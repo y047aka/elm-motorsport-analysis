@@ -1,10 +1,12 @@
 /// The `laps` table -- its name, its columns, its keys, and the schema and
-/// statements they make. A lap carries its car's number and nothing else about
-/// it: `Db.Cars` holds the class, group, team and manufacturer, which no round
-/// in the archive varies within a car.
+/// statements they make. A lap carries its car's number and the seat that ran
+/// it, and nothing else about either: `Db.Cars` holds the class, group, team
+/// and manufacturer, and `Db.CarDrivers` the seat's driver, none of which a
+/// round in the archive varies within a car.
 mod Db.Laps {
 
     use Db.LapRow.LapRow
+    use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
@@ -34,26 +36,17 @@ mod Db.Laps {
     /// One lap of one car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound[LapRow]] =
         let c = columns();
-        Schema.bound(c#season) :: Schema.bound(c#round) ::
-        Schema.bound(c#carNumber) :: Schema.bound(c#lapNumber) :: Nil
-
-    /// The place the file listed a lap in, which a round has at most one lap
-    /// at.
-    pub def sourceKey(): List[Bound[LapRow]] =
-        let c = columns();
-        Schema.bound(c#season) :: Schema.bound(c#round) :: Schema.bound(c#sourceRow) :: Nil
+        Schema.bound(c#roundId) :: Schema.bound(c#carNumber) :: Schema.bound(c#lapNumber) :: Nil
 
     // ---------------------------------------------------------- the columns
 
     /// What a projection picks from, and what every other view of the table
     /// is built out of.
     pub type alias Columns = {
-        season = Column[LapRow, Int32],
-        round = Column[LapRow, String],
+        roundId = Column[LapRow, Int32],
         sourceRow = Column[LapRow, Int32],
         carNumber = Column[LapRow, String],
         driverNumber = Column[LapRow, Int32],
-        driverName = Column[LapRow, String],
         lapNumber = Column[LapRow, Int32],
         lapTimeMs = Column[LapRow, Int32],
         lapImprovement = Column[LapRow, Int32],
@@ -78,12 +71,10 @@ mod Db.Laps {
     /// `Motorsport.MiniSector.all()` in track order, so a subscript is a place
     /// on the circuit; `json_each` is what a query reads one back with.
     pub def columns(): Columns = {
-        season = Schema.integer("season", r -> r#season),
-        round = Schema.text("round", r -> r#round),
+        roundId = Schema.integer("round_id", r -> r#roundId),
         sourceRow = Schema.integer("source_row", r -> r#sourceRow),
         carNumber = Schema.text("car_number", r -> r#carNumber),
         driverNumber = Schema.integer("driver_number", r -> r#driverNumber),
-        driverName = Schema.text("driver_name", r -> r#driverName),
         lapNumber = Schema.integer("lap_number", r -> r#lapNumber),
         lapTimeMs = Schema.integer("lap_time_ms", r -> r#lapTimeMs),
         lapImprovement = Schema.integer("lap_improvement", r -> r#lapImprovement),
@@ -99,10 +90,13 @@ mod Db.Laps {
         hourMs = Schema.integer("hour_ms", r -> r#hourMs),
         topSpeed = Schema.text("top_speed", r -> r#topSpeed),
         pitTimeMs = Schema.nullableInteger("pit_time_ms", r -> r#pitTimeMs),
-        flagAtFl = Schema.text("flag_at_fl", r -> r#flagAtFl),
+        flagAtFl = Schema.checkedText("flag_at_fl", flagNames(), r -> r#flagAtFl),
         miniSectorTimeMs = Schema.nullableIntArray("mini_sector_time_ms", r -> r#miniSectorTimeMs),
         miniSectorElapsedMs = Schema.nullableIntArray("mini_sector_elapsed_ms", r -> r#miniSectorElapsedMs)
     }
+
+    def flagNames(): List[String] =
+        Motorsport.Wec.flags() |> List.map(Motorsport.Wec.flagToString)
 
     /// A round's laps as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out
@@ -110,12 +104,10 @@ mod Db.Laps {
     pub def selection(): Sel[LapRow] =
         let c = columns();
         Sql.record({})
-            |> Sql.field(c#season, (row, value) -> { +season = value | row })
-            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
             |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
             |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
-            |> Sql.field(c#driverName, (row, value) -> { +driverName = value | row })
             |> Sql.field(c#lapNumber, (row, value) -> { +lapNumber = value | row })
             |> Sql.field(c#lapTimeMs, (row, value) -> { +lapTimeMs = value | row })
             |> Sql.field(c#lapImprovement, (row, value) -> { +lapImprovement = value | row })
@@ -142,12 +134,10 @@ mod Db.Laps {
     /// and no compiler sees them together.
     pub def all(): List[Bound[LapRow]] =
         let c = columns();
-        Schema.bound(c#season) ::
-        Schema.bound(c#round) ::
+        Schema.bound(c#roundId) ::
         Schema.bound(c#sourceRow) ::
         Schema.bound(c#carNumber) ::
         Schema.bound(c#driverNumber) ::
-        Schema.bound(c#driverName) ::
         Schema.bound(c#lapNumber) ::
         Schema.bound(c#lapTimeMs) ::
         Schema.bound(c#lapImprovement) ::
@@ -171,7 +161,7 @@ mod Db.Laps {
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), keys())
+        Schema.recreate(table(), all(), computed(), keys(), storage())
 
     pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
@@ -186,23 +176,39 @@ mod Db.Laps {
         scope(columns(), entry)
 
     /// Taken of the columns the query was handed rather than of this table's
-    /// own, so a reading of another source cannot be scoped by them.
+    /// own, so a reading of another source cannot be scoped by them. Named for
+    /// the table, since a join's other side has a `round_id` too.
     def scope(c: Columns, entry: Entry): Sql.Expr[Bool] =
-        Schema.scopeOf(table(), c#season, c#round, entry#season, entry#id)
+        Rounds.scope(Schema.qualified(table(), c#roundId), entry)
 
     def scoped(entry: Entry, rows: Sql.Rows[Columns]): Sql.Rows[Columns] =
         rows |> Sql.filter(c -> scope(c, entry))
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
-    /// and which is therefore where the round's start time is written.
-    pub def hourOffset(): String =
-        "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
+    /// and which is therefore where the round's start time is written. The
+    /// database makes it, so a query compares it as a column of the type it
+    /// has rather than pasting the arithmetic in twice.
+    pub def hourOffsetMs(): Schema.Computed[Int32] =
+        Schema.computedInteger(
+            "hour_offset_ms",
+            "((${Schema.name(columns()#hourMs)} - ${Schema.name(columns()#elapsedMs)})"
+                + " % 86400000 + 86400000) % 86400000"
+        )
+
+    /// What the database makes rather than what a row binds, and so what `all`
+    /// does not have.
+    pub def computed(): List[Schema.Declared] =
+        Schema.declaredOf(hourOffsetMs()) :: Nil
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys())
+        Schema.createTable(table(), all(), computed(), keys(), storage())
 
     def keys(): List[Sql.Key[Bound[LapRow]]] =
-        Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(sourceKey()) :: Nil
+        Sql.Key.Primary(primaryKey()) :: Nil
+
+    /// Nothing reaches a row of this table but through a key of it, so the
+    /// rows are the primary key's tree rather than a second one under it.
+    def storage(): Sql.Storage = Sql.Storage.WithoutRowid
 
     pub def columnNames(): List[String] =
         Schema.columnNames(all())

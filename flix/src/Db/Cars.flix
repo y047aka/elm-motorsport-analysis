@@ -1,10 +1,10 @@
-/// The `cars` table: the cars a round was run by, one row each. The class,
-/// group, team and manufacturer the feed repeats on every lap are here rather
-/// than in `Db.Laps`, which the archive bears out -- no `(season, round,
-/// car_number)` in it is described two ways.
+/// The `cars` table: the cars a round was run by, one row each, and which of
+/// the season's entries each was. What the feed says about a car is
+/// `Db.Entries`; this is the rounds it ran.
 mod Db.Cars {
 
     use Db.CarRow.CarRow
+    use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
@@ -23,28 +23,20 @@ mod Db.Cars {
     /// One car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound[CarRow]] =
         let c = columns();
-        Schema.bound(c#season) :: Schema.bound(c#round) :: Schema.bound(c#carNumber) :: Nil
+        Schema.bound(c#roundId) :: Schema.bound(c#carNumber) :: Nil
 
     // ---------------------------------------------------------- the columns
 
     pub type alias Columns = {
-        season = Column[CarRow, Int32],
-        round = Column[CarRow, String],
+        roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
-        carClass = Column[CarRow, String],
-        carGroup = Column[CarRow, String],
-        team = Column[CarRow, String],
-        manufacturer = Column[CarRow, String]
+        entryId = Column[CarRow, Int32]
     }
 
     pub def columns(): Columns = {
-        season = Schema.integer("season", r -> r#season),
-        round = Schema.text("round", r -> r#round),
+        roundId = Schema.integer("round_id", r -> r#roundId),
         carNumber = Schema.text("car_number", r -> r#carNumber),
-        carClass = Schema.text("class", r -> r#class),
-        carGroup = Schema.text("car_group", r -> r#carGroup),
-        team = Schema.text("team", r -> r#team),
-        manufacturer = Schema.text("manufacturer", r -> r#manufacturer)
+        entryId = Schema.integer("entry_id", r -> r#entryId)
     }
 
     /// A round's cars as the table holds them, a field at a time: each line
@@ -53,13 +45,9 @@ mod Db.Cars {
     pub def selection(): Sel[CarRow] =
         let c = columns();
         Sql.record({})
-            |> Sql.field(c#season, (row, value) -> { +season = value | row })
-            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
-            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
-            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
-            |> Sql.field(c#team, (row, value) -> { +team = value | row })
-            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
+            |> Sql.field(c#entryId, (row, value) -> { +entryId = value | row })
 
     /// The order the table declares them in, and so the order the insert binds
     /// them.
@@ -68,19 +56,15 @@ mod Db.Cars {
     /// and no compiler sees them together.
     pub def all(): List[Bound[CarRow]] =
         let c = columns();
-        Schema.bound(c#season) ::
-        Schema.bound(c#round) ::
+        Schema.bound(c#roundId) ::
         Schema.bound(c#carNumber) ::
-        Schema.bound(c#carClass) ::
-        Schema.bound(c#carGroup) ::
-        Schema.bound(c#team) ::
-        Schema.bound(c#manufacturer) ::
+        Schema.bound(c#entryId) ::
         Nil
 
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), keys())
+        Schema.recreate(table(), all(), Nil, keys(), storage())
 
     pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
@@ -91,13 +75,16 @@ mod Db.Cars {
     /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them.
     def scope(c: Columns, entry: Entry): Sql.Expr[Bool] =
-        Schema.scopeOf(table(), c#season, c#round, entry#season, entry#id)
+        Rounds.scope(Schema.qualified(table(), c#roundId), entry)
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys())
+        Schema.createTable(table(), all(), Nil, keys(), storage())
 
     def keys(): List[Sql.Key[Bound[CarRow]]] =
         Sql.Key.Primary(primaryKey()) :: Nil
+
+    /// As `Db.Laps`: the rows are the primary key's tree.
+    def storage(): Sql.Storage = Sql.Storage.WithoutRowid
 
     pub def columnNames(): List[String] =
         Schema.columnNames(all())

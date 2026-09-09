@@ -73,17 +73,22 @@ mod Cli.Export {
         if (not Round.loaded(task#entry))
             Err(CliError.RoundNotLoaded)
         else
-            Ok(render(Summary.read(task#entry), Index.read(task#entry), Laps.read(task#entry)))
+            let seats = Round.Drivers.read(task#entry);
+            Ok(render(
+                Summary.read(task#entry, seats),
+                Index.read(task#entry, seats),
+                Laps.read(task#entry, seats)
+            ))
 
     def render(
         metadata: Motorsport.Metadata.Metadata,
         index: Motorsport.Index.Index,
-        rawLaps: List[Motorsport.Wec.RawLap]
+        laps: List[Laps.Placed]
     ): Rendered =
         {
-            lapCount     = List.length(rawLaps),
+            lapCount     = List.length(laps),
             metadataJson = Render.renderSummary(metadata, index),
-            lapsJsonl    = Render.renderJsonl(rawLaps)
+            lapsJsonl    = Render.renderJsonl(laps)
         }
 
     def writeRound(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =

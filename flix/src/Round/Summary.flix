@@ -6,8 +6,11 @@ mod Round.Summary {
 
     use Db.CarRow.CarRow
     use Db.Cars
+    use Db.Entries
+    use Db.Entries.EntryRow
     use Db.LapRow.LapRow
     use Db.Laps
+    use Db.Rounds
     use Db.Schema
     use Db.Schema.Column
     use Sql.Sel
@@ -22,10 +25,10 @@ mod Round.Summary {
     use Util.Duration.Duration
     use Util.HourClock.Hour
 
-    pub def read(entry: Entry): Metadata.Metadata \ DbRead =
+    pub def read(entry: Entry, seats: Round.Drivers.Seats): Metadata.Metadata \ DbRead =
         let race = particulars(entry);
         let shape = track(entry);
-        Metadata.fromReadings(entry, race, shape, cars(entry))
+        Metadata.fromReadings(entry, race, shape, cars(entry, seats))
 
     /// The round's rows as a fragment, for the queries reading them from
     /// inside one of their own.
@@ -52,7 +55,7 @@ mod Round.Summary {
     /// carries.
     def startedAt(entry: Entry): Sel[Option[Int32]] =
         Sql.optionalIntOf(Sql.frags(
-            Sql.raw("(SELECT " + Laps.hourOffset()
+            Sql.raw("(SELECT ${Schema.nameOf(Laps.hourOffsetMs())}"
                 + " FROM " + Laps.table() + " WHERE") ::
             where_(entry, Nil) ::
             Sql.raw("ORDER BY source_row LIMIT 1)") :: Nil
@@ -60,41 +63,48 @@ mod Round.Summary {
 
     // ----------------------------------------------------------------- cars
 
-    def cars(entry: Entry): List[CarBuild] \ DbRead =
-        carBuilds(entry, driverNames(entry))
+    def cars(entry: Entry, seats: Round.Drivers.Seats): List[CarBuild] \ DbRead =
+        carBuilds(entry, driverNames(entry, seats))
 
     /// `(car number, driver name)` in the order the file first showed each
-    /// pair, which is the order a car's drivers are listed in.
-    def driverNames(entry: Entry): List[(String, String)] \ DbRead =
+    /// seat, which is the order a car's drivers are listed in. The order is
+    /// the laps' and the name is `car_drivers`', so the reading is of the one
+    /// and the naming of the other.
+    def driverNames(entry: Entry, seats: Round.Drivers.Seats): List[(String, String)] \ DbRead =
         let c = Laps.columns();
         Sql.access(
                 Sql.frags(
-                    Sql.raw("(SELECT car_number, driver_name, MIN(source_row) AS first_seen"
+                    Sql.raw("(SELECT car_number, driver_number, MIN(source_row) AS first_seen"
                         + " FROM " + Laps.table() + " WHERE") ::
                     where_(entry, Nil) ::
-                    Sql.raw("GROUP BY car_number, driver_name) d") :: Nil
+                    Sql.raw("GROUP BY car_number, driver_number) d") :: Nil
                 ),
-                { carNumber = c#carNumber, driverName = c#driverName }
+                { carNumber = c#carNumber, driverNumber = c#driverNumber }
             )
             |> Sql.orderBy(Sql.raw("first_seen") :: Nil)
-            |> Sql.map(d -> (d#carNumber, d#driverName))
+            |> Sql.map(d -> (d#carNumber, d#driverNumber))
             |> Sql.selectAll
+            |> List.map(match (carNumber, driverNumber) ->
+                (carNumber, Round.Drivers.nameOf(seats, carNumber, driverNumber)))
 
     /// A car is what `cars` says it was; where the file first mentioned it is
     /// the laps', and is the order the grid keeps where no lap 1 reorders it.
     def carBuilds(entry: Entry, drivers: List[(String, String)]): List[CarBuild] \ DbRead =
         let car = carColumns();
+        let entered = entryColumns();
         let lap1 = lap1Columns();
         Sql.access(
                 Sql.frags(
-                    Sql.raw(Cars.table() + " c JOIN f ON") ::
+                    Sql.raw(Cars.table() + " c JOIN " + Entries.table() + " e ON") ::
+                    Sql.term(Sql.eq(Schema.expr(entered#entryId), Schema.expr(car#entryId))) ::
+                    Sql.raw("JOIN f ON") ::
                     Sql.term(Sql.eq(Sql.column("f.car_number"), Schema.expr(car#carNumber))) ::
                     Sql.raw("LEFT JOIN l1 ON") ::
                     Sql.term(Sql.eq(Schema.expr(lap1#carNumber), Schema.expr(car#carNumber))) :: Nil
                 ),
-                { car = car, lap1 = lap1 }
+                { car = car, entry = entered, lap1 = lap1 }
             )
-            |> Sql.filter(t -> Schema.scope(t#car#season, t#car#round, entry#season, entry#id))
+            |> Sql.filter(t -> Rounds.scope(t#car#roundId, entry))
             |> Sql.using(Sql.frags(
                 Sql.raw("f AS (SELECT car_number, MIN(source_row) AS first_seen"
                     + " FROM " + Laps.table() + " WHERE") ::
@@ -111,10 +121,10 @@ mod Round.Summary {
             |> Sql.orderBy(Sql.raw("f.first_seen") :: Nil)
             |> Sql.map(t -> (
                 t#car#carNumber,
-                t#car#class,
-                t#car#carGroup,
-                t#car#team,
-                t#car#manufacturer,
+                t#entry#carClass,
+                t#entry#carGroup,
+                t#entry#team,
+                t#entry#manufacturer,
                 t#lap1#s1Ms,
                 Sql.orNull(t#lap1#elapsedMs)
             ))
@@ -123,23 +133,33 @@ mod Round.Summary {
 
     /// The round's cars under the name the join gives that side.
     def carColumns(): {
-        season = Column[CarRow, Int32],
-        round = Column[CarRow, String],
+        roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
-        class = Column[CarRow, String],
-        carGroup = Column[CarRow, String],
-        team = Column[CarRow, String],
-        manufacturer = Column[CarRow, String]
+        entryId = Column[CarRow, Int32]
     } =
         let c = Cars.columns();
         {
-            season       = Schema.qualified("c", c#season),
-            round        = Schema.qualified("c", c#round),
-            carNumber    = Schema.qualified("c", c#carNumber),
-            class        = Schema.qualified("c", c#carClass),
-            carGroup     = Schema.qualified("c", c#carGroup),
-            team         = Schema.qualified("c", c#team),
-            manufacturer = Schema.qualified("c", c#manufacturer)
+            roundId   = Schema.qualified("c", c#roundId),
+            carNumber = Schema.qualified("c", c#carNumber),
+            entryId   = Schema.qualified("c", c#entryId)
+        }
+
+    /// The season's entries under the name the join gives that side, which is
+    /// where a car's description is.
+    def entryColumns(): {
+        entryId = Column[EntryRow, Int32],
+        carClass = Column[EntryRow, String],
+        carGroup = Column[EntryRow, Option[String]],
+        team = Column[EntryRow, String],
+        manufacturer = Column[EntryRow, String]
+    } =
+        let e = Entries.columns();
+        {
+            entryId      = Schema.qualified("e", e#entryId),
+            carClass     = Schema.qualified("e", e#carClass),
+            carGroup     = Schema.qualified("e", e#carGroup),
+            team         = Schema.qualified("e", e#team),
+            manufacturer = Schema.qualified("e", e#manufacturer)
         }
 
     /// Each is a column of `laps`, so what it reads back as is the type the
@@ -156,7 +176,7 @@ mod Round.Summary {
 
     def carBuild(
         drivers: List[(String, String)],
-        row: (String, String, String, String, String, Option[Int32], Option[Int32])
+        row: (String, String, Option[String], String, String, Option[Int32], Option[Int32])
     ): CarBuild =
         match row {
             case (carNumber, class, group, team, manufacturer, lap1S1, lap1Elapsed) =>
@@ -164,7 +184,7 @@ mod Round.Summary {
                     carNumber    = carNumber,
                     drivers      = driversOf(carNumber, drivers),
                     class        = class,
-                    group        = group,
+                    group        = group |> Option.getWithDefault(""),
                     team         = team,
                     manufacturer = manufacturer
                 };

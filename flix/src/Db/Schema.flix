@@ -24,6 +24,52 @@ mod Db.Schema {
     /// type, so this is what an ordered list of them can hold.
     pub type alias Bound[r] = { name = String, sqlType = String, bind = r -> Value }
 
+    /// A column as the schema declares it, which is all a `CREATE TABLE` needs
+    /// and all a computed column has.
+    pub type alias Declared = { name = String, sqlType = String }
+
+    /// A column the database computes from the others: declared with the
+    /// expression that makes it, read like any other, and bound by nothing.
+    /// That last is why it is not a `Column` -- there is no row to bind it
+    /// from, and so no way for it to reach a table's `all`, which is the
+    /// ordering the insert follows.
+    pub enum Computed[a] {
+        case Computed({ name = String, sqlType = String, reading = String -> Sel[a] })
+    }
+
+    /// `VIRTUAL` rather than `STORED`: the expression is arithmetic over two
+    /// columns of the same row, so the rows are no larger for having it.
+    pub def computedInteger(name: String, expression: String): Computed[Int32] =
+        Computed.Computed({
+            name = name,
+            sqlType = "int GENERATED ALWAYS AS (${expression}) VIRTUAL",
+            reading = Sql.int
+        })
+
+    pub def declaredOf(computed: Computed[a]): Declared =
+        let Computed.Computed(c) = computed;
+        { name = c#name, sqlType = c#sqlType }
+
+    pub def nameOf(computed: Computed[a]): String =
+        let Computed.Computed(c) = computed;
+        c#name
+
+    pub def readOf(computed: Computed[a]): Sel[a] =
+        let Computed.Computed(c) = computed;
+        (c#reading)(c#name)
+
+    pub def exprOf(computed: Computed[a]): Sql.Expr[a] =
+        Sql.column(nameOf(computed))
+
+    /// A computed column is one of the things a query may project.
+    instance Sql.Project[Computed[a]] {
+        type Out = a
+        pub def sel(x: Computed[a]): Sel[a] = Db.Schema.readOf(x)
+    }
+
+    def declare(column: Bound[r]): Declared =
+        { name = column#name, sqlType = column#sqlType }
+
     pub def bound(column: Column[r, a]): Bound[r] =
         let Column.Column(c) = column;
         { name = c#name, sqlType = c#sqlType, bind = c#bind }
@@ -62,44 +108,45 @@ mod Db.Schema {
     pub def columnNames(these: List[Bound[r]]): List[String] =
         these |> List.map(c -> c#name)
 
-    /// The rows of one round, which every reading of either table is scoped
-    /// by, as the two columns given have it. A join's side names itself, so
-    /// this is what a query over one builds its scope from.
-    pub def scope(
-        season: Column[r, Int32],
-        round: Column[r, String],
-        inSeason: Int32,
-        named: String
-    ): Sql.Expr[Bool] =
-        Sql.every(
-            Sql.eq(expr(season), Sql.i32(inSeason)) ::
-            Sql.eq(expr(round), Sql.str(named)) :: Nil
-        )
-
-    /// As `scope`, of the named source.
-    ///
-    /// Both tables carry `season` and `round`, so a scope over bare column
-    /// names binds to whichever side of a join happens to have them -- to the
-    /// wrong side silently where only one does. Naming the source makes that
-    /// a query the database refuses instead.
-    pub def scopeOf(
-        source: String,
-        season: Column[r, Int32],
-        round: Column[r, String],
-        inSeason: Int32,
-        named: String
-    ): Sql.Expr[Bool] =
-        scope(qualified(source, season), qualified(source, round), inSeason, named)
-
     // ------------------------------------------------------------ the table
 
     pub def recreate(
         table: String,
         columns: List[Bound[r]],
-        keys: List[Sql.Key[Bound[r]]]
+        computed: List[Declared],
+        keys: List[Sql.Key[Bound[r]]],
+        storage: Sql.Storage
     ): Unit \ DbWrite =
         Db.execute(Sql.dropTableIfExists(table));
-        Db.execute(Sql.createTable(table, columns, keys))
+        Db.execute(createTable(table, columns, computed, keys, storage))
+
+    /// The columns a row binds, then the ones the database makes: a computed
+    /// column is declared like any other and is not in the ordering the insert
+    /// follows, so this is the one place the two lists meet.
+    pub def createTable(
+        table: String,
+        columns: List[Bound[r]],
+        computed: List[Declared],
+        keys: List[Sql.Key[Bound[r]]],
+        storage: Sql.Storage
+    ): String =
+        Sql.createTable(
+            table,
+            List.append(columns |> List.map(declare), computed),
+            keys |> List.map(Sql.mapKey(declare)),
+            storage
+        )
+
+    /// A tree the table carries beside its key, named for the table and the
+    /// columns it is over so that two of them cannot collide.
+    pub def createIndex(table: String, over: List[Bound[r]]): String =
+        Sql.createIndex(indexName(table, over), table, over |> List.map(declare))
+
+    pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite =
+        Db.execute(createIndex(table, over))
+
+    def indexName(table: String, over: List[Bound[r]]): String =
+        columnNames(over) |> List.foldLeft((acc, name) -> acc + "_" + name, table)
 
     pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
         let (statement, bound_) = Sql.insertRows(table, columns, rows);
@@ -118,11 +165,27 @@ mod Db.Schema {
     pub def integer(name: String, get: r -> Int32): Column[r, Int32] =
         column(name, "int not null", row -> Value.Integer(get(row)), Sql.int)
 
+    /// The table's own integer primary key. Declared `integer` rather than
+    /// `int` because SQLite makes such a column an alias for the row's own id
+    /// only where the type is spelled exactly that -- and where it does, the
+    /// rows are that key's tree and no second one is built over them.
+    pub def identity(name: String, get: r -> Int32): Column[r, Int32] =
+        column(name, "integer not null", row -> Value.Integer(get(row)), Sql.int)
+
     pub def text(name: String, get: r -> String): Column[r, String] =
         column(name, "text not null", row -> Value.Text(get(row)), Sql.text)
 
+    /// The allowed values are written into the schema rather than bound, so
+    /// they are the program's own: nothing a file said can reach here.
+    pub def checkedText(name: String, allowed: List[String], get: r -> String): Column[r, String] =
+        let inSet = allowed |> List.map(value -> "'${value}'") |> List.join(", ");
+        column(name, "text not null check (${name} in (${inSet}))", row -> Value.Text(get(row)), Sql.text)
+
     pub def boolean(name: String, get: r -> Bool): Column[r, Bool] =
         column(name, "int not null", row -> Value.Boolean(get(row)), Sql.bool)
+
+    pub def nullableText(name: String, get: r -> Option[String]): Column[r, Option[String]] =
+        column(name, "text", row -> Value.NullableText(get(row)), Sql.optionalText)
 
     pub def nullableInteger(name: String, get: r -> Option[Int32]): Column[r, Option[Int32]] =
         column(name, "int", row -> Value.NullableInteger(get(row)), Sql.optionalInt)

@@ -24,13 +24,13 @@ mod Sql.TestExpr {
     @Test
     def predicatesAreAndedInTheOrderGiven(): Unit \ Assert =
         let expr = Sql.every(
-            Sql.eq(Schema.expr(Laps.columns()#season), Sql.i32(2025)) ::
+            Sql.eq(Schema.expr(Laps.columns()#roundId), Sql.i32(4)) ::
             Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) ::
             Sql.isNotNull(Schema.expr(Laps.columns()#s1Ms)) :: Nil
         );
         Assert.assertTrue(Sql.toSql(Sql.term(expr)) == (
-            "season = ? AND lap_time_ms <> ? AND s1_ms IS NOT NULL",
-            Value.Integer(2025) :: Value.Integer(0) :: Nil
+            "round_id = ? AND lap_time_ms <> ? AND s1_ms IS NOT NULL",
+            Value.Integer(4) :: Value.Integer(0) :: Nil
         ))
 
     @Test
@@ -54,21 +54,27 @@ mod Sql.TestExpr {
 
     def leMans(): Entry = { season = 2025, id = "le_mans_24h", date = "2025-06-14" }
 
-    /// The pair that names a round, which every reading of either table is
-    /// scoped by. Both tables have `season` and `round`, so the scope names
-    /// the source it means: bare, it would bind to whichever side of a join
-    /// happened to carry them.
+    /// The id `rounds` gave the round, which every reading of either table is
+    /// scoped by. Both tables have a `round_id`, so the scope names the source
+    /// it means: bare, it would bind to whichever side of a join happened to
+    /// carry one.
+    ///
+    /// The id is read back rather than computed, so what the scope binds is
+    /// still the pair the calendar names the round by, and a database whose
+    /// `rounds` does not have it scopes to no rows.
     @Test
-    def theRowsAreScopedToTheSeasonAndTheRoundsNameOfTheTableTheyAreOf(): Unit \ Assert =
+    def theRowsAreScopedToTheRoundIdOfTheTableTheyAreOf(): Unit \ Assert =
+        let scope = source ->
+            "${source}.round_id = (SELECT round_id FROM rounds"
+                + " WHERE season = ? AND round_key = ?)";
+        let named = Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil;
         let lapNumbers = Laps.rows(leMans()) |> Sql.map(c -> c#lapNumber) |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(lapNumbers) == (
-            "SELECT lap_number FROM laps WHERE laps.season = ? AND laps.round = ?",
-            Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
+            "SELECT lap_number FROM laps WHERE ${scope("laps")}", named
         ));
         let carNumbers = Cars.rows(leMans()) |> Sql.map(c -> c#carNumber) |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(carNumbers) == (
-            "SELECT car_number FROM cars WHERE cars.season = ? AND cars.round = ?",
-            Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
+            "SELECT car_number FROM cars WHERE ${scope("cars")}", named
         ))
 
     /// A query reading the round's rows from inside a common table expression
@@ -76,7 +82,7 @@ mod Sql.TestExpr {
     @Test
     def theScopeIsAlsoHadAsAPredicate(): Unit \ Assert =
         Assert.assertTrue(Sql.toSql(Sql.term(Laps.inRound(leMans()))) == (
-            "laps.season = ? AND laps.round = ?",
+            "laps.round_id = (SELECT round_id FROM rounds WHERE season = ? AND round_key = ?)",
             Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
         ))
 
@@ -86,8 +92,9 @@ mod Sql.TestExpr {
     def aScopeOfARenamedSourceNamesTheRename(): Unit \ Assert =
         let c = Cars.columns();
         Assert.assertTrue(
-            Sql.toSql(Sql.term(Schema.scopeOf("c", c#season, c#round, 2025, "le_mans_24h")))
-                == ("c.season = ? AND c.round = ?",
+            Sql.toSql(Sql.term(Db.Rounds.scope(Schema.qualified("c", c#roundId), leMans())))
+                == ("c.round_id = (SELECT round_id FROM rounds"
+                        + " WHERE season = ? AND round_key = ?)",
                     Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil)
         )
 

@@ -34,6 +34,55 @@ mod Db.TestJdbc {
         Assert.assertTrue(Jdbc.classify(1, "no such table: laps") == Db.Error.Refused("no such table: laps"));
         Assert.assertTrue(Jdbc.classify(1555, "constraint") == Db.Error.Refused("constraint"))
 
+    /// What `Db.atomically` marks is SQLite's own savepoint, so this is where
+    /// it is driven against one: a round of a load sends rows to several
+    /// tables, and a failure at the last of them has to leave none of the
+    /// others behind. `Db.Jdbc`'s savepoint is the insert's alone and would
+    /// keep them.
+    @Test
+    def aFailedRoundLeavesNoneOfItsRowsBehind(): Unit \ {Assert, IO} =
+        let refused = Db.Error.Incomplete("the round was not what it should have been");
+        let counted = connected(() -> {
+            discard Db.runWithError(() -> {
+                Db.execute("CREATE TABLE t (n int not null)");
+                Db.execute("INSERT INTO t VALUES (1)")
+            });
+            discard (Db.runWithError(() -> Db.atomically("round", () -> {
+                Db.execute("INSERT INTO t VALUES (2)");
+                Db.execute("INSERT INTO t VALUES (3)");
+                DbErr.fail(refused)
+            })): Result[Db.Error, Unit]);
+            discard Db.runWithError(() -> Db.atomically("round", () ->
+                Db.execute("INSERT INTO t VALUES (4)")));
+            SqlRead.fetch("SELECT n FROM t ORDER BY n", Nil)
+        });
+        Assert.assertTrue(counted == Ok((Some("1") :: Nil) :: (Some("4") :: Nil) :: Nil))
+
+    /// SQLite builds an index for a primary key unless the key is the row's
+    /// own id, which it is only where the column is declared `integer`. The
+    /// tables that number a name are read through that id, so an index over it
+    /// would be the rows a second time; the ones keyed by more than a number
+    /// say `WITHOUT ROWID` instead and are their key's tree outright.
+    ///
+    /// Neither is a thing the DDL says, so it is asked of a database that took
+    /// it. What either would leave behind is an autoindex named for the table.
+    @Test
+    def aPrimaryKeyBuildsNoIndexOfItsOwn(): Unit \ {Assert, IO} =
+        let indexes = table -> connected(() -> {
+            discard Db.runWithError(() -> Db.execute(table));
+            SqlRead.fetch(
+                "SELECT name FROM sqlite_master WHERE type = 'index'"
+                    + " AND name LIKE 'sqlite_autoindex%' ORDER BY name", Nil)
+        });
+        Assert.assertTrue(indexes(Db.Rounds.createTable()) == Ok(
+            (Some("sqlite_autoindex_rounds_1") :: Nil) :: Nil
+        ));
+        Assert.assertTrue(indexes(Db.Drivers.createTable()) == Ok(
+            (Some("sqlite_autoindex_drivers_1") :: Nil) :: Nil
+        ));
+        Assert.assertTrue(indexes(Db.CarDrivers.createTable()) == Ok(Nil));
+        Assert.assertTrue(indexes(Db.Cars.createTable()) == Ok(Nil))
+
     /// The connection the server answers through.
     @Test
     def aReadingConnectionAnswersAFetch(): Unit \ {Assert, IO} =
@@ -67,8 +116,7 @@ mod Db.TestJdbc {
     /// leaves none of the round's rows behind rather than some of them.
     @Test
     def aRefusedLoadLeavesWhatWasThereAlone(): Unit \ {Assert, IO} =
-        let entry: Entry = { season = 2025, id = "test_refused", date = "2025-01-01" };
-        let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
+        let rows = LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil);
         let outcome = connected(() -> {
             let accepted = Db.runWithError(() -> { Laps.create(); Laps.insertRows(rows) });
             let refused  = Db.runWithError(() -> Laps.insertRows(rows));
@@ -175,9 +223,8 @@ mod Db.TestJdbc {
         DbErr.fail(Db.Error.Incomplete("the round was not what it should have been"))
 
     def load(): Int32 \ DbWrite =
-        let entry: Entry = { season = 2025, id = "test_shared", date = "2025-01-01" };
         Laps.create();
-        Laps.insertRows(LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil))
+        Laps.insertRows(LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil))
 
     /// From a connection of its own, so what it counts is what was committed.
     def counted(path: String): Result[Db.Error, List[List[Option[String]]]] \ IO =

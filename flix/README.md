@@ -27,16 +27,18 @@ database that is down stops a round being opened and not the app being used.
 An answer is tagged and compressed: a round is the same bytes until a run
 loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
 a 304, and a body goes out gzipped where the request accepts it — Le Mans's
-laps are 24MB, and 3.4MB on the wire.
+laps are 25MB, and 3.4MB on the wire.
 
 `Round` is one round on its way out of the tables, both halves of the trip:
 `Round.Summary`, `Round.Index`, `Round.Laps` and `Round.Cars` take an `Entry`
 and the `DbRead` effect and read it; `Round.Render` takes what they returned, is
 pure, and turns it into the bytes that go out. None of the five knows whether a
-file or a request is waiting at the other end. `Round.loaded` is what both
-callers ask first, and it asks both tables: laps without cars is a round half
-in the database, and answered off the laps alone it would be a race whose grid
-was empty.
+file or a request is waiting at the other end. Three of them take a
+`Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
+once for the round by whichever of the two callers asked, rather than once by
+each of them. `Round.loaded` is what both ask first, and it asks `laps` and `cars`:
+laps without cars is a round half in the database, and answered off the laps
+alone it would be a race whose grid was empty.
 
 `Server.Api` decides nothing about a round, then, and renders none of one
 either: it makes the same calls `Cli.Export` makes, so what is served and what
@@ -54,77 +56,162 @@ bundle's own calendar are built on one path being the other with
 only module of that name: `Cli.Export.urlRoot` and `Server.Api.urlRoot` are
 what the two sides hand it.
 
-## The `laps` and `cars` tables
+## The tables
 
-The run loads every round it converts into two tables, dropped and rebuilt each
-time as the JSON files are rewritten each time. `laps` is one lap of one car;
-`cars` is one car of one round, holding the `class`, `car_group`, `team` and
-`manufacturer` the feed repeats on every lap that car ran. The archive is what
-says they can be: no `(season, round, car_number)` in its 130,017 laps is
-described two ways, and the 579 cars they name are 4.7MB of the 26.7MB the one
-flat table took. A lap carries the number and nothing else about its car, which
-is also all the JSONL writes out, so the four columns are no longer read back
-20,182 times a round to be dropped.
+Six of them, dropped and rebuilt each time as the JSON files are rewritten each
+time. Three hold what a round did: `laps` is one lap of one car, `cars` is one
+car of one round, and `car_drivers` is one seat of one car. Three hold what
+those name rather than spell: `rounds` is the calendar written down, `drivers`
+the names the feed repeats over every lap, and `entries` the cars a season was
+contested by.
 
-Where the file first mentioned a car is not in `cars`: it is `MIN(source_row)`
-over the round's laps, which is what `Round.Summary` orders the grid by. What
-`cars` holds is what the file said, and nothing counted off it.
+The archive is what says the three can be split off: no car of a round in it is
+described two ways, and no seat of one is named two ways. A lap carries its
+car's number and the seat that ran it and nothing else about either, which is
+also all the JSONL writes out.
 
-What one row per car cannot hold is a file that describes one car two ways.
-`Db.CarRow` keeps the first mention and the second reaches no column, so
-`Db.CarRow.disagreements` is read before the insert and `Cli.Load` prints what
-it found: said there or nowhere, since no query over the tables can find it
-afterwards. It has not happened within a round in the archive; between rounds it
-has, which is why `cars` is keyed by round and not by season -- 2026's Le Mans
-file spells a manufacturer `Mercedes-AMG` where the season's other rounds spell
-it `Mercedes`.
+An id means nothing outside the database a run put it in, and no reader computes
+one. `Db.Drivers.add` gives a name its number -- carried between the rounds of a
+run rather than read back between them, since a driver turns up in several --
+and `Db.Rounds.scope` reads a round's id back inside the scope it builds, so a
+database written under another calendar scopes to no rows rather than to another
+round's.
 
-Everything else stays as it was. A column takes the type its Flix value already
-has -- a `Duration` is the milliseconds it holds, `kph` and `topSpeed` stay the
-text the feed gave -- so the load parses nothing the decoder did not. Le Mans's
-mini-sectors are two JSON array columns rather than thirty more: only one round
-in the archive has them. They hold the fifteen of `Motorsport.MiniSector.all()`
-in track order, so a subscript is a place on the circuit and a null is a marker
-the feed left blank. `json_each` is what a query reads one back with, one row
-per marker, keyed from zero where `Motorsport.MiniSector.positionOf` counts from
-one. That is the shape a query wants rather than the shape the JSON output has,
-which is the whole reason they are not the object `Motorsport.Wec` writes.
+A car number is an entry within its season and a different one across seasons --
+number 12 was three teams' over the three the archive holds -- so `entries` is
+keyed by the season and the number together, and the class, group, team and
+manufacturer the feed repeats on every lap of every round are written there
+once.
 
-Five readers of the tables. `Cli.Load.Validation` runs its five rules as
-SQL over the round just loaded, leaving only the message formatting in Flix:
-three are a comparison per row, and the two that walk a lap need the mini-sectors
-in track order, which is what those columns are for. `Round.Summary`
-reads the round's summary the same way, joining `cars` to the laps its grid order
-and its first lap come from. `Round.Index` reads the two indices a
-race is read at a moment through -- when the lap counter went up, and when each
-of the twenty records changed hands -- which are a walk of every lap of the round
-each: a `GROUP BY` for the first, and for the second one window over every
-record's readings stacked into a single column. `Round.Laps` reads a whole round
-back, `Db.Laps.selection` and `Db.LapRow.toRawLap` being the reverse of the
-load, and
-`Round.Cars` hands it the round's cars keyed by number -- read once each rather
-than once a lap, which is the reading the split bought. A car with laps and no
-row in `cars` is a round loaded by halves, and is said so rather than written out
-as a car with no name. `Cli.Export` and `Server.Api` are both rendered from what
-those readers return, so the files written and the round served are the same
-bytes rather than two renderings that agree. The indices ride in the summary
-rather than in a file of their own, so a round is still two URLs. Nothing renders
-a round from the laps a CSV decoded to: `Cli.Load` sends the rows and stops
-there.
+`cars` holds no fact the other tables do not. Its rows are `DISTINCT round_id,
+car_number` over `laps`, by construction as much as in the archive, and the
+`entry_id` on them follows from the round's season and the car's number -- which
+the `car_number` beside it follows from in turn, so the table is not in BCNF and
+knowingly: `Round.Summary` joins the round's cars to `MIN(source_row)` and to
+lap 1 by that number, and both are readings of `laps`. It is a join the tables
+keep rather than an entity they hold. `car_drivers` looks the same and is not:
+its rows are the laps' distinct seats too, but the `driver_id` on them is
+nowhere in `laps`.
+
+What one row per car cannot hold is a file that describes one car two ways, and
+one row per seat a file that names one seat two ways. Each keeps the first
+mention and the second reaches no column, so `Db.CarRow.disagreements` and
+`Db.CarDrivers.disagreements` are read before the insert and `Cli.Load` prints
+what they found: said there or nowhere, since no query over the tables can find
+it afterwards. Neither has happened within a round in the archive. A seat is the
+one of the two that changes what the rows mean rather than how they read: the
+second name's laps are credited to the first, in the grid and in the records
+alike.
+
+Between rounds it has, which is what holding the description once per season
+finds: 2026's Le Mans file spells cars 61 and 79 `Mercedes-AMG` where that
+season's other three rounds spell them `Mercedes`. `Db.Entries.add` keeps the
+first round's description and reports the later round's, and the export carries
+the season's spelling rather than each round's.
+
+A column takes the type its Flix value already has -- a `Duration` is the
+milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave -- so
+the load parses nothing the decoder did not. Two say more than the type:
+`flag_at_fl` is checked against `Motorsport.Wec.flags` rather than against a
+list written beside it, and `car_group` is nullable because the feed spells a
+car with no sub-class as one whose group is empty, an absence rather than a
+value. `hour_offset_ms` is the one no row binds: `(hour - elapsed) mod 24h` is a
+column the database makes, which is what `Db.Schema.Computed` is and why it is
+not a `Column` -- there is no row to bind it from, so it cannot reach a table's
+`all`, the ordering the insert follows. `VIRTUAL`, so the rows are no larger for
+it.
+
+Where a table's rows are stored is declared beside its keys, and the key is what
+decides it. A table keyed by more than a number takes `Sql.Storage.WithoutRowid`
+and is that key's tree outright. One keyed by a number leaves SQLite's own
+arrangement alone and declares the column with `Db.Schema.identity`, which
+spells it `integer` -- the one spelling SQLite reads as an alias for the row's
+own id, and so the one that has it build no second tree over the first. Either
+way there is one tree and not two, which is a thing the DDL does not state:
+`Db.TestJdbc` asks a database that took it.
+
+`source_row` carries the position the file listed the lap in, which nothing else
+in the tables recovers. It is what makes `laps` an image of the CSV rather than
+a set of it, and every reading that would move off Flix needs it: the
+validator's baseline is the file's first row, a car's drivers are in the order
+the file first showed them, and so is the grid. Nothing is keyed by it: the
+reader numbers it one to n over the round's laps, so no two of them can share a
+place, and a unique index asserting that cost 1.88MB and no time.
+
+`car_drivers` carries the one index the tables declare, over `driver_id`. Its
+key leads with the round, so nothing in it reaches the seats one driver sat in,
+which is the reading `drivers` was separated out for and a scan of every lap in
+the archive without it.
+
+No foreign key is declared and `PRAGMA foreign_keys` is left off. A declaration
+would add one check the code does not already make: every `round_id` is
+`Db.Rounds.idIn`'s and a car or a seat the run did not number fails the same
+way, both by name rather than by constraint, but nothing beyond the load's own
+numbering says a `driver_id` has a row. Turning them on costs two rewrites,
+neither of them the declarations: with the pragma on, `DROP TABLE` runs an
+implicit `DELETE FROM`, so the drops have to run children first while the
+creates run parents first, and the pragma is a silent no-op inside a
+transaction, so it belongs in `Db.Jdbc.connect` beside the journal mode. The one
+fixture in the way is `Round.TestSupport.onLapsAlone` -- laps with no cars,
+which is what `Round.loaded` asks about and what a `laps` to `cars` key would
+make unbuildable.
+
+Le Mans's mini-sectors are two JSON array columns rather than thirty more: only
+one round in the archive has them. They hold the fifteen of
+`Motorsport.MiniSector.all()` in track order, so a subscript is a place on the
+circuit and a null is a marker the feed left blank. `json_each` is what a query
+reads one back with, one row per marker, keyed from zero where
+`Motorsport.MiniSector.positionOf` counts from one. That is the shape a query
+wants rather than the shape the JSON output has, which is the whole reason they
+are not the object `Motorsport.Wec` writes.
 
 What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
 `Motorsport.Track` still choose the grid's basis, break its ties, and divide the
 lap; they take the readings those decisions are made from rather than the laps
-they were counted out of, and neither imports `Motorsport.Wec` any more. The
-counting is what SQL is better at and what cost the most: reading a round's cars
-off its laps was `O(laps x cars)` in Flix, which for one Le Mans is 20,182 laps
-against 62 cars, and `GROUP BY` is not.
+they were counted out of, and neither imports `Motorsport.Wec` any more.
+Counting is what a `GROUP BY` is better at than a fold over the laps, and it is
+what cost the most.
 
-`source_row` carries the position the file listed the lap in, which nothing else
-in the tables recovers. It is what makes `laps` an image of the CSV rather than
-a set of it, and every reading that would move off Flix needs it: the validator's
-baseline is the file's first row, a car's drivers are in the order the file
-first showed them, and so is the grid.
+`Cli.Load.Validation` runs its five rules as SQL
+over the round just loaded, leaving only the message formatting in Flix: three
+are a comparison per row, and the two that walk a lap need the mini-sectors in
+track order, which is what those columns are for. `Round.Index` reads the two
+indices a race is read at a moment through -- when the lap counter went up, and
+when each of the twenty records changed hands -- which are a walk of every lap
+of the round each: a `GROUP BY` for the first, and for the second one window
+over every record's readings stacked into a single column. They ride in the
+summary rather than in a file of their own, so a round is still two URLs.
+`Round.Laps` takes one window function beside the reading for where the car
+stood in the field as it crossed the line -- a reading of the round rather than
+of any row of it, so it rides beside the lap rather than in it. `Round.Cars` and
+`Round.Drivers` hand the others the round's cars keyed by number and who sat in
+each seat -- read once for the round rather than once a lap, and the two that
+say when a round is loaded by halves: a car with laps and no row in `cars`, or a
+lap from a seat with none in `car_drivers`, is said so rather than written out
+as a car with no name.
+
+## Why SQLite
+
+The database is not a system of record. It is a cache derived from the CSV, and
+dropping every table on each run is the design saying so, which is what takes
+durability, replication, migration and availability out of the question
+entirely. What is left is one writer, no point lookups, no concurrent writes,
+no transactions between users, and reads that are whole-round scans, `GROUP
+BY`, window functions and `json_each`. SQLite answers all of it from one file
+in the working copy.
+
+DuckDB is the near miss worth recording, since its column store and native
+`LIST` types fit the mini-sectors better than JSON text does: its files lock
+per process, so nothing reads one while a run writes it, and
+`.#serve-api` staying up across a `.#cli-run` is exactly that. A document store
+is what the export already is -- one round, one file -- and moving the tables
+there would take the window functions the indices are counted with. NewSQL
+solves distributed writes and horizontal scale, and there is one writer and one
+region here.
+
+Nothing about the scale argues otherwise later, either: the whole of the WEC,
+twenty seasons of it, is on the order of 1.5 million laps and 150MB in these
+tables, and adding other series keeps it in the low gigabytes.
 
 ## `SqlRead`, `SqlWrite` and `DbErr`
 
@@ -134,14 +221,14 @@ keeps the statements and answers a read with the error that nothing was sent,
 `Db.runFailing` answers every statement with one error the caller chose, and
 `Db.Jdbc` is the only file that imports `java.sql`. No effect here names a
 table or a column, so they, `Db.Jdbc` and `Sql` are together a database and a
-query language and nothing of this application; `Db.Laps`, `Db.Cars` and the
-two row types beside them are the whole of what the application tells them
-about itself, which is the same line Acadia draws between `Transaction`, `Rows`
-and a `Table`.
+query language and nothing of this application; the `Db` table modules and the
+row types beside them are the whole of what the application tells them about
+itself, which is the same line Acadia draws between `Transaction`, `Rows` and a
+`Table`.
 
 Reading and writing are two effects because the sides of this repository are
 two: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a
-statement that changes the database in them, and `Db.Laps`, `Db.Cars` and
+statement that changes the database in them, and the table modules and
 `Cli.Load.load` are the other half. The handlers are split the same way, so
 what the type says of the server the connection says too: `Db.Jdbc.runReading`
 installs the read alone, and a write reaches no handler through it.
@@ -180,8 +267,7 @@ go through next time -- a lock SQLite waited out rather than got, which
 `Db.Jdbc.classify` reads off the driver's code and is tested without a
 database -- `Unread` is a cell the reading could not read, `NoRow` is a query
 that had to answer with one and did not, and `Incomplete` is rows that came back
-whole and do not describe a round: a car with laps and no row in `cars`. The
-sentence is `ToString`'s, so the wording is in one place and the kind is what a
+whole and do not describe a round. The sentence is `ToString`'s, so the wording is in one place and the kind is what a
 caller reads.
 
 `Server.Api` is the one that reads it. `Unreachable` and `Busy` are answered
@@ -192,20 +278,25 @@ own words, so those ride in the response's `cause`, which `Server.send` logs
 and does not send.
 
 Nothing a statement sends is kept until a commit, and `Db.transact` is the only
-sender of one -- where that is decided: it commits what its caller sent when the caller returns,
-and rolls it back when a `DbErr` ended it instead -- which it then raises
-again, the rollback being what it did about it rather than what it answers. `Cli.Load.runAll` is the one caller, so the
-rebuild of both tables is a single transaction -- the two `DROP TABLE`s it opens
-with land only if the run reaches its end, and a run that is killed partway leaves
-the rounds it was rebuilding from. Measured on the archive: the same kill takes
-it from fourteen rounds to three without that boundary, and leaves all fourteen
-with it.
+sender of one: it commits what its caller sent when the caller returns, and
+rolls a `DbErr` back before raising it again, the rollback being what it did
+about the failure rather than what it answers. `Cli.Load.runAll` is the one
+caller, so the rebuild of every table is a single transaction -- the
+`DROP TABLE`s it opens with land only if the run reaches its end, and a run
+killed partway leaves the rounds it was rebuilding from rather than three of
+them.
 
 A round the database refuses is still counted and reported rather than taking
-the run with it, so `Db.Jdbc`'s insert marks a savepoint and undoes its own
-batches against that: the rows go out a thousand at a time, and a refusal
-partway through has already sent some of them. A read commits nothing, and
-closing a connection rolls back the transaction it opened.
+the run with it, and `Db.atomically` is the boundary that makes it so: it is
+`transact` of a part of one, marking a savepoint of SQLite's own so what a
+round sent is undone together and what the run sent before it is still to be
+committed. `Cli.Load` marks one per round, which is also what lets the
+numbering follow the rows -- a round that failed frees the names it took, and
+advancing past it would leave a name numbered and unwritten for every later
+round to reference. `Db.Jdbc`'s insert marks one of the driver's inside that,
+and that one is the batch's alone: the rows go out a thousand at a time, and a
+refusal partway through has already sent some of them. A read commits nothing,
+and closing a connection rolls back the transaction it opened.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
@@ -268,21 +359,19 @@ What a query asks of its rows is a `Sql.Expr[Bool]`, and `filter` takes it of
 the columns the source declared rather than on its own: the predicate is a
 function of what `map` would be handed, as Acadia's `filter` is of the row, so
 a column of another source is not one this query can be scoped by.
-The pair naming a round is what every reading of either table is scoped by,
-and it is applied where the rows come from rather than by the reader:
-`Db.Laps.rows` and `Db.Cars.rows` take the round and hand back rows already
-filtered by it, so rows of a table at large are not something either module
-hands out and a reader cannot forget the scope. A reader ANDs its own onto
-them. Both tables carry `season` and `round` alike, so a scope built from the
-wrong one would bind to whichever side of a join happened to have them, and to
-the wrong side without a word where only one does; the two records do not
-unify, so it does not compile. What a query builds itself cannot reach a
+The round is what every reading of a table keyed by one is scoped by, and it is
+applied where the rows come from rather than by the reader: `Db.Laps.rows` and
+`Db.Cars.rows` take the round and hand back rows already filtered by it, so rows
+of a table at large are not something those modules hand out and a reader cannot
+forget the scope. A reader ANDs its own onto them. Both carry a `round_id`, so a
+scope built from the wrong one would bind to whichever side of a join happened
+to have one; the records do not unify, so it does not compile. What a query builds itself cannot reach a
 `WHERE` written into a common table expression, which is text and takes the
 table's own columns: `Db.Laps.inRound` is the same predicate had on its own,
 for the queries in `Round.Index`, `Round.Summary` and `Cli.Load.Validation`
-that write one. Both name the table they are of, and a source that renames it
-says so itself: `Schema.scopeOf`, and what `Round.Summary.carBuilds` hands its
-`c`. The type is what carries
+that write one. Each names the table it is of, and a source that renames it
+says so itself: `Db.Rounds.scope` takes the column under that name, which is
+what `Round.Summary.carBuilds` hands its `c`. The type is what carries
 nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
 asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
 column list already knows and no longer a thing to notice. A column a common
@@ -326,8 +415,8 @@ read alongside a `json_each` of its own -- so a derived table calls `Sql.access`
 columns it selects, which is what `Round.Summary.driverNames` does with two of
 them. A source that has none is `Sql.column` as before.
 
-`Round.Summary.carBuilds` joins `cars` to two of those, and what its sides have
-is said the same way: `Db.Schema.qualified` is a column of a table under the
+`Round.Summary.carBuilds` joins `cars` to `entries` and to two of those, and
+what its sides have is said the same way: `Db.Schema.qualified` is a column of a table under the
 name a source gives it, so `c.car_number` and `l1.elapsed_ms` are declared
 columns read and compared as that source's, and the join's `ON` is a comparison
 of two of them rather than text. What a `LEFT JOIN` does to the far side is
@@ -362,10 +451,9 @@ paying for the same split.
   does not, so a change that raises that number is the one to look at. What
   sets it is `Motorsport.Wec.decoder`, whose sixteen fields are a curried
   lambda, a record literal and a pipeline apiece: stubbing it out takes the
-  build under 576k. Splitting `cars` out of `laps` did not move the number, a
-  reading of many columns being the runner-up rather than the ceiling, and it
-  is one of the reasons `Db.Laps.selection` is a record extended a field at
-  a time.
+  build under 576k. A reading of many columns is the runner-up rather than the
+  ceiling, which is one of the reasons `Db.Laps.selection` is a record extended
+  a field at a time.
 - **The database** — a test drives JDBC rather than a handler standing in for
   it, against the in-memory database `Round.TestSupport.url` names: a
   connection of its own per test, so what one loads is never the archive a

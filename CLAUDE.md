@@ -11,7 +11,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/flix`** — written in Flix, and two things rather than one: the CLI that
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
-  the `laps` and `cars` tables, and the `SqlRead` / `SqlWrite` / `DbErr`
+  the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
   effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`.
 
 There is no manifest at the repository root; the flake is what ties the three
@@ -47,8 +47,8 @@ prefixes, and which one says what is being run rather than what is being built:
 
 `.#cli-run` takes the directory holding the season directories and converts
 every round `Motorsport.Calendar` lists, in two stages: the CSV goes into the
-`laps` and `cars` tables, and a round's summary `.json`, its laps `.jsonl` one
-lap per line, and `index.json` beside them are written back out of the rows.
+tables, and a round's summary `.json`, its laps `.jsonl` one lap per line, and
+`index.json` beside them are written back out of the rows.
 **A new round is added to `Motorsport.Calendar` first** — the run converts
 nothing the calendar does not list, reports any CSV no round names, and fails
 any round whose CSV is missing.
@@ -59,7 +59,7 @@ round on the calendar answers to fails the run before anything is written.
 
 **A checkout holds the CSV, the calendar and one round's files.** 2025's Le
 Mans is kept, so the VRT and a dev server work with nothing run first. The
-other thirteen are 44MB the rows already say, so they are ignored rather than
+other thirteen are 49MB the rows already say, so they are ignored rather than
 committed, and `.#tauri-build` is the one command that writes them — a bundle
 carries the files it opens, and nothing else needs all of them at once. A round
 left unwritten is quiet: the dev server answers `/api` for it with a 502, and a
@@ -73,8 +73,8 @@ export** rather than being written out as a race that never ran — the rows rea
 back as one, which is the one thing they cannot say for themselves — and the
 files it would have replaced are left alone. `/api` answers such a round with a
 404 for the same reason, off the same reading: `Round.loaded` is where the two
-of them ask, and it asks both tables — a round with laps and no cars is half in
-the database rather than loaded.
+of them ask, and it asks `laps` and `cars` — a round with laps and no cars is
+half in the database rather than loaded.
 
 Both stages compute in SQLite, and so does the server, so all three need one:
 `--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made
@@ -91,7 +91,7 @@ is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL
 the app asks for before it knows anything — is reached only by a bundle with
 nothing listening on `/api`. Such a bundle opens whichever rounds were written
 before it was built, which is why `.#tauri-build` converts every one of them
-first: all fourteen come to 69MB of files and 3MiB in the `.app`, since Tauri
+first: all fourteen come to 74MB of files and 3MiB in the `.app`, since Tauri
 compresses what it embeds. A round the run did not write fails there rather than 404ing —
 Tauri's asset resolver answers a path it does not know with `index.html`, so it
 decodes HTML. A bundle behind a server
@@ -147,7 +147,9 @@ also once, and a round waits on it as it waits on the calendar. That file is
 written by hand and no compiler reads it, so a mistake in it shows as cars drawn
 by their numbers rather than as a build that fails. Unlike an unlisted round, an
 unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
-takes a colour from its number.
+takes a colour from its number. What the feed spells is
+`SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
+them the file has no row for is one query rather than a reading of the cars.
 
 ### The shadcn components
 
@@ -282,9 +284,8 @@ moment of it).
 ### The Flix side
 
 `flix/README.md` is the other half of the trip: the server that answers `/api`,
-the `laps` and `cars` tables it reads a round out of, and the `SqlRead` /
-`SqlWrite` / `DbErr` effects and `Sql` query builder the two stages reach it
-through.
+the tables it reads a round out of, and the `SqlRead` / `SqlWrite` / `DbErr`
+effects and `Sql` query builder the two stages reach it through.
 
 ## Comments and documentation
 

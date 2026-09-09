@@ -1,7 +1,12 @@
 mod Cli.Load {
 
+    use Db.CarDrivers
     use Db.Cars
+    use Db.Drivers
+    use Db.Entries
     use Db.Laps
+    use Db.Rounds
+    use Db.Rounds.RoundRow
 
     use Sys.Console
     use Util.Files
@@ -17,13 +22,24 @@ mod Cli.Load {
 
     type alias RunSummary = {
         processed = Int32,
-        errors    = Int32
+        errors    = Int32,
+        numbered  = Numbered
+    }
+
+    /// What a run has numbered so far. A run walks the rounds one at a time
+    /// and both a driver and an entry turn up in several, so what numbers them
+    /// is carried between rounds rather than read back between them.
+    type alias Numbered = {
+        drivers = Drivers.Numbering,
+        entries = Entries.Numbering
     }
 
     /// What the round put in each table, which is what the database took
     /// rather than what the file decoded to.
     type alias Loaded = {
+        entries = Int32,
         cars = Int32,
+        seats = Int32,
         laps = Int32
     }
 
@@ -33,8 +49,8 @@ mod Cli.Load {
     /// beside it are still committed.
     pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
         let rebuild = Db.runWithError(() -> Db.transact(() -> {
-            createTables();
-            convertRounds(root)
+            let rounds = createTables();
+            convertRounds(root, rounds)
         }));
         match rebuild {
             case Err(e) =>
@@ -46,26 +62,39 @@ mod Cli.Load {
 
     /// Belongs before the first round: a schema this database will not take
     /// would otherwise be reported once per round, in the same words.
-    def createTables(): Unit \ DbWrite =
+    ///
+    /// `rounds` is written here rather than per round, since what the other
+    /// two carry of a round is an id out of it. The rows come back because
+    /// that id is read off them: the reader looks it up in the table, and the
+    /// load has nothing to look it up with until the table is written.
+    def createTables(): List[RoundRow] \ DbWrite =
+        let rounds = Rounds.create(Motorsport.Calendar.entries());
+        Drivers.create();
+        CarDrivers.create();
+        Entries.create();
         Cars.create();
-        Laps.create()
+        Laps.create();
+        rounds
 
     /// The calendar is the worklist, so a run converts the rounds it holds and
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
+    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, SqlRead, SqlWrite} =
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
-            (acc, task) -> match processFile(task) {
-                case Ok(loaded) =>
-                    Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps, ${loaded#cars} cars loaded");
-                    { processed = acc#processed + 1 | acc }
-                case Err(e) =>
+            (acc, task) -> match processFile(rounds, acc#numbered, task) {
+                case (Ok(loaded), numbered) =>
+                    Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps,"
+                        + " ${loaded#cars} cars, ${loaded#seats} seats,"
+                        + " ${loaded#entries} entries loaded");
+                    { processed = acc#processed + 1, numbered = numbered | acc }
+                case (Err(e), numbered) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
-                    { errors = acc#errors + 1 | acc }
+                    { errors = acc#errors + 1, numbered = numbered | acc }
             },
-            { processed = 0, errors = 0 },
+            { processed = 0, errors = 0,
+              numbered = { drivers = Drivers.noneNumbered(), entries = Entries.noneNumbered() } },
             tasks
         );
         reportUnlistedCsvFiles(root, tasks);
@@ -85,34 +114,98 @@ mod Cli.Load {
                     )
         }
 
-    def processFile(task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, SqlRead, SqlWrite} =
-        CsvInput.read(task#inputPath)
-            |> Result.flatMap(decode(task))
-            |> Result.flatMap(reportCarDisagreements(task))
-            |> Result.flatMap(rawLaps ->
-                Db.runWithError(() -> reportViolations(task, load(task, rawLaps)))
-                    |> Result.mapErr(CliError.Database))
+    /// The round's rows land together or not at all, and the numbering
+    /// follows them: a round that failed leaves no rows, so the names it took
+    /// numbers for are free again and the next round numbers them itself.
+    ///
+    /// Advancing the numbering past a round that failed would leave a name
+    /// numbered and unwritten, and every later round would then commit an id
+    /// with no row behind it.
+    def processFile(
+        rounds: List[RoundRow],
+        numbering: Numbered,
+        task: FileTask.FileTask
+    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, SqlRead, SqlWrite} =
+        match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
+            case Err(e) => (Err(e), numbering)
+            case Ok(rawLaps) =>
+                reportDisagreements(task, rawLaps);
+                let seats = CarDrivers.seats(rawLaps);
+                let (drivers, newDrivers) =
+                    Drivers.add(numbering#drivers, seats |> List.map(s -> s#name));
+                let (entries, newEntries, differing) = Entries.add(
+                    numbering#entries, task#entry#season, CarRow.firstMentions(rawLaps));
+                reportEntryDisagreements(task, differing);
+                let numbered = { drivers = drivers, entries = entries };
+                let outcome = Db.runWithError(() -> Db.atomically("round", () -> reportViolations(
+                        task, load(rounds, numbered, newDrivers, newEntries, seats, task, rawLaps))))
+                    |> Result.mapErr(CliError.Database);
+                (outcome, if (Result.isOk(outcome)) numbered else numbering)
+        }
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
-    /// `Db.CarRow` keeps a car's first description and the second reaches no
-    /// column, so a file that describes one car two ways is said here or
-    /// nowhere. It is a reading of the file rather than of the rows, which is
-    /// why it is a stage of its own before the one that sends them.
-    def reportCarDisagreements(task: FileTask.FileTask): List[RawLap] -> Result[CliError, List[RawLap]] \ Console =
-        rawLaps -> {
-            CarRow.disagreements(rawLaps)
-                |> List.forEach(d -> Console.eprintln(
-                    "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
-                        + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""));
-            Ok(rawLaps)
+    /// `Db.CarRow` and `Db.CarDrivers` each keep a first mention and the
+    /// second reaches no column, so a file that describes one car -- or names
+    /// one seat -- two ways is said here or nowhere. It is a reading of the
+    /// file rather than of the rows, which is why it comes before the stage
+    /// that sends them.
+    def reportDisagreements(task: FileTask.FileTask, rawLaps: List[RawLap]): Unit \ Console =
+        CarRow.disagreements(rawLaps)
+            |> List.forEach(d -> Console.eprintln(
+                "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
+                    + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""));
+        CarDrivers.disagreements(rawLaps)
+            |> List.forEach(d -> Console.eprintln(
+                "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] seat-${d#driverNumber}: "
+                    + "kept=\"${d#kept}\" found=\"${d#found}\""))
+
+    /// The worklist and `rounds` are both the calendar, so a task with no row
+    /// is a run that wrote the two from different lists; a seat whose name the
+    /// same run did not number is the same fault a step later.
+    def load(
+        rounds: List[RoundRow],
+        numbering: Numbered,
+        newDrivers: List[Drivers.DriverRow],
+        newEntries: List[Entries.EntryRow],
+        seats: List[CarDrivers.Seat],
+        task: FileTask.FileTask,
+        rawLaps: List[RawLap]
+    ): Loaded \ DbWrite =
+        match Rounds.idIn(rounds, task#entry) {
+            case None => DbErr.fail(Db.Error.Incomplete(
+                "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
+            case Some(roundId) =>
+                discard Drivers.insertRows(newDrivers);
+                let entries = Entries.insertRows(newEntries);
+                match CarDrivers.fromSeats(roundId, numbering#drivers, seats) {
+                    case None => DbErr.fail(Db.Error.Incomplete(
+                        "round ${FileTask.label(task)} names a driver the run did not number"))
+                    case Some(seatRows) =>
+                        let seatCount = CarDrivers.insertRows(seatRows);
+                        match CarRow.fromRawLaps(
+                                roundId, task#entry#season, numbering#entries, rawLaps) {
+                            case None => DbErr.fail(Db.Error.Incomplete(
+                                "round ${FileTask.label(task)} names a car the run did not number"))
+                            case Some(carRows) =>
+                                let cars = Cars.insertRows(carRows);
+                                let laps = Laps.insertRows(LapRow.fromRawLaps(roundId, rawLaps));
+                                { entries = entries, cars = cars, seats = seatCount, laps = laps }
+                        }
+                }
         }
 
-    def load(task: FileTask.FileTask, rawLaps: List[RawLap]): Loaded \ DbWrite =
-        let cars = Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
-        let laps = Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps));
-        { cars = cars, laps = laps }
+    /// As `reportDisagreements`, across the rounds of one season rather than
+    /// within one round: the first round to name an entry describes it, and a
+    /// later round describing it otherwise reaches no column.
+    def reportEntryDisagreements(
+        task: FileTask.FileTask,
+        differing: List[Entries.Disagreement]
+    ): Unit \ Console =
+        differing |> List.forEach(d -> Console.eprintln(
+            "${task#entry#id}: [car ${d#carNumber}] season-${d#season} entry: "
+                + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""))
 
     def reportViolations(task: FileTask.FileTask, loaded: Loaded): Loaded \ {Console, DbRead} =
         Validation.validate(task#entry) |> List.forEach(Console.eprintln);

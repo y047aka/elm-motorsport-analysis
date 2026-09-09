@@ -124,19 +124,20 @@ mod Cli.Load.Validation {
                 Violation.ElapsedDrift(lap, duration(expected), duration(actual)))
             |> Sql.selectAll
 
+    def offset(): String = Schema.nameOf(Laps.hourOffsetMs())
+
     def hourOffsetViolations(entry: Entry): List[Violation] \ DbRead =
         Sql.rows(Sql.raw("o"))
             |> Sql.using(Sql.frags(
-                Sql.raw("o AS (SELECT car_number, lap_number, source_row, "
-                    + Laps.hourOffset() + " AS off,"
-                    + " FIRST_VALUE(" + Laps.hourOffset() + ") OVER (ORDER BY source_row) AS base"
+                Sql.raw("o AS (SELECT car_number, lap_number, source_row, ${offset()},"
+                    + " FIRST_VALUE(${offset()}) OVER (ORDER BY source_row) AS base"
                     + " FROM " + Laps.table() + " WHERE") ::
                 where_(entry, Nil) ::
                 Sql.raw(")") :: Nil
             ))
-            |> Sql.filter(_ -> Sql.ne(Sql.column("off"), Sql.column("base")))
+            |> Sql.filter(_ -> Sql.ne(Schema.exprOf(Laps.hourOffsetMs()), Sql.column("base")))
             |> Sql.orderBy(Sql.raw("source_row") :: Nil)
-            |> Sql.map(_ -> (lapOf(), Sql.int("base"), Sql.int("off")))
+            |> Sql.map(_ -> (lapOf(), Sql.int("base"), Laps.hourOffsetMs()))
             |> Sql.reading(match (lap, base, actual) ->
                 Violation.HourElapsedOffset(lap, base, actual))
             |> Sql.selectAll

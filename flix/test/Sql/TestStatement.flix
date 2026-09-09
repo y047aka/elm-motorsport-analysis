@@ -21,7 +21,8 @@ mod Sql.TestStatement {
     @Test
     def aTableDeclaresItsColumnsAndThenItsKeys(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.createTable("laps", columns(), Key.Primary(round_() :: lapNumber() :: Nil) :: Nil)
+            Sql.createTable("laps", columns(), Key.Primary(round_() :: lapNumber() :: Nil) :: Nil,
+                    Sql.Storage.Rowid)
                 == String.unlines(
                     "CREATE TABLE laps (" ::
                     "  round text not null," ::
@@ -30,11 +31,32 @@ mod Sql.TestStatement {
                 ) + ")"
         )
 
+    /// The rows in the primary key's own tree rather than in one of SQLite's.
+    @Test
+    def aTableMaySayWhereItsRowsLive(): Unit \ Assert =
+        Assert.assertTrue(
+            String.endsWith(
+                {suffix = "  PRIMARY KEY (round)\n) WITHOUT ROWID"},
+                Sql.createTable("laps", columns(), Key.Primary(round_() :: Nil) :: Nil,
+                    Sql.Storage.WithoutRowid)
+            )
+        )
+
     @Test
     def aTableTakesAsManyKeysAsItDeclares(): Unit \ Assert =
         let ddl = Sql.createTable("laps", columns(),
-            Key.Primary(round_() :: Nil) :: Key.Unique(lapNumber() :: Nil) :: Nil);
+            Key.Primary(round_() :: Nil) :: Key.Unique(lapNumber() :: Nil) :: Nil,
+            Sql.Storage.Rowid);
         Assert.assertTrue(String.contains({substr = "  PRIMARY KEY (round),\n  UNIQUE (lap_number)\n)"}, ddl))
+
+    /// Named for the table and the columns, so two indexes of one table are
+    /// two names.
+    @Test
+    def anIndexIsNamedForWhatItIsOver(): Unit \ Assert =
+        Assert.assertTrue(
+            Sql.createIndex("laps_round", "laps", columns())
+                == "CREATE INDEX laps_round ON laps (round, lap_number)"
+        )
 
     @Test
     def droppingATableThatIsNotThereIsNotAnError(): Unit \ Assert =

@@ -15,7 +15,7 @@ mod Round.TestIndex {
     def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
 
     def indexOf(laps: List[RawLap]): Motorsport.Index.Index \ IO =
-        TestSupport.onRound(entry(), laps, () -> Index.read(entry()))
+        TestSupport.onRound(entry(), laps, () -> Index.read(entry(), Round.Drivers.read(entry())))
 
     def changesOf(record: Record, laps: List[RawLap]): List[Change] \ IO =
         Motorsport.Index.changesOf(record, indexOf(laps))

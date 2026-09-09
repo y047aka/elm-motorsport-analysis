@@ -71,7 +71,12 @@ mod Sql {
     /// table expression makes up, and what no combinator here builds. Its type
     /// is the caller's word.
     pub def column(name: String): Expr[a] =
-        Expr.Expr(raw(name))
+        written(raw(name))
+
+    /// An expression the caller wrote out, values and all -- a scalar subquery,
+    /// say. As `column`, its type is the caller's word.
+    pub def written(fragment: Frag): Expr[a] =
+        Expr.Expr(fragment)
 
     pub def i32(value: Int32): Expr[Int32] =
         Expr.Expr(Frag.Frag("?", Value.Integer(value) :: Nil))
@@ -122,6 +127,9 @@ mod Sql {
 
     pub def text(expr: String): Sel[String] =
         cell(raw(expr), (name, c) -> c |> Option.toOk(Error.Unread("column `${name}` was null")))
+
+    pub def optionalText(expr: String): Sel[Option[String]] =
+        cell(raw(expr), (_, c) -> Ok(c))
 
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
@@ -399,6 +407,24 @@ mod Sql {
         case Unique(List[c])
     }
 
+    /// Where a table's rows live. SQLite's default keeps them in a tree of an
+    /// integer of its own and a declared primary key in a second tree over
+    /// them; `WithoutRowid` keeps them in the primary key's own tree, and so
+    /// needs the table to declare one.
+    pub enum Storage {
+        case Rowid
+        case WithoutRowid
+    }
+
+    /// The key over the columns as another view of them has them -- the
+    /// schema's, where a column is its name and the type it takes and a
+    /// computed one is too.
+    pub def mapKey(f: c -> d \ ef, key: Key[c]): Key[d] \ ef =
+        match key {
+            case Key.Primary(over) => Key.Primary(List.map(f, over))
+            case Key.Unique(over)  => Key.Unique(List.map(f, over))
+        }
+
     pub def dropTableIfExists(table: String): String =
         "DROP TABLE IF EXISTS " + table
 
@@ -408,7 +434,8 @@ mod Sql {
     pub def createTable(
         table: String,
         columns: List[{name = String, sqlType = String | r}],
-        keys: List[Key[{name = String, sqlType = String | r}]]
+        keys: List[Key[{name = String, sqlType = String | r}]],
+        storage: Storage
     ): String =
         let declared = List.append(
             columns |> List.map(c -> "${c#name} ${c#sqlType}"),
@@ -416,7 +443,22 @@ mod Sql {
         );
         "CREATE TABLE " + table + " (\n"
             + (declared |> List.map(d -> "  ${d}") |> List.join(",\n"))
-            + "\n)"
+            + "\n)" + storageText(storage)
+
+    /// A tree over columns the key does not lead with, which is the only way
+    /// a query reaching rows by them does not read the table through.
+    pub def createIndex(
+        name: String,
+        table: String,
+        over: List[{name = String | r}]
+    ): String =
+        "CREATE INDEX " + name + " ON " + table + " (" + names(over) + ")"
+
+    def storageText(storage: Storage): String =
+        match storage {
+            case Storage.Rowid        => ""
+            case Storage.WithoutRowid => " WITHOUT ROWID"
+        }
 
     def keyText(key: Key[{name = String | r}]): String =
         match key {

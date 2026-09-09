@@ -5,7 +5,7 @@ mod Round.Render {
     use Motorsport.Index
     use Motorsport.Metadata
     use Motorsport.Wec
-    use Motorsport.Wec.RawLap
+    use Round.Laps.Placed
 
     /// The round's summary and the indices read off the same rows, written as
     /// one document.
@@ -19,9 +19,16 @@ mod Round.Render {
             case other => other
         }
 
-    pub def renderJsonl(rawLaps: List[RawLap]): String =
-        rawLaps
-            |> List.map(rawLap -> "${Extra.renderOnOneLine(Wec.toJson(rawLap))}\n")
+    pub def renderJsonl(laps: List[Placed]): String =
+        laps
+            |> List.map(lap -> "${Extra.renderOnOneLine(withPosition(Wec.toJson(lap#lap), lap#position))}\n")
             |> List.join("")
+
+    def withPosition(lap: JsonValue, position: Int32): JsonValue =
+        match lap {
+            case JsonValue.JsonObject(fields) =>
+                JsonValue.JsonObject(List.append(fields, ("position", JsonValue.JsonInt(position)) :: Nil))
+            case other => other
+        }
 
 }

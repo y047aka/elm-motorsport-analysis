@@ -344,6 +344,11 @@ mod Motorsport.Wec {
     def boxToString(b: Bool): String =
         if (b) "B" else ""
 
+    /// Every flag there is, which `flagToString` renders and the `laps`
+    /// column is checked against.
+    pub def flags(): List[Flag] =
+        Flag.Green :: Flag.SlowZone :: Flag.FullCourseYellow :: Flag.Finish :: Flag.Red :: Nil
+
     pub def flagToString(flag: Flag): String =
         match flag {
             case Flag.Green            => "GF"

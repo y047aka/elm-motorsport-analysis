@@ -1,30 +1,38 @@
 mod Db.CarRow {
 
-    use Motorsport.Calendar.Entry
+    use Db.Entries
+    use Db.Entries.Numbering
     use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
 
-    /// One car of one round, which is what the feed repeats on every lap that
-    /// car ran: no round in the archive names a car twice, so the file's first
-    /// mention of one is the whole of what it says about it.
+    /// One car of one round: which of the season's entries ran it. What the
+    /// feed repeats on every lap of that car is `Db.Entries`, which the
+    /// archive bears out -- no round in it names a car twice, so the file's
+    /// first mention of one is the whole of what it says about it.
     pub type alias CarRow = {
-        season = Int32,
-        round = String,
+        roundId = Int32,
         carNumber = String,
-        class = String,
-        carGroup = String,
-        team = String,
-        manufacturer = String
+        entryId = Int32
     }
 
     /// The cars the round's laps name, in the order the file first mentioned
-    /// each. A car the file later contradicts itself about keeps what it was
-    /// first said to be, which is the same reading the starting grid is
-    /// ordered by, and `disagreements` is where the contradiction is said.
-    pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[CarRow] =
-        firstMentions(rawLaps) |> List.map(car -> fromRawCar(entry, car))
+    /// each, or nothing where one of them is an entry the run did not number.
+    pub def fromRawLaps(
+        roundId: Int32,
+        season: Int32,
+        numbering: Numbering,
+        rawLaps: List[RawLap]
+    ): Option[List[CarRow]] =
+        firstMentions(rawLaps)
+            |> List.map(car -> Entries.idIn(numbering, season, car#carNumber)
+                |> Option.map(entryId ->
+                    { roundId = roundId, carNumber = car#carNumber, entryId = entryId }))
+            |> List.sequence
 
-    def firstMentions(rawLaps: List[RawLap]): List[RawCar] =
+    /// The cars the round names, each as the file first described it. `pub`
+    /// reaches the load, which numbers the teams and manufacturers off them
+    /// before the rows that name those ids are built.
+    pub def firstMentions(rawLaps: List[RawLap]): List[RawCar] =
         let gathered = List.foldLeft((acc, rawLap) -> {
             let number = rawLap#car#carNumber;
             if (Set.memberOf(number, acc#seen))
@@ -89,25 +97,5 @@ mod Db.CarRow {
             ("team", kept#team, found#team) ::
             ("manufacturer", kept#manufacturer, found#manufacturer) :: Nil;
         fields |> List.filter(match (_, was, now) -> was != now)
-
-    pub def fromRawCar(entry: Entry, car: RawCar): CarRow =
-        {
-            season = entry#season,
-            round = entry#id,
-            carNumber = car#carNumber,
-            class = car#class,
-            carGroup = car#group,
-            team = car#team,
-            manufacturer = car#manufacturer
-        }
-
-    pub def toRawCar(row: CarRow): RawCar =
-        {
-            carNumber    = row#carNumber,
-            class        = row#class,
-            group        = row#carGroup,
-            team         = row#team,
-            manufacturer = row#manufacturer
-        }
 
 }

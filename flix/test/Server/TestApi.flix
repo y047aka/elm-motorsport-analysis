@@ -122,17 +122,26 @@ mod Server.TestApi {
         match served(laps) {
             case (summary, lapsBody, exported) =>
                 Assert.assertTrue(summary#status == 200);
-                Assert.assertTrue(summary#body == exported);
+                Assert.assertTrue(summary#body == exported#summary);
                 Assert.assertTrue(String.contains({substr = "\"index\""}, summary#body));
                 Assert.assertTrue(lapsBody#status == 200);
-                Assert.assertTrue(lapsBody#body == Render.renderJsonl(laps))
+                Assert.assertTrue(lapsBody#body == exported#laps)
         }
 
-    def served(laps: List[RawLap]): (Response, Response, String) \ IO =
+    /// The two answers and, beside them, what `Cli.Export` would have written
+    /// off the same rows -- rendered in the same run, a lap's place in the
+    /// field being a reading of the round rather than of the laps in hand.
+    def served(laps: List[RawLap]): (Response, Response, {summary = String, laps = String}) \ IO =
         TestSupport.onRound(fuji(), laps, () -> (
             Api.respond(Route.Summary(2025, "fuji_6h")),
             Api.respond(Route.Laps(2025, "fuji_6h")),
-            Render.renderSummary(Summary.read(fuji()), Index.read(fuji()))
+            {
+                summary = Render.renderSummary(
+                    Summary.read(fuji(), Round.Drivers.read(fuji())),
+                    Index.read(fuji(), Round.Drivers.read(fuji()))
+                ),
+                laps    = Render.renderJsonl(Round.Laps.read(fuji(), Round.Drivers.read(fuji())))
+            }
         ))
 
     /// A round the calendar lists and the rows hold none of. Answered out of

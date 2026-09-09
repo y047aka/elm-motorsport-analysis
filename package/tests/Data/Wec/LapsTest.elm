@@ -40,6 +40,13 @@ suite =
                     Laps.fromJsonl twoLaps
                         |> Result.map List.length
                         |> Expect.equal (Ok 2)
+            , test "fails a lap that arrives with no place in the field" <|
+                \_ ->
+                    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
+"""
+                        |> Laps.fromJsonl
+                        |> Result.mapError (String.left 8)
+                        |> Expect.equal (Err "line 1: ")
             , test "names the line a bad lap is on" <|
                 \_ ->
                     (twoLaps ++ """{"carNumber":"1"}\n""")
@@ -121,14 +128,14 @@ suite =
                                 |> List.map .best
                     in
                     Expect.equal [ Just 100000, Just 95000, Just 95000 ] bests
-            , test "assigns 0-based position by elapsed within each lap number" <|
+            , test "carries the place in the field each lap arrives with" <|
                 \_ ->
                     let
                         rawLaps =
-                            [ rawLap "1" 1 100000 100000
-                            , rawLap "2" 1 95000 95000
-                            , rawLap "1" 2 100000 200000
-                            , rawLap "2" 2 95000 190000
+                            [ rawLapAt 1 "1" 1 100000 100000
+                            , rawLapAt 0 "2" 1 95000 95000
+                            , rawLapAt 1 "1" 2 100000 200000
+                            , rawLapAt 0 "2" 2 95000 190000
                             ]
 
                         positionsByCar =
@@ -162,6 +169,7 @@ suite =
                             , { carNumber = "1"
                               , driverName = "D"
                               , lapNumber = 2
+                              , position = 0
                               , lapTime = 100000
                               , sectors = Sector.initialize (always Nothing)
                               , miniSectors = Nothing
@@ -186,8 +194,8 @@ suite =
 
 twoLaps : String
 twoLaps =
-    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
-{"carNumber":"1","lapNumber":2,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
+{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
 """
 
 
@@ -196,7 +204,7 @@ own time, and the running total from the line that places it.
 -}
 lapWithMiniSectors : String
 lapWithMiniSectors =
-    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","pitTime":""}
 """
 
 
@@ -205,7 +213,7 @@ lapWithMiniSectors =
 -}
 lapMissingAMiniSector : String
 lapMissingAMiniSector =
-    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","pitTime":""}
 """
 
 
@@ -214,7 +222,7 @@ and its mini-sectors all the same. Its SCL2 is quicker than any real one here.
 -}
 lapWithoutALapTime : String
 lapWithoutALapTime =
-    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","pitTime":""}
 """
 
 
@@ -222,7 +230,7 @@ lapWithoutALapTime =
 -}
 slowerSecondLap : String
 slowerSecondLap =
-    """{"carNumber":"1","lapNumber":2,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","pitTime":""}
+    """{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","pitTime":""}
 """
 
 
@@ -231,12 +239,24 @@ rawLap carNumber lapNumber lapTime elapsed =
     { carNumber = carNumber
     , driverName = "D"
     , lapNumber = lapNumber
+    , position = 0
     , lapTime = lapTime
     , sectors = Sector.initialize (always Nothing)
     , miniSectors = Nothing
     , elapsed = Instant.fromDuration elapsed
     , pitTime = Nothing
     }
+
+
+{-| The same lap, at a named place in the field.
+-}
+rawLapAt : Int -> String -> Int -> Int -> Int -> RawLap
+rawLapAt position carNumber lapNumber lapTime elapsed =
+    let
+        lap =
+            rawLap carNumber lapNumber lapTime elapsed
+    in
+    { lap | position = position }
 
 
 placeholderCars : List String -> List Car

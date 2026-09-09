@@ -14,5 +14,6 @@ VerifyExamples
 # Generated CSS
 app/public/style.css
 
-# Generated benchmark fixture (run `nix run .#benchmark`)
+# Generated benchmark fixtures (run `nix run .#benchmark`)
 package/benchmark/Fixture/Generated.elm
+package/benchmark/Fixture/Positions.elm

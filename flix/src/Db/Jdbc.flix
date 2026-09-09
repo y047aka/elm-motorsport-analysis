@@ -209,6 +209,10 @@ mod Db.Jdbc {
             case Value.Text(s)    => pstmt.setString(index, s)
             case Value.Integer(n) => pstmt.setInt(index, n)
             case Value.Boolean(b) => pstmt.setBoolean(index, b)
+            case Value.NullableText(o) => match o {
+                case Some(s) => pstmt.setString(index, s)
+                case None    => pstmt.setNull(index, Types.VARCHAR)
+            }
             case Value.NullableInteger(o) => match o {
                 case Some(n) => pstmt.setInt(index, n)
                 case None    => pstmt.setNull(index, Types.INTEGER)
