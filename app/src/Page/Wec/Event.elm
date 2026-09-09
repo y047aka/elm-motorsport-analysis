@@ -8,15 +8,16 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
-import DataView
-import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
-import Html exposing (Html, a, button, div, main_, nav, text)
+import Html exposing (Html, a, button, div, li, main_, nav, span, text, ul)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
+import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
+import Motorsport.Instant as Instant
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard
@@ -32,7 +33,6 @@ import UI.Shadcn.Card as Card
 import View exposing (View)
 import View.CarDetail as CarDetail
 import View.PlaybackControls as PlaybackControls
-import View.RaceEvents as RaceEvents
 
 
 
@@ -42,7 +42,6 @@ import View.RaceEvents as RaceEvents
 type alias Model =
     { mode : Mode
     , leaderboardState : Leaderboard.Model
-    , eventsState : DataView.Model
     , query : String
     , stripOffset : Int
     , detailCarNumber : Maybe String
@@ -53,23 +52,12 @@ type alias Model =
 type Mode
     = Default
     | Tracker
-    | Events
 
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { mode = Default
       , leaderboardState = Leaderboard.init
-      , eventsState =
-            DataView.init "Time"
-                (DataView.Options.defaultOptions
-                    |> (\options_ ->
-                            { options_
-                                | selecting = NoSelecting
-                                , pagination = NoPagination
-                            }
-                       )
-                )
       , query = ""
       , stripOffset = 0
       , detailCarNumber = Nothing
@@ -89,7 +77,6 @@ type Msg
     | ModeChange Mode
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | EventsMsg DataView.Msg
     | StripScrollTo Int
     | ToggleDetailCar String
     | SelectDetailChart CompareWidget.Chart
@@ -112,11 +99,6 @@ update msg m =
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
-            , Effect.none
-            )
-
-        EventsMsg eventsMsg ->
-            ( { m | eventsState = DataView.update eventsMsg m.eventsState }
             , Effect.none
             )
 
@@ -174,15 +156,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just race ->
-                    case m.mode of
-                        Default ->
-                            trackerView race.track race.snapshot m
-
-                        Tracker ->
-                            trackerView race.track race.snapshot m
-
-                        Events ->
-                            RaceEvents.view EventsMsg m.eventsState race.replay
+                    trackerView race.track race.snapshot race.replay m
             ]
         ]
     }
@@ -222,8 +196,8 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
-trackerView track snapshot m =
+trackerView : TrackerChart.Track -> Snapshot -> Replay.Model -> Model -> Html Msg
+trackerView track snapshot replay m =
     let
         layout =
             case m.mode of
@@ -284,7 +258,7 @@ trackerView track snapshot m =
                         ]
                     ]
                 ]
-            , sparePanel "col-start-3 row-start-2"
+            , timelinePanel "col-start-3 row-start-2" replay
             , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
                 [ SelectedCarsStrip.view
                     { offset = m.stripOffset
@@ -303,14 +277,67 @@ trackerView track snapshot m =
         ]
 
 
-sparePanel : String -> Html Msg
-sparePanel cell =
+{-| Timeline events that have occurred so far, oldest first: when each happened
+and what kind of thing it was.
+-}
+timelinePanel : String -> Replay.Model -> Html Msg
+timelinePanel cell replay =
+    let
+        currentElapsed =
+            Clock.getElapsed replay.playback
+
+        occurredEvents =
+            replay.race.timelineEvents
+                |> List.filter (\event -> Instant.compare event.elapsed currentElapsed /= GT)
+    in
     button
         [ attribute "popovertarget" standingsPopoverId
         , attribute "popovertargetaction" "show"
-        , Attributes.class (cell ++ " grid cursor-pointer text-left")
+        , Attributes.class (cell ++ " grid min-h-0 cursor-pointer text-left")
         ]
-        [ Card.card [] [] ]
+        [ Card.card []
+            [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+                [ Card.content []
+                    [ ul [ Attributes.class "flex flex-col gap-1 text-xs" ]
+                        (List.map eventRow occurredEvents)
+                    ]
+                ]
+            ]
+        ]
+
+
+eventRow : TimelineEvent -> Html Msg
+eventRow event =
+    li [ Attributes.class "flex items-baseline justify-between gap-2" ]
+        [ span [ Attributes.class "shrink-0 tabular-nums text-muted-foreground" ]
+            [ text (Instant.toString event.elapsed) ]
+        , span [] [ text (eventTypeToString event.eventType) ]
+        ]
+
+
+eventTypeToString : EventType -> String
+eventTypeToString eventType =
+    case eventType of
+        RaceStart ->
+            "Race Started"
+
+        CarEvent _ Start ->
+            "Start"
+
+        CarEvent _ TookLead ->
+            "Took the Lead"
+
+        CarEvent _ (PitIn _) ->
+            "Pit In"
+
+        CarEvent _ (PitOut _) ->
+            "Pit Out"
+
+        CarEvent _ Retirement ->
+            "Retirement"
+
+        CarEvent _ Checkered ->
+            "Checkered Flag"
 
 
 leaderboardConfig : Leaderboard.Config CarAt Msg
@@ -411,7 +438,6 @@ viewModeSelector currentMode =
     div [ Attributes.class "inline-flex" ]
         [ modeButton "Default" Default (currentMode == Default)
         , modeButton "Tracker" Tracker (currentMode == Tracker)
-        , modeButton "Events" Events (currentMode == Events)
         ]
 
 
