@@ -15,9 +15,7 @@ and a lap in progress.
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Fixture.Generated as Fixture
-import Motorsport.Circuit as Circuit
-import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Race as Race exposing (Race)
+import Motorsport.Instant as Instant
 import Motorsport.Race.Snapshot as Snapshot
 
 
@@ -29,17 +27,13 @@ main =
 suite : Benchmark
 suite =
     let
-        -- Indices and all, built once as the real race is.
-        race =
-            Race.fromCars Circuit.clockwise Fixture.cars
-
         clock =
             { elapsed =
-                Instant.toDuration race.timeLimit
+                Instant.toDuration Fixture.race.timeLimit
                     // 2
                     |> Instant.fromDuration
             }
     in
     describe "one frame of playback"
-        [ Benchmark.benchmark "Snapshot.at" (\_ -> Snapshot.at clock race)
+        [ Benchmark.benchmark "Snapshot.at" (\_ -> Snapshot.at clock Fixture.race)
         ]
