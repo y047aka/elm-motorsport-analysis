@@ -46,8 +46,7 @@ mod Round.TestRender {
 
     def timelineOf(laps: List[RawLap]): String \ IO =
         TestSupport.onRound(leMans(), laps, () ->
-            let metadata = Summary.read(leMans(), Drivers.read(leMans()));
-            Render.renderTimelineJsonl(Timeline.read(leMans(), metadata#race#timeLimit)))
+            Render.renderTimelineJsonl(Timeline.read(leMans())))
 
     /// Read back rather than rendered from the laps in hand: a lap's place in
     /// the field is counted over the round's rows, so the reader is the only

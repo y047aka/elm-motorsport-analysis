@@ -37,7 +37,10 @@ mod Round.Summary {
 
     // ---------------------------------------------------------- particulars
 
-    def particulars(entry: Entry): Metadata.Particulars \ DbRead =
+    /// `pub` reaches the load, which weighs the timeline's terminal events
+    /// against the time limit and has no use for the grid the rest of a
+    /// summary is made of.
+    pub def particulars(entry: Entry): Metadata.Particulars \ DbRead =
         Laps.rows(entry)
             |> Sql.map(_ -> (
                 startedAt(entry),

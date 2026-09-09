@@ -1,5 +1,8 @@
 /// Loading laps as a round of their own, so that what a rule or a summary reads
 /// back can be tested against laps written out by hand.
+///
+/// What it sends is what `Cli.Load` sends, the timeline included: a reader
+/// tested against a round this wrote is tested against the rows a run makes.
 mod Round.TestSupport {
 
     use Db.CarDrivers
@@ -8,6 +11,7 @@ mod Round.TestSupport {
     use Db.Entries
     use Db.Laps
     use Db.Rounds
+    use Db.TimelineEvents
 
     use Db.CarRow
     use Db.Jdbc
@@ -35,6 +39,7 @@ mod Round.TestSupport {
             Entries.create();
             Cars.create();
             Laps.create();
+            TimelineEvents.create();
             let roundId = match Rounds.idIn(rounds, entry) {
                 case Some(id) => id
                 case None     => bug!("the round just written has no row")
@@ -54,6 +59,10 @@ mod Round.TestSupport {
                 case None       => bug!("a car the run just numbered has no id")
             } else ();
             discard Laps.insertRows(LapRow.fromRawLaps(roundId, laps));
+            discard TimelineEvents.insertRows(TimelineEvents.fromEvents(
+                roundId,
+                Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)
+            ));
             read()
         }));
         match outcome {

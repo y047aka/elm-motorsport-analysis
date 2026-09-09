@@ -1,19 +1,42 @@
-/// The round's timeline, read back out of the rows it was loaded into.
+/// The round's timeline, both halves of it: counted out of the laps for the
+/// load to write down, and read back out of the rows it wrote.
 ///
-/// Three readings of the laps: each car's first and last moment, the stops, and
-/// each change of the lead. What they add up to is `Motorsport.Timeline`'s.
+/// The counting is three readings of the laps -- each car's first and last
+/// moment, the stops, and each change of the lead -- and what they add up to is
+/// `Motorsport.Timeline`'s. Only the load counts them: a round written out or
+/// served is read from `timeline_events`, where the weighing is already done.
 mod Round.Timeline {
 
     use Db.Laps
     use Db.Schema
+    use Db.TimelineEvents
+    use Db.TimelineEvents.EventRow
     use Motorsport.Calendar.Entry
     use Motorsport.Timeline
     use Util.Duration.Duration
 
+    /// The round's timeline, in the order the load numbered it.
+    pub def read(entry: Entry): List[Timeline.Event] \ DbRead =
+        TimelineEvents.rows(entry)
+            |> Sql.orderBy(Schema.term(TimelineEvents.columns()#seq) :: Nil)
+            |> Sql.map(_ -> TimelineEvents.selection())
+            |> Sql.selectAll
+            |> List.map(event)
+
+    /// A row that spells no event is a table written by something other than
+    /// `Db.TimelineEvents.fromEvents`, which is the one thing the rows cannot
+    /// say for themselves.
+    def event(r: EventRow): Timeline.Event \ DbErr =
+        match TimelineEvents.toEvent(r) {
+            case Some(e) => e
+            case None    => DbErr.fail(Db.Error.Incomplete(
+                "timeline event ${r#seq} is a \"${r#event}\" carrying nothing that spells one"))
+        }
+
     /// `timeLimit` is `Metadata`'s reading of how far the race was scheduled to
-    /// run -- the one thing here the laps do not say -- so the summary is read
-    /// first and hands it over.
-    pub def read(entry: Entry, timeLimit: Duration): List[Timeline.Event] \ DbRead =
+    /// run -- the one thing here the laps do not say -- so the round's
+    /// particulars are read first and hand it over.
+    pub def fromLaps(entry: Entry, timeLimit: Duration): List[Timeline.Event] \ DbRead =
         Timeline.fromReadings({
             timeLimit = timeLimit,
             cars      = cars(entry),

@@ -14,8 +14,11 @@ mod Round.TestTimeline {
 
     def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
 
+    /// The counting and the weighing, asked of the laps rather than of the rows
+    /// the load wrote: the time limit a test is about is its own, and a load
+    /// derives that one from the laps.
     def timelineOf(timeLimit: String, laps: List[RawLap]): List[Event] \ IO =
-        TestSupport.onRound(entry(), laps, () -> Timeline.read(entry(), duration(timeLimit)))
+        TestSupport.onRound(entry(), laps, () -> Timeline.fromLaps(entry(), duration(timeLimit)))
 
     def duration(s: String): Duration =
         match Util.Duration.fromString(s) {
@@ -44,6 +47,14 @@ mod Round.TestTimeline {
 
     def named(what: String, events: List[Event]): List[(String, String, String)] =
         events |> List.map(shape) |> List.filter(match (_, kind, _) -> kind == what)
+
+    /// `(lap, length)` per half of a stop, which is what only a stop carries.
+    def stops(events: List[Event]): List[(Int32, String)] =
+        events |> List.filterMap(event -> match event#eventType {
+            case EventType.Of(_, CarEvent.PitIn(lap_, length))  => Some((lap_, Util.Duration.format(length)))
+            case EventType.Of(_, CarEvent.PitOut(lap_, length)) => Some((lap_, Util.Duration.format(length)))
+            case _                                              => None
+        })
 
     // ---------------------------------------------------------------- laps
 
@@ -111,12 +122,7 @@ mod Round.TestTimeline {
     def aStopCarriesItsLapAndItsLength(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
             pitLap("7", 4, "3:00.000", "1:10.000") :: Nil);
-        let stops = events |> List.filterMap(event -> match event#eventType {
-            case EventType.Of(_, CarEvent.PitIn(lap_, length))  => Some((lap_, Util.Duration.format(length)))
-            case EventType.Of(_, CarEvent.PitOut(lap_, length)) => Some((lap_, Util.Duration.format(length)))
-            case _                                              => None
-        });
-        Assert.assertTrue(stops == (4, "1:10.000") :: (4, "1:10.000") :: Nil)
+        Assert.assertTrue(stops(events) == (4, "1:10.000") :: (4, "1:10.000") :: Nil)
 
     /// A stop longer than the race was old when it ended went in before the
     /// start, and the start is what it reads back as: a moment before the race
@@ -200,5 +206,52 @@ mod Round.TestTimeline {
             ("2:00.000", "pitIn", "7") ::
             ("2:30.000", "pitOut", "7") ::
             ("2:30.000", "checkered", "7") :: Nil)
+
+
+    // ----------------------------------------------------------------- rows
+
+    /// The timeline the load wrote, and the one it counted to write it.
+    ///
+    /// The laps run past the hour so that the limit a load derives falls inside
+    /// them, which is what puts the flag on one car and a retirement on the
+    /// other: `Motorsport.Metadata` reads the limit as the whole hours the
+    /// round's longest run covered.
+    def loadedAndCounted(): (List[Event], List[Event]) \ IO =
+        let laps =
+            lap("7", 1, "30:00.000") ::
+            lap("8", 1, "31:00.000") ::
+            lap("8", 2, "50:00.000") ::
+            pitLap("7", 2, "1:00:00.000", "1:10.000") ::
+            lap("7", 3, "1:30:00.000") ::
+            Nil;
+        TestSupport.onRound(entry(), laps, () -> (
+            Timeline.read(entry()),
+            Timeline.fromLaps(entry(), Round.Summary.particulars(entry())#timeLimit)
+        ))
+
+    @Test
+    def theRowsReadBackAsTheTimelineTheLoadCounted(): Unit \ {Assert, IO} =
+        match loadedAndCounted() {
+            case (readBack, counted) =>
+                Assert.assertTrue(List.map(shape, readBack) == List.map(shape, counted))
+        }
+
+    /// Every kind of event comes back through a row, the two things only a stop
+    /// carries included.
+    @Test
+    def everyKindOfEventComesBackThroughARow(): Unit \ {Assert, IO} =
+        match loadedAndCounted() {
+            case (readBack, _) =>
+                Assert.assertTrue(named("raceStart", readBack) == ("0.000", "raceStart", "") :: Nil);
+                Assert.assertTrue(named("start", readBack) ==
+                    ("0.000", "start", "7") ::
+                    ("0.000", "start", "8") :: Nil);
+                Assert.assertTrue(named("tookLead", readBack) ==
+                    ("50:00.000", "tookLead", "8") ::
+                    ("1:30:00.000", "tookLead", "7") :: Nil);
+                Assert.assertTrue(named("checkered", readBack) == ("1:30:00.000", "checkered", "7") :: Nil);
+                Assert.assertTrue(named("retirement", readBack) == ("50:00.000", "retirement", "8") :: Nil);
+                Assert.assertTrue(stops(readBack) == (2, "1:10.000") :: (2, "1:10.000") :: Nil)
+        }
 
 }

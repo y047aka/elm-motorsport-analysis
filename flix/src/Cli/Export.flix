@@ -81,7 +81,7 @@ mod Cli.Export {
             Ok(render(
                 metadata,
                 Index.read(task#entry, seats),
-                Timeline.read(task#entry, metadata#race#timeLimit),
+                Timeline.read(task#entry),
                 Laps.read(task#entry, seats)
             ))
 
