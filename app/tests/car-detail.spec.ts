@@ -22,18 +22,16 @@ test.describe('Car Detail Visual Tests', () => {
     await selectCar(page, '83');
   });
 
-  test('should render a single selected car', async ({ page }) => {
-    await expect(page.locator(DETAIL)).toHaveScreenshot('single-car.png');
+  test('should render the selected car with its rivals ahead and behind', async ({ page }) => {
+    await expect(page.locator(DETAIL)).toHaveScreenshot('selected-car-with-rivals.png');
   });
 
   test('should render three cars with the position progression chart', async ({ page }) => {
-    await chip(page, '6').click();
-    await chip(page, '8').click();
     await page.locator(DETAIL).getByRole('button', { name: 'Position progression' }).click();
     await expect(page.locator(DETAIL)).toHaveScreenshot('three-cars-position-tab.png');
   });
 
-  test('should render a recovery hint when every car is deselected', async ({ page }) => {
+  test('should render a recovery hint when the car is deselected', async ({ page }) => {
     await chip(page, '83').click();
     await expect(page.locator(DETAIL)).toHaveScreenshot('empty-selection.png');
   });

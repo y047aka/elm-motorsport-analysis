@@ -45,7 +45,7 @@ type alias Model =
     , eventsState : DataView.Model
     , query : String
     , stripOffset : Int
-    , detailCarNumbers : List String
+    , detailCarNumber : Maybe String
     , detailChart : CompareWidget.Chart
     }
 
@@ -72,7 +72,7 @@ init params =
                 )
       , query = ""
       , stripOffset = 0
-      , detailCarNumbers = []
+      , detailCarNumber = Nothing
       , detailChart = CompareWidget.GapChart
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -124,16 +124,15 @@ update msg m =
             ( { m | stripOffset = max 0 offset }, Effect.none )
 
         ToggleDetailCar carNumber ->
-            -- In-modal selector; toggle selection up to a maximum of 3 cars.
             let
                 next =
-                    if List.member carNumber m.detailCarNumbers then
-                        List.filter ((/=) carNumber) m.detailCarNumbers
+                    if m.detailCarNumber == Just carNumber then
+                        Nothing
 
                     else
-                        List.take 3 (m.detailCarNumbers ++ [ carNumber ])
+                        Just carNumber
             in
-            ( { m | detailCarNumbers = next }, Effect.none )
+            ( { m | detailCarNumber = next }, Effect.none )
 
         SelectDetailChart chart ->
             ( { m | detailChart = chart }, Effect.none )
@@ -255,7 +254,7 @@ trackerView track snapshot m =
                                 , onSelectChart = SelectDetailChart
                                 }
                                 snapshot
-                                m.detailCarNumbers
+                                m.detailCarNumber
                             ]
                         ]
                     ]
