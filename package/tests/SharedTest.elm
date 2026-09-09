@@ -86,6 +86,11 @@ summaryJson =
                 }
             }
         }
+    , "timelineEvents":
+        [ { "elapsed": "0.000", "event": "raceStart" }
+        , { "elapsed": "0.000", "event": "start", "carNumber": "7" }
+        , { "elapsed": "1:53.000", "event": "retirement", "carNumber": "7" }
+        ]
     }
     """
 
