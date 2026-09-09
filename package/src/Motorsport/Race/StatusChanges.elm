@@ -78,7 +78,7 @@ statusChange eventType =
         TimelineEvent.RaceStart ->
             Nothing
 
-        TimelineEvent.CarEvent carNumber (TimelineEvent.Start _) ->
+        TimelineEvent.CarEvent carNumber TimelineEvent.Start ->
             Just ( carNumber, Status.Racing )
 
         TimelineEvent.CarEvent carNumber (TimelineEvent.PitIn _) ->

@@ -8,6 +8,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (Test, describe, test)
 
 
@@ -64,6 +65,38 @@ suite =
                                 [ ( { time = Just 20708, elapsedInLap = Just 20708 }
                                   , { time = Just 3483, elapsedInLap = Just 234555 }
                                   )
+                                ]
+                            )
+            , test "puts each key under the mini-sector it is named for" <|
+                \_ ->
+                    -- What the fifteen-step pipeline in `miniSectorsDecoder`
+                    -- cannot check for itself: the keys and the fields of
+                    -- `ByMiniSector` are both in track order, so a line out of
+                    -- place pairs a key with its neighbour's field and nothing
+                    -- fails. No two times on this lap are the same, which makes
+                    -- such a swap show.
+                    Laps.fromJsonl lapWithMiniSectors
+                        |> Result.map
+                            (List.filterMap .miniSectors
+                                >> List.concatMap (LeMans.toList >> List.map (Tuple.mapSecond .time))
+                            )
+                        |> Expect.equal
+                            (Ok
+                                [ ( SCL2, Just 20708 )
+                                , ( Z4, Just 13826 )
+                                , ( IP1, Just 17374 )
+                                , ( Z12, Just 35154 )
+                                , ( SCLC, Just 4685 )
+                                , ( A7_1, Just 26059 )
+                                , ( IP2, Just 17354 )
+                                , ( A8_1, Just 6928 )
+                                , ( SCLB, Just 37644 )
+                                , ( PORIN, Just 17155 )
+                                , ( POROUT, Just 16786 )
+                                , ( PITREF, Just 7954 )
+                                , ( SCL1, Just 2885 )
+                                , ( FORDOUT, Just 6560 )
+                                , ( FL, Just 3483 )
                                 ]
                             )
             , test "reads a mini-sector the CLI left out as one with nothing in it" <|

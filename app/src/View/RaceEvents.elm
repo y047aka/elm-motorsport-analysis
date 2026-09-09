@@ -70,7 +70,7 @@ eventTypeToString eventType =
         RaceStart ->
             "Race Started"
 
-        CarEvent _ (Start _) ->
+        CarEvent _ Start ->
             "Start"
 
         CarEvent _ TookLead ->
