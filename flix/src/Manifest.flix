@@ -29,11 +29,12 @@ mod Manifest {
         r -> {
             let stem = "${urlRoot}/${season}/${r#id}";
             JsonObject(
-                ("id",      JsonString(r#id)) ::
-                ("name",    JsonString(Events.displayName(r#id))) ::
-                ("date",    JsonString(r#date)) ::
-                ("summary", JsonString("${stem}.json")) ::
-                ("laps",    JsonString("${stem}_laps.jsonl")) ::
+                ("id",       JsonString(r#id)) ::
+                ("name",     JsonString(Events.displayName(r#id))) ::
+                ("date",     JsonString(r#date)) ::
+                ("summary",  JsonString("${stem}.json")) ::
+                ("laps",     JsonString("${stem}_laps.jsonl")) ::
+                ("timeline", JsonString("${stem}_timeline.jsonl")) ::
                 Nil
             )
         }

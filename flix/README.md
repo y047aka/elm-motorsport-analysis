@@ -30,10 +30,10 @@ a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 25MB, and 3.4MB on the wire.
 
 `Round` is one round on its way out of the tables, both halves of the trip:
-`Round.Summary`, `Round.Index`, `Round.Laps` and `Round.Cars` take an `Entry`
-and the `DbRead` effect and read it; `Round.Render` takes what they returned, is
-pure, and turns it into the bytes that go out. None of the five knows whether a
-file or a request is waiting at the other end. Three of them take a
+`Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars`
+take an `Entry` and the `DbRead` effect and read it; `Round.Render` takes what
+they returned, is pure, and turns it into the bytes that go out. None of the six
+knows whether a file or a request is waiting at the other end. Three of them take a
 `Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
 once for the round by whichever of the two callers asked, rather than once by
 each of them. `Round.loaded` is what both ask first, and it asks `laps` and `cars`:
@@ -43,7 +43,7 @@ alone it would be a race whose grid was empty.
 `Server.Api` decides nothing about a round, then, and renders none of one
 either: it makes the same calls `Cli.Export` makes, so what is served and what
 is written are the same bytes rather than two renderings that agree. An answer
-carrying the summary alone stops at `Round.Render.renderSummary` rather than
+carrying one of the three reads only what that one is made of, rather than
 reading a round's laps to throw them away, which is the one thing the two
 callers do differently.
 
@@ -179,8 +179,25 @@ track order, which is what those columns are for. `Round.Index` reads the two
 indices a race is read at a moment through -- when the lap counter went up, and
 when each of the twenty records changed hands -- which are a walk of every lap
 of the round each: a `GROUP BY` for the first, and for the second one window
-over every record's readings stacked into a single column. They ride in the
-summary rather than in a file of their own, so a round is still two URLs.
+over every record's readings stacked into a single column. They are twenty
+readings and a few hundred rows, so they ride in the summary rather than in a
+file of their own.
+
+`Round.Timeline` is the third such walk and does not: it is thousands of records
+rather than hundreds -- Le Mans is 3983 of them against the summary's 100KB --
+so it is written a line at a time as the laps are, and a round is three files
+and three URLs. Each car's first and last crossing is one `GROUP BY`, the stops
+are the laps carrying a pit time, and the lead is `ROW_NUMBER` picking each
+lap's first crossing with `LAG` asking who held the one before -- two queries
+rather than one, since SQLite settles a `WHERE` before either window. What is
+left in Flix is the deciding: `Motorsport.Timeline` weighs each car's last
+crossing against the time limit, which is `Metadata`'s estimate and the one
+reading here the laps do not carry, so the summary's readings are made first and
+hand it over -- which is why `/api/wec/<season>/<id>_timeline.jsonl` costs a
+summary as well. It also fixes the order events sharing an instant come back in
+-- `List.sortBy` is not stable, and a stop ending as the flag falls has to leave
+the car classified rather than in the pits -- which is why the gathering order
+rides in the sort key.
 `Round.Laps` takes one window function beside the reading for where the car
 stood in the field as it crossed the line -- a reading of the round rather than
 of any row of it, so it rides beside the lap rather than in it. `Round.Cars` and

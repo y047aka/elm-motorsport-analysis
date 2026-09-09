@@ -38,10 +38,13 @@ mod Round.Laps {
             |> Sql.selectAll
             |> List.map(placed(cars, seats))
 
-    /// Counted from nought, which is what `Motorsport.Race.TimelineEvent`
-    /// reads the lead off. A window runs over the rows the round was scoped
+    /// Counted from nought. A window runs over the rows the round was scoped
     /// to, so the field is this round's and not the table's. Ties on the clock
     /// are broken by the file's order, which no two rows share.
+    ///
+    /// `Round.Timeline.leads` counts the same thing again to find who led each
+    /// lap: a place on the lap rides beside it, and the lead is a change
+    /// between laps, so neither reading is the other's to hand over.
     def placeInField(): String =
         "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) - 1"
 

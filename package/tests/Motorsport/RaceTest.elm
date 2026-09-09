@@ -98,7 +98,7 @@ suite =
 
 race : Race
 race =
-    Race.fromCars { timeLimit = Instant.fromDuration 7200000, index = index }
+    Race.fromCars { timeLimit = Instant.fromDuration 7200000, index = index, timelineEvents = [] }
         [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000

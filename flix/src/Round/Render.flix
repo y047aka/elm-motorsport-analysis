@@ -4,6 +4,7 @@ mod Round.Render {
     use Util.Json.Encode.JsonValue
     use Motorsport.Index
     use Motorsport.Metadata
+    use Motorsport.Timeline
     use Motorsport.Wec
     use Round.Laps.Placed
 
@@ -18,6 +19,11 @@ mod Round.Render {
                 JsonValue.JsonObject(List.append(fields, ("index", index) :: Nil))
             case other => other
         }
+
+    pub def renderTimelineJsonl(events: List[Timeline.Event]): String =
+        events
+            |> List.map(event -> "${Extra.renderOnOneLine(Timeline.toJson(event))}\n")
+            |> List.join("")
 
     pub def renderJsonl(laps: List[Placed]): String =
         laps

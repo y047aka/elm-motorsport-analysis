@@ -271,7 +271,7 @@ suite =
 
 snapshotAt : Duration -> Snapshot
 snapshotAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex } [ carOne, carTwo ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, timelineEvents = [] } [ carOne, carTwo ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -442,7 +442,7 @@ the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
-    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex } [ carOne, carTwo, carThree, nonStarter ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, timelineEvents = [] } [ carOne, carTwo, carThree, nonStarter ]
         |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
 
 
@@ -464,7 +464,7 @@ thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex } [ leMansCar ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, timelineEvents = [] } [ leMansCar ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -486,7 +486,7 @@ starts the next, so losing it loses both.
 -}
 leMansFieldMissing : LeMans2025MiniSector -> Duration -> Snapshot
 leMansFieldMissing missing elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex }
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, timelineEvents = [] }
         [ { leMansCar | laps = List.map (withoutRunningTotalFor missing) leMansCar.laps } ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
@@ -515,7 +515,7 @@ leaves blank rather than at zero. Its one lap runs from the start to 6.000.
 -}
 fieldWithUntimedSectors : List Sector -> Duration -> Snapshot
 fieldWithUntimedSectors untimed elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = untimedSectorsIndex untimed } [ carWithoutSectorTimes untimed ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = untimedSectorsIndex untimed, timelineEvents = [] } [ carWithoutSectorTimes untimed ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 

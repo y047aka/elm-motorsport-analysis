@@ -41,6 +41,7 @@ type alias Round =
     , date : String
     , summary : String
     , laps : String
+    , timeline : String
     }
 
 
@@ -86,9 +87,10 @@ seasonDecoder =
 
 roundDecoder : Decoder Round
 roundDecoder =
-    Decode.map5 Round
+    Decode.map6 Round
         (field "id" string)
         (field "name" string)
         (field "date" string)
         (field "summary" string)
         (field "laps" string)
+        (field "timeline" string)

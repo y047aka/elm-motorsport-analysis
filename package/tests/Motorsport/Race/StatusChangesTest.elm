@@ -3,7 +3,6 @@ module Motorsport.Race.StatusChangesTest exposing (suite)
 import Expect
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
-import Motorsport.Lap as Lap
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Status as Status
@@ -50,9 +49,9 @@ suite =
                     let
                         twoCars =
                             StatusChanges.fromTimelineEvents
-                                [ { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" (TimelineEvent.Start { currentLap = Lap.empty }) }
-                                , { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" (TimelineEvent.Start { currentLap = Lap.empty }) }
-                                , { eventTime = Instant.fromDuration 100000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Retirement }
+                                [ { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Start }
+                                , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Start }
+                                , { elapsed = Instant.fromDuration 100000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Retirement }
                                 ]
                     in
                     Expect.equal
@@ -74,7 +73,7 @@ The lead it takes in the middle is there to be ignored.
 index : StatusChanges
 index =
     StatusChanges.fromTimelineEvents
-        [ carEvent 0 (TimelineEvent.Start { currentLap = Lap.empty })
+        [ carEvent 0 TimelineEvent.Start
         , carEvent 170000 (TimelineEvent.PitIn { lapNumber = 2, duration = 30000 })
         , carEvent 200000 (TimelineEvent.PitOut { lapNumber = 2, duration = 30000 })
         , carEvent 210000 TimelineEvent.TookLead
@@ -89,7 +88,7 @@ index =
 
 
 carEvent : Duration -> TimelineEvent.CarEventType -> TimelineEvent
-carEvent eventTime carEventType =
-    { eventTime = Instant.fromDuration eventTime
+carEvent elapsed carEventType =
+    { elapsed = Instant.fromDuration elapsed
     , eventType = TimelineEvent.CarEvent "1" carEventType
     }

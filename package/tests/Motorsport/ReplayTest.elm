@@ -10,6 +10,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
@@ -143,6 +144,7 @@ initialModel =
         { timeLimit = Instant.fromDuration 7200000
         , finishedAt = Instant.fromDuration 7300000
         , index = index
+        , timelineEvents = timelineEvents
         }
         [ retiringCar, survivingCar ]
 
@@ -160,6 +162,26 @@ index =
             ]
     , bestTimeChanges = BestTimes.empty
     }
+
+
+{-| The timeline as `Round.Timeline` reads it off those rows: car "1" spends
+lap 2 in the pits and stops three laps in, short of the limit; car "2" is still
+running when it falls. Car "1" leads every lap, so the lead never changes hands.
+-}
+timelineEvents : List TimelineEvent
+timelineEvents =
+    [ { elapsed = Instant.raceStart, eventType = TimelineEvent.RaceStart }
+    , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Start }
+    , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Start }
+    , { elapsed = Instant.fromDuration 170000
+      , eventType = TimelineEvent.CarEvent "1" (TimelineEvent.PitIn { lapNumber = 2, duration = 30000 })
+      }
+    , { elapsed = Instant.fromDuration 200000
+      , eventType = TimelineEvent.CarEvent "1" (TimelineEvent.PitOut { lapNumber = 2, duration = 30000 })
+      }
+    , { elapsed = Instant.fromDuration 300000, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Retirement }
+    , { elapsed = Instant.fromDuration 7300000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Checkered }
+    ]
 
 
 retiringCar : Car
