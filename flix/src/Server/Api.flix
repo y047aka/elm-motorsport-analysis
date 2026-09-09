@@ -6,6 +6,7 @@ mod Server.Api {
     use Round.Laps
     use Round.Render
     use Round.Summary
+    use Round.Timeline
     use Motorsport.Calendar
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
@@ -107,7 +108,12 @@ mod Server.Api {
 
     def summary(season: Int32, id: String): Option[String] \ DbRead =
         answer(season, id, (e, seats) ->
-            Render.renderSummary(Summary.read(e, seats), Index.read(e, seats)))
+            let metadata = Summary.read(e, seats);
+            Render.renderSummary(
+                metadata,
+                Index.read(e, seats),
+                Timeline.read(e, metadata#race#timeLimit)
+            ))
 
     def laps(season: Int32, id: String): Option[String] \ DbRead =
         answer(season, id, (e, seats) -> Render.renderJsonl(Laps.read(e, seats)))

@@ -11,6 +11,7 @@ mod Cli.Export {
     use Round.Laps
     use Round.Render
     use Round.Summary
+    use Round.Timeline
 
     type alias RunSummary = {
         exported = Int32,
@@ -74,20 +75,23 @@ mod Cli.Export {
             Err(CliError.RoundNotLoaded)
         else
             let seats = Round.Drivers.read(task#entry);
+            let metadata = Summary.read(task#entry, seats);
             Ok(render(
-                Summary.read(task#entry, seats),
+                metadata,
                 Index.read(task#entry, seats),
+                Timeline.read(task#entry, metadata#race#timeLimit),
                 Laps.read(task#entry, seats)
             ))
 
     def render(
         metadata: Motorsport.Metadata.Metadata,
         index: Motorsport.Index.Index,
+        timeline: List[Motorsport.Timeline.Event],
         laps: List[Laps.Placed]
     ): Rendered =
         {
             lapCount     = List.length(laps),
-            metadataJson = Render.renderSummary(metadata, index),
+            metadataJson = Render.renderSummary(metadata, index, timeline),
             lapsJsonl    = Render.renderJsonl(laps)
         }
 

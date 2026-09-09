@@ -6,6 +6,7 @@ mod Round.TestRender {
     use Round.Render
     use Round.Summary
     use Round.TestSupport
+    use Round.Timeline
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Motorsport.Calendar.Entry
@@ -38,9 +39,11 @@ mod Round.TestRender {
 
     def summaryOf(laps: List[RawLap]): String \ IO =
         TestSupport.onRound(leMans(), laps, () ->
+            let metadata = Summary.read(leMans(), Drivers.read(leMans()));
             Render.renderSummary(
-                Summary.read(leMans(), Drivers.read(leMans())),
-                Index.read(leMans(), Drivers.read(leMans()))
+                metadata,
+                Index.read(leMans(), Drivers.read(leMans())),
+                Timeline.read(leMans(), metadata#race#timeLimit)
             ))
 
     /// Read back rather than rendered from the laps in hand: a lap's place in
@@ -67,6 +70,15 @@ mod Round.TestRender {
         Assert.assertTrue(String.contains({substr = "\"fastestLapTime\""}, json));
         Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json))
 
+    /// The timeline is written into the summary beside the indices.
+    @Test
+    def testRenderSummaryCarriesTheTimeline(): Unit \ {Assert, IO} =
+        let json = summaryOf(sampleRawLaps());
+        Assert.assertTrue(String.contains({substr = "\"timelineEvents\""}, json));
+        Assert.assertTrue(String.contains({substr = "{ \"elapsed\": \"0.000\", \"event\": \"raceStart\" }"}, json));
+        Assert.assertTrue(String.contains({substr = "\"event\": \"start\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"event\": \"checkered\""}, json))
+
     /// A round with no laps still has a summary, and it still renders.
     @Test
     def testRenderSummaryOfARoundWithNoLaps(): Unit \ {Assert, IO} =
@@ -74,6 +86,13 @@ mod Round.TestRender {
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, json));
         Assert.assertTrue(String.contains({substr = "\"entries\": []"}, json));
         Assert.assertTrue(String.contains({substr = "\"lapCompletions\": []"}, json))
+    /// A round with no cars ran no laps, and the race still started.
+    @Test
+    def testRenderSummaryOfARoundWithNoLapsStillStartsTheRace(): Unit \ {Assert, IO} =
+        let json = summaryOf(Nil);
+        Assert.assertTrue(String.contains(
+            {substr = "{ \"elapsed\": \"0.000\", \"event\": \"raceStart\" }"}, json));
+        Assert.assertTrue(not String.contains({substr = "\"event\": \"start\""}, json))
 
     @Test
     def testRenderJsonlRendersEveryLap(): Unit \ {Assert, IO} =

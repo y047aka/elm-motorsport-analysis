@@ -1,19 +1,22 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
-    , fromCars
+    , decoder
     )
 
-{-|
+{-| The race as a list of things that happened, in the order they happened.
+
+Read out of the round's summary, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
-@docs fromCars
+@docs decoder
 
 -}
 
-import List.Extra
-import Motorsport.Duration exposing (Duration)
+import Json.Decode as Decode exposing (Decoder, field, int, string)
+import Json.Decode.Extra
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Race.Car exposing (Car, CarNumber)
+import Motorsport.Race.Car exposing (CarNumber)
 
 
 type alias TimelineEvent =
@@ -35,154 +38,67 @@ type CarEventType
 
 
 
--- BUILD
+-- DECODE
 
 
-{-| Build a sorted list of timeline events from a race's entry list.
-
-`timeLimit` decides whether a car's last lap was the flag or a retirement, and
-is passed in rather than read off the laps -- see
-[`Race.fromCars`](Motorsport-Race#fromCars).
-
-There is deliberately no per-lap completion event: one per car per lap was five
-in six of the list, and the laps are on the car already for everything that
-reads them.
-
+{-| An event is one flat object: when it happened, what it was, and -- for all
+but the race's own start -- whose it was.
 -}
-fromCars : { timeLimit : Instant } -> List Car -> List TimelineEvent
-fromCars { timeLimit } cars =
-    let
-        events =
-            [ raceStartEvent ]
-                ++ startEvents cars
-                ++ leadChangeEvents cars
-                ++ pitEvents cars
-                ++ terminalEvents timeLimit cars
-    in
-    List.sortBy (.eventTime >> Instant.toDuration) events
+decoder : Decoder TimelineEvent
+decoder =
+    Decode.map2 TimelineEvent
+        (field "elapsed" Instant.decoder)
+        (field "event" string |> Decode.andThen eventTypeDecoder)
 
 
-raceStartEvent : TimelineEvent
-raceStartEvent =
-    { eventTime = Instant.raceStart, eventType = RaceStart }
+eventTypeDecoder : String -> Decoder EventType
+eventTypeDecoder event =
+    if event == "raceStart" then
+        Decode.succeed RaceStart
+
+    else
+        Decode.map2 CarEvent
+            (field "carNumber" string)
+            (carEventTypeDecoder event)
 
 
-startEvents : List Car -> List TimelineEvent
-startEvents cars =
-    cars
-        |> List.filter (\car -> not (List.isEmpty car.laps))
-        |> List.map
-            (\car ->
-                { eventTime = Instant.raceStart
-                , eventType = CarEvent car.metadata.carNumber Start
-                }
-            )
-
-
-{-| Who is leading at the end of each lap, in lap order.
+{-| A name the CLI writes that this app has none of fails the round, as an
+unreadable `sectors` does: the two disagree about the shape of the file, which
+is not a thing to carry on from. An event silently dropped would read as a car
+that never stopped.
 -}
-type alias Leader =
-    { lapNumber : Int, eventTime : Instant, carNumber : CarNumber }
+carEventTypeDecoder : String -> Decoder CarEventType
+carEventTypeDecoder event =
+    case event of
+        "start" ->
+            Decode.succeed Start
+
+        "tookLead" ->
+            Decode.succeed TookLead
+
+        "pitIn" ->
+            Decode.map PitIn stopDecoder
+
+        "pitOut" ->
+            Decode.map PitOut stopDecoder
+
+        "retirement" ->
+            Decode.succeed Retirement
+
+        "checkered" ->
+            Decode.succeed Checkered
+
+        _ ->
+            Decode.fail ("Unknown timeline event: " ++ event)
 
 
-{-| A `TookLead` each time the car at the front of the field changes hands.
-
-The lead is read off `Lap.position`, which is the field's order at that lap, so
-a change is only ever seen at a lap boundary. Whoever leads the opening lap has
-taken it from nobody, so the first leader is not an event.
-
--}
-leadChangeEvents : List Car -> List TimelineEvent
-leadChangeEvents cars =
-    let
-        leaders : List Leader
-        leaders =
-            cars
-                |> List.concatMap
-                    (\car ->
-                        car.laps
-                            |> List.filter (\lap -> lap.position == Just leadPosition)
-                            |> List.map
-                                (\lap ->
-                                    { lapNumber = lap.lap
-                                    , eventTime = lap.elapsed
-                                    , carNumber = car.metadata.carNumber
-                                    }
-                                )
-                    )
-                |> List.sortBy .lapNumber
-    in
-    List.map2 Tuple.pair leaders (List.drop 1 leaders)
-        |> List.filterMap
-            (\( previous, current ) ->
-                if previous.carNumber == current.carNumber then
-                    Nothing
-
-                else
-                    Just
-                        { eventTime = current.eventTime
-                        , eventType = CarEvent current.carNumber TookLead
-                        }
-            )
+stopDecoder : Decoder { lapNumber : Int, duration : Duration }
+stopDecoder =
+    Decode.map2 (\lapNumber duration -> { lapNumber = lapNumber, duration = duration })
+        (field "lap" int)
+        (field "duration" durationDecoder)
 
 
-{-| `Lap.position` counts from zero.
--}
-leadPosition : Int
-leadPosition =
-    0
-
-
-pitEvents : List Car -> List TimelineEvent
-pitEvents cars =
-    cars
-        |> List.concatMap
-            (\car ->
-                car.laps
-                    |> List.concatMap
-                        (\lap ->
-                            case lap.pitTime of
-                                Just pitDuration ->
-                                    let
-                                        pitInTime =
-                                            Instant.subtract pitDuration lap.elapsed
-                                    in
-                                    [ { eventTime = pitInTime
-                                      , eventType =
-                                            CarEvent car.metadata.carNumber
-                                                (PitIn { lapNumber = lap.lap, duration = pitDuration })
-                                      }
-                                    , { eventTime = lap.elapsed
-                                      , eventType =
-                                            CarEvent car.metadata.carNumber
-                                                (PitOut { lapNumber = lap.lap, duration = pitDuration })
-                                      }
-                                    ]
-
-                                Nothing ->
-                                    []
-                        )
-            )
-
-
-terminalEvents : Instant -> List Car -> List TimelineEvent
-terminalEvents timeLimit cars =
-    cars
-        |> List.filterMap
-            (\car ->
-                List.Extra.last car.laps
-                    |> Maybe.map
-                        (\finalLap ->
-                            let
-                                carEventType =
-                                    if Instant.compare finalLap.elapsed timeLimit == LT then
-                                        Retirement
-
-                                    else
-                                        Checkered
-                            in
-                            { eventTime = finalLap.elapsed
-                            , eventType = CarEvent car.metadata.carNumber carEventType
-                            }
-                        )
-            )
+durationDecoder : Decoder Duration
+durationDecoder =
+    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")

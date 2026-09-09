@@ -29,7 +29,7 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
+import Motorsport.Race.TimelineEvent exposing (TimelineEvent)
 import Motorsport.Status exposing (Status)
 
 
@@ -40,6 +40,9 @@ beside it read the same race at an instant, and are
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race
 was.
+
+`timelineEvents` arrives with the round's summary, from `Round.Timeline`, as
+`lapCompletions` and `bestTimeChanges` do.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
@@ -111,19 +114,11 @@ empty =
     }
 
 
-{-| Read a race off its entry list and the indices that came with it.
-
-Lead changes are read from `Lap.position`, so cars that arrive without their
-per-lap positions assigned produce a timeline with no lead changes in it -- see
-[`TimelineEvent.fromCars`](Motorsport-Race-TimelineEvent#fromCars).
-
+{-| Read a race off its entry list and what came with it: the indices, and the
+timeline the statuses are indexed from.
 -}
-fromCars : { timeLimit : Instant, index : Index } -> List Car -> Race
-fromCars { timeLimit, index } cars =
-    let
-        timelineEvents =
-            TimelineEvent.fromCars { timeLimit = timeLimit } cars
-    in
+fromCars : { timeLimit : Instant, index : Index, timelineEvents : List TimelineEvent } -> List Car -> Race
+fromCars { timeLimit, index, timelineEvents } cars =
     { cars = cars
     , lapTotal = ChangePoints.length index.lapCompletions
     , timeLimit = timeLimit

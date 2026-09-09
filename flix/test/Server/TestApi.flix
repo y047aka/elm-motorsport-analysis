@@ -136,13 +136,18 @@ mod Server.TestApi {
             Api.respond(Route.Summary(2025, "fuji_6h")),
             Api.respond(Route.Laps(2025, "fuji_6h")),
             {
-                summary = Render.renderSummary(
-                    Summary.read(fuji(), Round.Drivers.read(fuji())),
-                    Index.read(fuji(), Round.Drivers.read(fuji()))
-                ),
+                summary = summaryOf(fuji()),
                 laps    = Render.renderJsonl(Round.Laps.read(fuji(), Round.Drivers.read(fuji())))
             }
         ))
+
+    def summaryOf(entry: Entry): String \ DbRead =
+        let metadata = Summary.read(entry, Round.Drivers.read(entry));
+        Render.renderSummary(
+            metadata,
+            Index.read(entry, Round.Drivers.read(entry)),
+            Round.Timeline.read(entry, metadata#race#timeLimit)
+        )
 
     /// A round the calendar lists and the rows hold none of. Answered out of
     /// them it would be a race that never ran.

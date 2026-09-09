@@ -1,0 +1,98 @@
+/// The round's timeline, read back out of the rows it was loaded into.
+///
+/// Three readings of the laps: each car's first and last moment, the stops, and
+/// each change of the lead. What they add up to is `Motorsport.Timeline`'s.
+mod Round.Timeline {
+
+    use Db.Laps
+    use Db.Schema
+    use Motorsport.Calendar.Entry
+    use Motorsport.Timeline
+    use Util.Duration.Duration
+
+    /// `timeLimit` is `Metadata`'s reading of how far the race was scheduled to
+    /// run -- the one thing here the laps do not say -- so the summary is read
+    /// first and hands it over.
+    pub def read(entry: Entry, timeLimit: Duration): List[Timeline.Event] \ DbRead =
+        Timeline.fromReadings({
+            timeLimit = timeLimit,
+            cars      = cars(entry),
+            stops     = stops(entry),
+            leads     = leads(entry)
+        })
+
+    // ------------------------------------------------------------------ cars
+
+    /// Each car that took the start, with the moment it last crossed the line,
+    /// in the order the file first showed them.
+    ///
+    /// A car's laps only ever run forwards, so its latest crossing is the one
+    /// its last lap made, and no lap number is read to find it.
+    def cars(entry: Entry): List[(String, Duration)] \ DbRead =
+        let c = Laps.columns();
+        Laps.rows(entry)
+            |> Sql.groupBy(Schema.term(c#carNumber) :: Nil)
+            |> Sql.orderBy(Sql.raw("MIN(source_row)") :: Nil)
+            |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)")))
+            |> Sql.reading(match (carNumber, last) -> (carNumber, Util.Duration.fromMillis(last)))
+            |> Sql.selectAll
+
+    // ----------------------------------------------------------------- stops
+
+    /// One row per stop: the lap it ended on, when the car came back out, and
+    /// how long it was in.
+    def stops(entry: Entry): List[(String, Int32, Duration, Duration)] \ DbRead =
+        let c = Laps.columns();
+        Laps.rows(entry)
+            |> Sql.filter(row -> Sql.isNotNull(Schema.expr(row#pitTimeMs)))
+            |> Sql.orderBy(Schema.term(c#elapsedMs) :: Schema.term(c#sourceRow) :: Nil)
+            |> Sql.map(row -> (row#carNumber, row#lapNumber, row#elapsedMs, row#pitTimeMs))
+            |> Sql.selectAll
+            |> List.filterMap(stop)
+
+    def stop(row: (String, Int32, Int32, Option[Int32])): Option[(String, Int32, Duration, Duration)] =
+        match row {
+            case (carNumber, lapNumber, elapsed, Some(duration)) => Some((
+                carNumber,
+                lapNumber,
+                Util.Duration.fromMillis(elapsed),
+                Util.Duration.fromMillis(duration)
+            ))
+            case _ => None
+        }
+
+    // ----------------------------------------------------------------- leads
+
+    /// Each change of the lead, and who took it.
+    ///
+    /// The lead is the field's order at a lap boundary, which is what
+    /// `Round.Laps.placeInField` counts, so it is read the same way: the first
+    /// of the round's rows carrying a lap number. Whoever led the opening lap
+    /// took it from nobody, which is what `LAG` answering null is.
+    ///
+    /// The two windows are a query each because SQLite settles a `WHERE`
+    /// before either of them: the leaders are picked out in `l`, and only then
+    /// is each one asked who led the lap before.
+    def leads(entry: Entry): List[(String, Duration)] \ DbRead =
+        Sql.rows(Sql.raw("(" + handedOver() + ")"))
+            |> Sql.using(Sql.frags(
+                Sql.raw("l AS (SELECT car_number, lap_number, elapsed_ms, " + firstAcross()
+                    + " FROM " + Laps.table() + " WHERE") ::
+                Sql.term(Laps.inRound(entry)) ::
+                Sql.raw(")") :: Nil
+            ))
+            |> Sql.filter(_ -> Sql.column("held IS NOT NULL AND held <> car_number"))
+            |> Sql.orderBy(Sql.raw("lap_number") :: Nil)
+            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms")))
+            |> Sql.reading(match (carNumber, elapsed) -> (carNumber, Util.Duration.fromMillis(elapsed)))
+            |> Sql.selectAll
+
+    def firstAcross(): String =
+        "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) AS rn"
+
+    def handedOver(): String =
+        "SELECT car_number, lap_number, elapsed_ms,"
+            + " LAG(car_number) OVER (ORDER BY lap_number) AS held"
+            + " FROM l WHERE rn = 1"
+
+}

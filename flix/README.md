@@ -30,10 +30,10 @@ a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 25MB, and 3.4MB on the wire.
 
 `Round` is one round on its way out of the tables, both halves of the trip:
-`Round.Summary`, `Round.Index`, `Round.Laps` and `Round.Cars` take an `Entry`
-and the `DbRead` effect and read it; `Round.Render` takes what they returned, is
-pure, and turns it into the bytes that go out. None of the five knows whether a
-file or a request is waiting at the other end. Three of them take a
+`Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars`
+take an `Entry` and the `DbRead` effect and read it; `Round.Render` takes what
+they returned, is pure, and turns it into the bytes that go out. None of the six
+knows whether a file or a request is waiting at the other end. Three of them take a
 `Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
 once for the round by whichever of the two callers asked, rather than once by
 each of them. `Round.loaded` is what both ask first, and it asks `laps` and `cars`:
@@ -181,6 +181,18 @@ when each of the twenty records changed hands -- which are a walk of every lap
 of the round each: a `GROUP BY` for the first, and for the second one window
 over every record's readings stacked into a single column. They ride in the
 summary rather than in a file of their own, so a round is still two URLs.
+
+`Round.Timeline` is the third such walk and rides there too: each car's first
+and last crossing as one `GROUP BY`, the stops as the laps carrying a pit time,
+and the lead as `ROW_NUMBER` picking each lap's first crossing with `LAG` asking
+who held the one before -- two queries rather than one, since SQLite settles a
+`WHERE` before either window. What is left in Flix is the deciding:
+`Motorsport.Timeline` weighs each car's last crossing against the time limit,
+which is `Metadata`'s estimate and the one reading here the laps do not carry,
+so the summary is read first and hands it over. It also fixes the order events
+sharing an instant come back in -- `List.sortBy` is not stable, and a stop
+ending as the flag falls has to leave the car classified rather than in the
+pits -- which is why the gathering order rides in the sort key.
 `Round.Laps` takes one window function beside the reading for where the car
 stood in the field as it crossed the line -- a reading of the round rather than
 of any row of it, so it rides beside the lap rather than in it. `Round.Cars` and
