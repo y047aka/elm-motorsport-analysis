@@ -62,4 +62,4 @@ suite =
 decoded : String -> Result Decode.Error ( Instant, EventType )
 decoded json =
     Decode.decodeString TimelineEvent.decoder json
-        |> Result.map (\event -> ( event.eventTime, event.eventType ))
+        |> Result.map (\event -> ( event.elapsed, event.eventType ))

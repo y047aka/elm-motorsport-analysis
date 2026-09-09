@@ -49,9 +49,9 @@ suite =
                     let
                         twoCars =
                             StatusChanges.fromTimelineEvents
-                                [ { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Start }
-                                , { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Start }
-                                , { eventTime = Instant.fromDuration 100000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Retirement }
+                                [ { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Start }
+                                , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Start }
+                                , { elapsed = Instant.fromDuration 100000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Retirement }
                                 ]
                     in
                     Expect.equal
@@ -88,7 +88,7 @@ index =
 
 
 carEvent : Duration -> TimelineEvent.CarEventType -> TimelineEvent
-carEvent eventTime carEventType =
-    { eventTime = Instant.fromDuration eventTime
+carEvent elapsed carEventType =
+    { elapsed = Instant.fromDuration elapsed
     , eventType = TimelineEvent.CarEvent "1" carEventType
     }

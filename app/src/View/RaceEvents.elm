@@ -27,7 +27,7 @@ view toMsg eventsState replay =
         -- The race builds its timeline in time order, and filtering keeps it.
         occurredEvents =
             replay.race.timelineEvents
-                |> List.filter (\event -> Instant.compare event.eventTime currentElapsed /= GT)
+                |> List.filter (\event -> Instant.compare event.elapsed currentElapsed /= GT)
     in
     div []
         [ Html.h2 [] [ text "Race Events" ]
@@ -37,13 +37,13 @@ view toMsg eventsState replay =
 
 config : (DataView.Msg -> msg) -> DataView.Config TimelineEvent msg
 config toMsg =
-    { toId = .eventTime >> Instant.toString
+    { toId = .elapsed >> Instant.toString
     , toMsg = toMsg
     , columns =
         [ DataView.customColumn
             { label = "Time"
-            , getter = .eventTime >> Instant.toString
-            , sorter = Compare.by (.eventTime >> Instant.toDuration)
+            , getter = .elapsed >> Instant.toString
+            , sorter = Compare.by (.elapsed >> Instant.toDuration)
             }
         , DataView.stringColumn
             { label = "Car"

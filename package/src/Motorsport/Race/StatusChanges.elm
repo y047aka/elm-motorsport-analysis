@@ -59,12 +59,12 @@ collect :
     TimelineEvent
     -> Dict CarNumber (List ( Instant, Status ))
     -> Dict CarNumber (List ( Instant, Status ))
-collect { eventTime, eventType } acc =
+collect { elapsed, eventType } acc =
     case statusChange eventType of
         Just ( carNumber, status ) ->
             Dict.update carNumber
                 (\collected ->
-                    Just (( eventTime, status ) :: Maybe.withDefault [] collected)
+                    Just (( elapsed, status ) :: Maybe.withDefault [] collected)
                 )
                 acc
 

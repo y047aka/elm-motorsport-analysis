@@ -170,17 +170,17 @@ running when it falls. Car "1" leads every lap, so the lead never changes hands.
 -}
 timelineEvents : List TimelineEvent
 timelineEvents =
-    [ { eventTime = Instant.raceStart, eventType = TimelineEvent.RaceStart }
-    , { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Start }
-    , { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Start }
-    , { eventTime = Instant.fromDuration 170000
+    [ { elapsed = Instant.raceStart, eventType = TimelineEvent.RaceStart }
+    , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Start }
+    , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Start }
+    , { elapsed = Instant.fromDuration 170000
       , eventType = TimelineEvent.CarEvent "1" (TimelineEvent.PitIn { lapNumber = 2, duration = 30000 })
       }
-    , { eventTime = Instant.fromDuration 200000
+    , { elapsed = Instant.fromDuration 200000
       , eventType = TimelineEvent.CarEvent "1" (TimelineEvent.PitOut { lapNumber = 2, duration = 30000 })
       }
-    , { eventTime = Instant.fromDuration 300000, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Retirement }
-    , { eventTime = Instant.fromDuration 7300000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Checkered }
+    , { elapsed = Instant.fromDuration 300000, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Retirement }
+    , { elapsed = Instant.fromDuration 7300000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Checkered }
     ]
 
 

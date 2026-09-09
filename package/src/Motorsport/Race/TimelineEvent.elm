@@ -21,7 +21,7 @@ import Motorsport.Race.Car exposing (CarNumber)
 
 
 type alias TimelineEvent =
-    { eventTime : Instant, eventType : EventType }
+    { elapsed : Instant, eventType : EventType }
 
 
 type EventType
