@@ -50,12 +50,15 @@ view config snapshot =
 
         _ ->
             div
-                [ class "grid grid-cols-[auto_1fr_auto] items-center gap-2" ]
-                [ navButton "◀" (config.onScrollTo (offset - 1)) (offset <= 0)
+                [ class "grid gap-2" ]
+                [ div
+                    [ class "flex items-center justify-end gap-1" ]
+                    [ navButton "◀" (config.onScrollTo (offset - 1)) (offset <= 0)
+                    , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
+                    ]
                 , div
                     [ class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-2" ]
                     (List.map (CarCard.view lapHistory allCars) window)
-                , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
                 ]
 
 
