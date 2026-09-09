@@ -1,8 +1,9 @@
 # Written by `nix run .#cli-run` out of the rows. The round the VRT drives is
 # kept, so a checkout runs the tests and the dev server with no CLI run behind
-# it; the other thirteen are 44MB the CSV beside them already says.
+# it; the other thirteen are 50MB the CSV beside them already says.
 *.json
 *.jsonl
 !/index.json
 !/2025/le_mans_24h.json
 !/2025/le_mans_24h_laps.jsonl
+!/2025/le_mans_24h_timeline.jsonl

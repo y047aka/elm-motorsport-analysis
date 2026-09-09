@@ -1,14 +1,14 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
-    , decoder
+    , fromJsonl, decoder
     )
 
 {-| The race as a list of things that happened, in the order they happened.
 
-Read out of the round's summary, which `Round.Timeline` writes.
+Read out of the round's timeline file, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
-@docs decoder
+@docs fromJsonl, decoder
 
 -}
 
@@ -16,6 +16,7 @@ import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Internal.Jsonl as Jsonl
 import Motorsport.Race.Car exposing (CarNumber)
 
 
@@ -39,6 +40,14 @@ type CarEventType
 
 
 -- DECODE
+
+
+{-| Reads the timeline file, which holds one event per line rather than one
+array.
+-}
+fromJsonl : String -> Result String (List TimelineEvent)
+fromJsonl =
+    Jsonl.decode decoder
 
 
 {-| An event is one flat object: when it happened, what it was, and -- for all

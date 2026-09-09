@@ -19,7 +19,6 @@ import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as Class
@@ -51,7 +50,6 @@ type alias Event =
     , track : Track
     , startingGrid : StartingGrid
     , index : Race.Index
-    , timelineEvents : List TimelineEvent
     }
 
 
@@ -103,13 +101,12 @@ type alias StartingGridEntry =
 
 eventDecoder : Era -> Manufacturers -> Decoder Event
 eventDecoder era manufacturers =
-    Decode.map6 Event
+    Decode.map5 Event
         (field "race" (field "timeLimit" Instant.decoder))
         (field "race" (field "duration" Instant.decoder))
         (field "track" trackDecoder)
         (field "startingGrid" (startingGridDecoder era manufacturers))
         (field "index" Race.indexDecoder)
-        (field "timelineEvents" (list TimelineEvent.decoder))
 
 
 {-| Two keys the CLI leaves out when it has nothing to say, and `optional`

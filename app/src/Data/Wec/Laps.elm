@@ -19,6 +19,7 @@ import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Internal.Jsonl as Jsonl
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
@@ -55,25 +56,8 @@ type alias RawMiniSector =
 {-| Reads the laps file, which holds one lap per line rather than one array.
 -}
 fromJsonl : String -> Result String (List RawLap)
-fromJsonl body =
-    body
-        |> String.lines
-        |> List.indexedMap Tuple.pair
-        |> List.foldr decodeLine (Ok [])
-
-
-decodeLine : ( Int, String ) -> Result String (List RawLap) -> Result String (List RawLap)
-decodeLine ( index, line ) rest =
-    if String.isEmpty line then
-        rest
-
-    else
-        case Decode.decodeString rawLapDecoder line of
-            Ok rawLap ->
-                Result.map ((::) rawLap) rest
-
-            Err error ->
-                Err ("line " ++ String.fromInt (index + 1) ++ ": " ++ Decode.errorToString error)
+fromJsonl =
+    Jsonl.decode rawLapDecoder
 
 
 rawLapDecoder : Decoder RawLap

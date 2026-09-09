@@ -47,8 +47,9 @@ prefixes, and which one says what is being run rather than what is being built:
 
 `.#cli-run` takes the directory holding the season directories and converts
 every round `Motorsport.Calendar` lists, in two stages: the CSV goes into the
-tables, and a round's summary `.json`, its laps `.jsonl` one lap per line, and
-`index.json` beside them are written back out of the rows.
+tables, and a round's summary `.json`, its laps `.jsonl` one lap per line, its
+timeline `.jsonl` one event per line, and `index.json` beside them are written
+back out of the rows.
 **A new round is added to `Motorsport.Calendar` first** — the run converts
 nothing the calendar does not list, reports any CSV no round names, and fails
 any round whose CSV is missing.
@@ -59,7 +60,7 @@ round on the calendar answers to fails the run before anything is written.
 
 **A checkout holds the CSV, the calendar and one round's files.** 2025's Le
 Mans is kept, so the VRT and a dev server work with nothing run first. The
-other thirteen are 49MB the rows already say, so they are ignored rather than
+other thirteen are 50MB the rows already say, so they are ignored rather than
 committed, and `.#tauri-build` is the one command that writes them — a bundle
 carries the files it opens, and nothing else needs all of them at once. A round
 left unwritten is quiet: the dev server answers `/api` for it with a 502, and a
@@ -91,7 +92,7 @@ is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL
 the app asks for before it knows anything — is reached only by a bundle with
 nothing listening on `/api`. Such a bundle opens whichever rounds were written
 before it was built, which is why `.#tauri-build` converts every one of them
-first: all fourteen come to 74MB of files and 3MiB in the `.app`, since Tauri
+first: all fourteen come to 76MB of files and 3MiB in the `.app`, since Tauri
 compresses what it embeds. A round the run did not write fails there rather than 404ing —
 Tauri's asset resolver answers a path it does not know with `index.html`, so it
 decodes HTML. A bundle behind a server
@@ -102,9 +103,9 @@ Passing the flag goes through `nix run .#cli-run -- --database ...`, since the
 flake forwards what follows.
 
 `.#serve-api` answers `/api` out of the rows a run loaded: `/api/health`,
-`/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json` and
-`_laps.jsonl`. The Vite dev server forwards `/api` to port 8080, and answers it
-from `static/` when nothing is listening.
+`/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json`,
+`_laps.jsonl` and `_timeline.jsonl`. The Vite dev server forwards `/api` to
+port 8080, and answers it from `static/` when nothing is listening.
 
 Its operating form is the jar, since `flix run` takes the JVM down with `main`
 and the server's does not return. `flix build-jar` leaves the Maven
@@ -261,8 +262,10 @@ and `Lap.Performance` rates a lap for either side, so neither owns them.
 Neither walks a lap of the race. Which lap took which record is counted in
 `Round.Index` and arrives with the round's summary, as `Race.lapCompletions`
 does, so `Race.fromCars` is given a `Race.Index` rather than building one.
-`Race.TimelineEvent` is read the same way, off `Round.Timeline`: the race as a
-list of what happened, which `Race.StatusChanges` is the per-car index of.
+`Race.TimelineEvent` is read the same way, off `Round.Timeline` — the race as a
+list of what happened, which `Race.StatusChanges` is the per-car index of —
+though it arrives in a file of its own rather than in the summary, being the
+same order of size as the laps rather than of the indices.
 
 ### Reading the race at a moment
 

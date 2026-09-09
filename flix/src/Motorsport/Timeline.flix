@@ -1,14 +1,14 @@
 /// The race as a list of things that happened, in the order they happened.
 ///
 /// The mirror of `Motorsport.Race.TimelineEvent` on the Elm side, which reads
-/// these back out of the summary. What is decided here is what the rows do not
+/// these back a line at a time. What is decided here is what the rows do not
 /// say -- whether a car's last lap was the flag or a retirement -- and the
 /// counting that finds each event is `Round.Timeline`'s.
 mod Motorsport.Timeline {
 
     use Util.Duration.Duration
     use Util.Json.Encode
-    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
+    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt}
 
     pub enum CarEvent with Eq {
         case Start
@@ -90,10 +90,7 @@ mod Motorsport.Timeline {
             let ended = if (last < timeLimit) CarEvent.Retirement else CarEvent.Checkered;
             { elapsed = last, eventType = EventType.Of(carNumber, ended) })
 
-    pub def toJson(events: List[Event]): Encode.JsonValue =
-        JsonArray(events |> List.map(eventToJson))
-
-    def eventToJson(event: Event): Encode.JsonValue =
+    pub def toJson(event: Event): Encode.JsonValue =
         JsonObject(
             ("elapsed", JsonString(Util.Duration.format(event#elapsed))) ::
             typeToJson(event#eventType)

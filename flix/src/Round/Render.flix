@@ -8,23 +8,22 @@ mod Round.Render {
     use Motorsport.Wec
     use Round.Laps.Placed
 
-    /// The round's summary, the indices and the timeline read off the same
-    /// rows, written as one document.
-    pub def renderSummary(
-        metadata: Metadata.Metadata,
-        index: Index.Index,
-        timeline: List[Timeline.Event]
-    ): String =
-        Extra.render(Metadata.toJson(metadata)
-            |> extendedWith("index", Index.toJson(index))
-            |> extendedWith("timelineEvents", Timeline.toJson(timeline)))
+    /// The round's summary and the indices read off the same rows, written as
+    /// one document.
+    pub def renderSummary(metadata: Metadata.Metadata, index: Index.Index): String =
+        Extra.render(withIndex(Metadata.toJson(metadata), Index.toJson(index)))
 
-    def extendedWith(key: String, value: JsonValue, metadata: JsonValue): JsonValue =
+    def withIndex(metadata: JsonValue, index: JsonValue): JsonValue =
         match metadata {
             case JsonValue.JsonObject(fields) =>
-                JsonValue.JsonObject(List.append(fields, (key, value) :: Nil))
+                JsonValue.JsonObject(List.append(fields, ("index", index) :: Nil))
             case other => other
         }
+
+    pub def renderTimelineJsonl(events: List[Timeline.Event]): String =
+        events
+            |> List.map(event -> "${Extra.renderOnOneLine(Timeline.toJson(event))}\n")
+            |> List.join("")
 
     pub def renderJsonl(laps: List[Placed]): String =
         laps

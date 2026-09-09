@@ -27,6 +27,7 @@ mod Server.Api {
         case Calendar
         case Summary(Int32, String)
         case Laps(Int32, String)
+        case Timeline(Int32, String)
         case NotFound
     }
 
@@ -47,10 +48,15 @@ mod Server.Api {
         match Int32.fromString(season) {
             case None => Route.NotFound
             case Some(year) =>
-                match (String.stripSuffix({substr = "_laps.jsonl"}, file), String.stripSuffix({substr = ".json"}, file)) {
-                    case (Some(id), _) => listed(year, id, Route.Laps(year, id))
-                    case (_, Some(id)) => listed(year, id, Route.Summary(year, id))
-                    case _             => Route.NotFound
+                match (
+                    String.stripSuffix({substr = "_laps.jsonl"}, file),
+                    String.stripSuffix({substr = "_timeline.jsonl"}, file),
+                    String.stripSuffix({substr = ".json"}, file)
+                ) {
+                    case (Some(id), _, _) => listed(year, id, Route.Laps(year, id))
+                    case (_, Some(id), _) => listed(year, id, Route.Timeline(year, id))
+                    case (_, _, Some(id)) => listed(year, id, Route.Summary(year, id))
+                    case _                => Route.NotFound
                 }
         }
 
@@ -63,18 +69,20 @@ mod Server.Api {
     /// The calendar is `Motorsport.Calendar`, not a count of the rows.
     pub def needsDatabase(route: Route): Bool =
         match route {
-            case Route.Summary(_, _) => true
-            case Route.Laps(_, _)    => true
-            case _                   => false
+            case Route.Summary(_, _)  => true
+            case Route.Laps(_, _)     => true
+            case Route.Timeline(_, _) => true
+            case _                    => false
         }
 
     pub def respond(route: Route): Response \ SqlRead =
         match route {
             case Route.Health            => ok("text/plain", "ok")
             case Route.Calendar          => ok("application/json", calendar())
-            case Route.Summary(year, id) => body("application/json", () -> summary(year, id))
-            case Route.Laps(year, id)    => body("application/jsonl", () -> laps(year, id))
-            case Route.NotFound          => notFound("not found")
+            case Route.Summary(year, id)  => body("application/json", () -> summary(year, id))
+            case Route.Laps(year, id)     => body("application/jsonl", () -> laps(year, id))
+            case Route.Timeline(year, id) => body("application/jsonl", () -> timeline(year, id))
+            case Route.NotFound           => notFound("not found")
         }
 
     def ok(contentType: String, body: String): Response =
@@ -108,12 +116,13 @@ mod Server.Api {
 
     def summary(season: Int32, id: String): Option[String] \ DbRead =
         answer(season, id, (e, seats) ->
-            let metadata = Summary.read(e, seats);
-            Render.renderSummary(
-                metadata,
-                Index.read(e, seats),
-                Timeline.read(e, metadata#race#timeLimit)
-            ))
+            Render.renderSummary(Summary.read(e, seats), Index.read(e, seats)))
+
+    /// The time limit the terminal events are weighed against is the summary's,
+    /// so a round's timeline costs the summary's readings as well.
+    def timeline(season: Int32, id: String): Option[String] \ DbRead =
+        answer(season, id, (e, seats) ->
+            Render.renderTimelineJsonl(Timeline.read(e, Summary.read(e, seats)#race#timeLimit)))
 
     def laps(season: Int32, id: String): Option[String] \ DbRead =
         answer(season, id, (e, seats) -> Render.renderJsonl(Laps.read(e, seats)))

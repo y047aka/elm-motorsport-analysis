@@ -7,10 +7,11 @@ mod Cli.FileTask {
     /// pointed at. The calendar names the round and the path follows, so there
     /// is nothing to read back off a directory name.
     pub type alias FileTask = {
-        inputPath  = String,
-        outputPath = String,
-        lapsPath   = String,
-        entry      = Entry
+        inputPath    = String,
+        outputPath   = String,
+        lapsPath     = String,
+        timelinePath = String,
+        entry        = Entry
     }
 
     /// Which of the calendar's rounds a stage is for.
@@ -25,10 +26,11 @@ mod Cli.FileTask {
         Calendar.entries() |> List.map(entry -> {
             let stem = "${root}/${entry#season}/${entry#id}";
             {
-                inputPath  = "${stem}.csv",
-                outputPath = "${stem}.json",
-                lapsPath   = "${stem}_laps.jsonl",
-                entry      = entry
+                inputPath    = "${stem}.csv",
+                outputPath   = "${stem}.json",
+                lapsPath     = "${stem}_laps.jsonl",
+                timelinePath = "${stem}_timeline.jsonl",
+                entry        = entry
             }
         })
 

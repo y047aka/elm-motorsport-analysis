@@ -24,6 +24,7 @@ import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Msg(..))
@@ -88,14 +89,24 @@ type alias RoundId =
     }
 
 
-{-| The two files arrive in either order, and a round needs both. Three cases
-rather than a pair of `Maybe`s: having both is not a state, it is the move to
-`Loaded`.
+{-| The three files arrive in any order, and a round needs all of them.
+
+Held as three `Maybe`s rather than as the cases of a sum: two files had three
+inhabitants worth naming and three would have seven, none of which the app asks
+a question of. Having all three is still not a state -- it is the move to
+`Loaded`, which is what `completed` makes.
+
 -}
-type Partial
-    = NothingYet
-    | GotSummary Wec.Event
-    | GotLaps (List WecLaps.RawLap)
+type alias Partial =
+    { summary : Maybe Wec.Event
+    , laps : Maybe (List WecLaps.RawLap)
+    , timeline : Maybe (List TimelineEvent)
+    }
+
+
+nothingYet : Partial
+nothingYet =
+    { summary = Nothing, laps = Nothing, timeline = Nothing }
 
 
 {-| A loaded round, as the pages read it.
@@ -219,15 +230,21 @@ update msg m =
             resumeWaitingRound { m | round = Waiting params }
 
         JsonLoaded_Wec key (Ok summary) ->
-            ( { m | round = arrived key (withSummary summary) m.round }, Effect.none )
+            ( { m | round = arrived key (\p -> { p | summary = Just summary }) m.round }, Effect.none )
 
         JsonLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         LapsLoaded_Wec key (Ok rawLaps) ->
-            ( { m | round = arrived key (withLaps rawLaps) m.round }, Effect.none )
+            ( { m | round = arrived key (\p -> { p | laps = Just rawLaps }) m.round }, Effect.none )
 
         LapsLoaded_Wec key (Err error) ->
+            ( { m | round = didNotArrive key error m.round }, Effect.none )
+
+        TimelineLoaded_Wec key (Ok events) ->
+            ( { m | round = arrived key (\p -> { p | timeline = Just events }) m.round }, Effect.none )
+
+        TimelineLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         ReplayMsg replayMsg ->
@@ -267,7 +284,7 @@ askFor params manufacturers id round m =
             ( { m | round = Unavailable params NoClassGrid }, Effect.none )
 
         Just era ->
-            ( { m | round = Loading id NothingYet }
+            ( { m | round = Loading id nothingYet }
             , Effect.sendCmd <|
                 Cmd.batch
                     [ Http.get
@@ -276,22 +293,35 @@ askFor params manufacturers id round m =
                         }
                     , Http.get
                         { url = round.laps
-                        , expect =
-                            Http.expectString
-                                (LapsLoaded_Wec (keyOf id)
-                                    << Result.andThen (WecLaps.fromJsonl >> Result.mapError Http.BadBody)
-                                )
+                        , expect = expectJsonl (LapsLoaded_Wec (keyOf id)) WecLaps.fromJsonl
+                        }
+                    , Http.get
+                        { url = round.timeline
+                        , expect = expectJsonl (TimelineLoaded_Wec (keyOf id)) TimelineEvent.fromJsonl
                         }
                     ]
             )
+
+
+{-| A body read a line at a time, and a line that would not read answered as the
+round's own failure rather than as a round with fewer records in it.
+-}
+expectJsonl : (Result Http.Error (List a) -> msg) -> (String -> Result String (List a)) -> Http.Expect msg
+expectJsonl toMsg fromJsonl =
+    Http.expectString (toMsg << Result.andThen (fromJsonl >> Result.mapError Http.BadBody))
 
 
 {-| Applies a file to the round that asked for it, and to no other. A response
 naming any other round is one left over from a round already navigated away
 from.
 -}
-arrived : { season : Int, id : String } -> (RoundId -> Partial -> Round) -> Round -> Round
-arrived key step round =
+arrived : { season : Int, id : String } -> (Partial -> Partial) -> Round -> Round
+arrived key file round =
+    forRound key (\id partial -> completed id (file partial)) round
+
+
+forRound : { season : Int, id : String } -> (RoundId -> Partial -> Round) -> Round -> Round
+forRound key step round =
     case round of
         Loading id partial ->
             if keyOf id == key then
@@ -304,38 +334,30 @@ arrived key step round =
             round
 
 
-withSummary : Wec.Event -> RoundId -> Partial -> Round
-withSummary summary id partial =
-    case partial of
-        GotLaps rawLaps ->
-            Loaded id (raceFrom summary rawLaps)
+{-| The round once nothing is outstanding, and the same `Loading` until then.
+-}
+completed : RoundId -> Partial -> Round
+completed id partial =
+    case ( partial.summary, partial.laps, partial.timeline ) of
+        ( Just summary, Just rawLaps, Just timeline ) ->
+            Loaded id (raceFrom summary rawLaps timeline)
 
         _ ->
-            Loading id (GotSummary summary)
+            Loading id partial
 
 
 {-| The round the response was for, given up on. A response naming another is
-dropped by `arrived`, as a late success is.
+dropped by `forRound`, as a late success is.
 -}
 didNotArrive : { season : Int, id : String } -> Http.Error -> Round -> Round
 didNotArrive key error round =
-    arrived key
+    forRound key
         (\id _ -> Unavailable { season = String.fromInt id.season, event = id.id } (LoadFailed error))
         round
 
 
-withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
-withLaps rawLaps id partial =
-    case partial of
-        GotSummary summary ->
-            Loaded id (raceFrom summary rawLaps)
-
-        _ ->
-            Loading id (GotLaps rawLaps)
-
-
-raceFrom : Wec.Event -> List WecLaps.RawLap -> Race
-raceFrom summary rawLaps =
+raceFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Race
+raceFrom summary rawLaps timelineEvents =
     let
         replay =
             summary.startingGrid.entries
@@ -345,7 +367,7 @@ raceFrom summary rawLaps =
                     { timeLimit = summary.timeLimit
                     , finishedAt = summary.finishedAt
                     , index = summary.index
-                    , timelineEvents = summary.timelineEvents
+                    , timelineEvents = timelineEvents
                     }
     in
     { replay = replay

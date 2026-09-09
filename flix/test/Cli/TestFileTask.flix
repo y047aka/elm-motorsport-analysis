@@ -15,6 +15,7 @@ mod Cli.TestFileTask {
                 Assert.assertTrue(task#inputPath  == "../app/static/wec/2025/fuji_6h.csv");
                 Assert.assertTrue(task#outputPath == "../app/static/wec/2025/fuji_6h.json");
                 Assert.assertTrue(task#lapsPath   == "../app/static/wec/2025/fuji_6h_laps.jsonl");
+                Assert.assertTrue(task#timelinePath == "../app/static/wec/2025/fuji_6h_timeline.jsonl");
                 Assert.assertTrue(task#entry#date == "2025-09-28")
         }
 

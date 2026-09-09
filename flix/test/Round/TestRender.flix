@@ -39,12 +39,15 @@ mod Round.TestRender {
 
     def summaryOf(laps: List[RawLap]): String \ IO =
         TestSupport.onRound(leMans(), laps, () ->
-            let metadata = Summary.read(leMans(), Drivers.read(leMans()));
             Render.renderSummary(
-                metadata,
-                Index.read(leMans(), Drivers.read(leMans())),
-                Timeline.read(leMans(), metadata#race#timeLimit)
+                Summary.read(leMans(), Drivers.read(leMans())),
+                Index.read(leMans(), Drivers.read(leMans()))
             ))
+
+    def timelineOf(laps: List[RawLap]): String \ IO =
+        TestSupport.onRound(leMans(), laps, () ->
+            let metadata = Summary.read(leMans(), Drivers.read(leMans()));
+            Render.renderTimelineJsonl(Timeline.read(leMans(), metadata#race#timeLimit)))
 
     /// Read back rather than rendered from the laps in hand: a lap's place in
     /// the field is counted over the round's rows, so the reader is the only
@@ -70,14 +73,10 @@ mod Round.TestRender {
         Assert.assertTrue(String.contains({substr = "\"fastestLapTime\""}, json));
         Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json))
 
-    /// The timeline is written into the summary beside the indices.
+    /// The timeline is a file of its own, and none of it is in the summary.
     @Test
-    def testRenderSummaryCarriesTheTimeline(): Unit \ {Assert, IO} =
-        let json = summaryOf(sampleRawLaps());
-        Assert.assertTrue(String.contains({substr = "\"timelineEvents\""}, json));
-        Assert.assertTrue(String.contains({substr = "{ \"elapsed\": \"0.000\", \"event\": \"raceStart\" }"}, json));
-        Assert.assertTrue(String.contains({substr = "\"event\": \"start\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"event\": \"checkered\""}, json))
+    def testTheTimelineIsNotInTheSummary(): Unit \ {Assert, IO} =
+        Assert.assertTrue(not String.contains({substr = "\"event\""}, summaryOf(sampleRawLaps())))
 
     /// A round with no laps still has a summary, and it still renders.
     @Test
@@ -86,13 +85,24 @@ mod Round.TestRender {
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, json));
         Assert.assertTrue(String.contains({substr = "\"entries\": []"}, json));
         Assert.assertTrue(String.contains({substr = "\"lapCompletions\": []"}, json))
-    /// A round with no cars ran no laps, and the race still started.
+
+    /// Every event on a line of its own, as the laps are.
     @Test
-    def testRenderSummaryOfARoundWithNoLapsStillStartsTheRace(): Unit \ {Assert, IO} =
-        let json = summaryOf(Nil);
-        Assert.assertTrue(String.contains(
-            {substr = "{ \"elapsed\": \"0.000\", \"event\": \"raceStart\" }"}, json));
-        Assert.assertTrue(not String.contains({substr = "\"event\": \"start\""}, json))
+    def testRenderTimelineJsonlIsOneEventPerLine(): Unit \ {Assert, IO} =
+        let lines = timelineOf(sampleRawLaps()) |> String.splitOn({substr = "\n"}) |> List.filter(l -> l != "");
+        Assert.assertTrue(List.head(lines) == Some("{ \"elapsed\": \"0.000\", \"event\": \"raceStart\" }"));
+        Assert.assertTrue(List.forAll(
+            line -> String.startsWith({prefix = "{ "}, line) and String.endsWith({suffix = " }"}, line),
+            lines
+        ));
+        // The start, the two cars taking it, car 7's flag, car 12 taking the
+        // lead on the lap it had to itself, and its own flag.
+        Assert.assertTrue(List.length(lines) == 6)
+
+    /// A round with no laps has no cars in it, and the race still started.
+    @Test
+    def testRenderTimelineJsonlOfARoundWithNoLapsIsTheStartAlone(): Unit \ {Assert, IO} =
+        Assert.assertTrue(timelineOf(Nil) == "{ \"elapsed\": \"0.000\", \"event\": \"raceStart\" }\n")
 
     @Test
     def testRenderJsonlRendersEveryLap(): Unit \ {Assert, IO} =

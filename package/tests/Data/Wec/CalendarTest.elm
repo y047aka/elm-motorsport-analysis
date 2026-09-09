@@ -18,6 +18,7 @@ json =
                 [ { "id": "spa_6h", "name": "6 Hours of Spa", "date": "2026-05-09"
                   , "summary": "/static/wec/2026/spa_6h.json"
                   , "laps": "/static/wec/2026/spa_6h_laps.jsonl"
+                  , "timeline": "/static/wec/2026/spa_6h_timeline.jsonl"
                   }
                 ]
           }
@@ -26,10 +27,12 @@ json =
                 [ { "id": "spa_6h", "name": "6 Hours of Spa", "date": "2025-05-10"
                   , "summary": "/static/wec/2025/spa_6h.json"
                   , "laps": "/static/wec/2025/spa_6h_laps.jsonl"
+                  , "timeline": "/static/wec/2025/spa_6h_timeline.jsonl"
                   }
                 , { "id": "fuji_6h", "name": "6 Hours of Fuji", "date": "2025-09-28"
                   , "summary": "/static/wec/2025/fuji_6h.json"
                   , "laps": "/static/wec/2025/fuji_6h_laps.jsonl"
+                  , "timeline": "/static/wec/2025/fuji_6h_timeline.jsonl"
                   }
                 ]
           }

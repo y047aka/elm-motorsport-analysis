@@ -12,10 +12,11 @@ import Data.Wec.Calendar as Calendar
 import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer exposing (Manufacturers)
 import Http
+import Motorsport.Race.TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
 
 
-{-| The two file responses carry the round they were asked for.
+{-| The three file responses carry the round they were asked for.
 
 Nothing cancels an `Http.get`, so leaving a round mid-load leaves its responses
 in flight. Untagged, one of them lands beside the next round's other file and
@@ -28,4 +29,5 @@ type Msg
     | FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec { season : Int, id : String } (Result Http.Error Wec.Event)
     | LapsLoaded_Wec { season : Int, id : String } (Result Http.Error (List WecLaps.RawLap))
+    | TimelineLoaded_Wec { season : Int, id : String } (Result Http.Error (List TimelineEvent))
     | ReplayMsg Replay.Msg

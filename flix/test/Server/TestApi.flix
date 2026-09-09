@@ -111,6 +111,7 @@ mod Server.TestApi {
         let body = offline(Route.Calendar)#body;
         Assert.assertTrue(String.contains({substr = "\"summary\": \"/api/wec/2025/fuji_6h.json\""}, body));
         Assert.assertTrue(String.contains({substr = "\"laps\": \"/api/wec/2025/fuji_6h_laps.jsonl\""}, body));
+        Assert.assertTrue(String.contains({substr = "\"timeline\": \"/api/wec/2025/fuji_6h_timeline.jsonl\""}, body));
         Assert.assertTrue(not String.contains({substr = "/static/"}, body))
 
     /// The round the server answers with is the round the export would write,
@@ -120,34 +121,42 @@ mod Server.TestApi {
     def aRoundIsTheRoundTheExportWouldHold(): Unit \ {IO, Assert} =
         let laps = TestLapRow.sampleLaps();
         match served(laps) {
-            case (summary, lapsBody, exported) =>
-                Assert.assertTrue(summary#status == 200);
-                Assert.assertTrue(summary#body == exported#summary);
-                Assert.assertTrue(String.contains({substr = "\"index\""}, summary#body));
-                Assert.assertTrue(lapsBody#status == 200);
-                Assert.assertTrue(lapsBody#body == exported#laps)
+            case (answers, exported) =>
+                Assert.assertTrue(answers#summary#status == 200);
+                Assert.assertTrue(answers#summary#body == exported#summary);
+                Assert.assertTrue(String.contains({substr = "\"index\""}, answers#summary#body));
+                Assert.assertTrue(answers#laps#status == 200);
+                Assert.assertTrue(answers#laps#body == exported#laps);
+                Assert.assertTrue(answers#timeline#status == 200);
+                Assert.assertTrue(answers#timeline#body == exported#timeline);
+                Assert.assertTrue(String.contains({substr = "\"event\": \"raceStart\""}, answers#timeline#body))
         }
 
-    /// The two answers and, beside them, what `Cli.Export` would have written
+    /// The three answers and, beside them, what `Cli.Export` would have written
     /// off the same rows -- rendered in the same run, a lap's place in the
     /// field being a reading of the round rather than of the laps in hand.
-    def served(laps: List[RawLap]): (Response, Response, {summary = String, laps = String}) \ IO =
+    def served(laps: List[RawLap]): (
+        {summary = Response, laps = Response, timeline = Response},
+        {summary = String, laps = String, timeline = String}
+    ) \ IO =
         TestSupport.onRound(fuji(), laps, () -> (
-            Api.respond(Route.Summary(2025, "fuji_6h")),
-            Api.respond(Route.Laps(2025, "fuji_6h")),
             {
-                summary = summaryOf(fuji()),
-                laps    = Render.renderJsonl(Round.Laps.read(fuji(), Round.Drivers.read(fuji())))
+                summary  = Api.respond(Route.Summary(2025, "fuji_6h")),
+                laps     = Api.respond(Route.Laps(2025, "fuji_6h")),
+                timeline = Api.respond(Route.Timeline(2025, "fuji_6h"))
+            },
+            {
+                summary  = Render.renderSummary(
+                    Summary.read(fuji(), Round.Drivers.read(fuji())),
+                    Index.read(fuji(), Round.Drivers.read(fuji()))
+                ),
+                laps     = Render.renderJsonl(Round.Laps.read(fuji(), Round.Drivers.read(fuji()))),
+                timeline = Render.renderTimelineJsonl(Round.Timeline.read(
+                    fuji(),
+                    Summary.read(fuji(), Round.Drivers.read(fuji()))#race#timeLimit
+                ))
             }
         ))
-
-    def summaryOf(entry: Entry): String \ DbRead =
-        let metadata = Summary.read(entry, Round.Drivers.read(entry));
-        Render.renderSummary(
-            metadata,
-            Index.read(entry, Round.Drivers.read(entry)),
-            Round.Timeline.read(entry, metadata#race#timeLimit)
-        )
 
     /// A round the calendar lists and the rows hold none of. Answered out of
     /// them it would be a race that never ran.

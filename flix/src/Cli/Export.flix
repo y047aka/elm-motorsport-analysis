@@ -24,7 +24,8 @@ mod Cli.Export {
     pub type alias Rendered = {
         lapCount     = Int32,
         metadataJson = String,
-        lapsJsonl    = String
+        lapsJsonl    = String,
+        timelineJsonl = String
     }
 
     /// Where the app reads the exported files from, as `/api/wec` is where it
@@ -43,6 +44,7 @@ mod Cli.Export {
                     Console.println("${FileTask.label(task)}: Wrote ${rendered#lapCount} laps");
                     Console.println("${FileTask.label(task)}: Metadata -> ${task#outputPath}");
                     Console.println("${FileTask.label(task)}: Laps     -> ${task#lapsPath}");
+                    Console.println("${FileTask.label(task)}: Timeline -> ${task#timelinePath}");
                     { exported = acc#exported + 1 | acc }
                 case Err(e) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
@@ -90,15 +92,17 @@ mod Cli.Export {
         laps: List[Laps.Placed]
     ): Rendered =
         {
-            lapCount     = List.length(laps),
-            metadataJson = Render.renderSummary(metadata, index, timeline),
-            lapsJsonl    = Render.renderJsonl(laps)
+            lapCount      = List.length(laps),
+            metadataJson  = Render.renderSummary(metadata, index),
+            lapsJsonl     = Render.renderJsonl(laps),
+            timelineJsonl = Render.renderTimelineJsonl(timeline)
         }
 
     def writeRound(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
         forM(
             _ <- Files.write(task#outputPath, rendered#metadataJson) |> Result.mapErr(CliError.File);
-            _ <- Files.write(task#lapsPath, rendered#lapsJsonl) |> Result.mapErr(CliError.File)
+            _ <- Files.write(task#lapsPath, rendered#lapsJsonl) |> Result.mapErr(CliError.File);
+            _ <- Files.write(task#timelinePath, rendered#timelineJsonl) |> Result.mapErr(CliError.File)
         ) yield ()
 
     /// Written once for the export, not once per round, and written even by one

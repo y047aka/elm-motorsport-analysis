@@ -14,10 +14,13 @@ mod Cli.TestExport {
 
     /// The paths are never reached: `read` decides before anything is written.
     def task(entry: Entry): FileTask.FileTask =
-        { inputPath = "", outputPath = "", lapsPath = "", entry = entry }
+        { inputPath = "", outputPath = "", lapsPath = "", timelinePath = "", entry = entry }
 
     def readBack(loaded: Entry, wanted: Entry): Result[CliError, Rendered] \ IO =
         TestSupport.onRound(loaded, TestLapRow.sampleLaps(), () -> Export.read(task(wanted)))
+
+    def lines(jsonl: String): List[String] =
+        String.splitOn({substr = "\n"}, jsonl) |> List.filter(line -> line != "")
 
     @Test
     def aRoundNoRunHasLoadedIsNotWrittenOut(): Unit \ {Assert, IO} =
@@ -34,9 +37,10 @@ mod Cli.TestExport {
             case Ok(rendered) =>
                 Assert.assertTrue(rendered#lapCount == 3);
                 Assert.assertTrue(String.contains({substr = "\"6 Hours of Fuji\""}, rendered#metadataJson));
-                let lines = String.splitOn({substr = "\n"}, rendered#lapsJsonl)
-                    |> List.filter(line -> line != "");
-                Assert.assertTrue(List.length(lines) == 3)
+                Assert.assertTrue(List.length(lines(rendered#lapsJsonl)) == 3);
+                // The start, two cars taking it, two flags, car 12's stop on
+                // lap 2, and the lead it took coming out of it.
+                Assert.assertTrue(List.length(lines(rendered#timelineJsonl)) == 8)
             case Err(_) => Assert.assertTrue(false)
         }
 
