@@ -279,7 +279,7 @@ trackerView track snapshot replay m =
         ]
 
 
-{-| Timeline events that have occurred so far, oldest first: when each happened,
+{-| Timeline events that have occurred so far, newest first: when each happened,
 whose it was, and what kind of thing it was.
 -}
 timelinePanel : String -> Snapshot -> Replay.Model -> Html Msg
@@ -291,6 +291,7 @@ timelinePanel cell snapshot replay =
         occurredEvents =
             replay.race.timelineEvents
                 |> List.filter (\event -> Instant.compare event.elapsed currentElapsed /= GT)
+                |> List.reverse
     in
     button
         [ attribute "popovertarget" standingsPopoverId
