@@ -213,6 +213,11 @@ one instant have none of their own, and what a car is said to be where a stop
 ends as the flag falls is `Motorsport.Status.stronger`'s on the Elm side, off
 the pair rather than off the order they arrive in.
 
+Which is why `Round.Timeline.read` sorts by `elapsed_ms` and takes `seq` only
+as the tie -- rather than reading the rows in their key's order, which is the
+same list until a row is corrected in SQL and then is the list that moment used
+to be in.
+
 `Motorsport.Timeline.parts` is where the line written out and the row meet: what
 an event is called and which of the three optional fields it carries is settled
 once, so the JSON, the column's `check` and the reading back cannot disagree

@@ -7,11 +7,11 @@
 /// anything a row carries -- so the load decides it once and writes down what
 /// it decided.
 ///
-/// `seq` is the order the events go out in, and the whole of what it is for is
-/// that a round's timeline is written the same way twice: two events sharing an
-/// instant have no order of their own, and nothing is read out of the one they
-/// are given -- `Motorsport.Status.stronger` is where what a car is at such an
-/// instant is decided.
+/// `seq` is the order the load numbered the events in, and the whole of what it
+/// is for is that a round's timeline is written the same way twice: two events
+/// sharing an instant have no order of their own, and nothing is read out of
+/// the one they are given -- `Motorsport.Status.stronger` is where what a car is
+/// at such an instant is decided.
 mod Db.TimelineEvents {
 
     use Db.Rounds
@@ -154,8 +154,8 @@ mod Db.TimelineEvents {
     def keys(): List[Sql.Key[Bound[EventRow]]] =
         Sql.Key.Primary(primaryKey()) :: Nil
 
-    /// The key leads with the round and the timeline is read in its order, so
-    /// the rows are that key's tree and nothing reaches one another way.
+    /// A round's rows are read whole and in one go, so they are the key's tree
+    /// and nothing reaches one another way.
     def storage(): Sql.Storage = Sql.Storage.WithoutRowid
 
     pub def columnNames(): List[String] =

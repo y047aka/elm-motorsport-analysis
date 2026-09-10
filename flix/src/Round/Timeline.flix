@@ -15,10 +15,16 @@ mod Round.Timeline {
     use Motorsport.Timeline
     use Util.Duration.Duration
 
-    /// The round's timeline, in the order the load numbered it.
+    /// The round's timeline, in time order, and in the order the load numbered
+    /// them where two of them share an instant.
+    ///
+    /// Sorted rather than read in the key's order, so that a row corrected in
+    /// SQL comes back where its new moment puts it rather than where its old
+    /// one did.
     pub def read(entry: Entry): List[Timeline.Event] \ DbRead =
+        let c = TimelineEvents.columns();
         TimelineEvents.rows(entry)
-            |> Sql.orderBy(Schema.term(TimelineEvents.columns()#seq) :: Nil)
+            |> Sql.orderBy(Schema.term(c#elapsedMs) :: Schema.term(c#seq) :: Nil)
             |> Sql.map(_ -> TimelineEvents.selection())
             |> Sql.selectAll
             |> List.map(event)

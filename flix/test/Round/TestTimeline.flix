@@ -228,6 +228,25 @@ mod Round.TestTimeline {
             Timeline.fromLaps(entry(), Round.Summary.particulars(entry())#timeLimit)
         ))
 
+    /// A row corrected in SQL comes back where its new moment puts it. The
+    /// stop is moved past the flag, which leaves `seq` saying what it said
+    /// before -- and that is the order the rows are in and not the one they
+    /// are read in.
+    @Test
+    def aCorrectedRowComesBackAtItsNewMoment(): Unit \ {Assert, IO} =
+        let events = TestSupport.onRound(entry(),
+            lap("7", 1, "60.000") ::
+            pitLap("7", 2, "3:00.000", "1:10.000") ::
+            Nil,
+            () -> {
+                Db.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
+                    + " WHERE event = 'pitIn'");
+                Timeline.read(entry())
+            });
+        Assert.assertTrue(named("pitIn", events) == ("4:10.000", "pitIn", "7") :: Nil);
+        let times = events |> List.map(event -> event#elapsed);
+        Assert.assertTrue(times == List.sort(times))
+
     @Test
     def theRowsReadBackAsTheTimelineTheLoadCounted(): Unit \ {Assert, IO} =
         match loadedAndCounted() {
