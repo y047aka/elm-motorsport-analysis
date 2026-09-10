@@ -71,10 +71,13 @@ writes reads none of the CSV, so the files are an image of the rows and of
 nothing else: a row corrected in SQL is exported, and re-exporting after a
 change to a renderer costs no decoding. **The timeline is rows too**, which the
 load counts off the laps and writes to `timeline_events`, so a corrected lap
-reaches the summary and the laps on the next export and the timeline only on the
-next load — correct the events there instead, or load again. **A round no run
-has loaded fails the export** rather than being written out as a race that never
-ran — the rows read back as one, which is the one thing they cannot say for
+reaches the summary and the laps on the next export and the timeline not at all:
+a load rebuilds every table off the CSV, so running one to catch the timeline up
+would take the correction with it. Correct `timeline_events` beside `laps` —
+and renumber `seq` where the correction moves an event in time, since the export
+reads the rows in that order rather than sorting them. **A round no run has
+loaded fails the export** rather than being written out as a race that never ran
+— the rows read back as one, which is the one thing they cannot say for
 themselves — and the files it would have replaced are left alone. `/api` answers
 such a round with a 404 for the same reason, off the same reading: `Round.loaded`
 is where the two of them ask, and it asks `laps` and `cars` — a round with laps
