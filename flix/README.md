@@ -35,8 +35,9 @@ take an `Entry` and the `DbRead` effect and read it; `Round.Render` takes what
 they returned, is pure, and turns it into the bytes that go out. None of the six
 knows whether a file or a request is waiting at the other end. Three of them take a
 `Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
-once for the round by whichever answer names a driver, rather than once by
-each of them; the timeline names none and pays for neither it nor the summary. `Round.loaded` is what both ask first, and it asks `laps` and `cars`:
+once for the round by whichever answer names a driver rather than once by each
+of them; the timeline names none. `Round.loaded` is what both ask first, and it
+asks `laps` and `cars`:
 laps without cars is a round half in the database, and answered off the laps
 alone it would be a race whose grid was empty.
 
@@ -65,13 +66,11 @@ one car of one round, `car_drivers` is one seat of one car, and
 than spell: `rounds` is the calendar written down, `drivers` the names the feed
 repeats over every lap, and `entries` the cars a season was contested by.
 
-`timeline_events` is the one that is not a reading of the file. Its rows are the
-laps counted and then weighed -- which of a car's last crossings was the flag
-and which a retirement is read against a time limit no row carries -- so the
-load decides it once, writes down what it decided, and the export and the server
-read it back rather than each deciding it again, which is why a timeline costs
-neither the summary's readings nor the seats. The whole archive's 17,257 events
-are 0.56MB against `laps`' 12.94MB.
+`timeline_events` is the one that is not a reading of the file. Its rows are
+the laps counted and then weighed against a time limit no row carries, so the
+load decides it once and the two readers read back what it decided rather than
+each deciding it again. The whole archive's 17,257 events are 0.56MB against
+`laps`' 12.94MB.
 
 The archive is what says the three can be split off: no car of a round in it is
 described two ways, and no seat of one is named two ways. A lap carries its
@@ -196,7 +195,9 @@ rather than hundreds -- Le Mans is 3983 of them against the summary's 100KB --
 so it is written a line at a time as the laps are, and a round is three files
 and three URLs. It is also the only one of the walks a reader does not make:
 `Round.Timeline.fromLaps` is the load's, and `Round.Timeline.read` is the
-round's own rows in the order the load numbered them.
+round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
+rather than read in their key's order, which is the same list until a row is
+corrected in SQL and then is the list that moment used to be in.
 
 Each car's first and last crossing is one `GROUP BY`, the stops are the laps
 carrying a pit time, and the lead is `ROW_NUMBER` picking each lap's first
@@ -210,16 +211,10 @@ sharing an instant come back in -- `List.sortBy` is not stable, and a stop
 ending as the flag falls has to leave the car classified rather than in the pits
 -- which is why the gathering order rides in the sort key and lands in `seq`.
 
-Which is why `Round.Timeline.read` sorts by `elapsed_ms` and takes `seq` only
-as the tie -- rather than reading the rows in their key's order, which is the
-same list until a row is corrected in SQL and then is the list that moment used
-to be in.
-
-`Motorsport.Timeline.parts` is where the line written out and the row meet: what
-an event is called and which of the three optional fields it carries is settled
-once, so the JSON, the column's `check` and the reading back cannot disagree
-about it. A row that spells no event -- a stop with no lap, a name no event
-answers to -- is `Db.Error.Incomplete` rather than an event with either made up.
+`Motorsport.Timeline.parts` is where the line written out and the row meet, so
+the JSON, the column's `check` and the reading back cannot disagree about what
+an event is called or which fields it carries. A row that spells none is
+`Db.Error.Incomplete` rather than an event with either made up.
 
 `Round.Laps` takes one window function beside the reading for where the car
 stood in the field as it crossed the line -- a reading of the round rather than

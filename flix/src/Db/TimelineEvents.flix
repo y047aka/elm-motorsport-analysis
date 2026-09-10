@@ -1,16 +1,14 @@
 /// The `timeline_events` table: the round's timeline, one row per event.
 ///
-/// Alone among the tables holding what a round did, its rows are not the file
-/// written down: they are the laps counted and then weighed. Which of a car's
-/// last crossings was the flag and which a retirement is read against the time
-/// limit, and the time limit is `Motorsport.Metadata`'s estimate rather than
-/// anything a row carries -- so the load decides it once and writes down what
-/// it decided.
+/// Alone among the tables holding what a round did, its rows are the laps
+/// counted rather than the file written down. Which of a car's last crossings
+/// was the flag and which a retirement is weighed against the time limit, which
+/// is `Motorsport.Metadata`'s estimate and no row's, so the load decides it and
+/// a reader reads what it decided.
 ///
-/// `seq` is the order the load numbered the events in, and what it decides is
-/// the ones sharing an instant, which nothing else in the row orders: a stop
-/// ending as the flag falls has to leave the car classified rather than in the
-/// pits.
+/// `seq` orders the events sharing an instant, which nothing else in the row
+/// does: a stop ending as the flag falls has to leave the car classified rather
+/// than in the pits.
 mod Db.TimelineEvents {
 
     use Db.Rounds
@@ -25,8 +23,6 @@ mod Db.TimelineEvents {
 
     pub def table(): String = "timeline_events"
 
-    /// One event of one round, keyed by the place it holds in the round's
-    /// timeline.
     pub type alias EventRow = {
         roundId = Int32,
         seq = Int32,
@@ -49,7 +45,6 @@ mod Db.TimelineEvents {
 
     // ---------------------------------------------------------- the events
 
-    /// The timeline as rows, numbered from nought in the order it came in.
     pub def fromEvents(roundId: Int32, events: List[Event]): List[EventRow] =
         events
             |> List.zipWithIndex
@@ -67,7 +62,6 @@ mod Db.TimelineEvents {
             durationMs = p#duration |> Option.map(Util.Duration.millis)
         }
 
-    /// The event the row spells, or nothing where it spells none.
     pub def toEvent(r: EventRow): Option[Event] =
         Timeline.eventTypeOf({
             event = r#event,

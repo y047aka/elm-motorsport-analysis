@@ -205,9 +205,6 @@ mod Cli.Load {
                 }
         }
 
-    /// The terminal events are weighed against the time limit, and that is
-    /// `Metadata`'s estimate rather than anything a row carries, so the round's
-    /// particulars are read back beside the laps they are counted from.
     def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ Db =
         TimelineEvents.insertRows(TimelineEvents.fromEvents(
             roundId,

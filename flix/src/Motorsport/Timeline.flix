@@ -98,12 +98,10 @@ mod Motorsport.Timeline {
             let ended = if (last < timeLimit) CarEvent.Retirement else CarEvent.Checkered;
             { elapsed = last, eventType = EventType.Of(carNumber, ended) })
 
-    /// What an event is made of, in the words the file spells it in: which
-    /// event it was, whose it was, and the two things only a stop carries.
-    ///
-    /// The line written out and the row `Db.TimelineEvents` holds are two
-    /// writings of this, so which fields an event carries is settled here
-    /// rather than beside either of them.
+    /// What an event is made of, in the words the file spells it in. The line
+    /// written out and the row `Db.TimelineEvents` holds are two writings of
+    /// this, so which fields an event carries is settled here rather than
+    /// beside either of them.
     pub type alias Parts = {
         event     = String,
         carNumber = Option[String],
@@ -146,9 +144,6 @@ mod Motorsport.Timeline {
     def stopParts(event: String, lap: Int32, duration: Duration): Parts =
         { event = event, carNumber = None, lapNumber = Some(lap), duration = Some(duration) }
 
-    /// The event those parts spell, or nothing where they spell none: a name no
-    /// event answers to, a car's event with no car, or a stop with neither the
-    /// lap it ended on nor its length.
     pub def eventTypeOf(p: Parts): Option[EventType] =
         match (p#event, p#carNumber) {
             case ("raceStart", None)     => Some(EventType.RaceStart)

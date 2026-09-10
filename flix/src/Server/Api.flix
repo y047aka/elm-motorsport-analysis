@@ -129,9 +129,6 @@ mod Server.Api {
     /// list, and one it lists that no run has loaded. Rendered out of the rows
     /// the second would be a race that never ran, which is the one thing they
     /// cannot say for themselves.
-    ///
-    /// Who sat in a seat is read by the answers that name a driver rather than
-    /// here, so the timeline costs neither that reading nor the summary's.
     def answer(
         season: Int32,
         id: String,

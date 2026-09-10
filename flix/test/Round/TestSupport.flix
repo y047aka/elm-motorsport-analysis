@@ -1,8 +1,8 @@
 /// Loading laps as a round of their own, so that what a rule or a summary reads
 /// back can be tested against laps written out by hand.
 ///
-/// What it sends is what `Cli.Load` sends, the timeline included: a reader
-/// tested against a round this wrote is tested against the rows a run makes.
+/// What it sends is what `Cli.Load` sends, the timeline included, so a reader
+/// tested here is tested against the rows a run makes.
 mod Round.TestSupport {
 
     use Db.CarDrivers

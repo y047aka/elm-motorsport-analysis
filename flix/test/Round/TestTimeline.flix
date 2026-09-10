@@ -14,9 +14,8 @@ mod Round.TestTimeline {
 
     def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
 
-    /// The counting and the weighing, asked of the laps rather than of the rows
-    /// the load wrote: the time limit a test is about is its own, and a load
-    /// derives that one from the laps.
+    /// Asked of the laps rather than of the rows the load wrote: the time limit
+    /// a test is about is its own, and a load derives that one from the laps.
     def timelineOf(timeLimit: String, laps: List[RawLap]): List[Event] \ IO =
         TestSupport.onRound(entry(), laps, () -> Timeline.fromLaps(entry(), duration(timeLimit)))
 
@@ -213,9 +212,9 @@ mod Round.TestTimeline {
     /// The timeline the load wrote, and the one it counted to write it.
     ///
     /// The laps run past the hour so that the limit a load derives falls inside
-    /// them, which is what puts the flag on one car and a retirement on the
-    /// other: `Motorsport.Metadata` reads the limit as the whole hours the
-    /// round's longest run covered.
+    /// them -- `Motorsport.Metadata` reads it as the whole hours the round's
+    /// longest run covered -- which is what puts the flag on one car and a
+    /// retirement on the other.
     def loadedAndCounted(): (List[Event], List[Event]) \ IO =
         let laps =
             lap("7", 1, "30:00.000") ::
@@ -229,10 +228,8 @@ mod Round.TestTimeline {
             Timeline.fromLaps(entry(), Round.Summary.particulars(entry())#timeLimit)
         ))
 
-    /// A row corrected in SQL comes back where its new moment puts it. The
-    /// stop is moved past the flag, which leaves `seq` saying what it said
-    /// before -- and that is the order the rows are in and not the one they
-    /// are read in.
+    /// The stop is moved past the flag, which leaves `seq` saying what it said
+    /// before -- the order the rows are in and not the one they are read in.
     @Test
     def aCorrectedRowComesBackAtItsNewMoment(): Unit \ {Assert, IO} =
         let events = TestSupport.onRound(entry(),
@@ -255,8 +252,6 @@ mod Round.TestTimeline {
                 Assert.assertTrue(List.map(shape, readBack) == List.map(shape, counted))
         }
 
-    /// Every kind of event comes back through a row, the two things only a stop
-    /// carries included.
     @Test
     def everyKindOfEventComesBackThroughARow(): Unit \ {Assert, IO} =
         match loadedAndCounted() {

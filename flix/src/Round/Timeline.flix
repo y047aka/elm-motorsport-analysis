@@ -1,10 +1,8 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
-/// load to write down, and read back out of the rows it wrote.
-///
-/// The counting is three readings of the laps -- each car's first and last
-/// moment, the stops, and each change of the lead -- and what they add up to is
-/// `Motorsport.Timeline`'s. Only the load counts them: a round written out or
-/// served is read from `timeline_events`, where the weighing is already done.
+/// load to write down, and read back out of the rows it wrote. The counting is
+/// three readings of the laps -- each car's first and last moment, the stops,
+/// and each change of the lead -- and what they add up to is
+/// `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
     use Db.Laps
@@ -15,12 +13,8 @@ mod Round.Timeline {
     use Motorsport.Timeline
     use Util.Duration.Duration
 
-    /// The round's timeline, in time order, and in the order the load numbered
-    /// them where two of them share an instant.
-    ///
     /// Sorted rather than read in the key's order, so that a row corrected in
-    /// SQL comes back where its new moment puts it rather than where its old
-    /// one did.
+    /// SQL comes back at its new moment rather than at its old one.
     pub def read(entry: Entry): List[Timeline.Event] \ DbRead =
         let c = TimelineEvents.columns();
         TimelineEvents.rows(entry)
