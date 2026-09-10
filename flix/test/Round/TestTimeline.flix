@@ -191,9 +191,8 @@ mod Round.TestTimeline {
         let times = events |> List.map(event -> event#elapsed);
         Assert.assertTrue(times == List.sort(times))
 
-    /// Two events landing on one instant are ordered by what they are, which is
-    /// what decides the car's status there: a stop ending as the flag falls
-    /// leaves the car classified rather than in the pits.
+    /// Two events landing on one instant come back in the order the phases are
+    /// gathered in, so the round is written the same way twice.
     @Test
     def aStopEndingAtTheFlagIsOvertakenByIt(): Unit \ {Assert, IO} =
         let events = timelineOf("2:00.000",

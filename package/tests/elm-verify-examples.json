@@ -7,6 +7,7 @@
     "Motorsport.Lap",
     "Motorsport.Lap.Performance",
     "Motorsport.Sector",
+    "Motorsport.Status",
     "Motorsport.Wec.Circuit.LeMans",
     "Motorsport.Wec.Class",
     "Motorsport.Wec.Era"
