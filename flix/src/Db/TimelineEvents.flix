@@ -7,11 +7,10 @@
 /// anything a row carries -- so the load decides it once and writes down what
 /// it decided.
 ///
-/// `seq` is the order the load numbered the events in, and the whole of what it
-/// is for is that a round's timeline is written the same way twice: two events
-/// sharing an instant have no order of their own, and nothing is read out of
-/// the one they are given -- `Motorsport.Status.stronger` is where what a car is
-/// at such an instant is decided.
+/// `seq` is the order the load numbered the events in, and what it decides is
+/// the ones sharing an instant, which nothing else in the row orders: a stop
+/// ending as the flag falls has to leave the car classified rather than in the
+/// pits.
 mod Db.TimelineEvents {
 
     use Db.Rounds

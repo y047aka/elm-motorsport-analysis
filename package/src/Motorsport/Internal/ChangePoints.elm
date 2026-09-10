@@ -39,7 +39,8 @@ empty =
 {-| Index a list of changes, each paired with the elapsed time it takes effect.
 
 The list is sorted by time, stably, so changes sharing a moment keep the order
-they were given in -- and `valueAt` takes the last of them.
+they were given in -- and `valueAt` takes the last of them. That is what lets an
+index built from an event list agree with folding over the same list.
 
 -}
 fromList : List ( Instant, a ) -> ChangePoints a

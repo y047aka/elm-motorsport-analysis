@@ -206,12 +206,9 @@ is the deciding: `Motorsport.Timeline` weighs each car's last crossing against
 the time limit, which is `Metadata`'s estimate and the one reading here the laps
 do not carry, so `Round.Summary.particulars` is read first and hands it over --
 the whole of what the load wants a summary for. It also fixes the order events
-sharing an instant come back in -- `List.sortBy` is not stable -- which is why
-the gathering order rides in the sort key and lands in `seq`. That order is
-there so a round is written the same way twice and nothing more: two events at
-one instant have none of their own, and what a car is said to be where a stop
-ends as the flag falls is `Motorsport.Status.stronger`'s on the Elm side, off
-the pair rather than off the order they arrive in.
+sharing an instant come back in -- `List.sortBy` is not stable, and a stop
+ending as the flag falls has to leave the car classified rather than in the pits
+-- which is why the gathering order rides in the sort key and lands in `seq`.
 
 Which is why `Round.Timeline.read` sorts by `elapsed_ms` and takes `seq` only
 as the tie -- rather than reading the rows in their key's order, which is the

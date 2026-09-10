@@ -41,13 +41,12 @@ mod Motorsport.Timeline {
     /// The race start, one `Start` and one terminal event per car, two events
     /// per stop, and a `TookLead` per change of the lead, in time order.
     ///
-    /// Events sharing an instant come back in the order the phases are gathered
-    /// in, so one round's timeline is one list rather than any of the several a
-    /// sort could return. `List.sortBy` is not stable, so that order is carried
-    /// in the key rather than left to the sort -- a car's `Start` and the
-    /// race's own both sit at nought, and so does every other car's. What a car
-    /// is then said to be at such an instant is decided by
-    /// `Motorsport.Status.stronger` on the Elm side rather than by this order.
+    /// Events sharing an instant keep the order the phases are gathered in,
+    /// which is what decides a car's status where two of them land together: a
+    /// stop ending as the flag falls leaves the car classified rather than in
+    /// the pits. `List.sortBy` is not stable, so that order is carried in the
+    /// key rather than left to the sort -- a car's `Start` and the race's own
+    /// both sit at nought, and so does every other car's.
     pub def fromReadings(readings: Readings): List[Event] =
         List.flatten(
             (raceStart() :: Nil) ::

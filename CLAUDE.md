@@ -75,8 +75,7 @@ reaches the summary and the laps on the next export and the timeline not at all:
 a load rebuilds every table off the CSV, so running one to catch the timeline up
 would take the correction with it. Correct `timeline_events` beside `laps`, and
 nothing else: the export sorts the rows by the moment each event happened, and
-what a car is at an instant two of them share is
-`Motorsport.Status.stronger`'s rather than the rows' order. **A round no run has
+`seq` orders only the ones that land on the same moment. **A round no run has
 loaded fails the export** rather than being written out as a race that never ran
 — the rows read back as one, which is the one thing they cannot say for
 themselves — and the files it would have replaced are left alone. `/api` answers

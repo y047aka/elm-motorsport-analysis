@@ -31,34 +31,17 @@ suite =
                 \_ ->
                     StatusChanges.statusAt { elapsed = Instant.fromDuration 210000 } "1" index
                         |> Expect.equal Status.Racing
-            , test "the stronger of two changes sharing an instant wins" <|
+            , test "the last of two changes sharing an instant wins" <|
                 \_ ->
                     let
-                        pitOutAndFlag =
+                        pitOutThenFlag =
                             StatusChanges.fromTimelineEvents
                                 [ carEvent 300000 (TimelineEvent.PitOut { lapNumber = 9, duration = 25000 })
                                 , carEvent 300000 TimelineEvent.Checkered
                                 ]
                     in
-                    StatusChanges.statusAt { elapsed = Instant.fromDuration 300000 } "1" pitOutAndFlag
+                    StatusChanges.statusAt { elapsed = Instant.fromDuration 300000 } "1" pitOutThenFlag
                         |> Expect.equal Status.Checkered
-            , test "and wins from either side of the list" <|
-                \_ ->
-                    let
-                        statusAtTheFlag events =
-                            StatusChanges.statusAt
-                                { elapsed = Instant.fromDuration 300000 }
-                                "1"
-                                (StatusChanges.fromTimelineEvents events)
-
-                        pitOut =
-                            carEvent 300000 (TimelineEvent.PitOut { lapNumber = 9, duration = 25000 })
-                    in
-                    Expect.equal
-                        ( Status.Checkered, Status.Retired )
-                        ( statusAtTheFlag [ carEvent 300000 TimelineEvent.Checkered, pitOut ]
-                        , statusAtTheFlag [ carEvent 300000 TimelineEvent.Retirement, pitOut ]
-                        )
             ]
         , describe "fromTimelineEvents"
             [ test "events are kept apart by car number" <|
@@ -76,31 +59,6 @@ suite =
                         ( StatusChanges.statusAt { elapsed = Instant.fromDuration 200000 } "1" twoCars
                         , StatusChanges.statusAt { elapsed = Instant.fromDuration 200000 } "2" twoCars
                         )
-            , test "the same events shuffled build the same index" <|
-                \_ ->
-                    let
-                        events =
-                            [ carEvent 0 TimelineEvent.Start
-                            , carEvent 170000 (TimelineEvent.PitIn { lapNumber = 2, duration = 30000 })
-                            , carEvent 200000 (TimelineEvent.PitOut { lapNumber = 2, duration = 30000 })
-                            , carEvent 200000 TimelineEvent.Retirement
-                            ]
-
-                        readings from =
-                            let
-                                built =
-                                    StatusChanges.fromTimelineEvents from
-                            in
-                            [ 0, 169999, 170000, 200000, 900000 ]
-                                |> List.map
-                                    (\at ->
-                                        StatusChanges.statusAt
-                                            { elapsed = Instant.fromDuration at }
-                                            "1"
-                                            built
-                                    )
-                    in
-                    Expect.equal (readings events) (readings (List.reverse events))
             ]
         ]
 
