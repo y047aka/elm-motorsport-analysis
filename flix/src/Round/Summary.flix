@@ -37,7 +37,8 @@ mod Round.Summary {
 
     // ---------------------------------------------------------- particulars
 
-    def particulars(entry: Entry): Metadata.Particulars \ DbRead =
+    /// `pub` reaches the load, which wants the time limit and not the grid.
+    pub def particulars(entry: Entry): Metadata.Particulars \ DbRead =
         Laps.rows(entry)
             |> Sql.map(_ -> (
                 startedAt(entry),

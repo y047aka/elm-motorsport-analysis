@@ -81,7 +81,8 @@ mod Db.TestJdbc {
             (Some("sqlite_autoindex_drivers_1") :: Nil) :: Nil
         ));
         Assert.assertTrue(indexes(Db.CarDrivers.createTable()) == Ok(Nil));
-        Assert.assertTrue(indexes(Db.Cars.createTable()) == Ok(Nil))
+        Assert.assertTrue(indexes(Db.Cars.createTable()) == Ok(Nil));
+        Assert.assertTrue(indexes(Db.TimelineEvents.createTable()) == Ok(Nil))
 
     /// The connection the server answers through.
     @Test

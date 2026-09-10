@@ -35,8 +35,9 @@ take an `Entry` and the `DbRead` effect and read it; `Round.Render` takes what
 they returned, is pure, and turns it into the bytes that go out. None of the six
 knows whether a file or a request is waiting at the other end. Three of them take a
 `Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
-once for the round by whichever of the two callers asked, rather than once by
-each of them. `Round.loaded` is what both ask first, and it asks `laps` and `cars`:
+once for the round by whichever answer names a driver rather than once by each
+of them; the timeline names none. `Round.loaded` is what both ask first, and it
+asks `laps` and `cars`:
 laps without cars is a round half in the database, and answered off the laps
 alone it would be a race whose grid was empty.
 
@@ -58,12 +59,18 @@ what the two sides hand it.
 
 ## The tables
 
-Six of them, dropped and rebuilt each time as the JSON files are rewritten each
-time. Three hold what a round did: `laps` is one lap of one car, `cars` is one
-car of one round, and `car_drivers` is one seat of one car. Three hold what
-those name rather than spell: `rounds` is the calendar written down, `drivers`
-the names the feed repeats over every lap, and `entries` the cars a season was
-contested by.
+Seven of them, dropped and rebuilt each time as the JSON files are rewritten
+each time. Four hold what a round did: `laps` is one lap of one car, `cars` is
+one car of one round, `car_drivers` is one seat of one car, and
+`timeline_events` is one thing that happened. Three hold what those name rather
+than spell: `rounds` is the calendar written down, `drivers` the names the feed
+repeats over every lap, and `entries` the cars a season was contested by.
+
+`timeline_events` is the one that is not a reading of the file. Its rows are
+the laps counted and then weighed against a time limit no row carries, so the
+load decides it once and the two readers read back what it decided rather than
+each deciding it again. The whole archive's 17,257 events are 0.56MB against
+`laps`' 12.94MB.
 
 The archive is what says the three can be split off: no car of a round in it is
 described two ways, and no seat of one is named two ways. A lap carries its
@@ -186,18 +193,29 @@ file of their own.
 `Round.Timeline` is the third such walk and does not: it is thousands of records
 rather than hundreds -- Le Mans is 3983 of them against the summary's 100KB --
 so it is written a line at a time as the laps are, and a round is three files
-and three URLs. Each car's first and last crossing is one `GROUP BY`, the stops
-are the laps carrying a pit time, and the lead is `ROW_NUMBER` picking each
-lap's first crossing with `LAG` asking who held the one before -- two queries
-rather than one, since SQLite settles a `WHERE` before either window. What is
-left in Flix is the deciding: `Motorsport.Timeline` weighs each car's last
-crossing against the time limit, which is `Metadata`'s estimate and the one
-reading here the laps do not carry, so the summary's readings are made first and
-hand it over -- which is why `/api/wec/<season>/<id>_timeline.jsonl` costs a
-summary as well. It also fixes the order events sharing an instant come back in
--- `List.sortBy` is not stable, and a stop ending as the flag falls has to leave
-the car classified rather than in the pits -- which is why the gathering order
-rides in the sort key.
+and three URLs. It is also the only one of the walks a reader does not make:
+`Round.Timeline.fromLaps` is the load's, and `Round.Timeline.read` is the
+round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
+rather than read in their key's order, which is the same list until a row is
+corrected in SQL and then is the list that moment used to be in.
+
+Each car's first and last crossing is one `GROUP BY`, the stops are the laps
+carrying a pit time, and the lead is `ROW_NUMBER` picking each lap's first
+crossing with `LAG` asking who held the one before -- two queries rather than
+one, since SQLite settles a `WHERE` before either window. What is left in Flix
+is the deciding: `Motorsport.Timeline` weighs each car's last crossing against
+the time limit, which is `Metadata`'s estimate and the one reading here the laps
+do not carry, so `Round.Summary.particulars` is read first and hands it over --
+the whole of what the load wants a summary for. It also fixes the order events
+sharing an instant come back in -- `List.sortBy` is not stable, and a stop
+ending as the flag falls has to leave the car classified rather than in the pits
+-- which is why the gathering order rides in the sort key and lands in `seq`.
+
+`Motorsport.Timeline.parts` is where the line written out and the row meet, so
+the JSON, the column's `check` and the reading back cannot disagree about what
+an event is called or which fields it carries. A row that spells none is
+`Db.Error.Incomplete` rather than an event with either made up.
+
 `Round.Laps` takes one window function beside the reading for where the car
 stood in the field as it crossed the line -- a reading of the round rather than
 of any row of it, so it rides beside the lap rather than in it. `Round.Cars` and

@@ -115,17 +115,15 @@ mod Server.Api {
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
 
     def summary(season: Int32, id: String): Option[String] \ DbRead =
-        answer(season, id, (e, seats) ->
+        answer(season, id, e ->
+            let seats = Round.Drivers.read(e);
             Render.renderSummary(Summary.read(e, seats), Index.read(e, seats)))
 
-    /// The time limit the terminal events are weighed against is the summary's,
-    /// so a round's timeline costs the summary's readings as well.
     def timeline(season: Int32, id: String): Option[String] \ DbRead =
-        answer(season, id, (e, seats) ->
-            Render.renderTimelineJsonl(Timeline.read(e, Summary.read(e, seats)#race#timeLimit)))
+        answer(season, id, e -> Render.renderTimelineJsonl(Timeline.read(e)))
 
     def laps(season: Int32, id: String): Option[String] \ DbRead =
-        answer(season, id, (e, seats) -> Render.renderJsonl(Laps.read(e, seats)))
+        answer(season, id, e -> Render.renderJsonl(Laps.read(e, Round.Drivers.read(e))))
 
     /// `None` is a round no answer is served for: one the calendar does not
     /// list, and one it lists that no run has loaded. Rendered out of the rows
@@ -134,13 +132,13 @@ mod Server.Api {
     def answer(
         season: Int32,
         id: String,
-        render: (Entry, Round.Drivers.Seats) -> String \ DbRead
+        render: Entry -> String \ DbRead
     ): Option[String] \ DbRead =
         match Calendar.find(season, id) {
             case None        => None
             case Some(round) =>
                 if (Round.loaded(round))
-                    Some(render(round, Round.Drivers.read(round)))
+                    Some(render(round))
                 else
                     None
         }

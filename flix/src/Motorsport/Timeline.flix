@@ -98,41 +98,93 @@ mod Motorsport.Timeline {
             let ended = if (last < timeLimit) CarEvent.Retirement else CarEvent.Checkered;
             { elapsed = last, eventType = EventType.Of(carNumber, ended) })
 
+    /// What an event is made of, in the words the file spells it in. The line
+    /// written out and the row `Db.TimelineEvents` holds are two writings of
+    /// this, so which fields an event carries is settled here rather than
+    /// beside either of them.
+    pub type alias Parts = {
+        event     = String,
+        carNumber = Option[String],
+        lapNumber = Option[Int32],
+        duration  = Option[Duration]
+    }
+
+    /// The names an event goes by, which is what the column holding one is
+    /// checked against.
+    pub def names(): List[String] =
+        "raceStart" ::
+        "start" ::
+        "tookLead" ::
+        "pitIn" ::
+        "pitOut" ::
+        "retirement" ::
+        "checkered" ::
+        Nil
+
+    pub def parts(eventType: EventType): Parts =
+        match eventType {
+            case EventType.RaceStart               => named("raceStart")
+            case EventType.Of(carNumber, carEvent) =>
+                { carNumber = Some(carNumber) | carParts(carEvent) }
+        }
+
+    def carParts(carEvent: CarEvent): Parts =
+        match carEvent {
+            case CarEvent.Start                 => named("start")
+            case CarEvent.TookLead              => named("tookLead")
+            case CarEvent.PitIn(lap, duration)  => stopParts("pitIn", lap, duration)
+            case CarEvent.PitOut(lap, duration) => stopParts("pitOut", lap, duration)
+            case CarEvent.Retirement            => named("retirement")
+            case CarEvent.Checkered             => named("checkered")
+        }
+
+    def named(event: String): Parts =
+        { event = event, carNumber = None, lapNumber = None, duration = None }
+
+    def stopParts(event: String, lap: Int32, duration: Duration): Parts =
+        { event = event, carNumber = None, lapNumber = Some(lap), duration = Some(duration) }
+
+    pub def eventTypeOf(p: Parts): Option[EventType] =
+        match (p#event, p#carNumber) {
+            case ("raceStart", None)     => Some(EventType.RaceStart)
+            case (_, Some(carNumber))    =>
+                carEventOf(p#event, p#lapNumber, p#duration)
+                    |> Option.map(carEvent -> EventType.Of(carNumber, carEvent))
+            case _                       => None
+        }
+
+    def carEventOf(event: String, lap: Option[Int32], duration: Option[Duration]): Option[CarEvent] =
+        match (event, lap, duration) {
+            case ("start", _, _)                     => Some(CarEvent.Start)
+            case ("tookLead", _, _)                  => Some(CarEvent.TookLead)
+            case ("pitIn", Some(n), Some(length))    => Some(CarEvent.PitIn(n, length))
+            case ("pitOut", Some(n), Some(length))   => Some(CarEvent.PitOut(n, length))
+            case ("retirement", _, _)                => Some(CarEvent.Retirement)
+            case ("checkered", _, _)                 => Some(CarEvent.Checkered)
+            case _                                   => None
+        }
+
     pub def toJson(event: Event): Encode.JsonValue =
+        let p = parts(event#eventType);
         JsonObject(
             ("elapsed", JsonString(Util.Duration.format(event#elapsed))) ::
-            typeToJson(event#eventType)
+            ("event", JsonString(p#event)) ::
+            List.append(carNumberField(p), stopFields(p))
         )
 
-    def typeToJson(eventType: EventType): List[(String, Encode.JsonValue)] =
-        match eventType {
-            case EventType.RaceStart => ("event", JsonString("raceStart")) :: Nil
-            case EventType.Of(carNumber, carEvent) =>
-                ("event", JsonString(nameOf(carEvent))) ::
-                ("carNumber", JsonString(carNumber)) ::
-                stopToJson(carEvent)
+    def carNumberField(p: Parts): List[(String, Encode.JsonValue)] =
+        match p#carNumber {
+            case Some(carNumber) => ("carNumber", JsonString(carNumber)) :: Nil
+            case None            => Nil
         }
 
-    def nameOf(carEvent: CarEvent): String =
-        match carEvent {
-            case CarEvent.Start       => "start"
-            case CarEvent.TookLead    => "tookLead"
-            case CarEvent.PitIn(_, _) => "pitIn"
-            case CarEvent.PitOut(_, _) => "pitOut"
-            case CarEvent.Retirement  => "retirement"
-            case CarEvent.Checkered   => "checkered"
+    def stopFields(p: Parts): List[(String, Encode.JsonValue)] =
+        match (p#lapNumber, p#duration) {
+            case (Some(lap), Some(duration)) =>
+                ("lap", JsonInt(lap)) ::
+                ("duration", JsonString(Util.Duration.format(duration))) ::
+                Nil
+            case _ => Nil
         }
-
-    def stopToJson(carEvent: CarEvent): List[(String, Encode.JsonValue)] =
-        match carEvent {
-            case CarEvent.PitIn(lap, duration)  => stopFields(lap, duration)
-            case CarEvent.PitOut(lap, duration) => stopFields(lap, duration)
-            case _                              => Nil
-        }
-
-    def stopFields(lap: Int32, duration: Duration): List[(String, Encode.JsonValue)] =
-        ("lap", JsonInt(lap)) ::
-        ("duration", JsonString(Util.Duration.format(duration))) ::
-        Nil
 
 }

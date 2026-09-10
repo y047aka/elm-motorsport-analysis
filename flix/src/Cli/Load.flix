@@ -7,6 +7,7 @@ mod Cli.Load {
     use Db.Laps
     use Db.Rounds
     use Db.Rounds.RoundRow
+    use Db.TimelineEvents
 
     use Sys.Console
     use Util.Files
@@ -40,7 +41,8 @@ mod Cli.Load {
         entries = Int32,
         cars = Int32,
         seats = Int32,
-        laps = Int32
+        laps = Int32,
+        events = Int32
     }
 
     /// The tables are dropped and rebuilt, so the run is one transaction: a
@@ -74,6 +76,7 @@ mod Cli.Load {
         Entries.create();
         Cars.create();
         Laps.create();
+        TimelineEvents.create();
         rounds
 
     /// The calendar is the worklist, so a run converts the rounds it holds and
@@ -87,6 +90,7 @@ mod Cli.Load {
                 case (Ok(loaded), numbered) =>
                     Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps,"
                         + " ${loaded#cars} cars, ${loaded#seats} seats,"
+                        + " ${loaded#events} timeline events,"
                         + " ${loaded#entries} entries loaded");
                     { processed = acc#processed + 1, numbered = numbered | acc }
                 case (Err(e), numbered) =>
@@ -164,6 +168,9 @@ mod Cli.Load {
     /// The worklist and `rounds` are both the calendar, so a task with no row
     /// is a run that wrote the two from different lists; a seat whose name the
     /// same run did not number is the same fault a step later.
+    ///
+    /// The timeline is counted off the laps this just sent, so it goes last and
+    /// reads back inside the round's own savepoint, as the rules do.
     def load(
         rounds: List[RoundRow],
         numbering: Numbered,
@@ -172,7 +179,7 @@ mod Cli.Load {
         seats: List[CarDrivers.Seat],
         task: FileTask.FileTask,
         rawLaps: List[RawLap]
-    ): Loaded \ DbWrite =
+    ): Loaded \ Db =
         match Rounds.idIn(rounds, task#entry) {
             case None => DbErr.fail(Db.Error.Incomplete(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
@@ -191,10 +198,18 @@ mod Cli.Load {
                             case Some(carRows) =>
                                 let cars = Cars.insertRows(carRows);
                                 let laps = Laps.insertRows(LapRow.fromRawLaps(roundId, rawLaps));
-                                { entries = entries, cars = cars, seats = seatCount, laps = laps }
+                                let events = timeline(roundId, task#entry);
+                                { entries = entries, cars = cars, seats = seatCount,
+                                  laps = laps, events = events }
                         }
                 }
         }
+
+    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ Db =
+        TimelineEvents.insertRows(TimelineEvents.fromEvents(
+            roundId,
+            Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)
+        ))
 
     /// As `reportDisagreements`, across the rounds of one season rather than
     /// within one round: the first round to name an entry describes it, and a
