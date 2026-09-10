@@ -14,6 +14,7 @@ import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
+import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -310,7 +311,7 @@ eventRow : TimelineEvent -> Html Msg
 eventRow event =
     li [ Attributes.class "flex items-baseline justify-between gap-2" ]
         [ span [ Attributes.class "shrink-0 tabular-nums text-muted-foreground" ]
-            [ text (Instant.toString event.elapsed) ]
+            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         , span [] [ text (eventTypeToString event.eventType) ]
         ]
 
