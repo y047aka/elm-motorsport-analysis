@@ -150,7 +150,7 @@ view shared m =
         [ main_
             [ Attributes.class "dark h-full grid grid-rows-[auto_1fr]"
             ]
-            [ navigation (headerTitle shared) maybeRace m.mode
+            [ navigation (headerTitle shared) maybeRace
             , case maybeRace of
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
@@ -421,10 +421,10 @@ standingsPopover =
         ]
 
 
-navigation : String -> Maybe Shared.Race -> Mode -> Html Msg
-navigation title maybeRace currentMode =
+navigation : String -> Maybe Shared.Race -> Html Msg
+navigation title maybeRace =
     nav
-        [ Attributes.class "p-3 grid grid-cols-[auto_1fr_auto] items-center gap-x-10" ]
+        [ Attributes.class "p-3 grid grid-cols-[auto_1fr] items-center gap-x-10" ]
         [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
@@ -440,7 +440,6 @@ navigation title maybeRace currentMode =
                     , onPause = PauseRace
                     , toReplayMsg = ReplayMsg
                     }
-        , viewModeSelector currentMode
         ]
 
 
@@ -456,33 +455,3 @@ backLink =
         , Attributes.title "Back to the race list"
         ]
         [ text "←" ]
-
-
-viewModeSelector : Mode -> Html Msg
-viewModeSelector currentMode =
-    div [ Attributes.class "inline-flex" ]
-        [ modeButton "Default" Default (currentMode == Default)
-        , modeButton "Tracker" Tracker (currentMode == Tracker)
-        ]
-
-
-modeButton : String -> Mode -> Bool -> Html Msg
-modeButton label mode isActive =
-    joinButton label isActive (ModeChange mode)
-
-
-joinButton : String -> Bool -> Msg -> Html Msg
-joinButton label isActive msg =
-    button
-        [ onClick msg
-        , Attributes.class
-            ("inline-flex h-8 items-center justify-center border border-border px-3 text-sm font-medium cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md"
-                ++ (if isActive then
-                        " bg-primary text-primary-foreground border-primary"
-
-                    else
-                        " bg-accent/40 text-foreground hover:bg-accent/70"
-                   )
-            )
-        ]
-        [ text label ]
