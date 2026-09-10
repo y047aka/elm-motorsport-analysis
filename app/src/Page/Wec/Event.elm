@@ -9,7 +9,7 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 
 import Browser.Events
 import Effect exposing (Effect)
-import Html exposing (Html, a, button, div, li, main_, nav, span, text, ul)
+import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
@@ -20,6 +20,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -259,7 +260,7 @@ trackerView track snapshot replay m =
                         ]
                     ]
                 ]
-            , timelinePanel "col-start-3 row-start-2" replay
+            , timelinePanel "col-start-3 row-start-2" snapshot replay
             , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
                 [ SelectedCarsStrip.view
                     { offset = m.stripOffset
@@ -278,11 +279,11 @@ trackerView track snapshot replay m =
         ]
 
 
-{-| Timeline events that have occurred so far, oldest first: when each happened
-and what kind of thing it was.
+{-| Timeline events that have occurred so far, oldest first: when each happened,
+whose it was, and what kind of thing it was.
 -}
-timelinePanel : String -> Replay.Model -> Html Msg
-timelinePanel cell replay =
+timelinePanel : String -> Snapshot -> Replay.Model -> Html Msg
+timelinePanel cell snapshot replay =
     let
         currentElapsed =
             Clock.getElapsed replay.playback
@@ -299,21 +300,43 @@ timelinePanel cell replay =
         [ Card.card []
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
-                    [ ul [ Attributes.class "flex flex-col gap-1 text-xs" ]
-                        (List.map eventRow occurredEvents)
+                    [ table [ Attributes.class "w-full border-collapse text-xs" ]
+                        [ tbody [] (List.map (eventRow snapshot) occurredEvents) ]
                     ]
                 ]
             ]
         ]
 
 
-eventRow : TimelineEvent -> Html Msg
-eventRow event =
-    li [ Attributes.class "flex items-baseline justify-between gap-2" ]
-        [ span [ Attributes.class "shrink-0 tabular-nums text-muted-foreground" ]
+{-| One row per event: time, whose it was, what it was.
+-}
+eventRow : Snapshot -> TimelineEvent -> Html Msg
+eventRow snapshot event =
+    tr []
+        [ td [ Attributes.class "whitespace-nowrap py-0.5 pr-2 tabular-nums text-muted-foreground" ]
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
-        , span [] [ text (eventTypeToString event.eventType) ]
+        , td [ Attributes.class "w-px py-0.5 pr-2" ]
+            [ carBadge snapshot event.eventType ]
+        , td [ Attributes.class "py-0.5 text-right" ]
+            [ text (eventTypeToString event.eventType) ]
         ]
+
+
+{-| Whose event this was, badged like the standings badge it sits beside. A race
+start belongs to nobody, and a number no car of the field answers to keeps its
+bare digits rather than vanishing.
+-}
+carBadge : Snapshot -> EventType -> Html Msg
+carBadge snapshot eventType =
+    case eventType of
+        CarEvent carNumber _ ->
+            snapshot
+                |> Snapshot.get carNumber
+                |> Maybe.map (\car -> CarNumberBadge.viewRow car.metadata)
+                |> Maybe.withDefault (span [] [ text carNumber ])
+
+        RaceStart ->
+            text ""
 
 
 eventTypeToString : EventType -> String
