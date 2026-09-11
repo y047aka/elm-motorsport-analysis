@@ -39,7 +39,7 @@ view config snapshot detailCarNumber =
                                     (\( class_, _ ) ->
                                         div [ Attributes.class "flex items-start gap-x-3" ]
                                             [ CarSelector.classBadge class_
-                                            , CarSelector.carSelector config.onToggleCar snapshot class_ []
+                                            , CarSelector.carSelector config.onToggleCar snapshot class_ Nothing
                                             ]
                                     )
                            )
@@ -50,6 +50,7 @@ view config snapshot detailCarNumber =
                     { onToggleCar = config.onToggleCar
                     , activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
+                    , focused = selected
                     }
                     snapshot
                     (comparisonNumbers snapshot selected)

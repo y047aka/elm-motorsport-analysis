@@ -30,18 +30,20 @@ type Chart
 
 {-| Compare the cars in `selectedCarNumbers`. The first sets the class reference
 for both charts and for the embedded selector, whose chips fire `onToggleCar`;
-the widget holds no selection of its own. Only `activeChart` is rendered;
-clicking a tab fires `onSelectChart`.
+the widget holds no selection of its own. `focused` is the one car that
+selection is, the others being rivals derived from it, and is what the selector
+marks. Only `activeChart` is rendered; clicking a tab fires `onSelectChart`.
 -}
 viewComparison :
     { onToggleCar : String -> msg
     , activeChart : Chart
     , onSelectChart : Chart -> msg
+    , focused : String
     }
     -> Snapshot
     -> List String
     -> Html msg
-viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarNumbers =
+viewComparison { onToggleCar, activeChart, onSelectChart, focused } snapshot selectedCarNumbers =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -70,7 +72,7 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                 [ div
                     [ Attributes.class "flex items-center gap-x-3" ]
                     [ CarSelector.classBadge first.metadata.class
-                    , CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers
+                    , CarSelector.carSelector onToggleCar snapshot class (Just focused)
                     ]
                 , div
                     [ Attributes.class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-x-4" ]

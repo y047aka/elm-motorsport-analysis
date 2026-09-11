@@ -13,12 +13,12 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class as Class exposing (Class)
 
 
-{-| Lays out every car in the given class as chips, marking those in
-`selectedCarNumbers`; clicking one fires `onToggleCar` with its number. The
-selection itself belongs to the caller.
+{-| Lays out every car in the given class as chips, marking the focused one;
+clicking a chip fires `onToggleCar` with its number. The selection itself
+belongs to the caller, and the rivals it is compared against are not part of it.
 -}
-carSelector : (String -> msg) -> Snapshot -> Class -> List String -> Html msg
-carSelector onToggleCar standings class selectedCarNumbers =
+carSelector : (String -> msg) -> Snapshot -> Class -> Maybe String -> Html msg
+carSelector onToggleCar standings class focused =
     let
         classCars =
             Snapshot.inClass class standings
@@ -28,7 +28,7 @@ carSelector onToggleCar standings class selectedCarNumbers =
         (List.map
             (\item ->
                 carSelectorChip onToggleCar
-                    (List.member item.metadata.carNumber selectedCarNumbers)
+                    (focused == Just item.metadata.carNumber)
                     item
             )
             classCars
@@ -36,7 +36,7 @@ carSelector onToggleCar standings class selectedCarNumbers =
 
 
 carSelectorChip : (String -> msg) -> Bool -> CarAt -> Html msg
-carSelectorChip onToggleCar isSelected item =
+carSelectorChip onToggleCar isFocused item =
     let
         manufacturerColor =
             item.metadata.manufacturer.color
@@ -45,13 +45,13 @@ carSelectorChip onToggleCar isSelected item =
         ([ onClick (onToggleCar item.metadata.carNumber)
          , Attributes.class "flex items-center gap-x-1 py-0.5 px-2 rounded-full text-[11px] font-bold tabular-nums cursor-pointer"
          ]
-            ++ (if isSelected then
+            ++ (if isFocused then
                     [ style "border" ("1px solid " ++ manufacturerColor)
                     , style "background-color" ("oklch(from " ++ manufacturerColor ++ " l c h / 0.3)")
                     ]
 
                 else
-                    [ Attributes.class "border border-border bg-transparent opacity-70" ]
+                    [ Attributes.class "border border-border bg-transparent" ]
                )
         )
         [ text ("#" ++ item.metadata.carNumber) ]
