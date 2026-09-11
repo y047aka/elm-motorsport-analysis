@@ -15,7 +15,7 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 view : Snapshot -> Html msg
 view snapshot =
     div
-        [ class "h-full grid grid-rows-[repeat(3,1fr)] gap-y-2.5" ]
+        [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5" ]
         (List.map
             (\( class_, cars ) ->
                 div
