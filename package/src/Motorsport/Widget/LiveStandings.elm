@@ -5,7 +5,8 @@ import Html.Attributes exposing (attribute, class)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
 import Motorsport.Driver as Driver
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.Car exposing (Metadata)
+import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
@@ -14,7 +15,7 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 view : Snapshot -> Html msg
 view snapshot =
     div
-        [ class "h-full grid grid-rows-[repeat(3,1fr)] gap-y-2.5" ]
+        [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5" ]
         (List.map
             (\( class_, cars ) ->
                 div
@@ -30,7 +31,11 @@ view snapshot =
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
-                                    , Lazy.lazy carRow item
+                                    , Lazy.lazy4 carRow
+                                        item.metadata
+                                        item.standing.position
+                                        (Driver.toSurname item.currentDriver)
+                                        (item.status == Status.InPit)
                                     )
                                 )
                         )
@@ -40,24 +45,24 @@ view snapshot =
         )
 
 
-carRow : CarAt -> Html msg
-carRow item =
+{-| Takes the row's pieces rather than the `CarAt` they are read off. A thunk's
+arguments are compared by `===`, and a `CarAt` is built afresh at every clock;
+the metadata is the car's own, which the race holds still, and the rest are
+primitives.
+-}
+carRow : Metadata -> Int -> String -> Bool -> Html msg
+carRow metadata position driverSurname isInPit =
     li
-        [ class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr_24px] items-center gap-2 text-left [word-break:break-word]" ]
-        (carRowContent item)
+        [ class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word]" ]
+        [ div [ class "text-center text-xs" ] [ text (String.fromInt position) ]
+        , CarNumberBadge.viewRow metadata
+        , div [ class "text-xs" ]
+            [ text driverSurname ]
+        , if isInPit then
+            div
+                [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
+                [ text "P" ]
 
-
-carRowContent : CarAt -> List (Html msg)
-carRowContent item =
-    [ div [ class "text-center text-xs" ] [ text (String.fromInt item.standing.position) ]
-    , CarNumberBadge.viewRow item.metadata
-    , div [ class "text-xs opacity-70" ]
-        [ text (Driver.toSurname item.currentDriver) ]
-    , if item.status == Status.InPit then
-        div
-            [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]
-            [ text "P" ]
-
-      else
-        text ""
-    ]
+          else
+            text ""
+        ]

@@ -1,70 +1,67 @@
-module Motorsport.Widget.Compare.CarSummary exposing (carSummary, placeholderCard)
+module Motorsport.Widget.Compare.CarSummary exposing (carSummary)
 
 {-| Per-car summary card for the Compare widget: who the car is, and who is
-driving it. Plus the placeholder that fills an unselected slot.
+driving it.
 
-@docs carSummary, placeholderCard
+@docs carSummary
 
 -}
 
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, style)
 import Motorsport.Driver as Driver
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
-{-| Subtle placeholder filling an unselected slot. Nudges toward the selector above.
+{-| `isFocused` marks the one car the selection is; the others are the rivals
+derived from it, and carry the marking the selector gives an unselected chip.
 -}
-placeholderCard : Html msg
-placeholderCard =
+carSummary : Bool -> CarAt -> Html msg
+carSummary isFocused item =
     div
-        [ class "grid place-items-center min-h-[100px] border border-dashed border-border rounded-lg text-[11px] text-muted-foreground" ]
-        [ text "車両を追加" ]
-
-
-carSummary : CarAt -> Html msg
-carSummary item =
-    div
-        [ class "grid grid-cols-[auto_1fr_auto] items-start gap-x-2" ]
+        [ class "grid grid-cols-[auto_1fr_auto] items-start gap-x-2 rounded-lg p-2"
+        , style "border" ("1px solid " ++ markColor isFocused item)
+        , style "background-color" (markFill isFocused item)
+        ]
         [ CarNumberBadge.view item.metadata
         , div
             [ class "grid gap-y-0.5" ]
             [ div [ class "text-[14px]" ]
                 [ text item.metadata.team ]
-            , driverList item
+            , currentDriverName item
             ]
         , statusBadge item.status
         ]
 
 
-{-| As in the leaderboard, emphasizes the driver currently at the wheel and dims
-the others.
+{-| The chip's own vocabulary, applied to a card: the focused car is drawn in
+its manufacturer's colour, and the rest are left in the border colour.
 -}
-driverList : CarAt -> Html msg
-driverList item =
-    let
-        isCurrentDriver driver =
-            Driver.isSame driver item.currentDriver
-    in
-    div
-        [ class "flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]" ]
-        (List.map
-            (\driver ->
-                div
-                    [ class
-                        (if isCurrentDriver driver then
-                            "opacity-100"
+markColor : Bool -> CarAt -> String
+markColor isFocused item =
+    if isFocused then
+        item.metadata.manufacturer.color
 
-                         else
-                            "opacity-40"
-                        )
-                    ]
-                    [ text (Driver.toFullName driver) ]
-            )
-            item.metadata.drivers
-        )
+    else
+        "transparent"
+
+
+markFill : Bool -> CarAt -> String
+markFill isFocused item =
+    if isFocused then
+        "oklch(from " ++ item.metadata.manufacturer.color ++ " l c h / 0.3)"
+
+    else
+        "transparent"
+
+
+currentDriverName : CarAt -> Html msg
+currentDriverName item =
+    div
+        [ class "text-[11px]" ]
+        [ text (Driver.toFullName item.currentDriver) ]
 
 
 statusBadge : Status -> Html msg

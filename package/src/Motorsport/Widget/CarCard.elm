@@ -78,7 +78,7 @@ cardHeader item =
                 [ class "text-[12px] truncate" ]
                 [ text item.metadata.team ]
             , div
-                [ class "text-[11px] opacity-70 truncate" ]
+                [ class "text-[11px] truncate" ]
                 [ text (Driver.toFullName item.currentDriver) ]
             ]
         ]
@@ -102,7 +102,7 @@ statCell label valueHtml =
     div
         [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
         [ div
-            [ class "text-[8px] uppercase tracking-[0.03em] opacity-50" ]
+            [ class "text-[8px] uppercase tracking-[0.03em] text-muted-foreground" ]
             [ text label ]
         , div
             [ class "text-[12px] tabular-nums" ]
@@ -134,6 +134,6 @@ positionLabel item =
         , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
         ]
         [ text ("P" ++ String.fromInt item.standing.position)
-        , div [ class "opacity-60" ]
+        , div [ class "text-muted-foreground" ]
             [ text ("Class P" ++ String.fromInt item.standing.positionInClass) ]
         ]

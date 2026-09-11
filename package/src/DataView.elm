@@ -478,19 +478,18 @@ thead { toMsg, columns } model data =
 
 theadCell : (Msg -> msg) -> Model -> Column data msg -> Html msg
 theadCell toMsg model c =
-    th
-        (case model.options.sorting of
-            Sorting ->
+    case model.options.sorting of
+        Sorting ->
+            th
                 [ onClick <| toMsg <| Sort c.name
                 , class "select-none"
                 ]
+                [ text <| c.name
+                , sortIndicator (findSorting c.name model.sorting)
+                ]
 
-            NoSorting ->
-                []
-        )
-        [ text <| c.name
-        , sortIndicator (findSorting c.name model.sorting)
-        ]
+        NoSorting ->
+            th [] [ text <| c.name ]
 
 
 sortIndicator : Direction -> Html msg

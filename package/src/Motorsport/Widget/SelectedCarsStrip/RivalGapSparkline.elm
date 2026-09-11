@@ -1,8 +1,15 @@
-module Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline exposing (view)
+module Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline exposing
+    ( Neighbors, findNeighbors
+    , view
+    )
 
 {-| Sparkline of relative gap history against the class rivals ahead and behind,
 shown at the bottom of each SelectedCarsStrip card.
 
+The same extraction of a car's in-class neighbors is what the event page's
+car detail compares it against, so `findNeighbors` is exposed for that.
+
+@docs Neighbors, findNeighbors
 @docs view
 
 -}

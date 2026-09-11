@@ -1,11 +1,10 @@
 module Motorsport.Widget.Compare exposing (Chart(..), viewComparison)
 
-{-| Widget showing per-car detail (summary + in-class position history). Intended
-as the body of a popover/dialog; it does not carry the popover attributes itself.
+{-| Widget showing per-car detail (summary + in-class position history), drawn
+as plain inline content; the caller chooses which cars to compare.
 
-`viewComparison` embeds a same-class car selector in the modal and compares up to
-three cars, toggle-selected. Summaries sit side by side; the two lower charts are
-tabbed so only one shows at a time (to save space).
+`viewComparison` embeds a same-class selector to switch between them. Summaries
+sit side by side; the two lower charts are tabbed so only one shows at a time.
 
 @docs Chart, viewComparison
 
@@ -22,14 +21,6 @@ import Motorsport.Widget.Compare.ChartTabs as ChartTabs
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
-{-| Maximum number of cars that can be compared. The summary slot count
-(including placeholders) matches this.
--}
-maxComparisonCars : Int
-maxComparisonCars =
-    3
-
-
 {-| Tab for the lower chart. Only one is shown at a time.
 -}
 type Chart
@@ -37,21 +28,22 @@ type Chart
     | PositionChart
 
 
-{-| View that compares up to three same-class cars, toggle-selected within the
-modal. `selectedCarNumbers` are the selected car numbers (the first sets the
-chart's class reference). Each selector chip fires `onToggleCar` (the caller
-enforces the 3-car limit). Only `activeChart` is rendered; clicking a tab fires
-`onSelectChart`.
+{-| Compare the cars in `selectedCarNumbers`. The first sets the class reference
+for both charts and for the embedded selector, whose chips fire `onToggleCar`;
+the widget holds no selection of its own. `focused` is the one car that
+selection is, the others being rivals derived from it, and is what the selector
+marks. Only `activeChart` is rendered; clicking a tab fires `onSelectChart`.
 -}
 viewComparison :
     { onToggleCar : String -> msg
     , activeChart : Chart
     , onSelectChart : Chart -> msg
+    , focused : String
     }
     -> Snapshot
     -> List String
     -> Html msg
-viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarNumbers =
+viewComparison { onToggleCar, activeChart, onSelectChart, focused } snapshot selectedCarNumbers =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -80,14 +72,13 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                 [ div
                     [ Attributes.class "flex items-center gap-x-3" ]
                     [ CarSelector.classBadge first.metadata.class
-                    , CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers
+                    , CarSelector.carSelector onToggleCar snapshot class (Just focused)
                     ]
                 , div
-                    -- Tailwind's class scanner needs a literal class name, so this can't be
-                    -- built from maxComparisonCars; grid-cols-3 must be kept in sync with it by hand.
-                    [ Attributes.class "grid gap-x-4 grid-cols-3" ]
-                    (List.map CarSummary.carSummary selectedEntries
-                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
+                    [ Attributes.class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-x-4" ]
+                    (List.map
+                        (\entry -> CarSummary.carSummary (entry.metadata.carNumber == focused) entry)
+                        selectedEntries
                     )
                 , ChartTabs.chartTabs onSelectChart
                     activeChart

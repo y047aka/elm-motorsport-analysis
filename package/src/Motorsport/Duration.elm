@@ -2,6 +2,7 @@ module Motorsport.Duration exposing
     ( Duration
     , decoder
     , toString
+    , toStringToSeconds, toStringToTenths
     , fromString, fromStringWithDefault
     )
 
@@ -10,6 +11,7 @@ module Motorsport.Duration exposing
 @docs Duration
 @docs decoder
 @docs toString
+@docs toStringToSeconds, toStringToTenths
 @docs fromString, fromStringWithDefault
 
 -}
@@ -76,6 +78,82 @@ toString ms =
 
     else
         toStringInHours ms
+
+
+{-| The same spelling as [`toString`](#toString), stopped at whole seconds.
+
+    toStringToSeconds 4321
+    --> "4"
+
+    toStringToSeconds 65432
+    --> "1:05"
+
+    toStringToSeconds 25614321
+    --> "7:06:54"
+
+-}
+toStringToSeconds : Duration -> String
+toStringToSeconds ms =
+    if ms < 0 then
+        "-" ++ toStringToSeconds (abs ms)
+
+    else
+        let
+            seconds =
+                ms // 1000
+
+            h =
+                seconds // 3600 |> String.fromInt
+
+            m =
+                remainderBy 3600 seconds
+                    // 60
+                    |> String.fromInt
+                    |> String.padLeft 2 '0'
+
+            s =
+                remainderBy 60 seconds
+                    |> String.fromInt
+                    |> String.padLeft 2 '0'
+        in
+        if seconds < 60 then
+            String.fromInt seconds
+
+        else if seconds < 3600 then
+            String.join ":" [ String.fromInt (seconds // 60), s ]
+
+        else
+            String.join ":" [ h, m, s ]
+
+
+{-| The same spelling as [`toStringToSeconds`](#toStringToSeconds), carried one
+place further. Truncated like it is, so a clock being counted up never shows a
+tenth it has yet to reach.
+
+    toStringToTenths 4321
+    --> "4.3"
+
+    toStringToTenths 65432
+    --> "1:05.4"
+
+    toStringToTenths 25614321
+    --> "7:06:54.3"
+
+    toStringToTenths (-4321)
+    --> "-4.3"
+
+-}
+toStringToTenths : Duration -> String
+toStringToTenths ms =
+    if ms < 0 then
+        "-" ++ toStringToTenths (abs ms)
+
+    else
+        let
+            tenths =
+                remainderBy 1000 ms // 100 |> String.fromInt
+        in
+        toStringToSeconds ms ++ "." ++ tenths
 
 
 toStringInSeconds : Duration -> String

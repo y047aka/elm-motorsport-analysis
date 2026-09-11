@@ -8,20 +8,24 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
-import Compare
-import DataView
-import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
+import Dict exposing (Dict)
 import Effect exposing (Effect)
-import Html exposing (Html, a, button, div, main_, nav, text)
+import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
+import Html.Lazy
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Clock as Clock
+import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
+import Motorsport.Instant as Instant
+import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare as CompareWidget
-import Motorsport.Widget.Leaderboard as Leaderboard exposing (initialSort)
+import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import Route
@@ -34,7 +38,6 @@ import UI.Shadcn.Card as Card
 import View exposing (View)
 import View.CarDetail as CarDetail
 import View.PlaybackControls as PlaybackControls
-import View.RaceEvents as RaceEvents
 
 
 
@@ -44,10 +47,8 @@ import View.RaceEvents as RaceEvents
 type alias Model =
     { mode : Mode
     , leaderboardState : Leaderboard.Model
-    , eventsState : DataView.Model
-    , query : String
     , stripOffset : Int
-    , detailCarNumbers : List String
+    , detailCarNumber : Maybe String
     , detailChart : CompareWidget.Chart
     }
 
@@ -55,26 +56,14 @@ type alias Model =
 type Mode
     = Default
     | Tracker
-    | Events
 
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { mode = Default
-      , leaderboardState = initialSort "Position"
-      , eventsState =
-            DataView.init "Time"
-                (DataView.Options.defaultOptions
-                    |> (\options_ ->
-                            { options_
-                                | selecting = NoSelecting
-                                , pagination = NoPagination
-                            }
-                       )
-                )
-      , query = ""
+      , leaderboardState = Leaderboard.init
       , stripOffset = 0
-      , detailCarNumbers = []
+      , detailCarNumber = Nothing
       , detailChart = CompareWidget.GapChart
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -91,7 +80,6 @@ type Msg
     | ModeChange Mode
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | EventsMsg DataView.Msg
     | StripScrollTo Int
     | ToggleDetailCar String
     | SelectDetailChart CompareWidget.Chart
@@ -117,25 +105,19 @@ update msg m =
             , Effect.none
             )
 
-        EventsMsg eventsMsg ->
-            ( { m | eventsState = DataView.update eventsMsg m.eventsState }
-            , Effect.none
-            )
-
         StripScrollTo offset ->
             ( { m | stripOffset = max 0 offset }, Effect.none )
 
         ToggleDetailCar carNumber ->
-            -- In-modal selector; toggle selection up to a maximum of 3 cars.
             let
                 next =
-                    if List.member carNumber m.detailCarNumbers then
-                        List.filter ((/=) carNumber) m.detailCarNumbers
+                    if m.detailCarNumber == Just carNumber then
+                        Nothing
 
                     else
-                        List.take 3 (m.detailCarNumbers ++ [ carNumber ])
+                        Just carNumber
             in
-            ( { m | detailCarNumbers = next }, Effect.none )
+            ( { m | detailCarNumber = next }, Effect.none )
 
         SelectDetailChart chart ->
             ( { m | detailChart = chart }, Effect.none )
@@ -169,7 +151,7 @@ view shared m =
         [ main_
             [ Attributes.class "dark h-full grid grid-rows-[auto_1fr]"
             ]
-            [ navigation (headerTitle shared) maybeRace m.mode
+            [ navigation (headerTitle shared) maybeRace
             , case maybeRace of
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
@@ -177,15 +159,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just race ->
-                    case m.mode of
-                        Default ->
-                            trackerView race.track race.snapshot m
-
-                        Tracker ->
-                            trackerView race.track race.snapshot m
-
-                        Events ->
-                            RaceEvents.view EventsMsg m.eventsState race.replay
+                    trackerView race.track race.snapshot race.replay m
             ]
         ]
     }
@@ -225,8 +199,8 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
-trackerView track snapshot m =
+trackerView : TrackerChart.Track -> Snapshot -> Replay.Model -> Model -> Html Msg
+trackerView track snapshot replay m =
     let
         layout =
             case m.mode of
@@ -257,7 +231,7 @@ trackerView track snapshot m =
                                 , onSelectChart = SelectDetailChart
                                 }
                                 snapshot
-                                m.detailCarNumbers
+                                m.detailCarNumber
                             ]
                         ]
                     ]
@@ -268,7 +242,7 @@ trackerView track snapshot m =
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
         [ div
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[250px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
+            [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden" ]
                 [ LiveStandingsWidget.view snapshot ]
@@ -287,7 +261,7 @@ trackerView track snapshot m =
                         ]
                     ]
                 ]
-            , sparePanel "col-start-3 row-start-2"
+            , timelinePanel "col-start-3 row-start-2" replay
             , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
                 [ SelectedCarsStrip.view
                     { offset = m.stripOffset
@@ -306,14 +280,129 @@ trackerView track snapshot m =
         ]
 
 
-sparePanel : String -> Html Msg
-sparePanel cell =
+{-| The most recent timeline events that have occurred, newest first: when each
+happened, whose it was, and what kind of thing it was.
+-}
+timelinePanel : String -> Replay.Model -> Html Msg
+timelinePanel cell replay =
+    let
+        currentElapsed =
+            Clock.getElapsed replay.playback
+
+        occurredCount =
+            List.foldl
+                (\event n ->
+                    if Instant.compare event.elapsed currentElapsed /= GT then
+                        n + 1
+
+                    else
+                        n
+                )
+                0
+                replay.race.timelineEvents
+    in
     button
         [ attribute "popovertarget" standingsPopoverId
         , attribute "popovertargetaction" "show"
-        , Attributes.class (cell ++ " grid cursor-pointer text-left")
+        , Attributes.class (cell ++ " grid min-h-0 cursor-pointer text-left")
         ]
-        [ Card.card [] [] ]
+        [ Card.card []
+            [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+                [ Card.content []
+                    [ table [ Attributes.class "w-full border-collapse text-xs" ]
+                        [ Html.Lazy.lazy3 eventRows replay.race.cars replay.race.timelineEvents occurredCount ]
+                    ]
+                ]
+            ]
+        ]
+
+
+recentEventLimit : Int
+recentEventLimit =
+    100
+
+
+{-| The panel's rows, rebuilt only when an event arrives. A thunk's arguments are
+compared by `===`, so every one of these is held to something that survives a
+frame: the two lists never move under playback, and the count is a number.
+Anything frame-made passed instead -- a snapshot, or the cut list itself -- is a
+fresh reference on every frame and misses.
+
+The events are in time order, so the first `occurredCount` of them are the ones
+the clock has reached.
+
+-}
+eventRows : List Car -> List TimelineEvent -> Int -> Html Msg
+eventRows cars timelineEvents occurredCount =
+    let
+        metadataByNumber =
+            cars
+                |> List.map (\car -> ( car.metadata.carNumber, car.metadata ))
+                |> Dict.fromList
+
+        recentEvents =
+            timelineEvents
+                |> List.take occurredCount
+                |> List.reverse
+                |> List.take recentEventLimit
+    in
+    tbody [] (List.map (eventRow metadataByNumber) recentEvents)
+
+
+{-| One row per event: time, whose it was, what it was.
+-}
+eventRow : Dict CarNumber Metadata -> TimelineEvent -> Html Msg
+eventRow metadataByNumber event =
+    tr []
+        [ td [ Attributes.class "whitespace-nowrap py-0.5 pr-2 tabular-nums text-muted-foreground" ]
+            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
+        , td [ Attributes.class "w-px py-0.5 pr-2" ]
+            [ carBadge metadataByNumber event.eventType ]
+        , td [ Attributes.class "py-0.5 text-right" ]
+            [ text (eventTypeToString event.eventType) ]
+        ]
+
+
+{-| Whose event this was, badged like the standings badge it sits beside. A race
+start belongs to nobody, and a number no car of the field answers to keeps its
+bare digits rather than vanishing.
+-}
+carBadge : Dict CarNumber Metadata -> EventType -> Html Msg
+carBadge metadataByNumber eventType =
+    case eventType of
+        CarEvent carNumber _ ->
+            metadataByNumber
+                |> Dict.get carNumber
+                |> Maybe.map CarNumberBadge.viewRow
+                |> Maybe.withDefault (span [] [ text carNumber ])
+
+        RaceStart ->
+            text ""
+
+
+eventTypeToString : EventType -> String
+eventTypeToString eventType =
+    case eventType of
+        RaceStart ->
+            "Race Started"
+
+        CarEvent _ Start ->
+            "Start"
+
+        CarEvent _ TookLead ->
+            "Took the Lead"
+
+        CarEvent _ (PitIn _) ->
+            "Pit In"
+
+        CarEvent _ (PitOut _) ->
+            "Pit Out"
+
+        CarEvent _ Retirement ->
+            "Retirement"
+
+        CarEvent _ Checkered ->
+            "Checkered Flag"
 
 
 leaderboardConfig : Leaderboard.Config CarAt Msg
@@ -329,34 +418,16 @@ leaderboardConfig =
         , Leaderboard.customColumn
             { label = "Gap"
             , getter = .standing >> .gapToLeader >> Gap.toString
-            , sorter = Compare.by (.standing >> .position)
             }
         , Leaderboard.customColumn
             { label = "Interval"
             , getter = .standing >> .intervalToAhead >> Gap.toString
-            , sorter = Compare.by (.standing >> .position)
             }
-        , Leaderboard.currentLapColumn_Wec
-            { getter = identity
-            , sorter = Compare.by (.currentLap >> .elapsed)
-            }
-        , Leaderboard.lastLapColumn_Wec
-            { getter = .lastLap
-            , sorter = Compare.by (.lastLap >> lastLapTime)
-            }
+        , Leaderboard.currentLapColumn_Wec { getter = identity }
+        , Leaderboard.lastLapColumn_Wec { getter = .lastLap }
         , Leaderboard.bestTimeColumn { getter = .bestLap }
         ]
     }
-
-
-lastLapTime : Snapshot.LastLap -> Duration
-lastLapTime lastLap =
-    case lastLap of
-        Snapshot.Completed { rated } ->
-            rated |> Maybe.map .time |> Maybe.withDefault 0
-
-        Snapshot.NoLapYet ->
-            0
 
 
 standingsPopoverId : String
@@ -390,10 +461,10 @@ standingsPopover =
         ]
 
 
-navigation : String -> Maybe Shared.Race -> Mode -> Html Msg
-navigation title maybeRace currentMode =
+navigation : String -> Maybe Shared.Race -> Html Msg
+navigation title maybeRace =
     nav
-        [ Attributes.class "p-3 grid grid-cols-[auto_1fr_auto] items-center gap-x-10" ]
+        [ Attributes.class "p-3 grid grid-cols-[auto_1fr] items-center gap-x-10" ]
         [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
@@ -409,7 +480,6 @@ navigation title maybeRace currentMode =
                     , onPause = PauseRace
                     , toReplayMsg = ReplayMsg
                     }
-        , viewModeSelector currentMode
         ]
 
 
@@ -425,34 +495,3 @@ backLink =
         , Attributes.title "Back to the race list"
         ]
         [ text "←" ]
-
-
-viewModeSelector : Mode -> Html Msg
-viewModeSelector currentMode =
-    div [ Attributes.class "inline-flex" ]
-        [ modeButton "Default" Default (currentMode == Default)
-        , modeButton "Tracker" Tracker (currentMode == Tracker)
-        , modeButton "Events" Events (currentMode == Events)
-        ]
-
-
-modeButton : String -> Mode -> Bool -> Html Msg
-modeButton label mode isActive =
-    joinButton label isActive (ModeChange mode)
-
-
-joinButton : String -> Bool -> Msg -> Html Msg
-joinButton label isActive msg =
-    button
-        [ onClick msg
-        , Attributes.class
-            ("inline-flex h-8 items-center justify-center border border-border px-3 text-sm font-medium cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md"
-                ++ (if isActive then
-                        " bg-primary text-primary-foreground border-primary"
-
-                    else
-                        " bg-accent/40 text-foreground hover:bg-accent/70"
-                   )
-            )
-        ]
-        [ text label ]
