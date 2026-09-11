@@ -101,15 +101,6 @@ noSorter _ _ =
     EQ
 
 
-{-| The `filter` every column carries. No view fires `DataView.Msg.Filter`, so
-this is never consulted either; it only fills the field `DataView.Column`
-requires.
--}
-noFilter : data -> String -> Bool
-noFilter _ _ =
-    True
-
-
 
 -- UPDATE
 
@@ -307,7 +298,7 @@ sectorTimeColumn { label, getter } =
                 )
             >> Maybe.withDefault (text "")
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -330,7 +321,7 @@ histogramColumn { getter, bestTimes, coefficient } =
     { name = "Histogram"
     , view = getter >> Lazy.lazy3 Histogram.view bestTimes coefficient
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -343,7 +334,7 @@ performanceColumn { getter, bestTimes } =
     { name = "Performance"
     , view = getter >> performanceHistory bestTimes
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -352,7 +343,7 @@ carNumberColumn_Wec { getter } =
     { name = "#"
     , view = getter >> Lazy.lazy viewCarNumberColumn_Wec
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -383,7 +374,7 @@ driverAndTeamColumn_Wec { getter } =
     { name = "Team / Driver"
     , view = getter >> Lazy.lazy viewDriverAndTeamColumn_Wec
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -434,7 +425,7 @@ currentLapColumn_Wec { getter } =
     { name = "Current Lap"
     , view = getter >> Lazy.lazy viewCurrentLapColumn_Wec
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -488,7 +479,7 @@ currentLapColumn_LeMans24h { getter, bestTimes } =
     { name = "Current Lap"
     , view = getter >> Lazy.lazy2 viewCurrentLapColumn_LeMans24h bestTimes
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -548,7 +539,7 @@ lastLapColumn_Wec { getter } =
     { name = "Last Lap"
     , view = getter >> Lazy.lazy viewLastLapColumn_Wec
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
@@ -593,7 +584,7 @@ lastLapColumn_LeMans24h { getter } =
     { name = "Last Lap"
     , view = getter >> Lazy.lazy viewLastLapColumn_LeMans24h
     , sorter = noSorter
-    , filter = noFilter
+    , filter = DataView.noFiltering
     }
 
 
