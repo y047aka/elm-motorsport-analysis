@@ -2,7 +2,7 @@ module Motorsport.Duration exposing
     ( Duration
     , decoder
     , toString
-    , toStringToSeconds
+    , toStringToSeconds, toStringToTenths
     , fromString, fromStringWithDefault
     )
 
@@ -11,7 +11,7 @@ module Motorsport.Duration exposing
 @docs Duration
 @docs decoder
 @docs toString
-@docs toStringToSeconds
+@docs toStringToSeconds, toStringToTenths
 @docs fromString, fromStringWithDefault
 
 -}
@@ -124,6 +124,36 @@ toStringToSeconds ms =
 
         else
             String.join ":" [ h, m, s ]
+
+
+{-| The same spelling as [`toStringToSeconds`](#toStringToSeconds), carried one
+place further. Truncated like it is, so a clock being counted up never shows a
+tenth it has yet to reach.
+
+    toStringToTenths 4321
+    --> "4.3"
+
+    toStringToTenths 65432
+    --> "1:05.4"
+
+    toStringToTenths 25614321
+    --> "7:06:54.3"
+
+    toStringToTenths (-4321)
+    --> "-4.3"
+
+-}
+toStringToTenths : Duration -> String
+toStringToTenths ms =
+    if ms < 0 then
+        "-" ++ toStringToTenths (abs ms)
+
+    else
+        let
+            tenths =
+                remainderBy 1000 ms // 100 |> String.fromInt
+        in
+        toStringToSeconds ms ++ "." ++ tenths
 
 
 toStringInSeconds : Duration -> String
