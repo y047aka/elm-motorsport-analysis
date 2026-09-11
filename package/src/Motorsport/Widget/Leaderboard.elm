@@ -52,7 +52,7 @@ module Motorsport.Widget.Leaderboard exposing
 
 import DataView
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import Html exposing (Html, div, img, span, text)
+import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
@@ -99,6 +99,15 @@ never consulted; it only fills the field `DataView.Column` requires.
 noSorter : data -> data -> Order
 noSorter _ _ =
     EQ
+
+
+{-| The `filter` every column carries. No view fires `DataView.Msg.Filter`, so
+this is never consulted either; it only fills the field `DataView.Column`
+requires.
+-}
+noFilter : data -> String -> Bool
+noFilter _ _ =
+    True
 
 
 
@@ -298,7 +307,7 @@ sectorTimeColumn { label, getter } =
                 )
             >> Maybe.withDefault (text "")
     , sorter = noSorter
-    , filter = \_ _ -> True
+    , filter = noFilter
     }
 
 
@@ -321,7 +330,7 @@ histogramColumn { getter, bestTimes, coefficient } =
     { name = "Histogram"
     , view = getter >> Lazy.lazy3 Histogram.view bestTimes coefficient
     , sorter = noSorter
-    , filter = \_ _ -> True
+    , filter = noFilter
     }
 
 
@@ -334,7 +343,7 @@ performanceColumn { getter, bestTimes } =
     { name = "Performance"
     , view = getter >> performanceHistory bestTimes
     , sorter = noSorter
-    , filter = \_ _ -> True
+    , filter = noFilter
     }
 
 
@@ -343,7 +352,7 @@ carNumberColumn_Wec { getter } =
     { name = "#"
     , view = getter >> Lazy.lazy viewCarNumberColumn_Wec
     , sorter = noSorter
-    , filter = \data query -> getter data |> .carNumber |> String.startsWith query
+    , filter = noFilter
     }
 
 
@@ -374,7 +383,7 @@ driverAndTeamColumn_Wec { getter } =
     { name = "Team / Driver"
     , view = getter >> Lazy.lazy viewDriverAndTeamColumn_Wec
     , sorter = noSorter
-    , filter = \data query -> getter data |> (.metadata >> .team) |> String.startsWith query
+    , filter = noFilter
     }
 
 
@@ -425,7 +434,7 @@ currentLapColumn_Wec { getter } =
     { name = "Current Lap"
     , view = getter >> Lazy.lazy viewCurrentLapColumn_Wec
     , sorter = noSorter
-    , filter = \_ _ -> True
+    , filter = noFilter
     }
 
 
@@ -479,7 +488,7 @@ currentLapColumn_LeMans24h { getter, bestTimes } =
     { name = "Current Lap"
     , view = getter >> Lazy.lazy2 viewCurrentLapColumn_LeMans24h bestTimes
     , sorter = noSorter
-    , filter = \_ _ -> True
+    , filter = noFilter
     }
 
 
@@ -539,7 +548,7 @@ lastLapColumn_Wec { getter } =
     { name = "Last Lap"
     , view = getter >> Lazy.lazy viewLastLapColumn_Wec
     , sorter = noSorter
-    , filter = \_ _ -> True
+    , filter = noFilter
     }
 
 
@@ -584,7 +593,7 @@ lastLapColumn_LeMans24h { getter } =
     { name = "Last Lap"
     , view = getter >> Lazy.lazy viewLastLapColumn_LeMans24h
     , sorter = noSorter
-    , filter = \_ _ -> True
+    , filter = noFilter
     }
 
 

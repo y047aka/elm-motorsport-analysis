@@ -44,7 +44,6 @@ import View.PlaybackControls as PlaybackControls
 type alias Model =
     { mode : Mode
     , leaderboardState : Leaderboard.Model
-    , query : String
     , stripOffset : Int
     , detailCarNumber : Maybe String
     , detailChart : CompareWidget.Chart
@@ -60,7 +59,6 @@ init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { mode = Default
       , leaderboardState = Leaderboard.init
-      , query = ""
       , stripOffset = 0
       , detailCarNumber = Nothing
       , detailChart = CompareWidget.GapChart
