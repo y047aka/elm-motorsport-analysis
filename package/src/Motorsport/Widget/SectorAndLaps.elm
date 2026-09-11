@@ -212,5 +212,5 @@ pieGap =
 labelText : String -> Html msg
 labelText label =
     div
-        [ class "text-[9px] opacity-60" ]
+        [ class "text-[9px] text-muted-foreground" ]
         [ text label ]
