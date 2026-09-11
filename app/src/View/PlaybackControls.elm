@@ -16,7 +16,6 @@ import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
-import String exposing (dropRight)
 import UI.Shadcn.Button as Button
 import UI.Shadcn.ButtonGroup as ButtonGroup
 import UI.Shadcn.Slider as Slider
@@ -129,7 +128,7 @@ viewProgressBar toReplayMsg ({ playback, race } as replay) =
         [ div [ Attributes.class "flex justify-between" ]
             [ div [] [ text (Clock.toString playback) ]
             , div [] [ text ("Lap " ++ String.fromInt lapCount ++ " / " ++ String.fromInt race.lapTotal) ]
-            , div [] [ text (Duration.toString remaining |> dropRight 4) ]
+            , div [] [ text (Duration.toStringToSeconds remaining) ]
             ]
         , Slider.view
             { min = 0
