@@ -8,15 +8,18 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
+import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
+import Html.Lazy
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
+import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
@@ -258,7 +261,7 @@ trackerView track snapshot replay m =
                         ]
                     ]
                 ]
-            , timelinePanel "col-start-3 row-start-2" snapshot replay
+            , timelinePanel "col-start-3 row-start-2" replay
             , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
                 [ SelectedCarsStrip.view
                     { offset = m.stripOffset
@@ -277,11 +280,11 @@ trackerView track snapshot replay m =
         ]
 
 
-{-| Timeline events that have occurred so far, newest first: when each happened,
-whose it was, and what kind of thing it was.
+{-| The most recent timeline events that have occurred, newest first: when each
+happened, whose it was, and what kind of thing it was.
 -}
-timelinePanel : String -> Snapshot -> Replay.Model -> Html Msg
-timelinePanel cell snapshot replay =
+timelinePanel : String -> Replay.Model -> Html Msg
+timelinePanel cell replay =
     let
         currentElapsed =
             Clock.getElapsed replay.playback
@@ -290,6 +293,7 @@ timelinePanel cell snapshot replay =
             replay.race.timelineEvents
                 |> List.filter (\event -> Instant.compare event.elapsed currentElapsed /= GT)
                 |> List.reverse
+                |> List.take recentEventLimit
     in
     button
         [ attribute "popovertarget" standingsPopoverId
@@ -300,22 +304,44 @@ timelinePanel cell snapshot replay =
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
                     [ table [ Attributes.class "w-full border-collapse text-xs" ]
-                        [ tbody [] (List.map (eventRow snapshot) occurredEvents) ]
+                        [ Html.Lazy.lazy2 eventRows replay.race.cars occurredEvents ]
                     ]
                 ]
             ]
         ]
 
 
+recentEventLimit : Int
+recentEventLimit =
+    100
+
+
+{-| The panel's rows, rebuilt only when an event arrives. `Lazy` hits because its
+arguments hold their references across frames -- cars never moves under
+playback, and a rebuilt occurredEvents compares equal until an event crosses
+the clock. Anything frame-made passed instead, a snapshot or a dictionary built
+here, misses on every one.
+-}
+eventRows : List Car -> List TimelineEvent -> Html Msg
+eventRows cars events =
+    let
+        metadataByNumber =
+            cars
+                |> List.map (\car -> ( car.metadata.carNumber, car.metadata ))
+                |> Dict.fromList
+    in
+    tbody [] (List.map (eventRow metadataByNumber) events)
+
+
 {-| One row per event: time, whose it was, what it was.
 -}
-eventRow : Snapshot -> TimelineEvent -> Html Msg
-eventRow snapshot event =
+eventRow : Dict CarNumber Metadata -> TimelineEvent -> Html Msg
+eventRow metadataByNumber event =
     tr []
         [ td [ Attributes.class "whitespace-nowrap py-0.5 pr-2 tabular-nums text-muted-foreground" ]
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         , td [ Attributes.class "w-px py-0.5 pr-2" ]
-            [ carBadge snapshot event.eventType ]
+            [ carBadge metadataByNumber event.eventType ]
         , td [ Attributes.class "py-0.5 text-right" ]
             [ text (eventTypeToString event.eventType) ]
         ]
@@ -325,13 +351,13 @@ eventRow snapshot event =
 start belongs to nobody, and a number no car of the field answers to keeps its
 bare digits rather than vanishing.
 -}
-carBadge : Snapshot -> EventType -> Html Msg
-carBadge snapshot eventType =
+carBadge : Dict CarNumber Metadata -> EventType -> Html Msg
+carBadge metadataByNumber eventType =
     case eventType of
         CarEvent carNumber _ ->
-            snapshot
-                |> Snapshot.get carNumber
-                |> Maybe.map (\car -> CarNumberBadge.viewRow car.metadata)
+            metadataByNumber
+                |> Dict.get carNumber
+                |> Maybe.map CarNumberBadge.viewRow
                 |> Maybe.withDefault (span [] [ text carNumber ])
 
         RaceStart ->
