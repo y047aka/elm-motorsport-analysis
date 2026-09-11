@@ -60,7 +60,7 @@ carRow metadata position driverSurname isInPit =
             [ text driverSurname ]
         , if isInPit then
             div
-                [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
+                [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
                 [ text "P" ]
 
           else
