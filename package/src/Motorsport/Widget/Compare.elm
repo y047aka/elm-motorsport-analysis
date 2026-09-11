@@ -76,7 +76,10 @@ viewComparison { onToggleCar, activeChart, onSelectChart, focused } snapshot sel
                     ]
                 , div
                     [ Attributes.class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-x-4" ]
-                    (List.map CarSummary.carSummary selectedEntries)
+                    (List.map
+                        (\entry -> CarSummary.carSummary (entry.metadata.carNumber == focused) entry)
+                        selectedEntries
+                    )
                 , ChartTabs.chartTabs onSelectChart
                     activeChart
                     [ ( GapChart
