@@ -289,11 +289,17 @@ timelinePanel cell replay =
         currentElapsed =
             Clock.getElapsed replay.playback
 
-        occurredEvents =
-            replay.race.timelineEvents
-                |> List.filter (\event -> Instant.compare event.elapsed currentElapsed /= GT)
-                |> List.reverse
-                |> List.take recentEventLimit
+        occurredCount =
+            List.foldl
+                (\event n ->
+                    if Instant.compare event.elapsed currentElapsed /= GT then
+                        n + 1
+
+                    else
+                        n
+                )
+                0
+                replay.race.timelineEvents
     in
     button
         [ attribute "popovertarget" standingsPopoverId
@@ -304,7 +310,7 @@ timelinePanel cell replay =
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
                     [ table [ Attributes.class "w-full border-collapse text-xs" ]
-                        [ Html.Lazy.lazy2 eventRows replay.race.cars occurredEvents ]
+                        [ Html.Lazy.lazy3 eventRows replay.race.cars replay.race.timelineEvents occurredCount ]
                     ]
                 ]
             ]
@@ -316,21 +322,31 @@ recentEventLimit =
     100
 
 
-{-| The panel's rows, rebuilt only when an event arrives. `Lazy` hits because its
-arguments hold their references across frames -- cars never moves under
-playback, and a rebuilt occurredEvents compares equal until an event crosses
-the clock. Anything frame-made passed instead, a snapshot or a dictionary built
-here, misses on every one.
+{-| The panel's rows, rebuilt only when an event arrives. A thunk's arguments are
+compared by `===`, so every one of these is held to something that survives a
+frame: the two lists never move under playback, and the count is a number.
+Anything frame-made passed instead -- a snapshot, or the cut list itself -- is a
+fresh reference on every frame and misses.
+
+The events are in time order, so the first `occurredCount` of them are the ones
+the clock has reached.
+
 -}
-eventRows : List Car -> List TimelineEvent -> Html Msg
-eventRows cars events =
+eventRows : List Car -> List TimelineEvent -> Int -> Html Msg
+eventRows cars timelineEvents occurredCount =
     let
         metadataByNumber =
             cars
                 |> List.map (\car -> ( car.metadata.carNumber, car.metadata ))
                 |> Dict.fromList
+
+        recentEvents =
+            timelineEvents
+                |> List.take occurredCount
+                |> List.reverse
+                |> List.take recentEventLimit
     in
-    tbody [] (List.map (eventRow metadataByNumber) events)
+    tbody [] (List.map (eventRow metadataByNumber) recentEvents)
 
 
 {-| One row per event: time, whose it was, what it was.
