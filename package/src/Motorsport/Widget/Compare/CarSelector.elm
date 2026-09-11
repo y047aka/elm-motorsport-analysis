@@ -13,8 +13,9 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class as Class exposing (Class)
 
 
-{-| Lays out every car in the given class as chips; clicking a chip toggles its
-selection.
+{-| Lays out every car in the given class as chips, marking those in
+`selectedCarNumbers`; clicking one fires `onToggleCar` with its number. The
+selection itself belongs to the caller.
 -}
 carSelector : (String -> msg) -> Snapshot -> Class -> List String -> Html msg
 carSelector onToggleCar standings class selectedCarNumbers =

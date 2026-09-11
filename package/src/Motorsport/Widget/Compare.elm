@@ -1,11 +1,10 @@
 module Motorsport.Widget.Compare exposing (Chart(..), viewComparison)
 
-{-| Widget showing per-car detail (summary + in-class position history). Intended
-as the body of a popover/dialog; it does not carry the popover attributes itself.
+{-| Widget showing per-car detail (summary + in-class position history), drawn
+as plain inline content; the caller chooses which cars to compare.
 
-`viewComparison` embeds a same-class car selector in the modal and compares up to
-three cars, toggle-selected. Summaries sit side by side; the two lower charts are
-tabbed so only one shows at a time (to save space).
+`viewComparison` embeds a same-class selector to switch between them. Summaries
+sit side by side; the two lower charts are tabbed so only one shows at a time.
 
 @docs Chart, viewComparison
 
@@ -37,11 +36,10 @@ type Chart
     | PositionChart
 
 
-{-| View that compares up to three same-class cars, toggle-selected within the
-modal. `selectedCarNumbers` are the selected car numbers (the first sets the
-chart's class reference). Each selector chip fires `onToggleCar` (the caller
-enforces the 3-car limit). Only `activeChart` is rendered; clicking a tab fires
-`onSelectChart`.
+{-| Compare the cars in `selectedCarNumbers`. The first sets the class reference
+for both charts and for the embedded selector, whose chips fire `onToggleCar`;
+the widget holds no selection of its own. Only `activeChart` is rendered;
+clicking a tab fires `onSelectChart`.
 -}
 viewComparison :
     { onToggleCar : String -> msg
