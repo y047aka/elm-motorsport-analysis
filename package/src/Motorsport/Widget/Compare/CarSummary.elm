@@ -1,9 +1,9 @@
-module Motorsport.Widget.Compare.CarSummary exposing (carSummary, placeholderCard)
+module Motorsport.Widget.Compare.CarSummary exposing (carSummary)
 
 {-| Per-car summary card for the Compare widget: who the car is, and who is
-driving it. Plus the placeholder that fills an unselected slot.
+driving it.
 
-@docs carSummary, placeholderCard
+@docs carSummary
 
 -}
 
@@ -13,15 +13,6 @@ import Motorsport.Driver as Driver
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-
-
-{-| Subtle placeholder filling an unselected slot. Nudges toward the selector above.
--}
-placeholderCard : Html msg
-placeholderCard =
-    div
-        [ class "grid place-items-center min-h-[100px] border border-dashed border-border rounded-lg text-[11px] text-muted-foreground" ]
-        [ text "車両を追加" ]
 
 
 carSummary : CarAt -> Html msg

@@ -21,14 +21,6 @@ import Motorsport.Widget.Compare.ChartTabs as ChartTabs
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
-{-| Maximum number of cars that can be compared. The summary slot count
-(including placeholders) matches this.
--}
-maxComparisonCars : Int
-maxComparisonCars =
-    3
-
-
 {-| Tab for the lower chart. Only one is shown at a time.
 -}
 type Chart
@@ -81,12 +73,8 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                     , CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers
                     ]
                 , div
-                    -- Tailwind's class scanner needs a literal class name, so this can't be
-                    -- built from maxComparisonCars; grid-cols-3 must be kept in sync with it by hand.
-                    [ Attributes.class "grid gap-x-4 grid-cols-3" ]
-                    (List.map CarSummary.carSummary selectedEntries
-                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
-                    )
+                    [ Attributes.class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-x-4" ]
+                    (List.map CarSummary.carSummary selectedEntries)
                 , ChartTabs.chartTabs onSelectChart
                     activeChart
                     [ ( GapChart
