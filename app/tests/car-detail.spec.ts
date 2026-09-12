@@ -31,9 +31,9 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(page.locator(DETAIL)).toHaveScreenshot('position-tab.png');
   });
 
-  test('should render the car\'s own laps as a table', async ({ page }) => {
-    await page.locator(DETAIL).getByRole('button', { name: 'Laps', exact: true }).click();
-    await expect(page.locator(DETAIL)).toHaveScreenshot('laps-tab.png');
+  test('should render the car\'s own laps under its lap times', async ({ page }) => {
+    await page.locator(DETAIL).getByRole('button', { name: 'Lap history' }).click();
+    await expect(page.locator(DETAIL)).toHaveScreenshot('lap-history.png');
   });
 
   test('should render a recovery hint when the car is deselected', async ({ page }) => {

@@ -24,7 +24,6 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget as Widget
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
 import Motorsport.Widget.CarDetail.Header as Header
-import Motorsport.Widget.CarDetail.LapTable as LapTable
 import Motorsport.Widget.CarDetail.LapTimes as LapTimes
 import Motorsport.Widget.CarDetail.PositionProgression as PositionProgression
 import Motorsport.Widget.CarDetail.Stint as Stint
@@ -33,19 +32,24 @@ import Motorsport.Widget.Distribution as Distribution
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
 
 
-{-| The history the panel draws under the car's present, one at a time. The
-first three are the car among its rivals; the last is its own laps.
+{-| The race so far as the car ran it among its rivals, one view at a time.
+
+Every one of them draws the cars the legend above names, which is what keeps
+them one group: the car's own laps are not a comparison and are read where its
+other lap times are.
+
 -}
 type Chart
     = GapChart
     | PositionChart
     | DistributionChart
-    | LapTable
 
 
 view :
     { activeChart : Chart
     , onSelectChart : Chart -> msg
+    , lapHistoryOpen : Bool
+    , onToggleLapHistory : msg
     }
     -> List Car
     -> Snapshot
@@ -66,7 +70,11 @@ view config cars snapshot focused =
             }
             focused
         , Widget.container "Lap times"
-            (LapTimes.view (Snapshot.bestTimes snapshot)
+            (LapTimes.view
+                { bestTimes = Snapshot.bestTimes snapshot
+                , historyOpen = config.lapHistoryOpen
+                , onToggleHistory = config.onToggleLapHistory
+                }
                 (LapHistory.get focused.metadata.carNumber lapHistory)
                 focused
             )
@@ -161,12 +169,6 @@ chartTabs config lapRange lapHistory snapshot focused rivals =
         , ( DistributionChart
           , "Lap time distribution"
           , \() -> distribution lapHistory focused rivals
-          )
-        , ( LapTable
-          , "Laps"
-          , \() ->
-                LapTable.view (Snapshot.bestTimes snapshot)
-                    (LapHistory.get focused.metadata.carNumber lapHistory)
           )
         ]
 

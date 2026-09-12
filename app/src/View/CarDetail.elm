@@ -19,6 +19,8 @@ import Motorsport.Widget.CarDetail as CarDetailWidget
 view :
     { activeChart : CarDetailWidget.Chart
     , onSelectChart : CarDetailWidget.Chart -> msg
+    , lapHistoryOpen : Bool
+    , onToggleLapHistory : msg
     }
     -> List Car
     -> Snapshot
@@ -34,6 +36,8 @@ view config cars snapshot detailCarNumber =
                 CarDetailWidget.view
                     { activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
+                    , lapHistoryOpen = config.lapHistoryOpen
+                    , onToggleLapHistory = config.onToggleLapHistory
                     }
                     cars
                     snapshot

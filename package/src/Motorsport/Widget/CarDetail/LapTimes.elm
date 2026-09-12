@@ -1,7 +1,7 @@
 module Motorsport.Widget.CarDetail.LapTimes exposing (view)
 
 {-| The car's lap times, newest first: the lap it is driving, the lap it has
-just finished, and the best it has turned.
+just finished, the best it has turned, and every lap behind those.
 
 The whole page is a timing screen, so nothing here is labelled live. What the
 section is for is the one thing a timing screen is short of room for: the lap in
@@ -13,8 +13,9 @@ before it is over.
 
 -}
 
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (class, style)
+import Html exposing (Html, button, div, text)
+import Html.Attributes exposing (attribute, class, style)
+import Html.Events exposing (onClick)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
@@ -22,14 +23,28 @@ import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 import Motorsport.Status as Status
+import Motorsport.Widget.CarDetail.LapTable as LapTable
 import Motorsport.Widget.SegmentStrip as SegmentStrip
 
 
-{-| `laps` is the car's own completed laps, which is where the sectors of the
-lap in progress get something to be measured against.
+{-| `laps` is the car's own completed laps: what the sectors of the lap in
+progress are measured against, and -- once the reader asks for them -- the rows
+under everything else.
+
+The rows are built only while they are open. They are as many as the car has
+turned laps and they are rebuilt on every frame the panel draws, which is every
+frame of playback.
+
 -}
-view : BestTimes.Snapshot -> List Lap -> CarAt -> Html msg
-view bestTimes laps item =
+view :
+    { bestTimes : BestTimes.Snapshot
+    , historyOpen : Bool
+    , onToggleHistory : msg
+    }
+    -> List Lap
+    -> CarAt
+    -> Html msg
+view config laps item =
     div [ class "grid gap-y-2" ]
         [ if Status.hasStopped item.status then
             text ""
@@ -37,7 +52,48 @@ view bestTimes laps item =
           else
             currentLap (bestSectors laps) item
         , lastLap item
-        , bestLap bestTimes item
+        , bestLap config.bestTimes item
+        , history config laps
+        ]
+
+
+{-| Every lap the car has turned, under the three the section leads with.
+
+Kept behind a disclosure rather than beside the charts: the charts are the car
+against the cars it is racing, and a list of its own laps is not that -- it is
+the rest of this section, at the grain the section is about.
+
+-}
+history : { a | bestTimes : BestTimes.Snapshot, historyOpen : Bool, onToggleHistory : msg } -> List Lap -> Html msg
+history { bestTimes, historyOpen, onToggleHistory } laps =
+    div [ class "grid gap-y-1 border-t border-t-border pt-1.5" ]
+        [ button
+            [ onClick onToggleHistory
+            , attribute "aria-expanded"
+                (if historyOpen then
+                    "true"
+
+                 else
+                    "false"
+                )
+            , class "flex items-center gap-x-1 text-[9px] uppercase tracking-[0.03em] text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+            ]
+            [ div [ class "text-[8px]" ]
+                [ text
+                    (if historyOpen then
+                        "▼"
+
+                     else
+                        "▶"
+                    )
+                ]
+            , text "Lap history"
+            ]
+        , if historyOpen then
+            LapTable.view bestTimes laps
+
+          else
+            text ""
         ]
 
 

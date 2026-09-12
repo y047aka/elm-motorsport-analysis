@@ -52,6 +52,7 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , detailCarNumber : Maybe String
     , detailChart : CarDetailWidget.Chart
+    , lapHistoryOpen : Bool
     }
 
 
@@ -72,6 +73,7 @@ init params =
       , leaderboardState = Leaderboard.init
       , detailCarNumber = Nothing
       , detailChart = CarDetailWidget.GapChart
+      , lapHistoryOpen = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -90,6 +92,7 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | ToggleDetailCar String
     | SelectDetailChart CarDetailWidget.Chart
+    | ToggleLapHistory
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -128,6 +131,9 @@ update msg m =
 
         SelectDetailChart chart ->
             ( { m | detailChart = chart }, Effect.none )
+
+        ToggleLapHistory ->
+            ( { m | lapHistoryOpen = not m.lapHistoryOpen }, Effect.none )
 
 
 
@@ -235,6 +241,8 @@ trackerView track timeline snapshot replay m =
                             [ CarDetail.view
                                 { activeChart = m.detailChart
                                 , onSelectChart = SelectDetailChart
+                                , lapHistoryOpen = m.lapHistoryOpen
+                                , onToggleLapHistory = ToggleLapHistory
                                 }
                                 replay.race.cars
                                 snapshot
