@@ -65,7 +65,6 @@ type alias Summary =
     { stints : List Stint
     , current : Maybe Stint
     , pitStops : List Pit
-    , totalPitTime : Duration
     , medianStintLength : Maybe Int
     }
 
@@ -88,7 +87,6 @@ summarize laps =
     { stints = stints
     , current = List.filter (.pit >> (==) Nothing) stints |> List.head
     , pitStops = pitStops
-    , totalPitTime = List.sum (List.map .duration pitStops)
     , medianStintLength =
         stints
             |> List.filter (.pit >> (/=) Nothing)
@@ -173,8 +171,12 @@ median values =
 -- VIEW
 
 
-{-| The runs the car has made, as a bar of them over the laps of the race, above
-what the stops have cost and where the last of them stands.
+{-| The run the car is on, the runs behind it as a bar of the laps they took,
+and who has driven how many of them.
+
+What a stop cost is the stop's own business and is on the run it ended; what the
+section is for is the shape of the race the car is running -- how long it goes
+between stops, and how the driving has been shared out.
 
 The laps alone cannot say whether the run they end on is still going: a car that
 has retired leaves the same trace as one out on the road. `status` is what
@@ -184,41 +186,98 @@ settles it.
 view : Status -> Car.Metadata -> Summary -> Html msg
 view status metadata summary =
     div [ class "grid gap-y-2" ]
-        [ pitStats summary
+        [ lastStint status summary
         , stintBar metadata summary
-        , lastStint status summary
+        , driverShare metadata summary
+        , shape summary
         ]
 
 
-pitStats : Summary -> Html msg
-pitStats summary =
-    div [ class "border border-border rounded-lg grid grid-cols-4" ]
-        [ statCell "Stops" (String.fromInt (List.length summary.pitStops))
-        , statCell "Pit total"
-            (case summary.pitStops of
-                [] ->
-                    "-"
+{-| How many laps of the car's race each of its drivers has driven.
 
-                _ ->
-                    Duration.toString summary.totalPitTime
-            )
-        , statCell "Last stop"
-            (case List.Extra.last summary.pitStops of
-                Just pit ->
-                    "L" ++ String.fromInt pit.lapNumber ++ " " ++ Duration.toStringToTenths pit.duration
+Read off the runs rather than the laps, so the share and the bar above it say
+the same thing: a run is one driver's, and the colour it is drawn in is theirs.
 
-                Nothing ->
-                    "-"
-            )
-        , statCell "Median stint"
-            (case summary.medianStintLength of
-                Just laps ->
-                    inLaps laps
+The drivers come in the order the entry list names them, which is the order
+their shades are picked in, so a driver who has yet to drive is listed at nought
+rather than left out.
 
-                Nothing ->
-                    "-"
-            )
+-}
+driverShare : Car.Metadata -> Summary -> Html msg
+driverShare metadata summary =
+    if List.isEmpty summary.stints then
+        text ""
+
+    else
+        div [ class "flex flex-wrap items-center gap-x-3 gap-y-0.5" ]
+            (rowLabel "Laps" :: List.map (driverCell metadata summary) metadata.drivers)
+
+
+driverCell : Car.Metadata -> Summary -> Driver -> Html msg
+driverCell metadata summary driver =
+    div [ class "flex items-center gap-x-1 min-w-0" ]
+        [ div
+            [ class "size-2 shrink-0 rounded-[1px]"
+            , style "background-color" (driverShade metadata driver)
+            ]
+            []
+        , div [ class "text-[10px] truncate" ] [ text (Driver.toSurname driver) ]
+        , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
+            [ text (String.fromInt (lapsDrivenBy driver summary)) ]
         ]
+
+
+lapsDrivenBy : Driver -> Summary -> Int
+lapsDrivenBy driver summary =
+    summary.stints
+        |> List.filter (.driver >> Driver.isSame driver)
+        |> List.map .lapCount
+        |> List.sum
+
+
+{-| The shape of the race the car is running: how often it has stopped, and how
+long the runs between the stops have been.
+-}
+shape : Summary -> Html msg
+shape summary =
+    div [ class "text-[10px] text-muted-foreground tabular-nums" ]
+        [ text (String.join " · " (List.filter ((/=) "") [ stopCount summary, stintLengths summary ])) ]
+
+
+stopCount : Summary -> String
+stopCount summary =
+    case List.length summary.pitStops of
+        0 ->
+            "No stops yet"
+
+        1 ->
+            "1 stop"
+
+        count ->
+            String.fromInt count ++ " stops"
+
+
+stintLengths : Summary -> String
+stintLengths summary =
+    let
+        lengths =
+            summary.stints |> List.filter (.pit >> (/=) Nothing) |> List.map .lapCount
+    in
+    case ( List.minimum lengths, List.maximum lengths, summary.medianStintLength ) of
+        ( Just shortest, Just longest, Just median_ ) ->
+            if shortest == longest then
+                "runs of " ++ inLaps shortest
+
+            else
+                "runs of "
+                    ++ String.fromInt shortest
+                    ++ "-"
+                    ++ inLaps longest
+                    ++ ", median "
+                    ++ String.fromInt median_
+
+        _ ->
+            ""
 
 
 {-| Each run as a segment of the race so far, the widths in laps. The car's own
@@ -400,13 +459,10 @@ inLaps count =
            )
 
 
-statCell : String -> String -> Html msg
-statCell label value =
-    div
-        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
-        [ div [ class "text-[8px] uppercase tracking-[0.03em] text-muted-foreground" ] [ text label ]
-        , div [ class "text-[12px] tabular-nums" ] [ text value ]
-        ]
+rowLabel : String -> Html msg
+rowLabel label =
+    div [ class "text-[9px] uppercase tracking-[0.03em] text-muted-foreground" ]
+        [ text label ]
 
 
 durationOr : String -> Maybe Duration -> String

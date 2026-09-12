@@ -35,13 +35,10 @@ suite =
                 \_ ->
                     [ lap 1 95000, pitLap 2 96000 63000, lap 3 97000, pitLap 4 98000 71000 ]
                         |> Stint.summarize
-                        |> Expect.all
-                            [ .pitStops
-                                >> Expect.equal
-                                    [ { lapNumber = 2, duration = 63000 }
-                                    , { lapNumber = 4, duration = 71000 }
-                                    ]
-                            , .totalPitTime >> Expect.equal 134000
+                        |> .pitStops
+                        |> Expect.equal
+                            [ { lapNumber = 2, duration = 63000 }
+                            , { lapNumber = 4, duration = 71000 }
                             ]
             , test "the lap a stop fell on is left out of the run's times" <|
                 \_ ->
@@ -72,7 +69,7 @@ suite =
                         |> Expect.all
                             [ .stints >> Expect.equal []
                             , .current >> Expect.equal Nothing
-                            , .totalPitTime >> Expect.equal 0
+                            , .pitStops >> Expect.equal []
                             , .medianStintLength >> Expect.equal Nothing
                             ]
             , test "laps read in any order are cut in race order" <|
