@@ -3,14 +3,14 @@ import { waitForPageReady, setLapCount } from './helpers';
 
 const DETAIL = '#car-detail';
 
-/** Car selector chip (#<carNumber>) inside the detail view */
-function chip(page: Page, carNumber: string) {
-  return page.locator(DETAIL).getByRole('button', { name: `#${carNumber}`, exact: true });
+/** The car's row in the live standings, which is where a car is picked. */
+function standingsRow(page: Page, carNumber: string) {
+  return page.getByRole('button', { name: `Car #${carNumber}` });
 }
 
-/** Select a car by its chip in the detail view. */
+/** Select a car by its row in the live standings. */
 async function selectCar(page: Page, carNumber: string) {
-  await chip(page, carNumber).click();
+  await standingsRow(page, carNumber).click();
   await expect(page.locator(DETAIL)).toBeVisible();
 }
 
@@ -37,7 +37,7 @@ test.describe('Car Detail Visual Tests', () => {
   });
 
   test('should render a recovery hint when the car is deselected', async ({ page }) => {
-    await chip(page, '83').click();
+    await standingsRow(page, '83').click();
     await expect(page.locator(DETAIL)).toHaveScreenshot('empty-selection.png');
   });
 });

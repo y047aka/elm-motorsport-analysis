@@ -234,7 +234,6 @@ trackerView track timeline snapshot replay m =
                         [ Card.content []
                             [ CarDetail.view
                                 { activeChart = m.detailChart
-                                , onToggleCar = ToggleDetailCar
                                 , onSelectChart = SelectDetailChart
                                 }
                                 replay.race.cars
@@ -253,7 +252,10 @@ trackerView track timeline snapshot replay m =
             [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
-                [ LiveStandingsWidget.view snapshot ]
+                [ LiveStandingsWidget.view
+                    { onSelect = ToggleDetailCar, selected = m.detailCarNumber }
+                    snapshot
+                ]
             , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
             , div
                 -- The cell is the only box in the chain whose height is settled,

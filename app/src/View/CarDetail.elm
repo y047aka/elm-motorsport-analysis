@@ -14,12 +14,10 @@ import Html.Attributes as Attributes
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.CarDetail as CarDetailWidget
-import Motorsport.Widget.CarDetail.CarSelector as CarSelector
 
 
 view :
     { activeChart : CarDetailWidget.Chart
-    , onToggleCar : String -> msg
     , onSelectChart : CarDetailWidget.Chart -> msg
     }
     -> List Car
@@ -30,12 +28,11 @@ view config cars snapshot detailCarNumber =
     div [ Attributes.id elementId ]
         [ case detailCarNumber |> Maybe.andThen (\carNumber -> Snapshot.get carNumber snapshot) of
             Nothing ->
-                carPicker config.onToggleCar snapshot
+                nothingSelected
 
             Just focused ->
                 CarDetailWidget.view
-                    { onToggleCar = config.onToggleCar
-                    , activeChart = config.activeChart
+                    { activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
                     }
                     cars
@@ -44,22 +41,13 @@ view config cars snapshot detailCarNumber =
         ]
 
 
-carPicker : (String -> msg) -> Snapshot -> Html msg
-carPicker onToggleCar snapshot =
-    div [ Attributes.class "grid gap-y-3" ]
-        (div
-            [ Attributes.class "text-sm opacity-70" ]
-            [ text "No cars selected. Pick a car to compare." ]
-            :: (Snapshot.toClassList snapshot
-                    |> List.map
-                        (\( class_, _ ) ->
-                            div [ Attributes.class "flex items-start gap-x-3" ]
-                                [ CarSelector.classBadge class_
-                                , CarSelector.carSelector onToggleCar snapshot class_ Nothing
-                                ]
-                        )
-               )
-        )
+{-| The panel with nothing to show, which is the standings' cue rather than its
+own: picking a car is that list's job.
+-}
+nothingSelected : Html msg
+nothingSelected =
+    div [ Attributes.class "text-sm opacity-70" ]
+        [ text "No car selected. Pick one from the standings on the left." ]
 
 
 {-| The element the detail is drawn in, which the visual tests locate it by.

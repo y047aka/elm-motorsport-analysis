@@ -18,11 +18,10 @@ import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Race.Car exposing (Car, CarNumber)
+import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget as Widget
-import Motorsport.Widget.CarDetail.CarSelector as CarSelector
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
 import Motorsport.Widget.CarDetail.Header as Header
 import Motorsport.Widget.CarDetail.LapTable as LapTable
@@ -45,8 +44,7 @@ type Chart
 
 
 view :
-    { onToggleCar : CarNumber -> msg
-    , activeChart : Chart
+    { activeChart : Chart
     , onSelectChart : Chart -> msg
     }
     -> List Car
@@ -62,8 +60,7 @@ view config cars snapshot focused =
             neighborsOf snapshot focused
     in
     div [ class "grid gap-y-3" ]
-        [ carPicker config.onToggleCar snapshot focused
-        , Header.view
+        [ Header.view
             { startPosition = startPositionOf cars focused
             , behind = behind snapshot focused
             }
@@ -75,16 +72,6 @@ view config cars snapshot focused =
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )
         , charts config lapHistory snapshot focused rivals
-        ]
-
-
-{-| Every car of the selected car's class, to switch between them.
--}
-carPicker : (CarNumber -> msg) -> Snapshot -> CarAt -> Html msg
-carPicker onToggleCar snapshot focused =
-    div [ class "flex items-start gap-x-3" ]
-        [ CarSelector.classBadge focused.metadata.class
-        , CarSelector.carSelector onToggleCar snapshot focused.metadata.class (Just focused.metadata.carNumber)
         ]
 
 
