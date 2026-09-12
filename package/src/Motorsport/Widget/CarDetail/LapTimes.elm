@@ -21,7 +21,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
-import Motorsport.Sector as Sector exposing (BySector, Sector)
+import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status
 import Motorsport.Widget.CarDetail.LapTable as LapTable
 import Motorsport.Widget.SegmentStrip as SegmentStrip
@@ -49,14 +49,14 @@ view config laps item =
     div [ class "grid gap-y-2" ]
         [ bestLap config.bestTimes item
         , if Status.hasStopped item.status then
-            lastLap best item
+            lastLap item
 
           else
             -- Side by side, so that a sector of the lap under way sits beside
             -- the same sector of the lap before it.
             div [ class "grid grid-cols-2 gap-x-3" ]
                 [ currentLap best item
-                , lastLap best item
+                , lastLap item
                 ]
         , history config laps item.standing.lapsCompleted
         ]
@@ -114,7 +114,7 @@ currentLap best item =
         , time = Just { time = item.currentLap.elapsed, performance = item.currentLap.performance }
         , sectors =
             Sector.toList item.currentLap.sectorStates
-                |> List.map (\( sector, state ) -> sectorCell (Sector.get sector best) sector (Performance.ratedOf state))
+                |> List.map (\( sector, state ) -> deltaCell (Sector.get sector best) (Performance.ratedOf state))
         , strip =
             case item.currentLap.miniSectors of
                 Snapshot.Recorded { states } ->
@@ -151,17 +151,15 @@ bestSectors lapsCompleted laps =
 -- THE LAPS BEHIND IT
 
 
-lastLap : BySector (Maybe Duration) -> CarAt -> Html msg
-lastLap best item =
+lastLap : CarAt -> Html msg
+lastLap item =
     case item.lastLap of
         Snapshot.Completed { rated, sectors, miniSectors } ->
             lapBlock
                 { label = "Last"
                 , lapNumber = Just item.standing.lapsCompleted
                 , time = rated
-                , sectors =
-                    Sector.toList sectors
-                        |> List.map (\( sector, rating ) -> sectorCell (Sector.get sector best) sector rating)
+                , sectors = Sector.values sectors |> List.map timeCell
                 , strip = Maybe.map SegmentStrip.miniSectorsRated miniSectors
                 }
 
@@ -170,7 +168,7 @@ lastLap best item =
                 { label = "Last"
                 , lapNumber = Nothing
                 , time = Nothing
-                , sectors = List.map (\sector -> sectorCell Nothing sector Nothing) Sector.all
+                , sectors = List.map (\_ -> timeCell Nothing) Sector.all
                 , strip = Nothing
                 }
 
@@ -235,28 +233,47 @@ lapBlock { label, lapNumber, time, sectors, strip } =
             , div [ class "flex-1" ] []
             , timeText "text-[14px]" time
             ]
-        , div [ class "grid gap-y-0.5" ] sectors
+        , div [ class "grid grid-cols-3 gap-x-1.5" ] sectors
         , strip |> Maybe.withDefault (text "")
+        , sectorAxis
         ]
 
 
-{-| One sector of a lap: which it is, its time, and -- where there is a best to
-measure it against -- how far off that best it was. A sector under way has
-neither yet.
+{-| The names of the three sectors, under the strip they are the stretches of.
+-}
+sectorAxis : Html msg
+sectorAxis =
+    div [ class "grid grid-cols-3 gap-x-1.5" ]
+        (Sector.all
+            |> List.map
+                (\sector ->
+                    div [ class "text-[9px] text-center text-muted-foreground" ]
+                        [ text (Sector.toString sector) ]
+                )
+        )
 
-The three are stacked rather than set in a row, so that each keeps its name
-beside its time in half a panel column, and so that a sector lines up with the
-same sector of the lap beside it.
+
+{-| A sector of the lap under way, as how far off the best the car has driven it
+in it was -- which is what there is to say about a sector while the lap it
+belongs to is still being driven. What it took is on the strip below it, and the
+lap beside it is where the times are read.
+
+Which sector it is is said once under the strip rather than on each of the three
+cells, which is where the stretch of track it stands for is drawn.
 
 -}
-sectorCell : Maybe Duration -> Sector -> Maybe RatedTime -> Html msg
-sectorCell best sector rated =
-    div [ class "grid grid-cols-[1.3em_1fr_auto] items-baseline gap-x-1" ]
-        [ div [ class "text-[9px] text-muted-foreground" ] [ text (Sector.toString sector) ]
-        , timeText "text-[12px] text-right" rated
-        , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
-            [ text (deltaOf best rated) ]
-        ]
+deltaCell : Maybe Duration -> Maybe RatedTime -> Html msg
+deltaCell best rated =
+    div [ class "grid justify-items-center min-w-0" ]
+        [ ratedText "text-[12px]" rated (deltaOf best rated) ]
+
+
+{-| A sector of the lap behind, as the time it took.
+-}
+timeCell : Maybe RatedTime -> Html msg
+timeCell rated =
+    div [ class "grid justify-items-center min-w-0" ]
+        [ timeText "text-[12px]" rated ]
 
 
 {-| How the sector compares with the best the car has driven it in.
@@ -267,31 +284,39 @@ lap behind it is one of them, so its best sector comes out at nothing at all --
 which is the reading, and the two columns are measured against the same thing.
 
 -}
-deltaOf : Maybe Duration -> Maybe RatedTime -> String
+deltaOf : Maybe Duration -> Maybe RatedTime -> Maybe String
 deltaOf best rated =
-    case ( best, rated ) of
-        ( Just baseline, Just time ) ->
+    Maybe.map2
+        (\baseline time ->
             let
                 delta =
-                    time.time - baseline
+                    time - baseline
             in
             if delta > 0 then
                 "+" ++ Duration.toString delta
 
             else
                 Duration.toString delta
-
-        _ ->
-            ""
+        )
+        best
+        (Maybe.map .time rated)
 
 
 timeText : String -> Maybe RatedTime -> Html msg
 timeText size rated =
+    ratedText size rated (rated |> Maybe.map (.time >> Duration.toString))
+
+
+{-| A reading of a rated time -- the time itself, or how it stood against
+something -- in the colour that rating paints it.
+-}
+ratedText : String -> Maybe RatedTime -> Maybe String -> Html msg
+ratedText size rated reading =
     div
         [ class (size ++ " tabular-nums")
         , style "color" (rated |> Maybe.map (.performance >> Performance.toColorVariable) |> Maybe.withDefault "inherit")
         ]
-        [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
+        [ text (Maybe.withDefault "-" reading) ]
 
 
 rowLabel : String -> Html msg
