@@ -1,4 +1,4 @@
-module Motorsport.Widget.Compare.PositionProgression exposing (lapRange, view)
+module Motorsport.Widget.CarDetail.PositionProgression exposing (lapRange, view)
 
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)

@@ -25,8 +25,8 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.CarCardList as CarCardList
+import Motorsport.Widget.CarDetail as CarDetailWidget
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Route
@@ -51,7 +51,7 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , detailCarNumber : Maybe String
-    , detailChart : CompareWidget.Chart
+    , detailChart : CarDetailWidget.Chart
     }
 
 
@@ -71,7 +71,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , detailCarNumber = Nothing
-      , detailChart = CompareWidget.GapChart
+      , detailChart = CarDetailWidget.GapChart
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -89,7 +89,7 @@ type Msg
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | ToggleDetailCar String
-    | SelectDetailChart CompareWidget.Chart
+    | SelectDetailChart CarDetailWidget.Chart
 
 
 update : Msg -> Model -> ( Model, Effect Msg )

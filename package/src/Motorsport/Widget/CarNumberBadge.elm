@@ -1,7 +1,7 @@
 module Motorsport.Widget.CarNumberBadge exposing (view, viewRow)
 
 {-| Car number badge on a manufacturer-colored background,
-shared by SelectedCarsStrip, LiveStandings, and Compare.
+shared by SelectedCarsStrip, LiveStandings, and the car detail panel.
 
 Takes the car's metadata rather than a whole car: who the car is, is all a badge
 needs, and none of it moves as the race does.

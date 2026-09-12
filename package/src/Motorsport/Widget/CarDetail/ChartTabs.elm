@@ -1,4 +1,4 @@
-module Motorsport.Widget.Compare.ChartTabs exposing (chartTabs)
+module Motorsport.Widget.CarDetail.ChartTabs exposing (chartTabs)
 
 {-| Panel that switches the lower chart via tabs.
 

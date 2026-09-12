@@ -14,14 +14,13 @@ import Html.Attributes as Attributes
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.CarDetail as CarDetailWidget
-import Motorsport.Widget.Compare as CompareWidget
-import Motorsport.Widget.Compare.CarSelector as CarSelector
+import Motorsport.Widget.CarDetail.CarSelector as CarSelector
 
 
 view :
-    { activeChart : CompareWidget.Chart
+    { activeChart : CarDetailWidget.Chart
     , onToggleCar : String -> msg
-    , onSelectChart : CompareWidget.Chart -> msg
+    , onSelectChart : CarDetailWidget.Chart -> msg
     }
     -> List Car
     -> Snapshot

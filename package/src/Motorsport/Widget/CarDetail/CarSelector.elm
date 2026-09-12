@@ -1,6 +1,6 @@
-module Motorsport.Widget.Compare.CarSelector exposing (carSelector, classBadge)
+module Motorsport.Widget.CarDetail.CarSelector exposing (carSelector, classBadge)
 
-{-| Car selector and class badge for the Compare widget.
+{-| Car selector and class badge for the car detail panel.
 
 @docs carSelector, classBadge
 
