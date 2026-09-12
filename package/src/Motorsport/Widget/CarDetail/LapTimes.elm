@@ -27,14 +27,11 @@ import Motorsport.Widget.CarDetail.LapTable as LapTable
 import Motorsport.Widget.SegmentStrip as SegmentStrip
 
 
-{-| `laps` is the car's own completed laps: what the sectors of the lap in
-progress are measured against, and -- once the reader asks for them -- the rows
-under everything else.
-
-The rows are built only while they are open. They are as many as the car has
-turned laps and they are rebuilt on every frame the panel draws, which is every
-frame of playback.
-
+{-| `laps` is the car's whole race, as the race holds it rather than cut at the
+clock: what the sectors of the lap in progress are measured against, and -- once
+the reader asks for them -- the rows under everything else. The cut is made here
+at the lap the car has reached, so that the list handed down is the one that
+never moves and the rows below can be left alone between laps.
 -}
 view :
     { bestTimes : BestTimes.Snapshot
@@ -50,10 +47,10 @@ view config laps item =
             text ""
 
           else
-            currentLap (bestSectors laps) item
+            currentLap (bestSectors item.standing.lapsCompleted laps) item
         , lastLap item
         , bestLap config.bestTimes item
-        , history config laps
+        , history config laps item.standing.lapsCompleted
         ]
 
 
@@ -64,8 +61,8 @@ against the cars it is racing, and a list of its own laps is not that -- it is
 the rest of this section, at the grain the section is about.
 
 -}
-history : { a | bestTimes : BestTimes.Snapshot, historyOpen : Bool, onToggleHistory : msg } -> List Lap -> Html msg
-history { bestTimes, historyOpen, onToggleHistory } laps =
+history : { a | historyOpen : Bool, onToggleHistory : msg } -> List Lap -> Int -> Html msg
+history { historyOpen, onToggleHistory } laps lapsCompleted =
     div [ class "grid gap-y-1 border-t border-t-border pt-1.5" ]
         [ button
             [ onClick onToggleHistory
@@ -90,7 +87,7 @@ history { bestTimes, historyOpen, onToggleHistory } laps =
             , text "Lap history"
             ]
         , if historyOpen then
-            LapTable.view bestTimes laps
+            LapTable.view laps lapsCompleted
 
           else
             text ""
@@ -124,14 +121,15 @@ currentLap best item =
 
 Laps the car pitted on are left out, as they are everywhere else a pace is read:
 the stop is in that lap's final sector, and a sector nothing can beat is no
-baseline at all.
+baseline at all. So are the laps the clock has not reached: a lap the car is
+going to run is not a lap it has driven.
 
 -}
-bestSectors : List Lap -> BySector (Maybe Duration)
-bestSectors laps =
+bestSectors : Int -> List Lap -> BySector (Maybe Duration)
+bestSectors lapsCompleted laps =
     let
         racingLaps =
-            List.filter (\lap -> lap.pitTime == Nothing) laps
+            List.filter (\lap -> lap.pitTime == Nothing && lap.lap <= lapsCompleted) laps
     in
     Sector.initialize
         (\sector ->

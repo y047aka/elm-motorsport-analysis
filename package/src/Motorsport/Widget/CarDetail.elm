@@ -18,6 +18,7 @@ import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -75,7 +76,7 @@ view config cars snapshot focused =
                 , historyOpen = config.lapHistoryOpen
                 , onToggleHistory = config.onToggleLapHistory
                 }
-                (LapHistory.get focused.metadata.carNumber lapHistory)
+                (lapsOf cars focused)
                 focused
             )
         , Widget.container "Stints"
@@ -284,9 +285,21 @@ neighborsOf snapshot focused =
 
 startPositionOf : List Car -> CarAt -> Maybe Int
 startPositionOf cars focused =
-    cars
-        |> List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber)
-        |> Maybe.map .startPosition
+    carOf cars focused |> Maybe.map .startPosition
+
+
+{-| The car's laps as the race holds them, which is the same list from one frame
+to the next -- unlike the history, which is cut at the clock and built afresh
+every frame.
+-}
+lapsOf : List Car -> CarAt -> List Lap
+lapsOf cars focused =
+    carOf cars focused |> Maybe.map .laps |> Maybe.withDefault []
+
+
+carOf : List Car -> CarAt -> Maybe Car
+carOf cars focused =
+    List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
 
 
 {-| How far the next car in the running order is behind this one, which is the
