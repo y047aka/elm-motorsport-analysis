@@ -19,6 +19,7 @@ import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget as Widget
 import Motorsport.Widget.CarDetail.Header as Header
+import Motorsport.Widget.CarDetail.LapTable as LapTable
 import Motorsport.Widget.CarDetail.LiveTiming as LiveTiming
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.Compare as CompareWidget
@@ -49,6 +50,10 @@ view config cars snapshot focused =
                     |> LapHistory.get focused.metadata.carNumber
                     |> Stint.summarize
                 )
+            )
+        , Widget.container "Laps"
+            (LapTable.view (Snapshot.bestTimes snapshot)
+                (Snapshot.lapHistory snapshot |> LapHistory.get focused.metadata.carNumber)
             )
         , CompareWidget.viewComparison
             { onToggleCar = config.onToggleCar
