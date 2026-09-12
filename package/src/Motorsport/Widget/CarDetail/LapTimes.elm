@@ -14,7 +14,7 @@ before it is over.
 -}
 
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (attribute, class, style, title)
+import Html.Attributes exposing (attribute, class, style)
 import Html.Events exposing (onClick)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -47,7 +47,8 @@ view config laps item =
             bestSectors item.standing.lapsCompleted laps
     in
     div [ class "grid gap-y-2" ]
-        [ if Status.hasStopped item.status then
+        [ bestLap config.bestTimes item
+        , if Status.hasStopped item.status then
             lastLap best item
 
           else
@@ -57,7 +58,6 @@ view config laps item =
                 [ currentLap best item
                 , lastLap best item
                 ]
-        , bestLap config.bestTimes item
         , history config laps item.standing.lapsCompleted
         ]
 
@@ -235,27 +235,25 @@ lapBlock { label, lapNumber, time, sectors, strip } =
             , div [ class "flex-1" ] []
             , timeText "text-[14px]" time
             ]
-        , div [ class "grid grid-cols-3 gap-x-1.5" ] sectors
+        , div [ class "grid gap-y-0.5" ] sectors
         , strip |> Maybe.withDefault (text "")
         ]
 
 
-{-| One sector of a lap: its time, and -- where there is a best to measure it
-against -- how far off that best it was, under it. A sector under way has
+{-| One sector of a lap: which it is, its time, and -- where there is a best to
+measure it against -- how far off that best it was. A sector under way has
 neither yet.
 
-Which sector it is goes on the cell rather than beside the time: three of these
-share half a panel column, and the three are always in the order the car drives
-them, with the strip below them saying the same.
+The three are stacked rather than set in a row, so that each keeps its name
+beside its time in half a panel column, and so that a sector lines up with the
+same sector of the lap beside it.
 
 -}
 sectorCell : Maybe Duration -> Sector -> Maybe RatedTime -> Html msg
 sectorCell best sector rated =
-    div
-        [ class "grid gap-y-px justify-items-end min-w-0"
-        , title (Sector.toString sector)
-        ]
-        [ timeText "text-[12px]" rated
+    div [ class "grid grid-cols-[1.3em_1fr_auto] items-baseline gap-x-1" ]
+        [ div [ class "text-[9px] text-muted-foreground" ] [ text (Sector.toString sector) ]
+        , timeText "text-[12px] text-right" rated
         , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
             [ text (deltaOf best rated) ]
         ]
@@ -267,10 +265,6 @@ The best is taken over the laps the car has finished. The lap in progress is not
 one of them, so a sector quicker than anything before it comes out negative; the
 lap behind it is one of them, so its best sector comes out at nothing at all --
 which is the reading, and the two columns are measured against the same thing.
-
-Nothing is written where there is no baseline or no time, and the row is kept
-either way: the two laps sit side by side, and a cell that collapsed would take
-the strip under it out of line with the strip beside it.
 
 -}
 deltaOf : Maybe Duration -> Maybe RatedTime -> String
@@ -288,7 +282,7 @@ deltaOf best rated =
                 Duration.toString delta
 
         _ ->
-            "\u{00A0}"
+            ""
 
 
 timeText : String -> Maybe RatedTime -> Html msg
