@@ -10,9 +10,8 @@ changing.
 
 -}
 
-import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class)
-import Html.Events exposing (onClick)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class, style)
 import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.GapChart as GapChart
@@ -63,7 +62,8 @@ view config cars snapshot focused =
             neighborsOf snapshot focused
     in
     div [ class "grid gap-y-3" ]
-        [ Header.view
+        [ carPicker config.onToggleCar snapshot focused
+        , Header.view
             { startPosition = startPositionOf cars focused
             , behind = behind snapshot focused
             }
@@ -74,9 +74,17 @@ view config cars snapshot focused =
             (Stint.view focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )
-        , Widget.container "In class"
-            (inClass config.onToggleCar snapshot focused rivals)
         , charts config lapHistory snapshot focused rivals
+        ]
+
+
+{-| Every car of the selected car's class, to switch between them.
+-}
+carPicker : (CarNumber -> msg) -> Snapshot -> CarAt -> Html msg
+carPicker onToggleCar snapshot focused =
+    div [ class "flex items-start gap-x-3" ]
+        [ CarSelector.classBadge focused.metadata.class
+        , CarSelector.carSelector onToggleCar snapshot focused.metadata.class (Just focused.metadata.carNumber)
         ]
 
 
@@ -92,6 +100,52 @@ charts config lapHistory snapshot focused rivals =
         lapRange =
             PositionProgression.lapRange snapshot focused.metadata.class
     in
+    div [ class "grid gap-y-2" ]
+        [ legend snapshot focused rivals
+        , chartTabs config lapRange lapHistory snapshot focused rivals
+        ]
+
+
+{-| Which car each line of the charts below is, in running order, drawn in the
+colour the charts draw it in.
+-}
+legend : Snapshot -> CarAt -> List CarAt -> Html msg
+legend snapshot focused rivals =
+    div [ class "grid gap-y-1" ]
+        (List.map (legendEntry snapshot focused) rivals)
+
+
+legendEntry : Snapshot -> CarAt -> CarAt -> Html msg
+legendEntry snapshot focused item =
+    div
+        [ class "flex items-center gap-x-2 p-1 rounded-lg border-l-2 bg-card"
+        , style "border-left-color" item.metadata.manufacturer.color
+        ]
+        [ CarNumberBadge.viewRow item.metadata
+        , div [ class "text-[11px] truncate flex-1" ] [ text item.metadata.team ]
+        , div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
+            [ text ("Class P" ++ String.fromInt item.standing.positionInClass) ]
+        , div [ class "text-[12px] tabular-nums" ]
+            [ text
+                (if item.metadata.carNumber == focused.metadata.carNumber then
+                    "-"
+
+                 else
+                    fromFocused snapshot focused item
+                )
+            ]
+        ]
+
+
+chartTabs :
+    { a | activeChart : Chart, onSelectChart : Chart -> msg }
+    -> Maybe ( Int, Int )
+    -> LapHistory
+    -> Snapshot
+    -> CarAt
+    -> List CarAt
+    -> Html msg
+chartTabs config lapRange lapHistory snapshot focused rivals =
     ChartTabs.chartTabs config.onSelectChart
         config.activeChart
         [ ( GapChart
@@ -157,45 +211,11 @@ distribution lapHistory focused rivals =
             Widget.emptyState "No laps to compare"
 
 
-{-| The car's class: every car of it to switch to, and the two it is actually
-racing set against it.
+{-| How far up or down the road a rival is: the intervals between the two cars,
+added up along the running order. Each is measured at the same moment, so the sum
+is a time on the road; a lap anywhere between the two makes it no time at all,
+and the laps the two are apart are what is left to say.
 -}
-inClass : (CarNumber -> msg) -> Snapshot -> CarAt -> List CarAt -> Html msg
-inClass onToggleCar snapshot focused rivals =
-    div [ class "grid gap-y-2" ]
-        [ div [ class "flex items-start gap-x-3" ]
-            [ CarSelector.classBadge focused.metadata.class
-            , CarSelector.carSelector onToggleCar snapshot focused.metadata.class (Just focused.metadata.carNumber)
-            ]
-        , div [ class "grid grid-cols-2 gap-x-2" ]
-            (rivals
-                |> List.filter (\item -> item.metadata.carNumber /= focused.metadata.carNumber)
-                |> List.map (rival onToggleCar snapshot focused)
-            )
-        ]
-
-
-{-| One rival, and how far up or down the road it is: the intervals between the
-two cars, added up along the running order. Each is measured at the same moment,
-so the sum is a time on the road; a lap anywhere between the two makes it no
-time at all, and the laps the two are apart are what is left to say.
--}
-rival : (CarNumber -> msg) -> Snapshot -> CarAt -> CarAt -> Html msg
-rival onToggleCar snapshot focused item =
-    button
-        [ onClick (onToggleCar item.metadata.carNumber)
-        , class "flex items-center gap-x-2 p-1 rounded-lg border border-border cursor-pointer text-left hover:bg-accent"
-        ]
-        [ CarNumberBadge.viewRow item.metadata
-        , div [ class "grid gap-y-0.5 min-w-0 flex-1" ]
-            [ div [ class "text-[11px] truncate" ] [ text item.metadata.team ]
-            , div [ class "text-[10px] text-muted-foreground" ]
-                [ text ("Class P" ++ String.fromInt item.standing.positionInClass) ]
-            ]
-        , div [ class "text-[12px] tabular-nums" ] [ text (fromFocused snapshot focused item) ]
-        ]
-
-
 fromFocused : Snapshot -> CarAt -> CarAt -> String
 fromFocused snapshot focused item =
     case gapBetween snapshot focused item of
