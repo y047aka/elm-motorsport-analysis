@@ -63,9 +63,9 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
-import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
+import Motorsport.Widget.SegmentStrip as SegmentStrip
 
 
 
@@ -122,19 +122,9 @@ type alias Config data msg =
 -- RATING COLOURS
 
 
-{-| The colour of a rating that may not exist.
-
-A sector, mini-sector or lap the source data has no time for has no rating
-either, and takes the standard colour: there is nothing to rate it against.
-Every cell that paints a rating goes through one of these two, so the fallback
-is decided in one place rather than at each of them.
-
+{-| The colour of a rating that may not exist. A time the source data has none
+of takes the standard colour: there is nothing to rate it against.
 -}
-colorOfRated : Maybe RatedTime -> String
-colorOfRated =
-    Maybe.map .performance >> colorOfPerformance
-
-
 colorOfPerformance : Maybe Performance.PerformanceLevel -> String
 colorOfPerformance =
     Maybe.withDefault Performance.Standard >> Performance.toColorVariable
@@ -150,68 +140,6 @@ colorOfPerformanceText performance =
 
     else
         Performance.toColorVariable performance
-
-
-{-| One cell of a sector or mini-sector strip: white as far as the car has got
-while it is still in that stretch, and its rating's colour once the whole of it
-is behind.
-
-Both strips draw from [`Race.Snapshot`](Motorsport-Race-Snapshot)'s reading of
-where the car stands, so at three sectors and at fifteen mini-sectors the cell
-is the same cell.
-
-A stretch the car has not reached draws nothing, which is what a zero-width fill
-came to anyway -- the difference is that the reading now says so, rather than
-leaving the cell to read it back out of a number.
-
--}
-progressCell : SegmentState -> Html msg
-progressCell state =
-    let
-        ( widthPercent, backgroundColor_ ) =
-            case state of
-                Performance.NotEntered ->
-                    ( "0%", "transparent" )
-
-                Performance.InProgress progress ->
-                    ( String.fromFloat (progress * 100) ++ "%", "oklch(1 0 0)" )
-
-                Performance.Completed rated ->
-                    ( "100%", colorOfRated rated )
-    in
-    div
-        [ class "h-[3px] rounded-[1px]"
-        , style "width" widthPercent
-        , style "background-color" backgroundColor_
-        ]
-        []
-
-
-{-| The seventeen columns of the Le Mans strip: the fifteen mini-sectors in
-track order, with a spacer where each of the first two sectors ends.
--}
-miniSectorStrip : Snapshot.CurrentMiniSectorStates -> Html msg
-miniSectorStrip states =
-    div
-        [ class "grid grid-cols-[2fr_2fr_3fr_0.5fr_5fr_1fr_3fr_3fr_0.5fr_1fr_5fr_3fr_2fr_1fr_1fr_1fr_1fr] gap-x-px" ]
-        [ progressCell states.scl2
-        , progressCell states.z4
-        , progressCell states.ip1
-        , div [] []
-        , progressCell states.z12
-        , progressCell states.sclc
-        , progressCell states.a7_1
-        , progressCell states.ip2
-        , div [] []
-        , progressCell states.a8_1
-        , progressCell states.sclb
-        , progressCell states.porin
-        , progressCell states.porout
-        , progressCell states.pitref
-        , progressCell states.scl1
-        , progressCell states.fordout
-        , progressCell states.fl
-        ]
 
 
 
@@ -285,7 +213,7 @@ sectorTimeColumn { label, getter } =
                         , style "background-color"
                             (case state of
                                 Performance.Completed rated ->
-                                    colorOfRated rated
+                                    SegmentStrip.colorOfRated rated
 
                                 Performance.InProgress _ ->
                                     "oklch(1 0 0 / 0.9)"
@@ -453,9 +381,7 @@ viewCurrentLapColumn_Wec { status, currentLap } =
     else
         div [ class "flex flex-col gap-y-[5px]" ]
             [ lapTime { time = currentLap.elapsed, performance = currentLap.performance }
-            , div
-                [ class "grid grid-cols-[1fr_1fr_1fr] gap-x-1" ]
-                (List.map progressCell (Sector.values currentLap.sectorStates))
+            , SegmentStrip.sectors currentLap.sectorStates
             ]
 
 
@@ -522,7 +448,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
                         [ lapTime { time = currentLap.elapsed, personalBest = Just best.time }
                         , case currentLap.miniSectors of
                             Snapshot.Recorded { states } ->
-                                miniSectorStrip states
+                                SegmentStrip.miniSectors states
 
                             Snapshot.NotRecorded ->
                                 text ""
@@ -550,13 +476,6 @@ viewLastLapColumn_Wec lastLap =
             div
                 [ class "text-center", style "color" (colorOfPerformanceText performance) ]
                 [ text (Duration.toString time) ]
-
-        sectorCell rated =
-            div
-                [ class "h-[3px] rounded-[1px]"
-                , style "background-color" (colorOfRated rated)
-                ]
-                []
     in
     case lastLap of
         Snapshot.Completed { rated, sectors } ->
@@ -564,9 +483,7 @@ viewLastLapColumn_Wec lastLap =
                 Just lapTime ->
                     div [ class "flex flex-col gap-y-[5px]" ]
                         [ lapTimeView lapTime
-                        , div
-                            [ class "grid grid-cols-[1fr_1fr_1fr] gap-x-1" ]
-                            (List.map sectorCell (Sector.values sectors))
+                        , SegmentStrip.sectorsRated sectors
                         ]
 
                 Nothing ->
@@ -595,13 +512,6 @@ viewLastLapColumn_LeMans24h lastLap =
             div
                 [ class "text-center", style "color" (colorOfPerformanceText performance) ]
                 [ text (Duration.toString time) ]
-
-        sectorCell rated =
-            div
-                [ class "h-[3px] rounded-[1px]"
-                , style "background-color" (colorOfRated rated)
-                ]
-                []
     in
     case lastLap of
         Snapshot.Completed { rated, miniSectors } ->
@@ -610,28 +520,7 @@ viewLastLapColumn_LeMans24h lastLap =
                     div [ class "flex flex-col gap-y-[5px]" ]
                         [ lapTimeView lapTime
                         , miniSectors
-                            |> Maybe.map
-                                (\ms ->
-                                    div [ class "grid grid-cols-[2fr_2fr_3fr_0.5fr_5fr_1fr_3fr_3fr_0.5fr_1fr_5fr_3fr_2fr_1fr_1fr_1fr_1fr] gap-x-px" ]
-                                        [ sectorCell ms.scl2
-                                        , sectorCell ms.z4
-                                        , sectorCell ms.ip1
-                                        , div [] [] -- spacer
-                                        , sectorCell ms.z12
-                                        , sectorCell ms.sclc
-                                        , sectorCell ms.a7_1
-                                        , sectorCell ms.ip2
-                                        , div [] [] -- spacer
-                                        , sectorCell ms.a8_1
-                                        , sectorCell ms.sclb
-                                        , sectorCell ms.porin
-                                        , sectorCell ms.porout
-                                        , sectorCell ms.pitref
-                                        , sectorCell ms.scl1
-                                        , sectorCell ms.fordout
-                                        , sectorCell ms.fl
-                                        ]
-                                )
+                            |> Maybe.map SegmentStrip.miniSectorsRated
                             |> Maybe.withDefault (text "-")
                         ]
 

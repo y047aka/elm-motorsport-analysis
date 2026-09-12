@@ -25,7 +25,7 @@ import Motorsport.Widget as Widget
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
 import Motorsport.Widget.CarDetail.Header as Header
 import Motorsport.Widget.CarDetail.LapTable as LapTable
-import Motorsport.Widget.CarDetail.LiveTiming as LiveTiming
+import Motorsport.Widget.CarDetail.LapTimes as LapTimes
 import Motorsport.Widget.CarDetail.PositionProgression as PositionProgression
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
@@ -65,8 +65,11 @@ view config cars snapshot focused =
             , behind = behind snapshot focused
             }
             focused
-        , Widget.container "Live timing"
-            (LiveTiming.view (Snapshot.bestTimes snapshot) focused)
+        , Widget.container "Lap times"
+            (LapTimes.view (Snapshot.bestTimes snapshot)
+                (LapHistory.get focused.metadata.carNumber lapHistory)
+                focused
+            )
         , Widget.container "Stints & pit stops"
             (Stint.view focused.status
                 focused.metadata
