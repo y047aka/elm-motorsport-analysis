@@ -3,7 +3,7 @@
 Two things rather than one: the CLI that moves CSV through SQLite into
 JSON/JSONL, and the server that answers `/api` out of the same rows, both out
 of the same jar. They are run through the repository's Nix flake, which the
-root `CLAUDE.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
+root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
 `.#cli-run`, `.#cli-load`, `.#cli-export`, `.#serve-api`.
 
 What follows is what the code cannot say for itself.

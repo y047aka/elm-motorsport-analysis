@@ -61,5 +61,5 @@ been hit here. Add to the first list when you hit something new, and say where.
   `Db.Jdbc.withConnection`, `Db.runRecording` and `Db.runWithError`, and
   nothing else installs one.
 - Aliases are what signatures say (`\ DbRead`, not `\ {SqlRead, DbErr}`).
-- Comments follow the repository's rule in `CLAUDE.md`: an outside constraint, a
+- Comments follow the repository's rule in `AGENTS.md`: an outside constraint, a
   hazard, or a decision whose alternatives looked equal. Nothing else.
