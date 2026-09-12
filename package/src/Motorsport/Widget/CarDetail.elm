@@ -11,7 +11,7 @@ changing.
 -}
 
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class)
 import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.GapChart as GapChart
@@ -108,9 +108,12 @@ charts config lapHistory snapshot focused rivals =
         )
 
 
-{-| Which car each line of the charts below is, in running order, drawn in the
-colour the charts draw it in -- and how far up or down the road each of them is,
-which is what the lines are about.
+{-| Which car each line of the charts below is, in running order, and how far up
+or down the road each of them is, which is what the lines are about.
+
+Nothing here restates the colour the charts draw a car in: the car's badge is
+that colour already, and a second mark beside it is the same ink twice.
+
 -}
 legend : Snapshot -> CarAt -> List CarAt -> Html msg
 legend snapshot focused rivals =
@@ -125,7 +128,7 @@ legendEntry snapshot focused item =
             item.metadata.carNumber == focused.metadata.carNumber
     in
     div
-        [ class "flex items-center gap-x-2 py-0.5 pl-1.5 pr-1 rounded-r border-l-2"
+        [ class "flex items-center gap-x-2 py-0.5 px-1 rounded"
         , class
             (if isFocused then
                 "bg-accent/40"
@@ -133,7 +136,6 @@ legendEntry snapshot focused item =
              else
                 ""
             )
-        , style "border-left-color" item.metadata.manufacturer.color
         ]
         [ CarNumberBadge.viewRow item.metadata
         , div [ class "text-[11px] truncate flex-1" ] [ text item.metadata.team ]
