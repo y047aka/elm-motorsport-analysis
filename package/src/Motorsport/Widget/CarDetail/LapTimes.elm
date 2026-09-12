@@ -14,7 +14,7 @@ before it is over.
 -}
 
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (attribute, class, style)
+import Html.Attributes exposing (attribute, class, style, title)
 import Html.Events exposing (onClick)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -42,13 +42,21 @@ view :
     -> CarAt
     -> Html msg
 view config laps item =
+    let
+        best =
+            bestSectors item.standing.lapsCompleted laps
+    in
     div [ class "grid gap-y-2" ]
         [ if Status.hasStopped item.status then
-            text ""
+            lastLap best item
 
           else
-            currentLap (bestSectors item.standing.lapsCompleted laps) item
-        , lastLap item
+            -- Side by side, so that a sector of the lap under way sits beside
+            -- the same sector of the lap before it.
+            div [ class "grid grid-cols-2 gap-x-3" ]
+                [ currentLap best item
+                , lastLap best item
+                ]
         , bestLap config.bestTimes item
         , history config laps item.standing.lapsCompleted
         ]
@@ -143,8 +151,8 @@ bestSectors lapsCompleted laps =
 -- THE LAPS BEHIND IT
 
 
-lastLap : CarAt -> Html msg
-lastLap item =
+lastLap : BySector (Maybe Duration) -> CarAt -> Html msg
+lastLap best item =
     case item.lastLap of
         Snapshot.Completed { rated, sectors, miniSectors } ->
             lapBlock
@@ -153,7 +161,7 @@ lastLap item =
                 , time = rated
                 , sectors =
                     Sector.toList sectors
-                        |> List.map (\( sector, rating ) -> sectorCell Nothing sector rating)
+                        |> List.map (\( sector, rating ) -> sectorCell (Sector.get sector best) sector rating)
                 , strip = Maybe.map SegmentStrip.miniSectorsRated miniSectors
                 }
 
@@ -219,27 +227,35 @@ lapBlock :
     }
     -> Html msg
 lapBlock { label, lapNumber, time, sectors, strip } =
-    div [ class "grid gap-y-1" ]
-        [ div [ class "flex items-baseline gap-x-2" ]
+    div [ class "grid gap-y-1 min-w-0" ]
+        [ div [ class "flex items-baseline gap-x-1.5" ]
             [ rowLabel label
             , div [ class "text-[10px] text-muted-foreground tabular-nums" ]
                 [ text (lapNumber |> Maybe.map (\number -> "L" ++ String.fromInt number) |> Maybe.withDefault "") ]
             , div [ class "flex-1" ] []
             , timeText "text-[14px]" time
             ]
-        , div [ class "grid grid-cols-3 gap-x-2" ] sectors
+        , div [ class "grid grid-cols-3 gap-x-1.5" ] sectors
         , strip |> Maybe.withDefault (text "")
         ]
 
 
 {-| One sector of a lap: its time, and -- where there is a best to measure it
-against -- how far off that best it was. A sector under way has neither yet.
+against -- how far off that best it was, under it. A sector under way has
+neither yet.
+
+Which sector it is goes on the cell rather than beside the time: three of these
+share half a panel column, and the three are always in the order the car drives
+them, with the strip below them saying the same.
+
 -}
 sectorCell : Maybe Duration -> Sector -> Maybe RatedTime -> Html msg
 sectorCell best sector rated =
-    div [ class "flex items-baseline gap-x-1" ]
-        [ div [ class "text-[9px] text-muted-foreground" ] [ text (Sector.toString sector) ]
-        , timeText "text-[12px]" rated
+    div
+        [ class "grid gap-y-px justify-items-end min-w-0"
+        , title (Sector.toString sector)
+        ]
+        [ timeText "text-[12px]" rated
         , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
             [ text (deltaOf best rated) ]
         ]
@@ -247,9 +263,14 @@ sectorCell best sector rated =
 
 {-| How the sector compares with the best the car has driven it in.
 
-The best is taken over the laps the car has finished, so the lap in progress is
-not in it: a sector quicker than anything before it comes out negative rather
-than as a zero.
+The best is taken over the laps the car has finished. The lap in progress is not
+one of them, so a sector quicker than anything before it comes out negative; the
+lap behind it is one of them, so its best sector comes out at nothing at all --
+which is the reading, and the two columns are measured against the same thing.
+
+Nothing is written where there is no baseline or no time, and the row is kept
+either way: the two laps sit side by side, and a cell that collapsed would take
+the strip under it out of line with the strip beside it.
 
 -}
 deltaOf : Maybe Duration -> Maybe RatedTime -> String
@@ -267,7 +288,7 @@ deltaOf best rated =
                 Duration.toString delta
 
         _ ->
-            ""
+            "\u{00A0}"
 
 
 timeText : String -> Maybe RatedTime -> Html msg
