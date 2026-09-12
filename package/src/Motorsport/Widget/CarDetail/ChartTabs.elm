@@ -1,6 +1,6 @@
 module Motorsport.Widget.CarDetail.ChartTabs exposing (chartTabs)
 
-{-| Panel that switches the lower chart via tabs.
+{-| The bar that switches the chart under it, and that chart.
 
 @docs chartTabs
 
@@ -16,12 +16,16 @@ import List.Extra
 mechanism is the same joined button group as the Event page's mode selector:
 clicking fires `onSelect` to switch `active` (the caller holds the state). Each
 content is passed as a lazy thunk so inactive charts are not rendered.
+
+The bar and the chart are drawn plain: what they sit in is the section they
+belong to, which holds the rest of what the chart is about.
+
 -}
 chartTabs : (tab -> msg) -> tab -> List ( tab, String, () -> Html msg ) -> Html msg
 chartTabs onSelect active tabs =
     div
-        [ class "bg-card border border-border rounded-lg p-2 grid" ]
-        [ div [ class "inline-flex" ]
+        [ class "grid gap-y-1" ]
+        [ div [ class "grid grid-flow-col auto-cols-[minmax(0,1fr)]" ]
             (List.map (\( chart, label, _ ) -> chartTabButton onSelect chart label (chart == active)) tabs)
         , tabs
             |> List.Extra.find (\( chart, _, _ ) -> chart == active)
@@ -30,14 +34,16 @@ chartTabs onSelect active tabs =
         ]
 
 
-{-| Tab button for `chartTabs`, matched to the look of the Event page's `joinButton`.
+{-| Tab button for `chartTabs`, the Event page's joined button group at the size
+a panel column has room for: three of these share the width, so a label that
+wrapped to two lines took the bar to twice the height of the buttons in it.
 -}
 chartTabButton : (tab -> msg) -> tab -> String -> Bool -> Html msg
 chartTabButton onSelect chart label isActive =
     button
         [ onClick (onSelect chart)
         , class
-            ("inline-flex h-8 items-center justify-center border border-border px-3 text-sm font-medium cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md"
+            ("inline-flex h-7 items-center justify-center border border-border px-2 text-xs font-medium whitespace-nowrap cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md"
                 ++ (if isActive then
                         " bg-primary text-primary-foreground border-primary"
 

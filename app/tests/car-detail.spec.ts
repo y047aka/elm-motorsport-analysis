@@ -27,7 +27,7 @@ test.describe('Car Detail Visual Tests', () => {
   });
 
   test('should render the position progression chart', async ({ page }) => {
-    await page.locator(DETAIL).getByRole('button', { name: 'Position progression' }).click();
+    await page.locator(DETAIL).getByRole('button', { name: 'Positions' }).click();
     await expect(page.locator(DETAIL)).toHaveScreenshot('position-tab.png');
   });
 

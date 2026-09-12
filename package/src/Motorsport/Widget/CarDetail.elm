@@ -100,34 +100,48 @@ charts config lapHistory snapshot focused rivals =
         lapRange =
             PositionProgression.lapRange snapshot focused.metadata.class
     in
-    div [ class "grid gap-y-2" ]
-        [ legend snapshot focused rivals
-        , chartTabs config lapRange lapHistory snapshot focused rivals
-        ]
+    Widget.container "Rivals"
+        (div [ class "grid gap-y-2" ]
+            [ legend snapshot focused rivals
+            , chartTabs config lapRange lapHistory snapshot focused rivals
+            ]
+        )
 
 
 {-| Which car each line of the charts below is, in running order, drawn in the
-colour the charts draw it in.
+colour the charts draw it in -- and how far up or down the road each of them is,
+which is what the lines are about.
 -}
 legend : Snapshot -> CarAt -> List CarAt -> Html msg
 legend snapshot focused rivals =
-    div [ class "grid gap-y-1" ]
+    div [ class "grid gap-y-px" ]
         (List.map (legendEntry snapshot focused) rivals)
 
 
 legendEntry : Snapshot -> CarAt -> CarAt -> Html msg
 legendEntry snapshot focused item =
+    let
+        isFocused =
+            item.metadata.carNumber == focused.metadata.carNumber
+    in
     div
-        [ class "flex items-center gap-x-2 p-1 rounded-lg border-l-2 bg-card"
+        [ class "flex items-center gap-x-2 py-0.5 pl-1.5 pr-1 rounded-r border-l-2"
+        , class
+            (if isFocused then
+                "bg-accent/40"
+
+             else
+                ""
+            )
         , style "border-left-color" item.metadata.manufacturer.color
         ]
         [ CarNumberBadge.viewRow item.metadata
         , div [ class "text-[11px] truncate flex-1" ] [ text item.metadata.team ]
         , div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
-            [ text ("Class P" ++ String.fromInt item.standing.positionInClass) ]
+            [ text ("P" ++ String.fromInt item.standing.positionInClass) ]
         , div [ class "text-[12px] tabular-nums" ]
             [ text
-                (if item.metadata.carNumber == focused.metadata.carNumber then
+                (if isFocused then
                     "-"
 
                  else
@@ -149,7 +163,7 @@ chartTabs config lapRange lapHistory snapshot focused rivals =
     ChartTabs.chartTabs config.onSelectChart
         config.activeChart
         [ ( GapChart
-          , "Gap to group avg"
+          , "Gap to avg"
           , \() ->
                 case lapRange of
                     Just range ->
@@ -159,7 +173,7 @@ chartTabs config lapRange lapHistory snapshot focused rivals =
                         text ""
           )
         , ( PositionChart
-          , "Position progression"
+          , "Positions"
           , \() ->
                 PositionProgression.view { width = 1000, height = 250 }
                     snapshot
@@ -168,7 +182,7 @@ chartTabs config lapRange lapHistory snapshot focused rivals =
                     }
           )
         , ( DistributionChart
-          , "Lap time distribution"
+          , "Distribution"
           , \() -> distribution lapHistory focused rivals
           )
         ]
