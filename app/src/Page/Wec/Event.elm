@@ -29,7 +29,6 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
-import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import Route
 import Shared
 import Shared.Msg
@@ -51,7 +50,6 @@ type alias Model =
     { mode : Mode
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , stripOffset : Int
     , detailCarNumber : Maybe String
     , detailChart : CompareWidget.Chart
     }
@@ -72,7 +70,6 @@ init params =
     ( { mode = Default
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , stripOffset = 0
       , detailCarNumber = Nothing
       , detailChart = CompareWidget.GapChart
       }
@@ -91,7 +88,6 @@ type Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | StripScrollTo Int
     | ToggleDetailCar String
     | SelectDetailChart CompareWidget.Chart
 
@@ -118,9 +114,6 @@ update msg m =
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
             , Effect.none
             )
-
-        StripScrollTo offset ->
-            ( { m | stripOffset = max 0 offset }, Effect.none )
 
         ToggleDetailCar carNumber ->
             let
@@ -256,9 +249,9 @@ trackerView track timeline snapshot replay m =
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
         [ div
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
+            [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
             [ div
-                [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden" ]
+                [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandingsWidget.view snapshot ]
             , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
             , div
@@ -276,13 +269,6 @@ trackerView track timeline snapshot replay m =
                     ]
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
-            , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
-                [ SelectedCarsStrip.view
-                    { offset = m.stripOffset
-                    , onScrollTo = StripScrollTo
-                    }
-                    snapshot
-                ]
             ]
         , standingsPanel m.standingsTab m snapshot
         , standingsPopover
