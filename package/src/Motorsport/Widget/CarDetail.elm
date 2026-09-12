@@ -35,7 +35,7 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 
 {-| The race so far as the car ran it among its rivals, one view at a time.
 
-Every one of them draws the cars the legend above names, which is what keeps
+Every one of them draws the cars the legend under it names, which is what keeps
 them one group: the car's own laps are not a comparison and are read where its
 other lap times are.
 
@@ -102,13 +102,13 @@ charts config lapHistory snapshot focused rivals =
     in
     Widget.container "Rivals"
         (div [ class "grid gap-y-2" ]
-            [ legend snapshot focused rivals
-            , chartTabs config lapRange lapHistory snapshot focused rivals
+            [ chartTabs config lapRange lapHistory snapshot focused rivals
+            , legend snapshot focused rivals
             ]
         )
 
 
-{-| Which car each line of the charts below is, in running order, and how far up
+{-| Which car each line of the chart above is, in running order, and how far up
 or down the road each of them is, which is what the lines are about.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
