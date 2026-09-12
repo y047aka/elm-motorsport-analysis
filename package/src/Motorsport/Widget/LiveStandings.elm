@@ -20,8 +20,9 @@ import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
-{-| `selected` is the car the rest of the page is following; clicking its row
-fires `onSelect` with it again, which is how the selection is let go of.
+{-| `selected` is the car the rest of the page is following, which is always one
+of them: clicking a row hands `onSelect` the car it names, and there is no
+clicking a car away again.
 -}
 view : { onSelect : CarNumber -> msg, selected : Maybe CarNumber } -> Snapshot -> Html msg
 view { onSelect, selected } snapshot =

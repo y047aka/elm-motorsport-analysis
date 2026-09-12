@@ -36,8 +36,16 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(page.locator(DETAIL)).toHaveScreenshot('lap-history.png');
   });
 
-  test('should render a recovery hint when the car is deselected', async ({ page }) => {
+  test('should keep the car it was given when its own row is clicked again', async ({ page }) => {
     await standingsRow(page, '83').click();
-    await expect(page.locator(DETAIL)).toHaveScreenshot('empty-selection.png');
+    await expect(standingsRow(page, '83')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator(DETAIL)).toContainText('AF Corse');
+  });
+
+  test('should lead the race when no car has been picked', async ({ page }) => {
+    await page.goto('/wec/2025/le_mans_24h', { waitUntil: 'load' });
+    await waitForPageReady(page, 'text=24 Hours of Le Mans');
+    await setLapCount(page, 180);
+    await expect(page.locator(DETAIL)).toHaveScreenshot('leader-by-default.png');
   });
 });

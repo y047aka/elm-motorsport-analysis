@@ -90,7 +90,7 @@ type Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | ToggleDetailCar String
+    | SelectDetailCar String
     | SelectDetailChart CarDetailWidget.Chart
     | ToggleLapHistory
 
@@ -118,16 +118,8 @@ update msg m =
             , Effect.none
             )
 
-        ToggleDetailCar carNumber ->
-            let
-                next =
-                    if m.detailCarNumber == Just carNumber then
-                        Nothing
-
-                    else
-                        Just carNumber
-            in
-            ( { m | detailCarNumber = next }, Effect.none )
+        SelectDetailCar carNumber ->
+            ( { m | detailCarNumber = Just carNumber }, Effect.none )
 
         SelectDetailChart chart ->
             ( { m | detailChart = chart }, Effect.none )
@@ -215,6 +207,9 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
+        focused =
+            focusedCar snapshot m
+
         layout =
             case m.mode of
                 Tracker ->
@@ -246,7 +241,7 @@ trackerView track timeline snapshot replay m =
                                 }
                                 replay.race.cars
                                 snapshot
-                                m.detailCarNumber
+                                focused
                             ]
                         ]
                     ]
@@ -261,7 +256,9 @@ trackerView track timeline snapshot replay m =
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandingsWidget.view
-                    { onSelect = ToggleDetailCar, selected = m.detailCarNumber }
+                    { onSelect = SelectDetailCar
+                    , selected = Maybe.map (.metadata >> .carNumber) focused
+                    }
                     snapshot
                 ]
             , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
@@ -284,6 +281,20 @@ trackerView track timeline snapshot replay m =
         , standingsPanel m.standingsTab m snapshot
         , standingsPopover
         ]
+
+
+{-| The car the middle of the page is given over to: the one the reader picked,
+and until they pick one -- or when the one they picked is not in the field -- the
+car at the front of the race.
+-}
+focusedCar : Snapshot -> Model -> Maybe CarAt
+focusedCar snapshot m =
+    case m.detailCarNumber |> Maybe.andThen (\carNumber -> Snapshot.get carNumber snapshot) of
+        Just car ->
+            Just car
+
+        Nothing ->
+            Snapshot.leader snapshot
 
 
 standingsPanel : StandingsTab -> Model -> Snapshot -> Html Msg
