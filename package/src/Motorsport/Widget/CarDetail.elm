@@ -16,6 +16,7 @@ import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget as Widget
+import Motorsport.Widget.CarDetail.LiveTiming as LiveTiming
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
@@ -31,7 +32,9 @@ view :
     -> Html msg
 view config snapshot focused =
     div [ class "grid gap-y-3" ]
-        [ Widget.container "Stints & pit stops"
+        [ Widget.container "Live timing"
+            (LiveTiming.view (Snapshot.bestTimes snapshot) focused)
+        , Widget.container "Stints & pit stops"
             (Stint.view focused.metadata
                 (Snapshot.lapHistory snapshot
                     |> LapHistory.get focused.metadata.carNumber
