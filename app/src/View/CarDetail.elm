@@ -11,6 +11,7 @@ from the selected car, so it stays live-updating as the field moves.
 
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes
+import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.CarDetail as CarDetailWidget
 import Motorsport.Widget.Compare as CompareWidget
@@ -22,10 +23,11 @@ view :
     , onToggleCar : String -> msg
     , onSelectChart : CompareWidget.Chart -> msg
     }
+    -> List Car
     -> Snapshot
     -> Maybe String
     -> Html msg
-view config snapshot detailCarNumber =
+view config cars snapshot detailCarNumber =
     div [ Attributes.id elementId ]
         [ case detailCarNumber |> Maybe.andThen (\carNumber -> Snapshot.get carNumber snapshot) of
             Nothing ->
@@ -37,6 +39,7 @@ view config snapshot detailCarNumber =
                     , activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
                     }
+                    cars
                     snapshot
                     focused
         ]

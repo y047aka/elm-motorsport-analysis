@@ -237,6 +237,7 @@ trackerView track timeline snapshot replay m =
                                 , onToggleCar = ToggleDetailCar
                                 , onSelectChart = SelectDetailChart
                                 }
+                                replay.race.cars
                                 snapshot
                                 m.detailCarNumber
                             ]
