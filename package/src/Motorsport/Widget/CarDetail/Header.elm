@@ -7,8 +7,8 @@ the two cars it is actually racing on either side of it.
 
 -}
 
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (attribute, class)
+import Html exposing (Html, div, img, text)
+import Html.Attributes exposing (alt, attribute, class, src)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Race.Snapshot exposing (CarAt)
@@ -21,26 +21,65 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 off the opening lap rather than reading off a grid sheet. `behind` is the car
 next in the running order measured against this one, which no `CarAt` carries:
 a car is given the gap to the one ahead of it, never the one behind.
+
+`carImageUrl` is the car's own photograph, which only the app knows where to
+find: the season's image table lives beside the calendar rather than in here.
+
 -}
-view : { startPosition : Maybe Int, behind : Maybe Gap } -> CarAt -> Html msg
-view { startPosition, behind } item =
+view :
+    { startPosition : Maybe Int
+    , behind : Maybe Gap
+    , carImageUrl : Maybe String
+    }
+    -> CarAt
+    -> Html msg
+view { startPosition, behind, carImageUrl } item =
     div [ class "grid gap-y-2" ]
-        [ who item
+        [ who carImageUrl item
         , standing { startPosition = startPosition, behind = behind } item
         ]
 
 
-who : CarAt -> Html msg
-who item =
-    div [ class "grid grid-cols-[auto_1fr_auto] items-start gap-x-3" ]
+{-| The car itself, side on, in the width the name and the drivers leave beside
+them -- the panel is wide enough that a line of text does not fill it, and a row
+of its own for the photograph gave it more of the panel's height than the whole
+of the lap times below it.
+
+Seasons before the photographs were collected have none, and so does a car the
+season's table does not list; the column then collapses and the row reads as it
+did before.
+
+-}
+portrait : Maybe String -> CarAt -> Html msg
+portrait carImageUrl item =
+    case carImageUrl of
+        Just url ->
+            img
+                [ src url
+                , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
+                , class "self-center w-[140px] h-auto object-contain"
+                ]
+                []
+
+        Nothing ->
+            text ""
+
+
+who : Maybe String -> CarAt -> Html msg
+who carImageUrl item =
+    div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
         [ CarNumberBadge.view item.metadata
         , div [ class "grid gap-y-0.5 min-w-0" ]
-            [ div [ class "flex items-center gap-x-2" ]
+            -- The class badge does not wrap, so without a floor of its own this
+            -- line is as wide as the team's name and pushes the car's picture
+            -- off the end of the row rather than cutting the name.
+            [ div [ class "flex items-center gap-x-2 min-w-0" ]
                 [ classBadge item
                 , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
                 ]
             , lineup item
             ]
+        , portrait carImageUrl item
         , statusBadge item.status
         ]
 

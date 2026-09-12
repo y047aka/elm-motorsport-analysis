@@ -13,8 +13,8 @@ import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.CarCard as CarCard
 
 
-view : Snapshot -> Html msg
-view snapshot =
+view : { carImageUrl : String -> Maybe String } -> Snapshot -> Html msg
+view config snapshot =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -30,4 +30,4 @@ view snapshot =
         _ ->
             div
                 [ class "grid gap-2 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]" ]
-                (List.map (CarCard.view lapHistory allCars) allCars)
+                (List.map (CarCard.view config.carImageUrl lapHistory allCars) allCars)

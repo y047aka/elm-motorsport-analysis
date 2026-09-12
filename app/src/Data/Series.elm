@@ -13,15 +13,9 @@ and now sit under `/static/images/wec/<season>`. Each name there still carries
 the asset id it had at the source -- `/80971/2024-wec-2-cadillac-droite.png` --
 and the six characters that id occupies are what is dropped.
 
-Nothing calls this yet, so the compiler drops it and the three per-season image
-tables with it. Worth keeping that way: reaching those tables from code that
-does run -- by pairing them with the calendar in a single per-season lookup,
-say -- pulls all three into the bundle, for 11 kB and a feature that is not
-wired up.
-
-With the calendar gone from here, nothing imports this module either, and
-`NoUnused.Modules` says so. That is the same fact one step further out, not a
-new one; the images are still what the module is being kept for.
+The event page calls this now, for the car the middle of the page is given over
+to and for every card of the standings, so all three per-season tables are in
+the bundle -- 11 kB for the field's photographs.
 
 -}
 carImageUrl_Wec : Int -> String -> Maybe String

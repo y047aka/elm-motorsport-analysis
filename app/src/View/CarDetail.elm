@@ -5,10 +5,15 @@ module View.CarDetail exposing (elementId, view)
 It wraps `Widget.CarDetail` and is always rendered; only its contents are built
 from the car it is given, so it stays live-updating as the field moves.
 
+The season is where the car's photograph comes from -- the image tables are
+per-season -- and it is a `Maybe` because the page is drawn from the moment the
+URL resolves, which is before the round it names has been read.
+
 @docs elementId, view
 
 -}
 
+import Data.Series as Series
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes
 import Motorsport.Race.Car exposing (Car)
@@ -21,6 +26,7 @@ view :
     , onSelectChart : CarDetailWidget.Chart -> msg
     , lapHistoryOpen : Bool
     , onToggleLapHistory : msg
+    , season : Maybe Int
     }
     -> List Car
     -> Snapshot
@@ -40,6 +46,10 @@ view config cars snapshot focusedCar =
                     , onSelectChart = config.onSelectChart
                     , lapHistoryOpen = config.lapHistoryOpen
                     , onToggleLapHistory = config.onToggleLapHistory
+                    , carImageUrl =
+                        config.season
+                            |> Maybe.andThen
+                                (\season -> Series.carImageUrl_Wec season focused.metadata.carNumber)
                     }
                     cars
                     snapshot

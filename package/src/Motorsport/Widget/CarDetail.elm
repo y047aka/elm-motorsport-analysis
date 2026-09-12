@@ -51,6 +51,7 @@ view :
     , onSelectChart : Chart -> msg
     , lapHistoryOpen : Bool
     , onToggleLapHistory : msg
+    , carImageUrl : Maybe String
     }
     -> List Car
     -> Snapshot
@@ -68,6 +69,7 @@ view config cars snapshot focused =
         [ Header.view
             { startPosition = startPositionOf cars focused
             , behind = behind snapshot focused
+            , carImageUrl = config.carImageUrl
             }
             focused
         , Widget.container "Lap times"
