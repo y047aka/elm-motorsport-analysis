@@ -24,6 +24,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Widget.CarCardList as CarCardList
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard
@@ -36,6 +37,7 @@ import Task
 import Time
 import UI.Notice as Notice
 import UI.Shadcn.Card as Card
+import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
 import View.CarDetail as CarDetail
 import View.PlaybackControls as PlaybackControls
@@ -47,6 +49,7 @@ import View.PlaybackControls as PlaybackControls
 
 type alias Model =
     { mode : Mode
+    , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , stripOffset : Int
     , detailCarNumber : Maybe String
@@ -59,9 +62,15 @@ type Mode
     | Tracker
 
 
+type StandingsTab
+    = LeaderboardTab
+    | CardsTab
+
+
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { mode = Default
+      , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , stripOffset = 0
       , detailCarNumber = Nothing
@@ -79,6 +88,7 @@ type Msg
     = StartRace
     | PauseRace
     | ModeChange Mode
+    | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | StripScrollTo Int
@@ -97,6 +107,9 @@ update msg m =
 
         ModeChange mode ->
             ( { m | mode = mode }, Effect.none )
+
+        StandingsTabChange tab ->
+            ( { m | standingsTab = tab }, Effect.none )
 
         ReplayMsg replayMsg ->
             ( m, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
@@ -271,14 +284,48 @@ trackerView track timeline snapshot replay m =
                     snapshot
                 ]
             ]
-        , div [ Attributes.class "shrink-0 grid" ]
-            [ Card.card []
-                [ Card.content []
-                    [ Leaderboard.view leaderboardConfig m.leaderboardState snapshot ]
-                ]
-            ]
+        , standingsPanel m.standingsTab m snapshot
         , standingsPopover
         ]
+
+
+standingsPanel : StandingsTab -> Model -> Snapshot -> Html Msg
+standingsPanel tab m snapshot =
+    let
+        body =
+            case tab of
+                LeaderboardTab ->
+                    Leaderboard.view leaderboardConfig m.leaderboardState snapshot
+
+                CardsTab ->
+                    CarCardList.view snapshot
+    in
+    div [ Attributes.class "shrink-0 grid" ]
+        [ Card.card []
+            [ Card.header []
+                [ Card.action [] [ standingsTabs tab ] ]
+            , Card.content [] [ body ]
+            ]
+        ]
+
+
+standingsTabs : StandingsTab -> Html Msg
+standingsTabs current =
+    let
+        tabItem label tab =
+            { label = label
+            , active = current == tab
+            , disabled = False
+            , onSelect = StandingsTabChange tab
+            }
+    in
+    ToggleGroup.view
+        { items =
+            [ tabItem "Table" LeaderboardTab
+            , tabItem "Cards" CardsTab
+            ]
+        }
+        []
 
 
 {-| The most recent timeline events that have occurred, newest first: when each
