@@ -63,7 +63,7 @@ currentLapTimeCell item =
         , style "color" (performanceColor item.currentLap.performance)
         ]
         [ text
-            (if Status.hasRetired item.status then
+            (if Status.hasStopped item.status then
                 "-"
 
              else

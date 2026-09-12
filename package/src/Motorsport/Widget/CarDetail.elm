@@ -68,7 +68,8 @@ view config cars snapshot focused =
         , Widget.container "Live timing"
             (LiveTiming.view (Snapshot.bestTimes snapshot) focused)
         , Widget.container "Stints & pit stops"
-            (Stint.view focused.metadata
+            (Stint.view focused.status
+                focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )
         , charts config lapHistory snapshot focused rivals

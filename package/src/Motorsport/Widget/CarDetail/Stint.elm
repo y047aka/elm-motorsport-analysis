@@ -24,6 +24,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
+import Motorsport.Status exposing (Status(..))
 
 
 {-| One run between stops, numbered from the start of the race.
@@ -173,15 +174,19 @@ median values =
 
 
 {-| The runs the car has made, as a bar of them over the laps of the race, above
-what the stops have cost and where the run in progress stands against the ones
-before it.
+what the stops have cost and where the last of them stands.
+
+The laps alone cannot say whether the run they end on is still going: a car that
+has retired leaves the same trace as one out on the road. `status` is what
+settles it.
+
 -}
-view : Car.Metadata -> Summary -> Html msg
-view metadata summary =
+view : Status -> Car.Metadata -> Summary -> Html msg
+view status metadata summary =
     div [ class "grid gap-y-2" ]
         [ pitStats summary
         , stintBar metadata summary
-        , currentStint summary
+        , lastStint status summary
         ]
 
 
@@ -189,7 +194,14 @@ pitStats : Summary -> Html msg
 pitStats summary =
     div [ class "border border-border rounded-lg grid grid-cols-4" ]
         [ statCell "Stops" (String.fromInt (List.length summary.pitStops))
-        , statCell "Pit total" (durationOr "-" (Just summary.totalPitTime))
+        , statCell "Pit total"
+            (case summary.pitStops of
+                [] ->
+                    "-"
+
+                _ ->
+                    Duration.toString summary.totalPitTime
+            )
         , statCell "Last stop"
             (case List.Extra.last summary.pitStops of
                 Just pit ->
@@ -201,7 +213,7 @@ pitStats summary =
         , statCell "Median stint"
             (case summary.medianStintLength of
                 Just laps ->
-                    String.fromInt laps ++ " laps"
+                    inLaps laps
 
                 Nothing ->
                     "-"
@@ -250,7 +262,7 @@ stintTitle : Stint -> String
 stintTitle stint =
     [ "Stint " ++ String.fromInt stint.number
     , "L" ++ String.fromInt stint.firstLap ++ "-L" ++ String.fromInt stint.lastLap
-    , String.fromInt stint.lapCount ++ " laps"
+    , inLaps stint.lapCount
     , Driver.toFullName stint.driver
     , "avg " ++ durationOr "-" stint.averageLapTime
     , case stint.pit of
@@ -292,30 +304,67 @@ shadeOf manufacturer alpha =
     "oklch(from " ++ manufacturer.color ++ " l c h / " ++ alpha ++ ")"
 
 
-currentStint : Summary -> Html msg
-currentStint summary =
-    case summary.current of
-        Nothing ->
-            div [ class "text-[11px] text-muted-foreground" ] [ text "In the pits" ]
+{-| The run the car is on, or the one it stopped on.
 
-        Just stint ->
-            div [ class "flex flex-wrap items-baseline gap-x-3 text-[11px] tabular-nums" ]
-                [ div []
-                    [ text
-                        ("Stint "
-                            ++ String.fromInt stint.number
-                            ++ " · L"
-                            ++ String.fromInt stint.firstLap
-                            ++ "- · "
-                            ++ String.fromInt stint.lapCount
-                            ++ " laps"
-                        )
-                    ]
-                , div [ class "text-muted-foreground" ]
-                    [ text ("avg " ++ durationOr "-" stint.averageLapTime) ]
-                , div [ class "text-muted-foreground" ]
-                    [ text (againstMedian summary stint) ]
-                ]
+A car sitting in the pits is on no run, and neither is one that has yet to
+complete a lap; between the two the laps say the same thing, so the status is
+read first. A run the car will not resume is described as the run it was --
+where it ran from and to -- rather than measured against runs it is no longer
+trying to match.
+
+-}
+lastStint : Status -> Summary -> Html msg
+lastStint status summary =
+    case ( status, summary.current, List.Extra.last summary.stints ) of
+        ( Retired, _, Just final ) ->
+            stintLine { isRunning = False } final "retired"
+
+        ( Checkered, _, Just final ) ->
+            stintLine { isRunning = False } final "took the flag"
+
+        ( InPit, _, _ ) ->
+            note "In the pits"
+
+        ( _, Just stint, _ ) ->
+            stintLine { isRunning = True } stint (againstMedian summary stint)
+
+        ( _, _, Just _ ) ->
+            -- Every lap the car has completed is behind a stop, so the one it is
+            -- driving is the first of a run rather than part of the last.
+            note "On an out lap"
+
+        _ ->
+            note "No laps completed"
+
+
+note : String -> Html msg
+note label =
+    div [ class "text-[11px] text-muted-foreground" ] [ text label ]
+
+
+stintLine : { isRunning : Bool } -> Stint -> String -> Html msg
+stintLine { isRunning } stint trailing =
+    div [ class "flex flex-wrap items-baseline gap-x-3 text-[11px] tabular-nums" ]
+        [ div []
+            [ text
+                ("Stint "
+                    ++ String.fromInt stint.number
+                    ++ " · L"
+                    ++ String.fromInt stint.firstLap
+                    ++ (if isRunning then
+                            "-"
+
+                        else
+                            "-L" ++ String.fromInt stint.lastLap
+                       )
+                    ++ " · "
+                    ++ inLaps stint.lapCount
+                )
+            ]
+        , div [ class "text-muted-foreground" ]
+            [ text ("avg " ++ durationOr "-" stint.averageLapTime) ]
+        , div [ class "text-muted-foreground" ] [ text trailing ]
+        ]
 
 
 {-| How the run in progress stands against the ones that ended, which is as far
@@ -331,13 +380,24 @@ againstMedian summary stint =
                     median_ - stint.lapCount
             in
             if remaining > 0 then
-                String.fromInt remaining ++ " laps short of the median"
+                inLaps remaining ++ " short of the median"
 
             else
-                String.fromInt (abs remaining) ++ " laps past the median"
+                inLaps (abs remaining) ++ " past the median"
 
         Nothing ->
             ""
+
+
+inLaps : Int -> String
+inLaps count =
+    String.fromInt count
+        ++ (if abs count == 1 then
+                " lap"
+
+            else
+                " laps"
+           )
 
 
 statCell : String -> String -> Html msg

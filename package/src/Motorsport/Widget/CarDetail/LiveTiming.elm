@@ -18,6 +18,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
+import Motorsport.Status as Status
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 
@@ -27,9 +28,14 @@ view bestTimes item =
     div [ class "grid gap-y-3" ]
         [ SectorAndLaps.view item
         , div [ class "grid gap-y-2" ]
-            [ segmentRow "Current lap" (currentSectors item)
-            , segmentRow "Last lap" (lastSectors item)
-            ]
+            (if Status.hasStopped item.status then
+                [ segmentRow "Last lap" (lastSectors item) ]
+
+             else
+                [ segmentRow "Current lap" (currentSectors item)
+                , segmentRow "Last lap" (lastSectors item)
+                ]
+            )
         , lastMiniSectors item
         , bestLap bestTimes item
         ]
