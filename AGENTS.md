@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Motorsport race analysis and visualization app. CSV telemetry → CLI →
 SQLite → HTTP or a JSON export → Elm visualization.
