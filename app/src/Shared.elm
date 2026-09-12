@@ -24,6 +24,8 @@ import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.Race.StatusChanges as StatusChanges
+import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Era as Era
@@ -116,11 +118,16 @@ everything else about a frame follows from `replay` and the clock, where the
 track never moves once the data has loaded. `snapshot` is `replay` read at the
 clock, cached because every view of a frame shares it.
 
+`timeline` is the events themselves, kept for the events table to read the
+clock against; what playback reads is only the status index counted off them,
+inside `replay.race`.
+
 -}
 type alias Race =
     { replay : Replay.Model
     , snapshot : Snapshot
     , track : Tracker.Track
+    , timeline : Timeline
     }
 
 
@@ -367,12 +374,13 @@ raceFrom summary rawLaps timelineEvents =
                     { timeLimit = summary.timeLimit
                     , finishedAt = summary.finishedAt
                     , index = summary.index
-                    , timelineEvents = timelineEvents
+                    , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
                     }
     in
     { replay = replay
     , snapshot = snapshotOf replay
     , track = Tracker.fromConfig summary.track
+    , timeline = Timeline.fromList timelineEvents
     }
 
 

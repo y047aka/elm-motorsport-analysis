@@ -21,6 +21,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
@@ -159,7 +160,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just race ->
-                    trackerView race.track race.snapshot race.replay m
+                    trackerView race.track race.timeline race.snapshot race.replay m
             ]
         ]
     }
@@ -199,8 +200,8 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-trackerView : TrackerChart.Track -> Snapshot -> Replay.Model -> Model -> Html Msg
-trackerView track snapshot replay m =
+trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
+trackerView track timeline snapshot replay m =
     let
         layout =
             case m.mode of
@@ -261,7 +262,7 @@ trackerView track snapshot replay m =
                         ]
                     ]
                 ]
-            , timelinePanel "col-start-3 row-start-2" replay
+            , timelinePanel "col-start-3 row-start-2" timeline replay
             , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
                 [ SelectedCarsStrip.view
                     { offset = m.stripOffset
@@ -283,23 +284,11 @@ trackerView track snapshot replay m =
 {-| The most recent timeline events that have occurred, newest first: when each
 happened, whose it was, and what kind of thing it was.
 -}
-timelinePanel : String -> Replay.Model -> Html Msg
-timelinePanel cell replay =
+timelinePanel : String -> Timeline -> Replay.Model -> Html Msg
+timelinePanel cell timeline replay =
     let
-        currentElapsed =
-            Clock.getElapsed replay.playback
-
         occurredCount =
-            List.foldl
-                (\event n ->
-                    if Instant.compare event.elapsed currentElapsed /= GT then
-                        n + 1
-
-                    else
-                        n
-                )
-                0
-                replay.race.timelineEvents
+            Timeline.countUpTo (Clock.getElapsed replay.playback) timeline
     in
     button
         [ attribute "popovertarget" standingsPopoverId
@@ -310,7 +299,7 @@ timelinePanel cell replay =
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
                     [ table [ Attributes.class "w-full border-collapse text-xs" ]
-                        [ Html.Lazy.lazy3 eventRows replay.race.cars replay.race.timelineEvents occurredCount ]
+                        [ Html.Lazy.lazy3 eventRows replay.race.cars timeline occurredCount ]
                     ]
                 ]
             ]
@@ -324,29 +313,21 @@ recentEventLimit =
 
 {-| The panel's rows, rebuilt only when an event arrives. A thunk's arguments are
 compared by `===`, so every one of these is held to something that survives a
-frame: the two lists never move under playback, and the count is a number.
-Anything frame-made passed instead -- a snapshot, or the cut list itself -- is a
-fresh reference on every frame and misses.
-
-The events are in time order, so the first `occurredCount` of them are the ones
-the clock has reached.
-
+frame: the cars and the timeline never move under playback, and the count is a
+number. Anything frame-made passed instead -- a snapshot, or the cut list itself
+-- is a fresh reference on every frame and misses.
 -}
-eventRows : List Car -> List TimelineEvent -> Int -> Html Msg
-eventRows cars timelineEvents occurredCount =
+eventRows : List Car -> Timeline -> Int -> Html Msg
+eventRows cars timeline occurredCount =
     let
         metadataByNumber =
             cars
                 |> List.map (\car -> ( car.metadata.carNumber, car.metadata ))
                 |> Dict.fromList
-
-        recentEvents =
-            timelineEvents
-                |> List.take occurredCount
-                |> List.reverse
-                |> List.take recentEventLimit
     in
-    tbody [] (List.map (eventRow metadataByNumber) recentEvents)
+    Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
+        |> List.map (eventRow metadataByNumber)
+        |> tbody []
 
 
 {-| One row per event: time, whose it was, what it was.

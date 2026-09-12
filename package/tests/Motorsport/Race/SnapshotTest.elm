@@ -17,6 +17,7 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.StatusChanges as StatusChanges
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Test exposing (Test, describe, test)
 
@@ -271,7 +272,7 @@ suite =
 
 snapshotAt : Duration -> Snapshot
 snapshotAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, timelineEvents = [] } [ carOne, carTwo ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, statusChanges = StatusChanges.empty } [ carOne, carTwo ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -442,7 +443,7 @@ the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
-    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, timelineEvents = [] } [ carOne, carTwo, carThree, nonStarter ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, statusChanges = StatusChanges.empty } [ carOne, carTwo, carThree, nonStarter ]
         |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
 
 
@@ -464,7 +465,7 @@ thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, timelineEvents = [] } [ leMansCar ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, statusChanges = StatusChanges.empty } [ leMansCar ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -486,7 +487,7 @@ starts the next, so losing it loses both.
 -}
 leMansFieldMissing : LeMans2025MiniSector -> Duration -> Snapshot
 leMansFieldMissing missing elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, timelineEvents = [] }
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, statusChanges = StatusChanges.empty }
         [ { leMansCar | laps = List.map (withoutRunningTotalFor missing) leMansCar.laps } ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
@@ -515,7 +516,7 @@ leaves blank rather than at zero. Its one lap runs from the start to 6.000.
 -}
 fieldWithUntimedSectors : List Sector -> Duration -> Snapshot
 fieldWithUntimedSectors untimed elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = untimedSectorsIndex untimed, timelineEvents = [] } [ carWithoutSectorTimes untimed ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = untimedSectorsIndex untimed, statusChanges = StatusChanges.empty } [ carWithoutSectorTimes untimed ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 

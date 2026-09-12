@@ -10,6 +10,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
+import Motorsport.Race.StatusChanges as StatusChanges
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
@@ -144,7 +145,7 @@ initialModel =
         { timeLimit = Instant.fromDuration 7200000
         , finishedAt = Instant.fromDuration 7300000
         , index = index
-        , timelineEvents = timelineEvents
+        , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
         }
         [ retiringCar, survivingCar ]
 

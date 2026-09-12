@@ -29,20 +29,19 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
-import Motorsport.Race.TimelineEvent exposing (TimelineEvent)
 import Motorsport.Status exposing (Status)
 
 
-{-| `timelineEvents` reads the race as a list of things that happened; the three
-beside it read the same race at an instant, and are
+{-| The three indices read the same race at an instant, and are all
 [`ChangePoints`](Motorsport-Internal-ChangePoints) underneath.
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race
 was.
 
-`timelineEvents` arrives in a file of its own, from `Round.Timeline`; the two
-indices come with the round's summary.
+`statusChanges` is counted off the raw timeline, which arrives in a file of its
+own from `Round.Timeline`; the two indices beside it come with the round's
+summary.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
@@ -55,7 +54,6 @@ type alias Race =
     { cars : List Car
     , lapTotal : Int
     , timeLimit : Instant
-    , timelineEvents : List TimelineEvent
     , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
     , bestTimeChanges : BestTimes.Changes
@@ -107,23 +105,21 @@ empty =
     { cars = []
     , lapTotal = 0
     , timeLimit = Instant.raceStart
-    , timelineEvents = []
     , statusChanges = StatusChanges.empty
     , lapCompletions = emptyIndex.lapCompletions
     , bestTimeChanges = emptyIndex.bestTimeChanges
     }
 
 
-{-| Read a race off its entry list and what came with it: the indices, and the
-timeline the statuses are indexed from.
+{-| Read a race off its entry list and the indices that came with it. The
+statuses are indexed by the caller, from the timeline.
 -}
-fromCars : { timeLimit : Instant, index : Index, timelineEvents : List TimelineEvent } -> List Car -> Race
-fromCars { timeLimit, index, timelineEvents } cars =
+fromCars : { timeLimit : Instant, index : Index, statusChanges : StatusChanges } -> List Car -> Race
+fromCars { timeLimit, index, statusChanges } cars =
     { cars = cars
     , lapTotal = ChangePoints.length index.lapCompletions
     , timeLimit = timeLimit
-    , timelineEvents = timelineEvents
-    , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
+    , statusChanges = statusChanges
     , lapCompletions = index.lapCompletions
     , bestTimeChanges = index.bestTimeChanges
     }

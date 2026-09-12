@@ -10,6 +10,7 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
+import Motorsport.Race.StatusChanges as StatusChanges
 import Test exposing (Test, describe, test)
 
 
@@ -98,7 +99,7 @@ suite =
 
 race : Race
 race =
-    Race.fromCars { timeLimit = Instant.fromDuration 7200000, index = index, timelineEvents = [] }
+    Race.fromCars { timeLimit = Instant.fromDuration 7200000, index = index, statusChanges = StatusChanges.empty }
         [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000
