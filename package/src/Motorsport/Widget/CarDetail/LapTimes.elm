@@ -108,20 +108,27 @@ history { historyOpen, onToggleHistory } laps lapsCompleted =
 
 currentLap : BySector (Maybe Duration) -> CarAt -> Html msg
 currentLap best item =
+    let
+        cells =
+            Sector.map2 (\baseline state -> deltaCell baseline (Performance.ratedOf state))
+                best
+                item.currentLap.sectorStates
+    in
     lapBlock
         { label = "Current"
         , lapNumber = Just (item.standing.lapsCompleted + 1)
         , time = Just { time = item.currentLap.elapsed, performance = item.currentLap.performance }
-        , sectors =
-            Sector.toList item.currentLap.sectorStates
-                |> List.map (\( sector, state ) -> deltaCell (Sector.get sector best) (Performance.ratedOf state))
-        , strip =
+        , segments =
             case item.currentLap.miniSectors of
                 Snapshot.Recorded { states } ->
-                    withAxis (SegmentStrip.miniSectors states) SegmentStrip.miniSectorAxis
+                    SegmentStrip.overMiniSectors
+                        { cells = cells, strip = SegmentStrip.miniSectors states }
 
                 Snapshot.NotRecorded ->
-                    withAxis (SegmentStrip.sectors item.currentLap.sectorStates) SegmentStrip.sectorAxis
+                    SegmentStrip.overSectors
+                        { cells = cells
+                        , strip = SegmentStrip.sectors item.currentLap.sectorStates
+                        }
         }
 
 
@@ -155,18 +162,23 @@ lastLap : CarAt -> Html msg
 lastLap item =
     case item.lastLap of
         Snapshot.Completed { rated, sectors, miniSectors } ->
+            let
+                cells =
+                    Sector.initialize (\sector -> timeCell (Sector.get sector sectors))
+            in
             lapBlock
                 { label = "Last"
                 , lapNumber = Just item.standing.lapsCompleted
                 , time = rated
-                , sectors = Sector.values sectors |> List.map timeCell
-                , strip =
+                , segments =
                     case miniSectors of
                         Just rating ->
-                            withAxis (SegmentStrip.miniSectorsRated rating) SegmentStrip.miniSectorAxis
+                            SegmentStrip.overMiniSectors
+                                { cells = cells, strip = SegmentStrip.miniSectorsRated rating }
 
                         Nothing ->
-                            withAxis (SegmentStrip.sectorsRated sectors) SegmentStrip.sectorAxis
+                            SegmentStrip.overSectors
+                                { cells = cells, strip = SegmentStrip.sectorsRated sectors }
                 }
 
         Snapshot.NoLapYet ->
@@ -174,8 +186,11 @@ lastLap item =
                 { label = "Last"
                 , lapNumber = Nothing
                 , time = Nothing
-                , sectors = List.map (\_ -> timeCell Nothing) Sector.all
-                , strip = Nothing
+                , segments =
+                    SegmentStrip.overSectors
+                        { cells = Sector.initialize (\_ -> timeCell Nothing)
+                        , strip = text ""
+                        }
                 }
 
 
@@ -226,11 +241,10 @@ lapBlock :
     { label : String
     , lapNumber : Maybe Int
     , time : Maybe RatedTime
-    , sectors : List (Html msg)
-    , strip : Maybe (Html msg)
+    , segments : Html msg
     }
     -> Html msg
-lapBlock { label, lapNumber, time, sectors, strip } =
+lapBlock { label, lapNumber, time, segments } =
     div [ class "grid gap-y-1 min-w-0" ]
         [ div [ class "flex items-baseline gap-x-1.5" ]
             [ rowLabel label
@@ -239,17 +253,8 @@ lapBlock { label, lapNumber, time, sectors, strip } =
             , div [ class "flex-1" ] []
             , timeText "text-[14px]" time
             ]
-        , div [ class "grid grid-cols-3 gap-x-1.5" ] sectors
-        , strip |> Maybe.withDefault (text "")
+        , segments
         ]
-
-
-{-| A strip and the names of the sectors it is divided into, which are laid out
-in the strip's own columns so that a name sits under the stretch it names.
--}
-withAxis : Html msg -> Html msg -> Maybe (Html msg)
-withAxis strip axis =
-    Just (div [ class "grid gap-y-0.5" ] [ strip, axis ])
 
 
 {-| A sector of the lap under way, as how far off the best the car has driven it

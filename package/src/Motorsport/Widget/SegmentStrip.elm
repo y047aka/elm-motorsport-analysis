@@ -1,7 +1,7 @@
 module Motorsport.Widget.SegmentStrip exposing
     ( sectors, miniSectors
     , sectorsRated, miniSectorsRated
-    , sectorAxis, miniSectorAxis
+    , overSectors, overMiniSectors
     , colorOfRated
     )
 
@@ -16,7 +16,7 @@ else.
 
 @docs sectors, miniSectors
 @docs sectorsRated, miniSectorsRated
-@docs sectorAxis, miniSectorAxis
+@docs overSectors, overMiniSectors
 @docs colorOfRated
 
 -}
@@ -54,22 +54,22 @@ track order, with a spacer where each of the first two sectors ends.
 -}
 miniSectors : ByMiniSector SegmentState -> Html msg
 miniSectors states =
-    strip (\mini state -> progressCell (LeMans.toString mini) state) states
+    miniStrip (\mini state -> progressCell (LeMans.toString mini) state) states
 
 
 {-| The same seventeen columns for a lap that is over.
 -}
 miniSectorsRated : ByMiniSector (Maybe RatedTime) -> Html msg
 miniSectorsRated rated =
-    strip (\mini rating -> ratedCell (LeMans.toString mini) rating) rated
+    miniStrip (\mini rating -> ratedCell (LeMans.toString mini) rating) rated
 
 
 {-| The strip's columns are as wide as the stretches of track they stand for, and
 two of them are the gaps where a sector ends -- so the cells are laid out here
 rather than mapped over, the spacers falling where they belong.
 -}
-strip : (LeMans.LeMans2025MiniSector -> a -> Html msg) -> ByMiniSector a -> Html msg
-strip cell values =
+miniStrip : (LeMans.LeMans2025MiniSector -> a -> Html msg) -> ByMiniSector a -> Html msg
+miniStrip cell values =
     div [ class miniSectorColumns ]
         [ cell LeMans.SCL2 values.scl2
         , cell LeMans.Z4 values.z4
@@ -105,27 +105,54 @@ miniSectorColumns =
     "grid grid-cols-[2fr_2fr_3fr_0.5fr_5fr_1fr_3fr_3fr_0.5fr_1fr_5fr_3fr_2fr_1fr_1fr_1fr_1fr] gap-x-px"
 
 
-{-| The three sectors named under a strip of them.
--}
-sectorAxis : Html msg
-sectorAxis =
-    div [ class sectorColumns ]
-        (List.map (\sector -> axisLabel "" sector) Sector.all)
+{-| A reading per sector, the strip the lap was read from, and the sectors' own
+names -- the three rows of a lap at the sector grain, in the columns the strip
+is drawn in so that each sector's reading, its stretch of the strip and its name
+are above one another.
 
+A reading wider than the stretch it stands for hangs over the edges of it rather
+than being cut or wrapped: the sectors of a lap are not equal, and the shortest
+of them is narrower than a time.
 
-{-| The same three names under a strip of mini-sectors, each spanning the
-mini-sectors its sector is driven in -- three, four and eight of them, with the
-gaps where the first two sectors end falling between.
 -}
-miniSectorAxis : Html msg
-miniSectorAxis =
-    div [ class miniSectorColumns ]
-        [ axisLabel "col-span-3" Sector.S1
-        , spacer
-        , axisLabel "col-span-4" Sector.S2
-        , spacer
-        , axisLabel "col-span-8" Sector.S3
+overSectors : { cells : BySector (Html msg), strip : Html msg } -> Html msg
+overSectors { cells, strip } =
+    rows
+        [ div [ class sectorColumns ] (Sector.values cells)
+        , strip
+        , div [ class sectorColumns ] (List.map (axisLabel "") Sector.all)
         ]
+
+
+{-| The same three rows over a strip of mini-sectors, where a sector spans the
+mini-sectors it is driven in -- three of them, four and eight -- with the gaps
+where the first two sectors end falling between.
+-}
+overMiniSectors : { cells : BySector (Html msg), strip : Html msg } -> Html msg
+overMiniSectors { cells, strip } =
+    rows
+        [ spanning (\_ cell -> cell) cells
+        , strip
+        , spanning (\sector _ -> axisLabel "" sector) cells
+        ]
+
+
+{-| One item per sector, laid over the mini-sectors that sector is driven in.
+-}
+spanning : (Sector -> Html msg -> Html msg) -> BySector (Html msg) -> Html msg
+spanning toCell cells =
+    div [ class miniSectorColumns ]
+        [ div [ class "col-span-3 min-w-0" ] [ toCell Sector.S1 cells.s1 ]
+        , spacer
+        , div [ class "col-span-4 min-w-0" ] [ toCell Sector.S2 cells.s2 ]
+        , spacer
+        , div [ class "col-span-8 min-w-0" ] [ toCell Sector.S3 cells.s3 ]
+        ]
+
+
+rows : List (Html msg) -> Html msg
+rows =
+    div [ class "grid gap-y-0.5" ]
 
 
 axisLabel : String -> Sector -> Html msg
