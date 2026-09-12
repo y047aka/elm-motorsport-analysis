@@ -118,10 +118,10 @@ currentLap best item =
         , strip =
             case item.currentLap.miniSectors of
                 Snapshot.Recorded { states } ->
-                    Just (SegmentStrip.miniSectors states)
+                    withAxis (SegmentStrip.miniSectors states) SegmentStrip.miniSectorAxis
 
                 Snapshot.NotRecorded ->
-                    Just (SegmentStrip.sectors item.currentLap.sectorStates)
+                    withAxis (SegmentStrip.sectors item.currentLap.sectorStates) SegmentStrip.sectorAxis
         }
 
 
@@ -160,7 +160,13 @@ lastLap item =
                 , lapNumber = Just item.standing.lapsCompleted
                 , time = rated
                 , sectors = Sector.values sectors |> List.map timeCell
-                , strip = Maybe.map SegmentStrip.miniSectorsRated miniSectors
+                , strip =
+                    case miniSectors of
+                        Just rating ->
+                            withAxis (SegmentStrip.miniSectorsRated rating) SegmentStrip.miniSectorAxis
+
+                        Nothing ->
+                            withAxis (SegmentStrip.sectorsRated sectors) SegmentStrip.sectorAxis
                 }
 
         Snapshot.NoLapYet ->
@@ -235,22 +241,15 @@ lapBlock { label, lapNumber, time, sectors, strip } =
             ]
         , div [ class "grid grid-cols-3 gap-x-1.5" ] sectors
         , strip |> Maybe.withDefault (text "")
-        , sectorAxis
         ]
 
 
-{-| The names of the three sectors, under the strip they are the stretches of.
+{-| A strip and the names of the sectors it is divided into, which are laid out
+in the strip's own columns so that a name sits under the stretch it names.
 -}
-sectorAxis : Html msg
-sectorAxis =
-    div [ class "grid grid-cols-3 gap-x-1.5" ]
-        (Sector.all
-            |> List.map
-                (\sector ->
-                    div [ class "text-[9px] text-center text-muted-foreground" ]
-                        [ text (Sector.toString sector) ]
-                )
-        )
+withAxis : Html msg -> Html msg -> Maybe (Html msg)
+withAxis strip axis =
+    Just (div [ class "grid gap-y-0.5" ] [ strip, axis ])
 
 
 {-| A sector of the lap under way, as how far off the best the car has driven it

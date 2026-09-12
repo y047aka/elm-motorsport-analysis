@@ -1,6 +1,7 @@
 module Motorsport.Widget.SegmentStrip exposing
     ( sectors, miniSectors
     , sectorsRated, miniSectorsRated
+    , sectorAxis, miniSectorAxis
     , colorOfRated
     )
 
@@ -15,15 +16,16 @@ else.
 
 @docs sectors, miniSectors
 @docs sectorsRated, miniSectorsRated
+@docs sectorAxis, miniSectorAxis
 @docs colorOfRated
 
 -}
 
-import Html exposing (Html, div)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style, title)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState)
-import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Sector as Sector exposing (BySector, Sector)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
@@ -31,7 +33,7 @@ import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 -}
 sectors : BySector SegmentState -> Html msg
 sectors states =
-    div [ class "grid grid-cols-[1fr_1fr_1fr] gap-x-1" ]
+    div [ class sectorColumns ]
         (Sector.toList states
             |> List.map (\( sector, state ) -> progressCell (Sector.toString sector) state)
         )
@@ -41,7 +43,7 @@ sectors states =
 -}
 sectorsRated : BySector (Maybe RatedTime) -> Html msg
 sectorsRated rated =
-    div [ class "grid grid-cols-[1fr_1fr_1fr] gap-x-1" ]
+    div [ class sectorColumns ]
         (Sector.toList rated
             |> List.map (\( sector, rating ) -> ratedCell (Sector.toString sector) rating)
         )
@@ -68,7 +70,7 @@ rather than mapped over, the spacers falling where they belong.
 -}
 strip : (LeMans.LeMans2025MiniSector -> a -> Html msg) -> ByMiniSector a -> Html msg
 strip cell values =
-    div [ class "grid grid-cols-[2fr_2fr_3fr_0.5fr_5fr_1fr_3fr_3fr_0.5fr_1fr_5fr_3fr_2fr_1fr_1fr_1fr_1fr] gap-x-px" ]
+    div [ class miniSectorColumns ]
         [ cell LeMans.SCL2 values.scl2
         , cell LeMans.Z4 values.z4
         , cell LeMans.IP1 values.ip1
@@ -87,6 +89,49 @@ strip cell values =
         , cell LeMans.FORDOUT values.fordout
         , cell LeMans.FL values.fl
         ]
+
+
+{-| The columns a strip is laid out in, which anything drawn under one has to be
+laid out in too: a name for a sector is under the stretch of track it names only
+while the two are in the same grid.
+-}
+sectorColumns : String
+sectorColumns =
+    "grid grid-cols-[1fr_1fr_1fr] gap-x-1"
+
+
+miniSectorColumns : String
+miniSectorColumns =
+    "grid grid-cols-[2fr_2fr_3fr_0.5fr_5fr_1fr_3fr_3fr_0.5fr_1fr_5fr_3fr_2fr_1fr_1fr_1fr_1fr] gap-x-px"
+
+
+{-| The three sectors named under a strip of them.
+-}
+sectorAxis : Html msg
+sectorAxis =
+    div [ class sectorColumns ]
+        (List.map (\sector -> axisLabel "" sector) Sector.all)
+
+
+{-| The same three names under a strip of mini-sectors, each spanning the
+mini-sectors its sector is driven in -- three, four and eight of them, with the
+gaps where the first two sectors end falling between.
+-}
+miniSectorAxis : Html msg
+miniSectorAxis =
+    div [ class miniSectorColumns ]
+        [ axisLabel "col-span-3" Sector.S1
+        , spacer
+        , axisLabel "col-span-4" Sector.S2
+        , spacer
+        , axisLabel "col-span-8" Sector.S3
+        ]
+
+
+axisLabel : String -> Sector -> Html msg
+axisLabel span sector =
+    div [ class (span ++ " text-[9px] text-center text-muted-foreground leading-none") ]
+        [ text (Sector.toString sector) ]
 
 
 spacer : Html msg
