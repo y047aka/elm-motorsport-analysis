@@ -154,11 +154,18 @@ takes a colour from its number. What the feed spells is
 them the file has no row for is one query rather than a reading of the cars.
 
 `Data/Wec/CarImage.elm` decodes `/static/car-images.json`, written by hand as
-the manufacturer table is, which names each season's photographs and the
-directory under `static/images/wec` they sit in. Nothing waits on it. A car is
+the manufacturer table is and waited on the same way, which names each season's
+photographs and the directory under `static/images/wec` they sit in. A car is
 one file name, or the file its rounds use by default beside the rounds
 photographed separately — which is a livery carried for a single round, and the
-reason the round is looked up beside the season.
+reason the round is read against the table beside the season.
+
+Both tables are read where the cars decode rather than where they are drawn:
+`Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
+round, and `Car.Metadata` comes out of it carrying the colour, the badge and
+the photograph. Nothing downstream asks a second time — the round the car
+belongs to is settled before the file is asked for, and a widget handed a car
+has everything it draws.
 
 ### The shadcn components
 
@@ -243,10 +250,12 @@ GapChart, BoxPlot).
 passed through (`Class`, `Era`), and Le Mans's mini-sectors
 (`Circuit/LeMans`). Decoding the timing feed stays app-side in `Data.Wec` /
 `Data.Wec.Laps` — the shape of one publisher's files, not of the domain.
-`Data.Wec.Manufacturer` is app-side for the same reason: which manufacturers
-there are, and how each is coloured and badged, is one series' entry list and
-this application's assets. It holds none of them itself — it decodes the table
-that does.
+`Data.Wec.Manufacturer` and `Data.Wec.CarImage` are app-side for the same
+reason: which manufacturers there are, how each is coloured and badged, and
+which photograph a car carries at a round, is one series' entry list and this
+application's assets. Neither holds any of it itself — each decodes the table
+that does, and what reaches `Car.Metadata` is the resolved colour, badge and
+photograph rather than the tables.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in three places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to

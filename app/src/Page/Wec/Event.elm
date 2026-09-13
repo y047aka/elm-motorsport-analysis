@@ -164,8 +164,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just race ->
-                    trackerView (Shared.carImageUrl shared)
-                        race.track
+                    trackerView race.track
                         race.timeline
                         race.snapshot
                         race.replay
@@ -209,8 +208,8 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-trackerView : (String -> Maybe String) -> TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
-trackerView carImageUrl track timeline snapshot replay m =
+trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
+trackerView track timeline snapshot replay m =
     let
         focused =
             focusedCar snapshot m
@@ -243,7 +242,6 @@ trackerView carImageUrl track timeline snapshot replay m =
                                 , onSelectChart = SelectDetailChart
                                 , lapHistoryOpen = m.lapHistoryOpen
                                 , onToggleLapHistory = ToggleLapHistory
-                                , carImageUrl = carImageUrl
                                 }
                                 replay.race.cars
                                 snapshot
@@ -284,7 +282,7 @@ trackerView carImageUrl track timeline snapshot replay m =
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
             ]
-        , standingsPanel carImageUrl m.standingsTab m snapshot
+        , standingsPanel m.standingsTab m snapshot
         , standingsPopover
         ]
 
@@ -303,8 +301,8 @@ focusedCar snapshot m =
             Snapshot.leader snapshot
 
 
-standingsPanel : (String -> Maybe String) -> StandingsTab -> Model -> Snapshot -> Html Msg
-standingsPanel carImageUrl tab m snapshot =
+standingsPanel : StandingsTab -> Model -> Snapshot -> Html Msg
+standingsPanel tab m snapshot =
     let
         body =
             case tab of
@@ -312,7 +310,7 @@ standingsPanel carImageUrl tab m snapshot =
                     Leaderboard.view leaderboardConfig m.leaderboardState snapshot
 
                 CardsTab ->
-                    CarCardList.view { carImageUrl = carImageUrl } snapshot
+                    CarCardList.view snapshot
     in
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []

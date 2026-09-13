@@ -7,6 +7,7 @@ so how far one has got is read back through `Shared.race` and `Shared.roundId`
 
 import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar
+import Data.Wec.CarImage as CarImage
 import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer as Manufacturer
 import Dict
@@ -123,14 +124,54 @@ manufacturersJson =
     """
 
 
+carImagesJson : String
+carImagesJson =
+    """
+    { "seasons":
+        { "2025":
+            { "basePath": "/static/images/wec/2025"
+            , "cars":
+                { "7":
+                    { "default": "toyota-7.png"
+                    , "rounds": { "le_mans_24h": "toyota-7-le-mans.png" }
+                    }
+                }
+            }
+        }
+    }
+    """
+
+
 summary : Maybe Wec.Event
 summary =
+    eventAt "spa_6h"
+
+
+eventAt : String -> Maybe Wec.Event
+eventAt round =
     Era.fromSeason 2025
         |> Maybe.andThen
             (\era ->
-                Decode.decodeString (Wec.eventDecoder era manufacturers) summaryJson
+                Decode.decodeString
+                    (Wec.eventDecoder era manufacturers (photographAt round))
+                    summaryJson
                     |> Result.toMaybe
             )
+
+
+photographAt : String -> String -> Maybe String
+photographAt round carNumber =
+    CarImage.url carImages { season = 2025, round = round, carNumber = carNumber }
+
+
+{-| The photograph the round's one car is given, which is the whole of what a
+round changes about it.
+-}
+liveryAt : String -> Maybe String
+liveryAt round =
+    eventAt round
+        |> Maybe.andThen (.startingGrid >> .entries >> List.head)
+        |> Maybe.andThen (.car >> .imageUrl)
 
 
 laps : List WecLaps.RawLap
@@ -190,6 +231,12 @@ manufacturers =
         |> Result.withDefault Dict.empty
 
 
+carImages : CarImage.CarImages
+carImages =
+    Decode.decodeString CarImage.decoder carImagesJson
+        |> Result.withDefault CarImage.none
+
+
 fresh : Shared.Model
 fresh =
     Shared.init () |> Tuple.first
@@ -202,6 +249,7 @@ loadingSpa : Shared.Model
 loadingSpa =
     fresh
         |> step (ManufacturersLoaded (Ok manufacturers))
+        |> step (CarImagesLoaded (Ok carImages))
         |> step (CalendarLoaded (Ok calendar))
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
 
@@ -215,6 +263,7 @@ loadingSpaByDeepLink =
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
         |> step (CalendarLoaded (Ok calendar))
         |> step (ManufacturersLoaded (Ok manufacturers))
+        |> step (CarImagesLoaded (Ok carImages))
 
 
 step : Msg -> Shared.Model -> Shared.Model
@@ -229,17 +278,25 @@ suite =
             \_ ->
                 ( summary /= Nothing, List.length laps, List.length timeline )
                     |> Expect.equal ( True, 1, 3 )
+        , test "puts on a car the livery it carried at the round being read" <|
+            \_ ->
+                ( liveryAt "spa_6h", liveryAt "le_mans_24h" )
+                    |> Expect.equal
+                        ( Just "/static/images/wec/2025/toyota-7.png"
+                        , Just "/static/images/wec/2025/toyota-7-le-mans.png"
+                        )
         , describe "update"
-            [ test "resolves the round whichever of the URL, the calendar and the table is last" <|
+            [ test "resolves the round whichever of the URL, the calendar and the tables is last" <|
                 \_ ->
                     [ loadingSpa, loadingSpaByDeepLink ]
                         |> List.map (Shared.roundId >> Maybe.map .name)
                         |> Expect.equalLists
                             [ Just "6 Hours of Spa", Just "6 Hours of Spa" ]
-            , test "opens a round the manufacturer table never reached" <|
+            , test "opens a round neither table reached" <|
                 \_ ->
                     fresh
                         |> step (ManufacturersLoaded (Err Http.NetworkError))
+                        |> step (CarImagesLoaded (Err Http.NetworkError))
                         |> step (CalendarLoaded (Ok calendar))
                         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
                         |> Shared.roundId
@@ -257,6 +314,7 @@ suite =
                 \_ ->
                     fresh
                         |> step (ManufacturersLoaded (Ok manufacturers))
+                        |> step (CarImagesLoaded (Ok carImages))
                         |> step (CalendarLoaded (Ok calendar))
                         |> step (FetchJson_Wec { season = "2025", event = "monza_6h" })
                         |> (\m -> ( Shared.roundId m, Shared.race m ))

@@ -21,21 +21,16 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 off the opening lap rather than reading off a grid sheet. `behind` is the car
 next in the running order measured against this one, which no `CarAt` carries:
 a car is given the gap to the one ahead of it, never the one behind.
-
-`carImageUrl` is the car's own photograph, which only the app knows where to
-find: the season's image table lives beside the calendar rather than in here.
-
 -}
 view :
     { startPosition : Maybe Int
     , behind : Maybe Gap
-    , carImageUrl : Maybe String
     }
     -> CarAt
     -> Html msg
-view { startPosition, behind, carImageUrl } item =
+view { startPosition, behind } item =
     div [ class "grid gap-y-2" ]
-        [ who carImageUrl item
+        [ who item
         , standing { startPosition = startPosition, behind = behind } item
         ]
 
@@ -60,8 +55,8 @@ portrait carImageUrl item =
             text ""
 
 
-who : Maybe String -> CarAt -> Html msg
-who carImageUrl item =
+who : CarAt -> Html msg
+who item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
         [ CarNumberBadge.view item.metadata
         , div [ class "grid gap-y-0.5 min-w-0" ]
@@ -74,7 +69,7 @@ who carImageUrl item =
                 ]
             , lineup item
             ]
-        , portrait carImageUrl item
+        , portrait item.metadata.imageUrl item
         , statusBadge item.status
         ]
 

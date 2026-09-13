@@ -253,6 +253,7 @@ carWith carNumber laps =
         , group = "H"
         , team = "Test Team"
         , manufacturer = unknown
+        , imageUrl = Nothing
         }
     , startPosition = 1
     , laps = laps

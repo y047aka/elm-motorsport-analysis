@@ -21,7 +21,6 @@ view :
     , onSelectChart : CarDetailWidget.Chart -> msg
     , lapHistoryOpen : Bool
     , onToggleLapHistory : msg
-    , carImageUrl : String -> Maybe String
     }
     -> List Car
     -> Snapshot
@@ -41,7 +40,6 @@ view config cars snapshot focusedCar =
                     , onSelectChart = config.onSelectChart
                     , lapHistoryOpen = config.lapHistoryOpen
                     , onToggleLapHistory = config.onToggleLapHistory
-                    , carImageUrl = config.carImageUrl focused.metadata.carNumber
                     }
                     cars
                     snapshot

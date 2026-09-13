@@ -1,7 +1,7 @@
 module Shared exposing
     ( Model, Race, RoundId, Catalogue(..), Problem(..)
     , init, update, subscriptions
-    , race, roundId, isPlaying, problem, carImageUrl
+    , race, roundId, isPlaying, problem
     )
 
 {-| Application-wide state, preserved from the elm-pages version. The data is
@@ -9,7 +9,7 @@ loaded at runtime via `Http`, so no `BackendTask` is involved.
 
 @docs Model, Race, RoundId, Catalogue, Problem
 @docs init, update, subscriptions
-@docs race, roundId, isPlaying, problem, carImageUrl
+@docs race, roundId, isPlaying, problem
 
 -}
 
@@ -43,7 +43,7 @@ so a half-loaded one cannot be read as a loaded one.
 type alias Model =
     { calendar : Catalogue
     , manufacturers : Maybe Manufacturers
-    , carImages : CarImages
+    , carImages : Maybe CarImages
     , round : Round
     }
 
@@ -67,9 +67,10 @@ type Problem
     | LoadFailed Http.Error
 
 
-{-| `Waiting` is a URL that arrived before the calendar or the manufacturer
-table did. One says where a round's files are and the other what colours its
-cars, so the request waits rather than being guessed at.
+{-| `Waiting` is a URL that arrived before the calendar or one of the two tables
+did. The calendar says where a round's files are, and the tables what colours
+its cars and which photograph each carries, so the request waits rather than
+being guessed at.
 
 `Loading` carries no `Race`, which is what stops the previous round's cars being
 shown under this one's name.
@@ -139,7 +140,7 @@ the app opened on, and a round reached by its URL still draws on all three.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
-    ( { calendar = Arriving, manufacturers = Nothing, carImages = CarImage.none, round = NoRound }
+    ( { calendar = Arriving, manufacturers = Nothing, carImages = Nothing, round = NoRound }
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
@@ -202,18 +203,6 @@ race model =
             Nothing
 
 
-{-| Where a car's photograph is, for the round being shown.
--}
-carImageUrl : Model -> String -> Maybe String
-carImageUrl model carNumber =
-    roundId model
-        |> Maybe.andThen
-            (\id ->
-                CarImage.url model.carImages
-                    { season = id.season, round = id.id, carNumber = carNumber }
-            )
-
-
 {-| Whether playback is running, which is the whole of what deciding about
 animation frames takes. Asked here so that page does not reach through a race to
 its clock for one constructor.
@@ -252,10 +241,10 @@ update msg m =
                 { m | manufacturers = Just (Result.withDefault Dict.empty result) }
 
         CarImagesLoaded result ->
-            -- No round waits on this one, unlike the table above: the
-            -- photographs are read where a car is drawn rather than folded into
-            -- the race, so a late table costs them a frame and nothing else.
-            ( { m | carImages = Result.withDefault CarImage.none result }, Effect.none )
+            -- As above: a table that has no picture of a car leaves it drawn
+            -- without one.
+            resumeWaitingRound
+                { m | carImages = Just (Result.withDefault CarImage.none result) }
 
         FetchJson_Wec params ->
             resumeWaitingRound { m | round = Waiting params }
@@ -282,13 +271,13 @@ update msg m =
             ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
 
 
-{-| Called as the URL, the calendar and the manufacturer table arrive, so
-whichever is last is the one that finds everything it needs here.
+{-| Called as the URL, the calendar and the two tables arrive, so whichever is
+last is the one that finds everything it needs here.
 -}
 resumeWaitingRound : Model -> ( Model, Effect Msg )
 resumeWaitingRound m =
-    case ( m.round, m.manufacturers ) of
-        ( Waiting params, Just manufacturers ) ->
+    case ( m.round, m.manufacturers, m.carImages ) of
+        ( Waiting params, Just manufacturers, Just carImages ) ->
             case m.calendar of
                 Arriving ->
                     ( m, Effect.none )
@@ -302,14 +291,26 @@ resumeWaitingRound m =
                             ( { m | round = Unavailable params NotListed }, Effect.none )
 
                         Just ( season, round ) ->
-                            askFor params manufacturers { season = season.season, id = round.id, name = round.name } round m
+                            let
+                                id =
+                                    { season = season.season, id = round.id, name = round.name }
+                            in
+                            askFor params manufacturers (photographIn carImages id) id round m
 
         _ ->
             ( m, Effect.none )
 
 
-askFor : { season : String, event : String } -> Manufacturers -> RoundId -> Calendar.Round -> Model -> ( Model, Effect Msg )
-askFor params manufacturers id round m =
+{-| Where each car of a round has its photograph, which the cars are read
+against as they decode, the way the manufacturer table colours them.
+-}
+photographIn : CarImages -> RoundId -> Car.CarNumber -> Maybe String
+photographIn carImages id carNumber =
+    CarImage.url carImages { season = id.season, round = id.id, carNumber = carNumber }
+
+
+askFor : { season : String, event : String } -> Manufacturers -> (Car.CarNumber -> Maybe String) -> RoundId -> Calendar.Round -> Model -> ( Model, Effect Msg )
+askFor params manufacturers carImageUrl id round m =
     case Era.fromSeason id.season of
         Nothing ->
             ( { m | round = Unavailable params NoClassGrid }, Effect.none )
@@ -320,7 +321,7 @@ askFor params manufacturers id round m =
                 Cmd.batch
                     [ Http.get
                         { url = round.summary
-                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era manufacturers)
+                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era manufacturers carImageUrl)
                         }
                     , Http.get
                         { url = round.laps

@@ -306,6 +306,7 @@ placeholderCar carNumber =
         , group = ""
         , team = ""
         , manufacturer = unknown
+        , imageUrl = Nothing
         }
     , startPosition = 0
     , laps = []

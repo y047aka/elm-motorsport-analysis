@@ -28,6 +28,11 @@ type alias Car =
     }
 
 
+{-| `imageUrl` is the car's photograph, filled in where the car is read as the
+`Manufacturer`'s colour and badge are: which round this is decides it, and the
+table saying so is one application's assets rather than anything the domain
+knows.
+-}
 type alias Metadata =
     { carNumber : CarNumber
     , drivers : List Driver
@@ -35,6 +40,7 @@ type alias Metadata =
     , group : String
     , team : String
     , manufacturer : Manufacturer
+    , imageUrl : Maybe String
     }
 
 
