@@ -12,10 +12,10 @@ import Html.Events exposing (onClick)
 import List.Extra
 
 
-{-| Switches charts via tabs to fit them into a single chart's footprint. The tab
-mechanism is the same joined button group as the Event page's mode selector:
-clicking fires `onSelect` to switch `active` (the caller holds the state). Each
-content is passed as a lazy thunk so inactive charts are not rendered.
+{-| The tab mechanism is the same joined button group as the Event page's mode
+selector: clicking fires `onSelect` to switch `active` (the caller holds the
+state). Each content is passed as a lazy thunk so inactive charts are not
+rendered.
 
 The bar and the chart are drawn plain: what they sit in is the section they
 belong to, which holds the rest of what the chart is about.

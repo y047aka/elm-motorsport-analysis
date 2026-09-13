@@ -41,14 +41,9 @@ view { startPosition, behind, carImageUrl } item =
 
 
 {-| The car itself, side on, in the width the name and the drivers leave beside
-them -- the panel is wide enough that a line of text does not fill it, and a row
-of its own for the photograph gave it more of the panel's height than the whole
-of the lap times below it.
-
-Seasons before the photographs were collected have none, and so does a car the
-season's table does not list; the column then collapses and the row reads as it
-did before.
-
+them: the panel is wide enough that a line of text does not fill it, where a row
+of the photograph's own took more of the panel's height than the lap times below
+it.
 -}
 portrait : Maybe String -> CarAt -> Html msg
 portrait carImageUrl item =

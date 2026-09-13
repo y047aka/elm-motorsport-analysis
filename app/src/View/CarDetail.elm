@@ -5,9 +5,8 @@ module View.CarDetail exposing (elementId, view)
 It wraps `Widget.CarDetail` and is always rendered; only its contents are built
 from the car it is given, so it stays live-updating as the field moves.
 
-The season is where the car's photograph comes from -- the image tables are
-per-season -- and it is a `Maybe` because the page is drawn from the moment the
-URL resolves, which is before the round it names has been read.
+`season` is what the car's photograph is looked up by, and a `Maybe` for the
+same reason the car is: the page is drawn from the moment the URL resolves.
 
 @docs elementId, view
 

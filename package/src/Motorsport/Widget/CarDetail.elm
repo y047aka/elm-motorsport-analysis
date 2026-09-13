@@ -307,8 +307,7 @@ startPositionOf cars focused =
 
 
 {-| The car's laps as the race holds them, which is the same list from one frame
-to the next -- unlike the history, which is cut at the clock and built afresh
-every frame.
+to the next -- unlike the history, which is built afresh at every clock.
 -}
 lapsOf : List Car -> CarAt -> List Lap
 lapsOf cars focused =

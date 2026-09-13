@@ -91,9 +91,8 @@ miniStrip cell values =
         ]
 
 
-{-| The columns a strip is laid out in, which anything drawn under one has to be
-laid out in too: a name for a sector is under the stretch of track it names only
-while the two are in the same grid.
+{-| The columns a strip is laid out in, which anything drawn over or under one
+has to be laid out in too.
 -}
 sectorColumns : String
 sectorColumns =

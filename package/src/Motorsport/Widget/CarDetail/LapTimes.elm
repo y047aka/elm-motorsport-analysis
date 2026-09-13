@@ -29,9 +29,8 @@ import Motorsport.Widget.SegmentStrip as SegmentStrip
 
 {-| `laps` is the car's whole race, as the race holds it rather than cut at the
 clock: what the sectors of the lap in progress are measured against, and -- once
-the reader asks for them -- the rows under everything else. The cut is made here
-at the lap the car has reached, so that the list handed down is the one that
-never moves and the rows below can be left alone between laps.
+the reader asks for them -- the rows under everything else. Both readings cut it
+at the lap the car has reached themselves.
 -}
 view :
     { bestTimes : BestTimes.Snapshot
@@ -62,12 +61,9 @@ view config laps item =
         ]
 
 
-{-| Every lap the car has turned, under the three the section leads with.
-
-Kept behind a disclosure rather than beside the charts: the charts are the car
-against the cars it is racing, and a list of its own laps is not that -- it is
-the rest of this section, at the grain the section is about.
-
+{-| Every lap the car has turned, under the three the section leads with, and
+behind a disclosure: four hundred rows are the end of the section rather than
+the middle of it.
 -}
 history : { a | historyOpen : Bool, onToggleHistory : msg } -> List Lap -> Int -> Html msg
 history { historyOpen, onToggleHistory } laps lapsCompleted =
@@ -261,10 +257,6 @@ lapBlock { label, lapNumber, time, segments } =
 in it was -- which is what there is to say about a sector while the lap it
 belongs to is still being driven. What it took is on the strip below it, and the
 lap beside it is where the times are read.
-
-Which sector it is is said once under the strip rather than on each of the three
-cells, which is where the stretch of track it stands for is drawn.
-
 -}
 deltaCell : Maybe Duration -> Maybe RatedTime -> Html msg
 deltaCell best rated =

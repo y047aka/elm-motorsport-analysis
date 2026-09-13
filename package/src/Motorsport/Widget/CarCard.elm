@@ -52,15 +52,10 @@ view carImageUrl lapHistory allCars item =
         ]
 
 
-{-| The car itself, side on, across the card but held to a row the height of the
-sector times under it. Left to the width it arrives at, it stood as tall as
-those times and both charts together, which is more of a card than the one thing
-on it that does not change; and set beside the heading instead, it took the room
-the team's name needs -- these cards are narrow, and most names were cut.
-
-A car the season has no photograph of leaves the row out rather than holding its
-height empty.
-
+{-| The car itself, side on, across the card at the height of the sector times
+under it. These cards are 260px, so it cannot go beside the heading without
+cutting the team's name, and at the width it arrives at it stands as tall as
+those times and both charts together.
 -}
 portrait : Maybe String -> CarAt -> Html msg
 portrait carImageUrl item =
