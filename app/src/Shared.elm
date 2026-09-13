@@ -1,7 +1,7 @@
 module Shared exposing
     ( Model, Race, RoundId, Catalogue(..), Problem(..)
     , init, update, subscriptions
-    , race, roundId, isPlaying, problem
+    , race, roundId, isPlaying, problem, carImageUrl
     )
 
 {-| Application-wide state, preserved from the elm-pages version. The data is
@@ -9,12 +9,13 @@ loaded at runtime via `Http`, so no `BackendTask` is involved.
 
 @docs Model, Race, RoundId, Catalogue, Problem
 @docs init, update, subscriptions
-@docs race, roundId, isPlaying, problem
+@docs race, roundId, isPlaying, problem, carImageUrl
 
 -}
 
 import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar exposing (Calendar)
+import Data.Wec.CarImage as CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Dict
@@ -42,6 +43,7 @@ so a half-loaded one cannot be read as a loaded one.
 type alias Model =
     { calendar : Catalogue
     , manufacturers : Maybe Manufacturers
+    , carImages : CarImages
     , round : Round
     }
 
@@ -131,13 +133,13 @@ type alias Race =
     }
 
 
-{-| The calendar and the manufacturer table are asked for here rather than by
-the pages that read them: they are the same files whichever route the app opened
-on, and a round reached by its URL still needs both.
+{-| The calendar, the manufacturer table and the car images are asked for here
+rather than by the pages that read them: they are the same files whichever route
+the app opened on, and a round reached by its URL still draws on all three.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
-    ( { calendar = Arriving, manufacturers = Nothing, round = NoRound }
+    ( { calendar = Arriving, manufacturers = Nothing, carImages = CarImage.none, round = NoRound }
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
@@ -147,6 +149,10 @@ init _ =
             , Http.get
                 { url = "/static/manufacturers.json"
                 , expect = Http.expectJson ManufacturersLoaded Manufacturer.decoder
+                }
+            , Http.get
+                { url = "/static/car-images.json"
+                , expect = Http.expectJson CarImagesLoaded CarImage.decoder
                 }
             ]
     )
@@ -196,6 +202,15 @@ race model =
             Nothing
 
 
+{-| Where a car's photograph is, for the round being shown.
+-}
+carImageUrl : Model -> String -> Maybe String
+carImageUrl model carNumber =
+    roundId model
+        |> Maybe.andThen
+            (\id -> CarImage.url model.carImages { season = id.season, carNumber = carNumber })
+
+
 {-| Whether playback is running, which is the whole of what deciding about
 animation frames takes. Asked here so that page does not reach through a race to
 its clock for one constructor.
@@ -232,6 +247,12 @@ update msg m =
             -- back: a table that names no one leaves the cars their numbers.
             resumeWaitingRound
                 { m | manufacturers = Just (Result.withDefault Dict.empty result) }
+
+        CarImagesLoaded result ->
+            -- No round waits on this one, unlike the table above: the
+            -- photographs are read where a car is drawn rather than folded into
+            -- the race, so a late table costs them a frame and nothing else.
+            ( { m | carImages = Result.withDefault CarImage.none result }, Effect.none )
 
         FetchJson_Wec params ->
             resumeWaitingRound { m | round = Waiting params }

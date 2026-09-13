@@ -8,7 +8,6 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
-import Data.Series as Series
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
@@ -165,7 +164,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just race ->
-                    trackerView (Shared.roundId shared |> Maybe.map .season)
+                    trackerView (Shared.carImageUrl shared)
                         race.track
                         race.timeline
                         race.snapshot
@@ -210,8 +209,8 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-trackerView : Maybe Int -> TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
-trackerView season track timeline snapshot replay m =
+trackerView : (String -> Maybe String) -> TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
+trackerView carImageUrl track timeline snapshot replay m =
     let
         focused =
             focusedCar snapshot m
@@ -244,7 +243,7 @@ trackerView season track timeline snapshot replay m =
                                 , onSelectChart = SelectDetailChart
                                 , lapHistoryOpen = m.lapHistoryOpen
                                 , onToggleLapHistory = ToggleLapHistory
-                                , season = season
+                                , carImageUrl = carImageUrl
                                 }
                                 replay.race.cars
                                 snapshot
@@ -285,7 +284,7 @@ trackerView season track timeline snapshot replay m =
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
             ]
-        , standingsPanel season m.standingsTab m snapshot
+        , standingsPanel carImageUrl m.standingsTab m snapshot
         , standingsPopover
         ]
 
@@ -304,8 +303,8 @@ focusedCar snapshot m =
             Snapshot.leader snapshot
 
 
-standingsPanel : Maybe Int -> StandingsTab -> Model -> Snapshot -> Html Msg
-standingsPanel season tab m snapshot =
+standingsPanel : (String -> Maybe String) -> StandingsTab -> Model -> Snapshot -> Html Msg
+standingsPanel carImageUrl tab m snapshot =
     let
         body =
             case tab of
@@ -313,7 +312,7 @@ standingsPanel season tab m snapshot =
                     Leaderboard.view leaderboardConfig m.leaderboardState snapshot
 
                 CardsTab ->
-                    CarCardList.view { carImageUrl = carImageUrl season } snapshot
+                    CarCardList.view { carImageUrl = carImageUrl } snapshot
     in
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
@@ -341,15 +340,6 @@ standingsTabs current =
             ]
         }
         []
-
-
-{-| Where a car's photograph is, for the season the round belongs to. Seasons
-the images were never collected for, and the moment before the round has been
-read at all, answer the same way: no picture.
--}
-carImageUrl : Maybe Int -> String -> Maybe String
-carImageUrl season carNumber =
-    season |> Maybe.andThen (\s -> Series.carImageUrl_Wec s carNumber)
 
 
 {-| The most recent timeline events that have occurred, newest first: when each

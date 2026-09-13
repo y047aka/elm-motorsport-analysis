@@ -144,9 +144,6 @@ and a round it does not list cannot be opened. That one URL is the whole of
 what the app knows about where its data comes from: the calendar names each
 round's summary and laps, and nothing else does.
 
-`Data/Series.elm` is the remains of the compile-time calendar it replaced: car
-images, which nothing imports yet.
-
 `Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json` the same way,
 also once, and a round waits on it as it waits on the calendar. That file is
 written by hand and no compiler reads it, so a mistake in it shows as cars drawn
@@ -155,6 +152,13 @@ unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
 takes a colour from its number. What the feed spells is
 `SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
 them the file has no row for is one query rather than a reading of the cars.
+
+`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, written by hand as
+the manufacturer table is, which names each season's photographs and the
+directory under `static/images/wec` they sit in. Nothing waits on it, and a
+season holds one image per car — which a livery carried for a single round has
+no room in, so 2025's car 7 is shown in the one it ran at Le Mans and nowhere
+else.
 
 ### The shadcn components
 
