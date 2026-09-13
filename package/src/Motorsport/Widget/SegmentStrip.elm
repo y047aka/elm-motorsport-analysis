@@ -119,7 +119,7 @@ overSectors { cells, strip } =
     rows
         [ div [ class sectorColumns ] (Sector.values cells)
         , strip
-        , div [ class sectorColumns ] (List.map (axisLabel "") Sector.all)
+        , div [ class sectorColumns ] (List.map axisLabel Sector.all)
         ]
 
 
@@ -132,7 +132,7 @@ overMiniSectors { cells, strip } =
     rows
         [ spanning (\_ cell -> cell) cells
         , strip
-        , spanning (\sector _ -> axisLabel "" sector) cells
+        , spanning (\sector _ -> axisLabel sector) cells
         ]
 
 
@@ -154,9 +154,9 @@ rows =
     div [ class "grid gap-y-0.5" ]
 
 
-axisLabel : String -> Sector -> Html msg
-axisLabel span sector =
-    div [ class (span ++ " text-[9px] text-center text-muted-foreground leading-none") ]
+axisLabel : Sector -> Html msg
+axisLabel sector =
+    div [ class "text-[9px] text-center text-muted-foreground leading-none" ]
         [ text (Sector.toString sector) ]
 
 
