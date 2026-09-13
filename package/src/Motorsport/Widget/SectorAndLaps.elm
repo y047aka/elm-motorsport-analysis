@@ -1,7 +1,7 @@
 module Motorsport.Widget.SectorAndLaps exposing (view)
 
 {-| Per-car "sector progress pie + Current lap + Last lap" row,
-shared by SelectedCarsStrip and Compare.
+shared by SelectedCarsStrip and the car detail panel.
 
 @docs view
 
@@ -63,7 +63,7 @@ currentLapTimeCell item =
         , style "color" (performanceColor item.currentLap.performance)
         ]
         [ text
-            (if Status.hasRetired item.status then
+            (if Status.hasStopped item.status then
                 "-"
 
              else

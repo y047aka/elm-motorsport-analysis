@@ -8,6 +8,7 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
+import Data.Series as Series
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
@@ -24,11 +25,11 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Widget.CarCardList as CarCardList
+import Motorsport.Widget.CarDetail as CarDetailWidget
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
-import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import Route
 import Shared
 import Shared.Msg
@@ -36,6 +37,7 @@ import Task
 import Time
 import UI.Notice as Notice
 import UI.Shadcn.Card as Card
+import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
 import View.CarDetail as CarDetail
 import View.PlaybackControls as PlaybackControls
@@ -47,10 +49,11 @@ import View.PlaybackControls as PlaybackControls
 
 type alias Model =
     { mode : Mode
+    , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , stripOffset : Int
     , detailCarNumber : Maybe String
-    , detailChart : CompareWidget.Chart
+    , detailChart : CarDetailWidget.Chart
+    , lapHistoryOpen : Bool
     }
 
 
@@ -59,13 +62,19 @@ type Mode
     | Tracker
 
 
+type StandingsTab
+    = LeaderboardTab
+    | CardsTab
+
+
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { mode = Default
+      , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , stripOffset = 0
       , detailCarNumber = Nothing
-      , detailChart = CompareWidget.GapChart
+      , detailChart = CarDetailWidget.GapChart
+      , lapHistoryOpen = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -79,11 +88,12 @@ type Msg
     = StartRace
     | PauseRace
     | ModeChange Mode
+    | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | StripScrollTo Int
-    | ToggleDetailCar String
-    | SelectDetailChart CompareWidget.Chart
+    | SelectDetailCar String
+    | SelectDetailChart CarDetailWidget.Chart
+    | ToggleLapHistory
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -98,6 +108,9 @@ update msg m =
         ModeChange mode ->
             ( { m | mode = mode }, Effect.none )
 
+        StandingsTabChange tab ->
+            ( { m | standingsTab = tab }, Effect.none )
+
         ReplayMsg replayMsg ->
             ( m, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
 
@@ -106,22 +119,14 @@ update msg m =
             , Effect.none
             )
 
-        StripScrollTo offset ->
-            ( { m | stripOffset = max 0 offset }, Effect.none )
-
-        ToggleDetailCar carNumber ->
-            let
-                next =
-                    if m.detailCarNumber == Just carNumber then
-                        Nothing
-
-                    else
-                        Just carNumber
-            in
-            ( { m | detailCarNumber = next }, Effect.none )
+        SelectDetailCar carNumber ->
+            ( { m | detailCarNumber = Just carNumber }, Effect.none )
 
         SelectDetailChart chart ->
             ( { m | detailChart = chart }, Effect.none )
+
+        ToggleLapHistory ->
+            ( { m | lapHistoryOpen = not m.lapHistoryOpen }, Effect.none )
 
 
 
@@ -160,7 +165,12 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just race ->
-                    trackerView race.track race.timeline race.snapshot race.replay m
+                    trackerView (Shared.roundId shared |> Maybe.map .season)
+                        race.track
+                        race.timeline
+                        race.snapshot
+                        race.replay
+                        m
             ]
         ]
     }
@@ -200,9 +210,12 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
-trackerView track timeline snapshot replay m =
+trackerView : Maybe Int -> TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
+trackerView season track timeline snapshot replay m =
     let
+        focused =
+            focusedCar snapshot m
+
         layout =
             case m.mode of
                 Tracker ->
@@ -228,11 +241,14 @@ trackerView track timeline snapshot replay m =
                         [ Card.content []
                             [ CarDetail.view
                                 { activeChart = m.detailChart
-                                , onToggleCar = ToggleDetailCar
                                 , onSelectChart = SelectDetailChart
+                                , lapHistoryOpen = m.lapHistoryOpen
+                                , onToggleLapHistory = ToggleLapHistory
+                                , season = season
                                 }
+                                replay.race.cars
                                 snapshot
-                                m.detailCarNumber
+                                focused
                             ]
                         ]
                     ]
@@ -243,10 +259,15 @@ trackerView track timeline snapshot replay m =
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
         [ div
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
+            [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
             [ div
-                [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden" ]
-                [ LiveStandingsWidget.view snapshot ]
+                [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
+                [ LiveStandingsWidget.view
+                    { onSelect = SelectDetailCar
+                    , selected = Maybe.map (.metadata >> .carNumber) focused
+                    }
+                    snapshot
+                ]
             , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
             , div
                 -- The cell is the only box in the chain whose height is settled,
@@ -263,22 +284,72 @@ trackerView track timeline snapshot replay m =
                     ]
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
-            , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
-                [ SelectedCarsStrip.view
-                    { offset = m.stripOffset
-                    , onScrollTo = StripScrollTo
-                    }
-                    snapshot
-                ]
             ]
-        , div [ Attributes.class "shrink-0 grid" ]
-            [ Card.card []
-                [ Card.content []
-                    [ Leaderboard.view leaderboardConfig m.leaderboardState snapshot ]
-                ]
-            ]
+        , standingsPanel season m.standingsTab m snapshot
         , standingsPopover
         ]
+
+
+{-| The car the middle of the page is given over to: the one the reader picked,
+and until they pick one -- or when the one they picked is not in the field -- the
+car at the front of the race.
+-}
+focusedCar : Snapshot -> Model -> Maybe CarAt
+focusedCar snapshot m =
+    case m.detailCarNumber |> Maybe.andThen (\carNumber -> Snapshot.get carNumber snapshot) of
+        Just car ->
+            Just car
+
+        Nothing ->
+            Snapshot.leader snapshot
+
+
+standingsPanel : Maybe Int -> StandingsTab -> Model -> Snapshot -> Html Msg
+standingsPanel season tab m snapshot =
+    let
+        body =
+            case tab of
+                LeaderboardTab ->
+                    Leaderboard.view leaderboardConfig m.leaderboardState snapshot
+
+                CardsTab ->
+                    CarCardList.view { carImageUrl = carImageUrl season } snapshot
+    in
+    div [ Attributes.class "shrink-0 grid" ]
+        [ Card.card []
+            [ Card.header []
+                [ Card.action [] [ standingsTabs tab ] ]
+            , Card.content [] [ body ]
+            ]
+        ]
+
+
+standingsTabs : StandingsTab -> Html Msg
+standingsTabs current =
+    let
+        tabItem label tab =
+            { label = label
+            , active = current == tab
+            , disabled = False
+            , onSelect = StandingsTabChange tab
+            }
+    in
+    ToggleGroup.view
+        { items =
+            [ tabItem "Table" LeaderboardTab
+            , tabItem "Cards" CardsTab
+            ]
+        }
+        []
+
+
+{-| Where a car's photograph is, for the season the round belongs to. Seasons
+the images were never collected for, and the moment before the round has been
+read at all, answer the same way: no picture.
+-}
+carImageUrl : Maybe Int -> String -> Maybe String
+carImageUrl season carNumber =
+    season |> Maybe.andThen (\s -> Series.carImageUrl_Wec s carNumber)
 
 
 {-| The most recent timeline events that have occurred, newest first: when each

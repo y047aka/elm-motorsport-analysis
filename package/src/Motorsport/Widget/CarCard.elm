@@ -7,8 +7,8 @@ driving it, and how it is running.
 
 -}
 
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (attribute, class)
+import Html exposing (Html, div, img, text)
+import Html.Attributes exposing (alt, attribute, class, src)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
@@ -24,9 +24,13 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 
 {-| `allCars` is the full overall standings, not just the visible window —
 the sparkline searches it for the class rivals ahead of and behind the car.
+
+`carImageUrl` answers for any car number, because the card is drawn for whatever
+the caller hands it; only the app knows where the season's photographs are.
+
 -}
-view : LapHistory -> List CarAt -> CarAt -> Html msg
-view lapHistory allCars item =
+view : (String -> Maybe String) -> LapHistory -> List CarAt -> CarAt -> Html msg
+view carImageUrl lapHistory allCars item =
     div
         [ class "grid gap-y-1" ]
         [ div
@@ -38,6 +42,7 @@ view lapHistory allCars item =
             [ div
                 [ class "grid gap-y-2 p-3" ]
                 [ cardHeader item
+                , portrait (carImageUrl item.metadata.carNumber) item
                 , summaryStats item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item
@@ -45,6 +50,26 @@ view lapHistory allCars item =
                 ]
             ]
         ]
+
+
+{-| The car itself, side on, across the card at the height of the sector times
+under it. These cards are 260px, so it cannot go beside the heading without
+cutting the team's name, and at the width it arrives at it stands as tall as
+those times and both charts together.
+-}
+portrait : Maybe String -> CarAt -> Html msg
+portrait carImageUrl item =
+    case carImageUrl of
+        Just url ->
+            img
+                [ src url
+                , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
+                , class "w-full h-10 object-contain"
+                ]
+                []
+
+        Nothing ->
+            text ""
 
 
 {-| The car's own laps, on a scale of their own: the cards beside it are the

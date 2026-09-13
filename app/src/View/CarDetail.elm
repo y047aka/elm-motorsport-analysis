@@ -2,82 +2,58 @@ module View.CarDetail exposing (elementId, view)
 
 {-| Per-car detail, drawn in place on the event page.
 
-It wraps `Compare.viewComparison` and is always rendered; only its contents are
-built from the selected car and its in-class rivals ahead of and behind it, so
-it stays live-updating as the field moves.
+It wraps `Widget.CarDetail` and is always rendered; only its contents are built
+from the car it is given, so it stays live-updating as the field moves.
+
+`season` is what the car's photograph is looked up by, and a `Maybe` for the
+same reason the car is: the page is drawn from the moment the URL resolves.
 
 @docs elementId, view
 
 -}
 
+import Data.Series as Series
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes
-import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
-import Motorsport.Widget.Compare as CompareWidget
-import Motorsport.Widget.Compare.CarSelector as CarSelector
-import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
+import Motorsport.Race.Car exposing (Car)
+import Motorsport.Race.Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Widget.CarDetail as CarDetailWidget
 
 
 view :
-    { activeChart : CompareWidget.Chart
-    , onToggleCar : String -> msg
-    , onSelectChart : CompareWidget.Chart -> msg
+    { activeChart : CarDetailWidget.Chart
+    , onSelectChart : CarDetailWidget.Chart -> msg
+    , lapHistoryOpen : Bool
+    , onToggleLapHistory : msg
+    , season : Maybe Int
     }
+    -> List Car
     -> Snapshot
-    -> Maybe String
+    -> Maybe CarAt
     -> Html msg
-view config snapshot detailCarNumber =
+view config cars snapshot focusedCar =
     div [ Attributes.id elementId ]
-        [ case detailCarNumber of
+        [ case focusedCar of
             Nothing ->
-                div [ Attributes.class "grid gap-y-3" ]
-                    (div
-                        [ Attributes.class "text-sm opacity-70" ]
-                        [ text "No cars selected. Pick a car to compare." ]
-                        :: (Snapshot.toClassList snapshot
-                                |> List.map
-                                    (\( class_, _ ) ->
-                                        div [ Attributes.class "flex items-start gap-x-3" ]
-                                            [ CarSelector.classBadge class_
-                                            , CarSelector.carSelector config.onToggleCar snapshot class_ Nothing
-                                            ]
-                                    )
-                           )
-                    )
+                -- Only before a car of the field has turned a lap, which is not
+                -- a moment the page is read at.
+                text ""
 
-            Just selected ->
-                CompareWidget.viewComparison
-                    { onToggleCar = config.onToggleCar
-                    , activeChart = config.activeChart
+            Just focused ->
+                CarDetailWidget.view
+                    { activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
-                    , focused = selected
+                    , lapHistoryOpen = config.lapHistoryOpen
+                    , onToggleLapHistory = config.onToggleLapHistory
+                    , carImageUrl =
+                        config.season
+                            |> Maybe.andThen
+                                (\season -> Series.carImageUrl_Wec season focused.metadata.carNumber)
                     }
+                    cars
                     snapshot
-                    (comparisonNumbers snapshot selected)
+                    focused
         ]
-
-
-{-| The cars the comparison is drawn for: the selected one and its in-class
-rivals ahead of and behind it, so the set follows the field as positions
-change. At a class edge only the available rival is kept.
-
-Same extraction as the strip's rival sparkline; only the nearest on each side
-is shown there too.
-
--}
-comparisonNumbers : Snapshot -> String -> List String
-comparisonNumbers snapshot selected =
-    case Snapshot.get selected snapshot of
-        Nothing ->
-            []
-
-        Just focused ->
-            let
-                neighbors =
-                    RivalGapSparkline.findNeighbors (Snapshot.toList snapshot) focused
-            in
-            [ List.head neighbors.ahead, Just focused, List.head neighbors.behind ]
-                |> List.filterMap (Maybe.map (.metadata >> .carNumber))
 
 
 {-| The element the detail is drawn in, which the visual tests locate it by.
