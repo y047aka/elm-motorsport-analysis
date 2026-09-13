@@ -73,7 +73,12 @@
         "4": "2025-lm-4-porsche-963-droite_6847e4.png",
         "5": "2_66467b.png",
         "6": "2_e70d15.png",
-        "7": "2025-lm-7-toyota-gr010-droite_47e4ea.png",
+        "7": {
+          "default": "2_7967b9.png",
+          "rounds": {
+            "le_mans_24h": "2025-lm-7-toyota-gr010-droite_47e4ea.png"
+          }
+        },
         "007": "2_9d9bab.png",
         "8": "2_9f9d8f.png",
         "9": "2025-lm-9-oreca-07-droite_847e5d.png",

@@ -208,7 +208,10 @@ carImageUrl : Model -> String -> Maybe String
 carImageUrl model carNumber =
     roundId model
         |> Maybe.andThen
-            (\id -> CarImage.url model.carImages { season = id.season, carNumber = carNumber })
+            (\id ->
+                CarImage.url model.carImages
+                    { season = id.season, round = id.id, carNumber = carNumber }
+            )
 
 
 {-| Whether playback is running, which is the whole of what deciding about

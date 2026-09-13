@@ -155,10 +155,10 @@ them the file has no row for is one query rather than a reading of the cars.
 
 `Data/Wec/CarImage.elm` decodes `/static/car-images.json`, written by hand as
 the manufacturer table is, which names each season's photographs and the
-directory under `static/images/wec` they sit in. Nothing waits on it, and a
-season holds one image per car — which a livery carried for a single round has
-no room in, so 2025's car 7 is shown in the one it ran at Le Mans and nowhere
-else.
+directory under `static/images/wec` they sit in. Nothing waits on it. A car is
+one file name, or the file its rounds use by default beside the rounds
+photographed separately — which is a livery carried for a single round, and the
+reason the round is looked up beside the season.
 
 ### The shadcn components
 

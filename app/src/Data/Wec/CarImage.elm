@@ -1,15 +1,13 @@
 module Data.Wec.CarImage exposing (CarImages, none, decoder, url)
 
-{-| Where a car's photograph is, season by season.
+{-| Where a car's photograph is, season by season and round by round.
 
 The table is `/static/car-images.json`, which is written by hand and which no
 compiler reads, so a mistake in it shows as a car drawn without a photograph
 rather than as a build that fails.
 
-A season holds one image per car and a livery is not held that way: some are
-carried for a single round. 2025's car 7 is photographed here in the livery it
-ran at Le Mans and nowhere else, and `2_7967b9.png` -- the livery of its other
-rounds -- sits in `static/images/wec/2025` with nothing naming it.
+A car is a file name, or an object: the file its rounds use by default, and
+the rounds photographed separately from it.
 
 @docs CarImages, none, decoder, url
 
@@ -26,7 +24,16 @@ type alias CarImages =
 
 type alias Season =
     { basePath : String
-    , cars : Dict String String
+    , cars : Dict String Liveries
+    }
+
+
+{-| `rounds` is keyed as the calendar keys a round -- `le_mans_24h` -- and a key
+spelt any other way is never reached rather than refused.
+-}
+type alias Liveries =
+    { default : String
+    , rounds : Dict String String
     }
 
 
@@ -44,14 +51,35 @@ seasonDecoder : Decoder Season
 seasonDecoder =
     Decode.succeed Season
         |> required "basePath" string
-        |> required "cars" (Decode.dict string)
+        |> required "cars" (Decode.dict liveriesDecoder)
 
 
-url : CarImages -> { season : Int, carNumber : String } -> Maybe String
-url carImages { season, carNumber } =
+{-| `rounds` is `required` of the object form, so a car written as one carries
+both keys. Left optional, a misspelt `rounds` would read as a car with no
+livery of its own and the default would go on every round -- a wrong picture
+rather than a missing one.
+-}
+liveriesDecoder : Decoder Liveries
+liveriesDecoder =
+    Decode.oneOf
+        [ Decode.map (\file -> Liveries file Dict.empty) string
+        , Decode.succeed Liveries
+            |> required "default" string
+            |> required "rounds" (Decode.dict string)
+        ]
+
+
+url : CarImages -> { season : Int, round : String, carNumber : String } -> Maybe String
+url carImages { season, round, carNumber } =
+    let
+        fileFor liveries =
+            Dict.get round liveries.rounds
+                |> Maybe.withDefault liveries.default
+    in
     Dict.get (String.fromInt season) carImages
         |> Maybe.andThen
             (\seasonImages ->
                 Dict.get carNumber seasonImages.cars
-                    |> Maybe.map (\file -> seasonImages.basePath ++ "/" ++ file)
+                    |> Maybe.map
+                        (\liveries -> seasonImages.basePath ++ "/" ++ fileFor liveries)
             )
