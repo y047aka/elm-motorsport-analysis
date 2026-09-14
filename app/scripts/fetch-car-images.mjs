@@ -31,7 +31,7 @@
 //
 //     node scripts/fetch-car-images.mjs [--season 2026] [--dry-run]
 
-import { mkdir, readFile, writeFile, readdir, rm, open } from "node:fs/promises";
+import { mkdir, readFile, writeFile, readdir, rm, rename, open } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { existsSync } from "node:fs";
@@ -102,7 +102,9 @@ async function main() {
 
   const imageDir = join(appDir, "static/images/wec", String(season));
   const origins = JSON.parse(await readFile(originsPath, "utf8"));
-  const images = imageStore(imageDir, (origins[String(season)] ??= {}));
+  const images = imageStore(imageDir, (origins[String(season)] ??= {}), () =>
+    writeFile(originsPath, sorted(origins)),
+  );
   const { liveries, sameAgain } = await collect(allSeason, rounds, images);
 
   const downloaded = [];
@@ -118,7 +120,6 @@ async function main() {
     }
     downloaded.push(source);
   }
-  if (!dryRun) await writeFile(originsPath, JSON.stringify(origins, null, 2) + "\n");
 
   const table = JSON.parse(await readFile(tablePath, "utf8"));
   const entry = (table.seasons[String(season)] ??= {
@@ -174,38 +175,40 @@ function kept(source) {
  * `origins` is each original's digest, remembered because the WebP written from
  * it cannot be compared against another original. A season whose originals are
  * all remembered downloads no image at all. */
-function imageStore(dir, origins) {
+function imageStore(dir, origins, remember) {
   const bytes = new Map();
   let asked = 0;
 
-  // Anything fetched is remembered as it arrives, whether it was fetched to be
-  // compared or to be written: a file here whose digest was never taken is one
-  // a later run cannot compare without asking for it a second time.
-  const original = async (source) => {
-    if (!bytes.has(source)) {
-      const got = Buffer.from(await (await get(`${uploads}/${source}`)).arrayBuffer());
-      asked += 1;
-      bytes.set(source, got);
-      origins[source] ??= createHash("sha256").update(got).digest("hex");
-    }
-    return bytes.get(source);
-  };
-
   const onDisk = (source) => existsSync(join(dir, kept(source)));
 
-  const digest = async (source) => {
-    if (origins[source] === undefined) {
-      // The WebP here was written from this original and cannot stand in for
-      // it, and asking the site for a picture already held is the one thing
-      // this must not do. So the digest is restored rather than re-fetched.
+  // The one place an image is asked for, and so the one place that can refuse
+  // to. A picture already here is never asked for a second time: the WebP was
+  // written from the original and cannot stand in for it, so a run that has
+  // lost the digest stops and says so rather than fetching it again.
+  //
+  // What it does fetch it remembers as it arrives, and the remembering is
+  // written out there and then. A digest held only in memory is one an error,
+  // an interrupt or a `--dry-run` would drop, and dropping it costs the site
+  // the same request again.
+  const original = async (source) => {
+    if (!bytes.has(source)) {
       if (onDisk(source)) {
         throw new Error(
           `${kept(source)} is here and its original's digest is not in` +
             ` ${originsPath}. Put it back there, or take the file away.`,
         );
       }
-      await original(source);
+      const got = Buffer.from(await (await get(`${uploads}/${source}`)).arrayBuffer());
+      asked += 1;
+      bytes.set(source, got);
+      origins[source] = createHash("sha256").update(got).digest("hex");
+      await remember();
     }
+    return bytes.get(source);
+  };
+
+  const digest = async (source) => {
+    if (origins[source] === undefined) await original(source);
     return origins[source];
   };
 
@@ -218,13 +221,21 @@ function imageStore(dir, origins) {
     alike: async (a, b) => (await digest(a)) === (await digest(b)),
     // `cwebp` reads and writes files rather than pipes, so the original is put
     // beside what is written from it and taken away again.
+    //
+    // What it writes is put in place by a rename, so a run cut short leaves
+    // either the whole photograph or none of it. Half of one would read as a
+    // photograph already here, and a photograph already here is never asked
+    // for again -- the truncated file would stay, and be served.
     write: async (source) => {
       const from = join(dir, `.${source}.original`);
+      const onto = join(dir, `.${kept(source)}.part`);
       await writeFile(from, await original(source));
       try {
-        await run("cwebp", ["-quiet", ...encoding, from, "-o", join(dir, kept(source))]);
+        await run("cwebp", ["-quiet", ...encoding, from, "-o", onto]);
+        await rename(onto, join(dir, kept(source)));
       } finally {
         await rm(from, { force: true });
+        await rm(onto, { force: true });
       }
     },
   };
@@ -554,6 +565,21 @@ async function report({
 }
 
 const stillNamed = (livery) => (typeof livery === "string" ? livery : livery.default);
+
+/** The digests, by name. Written sorted rather than in the order they were
+ * taken: a digest re-taken would otherwise move to the end of its season and
+ * the diff would say a hundred lines had changed when one had. */
+function sorted(origins) {
+  const seasons = Object.fromEntries(
+    Object.keys(origins)
+      .sort()
+      .map((season) => [
+        season,
+        Object.fromEntries(Object.keys(origins[season]).sort().map((f) => [f, origins[season][f]])),
+      ]),
+  );
+  return JSON.stringify(seasons, null, 2) + "\n";
+}
 
 /** How wide a WebP is, off its header, so that what is here can be measured
  * without decoding it or asking anyone. `cwebp` writes these with an alpha

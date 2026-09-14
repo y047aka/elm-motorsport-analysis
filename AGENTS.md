@@ -203,10 +203,18 @@ downloads no image at all. **A photograph already here is never asked for
 again** — the only place an image is requested is reached from two, and both are
 behind that check, so a digest missing for a file that is here fails the run
 rather than fetching it a second time. The digests cover every original a run
-fetched and not only the ones it kept: a picture asked for to find it was the
-season's again is not written anywhere else, and dropping its digest is what
-makes the next run ask for it a second time. A run says how many images it
-asked the site for, which is the number to read rather than how many it kept.
+fetched and not only the ones it kept — a picture asked for to find it was the
+season's again is written nowhere else — and each is put in the file as it
+arrives rather than at the end, so an error, an interrupt or a `--dry-run`
+cannot drop what was already paid for. A run says how many images it asked the
+site for, which is the number to read rather than how many it kept.
+
+Everything else a run does is bounded by what it read: one request for the grid
+page, two more for a season that page is not showing, and one for each race the
+calendar has a round for — a race it does not is never asked about. A
+photograph is put in place by a rename, so a run cut short leaves a whole one
+or none: half of one would read as a photograph already here, and never be
+asked for again.
 
 It says two more things at the end. **The cars the table has that no source
 named** are the ones whose photographs it could not replace — a car that has
