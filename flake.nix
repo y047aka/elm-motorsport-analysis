@@ -182,6 +182,18 @@
         # relative to the cwd. Rebuilds the jar when a source is newer than the
         # marker a finished build leaves, as `mkFlixServerApp` does; cargo is
         # needed by the rust-major-audit subcommand.
+        # The fetcher encodes what it downloads, so it needs libwebp beside Node.
+        # Kept apart from `mkNodeApp` rather than added to it: every other Node
+        # command would carry the encoder for nothing.
+        carImagesApp = pkgs.writeShellApplication {
+          name = "car-images";
+          runtimeInputs = [ pkgs.nodejs_26 pkgs.libwebp ];
+          text = ''
+            cd app
+            node scripts/fetch-car-images.mjs "$@"
+          '';
+        };
+
         depsAuditApp = pkgs.writeShellApplication {
           name = "deps-audit";
           runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
@@ -221,6 +233,7 @@
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
+          car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };

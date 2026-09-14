@@ -32,6 +32,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
+| `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -153,9 +154,53 @@ takes a colour from its number. What the feed spells is
 `SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
 them the file has no row for is one query rather than a reading of the cars.
 
-`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, written by hand as
-the manufacturer table is and waited on the same way, which names each season's
-photographs and the directory under `static/images/wec` they sit in. A car is
+`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the
+manufacturer table is, which names each season's photographs and the directory
+under `static/images/wec` they sit in. `.#car-images --season <year>` writes
+one season of it, out of two sources of the one publisher.
+
+A round's entry list comes from `api-he.lemans.org`, which states a car's
+number and where its photograph is rather than leaving either to be read out of
+a page. It is the only one of the two with Le Mans's LMP2 field: that class is
+the organiser's and not the championship's, so fiawec.com, whose categories are
+Hypercar and LMGT3, does not carry it. What the API has no list of is which
+races a season ran, so the grid page at fiawec.com is what says that — its race
+filter is a Symfony live component, and its season filter is how a season other
+than the one it opens on is reached. That page is also the one photograph per
+car a round is compared against.
+
+Every round has an upload of its own for every car, most of them the season's
+picture again under another name, so a round is registered for the picture
+differing and not the file — they are compared by what they hold. Of 2025's, 179
+were the season's again and 134 were not: a livery gains a sponsor over a season
+and Le Mans is its own.
+
+The photographs come from the bucket both sites are served out of, at the size
+they were uploaded — 900px, where the paths the app carried until this year were
+a 300px thumbnail cache — and are kept as WebP at `-q 75 -sharp_yuv`. Measured
+against the original as the card draws it, spending bytes on resolution beats
+spending them on quality: at one file size, the full width at a low quality is
+nearer the original than a narrower picture at a high one, because the browser's
+own downscale averages the compression away and resolution thrown away before
+encoding does not come back. `-sharp_yuv` is the one flag worth its bytes —
+WebP's lossy mode is YUV 4:2:0 at every quality, and the sharper conversion
+recovers a tenth of the error for a twenty-fifth of the size. The three seasons
+come to 9MB, where the same pictures as PNG were 71MB.
+
+`app/scripts/car-image-origins.json` is each original's digest. A round is
+registered for its picture differing from the season's, and the WebP written
+from an original cannot be compared against another original, so the digests are
+remembered rather than recomputed: a season whose originals are all known
+downloads no image at all.
+
+Every request waits a second behind the one before it, and nothing is retried: a
+run is a few hundred requests against someone else's site and none of them is
+urgent.
+
+It leaves alone every season it was not asked for, every file the sources do not
+name, and every race the calendar has no round for. A car neither source lists
+keeps whatever the table already said of it — 2025's 199 is the one, and still
+the only photograph there at 300px. A car is
 one file name, or the file its rounds use by default beside the rounds
 photographed separately — which is a livery carried for a single round, and the
 reason the round is read against the table beside the season.
