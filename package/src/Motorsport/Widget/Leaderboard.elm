@@ -7,8 +7,10 @@ module Motorsport.Widget.Leaderboard exposing
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverAndTeamColumn_Wec
+    , startColumn
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
     , lastLapColumn_Wec, lastLapColumn_LeMans24h
+    , viewStartAndGained
     , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
     , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
     , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -41,9 +43,11 @@ module Motorsport.Widget.Leaderboard exposing
 @docs histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
 @docs driverAndTeamColumn_Wec
+@docs startColumn
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
 @docs lastLapColumn_Wec, lastLapColumn_LeMans24h
 
+@docs viewStartAndGained
 @docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
 @docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
 @docs viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -332,6 +336,47 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
                 )
                 metadata.drivers
         ]
+
+
+{-| Where the car started and what it has made of that since: the grid place,
+and the places gained or lost against the running order.
+
+`startPosition` is the one a `Car` holds and a `CarAt` does not — the grid is
+estimated off the opening lap once and never moves again — so the caller looks
+it up by car number rather than the column doing it.
+-}
+startColumn : { getter : data -> { startPosition : Maybe Int, position : Int } } -> Column data msg
+startColumn { getter } =
+    customColumn { label = "Start", getter = getter >> viewStartAndGained }
+
+
+{-| The start and the places gained on it, as `Header` prints them: `P4 ▲2`, a
+car that has held its place with no arrow at all, and `-` where the grid is not
+known.
+-}
+viewStartAndGained : { startPosition : Maybe Int, position : Int } -> String
+viewStartAndGained { startPosition, position } =
+    case startPosition of
+        Just start ->
+            let
+                gained =
+                    start - position
+            in
+            "P"
+                ++ String.fromInt start
+                ++ (if gained > 0 then
+                        " ▲" ++ String.fromInt gained
+
+                    else if gained < 0 then
+                        " ▼" ++ String.fromInt (abs gained)
+
+                    else
+                        ""
+                   )
+
+        Nothing ->
+            "-"
+
 
 
 currentLapColumn_Wec :

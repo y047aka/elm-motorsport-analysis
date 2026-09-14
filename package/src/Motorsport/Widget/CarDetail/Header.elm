@@ -15,6 +15,7 @@ import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
+import Motorsport.Widget.Leaderboard exposing (viewStartAndGained)
 
 
 {-| `startPosition` is where the car began, which the round's summary estimates
@@ -111,7 +112,7 @@ standing { startPosition, behind } item =
     div [ class "border border-border rounded-lg grid grid-cols-6" ]
         [ statCell "Pos" ("P" ++ String.fromInt item.standing.position)
         , statCell "Class" ("P" ++ String.fromInt item.standing.positionInClass)
-        , statCell "Start" (startAndGained startPosition item)
+        , statCell "Start" (viewStartAndGained { startPosition = startPosition, position = item.standing.position })
         , statCell "Laps" (String.fromInt item.standing.lapsCompleted)
         , statCell "Leader" (Gap.toString item.standing.gapToLeader)
         , statCell "Ahead / behind"
@@ -120,30 +121,6 @@ standing { startPosition, behind } item =
                 ++ (behind |> Maybe.map Gap.toString |> Maybe.withDefault "-")
             )
         ]
-
-
-startAndGained : Maybe Int -> CarAt -> String
-startAndGained startPosition item =
-    case startPosition of
-        Just start ->
-            let
-                gained =
-                    start - item.standing.position
-            in
-            "P"
-                ++ String.fromInt start
-                ++ (if gained > 0 then
-                        " ▲" ++ String.fromInt gained
-
-                    else if gained < 0 then
-                        " ▼" ++ String.fromInt (abs gained)
-
-                    else
-                        ""
-                   )
-
-        Nothing ->
-            "-"
 
 
 statCell : String -> String -> Html msg
