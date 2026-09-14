@@ -14,6 +14,7 @@ import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, 
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Lazy
+import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -282,7 +283,7 @@ trackerView track timeline snapshot replay m =
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
             ]
-        , standingsPanel m.standingsTab m snapshot
+        , standingsPanel m.standingsTab m replay snapshot
         , standingsPopover
         ]
 
@@ -301,13 +302,13 @@ focusedCar snapshot m =
             Snapshot.leader snapshot
 
 
-standingsPanel : StandingsTab -> Model -> Snapshot -> Html Msg
-standingsPanel tab m snapshot =
+standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg
+standingsPanel tab m replay snapshot =
     let
         body =
             case tab of
                 LeaderboardTab ->
-                    Leaderboard.view leaderboardConfig m.leaderboardState snapshot
+                    Leaderboard.view (leaderboardConfig replay.race.cars) m.leaderboardState snapshot
 
                 CardsTab ->
                     CarCardList.view snapshot
@@ -439,8 +440,14 @@ eventTypeToString eventType =
             "Checkered Flag"
 
 
-leaderboardConfig : Leaderboard.Config CarAt Msg
-leaderboardConfig =
+leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
+leaderboardConfig cars =
+    let
+        startPositionOf : CarAt -> Maybe Int
+        startPositionOf item =
+            List.Extra.find (\car -> car.metadata.carNumber == item.metadata.carNumber) cars
+                |> Maybe.map .startPosition
+    in
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -448,6 +455,8 @@ leaderboardConfig =
         , Leaderboard.carNumberColumn_Wec { getter = .metadata }
         , Leaderboard.driverAndTeamColumn_Wec
             { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
+        , Leaderboard.startColumn
+            { getter = \item -> { startPosition = startPositionOf item, position = item.standing.position } }
         , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
         , Leaderboard.customColumn
             { label = "Gap"
