@@ -25,7 +25,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
-import Motorsport.Race.Stint as Stint exposing (Pit, Stint)
+import Motorsport.Race.Stint as RaceStint exposing (Pit, Stint)
 import Motorsport.Status exposing (Status(..))
 
 
@@ -51,7 +51,7 @@ summarize : List Lap -> Summary
 summarize laps =
     let
         stints =
-            Stint.fromLaps laps
+            RaceStint.fromLaps laps
     in
     { stints = stints
     , current = List.filter (.pit >> (==) Nothing) stints |> List.head
