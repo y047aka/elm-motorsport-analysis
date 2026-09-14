@@ -3,6 +3,7 @@ module Motorsport.Lap exposing
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorTime
     , recorded
+    , isPitLap, isRacingLap
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -17,6 +18,7 @@ module Motorsport.Lap exposing
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorTime
 @docs recorded
+@docs isPitLap, isRacingLap
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -140,6 +142,32 @@ recorded time =
 
     else
         Just time
+
+
+{-| Whether the car pitted on this lap.
+
+A stop is recorded on the lap it ended on, so that lap carries the pit lane in
+its final sector.
+
+-}
+isPitLap : Lap -> Bool
+isPitLap lap =
+    lap.pitTime /= Nothing
+
+
+{-| The other side of [`isPitLap`](#isPitLap), which is what a reading of pace
+wants: a time with the pit lane in it is not a lap the car drove, and a sector
+nothing can beat is no baseline at all.
+
+It says only that the car did not stop on this lap -- not that the lap is a
+representative one. An out lap, a lap behind a safety car and a lap spent in
+traffic all pass. What to do about those is the reading's own business; the
+usual answer is an IQR fence over the times rather than a rule about laps.
+
+-}
+isRacingLap : Lap -> Bool
+isRacingLap =
+    isPitLap >> not
 
 
 type alias Clock =

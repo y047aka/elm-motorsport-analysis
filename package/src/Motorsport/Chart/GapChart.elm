@@ -22,7 +22,7 @@ import Html exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Scale
@@ -276,7 +276,7 @@ groupReferenceByLap : List CarLine -> Dict Int Instant
 groupReferenceByLap carLines =
     carLines
         |> List.concatMap .laps
-        |> List.filter (\lap -> lap.pitTime == Nothing)
+        |> List.filter Lap.isRacingLap
         |> List.foldl
             (\lap ->
                 let

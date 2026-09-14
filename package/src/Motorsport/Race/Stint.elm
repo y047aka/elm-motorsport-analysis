@@ -36,7 +36,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 
 
@@ -77,7 +77,7 @@ fromLaps : List Lap -> List Stint
 fromLaps laps =
     laps
         |> List.sortBy .lap
-        |> splitAfter (\lap -> lap.pitTime /= Nothing)
+        |> splitAfter Lap.isPitLap
         |> List.indexedMap toStint
         |> List.filterMap identity
 
@@ -89,7 +89,7 @@ toStint index laps =
             let
                 racingTimes =
                     laps
-                        |> List.filter (\lap -> lap.pitTime == Nothing)
+                        |> List.filter Lap.isRacingLap
                         |> List.filterMap .time
             in
             Just
