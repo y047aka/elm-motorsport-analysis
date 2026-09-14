@@ -96,6 +96,24 @@ tests =
                         |> Clock.getElapsed
                         |> Expect.equal (instant (1000 + 5000))
             ]
+        , describe "pause"
+            [ test "resets the speed, so resuming runs at 1× again" <|
+                \_ ->
+                    clock
+                        |> Clock.setPlaybackSpeed Clock.Speed60x
+                        |> Clock.update epoch Clock.Start
+                        |> Clock.update epoch Clock.Pause
+                        |> .playbackSpeed
+                        |> Expect.equal Clock.Speed1x
+            , test "the head is settled at the old speed before it goes" <|
+                \_ ->
+                    clock
+                        |> Clock.setPlaybackSpeed Clock.Speed60x
+                        |> Clock.update epoch Clock.Start
+                        |> Clock.update (millisToPosix 1000) Clock.Pause
+                        |> Clock.getElapsed
+                        |> Expect.equal (instant 60000)
+            ]
         , describe "the end of what there is to play"
             [ test "playback runs out there rather than past it" <|
                 \_ ->

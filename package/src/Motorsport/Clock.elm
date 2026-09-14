@@ -1,7 +1,7 @@
 module Motorsport.Clock exposing
     ( Model, State(..), PlaybackSpeed(..), init
     , Msg(..), update
-    , setElapsed, setPlaybackSpeed
+    , setElapsed, setPlaybackSpeed, faster
     , toString
     , getElapsed
     , defaultSpeed
@@ -26,6 +26,11 @@ These do not: where the head goes, and how fast it moves from there, are settled
 without reference to the wall clock.
 
 @docs setElapsed, setPlaybackSpeed
+
+
+## Stepping the speed
+
+@docs faster
 
 
 ## Reading the clock
@@ -132,7 +137,12 @@ update now msg m =
         Pause ->
             case m.state of
                 Started splitTime { startedAt } ->
-                    { m | state = Paused (calcElapsed startedAt now splitTime m.playbackSpeed) }
+                    -- The speed resets so that resuming runs at 1× again; the
+                    -- head is settled from the old speed before it goes.
+                    { m
+                        | state = Paused (calcElapsed startedAt now splitTime m.playbackSpeed)
+                        , playbackSpeed = defaultSpeed
+                    }
 
                 _ ->
                     m
@@ -192,6 +202,21 @@ setPlaybackSpeed newSpeed m =
 
             _ ->
                 { m | playbackSpeed = newSpeed }
+
+
+{-| One step up the ladder of speeds, staying at 60× once there.
+-}
+faster : PlaybackSpeed -> PlaybackSpeed
+faster speed =
+    case speed of
+        Speed1x ->
+            Speed10x
+
+        Speed10x ->
+            Speed60x
+
+        Speed60x ->
+            Speed60x
 
 
 toString : Model -> String
