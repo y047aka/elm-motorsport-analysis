@@ -202,7 +202,19 @@ remembered rather than recomputed: a season whose originals are all known
 downloads no image at all. **A photograph already here is never asked for
 again** — the only place an image is requested is reached from two, and both are
 behind that check, so a digest missing for a file that is here fails the run
-rather than fetching it a second time.
+rather than fetching it a second time. The digests cover every original a run
+fetched and not only the ones it kept: a picture asked for to find it was the
+season's again is not written anywhere else, and dropping its digest is what
+makes the next run ask for it a second time. A run says how many images it
+asked the site for, which is the number to read rather than how many it kept.
+
+It says two more things at the end. **The cars the table has that no source
+named** are the ones whose photographs it could not replace — a car that has
+left the entry lists keeps whatever the table said of it, which is right and
+would otherwise be silent. **The photographs narrower than the rest** are what
+those are usually left at, read off the WebP header rather than by asking
+anyone: 2024's 14 and 2025's 199 are on neither source and are the two still at
+300px.
 
 Every request waits a second behind the one before it, and nothing is retried: a
 run is a few hundred requests against someone else's site and none of them is

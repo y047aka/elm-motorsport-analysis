@@ -31,7 +31,7 @@
 //
 //     node scripts/fetch-car-images.mjs [--season 2026] [--dry-run]
 
-import { mkdir, readFile, writeFile, readdir, rm } from "node:fs/promises";
+import { mkdir, readFile, writeFile, readdir, rm, open } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { existsSync } from "node:fs";
@@ -129,7 +129,8 @@ async function main() {
   if (!dryRun) await writeFile(tablePath, render(table));
 
   await report({
-    season, source, liveries, downloaded, held, changed, skipped, sameAgain, imageDir, dryRun,
+    season, source, liveries, downloaded, held, changed, skipped, sameAgain, entry, images,
+    imageDir, dryRun,
   });
 }
 
@@ -175,10 +176,17 @@ function kept(source) {
  * all remembered downloads no image at all. */
 function imageStore(dir, origins) {
   const bytes = new Map();
+  let asked = 0;
 
+  // Anything fetched is remembered as it arrives, whether it was fetched to be
+  // compared or to be written: a file here whose digest was never taken is one
+  // a later run cannot compare without asking for it a second time.
   const original = async (source) => {
     if (!bytes.has(source)) {
-      bytes.set(source, Buffer.from(await (await get(`${uploads}/${source}`)).arrayBuffer()));
+      const got = Buffer.from(await (await get(`${uploads}/${source}`)).arrayBuffer());
+      asked += 1;
+      bytes.set(source, got);
+      origins[source] ??= createHash("sha256").update(got).digest("hex");
     }
     return bytes.get(source);
   };
@@ -196,13 +204,17 @@ function imageStore(dir, origins) {
             ` ${originsPath}. Put it back there, or take the file away.`,
         );
       }
-      origins[source] = createHash("sha256").update(await original(source)).digest("hex");
+      await original(source);
     }
     return origins[source];
   };
 
   return {
     onDisk,
+    // Every image this asked the site for, written or not. A picture fetched
+    // only to find it was the season's again is a request all the same, and a
+    // run that does not count it reads quieter than it was.
+    asked: () => asked,
     alike: async (a, b) => (await digest(a)) === (await digest(b)),
     // `cwebp` reads and writes files rather than pipes, so the original is put
     // beside what is written from it and taken away again.
@@ -471,17 +483,19 @@ function readArgs(argv) {
 }
 
 async function report({
-  season, source, liveries, downloaded, held, changed, skipped, sameAgain, imageDir, dryRun,
+  season, source, liveries, downloaded, held, changed, skipped, sameAgain, entry, images,
+  imageDir, dryRun,
 }) {
   const say = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const apart = [...liveries.values()].filter((livery) => livery.rounds !== undefined).length;
   console.log(
     `${dryRun ? "Would take" : "Took"} ${say(liveries.size, "car", "cars")} off ${source.path}` +
       `${apart === 0 ? "" : `, ${say(apart, "car", "cars")} photographed apart for a round`}: ` +
-      `${say(downloaded.length, "photograph", "photographs")} ${dryRun ? "to download" : "downloaded"}, ` +
+      `${say(downloaded.length, "photograph", "photographs")} ${dryRun ? "to keep" : "kept"}, ` +
       `${held.length} already here` +
       `${sameAgain === 0 ? "" : `, and ${sameAgain} of a round's that were the season's again`}.`,
   );
+  console.log(`  ${say(images.asked(), "image", "images")} asked of the site.`);
   for (const { carNumber, was, now } of changed) {
     const one = (livery) =>
       livery === undefined
@@ -495,15 +509,67 @@ async function report({
 
   for (const { name, why } of skipped) console.log(`\nNot asked for ${name}: ${why}.`);
 
+  // A car the sources have stopped naming keeps whatever the table said of it,
+  // which is right -- there is nothing better to put there -- and quiet, which
+  // is not. It is the one way a photograph goes unreplaced, so it is said.
+  const missed = Object.keys(entry.cars).filter((carNumber) => !liveries.has(carNumber));
+  if (missed.length > 0) {
+    console.log(`\n${say(missed.length, "car", "cars")} the table has that no source named:`);
+    for (const carNumber of missed) {
+      console.log(`  #${carNumber}  ${stillNamed(entry.cars[carNumber])}`);
+    }
+  }
+
+  // And what those are usually left at: a photograph from before this fetched
+  // them, which the rest have outgrown.
+  const narrow = [];
+  for (const [carNumber, livery] of Object.entries(entry.cars)) {
+    const file = stillNamed(livery);
+    const width = await widthOf(join(imageDir, file));
+    if (width !== null && width < 600) narrow.push({ carNumber, file, width });
+  }
+  if (narrow.length > 0) {
+    console.log(`\n${say(narrow.length, "photograph", "photographs")} narrower than the rest:`);
+    for (const { carNumber, file, width } of narrow) {
+      console.log(`  #${carNumber}  ${width}px  ${file}`);
+    }
+  }
+
   // A photograph the table stopped naming is left where it is: it may be one
-  // this run could not see, and throwing it away is not this to do.
-  const named = new Set([...filesIn(liveries)].map(kept));
+  // this run could not see, and throwing it away is not this to do. What the
+  // table still names is not spare whoever named it -- the car above keeps a
+  // photograph no source has, and it is the table that holds it there.
+  const named = new Set([
+    ...[...filesIn(liveries)].map(kept),
+    ...Object.values(entry.cars).flatMap((livery) =>
+      typeof livery === "string" ? [livery] : [livery.default, ...Object.values(livery.rounds)],
+    ),
+  ]);
   const onDisk = existsSync(imageDir) ? await readdir(imageDir) : [];
   const spare = onDisk.filter((file) => !named.has(file));
   if (spare.length > 0) {
     console.log(`\n${say(spare.length, "file", "files")} here that ${source.path} does not name:`);
     for (const file of spare) console.log(`  ${file}`);
   }
+}
+
+const stillNamed = (livery) => (typeof livery === "string" ? livery : livery.default);
+
+/** How wide a WebP is, off its header, so that what is here can be measured
+ * without decoding it or asking anyone. `cwebp` writes these with an alpha
+ * channel, which makes the extended form the one they take; anything else is
+ * not this script's and is not measured. */
+async function widthOf(path) {
+  if (!existsSync(path)) return null;
+  const head = Buffer.alloc(30);
+  const file = await open(path);
+  try {
+    await file.read(head, 0, 30, 0);
+  } finally {
+    await file.close();
+  }
+  const extended = head.subarray(0, 4).toString() === "RIFF" && head.subarray(12, 16).toString() === "VP8X";
+  return extended ? head.readUIntLE(24, 3) + 1 : null;
 }
 
 main().catch((error) => {
