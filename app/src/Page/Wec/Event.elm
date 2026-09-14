@@ -451,11 +451,10 @@ leaderboardConfig cars =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
-        [ Leaderboard.intColumn { label = "", getter = .standing >> .position }
-        , Leaderboard.carNumberColumn_Wec { getter = .metadata }
+        [ Leaderboard.carNumberColumn_Wec { getter = .metadata }
         , Leaderboard.driverAndTeamColumn_Wec
             { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , Leaderboard.startColumn
+        , Leaderboard.positionChangeColumn
             { getter = \item -> { startPosition = startPositionOf item, position = item.standing.position } }
         , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
         , Leaderboard.customColumn

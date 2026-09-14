@@ -15,7 +15,7 @@ import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Leaderboard exposing (viewStartAndGained)
+import Motorsport.Widget.Leaderboard exposing (viewPositionChange)
 
 
 {-| `startPosition` is where the car began, which the round's summary estimates
@@ -110,25 +110,27 @@ driverName current driver =
 standing : { startPosition : Maybe Int, behind : Maybe Gap } -> CarAt -> Html msg
 standing { startPosition, behind } item =
     div [ class "border border-border rounded-lg grid grid-cols-6" ]
-        [ statCell "Pos" ("P" ++ String.fromInt item.standing.position)
-        , statCell "Class" ("P" ++ String.fromInt item.standing.positionInClass)
-        , statCell "Start" (viewStartAndGained { startPosition = startPosition, position = item.standing.position })
-        , statCell "Laps" (String.fromInt item.standing.lapsCompleted)
-        , statCell "Leader" (Gap.toString item.standing.gapToLeader)
+        [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
+        , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
+        , statCell "Position" (viewPositionChange { startPosition = startPosition, position = item.standing.position })
+        , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
+        , statCell "Leader" (text (Gap.toString item.standing.gapToLeader))
         , statCell "Ahead / behind"
-            (Gap.toString item.standing.intervalToAhead
-                ++ " / "
-                ++ (behind |> Maybe.map Gap.toString |> Maybe.withDefault "-")
+            (text
+                (Gap.toString item.standing.intervalToAhead
+                    ++ " / "
+                    ++ (behind |> Maybe.map Gap.toString |> Maybe.withDefault "-")
+                )
             )
         ]
 
 
-statCell : String -> String -> Html msg
+statCell : String -> Html msg -> Html msg
 statCell label value =
     div
         [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
         [ div [ class "text-[8px] uppercase tracking-[0.03em] text-muted-foreground" ] [ text label ]
-        , div [ class "text-[12px] tabular-nums" ] [ text value ]
+        , div [ class "text-[12px] tabular-nums" ] [ value ]
         ]
 
 

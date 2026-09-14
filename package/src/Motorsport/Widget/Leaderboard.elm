@@ -7,10 +7,10 @@ module Motorsport.Widget.Leaderboard exposing
     , performanceColumn
     , carNumberColumn_Wec
     , driverAndTeamColumn_Wec
-    , startColumn
+    , positionChangeColumn
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
     , lastLapColumn_Wec, lastLapColumn_LeMans24h
-    , viewStartAndGained
+    , viewPositionChange
     , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
     , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
     , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -43,11 +43,11 @@ module Motorsport.Widget.Leaderboard exposing
 @docs performanceColumn
 @docs carNumberColumn_Wec
 @docs driverAndTeamColumn_Wec
-@docs startColumn
+@docs positionChangeColumn
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
 @docs lastLapColumn_Wec, lastLapColumn_LeMans24h
 
-@docs viewStartAndGained
+@docs viewPositionChange
 @docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
 @docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
 @docs viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -56,7 +56,7 @@ module Motorsport.Widget.Leaderboard exposing
 
 import DataView
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import Html exposing (Html, div, img, text)
+import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
@@ -323,45 +323,50 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
         ]
 
 
-{-| Where the car started and what it has made of that since: the grid place,
-and the places gained or lost against the running order.
+{-| How far the car has moved from where it started, and no more than that:
+the grid place itself is left to whoever prints the classification line.
 
 `startPosition` is the one a `Car` holds and a `CarAt` does not — the grid is
 estimated off the opening lap once and never moves again — so the caller looks
 it up by car number rather than the column doing it.
 
 -}
-startColumn : { getter : data -> { startPosition : Maybe Int, position : Int } } -> Column data msg
-startColumn { getter } =
-    customColumn { label = "Start", getter = getter >> viewStartAndGained }
+positionChangeColumn : { getter : data -> { startPosition : Maybe Int, position : Int } } -> Column data msg
+positionChangeColumn { getter } =
+    { name = "Pos"
+    , view = getter >> Lazy.lazy viewPositionChange
+    , sorter = noSorter
+    , filter = DataView.noFiltering
+    }
 
 
-{-| The start and the places gained on it, as `Header` prints them: `P4 ▲2`, a
-car that has held its place with no arrow at all, and `-` where the grid is not
-known.
+{-| The places gained or lost since the start: `↑2`, the arrow green for a gain
+and red for a loss and the number always grey, and a grey `-` for a car that has
+held its place or whose grid place is not known.
 -}
-viewStartAndGained : { startPosition : Maybe Int, position : Int } -> String
-viewStartAndGained { startPosition, position } =
-    case startPosition of
-        Just start ->
-            let
-                gained =
-                    start - position
-            in
-            "P"
-                ++ String.fromInt start
-                ++ (if gained > 0 then
-                        " ▲" ++ String.fromInt gained
+viewPositionChange : { startPosition : Maybe Int, position : Int } -> Html msg
+viewPositionChange { startPosition, position } =
+    case Maybe.map (\start -> start - position) startPosition of
+        Just gained ->
+            if gained > 0 then
+                arrow "text-green-500" "↑" (String.fromInt gained)
 
-                    else if gained < 0 then
-                        " ▼" ++ String.fromInt (abs gained)
+            else if gained < 0 then
+                arrow "text-red-500" "↓" (String.fromInt (abs gained))
 
-                    else
-                        ""
-                   )
+            else
+                text "-"
 
         Nothing ->
-            "-"
+            text "-"
+
+
+arrow : String -> String -> String -> Html msg
+arrow look glyph number =
+    div [ class "text-center font-bold tabular-nums" ]
+        [ span [ class look ] [ text glyph ]
+        , text number
+        ]
 
 
 currentLapColumn_Wec :
