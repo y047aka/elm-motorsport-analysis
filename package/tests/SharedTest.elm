@@ -1,7 +1,7 @@
 module SharedTest exposing (suite)
 
 {-| Drives `Shared.update` from the outside. A round's states are not exposed,
-so how far one has got is read back through `Shared.race` and `Shared.roundId`
+so how far one has got is read back through `Shared.loadedRound` and `Shared.roundId`
 -- all a page can see of it either.
 -}
 
@@ -308,7 +308,7 @@ suite =
                         |> deliverSummary spa
                         |> deliverLaps spa
                         |> deliverTimeline spa
-                        |> Shared.race
+                        |> Shared.loadedRound
                         |> Expect.notEqual Nothing
             , test "leaves a round the calendar does not list unresolved" <|
                 \_ ->
@@ -317,7 +317,7 @@ suite =
                         |> step (CarImagesLoaded (Ok carImages))
                         |> step (CalendarLoaded (Ok calendar))
                         |> step (FetchJson_Wec { season = "2025", event = "monza_6h" })
-                        |> (\m -> ( Shared.roundId m, Shared.race m ))
+                        |> (\m -> ( Shared.roundId m, Shared.loadedRound m ))
                         |> Expect.equal ( Nothing, Nothing )
             , test "shows no race until every one of the round's files is in" <|
                 \_ ->
@@ -326,7 +326,7 @@ suite =
                     , loadingSpa |> deliverSummary spa |> deliverTimeline spa
                     , loadingSpa |> deliverLaps spa |> deliverTimeline spa
                     ]
-                        |> List.map (Shared.race >> (/=) Nothing)
+                        |> List.map (Shared.loadedRound >> (/=) Nothing)
                         |> Expect.equalLists [ False, False, False, False ]
             , test "builds the race once all three are in, whichever order they arrive" <|
                 \_ ->
@@ -334,7 +334,7 @@ suite =
                     , loadingSpa |> deliverTimeline spa |> deliverLaps spa |> deliverSummary spa
                     , loadingSpa |> deliverLaps spa |> deliverTimeline spa |> deliverSummary spa
                     ]
-                        |> List.map (Shared.race >> (/=) Nothing)
+                        |> List.map (Shared.loadedRound >> (/=) Nothing)
                         |> Expect.equalLists [ True, True, True ]
             , test "drops a file left over from a round already navigated away from" <|
                 \_ ->
@@ -344,7 +344,7 @@ suite =
                         |> deliverSummary spa
                         |> deliverTimeline spa
                         |> deliverLaps fuji
-                        |> Shared.race
+                        |> Shared.loadedRound
                         |> Expect.equal Nothing
             , test "reports playback running only once a race is loaded and started" <|
                 \_ ->
@@ -364,7 +364,7 @@ suite =
                         |> deliverLaps fuji
                         |> deliverSummary fuji
                         |> deliverTimeline fuji
-                        |> (\m -> ( Shared.roundId m |> Maybe.map .id, Shared.race m /= Nothing ))
+                        |> (\m -> ( Shared.roundId m |> Maybe.map .id, Shared.loadedRound m /= Nothing ))
                         |> Expect.equal ( Just "spa_6h", False )
             ]
         ]

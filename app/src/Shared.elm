@@ -1,15 +1,15 @@
 module Shared exposing
-    ( Model, Race, RoundId, Catalogue(..), Problem(..)
+    ( Model, LoadedRound, RoundId, Catalogue(..), Problem(..)
     , init, update, subscriptions
-    , race, roundId, isPlaying, problem
+    , loadedRound, roundId, isPlaying, problem
     )
 
 {-| Application-wide state, preserved from the elm-pages version. The data is
 loaded at runtime via `Http`, so no `BackendTask` is involved.
 
-@docs Model, Race, RoundId, Catalogue, Problem
+@docs Model, LoadedRound, RoundId, Catalogue, Problem
 @docs init, update, subscriptions
-@docs race, roundId, isPlaying, problem
+@docs loadedRound, roundId, isPlaying, problem
 
 -}
 
@@ -72,15 +72,15 @@ did. The calendar says where a round's files are, and the tables what colours
 its cars and which photograph each carries, so the request waits rather than
 being guessed at.
 
-`Loading` carries no `Race`, which is what stops the previous round's cars being
-shown under this one's name.
+`Loading` carries no `LoadedRound`, which is what stops the previous round's
+cars being shown under this one's name.
 
 -}
 type Round
     = NoRound
     | Waiting { season : String, event : String }
     | Loading RoundId Partial
-    | Loaded RoundId Race
+    | Loaded RoundId LoadedRound
     | Unavailable { season : String, event : String } Problem
 
 
@@ -114,19 +114,25 @@ nothingYet =
     { summary = Nothing, laps = Nothing, timeline = Nothing }
 
 
-{-| A loaded round, as the pages read it.
+{-| A loaded round, as the pages read it: the race, the playback head over it,
+and the derived values worth keeping rather than working out where they are
+used.
 
-`track` is the one derived value kept rather than worked out where it is used:
-everything else about a frame follows from `replay` and the clock, where the
-track never moves once the data has loaded. `snapshot` is `replay` read at the
-clock, cached because every view of a frame shares it.
+The race itself is `replay.race`, a [`Motorsport.Race`](Motorsport-Race). This
+is the round around it -- what the app holds in order to draw one -- which is
+why it is not called a race. A `Race` answers what is true at a moment of it,
+and none of the four fields here does.
+
+`track` never moves once the data has loaded. `snapshot` is `replay` read at the
+clock, cached because every view of a frame shares it, and the one of the four
+that is rebuilt as playback runs.
 
 `timeline` is the events themselves, kept for the events table to read the
 clock against; what playback reads is only the status index counted off them,
 inside `replay.race`.
 
 -}
-type alias Race =
+type alias LoadedRound =
     { replay : Replay.Model
     , snapshot : Snapshot
     , track : Tracker.Track
@@ -193,8 +199,8 @@ problem model =
 
 {-| The round's data, once all of it has arrived.
 -}
-race : Model -> Maybe Race
-race model =
+loadedRound : Model -> Maybe LoadedRound
+loadedRound model =
     case model.round of
         Loaded _ loaded ->
             Just loaded
@@ -213,7 +219,7 @@ nothing here has to know how long the race was.
 -}
 isPlaying : Model -> Bool
 isPlaying model =
-    case race model |> Maybe.map (.replay >> .playback >> .state) of
+    case loadedRound model |> Maybe.map (.replay >> .playback >> .state) of
         Just (Clock.Started _ _) ->
             True
 
@@ -268,7 +274,7 @@ update msg m =
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         ReplayMsg replayMsg ->
-            ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
+            ( { m | round = mapLoaded (stepReplay replayMsg) m.round }, Effect.none )
 
 
 {-| Called as the URL, the calendar and the two tables arrive, so whichever is
@@ -372,7 +378,7 @@ completed : RoundId -> Partial -> Round
 completed id partial =
     case ( partial.summary, partial.laps, partial.timeline ) of
         ( Just summary, Just rawLaps, Just timeline ) ->
-            Loaded id (raceFrom summary rawLaps timeline)
+            Loaded id (roundFrom summary rawLaps timeline)
 
         _ ->
             Loading id partial
@@ -388,8 +394,8 @@ didNotArrive key error round =
         round
 
 
-raceFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Race
-raceFrom summary rawLaps timelineEvents =
+roundFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> LoadedRound
+roundFrom summary rawLaps timelineEvents =
     let
         replay =
             summary.startingGrid.entries
@@ -409,8 +415,8 @@ raceFrom summary rawLaps timelineEvents =
     }
 
 
-mapRace : (Race -> Race) -> Round -> Round
-mapRace f round =
+mapLoaded : (LoadedRound -> LoadedRound) -> Round -> Round
+mapLoaded f round =
     case round of
         Loaded id loaded ->
             Loaded id (f loaded)
@@ -419,7 +425,7 @@ mapRace f round =
             round
 
 
-stepReplay : Replay.Msg -> Race -> Race
+stepReplay : Replay.Msg -> LoadedRound -> LoadedRound
 stepReplay replayMsg loaded =
     let
         replayNew =
