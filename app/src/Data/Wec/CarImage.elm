@@ -2,12 +2,9 @@ module Data.Wec.CarImage exposing (CarImages, none, decoder, url)
 
 {-| Where a car's photograph is, season by season and round by round.
 
-The table is `/static/car-images.json`, which is written by hand and which no
-compiler reads, so a mistake in it shows as a car drawn without a photograph
+The table is `/static/car-images.json`, which `nix run .#car-images` writes and
+no compiler reads, so a mistake in it shows as a car drawn without a photograph
 rather than as a build that fails.
-
-A car is a file name, or an object: the file its rounds use by default, and
-the rounds photographed separately from it.
 
 @docs CarImages, none, decoder, url
 
@@ -54,10 +51,13 @@ seasonDecoder =
         |> required "cars" (Decode.dict liveriesDecoder)
 
 
-{-| `rounds` is `required` of the object form, so a car written as one carries
-both keys. Left optional, a misspelt `rounds` would read as a car with no
-livery of its own and the default would go on every round -- a wrong picture
-rather than a missing one.
+{-| A car is a file name, or the file its rounds use by default beside the
+rounds photographed apart from it.
+
+`rounds` is `required` of that second form rather than `optional`: misspelt, an
+optional key would read as a car with no livery of its own and put the default
+on every round -- a wrong picture rather than a missing one.
+
 -}
 liveriesDecoder : Decoder Liveries
 liveriesDecoder =

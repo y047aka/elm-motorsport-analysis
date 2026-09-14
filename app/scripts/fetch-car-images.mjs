@@ -1,33 +1,14 @@
 // Fills a season's half of `static/car-images.json`, and the directory it
 // names, from two sources of the one publisher.
 //
-// A round's entry list comes from `api-he.lemans.org`, which states a car's
-// number and where its photograph is rather than leaving either to be read out
-// of a page. It is the only one of the two that has Le Mans's LMP2 field: that
-// class is the organiser's and not the championship's, so fiawec.com, whose
-// categories are Hypercar and LMGT3, does not carry it.
-//
-// What that API has no list of is which races a season ran, so the season's
-// page at fiawec.com is still what says that -- and it is also the one photograph
-// per car that a round is compared against.
+// It takes two because neither has all of it. Le Mans's LMP2 field is the
+// organiser's class and not the championship's, so fiawec.com, whose categories
+// are Hypercar and LMGT3, does not carry it and `api-he.lemans.org` does; and
+// that API has no list of which races a season ran, which the grid page has.
 //
 // Every round has an upload of its own for every car, most of them the season's
-// picture again under another name, so what a round is registered for is the
-// picture differing and not the file: they are compared by what they hold.
-//
-// The photographs are taken from the bucket both sites are served out of, which
-// holds them at the size they were uploaded, and are kept as WebP. The app draws
-// a car 260px wide at most, so what is kept is the width they arrive at and a
-// quality well under lossless: measured against the original as the card draws
-// it, spending bytes on resolution beats spending them on quality, and past
-// about q75 neither buys anything the page can show.
-//
-// What a picture is compared against is the original that was downloaded, not
-// the WebP written from it, so `origins` remembers each original's digest. A
-// run that has it asks for no image it already holds.
-//
-// Every request waits behind the one before it -- see `politely` -- so a run
-// asks no faster than a reader would.
+// picture again under another name. A round is registered for the picture
+// differing and not the file, so they are compared by what they hold.
 //
 //     node scripts/fetch-car-images.mjs [--season 2026] [--dry-run]
 
@@ -52,13 +33,11 @@ const uploads = "https://storage.googleapis.com/editorial-prod/uploads";
 const userAgent = "elm-motorsport-analysis/1.0 (car photograph fetcher)";
 
 // The least this leaves between one request and the next. A run is a few
-// hundred of them and none is urgent, so they are spaced rather than spent as
-// fast as they can be answered.
+// hundred of them and none is urgent.
 const restBetweenRequests = 1000;
 
-// The API answers only a caller the site would have. Sent because it is asked
-// for, not to look like something this is not: the agent above still says what
-// is running.
+// The API refuses a caller that sends neither. Not a disguise -- the agent
+// above still says what is running.
 const asThePageAsks = {
   Origin: "https://www.24h-lemans.com",
   Referer: "https://www.24h-lemans.com/",
@@ -74,18 +53,15 @@ const run = promisify(execFile);
 async function main() {
   const { season, dryRun } = readArgs(process.argv.slice(2));
 
-  // The grid page shows one season, and is asked to show another the way its
-  // own filter does. `/en/car/<season>` reaches a past season too, but without
-  // the race filter, which is the half of the page this needs most.
   const grid = await page("/en/page/grid");
   const source = seasonOn(grid.html) === season ? grid : await showing(grid, season);
   if (seasonOn(source.html) !== season) {
     throw new Error(`the grid page cannot be made to show ${season}.`);
   }
 
-  // A season still being run is a photograph per car here; one the site keeps
-  // only in its archive lists the cars and not their pictures, and then the
-  // rounds are the whole of where a car's photographs come from.
+  // A season still being run is a photograph per car here. One the site keeps
+  // only in its archive lists the cars without their pictures, so this is empty
+  // and the rounds are the whole of where they come from.
   const allSeason = new Map(carsOn(source.html).map((car) => [car.carNumber, car.file]));
 
   const skipped = [];
@@ -135,10 +111,9 @@ async function main() {
   });
 }
 
-/** What each car carries, and how many of a round's photographs turned out to
- * be the season's again. A car the season's page does not have -- entered for
- * one round, which is most of Le Mans's field -- takes its first round's
- * photograph as the one it carries. */
+/** A car the season's page does not have -- entered for one round, which is
+ * most of Le Mans's field -- takes its first round's photograph as the one it
+ * carries. */
 async function collect(allSeason, rounds, images) {
   const carNumbers = new Set([...allSeason.keys(), ...[...rounds.values()].flatMap((r) => [...r.keys()])]);
 
@@ -164,17 +139,13 @@ async function collect(allSeason, rounds, images) {
   return { liveries, sameAgain };
 }
 
-/** What a photograph is written as. The name the publisher gave it is kept --
- * it carries the upload it came from -- and only what it holds changes. */
+/** The publisher's name for a photograph carries the upload it came from, so it
+ * is kept and only the suffix changes. */
 function kept(source) {
   return source.replace(/\.[^.]+$/, "") + ".webp";
 }
 
-/** The originals, and what is written from them.
- *
- * `origins` is each original's digest, remembered because the WebP written from
- * it cannot be compared against another original. A season whose originals are
- * all remembered downloads no image at all. */
+/** The originals, and what is written from them. */
 function imageStore(dir, origins, remember) {
   const bytes = new Map();
   let asked = 0;
@@ -182,14 +153,13 @@ function imageStore(dir, origins, remember) {
   const onDisk = (source) => existsSync(join(dir, kept(source)));
 
   // The one place an image is asked for, and so the one place that can refuse
-  // to. A picture already here is never asked for a second time: the WebP was
-  // written from the original and cannot stand in for it, so a run that has
-  // lost the digest stops and says so rather than fetching it again.
+  // to. The WebP here was written from the original and cannot stand in for it,
+  // so a picture whose digest has been lost stops the run rather than being
+  // fetched a second time.
   //
-  // What it does fetch it remembers as it arrives, and the remembering is
-  // written out there and then. A digest held only in memory is one an error,
-  // an interrupt or a `--dry-run` would drop, and dropping it costs the site
-  // the same request again.
+  // A digest is written out as it arrives. One held to the end of the run is
+  // one an error, an interrupt or a `--dry-run` drops, and the site is asked
+  // for that picture again.
   const original = async (source) => {
     if (!bytes.has(source)) {
       if (onDisk(source)) {
@@ -214,18 +184,14 @@ function imageStore(dir, origins, remember) {
 
   return {
     onDisk,
-    // Every image this asked the site for, written or not. A picture fetched
-    // only to find it was the season's again is a request all the same, and a
-    // run that does not count it reads quieter than it was.
+    // Every image asked of the site, written or not: one fetched only to find
+    // it was the season's again is a request all the same.
     asked: () => asked,
     alike: async (a, b) => (await digest(a)) === (await digest(b)),
     // `cwebp` reads and writes files rather than pipes, so the original is put
-    // beside what is written from it and taken away again.
-    //
-    // What it writes is put in place by a rename, so a run cut short leaves
-    // either the whole photograph or none of it. Half of one would read as a
-    // photograph already here, and a photograph already here is never asked
-    // for again -- the truncated file would stay, and be served.
+    // beside what is written from it and taken away again. The rename is what
+    // puts the photograph in place: half of one would read as a photograph
+    // already here, never be asked for again, and be served.
     write: async (source) => {
       const from = join(dir, `.${source}.original`);
       const onto = join(dir, `.${kept(source)}.part`);
@@ -241,7 +207,6 @@ function imageStore(dir, origins, remember) {
   };
 }
 
-/** The season a page is of, which its cars are the ones linked to of. */
 function seasonOn(html) {
   const seasons = new Set(
     [...html.matchAll(/href="\/en\/car\/(\d{4})\/[^"]+"/g)].map(([, year]) => Number(year)),
@@ -265,11 +230,11 @@ function carsOn(html) {
   return [...cars.values()];
 }
 
-/** The races the season ran, as the calendar names them. A race the calendar
- * has no round for is one this application cannot show and does not collect.
+/** The races the calendar has a round for; one it does not is a race this
+ * application cannot show, and is not asked about.
  *
  * The race filter is the one select the component acts on: the other changes
- * the season, and does it by going to another page. */
+ * the season by going to another page. */
 async function racesOn(source, season, skipped) {
   const select = [...source.html.matchAll(/<select\b[^>]*>[\s\S]*?<\/select>/g)]
     .map((match) => match[0])
@@ -311,7 +276,6 @@ async function showing(grid, season) {
   };
 }
 
-/** One value changed on a live component, and the markup it renders as. */
 async function live(source, action, updated) {
   const body = new FormData();
   body.set("data", JSON.stringify({ props: source.props, updated, args: {} }));
@@ -334,9 +298,8 @@ async function live(source, action, updated) {
   return answer.text();
 }
 
-/** The cars of a round, as the organiser's own list of them. `participant_number`
- * is the number itself rather than something a number has to be read out of,
- * and `large_picture_url` names the photograph at the size it was uploaded. */
+/** The cars of a round. `large_picture_url` is the photograph at the size it
+ * was uploaded; the other two the entry carries are cached thumbnails. */
 async function entered(race) {
   const answer = await json(`${api}/entries?race=${race.id}`, asThePageAsks);
   const entries = Object.values(answer).find(Array.isArray);
@@ -388,10 +351,7 @@ function filesIn(liveries) {
 
 /** Writes each car's liveries into the season, and says which of them the table
  * did not already say. A car carrying one photograph all season is written as
- * the file alone, which is most of them.
- *
- * The table names what is on the disk, so the publisher's name for a photograph
- * is carried over to it and only the suffix differs. */
+ * the file alone, which is most of them. */
 function register(entry, liveries) {
   const changed = [];
   for (const [carNumber, livery] of liveries) {
@@ -458,14 +418,12 @@ async function get(url, headers) {
   return answer;
 }
 
-/** Every request this makes, one at a time and none of them sooner than
- * `restBetweenRequests` after the last. Held as a chain rather than a counter so
- * that it holds however the callers are written -- nothing here can start a
- * second request by forgetting to await the first.
+/** Every request this makes, one at a time and none sooner than
+ * `restBetweenRequests` after the last. A chain rather than a counter, so it
+ * holds however the callers are written: nothing can start a second request by
+ * forgetting to await the first.
  *
- * A run is a few hundred requests against someone else's site and none of them
- * is urgent, so the run is slow on purpose. Nothing is retried: a refusal is
- * reported and the run stops, rather than being asked again.
+ * Nothing is retried. A refusal stops the run rather than being asked again.
  */
 let lastRequest = Promise.resolve(0);
 function politely(send) {
@@ -521,8 +479,7 @@ async function report({
   for (const { name, why } of skipped) console.log(`\nNot asked for ${name}: ${why}.`);
 
   // A car the sources have stopped naming keeps whatever the table said of it,
-  // which is right -- there is nothing better to put there -- and quiet, which
-  // is not. It is the one way a photograph goes unreplaced, so it is said.
+  // which is the one way a photograph goes unreplaced.
   const missed = Object.keys(entry.cars).filter((carNumber) => !liveries.has(carNumber));
   if (missed.length > 0) {
     console.log(`\n${say(missed.length, "car", "cars")} the table has that no source named:`);
@@ -531,8 +488,7 @@ async function report({
     }
   }
 
-  // And what those are usually left at: a photograph from before this fetched
-  // them, which the rest have outgrown.
+  // And what those are usually left at.
   const narrow = [];
   for (const [carNumber, livery] of Object.entries(entry.cars)) {
     const file = stillNamed(livery);

@@ -28,10 +28,9 @@ type alias Car =
     }
 
 
-{-| `imageUrl` is the car's photograph, filled in where the car is read as the
-`Manufacturer`'s colour and badge are: which round this is decides it, and the
-table saying so is one application's assets rather than anything the domain
-knows.
+{-| `imageUrl` is filled in where the car is read, as the `Manufacturer`'s
+colour and badge are: which round this is decides which photograph a car
+carries, and the table saying so is one application's assets.
 -}
 type alias Metadata =
     { carNumber : CarNumber

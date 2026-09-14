@@ -156,92 +156,62 @@ them the file has no row for is one query rather than a reading of the cars.
 
 `Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the
 manufacturer table is, which names each season's photographs and the directory
-under `static/images/wec` they sit in. `.#car-images --season <year>` writes
-one season of it, out of two sources of the one publisher.
+under `static/images/wec` they sit in. `.#car-images --season <year>` writes one
+season of it.
 
-A round's entry list comes from `api-he.lemans.org`, which states a car's
-number and where its photograph is rather than leaving either to be read out of
-a page. It is the only one of the two with Le Mans's LMP2 field: that class is
-the organiser's and not the championship's, so fiawec.com, whose categories are
-Hypercar and LMGT3, does not carry it. What the API has no list of is which
-races a season ran, so the grid page at fiawec.com is what says that — its race
-filter is a Symfony live component, and its season filter is how a season other
-than the one it opens on is reached. The season ids that filter takes are the
-ones `/evo/1/seasons` publishes, and it answers for a season its own page no
-longer offers: 2024 is reached that way and nowhere else, since `/en/car/2024`
-now redirects to the current season.
+It reads two sources because neither has all of it. Le Mans's LMP2 field is the
+organiser's class and not the championship's, so fiawec.com — whose categories
+are Hypercar and LMGT3 — does not carry it and `api-he.lemans.org` does; and
+that API has no list of which races a season ran, which the grid page has. A
+season the grid page is not showing is reached through its season filter, which
+takes the ids `/evo/1/seasons` publishes and answers for seasons the page itself
+no longer offers: 2024 is reached that way and nowhere else, `/en/car/2024`
+having become a redirect to the current season.
 
-A season still being run is a photograph per car on that page, and a round is
-compared against it. One the site keeps only in its archive lists the cars
+A season still being run is a photograph per car on the grid page, and a round
+is compared against it. One the site keeps only in its archive lists the cars
 without their pictures, and then the rounds are the whole of where a car's
-photographs come from — its first of them is what the car carries, and 2024
-reads that way.
+photographs come from — its first of them is what the car carries, which is how
+2024 reads.
 
 Every round has an upload of its own for every car, most of them the season's
 picture again under another name, so a round is registered for the picture
-differing and not the file — they are compared by what they hold. Of 2025's, 179
-were the season's again and 134 were not: a livery gains a sponsor over a season
-and Le Mans is its own.
+differing and not the file: they are compared by what they hold. Of 2025's, 179
+were the season's again and 134 were not.
 
-The photographs come from the bucket both sites are served out of, at the size
-they were uploaded — 900px, where the paths the app carried until this year were
-a 300px thumbnail cache — and are kept as WebP at `-q 75 -sharp_yuv`. Measured
-against the original as the card draws it, spending bytes on resolution beats
-spending them on quality: at one file size, the full width at a low quality is
-nearer the original than a narrower picture at a high one, because the browser's
-own downscale averages the compression away and resolution thrown away before
-encoding does not come back. `-sharp_yuv` is the one flag worth its bytes —
-WebP's lossy mode is YUV 4:2:0 at every quality, and the sharper conversion
-recovers a tenth of the error for a twenty-fifth of the size. The three seasons
-come to 9MB, where the same pictures as PNG were 71MB.
+The photographs are kept as WebP at `-q 75 -sharp_yuv`, at the width they are
+published rather than a narrower one — measured as the card draws them, bytes
+spent on resolution beat bytes spent on quality. `-sharp_yuv` is the one flag
+worth its cost: WebP's lossy mode is YUV 4:2:0 at every quality, and the
+sharper conversion recovers a tenth of the error for a twenty-fifth of the size.
+Three seasons come to 13MB, where the same pictures as PNG were 71MB.
 
-`app/scripts/car-image-origins.json` is each original's digest. A round is
-registered for its picture differing from the season's, and the WebP written
-from an original cannot be compared against another original, so the digests are
-remembered rather than recomputed: a season whose originals are all known
-downloads no image at all. **A photograph already here is never asked for
-again** — the only place an image is requested is reached from two, and both are
-behind that check, so a digest missing for a file that is here fails the run
-rather than fetching it a second time. The digests cover every original a run
-fetched and not only the ones it kept — a picture asked for to find it was the
-season's again is written nowhere else — and each is put in the file as it
-arrives rather than at the end, so an error, an interrupt or a `--dry-run`
-cannot drop what was already paid for. A run says how many images it asked the
-site for, which is the number to read rather than how many it kept.
+**A photograph already here is never asked for again.** The one place an image
+is requested is reached from two, and both are behind that check, so a run that
+cannot compare a file it holds stops and says which. Comparing needs the
+original and not the WebP written from it, so `app/scripts/car-image-origins.json`
+holds each original's digest — every one a run fetched and not only the ones it
+kept, each written as it arrives, so an error, an interrupt or a `--dry-run`
+cannot drop what was already paid for. Everything else is bounded by what was
+read: one request for the grid page, two more for a season it is not showing,
+one for each race the calendar has a round for. A run says how many images it
+asked the site for, which is the number to read rather than how many it kept.
+Requests are a second apart and nothing is retried.
 
-Everything else a run does is bounded by what it read: one request for the grid
-page, two more for a season that page is not showing, and one for each race the
-calendar has a round for — a race it does not is never asked about. A
-photograph is put in place by a rename, so a run cut short leaves a whole one
-or none: half of one would read as a photograph already here, and never be
-asked for again.
+A photograph is put in place by a rename: half of one would read as a photograph
+already here, never be asked for again, and be served.
 
-It says two more things at the end. **The cars the table has that no source
-named** are the ones whose photographs it could not replace — a car that has
-left the entry lists keeps whatever the table said of it, which is right and
-would otherwise be silent. **The photographs narrower than the rest** are what
-those are usually left at, read off the WebP header rather than by asking
-anyone: 2024's 14 and 2025's 199 are on neither source and are the two still at
-300px.
-
-Every request waits a second behind the one before it, and nothing is retried: a
-run is a few hundred requests against someone else's site and none of them is
-urgent.
-
-It leaves alone every season it was not asked for, every file the sources do not
-name, and every race the calendar has no round for. A car neither source lists
-keeps whatever the table already said of it — 2025's 199 is the one, and still
-the only photograph there at 300px. A car is
-one file name, or the file its rounds use by default beside the rounds
-photographed separately — which is a livery carried for a single round, and the
-reason the round is read against the table beside the season.
+A run ends by naming **the cars the table has that no source named** — a car
+that has left the entry lists keeps whatever the table said of it, which is the
+one way a photograph goes unreplaced — and **the photographs narrower than the
+rest**, read off the WebP header. 2024's 14 and 2025's 199 are on neither
+source and are the two still at 300px.
 
 Both tables are read where the cars decode rather than where they are drawn:
 `Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
-round, and `Car.Metadata` comes out of it carrying the colour, the badge and
-the photograph. Nothing downstream asks a second time — the round the car
-belongs to is settled before the file is asked for, and a widget handed a car
-has everything it draws.
+round, and `Car.Metadata` comes out of it carrying the colour, the badge and the
+photograph. Nothing downstream asks a second time, so a widget handed a car has
+everything it draws.
 
 ### The shadcn components
 
