@@ -83,15 +83,21 @@ async function main() {
     throw new Error(`the grid page cannot be made to show ${season}.`);
   }
 
+  // A season still being run is a photograph per car here; one the site keeps
+  // only in its archive lists the cars and not their pictures, and then the
+  // rounds are the whole of where a car's photographs come from.
   const allSeason = new Map(carsOn(source.html).map((car) => [car.carNumber, car.file]));
-  if (allSeason.size === 0) {
-    throw new Error(`${origin}${source.path} named no car. It is no longer the shape this reads.`);
-  }
 
   const skipped = [];
   const rounds = new Map();
   for (const race of await racesOn(source, season, skipped)) {
     rounds.set(race.round, await entered(race));
+  }
+  if (allSeason.size === 0 && rounds.size === 0) {
+    throw new Error(
+      `nothing of ${season} was found: neither ${origin}${source.path} nor a round of it` +
+        ` named a car. It is no longer the shape this reads.`,
+    );
   }
 
   const imageDir = join(appDir, "static/images/wec", String(season));
@@ -177,15 +183,26 @@ function imageStore(dir, origins) {
     return bytes.get(source);
   };
 
+  const onDisk = (source) => existsSync(join(dir, kept(source)));
+
   const digest = async (source) => {
     if (origins[source] === undefined) {
+      // The WebP here was written from this original and cannot stand in for
+      // it, and asking the site for a picture already held is the one thing
+      // this must not do. So the digest is restored rather than re-fetched.
+      if (onDisk(source)) {
+        throw new Error(
+          `${kept(source)} is here and its original's digest is not in` +
+            ` ${originsPath}. Put it back there, or take the file away.`,
+        );
+      }
       origins[source] = createHash("sha256").update(await original(source)).digest("hex");
     }
     return origins[source];
   };
 
   return {
-    onDisk: (source) => existsSync(join(dir, kept(source))),
+    onDisk,
     alike: async (a, b) => (await digest(a)) === (await digest(b)),
     // `cwebp` reads and writes files rather than pipes, so the original is put
     // beside what is written from it and taken away again.

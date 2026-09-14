@@ -166,8 +166,16 @@ the organiser's and not the championship's, so fiawec.com, whose categories are
 Hypercar and LMGT3, does not carry it. What the API has no list of is which
 races a season ran, so the grid page at fiawec.com is what says that — its race
 filter is a Symfony live component, and its season filter is how a season other
-than the one it opens on is reached. That page is also the one photograph per
-car a round is compared against.
+than the one it opens on is reached. The season ids that filter takes are the
+ones `/evo/1/seasons` publishes, and it answers for a season its own page no
+longer offers: 2024 is reached that way and nowhere else, since `/en/car/2024`
+now redirects to the current season.
+
+A season still being run is a photograph per car on that page, and a round is
+compared against it. One the site keeps only in its archive lists the cars
+without their pictures, and then the rounds are the whole of where a car's
+photographs come from — its first of them is what the car carries, and 2024
+reads that way.
 
 Every round has an upload of its own for every car, most of them the season's
 picture again under another name, so a round is registered for the picture
@@ -191,7 +199,10 @@ come to 9MB, where the same pictures as PNG were 71MB.
 registered for its picture differing from the season's, and the WebP written
 from an original cannot be compared against another original, so the digests are
 remembered rather than recomputed: a season whose originals are all known
-downloads no image at all.
+downloads no image at all. **A photograph already here is never asked for
+again** — the only place an image is requested is reached from two, and both are
+behind that check, so a digest missing for a file that is here fails the run
+rather than fetching it a second time.
 
 Every request waits a second behind the one before it, and nothing is retried: a
 run is a few hundred requests against someone else's site and none of them is
