@@ -57,6 +57,10 @@ type Snapshot
 Readings only, and no laps: the laps up to this moment are
 [`lapHistory`](#lapHistory)'s to give out, already cut.
 
+`pitStops` counts the stops the car has completed, so a car sitting in the pits
+reads at the one before the one it is making. See
+[`Race.pitStopsAt`](Motorsport-Race#pitStopsAt).
+
 Every rating here is measured against the records as they stood at this moment,
 not as the race leaves them -- the race's, held by [`bestTimes`](#bestTimes),
 and the car's own, which is `bestLap`. See
@@ -68,6 +72,7 @@ type alias CarAt =
     , status : Status
     , currentDriver : Driver
     , standing : Standing
+    , pitStops : Int
     , currentLap : CurrentLap
     , lastLap : LastLap
     , bestLap : Maybe RatedTime
@@ -370,6 +375,7 @@ type alias SampledCar =
         , lastLap : Maybe Lap
         , status : Status
         , currentDriver : Driver
+        , pitStops : Int
         }
 
 
@@ -392,6 +398,7 @@ sampleCar clock race car =
                 , lastLap = Lap.findLastLapAt clock car.laps
                 , status = Race.statusAt clock car.metadata.carNumber race
                 , currentDriver = lap.driver
+                , pitStops = Race.pitStopsAt clock car.metadata.carNumber race
                 }
             )
 
@@ -586,6 +593,7 @@ readCarAt frame placed =
         , gapToLeader = timing.gapToLeader
         , intervalToAhead = timing.intervalToAhead
         }
+    , pitStops = car.pitStops
     , currentLap =
         readCurrentLap
             { clock = { elapsed = frame.raceElapsed }

@@ -455,6 +455,7 @@ leaderboardConfig =
         , Leaderboard.driverAndTeamColumn_Wec
             { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
+        , Leaderboard.intColumn { label = "Stops", getter = .pitStops }
         , Leaderboard.customColumn
             { label = "Gap"
             , getter = .standing >> .gapToLeader >> Gap.toString

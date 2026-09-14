@@ -3,7 +3,7 @@ module Motorsport.Race exposing
     , Index, emptyIndex, indexDecoder
     , empty, fromCars
     , lapCountAt, elapsedAtLapCount, timeToFlagAt
-    , statusAt
+    , statusAt, pitStopsAt
     )
 
 {-| A race, as it is once the data has loaded: cars, their laps, and the
@@ -18,7 +18,7 @@ moment is derived from the two, in
 @docs Index, emptyIndex, indexDecoder
 @docs empty, fromCars
 @docs lapCountAt, elapsedAtLapCount, timeToFlagAt
-@docs statusAt
+@docs statusAt, pitStopsAt
 
 -}
 
@@ -29,10 +29,11 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
+import Motorsport.Race.Stint as Stint
 import Motorsport.Status exposing (Status)
 
 
-{-| The three indices read the same race at an instant, and are all
+{-| The four indices read the same race at an instant, and are all
 [`ChangePoints`](Motorsport-Internal-ChangePoints) underneath.
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
@@ -41,7 +42,8 @@ was.
 
 `statusChanges` is counted off the raw timeline, which arrives in a file of its
 own from `Round.Timeline`; the two indices beside it come with the round's
-summary.
+summary. `pitStops` is counted here, off the cars: a stop is on the lap it ended
+on, so the laps already say it and nothing has to be read for it.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
@@ -57,6 +59,7 @@ type alias Race =
     , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
     , bestTimeChanges : BestTimes.Changes
+    , pitStops : Stint.Index
     }
 
 
@@ -108,6 +111,7 @@ empty =
     , statusChanges = StatusChanges.empty
     , lapCompletions = emptyIndex.lapCompletions
     , bestTimeChanges = emptyIndex.bestTimeChanges
+    , pitStops = Stint.emptyIndex
     }
 
 
@@ -122,6 +126,7 @@ fromCars { timeLimit, index, statusChanges } cars =
     , statusChanges = statusChanges
     , lapCompletions = index.lapCompletions
     , bestTimeChanges = index.bestTimeChanges
+    , pitStops = Stint.indexOf cars
     }
 
 
@@ -169,3 +174,10 @@ timeToFlagAt { elapsed } race =
 statusAt : { elapsed : Instant } -> CarNumber -> Race -> Status
 statusAt clock carNumber race =
     StatusChanges.statusAt clock carNumber race.statusChanges
+
+
+{-| How many stops a car has completed at a moment of the race.
+-}
+pitStopsAt : { elapsed : Instant } -> CarNumber -> Race -> Int
+pitStopsAt clock carNumber race =
+    Stint.stopsAt clock carNumber race.pitStops

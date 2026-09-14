@@ -1,6 +1,7 @@
 module Motorsport.Race.Stint exposing
     ( Stint, Pit
     , fromLaps
+    , Index, emptyIndex, indexOf, stopsAt
     )
 
 {-| A car's race read as the runs it made between pit stops.
@@ -18,12 +19,25 @@ on the road, and the laps alone cannot tell the two apart. See
 @docs Stint, Pit
 @docs fromLaps
 
+
+## The field's stops, read at a clock
+
+Cutting a car's laps answers everything about one car and costs a pass over its
+race. Reading a count off every car on every frame is a different question, and
+[`Index`](#Index) is what makes it cheap.
+
+@docs Index, emptyIndex, indexOf, stopsAt
+
 -}
 
+import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant exposing (Instant)
+import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 
 
 {-| One run between stops, numbered from the start of the race.
@@ -122,3 +136,69 @@ average durations =
 
         _ ->
             Just (List.sum durations // List.length durations)
+
+
+
+-- THE FIELD'S STOPS, READ AT A CLOCK
+
+
+{-| Every car's stops, indexed by the moment each of them ended.
+
+[`fromLaps`](#fromLaps) counts a car's stops by cutting its laps, which is
+affordable for the one car a panel is given over to and not for the field on
+every frame: a race is twenty thousand laps. The stops are under two thousand of
+them, so collecting those once and reading the count back is a binary search
+over a fraction of the data. See
+[`ChangePoints`](Motorsport-Internal-ChangePoints).
+
+Keyed by car number, so two cars sharing one -- which the source data
+occasionally has -- come to a single entry, as they do in
+[`LapHistory`](Motorsport-Race-LapHistory).
+
+-}
+type Index
+    = Index (Dict CarNumber (ChangePoints Pit))
+
+
+{-| An index over no race at all. Every car reads back as having stopped never.
+-}
+emptyIndex : Index
+emptyIndex =
+    Index Dict.empty
+
+
+{-| Collect the field's stops, each at the moment the lap it ended on was
+completed.
+-}
+indexOf : List Car -> Index
+indexOf cars =
+    cars
+        |> List.map (\car -> ( car.metadata.carNumber, stopsOf car.laps ))
+        |> Dict.fromList
+        |> Index
+
+
+stopsOf : List Lap -> ChangePoints Pit
+stopsOf laps =
+    laps
+        |> List.filterMap
+            (\lap ->
+                lap.pitTime
+                    |> Maybe.map
+                        (\duration -> ( lap.elapsed, { lapNumber = lap.lap, duration = duration } ))
+            )
+        |> ChangePoints.fromList
+
+
+{-| How many stops a car has completed at a moment of the race.
+
+A car in the pits reads at the stop before the one it is making: a stop is
+recorded on the lap it ended on, and that lap is not complete until the car is
+back out on the road. A car the race has never heard of has made none.
+
+-}
+stopsAt : { elapsed : Instant } -> CarNumber -> Index -> Int
+stopsAt { elapsed } carNumber (Index index) =
+    Dict.get carNumber index
+        |> Maybe.map (ChangePoints.countUpTo elapsed)
+        |> Maybe.withDefault 0

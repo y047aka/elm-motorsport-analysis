@@ -87,6 +87,30 @@ suite =
                         |> List.map (\elapsed -> Race.timeToFlagAt { elapsed = instant elapsed } race)
                         |> Expect.equal [ 0, 0 ]
             ]
+        , describe "pitStopsAt"
+            [ test "counts the stops off the cars the race was built from" <|
+                \_ ->
+                    let
+                        raced =
+                            Race.fromCars
+                                { timeLimit = instant 7200000
+                                , index = index
+                                , statusChanges = StatusChanges.empty
+                                }
+                                [ carWith "1" [ lapAt "1" 1 100000, pitAt "1" 2 260000 63000 ] ]
+                    in
+                    [ 259999, 260000 ]
+                        |> List.map (\elapsed -> Race.pitStopsAt { elapsed = instant elapsed } "1" raced)
+                        |> Expect.equal [ 0, 1 ]
+            , test "the fixture's cars never stopped" <|
+                \_ ->
+                    Race.pitStopsAt { elapsed = instant 99999999 } "1" race
+                        |> Expect.equal 0
+            , test "a race with no cars has no stops" <|
+                \_ ->
+                    Race.pitStopsAt { elapsed = instant 500000 } "1" Race.empty
+                        |> Expect.equal 0
+            ]
         ]
 
 
@@ -164,3 +188,12 @@ lapAt carNumber lapNumber elapsed =
         , position = Just 1
         , elapsed = instant elapsed
     }
+
+
+pitAt : CarNumber -> Int -> Int -> Int -> Lap
+pitAt carNumber lapNumber elapsed pitTime =
+    let
+        base =
+            lapAt carNumber lapNumber elapsed
+    in
+    { base | pitTime = Just pitTime }
