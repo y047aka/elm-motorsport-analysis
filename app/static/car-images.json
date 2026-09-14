@@ -1,0 +1,822 @@
+{
+  "seasons": {
+    "2024": {
+      "basePath": "/static/images/wec/2024",
+      "cars": {
+        "2": {
+          "default": "2024-lm-2-cadillac-droite-3c0283-68f0a3c66d3fa677161537.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-2-cadillac-droite-0d4f1c-68f0a58cc78f1681303062.webp",
+            "bahrain_8h": "2024-wec-2-cadillac-droite-0d4f1c-68f0a639d728c697363541.webp"
+          }
+        },
+        "3": "2024-lm-3-cadillac-droite-c3c109-68f0a3ed69084353084444.webp",
+        "4": "2024-lm-4-porsche-963-droite-1d620d-68f0a3edb2d5e628859627.webp",
+        "5": {
+          "default": "2024-lm-5-porsche-963-droite-6c3c29-68f0a3c6b3035693278832.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-5-porsche-963-droite-d4f58d-68f0a58d0de31705561413.webp",
+            "bahrain_8h": "2024-wec-5-porsche-963-droite-d4f58d-68f0a63a1e901161716559.webp"
+          }
+        },
+        "6": {
+          "default": "2024-lm-6-porsche-963-droite-340666-68f0a3c70628f755968292.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-6-porsche-963-droite-d4f63b-68f0a58d47f2a001885489.webp",
+            "bahrain_8h": "2024-wec-6-porsche-963-droite-d4f63b-68f0a63a58f16108457587.webp"
+          }
+        },
+        "7": {
+          "default": "2024-lm-7-toyota-gr010-droite-c3c44b-68f0a3c74b7e2902667109.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-7toyota-gr010-7-droite-4660d4-68f0a58d8497d814355257.webp",
+            "bahrain_8h": "2024-wec-7toyota-gr010-7-droite-4660d4-68f0a63a96078631827402.webp"
+          }
+        },
+        "8": {
+          "default": "2024-lm-8-toyota-gr010-droite-44666c-68f0a3c7928e6130209035.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-8toyota-gr010-8-droite-f77a4f-68f0a58dbf39c916378479.webp",
+            "bahrain_8h": "2024-wec-8toyota-gr010-8-droite-f77a4f-68f0a63acd413985139682.webp"
+          }
+        },
+        "9": "2024-lm-9-oreca-07-droite-1666c3-68f0a3f005bd3164609075.webp",
+        "10": "2024-lm-10-oreca-07-droite-78bd95-68f0a3f04b50b277035118.webp",
+        "11": "2024-lm-11-isotta-fraschini-droite-c78ed3-68f0a3c7e352f783918633.webp",
+        "12": {
+          "default": "2024-lm-12-porsche-963-droite-3c8705-68f0a3c83fd30199028244.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-12-porsche-963-droite-466350-68f0a58e0665b274566358.webp",
+            "bahrain_8h": "2024-wec-12-porsche-963-droite-466350-68f0a63b174a5275105006.webp"
+          }
+        },
+        "14": "2024-lm-14-oreca-07-droite_c955cd.webp",
+        "15": {
+          "default": "2024-lm-15-bmwm-hybrid-v8-droite-ca1d0b-68f0a3c8826b3041778372.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-15-bmw-m-hybrid-v8-droite-133660-68f0a58e3f3bc479525435.webp",
+            "bahrain_8h": "2024-wec-15-bmw-m-hybrid-v8-droite-133660-68f0a63b53e57469202097.webp"
+          }
+        },
+        "19": "2024-lm-19-lamborghini-sc63-droite-cb7e49-68f0a3ee041a1974544102.webp",
+        "20": {
+          "default": "2024-lm-20-bmwm-hybrid-v8-art-car-droite-33666c-68f0a3c8ca1f0870991463.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-20-bmw-m-hybrid-v8-droite-60d4fa-68f0a58e7dd54507112414.webp",
+            "bahrain_8h": "2024-wec-20-bmw-m-hybrid-v8-droite-60d4fa-68f0a63b8fa2f954456730.webp"
+          }
+        },
+        "22": "2024-lm-22-oreca-07-droite-6c3d04-68f0a3f092ae0024074594.webp",
+        "23": "2024-lm-23-oreca-07-droite-0f97a3-68f0a3f0d7ca7026940870.webp",
+        "24": "2024-lm-24-oreca-07-droite-1ecd50-68f0a3f12bffa720453259.webp",
+        "25": "2024-lm-25-oreca-07-droite-38666c-68f0a3f16f197752578692.webp",
+        "27": {
+          "default": "2024-lm-27-aston-martin-gt3-droite-7666c3-68f0a3c9230a4449345973.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-27-aston-martin-gt3-droite-301661-68f0a58eb853c424928191.webp",
+            "bahrain_8h": "2024-wec-27-aston-martin-gt3-droite-301661-68f0a63bcb48a074038752.webp"
+          }
+        },
+        "28": "2024-lm-28-oreca-07-droite-0666c3-68f0a3f1b255e021861878.webp",
+        "30": "2024-lm-30-oreca-07-droite-7338bc-68f0a3f202ef6401859478.webp",
+        "31": {
+          "default": "2024-lm-31-bmw-m4-gt3-droite-612afd-68f0a3e5364cf028331100.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-31-bmw-m4-gt3-sp-droite-68434d-68f0a5b326f1d430060467.webp",
+            "bahrain_8h": "2024-wec-31-bmw-m4-gt3-sp-droite-68434d-68f0a642ad540005081126.webp"
+          }
+        },
+        "33": "2024-lm-33-oreca-07-droite-666c3d-68f0a3f24dd92059484721.webp",
+        "34": "2024-lm-34-oreca-07-droite-d77f36-68f0a3f2984db546953764.webp",
+        "35": {
+          "default": "2024-lm-35-alpine-droite-8b9765-68f0a3e57ce5b422054544.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-35-alpine-droite-06639e-68f0a58ef2b00245167724.webp",
+            "bahrain_8h": "2024-wec-35-alpine-droite-06639e-68f0a63c14dfd653857752.webp"
+          }
+        },
+        "36": {
+          "default": "2024-lm-36-alpine-droite-175666-68f0a3e5c1950425071788.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-36-alpine-droite-6639e0-68f0a58f36e21609586585.webp",
+            "bahrain_8h": "2024-wec-36-alpine-droite-6639e0-68f0a63c534a1805133532.webp"
+          }
+        },
+        "37": "2024-lm-37-oreca-07-droite-922666-68f0a3f2e1a87427509860.webp",
+        "38": {
+          "default": "2024-lm-38-porsche-963-droite-c2ec59-68f0a3e6143d7766239597.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-38-porsche-963-droite-66cf3b-68f0a58f7eb3d972591042.webp",
+            "bahrain_8h": "2024-wec-38-porsche-963-droite-66cf3b-68f0a63c910ce727960078.webp"
+          }
+        },
+        "44": "2024-lm-44-ford-mustang-droite-3dcd73-68f0a3ee8d05e126804310.webp",
+        "45": "2024-lm-45-oreca-07-droite-6c3dd8-68f0a3f33341c132555131.webp",
+        "46": {
+          "default": "2024-lm-46-bmw-m4-gt3-droite-3666c3-68f0a3e6626cf882160348.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-46-bmw-m4-gt3-sp-droite-8434c5-68f0a5b2ddb50461535845.webp",
+            "bahrain_8h": "2024-wec-46-bmw-m4-gt3-sp-droite-8434c5-68f0a6426f5c7921086499.webp"
+          }
+        },
+        "47": "2024-lm-47-oreca-07-droite-c3df1e-68f0a3f4260d4226562548.webp",
+        "50": {
+          "default": "2024-lm-50-ferrari-droite-3dfc5b-68f0a3e6ac3a8397400726.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-50-ferrari-droite-668067-68f0a58fb8bbb534706654.webp",
+            "bahrain_8h": "2024-wec-50-ferrari-droite-668067-68f0a63cccc1b210283328.webp"
+          }
+        },
+        "51": {
+          "default": "2024-lm-51-ferrari-droite-3e0a4d-68f0a3e70039a548712463.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-51-ferrari-droite-466806-68f0a59001ed7937723769.webp",
+            "bahrain_8h": "2024-wec-51-ferrari-droite-466806-68f0a63d13c5b222896008.webp"
+          }
+        },
+        "54": {
+          "default": "2024-lm-54-ferrari-296-gt3-droite-c3e1c8-68f0a3e74675d502878697.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-54-ferrari-296-gt3-droite-96739e-68f0a5903c4ac657425718.webp",
+            "bahrain_8h": "2024-wec-54-ferrari-296-gt3-droite-96739e-68f0a63d50c07765590075.webp"
+          }
+        },
+        "55": {
+          "default": "2024-lm-55-ferrari-296-gt3-droite-6c3e26-68f0a3e78df50019177259.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-55-ferrari-296-gt3-droite-398905-68f0a5907860d698512917.webp",
+            "bahrain_8h": "2024-wec-55-ferrari-296-gt3-droite-398905-68f0a63d901c8333209729.webp"
+          }
+        },
+        "59": {
+          "default": "2024-lm-59-mclaren-720s-spa-droite-39eb4f-68f0a3e7dd04d920406266.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-59-mclaren-720s-cota-droite-6c8579-68f0a590bce80877597040.webp",
+            "bahrain_8h": "2024-wec-59-mclaren-720s-cota-droite-6c8579-68f0a63dd11c2121653287.webp"
+          }
+        },
+        "60": {
+          "default": "2024-lm-60-lamborghini-huracan-gt3-evo2-droite-6c3e4a-68f0a3e82d69c781160810.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-60-lamborghini-huracan-gt3-evo2-droite-9d2e22-68f0a591046d1600327697.webp",
+            "bahrain_8h": "2024-wec-60-lamborghini-huracan-gt3-evo2-droite-9d2e22-68f0a63e1b076145290978.webp"
+          }
+        },
+        "63": {
+          "default": "2024-lm-63-lamborghini-sc63-droite-66c3e5-68f0a3e87717b019548377.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-63-lamborghini-sc63-droite-437660-68f0a59140078996955957.webp",
+            "bahrain_8h": "2024-wec-63-lamborghini-sc63-droite-437660-68f0a63e577e3435841540.webp"
+          }
+        },
+        "65": "2024-lm-65-oreca-07-droite-c3f026-68f0a3f380ebc244786339.webp",
+        "66": "2024-lm-66-ferrari-296-gt3-droite-666c3f-68f0a3eedb030216487656.webp",
+        "70": "2024-lm-70-mclaren-720s-droite-666c3f-68f0a3ef2a62d462616095.webp",
+        "77": {
+          "default": "2024-lm-77-ford-mustang-droite-66c3f2-68f0a3e8c2778477914273.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-77-ford-mustang-droite-65dc67-68f0a5917c5b6850964163.webp",
+            "bahrain_8h": "2024-wec-77-ford-mustang-droite-65dc67-68f0a63e9a702495842816.webp"
+          }
+        },
+        "78": {
+          "default": "2024-lm-78-lexus-rc-f-lmgt3-droite-66c3f4-68f0a3e92026e948019422.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-78-lexus-rc-f-lmgt3-droite-ecc4c6-68f0a591b6e4a051328248.webp",
+            "bahrain_8h": "2024-wec-78-lexus-rc-f-lmgt3-droite-ecc4c6-68f0a63edb1c3337906672.webp"
+          }
+        },
+        "81": {
+          "default": "2024-lm-81-corvette-z06-gt3-r-droite-f57a9d-68f0a3e96e503708822778.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-81-corvette-z06-gt3-r-droite-7465dc-68f0a591f3983474682416.webp",
+            "bahrain_8h": "2024-wec-81-corvette-z06-gt3-r-droite-7465dc-68f0a63f210e7879366572.webp"
+          }
+        },
+        "82": {
+          "default": "2024-lm-82-corvette-z06-gt3-r-droite-6c3f63-68f0a3e9bc6a0518372879.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-82-corvette-z06-gt3-r-droite-96c378-68f0a5923a941663052346.webp",
+            "bahrain_8h": "2024-wec-82-corvette-z06-gt3-r-droite-96c378-68f0a63f6517c497200396.webp"
+          }
+        },
+        "83": {
+          "default": "2024-lm-83-ferrari-droite-942ab3-68f0a3ea0f1f4437385741.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-83-ferrari-droite-19a0da-68f0a59277f33527208339.webp",
+            "bahrain_8h": "2024-wec-83-ferrari-droite-19a0da-68f0a63fa3ce7557633257.webp"
+          }
+        },
+        "85": {
+          "default": "2024-lm-85-lamborghini-huracan-gt3-evo2-droite-3fa10c-68f0a3ea5c225527566693.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-85-lamborghini-huracan-gt3-evo2-droite-a81791-68f0a592b406a057004079.webp",
+            "bahrain_8h": "2024-wec-85-lamborghini-huracan-gt3-evo2-droite-a81791-68f0a63fe094b858939598.webp"
+          }
+        },
+        "86": "2024-lm-86-ferrari-296-droite-3fad55-68f0a3ef6dfa4746096369.webp",
+        "87": {
+          "default": "2024-lm-87-lexus-rc-f-lmgt3-droite-666c3f-68f0a3eaa1c6e583105031.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-87-lexus-rc-f-lmgt3-droite-5dec73-68f0a593048f4053266403.webp",
+            "bahrain_8h": "2024-wec-87-lexus-rc-f-lmgt3-droite-5dec73-68f0a640241aa174135130.webp"
+          }
+        },
+        "88": {
+          "default": "2024-lm-88-ford-mustang-droite-fc9d8d-68f0a3eb06644719005696.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-88-ford-mustang-droite-23bf01-68f0a5933f45d824182741.webp",
+            "bahrain_8h": "2024-wec-88-ford-mustang-droite-23bf01-68f0a6405fcb8461130572.webp"
+          }
+        },
+        "91": {
+          "default": "2024-lm-91-porsche-911-gt3-r-droite-830666-68f0a3eb4f609234438402.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-91-porsche-911-gt3-r-droite-765f85-68f0a59377224657761842.webp",
+            "bahrain_8h": "2024-wec-91-porsche-911-gt3-r-droite-765f85-68f0a640a280e642825009.webp"
+          }
+        },
+        "92": {
+          "default": "2024-lm-92-porsche-911-gt3-r-droite-23666c-68f0a3eb962ea251029882.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-92-porsche-911-gt3-r-droite-5f85b8-68f0a593b128c557101252.webp",
+            "bahrain_8h": "2024-wec-92-porsche-911-gt3-r-droite-bahrain-1adc79-68f0a640e90a9779969457.webp"
+          }
+        },
+        "93": {
+          "default": "2024-lm-93-peugeot-9x8-droite-14666c-68f0a3ebda93e342944462.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-93-peugeot-9x8-droite-592661-68f0a593eac24642256348.webp",
+            "bahrain_8h": "2024-wec-93-peugeot-9x8-droite-592661-68f0a64130491084698529.webp"
+          }
+        },
+        "94": {
+          "default": "2024-lm-94-peugeot-9x8-droite-4094ad-68f0a3ec33c01487648314.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-94-peugeot-9x8-droite-691661-68f0a5b1de84a404923673.webp",
+            "bahrain_8h": "2024-wec-94-peugeot-9x8-droite-691661-68f0a6416b812620102932.webp"
+          }
+        },
+        "95": {
+          "default": "2024-lm-95-mclaren-720s-droite-a0ad47-68f0a3ec7c884633968423.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-95-mclaren-720s-cota-droite-f6f3c6-68f0a5b22a99a397317059.webp",
+            "bahrain_8h": "2024-wec-95-mclaren-720s-cota-droite-f6f3c6-68f0a641b3081091571199.webp"
+          }
+        },
+        "99": {
+          "default": "2024-lm-99-porsche-963-droite-20ff90-68f0a3ecc87df059550335.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-99-porsche-963-sp-droite-73721-68f0a5b266ef4253374672.webp",
+            "bahrain_8h": "2024-wec-99-porsche-963-sp-droite-73721-68f0a641eb572911240073.webp"
+          }
+        },
+        "155": "2024-lm-155-ferrari-296-droite-68062e-68f0a3efb5723228117717.webp",
+        "183": "2024-lm-183-oreca-07-droite-7666c4-68f0a3f3c73f7116412167.webp",
+        "311": "2024-lm-311-cadillac-droite-f2b29b-68f0a3ee49ae0955876070.webp",
+        "777": {
+          "default": "2024-lm-777-aston-martin-gt3-droite-666c41-68f0a3ed22196598375163.webp",
+          "rounds": {
+            "fuji_6h": "2024-wec-777-aston-martin-gt3-droite-8d4f6c-68f0a5b2a3ce2679526386.webp",
+            "bahrain_8h": "2024-wec-777-aston-martin-gt3-droite-8d4f6c-68f0a64234078431723599.webp"
+          }
+        }
+      }
+    },
+    "2025": {
+      "basePath": "/static/images/wec/2025",
+      "cars": {
+        "4": "2025-lm-4-porsche-963-droite-6847e4-68f0a734d1d5c040485080.webp",
+        "5": {
+          "default": "2-66467b-68f0a64abfac2466224951.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-5-porsche-963-droite-cc24b3-68f0a72ab140c207776199.webp"
+          }
+        },
+        "6": {
+          "default": "2-e70d15-68f0a64b0b42d504202792.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-6-porsche-963-droite-6847e4-68f0a72b03317739660248.webp"
+          }
+        },
+        "7": {
+          "default": "2-7967b9-68f0a64b4846c705825292.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-7-toyota-gr010-droite-47e4ea-68f0a72b42c18991618510.webp"
+          }
+        },
+        "007": {
+          "default": "2025-wec-007-aston-martin-valkyrie-droite-6067f5-68f0a64a3c825602781859.webp",
+          "rounds": {
+            "qatar_1812km": "2-9d9bab-68f0a7221c1ef319701364.webp",
+            "imola_6h": "2-9d9bab-68f0a7c680139599231675.webp",
+            "spa_6h": "2-9d9bab-68f0a84ccbd3d434906143.webp",
+            "le_mans_24h": "2025-lm-007-aston-martin-valkyrie-droite-0a4abd-68f0a87d2a90b867538184.webp",
+            "sao_paulo_6h": "2025-wec-007-aston-martin-valkyrie-droite-ea2bc8-68f0a8c9ee798497085073.webp",
+            "cota_6h": "2025-wec-007-aston-martin-valkyrie-droite-ea2bc8-68f0a9347698f826280884.webp",
+            "fuji_6h": "2025-wec-007-aston-martin-valkyrie-droite-ea2bc8-68f0a976ce6e3656855192.webp"
+          }
+        },
+        "8": {
+          "default": "2-9f9d8f-68f0a64b8c6d9912633898.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-8-toyota-gr010-droite-7e56be-68f0a72b89f75809593844.webp"
+          }
+        },
+        "9": "2025-lm-9-oreca-07-droite-847e5d-68f0a754295ab142776096.webp",
+        "009": {
+          "default": "2025-wec-009-aston-martin-valkyrie-droite-6367f5-68f0a64a7e67f239549738.webp",
+          "rounds": {
+            "qatar_1812km": "2-be0379-68f0a722ccd3c815323843.webp",
+            "imola_6h": "2-be0379-68f0a7c744afa288651632.webp",
+            "spa_6h": "2-be0379-68f0a84d8421d832905402.webp",
+            "le_mans_24h": "2025-lm-009-aston-martin-valkyrie-droite-126847-68f0a72bd9558395554311.webp",
+            "sao_paulo_6h": "2025-wec-009-aston-martin-valkyrie-droite-a2ce84-68f0a8caad54f305184672.webp",
+            "cota_6h": "2025-wec-009-aston-martin-valkyrie-droite-a2ce84-68f0a9353762d609183689.webp",
+            "fuji_6h": "2025-wec-009-aston-martin-valkyrie-droite-a2ce84-68f0a9778c28a076644724.webp"
+          }
+        },
+        "10": {
+          "default": "2-5767b9-68f0a66e1b944471356503.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-10-aston-martin-gt3-droite-7ec8f7-68f0a72c34cc2383696555.webp",
+            "cota_6h": "2025-wec-10-aston-martin-gt3-cota-droite-28dd9a-68f0a935897ef054327753.webp",
+            "fuji_6h": "2025-wec-10-aston-martin-gt3-fuji-droite-f26339-68f0a977cc599182453703.webp"
+          }
+        },
+        "11": "2025-lm-11-oreca-07-droite-7e5f6c-68f0a7546a497486531670.webp",
+        "12": {
+          "default": "2-567b99-68f0a64bcf039523649967.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-12-cadillac-droite-500684-68f0a72c75b4d813227237.webp"
+          }
+        },
+        "13": "2025-lm-13-corvette-z06-gt3-r-droite-7eca65-68f0a75947a48351431872.webp",
+        "15": {
+          "default": "2-9c473f-68f0a64c1963e608702484.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-15-bmwm-hybrid-v8-droite-193cf3-68f0a72cb6b8c347149246.webp"
+          }
+        },
+        "16": "2025-lm-16-oreca-07-droite-36847e-68f0a754ae638197197377.webp",
+        "18": "2025-lm-18-oreca-07-droite-634683-68f0a7598c88d951981872.webp",
+        "20": {
+          "default": "2-167b99-68f0a66b730b1301537471.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-20-bmwm-hybrid-v8-droite-356844-68f0a72d01f12917774651.webp"
+          }
+        },
+        "21": {
+          "default": "2-d9c8d4-68f0a66e5dafe663497580.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-21-ferrari-296-gt3-droite-ecd84d-68f0a72d4d15c938264455.webp"
+          }
+        },
+        "22": "2025-lm-22-oreca-07-droite-63d7ff-68f0a7551378d556860420.webp",
+        "23": "2025-lm-23-oreca-07-droite-882684-68f0a75559f90444884174.webp",
+        "24": "2025-lm-24-oreca-07-droite-adfcc3-68f0a755b4bd2041438335.webp",
+        "25": "2025-lm-25-oreca-07-droite-09c09b-68f0a7560254e397215086.webp",
+        "27": {
+          "default": "2-7b99d9-68f0a66e9d80f115252853.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-27-aston-martin-gt3-droite-7ecf2d-68f0a72d909a9221480604.webp"
+          }
+        },
+        "28": "2025-lm-28-oreca-07-droite-6847e6-68f0a75643303962032649.webp",
+        "29": "2025-lm-29-oreca-07-droite-e71e3d-68f0a75687fb6921870302.webp",
+        "31": {
+          "default": "2-67b99d-68f0a66edb59d922022334.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-31-bmw-m4-gt3-droite-796847-68f0a72ddfa99600170149.webp",
+            "cota_6h": "2025-wec-31-bmw-m4-gt3-cota-droite-a84302-68f0a9371ba26327526434.webp"
+          }
+        },
+        "33": {
+          "default": "2-b99d9c-68f0a66f7a75c341493017.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-33-corvette-z06-gt3-r-droite-103684-68f0a72e31d6b877714646.webp"
+          }
+        },
+        "34": "2025-lm-34-oreca-07-droite-7400a2-68f0a756ceca5559905152.webp",
+        "35": {
+          "default": "2-367b99-68f0a66bb5a0e424184168.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-35-alpine-droite-1959b6-68f0a72e7e19c691568645.webp"
+          }
+        },
+        "36": {
+          "default": "2-d9d399-68f0a66c0315c587733595.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-36-alpine-droite-844196-68f0a72ebdbec990240530.webp"
+          }
+        },
+        "37": "2025-lm-37-oreca-07-droite-793684-68f0a757235ee386420772.webp",
+        "38": {
+          "default": "2-367b99-68f0a66c45baf987533313.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-38-cadillac-droite-6fd5b4-68f0a72f0a970427634383.webp"
+          }
+        },
+        "43": "2025-lm-43-oreca-07-droite-442e0c-68f0a7576ce8e013208376.webp",
+        "45": "2025-lm-45-oreca-07-droite-e99b3e-68f0a757b82d8262351899.webp",
+        "46": {
+          "default": "2025-wec-46-bmw-m4-gt3-droite-c02d79-68f0a66f33830299886137.webp",
+          "rounds": {
+            "qatar_1812km": "2-b99d9d-68f0a725b46aa328630039.webp",
+            "imola_6h": "2-b99d9d-68f0a7ca4ed8f467948740.webp",
+            "spa_6h": "2-b99d9d-68f0a8507a099303938622.webp",
+            "le_mans_24h": "2025-lm-46-bmw-m4-gt3-droite-d70e6f-68f0a72f50173198953627.webp"
+          }
+        },
+        "48": "2025-lm-48-oreca-07-droite-06847e-68f0a758096dc386997396.webp",
+        "50": {
+          "default": "2-9d9324-68f0a66c81e84873245591.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-50-ferrari-droite-168441-68f0a72f96944679508224.webp",
+            "sao_paulo_6h": "2025-wec-50-ferrari-droite-9685ea-68f0a8cddfe79360102362.webp",
+            "cota_6h": "2025-wec-50-ferrari-droite-9685ea-68f0a9389033f690438193.webp",
+            "fuji_6h": "2025-wec-50-ferrari-droite-9685ea-68f0a99cb0df7051351451.webp"
+          }
+        },
+        "51": {
+          "default": "2-b99d9d-68f0a66cc2778049018975.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-51-ferrari-droite-939684-68f0a72fd9254404321275.webp",
+            "sao_paulo_6h": "2025-wec-51-ferrari-droite-a2f125-68f0a8ce2d288705277777.webp",
+            "cota_6h": "2025-wec-51-ferrari-droite-a2f125-68f0a938cbdcf683495123.webp",
+            "fuji_6h": "2025-wec-51-ferrari-droite-a2f125-68f0a99cf1682962004615.webp"
+          }
+        },
+        "54": {
+          "default": "2-99d9dd-68f0a66fbf737844023331.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-54-ferrari-296-gt3-droite-426847-68f0a7302ad58875449843.webp"
+          }
+        },
+        "57": "2025-lm-57-ferrari-296-gt3-droite-eda01a-68f0a7351f3df640937998.webp",
+        "59": {
+          "default": "2-df02e2-68f0a6700c2e2758185547.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-59-mclaren-720s-droite-16847e-68f0a73073c20690872095.webp"
+          }
+        },
+        "60": {
+          "default": "2-9d9e36-68f0a6708c449733925824.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-60-mercedes-droite-47edd0-68f0a730c1d9f892522247.webp",
+            "sao_paulo_6h": "2025-wec-60-mercedes-bis-droite-3a3565-68f0a8cedfa4b598688844.webp",
+            "cota_6h": "2025-wec-60-mercedes-bis-droite-3a3565-68f0a9399d83b703942254.webp",
+            "fuji_6h": "2025-wec-60-mercedes-bis-droite-3a3565-68f0a99dc2164683377074.webp"
+          }
+        },
+        "61": {
+          "default": "2-267b99-68f0a670cb83b314895400.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-61-mercedes-droite-7ede1b-68f0a73113450351180130.webp",
+            "sao_paulo_6h": "2025-wec-61-mercedes-bis-droite-92b063-68f0a8cf2bdf8047141328.webp",
+            "cota_6h": "2025-wec-61-mercedes-bis-droite-92b063-68f0a939e06b8530186024.webp",
+            "fuji_6h": "2025-wec-61-mercedes-bis-droite-92b063-68f0a99e0cf31710781248.webp"
+          }
+        },
+        "63": "2025-lm-63-mercedes-droite-7edfa4-68f0a752f27cb258501336.webp",
+        "77": {
+          "default": "2-67b99d-68f0a6711ab8f174999906.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-77-ford-mustang-droite-192b08-68f0a7315b296891442640.webp"
+          }
+        },
+        "78": {
+          "default": "2-9d9eb6-68f0a671983f8554548693.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-78-lexus-rc-f-lmgt3-droite-47ee29-68f0a731abf5d871649088.webp"
+          }
+        },
+        "81": {
+          "default": "2-367b99-68f0a67223ca5662428347.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-81-corvette-z06-gt3-r-droite-3dded2-68f0a7320331d977301138.webp"
+          }
+        },
+        "83": {
+          "default": "2-467b99-68f0a66d0b4bf155214791.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-83-ferrari-droite-844199-68f0a73243722540409902.webp",
+            "sao_paulo_6h": "2025-wec-83-ferrari-droite-5ea30a-68f0a8d027e0d662665353.webp",
+            "cota_6h": "2025-wec-83-ferrari-droite-5ea30a-68f0a93ad7e92104317528.webp",
+            "fuji_6h": "2025-wec-83-ferrari-droite-5ea30a-68f0a99f06685024306502.webp"
+          }
+        },
+        "85": {
+          "default": "2-f3bfc7-68f0a67271b4e444385923.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-85-porsche-911-gt3-r-droite-476847-68f0a7328953c365660776.webp",
+            "fuji_6h": "2025-wec-85-porsche-911-gt3-r-fuji-droite-068d0f-68f0a99f4488c968055692.webp"
+          }
+        },
+        "87": {
+          "default": "2-8667b9-68f0a671d93cc295810138.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-87-lexus-rc-f-lmgt3-droite-7ee871-68f0a732d899a359690276.webp"
+          }
+        },
+        "88": {
+          "default": "2-7b99d9-68f0a6715c2c3018408361.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-88-ford-mustang-droite-eeb5d3-68f0a7332fb06485177378.webp"
+          }
+        },
+        "90": "2025-lm-90-porsche-911-gt3-r-droite-d8a36c-68f0a7534470d839878171.webp",
+        "92": {
+          "default": "2-567b99-68f0a672b0336801627345.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-92-porsche-911-gt3-r-droite-edb972-68f0a7337708b513433492.webp"
+          }
+        },
+        "93": {
+          "default": "2-99d9fd-68f0a66d4bdcb424511047.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-93-peugeot-9x8-droite-746684-68f0a733b620d760310081.webp"
+          }
+        },
+        "94": {
+          "default": "2-99da00-68f0a66d8dc9d692670932.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-94-peugeot-9x8-droite-696844-68f0a73402e39532601665.webp"
+          }
+        },
+        "95": {
+          "default": "2-67767b-68f0a6704aeeb147156762.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-95-mclaren-720s-droite-5ab88-68f0a7344eda2838232284.webp"
+          }
+        },
+        "99": {
+          "default": "2-b99da0-68f0a66dcca95283449101.webp",
+          "rounds": {
+            "le_mans_24h": "2025-lm-99-porsche-963-droite-419bf7-68f0a7348fd1e660497080.webp",
+            "sao_paulo_6h": "2025-wec-99-porsche-963-droite-ea31a1-68f0a8f6a6196451362464.webp",
+            "cota_6h": "2025-wec-99-porsche-963-droite-ea31a1-68f0a93cd300d112026966.webp",
+            "fuji_6h": "2025-wec-99-porsche-963-droite-ea31a1-68f0a9a0ec99f859247144.webp"
+          }
+        },
+        "101": "2025-lm-101-cadillac-droite-4419cc-68f0a7589d1e8184066030.webp",
+        "150": "2025-lm-150-ferrari-296-droite-847ef3-68f0a7538fd42517393808.webp",
+        "183": "2025-lm-183-oreca-07-droite-86847e-68f0a7585ae9c916367064.webp",
+        "193": "2025-lm-193-ferrari-296-droite-f5858d-68f0a753d59cd833739352.webp",
+        "199": "2025-lm-199-oreca-07-droite_396847.webp",
+        "311": "2025-lm-311-cadillac-droite-684419-68f0a758ee7ee012270467.webp"
+      }
+    },
+    "2026": {
+      "basePath": "/static/images/wec/2026",
+      "cars": {
+        "2": "2026-lm-2-corvette-z06-gt3-r-droite-6a23f4294bf1d831920081.webp",
+        "3": "2026-lm-3-oreca-07-droite-6a23f4290da93102971723.webp",
+        "4": "2026-lm-4-oreca-07-droite-6a267734af4d5403770039.webp",
+        "7": {
+          "default": "2026-wec-7-toyota-gr010-droite-69ef5999d1a72852098293.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-7-toyota-gr010-droite-6a26fd966719f513419808.webp"
+          }
+        },
+        "007": {
+          "default": "2026-wec-007-aston-martin-valkyrie-droit-69ef5999441ee923225009.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-007-aston-martin-valkyrie-droite-6a23f429b758d200643365.webp"
+          }
+        },
+        "8": {
+          "default": "2026-wec-8-toyota-gr010-droite-69ef599a5dfc2383937758.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-8-toyota-gr010-droite-6a23f429e7199801099749.webp"
+          }
+        },
+        "9": "2026-lm-9-oreca-07-droite-6a2677347d0c3665065352.webp",
+        "009": {
+          "default": "2026-wec-009-aston-martin-valkyrie-droit-69ef599aeb4db853979685.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-009-aston-martin-valkyrie-droite-6a2445c9db7a5747790382.webp"
+          }
+        },
+        "10": {
+          "default": "2026-wec-10-mclaren-720s-droit-69ef599b47943959296083.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-10-mclaren-720s-droite-6a25890613e58669955443.webp"
+          }
+        },
+        "12": {
+          "default": "2026-wec-12-cadillac-droit-69ef599bb359a378434336.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-12-cadillac-droite-6a2586c2c8f46935182024.webp"
+          }
+        },
+        "13": "2026-lm-13-corvette-z06-gt3-r-droite-6a23f42fa0c19329993615.webp",
+        "14": "2026-lm-14-oreca-07-droite-6a23f42cb7cd8036259477.webp",
+        "15": {
+          "default": "2026-wec-15-bmwm-hybrid-v8-droite-69ef599c5b32c241629633.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-15-bmwm-hybrid-v8-droite-6a23f42a84871843672959.webp"
+          }
+        },
+        "17": {
+          "default": "2026-wec-17-genesis-droite-69ef599d04050660947957.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-17-genesis-droite-6a23f42ab7564435785600.webp"
+          }
+        },
+        "19": {
+          "default": "2026-wec-19-genesis-droite-69ef599ec447c282142727.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-19-genesis-droite-6a23f42ae5ffc933140298.webp"
+          }
+        },
+        "20": {
+          "default": "2026-wec-20-bmwm-hybrid-v8-droite-69ef599f58985019540552.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-20-bmwm-hybrid-v8-droite-6a23f42b2307f957621104.webp"
+          }
+        },
+        "21": {
+          "default": "2026-wec-21-ferrari-296-gt3-droit-69ef599e2d353428239370.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-21-ferrari-296-gt3-droite-6a2677361fb88431988873.webp"
+          }
+        },
+        "22": "2026-lm-22-oreca-07-droite-6a23f42ce82f7650649137.webp",
+        "23": {
+          "default": "2026-wec-23-aston-martin-gt3-droit-69ef599fa93ef563850981.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-23-aston-martin-gt3-droite-6a23f4300874d981877522.webp"
+          }
+        },
+        "24": "2026-lm-24-oreca-07-droite-6a23f42d22e0c137561736.webp",
+        "25": "2026-lm-25-oreca-07-droite-6a267735217fd437867079.webp",
+        "26": "2026-lm-26-oreca-07-droite-6a23f42dd3cda892718074.webp",
+        "27": {
+          "default": "2026-wec-27-aston-martin-gt3-droit-69ef599fd7e82541482510.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-27-aston-martin-gt3-droite-6a23f4303703d954941083.webp"
+          }
+        },
+        "28": "2026-lm-28-oreca-07-droite-6a26773407abe211299486.webp",
+        "29": "2026-lm-29-oreca-07-droite-6a23f42e3ff3a528500634.webp",
+        "30": "2026-lm-30-oreca-07-droite-6a26773446d80649591098.webp",
+        "32": {
+          "default": "2026-wec-32-bmw-m4-gt3-droit-v2-6a8d9df92d318176106502.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-32-bmw-m4-gt3-droite-6a23f4306836a616386880.webp",
+            "sao_paulo_6h": "2026-wec-32-bmw-m4-gt3-droit-6a42595a9199c326529475.webp"
+          }
+        },
+        "33": {
+          "default": "2026-wec-33-corvette-z06-gt3-r-droit-69ef59a03dc10845381441.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-33-corvette-z06-gt3-r-droite-6a23f430964ba606961465.webp"
+          }
+        },
+        "34": {
+          "default": "2026-wec-34-corvette-z06-gt3-r-droit-69ef59a06dbf9223293483.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-34-corvette-z06-gt3-r-droite-6a23f430bf7e5476773437.webp"
+          }
+        },
+        "35": {
+          "default": "2026-wec-35-alpine-a424-droit-69ef59a0cbea1140658677.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-35-alpine-droite-6a2445ca3bcde641089806.webp"
+          }
+        },
+        "36": {
+          "default": "2026-wec-36-alpine-a424-droit-69ef59a162910008451141.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-36-alpine-droite-6a23f42b849da447833868.webp"
+          }
+        },
+        "37": "2026-lm-37-oreca-07-droite-6a23f42ea3947064301251.webp",
+        "38": {
+          "default": "2026-wec-38-cadillac-droit-69ef59a1eea2a677591800.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-38-cadillac-droite-6a2586c3028d2165133795.webp"
+          }
+        },
+        "43": "2026-lm-43-oreca-07-droite-6a23f5a155e8e943204469.webp",
+        "44": "2026-lm-44-oreca-07-droite-6a23f42f14f3a822899879.webp",
+        "48": "2026-lm-48-oreca-07-droite-6a23f42f4208e389929548.webp",
+        "50": {
+          "default": "2026-wec-50-ferrari-499-droit-69ef59a283984016887771.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-50-ferrari-droite-6a23f42be13ce192484583.webp"
+          }
+        },
+        "51": {
+          "default": "2026-wec-51-ferrari-499-droit-69ef59a31b0e0838993591.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-51-ferrari-droite-6a24388ee2b5f553483886.webp"
+          }
+        },
+        "54": {
+          "default": "2026-wec-54-ferrari-296-gt3-droit-69ef599d8387b905439544.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-54-ferrari-296-gt3-droite-6a26773651800372659842.webp"
+          }
+        },
+        "57": "2026-lm-57-ferrari-296-gt3-droite-6a267736bfc0a342672034.webp",
+        "58": {
+          "default": "2026-wec-58-mclaren-720s-droit-69ef59a36ba14571940278.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-58-mclaren-720s-droite-6a26fd9583762963365039.webp"
+          }
+        },
+        "59": "2026-lm-59-aston-martin-gt3-droite-6a23f4317e0df436852662.webp",
+        "61": {
+          "default": "2026-wec-61-mercedes-droit-69ef59a3da842531072903.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-61-mercedes-droite-6a26fd95c2cb2307651804.webp"
+          }
+        },
+        "62": "2026-lm-62-mercedes-droite-6a26fd96018f5327722444.webp",
+        "69": {
+          "default": "2026-wec-69-bmw-m4-gt3-spa-droit-69fa57b6bd0b9675746254.webp",
+          "rounds": {
+            "imola_6h": "2026-wec-69-bmw-m4-gt3-imola-droite-69de8a50dd147687949933.webp",
+            "le_mans_24h": "2026-lm-69-bmw-m4-gt3-droite-6a23f4321cc92396438838.webp"
+          }
+        },
+        "74": "2026-lm-74-ferrari-296-droite-6a23f4324c257979740144.webp",
+        "77": {
+          "default": "2026-wec-77-ford-mustang-droit-v2-6a8d9df850ac4232285542.webp",
+          "rounds": {
+            "imola_6h": "2026-wec-77-ford-mustang-droit-69e08c1fa1b2e019672521.webp",
+            "spa_6h": "2026-wec-77-ford-mustang-droit-69faf16cf4230479188427.webp",
+            "le_mans_24h": "2026-lm-77-ford-mustang-droite-6a23f4327e178870621692.webp",
+            "sao_paulo_6h": "2026-wec-77-ford-mustang-droit-6a425a291d9c1446606869.webp"
+          }
+        },
+        "78": {
+          "default": "2026-wec-78-lexus-rc-f-lmgt3-droit-69ef59a4b9726258267872.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-78-lexus-rc-f-lmgt3-droite-6a23f432aecc1836233522.webp"
+          }
+        },
+        "79": {
+          "default": "2026-wec-79-mercedes-spa-droite-69fdfd001bbad047429673.webp",
+          "rounds": {
+            "imola_6h": "2026-wec-79-mercedes-droit-69de580f61096494073058.webp",
+            "le_mans_24h": "2026-lm-79-mercedes-droite-6a26fd96381b3880699968.webp"
+          }
+        },
+        "83": {
+          "default": "2026-wec-83-ferrari-499-droit-69d608e5ee4ac003532549.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-83-ferrari-droite-6a23f42c4b83b193938633.webp"
+          }
+        },
+        "87": {
+          "default": "2026-wec-87-lexus-rc-f-lmgt3-droit-69d608ecdbb90368473377.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-87-lexus-rc-f-lmgt3-droite-6a23f46b1adc5624934961.webp"
+          }
+        },
+        "88": {
+          "default": "2026-wec-88-ford-mustang-droit-v2-6a8d9df8d444d186302672.webp",
+          "rounds": {
+            "imola_6h": "2026-wec-88-ford-mustang-droit-69e08c2038d11322351238.webp",
+            "spa_6h": "2026-wec-88-ford-mustang-droit-69faf16d7efa9999939549.webp",
+            "le_mans_24h": "2026-lm-88-ford-mustang-droite-6a23f46b5d822247327577.webp",
+            "sao_paulo_6h": "2026-wec-88-ford-mustang-droit-6a425a2a10849315209482.webp"
+          }
+        },
+        "91": {
+          "default": "2026-wec-91-porsche-911-gt3-r-droit-69d6115bd7e17864774223.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-91-porsche-911-gt3-r-droite-6a23f46b8d22c882928676.webp"
+          }
+        },
+        "92": {
+          "default": "2026-wec-92-porsche-911-gt3-r-droit-69d608ee51ef7314320931.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-92-porsche-911-gt3-r-droite-6a23f46bba406303300710.webp"
+          }
+        },
+        "93": {
+          "default": "2026-wec-93-peugeot-9x8-droite-69de032b1a0d8786392454.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-93-peugeot-9x8-droite-6a23f45941b5c773534759.webp"
+          }
+        },
+        "94": {
+          "default": "2026-wec-94-peugeot-9x8-droit-69de032b8d651258439958.webp",
+          "rounds": {
+            "le_mans_24h": "2026-lm-94-peugeot-9x8-droite-6a23f45972dd4058598378.webp"
+          }
+        },
+        "99": "2026-lm-99-oreca-07-droite-6a23f4626bcb6584337185.webp",
+        "101": "2026-lm-101-cadillac-droite-6a26774633fed334664395.webp",
+        "150": "2026-lm-150-ferrari-296-droite-6a23f46be93d0061190803.webp",
+        "183": "2026-lm-183-oreca-07-droite-6a23f4629ec66657009078.webp",
+        "222": "2026-lm-222-oreca-07-droite-6a23f462cd839563477846.webp",
+        "343": "2026-lm-343-oreca-07-droite-6a23f4630d96a243964806.webp"
+      }
+    }
+  }
+}

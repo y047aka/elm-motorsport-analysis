@@ -1,0 +1,6 @@
+# What `.#car-images` writes a photograph through. The original it encodes from
+# and the file `cwebp` fills sit beside the finished one so that the rename
+# putting it in place is on the one filesystem, and a run that is killed rather
+# than failed leaves them behind.
+.*.original
+.*.part

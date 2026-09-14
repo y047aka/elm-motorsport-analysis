@@ -99,13 +99,13 @@ type alias StartingGridEntry =
 -- DECODER
 
 
-eventDecoder : Era -> Manufacturers -> Decoder Event
-eventDecoder era manufacturers =
+eventDecoder : Era -> Manufacturers -> (Car.CarNumber -> Maybe String) -> Decoder Event
+eventDecoder era manufacturers carImageUrl =
     Decode.map5 Event
         (field "race" (field "timeLimit" Instant.decoder))
         (field "race" (field "duration" Instant.decoder))
         (field "track" trackDecoder)
-        (field "startingGrid" (startingGridDecoder era manufacturers))
+        (field "startingGrid" (startingGridDecoder era manufacturers carImageUrl))
         (field "index" Race.indexDecoder)
 
 
@@ -195,11 +195,11 @@ byMiniSectorDecoder =
         |> required "fl" shareDecoder
 
 
-startingGridDecoder : Era -> Manufacturers -> Decoder StartingGrid
-startingGridDecoder era manufacturers =
+startingGridDecoder : Era -> Manufacturers -> (Car.CarNumber -> Maybe String) -> Decoder StartingGrid
+startingGridDecoder era manufacturers carImageUrl =
     Decode.map2 StartingGrid
         (field "basis" basisDecoder)
-        (field "entries" (list (startingGridEntryDecoder era manufacturers)))
+        (field "entries" (list (startingGridEntryDecoder era manufacturers carImageUrl)))
 
 
 basisDecoder : Decoder Basis
@@ -222,15 +222,15 @@ basisDecoder =
             )
 
 
-startingGridEntryDecoder : Era -> Manufacturers -> Decoder StartingGridEntry
-startingGridEntryDecoder era manufacturers =
+startingGridEntryDecoder : Era -> Manufacturers -> (Car.CarNumber -> Maybe String) -> Decoder StartingGridEntry
+startingGridEntryDecoder era manufacturers carImageUrl =
     Decode.map2 StartingGridEntry
         (field "position" int)
-        (field "car" (carMetadataDecoder era manufacturers))
+        (field "car" (carMetadataDecoder era manufacturers carImageUrl))
 
 
-carMetadataDecoder : Era -> Manufacturers -> Decoder Car.Metadata
-carMetadataDecoder era manufacturers =
+carMetadataDecoder : Era -> Manufacturers -> (Car.CarNumber -> Maybe String) -> Decoder Car.Metadata
+carMetadataDecoder era manufacturers carImageUrl =
     Decode.succeed
         (\carNumber drivers class group team manufacturer ->
             { carNumber = carNumber
@@ -239,6 +239,7 @@ carMetadataDecoder era manufacturers =
             , group = group
             , team = team
             , manufacturer = Manufacturer.fromName manufacturers { name = manufacturer, carNumber = carNumber }
+            , imageUrl = carImageUrl carNumber
             }
         )
         |> required "carNumber" string

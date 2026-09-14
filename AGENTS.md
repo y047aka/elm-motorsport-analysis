@@ -32,6 +32,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
+| `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -144,9 +145,6 @@ and a round it does not list cannot be opened. That one URL is the whole of
 what the app knows about where its data comes from: the calendar names each
 round's summary and laps, and nothing else does.
 
-`Data/Series.elm` is the remains of the compile-time calendar it replaced: car
-images, which nothing imports yet.
-
 `Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json` the same way,
 also once, and a round waits on it as it waits on the calendar. That file is
 written by hand and no compiler reads it, so a mistake in it shows as cars drawn
@@ -155,6 +153,65 @@ unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
 takes a colour from its number. What the feed spells is
 `SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
 them the file has no row for is one query rather than a reading of the cars.
+
+`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the
+manufacturer table is, which names each season's photographs and the directory
+under `static/images/wec` they sit in. `.#car-images --season <year>` writes one
+season of it.
+
+It reads two sources because neither has all of it. Le Mans's LMP2 field is the
+organiser's class and not the championship's, so fiawec.com — whose categories
+are Hypercar and LMGT3 — does not carry it and `api-he.lemans.org` does; and
+that API has no list of which races a season ran, which the grid page has. A
+season the grid page is not showing is reached through its season filter, which
+takes the ids `/evo/1/seasons` publishes and answers for seasons the page itself
+no longer offers: 2024 is reached that way and nowhere else, `/en/car/2024`
+having become a redirect to the current season.
+
+A season still being run is a photograph per car on the grid page, and a round
+is compared against it. One the site keeps only in its archive lists the cars
+without their pictures, and then the rounds are the whole of where a car's
+photographs come from — its first of them is what the car carries, which is how
+2024 reads.
+
+Every round has an upload of its own for every car, most of them the season's
+picture again under another name, so a round is registered for the picture
+differing and not the file: they are compared by what they hold. Of 2025's, 179
+were the season's again and 134 were not.
+
+The photographs are kept as WebP at `-q 75 -sharp_yuv`, at the width they are
+published rather than a narrower one — measured as the card draws them, bytes
+spent on resolution beat bytes spent on quality. `-sharp_yuv` is the one flag
+worth its cost: WebP's lossy mode is YUV 4:2:0 at every quality, and the
+sharper conversion recovers a tenth of the error for a twenty-fifth of the size.
+Three seasons come to 13MB, where the same pictures as PNG were 71MB.
+
+**A photograph already here is never asked for again.** The one place an image
+is requested is reached from two, and both are behind that check, so a run that
+cannot compare a file it holds stops and says which. Comparing needs the
+original and not the WebP written from it, so `app/scripts/car-image-origins.json`
+holds each original's digest — every one a run fetched and not only the ones it
+kept, each written as it arrives, so an error, an interrupt or a `--dry-run`
+cannot drop what was already paid for. Everything else is bounded by what was
+read: one request for the grid page, two more for a season it is not showing,
+one for each race the calendar has a round for. A run says how many images it
+asked the site for, which is the number to read rather than how many it kept.
+Requests are a second apart and nothing is retried.
+
+A photograph is put in place by a rename: half of one would read as a photograph
+already here, never be asked for again, and be served.
+
+A run ends by naming **the cars the table has that no source named** — a car
+that has left the entry lists keeps whatever the table said of it, which is the
+one way a photograph goes unreplaced — and **the photographs narrower than the
+rest**, read off the WebP header. 2024's 14 and 2025's 199 are on neither
+source and are the two still at 300px.
+
+Both tables are read where the cars decode rather than where they are drawn:
+`Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
+round, and `Car.Metadata` comes out of it carrying the colour, the badge and the
+photograph. Nothing downstream asks a second time, so a widget handed a car has
+everything it draws.
 
 ### The shadcn components
 
@@ -239,10 +296,12 @@ GapChart, BoxPlot).
 passed through (`Class`, `Era`), and Le Mans's mini-sectors
 (`Circuit/LeMans`). Decoding the timing feed stays app-side in `Data.Wec` /
 `Data.Wec.Laps` — the shape of one publisher's files, not of the domain.
-`Data.Wec.Manufacturer` is app-side for the same reason: which manufacturers
-there are, and how each is coloured and badged, is one series' entry list and
-this application's assets. It holds none of them itself — it decodes the table
-that does.
+`Data.Wec.Manufacturer` and `Data.Wec.CarImage` are app-side for the same
+reason: which manufacturers there are, how each is coloured and badged, and
+which photograph a car carries at a round, is one series' entry list and this
+application's assets. Neither holds any of it itself — each decodes the table
+that does, and what reaches `Car.Metadata` is the resolved colour, badge and
+photograph rather than the tables.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in three places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to

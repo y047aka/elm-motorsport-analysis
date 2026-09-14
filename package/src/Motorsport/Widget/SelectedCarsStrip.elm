@@ -22,7 +22,6 @@ internally, so callers may store them as-is.
 view :
     { offset : Int
     , onScrollTo : Int -> msg
-    , carImageUrl : String -> Maybe String
     }
     -> Snapshot
     -> Html msg
@@ -59,7 +58,7 @@ view config snapshot =
                     ]
                 , div
                     [ class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-2" ]
-                    (List.map (CarCard.view config.carImageUrl lapHistory allCars) window)
+                    (List.map (CarCard.view lapHistory allCars) window)
                 ]
 
 

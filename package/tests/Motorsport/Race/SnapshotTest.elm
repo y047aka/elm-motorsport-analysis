@@ -652,6 +652,7 @@ metadataOf carNumber class =
     , group = "H"
     , team = "Team " ++ carNumber
     , manufacturer = Manufacturer.unknown
+    , imageUrl = Nothing
     }
 
 

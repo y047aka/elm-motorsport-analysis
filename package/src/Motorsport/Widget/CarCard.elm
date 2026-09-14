@@ -24,13 +24,9 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 
 {-| `allCars` is the full overall standings, not just the visible window —
 the sparkline searches it for the class rivals ahead of and behind the car.
-
-`carImageUrl` answers for any car number, because the card is drawn for whatever
-the caller hands it; only the app knows where the season's photographs are.
-
 -}
-view : (String -> Maybe String) -> LapHistory -> List CarAt -> CarAt -> Html msg
-view carImageUrl lapHistory allCars item =
+view : LapHistory -> List CarAt -> CarAt -> Html msg
+view lapHistory allCars item =
     div
         [ class "grid gap-y-1" ]
         [ div
@@ -42,7 +38,7 @@ view carImageUrl lapHistory allCars item =
             [ div
                 [ class "grid gap-y-2 p-3" ]
                 [ cardHeader item
-                , portrait (carImageUrl item.metadata.carNumber) item
+                , portrait item.metadata.imageUrl item
                 , summaryStats item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item
