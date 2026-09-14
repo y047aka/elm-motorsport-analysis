@@ -19,6 +19,7 @@ const mimeTypes: Record<string, string> = {
   ".json": "application/json",
   ".jsonl": "application/jsonl",
   ".png": "image/png",
+  ".webp": "image/webp",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".svg": "image/svg+xml",
