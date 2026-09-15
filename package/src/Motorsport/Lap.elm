@@ -163,9 +163,6 @@ type Pit
     | OutAndIn Duration
 
 
-{-| Whether the car finished this lap in the pit lane, which is the lap a run
-between stops ends on.
--}
 isInLap : Lap -> Bool
 isInLap lap =
     case lap.pit of
@@ -200,7 +197,7 @@ isRacingLap lap =
 {-| How long the stop that this lap began with took.
 
 `Nothing` on the lap the car came in on: the stop is not timed until the car is
-back out, and the time is then recorded on the lap that follows.
+back out.
 
 -}
 stopOf : Lap -> Maybe Duration
@@ -222,8 +219,7 @@ stopOf lap =
 {-| When the car drove away from that stop.
 
 That is when it has made one, rather than when the lap it drove away on was
-completed: the rest of that lap is a lap out on the road, and where the pit lane
-falls in the first sector that is most of it.
+completed: the rest of that lap is a lap out on the road.
 
 -}
 stopEndedAt : Lap -> Maybe Instant

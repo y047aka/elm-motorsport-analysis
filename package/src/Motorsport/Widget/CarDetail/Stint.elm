@@ -248,8 +248,7 @@ stintTitle stint =
             "pit " ++ Duration.toStringToTenths pit.duration
 
         RaceStint.InPit ->
-            -- The run ended on a stop whose length is on a lap the car has not
-            -- finished, so there is no number for it yet.
+            -- The length is on a lap the car has not finished.
             "pit -"
 
         RaceStint.Running ->

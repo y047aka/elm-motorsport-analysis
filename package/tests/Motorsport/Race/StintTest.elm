@@ -132,8 +132,7 @@ lap lapNumber time =
     { empty | lap = lapNumber, time = Just time }
 
 
-{-| The lap the car came in on: slower for the pit entry in its final sector,
-and carrying no stop of its own.
+{-| The lap the car came in on, which carries no stop of its own.
 -}
 inLap : Int -> Int -> Lap
 inLap lapNumber time =

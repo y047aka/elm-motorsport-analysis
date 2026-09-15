@@ -10,9 +10,9 @@ Needs no laps, no clock and no entry list to say it, which is why it lives on it
 own: the race's record of when it changed and the badges on a timing screen both
 want this and nothing more.
 
-Reading one off a race takes both halves of its data -- the timeline settles the
-ends of a car's race and the laps settle the pit lane -- so a car's actual status
-is [`Race.Snapshot`](Motorsport-Race-Snapshot)'s, which has both.
+A car's actual status is [`Race.Snapshot`](Motorsport-Race-Snapshot)'s. Its laps
+say all of it, but in two readings -- where its race began and ended, and where
+in a stop it is -- and only the snapshot has both.
 
 @docs Status, hasRetired, hasStopped
 

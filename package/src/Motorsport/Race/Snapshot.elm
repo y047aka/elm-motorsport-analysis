@@ -403,14 +403,13 @@ sampleCar clock race car =
             )
 
 
-{-| Where the car stands, read off both halves of the race's data.
+{-| Where the car stands, off the two readings of its laps that say it.
 
-Whether its race has begun and whether it is over are the timeline's, which is
-the only place they are said. The pit lane is the lap the car is on: a stop falls
-at the head of the lap the car came back out on, so the lap in progress is the
-one carrying it, and the clock against
-[`Lap.stopEndedAt`](Motorsport-Lap#stopEndedAt) separates a car standing in its
-box from one already rejoining.
+Where its race began and ended is [`Race.statusAt`](Motorsport-Race#statusAt)'s.
+Where it is within one still being run is the lap in progress: a stop falls at
+the head of the lap the car came back out on, so that is the lap carrying it, and
+the clock against [`Lap.stopEndedAt`](Motorsport-Lap#stopEndedAt) separates a car
+standing in its box from one already rejoining.
 
 -}
 statusOf : { elapsed : Instant } -> Race -> Car -> Lap -> Status
