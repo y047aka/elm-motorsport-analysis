@@ -327,7 +327,6 @@ fieldIndex =
     { lapCompletions = ChangePoints.fromList [ ( Instant.fromDuration 5000, 1 ), ( Instant.fromDuration 9000, 2 ) ]
     , bestTimeChanges =
         { fastestLapTime = changes [ { at = 5000, car = "2", lap = 1, time = 5000 }, { at = 9000, car = "2", lap = 2, time = 4000 } ]
-        , slowestLapTime = changes [ { at = 5000, car = "2", lap = 1, time = 5000 }, { at = 6000, car = "1", lap = 1, time = 6000 } ]
         , fastestSectors =
             { s1 = changes [ { at = 5000, car = "2", lap = 1, time = 1500 }, { at = 6000, car = "1", lap = 1, time = 1000 } ]
             , s2 = changes [ { at = 5000, car = "2", lap = 1, time = 1500 } ]
@@ -350,7 +349,6 @@ leMansIndex =
     { lapCompletions = ChangePoints.fromList [ ( Instant.fromDuration 15000, 1 ) ]
     , bestTimeChanges =
         { fastestLapTime = setBy "7" 15000 15000
-        , slowestLapTime = setBy "7" 15000 15000
         , fastestSectors =
             { s1 = setBy "7" 15000 3000
             , s2 = setBy "7" 15000 4000
@@ -369,7 +367,6 @@ untimedSectorsIndex untimed =
     { lapCompletions = ChangePoints.fromList [ ( Instant.fromDuration 6000, 1 ) ]
     , bestTimeChanges =
         { fastestLapTime = setBy "5" 6000 6000
-        , slowestLapTime = setBy "5" 6000 6000
         , fastestSectors =
             Sector.initialize
                 (\sector ->

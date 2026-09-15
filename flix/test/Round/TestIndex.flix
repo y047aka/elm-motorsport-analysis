@@ -82,20 +82,6 @@ mod Round.TestIndex {
                 == ("1:00.000", "7", 1) :: ("58.000", "8", 2) :: Nil
         )
 
-    /// The slowest lap is the same walk in the other direction, which is the
-    /// one record a running minimum does not find.
-    @Test
-    def theSlowestLapIsWonTheOtherWayRound(): Unit \ {Assert, IO} =
-        let laps =
-            lap("7", "Driver A", 1, "60.000", "20.000", "20.000", "20.000", "60.000") ::
-            lap("8", "Driver B", 1, "61.000", "21.000", "20.000", "20.000", "61.000") ::
-            lap("8", "Driver B", 2, "58.000", "19.000", "19.500", "19.500", "1:59.000") ::
-            Nil;
-        Assert.assertTrue(
-            held(changesOf(Record.SlowestLap, laps))
-                == ("1:00.000", "7", 1) :: ("1:01.000", "8", 1) :: Nil
-        )
-
     /// A sector record is the sector's own time, not the time of the lap that
     /// set it -- and it is won on a lap that took neither of the others.
     @Test
@@ -118,8 +104,7 @@ mod Round.TestIndex {
             lap("7", "Driver A", 1, "0.000", "20.000", "20.000", "20.000", "60.000") ::
             lap("8", "Driver B", 1, "61.000", "21.000", "20.000", "20.000", "61.000") ::
             Nil;
-        Assert.assertTrue(held(changesOf(Record.FastestLap, laps)) == ("1:01.000", "8", 1) :: Nil);
-        Assert.assertTrue(held(changesOf(Record.SlowestLap, laps)) == ("1:01.000", "8", 1) :: Nil)
+        Assert.assertTrue(held(changesOf(Record.FastestLap, laps)) == ("1:01.000", "8", 1) :: Nil)
 
     /// Nor are the mini-sectors of such a lap, which the feed records all the
     /// same.

@@ -45,7 +45,7 @@ tests =
             , test "a summary missing a record is a summary of the wrong shape" <|
                 \_ ->
                     Decode.decodeString BestTimes.changesDecoder
-                        """{ "fastestLapTime": [], "slowestLapTime": [] }"""
+                        """{ "fastestLapTime": [] }"""
                         |> Result.toMaybe
                         |> Expect.equal Nothing
             ]
@@ -62,11 +62,12 @@ tests =
                         |> Expect.equal Nothing
             , test "who holds a record moves with the record" <|
                 \_ ->
+                    -- S1 is car 2's on its opening lap and car 1's from 6.000.
                     [ 4999, 5000, 6000, 9000 ]
                         |> List.map
                             (\elapsed ->
                                 BestTimes.at { elapsed = Instant.fromDuration elapsed } changes
-                                    |> .slowestLapTime
+                                    |> (.fastestSectors >> .s1)
                                     |> Maybe.map .carNumber
                             )
                         |> Expect.equal [ Nothing, Just "2", Just "1", Just "1" ]
@@ -136,10 +137,6 @@ summaryIndexJson =
     { "fastestLapTime":
         [ { "elapsed": "5.000", "time": "5.000", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" }
         , { "elapsed": "9.000", "time": "4.000", "carNumber": "2", "lap": 2, "driver": "Kamui KOBAYASHI" }
-        ]
-    , "slowestLapTime":
-        [ { "elapsed": "5.000", "time": "5.000", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" }
-        , { "elapsed": "6.000", "time": "6.000", "carNumber": "1", "lap": 1, "driver": "Will STEVENS" }
         ]
     , "sectors":
         { "s1":

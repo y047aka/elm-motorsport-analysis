@@ -7,12 +7,11 @@ module Motorsport.BestTimes exposing
 {-| When each of the race's best times was set, what they stand at, and who set
 them.
 
-Twenty records make up the baseline a timing screen rates against: the fastest
-lap, three sectors, fifteen mini-sectors, and the slowest lap that the other end
-of the scale is drawn against. Each is a
+Nineteen records make up the baseline a timing screen rates against: the fastest
+lap, three sectors and fifteen mini-sectors. Each is a
 [`ChangePoints`](Motorsport-Internal-ChangePoints) over the moments it was
 beaten, which is what keeps reading the baseline off a binary search rather than
-twenty passes over every lap of the race.
+nineteen passes over every lap of the race.
 
 Which lap took which record is counted where the laps are, in `Round.Index`, and
 arrives with the round's summary.
@@ -75,13 +74,12 @@ type alias Snapshot =
 
 {-| One value per record: the shape `Changes` and `Snapshot` share.
 
-Everything this module does to the twenty records goes through `map`, so they
+Everything this module does to the nineteen records goes through `map`, so they
 are enumerated in exactly one place.
 
 -}
 type alias ByRecord a =
     { fastestLapTime : a
-    , slowestLapTime : a
     , fastestSectors : BySector a
     , fastestMiniSectors : ByMiniSector a
     }
@@ -90,7 +88,6 @@ type alias ByRecord a =
 map : (a -> b) -> ByRecord a -> ByRecord b
 map f records =
     { fastestLapTime = f records.fastestLapTime
-    , slowestLapTime = f records.slowestLapTime
     , fastestSectors = Sector.initialize (\sector -> f (Sector.get sector records.fastestSectors))
     , fastestMiniSectors = LeMans.initialize (\mini -> f (LeMans.get mini records.fastestMiniSectors))
     }
@@ -102,7 +99,6 @@ map f records =
 empty : Changes
 empty =
     { fastestLapTime = ChangePoints.empty
-    , slowestLapTime = ChangePoints.empty
     , fastestSectors = Sector.initialize (\_ -> ChangePoints.empty)
     , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
     }
@@ -112,9 +108,8 @@ empty =
 -}
 changesDecoder : Decoder Changes
 changesDecoder =
-    Decode.map4 ByRecord
+    Decode.map3 ByRecord
         (field "fastestLapTime" holdersDecoder)
-        (field "slowestLapTime" holdersDecoder)
         (field "sectors" (Decode.map3 BySector (field "s1" holdersDecoder) (field "s2" holdersDecoder) (field "s3" holdersDecoder)))
         (field "miniSectors" miniSectorsDecoder)
 

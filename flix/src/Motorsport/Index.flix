@@ -24,12 +24,10 @@ mod Motorsport.Index {
         driver    = String
     }
 
-    /// The twenty a timing screen rates against: the fastest lap, three
-    /// sectors, fifteen mini-sectors, and the slowest lap the other end of the
-    /// scale is drawn against.
+    /// The nineteen a timing screen rates against: the fastest lap, three
+    /// sectors and fifteen mini-sectors.
     pub enum Record with Eq {
         case FastestLap
-        case SlowestLap
         case FastestSector(Sector)
         case FastestMiniSector(MiniSectorId)
     }
@@ -38,7 +36,6 @@ mod Motorsport.Index {
     /// missing from what is written.
     pub def records(): List[Record] =
         Record.FastestLap ::
-        Record.SlowestLap ::
         List.append(
             Sector.all() |> List.map(s -> Record.FastestSector(s)),
             MiniSector.all() |> List.map(m -> Record.FastestMiniSector(m))
@@ -79,7 +76,6 @@ mod Motorsport.Index {
     def bestTimesToJson(index: Index): Encode.JsonValue =
         JsonObject(
             ("fastestLapTime", changesToJson(Record.FastestLap, index)) ::
-            ("slowestLapTime", changesToJson(Record.SlowestLap, index)) ::
             ("sectors", JsonObject(Sector.all() |> List.map(s ->
                 (Sector.jsonKey(s), changesToJson(Record.FastestSector(s), index))))) ::
             ("miniSectors", JsonObject(MiniSector.all() |> List.map(m ->

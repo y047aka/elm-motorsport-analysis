@@ -42,21 +42,21 @@ mod Round.Index {
 
     // ----------------------------------------------------------- best times
 
-    /// What each record is drawn from, and which way round it is won: `1` keeps
-    /// the smallest reading, `-1` the largest.
-    def sources(): List[(Record, Int32, String)] =
-        (Record.FastestLap, 1, "NULLIF(lap_time_ms, 0)") ::
-        (Record.SlowestLap, -1, "NULLIF(lap_time_ms, 0)") ::
-        (Record.FastestSector(Sector.S1), 1, "s1_ms") ::
-        (Record.FastestSector(Sector.S2), 1, "s2_ms") ::
-        (Record.FastestSector(Sector.S3), 1, "s3_ms") ::
+    /// What each record is drawn from. Every one of them is won by the
+    /// smallest reading, which is what lets `standing` find them all in one
+    /// running minimum.
+    def sources(): List[(Record, String)] =
+        (Record.FastestLap, "NULLIF(lap_time_ms, 0)") ::
+        (Record.FastestSector(Sector.S1), "s1_ms") ::
+        (Record.FastestSector(Sector.S2), "s2_ms") ::
+        (Record.FastestSector(Sector.S3), "s3_ms") ::
         Nil
 
     def bestTimes(entry: Entry, seats: Round.Drivers.Seats): List[(Record, Change)] \ DbRead =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
-            |> Sql.filter(_ -> Sql.column("prev IS NULL OR t * dir < prev"))
+            |> Sql.filter(_ -> Sql.column("prev IS NULL OR t < prev"))
             |> Sql.orderBy(Sql.raw("k") :: Sql.raw("elapsed_ms") :: Sql.raw("source_row") :: Nil)
             |> Sql.map(_ -> (
                 record,
@@ -84,8 +84,8 @@ mod Round.Index {
         changes |> List.filterMap(match (r, change) -> if (r == record) Some(change) else None)
 
     def branches(entry: Entry): List[Sql.Branch[Record]] =
-        let scalar = sources() |> List.map(match (record, direction, expression) ->
-            Sql.Branch.One(record, reading(entry, direction, expression)));
+        let scalar = sources() |> List.map(match (record, expression) ->
+            Sql.Branch.One(record, reading(entry, expression)));
         List.append(scalar, miniSectorBranch(entry) :: Nil)
 
     /// The fifteen mini-sectors are one arm, `json_each` numbering them from
@@ -104,15 +104,15 @@ mod Round.Index {
     /// Every reading with the record as it stood before it beside it, the
     /// readings walked once in the order the laps were completed.
     def standing(): String =
-        "SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_number, t, dir,"
-            + " MIN(t * dir) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
+        "SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_number, t,"
+            + " MIN(t) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
             + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
             + " FROM v WHERE t IS NOT NULL"
 
-    def reading(entry: Entry, direction: Int32, expression: String): Sql.Frag =
+    def reading(entry: Entry, expression: String): Sql.Frag =
         Sql.frags(
             Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number,"
-                + " ${direction} AS dir, ${expression} AS t"
+                + " ${expression} AS t"
                 + " FROM " + Laps.table() + " WHERE") ::
             where_(entry, Nil) :: Nil
         )
@@ -121,7 +121,7 @@ mod Round.Index {
     /// of such a lap are not a lap of the circuit either.
     def miniSectorReadings(entry: Entry): Sql.Frag =
         Sql.frags(
-            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number, 1, m.value"
+            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number, m.value"
                 + " FROM " + Laps.table()
                 + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"
                 + " WHERE") ::

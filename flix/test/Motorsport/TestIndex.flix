@@ -30,7 +30,6 @@ mod Motorsport.TestIndex {
     def everyRecordIsWritten(): Unit \ Assert =
         let json = Extra.render(Index.toJson(sample()));
         Assert.assertTrue(String.contains({substr = "\"fastestLapTime\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"slowestLapTime\""}, json));
         Assert.assertTrue(Sector.all() |> List.forAll(s ->
             String.contains({substr = "\"${Sector.jsonKey(s)}\""}, json)));
         Assert.assertTrue(MiniSector.all() |> List.forAll(m ->
@@ -38,7 +37,7 @@ mod Motorsport.TestIndex {
 
     @Test
     def theCountAgreesWithTheEnumeration(): Unit \ Assert =
-        Assert.assertTrue(List.length(Index.records()) == 20)
+        Assert.assertTrue(List.length(Index.records()) == 19)
 
     /// A change carries the record itself, not the time of the lap that set
     /// it, and the moment it was set at.

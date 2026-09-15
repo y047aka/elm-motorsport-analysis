@@ -4,7 +4,7 @@ module Motorsport.Widget.Leaderboard exposing
     , Msg, update
     , customColumn, veryCustomColumn
     , sectorTimeColumn, bestTimeColumn
-    , histogramColumn, performanceColumn
+    , performanceColumn
     , carNumberColumn_Wec
     , driverAndTeamColumn_Wec
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
@@ -38,7 +38,7 @@ module Motorsport.Widget.Leaderboard exposing
 @docs Column, customColumn, veryCustomColumn
 
 @docs sectorTimeColumn, bestTimeColumn
-@docs histogramColumn, performanceColumn
+@docs performanceColumn
 @docs carNumberColumn_Wec
 @docs driverAndTeamColumn_Wec
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
@@ -56,7 +56,6 @@ import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
-import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
@@ -237,20 +236,6 @@ bestTimeColumn { getter } =
         , getter = getter >> Maybe.map (.time >> Duration.toString) >> Maybe.withDefault "-"
         , sorter = noSorter
         }
-
-
-histogramColumn :
-    { getter : data -> List Lap
-    , bestTimes : { a | fastestLapTime : Maybe Holder, slowestLapTime : Maybe Holder }
-    , coefficient : Float
-    }
-    -> Column data msg
-histogramColumn { getter, bestTimes, coefficient } =
-    { name = "Histogram"
-    , view = getter >> Lazy.lazy3 Histogram.view bestTimes coefficient
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
 
 
 performanceColumn :
