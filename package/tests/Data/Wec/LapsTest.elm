@@ -5,6 +5,7 @@ import Expect
 import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
+import Motorsport.Lap as Lap
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector
@@ -16,18 +17,31 @@ suite : Test
 suite =
     describe "Data.Wec.Laps"
         [ describe "fromJsonl"
-            [ test "decodes empty pitTime as Nothing and a value as Just" <|
+            [ test "reads the two ends of a stop off the two laps that carry them" <|
                 \_ ->
-                    case Laps.fromJsonl twoLaps of
+                    case Laps.fromJsonl aStop of
                         Ok rawLaps ->
                             let
-                                cars =
+                                pits =
                                     Laps.attach rawLaps (placeholderCars [ "1" ])
-
-                                pitTimes =
-                                    cars |> List.concatMap .laps |> List.map .pitTime
+                                        |> List.concatMap .laps
+                                        |> List.map .pit
                             in
-                            Expect.equal [ Nothing, Just 69953 ] pitTimes
+                            Expect.equal [ Lap.NoPit, Lap.InLap, Lap.OutLap 69953 ] pits
+
+                        Err err ->
+                            Expect.fail err
+            , test "a lap that came out and went straight back in carries both" <|
+                \_ ->
+                    case Laps.fromJsonl aDoubleStop of
+                        Ok rawLaps ->
+                            let
+                                pits =
+                                    Laps.attach rawLaps (placeholderCars [ "1" ])
+                                        |> List.concatMap .laps
+                                        |> List.map .pit
+                            in
+                            Expect.equal [ Lap.InLap, Lap.OutAndIn 46857, Lap.OutLap 69107 ] pits
 
                         Err err ->
                             Expect.fail err
@@ -43,7 +57,7 @@ suite =
                         |> Expect.equal (Ok 2)
             , test "fails a lap that arrives with no place in the field" <|
                 \_ ->
-                    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
+                    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":""}
 """
                         |> Laps.fromJsonl
                         |> Result.mapError (String.left 8)
@@ -194,7 +208,7 @@ suite =
                                 |> Maybe.withDefault []
                     in
                     Expect.equal [] car2Laps
-            , test "preserves pitTime through attach" <|
+            , test "preserves the pit lane through attach" <|
                 \_ ->
                     let
                         rawLaps =
@@ -207,16 +221,17 @@ suite =
                               , sectors = Sector.initialize (always Nothing)
                               , miniSectors = Nothing
                               , elapsed = Instant.fromDuration 200000
+                              , crossingFinishLineInPit = False
                               , pitTime = Just 50000
                               }
                             ]
 
-                        pitTimes =
+                        pits =
                             Laps.attach rawLaps (placeholderCars [ "1" ])
                                 |> List.concatMap .laps
-                                |> List.map .pitTime
+                                |> List.map .pit
                     in
-                    Expect.equal [ Nothing, Just 50000 ] pitTimes
+                    Expect.equal [ Lap.NoPit, Lap.OutLap 50000 ] pits
             ]
         ]
 
@@ -227,8 +242,30 @@ suite =
 
 twoLaps : String
 twoLaps =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
-{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":""}
+{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","crossingFinishLineInPit":"","pitTime":"1:09.953"}
+"""
+
+
+{-| A lap on the road, the lap the car came in on, and the lap it came back out
+on -- the shape every stop in a round has.
+-}
+aStop : String
+aStop =
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":""}
+{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"1:41.000","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"49.000"}},"elapsed":"3:16.365","crossingFinishLineInPit":"B","pitTime":""}
+{"carNumber":"1","lapNumber":3,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"1:38.953"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"6:26.318","crossingFinishLineInPit":"","pitTime":"1:09.953"}
+"""
+
+
+{-| A car that came back out and went straight in again, which the feed states
+as one lap carrying both ends of a stop.
+-}
+aDoubleStop : String
+aDoubleStop =
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:41.000","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"49.000"}},"elapsed":"1:41.000","crossingFinishLineInPit":"B","pitTime":""}
+{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"2:46.857","improvement":0},"sectors":{"s1":{"time":"1:15.857"},"s2":{"time":"29.000"},"s3":{"time":"1:02.000"}},"elapsed":"4:27.857","crossingFinishLineInPit":"B","pitTime":"46.857"}
+{"carNumber":"1","lapNumber":3,"position":0,"driverName":"D","lap":{"time":"3:09.107","improvement":0},"sectors":{"s1":{"time":"1:38.107"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"7:36.964","crossingFinishLineInPit":"","pitTime":"1:09.107"}
 """
 
 
@@ -237,7 +274,7 @@ own time, and the running total from the line that places it.
 -}
 lapWithMiniSectors : String
 lapWithMiniSectors =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","crossingFinishLineInPit":"","pitTime":""}
 """
 
 
@@ -246,7 +283,7 @@ lapWithMiniSectors =
 -}
 lapMissingAMiniSector : String
 lapMissingAMiniSector =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","crossingFinishLineInPit":"","pitTime":""}
 """
 
 
@@ -255,7 +292,7 @@ and its mini-sectors all the same. Its SCL2 is quicker than any real one here.
 -}
 lapWithoutALapTime : String
 lapWithoutALapTime =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","crossingFinishLineInPit":"","pitTime":""}
 """
 
 
@@ -263,7 +300,7 @@ lapWithoutALapTime =
 -}
 slowerSecondLap : String
 slowerSecondLap =
-    """{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","pitTime":""}
+    """{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","crossingFinishLineInPit":"","pitTime":""}
 """
 
 
@@ -277,6 +314,7 @@ rawLap carNumber lapNumber lapTime elapsed =
     , sectors = Sector.initialize (always Nothing)
     , miniSectors = Nothing
     , elapsed = Instant.fromDuration elapsed
+    , crossingFinishLineInPit = False
     , pitTime = Nothing
     }
 

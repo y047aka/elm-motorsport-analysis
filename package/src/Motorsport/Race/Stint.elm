@@ -1,22 +1,23 @@
 module Motorsport.Race.Stint exposing
-    ( Stint, Pit
+    ( Stint, End(..), Pit
     , fromLaps
     , Index, emptyIndex, indexOf, stopsAt
     )
 
 {-| A car's race read as the runs it made between pit stops.
 
-Nothing in the feed states a stint; what it states is a stop, on the lap the
-stop ended on. The runs are the laps cut at those, which is all the data there
-is to say how a car is being operated -- no fuel load, no tyre, no strategy call.
+Nothing in the feed states a stint; what it states is the two ends of a stop,
+one lap apart. The runs are the laps cut at the lap the car came in on, so a run
+begins on the lap it came back out on and ends on the lap it next came in. That
+is all the data there is to say how a car is being operated -- no fuel load, no
+tyre, no strategy call.
 
 A run is cut out of the laps it was given, so laps cut at a clock give the runs
-as they stood at that moment. What the last of them _is_ at that moment is the
-caller's to settle: a car sitting in the pits leaves the same trace as one out
-on the road, and the laps alone cannot tell the two apart. See
-[`Race.statusAt`](Motorsport-Race#statusAt).
+as they stood at that moment. Whether the car will resume the run it is on is
+still the caller's to settle: a car that has retired leaves the same trace as
+one out on the road. See [`Race.statusAt`](Motorsport-Race#statusAt).
 
-@docs Stint, Pit
+@docs Stint, End, Pit
 @docs fromLaps
 
 
@@ -42,9 +43,8 @@ import Motorsport.Race.Car exposing (Car, CarNumber)
 
 {-| One run between stops, numbered from the start of the race.
 
-`pit` is the stop that ended it, and is `Nothing` for the run the laps end on.
-`averageLapTime` and `bestLapTime` leave out the lap the stop fell on, whose
-time carries the pit lane.
+`averageLapTime` and `bestLapTime` leave out the laps that touched the pit lane
+-- the one the run begins on and the one it ends on -- whose times carry it.
 
 -}
 type alias Stint =
@@ -55,11 +55,25 @@ type alias Stint =
     , lapCount : Int
     , averageLapTime : Maybe Duration
     , bestLapTime : Maybe Duration
-    , pit : Maybe Pit
+    , end : End
     }
 
 
-{-| A stop, as the lap it ended on records it.
+{-| How a run finished.
+
+`InPit` is a run that is over as much as `Ended` is: `lastLap` is the lap the
+car came in on either way. What separates them is that a stop is not timed until
+the car is back out, so the run it ended reads as `InPit` for as long as the car
+is stationary.
+
+-}
+type End
+    = Running
+    | InPit
+    | Ended Pit
+
+
+{-| A stop, as the lap the car came back out on records it.
 -}
 type alias Pit =
     { lapNumber : Int
@@ -75,15 +89,31 @@ the same way.
 -}
 fromLaps : List Lap -> List Stint
 fromLaps laps =
-    laps
-        |> List.sortBy .lap
-        |> splitAfter Lap.isPitLap
+    let
+        runs =
+            laps
+                |> List.sortBy .lap
+                |> splitAfter Lap.isInLap
+
+        {- The stop that ended a run is recorded on the first lap of the run
+           after it, which is the lap the car came back out on.
+        -}
+        ends =
+            (List.drop 1 runs |> List.map (List.head >> Maybe.andThen stopEnding)) ++ [ Nothing ]
+    in
+    List.map2 Tuple.pair runs ends
         |> List.indexedMap toStint
         |> List.filterMap identity
 
 
-toStint : Int -> List Lap -> Maybe Stint
-toStint index laps =
+stopEnding : Lap -> Maybe Pit
+stopEnding outLap =
+    Lap.stopOf outLap
+        |> Maybe.map (\duration -> { lapNumber = outLap.lap, duration = duration })
+
+
+toStint : Int -> ( List Lap, Maybe Pit ) -> Maybe Stint
+toStint index ( laps, stop ) =
     case ( List.head laps, List.Extra.last laps ) of
         ( Just first, Just last ) ->
             let
@@ -100,15 +130,24 @@ toStint index laps =
                 , lapCount = List.length laps
                 , averageLapTime = average racingTimes
                 , bestLapTime = List.minimum racingTimes
-                , pit = last.pitTime |> Maybe.map (\duration -> { lapNumber = last.lap, duration = duration })
+                , end =
+                    case ( Lap.isInLap last, stop ) of
+                        ( False, _ ) ->
+                            Running
+
+                        ( True, Nothing ) ->
+                            InPit
+
+                        ( True, Just pit ) ->
+                            Ended pit
                 }
 
         _ ->
             Nothing
 
 
-{-| Cut the list after every item the test holds for, so the item that ends a
-run stays in the run it ended.
+{-| Cut the list after every item the test holds for, so the lap the car came in
+on stays in the run it ended.
 -}
 splitAfter : (a -> Bool) -> List a -> List (List a)
 splitAfter isBoundary =
@@ -181,20 +220,15 @@ indexOf cars =
 stopsOf : List Lap -> ChangePoints Pit
 stopsOf laps =
     laps
-        |> List.filterMap
-            (\lap ->
-                lap.pitTime
-                    |> Maybe.map
-                        (\duration -> ( lap.elapsed, { lapNumber = lap.lap, duration = duration } ))
-            )
+        |> List.filterMap (\lap -> stopEnding lap |> Maybe.map (Tuple.pair lap.elapsed))
         |> ChangePoints.fromList
 
 
 {-| How many stops a car has completed at a moment of the race.
 
 A car in the pits reads at the stop before the one it is making: a stop is
-recorded on the lap it ended on, and that lap is not complete until the car is
-back out on the road. A car the race has never heard of has made none.
+recorded on the lap the car came back out on, and that lap is not complete until
+it is back on the road. A car the race has never heard of has made none.
 
 -}
 stopsAt : { elapsed : Instant } -> CarNumber -> Index -> Int

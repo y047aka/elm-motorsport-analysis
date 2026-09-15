@@ -15,7 +15,7 @@ import Html.Attributes exposing (class, style)
 import Html.Lazy as Lazy
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Sector as Sector
 
@@ -73,7 +73,7 @@ row lap =
             :: timeCell (againstOwnBest { time = lap.time, personalBest = lap.best })
             :: (Sector.values lap.sectors |> List.map (againstOwnBest >> timeCell))
             ++ [ td [ class "py-0.5 px-1 text-right text-muted-foreground" ]
-                    [ text (lap.pitTime |> Maybe.map Duration.toString |> Maybe.withDefault "") ]
+                    [ text (Lap.stopOf lap |> Maybe.map Duration.toString |> Maybe.withDefault "") ]
                ]
         )
 

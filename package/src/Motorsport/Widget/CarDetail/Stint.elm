@@ -30,7 +30,7 @@ import Motorsport.Status exposing (Status(..))
 
 
 {-| `current` is the run the car is on, which a car sitting in the pits does not
-have: its last lap is the one the stop ended on.
+have: its last lap is the one it came in on.
 
 `medianStintLength` counts only the runs that ended, so the one in progress does
 not drag it down as it goes.
@@ -54,14 +54,32 @@ summarize laps =
             RaceStint.fromLaps laps
     in
     { stints = stints
-    , current = List.filter (.pit >> (==) Nothing) stints |> List.head
-    , pitStops = List.filterMap .pit stints
+    , current = List.Extra.find (.end >> (==) RaceStint.Running) stints
+    , pitStops = List.filterMap stopOf stints
     , medianStintLength =
         stints
-            |> List.filter (.pit >> (/=) Nothing)
+            |> List.filter hasEnded
             |> List.map .lapCount
             |> median
     }
+
+
+hasEnded : Stint -> Bool
+hasEnded stint =
+    stint.end /= RaceStint.Running
+
+
+stopOf : Stint -> Maybe Pit
+stopOf stint =
+    case stint.end of
+        RaceStint.Ended pit ->
+            Just pit
+
+        RaceStint.InPit ->
+            Nothing
+
+        RaceStint.Running ->
+            Nothing
 
 
 median : List Int -> Maybe Int
@@ -174,7 +192,7 @@ stintLengths : Summary -> String
 stintLengths summary =
     let
         lengths =
-            summary.stints |> List.filter (.pit >> (/=) Nothing) |> List.map .lapCount
+            summary.stints |> List.filter hasEnded |> List.map .lapCount
     in
     case ( List.minimum lengths, List.maximum lengths, summary.medianStintLength ) of
         ( Just shortest, Just longest, Just median_ ) ->
@@ -216,7 +234,7 @@ stintSegment metadata totalLaps stint =
     div
         [ class "grid place-items-center min-w-0 text-[9px] tabular-nums"
         , class
-            (if stint.pit == Nothing then
+            (if stint.end == RaceStint.Running then
                 "rounded-r-sm outline outline-1 -outline-offset-1 outline-foreground/40"
 
              else
@@ -237,11 +255,14 @@ stintTitle stint =
     , inLaps stint.lapCount
     , Driver.toFullName stint.driver
     , "avg " ++ durationOr "-" stint.averageLapTime
-    , case stint.pit of
-        Just pit ->
+    , case stint.end of
+        RaceStint.Ended pit ->
             "pit " ++ Duration.toStringToTenths pit.duration
 
-        Nothing ->
+        RaceStint.InPit ->
+            "in the pits"
+
+        RaceStint.Running ->
             "running"
     ]
         |> String.join " · "

@@ -91,7 +91,24 @@ instant =
 tests : Test
 tests =
     describe "Motorsport.Lap"
-        [ describe "segments"
+        [ describe "the pit lane"
+            [ test "a lap that touched it at either end is not a lap the car drove" <|
+                \_ ->
+                    [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 63000 ]
+                        |> List.map (\pit -> Lap.isRacingLap { empty | pit = pit })
+                        |> Expect.equal [ True, False, False, False ]
+            , test "a run ends on the lap the car came in on, whichever way it got there" <|
+                \_ ->
+                    [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 63000 ]
+                        |> List.map (\pit -> Lap.isInLap { empty | pit = pit })
+                        |> Expect.equal [ False, True, False, True ]
+            , test "the stop is timed on the lap the car came back out on, never the one it came in on" <|
+                \_ ->
+                    [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 46857 ]
+                        |> List.map (\pit -> Lap.stopOf { empty | pit = pit })
+                        |> Expect.equal [ Nothing, Nothing, Just 63000, Just 46857 ]
+            ]
+        , describe "segments"
             [ test "starts each sector where the one before it ended" <|
                 \_ ->
                     Lap.segments lap

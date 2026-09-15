@@ -6,7 +6,7 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car, CarNumber)
-import Motorsport.Race.Stint as Stint
+import Motorsport.Race.Stint as Stint exposing (End(..))
 import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
@@ -21,30 +21,47 @@ suite =
                         |> Stint.fromLaps
                         |> List.map (\stint -> ( stint.number, stint.firstLap, stint.lastLap ))
                         |> Expect.equal [ ( 1, 1, 3 ) ]
-            , test "the lap a stop ended on closes the run it fell on" <|
+            , test "the lap the car came in on closes the run, and the lap it came out on opens the next" <|
                 \_ ->
-                    [ lap 1 95000, pitLap 2 96000 63000, lap 3 97000 ]
+                    [ lap 1 95000, inLap 2 101000, outLap 3 165000 63000 ]
                         |> Stint.fromLaps
                         |> List.map (\stint -> ( stint.firstLap, stint.lastLap ))
                         |> Expect.equal [ ( 1, 2 ), ( 3, 3 ) ]
-            , test "a run that ended carries the stop that ended it" <|
+            , test "a run that ended carries the stop that ended it, read off the lap after it" <|
                 \_ ->
-                    [ lap 1 95000, pitLap 2 96000 63000, lap 3 97000, pitLap 4 98000 71000 ]
+                    [ lap 1 95000, inLap 2 101000, outLap 3 165000 63000, inLap 4 101000, outLap 5 173000 71000 ]
                         |> Stint.fromLaps
-                        |> List.map .pit
+                        |> List.map .end
                         |> Expect.equal
-                            [ Just { lapNumber = 2, duration = 63000 }
-                            , Just { lapNumber = 4, duration = 71000 }
+                            [ Ended { lapNumber = 3, duration = 63000 }
+                            , Ended { lapNumber = 5, duration = 71000 }
+                            , Running
                             ]
-            , test "the lap a stop fell on is left out of the run's times" <|
+            , test "a car sitting in the pits has ended a run with no stop to show for it yet" <|
                 \_ ->
-                    [ lap 1 95000, lap 2 97000, pitLap 3 150000 63000 ]
+                    [ lap 1 95000, inLap 2 101000 ]
+                        |> Stint.fromLaps
+                        |> List.map .end
+                        |> Expect.equal [ InPit ]
+            , test "a car that came out and went straight back in has run one lap" <|
+                \_ ->
+                    [ lap 1 95000, inLap 2 101000, outAndIn 3 166000 46857, outLap 4 173000 69107 ]
+                        |> Stint.fromLaps
+                        |> List.map (\stint -> ( stint.lapCount, stint.end ))
+                        |> Expect.equal
+                            [ ( 2, Ended { lapNumber = 3, duration = 46857 } )
+                            , ( 1, Ended { lapNumber = 4, duration = 69107 } )
+                            , ( 1, Running )
+                            ]
+            , test "the laps that touched the pit lane are left out of the run's times" <|
+                \_ ->
+                    [ outLap 1 160000 63000, lap 2 95000, lap 3 97000, inLap 4 150000 ]
                         |> Stint.fromLaps
                         |> List.map (\stint -> ( stint.averageLapTime, stint.bestLapTime ))
                         |> Expect.equal [ ( Just 96000, Just 95000 ) ]
             , test "laps read in any order are cut in race order" <|
                 \_ ->
-                    [ lap 3 97000, lap 1 95000, pitLap 2 96000 63000 ]
+                    [ outLap 3 165000 63000, lap 1 95000, inLap 2 101000 ]
                         |> Stint.fromLaps
                         |> List.map .lastLap
                         |> Expect.equal [ 2, 3 ]
@@ -61,12 +78,12 @@ suite =
                         |> Stint.indexOf
                         |> Stint.stopsAt { elapsed = instant 999999 } "1"
                         |> Expect.equal 0
-            , test "the count goes up as the lap the stop ended on is completed" <|
+            , test "the count goes up as the lap the car came back out on is completed" <|
                 \_ ->
                     let
                         index =
                             Stint.indexOf
-                                [ carWith "1" [ lapAt 1 100000, pitLapAt 2 260000 63000 ] ]
+                                [ carWith "1" [ lapAt 1 100000, outLapAt 2 260000 63000 ] ]
                     in
                     [ 259999, 260000, 260001 ]
                         |> List.map (\at -> Stint.stopsAt { elapsed = instant at } "1" index)
@@ -76,8 +93,8 @@ suite =
                     let
                         index =
                             Stint.indexOf
-                                [ carWith "1" [ pitLapAt 1 100000 63000, pitLapAt 2 300000 61000 ]
-                                , carWith "2" [ pitLapAt 1 200000 65000 ]
+                                [ carWith "1" [ outLapAt 1 100000 63000, outLapAt 2 300000 61000 ]
+                                , carWith "2" [ outLapAt 1 200000 65000 ]
                                 ]
                     in
                     [ "1", "2" ]
@@ -85,7 +102,7 @@ suite =
                         |> Expect.equal [ 1, 1 ]
             , test "a car the race has never heard of has made none" <|
                 \_ ->
-                    [ carWith "1" [ pitLapAt 1 100000 63000 ] ]
+                    [ carWith "1" [ outLapAt 1 100000 63000 ] ]
                         |> Stint.indexOf
                         |> Stint.stopsAt { elapsed = instant 999999 } "99"
                         |> Expect.equal 0
@@ -99,7 +116,7 @@ suite =
                     let
                         index =
                             Stint.indexOf
-                                [ carWith "1" [ pitLapAt 3 300000 61000, pitLapAt 1 100000 63000 ] ]
+                                [ carWith "1" [ outLapAt 3 300000 61000, outLapAt 1 100000 63000 ] ]
                     in
                     [ 99999, 100000, 299999, 300000 ]
                         |> List.map (\at -> Stint.stopsAt { elapsed = instant at } "1" index)
@@ -113,9 +130,24 @@ lap lapNumber time =
     { empty | lap = lapNumber, time = Just time }
 
 
-pitLap : Int -> Int -> Int -> Lap
-pitLap lapNumber time pitTime =
-    { empty | lap = lapNumber, time = Just time, pitTime = Just pitTime }
+{-| The lap the car came in on: slower for the pit entry in its final sector,
+and carrying no stop of its own.
+-}
+inLap : Int -> Int -> Lap
+inLap lapNumber time =
+    { empty | lap = lapNumber, time = Just time, pit = Lap.InLap }
+
+
+{-| The lap the car came back out on, which is where the feed times the stop.
+-}
+outLap : Int -> Int -> Int -> Lap
+outLap lapNumber time stop =
+    { empty | lap = lapNumber, time = Just time, pit = Lap.OutLap stop }
+
+
+outAndIn : Int -> Int -> Int -> Lap
+outAndIn lapNumber time stop =
+    { empty | lap = lapNumber, time = Just time, pit = Lap.OutAndIn stop }
 
 
 empty : Lap
@@ -135,9 +167,9 @@ lapAt lapNumber elapsed =
     { empty | lap = lapNumber, elapsed = instant elapsed }
 
 
-pitLapAt : Int -> Int -> Int -> Lap
-pitLapAt lapNumber elapsed pitTime =
-    { empty | lap = lapNumber, elapsed = instant elapsed, pitTime = Just pitTime }
+outLapAt : Int -> Int -> Int -> Lap
+outLapAt lapNumber elapsed stop =
+    { empty | lap = lapNumber, elapsed = instant elapsed, pit = Lap.OutLap stop }
 
 
 instant : Int -> Instant

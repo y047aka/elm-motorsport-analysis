@@ -189,7 +189,7 @@ retiringCar : Car
 retiringCar =
     carWith "1"
         [ lapAt "1" 1 100000
-        , lapAt "1" 2 200000 |> withPitTime (Just 30000)
+        , lapAt "1" 2 200000 |> cameOutAfter 30000
         , lapAt "1" 3 300000
         ]
 
@@ -275,6 +275,6 @@ lapAt carNumber lapNumber elapsed =
     }
 
 
-withPitTime : Maybe Int -> Lap -> Lap
-withPitTime pitTime lap =
-    { lap | pitTime = pitTime }
+cameOutAfter : Int -> Lap -> Lap
+cameOutAfter duration lap =
+    { lap | pit = Lap.OutLap duration }

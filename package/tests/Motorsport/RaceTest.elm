@@ -196,4 +196,4 @@ pitAt carNumber lapNumber elapsed pitTime =
         base =
             lapAt carNumber lapNumber elapsed
     in
-    { base | pitTime = Just pitTime }
+    { base | pit = Lap.OutLap pitTime }

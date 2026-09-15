@@ -3,7 +3,7 @@ module Motorsport.Lap exposing
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorTime
     , recorded
-    , isPitLap, isRacingLap
+    , Pit(..), isInLap, isRacingLap, stopOf
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -18,7 +18,7 @@ module Motorsport.Lap exposing
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorTime
 @docs recorded
-@docs isPitLap, isRacingLap
+@docs Pit, isInLap, isRacingLap, stopOf
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -58,7 +58,7 @@ type alias Lap =
     , best : Maybe Duration
     , sectors : SectorTimes
     , elapsed : Instant
-    , pitTime : Maybe Duration
+    , pit : Pit
     , miniSectors : Maybe MiniSectors
     }
 
@@ -115,7 +115,7 @@ empty =
     , sectors = Sector.initialize (always { time = Nothing, personalBest = Nothing })
     , best = Nothing
     , elapsed = Instant.raceStart
-    , pitTime = Nothing
+    , pit = NoPit
     , miniSectors = Nothing
     }
 
@@ -144,30 +144,79 @@ recorded time =
         Just time
 
 
-{-| Whether the car pitted on this lap.
+{-| What a lap has to do with the pit lane.
 
-A stop is recorded on the lap it ended on, so that lap carries the pit lane in
-its final sector.
+The feed states the two ends of a stop on two different laps, and neither is a
+lap the car drove. The lap that finished in the pit lane carries
+`crossing_finish_line_in_pit` and has the pit entry in its final sector; the lap
+the car came back out on carries `pit_time` and has the stop and the pit exit in
+its first.
+
+A car that came out and went straight back in finishes that lap in the pit lane
+as well, which is `OutAndIn`.
 
 -}
-isPitLap : Lap -> Bool
-isPitLap lap =
-    lap.pitTime /= Nothing
+type Pit
+    = NoPit
+    | InLap
+    | OutLap Duration
+    | OutAndIn Duration
 
 
-{-| The other side of [`isPitLap`](#isPitLap), which is what a reading of pace
-wants: a time with the pit lane in it is not a lap the car drove, and a sector
-nothing can beat is no baseline at all.
+{-| Whether the car finished this lap in the pit lane, which is the lap a run
+between stops ends on.
+-}
+isInLap : Lap -> Bool
+isInLap lap =
+    case lap.pit of
+        InLap ->
+            True
 
-It says only that the car did not stop on this lap -- not that the lap is a
-representative one. An out lap, a lap behind a safety car and a lap spent in
-traffic all pass. What to do about those is the reading's own business; the
-usual answer is an IQR fence over the times rather than a rule about laps.
+        OutAndIn _ ->
+            True
+
+        OutLap _ ->
+            False
+
+        NoPit ->
+            False
+
+
+{-| Whether the car drove the whole of this lap on the road, which is what a
+reading of pace wants: a time with the pit lane in it is not a lap the car
+drove, and a sector nothing can beat is no baseline at all.
+
+It says only that the lap touched the pit lane at neither end -- not that it is
+a representative one. A lap behind a safety car and a lap spent in traffic both
+pass. What to do about those is the reading's own business; the usual answer is
+an IQR fence over the times rather than a rule about laps.
 
 -}
 isRacingLap : Lap -> Bool
-isRacingLap =
-    isPitLap >> not
+isRacingLap lap =
+    lap.pit == NoPit
+
+
+{-| How long the stop that this lap began with took.
+
+`Nothing` on the lap the car came in on: the stop is not timed until the car is
+back out, and the time is then recorded on the lap that follows.
+
+-}
+stopOf : Lap -> Maybe Duration
+stopOf lap =
+    case lap.pit of
+        OutLap duration ->
+            Just duration
+
+        OutAndIn duration ->
+            Just duration
+
+        InLap ->
+            Nothing
+
+        NoPit ->
+            Nothing
 
 
 type alias Clock =

@@ -41,10 +41,10 @@ scaleOf series =
 
 
 {-| Builds one car's series for the lap-time distribution chart, from the laps
-in the range the car did not pit on.
+in the range the car drove on the road.
 
-The upper fence is what keeps the shape readable: an out lap, a lap behind a
-safety car and a lap spent in traffic all survive
+The upper fence is what keeps the shape readable: a lap behind a safety car and
+a lap spent in traffic both survive
 [`Lap.isRacingLap`](Motorsport-Lap#isRacingLap), and the tail they make would
 flatten everything the chart is drawn to show.
 
