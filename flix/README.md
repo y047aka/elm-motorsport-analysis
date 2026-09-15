@@ -199,17 +199,20 @@ round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
 rather than read in their key's order, which is the same list until a row is
 corrected in SQL and then is the list that moment used to be in.
 
-Each car's first and last crossing is one `GROUP BY`, the stops are the laps
-carrying a pit time, and the lead is `ROW_NUMBER` picking each lap's first
-crossing with `LAG` asking who held the one before -- two queries rather than
-one, since SQLite settles a `WHERE` before either window. What is left in Flix
-is the deciding: `Motorsport.Timeline` weighs each car's last crossing against
-the time limit, which is `Metadata`'s estimate and the one reading here the laps
-do not carry, so `Round.Summary.particulars` is read first and hands it over --
-the whole of what the load wants a summary for. It also fixes the order events
-sharing an instant come back in -- `List.sortBy` is not stable, and a stop
-ending as the flag falls has to leave the car classified rather than in the pits
--- which is why the gathering order rides in the sort key and lands in `seq`.
+Each car's first and last crossing is one `GROUP BY`, and the lead is
+`ROW_NUMBER` picking each lap's first crossing with `LAG` asking who held the one
+before -- two queries rather than one, since SQLite settles a `WHERE` before
+either window. The stops are not counted at all: both halves of one are read off
+`pit_time` and the laps still carry it, so the app reads them there, and the
+timeline is the 191 events of a round rather than the 3,983 that buried them.
+What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's
+last crossing against the time limit, which is `Metadata`'s estimate and the one
+reading here the laps do not carry, so `Round.Summary.particulars` is read first
+and hands it over -- the whole of what the load wants a summary for. It also
+fixes the order events sharing an instant come back in: `List.sortBy` is not
+stable, and a report the load counted has to read back in the order it was
+written, which is why the gathering order rides in the sort key and lands in
+`seq`.
 
 `Motorsport.Timeline.parts` is where the line written out and the row meet, so
 the JSON, the column's `check` and the reading back cannot disagree about what

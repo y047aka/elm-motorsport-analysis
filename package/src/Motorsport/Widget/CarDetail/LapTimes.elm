@@ -18,7 +18,7 @@ import Html.Attributes exposing (attribute, class, style)
 import Html.Events exposing (onClick)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
@@ -130,17 +130,16 @@ currentLap best item =
 
 {-| The best each sector has been driven in, over the laps the car has finished.
 
-Laps the car pitted on are left out, as they are everywhere else a pace is read:
-the stop is in that lap's final sector, and a sector nothing can beat is no
-baseline at all. So are the laps the clock has not reached: a lap the car is
-going to run is not a lap it has driven.
+Laps the car pitted on are left out, as they are everywhere a pace is read --
+see [`Lap.isRacingLap`](Motorsport-Lap#isRacingLap). So are the laps the clock
+has not reached: a lap the car is going to run is not a lap it has driven.
 
 -}
 bestSectors : Int -> List Lap -> BySector (Maybe Duration)
 bestSectors lapsCompleted laps =
     let
         racingLaps =
-            List.filter (\lap -> lap.pitTime == Nothing && lap.lap <= lapsCompleted) laps
+            List.filter (\lap -> Lap.isRacingLap lap && lap.lap <= lapsCompleted) laps
     in
     Sector.initialize
         (\sector ->

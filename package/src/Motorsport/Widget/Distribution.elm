@@ -11,6 +11,7 @@ that aligns the X domain and peak density across several of them (`scaleOf`).
 
 import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
+import Motorsport.Lap as Lap
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 
@@ -39,9 +40,14 @@ scaleOf series =
             )
 
 
-{-| Builds one car's series for the lap-time distribution chart. From the non-pit
-laps within the lap range, keeps only racing laps at or below the IQR upper fence,
-excluding pit and out laps.
+{-| Builds one car's series for the lap-time distribution chart, from the laps
+in the range the car drove on the road.
+
+The upper fence is what keeps the shape readable: a lap behind a safety car and
+a lap spent in traffic both survive
+[`Lap.isRacingLap`](Motorsport-Lap#isRacingLap), and the tail they make would
+flatten everything the chart is drawn to show.
+
 -}
 seriesOf : LapHistory -> ( Int, Int ) -> CarAt -> LapTimeDistribution.Series
 seriesOf lapHistory range entry =
@@ -69,7 +75,7 @@ racingTimes lapHistory ( minLap, maxLap ) entry =
         -- lap run in no time, and has no place in the distribution.
         times =
             LapHistory.get entry.metadata.carNumber lapHistory
-                |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && lap.pitTime == Nothing)
+                |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && Lap.isRacingLap lap)
                 |> List.filterMap .time
     in
     times |> List.filter (\t -> t <= upperFence times)

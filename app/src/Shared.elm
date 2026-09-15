@@ -1,15 +1,15 @@
 module Shared exposing
-    ( Model, Race, RoundId, Catalogue(..), Problem(..)
+    ( Model, LoadedRound, RoundId, Catalogue(..), Problem(..)
     , init, update, subscriptions
-    , race, roundId, isPlaying, problem
+    , loadedRound, roundId, isPlaying, problem
     )
 
 {-| Application-wide state, preserved from the elm-pages version. The data is
 loaded at runtime via `Http`, so no `BackendTask` is involved.
 
-@docs Model, Race, RoundId, Catalogue, Problem
+@docs Model, LoadedRound, RoundId, Catalogue, Problem
 @docs init, update, subscriptions
-@docs race, roundId, isPlaying, problem
+@docs loadedRound, roundId, isPlaying, problem
 
 -}
 
@@ -25,7 +25,6 @@ import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
-import Motorsport.Race.StatusChanges as StatusChanges
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
@@ -72,15 +71,15 @@ did. The calendar says where a round's files are, and the tables what colours
 its cars and which photograph each carries, so the request waits rather than
 being guessed at.
 
-`Loading` carries no `Race`, which is what stops the previous round's cars being
-shown under this one's name.
+`Loading` carries no `LoadedRound`, which is what stops the previous round's
+cars being shown under this one's name.
 
 -}
 type Round
     = NoRound
     | Waiting { season : String, event : String }
     | Loading RoundId Partial
-    | Loaded RoundId Race
+    | Loaded RoundId LoadedRound
     | Unavailable { season : String, event : String } Problem
 
 
@@ -94,39 +93,57 @@ type alias RoundId =
     }
 
 
-{-| The three files arrive in any order, and a round needs all of them.
-
-Held as three `Maybe`s rather than as the cases of a sum: two files had three
-inhabitants worth naming and three would have seven, none of which the app asks
-a question of. Having all three is still not a state -- it is the move to
-`Loaded`, which is what `completed` makes.
-
+{-| How far a round has got: what it is still waiting on, and what has come
+along beside it.
 -}
 type alias Partial =
-    { summary : Maybe Wec.Event
-    , laps : Maybe (List WecLaps.RawLap)
+    { files : Files
     , timeline : Maybe (List TimelineEvent)
     }
 
 
-nothingYet : Partial
-nothingYet =
-    { summary = Nothing, laps = Nothing, timeline = Nothing }
+{-| The summary and the laps, which arrive in either order and are what a round
+is. Three cases rather than a pair of `Maybe`s: having both is not a state, it is
+the move to `Loaded`.
 
-
-{-| A loaded round, as the pages read it.
-
-`track` is the one derived value kept rather than worked out where it is used:
-everything else about a frame follows from `replay` and the clock, where the
-track never moves once the data has loaded. `snapshot` is `replay` read at the
-clock, cached because every view of a frame shares it.
-
-`timeline` is the events themselves, kept for the events table to read the
-clock against; what playback reads is only the status index counted off them,
-inside `replay.race`.
+The timeline is not one of the two and gates nothing, so it stays the `Maybe` it
+looks like: a fraction of the size of the laps, it commonly arrives before there
+is a round to put it on, and is kept until there is.
 
 -}
-type alias Race =
+type Files
+    = NothingYet
+    | GotSummary Wec.Event
+    | GotLaps (List WecLaps.RawLap)
+
+
+nothingYet : Partial
+nothingYet =
+    { files = NothingYet, timeline = Nothing }
+
+
+{-| A loaded round, as the pages read it: the race, the playback head over it,
+and the derived values worth keeping rather than working out where they are
+used.
+
+The race itself is `replay.race`, a [`Motorsport.Race`](Motorsport-Race). This
+is the round around it -- what the app holds in order to draw one -- which is
+why it is not called a race. A `Race` answers what is true at a moment of it,
+and none of the four fields here does.
+
+`track` never moves once the data has loaded. `snapshot` is `replay` read at the
+clock, cached because every view of a frame shares it, and the one of the four
+that is rebuilt as playback runs.
+
+`timeline` is the events themselves, kept for the events table to read the clock
+against, and the only one of the four a round can go without: nothing playback
+reads is counted off them.
+
+It is the round's report rather than everything the file holds -- see
+[`reported`](#reported).
+
+-}
+type alias LoadedRound =
     { replay : Replay.Model
     , snapshot : Snapshot
     , track : Tracker.Track
@@ -193,8 +210,8 @@ problem model =
 
 {-| The round's data, once all of it has arrived.
 -}
-race : Model -> Maybe Race
-race model =
+loadedRound : Model -> Maybe LoadedRound
+loadedRound model =
     case model.round of
         Loaded _ loaded ->
             Just loaded
@@ -213,7 +230,7 @@ nothing here has to know how long the race was.
 -}
 isPlaying : Model -> Bool
 isPlaying model =
-    case race model |> Maybe.map (.replay >> .playback >> .state) of
+    case loadedRound model |> Maybe.map (.replay >> .playback >> .state) of
         Just (Clock.Started _ _) ->
             True
 
@@ -250,25 +267,27 @@ update msg m =
             resumeWaitingRound { m | round = Waiting params }
 
         JsonLoaded_Wec key (Ok summary) ->
-            ( { m | round = arrived key (\p -> { p | summary = Just summary }) m.round }, Effect.none )
+            ( { m | round = forRound key (withSummary summary) m.round }, Effect.none )
 
         JsonLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         LapsLoaded_Wec key (Ok rawLaps) ->
-            ( { m | round = arrived key (\p -> { p | laps = Just rawLaps }) m.round }, Effect.none )
+            ( { m | round = forRound key (withLaps rawLaps) m.round }, Effect.none )
 
         LapsLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         TimelineLoaded_Wec key (Ok events) ->
-            ( { m | round = arrived key (\p -> { p | timeline = Just events }) m.round }, Effect.none )
+            ( { m | round = timelineArrived key events m.round }, Effect.none )
 
-        TimelineLoaded_Wec key (Err error) ->
-            ( { m | round = didNotArrive key error m.round }, Effect.none )
+        TimelineLoaded_Wec _ (Err _) ->
+            -- The events table goes without rather than the round: a page draws
+            -- every other part of one from the summary and the laps.
+            ( m, Effect.none )
 
         ReplayMsg replayMsg ->
-            ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
+            ( { m | round = mapLoaded (stepReplay replayMsg) m.round }, Effect.none )
 
 
 {-| Called as the URL, the calendar and the two tables arrive, so whichever is
@@ -347,11 +366,6 @@ expectJsonl toMsg fromJsonl =
 naming any other round is one left over from a round already navigated away
 from.
 -}
-arrived : { season : Int, id : String } -> (Partial -> Partial) -> Round -> Round
-arrived key file round =
-    forRound key (\id partial -> completed id (file partial)) round
-
-
 forRound : { season : Int, id : String } -> (RoundId -> Partial -> Round) -> Round -> Round
 forRound key step round =
     case round of
@@ -366,16 +380,53 @@ forRound key step round =
             round
 
 
-{-| The round once nothing is outstanding, and the same `Loading` until then.
--}
-completed : RoundId -> Partial -> Round
-completed id partial =
-    case ( partial.summary, partial.laps, partial.timeline ) of
-        ( Just summary, Just rawLaps, Just timeline ) ->
-            Loaded id (raceFrom summary rawLaps timeline)
+withSummary : Wec.Event -> RoundId -> Partial -> Round
+withSummary summary id partial =
+    case partial.files of
+        GotLaps rawLaps ->
+            Loaded id (roundFrom summary rawLaps (eventsOf partial))
 
         _ ->
-            Loading id partial
+            Loading id { partial | files = GotSummary summary }
+
+
+withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
+withLaps rawLaps id partial =
+    case partial.files of
+        GotSummary summary ->
+            Loaded id (roundFrom summary rawLaps (eventsOf partial))
+
+        _ ->
+            Loading id { partial | files = GotLaps rawLaps }
+
+
+eventsOf : Partial -> List TimelineEvent
+eventsOf partial =
+    Maybe.withDefault [] partial.timeline
+
+
+{-| The timeline, which can land either side of the round being made, so it is
+not `forRound`'s: the round it is for may already have loaded.
+-}
+timelineArrived : { season : Int, id : String } -> List TimelineEvent -> Round -> Round
+timelineArrived key events round =
+    case round of
+        Loading id partial ->
+            if keyOf id == key then
+                Loading id { partial | timeline = Just events }
+
+            else
+                round
+
+        Loaded id loaded ->
+            if keyOf id == key then
+                Loaded id { loaded | timeline = Timeline.fromList events }
+
+            else
+                round
+
+        _ ->
+            round
 
 
 {-| The round the response was for, given up on. A response naming another is
@@ -388,8 +439,8 @@ didNotArrive key error round =
         round
 
 
-raceFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Race
-raceFrom summary rawLaps timelineEvents =
+roundFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> LoadedRound
+roundFrom summary rawLaps timelineEvents =
     let
         replay =
             summary.startingGrid.entries
@@ -399,7 +450,6 @@ raceFrom summary rawLaps timelineEvents =
                     { timeLimit = summary.timeLimit
                     , finishedAt = summary.finishedAt
                     , index = summary.index
-                    , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
                     }
     in
     { replay = replay
@@ -409,8 +459,8 @@ raceFrom summary rawLaps timelineEvents =
     }
 
 
-mapRace : (Race -> Race) -> Round -> Round
-mapRace f round =
+mapLoaded : (LoadedRound -> LoadedRound) -> Round -> Round
+mapLoaded f round =
     case round of
         Loaded id loaded ->
             Loaded id (f loaded)
@@ -419,7 +469,7 @@ mapRace f round =
             round
 
 
-stepReplay : Replay.Msg -> Race -> Race
+stepReplay : Replay.Msg -> LoadedRound -> LoadedRound
 stepReplay replayMsg loaded =
     let
         replayNew =

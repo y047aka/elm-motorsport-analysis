@@ -35,6 +35,7 @@ type alias RawLap =
     , sectors : BySector (Maybe Duration)
     , miniSectors : Maybe (ByMiniSector RawMiniSector)
     , elapsed : Instant
+    , crossingFinishLineInPit : Bool
     , pitTime : Maybe Duration
     }
 
@@ -71,7 +72,16 @@ rawLapDecoder =
         |> required "sectors" sectorsDecoder
         |> optional "miniSectors" (Decode.map Just miniSectorsDecoder) Nothing
         |> required "elapsed" Instant.decoder
+        |> required "crossingFinishLineInPit" flagDecoder
         |> required "pitTime" optionalDurationDecoder
+
+
+{-| `crossingFinishLineInPit` is `B` where the lap finished in the pit lane and
+blank where it did not; no other value appears in a round.
+-}
+flagDecoder : Decoder Bool
+flagDecoder =
+    Decode.map (String.isEmpty >> not) string
 
 
 sectorsDecoder : Decoder (BySector (Maybe Duration))
@@ -269,7 +279,7 @@ accumulate raw ( bests, acc ) =
                     raw.sectors
                     newBests.sectors
             , elapsed = raw.elapsed
-            , pitTime = raw.pitTime
+            , pit = pitOf raw
             , miniSectors =
                 raw.miniSectors
                     |> Maybe.map
@@ -287,3 +297,19 @@ accumulate raw ( bests, acc ) =
             }
     in
     ( newBests, lap :: acc )
+
+
+pitOf : RawLap -> Lap.Pit
+pitOf raw =
+    case ( raw.crossingFinishLineInPit, raw.pitTime ) of
+        ( False, Nothing ) ->
+            Lap.NoPit
+
+        ( True, Nothing ) ->
+            Lap.InLap
+
+        ( False, Just stop ) ->
+            Lap.OutLap stop
+
+        ( True, Just stop ) ->
+            Lap.OutAndIn stop

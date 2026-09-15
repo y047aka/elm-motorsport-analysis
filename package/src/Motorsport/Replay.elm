@@ -22,7 +22,6 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car exposing (Car)
-import Motorsport.Race.StatusChanges exposing (StatusChanges)
 import Time exposing (Posix)
 
 
@@ -37,11 +36,11 @@ type alias Model =
 
 
 fromCars :
-    { timeLimit : Instant, finishedAt : Instant, index : Race.Index, statusChanges : StatusChanges }
+    { timeLimit : Instant, finishedAt : Instant, index : Race.Index }
     -> List Car
     -> Model
-fromCars { timeLimit, finishedAt, index, statusChanges } cars =
-    { race = Race.fromCars { timeLimit = timeLimit, index = index, statusChanges = statusChanges } cars
+fromCars { timeLimit, finishedAt, index } cars =
+    { race = Race.fromCars { timeLimit = timeLimit, index = index } cars
     , playback = Clock.init { finishedAt = finishedAt }
     }
 

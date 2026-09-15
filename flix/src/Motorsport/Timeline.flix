@@ -13,8 +13,6 @@ mod Motorsport.Timeline {
     pub enum CarEvent with Eq {
         case Start
         case TookLead
-        case PitIn(Int32, Duration)
-        case PitOut(Int32, Duration)
         case Retirement
         case Checkered
     }
@@ -30,29 +28,30 @@ mod Motorsport.Timeline {
     }
 
     /// What the events of one round are gathered from: each car's first and
-    /// last moment, every stop, and every change of the lead.
+    /// last moment, and every change of the lead.
+    ///
+    /// Not the stops. Both halves of one are counted off `pit_time` and the
+    /// laps still carry it, so the app reads them there rather than here --
+    /// where they were 95% of a round's events and buried the rest.
     pub type alias Readings = {
         timeLimit = Duration,
         cars      = List[(String, Duration)],
-        stops     = List[(String, Int32, Duration, Duration)],
         leads     = List[(String, Duration)]
     }
 
-    /// The race start, one `Start` and one terminal event per car, two events
-    /// per stop, and a `TookLead` per change of the lead, in time order.
+    /// The race start, one `Start` and one terminal event per car, and a
+    /// `TookLead` per change of the lead, in time order.
     ///
-    /// Events sharing an instant keep the order the phases are gathered in,
-    /// which is what decides a car's status where two of them land together: a
-    /// stop ending as the flag falls leaves the car classified rather than in
-    /// the pits. `List.sortBy` is not stable, so that order is carried in the
-    /// key rather than left to the sort -- a car's `Start` and the race's own
-    /// both sit at nought, and so does every other car's.
+    /// Events sharing an instant keep the order the phases are gathered in.
+    /// `List.sortBy` is not stable, so that order is carried in the key rather
+    /// than left to the sort -- a car's `Start` and the race's own both sit at
+    /// nought, and so does every other car's, and a report the load counted has
+    /// to read back in the order it was written.
     pub def fromReadings(readings: Readings): List[Event] =
         List.flatten(
             (raceStart() :: Nil) ::
             starts(readings#cars) ::
             leads(readings#leads) ::
-            stops(readings#stops) ::
             terminals(readings#timeLimit, readings#cars) ::
             Nil
         )
@@ -71,24 +70,6 @@ mod Motorsport.Timeline {
         changes |> List.map(match (carNumber, elapsed) ->
             { elapsed = elapsed, eventType = EventType.Of(carNumber, CarEvent.TookLead) })
 
-    /// A stop is read off the lap it ended on, so the lap carries when the car
-    /// came out and how long it was in; when it went in is the difference.
-    ///
-    /// A stop longer than the race was old when it ended went in before the
-    /// start, which is not a moment of the race: the start stands in for it, as
-    /// `Motorsport.Instant.fromDuration` makes it on the Elm side. Written out,
-    /// a negative would be spelled in a way nothing reads back.
-    def stops(rows: List[(String, Int32, Duration, Duration)]): List[Event] =
-        rows |> List.flatMap(match (carNumber, lapNumber, elapsed, duration) ->
-            let entered = atOrAfterStart(
-                Util.Duration.millis(elapsed) - Util.Duration.millis(duration));
-            { elapsed = entered, eventType = EventType.Of(carNumber, CarEvent.PitIn(lapNumber, duration)) } ::
-            { elapsed = elapsed, eventType = EventType.Of(carNumber, CarEvent.PitOut(lapNumber, duration)) } ::
-            Nil)
-
-    def atOrAfterStart(ms: Int32): Duration =
-        if (ms < 0) Util.Duration.zero() else Util.Duration.fromMillis(ms)
-
     /// A car still running when the race was scheduled to end took the flag;
     /// one whose last lap fell short of it retired. The rows say when each car
     /// stopped and not why, and the time limit is `Metadata`'s estimate rather
@@ -104,9 +85,7 @@ mod Motorsport.Timeline {
     /// beside either of them.
     pub type alias Parts = {
         event     = String,
-        carNumber = Option[String],
-        lapNumber = Option[Int32],
-        duration  = Option[Duration]
+        carNumber = Option[String]
     }
 
     /// The names an event goes by, which is what the column holding one is
@@ -115,8 +94,6 @@ mod Motorsport.Timeline {
         "raceStart" ::
         "start" ::
         "tookLead" ::
-        "pitIn" ::
-        "pitOut" ::
         "retirement" ::
         "checkered" ::
         Nil
@@ -130,38 +107,31 @@ mod Motorsport.Timeline {
 
     def carParts(carEvent: CarEvent): Parts =
         match carEvent {
-            case CarEvent.Start                 => named("start")
-            case CarEvent.TookLead              => named("tookLead")
-            case CarEvent.PitIn(lap, duration)  => stopParts("pitIn", lap, duration)
-            case CarEvent.PitOut(lap, duration) => stopParts("pitOut", lap, duration)
-            case CarEvent.Retirement            => named("retirement")
-            case CarEvent.Checkered             => named("checkered")
+            case CarEvent.Start      => named("start")
+            case CarEvent.TookLead   => named("tookLead")
+            case CarEvent.Retirement => named("retirement")
+            case CarEvent.Checkered  => named("checkered")
         }
 
     def named(event: String): Parts =
-        { event = event, carNumber = None, lapNumber = None, duration = None }
-
-    def stopParts(event: String, lap: Int32, duration: Duration): Parts =
-        { event = event, carNumber = None, lapNumber = Some(lap), duration = Some(duration) }
+        { event = event, carNumber = None }
 
     pub def eventTypeOf(p: Parts): Option[EventType] =
         match (p#event, p#carNumber) {
             case ("raceStart", None)     => Some(EventType.RaceStart)
             case (_, Some(carNumber))    =>
-                carEventOf(p#event, p#lapNumber, p#duration)
+                carEventOf(p#event)
                     |> Option.map(carEvent -> EventType.Of(carNumber, carEvent))
             case _                       => None
         }
 
-    def carEventOf(event: String, lap: Option[Int32], duration: Option[Duration]): Option[CarEvent] =
-        match (event, lap, duration) {
-            case ("start", _, _)                     => Some(CarEvent.Start)
-            case ("tookLead", _, _)                  => Some(CarEvent.TookLead)
-            case ("pitIn", Some(n), Some(length))    => Some(CarEvent.PitIn(n, length))
-            case ("pitOut", Some(n), Some(length))   => Some(CarEvent.PitOut(n, length))
-            case ("retirement", _, _)                => Some(CarEvent.Retirement)
-            case ("checkered", _, _)                 => Some(CarEvent.Checkered)
-            case _                                   => None
+    def carEventOf(event: String): Option[CarEvent] =
+        match event {
+            case "start"      => Some(CarEvent.Start)
+            case "tookLead"   => Some(CarEvent.TookLead)
+            case "retirement" => Some(CarEvent.Retirement)
+            case "checkered"  => Some(CarEvent.Checkered)
+            case _            => None
         }
 
     pub def toJson(event: Event): Encode.JsonValue =
@@ -169,22 +139,13 @@ mod Motorsport.Timeline {
         JsonObject(
             ("elapsed", JsonString(Util.Duration.format(event#elapsed))) ::
             ("event", JsonString(p#event)) ::
-            List.append(carNumberField(p), stopFields(p))
+            carNumberField(p)
         )
 
     def carNumberField(p: Parts): List[(String, Encode.JsonValue)] =
         match p#carNumber {
             case Some(carNumber) => ("carNumber", JsonString(carNumber)) :: Nil
             case None            => Nil
-        }
-
-    def stopFields(p: Parts): List[(String, Encode.JsonValue)] =
-        match (p#lapNumber, p#duration) {
-            case (Some(lap), Some(duration)) =>
-                ("lap", JsonInt(lap)) ::
-                ("duration", JsonString(Util.Duration.format(duration))) ::
-                Nil
-            case _ => Nil
         }
 
 }

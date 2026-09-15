@@ -34,7 +34,7 @@ import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Status exposing (Status)
+import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as Class exposing (Class)
 
@@ -57,6 +57,10 @@ type Snapshot
 Readings only, and no laps: the laps up to this moment are
 [`lapHistory`](#lapHistory)'s to give out, already cut.
 
+`pitStops` counts the stops the car has completed, so a car sitting in the pits
+reads at the one before the one it is making. See
+[`Race.pitStopsAt`](Motorsport-Race#pitStopsAt).
+
 Every rating here is measured against the records as they stood at this moment,
 not as the race leaves them -- the race's, held by [`bestTimes`](#bestTimes),
 and the car's own, which is `bestLap`. See
@@ -68,6 +72,7 @@ type alias CarAt =
     , status : Status
     , currentDriver : Driver
     , standing : Standing
+    , pitStops : Int
     , currentLap : CurrentLap
     , lastLap : LastLap
     , bestLap : Maybe RatedTime
@@ -370,6 +375,7 @@ type alias SampledCar =
         , lastLap : Maybe Lap
         , status : Status
         , currentDriver : Driver
+        , pitStops : Int
         }
 
 
@@ -390,10 +396,44 @@ sampleCar clock race car =
                 , laps = car.laps
                 , currentLap = lap
                 , lastLap = Lap.findLastLapAt clock car.laps
-                , status = Race.statusAt clock car.metadata.carNumber race
+                , status = statusOf clock race car lap
                 , currentDriver = lap.driver
+                , pitStops = Race.pitStopsAt clock car.metadata.carNumber race
                 }
             )
+
+
+{-| Where the car stands, off the two readings of its laps that say it.
+
+Where its race began and ended is [`Race.statusAt`](Motorsport-Race#statusAt)'s.
+Where it is within one still being run is the lap in progress: a stop falls at
+the head of the lap the car came back out on, so that is the lap carrying it, and
+the clock against [`Lap.stopEndedAt`](Motorsport-Lap#stopEndedAt) separates a car
+standing in its box from one already rejoining.
+
+-}
+statusOf : { elapsed : Instant } -> Race -> Car -> Lap -> Status
+statusOf clock race car currentLap =
+    case Race.statusAt clock car race of
+        Status.Racing ->
+            pitPhaseOf clock currentLap
+
+        settled ->
+            settled
+
+
+pitPhaseOf : { elapsed : Instant } -> Lap -> Status
+pitPhaseOf clock currentLap =
+    case Lap.stopEndedAt currentLap of
+        Just droveAway ->
+            if Instant.compare clock.elapsed droveAway == LT then
+                Status.InPit
+
+            else
+                Status.OutLap
+
+        Nothing ->
+            Status.Racing
 
 
 type alias Timing =
@@ -586,6 +626,7 @@ readCarAt frame placed =
         , gapToLeader = timing.gapToLeader
         , intervalToAhead = timing.intervalToAhead
         }
+    , pitStops = car.pitStops
     , currentLap =
         readCurrentLap
             { clock = { elapsed = frame.raceElapsed }

@@ -36,24 +36,14 @@ mod Round.TestTimeline {
 
     def name(carEvent: CarEvent): String =
         match carEvent {
-            case CarEvent.Start        => "start"
-            case CarEvent.TookLead     => "tookLead"
-            case CarEvent.PitIn(_, _)  => "pitIn"
-            case CarEvent.PitOut(_, _) => "pitOut"
-            case CarEvent.Retirement   => "retirement"
-            case CarEvent.Checkered    => "checkered"
+            case CarEvent.Start      => "start"
+            case CarEvent.TookLead   => "tookLead"
+            case CarEvent.Retirement => "retirement"
+            case CarEvent.Checkered  => "checkered"
         }
 
     def named(what: String, events: List[Event]): List[(String, String, String)] =
         events |> List.map(shape) |> List.filter(match (_, kind, _) -> kind == what)
-
-    /// `(lap, length)` per half of a stop, which is what only a stop carries.
-    def stops(events: List[Event]): List[(Int32, String)] =
-        events |> List.filterMap(event -> match event#eventType {
-            case EventType.Of(_, CarEvent.PitIn(lap_, length))  => Some((lap_, Util.Duration.format(length)))
-            case EventType.Of(_, CarEvent.PitOut(lap_, length)) => Some((lap_, Util.Duration.format(length)))
-            case _                                              => None
-        })
 
     // ---------------------------------------------------------------- laps
 
@@ -102,42 +92,6 @@ mod Round.TestTimeline {
             Nil);
         Assert.assertTrue(named("checkered", events) == ("2:01.000", "checkered", "7") :: Nil);
         Assert.assertTrue(named("retirement", events) == ("1:02.000", "retirement", "8") :: Nil)
-
-    // ---------------------------------------------------------------- stops
-
-    /// A stop is read off the lap it ended on: the car came out when that lap
-    /// was completed, and went in the stop's length before that.
-    @Test
-    def aStopIsTheLapItEndedOn(): Unit \ {Assert, IO} =
-        let events = timelineOf("1:00:00.000",
-            lap("7", 1, "60.000") ::
-            pitLap("7", 2, "3:00.000", "1:10.000") ::
-            Nil);
-        Assert.assertTrue(named("pitIn", events) == ("1:50.000", "pitIn", "7") :: Nil);
-        Assert.assertTrue(named("pitOut", events) == ("3:00.000", "pitOut", "7") :: Nil)
-
-    /// Which lap it was and how long it took ride on both halves of it.
-    @Test
-    def aStopCarriesItsLapAndItsLength(): Unit \ {Assert, IO} =
-        let events = timelineOf("1:00:00.000",
-            pitLap("7", 4, "3:00.000", "1:10.000") :: Nil);
-        Assert.assertTrue(stops(events) == (4, "1:10.000") :: (4, "1:10.000") :: Nil)
-
-    /// A stop longer than the race was old when it ended went in before the
-    /// start, and the start is what it reads back as: a moment before the race
-    /// began is not one, and written out it would be a time nothing parses.
-    @Test
-    def aStopReachingBackPastTheStartBeginsAtIt(): Unit \ {Assert, IO} =
-        let events = timelineOf("1:00:00.000",
-            pitLap("7", 1, "1:00.000", "1:10.000") :: Nil);
-        Assert.assertTrue(named("pitIn", events) == ("0.000", "pitIn", "7") :: Nil)
-
-    /// A lap the car did not stop on is not a stop.
-    @Test
-    def aLapWithNoPitTimeIsNoStop(): Unit \ {Assert, IO} =
-        let events = timelineOf("1:00:00.000", lap("7", 1, "60.000") :: Nil);
-        Assert.assertTrue(named("pitIn", events) == Nil);
-        Assert.assertTrue(named("pitOut", events) == Nil)
 
     // ---------------------------------------------------------------- leads
 
@@ -190,22 +144,6 @@ mod Round.TestTimeline {
         let times = events |> List.map(event -> event#elapsed);
         Assert.assertTrue(times == List.sort(times))
 
-    /// Two events landing on one instant are ordered by what they are, which is
-    /// what decides the car's status there: a stop ending as the flag falls
-    /// leaves the car classified rather than in the pits.
-    @Test
-    def aStopEndingAtTheFlagIsOvertakenByIt(): Unit \ {Assert, IO} =
-        let events = timelineOf("2:00.000",
-            lap("7", 1, "60.000") ::
-            pitLap("7", 2, "2:30.000", "30.000") ::
-            Nil);
-        Assert.assertTrue(events |> List.map(shape) ==
-            ("0.000", "raceStart", "") ::
-            ("0.000", "start", "7") ::
-            ("2:00.000", "pitIn", "7") ::
-            ("2:30.000", "pitOut", "7") ::
-            ("2:30.000", "checkered", "7") :: Nil)
-
 
     // ----------------------------------------------------------------- rows
 
@@ -228,20 +166,20 @@ mod Round.TestTimeline {
             Timeline.fromLaps(entry(), Round.Summary.particulars(entry())#timeLimit)
         ))
 
-    /// The stop is moved past the flag, which leaves `seq` saying what it said
-    /// before -- the order the rows are in and not the one they are read in.
+    /// The flag is moved later, which leaves `seq` saying what it said before
+    /// -- the order the rows are in and not the one they are read in.
     @Test
     def aCorrectedRowComesBackAtItsNewMoment(): Unit \ {Assert, IO} =
         let events = TestSupport.onRound(entry(),
             lap("7", 1, "60.000") ::
-            pitLap("7", 2, "3:00.000", "1:10.000") ::
+            lap("7", 2, "3:00.000") ::
             Nil,
             () -> {
                 Db.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
-                    + " WHERE event = 'pitIn'");
+                    + " WHERE event = 'checkered'");
                 Timeline.read(entry())
             });
-        Assert.assertTrue(named("pitIn", events) == ("4:10.000", "pitIn", "7") :: Nil);
+        Assert.assertTrue(named("checkered", events) == ("4:10.000", "checkered", "7") :: Nil);
         let times = events |> List.map(event -> event#elapsed);
         Assert.assertTrue(times == List.sort(times))
 
@@ -264,8 +202,7 @@ mod Round.TestTimeline {
                     ("50:00.000", "tookLead", "8") ::
                     ("1:30:00.000", "tookLead", "7") :: Nil);
                 Assert.assertTrue(named("checkered", readBack) == ("1:30:00.000", "checkered", "7") :: Nil);
-                Assert.assertTrue(named("retirement", readBack) == ("50:00.000", "retirement", "8") :: Nil);
-                Assert.assertTrue(stops(readBack) == (2, "1:10.000") :: (2, "1:10.000") :: Nil)
+                Assert.assertTrue(named("retirement", readBack) == ("50:00.000", "retirement", "8") :: Nil)
         }
 
 }

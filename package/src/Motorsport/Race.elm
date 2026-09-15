@@ -3,7 +3,7 @@ module Motorsport.Race exposing
     , Index, emptyIndex, indexDecoder
     , empty, fromCars
     , lapCountAt, elapsedAtLapCount, timeToFlagAt
-    , statusAt
+    , statusAt, pitStopsAt
     )
 
 {-| A race, as it is once the data has loaded: cars, their laps, and the
@@ -18,18 +18,19 @@ moment is derived from the two, in
 @docs Index, emptyIndex, indexDecoder
 @docs empty, fromCars
 @docs lapCountAt, elapsedAtLapCount, timeToFlagAt
-@docs statusAt
+@docs statusAt, pitStopsAt
 
 -}
 
 import Json.Decode as Decode exposing (Decoder, field)
+import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
-import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
-import Motorsport.Status exposing (Status)
+import Motorsport.Race.Stint as Stint
+import Motorsport.Status as Status exposing (Status)
 
 
 {-| The three indices read the same race at an instant, and are all
@@ -39,24 +40,25 @@ import Motorsport.Status exposing (Status)
 counter's ceiling and `lapCountAt` can never disagree about how long the race
 was.
 
-`statusChanges` is counted off the raw timeline, which arrives in a file of its
-own from `Round.Timeline`; the two indices beside it come with the round's
-summary.
+`lapCompletions` and `bestTimeChanges` come with the round's summary.
+`pitStops` is counted here, off the cars: the laps carry both ends of a stop, so
+nothing has to be read for it, and neither is anything read for a status.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
-off the last of them -- so [`fromCars`](#fromCars) is given it. Where the race
-actually ran out bounds playback rather than describing the race, and is
-[`Clock`](Motorsport-Clock)'s.
+off the last of them -- so [`fromCars`](#fromCars) is given it. It is also what
+tells a car that retired from one that took the flag, neither of which a last
+lap says for itself. Where the race actually ran out bounds playback rather than
+describing the race, and is [`Clock`](Motorsport-Clock)'s.
 
 -}
 type alias Race =
     { cars : List Car
     , lapTotal : Int
     , timeLimit : Instant
-    , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
     , bestTimeChanges : BestTimes.Changes
+    , pitStops : Stint.Index
     }
 
 
@@ -105,23 +107,22 @@ empty =
     { cars = []
     , lapTotal = 0
     , timeLimit = Instant.raceStart
-    , statusChanges = StatusChanges.empty
     , lapCompletions = emptyIndex.lapCompletions
     , bestTimeChanges = emptyIndex.bestTimeChanges
+    , pitStops = Stint.emptyIndex
     }
 
 
-{-| Read a race off its entry list and the indices that came with it. The
-statuses are indexed by the caller, from the timeline.
+{-| Read a race off its entry list and the indices that came with it.
 -}
-fromCars : { timeLimit : Instant, index : Index, statusChanges : StatusChanges } -> List Car -> Race
-fromCars { timeLimit, index, statusChanges } cars =
+fromCars : { timeLimit : Instant, index : Index } -> List Car -> Race
+fromCars { timeLimit, index } cars =
     { cars = cars
     , lapTotal = ChangePoints.length index.lapCompletions
     , timeLimit = timeLimit
-    , statusChanges = statusChanges
     , lapCompletions = index.lapCompletions
     , bestTimeChanges = index.bestTimeChanges
+    , pitStops = Stint.indexOf cars
     }
 
 
@@ -164,8 +165,38 @@ timeToFlagAt { elapsed } race =
     max 0 (Instant.since { from = elapsed, to = race.timeLimit })
 
 
-{-| The status a car holds at a moment of the race.
+{-| How far through its race a car is at a moment of it: away, running, or done.
+
+Both ends come off the car's own laps. It is running from the start until its
+final crossing, and from there it has either retired or taken the flag -- which
+the laps cannot tell apart, a last lap being a last lap either way, so the
+scheduled end of the race is what separates them. A car that turned no lap never
+started.
+
+The pit lane is the other half of a status and is read off the laps too, so a
+car's whole status is [`Race.Snapshot`](Motorsport-Race-Snapshot)'s rather than
+this.
+
 -}
-statusAt : { elapsed : Instant } -> CarNumber -> Race -> Status
-statusAt clock carNumber race =
-    StatusChanges.statusAt clock carNumber race.statusChanges
+statusAt : { elapsed : Instant } -> Car -> Race -> Status
+statusAt clock car race =
+    case List.Extra.last car.laps of
+        Nothing ->
+            Status.PreRace
+
+        Just final ->
+            if Instant.compare clock.elapsed final.elapsed == LT then
+                Status.Racing
+
+            else if Instant.compare final.elapsed race.timeLimit == LT then
+                Status.Retired
+
+            else
+                Status.Checkered
+
+
+{-| How many stops a car has completed at a moment of the race.
+-}
+pitStopsAt : { elapsed : Instant } -> CarNumber -> Race -> Int
+pitStopsAt clock carNumber race =
+    Stint.stopsAt clock carNumber race.pitStops

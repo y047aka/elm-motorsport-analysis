@@ -10,7 +10,7 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
-import Motorsport.Race.StatusChanges as StatusChanges
+import Motorsport.Status as Status
 import Test exposing (Test, describe, test)
 
 
@@ -87,6 +87,44 @@ suite =
                         |> List.map (\elapsed -> Race.timeToFlagAt { elapsed = instant elapsed } race)
                         |> Expect.equal [ 0, 0 ]
             ]
+        , describe "pitStopsAt"
+            [ test "counts the stops off the cars the race was built from" <|
+                \_ ->
+                    let
+                        raced =
+                            Race.fromCars
+                                { timeLimit = instant 7200000
+                                , index = index
+                                }
+                                [ carWith "1" [ lapAt "1" 1 100000, pitAt "1" 2 260000 160000 63000 ] ]
+                    in
+                    [ 162999, 163000 ]
+                        |> List.map (\elapsed -> Race.pitStopsAt { elapsed = instant elapsed } "1" raced)
+                        |> Expect.equal [ 0, 1 ]
+            , test "the fixture's cars never stopped" <|
+                \_ ->
+                    Race.pitStopsAt { elapsed = instant 99999999 } "1" race
+                        |> Expect.equal 0
+            , test "a race with no cars has no stops" <|
+                \_ ->
+                    Race.pitStopsAt { elapsed = instant 500000 } "1" Race.empty
+                        |> Expect.equal 0
+            ]
+        , describe "statusAt"
+            [ test "a car is running until its final crossing" <|
+                \_ ->
+                    [ 0, 299999, 300000 ]
+                        |> List.map (\at -> Race.statusAt { elapsed = instant at } carOne race)
+                        |> Expect.equal [ Status.Racing, Status.Racing, Status.Retired ]
+            , test "a car still running when the race was scheduled to end took the flag" <|
+                \_ ->
+                    Race.statusAt { elapsed = instant 99999999 } carTwo race
+                        |> Expect.equal Status.Checkered
+            , test "a car that turned no lap never started" <|
+                \_ ->
+                    Race.statusAt { elapsed = instant 99999999 } (carWith "3" []) race
+                        |> Expect.equal Status.PreRace
+            ]
         ]
 
 
@@ -99,16 +137,29 @@ suite =
 
 race : Race
 race =
-    Race.fromCars { timeLimit = Instant.fromDuration 7200000, index = index, statusChanges = StatusChanges.empty }
-        [ carWith "1"
-            [ lapAt "1" 1 100000
-            , lapAt "1" 2 200000
-            , lapAt "1" 3 300000
-            ]
-        , carWith "2"
-            [ lapAt "2" 1 90000
-            , lapAt "2" 2 7300000
-            ]
+    Race.fromCars { timeLimit = Instant.fromDuration 7200000, index = index } [ carOne, carTwo ]
+
+
+{-| Three laps and then nothing, well short of the two hours the race was
+scheduled for.
+-}
+carOne : Car
+carOne =
+    carWith "1"
+        [ lapAt "1" 1 100000
+        , lapAt "1" 2 200000
+        , lapAt "1" 3 300000
+        ]
+
+
+{-| Still out there when the limit fell, which is what puts its last crossing
+past it.
+-}
+carTwo : Car
+carTwo =
+    carWith "2"
+        [ lapAt "2" 1 90000
+        , lapAt "2" 2 7300000
         ]
 
 
@@ -164,3 +215,12 @@ lapAt carNumber lapNumber elapsed =
         , position = Just 1
         , elapsed = instant elapsed
     }
+
+
+pitAt : CarNumber -> Int -> Int -> Int -> Int -> Lap
+pitAt carNumber lapNumber elapsed time pitTime =
+    let
+        base =
+            lapAt carNumber lapNumber elapsed
+    in
+    { base | time = Just time, pit = Lap.OutLap pitTime }

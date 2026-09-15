@@ -326,9 +326,11 @@ Neither walks a lap of the race. Which lap took which record is counted in
 `Round.Index` and arrives with the round's summary, as `Race.lapCompletions`
 does, so `Race.fromCars` is given a `Race.Index` rather than building one.
 `Race.TimelineEvent` is read the same way, off `Round.Timeline` — the race as a
-list of what happened, which `Race.StatusChanges` is the per-car index of —
-though it arrives in a file of its own rather than in the summary, being the
-same order of size as the laps rather than of the indices.
+list of what happened, which the round's report is drawn from — though it
+arrives in a file of its own rather than in the summary, being the same order of
+size as the laps rather than of the indices. Nothing a `Race` holds is counted
+off it: a car's status is its own laps read against the time limit, so a round
+draws without it and `Shared` does not wait for it.
 
 ### Reading the race at a moment
 

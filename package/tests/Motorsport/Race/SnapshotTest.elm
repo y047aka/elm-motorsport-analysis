@@ -17,8 +17,8 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Race.StatusChanges as StatusChanges
 import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.Status as Status exposing (Status)
 import Test exposing (Test, describe, test)
 
 
@@ -259,6 +259,46 @@ suite =
                 [ 4999, 5000, 8999, 9000 ]
                     |> List.map (snapshotAt >> Snapshot.lapCount)
                     |> Expect.equal [ 0, 1, 1, 2 ]
+        , describe "where a car stands"
+            [ test "a stop is three states and the laps say which" <|
+                \_ ->
+                    -- Car 9 crossed the line in the pit lane at 10.000 and was
+                    -- away 3.000 later; the lap it drove away on runs to 20.000.
+                    [ 9999, 10000, 12999, 13000, 19999, 20000 ]
+                        |> List.map (statusOf "9" stopping)
+                        |> Expect.equal
+                            [ Just Status.Racing
+                            , Just Status.InPit
+                            , Just Status.InPit
+                            , Just Status.OutLap
+                            , Just Status.OutLap
+                            , Just Status.Racing
+                            ]
+            , test "a car that came out and went straight back in is in the pits again" <|
+                \_ ->
+                    -- Lap 2 is both ends of a stop, so the lap after it carries
+                    -- one of its own: away at 13.000, back in at 20.000, away
+                    -- again at 24.000.
+                    [ 12999, 13000, 19999, 20000, 23999, 24000 ]
+                        |> List.map (statusOf "12" stoppingTwice)
+                        |> Expect.equal
+                            [ Just Status.InPit
+                            , Just Status.OutLap
+                            , Just Status.OutLap
+                            , Just Status.InPit
+                            , Just Status.InPit
+                            , Just Status.OutLap
+                            ]
+            , test "a race that is over is not a pit lane, whatever the last lap was" <|
+                \_ ->
+                    -- Car 8's laps end on the one it came back out on, so the
+                    -- clock falls through to it for ever after. The end of its
+                    -- race is what it reads as, not the stop that lap began.
+                    [ 19999, 20000, 99999 ]
+                        |> List.map (statusOf "8" retiringOnAnOutLap)
+                        |> Expect.equal
+                            [ Just Status.OutLap, Just Status.Retired, Just Status.Retired ]
+            ]
         ]
 
 
@@ -272,7 +312,7 @@ suite =
 
 snapshotAt : Duration -> Snapshot
 snapshotAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, statusChanges = StatusChanges.empty } [ carOne, carTwo ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex } [ carOne, carTwo ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -443,7 +483,7 @@ the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
-    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex, statusChanges = StatusChanges.empty } [ carOne, carTwo, carThree, nonStarter ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex } [ carOne, carTwo, carThree, nonStarter ]
         |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
 
 
@@ -465,7 +505,7 @@ thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, statusChanges = StatusChanges.empty } [ leMansCar ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex } [ leMansCar ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -487,7 +527,7 @@ starts the next, so losing it loses both.
 -}
 leMansFieldMissing : LeMans2025MiniSector -> Duration -> Snapshot
 leMansFieldMissing missing elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex, statusChanges = StatusChanges.empty }
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex }
         [ { leMansCar | laps = List.map (withoutRunningTotalFor missing) leMansCar.laps } ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
@@ -516,7 +556,7 @@ leaves blank rather than at zero. Its one lap runs from the start to 6.000.
 -}
 fieldWithUntimedSectors : List Sector -> Duration -> Snapshot
 fieldWithUntimedSectors untimed elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart, index = untimedSectorsIndex untimed, statusChanges = StatusChanges.empty } [ carWithoutSectorTimes untimed ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = untimedSectorsIndex untimed } [ carWithoutSectorTimes untimed ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -692,3 +732,65 @@ lapOf carNumber lapNumber time elapsed sectors =
 empty : Lap
 empty =
     Lap.empty
+
+
+{-| A race long enough that nothing here reads as over, held at a car of its own
+so the field above is left to the orderings it is there for.
+-}
+statusOf : String -> Car -> Duration -> Maybe Status
+statusOf carNumber car elapsed =
+    Race.fromCars { timeLimit = Instant.fromDuration 60000, index = fieldIndex } [ car ]
+        |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
+        |> carAt carNumber
+        |> Maybe.map .status
+
+
+{-| One stop: in at the end of lap 1, away 3.000 into lap 2, and out on the road
+again from lap 3.
+-}
+stopping : Car
+stopping =
+    stopperWith "9"
+        [ pitLapOf "9" 1 10000 10000 Lap.InLap
+        , pitLapOf "9" 2 10000 20000 (Lap.OutLap 3000)
+        , pitLapOf "9" 3 10000 30000 Lap.NoPit
+        ]
+
+
+{-| The same, except that lap 2 ends in the pit lane as well, so lap 3 is
+another lap that begins with a stop.
+-}
+stoppingTwice : Car
+stoppingTwice =
+    stopperWith "12"
+        [ pitLapOf "12" 1 10000 10000 Lap.InLap
+        , pitLapOf "12" 2 10000 20000 (Lap.OutAndIn 3000)
+        , pitLapOf "12" 3 10000 30000 (Lap.OutLap 4000)
+        ]
+
+
+{-| A car whose race ends on the lap it came back out on.
+-}
+retiringOnAnOutLap : Car
+retiringOnAnOutLap =
+    stopperWith "8"
+        [ pitLapOf "8" 1 10000 10000 Lap.InLap
+        , pitLapOf "8" 2 10000 20000 (Lap.OutLap 3000)
+        ]
+
+
+stopperWith : String -> List Lap -> Car
+stopperWith carNumber laps =
+    { metadata = metadataOf carNumber (classOf "HYPERCAR")
+    , startPosition = 1
+    , laps = laps
+    }
+
+
+pitLapOf : String -> Int -> Duration -> Duration -> Lap.Pit -> Lap
+pitLapOf carNumber lapNumber time elapsed pit =
+    let
+        base =
+            lapOf carNumber lapNumber time elapsed { s1 = 1000, s2 = 2000, s3 = 3000 }
+    in
+    { base | pit = pit }

@@ -148,26 +148,26 @@ subscriptions shared _ =
 view : Shared.Model -> Model -> View Msg
 view shared m =
     let
-        maybeRace =
-            Shared.race shared
+        maybeRound =
+            Shared.loadedRound shared
     in
     { title = "Wec"
     , body =
         [ main_
             [ Attributes.class "dark h-full grid grid-rows-[auto_1fr]"
             ]
-            [ navigation (headerTitle shared) maybeRace
-            , case maybeRace of
+            [ navigation (headerTitle shared) maybeRound
+            , case maybeRound of
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
                     -- round before it.
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
-                Just race ->
-                    trackerView race.track
-                        race.timeline
-                        race.snapshot
-                        race.replay
+                Just round ->
+                    trackerView round.track
+                        round.timeline
+                        round.snapshot
+                        round.replay
                         m
             ]
         ]
@@ -432,12 +432,6 @@ eventTypeToString eventType =
         CarEvent _ TookLead ->
             "Took the Lead"
 
-        CarEvent _ (PitIn _) ->
-            "Pit In"
-
-        CarEvent _ (PitOut _) ->
-            "Pit Out"
-
         CarEvent _ Retirement ->
             "Retirement"
 
@@ -466,6 +460,7 @@ leaderboardConfig =
         , Leaderboard.currentLapColumn_Wec { getter = identity }
         , Leaderboard.lastLapColumn_Wec { getter = .lastLap }
         , Leaderboard.bestTimeColumn { getter = .bestLap }
+        , Leaderboard.intColumn { label = "Stops", getter = .pitStops }
         ]
     }
 
@@ -501,21 +496,21 @@ standingsPopover =
         ]
 
 
-navigation : String -> Maybe Shared.Race -> Html Msg
-navigation title maybeRace =
+navigation : String -> Maybe Shared.LoadedRound -> Html Msg
+navigation title maybeRound =
     nav
         [ Attributes.class "p-3 grid grid-cols-[auto_1fr] items-center gap-x-10" ]
         [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
             ]
-        , case maybeRace of
+        , case maybeRound of
             Nothing ->
                 text ""
 
-            Just race ->
+            Just round ->
                 PlaybackControls.view
-                    { replay = race.replay
+                    { replay = round.replay
                     , onStart = StartRace
                     , onPause = PauseRace
                     , toReplayMsg = ReplayMsg

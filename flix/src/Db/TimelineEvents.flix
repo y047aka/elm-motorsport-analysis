@@ -28,9 +28,7 @@ mod Db.TimelineEvents {
         seq = Int32,
         elapsedMs = Int32,
         event = String,
-        carNumber = Option[String],
-        lapNumber = Option[Int32],
-        durationMs = Option[Int32]
+        carNumber = Option[String]
     }
 
     /// The round's rows. As `Db.Laps.rows`, the pair naming the round is
@@ -57,17 +55,13 @@ mod Db.TimelineEvents {
             seq = seq,
             elapsedMs = Util.Duration.millis(event#elapsed),
             event = p#event,
-            carNumber = p#carNumber,
-            lapNumber = p#lapNumber,
-            durationMs = p#duration |> Option.map(Util.Duration.millis)
+            carNumber = p#carNumber
         }
 
     pub def toEvent(r: EventRow): Option[Event] =
         Timeline.eventTypeOf({
             event = r#event,
-            carNumber = r#carNumber,
-            lapNumber = r#lapNumber,
-            duration = r#durationMs |> Option.map(Util.Duration.fromMillis)
+            carNumber = r#carNumber
         })
             |> Option.map(eventType -> {
                 elapsed = Util.Duration.fromMillis(r#elapsedMs),
@@ -81,21 +75,16 @@ mod Db.TimelineEvents {
         seq = Column[EventRow, Int32],
         elapsedMs = Column[EventRow, Int32],
         event = Column[EventRow, String],
-        carNumber = Column[EventRow, Option[String]],
-        lapNumber = Column[EventRow, Option[Int32]],
-        durationMs = Column[EventRow, Option[Int32]]
+        carNumber = Column[EventRow, Option[String]]
     }
 
-    /// The three nullable columns are the ones an event may not carry: the
-    /// race's own start is nobody's, and only a stop has a lap and a length.
+    /// `car_number` is nullable because the race's own start is nobody's.
     pub def columns(): Columns = {
         roundId = Schema.integer("round_id", r -> r#roundId),
         seq = Schema.integer("seq", r -> r#seq),
         elapsedMs = Schema.integer("elapsed_ms", r -> r#elapsedMs),
         event = Schema.checkedText("event", Timeline.names(), r -> r#event),
-        carNumber = Schema.nullableText("car_number", r -> r#carNumber),
-        lapNumber = Schema.nullableInteger("lap_number", r -> r#lapNumber),
-        durationMs = Schema.nullableInteger("duration_ms", r -> r#durationMs)
+        carNumber = Schema.nullableText("car_number", r -> r#carNumber)
     }
 
     /// A round's events as the table holds them, a field at a time: each line
@@ -109,8 +98,6 @@ mod Db.TimelineEvents {
             |> Sql.field(c#elapsedMs, (r, value) -> { +elapsedMs = value | r })
             |> Sql.field(c#event, (r, value) -> { +event = value | r })
             |> Sql.field(c#carNumber, (r, value) -> { +carNumber = value | r })
-            |> Sql.field(c#lapNumber, (r, value) -> { +lapNumber = value | r })
-            |> Sql.field(c#durationMs, (r, value) -> { +durationMs = value | r })
 
     /// The order the table declares them in, and so the order the insert binds
     /// them.
@@ -121,8 +108,6 @@ mod Db.TimelineEvents {
         Schema.bound(c#elapsedMs) ::
         Schema.bound(c#event) ::
         Schema.bound(c#carNumber) ::
-        Schema.bound(c#lapNumber) ::
-        Schema.bound(c#durationMs) ::
         Nil
 
     // --------------------------------------------------------------- schema

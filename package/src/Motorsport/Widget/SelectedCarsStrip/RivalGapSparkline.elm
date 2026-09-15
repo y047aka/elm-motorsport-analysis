@@ -41,8 +41,9 @@ five-car reference relaxes the strict self-centering of a three-car reference
 mirror-image lock between the ahead/behind lines (the two outer cars' gaps
 largely cancel, keeping the picture near zero).
 
-The reference averages only each car's non-pit laps (no pitTime), preventing pit
-stops from jolting the baseline. The vertical axis spans only the band of normal
+The reference averages only the laps each car did not pit on (see
+[`Lap.isRacingLap`](Motorsport-Lap#isRacingLap)), preventing pit stops from
+jolting the baseline. The vertical axis spans only the band of normal
 variation with outliers (two-sided IQR) such as pit laps excluded; outliers are
 clipped outside the frame. Cards missing both rivals are not drawn.
 

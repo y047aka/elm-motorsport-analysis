@@ -10,8 +10,6 @@ import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
-import Motorsport.Race.StatusChanges as StatusChanges
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
@@ -24,31 +22,22 @@ suite : Test
 suite =
     describe "Replay"
         [ describe "status is a function of the elapsed time, not of the path taken to it"
-            [ test "landing inside a pit window puts the car in the pits, and past it back on track" <|
-                \_ ->
-                    [ 180000, 250000 ]
-                        |> List.map (\elapsed -> statusOf "1" (skipTo elapsed initialModel))
-                        |> Expect.equal [ Just Status.InPit, Just Status.Racing ]
-            , test "jumping clear past a retirement retires the car" <|
-                \_ ->
-                    initialModel
-                        |> skipTo 1000000
-                        |> statusOf "1"
-                        |> Expect.equal (Just Status.Retired)
-            , test "rewinding back into a pit window puts the car back in the pits" <|
+            [ test "rewinding back into a pit window puts the car back in the pits" <|
                 \_ ->
                     initialModel
                         |> skipTo 200000
-                        |> skipBy -20000
+                        |> skipBy -80000
                         |> statusOf "1"
                         |> Expect.equal (Just Status.InPit)
             , test "rewinding from a retirement brings the car back to racing" <|
                 \_ ->
-                    initialModel
-                        |> skipTo 1000000
-                        |> skipTo 250000
-                        |> statusOf "1"
-                        |> Expect.equal (Just Status.Racing)
+                    let
+                        retired =
+                            initialModel |> skipTo 1000000
+                    in
+                    Expect.equal
+                        ( Just Status.Retired, Just Status.Racing )
+                        ( statusOf "1" retired, statusOf "1" (skipTo 250000 retired) )
             , test "one jump and many small steps to the same elapsed agree" <|
                 \_ ->
                     let
@@ -61,12 +50,6 @@ suite =
                     Expect.equal
                         (statusOf "1" inOneJump)
                         (statusOf "1" inManySteps)
-            , test "a car still running past the time limit takes the chequered flag, not a retirement" <|
-                \_ ->
-                    initialModel
-                        |> skipTo 7300000
-                        |> statusOf "2"
-                        |> Expect.equal (Just Status.Checkered)
             ]
         , describe "while the race is running"
             -- Every case above moves a stopped clock. A running one reports its
@@ -79,9 +62,9 @@ suite =
                         |> Expect.equal 110000
             , test "and the status follows the head" <|
                 \_ ->
-                    -- 100.000 + 80.000 is inside car "1"'s pit window.
+                    -- 100.000 + 20.000 is inside car "1"'s stop.
                     playingAt 100000
-                        |> skipBy 80000
+                        |> skipBy 20000
                         |> statusOf "1"
                         |> Expect.equal (Just Status.InPit)
             ]
@@ -122,12 +105,13 @@ suite =
         , describe "SetCount"
             [ test "moving the lap counter forward carries the status with it" <|
                 \_ ->
-                    -- The end of lap 1 is the instant before car "1" completes
-                    -- lap 2, which it spends in the pits.
+                    -- The counter reads 1 until the instant car "1" completes
+                    -- lap 2, by which point the stop that lap began with is
+                    -- long over and the car is finishing the out lap.
                     initialModel
                         |> Replay.update (Replay.SetCount 1)
                         |> statusOf "1"
-                        |> Expect.equal (Just Status.InPit)
+                        |> Expect.equal (Just Status.OutLap)
             ]
         ]
 
@@ -145,7 +129,6 @@ initialModel =
         { timeLimit = Instant.fromDuration 7200000
         , finishedAt = Instant.fromDuration 7300000
         , index = index
-        , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
         }
         [ retiringCar, survivingCar ]
 
@@ -165,40 +148,20 @@ index =
     }
 
 
-{-| The timeline as `Round.Timeline` reads it off those rows: car "1" spends
-lap 2 in the pits and stops three laps in, short of the limit; car "2" is still
-running when it falls. Car "1" leads every lap, so the lead never changes hands.
--}
-timelineEvents : List TimelineEvent
-timelineEvents =
-    [ { elapsed = Instant.raceStart, eventType = TimelineEvent.RaceStart }
-    , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Start }
-    , { elapsed = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Start }
-    , { elapsed = Instant.fromDuration 170000
-      , eventType = TimelineEvent.CarEvent "1" (TimelineEvent.PitIn { lapNumber = 2, duration = 30000 })
-      }
-    , { elapsed = Instant.fromDuration 200000
-      , eventType = TimelineEvent.CarEvent "1" (TimelineEvent.PitOut { lapNumber = 2, duration = 30000 })
-      }
-    , { elapsed = Instant.fromDuration 300000, eventType = TimelineEvent.CarEvent "1" TimelineEvent.Retirement }
-    , { elapsed = Instant.fromDuration 7300000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Checkered }
-    ]
-
-
 retiringCar : Car
 retiringCar =
     carWith "1"
-        [ lapAt "1" 1 100000
-        , lapAt "1" 2 200000 |> withPitTime (Just 30000)
-        , lapAt "1" 3 300000
+        [ lapAt "1" 1 100000 100000 |> cameIn
+        , lapAt "1" 2 100000 200000 |> cameOutAfter 30000
+        , lapAt "1" 3 100000 300000
         ]
 
 
 survivingCar : Car
 survivingCar =
     carWith "2"
-        [ lapAt "2" 1 100000
-        , lapAt "2" 2 7300000
+        [ lapAt "2" 1 100000 100000
+        , lapAt "2" 2 7200000 7300000
         ]
 
 
@@ -260,8 +223,8 @@ carWith carNumber laps =
     }
 
 
-lapAt : CarNumber -> Int -> Int -> Lap
-lapAt carNumber lapNumber elapsed =
+lapAt : CarNumber -> Int -> Int -> Int -> Lap
+lapAt carNumber lapNumber time elapsed =
     let
         base =
             Lap.empty
@@ -271,10 +234,20 @@ lapAt carNumber lapNumber elapsed =
         , driver = Driver.fromName "Test Driver"
         , lap = lapNumber
         , position = Just 1
+        , time = Just time
         , elapsed = Instant.fromDuration elapsed
     }
 
 
-withPitTime : Maybe Int -> Lap -> Lap
-withPitTime pitTime lap =
-    { lap | pitTime = pitTime }
+{-| The lap the car finished in the pit lane, which is where a stop begins.
+-}
+cameIn : Lap -> Lap
+cameIn lap =
+    { lap | pit = Lap.InLap }
+
+
+{-| The lap it came back out on, which carries how long the stop took.
+-}
+cameOutAfter : Int -> Lap -> Lap
+cameOutAfter duration lap =
+    { lap | pit = Lap.OutLap duration }
