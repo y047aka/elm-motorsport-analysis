@@ -139,6 +139,9 @@ that is rebuilt as playback runs.
 against, and the only one of the four a round can go without: nothing playback
 reads is counted off them.
 
+It is the round's report rather than everything the file holds -- see
+[`reported`](#reported).
+
 -}
 type alias LoadedRound =
     { replay : Replay.Model
@@ -417,7 +420,7 @@ timelineArrived key events round =
 
         Loaded id loaded ->
             if keyOf id == key then
-                Loaded id { loaded | timeline = Timeline.fromList events }
+                Loaded id { loaded | timeline = reportOf events }
 
             else
                 round
@@ -452,8 +455,21 @@ roundFrom summary rawLaps timelineEvents =
     { replay = replay
     , snapshot = snapshotOf replay
     , track = Tracker.fromConfig summary.track
-    , timeline = Timeline.fromList timelineEvents
+    , timeline = reportOf timelineEvents
     }
+
+
+{-| The round's report: its events, less the stops.
+
+The two halves of one are 95% of a round's events, so a table of the recent
+hundred is 95% pit lane -- at Le Mans it spans half an hour and carries two of
+anything else. The pit lane is on the timing screen four other ways by now, and
+a lead changing hands is on it nowhere else.
+
+-}
+reportOf : List TimelineEvent -> Timeline
+reportOf =
+    List.filter (TimelineEvent.isStop >> not) >> Timeline.fromList
 
 
 mapLoaded : (LoadedRound -> LoadedRound) -> Round -> Round

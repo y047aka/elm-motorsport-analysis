@@ -103,12 +103,15 @@ lapsJsonl =
 
 
 {-| The timeline of that one lap: car 7 crossed the line once and never again,
-which is a long way short of the six hours the round was scheduled for.
+which is a long way short of the six hours the round was scheduled for. The stop
+it made on the way is in the file and not in the report.
 -}
 timelineJsonl : String
 timelineJsonl =
     """{ "elapsed": "0.000", "event": "raceStart" }
 { "elapsed": "0.000", "event": "start", "carNumber": "7" }
+{ "elapsed": "40.000", "event": "pitIn", "carNumber": "7", "lap": 1, "duration": "30.000" }
+{ "elapsed": "1:10.000", "event": "pitOut", "carNumber": "7", "lap": 1, "duration": "30.000" }
 { "elapsed": "1:53.000", "event": "retirement", "carNumber": "7" }
 """
 
@@ -290,7 +293,7 @@ suite =
         [ test "the fixtures decode" <|
             \_ ->
                 ( summary /= Nothing, List.length laps, List.length timeline )
-                    |> Expect.equal ( True, 1, 3 )
+                    |> Expect.equal ( True, 1, 5 )
         , test "puts on a car the livery it carried at the round being read" <|
             \_ ->
                 ( liveryAt "spa_6h", liveryAt "le_mans_24h" )
@@ -358,6 +361,16 @@ suite =
                     ]
                         |> List.map eventCount
                         |> Expect.equalLists [ 0, 3, 3 ]
+            , test "the report leaves out the stops the file carries" <|
+                \_ ->
+                    -- Five events in, three out: the two halves of the stop are
+                    -- the timing screen's to show, not the report's.
+                    loadingSpa
+                        |> deliverSummary spa
+                        |> deliverLaps spa
+                        |> deliverTimeline spa
+                        |> eventCount
+                        |> Expect.equal 3
             , test "a timeline that never arrives leaves the round rather than taking it away" <|
                 \_ ->
                     loadingSpa

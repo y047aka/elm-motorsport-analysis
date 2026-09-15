@@ -1,5 +1,6 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
+    , isStop
     , fromJsonl, decoder
     )
 
@@ -8,6 +9,7 @@ module Motorsport.Race.TimelineEvent exposing
 Read out of the round's timeline file, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
+@docs isStop
 @docs fromJsonl, decoder
 
 -}
@@ -36,6 +38,21 @@ type CarEventType
     | PitOut { lapNumber : Int, duration : Duration }
     | Retirement
     | Checkered
+
+
+{-| Whether the event is one half of a pit stop.
+-}
+isStop : TimelineEvent -> Bool
+isStop event =
+    case event.eventType of
+        CarEvent _ (PitIn _) ->
+            True
+
+        CarEvent _ (PitOut _) ->
+            True
+
+        _ ->
+            False
 
 
 
