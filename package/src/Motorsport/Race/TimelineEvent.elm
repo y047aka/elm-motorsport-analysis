@@ -1,6 +1,5 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
-    , isStop
     , fromJsonl, decoder
     )
 
@@ -9,14 +8,11 @@ module Motorsport.Race.TimelineEvent exposing
 Read out of the round's timeline file, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
-@docs isStop
 @docs fromJsonl, decoder
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, field, int, string)
-import Json.Decode.Extra
-import Motorsport.Duration as Duration exposing (Duration)
+import Json.Decode as Decode exposing (Decoder, field, string)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.Jsonl as Jsonl
 import Motorsport.Race.Car exposing (CarNumber)
@@ -34,25 +30,8 @@ type EventType
 type CarEventType
     = Start
     | TookLead
-    | PitIn { lapNumber : Int, duration : Duration }
-    | PitOut { lapNumber : Int, duration : Duration }
     | Retirement
     | Checkered
-
-
-{-| Whether the event is one half of a pit stop.
--}
-isStop : TimelineEvent -> Bool
-isStop event =
-    case event.eventType of
-        CarEvent _ (PitIn _) ->
-            True
-
-        CarEvent _ (PitOut _) ->
-            True
-
-        _ ->
-            False
 
 
 
@@ -102,12 +81,6 @@ carEventTypeDecoder event =
         "tookLead" ->
             Decode.succeed TookLead
 
-        "pitIn" ->
-            Decode.map PitIn stopDecoder
-
-        "pitOut" ->
-            Decode.map PitOut stopDecoder
-
         "retirement" ->
             Decode.succeed Retirement
 
@@ -116,15 +89,3 @@ carEventTypeDecoder event =
 
         _ ->
             Decode.fail ("Unknown timeline event: " ++ event)
-
-
-stopDecoder : Decoder { lapNumber : Int, duration : Duration }
-stopDecoder =
-    Decode.map2 (\lapNumber duration -> { lapNumber = lapNumber, duration = duration })
-        (field "lap" int)
-        (field "duration" durationDecoder)
-
-
-durationDecoder : Decoder Duration
-durationDecoder =
-    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")

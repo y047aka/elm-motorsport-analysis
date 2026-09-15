@@ -18,24 +18,6 @@ suite =
             \_ ->
                 decoded """{ "elapsed": "0.000", "event": "start", "carNumber": "7" }"""
                     |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" Start ))
-        , test "a stop carries the lap it ended on and how long it took" <|
-            \_ ->
-                decoded """{ "elapsed": "1:50.000", "event": "pitIn", "carNumber": "7", "lap": 2, "duration": "1:10.000" }"""
-                    |> Expect.equal
-                        (Ok
-                            ( Instant.fromDuration 110000
-                            , CarEvent "7" (PitIn { lapNumber = 2, duration = 70000 })
-                            )
-                        )
-        , test "and its other half says the same of itself" <|
-            \_ ->
-                decoded """{ "elapsed": "3:00.000", "event": "pitOut", "carNumber": "7", "lap": 2, "duration": "1:10.000" }"""
-                    |> Expect.equal
-                        (Ok
-                            ( Instant.fromDuration 180000
-                            , CarEvent "7" (PitOut { lapNumber = 2, duration = 70000 })
-                            )
-                        )
         , test "each of the remaining kinds reads back as itself" <|
             \_ ->
                 [ "tookLead", "retirement", "checkered" ]
