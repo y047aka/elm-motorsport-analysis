@@ -34,7 +34,7 @@ mod Motorsport.Timeline {
     pub type alias Readings = {
         timeLimit = Duration,
         cars      = List[(String, Duration)],
-        stops     = List[(String, Int32, Duration, Duration)],
+        stops     = List[(String, Int32, Duration, Duration, Duration)],
         leads     = List[(String, Duration)]
     }
 
@@ -71,19 +71,24 @@ mod Motorsport.Timeline {
         changes |> List.map(match (carNumber, elapsed) ->
             { elapsed = elapsed, eventType = EventType.Of(carNumber, CarEvent.TookLead) })
 
-    /// A stop is read off the lap it ended on, so the lap carries when the car
-    /// came out and how long it was in; when it went in is the difference.
+    /// A stop is read off the lap the car came back out on, which is the lap
+    /// that begins with it: the feed marks the crossing the car made in the pit
+    /// lane on the lap before, and carries the length of the stop on this one.
+    /// So the car went in when this lap began -- its elapsed less its own time,
+    /// which is the previous lap's elapsed on a round that does not drift and
+    /// is still a moment where a lap is missing.
     ///
-    /// A stop longer than the race was old when it ended went in before the
-    /// start, which is not a moment of the race: the start stands in for it, as
-    /// `Motorsport.Instant.fromDuration` makes it on the Elm side. Written out,
-    /// a negative would be spelled in a way nothing reads back.
-    def stops(rows: List[(String, Int32, Duration, Duration)]): List[Event] =
-        rows |> List.flatMap(match (carNumber, lapNumber, elapsed, duration) ->
+    /// `Cli.Load.Validation`'s ElapsedDrift is the check on that. A round
+    /// drifting far enough to reach back past the start reads at the start
+    /// instead, a negative being spelled in a way nothing reads back.
+    def stops(rows: List[(String, Int32, Duration, Duration, Duration)]): List[Event] =
+        rows |> List.flatMap(match (carNumber, lapNumber, elapsed, lapTime, duration) ->
             let entered = atOrAfterStart(
-                Util.Duration.millis(elapsed) - Util.Duration.millis(duration));
+                Util.Duration.millis(elapsed) - Util.Duration.millis(lapTime));
+            let left = Util.Duration.fromMillis(
+                Util.Duration.millis(entered) + Util.Duration.millis(duration));
             { elapsed = entered, eventType = EventType.Of(carNumber, CarEvent.PitIn(lapNumber, duration)) } ::
-            { elapsed = elapsed, eventType = EventType.Of(carNumber, CarEvent.PitOut(lapNumber, duration)) } ::
+            { elapsed = left, eventType = EventType.Of(carNumber, CarEvent.PitOut(lapNumber, duration)) } ::
             Nil)
 
     def atOrAfterStart(ms: Int32): Duration =

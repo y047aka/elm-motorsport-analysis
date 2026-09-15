@@ -105,31 +105,35 @@ mod Round.TestTimeline {
 
     // ---------------------------------------------------------------- stops
 
-    /// A stop is read off the lap it ended on: the car came out when that lap
-    /// was completed, and went in the stop's length before that.
+    /// A stop is read off the lap the car came back out on, and that lap is
+    /// the one that begins with it: the car went in where the lap began and was
+    /// out again the stop's length later, both of them well before the lap was
+    /// completed.
     @Test
-    def aStopIsTheLapItEndedOn(): Unit \ {Assert, IO} =
+    def aStopBeginsWhereTheLapTheCarCameOutOnBegan(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
             lap("7", 1, "60.000") ::
-            pitLap("7", 2, "3:00.000", "1:10.000") ::
+            pitLap("7", 2, "2:00.000", "40.000") ::
             Nil);
-        Assert.assertTrue(named("pitIn", events) == ("1:50.000", "pitIn", "7") :: Nil);
-        Assert.assertTrue(named("pitOut", events) == ("3:00.000", "pitOut", "7") :: Nil)
+        Assert.assertTrue(named("pitIn", events) == ("1:00.000", "pitIn", "7") :: Nil);
+        Assert.assertTrue(named("pitOut", events) == ("1:40.000", "pitOut", "7") :: Nil)
 
     /// Which lap it was and how long it took ride on both halves of it.
     @Test
     def aStopCarriesItsLapAndItsLength(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
-            pitLap("7", 4, "3:00.000", "1:10.000") :: Nil);
-        Assert.assertTrue(stops(events) == (4, "1:10.000") :: (4, "1:10.000") :: Nil)
+            pitLap("7", 4, "3:00.000", "40.000") :: Nil);
+        Assert.assertTrue(stops(events) == (4, "40.000") :: (4, "40.000") :: Nil)
 
-    /// A stop longer than the race was old when it ended went in before the
-    /// start, and the start is what it reads back as: a moment before the race
-    /// began is not one, and written out it would be a time nothing parses.
+    /// A lap whose elapsed falls short of its own time -- the drift
+    /// `Cli.Load.Validation` reports and does not fail on -- would put the car
+    /// in the pits before the race began, and the start is what it reads back
+    /// as: a moment before the race began is not one, and written out it would
+    /// be a time nothing parses.
     @Test
     def aStopReachingBackPastTheStartBeginsAtIt(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
-            pitLap("7", 1, "1:00.000", "1:10.000") :: Nil);
+            pitLap("7", 1, "30.000", "20.000") :: Nil);
         Assert.assertTrue(named("pitIn", events) == ("0.000", "pitIn", "7") :: Nil)
 
     /// A lap the car did not stop on is not a stop.
@@ -197,12 +201,12 @@ mod Round.TestTimeline {
     def aStopEndingAtTheFlagIsOvertakenByIt(): Unit \ {Assert, IO} =
         let events = timelineOf("2:00.000",
             lap("7", 1, "60.000") ::
-            pitLap("7", 2, "2:30.000", "30.000") ::
+            pitLap("7", 2, "2:30.000", "1:00.000") ::
             Nil);
         Assert.assertTrue(events |> List.map(shape) ==
             ("0.000", "raceStart", "") ::
             ("0.000", "start", "7") ::
-            ("2:00.000", "pitIn", "7") ::
+            ("1:30.000", "pitIn", "7") ::
             ("2:30.000", "pitOut", "7") ::
             ("2:30.000", "checkered", "7") :: Nil)
 

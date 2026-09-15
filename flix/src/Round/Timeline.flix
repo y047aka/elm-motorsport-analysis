@@ -62,23 +62,25 @@ mod Round.Timeline {
 
     // ----------------------------------------------------------------- stops
 
-    /// One row per stop: the lap it ended on, when the car came back out, and
-    /// how long it was in.
-    def stops(entry: Entry): List[(String, Int32, Duration, Duration)] \ DbRead =
+    /// One row per stop: the lap the car came back out on, when that lap was
+    /// completed and how long it took, and how long the car was in. Where those
+    /// put the stop is `Motorsport.Timeline.stops`'s.
+    def stops(entry: Entry): List[(String, Int32, Duration, Duration, Duration)] \ DbRead =
         let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.filter(row -> Sql.isNotNull(Schema.expr(row#pitTimeMs)))
             |> Sql.orderBy(Schema.term(c#elapsedMs) :: Schema.term(c#sourceRow) :: Nil)
-            |> Sql.map(row -> (row#carNumber, row#lapNumber, row#elapsedMs, row#pitTimeMs))
+            |> Sql.map(row -> (row#carNumber, row#lapNumber, row#elapsedMs, row#lapTimeMs, row#pitTimeMs))
             |> Sql.selectAll
             |> List.filterMap(stop)
 
-    def stop(row: (String, Int32, Int32, Option[Int32])): Option[(String, Int32, Duration, Duration)] =
+    def stop(row: (String, Int32, Int32, Int32, Option[Int32])): Option[(String, Int32, Duration, Duration, Duration)] =
         match row {
-            case (carNumber, lapNumber, elapsed, Some(duration)) => Some((
+            case (carNumber, lapNumber, elapsed, lapTime, Some(duration)) => Some((
                 carNumber,
                 lapNumber,
                 Util.Duration.fromMillis(elapsed),
+                Util.Duration.fromMillis(lapTime),
                 Util.Duration.fromMillis(duration)
             ))
             case _ => None

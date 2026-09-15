@@ -206,8 +206,10 @@ one, since SQLite settles a `WHERE` before either window. What is left in Flix
 is the deciding: `Motorsport.Timeline` weighs each car's last crossing against
 the time limit, which is `Metadata`'s estimate and the one reading here the laps
 do not carry, so `Round.Summary.particulars` is read first and hands it over --
-the whole of what the load wants a summary for. It also fixes the order events
-sharing an instant come back in -- `List.sortBy` is not stable, and a stop
+the whole of what the load wants a summary for. It places the two halves of a
+stop as well: the lap carrying the pit time is the one the car came back out on,
+so the stop sits at the start of that lap rather than at its end. It also fixes
+the order events sharing an instant come back in -- `List.sortBy` is not stable, and a stop
 ending as the flag falls has to leave the car classified rather than in the pits
 -- which is why the gathering order rides in the sort key and lands in `seq`.
 
