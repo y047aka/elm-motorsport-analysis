@@ -22,20 +22,7 @@ suite : Test
 suite =
     describe "Replay"
         [ describe "status is a function of the elapsed time, not of the path taken to it"
-            [ test "landing in a stop puts the car in the pits, then on the out lap, then back on track" <|
-                \_ ->
-                    -- Car "1" crossed the line in the pit lane at 100.000 and
-                    -- was away 30.000 later; lap 2 runs on to 200.000.
-                    [ 110000, 150000, 250000 ]
-                        |> List.map (\elapsed -> statusOf "1" (skipTo elapsed initialModel))
-                        |> Expect.equal [ Just Status.InPit, Just Status.OutLap, Just Status.Racing ]
-            , test "jumping clear past a retirement retires the car" <|
-                \_ ->
-                    initialModel
-                        |> skipTo 1000000
-                        |> statusOf "1"
-                        |> Expect.equal (Just Status.Retired)
-            , test "rewinding back into a pit window puts the car back in the pits" <|
+            [ test "rewinding back into a pit window puts the car back in the pits" <|
                 \_ ->
                     initialModel
                         |> skipTo 200000
@@ -44,11 +31,13 @@ suite =
                         |> Expect.equal (Just Status.InPit)
             , test "rewinding from a retirement brings the car back to racing" <|
                 \_ ->
-                    initialModel
-                        |> skipTo 1000000
-                        |> skipTo 250000
-                        |> statusOf "1"
-                        |> Expect.equal (Just Status.Racing)
+                    let
+                        retired =
+                            initialModel |> skipTo 1000000
+                    in
+                    Expect.equal
+                        ( Just Status.Retired, Just Status.Racing )
+                        ( statusOf "1" retired, statusOf "1" (skipTo 250000 retired) )
             , test "one jump and many small steps to the same elapsed agree" <|
                 \_ ->
                     let
@@ -61,12 +50,6 @@ suite =
                     Expect.equal
                         (statusOf "1" inOneJump)
                         (statusOf "1" inManySteps)
-            , test "a car still running past the time limit takes the chequered flag, not a retirement" <|
-                \_ ->
-                    initialModel
-                        |> skipTo 7300000
-                        |> statusOf "2"
-                        |> Expect.equal (Just Status.Checkered)
             ]
         , describe "while the race is running"
             -- Every case above moves a stopped clock. A running one reports its

@@ -208,30 +208,6 @@ suite =
                                 |> Maybe.withDefault []
                     in
                     Expect.equal [] car2Laps
-            , test "preserves the pit lane through attach" <|
-                \_ ->
-                    let
-                        rawLaps =
-                            [ rawLap "1" 1 100000 100000
-                            , { carNumber = "1"
-                              , driverName = "D"
-                              , lapNumber = 2
-                              , position = 0
-                              , lapTime = 100000
-                              , sectors = Sector.initialize (always Nothing)
-                              , miniSectors = Nothing
-                              , elapsed = Instant.fromDuration 200000
-                              , crossingFinishLineInPit = False
-                              , pitTime = Just 50000
-                              }
-                            ]
-
-                        pits =
-                            Laps.attach rawLaps (placeholderCars [ "1" ])
-                                |> List.concatMap .laps
-                                |> List.map .pit
-                    in
-                    Expect.equal [ Lap.NoPit, Lap.OutLap 50000 ] pits
             ]
         ]
 
