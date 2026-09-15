@@ -97,9 +97,9 @@ suite =
                                 , index = index
                                 , statusChanges = StatusChanges.empty
                                 }
-                                [ carWith "1" [ lapAt "1" 1 100000, pitAt "1" 2 260000 63000 ] ]
+                                [ carWith "1" [ lapAt "1" 1 100000, pitAt "1" 2 260000 160000 63000 ] ]
                     in
-                    [ 259999, 260000 ]
+                    [ 162999, 163000 ]
                         |> List.map (\elapsed -> Race.pitStopsAt { elapsed = instant elapsed } "1" raced)
                         |> Expect.equal [ 0, 1 ]
             , test "the fixture's cars never stopped" <|
@@ -190,10 +190,10 @@ lapAt carNumber lapNumber elapsed =
     }
 
 
-pitAt : CarNumber -> Int -> Int -> Int -> Lap
-pitAt carNumber lapNumber elapsed pitTime =
+pitAt : CarNumber -> Int -> Int -> Int -> Int -> Lap
+pitAt carNumber lapNumber elapsed time pitTime =
     let
         base =
             lapAt carNumber lapNumber elapsed
     in
-    { base | pit = Lap.OutLap pitTime }
+    { base | time = Just time, pit = Lap.OutLap pitTime }

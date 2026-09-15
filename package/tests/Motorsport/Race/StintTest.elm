@@ -78,23 +78,25 @@ suite =
                         |> Stint.indexOf
                         |> Stint.stopsAt { elapsed = instant 999999 } "1"
                         |> Expect.equal 0
-            , test "the count goes up as the lap the car came back out on is completed" <|
+            , test "the count goes up as the car drives away, not as the lap it drove away on ends" <|
                 \_ ->
                     let
                         index =
                             Stint.indexOf
-                                [ carWith "1" [ lapAt 1 100000, outLapAt 2 260000 63000 ] ]
+                                [ carWith "1" [ lapAt 1 100000, outLapAt 2 260000 160000 63000 ] ]
                     in
-                    [ 259999, 260000, 260001 ]
+                    -- The lap began at 100000 and the stop took 63000, so the
+                    -- car was away at 163000 and the lap ran on to 260000.
+                    [ 162999, 163000, 259999, 260001 ]
                         |> List.map (\at -> Stint.stopsAt { elapsed = instant at } "1" index)
-                        |> Expect.equal [ 0, 1, 1 ]
+                        |> Expect.equal [ 0, 1, 1, 1 ]
             , test "each car is counted on its own" <|
                 \_ ->
                     let
                         index =
                             Stint.indexOf
-                                [ carWith "1" [ outLapAt 1 100000 63000, outLapAt 2 300000 61000 ]
-                                , carWith "2" [ outLapAt 1 200000 65000 ]
+                                [ carWith "1" [ outLapAt 1 100000 100000 63000, outLapAt 2 300000 100000 61000 ]
+                                , carWith "2" [ outLapAt 1 200000 100000 65000 ]
                                 ]
                     in
                     [ "1", "2" ]
@@ -102,7 +104,7 @@ suite =
                         |> Expect.equal [ 1, 1 ]
             , test "a car the race has never heard of has made none" <|
                 \_ ->
-                    [ carWith "1" [ outLapAt 1 100000 63000 ] ]
+                    [ carWith "1" [ outLapAt 1 100000 100000 63000 ] ]
                         |> Stint.indexOf
                         |> Stint.stopsAt { elapsed = instant 999999 } "99"
                         |> Expect.equal 0
@@ -116,9 +118,9 @@ suite =
                     let
                         index =
                             Stint.indexOf
-                                [ carWith "1" [ outLapAt 3 300000 61000, outLapAt 1 100000 63000 ] ]
+                                [ carWith "1" [ outLapAt 3 300000 100000 61000, outLapAt 1 100000 100000 63000 ] ]
                     in
-                    [ 99999, 100000, 299999, 300000 ]
+                    [ 62999, 63000, 260999, 261000 ]
                         |> List.map (\at -> Stint.stopsAt { elapsed = instant at } "1" index)
                         |> Expect.equal [ 0, 1, 1, 2 ]
             ]
@@ -167,9 +169,12 @@ lapAt lapNumber elapsed =
     { empty | lap = lapNumber, elapsed = instant elapsed }
 
 
-outLapAt : Int -> Int -> Int -> Lap
-outLapAt lapNumber elapsed stop =
-    { empty | lap = lapNumber, elapsed = instant elapsed, pit = Lap.OutLap stop }
+{-| An out lap carries its own time as well, which is what puts the stop it
+began with at the head of it.
+-}
+outLapAt : Int -> Int -> Int -> Int -> Lap
+outLapAt lapNumber elapsed time stop =
+    { empty | lap = lapNumber, elapsed = instant elapsed, time = Just time, pit = Lap.OutLap stop }
 
 
 instant : Int -> Instant

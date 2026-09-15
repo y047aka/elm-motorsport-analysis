@@ -206,8 +206,7 @@ emptyIndex =
     Index Dict.empty
 
 
-{-| Collect the field's stops, each at the moment the lap it ended on was
-completed.
+{-| Collect the field's stops, each at the moment the car drove away from it.
 -}
 indexOf : List Car -> Index
 indexOf cars =
@@ -220,15 +219,16 @@ indexOf cars =
 stopsOf : List Lap -> ChangePoints Pit
 stopsOf laps =
     laps
-        |> List.filterMap (\lap -> stopEnding lap |> Maybe.map (Tuple.pair lap.elapsed))
+        |> List.filterMap (\lap -> Maybe.map2 Tuple.pair (Lap.stopEndedAt lap) (stopEnding lap))
         |> ChangePoints.fromList
 
 
 {-| How many stops a car has completed at a moment of the race.
 
-A car in the pits reads at the stop before the one it is making: a stop is
-recorded on the lap the car came back out on, and that lap is not complete until
-it is back on the road. A car the race has never heard of has made none.
+A car standing in its box reads at the stop before the one it is making, and
+goes up the moment it drives away rather than when the lap it drove away on is
+completed -- the same moment [`Race.statusAt`](Motorsport-Race#statusAt) has it
+back out on the road. A car the race has never heard of has made none.
 
 -}
 stopsAt : { elapsed : Instant } -> CarNumber -> Index -> Int

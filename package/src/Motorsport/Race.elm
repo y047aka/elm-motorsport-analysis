@@ -42,8 +42,8 @@ was.
 
 `statusChanges` is counted off the raw timeline, which arrives in a file of its
 own from `Round.Timeline`; the two indices beside it come with the round's
-summary. `pitStops` is counted here, off the cars: a stop is on the lap it ended
-on, so the laps already say it and nothing has to be read for it.
+summary. `pitStops` is counted here, off the cars: the laps carry both ends of a stop, so
+nothing has to be read for it.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate

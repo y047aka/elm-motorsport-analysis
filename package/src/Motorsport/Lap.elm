@@ -3,7 +3,7 @@ module Motorsport.Lap exposing
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorTime
     , recorded
-    , Pit(..), isInLap, isRacingLap, stopOf
+    , Pit(..), isInLap, isRacingLap, stopOf, stopEndedAt
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -18,7 +18,7 @@ module Motorsport.Lap exposing
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorTime
 @docs recorded
-@docs Pit, isInLap, isRacingLap, stopOf
+@docs Pit, isInLap, isRacingLap, stopOf, stopEndedAt
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -217,6 +217,18 @@ stopOf lap =
 
         NoPit ->
             Nothing
+
+
+{-| When the car drove away from that stop.
+
+That is when it has made one, rather than when the lap it drove away on was
+completed: the rest of that lap is a lap out on the road, and where the pit lane
+falls in the first sector that is most of it.
+
+-}
+stopEndedAt : Lap -> Maybe Instant
+stopEndedAt lap =
+    stopOf lap |> Maybe.map (\duration -> Instant.add duration (lapStart lap))
 
 
 type alias Clock =
