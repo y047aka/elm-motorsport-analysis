@@ -396,7 +396,7 @@ sampleCar clock race car =
                 , laps = car.laps
                 , currentLap = lap
                 , lastLap = Lap.findLastLapAt clock car.laps
-                , status = statusOf clock race car.metadata.carNumber lap
+                , status = statusOf clock race car lap
                 , currentDriver = lap.driver
                 , pitStops = Race.pitStopsAt clock car.metadata.carNumber race
                 }
@@ -413,9 +413,9 @@ one carrying it, and the clock against
 box from one already rejoining.
 
 -}
-statusOf : { elapsed : Instant } -> Race -> CarNumber -> Lap -> Status
-statusOf clock race carNumber currentLap =
-    case Race.statusAt clock carNumber race of
+statusOf : { elapsed : Instant } -> Race -> Car -> Lap -> Status
+statusOf clock race car currentLap =
+    case Race.statusAt clock car race of
         Status.Racing ->
             pitPhaseOf clock currentLap
 

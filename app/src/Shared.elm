@@ -25,7 +25,6 @@ import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
-import Motorsport.Race.StatusChanges as StatusChanges
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
@@ -405,7 +404,6 @@ roundFrom summary rawLaps timelineEvents =
                     { timeLimit = summary.timeLimit
                     , finishedAt = summary.finishedAt
                     , index = summary.index
-                    , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
                     }
     in
     { replay = replay
