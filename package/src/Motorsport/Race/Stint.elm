@@ -62,9 +62,11 @@ type alias Stint =
 {-| How a run finished.
 
 `InPit` is a run that is over as much as `Ended` is: `lastLap` is the lap the
-car came in on either way. What separates them is that a stop is not timed until
-the car is back out, so the run it ended reads as `InPit` for as long as the car
-is stationary.
+car came in on either way. What separates them is where the stop's length is
+recorded -- on the lap the car came back out on -- so a run reads as `InPit`
+until that lap is complete. That is the whole of the out lap as well as the
+stop, and longer than the car is anywhere near the pit lane; where it actually
+is at a moment is [`Status`](Motorsport-Status)'s.
 
 -}
 type End
