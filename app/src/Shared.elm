@@ -93,28 +93,33 @@ type alias RoundId =
     }
 
 
-{-| The files a round is made of, which arrive in any order.
-
-The summary and the laps are the round. The timeline is the report's, and
-`completed` does not wait for it: it takes one that happens to be here already,
-and one that is later lands on a round that has loaded without it.
-
-Held as three `Maybe`s rather than as the cases of a sum: two files had three
-inhabitants worth naming and three would have seven, none of which the app asks
-a question of. Having them is still not a state -- it is the move to `Loaded`,
-which is what `completed` makes.
-
+{-| How far a round has got: what it is still waiting on, and what has come
+along beside it.
 -}
 type alias Partial =
-    { summary : Maybe Wec.Event
-    , laps : Maybe (List WecLaps.RawLap)
+    { files : Files
     , timeline : Maybe (List TimelineEvent)
     }
 
 
+{-| The summary and the laps, which arrive in either order and are what a round
+is. Three cases rather than a pair of `Maybe`s: having both is not a state, it is
+the move to `Loaded`.
+
+The timeline is not one of the two and gates nothing, so it stays the `Maybe` it
+looks like: a fraction of the size of the laps, it commonly arrives before there
+is a round to put it on, and is kept until there is.
+
+-}
+type Files
+    = NothingYet
+    | GotSummary Wec.Event
+    | GotLaps (List WecLaps.RawLap)
+
+
 nothingYet : Partial
 nothingYet =
-    { summary = Nothing, laps = Nothing, timeline = Nothing }
+    { files = NothingYet, timeline = Nothing }
 
 
 {-| A loaded round, as the pages read it: the race, the playback head over it,
@@ -259,13 +264,13 @@ update msg m =
             resumeWaitingRound { m | round = Waiting params }
 
         JsonLoaded_Wec key (Ok summary) ->
-            ( { m | round = arrived key (\p -> { p | summary = Just summary }) m.round }, Effect.none )
+            ( { m | round = forRound key (withSummary summary) m.round }, Effect.none )
 
         JsonLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         LapsLoaded_Wec key (Ok rawLaps) ->
-            ( { m | round = arrived key (\p -> { p | laps = Just rawLaps }) m.round }, Effect.none )
+            ( { m | round = forRound key (withLaps rawLaps) m.round }, Effect.none )
 
         LapsLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
@@ -358,11 +363,6 @@ expectJsonl toMsg fromJsonl =
 naming any other round is one left over from a round already navigated away
 from.
 -}
-arrived : { season : Int, id : String } -> (Partial -> Partial) -> Round -> Round
-arrived key file round =
-    forRound key (\id partial -> completed id (file partial)) round
-
-
 forRound : { season : Int, id : String } -> (RoundId -> Partial -> Round) -> Round -> Round
 forRound key step round =
     case round of
@@ -377,28 +377,40 @@ forRound key step round =
             round
 
 
-{-| The round once the summary and the laps are in, and the same `Loading` until
-then.
--}
-completed : RoundId -> Partial -> Round
-completed id partial =
-    case ( partial.summary, partial.laps ) of
-        ( Just summary, Just rawLaps ) ->
-            Loaded id (roundFrom summary rawLaps (Maybe.withDefault [] partial.timeline))
+withSummary : Wec.Event -> RoundId -> Partial -> Round
+withSummary summary id partial =
+    case partial.files of
+        GotLaps rawLaps ->
+            Loaded id (roundFrom summary rawLaps (eventsOf partial))
 
         _ ->
-            Loading id partial
+            Loading id { partial | files = GotSummary summary }
 
 
-{-| The timeline, which can land either side of the round being made: `forRound`
-is no use here because the round it is for may already have loaded.
+withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
+withLaps rawLaps id partial =
+    case partial.files of
+        GotSummary summary ->
+            Loaded id (roundFrom summary rawLaps (eventsOf partial))
+
+        _ ->
+            Loading id { partial | files = GotLaps rawLaps }
+
+
+eventsOf : Partial -> List TimelineEvent
+eventsOf partial =
+    Maybe.withDefault [] partial.timeline
+
+
+{-| The timeline, which can land either side of the round being made, so it is
+not `forRound`'s: the round it is for may already have loaded.
 -}
 timelineArrived : { season : Int, id : String } -> List TimelineEvent -> Round -> Round
 timelineArrived key events round =
     case round of
         Loading id partial ->
             if keyOf id == key then
-                completed id { partial | timeline = Just events }
+                Loading id { partial | timeline = Just events }
 
             else
                 round
