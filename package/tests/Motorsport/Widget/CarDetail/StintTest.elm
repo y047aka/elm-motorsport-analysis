@@ -24,21 +24,6 @@ suite =
                         |> Stint.summarize
                         |> .current
                         |> Expect.equal Nothing
-            , test "the stops are the laps the car came back out on" <|
-                \_ ->
-                    [ lap 1 95000, inLap 2 101000, outLap 3 165000 63000, inLap 4 101000, outLap 5 173000 71000 ]
-                        |> Stint.summarize
-                        |> .pitStops
-                        |> Expect.equal
-                            [ { lapNumber = 3, duration = 63000 }
-                            , { lapNumber = 5, duration = 71000 }
-                            ]
-            , test "a stop the car is still making is not one it has made" <|
-                \_ ->
-                    [ lap 1 95000, inLap 2 101000 ]
-                        |> Stint.summarize
-                        |> .pitStops
-                        |> Expect.equal []
             , test "the run in progress is left out of the median" <|
                 \_ ->
                     -- Runs of 2, 4 and a 1 still going: the median is of the two
@@ -61,7 +46,6 @@ suite =
                         |> Expect.all
                             [ .stints >> Expect.equal []
                             , .current >> Expect.equal Nothing
-                            , .pitStops >> Expect.equal []
                             , .medianStintLength >> Expect.equal Nothing
                             ]
             ]

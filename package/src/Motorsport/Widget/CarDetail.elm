@@ -80,7 +80,8 @@ view config cars snapshot focused =
                 focused
             )
         , Widget.container "Stints"
-            (Stint.view focused.status
+            (Stint.view
+                { status = focused.status, stops = focused.pitStops }
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )

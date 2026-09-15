@@ -25,7 +25,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
-import Motorsport.Race.Stint as RaceStint exposing (Pit, Stint)
+import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Status exposing (Status(..))
 
 
@@ -39,7 +39,6 @@ not drag it down as it goes.
 type alias Summary =
     { stints : List Stint
     , current : Maybe Stint
-    , pitStops : List Pit
     , medianStintLength : Maybe Int
     }
 
@@ -55,7 +54,6 @@ summarize laps =
     in
     { stints = stints
     , current = List.Extra.find (.end >> (==) RaceStint.Running) stints
-    , pitStops = List.filterMap stopOf stints
     , medianStintLength =
         stints
             |> List.filter hasEnded
@@ -67,19 +65,6 @@ summarize laps =
 hasEnded : Stint -> Bool
 hasEnded stint =
     stint.end /= RaceStint.Running
-
-
-stopOf : Stint -> Maybe Pit
-stopOf stint =
-    case stint.end of
-        RaceStint.Ended pit ->
-            Just pit
-
-        RaceStint.InPit ->
-            Nothing
-
-        RaceStint.Running ->
-            Nothing
 
 
 median : List Int -> Maybe Int
@@ -109,18 +94,21 @@ What a stop cost is the stop's own business and is on the run it ended; what the
 section is for is the shape of the race the car is running -- how long it goes
 between stops, and how the driving has been shared out.
 
-The laps alone cannot say whether the run they end on is still going: a car that
-has retired leaves the same trace as one out on the road. `status` is what
-settles it.
+Two readings come from the race rather than from the laps, both because the laps
+here are cut at the clock. `status` settles whether the run they end on is still
+going: a car that has retired leaves the same trace as one out on the road.
+`stops` is the count, which the laps fall one short of while the car is driving
+away from one -- what a stop took is recorded on the lap it began, and that lap
+is not in a list cut at the clock until it is over.
 
 -}
-view : Status -> Car.Metadata -> Summary -> Html msg
-view status metadata summary =
+view : { status : Status, stops : Int } -> Car.Metadata -> Summary -> Html msg
+view race metadata summary =
     div [ class "grid gap-y-2" ]
-        [ lastStint status summary
+        [ lastStint race.status summary
         , stintBar metadata summary
         , driverShare metadata summary
-        , shape summary
+        , shape race.stops summary
         ]
 
 
@@ -169,15 +157,15 @@ lapsDrivenBy driver summary =
 {-| The shape of the race the car is running: how often it has stopped, and how
 long the runs between the stops have been.
 -}
-shape : Summary -> Html msg
-shape summary =
+shape : Int -> Summary -> Html msg
+shape stops summary =
     div [ class "text-[10px] text-muted-foreground tabular-nums" ]
-        [ text (String.join " · " (List.filter ((/=) "") [ stopCount summary, stintLengths summary ])) ]
+        [ text (String.join " · " (List.filter ((/=) "") [ stopCount stops, stintLengths summary ])) ]
 
 
-stopCount : Summary -> String
-stopCount summary =
-    case List.length summary.pitStops of
+stopCount : Int -> String
+stopCount stops =
+    case stops of
         0 ->
             "No stops yet"
 
