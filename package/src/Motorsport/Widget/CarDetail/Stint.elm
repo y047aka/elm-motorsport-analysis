@@ -306,13 +306,16 @@ lastStint status summary =
         ( InPit, _, _ ) ->
             note "In the pits"
 
+        ( OutLap, _, _ ) ->
+            note "On an out lap"
+
         ( _, Just stint, _ ) ->
             stintLine { isRunning = True } stint (againstMedian summary stint)
 
         ( _, _, Just _ ) ->
-            -- Every lap the car has completed is behind a stop, so the one it is
-            -- driving is the first of a run rather than part of the last.
-            note "On an out lap"
+            -- Every lap the car has completed is behind a stop it has not come
+            -- back out of, which the laps have no further word on.
+            note "In the pits"
 
         _ ->
             note "No laps completed"

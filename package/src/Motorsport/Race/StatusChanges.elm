@@ -4,11 +4,16 @@ module Motorsport.Race.StatusChanges exposing
     , statusAt
     )
 
-{-| Every moment a car's status changes, collected once from the race timeline.
+{-| Every moment a car's race begins or ends, collected once from the timeline.
 
 A status is not something playback accumulates as the clock runs -- it is
 a function of the race and the moment it is read at. This index makes that cheap:
 see [`ChangePoints`](Motorsport-Internal-ChangePoints), one set of them per car.
+
+The pit lane is not in here. A stop is counted off the laps in the first place,
+and the laps are where [`Race.Snapshot`](Motorsport-Race-Snapshot) reads it back.
+What the laps cannot say is where a car's race began and ended, which is what
+this index is for.
 
 @docs StatusChanges
 @docs empty, fromTimelineEvents
@@ -43,8 +48,10 @@ empty =
 
 {-| Build the index from a race's timeline.
 
-Only the events that move a car between statuses are kept; taking the lead and the
-race start itself leave the status where it was.
+Only the events that begin or end a car's race are kept. Taking the lead and the
+race start itself leave the status where it was, and a stop is read off the laps
+instead -- the timeline still lists both halves of one, for the race's report to
+draw.
 
 -}
 fromTimelineEvents : List TimelineEvent -> StatusChanges
@@ -81,11 +88,11 @@ statusChange eventType =
         TimelineEvent.CarEvent carNumber TimelineEvent.Start ->
             Just ( carNumber, Status.Racing )
 
-        TimelineEvent.CarEvent carNumber (TimelineEvent.PitIn _) ->
-            Just ( carNumber, Status.InPit )
+        TimelineEvent.CarEvent _ (TimelineEvent.PitIn _) ->
+            Nothing
 
-        TimelineEvent.CarEvent carNumber (TimelineEvent.PitOut _) ->
-            Just ( carNumber, Status.Racing )
+        TimelineEvent.CarEvent _ (TimelineEvent.PitOut _) ->
+            Nothing
 
         TimelineEvent.CarEvent carNumber TimelineEvent.Retirement ->
             Just ( carNumber, Status.Retired )
@@ -97,14 +104,11 @@ statusChange eventType =
             Nothing
 
 
-{-| The status a car holds at a given point in the race.
+{-| How far through its race a car is at a given point: `PreRace` before it
+takes the start, `Racing` once it has, and `Retired` or `Checkered` once it is
+over.
 
-Where a pit exit and the chequered flag land on the same instant the flag wins,
-because the timeline lists it later -- see
-[`ChangePoints.fromList`](Motorsport-Internal-ChangePoints#fromList).
-
-    StatusChanges.statusAt { elapsed = Instant.fromDuration 3600000 } "7" index
-    -- Racing, InPit, Retired, ...
+Never `InPit` or `OutLap`, which the laps say and this index does not carry.
 
 -}
 statusAt : { elapsed : Instant } -> CarNumber -> StatusChanges -> Status

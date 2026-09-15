@@ -34,7 +34,7 @@ import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Status exposing (Status)
+import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as Class exposing (Class)
 
@@ -396,11 +396,45 @@ sampleCar clock race car =
                 , laps = car.laps
                 , currentLap = lap
                 , lastLap = Lap.findLastLapAt clock car.laps
-                , status = Race.statusAt clock car.metadata.carNumber race
+                , status = statusOf clock race car.metadata.carNumber lap
                 , currentDriver = lap.driver
                 , pitStops = Race.pitStopsAt clock car.metadata.carNumber race
                 }
             )
+
+
+{-| Where the car stands, read off both halves of the race's data.
+
+Whether its race has begun and whether it is over are the timeline's, which is
+the only place they are said. The pit lane is the lap the car is on: a stop falls
+at the head of the lap the car came back out on, so the lap in progress is the
+one carrying it, and the clock against
+[`Lap.stopEndedAt`](Motorsport-Lap#stopEndedAt) separates a car standing in its
+box from one already rejoining.
+
+-}
+statusOf : { elapsed : Instant } -> Race -> CarNumber -> Lap -> Status
+statusOf clock race carNumber currentLap =
+    case Race.statusAt clock carNumber race of
+        Status.Racing ->
+            pitPhaseOf clock currentLap
+
+        settled ->
+            settled
+
+
+pitPhaseOf : { elapsed : Instant } -> Lap -> Status
+pitPhaseOf clock currentLap =
+    case Lap.stopEndedAt currentLap of
+        Just droveAway ->
+            if Instant.compare clock.elapsed droveAway == LT then
+                Status.InPit
+
+            else
+                Status.OutLap
+
+        Nothing ->
+            Status.Racing
 
 
 type alias Timing =

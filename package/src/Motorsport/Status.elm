@@ -2,12 +2,17 @@ module Motorsport.Status exposing (Status(..), hasRetired, hasStopped)
 
 {-| Where a car stands in the race: away, in the pits, out of it, done.
 
+A stop is three of these rather than one. The car is `Racing` until it crosses
+the line in the pit lane, `InPit` until it drives away, and on an `OutLap` until
+it crosses the line again.
+
 Needs no laps, no clock and no entry list to say it, which is why it lives on its
 own: the race's record of when it changed and the badges on a timing screen both
 want this and nothing more.
 
-What a car's status actually is at a moment of the race is
-[`Race.statusAt`](Motorsport-Race#statusAt).
+Reading one off a race takes both halves of its data -- the timeline settles the
+ends of a car's race and the laps settle the pit lane -- so a car's actual status
+is [`Race.Snapshot`](Motorsport-Race-Snapshot)'s, which has both.
 
 @docs Status, hasRetired, hasStopped
 
@@ -18,6 +23,7 @@ type Status
     = PreRace
     | Racing
     | InPit
+    | OutLap
     | Checkered
     | Retired
 

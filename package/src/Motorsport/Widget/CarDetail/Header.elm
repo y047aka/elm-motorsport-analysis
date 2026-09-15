@@ -161,6 +161,9 @@ statusBadge status =
         InPit ->
             badge "border border-border" "IN PIT"
 
+        OutLap ->
+            badge "border border-border" "OUT LAP"
+
         Retired ->
             badge "bg-destructive/10 text-destructive" "RETIRED"
 

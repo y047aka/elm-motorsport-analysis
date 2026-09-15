@@ -15,7 +15,7 @@ tyre, no strategy call.
 A run is cut out of the laps it was given, so laps cut at a clock give the runs
 as they stood at that moment. Whether the car will resume the run it is on is
 still the caller's to settle: a car that has retired leaves the same trace as
-one out on the road. See [`Race.statusAt`](Motorsport-Race#statusAt).
+one out on the road. See [`Status`](Motorsport-Status).
 
 @docs Stint, End, Pit
 @docs fromLaps
@@ -227,8 +227,8 @@ stopsOf laps =
 
 A car standing in its box reads at the stop before the one it is making, and
 goes up the moment it drives away rather than when the lap it drove away on is
-completed -- the same moment [`Race.statusAt`](Motorsport-Race#statusAt) has it
-back out on the road. A car the race has never heard of has made none.
+completed -- the same moment its [`Status`](Motorsport-Status) leaves the pit
+lane. A car the race has never heard of has made none.
 
 -}
 stopsAt : { elapsed : Instant } -> CarNumber -> Index -> Int

@@ -169,7 +169,10 @@ timeToFlagAt { elapsed } race =
     max 0 (Instant.since { from = elapsed, to = race.timeLimit })
 
 
-{-| The status a car holds at a moment of the race.
+{-| How far through its race a car is at a moment of it, which is the half of a
+status the timeline carries. The pit lane is the other half and is read off the
+laps, so a car's whole status is
+[`Race.Snapshot`](Motorsport-Race-Snapshot)'s rather than this.
 -}
 statusAt : { elapsed : Instant } -> CarNumber -> Race -> Status
 statusAt clock carNumber race =

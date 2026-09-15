@@ -23,10 +23,16 @@ suite =
             , test "a change takes effect on the instant it happens, not the one after" <|
                 \_ ->
                     Expect.equal
-                        ( Status.Racing, Status.InPit )
-                        ( StatusChanges.statusAt { elapsed = Instant.fromDuration 169999 } "1" index
-                        , StatusChanges.statusAt { elapsed = Instant.fromDuration 170000 } "1" index
+                        ( Status.Racing, Status.Checkered )
+                        ( StatusChanges.statusAt { elapsed = Instant.fromDuration 899999 } "1" index
+                        , StatusChanges.statusAt { elapsed = Instant.fromDuration 900000 } "1" index
                         )
+            , test "the pit lane is not in this index" <|
+                \_ ->
+                    -- Both halves of both stops, and the moments between them.
+                    [ 170000, 185000, 200000, 400000, 412000, 425000 ]
+                        |> List.map (\at -> StatusChanges.statusAt { elapsed = Instant.fromDuration at } "1" index)
+                        |> Expect.equal (List.repeat 6 Status.Racing)
             , test "taking the lead is not a status change" <|
                 \_ ->
                     StatusChanges.statusAt { elapsed = Instant.fromDuration 210000 } "1" index
@@ -34,13 +40,13 @@ suite =
             , test "the last of two changes sharing an instant wins" <|
                 \_ ->
                     let
-                        pitOutThenFlag =
+                        retiredThenFlag =
                             StatusChanges.fromTimelineEvents
-                                [ carEvent 300000 (TimelineEvent.PitOut { lapNumber = 9, duration = 25000 })
+                                [ carEvent 300000 TimelineEvent.Retirement
                                 , carEvent 300000 TimelineEvent.Checkered
                                 ]
                     in
-                    StatusChanges.statusAt { elapsed = Instant.fromDuration 300000 } "1" pitOutThenFlag
+                    StatusChanges.statusAt { elapsed = Instant.fromDuration 300000 } "1" retiredThenFlag
                         |> Expect.equal Status.Checkered
             ]
         , describe "fromTimelineEvents"
@@ -68,7 +74,7 @@ suite =
 
 
 {-| One car's race: away at the start, two pit stops, and the flag at 15 minutes.
-The lead it takes in the middle is there to be ignored.
+The stops and the lead it takes between them are there to be ignored.
 -}
 index : StatusChanges
 index =
