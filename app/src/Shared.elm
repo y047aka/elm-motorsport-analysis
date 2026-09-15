@@ -93,12 +93,16 @@ type alias RoundId =
     }
 
 
-{-| The three files arrive in any order, and a round needs all of them.
+{-| The files a round is made of, which arrive in any order.
+
+The summary and the laps are the round. The timeline is the report's, and
+`completed` does not wait for it: it takes one that happens to be here already,
+and one that is later lands on a round that has loaded without it.
 
 Held as three `Maybe`s rather than as the cases of a sum: two files had three
 inhabitants worth naming and three would have seven, none of which the app asks
-a question of. Having all three is still not a state -- it is the move to
-`Loaded`, which is what `completed` makes.
+a question of. Having them is still not a state -- it is the move to `Loaded`,
+which is what `completed` makes.
 
 -}
 type alias Partial =
@@ -126,9 +130,9 @@ and none of the four fields here does.
 clock, cached because every view of a frame shares it, and the one of the four
 that is rebuilt as playback runs.
 
-`timeline` is the events themselves, kept for the events table to read the
-clock against; what playback reads is only the status index counted off them,
-inside `replay.race`.
+`timeline` is the events themselves, kept for the events table to read the clock
+against, and the only one of the four a round can go without: nothing playback
+reads is counted off them.
 
 -}
 type alias LoadedRound =
@@ -267,10 +271,12 @@ update msg m =
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         TimelineLoaded_Wec key (Ok events) ->
-            ( { m | round = arrived key (\p -> { p | timeline = Just events }) m.round }, Effect.none )
+            ( { m | round = timelineArrived key events m.round }, Effect.none )
 
-        TimelineLoaded_Wec key (Err error) ->
-            ( { m | round = didNotArrive key error m.round }, Effect.none )
+        TimelineLoaded_Wec _ (Err _) ->
+            -- The events table goes without rather than the round: a page draws
+            -- every other part of one from the summary and the laps.
+            ( m, Effect.none )
 
         ReplayMsg replayMsg ->
             ( { m | round = mapLoaded (stepReplay replayMsg) m.round }, Effect.none )
@@ -371,16 +377,41 @@ forRound key step round =
             round
 
 
-{-| The round once nothing is outstanding, and the same `Loading` until then.
+{-| The round once the summary and the laps are in, and the same `Loading` until
+then.
 -}
 completed : RoundId -> Partial -> Round
 completed id partial =
-    case ( partial.summary, partial.laps, partial.timeline ) of
-        ( Just summary, Just rawLaps, Just timeline ) ->
-            Loaded id (roundFrom summary rawLaps timeline)
+    case ( partial.summary, partial.laps ) of
+        ( Just summary, Just rawLaps ) ->
+            Loaded id (roundFrom summary rawLaps (Maybe.withDefault [] partial.timeline))
 
         _ ->
             Loading id partial
+
+
+{-| The timeline, which can land either side of the round being made: `forRound`
+is no use here because the round it is for may already have loaded.
+-}
+timelineArrived : { season : Int, id : String } -> List TimelineEvent -> Round -> Round
+timelineArrived key events round =
+    case round of
+        Loading id partial ->
+            if keyOf id == key then
+                completed id { partial | timeline = Just events }
+
+            else
+                round
+
+        Loaded id loaded ->
+            if keyOf id == key then
+                Loaded id { loaded | timeline = Timeline.fromList events }
+
+            else
+                round
+
+        _ ->
+            round
 
 
 {-| The round the response was for, given up on. A response naming another is

@@ -14,6 +14,8 @@ import Dict
 import Expect
 import Http
 import Json.Decode as Decode
+import Motorsport.Instant as Instant
+import Motorsport.Race.Timeline as Timeline
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Era as Era
@@ -209,6 +211,17 @@ deliverTimeline key model =
     step (TimelineLoaded_Wec key (Ok timeline)) model
 
 
+{-| How many events the round ended up holding, which is the whole of what the
+timeline is to a page. A round that never loaded reads as -1 rather than as one
+holding none.
+-}
+eventCount : Shared.Model -> Int
+eventCount model =
+    Shared.loadedRound model
+        |> Maybe.map (.timeline >> Timeline.countUpTo (Instant.fromDuration 99999999))
+        |> Maybe.withDefault -1
+
+
 spa : { season : Int, id : String }
 spa =
     { season = 2025, id = "spa_6h" }
@@ -319,23 +332,42 @@ suite =
                         |> step (FetchJson_Wec { season = "2025", event = "monza_6h" })
                         |> (\m -> ( Shared.roundId m, Shared.loadedRound m ))
                         |> Expect.equal ( Nothing, Nothing )
-            , test "shows no race until every one of the round's files is in" <|
+            , test "shows no race until the summary and the laps are both in" <|
                 \_ ->
                     [ loadingSpa |> deliverSummary spa
-                    , loadingSpa |> deliverSummary spa |> deliverLaps spa
+                    , loadingSpa |> deliverLaps spa
+                    , loadingSpa |> deliverTimeline spa
                     , loadingSpa |> deliverSummary spa |> deliverTimeline spa
                     , loadingSpa |> deliverLaps spa |> deliverTimeline spa
                     ]
                         |> List.map (Shared.loadedRound >> (/=) Nothing)
-                        |> Expect.equalLists [ False, False, False, False ]
-            , test "builds the race once all three are in, whichever order they arrive" <|
+                        |> Expect.equalLists [ False, False, False, False, False ]
+            , test "builds the race off those two, whichever order they arrive" <|
                 \_ ->
-                    [ loadingSpa |> deliverSummary spa |> deliverLaps spa |> deliverTimeline spa
+                    [ loadingSpa |> deliverSummary spa |> deliverLaps spa
+                    , loadingSpa |> deliverLaps spa |> deliverSummary spa
                     , loadingSpa |> deliverTimeline spa |> deliverLaps spa |> deliverSummary spa
-                    , loadingSpa |> deliverLaps spa |> deliverTimeline spa |> deliverSummary spa
                     ]
                         |> List.map (Shared.loadedRound >> (/=) Nothing)
                         |> Expect.equalLists [ True, True, True ]
+            , test "the timeline does not hold the round back, and lands on it either side of loading" <|
+                \_ ->
+                    [ loadingSpa |> deliverSummary spa |> deliverLaps spa
+                    , loadingSpa |> deliverTimeline spa |> deliverSummary spa |> deliverLaps spa
+                    , loadingSpa |> deliverSummary spa |> deliverLaps spa |> deliverTimeline spa
+                    ]
+                        |> List.map eventCount
+                        |> Expect.equalLists [ 0, 3, 3 ]
+            , test "a timeline that never arrives leaves the round rather than taking it away" <|
+                \_ ->
+                    loadingSpa
+                        |> deliverSummary spa
+                        |> deliverLaps spa
+                        |> step (TimelineLoaded_Wec spa (Err Http.NetworkError))
+                        |> Expect.all
+                            [ Shared.loadedRound >> (/=) Nothing >> Expect.equal True
+                            , eventCount >> Expect.equal 0
+                            ]
             , test "drops a file left over from a round already navigated away from" <|
                 \_ ->
                     -- Untagged, Fuji's laps would land beside Spa's summary
