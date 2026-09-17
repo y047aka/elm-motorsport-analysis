@@ -67,8 +67,6 @@ type Msg
     | SkipTime Duration
     | BackTime Duration
     | SetCount Int
-    | NextLap
-    | PreviousLap
     | SetPlaybackSpeed Clock.PlaybackSpeed
 
 
@@ -98,28 +96,6 @@ update msg m =
         SetCount wanted ->
             if wanted >= 0 && wanted <= m.race.lapTotal then
                 moveToLap wanted m
-
-            else
-                m
-
-        NextLap ->
-            let
-                current =
-                    lapCount m
-            in
-            if current < m.race.lapTotal then
-                moveToLap (current + 1) m
-
-            else
-                m
-
-        PreviousLap ->
-            let
-                current =
-                    lapCount m
-            in
-            if current > 0 then
-                moveToLap (current - 1) m
 
             else
                 m
