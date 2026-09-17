@@ -65,6 +65,7 @@ type Msg
     | Pause Posix
     | Tick Posix
     | SkipTime Duration
+    | BackTime Duration
     | SetCount Int
     | NextLap
     | PreviousLap
@@ -89,6 +90,10 @@ update msg m =
         SkipTime duration ->
             -- The clock clamps: more than there is left lands on the end.
             moveTo (Instant.add duration (Clock.getElapsed m.playback)) m
+
+        BackTime duration ->
+            -- And `subtract` clamps the other way, at the start of the race.
+            moveTo (Instant.subtract duration (Clock.getElapsed m.playback)) m
 
         SetCount wanted ->
             if wanted >= 0 && wanted <= m.race.lapTotal then

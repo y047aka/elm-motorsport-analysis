@@ -4,8 +4,8 @@ module UI.Shadcn.ToggleGroup exposing (Item, view)
 components behind the `shadcn-toggle-group` element.
 
 Base UI gives each item `aria-pressed` and makes the whole row one arrow-key
-stop. A row of independent actions, carrying no selection, is
-[`UI.Shadcn.ButtonGroup`](UI-Shadcn-ButtonGroup).
+stop. A row of independent actions, carrying no selection, is a row of
+[`UI.Shadcn.Button`](UI-Shadcn-Button)s.
 
 @docs Item, view
 

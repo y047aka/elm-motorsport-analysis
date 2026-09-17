@@ -17,7 +17,6 @@ import Motorsport.Duration as Duration
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
 import UI.Shadcn.Button as Button
-import UI.Shadcn.ButtonGroup as ButtonGroup
 import UI.Shadcn.Slider as Slider
 import UI.Shadcn.ToggleGroup as ToggleGroup
 
@@ -32,8 +31,9 @@ view :
 view config =
     div [ Attributes.class "flex items-center gap-8" ]
         [ div [ Attributes.class "flex items-center gap-2" ]
-            [ viewPlayPauseButton config
-            , viewSkipControls config.toReplayMsg config.replay.playback.state
+            [ viewBackButton config.toReplayMsg config.replay.playback.state
+            , viewPlayPauseButton config
+            , viewForwardButton config.toReplayMsg config.replay.playback.state
             ]
         , viewProgressBar config.toReplayMsg config.replay
         , viewSpeedControls config.toReplayMsg config.replay.playback.playbackSpeed
@@ -70,24 +70,33 @@ viewPlayPauseButton { replay, onStart, onPause } =
         []
 
 
-{-| Skipping is offered forwards only, so there is nowhere to go from the end of
-the race.
+{-| Neither button moves at the end of the race: nothing is playing there to
+rewind, and there is nothing left to skip to.
 -}
-viewSkipControls : (Replay.Msg -> msg) -> Clock.State -> Html msg
-viewSkipControls toReplayMsg state =
-    let
-        skipItem label duration =
-            { label = label
-            , disabled = state == Finished
-            , onPress = toReplayMsg (Replay.SkipTime duration)
-            }
-    in
-    ButtonGroup.view
-        { items =
-            [ skipItem "+10s" (10 * 1000)
-            , skipItem "+1m" (60 * 1000)
-            , skipItem "+1h" (60 * 60 * 1000)
-            ]
+viewBackButton : (Replay.Msg -> msg) -> Clock.State -> Html msg
+viewBackButton toReplayMsg state =
+    viewJumpButton "-10s" (Replay.BackTime (10 * 1000)) state toReplayMsg
+
+
+viewForwardButton : (Replay.Msg -> msg) -> Clock.State -> Html msg
+viewForwardButton toReplayMsg state =
+    viewJumpButton "+10s" (Replay.SkipTime (10 * 1000)) state toReplayMsg
+
+
+viewJumpButton :
+    String
+    -> Replay.Msg
+    -> Clock.State
+    -> (Replay.Msg -> msg)
+    -> Html msg
+viewJumpButton label msg state toReplayMsg =
+    Button.view
+        { label = label
+        , variant = Button.Ghost
+        , size = Button.Icon
+        , shape = Button.Circle
+        , disabled = state == Finished
+        , onPress = toReplayMsg msg
         }
         []
 
