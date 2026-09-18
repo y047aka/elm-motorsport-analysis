@@ -22,6 +22,7 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Rivals as Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Widget as Widget
 import Scale
 import Svg exposing (Svg, line)
 import Svg.Attributes as SvgAttr
@@ -94,24 +95,36 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
         referenceLines =
             Rivals.nearest baselineRivals rivals
                 |> List.map (carLine lapHistory ( minLap, maxLap ) Focused)
+
+        drawn =
+            plotGaps
+                { reference = referenceLines
+                , display = Rivals.nearest drawnRivals rivals |> List.map lineOf
+                }
+
+        fight =
+            drawn |> List.filter (\plotted -> plotted.car.emphasis == Focused)
     in
-    if Dict.isEmpty (groupReferenceByLap referenceLines) then
-        text ""
+    -- The cars drawn, not the wider group they are baselined on: a car that
+    -- retired before the range began has nothing in it, and neither do the
+    -- rivals it is ranked among, while the ring beyond them is still running
+    -- and would carry a guard that only asked whether a baseline exists.
+    if List.all (.points >> List.isEmpty) drawn then
+        Widget.emptyState "No laps in this range"
 
     else
         gapChartViewWith { dimensions = consolidated, showAxes = True }
             ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
-            (let
-                drawn =
-                    plotGaps
-                        { reference = referenceLines
-                        , display = Rivals.nearest drawnRivals rivals |> List.map lineOf
-                        }
-             in
-             { scaleOn = drawn |> List.filter (\plotted -> plotted.car.emphasis == Focused)
-             , draw = drawn
-             }
-            )
+            { scaleOn =
+                -- The fight owns the frame, unless the range has left none of
+                -- it to draw and the context is all there is.
+                if List.all (.points >> List.isEmpty) fight then
+                    drawn
+
+                else
+                    fight
+            , draw = drawn
+            }
 
 
 {-| How far out the full chart reaches, in rivals a side.
