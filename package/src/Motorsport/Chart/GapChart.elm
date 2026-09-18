@@ -4,7 +4,7 @@ module Motorsport.Chart.GapChart exposing (gapChartView, gapSparkline)
 average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or at card
 size without them ([`gapSparkline`](#gapSparkline)).
 
-Both are given the cars as [`Rivals`](Motorsport-Race-Rivals): the group the
+Both are given the cars as [`Rivals`](Motorsport-Analysis-Rivals): the group the
 baseline is averaged from is wider than the group drawn against it, for the
 reason that type gives.
 
@@ -16,11 +16,12 @@ import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSiz
 import Dict exposing (Dict)
 import Html exposing (Html, text)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Internal.Statistics exposing (iqrFences)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.Race.Rivals as Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Widget as Widget
 import Scale
@@ -177,7 +178,7 @@ gapPoints referenceByLap laps =
 {-| Compute the baseline once from `reference`, then project each car of
 `display` onto it. The two sets are taken separately so that the populations can
 differ: a relative-gap chart baselines on a wider ring than it draws, for the
-reason [`Rivals`](Motorsport-Race-Rivals) gives. How much wider is each chart's
+reason [`Rivals`](Motorsport-Analysis-Rivals) gives. How much wider is each chart's
 own to say — see [`fightRivals`](#fightRivals) for the full one's.
 -}
 plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar

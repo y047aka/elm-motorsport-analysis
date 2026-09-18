@@ -1,4 +1,4 @@
-module Motorsport.Race.LapWindow exposing
+module Motorsport.Analysis.LapWindow exposing
     ( LapWindow(..)
     , laps
     )
@@ -11,6 +11,9 @@ what a race is read in -- an hour of it is an hour of it whether the cars spent
 it lapping under a safety car or flat out. Turning one into lap numbers is the
 race's to do rather than a chart's: which laps an hour covers depends on who was
 running and how quickly they went round.
+
+A reading under `Motorsport/Analysis/`: derived from a snapshot, shared by
+several views, holding nothing of its own.
 
 @docs LapWindow
 @docs laps

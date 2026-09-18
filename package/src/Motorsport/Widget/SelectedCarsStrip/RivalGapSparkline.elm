@@ -8,9 +8,9 @@ shown at the bottom of each SelectedCarsStrip card.
 -}
 
 import Html exposing (Html)
+import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Race.LapHistory exposing (LapHistory)
-import Motorsport.Race.Rivals as Rivals
 import Motorsport.Race.Snapshot exposing (CarAt)
 
 
@@ -19,7 +19,7 @@ against the group, and its level is where that has left it. Rising means the
 cumulative time is below the reference and the relative lead is stretching;
 falling means losing ground. Two lines converging or diverging is the whole
 point, and that reading holds whatever the baseline is -- see
-[`Rivals`](Motorsport-Race-Rivals) for why it is wider than the three lines
+[`Rivals`](Motorsport-Analysis-Rivals) for why it is wider than the three lines
 drawn.
 
 The gaps are matched by lap number, so the rivals are assumed to be on the same

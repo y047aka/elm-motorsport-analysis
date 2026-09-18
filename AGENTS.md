@@ -289,8 +289,19 @@ what an object-valued setter compares with, and both are back to zero.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
-(`Snapshot`, `LapHistory`), `Widget/` and `Chart/` for rendering (Leaderboard,
-GapChart, BoxPlot).
+(`Snapshot`, `LapHistory`), `Analysis/` for readings derived from one of those
+(`Rivals`, `LapWindow`), `Widget/` and `Chart/` for rendering (Leaderboard,
+GapChart, BoxPlot), `Internal/` for machinery that is not the race's vocabulary
+(`ChangePoints`, `Statistics`).
+
+Directly under `Motorsport/` are the primitives the rest is written in.
+`Analysis/` is what a view asks of a snapshot rather than what a race is made
+of: a module belongs there when it derives from a `Race.Snapshot` and the
+primitives, more than one view reads it, and it holds no state of its own --
+which is what keeps it out of `Race/`, where nothing owns it, and out of
+`Chart/` and `Widget/`, which it draws nothing for. `Rivals` answers who a car
+is racing and `LapWindow` which laps a stretch of the race covers; both hand
+back the snapshot's own `CarAt`s and numbers rather than a record per car.
 
 `Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
 passed through (`Class`, `Era`), and Le Mans's mini-sectors
@@ -317,7 +328,9 @@ widget that wants a class's colour calls `Class.toColor` itself, and a
 `Manufacturer` is read for the colour and logo it was built with. `Snapshot.at`
 runs once per frame and every view shares that result, which is the only reason
 the type exists; a record per car on top of it cost under 2% of the frame
-(`benchmark/PerFrameBenchmark.elm`), so nothing sits above it.
+(`benchmark/PerFrameBenchmark.elm`), so nothing sits above it. What `Analysis/`
+holds is not that layer: those modules pick out and count what a snapshot
+already holds, and hand its own values back.
 
 Modules serving both sides sit directly under `Motorsport/` rather than in a
 subdirectory — `BestTimes` is held by `Race` and read back by `Race.Snapshot`,

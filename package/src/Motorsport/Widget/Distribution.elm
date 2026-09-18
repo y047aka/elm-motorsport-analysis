@@ -8,11 +8,12 @@ racing laps, the cars laid over one another on a shared scale.
 -}
 
 import Html exposing (Html, text)
-import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
+import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
+import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
+import Motorsport.Internal.Statistics exposing (upperFence)
 import Motorsport.Lap as Lap
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.Race.Rivals as Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Widget as Widget
 

@@ -3,10 +3,10 @@ module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
 import List.Extra
+import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
-import Motorsport.Race.Rivals as Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
 import Motorsport.Widget as Widget

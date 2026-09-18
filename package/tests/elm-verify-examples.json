@@ -4,6 +4,7 @@
     "Motorsport.Duration",
     "Motorsport.Gap",
     "Motorsport.Instant",
+    "Motorsport.Internal.Statistics",
     "Motorsport.Lap",
     "Motorsport.Lap.Performance",
     "Motorsport.Sector",
