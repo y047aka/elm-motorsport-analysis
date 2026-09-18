@@ -12,8 +12,8 @@ How far out to look is the reader's, not this module's -- a chart drawing lines
 wants fewer cars than one averaging a baseline -- so the rings come out through
 [`nearest`](#nearest) rather than as named groups.
 
-A reading under `Motorsport/Analysis/`: derived from a snapshot, shared by
-several views, holding nothing of its own.
+A reading under `Motorsport/Analysis/`: derived from a snapshot and the
+primitives, holding nothing of its own.
 
 @docs Rivals
 @docs around

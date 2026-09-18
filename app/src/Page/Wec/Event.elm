@@ -437,7 +437,7 @@ leaderboardConfig cars =
         -- Worked out once rather than per row: where a car started is fixed for
         -- the whole race, and the table is rebuilt on every frame of playback,
         -- so a scan of the field per row is the same answer found afresh sixty
-        -- times a second. The timeline panel below reads its cars the same way.
+        -- times a second.
         startPositions : Dict CarNumber Int
         startPositions =
             -- foldr, so that where the source data has two cars under one

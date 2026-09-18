@@ -5,9 +5,9 @@ module Motorsport.Chart.Common exposing
     , axisStyle, lapGridLines, lapAxis, yAxis
     )
 
-{-| Shared foundation for the sparkline, lap-time distribution and position
-history charts: the types they draw against, the polyline renderer, the axis and
-grid drawing.
+{-| Shared foundation for the relative-gap, lap-time distribution and position
+charts: the types they draw against, the polyline renderer, the axis and grid
+drawing.
 
 @docs Emphasis, chooseByEmphasis, emphasisRank, sortForDrawing
 @docs Dimensions, Scales, axisPadding, xContinuousScale

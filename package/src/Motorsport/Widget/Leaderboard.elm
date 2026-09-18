@@ -323,8 +323,7 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
         ]
 
 
-{-| How far the car has moved from where it started, and no more than that:
-the grid place itself is left to whoever prints the classification line.
+{-| How far the car has moved from where it started, and no more than that.
 
 `startPosition` is the one a `Car` holds and a `CarAt` does not — the grid is
 estimated off the opening lap once and never moves again — so the caller looks

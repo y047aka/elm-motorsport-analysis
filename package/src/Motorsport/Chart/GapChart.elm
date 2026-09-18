@@ -130,12 +130,14 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
 
 {-| How far out the full chart reaches, in rivals a side.
 
-The vertical scale is an IQR band over the cars drawn, so every extra line
-widens it and costs the fight some of the frame; `drawnRivals` is one ring past
-the fight and no further. `baselineRivals` goes two further again, because a
-baseline averaged from exactly the cars drawn against it locks them into a
-mirror image of one another -- the gaps sum to zero, so the outer lines can only
-move against each other.
+`drawnRivals` is one ring past the fight and no further: every extra line is one
+more to follow, and what the chart is read for is what two of them are doing to
+each other. The ring past the fight is drawn muted for the same reason, and the
+vertical band is taken off the fight alone so that it costs the fight no frame.
+
+`baselineRivals` goes two further again, because a baseline averaged from
+exactly the cars drawn against it locks them into a mirror image of one another
+-- the gaps sum to zero, so the outer lines can only move against each other.
 
 -}
 fightRivals : Int

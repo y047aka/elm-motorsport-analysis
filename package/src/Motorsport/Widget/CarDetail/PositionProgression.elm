@@ -1,5 +1,11 @@
 module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
 
+{-| The place each car of a class has held, lap by lap.
+
+@docs view
+
+-}
+
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
 import List.Extra

@@ -1,6 +1,8 @@
 module Motorsport.Widget.CarDetail.ChartTabs exposing (chartTabs, segmentedControl)
 
-{-| The bar that switches the chart under it, and that chart.
+{-| The bar that switches the chart under it, and that chart. The bar carries
+the tabs at one end and whatever else the caller puts at the other, both made of
+the same joined button group.
 
 @docs chartTabs, segmentedControl
 

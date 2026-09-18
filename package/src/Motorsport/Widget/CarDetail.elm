@@ -66,8 +66,10 @@ init =
 
 {-| The race so far as the car ran it among its rivals, one view at a time.
 
-Every one of them draws the cars the legend under it names, which is what keeps
-them one group: the car's own laps are not a comparison and are read where its
+The legend beneath them names the cars the panel is comparing, and all three
+draw those in full. What each puts behind them is its own: the gap chart adds
+the pair beyond the fight, the position chart the whole class, the distribution
+nothing at all. The car's own laps are not a comparison and are read where its
 other lap times are.
 
 -}
@@ -181,8 +183,9 @@ rangeOptions =
     ]
 
 
-{-| Which car each line of the chart above is, in running order, and how far up
-or down the road each of them is, which is what the lines are about.
+{-| The cars the panel is comparing, in running order, and how far up or down
+the road each of them is, which is what the charts above are drawn to show. The
+charts emphasise these and may draw more behind them; only these are named.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
