@@ -59,19 +59,31 @@ laps window class snapshot =
             ( firstLapSince stretch snapshot classCars, latest )
 
 
-{-| The class leader's first lap completed no earlier than `stretch` ago, which
-is where a chart drawn over that stretch starts. Lap 1 where the class has not
-been running that long yet.
+{-| Where a chart drawn over `stretch` starts: the lap the car furthest through
+the race was on when the stretch began. Lap 1 where the class has not been
+running that long yet.
+
+Every car of the class is asked, and the furthest through answers, rather than
+asking the one at the front of the order. They are usually the same car, but not
+always: a car that retired while leading keeps the laps it had and so keeps its
+place in the order for as long as it takes the rest to pass it, and asked on its
+own it has nothing inside the stretch at all -- the window would quietly open
+out to the whole race while the toggle still said otherwise. Cars with nothing
+in the stretch say nothing about where it starts.
+
 -}
 firstLapSince : Duration -> Snapshot -> List CarAt -> Int
 firstLapSince stretch snapshot classCars =
     let
         threshold =
             Instant.subtract stretch (Snapshot.elapsed snapshot)
+
+        firstLapOf car =
+            LapHistory.get car.metadata.carNumber (Snapshot.lapHistory snapshot)
+                |> List.Extra.find (\lap -> Instant.compare lap.elapsed threshold /= LT)
+                |> Maybe.map .lap
     in
     classCars
-        |> List.head
-        |> Maybe.map (\leading -> LapHistory.get leading.metadata.carNumber (Snapshot.lapHistory snapshot))
-        |> Maybe.andThen (List.Extra.find (\lap -> Instant.compare lap.elapsed threshold /= LT))
-        |> Maybe.map .lap
+        |> List.filterMap firstLapOf
+        |> List.maximum
         |> Maybe.withDefault 1
