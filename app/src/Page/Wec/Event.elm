@@ -14,7 +14,6 @@ import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, 
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Lazy
-import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -435,10 +434,21 @@ eventTypeToString eventType =
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
 leaderboardConfig cars =
     let
+        -- Worked out once rather than per row: where a car started is fixed for
+        -- the whole race, and the table is rebuilt on every frame of playback,
+        -- so a scan of the field per row is the same answer found afresh sixty
+        -- times a second. The timeline panel below reads its cars the same way.
+        startPositions : Dict CarNumber Int
+        startPositions =
+            -- foldr, so that where the source data has two cars under one
+            -- number the one running ahead wins, as the scan this replaces did
+            -- and as `Snapshot.get` does.
+            cars
+                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
+
         startPositionOf : CarAt -> Maybe Int
         startPositionOf item =
-            List.Extra.find (\car -> car.metadata.carNumber == item.metadata.carNumber) cars
-                |> Maybe.map .startPosition
+            Dict.get item.metadata.carNumber startPositions
     in
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
