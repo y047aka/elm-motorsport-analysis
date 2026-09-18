@@ -129,14 +129,35 @@ lastLapTime entry =
             Nothing
 
 
+{-| The car's laps in the range, with the outliers among them dropped.
+
+The fence comes off the whole race the car has run rather than off the range,
+because what counts as an outlier is a fact about the car's pace and not about
+how much of the race is being looked at. Measured inside a short range it stops
+working exactly where it is needed: an hour and a half that was half safety car
+puts the third quartile up among those laps, and a fence drawn from there lets
+every one of them through.
+
+-}
 racingTimes : LapHistory -> ( Int, Int ) -> CarAt -> List Int
 racingTimes lapHistory ( minLap, maxLap ) entry =
     let
+        history =
+            LapHistory.get entry.metadata.carNumber lapHistory
+
         -- filterMap, not map: a lap the source data has no time for is not a
         -- lap run in no time, and has no place in the distribution.
-        times =
-            LapHistory.get entry.metadata.carNumber lapHistory
-                |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && Lap.isRacingLap lap)
-                |> List.filterMap .time
+        timeOf lap =
+            if Lap.isRacingLap lap then
+                lap.time
+
+            else
+                Nothing
+
+        fence =
+            upperFence (List.filterMap timeOf history)
     in
-    times |> List.filter (\t -> t <= upperFence times)
+    history
+        |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
+        |> List.filterMap timeOf
+        |> List.filter (\t -> t <= fence)
