@@ -1,13 +1,20 @@
 module Motorsport.Race.Rivals exposing
     ( Rivals
     , around
+    , focused, nearest
     )
 
-{-| The cars a car is racing: the ones drawn beside it, and the wider group they
-are measured against.
+{-| The cars a car is racing, as rings around it: the rival either side is the
+fight, the ones beyond them are what is coming, and wider still is a population
+to measure the lot against.
+
+How far out to look is the reader's, not this module's -- a chart drawing lines
+wants fewer cars than one averaging a baseline -- so the rings come out through
+[`nearest`](#nearest) rather than as named groups.
 
 @docs Rivals
 @docs around
+@docs focused, nearest
 
 -}
 
@@ -15,31 +22,27 @@ import List.Extra
 import Motorsport.Race.Snapshot exposing (CarAt)
 
 
-{-| `focused` is the car the group is built around, and the one a chart draws
-differently from the rest. `display` is it and the in-class rival either side of
-it, in running order. `reference` is the same group widened to two rivals a side, which
-only a chart baselining on the group reads, and only to average it.
+type Rivals
+    = Rivals
+        { car : CarAt
+        , ahead : List CarAt
+        , behind : List CarAt
+        }
 
-Baselining on exactly the cars drawn locks a relative-gap chart into a mirror
-image: the three gaps sum to zero, so the outer two lines can only move against
-each other. Two more cars either side loosen that into an approximate centring
-and let all three move. What such a chart is read for -- two lines converging or
-diverging -- is the difference between them, which no choice of baseline
-changes.
 
+{-| How far out `around` gathers, in rivals a side. Past the widest ring anyone
+asks for, so that asking never comes up short for a reason the caller cannot see.
 -}
-type alias Rivals =
-    { focused : CarAt
-    , display : List CarAt
-    , reference : List CarAt
-    }
+gathered : Int
+gathered =
+    4
 
 
 {-| The cars either side of `item` in its own class, taken from the overall
 running order so the group follows the field as positions change. Filtering by
-class preserves that order, so the result is the in-class order as-is.
+class preserves that order, so what comes out is the in-class order as-is.
 
-At a class edge only the available rivals are kept, and a car the list does not
+At a class edge only the available rivals are there, and a car the list does not
 hold is its own only company.
 
 -}
@@ -49,25 +52,35 @@ around allCars item =
         classmates =
             allCars |> List.filter (\other -> other.metadata.class == item.metadata.class)
 
-        at index =
-            List.Extra.getAt index classmates
+        side steps =
+            steps |> List.filterMap (\step -> List.Extra.getAt step classmates)
     in
     case List.Extra.findIndex (\other -> other.metadata.carNumber == item.metadata.carNumber) classmates of
         Just i ->
-            let
-                -- Nearest first, so the head of each is the rival on the road.
-                ahead =
-                    [ 1, 2 ] |> List.filterMap (\d -> at (i - d))
+            Rivals
+                { car = item
 
-                behind =
-                    [ 1, 2 ] |> List.filterMap (\d -> at (i + d))
-            in
-            { focused = item
-            , display =
-                List.filterMap identity
-                    [ List.head ahead, Just item, List.head behind ]
-            , reference = ahead ++ item :: behind
-            }
+                -- Nearest first on both sides, so `nearest` can take a ring off
+                -- the front of each.
+                , ahead = side (List.range 1 gathered |> List.map (\d -> i - d))
+                , behind = side (List.range 1 gathered |> List.map (\d -> i + d))
+                }
 
         Nothing ->
-            { focused = item, display = [ item ], reference = [ item ] }
+            Rivals { car = item, ahead = [], behind = [] }
+
+
+{-| The car the group was built around, and the one a chart draws differently
+from the rest.
+-}
+focused : Rivals -> CarAt
+focused (Rivals r) =
+    r.car
+
+
+{-| The car and up to `count` rivals either side of it, in running order. Fewer
+at a class edge, and never more than `around` gathered.
+-}
+nearest : Int -> Rivals -> List CarAt
+nearest count (Rivals r) =
+    List.reverse (List.take count r.ahead) ++ r.car :: List.take count r.behind

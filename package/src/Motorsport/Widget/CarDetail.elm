@@ -152,7 +152,7 @@ charts : State -> LapHistory -> Snapshot -> Rivals -> Html Msg
 charts state lapHistory snapshot rivals =
     let
         comparison =
-            { laps = LapWindow.laps state.range rivals.focused.metadata.class snapshot
+            { laps = LapWindow.laps state.range (Rivals.focused rivals).metadata.class snapshot
             , lapHistory = lapHistory
             , snapshot = snapshot
             , rivals = rivals
@@ -189,9 +189,11 @@ that colour already, and a second mark beside it is the same ink twice.
 
 -}
 legend : Snapshot -> Rivals -> Html msg
-legend snapshot { focused, display } =
+legend snapshot rivals =
     div [ class "grid gap-y-px" ]
-        (List.map (legendEntry snapshot focused) display)
+        (Rivals.nearest 1 rivals
+            |> List.map (legendEntry snapshot (Rivals.focused rivals))
+        )
 
 
 legendEntry : Snapshot -> CarAt -> CarAt -> Html msg

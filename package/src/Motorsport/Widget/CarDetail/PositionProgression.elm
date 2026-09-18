@@ -6,7 +6,7 @@ import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
-import Motorsport.Race.Rivals exposing (Rivals)
+import Motorsport.Race.Rivals as Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
 import Motorsport.Widget as Widget
@@ -53,13 +53,13 @@ classPositionPoints range snapshot class =
 
 
 buildClassProgressionData : ( Int, Int ) -> Snapshot -> Rivals -> Result String (List PositionSeries)
-buildClassProgressionData range snapshot { focused, display } =
+buildClassProgressionData range snapshot rivals =
     let
         highlighted =
-            display |> List.map (.metadata >> .carNumber)
+            Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
 
         series =
-            classPositionPoints range snapshot focused.metadata.class
+            classPositionPoints range snapshot (Rivals.focused rivals).metadata.class
                 |> List.map
                     (\( item, points ) ->
                         { points = points

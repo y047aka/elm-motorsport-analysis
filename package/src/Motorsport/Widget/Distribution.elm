@@ -12,19 +12,27 @@ import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Lap as Lap
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.Race.Rivals exposing (Rivals)
+import Motorsport.Race.Rivals as Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Widget as Widget
 
 
-{-| The cars' laps on one scale, the focused car's curve the emphasised one: how
-quick a car is reads only against what the cars it is racing are doing.
+{-| The car and the rival either side on one scale, the car's own curve the
+emphasised one: how quick a car is reads only against what the cars it is racing
+are doing.
+
+Three curves and no more, unlike the gap chart beside it: these overlap where
+they are alike, which is exactly where the chart is being read.
+
 -}
 view : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
-view range lapHistory { focused, display } =
+view range lapHistory rivals =
     let
+        focused =
+            Rivals.focused rivals
+
         series =
-            display
+            Rivals.nearest 1 rivals
                 |> List.map
                     (\item ->
                         let
