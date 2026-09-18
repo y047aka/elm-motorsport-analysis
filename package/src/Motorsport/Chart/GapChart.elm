@@ -77,20 +77,28 @@ Subtracting the group average — rather than plotting absolute lap time —
 magnifies the pace differences between nearby cars. Ahead of the baseline goes
 up and behind it goes down, so a line's vertical motion reads as relative pace.
 
+`reference` is the population the baseline is averaged from and `display` the
+cars drawn against it; the two are taken separately for the reason
+[`plotGaps`](#plotGaps) gives, and passing the same list for both is what a
+chart baselined on exactly what it draws looks like.
+
 -}
-gapChartView : ( Int, Int ) -> LapHistory -> List CarAt -> Html msg
-gapChartView ( minLap, maxLap ) lapHistory entries =
+gapChartView : ( Int, Int ) -> LapHistory -> { reference : List CarAt, display : List CarAt } -> Html msg
+gapChartView ( minLap, maxLap ) lapHistory { reference, display } =
     let
-        carLines =
-            entries |> List.map (carLine lapHistory (Range ( minLap, maxLap )) Focused)
+        linesOf =
+            List.map (carLine lapHistory (Range ( minLap, maxLap )) Focused)
+
+        referenceLines =
+            linesOf reference
     in
-    if Dict.isEmpty (groupReferenceByLap carLines) then
+    if Dict.isEmpty (groupReferenceByLap referenceLines) then
         text ""
 
     else
         gapChartViewWith { dimensions = consolidated, showAxes = True }
             ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
-            (plotGaps { reference = carLines, display = carLines })
+            (plotGaps { reference = referenceLines, display = linesOf display })
 
 
 {-| The relative-gap point series, `cumulative time − baseline`. A lap with no

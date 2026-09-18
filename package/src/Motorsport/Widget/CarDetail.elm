@@ -113,7 +113,7 @@ charts :
     -> LapHistory
     -> Snapshot
     -> CarAt
-    -> List CarAt
+    -> Rivals
     -> Html msg
 charts config lapHistory snapshot focused rivals =
     let
@@ -123,7 +123,7 @@ charts config lapHistory snapshot focused rivals =
     Widget.container "Rivals"
         (div [ class "grid gap-y-2" ]
             [ chartTabs config range lapHistory snapshot focused rivals
-            , legend snapshot focused rivals
+            , legend snapshot focused rivals.display
             ]
         )
 
@@ -233,7 +233,7 @@ chartTabs :
     -> LapHistory
     -> Snapshot
     -> CarAt
-    -> List CarAt
+    -> Rivals
     -> Html msg
 chartTabs config range lapHistory snapshot focused rivals =
     ChartTabs.chartTabs config.onSelectChart
@@ -249,13 +249,13 @@ chartTabs config range lapHistory snapshot focused rivals =
                 PositionProgression.view { width = 1000, height = 250 }
                     snapshot
                     { class = focused.metadata.class
-                    , highlighted = List.map (.metadata >> .carNumber) rivals
+                    , highlighted = List.map (.metadata >> .carNumber) rivals.display
                     , lapRange = range
                     }
           )
         , ( DistributionChart
           , "Distribution"
-          , \() -> distribution range lapHistory focused rivals
+          , \() -> distribution range lapHistory focused rivals.display
           )
         ]
 
@@ -355,18 +355,45 @@ signed value =
         "-"
 
 
-{-| The selected car and the in-class rivals ahead of and behind it, in running
-order, so the set follows the field as positions change. At a class edge only
-the available rival is kept.
+{-| The cars the charts are about, and the cars the gap chart measures them
+against.
+
+`display` is the selected car and the in-class rival either side of it, in
+running order, so the set follows the field as positions change. `reference` is
+the same group widened to two rivals a side: only the gap chart reads it, and
+only to average a baseline out of it.
+
 -}
-neighborsOf : Snapshot -> CarAt -> List CarAt
+type alias Rivals =
+    { display : List CarAt
+    , reference : List CarAt
+    }
+
+
+{-| Three cars to draw and up to five to baseline them on, the same populations
+the strip's sparkline is built from.
+
+Baselining on exactly the three cars drawn locks the picture into a mirror
+image: the three gaps sum to zero, so the outer two lines can only move against
+each other. Two more cars either side loosen that into an approximate centring
+and let all three move. What the chart is read for -- two lines converging or
+diverging -- is the difference between them, which no choice of baseline
+changes.
+
+At a class edge only the available rivals are kept.
+
+-}
+neighborsOf : Snapshot -> CarAt -> Rivals
 neighborsOf snapshot focused =
     let
         neighbors =
             RivalGapSparkline.findNeighbors (Snapshot.toList snapshot) focused
     in
-    List.filterMap identity
-        [ List.head neighbors.ahead, Just focused, List.head neighbors.behind ]
+    { display =
+        List.filterMap identity
+            [ List.head neighbors.ahead, Just focused, List.head neighbors.behind ]
+    , reference = neighbors.ahead ++ focused :: neighbors.behind
+    }
 
 
 startPositionOf : List Car -> CarAt -> Maybe Int
