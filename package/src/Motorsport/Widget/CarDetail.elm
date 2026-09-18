@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetail exposing (Chart(..), view)
+module Motorsport.Widget.CarDetail exposing (Chart(..), Range(..), view)
 
 {-| Everything the race says about one car, drawn as plain inline content.
 
@@ -6,7 +6,7 @@ The car is the caller's selection; the rivals it is measured against are read
 off the field around it, so the panel follows the race without the selection
 changing.
 
-@docs Chart, view
+@docs Chart, Range, view
 
 -}
 
@@ -18,6 +18,7 @@ import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Instant as Instant
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
@@ -46,9 +47,27 @@ type Chart
     | DistributionChart
 
 
+{-| How much of the race the charts are drawn over: all of it run so far, or
+the last stretch of it.
+
+The stretch is a length of time rather than a count of laps, because that is
+what a race is read in -- an hour of it is an hour of it whether the cars spent
+it lapping under a safety car or flat out.
+
+One setting for all three rather than one each: only one chart is showing at a
+time, and a range that changed as the tabs did would read as the chart changing.
+
+-}
+type Range
+    = WholeRace
+    | Recent Duration
+
+
 view :
     { activeChart : Chart
     , onSelectChart : Chart -> msg
+    , activeRange : Range
+    , onSelectRange : Range -> msg
     , lapHistoryOpen : Bool
     , onToggleLapHistory : msg
     }
@@ -90,7 +109,7 @@ view config cars snapshot focused =
 
 
 charts :
-    { a | activeChart : Chart, onSelectChart : Chart -> msg }
+    { a | activeChart : Chart, onSelectChart : Chart -> msg, activeRange : Range, onSelectRange : Range -> msg }
     -> LapHistory
     -> Snapshot
     -> CarAt
@@ -98,15 +117,69 @@ charts :
     -> Html msg
 charts config lapHistory snapshot focused rivals =
     let
-        lapRange =
-            PositionProgression.lapRange snapshot focused.metadata.class
+        range =
+            lapsIn config.activeRange snapshot focused
     in
     Widget.container "Rivals"
         (div [ class "grid gap-y-2" ]
-            [ chartTabs config lapRange lapHistory snapshot focused rivals
+            [ chartTabs config range lapHistory snapshot focused rivals
             , legend snapshot focused rivals
             ]
         )
+
+
+{-| The selected range as the lap numbers each chart keeps its laps by, both
+ends read off the car's own class rather than the race: every car these charts
+draw is in the one class, and a slower class's laps both run out short of the
+race leader's and take longer to come round.
+-}
+lapsIn : Range -> Snapshot -> CarAt -> ( Int, Int )
+lapsIn range snapshot focused =
+    let
+        classCars =
+            Snapshot.inClass focused.metadata.class snapshot
+
+        latest =
+            classCars
+                |> List.map (.standing >> .lapsCompleted)
+                |> List.maximum
+                |> Maybe.withDefault 1
+                |> max 1
+    in
+    case range of
+        WholeRace ->
+            ( 1, latest )
+
+        Recent window ->
+            ( firstLapSince window snapshot classCars, latest )
+
+
+{-| The class leader's first lap completed no earlier than `window` ago, which
+is where a chart drawn over that stretch starts. Lap 1 where the class has not
+been running that long yet.
+-}
+firstLapSince : Duration -> Snapshot -> List CarAt -> Int
+firstLapSince window snapshot classCars =
+    let
+        threshold =
+            Instant.subtract window (Snapshot.elapsed snapshot)
+    in
+    classCars
+        |> List.head
+        |> Maybe.map (\leading -> LapHistory.get leading.metadata.carNumber (Snapshot.lapHistory snapshot))
+        |> Maybe.andThen (List.Extra.find (\lap -> Instant.compare lap.elapsed threshold /= LT))
+        |> Maybe.map .lap
+        |> Maybe.withDefault 1
+
+
+{-| The ranges on offer, in the order the toggle draws them.
+-}
+rangeOptions : List ( Range, String )
+rangeOptions =
+    [ ( Recent (90 * 60 * 1000), "Last 1.5h" )
+    , ( Recent (3 * 60 * 60 * 1000), "Last 3h" )
+    , ( WholeRace, "All" )
+    ]
 
 
 {-| Which car each line of the chart above is, in running order, and how far up
@@ -155,25 +228,20 @@ legendEntry snapshot focused item =
 
 
 chartTabs :
-    { a | activeChart : Chart, onSelectChart : Chart -> msg }
-    -> Maybe ( Int, Int )
+    { a | activeChart : Chart, onSelectChart : Chart -> msg, activeRange : Range, onSelectRange : Range -> msg }
+    -> ( Int, Int )
     -> LapHistory
     -> Snapshot
     -> CarAt
     -> List CarAt
     -> Html msg
-chartTabs config lapRange lapHistory snapshot focused rivals =
+chartTabs config range lapHistory snapshot focused rivals =
     ChartTabs.chartTabs config.onSelectChart
         config.activeChart
+        (ChartTabs.segmentedControl config.onSelectRange config.activeRange rangeOptions)
         [ ( GapChart
           , "Gap to avg"
-          , \() ->
-                case lapRange of
-                    Just range ->
-                        GapChart.gapChartView range lapHistory rivals
-
-                    Nothing ->
-                        text ""
+          , \() -> GapChart.gapChartView range lapHistory rivals
           )
         , ( PositionChart
           , "Positions"
@@ -182,11 +250,12 @@ chartTabs config lapRange lapHistory snapshot focused rivals =
                     snapshot
                     { class = focused.metadata.class
                     , highlighted = List.map (.metadata >> .carNumber) rivals
+                    , lapRange = range
                     }
           )
         , ( DistributionChart
           , "Distribution"
-          , \() -> distribution lapHistory focused rivals
+          , \() -> distribution range lapHistory focused rivals
           )
         ]
 
@@ -194,8 +263,8 @@ chartTabs config lapRange lapHistory snapshot focused rivals =
 {-| The three cars' laps on one scale, the selected car's curve the emphasised
 one: how quick a car is reads only against what the cars it is racing are doing.
 -}
-distribution : LapHistory -> CarAt -> List CarAt -> Html msg
-distribution lapHistory focused rivals =
+distribution : ( Int, Int ) -> LapHistory -> CarAt -> List CarAt -> Html msg
+distribution range lapHistory focused rivals =
     let
         series =
             rivals
@@ -203,7 +272,7 @@ distribution lapHistory focused rivals =
                     (\item ->
                         let
                             own =
-                                Distribution.seriesOf lapHistory ( 1, focused.standing.lapsCompleted ) item
+                                Distribution.seriesOf lapHistory range item
                         in
                         if item.metadata.carNumber == focused.metadata.carNumber then
                             own

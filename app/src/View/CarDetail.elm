@@ -19,6 +19,8 @@ import Motorsport.Widget.CarDetail as CarDetailWidget
 view :
     { activeChart : CarDetailWidget.Chart
     , onSelectChart : CarDetailWidget.Chart -> msg
+    , activeRange : CarDetailWidget.Range
+    , onSelectRange : CarDetailWidget.Range -> msg
     , lapHistoryOpen : Bool
     , onToggleLapHistory : msg
     }
@@ -38,6 +40,8 @@ view config cars snapshot focusedCar =
                 CarDetailWidget.view
                     { activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
+                    , activeRange = config.activeRange
+                    , onSelectRange = config.onSelectRange
                     , lapHistoryOpen = config.lapHistoryOpen
                     , onToggleLapHistory = config.onToggleLapHistory
                     }
