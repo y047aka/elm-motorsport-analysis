@@ -12,24 +12,18 @@ from the car it is given, so it stays live-updating as the field moves.
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes
 import Motorsport.Race.Car exposing (Car)
-import Motorsport.Race.LapWindow exposing (LapWindow)
 import Motorsport.Race.Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget.CarDetail as CarDetailWidget
 
 
 view :
-    { activeChart : CarDetailWidget.Chart
-    , onSelectChart : CarDetailWidget.Chart -> msg
-    , activeRange : LapWindow
-    , onSelectRange : LapWindow -> msg
-    , lapHistoryOpen : Bool
-    , onToggleLapHistory : msg
-    }
+    (CarDetailWidget.Msg -> msg)
+    -> CarDetailWidget.Model
     -> List Car
     -> Snapshot
     -> Maybe CarAt
     -> Html msg
-view config cars snapshot focusedCar =
+view toMsg state cars snapshot focusedCar =
     div [ Attributes.id elementId ]
         [ case focusedCar of
             Nothing ->
@@ -38,17 +32,7 @@ view config cars snapshot focusedCar =
                 text ""
 
             Just focused ->
-                CarDetailWidget.view
-                    { activeChart = config.activeChart
-                    , onSelectChart = config.onSelectChart
-                    , activeRange = config.activeRange
-                    , onSelectRange = config.onSelectRange
-                    , lapHistoryOpen = config.lapHistoryOpen
-                    , onToggleLapHistory = config.onToggleLapHistory
-                    }
-                    cars
-                    snapshot
-                    focused
+                CarDetailWidget.view toMsg state cars snapshot focused
         ]
 
 

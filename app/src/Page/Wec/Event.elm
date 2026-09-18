@@ -21,7 +21,6 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
-import Motorsport.Race.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
@@ -53,9 +52,7 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , detailCarNumber : Maybe String
-    , detailChart : CarDetailWidget.Chart
-    , detailRange : LapWindow
-    , lapHistoryOpen : Bool
+    , detailState : CarDetailWidget.Model
     }
 
 
@@ -75,9 +72,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , detailCarNumber = Nothing
-      , detailChart = CarDetailWidget.GapChart
-      , detailRange = LapWindow.WholeRace
-      , lapHistoryOpen = False
+      , detailState = CarDetailWidget.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -95,9 +90,7 @@ type Msg
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | SelectDetailCar String
-    | SelectDetailChart CarDetailWidget.Chart
-    | SelectDetailRange LapWindow
-    | ToggleLapHistory
+    | CarDetailMsg CarDetailWidget.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -126,14 +119,10 @@ update msg m =
         SelectDetailCar carNumber ->
             ( { m | detailCarNumber = Just carNumber }, Effect.none )
 
-        SelectDetailChart chart ->
-            ( { m | detailChart = chart }, Effect.none )
-
-        SelectDetailRange range ->
-            ( { m | detailRange = range }, Effect.none )
-
-        ToggleLapHistory ->
-            ( { m | lapHistoryOpen = not m.lapHistoryOpen }, Effect.none )
+        CarDetailMsg detailMsg ->
+            ( { m | detailState = CarDetailWidget.update detailMsg m.detailState }
+            , Effect.none
+            )
 
 
 
@@ -245,14 +234,8 @@ trackerView track timeline snapshot replay m =
                     -- the box that scrolls has to be a flex child of the card.
                     [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                         [ Card.content []
-                            [ CarDetail.view
-                                { activeChart = m.detailChart
-                                , onSelectChart = SelectDetailChart
-                                , activeRange = m.detailRange
-                                , onSelectRange = SelectDetailRange
-                                , lapHistoryOpen = m.lapHistoryOpen
-                                , onToggleLapHistory = ToggleLapHistory
-                                }
+                            [ CarDetail.view CarDetailMsg
+                                m.detailState
                                 replay.race.cars
                                 snapshot
                                 focused

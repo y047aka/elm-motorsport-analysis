@@ -1,4 +1,8 @@
-module Motorsport.Widget.CarDetail exposing (Chart(..), view)
+module Motorsport.Widget.CarDetail exposing
+    ( Model, init
+    , Msg, update
+    , view
+    )
 
 {-| Everything the race says about one car, drawn as plain inline content.
 
@@ -6,7 +10,13 @@ The car is the caller's selection; the rivals it is measured against are read
 off the field around it, so the panel follows the race without the selection
 changing.
 
-@docs Chart, view
+Which of them is on show is the panel's own, though, and is held here rather
+than by the page: the chart, the stretch of the race it covers and whether the
+lap history is open say nothing about the race and nothing else reads them.
+
+@docs Model, init
+@docs Msg, update
+@docs view
 
 -}
 
@@ -32,6 +42,28 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Distribution as Distribution
 
 
+{-| What the panel is showing, which nothing outside it reads.
+-}
+type Model
+    = Model State
+
+
+type alias State =
+    { chart : Chart
+    , range : LapWindow
+    , lapHistoryOpen : Bool
+    }
+
+
+init : Model
+init =
+    Model
+        { chart = GapChart
+        , range = LapWindow.WholeRace
+        , lapHistoryOpen = False
+        }
+
+
 {-| The race so far as the car ran it among its rivals, one view at a time.
 
 Every one of them draws the cars the legend under it names, which is what keeps
@@ -45,19 +77,33 @@ type Chart
     | DistributionChart
 
 
-view :
-    { activeChart : Chart
-    , onSelectChart : Chart -> msg
-    , activeRange : LapWindow
-    , onSelectRange : LapWindow -> msg
-    , lapHistoryOpen : Bool
-    , onToggleLapHistory : msg
-    }
-    -> List Car
-    -> Snapshot
-    -> CarAt
-    -> Html msg
-view config cars snapshot focused =
+type Msg
+    = SelectedChart Chart
+    | SelectedRange LapWindow
+    | ToggledLapHistory
+
+
+update : Msg -> Model -> Model
+update msg (Model state) =
+    Model <|
+        case msg of
+            SelectedChart chart ->
+                { state | chart = chart }
+
+            SelectedRange range ->
+                { state | range = range }
+
+            ToggledLapHistory ->
+                { state | lapHistoryOpen = not state.lapHistoryOpen }
+
+
+view : (Msg -> msg) -> Model -> List Car -> Snapshot -> CarAt -> Html msg
+view toMsg (Model state) cars snapshot focused =
+    Html.map toMsg (panel state cars snapshot focused)
+
+
+panel : State -> List Car -> Snapshot -> CarAt -> Html Msg
+panel state cars snapshot focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -74,8 +120,8 @@ view config cars snapshot focused =
         , Widget.container "Lap times"
             (LapTimes.view
                 { bestTimes = Snapshot.bestTimes snapshot
-                , historyOpen = config.lapHistoryOpen
-                , onToggleHistory = config.onToggleLapHistory
+                , historyOpen = state.lapHistoryOpen
+                , onToggleHistory = ToggledLapHistory
                 }
                 (lapsOf cars focused)
                 focused
@@ -86,7 +132,7 @@ view config cars snapshot focused =
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )
-        , charts config lapHistory snapshot rivals
+        , charts state lapHistory snapshot rivals
         ]
 
 
@@ -102,16 +148,11 @@ type alias Comparison =
     }
 
 
-charts :
-    { a | activeChart : Chart, onSelectChart : Chart -> msg, activeRange : LapWindow, onSelectRange : LapWindow -> msg }
-    -> LapHistory
-    -> Snapshot
-    -> Rivals
-    -> Html msg
-charts config lapHistory snapshot rivals =
+charts : State -> LapHistory -> Snapshot -> Rivals -> Html Msg
+charts state lapHistory snapshot rivals =
     let
         comparison =
-            { laps = LapWindow.laps config.activeRange rivals.focused.metadata.class snapshot
+            { laps = LapWindow.laps state.range rivals.focused.metadata.class snapshot
             , lapHistory = lapHistory
             , snapshot = snapshot
             , rivals = rivals
@@ -119,7 +160,7 @@ charts config lapHistory snapshot rivals =
     in
     Widget.container "Rivals"
         (div [ class "grid gap-y-2" ]
-            [ chartTabs config comparison
+            [ chartTabs state comparison
             , legend snapshot rivals
             ]
         )
@@ -185,14 +226,11 @@ legendEntry snapshot focused item =
         ]
 
 
-chartTabs :
-    { a | activeChart : Chart, onSelectChart : Chart -> msg, activeRange : LapWindow, onSelectRange : LapWindow -> msg }
-    -> Comparison
-    -> Html msg
-chartTabs config { laps, lapHistory, snapshot, rivals } =
-    ChartTabs.chartTabs config.onSelectChart
-        config.activeChart
-        (ChartTabs.segmentedControl config.onSelectRange config.activeRange rangeOptions)
+chartTabs : State -> Comparison -> Html Msg
+chartTabs state { laps, lapHistory, snapshot, rivals } =
+    ChartTabs.chartTabs SelectedChart
+        state.chart
+        (ChartTabs.segmentedControl SelectedRange state.range rangeOptions)
         [ ( GapChart, "Gap to avg", \() -> GapChart.gapChartView laps lapHistory rivals )
         , ( PositionChart, "Positions", \() -> PositionProgression.view laps snapshot rivals )
         , ( DistributionChart, "Distribution", \() -> Distribution.view laps lapHistory rivals )
