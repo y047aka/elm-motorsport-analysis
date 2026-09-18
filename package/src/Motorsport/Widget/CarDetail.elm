@@ -22,6 +22,7 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.LapWindow as LapWindow exposing (LapWindow)
+import Motorsport.Race.Rivals as Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget as Widget
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
@@ -31,7 +32,6 @@ import Motorsport.Widget.CarDetail.PositionProgression as PositionProgression
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Distribution as Distribution
-import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
 
 
 {-| The race so far as the car ran it among its rivals, one view at a time.
@@ -65,7 +65,7 @@ view config cars snapshot focused =
             Snapshot.lapHistory snapshot
 
         rivals =
-            neighborsOf snapshot focused
+            rivalsOf snapshot focused
     in
     div [ class "grid gap-y-3" ]
         [ Header.view
@@ -300,45 +300,12 @@ signed value =
         "-"
 
 
-{-| The cars the charts are about, and the cars the gap chart measures them
-against.
-
-`display` is the selected car and the in-class rival either side of it, in
-running order, so the set follows the field as positions change. `reference` is
-the same group widened to two rivals a side: only the gap chart reads it, and
-only to average a baseline out of it.
-
+{-| The cars either side of this one in its class, which is what the charts
+compare it against and the legend names.
 -}
-type alias Rivals =
-    { display : List CarAt
-    , reference : List CarAt
-    }
-
-
-{-| Three cars to draw and up to five to baseline them on, the same populations
-the strip's sparkline is built from.
-
-Baselining on exactly the three cars drawn locks the picture into a mirror
-image: the three gaps sum to zero, so the outer two lines can only move against
-each other. Two more cars either side loosen that into an approximate centring
-and let all three move. What the chart is read for -- two lines converging or
-diverging -- is the difference between them, which no choice of baseline
-changes.
-
-At a class edge only the available rivals are kept.
-
--}
-neighborsOf : Snapshot -> CarAt -> Rivals
-neighborsOf snapshot focused =
-    let
-        neighbors =
-            RivalGapSparkline.findNeighbors (Snapshot.toList snapshot) focused
-    in
-    { display =
-        List.filterMap identity
-            [ List.head neighbors.ahead, Just focused, List.head neighbors.behind ]
-    , reference = neighbors.ahead ++ focused :: neighbors.behind
-    }
+rivalsOf : Snapshot -> CarAt -> Rivals
+rivalsOf snapshot focused =
+    Rivals.around (Snapshot.toList snapshot) focused
 
 
 startPositionOf : List Car -> CarAt -> Maybe Int

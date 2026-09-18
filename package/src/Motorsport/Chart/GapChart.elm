@@ -1,17 +1,13 @@
-module Motorsport.Chart.GapChart exposing
-    ( CarLine, LinePoint, PlottedCar
-    , carLine, groupReferenceByLap, gapPoints, plotGaps
-    , consolidated, rivalStrip
-    , gapChartView, gapSparkline
-    )
+module Motorsport.Chart.GapChart exposing (gapChartView, gapSparkline)
 
 {-| The relative-gap chart: each car's cumulative time against the group
-average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or as an
-axis-less sparkline ([`gapSparkline`](#gapSparkline)).
+average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or at card
+size without them ([`gapSparkline`](#gapSparkline)).
 
-@docs CarLine, LinePoint, PlottedCar
-@docs carLine, groupReferenceByLap, gapPoints, plotGaps
-@docs consolidated, rivalStrip
+Both are given the cars as [`Rivals`](Motorsport-Race-Rivals): the group the
+baseline is averaged from is wider than the group drawn against it, for the
+reason that type gives.
+
 @docs gapChartView, gapSparkline
 
 -}
@@ -24,6 +20,7 @@ import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisP
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.Race.Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Scale
 import Svg exposing (Svg, line)
@@ -69,13 +66,10 @@ Subtracting the group average — rather than plotting absolute lap time —
 magnifies the pace differences between nearby cars. Ahead of the baseline goes
 up and behind it goes down, so a line's vertical motion reads as relative pace.
 
-`reference` is the population the baseline is averaged from and `display` the
-cars drawn against it; the two are taken separately for the reason
-[`plotGaps`](#plotGaps) gives, and passing the same list for both is what a
-chart baselined on exactly what it draws looks like.
+Every line drawn is emphasised: the panel this sits in is about all of them.
 
 -}
-gapChartView : ( Int, Int ) -> LapHistory -> { reference : List CarAt, display : List CarAt } -> Html msg
+gapChartView : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
 gapChartView ( minLap, maxLap ) lapHistory { reference, display } =
     let
         linesOf =
@@ -124,11 +118,55 @@ plotGaps { reference, display } =
     display |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
 
 
-{-| The same series without axes: only the polyline and the zero baseline.
+{-| The same series at card size and without axes: only the polylines and the
+zero baseline, and only `focused` drawn emphasised, the rivals beside it held
+back.
+
+The horizontal extent is the laps the focused car actually has inside `window`
+rather than the window itself, so a card of a car that has just come out is the
+laps it has run and not mostly blank. A card with no rival to compare against,
+or with too little of the focused car to draw a line from, is not drawn at all.
+
 -}
-gapSparkline : Dimensions -> ( Float, Float ) -> List PlottedCar -> Html msg
-gapSparkline dimensions range carsWithGaps =
-    gapChartViewWith { dimensions = dimensions, showAxes = False } range carsWithGaps
+gapSparkline : ( Int, Int ) -> LapHistory -> CarAt -> Rivals -> Html msg
+gapSparkline window lapHistory focused { reference, display } =
+    let
+        lineOf entry =
+            carLine lapHistory
+                window
+                (if entry.metadata.carNumber == focused.metadata.carNumber then
+                    Focused
+
+                 else
+                    Related
+                )
+                entry
+
+        referenceLines =
+            List.map lineOf reference
+
+        -- Blank carNumber to omit the end-of-line label on these narrow cards
+        -- (renderLine skips empty strings).
+        displayLines =
+            display
+                |> List.map lineOf
+                |> List.map (\line -> { line | carNumber = "" })
+
+        focusedLapNumbers =
+            carLine lapHistory window Focused focused
+                |> .laps
+                |> List.map (.lap >> toFloat)
+    in
+    case ( focusedLapNumbers, display, Dict.isEmpty (groupReferenceByLap referenceLines) ) of
+        ( _ :: _ :: _, _ :: _ :: _, False ) ->
+            gapChartViewWith { dimensions = rivalStrip, showAxes = False }
+                ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
+                , List.maximum focusedLapNumbers |> Maybe.withDefault 1
+                )
+                (plotGaps { reference = referenceLines, display = displayLines })
+
+        _ ->
+            text ""
 
 
 {-| What [`gapChartView`](#gapChartView) and [`gapSparkline`](#gapSparkline)
