@@ -30,14 +30,6 @@ type Rivals
         }
 
 
-{-| How far out `around` gathers, in rivals a side. Past the widest ring anyone
-asks for, so that asking never comes up short for a reason the caller cannot see.
--}
-gathered : Int
-gathered =
-    4
-
-
 {-| The cars either side of `item` in its own class, taken from the overall
 running order so the group follows the field as positions change. Filtering by
 class preserves that order, so what comes out is the in-class order as-is.
@@ -51,19 +43,17 @@ around allCars item =
     let
         classmates =
             allCars |> List.filter (\other -> other.metadata.class == item.metadata.class)
-
-        side steps =
-            steps |> List.filterMap (\step -> List.Extra.getAt step classmates)
     in
     case List.Extra.findIndex (\other -> other.metadata.carNumber == item.metadata.carNumber) classmates of
         Just i ->
             Rivals
                 { car = item
 
-                -- Nearest first on both sides, so `nearest` can take a ring off
-                -- the front of each.
-                , ahead = side (List.range 1 gathered |> List.map (\d -> i - d))
-                , behind = side (List.range 1 gathered |> List.map (\d -> i + d))
+                -- The whole class either side, nearest first on both, so that
+                -- `nearest` takes a ring off the front of each and no ring a
+                -- caller asks for is quietly cut short.
+                , ahead = classmates |> List.take i |> List.reverse
+                , behind = classmates |> List.drop (i + 1)
                 }
 
         Nothing ->
@@ -79,7 +69,7 @@ focused (Rivals r) =
 
 
 {-| The car and up to `count` rivals either side of it, in running order. Fewer
-at a class edge, and never more than `around` gathered.
+where the class runs out, which at its edges is all of one side.
 -}
 nearest : Int -> Rivals -> List CarAt
 nearest count (Rivals r) =

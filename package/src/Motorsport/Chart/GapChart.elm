@@ -176,7 +176,9 @@ gapPoints referenceByLap laps =
 
 {-| Compute the baseline once from `reference`, then project each car of
 `display` onto it. The two sets are taken separately so that the populations can
-differ — the rival comparison baselines on up to 5 cars and shows 3.
+differ: a relative-gap chart baselines on a wider ring than it draws, for the
+reason [`Rivals`](Motorsport-Race-Rivals) gives. How much wider is each chart's
+own to say — see [`fightRivals`](#fightRivals) for the full one's.
 -}
 plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar
 plotGaps { reference, display } =
