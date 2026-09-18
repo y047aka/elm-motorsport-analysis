@@ -88,9 +88,6 @@ type alias Scale =
     }
 
 
-{-| The shared scale of every series given, so the distributions can be compared
-on the same scale.
--}
 scaleOf : List LapTimeDistribution.Series -> Maybe Scale
 scaleOf series =
     LapTimeDistribution.domainOf series
@@ -102,14 +99,8 @@ scaleOf series =
             )
 
 
-{-| Builds one car's series for the lap-time distribution chart, from the laps
-in the range the car drove on the road.
-
-The upper fence is what keeps the shape readable: a lap behind a safety car and
-a lap spent in traffic both survive
-[`Lap.isRacingLap`](Motorsport-Lap#isRacingLap), and the tail they make would
-flatten everything the chart is drawn to show.
-
+{-| One car's curve: the laps it ran on the road inside the range, and the lap
+it is on now marked as a point on them.
 -}
 seriesOf : LapHistory -> ( Int, Int ) -> CarAt -> LapTimeDistribution.Series
 seriesOf lapHistory range entry =

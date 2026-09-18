@@ -138,9 +138,8 @@ panel state cars snapshot focused =
         ]
 
 
-{-| What the three charts are all drawn from: which laps, whose laps, the field
-they stand in, and the cars the panel is comparing. Built once here so that the
-tabs switch the chart and nothing else about what is being shown.
+{-| What the three charts are all drawn from, built once here so that the tabs
+switch the chart and nothing else about what is being shown.
 -}
 type alias Comparison =
     { laps : ( Int, Int )
@@ -184,8 +183,8 @@ rangeOptions =
 
 
 {-| The cars the panel is comparing, in running order, and how far up or down
-the road each of them is, which is what the charts above are drawn to show. The
-charts emphasise these and may draw more behind them; only these are named.
+the road each of them is, which is what the charts above are drawn to show.
+Only these are named, whatever else a chart draws behind them.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
@@ -306,9 +305,6 @@ signed value =
         "-"
 
 
-{-| The cars either side of this one in its class, which is what the charts
-compare it against and the legend names.
--}
 rivalsOf : Snapshot -> CarAt -> Rivals
 rivalsOf snapshot focused =
     Rivals.around (Snapshot.toList snapshot) focused

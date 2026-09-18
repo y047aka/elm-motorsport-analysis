@@ -4,9 +4,9 @@ module Motorsport.Chart.GapChart exposing (gapChartView, gapSparkline)
 average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or at card
 size without them ([`gapSparkline`](#gapSparkline)).
 
-Both are given the cars as [`Rivals`](Motorsport-Analysis-Rivals): the group the
-baseline is averaged from is wider than the group drawn against it, for the
-reason that type gives.
+Both are given the cars as [`Rivals`](Motorsport-Analysis-Rivals) and take a
+wider ring of it to baseline on than they draw; how much wider, and why, is
+[`fightRivals`](#fightRivals).
 
 @docs gapChartView, gapSparkline
 
@@ -68,11 +68,9 @@ Subtracting the group average — rather than plotting absolute lap time —
 magnifies the pace differences between nearby cars. Ahead of the baseline goes
 up and behind it goes down, so a line's vertical motion reads as relative pace.
 
-The rival either side is drawn in full and labelled, the pair beyond them drawn
-muted -- grey and faint, with no end label: the fight is what the chart is for,
-and in the manufacturer colours the outer two read as two more cars to follow
-rather than as the ground being made up behind. It is the treatment the position
-chart gives the rest of the class, for the same reason.
+The rival either side is drawn in full and labelled, the pair beyond them grey
+and faint with no end label -- the treatment the position chart gives the rest
+of its class.
 
 -}
 gapChartView : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
@@ -178,10 +176,8 @@ gapPoints referenceByLap laps =
 
 
 {-| Compute the baseline once from `reference`, then project each car of
-`display` onto it. The two sets are taken separately so that the populations can
-differ: a relative-gap chart baselines on a wider ring than it draws, for the
-reason [`Rivals`](Motorsport-Analysis-Rivals) gives. How much wider is each chart's
-own to say — see [`fightRivals`](#fightRivals) for the full one's.
+`display` onto it. The two are taken separately so that they can differ — see
+[`fightRivals`](#fightRivals).
 -}
 plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar
 plotGaps { reference, display } =
