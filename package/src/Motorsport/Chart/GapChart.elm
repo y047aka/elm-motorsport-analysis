@@ -20,7 +20,7 @@ import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSiz
 import Dict exposing (Dict)
 import Html exposing (Html, text)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
@@ -52,22 +52,14 @@ type alias PlottedCar =
     }
 
 
-carLine : LapHistory -> LapWindow -> Emphasis -> CarAt -> CarLine
-carLine lapHistory window emphasis entry =
-    let
-        history =
-            LapHistory.get entry.metadata.carNumber lapHistory
-    in
+carLine : LapHistory -> ( Int, Int ) -> Emphasis -> CarAt -> CarLine
+carLine lapHistory ( minLap, maxLap ) emphasis entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
     , laps =
-        case window of
-            Recent currentLap ->
-                LapHistory.recentLaps { count = 20, currentLap = currentLap } history
-
-            Range ( minLap, maxLap ) ->
-                history |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
+        LapHistory.get entry.metadata.carNumber lapHistory
+            |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
     }
 
 
@@ -87,7 +79,7 @@ gapChartView : ( Int, Int ) -> LapHistory -> { reference : List CarAt, display :
 gapChartView ( minLap, maxLap ) lapHistory { reference, display } =
     let
         linesOf =
-            List.map (carLine lapHistory (Range ( minLap, maxLap )) Focused)
+            List.map (carLine lapHistory ( minLap, maxLap ) Focused)
 
         referenceLines =
             linesOf reference

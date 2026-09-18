@@ -21,6 +21,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
+import Motorsport.Race.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
@@ -53,7 +54,7 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , detailCarNumber : Maybe String
     , detailChart : CarDetailWidget.Chart
-    , detailRange : CarDetailWidget.Range
+    , detailRange : LapWindow
     , lapHistoryOpen : Bool
     }
 
@@ -75,7 +76,7 @@ init params =
       , leaderboardState = Leaderboard.init
       , detailCarNumber = Nothing
       , detailChart = CarDetailWidget.GapChart
-      , detailRange = CarDetailWidget.WholeRace
+      , detailRange = LapWindow.WholeRace
       , lapHistoryOpen = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -95,7 +96,7 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | SelectDetailCar String
     | SelectDetailChart CarDetailWidget.Chart
-    | SelectDetailRange CarDetailWidget.Range
+    | SelectDetailRange LapWindow
     | ToggleLapHistory
 
 

@@ -12,6 +12,7 @@ from the car it is given, so it stays live-updating as the field moves.
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes
 import Motorsport.Race.Car exposing (Car)
+import Motorsport.Race.LapWindow exposing (LapWindow)
 import Motorsport.Race.Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget.CarDetail as CarDetailWidget
 
@@ -19,8 +20,8 @@ import Motorsport.Widget.CarDetail as CarDetailWidget
 view :
     { activeChart : CarDetailWidget.Chart
     , onSelectChart : CarDetailWidget.Chart -> msg
-    , activeRange : CarDetailWidget.Range
-    , onSelectRange : CarDetailWidget.Range -> msg
+    , activeRange : LapWindow
+    , onSelectRange : LapWindow -> msg
     , lapHistoryOpen : Bool
     , onToggleLapHistory : msg
     }

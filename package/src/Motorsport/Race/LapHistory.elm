@@ -1,7 +1,7 @@
 module Motorsport.Race.LapHistory exposing
     ( LapHistory
     , at
-    , get, recentLaps
+    , get
     )
 
 {-| Each car's laps, cut off at a moment of the race.
@@ -12,7 +12,7 @@ that the charts scanning a car's history all read the same laps.
 
 @docs LapHistory
 @docs at
-@docs get, recentLaps
+@docs get
 
 -}
 
@@ -40,14 +40,3 @@ get : String -> LapHistory -> List Lap
 get carNumber (LapHistory histories) =
     Dict.get carNumber histories
         |> Maybe.withDefault []
-
-
-recentLaps : { count : Int, currentLap : Int } -> List Lap -> List Lap
-recentLaps { count, currentLap } lapList =
-    let
-        targetRange =
-            List.range (currentLap - count) currentLap
-    in
-    lapList
-        |> List.filter (\lap -> List.member lap.lap targetRange)
-        |> List.sortBy .lap

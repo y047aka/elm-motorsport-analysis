@@ -1,6 +1,5 @@
 module Motorsport.Chart.Common exposing
     ( Emphasis(..), chooseByEmphasis, emphasisRank, sortForDrawing
-    , LapWindow(..)
     , Dimensions, Scales, axisPadding, xContinuousScale
     , svg, renderLine
     , axisStyle, lapGridLines, lapAxis, yAxis
@@ -12,7 +11,6 @@ history charts: the types they draw against, the polyline renderer, the axis and
 grid drawing, and the outlier statistics.
 
 @docs Emphasis, chooseByEmphasis, emphasisRank, sortForDrawing
-@docs LapWindow
 @docs Dimensions, Scales, axisPadding, xContinuousScale
 @docs svg, renderLine
 @docs axisStyle, lapGridLines, lapAxis, yAxis
@@ -82,19 +80,6 @@ sortForDrawing : (a -> Emphasis) -> (a -> Maybe Int) -> List a -> List a
 sortForDrawing toEmphasis toLatestPosition =
     List.sortBy
         (\s -> ( emphasisRank (toEmphasis s), negate (Maybe.withDefault 9999 (toLatestPosition s)) ))
-
-
-
--- Lap window
-
-
-{-| How to slice the lap column. `Recent` is a window anchored at the target
-car's current lap, which keeps stale laps of retired or far-behind neighbours
-out of the baseline average; `Range` is a fixed `(minLap, maxLap)`.
--}
-type LapWindow
-    = Recent Int
-    | Range ( Int, Int )
 
 
 

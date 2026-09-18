@@ -17,7 +17,7 @@ car detail compares it against, so `findNeighbors` is exposed for that.
 import Dict
 import Html exposing (Html, text)
 import List.Extra
-import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
+import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
@@ -67,14 +67,19 @@ view lapHistory allCars item =
         currentLap =
             item.standing.lapsCompleted
 
+        -- Anchored at the focused car's current lap, which keeps stale laps of
+        -- retired or far-behind neighbours out of the baseline average.
+        window =
+            ( currentLap - recentLapCount, currentLap )
+
         aheadLines =
-            neighbors.ahead |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
+            neighbors.ahead |> List.map (GapChart.carLine lapHistory window Related)
 
         behindLines =
-            neighbors.behind |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
+            neighbors.behind |> List.map (GapChart.carLine lapHistory window Related)
 
         focusedLine =
-            GapChart.carLine lapHistory (Recent currentLap) Focused item
+            GapChart.carLine lapHistory window Focused item
 
         -- Display the nearest rival on each side plus the focused car
         -- (ahead → focused → behind); missing neighbors are dropped.
@@ -115,6 +120,14 @@ view lapHistory allCars item =
 
         _ ->
             text ""
+
+
+{-| How many laps back the card reaches. A card is a thumbnail of the last
+stretch of the race, not of the race.
+-}
+recentLapCount : Int
+recentLapCount =
+    20
 
 
 {-| Cars adjacent to the focused car in same-class order, held nearest-first with
