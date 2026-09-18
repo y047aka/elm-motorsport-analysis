@@ -128,8 +128,8 @@ laps it has run and not mostly blank. A card with no rival to compare against,
 or with too little of the focused car to draw a line from, is not drawn at all.
 
 -}
-gapSparkline : ( Int, Int ) -> LapHistory -> CarAt -> Rivals -> Html msg
-gapSparkline window lapHistory focused { reference, display } =
+gapSparkline : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
+gapSparkline window lapHistory { focused, reference, display } =
     let
         lineOf entry =
             carLine lapHistory

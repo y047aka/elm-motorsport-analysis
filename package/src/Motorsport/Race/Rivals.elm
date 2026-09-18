@@ -15,8 +15,9 @@ import List.Extra
 import Motorsport.Race.Snapshot exposing (CarAt)
 
 
-{-| `display` is the car itself and the in-class rival either side of it, in
-running order. `reference` is the same group widened to two rivals a side, which
+{-| `focused` is the car the group is built around, and the one a chart draws
+differently from the rest. `display` is it and the in-class rival either side of
+it, in running order. `reference` is the same group widened to two rivals a side, which
 only a chart baselining on the group reads, and only to average it.
 
 Baselining on exactly the cars drawn locks a relative-gap chart into a mirror
@@ -28,7 +29,8 @@ changes.
 
 -}
 type alias Rivals =
-    { display : List CarAt
+    { focused : CarAt
+    , display : List CarAt
     , reference : List CarAt
     }
 
@@ -60,11 +62,12 @@ around allCars item =
                 behind =
                     [ 1, 2 ] |> List.filterMap (\d -> at (i + d))
             in
-            { display =
+            { focused = item
+            , display =
                 List.filterMap identity
                     [ List.head ahead, Just item, List.head behind ]
             , reference = ahead ++ item :: behind
             }
 
         Nothing ->
-            { display = [ item ], reference = [ item ] }
+            { focused = item, display = [ item ], reference = [ item ] }

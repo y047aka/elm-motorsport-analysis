@@ -13,9 +13,7 @@ changing.
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import List.Extra
-import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
@@ -88,26 +86,41 @@ view config cars snapshot focused =
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )
-        , charts config lapHistory snapshot focused rivals
+        , charts config lapHistory snapshot rivals
         ]
+
+
+{-| What the three charts are all drawn from: which laps, whose laps, the field
+they stand in, and the cars the panel is comparing. Built once here so that the
+tabs switch the chart and nothing else about what is being shown.
+-}
+type alias Comparison =
+    { laps : ( Int, Int )
+    , lapHistory : LapHistory
+    , snapshot : Snapshot
+    , rivals : Rivals
+    }
 
 
 charts :
     { a | activeChart : Chart, onSelectChart : Chart -> msg, activeRange : LapWindow, onSelectRange : LapWindow -> msg }
     -> LapHistory
     -> Snapshot
-    -> CarAt
     -> Rivals
     -> Html msg
-charts config lapHistory snapshot focused rivals =
+charts config lapHistory snapshot rivals =
     let
-        range =
-            LapWindow.laps config.activeRange focused.metadata.class snapshot
+        comparison =
+            { laps = LapWindow.laps config.activeRange rivals.focused.metadata.class snapshot
+            , lapHistory = lapHistory
+            , snapshot = snapshot
+            , rivals = rivals
+            }
     in
     Widget.container "Rivals"
         (div [ class "grid gap-y-2" ]
-            [ chartTabs config range lapHistory snapshot focused rivals
-            , legend snapshot focused rivals.display
+            [ chartTabs config comparison
+            , legend snapshot rivals
             ]
         )
 
@@ -134,10 +147,10 @@ Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
 
 -}
-legend : Snapshot -> CarAt -> List CarAt -> Html msg
-legend snapshot focused rivals =
+legend : Snapshot -> Rivals -> Html msg
+legend snapshot { focused, display } =
     div [ class "grid gap-y-px" ]
-        (List.map (legendEntry snapshot focused) rivals)
+        (List.map (legendEntry snapshot focused) display)
 
 
 legendEntry : Snapshot -> CarAt -> CarAt -> Html msg
@@ -174,66 +187,16 @@ legendEntry snapshot focused item =
 
 chartTabs :
     { a | activeChart : Chart, onSelectChart : Chart -> msg, activeRange : LapWindow, onSelectRange : LapWindow -> msg }
-    -> ( Int, Int )
-    -> LapHistory
-    -> Snapshot
-    -> CarAt
-    -> Rivals
+    -> Comparison
     -> Html msg
-chartTabs config range lapHistory snapshot focused rivals =
+chartTabs config { laps, lapHistory, snapshot, rivals } =
     ChartTabs.chartTabs config.onSelectChart
         config.activeChart
         (ChartTabs.segmentedControl config.onSelectRange config.activeRange rangeOptions)
-        [ ( GapChart
-          , "Gap to avg"
-          , \() -> GapChart.gapChartView range lapHistory rivals
-          )
-        , ( PositionChart
-          , "Positions"
-          , \() ->
-                PositionProgression.view { width = 1000, height = 250 }
-                    snapshot
-                    { class = focused.metadata.class
-                    , highlighted = List.map (.metadata >> .carNumber) rivals.display
-                    , lapRange = range
-                    }
-          )
-        , ( DistributionChart
-          , "Distribution"
-          , \() -> distribution range lapHistory focused rivals.display
-          )
+        [ ( GapChart, "Gap to avg", \() -> GapChart.gapChartView laps lapHistory rivals )
+        , ( PositionChart, "Positions", \() -> PositionProgression.view laps snapshot rivals )
+        , ( DistributionChart, "Distribution", \() -> Distribution.view laps lapHistory rivals )
         ]
-
-
-{-| The three cars' laps on one scale, the selected car's curve the emphasised
-one: how quick a car is reads only against what the cars it is racing are doing.
--}
-distribution : ( Int, Int ) -> LapHistory -> CarAt -> List CarAt -> Html msg
-distribution range lapHistory focused rivals =
-    let
-        series =
-            rivals
-                |> List.map
-                    (\item ->
-                        let
-                            own =
-                                Distribution.seriesOf lapHistory range item
-                        in
-                        if item.metadata.carNumber == focused.metadata.carNumber then
-                            own
-
-                        else
-                            { own | emphasis = Related }
-                    )
-    in
-    case Distribution.scaleOf series of
-        Just { domain, maxDensity } ->
-            LapTimeDistribution.view
-                { width = 1000, height = 250, domain = domain, maxDensity = maxDensity }
-                series
-
-        Nothing ->
-            Widget.emptyState "No laps to compare"
 
 
 {-| How far up or down the road a rival is: the intervals between the two cars,

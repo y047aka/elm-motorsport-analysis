@@ -39,7 +39,6 @@ view lapHistory allCars item =
     in
     GapChart.gapSparkline ( currentLap - recentLapCount, currentLap )
         lapHistory
-        item
         (Rivals.around allCars item)
 
 

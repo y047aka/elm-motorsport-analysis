@@ -6,6 +6,7 @@ import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
+import Motorsport.Race.Rivals exposing (Rivals)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
 import Motorsport.Widget as Widget
@@ -13,24 +14,35 @@ import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
 
 
-{-| `lapRange` is the stretch of the race to draw, which the caller sets for
-every chart of the panel at once rather than each of them choosing its own.
+{-| The whole class over the given laps, the cars of `rivals` picked out of it.
+
+Unlike the other charts of the panel, the population is the class rather than
+the rivals: a car's position only means anything against everyone it could have
+gained or lost one to.
+
 -}
-view : { width : Float, height : Float } -> Snapshot -> { class : Class, highlighted : List String, lapRange : ( Int, Int ) } -> Html msg
-view size snapshot target =
-    case buildClassProgressionData snapshot target of
+view : ( Int, Int ) -> Snapshot -> Rivals -> Html msg
+view range snapshot rivals =
+    case buildClassProgressionData range snapshot rivals of
         Ok series ->
-            positionProgressionChart size series
+            positionProgressionChart consolidated series
 
         Err message ->
             Widget.emptyState message
 
 
+{-| The size the panel's full-width charts share.
+-}
+consolidated : { width : Float, height : Float }
+consolidated =
+    { width = 1000, height = 250 }
+
+
 {-| Builds the position points inside the range for each car in the class,
 keeping only cars with two or more points.
 -}
-classPositionPoints : Snapshot -> Class -> ( Int, Int ) -> List ( CarAt, List PositionPoint )
-classPositionPoints snapshot class range =
+classPositionPoints : ( Int, Int ) -> Snapshot -> Class -> List ( CarAt, List PositionPoint )
+classPositionPoints range snapshot class =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -40,11 +52,14 @@ classPositionPoints snapshot class range =
         |> List.filter (\( _, points ) -> List.length points >= 2)
 
 
-buildClassProgressionData : Snapshot -> { class : Class, highlighted : List String, lapRange : ( Int, Int ) } -> Result String (List PositionSeries)
-buildClassProgressionData snapshot { class, highlighted, lapRange } =
+buildClassProgressionData : ( Int, Int ) -> Snapshot -> Rivals -> Result String (List PositionSeries)
+buildClassProgressionData range snapshot { focused, display } =
     let
+        highlighted =
+            display |> List.map (.metadata >> .carNumber)
+
         series =
-            classPositionPoints snapshot class lapRange
+            classPositionPoints range snapshot focused.metadata.class
                 |> List.map
                     (\( item, points ) ->
                         { points = points
