@@ -66,9 +66,11 @@ Subtracting the group average — rather than plotting absolute lap time —
 magnifies the pace differences between nearby cars. Ahead of the baseline goes
 up and behind it goes down, so a line's vertical motion reads as relative pace.
 
-The rival either side is drawn in full and labelled, the pair beyond them held
-back: the fight is what the chart is for, and the cars closing on it are context
-rather than a fourth and fifth thing to follow.
+The rival either side is drawn in full and labelled, the pair beyond them drawn
+muted -- grey and faint, with no end label: the fight is what the chart is for,
+and in the manufacturer colours the outer two read as two more cars to follow
+rather than as the ground being made up behind. It is the treatment the position
+chart gives the rest of the class, for the same reason.
 
 -}
 gapChartView : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
@@ -85,7 +87,7 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
                     Focused
 
                  else
-                    Related
+                    Muted
                 )
                 entry
 
