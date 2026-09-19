@@ -23,7 +23,6 @@ import Motorsport.Internal.Statistics exposing (iqrFences)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
-import Motorsport.Widget as Widget
 import Scale
 import Svg exposing (Svg, line)
 import Svg.Attributes as SvgAttr
@@ -72,8 +71,11 @@ The rival either side is drawn in full and labelled, the pair beyond them grey
 and faint with no end label -- the treatment the position chart gives the rest
 of its class.
 
+`Nothing` where the range holds none of the laps the chart would draw; what
+stands in its place is the caller's.
+
 -}
-gapChartView : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
+gapChartView : ( Int, Int ) -> LapHistory -> Rivals -> Maybe (Html msg)
 gapChartView ( minLap, maxLap ) lapHistory rivals =
     let
         fighting =
@@ -109,21 +111,23 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
     -- rivals it is ranked among, while the ring beyond them is still running
     -- and would carry a guard that only asked whether a baseline exists.
     if List.all (.points >> List.isEmpty) drawn then
-        Widget.emptyState "No laps in this range"
+        Nothing
 
     else
-        gapChartViewWith { dimensions = consolidated, showAxes = True }
-            ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
-            { scaleOn =
-                -- The fight owns the frame, unless the range has left none of
-                -- it to draw and the context is all there is.
-                if List.all (.points >> List.isEmpty) fight then
-                    drawn
+        Just
+            (gapChartViewWith { dimensions = consolidated, showAxes = True }
+                ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
+                { scaleOn =
+                    -- The fight owns the frame, unless the range has left none
+                    -- of it to draw and the context is all there is.
+                    if List.all (.points >> List.isEmpty) fight then
+                        drawn
 
-                else
-                    fight
-            , draw = drawn
-            }
+                    else
+                        fight
+                , draw = drawn
+                }
+            )
 
 
 {-| How far out the full chart reaches, in rivals a side.

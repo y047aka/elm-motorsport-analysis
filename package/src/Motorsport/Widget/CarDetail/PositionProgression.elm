@@ -15,7 +15,6 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
-import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
 
@@ -26,15 +25,18 @@ Unlike the other charts of the panel, the population is the class rather than
 the rivals: a car's position only means anything against everyone it could have
 gained or lost one to.
 
--}
-view : ( Int, Int ) -> Snapshot -> Rivals -> Html msg
-view range snapshot rivals =
-    case buildClassProgressionData range snapshot rivals of
-        Ok series ->
-            positionProgressionChart consolidated series
+`Nothing` where the range leaves no car of the class with a line to draw; what
+stands in its place is the caller's.
 
-        Err message ->
-            Widget.emptyState message
+-}
+view : ( Int, Int ) -> Snapshot -> Rivals -> Maybe (Html msg)
+view range snapshot rivals =
+    case classProgressionSeries range snapshot rivals of
+        [] ->
+            Nothing
+
+        series ->
+            Just (positionProgressionChart consolidated series)
 
 
 {-| The size the panel's full-width charts share.
@@ -58,33 +60,26 @@ classPositionPoints range snapshot class =
         |> List.filter (\( _, points ) -> List.length points >= 2)
 
 
-buildClassProgressionData : ( Int, Int ) -> Snapshot -> Rivals -> Result String (List PositionSeries)
-buildClassProgressionData range snapshot rivals =
+classProgressionSeries : ( Int, Int ) -> Snapshot -> Rivals -> List PositionSeries
+classProgressionSeries range snapshot rivals =
     let
         highlighted =
             Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
-
-        series =
-            classPositionPoints range snapshot (Rivals.focused rivals).metadata.class
-                |> List.map
-                    (\( item, points ) ->
-                        { points = points
-                        , color = item.metadata.manufacturer.color
-                        , carNumber = item.metadata.carNumber
-                        , emphasis =
-                            if List.member item.metadata.carNumber highlighted then
-                                Focused
-
-                            else
-                                Muted
-                        }
-                    )
     in
-    if List.isEmpty series then
-        Err "Lap chart will appear as more laps are completed."
+    classPositionPoints range snapshot (Rivals.focused rivals).metadata.class
+        |> List.map
+            (\( item, points ) ->
+                { points = points
+                , color = item.metadata.manufacturer.color
+                , carNumber = item.metadata.carNumber
+                , emphasis =
+                    if List.member item.metadata.carNumber highlighted then
+                        Focused
 
-    else
-        Ok series
+                    else
+                        Muted
+                }
+            )
 
 
 type alias PositionPoint =

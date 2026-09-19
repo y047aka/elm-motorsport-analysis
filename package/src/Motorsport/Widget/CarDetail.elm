@@ -32,13 +32,13 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Widget as Widget
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
 import Motorsport.Widget.CarDetail.Header as Header
 import Motorsport.Widget.CarDetail.LapTimes as LapTimes
 import Motorsport.Widget.CarDetail.PositionProgression as PositionProgression
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
+import Motorsport.Widget.Common as Widget
 import Motorsport.Widget.Distribution as Distribution
 
 
@@ -230,14 +230,24 @@ legendEntry snapshot focused item =
         ]
 
 
+{-| One wording for an empty chart, whatever tab is showing. The three run out
+of laps for reasons of their own -- a stretch holding none of the cars drawn, a
+class with no line to draw, no lap time to describe -- and a wording apiece reads
+as the tabs disagreeing about the race.
+-}
 chartTabs : State -> Comparison -> Html Msg
 chartTabs state { laps, lapHistory, snapshot, rivals } =
+    let
+        orEmptyState : Maybe (Html Msg) -> Html Msg
+        orEmptyState =
+            Maybe.withDefault (Widget.emptyState "No laps to compare yet")
+    in
     ChartTabs.chartTabs SelectedChart
         state.chart
         (ChartTabs.segmentedControl SelectedRange state.range rangeOptions)
-        [ ( GapChart, "Gap to avg", \() -> GapChart.gapChartView laps lapHistory rivals )
-        , ( PositionChart, "Positions", \() -> PositionProgression.view laps snapshot rivals )
-        , ( DistributionChart, "Distribution", \() -> Distribution.view laps lapHistory rivals )
+        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView laps lapHistory rivals) )
+        , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view laps snapshot rivals) )
+        , ( DistributionChart, "Distribution", \() -> orEmptyState (Distribution.view laps lapHistory rivals) )
         ]
 
 
