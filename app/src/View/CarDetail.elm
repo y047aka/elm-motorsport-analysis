@@ -17,16 +17,13 @@ import Motorsport.Widget.CarDetail as CarDetailWidget
 
 
 view :
-    { activeChart : CarDetailWidget.Chart
-    , onSelectChart : CarDetailWidget.Chart -> msg
-    , lapHistoryOpen : Bool
-    , onToggleLapHistory : msg
-    }
+    (CarDetailWidget.Msg -> msg)
+    -> CarDetailWidget.Model
     -> List Car
     -> Snapshot
     -> Maybe CarAt
     -> Html msg
-view config cars snapshot focusedCar =
+view toMsg state cars snapshot focusedCar =
     div [ Attributes.id elementId ]
         [ case focusedCar of
             Nothing ->
@@ -35,15 +32,7 @@ view config cars snapshot focusedCar =
                 text ""
 
             Just focused ->
-                CarDetailWidget.view
-                    { activeChart = config.activeChart
-                    , onSelectChart = config.onSelectChart
-                    , lapHistoryOpen = config.lapHistoryOpen
-                    , onToggleLapHistory = config.onToggleLapHistory
-                    }
-                    cars
-                    snapshot
-                    focused
+                CarDetailWidget.view toMsg state cars snapshot focused
         ]
 
 

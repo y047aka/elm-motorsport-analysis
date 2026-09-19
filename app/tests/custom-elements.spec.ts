@@ -109,7 +109,7 @@ test('a circular button rounds fully and a rectangular one does not', async ({ p
   expect(await classFor(page, 'shadcn-button', { ...props, shape: 'default' })).not.toContain('rounded-full');
 });
 
-test('a press reports the index Elm listens for', async ({ page }) => {
+test('a press reports what Elm listens for, and a disabled button reports nothing', async ({ page }) => {
   const events = await page.evaluate(async () => {
     const seen: Array<[string, unknown]> = [];
 
@@ -119,28 +119,19 @@ test('a press reports the index Elm listens for', async ({ page }) => {
     document.body.appendChild(button);
     button.querySelector('button')!.click();
 
-    const group = document.createElement('shadcn-button-group');
-    (group as any).items = [
-      { label: 'a', disabled: false },
-      { label: 'b', disabled: false },
-      { label: 'c', disabled: true },
-    ];
-    group.addEventListener('button-group-press', (e) => seen.push(['button-group-press', (e as CustomEvent).detail]));
-    document.body.appendChild(group);
-    const buttons = [...group.querySelectorAll('button')];
-    buttons[1].click();
-    // A disabled item reports nothing, so Elm never sees a press it disabled.
-    buttons[2].click();
+    const disabled = document.createElement('shadcn-button');
+    Object.assign(disabled, { label: 'press', variant: 'default', size: 'default', shape: 'default', disabled: true });
+    disabled.addEventListener('button-press', (e) => seen.push(['disabled', (e as CustomEvent).detail]));
+    document.body.appendChild(disabled);
+    disabled.querySelector('button')!.click();
 
     button.remove();
-    group.remove();
+    disabled.remove();
     return seen;
   });
 
-  expect(events).toEqual([
-    ['button-press', null],
-    ['button-group-press', 1],
-  ]);
+  // A disabled button reports nothing, so Elm never sees a press it disabled.
+  expect(events).toEqual([['button-press', null]]);
 });
 
 test('the toggle group reports a selection and swallows a clearing press', async ({ page }) => {

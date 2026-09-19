@@ -51,8 +51,7 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , detailCarNumber : Maybe String
-    , detailChart : CarDetailWidget.Chart
-    , lapHistoryOpen : Bool
+    , detailState : CarDetailWidget.Model
     }
 
 
@@ -72,8 +71,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , detailCarNumber = Nothing
-      , detailChart = CarDetailWidget.GapChart
-      , lapHistoryOpen = False
+      , detailState = CarDetailWidget.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -91,8 +89,7 @@ type Msg
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | SelectDetailCar String
-    | SelectDetailChart CarDetailWidget.Chart
-    | ToggleLapHistory
+    | CarDetailMsg CarDetailWidget.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -121,11 +118,10 @@ update msg m =
         SelectDetailCar carNumber ->
             ( { m | detailCarNumber = Just carNumber }, Effect.none )
 
-        SelectDetailChart chart ->
-            ( { m | detailChart = chart }, Effect.none )
-
-        ToggleLapHistory ->
-            ( { m | lapHistoryOpen = not m.lapHistoryOpen }, Effect.none )
+        CarDetailMsg detailMsg ->
+            ( { m | detailState = CarDetailWidget.update detailMsg m.detailState }
+            , Effect.none
+            )
 
 
 
@@ -237,12 +233,8 @@ trackerView track timeline snapshot replay m =
                     -- the box that scrolls has to be a flex child of the card.
                     [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                         [ Card.content []
-                            [ CarDetail.view
-                                { activeChart = m.detailChart
-                                , onSelectChart = SelectDetailChart
-                                , lapHistoryOpen = m.lapHistoryOpen
-                                , onToggleLapHistory = ToggleLapHistory
-                                }
+                            [ CarDetail.view CarDetailMsg
+                                m.detailState
                                 replay.race.cars
                                 snapshot
                                 focused
@@ -282,7 +274,7 @@ trackerView track timeline snapshot replay m =
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
             ]
-        , standingsPanel m.standingsTab m snapshot
+        , standingsPanel m.standingsTab m replay snapshot
         , standingsPopover
         ]
 
@@ -301,13 +293,13 @@ focusedCar snapshot m =
             Snapshot.leader snapshot
 
 
-standingsPanel : StandingsTab -> Model -> Snapshot -> Html Msg
-standingsPanel tab m snapshot =
+standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg
+standingsPanel tab m replay snapshot =
     let
         body =
             case tab of
                 LeaderboardTab ->
-                    Leaderboard.view leaderboardConfig m.leaderboardState snapshot
+                    Leaderboard.view (leaderboardConfig replay.race.cars) m.leaderboardState snapshot
 
                 CardsTab ->
                     CarCardList.view snapshot
@@ -439,15 +431,33 @@ eventTypeToString eventType =
             "Checkered Flag"
 
 
-leaderboardConfig : Leaderboard.Config CarAt Msg
-leaderboardConfig =
+leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
+leaderboardConfig cars =
+    let
+        -- Worked out once rather than per row: where a car started is fixed for
+        -- the whole race, and the table is rebuilt on every frame of playback,
+        -- so a scan of the field per row is the same answer found afresh sixty
+        -- times a second.
+        startPositions : Dict CarNumber Int
+        startPositions =
+            -- foldr, so that where the source data has two cars under one
+            -- number the one running ahead wins, as the scan this replaces did
+            -- and as `Snapshot.get` does.
+            cars
+                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
+
+        startPositionOf : CarAt -> Maybe Int
+        startPositionOf item =
+            Dict.get item.metadata.carNumber startPositions
+    in
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
-        [ Leaderboard.intColumn { label = "", getter = .standing >> .position }
-        , Leaderboard.carNumberColumn_Wec { getter = .metadata }
+        [ Leaderboard.carNumberColumn_Wec { getter = .metadata }
         , Leaderboard.driverAndTeamColumn_Wec
             { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
+        , Leaderboard.positionChangeColumn
+            { getter = \item -> { startPosition = startPositionOf item, position = item.standing.position } }
         , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
         , Leaderboard.customColumn
             { label = "Gap"

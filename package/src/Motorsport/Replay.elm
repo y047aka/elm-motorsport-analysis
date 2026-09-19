@@ -65,9 +65,8 @@ type Msg
     | Pause Posix
     | Tick Posix
     | SkipTime Duration
+    | BackTime Duration
     | SetCount Int
-    | NextLap
-    | PreviousLap
     | SetPlaybackSpeed Clock.PlaybackSpeed
 
 
@@ -90,31 +89,13 @@ update msg m =
             -- The clock clamps: more than there is left lands on the end.
             moveTo (Instant.add duration (Clock.getElapsed m.playback)) m
 
+        BackTime duration ->
+            -- And `subtract` clamps the other way, at the start of the race.
+            moveTo (Instant.subtract duration (Clock.getElapsed m.playback)) m
+
         SetCount wanted ->
             if wanted >= 0 && wanted <= m.race.lapTotal then
                 moveToLap wanted m
-
-            else
-                m
-
-        NextLap ->
-            let
-                current =
-                    lapCount m
-            in
-            if current < m.race.lapTotal then
-                moveToLap (current + 1) m
-
-            else
-                m
-
-        PreviousLap ->
-            let
-                current =
-                    lapCount m
-            in
-            if current > 0 then
-                moveToLap (current - 1) m
 
             else
                 m

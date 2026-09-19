@@ -1,10 +1,16 @@
-module Motorsport.Widget.CarDetail.PositionProgression exposing (lapRange, view)
+module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
+
+{-| The place each car of a class has held, lap by lap.
+
+@docs view
+
+-}
 
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
 import List.Extra
+import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
-import Motorsport.Instant as Instant
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -14,54 +20,52 @@ import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
 
 
-view : { width : Float, height : Float } -> Snapshot -> { class : Class, highlighted : List String } -> Html msg
-view size snapshot target =
-    case buildClassProgressionData snapshot target of
+{-| The whole class over the given laps, the cars of `rivals` picked out of it.
+
+Unlike the other charts of the panel, the population is the class rather than
+the rivals: a car's position only means anything against everyone it could have
+gained or lost one to.
+
+-}
+view : ( Int, Int ) -> Snapshot -> Rivals -> Html msg
+view range snapshot rivals =
+    case buildClassProgressionData range snapshot rivals of
         Ok series ->
-            positionProgressionChart size series
+            positionProgressionChart consolidated series
 
         Err message ->
             Widget.emptyState message
 
 
-{-| The lap-number range `(minLap, maxLap)` the position-history chart currently
-draws. Shared so the sparkline can be drawn over the same range (X axis). When there
-is nothing to display, returns `Nothing`. Computed with the same threshold (the
-recent window) and the same point-extraction condition as the chart itself.
+{-| The size the panel's full-width charts share.
 -}
-lapRange : Snapshot -> Class -> Maybe ( Int, Int )
-lapRange snapshot class =
-    let
-        lapNumbers =
-            classPositionPoints snapshot class
-                |> List.concatMap (Tuple.second >> List.map .lapNumber)
-    in
-    Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
+consolidated : { width : Float, height : Float }
+consolidated =
+    { width = 1000, height = 250 }
 
 
-{-| Builds the "position points past the threshold" for each car in the class,
-keeping only cars with two or more points. Centralizes the point-extraction
-condition here so the chart itself and `lapRange` share the same X axis.
+{-| Builds the position points inside the range for each car in the class,
+keeping only cars with two or more points.
 -}
-classPositionPoints : Snapshot -> Class -> List ( CarAt, List PositionPoint )
-classPositionPoints snapshot class =
+classPositionPoints : ( Int, Int ) -> Snapshot -> Class -> List ( CarAt, List PositionPoint )
+classPositionPoints range snapshot class =
     let
-        lapThreshold =
-            calculateLapThreshold snapshot
-
         lapHistory =
             Snapshot.lapHistory snapshot
     in
     Snapshot.inClass class snapshot
-        |> List.map (\item -> ( item, buildPositionPoints lapThreshold (LapHistory.get item.metadata.carNumber lapHistory) ))
+        |> List.map (\item -> ( item, buildPositionPoints range (LapHistory.get item.metadata.carNumber lapHistory) ))
         |> List.filter (\( _, points ) -> List.length points >= 2)
 
 
-buildClassProgressionData : Snapshot -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
-buildClassProgressionData snapshot { class, highlighted } =
+buildClassProgressionData : ( Int, Int ) -> Snapshot -> Rivals -> Result String (List PositionSeries)
+buildClassProgressionData range snapshot rivals =
     let
+        highlighted =
+            Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
+
         series =
-            classPositionPoints snapshot class
+            classPositionPoints range snapshot (Rivals.focused rivals).metadata.class
                 |> List.map
                     (\( item, points ) ->
                         { points = points
@@ -110,27 +114,6 @@ lapExtent positions =
     )
 
 
-positionHistoryWindowMillis : Int
-positionHistoryWindowMillis =
-    6 * 60 * 60 * 1000
-
-
-calculateLapThreshold : Snapshot -> Int
-calculateLapThreshold snapshot =
-    let
-        currentRaceTime =
-            Snapshot.elapsed snapshot
-
-        timeThreshold =
-            Instant.subtract positionHistoryWindowMillis currentRaceTime
-    in
-    Snapshot.leader snapshot
-        |> Maybe.map (\l -> LapHistory.get l.metadata.carNumber (Snapshot.lapHistory snapshot))
-        |> Maybe.andThen (List.Extra.find (\lap -> Instant.compare lap.elapsed timeThreshold /= LT))
-        |> Maybe.map .lap
-        |> Maybe.withDefault 1
-
-
 positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
 positionProgressionChart size series =
     let
@@ -167,10 +150,10 @@ positionProgressionChart size series =
         )
 
 
-buildPositionPoints : Int -> List Lap -> List PositionPoint
-buildPositionPoints lapThreshold history =
+buildPositionPoints : ( Int, Int ) -> List Lap -> List PositionPoint
+buildPositionPoints ( minLap, maxLap ) history =
     history
-        |> List.filter (\lap -> lap.lap >= lapThreshold)
+        |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
         |> List.filterMap
             (\lap ->
                 lap.position |> Maybe.map (\pos -> { lapNumber = lap.lap, position = pos })

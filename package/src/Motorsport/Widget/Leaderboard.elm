@@ -7,8 +7,10 @@ module Motorsport.Widget.Leaderboard exposing
     , performanceColumn
     , carNumberColumn_Wec
     , driverAndTeamColumn_Wec
+    , positionChangeColumn
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
     , lastLapColumn_Wec, lastLapColumn_LeMans24h
+    , viewPositionChange
     , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
     , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
     , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -41,9 +43,11 @@ module Motorsport.Widget.Leaderboard exposing
 @docs performanceColumn
 @docs carNumberColumn_Wec
 @docs driverAndTeamColumn_Wec
+@docs positionChangeColumn
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
 @docs lastLapColumn_Wec, lastLapColumn_LeMans24h
 
+@docs viewPositionChange
 @docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
 @docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
 @docs viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -52,7 +56,7 @@ module Motorsport.Widget.Leaderboard exposing
 
 import DataView
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import Html exposing (Html, div, img, text)
+import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
@@ -316,6 +320,51 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
                         [ text (Driver.toInitialAndSurname driver) ]
                 )
                 metadata.drivers
+        ]
+
+
+{-| How far the car has moved from where it started, and no more than that.
+
+`startPosition` is the one a `Car` holds and a `CarAt` does not — the grid is
+estimated off the opening lap once and never moves again — so the caller looks
+it up by car number rather than the column doing it.
+
+-}
+positionChangeColumn : { getter : data -> { startPosition : Maybe Int, position : Int } } -> Column data msg
+positionChangeColumn { getter } =
+    { name = "Pos"
+    , view = getter >> Lazy.lazy viewPositionChange
+    , sorter = noSorter
+    , filter = DataView.noFiltering
+    }
+
+
+{-| The places gained or lost since the start: `↑2`, the arrow green for a gain
+and red for a loss and the number always grey, and a grey `-` for a car that has
+held its place or whose grid place is not known.
+-}
+viewPositionChange : { startPosition : Maybe Int, position : Int } -> Html msg
+viewPositionChange { startPosition, position } =
+    case Maybe.map (\start -> start - position) startPosition of
+        Just gained ->
+            if gained > 0 then
+                arrow "text-green-500" "↑" (String.fromInt gained)
+
+            else if gained < 0 then
+                arrow "text-red-500" "↓" (String.fromInt (abs gained))
+
+            else
+                text "-"
+
+        Nothing ->
+            text "-"
+
+
+arrow : String -> String -> String -> Html msg
+arrow look glyph number =
+    div [ class "text-center font-bold tabular-nums" ]
+        [ span [ class look ] [ text glyph ]
+        , text number
         ]
 
 

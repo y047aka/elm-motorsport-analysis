@@ -1,0 +1,79 @@
+module Motorsport.Analysis.Rivals exposing
+    ( Rivals
+    , around
+    , focused, nearest
+    )
+
+{-| The cars a car is racing, as rings around it: the rival either side is the
+fight, the ones beyond them are what is coming, and wider still is a population
+to measure the lot against.
+
+How far out to look is the reader's, not this module's -- a chart drawing lines
+wants fewer cars than one averaging a baseline -- so the rings come out through
+[`nearest`](#nearest) rather than as named groups.
+
+A reading under `Motorsport/Analysis/`: derived from a snapshot and the
+primitives, holding nothing of its own.
+
+@docs Rivals
+@docs around
+@docs focused, nearest
+
+-}
+
+import List.Extra
+import Motorsport.Race.Snapshot exposing (CarAt)
+
+
+type Rivals
+    = Rivals
+        { car : CarAt
+        , ahead : List CarAt
+        , behind : List CarAt
+        }
+
+
+{-| The cars either side of `item` in its own class, taken from the overall
+running order so the group follows the field as positions change. Filtering by
+class preserves that order, so what comes out is the in-class order as-is.
+
+At a class edge only the available rivals are there, and a car the list does not
+hold is its own only company.
+
+-}
+around : List CarAt -> CarAt -> Rivals
+around allCars item =
+    let
+        classmates =
+            allCars |> List.filter (\other -> other.metadata.class == item.metadata.class)
+    in
+    case List.Extra.findIndex (\other -> other.metadata.carNumber == item.metadata.carNumber) classmates of
+        Just i ->
+            Rivals
+                { car = item
+
+                -- The whole class either side, nearest first on both, so that
+                -- `nearest` takes a ring off the front of each and no ring a
+                -- caller asks for is quietly cut short.
+                , ahead = classmates |> List.take i |> List.reverse
+                , behind = classmates |> List.drop (i + 1)
+                }
+
+        Nothing ->
+            Rivals { car = item, ahead = [], behind = [] }
+
+
+{-| The car the group was built around, and the one a chart draws differently
+from the rest.
+-}
+focused : Rivals -> CarAt
+focused (Rivals r) =
+    r.car
+
+
+{-| The car and up to `count` rivals either side of it, in running order. Fewer
+where the class runs out, which at its edges is all of one side.
+-}
+nearest : Int -> Rivals -> List CarAt
+nearest count (Rivals r) =
+    List.reverse (List.take count r.ahead) ++ r.car :: List.take count r.behind

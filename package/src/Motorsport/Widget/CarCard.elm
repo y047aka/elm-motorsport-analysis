@@ -9,7 +9,6 @@ driving it, and how it is running.
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
-import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Race.LapHistory exposing (LapHistory)
@@ -42,7 +41,7 @@ view lapHistory allCars item =
                 , summaryStats item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item
-                , lapTimeDistribution lapHistory item
+                , Distribution.sparkline ( 1, item.standing.lapsCompleted ) lapHistory item
                 ]
             ]
         ]
@@ -63,26 +62,6 @@ portrait carImageUrl item =
                 , class "w-full h-10 object-contain"
                 ]
                 []
-
-        Nothing ->
-            text ""
-
-
-{-| The car's own laps, on a scale of their own: the cards beside it are the
-overall order rather than one class, and two classes on one lap-time axis
-flatten both.
--}
-lapTimeDistribution : LapHistory -> CarAt -> Html msg
-lapTimeDistribution lapHistory item =
-    let
-        series =
-            Distribution.seriesOf lapHistory ( 1, item.standing.lapsCompleted ) item
-    in
-    case Distribution.scaleOf [ series ] of
-        Just { domain, maxDensity } ->
-            LapTimeDistribution.view
-                { width = 220, height = 50, domain = domain, maxDensity = maxDensity }
-                [ series ]
 
         Nothing ->
             text ""

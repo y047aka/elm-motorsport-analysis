@@ -1,6 +1,5 @@
 import "./src/shadcn/badge-element";
 import "./src/shadcn/button-element";
-import "./src/shadcn/button-group-element";
 import "./src/shadcn/card-elements";
 import "./src/shadcn/slider-element";
 import "./src/shadcn/toggle-group-element";

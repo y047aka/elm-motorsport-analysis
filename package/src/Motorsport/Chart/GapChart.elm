@@ -1,17 +1,13 @@
-module Motorsport.Chart.GapChart exposing
-    ( CarLine, LinePoint, PlottedCar
-    , carLine, groupReferenceByLap, gapPoints, plotGaps
-    , consolidated, rivalStrip
-    , gapChartView, gapSparkline
-    )
+module Motorsport.Chart.GapChart exposing (gapChartView, gapSparkline)
 
 {-| The relative-gap chart: each car's cumulative time against the group
-average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or as an
-axis-less sparkline ([`gapSparkline`](#gapSparkline)).
+average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or at card
+size without them ([`gapSparkline`](#gapSparkline)).
 
-@docs CarLine, LinePoint, PlottedCar
-@docs carLine, groupReferenceByLap, gapPoints, plotGaps
-@docs consolidated, rivalStrip
+Both are given the cars as [`Rivals`](Motorsport-Analysis-Rivals) and take a
+wider ring of it to baseline on than they draw; how much wider, and why, is
+[`fightRivals`](#fightRivals).
+
 @docs gapChartView, gapSparkline
 
 -}
@@ -20,11 +16,14 @@ import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSiz
 import Dict exposing (Dict)
 import Html exposing (Html, text)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Internal.Statistics exposing (iqrFences)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Widget as Widget
 import Scale
 import Svg exposing (Svg, line)
 import Svg.Attributes as SvgAttr
@@ -52,22 +51,14 @@ type alias PlottedCar =
     }
 
 
-carLine : LapHistory -> LapWindow -> Emphasis -> CarAt -> CarLine
-carLine lapHistory window emphasis entry =
-    let
-        history =
-            LapHistory.get entry.metadata.carNumber lapHistory
-    in
+carLine : LapHistory -> ( Int, Int ) -> Emphasis -> CarAt -> CarLine
+carLine lapHistory ( minLap, maxLap ) emphasis entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
     , laps =
-        case window of
-            Recent currentLap ->
-                LapHistory.recentLaps { count = 20, currentLap = currentLap } history
-
-            Range ( minLap, maxLap ) ->
-                history |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
+        LapHistory.get entry.metadata.carNumber lapHistory
+            |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
     }
 
 
@@ -77,20 +68,93 @@ Subtracting the group average — rather than plotting absolute lap time —
 magnifies the pace differences between nearby cars. Ahead of the baseline goes
 up and behind it goes down, so a line's vertical motion reads as relative pace.
 
+The rival either side is drawn in full and labelled, the pair beyond them grey
+and faint with no end label -- the treatment the position chart gives the rest
+of its class.
+
 -}
-gapChartView : ( Int, Int ) -> LapHistory -> List CarAt -> Html msg
-gapChartView ( minLap, maxLap ) lapHistory entries =
+gapChartView : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
+gapChartView ( minLap, maxLap ) lapHistory rivals =
     let
-        carLines =
-            entries |> List.map (carLine lapHistory (Range ( minLap, maxLap )) Focused)
+        fighting =
+            Rivals.nearest fightRivals rivals
+                |> List.map (.metadata >> .carNumber)
+
+        lineOf entry =
+            carLine lapHistory
+                ( minLap, maxLap )
+                (if List.member entry.metadata.carNumber fighting then
+                    Focused
+
+                 else
+                    Muted
+                )
+                entry
+
+        referenceLines =
+            Rivals.nearest baselineRivals rivals
+                |> List.map (carLine lapHistory ( minLap, maxLap ) Focused)
+
+        drawn =
+            plotGaps
+                { reference = referenceLines
+                , display = Rivals.nearest drawnRivals rivals |> List.map lineOf
+                }
+
+        fight =
+            drawn |> List.filter (\plotted -> plotted.car.emphasis == Focused)
     in
-    if Dict.isEmpty (groupReferenceByLap carLines) then
-        text ""
+    -- The cars drawn, not the wider group they are baselined on: a car that
+    -- retired before the range began has nothing in it, and neither do the
+    -- rivals it is ranked among, while the ring beyond them is still running
+    -- and would carry a guard that only asked whether a baseline exists.
+    if List.all (.points >> List.isEmpty) drawn then
+        Widget.emptyState "No laps in this range"
 
     else
         gapChartViewWith { dimensions = consolidated, showAxes = True }
             ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
-            (plotGaps { reference = carLines, display = carLines })
+            { scaleOn =
+                -- The fight owns the frame, unless the range has left none of
+                -- it to draw and the context is all there is.
+                if List.all (.points >> List.isEmpty) fight then
+                    drawn
+
+                else
+                    fight
+            , draw = drawn
+            }
+
+
+{-| How far out the full chart reaches, in rivals a side.
+
+`drawnRivals` is one ring past the fight and no further: every extra line is one
+more to follow, and what the chart is read for is what two of them are doing to
+each other. The ring past the fight is drawn muted for the same reason, and the
+vertical band is taken off the fight alone so that it costs the fight no frame.
+
+`baselineRivals` goes two further again, because a baseline averaged from
+exactly the cars drawn against it locks them into a mirror image of one another
+-- the gaps sum to zero, so the outer lines can only move against each other.
+
+-}
+fightRivals : Int
+fightRivals =
+    1
+
+
+{-| See [`fightRivals`](#fightRivals).
+-}
+drawnRivals : Int
+drawnRivals =
+    2
+
+
+{-| See [`fightRivals`](#fightRivals).
+-}
+baselineRivals : Int
+baselineRivals =
+    4
 
 
 {-| The relative-gap point series, `cumulative time − baseline`. A lap with no
@@ -112,8 +176,8 @@ gapPoints referenceByLap laps =
 
 
 {-| Compute the baseline once from `reference`, then project each car of
-`display` onto it. The two sets are taken separately so that the populations can
-differ — the rival comparison baselines on up to 5 cars and shows 3.
+`display` onto it. The two are taken separately so that they can differ — see
+[`fightRivals`](#fightRivals).
 -}
 plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar
 plotGaps { reference, display } =
@@ -124,11 +188,68 @@ plotGaps { reference, display } =
     display |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
 
 
-{-| The same series without axes: only the polyline and the zero baseline.
+{-| The same series at card size and without axes: only the polylines and the
+zero baseline, and only `focused` drawn emphasised, the rivals beside it held
+back.
+
+The horizontal extent is the laps the focused car actually has inside `window`
+rather than the window itself, so a card of a car that has just come out is the
+laps it has run and not mostly blank. A card with no rival to compare against,
+or with too little of the focused car to draw a line from, is not drawn at all.
+
 -}
-gapSparkline : Dimensions -> ( Float, Float ) -> List PlottedCar -> Html msg
-gapSparkline dimensions range carsWithGaps =
-    gapChartViewWith { dimensions = dimensions, showAxes = False } range carsWithGaps
+gapSparkline : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
+gapSparkline window lapHistory rivals =
+    let
+        focused =
+            Rivals.focused rivals
+
+        -- A card has room for the fight and no more, and baselines a ring
+        -- wider for the reason `fightRivals` gives.
+        display =
+            Rivals.nearest 1 rivals
+
+        lineOf entry =
+            carLine lapHistory
+                window
+                (if entry.metadata.carNumber == focused.metadata.carNumber then
+                    Focused
+
+                 else
+                    Related
+                )
+                entry
+
+        referenceLines =
+            Rivals.nearest 2 rivals |> List.map lineOf
+
+        -- Blank carNumber to omit the end-of-line label on these narrow cards
+        -- (renderLine skips empty strings).
+        displayLines =
+            display
+                |> List.map lineOf
+                |> List.map (\line -> { line | carNumber = "" })
+
+        focusedLapNumbers =
+            carLine lapHistory window Focused focused
+                |> .laps
+                |> List.map (.lap >> toFloat)
+    in
+    case ( focusedLapNumbers, display, Dict.isEmpty (groupReferenceByLap referenceLines) ) of
+        ( _ :: _ :: _, _ :: _ :: _, False ) ->
+            gapChartViewWith { dimensions = rivalStrip, showAxes = False }
+                ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
+                , List.maximum focusedLapNumbers |> Maybe.withDefault 1
+                )
+                (let
+                    drawn =
+                        plotGaps { reference = referenceLines, display = displayLines }
+                 in
+                 { scaleOn = drawn, draw = drawn }
+                )
+
+        _ ->
+            text ""
 
 
 {-| What [`gapChartView`](#gapChartView) and [`gapSparkline`](#gapSparkline)
@@ -137,23 +258,23 @@ share; they differ only in their dimensions and in `showAxes`.
 gapChartViewWith :
     { dimensions : Dimensions, showAxes : Bool }
     -> ( Float, Float )
-    -> List PlottedCar
+    -> { scaleOn : List PlottedCar, draw : List PlottedCar }
     -> Html msg
-gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
+gapChartViewWith { dimensions, showAxes } ( minX, maxX ) { scaleOn, draw } =
     let
         { width, height, padding } =
             dimensions
 
         scales =
             { xScale = xContinuousScale dimensions ( minX, maxX )
-            , yScale = gapYScale dimensions carsWithGaps
+            , yScale = gapYScale dimensions scaleOn
             }
 
         orderedCars =
             sortForDrawing
                 (.car >> .emphasis)
                 (.car >> .laps >> List.Extra.last >> Maybe.andThen .position)
-                carsWithGaps
+                draw
     in
     svg { width = width, height = height }
         (gapDecorations { showAxes = showAxes } dimensions scales ( minX, maxX )
@@ -164,6 +285,12 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
 
 {-| The vertical scale. Always includes 0, and bounds the range on the IQR band
 so that the outliers — pit laps, mostly — are clipped rather than drawn to.
+
+It is taken from `scaleOn` rather than from everything drawn, so that a car kept
+in the picture for context cannot cost the cars being compared the frame. A
+rival two places away can be a pit stop or a lap adrift, which on a cumulative
+scale is far enough to flatten the fight to a line.
+
 -}
 gapYScale : Dimensions -> List PlottedCar -> Scale.ContinuousScale Float
 gapYScale { height, padding } carsWithGaps =

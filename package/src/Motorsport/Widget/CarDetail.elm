@@ -1,4 +1,8 @@
-module Motorsport.Widget.CarDetail exposing (Chart(..), view)
+module Motorsport.Widget.CarDetail exposing
+    ( Model, init
+    , Msg, update
+    , view
+    )
 
 {-| Everything the race says about one car, drawn as plain inline content.
 
@@ -6,16 +10,22 @@ The car is the caller's selection; the rivals it is measured against are read
 off the field around it, so the panel follows the race without the selection
 changing.
 
-@docs Chart, view
+Which of them is on show is the panel's own, though, and is held here rather
+than by the page: the chart, the stretch of the race it covers and whether the
+lap history is open say nothing about the race and nothing else reads them.
+
+@docs Model, init
+@docs Msg, update
+@docs view
 
 -}
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import List.Extra
-import Motorsport.Chart.Common exposing (Emphasis(..))
+import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
+import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
@@ -30,13 +40,36 @@ import Motorsport.Widget.CarDetail.PositionProgression as PositionProgression
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Distribution as Distribution
-import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
+
+
+{-| What the panel is showing, which nothing outside it reads.
+-}
+type Model
+    = Model State
+
+
+type alias State =
+    { chart : Chart
+    , range : LapWindow
+    , lapHistoryOpen : Bool
+    }
+
+
+init : Model
+init =
+    Model
+        { chart = GapChart
+        , range = LapWindow.WholeRace
+        , lapHistoryOpen = False
+        }
 
 
 {-| The race so far as the car ran it among its rivals, one view at a time.
 
-Every one of them draws the cars the legend under it names, which is what keeps
-them one group: the car's own laps are not a comparison and are read where its
+The legend beneath them names the cars the panel is comparing, and all three
+draw those in full. What each puts behind them is its own: the gap chart adds
+the pair beyond the fight, the position chart the whole class, the distribution
+nothing at all. The car's own laps are not a comparison and are read where its
 other lap times are.
 
 -}
@@ -46,23 +79,39 @@ type Chart
     | DistributionChart
 
 
-view :
-    { activeChart : Chart
-    , onSelectChart : Chart -> msg
-    , lapHistoryOpen : Bool
-    , onToggleLapHistory : msg
-    }
-    -> List Car
-    -> Snapshot
-    -> CarAt
-    -> Html msg
-view config cars snapshot focused =
+type Msg
+    = SelectedChart Chart
+    | SelectedRange LapWindow
+    | ToggledLapHistory
+
+
+update : Msg -> Model -> Model
+update msg (Model state) =
+    Model <|
+        case msg of
+            SelectedChart chart ->
+                { state | chart = chart }
+
+            SelectedRange range ->
+                { state | range = range }
+
+            ToggledLapHistory ->
+                { state | lapHistoryOpen = not state.lapHistoryOpen }
+
+
+view : (Msg -> msg) -> Model -> List Car -> Snapshot -> CarAt -> Html msg
+view toMsg (Model state) cars snapshot focused =
+    Html.map toMsg (panel state cars snapshot focused)
+
+
+panel : State -> List Car -> Snapshot -> CarAt -> Html Msg
+panel state cars snapshot focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
 
         rivals =
-            neighborsOf snapshot focused
+            rivalsOf snapshot focused
     in
     div [ class "grid gap-y-3" ]
         [ Header.view
@@ -73,8 +122,8 @@ view config cars snapshot focused =
         , Widget.container "Lap times"
             (LapTimes.view
                 { bestTimes = Snapshot.bestTimes snapshot
-                , historyOpen = config.lapHistoryOpen
-                , onToggleHistory = config.onToggleLapHistory
+                , historyOpen = state.lapHistoryOpen
+                , onToggleHistory = ToggledLapHistory
                 }
                 (lapsOf cars focused)
                 focused
@@ -85,41 +134,68 @@ view config cars snapshot focused =
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )
-        , charts config lapHistory snapshot focused rivals
+        , charts state lapHistory snapshot rivals
         ]
 
 
-charts :
-    { a | activeChart : Chart, onSelectChart : Chart -> msg }
-    -> LapHistory
-    -> Snapshot
-    -> CarAt
-    -> List CarAt
-    -> Html msg
-charts config lapHistory snapshot focused rivals =
+{-| What the three charts are all drawn from, built once here so that the tabs
+switch the chart and nothing else about what is being shown.
+-}
+type alias Comparison =
+    { laps : ( Int, Int )
+    , lapHistory : LapHistory
+    , snapshot : Snapshot
+    , rivals : Rivals
+    }
+
+
+charts : State -> LapHistory -> Snapshot -> Rivals -> Html Msg
+charts state lapHistory snapshot rivals =
     let
-        lapRange =
-            PositionProgression.lapRange snapshot focused.metadata.class
+        comparison =
+            { laps = LapWindow.laps state.range (Rivals.focused rivals).metadata.class snapshot
+            , lapHistory = lapHistory
+            , snapshot = snapshot
+            , rivals = rivals
+            }
     in
     Widget.container "Rivals"
         (div [ class "grid gap-y-2" ]
-            [ chartTabs config lapRange lapHistory snapshot focused rivals
-            , legend snapshot focused rivals
+            [ chartTabs state comparison
+            , legend snapshot rivals
             ]
         )
 
 
-{-| Which car each line of the chart above is, in running order, and how far up
-or down the road each of them is, which is what the lines are about.
+{-| The stretches of the race on offer, in the order the toggle draws them.
+
+One setting for all three charts rather than one each: only one of them is
+showing at a time, and a range that changed as the tabs did would read as the
+chart changing.
+
+-}
+rangeOptions : List ( LapWindow, String )
+rangeOptions =
+    [ ( LapWindow.Recent (90 * 60 * 1000), "Last 1.5h" )
+    , ( LapWindow.Recent (3 * 60 * 60 * 1000), "Last 3h" )
+    , ( LapWindow.WholeRace, "All" )
+    ]
+
+
+{-| The cars the panel is comparing, in running order, and how far up or down
+the road each of them is, which is what the charts above are drawn to show.
+Only these are named, whatever else a chart draws behind them.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
 
 -}
-legend : Snapshot -> CarAt -> List CarAt -> Html msg
-legend snapshot focused rivals =
+legend : Snapshot -> Rivals -> Html msg
+legend snapshot rivals =
     div [ class "grid gap-y-px" ]
-        (List.map (legendEntry snapshot focused) rivals)
+        (Rivals.nearest 1 rivals
+            |> List.map (legendEntry snapshot (Rivals.focused rivals))
+        )
 
 
 legendEntry : Snapshot -> CarAt -> CarAt -> Html msg
@@ -154,72 +230,15 @@ legendEntry snapshot focused item =
         ]
 
 
-chartTabs :
-    { a | activeChart : Chart, onSelectChart : Chart -> msg }
-    -> Maybe ( Int, Int )
-    -> LapHistory
-    -> Snapshot
-    -> CarAt
-    -> List CarAt
-    -> Html msg
-chartTabs config lapRange lapHistory snapshot focused rivals =
-    ChartTabs.chartTabs config.onSelectChart
-        config.activeChart
-        [ ( GapChart
-          , "Gap to avg"
-          , \() ->
-                case lapRange of
-                    Just range ->
-                        GapChart.gapChartView range lapHistory rivals
-
-                    Nothing ->
-                        text ""
-          )
-        , ( PositionChart
-          , "Positions"
-          , \() ->
-                PositionProgression.view { width = 1000, height = 250 }
-                    snapshot
-                    { class = focused.metadata.class
-                    , highlighted = List.map (.metadata >> .carNumber) rivals
-                    }
-          )
-        , ( DistributionChart
-          , "Distribution"
-          , \() -> distribution lapHistory focused rivals
-          )
+chartTabs : State -> Comparison -> Html Msg
+chartTabs state { laps, lapHistory, snapshot, rivals } =
+    ChartTabs.chartTabs SelectedChart
+        state.chart
+        (ChartTabs.segmentedControl SelectedRange state.range rangeOptions)
+        [ ( GapChart, "Gap to avg", \() -> GapChart.gapChartView laps lapHistory rivals )
+        , ( PositionChart, "Positions", \() -> PositionProgression.view laps snapshot rivals )
+        , ( DistributionChart, "Distribution", \() -> Distribution.view laps lapHistory rivals )
         ]
-
-
-{-| The three cars' laps on one scale, the selected car's curve the emphasised
-one: how quick a car is reads only against what the cars it is racing are doing.
--}
-distribution : LapHistory -> CarAt -> List CarAt -> Html msg
-distribution lapHistory focused rivals =
-    let
-        series =
-            rivals
-                |> List.map
-                    (\item ->
-                        let
-                            own =
-                                Distribution.seriesOf lapHistory ( 1, focused.standing.lapsCompleted ) item
-                        in
-                        if item.metadata.carNumber == focused.metadata.carNumber then
-                            own
-
-                        else
-                            { own | emphasis = Related }
-                    )
-    in
-    case Distribution.scaleOf series of
-        Just { domain, maxDensity } ->
-            LapTimeDistribution.view
-                { width = 1000, height = 250, domain = domain, maxDensity = maxDensity }
-                series
-
-        Nothing ->
-            Widget.emptyState "No laps to compare"
 
 
 {-| How far up or down the road a rival is: the intervals between the two cars,
@@ -286,18 +305,9 @@ signed value =
         "-"
 
 
-{-| The selected car and the in-class rivals ahead of and behind it, in running
-order, so the set follows the field as positions change. At a class edge only
-the available rival is kept.
--}
-neighborsOf : Snapshot -> CarAt -> List CarAt
-neighborsOf snapshot focused =
-    let
-        neighbors =
-            RivalGapSparkline.findNeighbors (Snapshot.toList snapshot) focused
-    in
-    List.filterMap identity
-        [ List.head neighbors.ahead, Just focused, List.head neighbors.behind ]
+rivalsOf : Snapshot -> CarAt -> Rivals
+rivalsOf snapshot focused =
+    Rivals.around (Snapshot.toList snapshot) focused
 
 
 startPositionOf : List Car -> CarAt -> Maybe Int
