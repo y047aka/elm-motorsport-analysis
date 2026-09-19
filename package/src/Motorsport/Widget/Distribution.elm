@@ -15,7 +15,6 @@ import Motorsport.Internal.Statistics exposing (upperFence)
 import Motorsport.Lap as Lap
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
-import Motorsport.Widget as Widget
 
 
 {-| The car and the rival either side on one scale, the car's own curve the
@@ -25,8 +24,11 @@ are doing.
 Three curves and no more, unlike the gap chart beside it: these overlap where
 they are alike, which is exactly where the chart is being read.
 
+`Nothing` where the range holds no lap to describe; what stands in its place is
+the caller's.
+
 -}
-view : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
+view : ( Int, Int ) -> LapHistory -> Rivals -> Maybe (Html msg)
 view range lapHistory rivals =
     let
         focused =
@@ -47,14 +49,13 @@ view range lapHistory rivals =
                             { own | emphasis = Related }
                     )
     in
-    case scaleOf series of
-        Just { domain, maxDensity } ->
-            LapTimeDistribution.view
-                { width = 1000, height = 250, domain = domain, maxDensity = maxDensity }
-                series
-
-        Nothing ->
-            Widget.emptyState "No laps to compare"
+    scaleOf series
+        |> Maybe.map
+            (\{ domain, maxDensity } ->
+                LapTimeDistribution.view
+                    { width = 1000, height = 250, domain = domain, maxDensity = maxDensity }
+                    series
+            )
 
 
 {-| One car's own laps at card size, on a scale of its own: the cards beside it
