@@ -297,11 +297,18 @@ GapChart, BoxPlot), `Internal/` for machinery that is not the race's vocabulary
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
 of: a module belongs there when it derives from a `Race.Snapshot` and the
-primitives, more than one view reads it, and it holds no state of its own --
-which is what keeps it out of `Race/`, where nothing owns it, and out of
-`Chart/` and `Widget/`, which it draws nothing for. `Rivals` answers who a car
-is racing and `LapWindow` which laps a stretch of the race covers; both hand
-back the snapshot's own `CarAt`s and numbers rather than a record per car.
+primitives, it holds no state of its own, and it draws nothing -- which is what
+keeps it out of `Race/`, where nothing owns it, and out of `Chart/` and
+`Widget/`. Drawing is the test that does the work. A colour, an emphasis or an
+axis domain in what a module hands back puts it with the chart whatever else it
+computes, which is why `GapChart` keeps `carLine` and `Distribution` keeps
+`seriesOf` while the arithmetic under both of them sits here. How many views
+read a module is not a test: the shelf is organised by the reading and not by
+the reader, so `Rivals` has five readers because who a car is racing is a
+question five views have, and a chart's own sample has one because only that
+chart asks it. `Rivals` answers who a car is racing and `LapWindow` which laps a
+stretch of the race covers; both hand back the snapshot's own `CarAt`s and
+numbers rather than a record per car.
 
 `Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
 passed through (`Class`, `Era`), and Le Mans's mini-sectors

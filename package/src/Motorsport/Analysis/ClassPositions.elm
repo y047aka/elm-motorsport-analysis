@@ -1,6 +1,6 @@
 module Motorsport.Analysis.ClassPositions exposing
     ( Point
-    , held
+    , byCar
     )
 
 {-| The places each car of a class held, lap by lap.
@@ -12,7 +12,7 @@ A reading under `Motorsport/Analysis/`: derived from a snapshot and the
 primitives, holding nothing of its own.
 
 @docs Point
-@docs held
+@docs byCar
 
 -}
 
@@ -32,8 +32,8 @@ type alias Point =
 lap the feed gave no position for is not one of them, and a car that was not
 running in the window answers with nothing.
 -}
-held : Laps -> Class -> Snapshot -> List ( CarAt, List Point )
-held window class snapshot =
+byCar : Laps -> Class -> Snapshot -> List ( CarAt, List Point )
+byCar window class snapshot =
     let
         lapHistory =
             Snapshot.lapHistory snapshot

@@ -1,5 +1,5 @@
 module Motorsport.Analysis.RelativeGap exposing
-    ( Baseline, baseline, isEmpty
+    ( Baseline, baseline
     , Point, against
     )
 
@@ -15,7 +15,7 @@ measured against it; they are separate arguments for that reason.
 A reading under `Motorsport/Analysis/`: derived from a snapshot's laps and the
 primitives, holding nothing of its own.
 
-@docs Baseline, baseline, isEmpty
+@docs Baseline, baseline
 @docs Point, against
 
 -}
@@ -40,39 +40,44 @@ type alias Point =
 
 {-| The mean cumulative time per lap number, over the non-pit laps only --
 including the pit laps would make the baseline jump.
+
+`Nothing` where the group ran no lap on the road at all: there is then no moment
+to measure against, which is not the same as every car being level with it.
+
 -}
-baseline : List Lap -> Baseline
+baseline : List Lap -> Maybe Baseline
 baseline groupLaps =
-    groupLaps
-        |> List.filter Lap.isRacingLap
-        |> List.foldl
-            (\lap ->
-                let
-                    -- Summing moments is meaningless on its own; the mean of
-                    -- them is the moment the group crossed the line.
-                    elapsed =
-                        Instant.toDuration lap.elapsed
-                in
-                Dict.update lap.lap
-                    (\existing ->
-                        case existing of
-                            Just ( sum, count ) ->
-                                Just ( sum + elapsed, count + 1 )
+    let
+        byLap =
+            groupLaps
+                |> List.filter Lap.isRacingLap
+                |> List.foldl
+                    (\lap ->
+                        let
+                            -- Summing moments is meaningless on its own; the
+                            -- mean of them is the moment the group crossed the
+                            -- line.
+                            elapsed =
+                                Instant.toDuration lap.elapsed
+                        in
+                        Dict.update lap.lap
+                            (\existing ->
+                                case existing of
+                                    Just ( sum, count ) ->
+                                        Just ( sum + elapsed, count + 1 )
 
-                            Nothing ->
-                                Just ( elapsed, 1 )
+                                    Nothing ->
+                                        Just ( elapsed, 1 )
+                            )
                     )
-            )
-            Dict.empty
-        |> Dict.map (\_ ( sum, count ) -> Instant.fromDuration (sum // count))
-        |> Baseline
+                    Dict.empty
+                |> Dict.map (\_ ( sum, count ) -> Instant.fromDuration (sum // count))
+    in
+    if Dict.isEmpty byLap then
+        Nothing
 
-
-{-| Whether the group ran any lap the baseline could be taken off.
--}
-isEmpty : Baseline -> Bool
-isEmpty (Baseline byLap) =
-    Dict.isEmpty byLap
+    else
+        Just (Baseline byLap)
 
 
 {-| One car's laps against the baseline. A lap the group has no moment for

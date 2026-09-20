@@ -51,7 +51,7 @@ classProgressionSeries window snapshot rivals =
         highlighted =
             Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
     in
-    ClassPositions.held window (Rivals.focused rivals).metadata.class snapshot
+    ClassPositions.byCar window (Rivals.focused rivals).metadata.class snapshot
         |> List.filter (\( _, points ) -> List.length points >= 2)
         |> List.map
             (\( item, points ) ->

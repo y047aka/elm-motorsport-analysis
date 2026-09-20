@@ -51,13 +51,11 @@ suite =
             [ test "a group that never left the pit lane is no baseline at all" <|
                 \_ ->
                     RelativeGap.baseline [ stopping 1 100000 ]
-                        |> RelativeGap.isEmpty
-                        |> Expect.equal True
+                        |> Expect.equal Nothing
             , test "one racing lap is enough to be one" <|
                 \_ ->
                     RelativeGap.baseline [ crossing 1 100000 ]
-                        |> RelativeGap.isEmpty
-                        |> Expect.equal False
+                        |> Expect.notEqual Nothing
             ]
         ]
 
@@ -66,11 +64,14 @@ suite =
 -- FIXTURE
 
 
-{-| The group's laps, then the car's, as the two views hand them over.
+{-| The group's laps, then the car's, as the two views hand them over. No
+baseline is no gaps, which the views read off the `Maybe` rather than off this.
 -}
 gapsOf : List Lap -> List Lap -> List RelativeGap.Point
 gapsOf groupLaps carLaps =
-    RelativeGap.against (RelativeGap.baseline groupLaps) carLaps
+    RelativeGap.baseline groupLaps
+        |> Maybe.map (\baseline -> RelativeGap.against baseline carLaps)
+        |> Maybe.withDefault []
 
 
 {-| A lap completed on the road at `elapsed`. Only the lap number and the moment

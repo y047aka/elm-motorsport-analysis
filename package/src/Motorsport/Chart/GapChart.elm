@@ -61,9 +61,8 @@ carLine window lapHistory emphasis entry =
 
 {-| The full chart, with a lap axis and a gap axis.
 
-Subtracting the group average — rather than plotting absolute lap time —
-magnifies the pace differences between nearby cars. Ahead of the baseline goes
-up and behind it goes down, so a line's vertical motion reads as relative pace.
+Ahead of the baseline goes up and behind it goes down, so a line's vertical
+motion reads as relative pace.
 
 The rival either side is drawn in full and labelled, the pair beyond them grey
 and faint with no end label -- the treatment the position chart gives the rest
@@ -91,16 +90,18 @@ gapChartView window lapHistory rivals =
                 )
                 entry
 
-        baseline =
+        drawn =
             Rivals.nearest baselineRivals rivals
                 |> List.concatMap (lapsOf window lapHistory)
                 |> RelativeGap.baseline
-
-        drawn =
-            plotGaps
-                { baseline = baseline
-                , display = Rivals.nearest drawnRivals rivals |> List.map lineOf
-                }
+                |> Maybe.map
+                    (\baseline ->
+                        plotGaps
+                            { baseline = baseline
+                            , display = Rivals.nearest drawnRivals rivals |> List.map lineOf
+                            }
+                    )
+                |> Maybe.withDefault []
 
         fight =
             drawn |> List.filter (\plotted -> plotted.car.emphasis == Focused)
@@ -160,8 +161,8 @@ baselineRivals =
     4
 
 
-{-| Each car of `display` against the baseline. The two are taken separately so
-that they can differ — see [`fightRivals`](#fightRivals).
+{-| Each car of `display` against the baseline. How much wider the group behind
+that baseline is, and why, is [`fightRivals`](#fightRivals).
 -}
 plotGaps : { baseline : Baseline, display : List CarLine } -> List PlottedCar
 plotGaps { baseline, display } =
@@ -200,7 +201,7 @@ gapSparkline window lapHistory rivals =
                 )
                 entry
 
-        baseline =
+        group =
             Rivals.nearest 2 rivals
                 |> List.concatMap (lapsOf window lapHistory)
                 |> RelativeGap.baseline
@@ -216,8 +217,8 @@ gapSparkline window lapHistory rivals =
             lapsOf window lapHistory focused
                 |> List.map (.lap >> toFloat)
     in
-    case ( focusedLapNumbers, display, RelativeGap.isEmpty baseline ) of
-        ( _ :: _ :: _, _ :: _ :: _, False ) ->
+    case ( focusedLapNumbers, display, group ) of
+        ( _ :: _ :: _, _ :: _ :: _, Just baseline ) ->
             gapChartViewWith { dimensions = rivalStrip, showAxes = False }
                 ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
                 , List.maximum focusedLapNumbers |> Maybe.withDefault 1

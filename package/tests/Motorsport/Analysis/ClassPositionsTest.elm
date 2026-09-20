@@ -24,17 +24,17 @@ suite =
         [ describe "who answers"
             [ test "the cars of the class, and only those" <|
                 \_ ->
-                    ClassPositions.held wholeRace (classOf "HYPERCAR") field
+                    ClassPositions.byCar wholeRace (classOf "HYPERCAR") field
                         |> List.map (Tuple.first >> .metadata >> .carNumber)
                         |> List.sort
                         |> Expect.equal [ "1", "3" ]
             , test "a class no car races in has no one to answer for it" <|
                 \_ ->
-                    ClassPositions.held wholeRace (classOf "LMP2") field
+                    ClassPositions.byCar wholeRace (classOf "LMP2") field
                         |> Expect.equal []
             , test "a car with nothing inside the window answers with nothing, rather than dropping out" <|
                 \_ ->
-                    ClassPositions.held { first = 10, last = 12 } (classOf "HYPERCAR") field
+                    ClassPositions.byCar { first = 10, last = 12 } (classOf "HYPERCAR") field
                         |> List.map Tuple.second
                         |> Expect.equal [ [], [] ]
             ]
@@ -42,7 +42,7 @@ suite =
             [ test "one per lap it was given a position on" <|
                 \_ ->
                     -- Car 1 was second by the end, and lap 3 went unrecorded.
-                    heldBy "1" wholeRace
+                    pointsFor "1" wholeRace
                         |> Expect.equal
                             [ { lap = 1, position = 1 }
                             , { lap = 2, position = 1 }
@@ -50,7 +50,7 @@ suite =
                             ]
             , test "the window keeps only the laps inside it" <|
                 \_ ->
-                    heldBy "3" { first = 2, last = 3 }
+                    pointsFor "3" { first = 2, last = 3 }
                         |> Expect.equal
                             [ { lap = 2, position = 2 }
                             , { lap = 3, position = 1 }
@@ -72,9 +72,9 @@ wholeRace =
     { first = 1, last = 4 }
 
 
-heldBy : String -> Laps -> List ClassPositions.Point
-heldBy carNumber window =
-    ClassPositions.held window (classOf "HYPERCAR") field
+pointsFor : String -> Laps -> List ClassPositions.Point
+pointsFor carNumber window =
+    ClassPositions.byCar window (classOf "HYPERCAR") field
         |> List.filter (\( car, _ ) -> car.metadata.carNumber == carNumber)
         |> List.concatMap Tuple.second
 
