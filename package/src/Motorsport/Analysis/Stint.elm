@@ -1,4 +1,4 @@
-module Motorsport.Analysis.Stints exposing
+module Motorsport.Analysis.Stint exposing
     ( Summary, summarize
     , endedLengths, lapsDrivenBy
     )

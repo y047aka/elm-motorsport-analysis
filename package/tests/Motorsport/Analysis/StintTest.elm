@@ -1,7 +1,7 @@
-module Motorsport.Analysis.StintsTest exposing (suite)
+module Motorsport.Analysis.StintTest exposing (suite)
 
 import Expect
-import Motorsport.Analysis.Stints as Stints
+import Motorsport.Analysis.Stint as Stint
 import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Test exposing (Test, describe, test)
@@ -9,19 +9,19 @@ import Test exposing (Test, describe, test)
 
 suite : Test
 suite =
-    describe "Motorsport.Analysis.Stints"
+    describe "Motorsport.Analysis.Stint"
         [ describe "summarize"
             [ test "a car that has not stopped is on its first run" <|
                 \_ ->
                     [ lap 1 95000, lap 2 96000, lap 3 97000 ]
-                        |> Stints.summarize
+                        |> Stint.summarize
                         |> .current
                         |> Maybe.map (\stint -> ( stint.number, stint.firstLap, stint.lastLap ))
                         |> Expect.equal (Just ( 1, 1, 3 ))
             , test "a car sitting in the pits is on no run" <|
                 \_ ->
                     [ lap 1 95000, inLap 2 101000 ]
-                        |> Stints.summarize
+                        |> Stint.summarize
                         |> .current
                         |> Expect.equal Nothing
             , test "the run in progress is left out of the median" <|
@@ -36,13 +36,13 @@ suite =
                     , inLap 6 101000
                     , outLap 7 165000 63000
                     ]
-                        |> Stints.summarize
+                        |> Stint.summarize
                         |> .medianStintLength
                         |> Expect.equal (Just 2)
             , test "a car that has turned no lap has run nothing" <|
                 \_ ->
                     []
-                        |> Stints.summarize
+                        |> Stint.summarize
                         |> Expect.all
                             [ .stints >> Expect.equal []
                             , .current >> Expect.equal Nothing
@@ -61,8 +61,8 @@ suite =
                     , outLap 4 165000 63000 |> drivenBy "Mike CONWAY"
                     , lap 5 95000 |> drivenBy "Mike CONWAY"
                     ]
-                        |> Stints.summarize
-                        |> Stints.lapsDrivenBy (Driver.fromName "Mike CONWAY")
+                        |> Stint.summarize
+                        |> Stint.lapsDrivenBy (Driver.fromName "Mike CONWAY")
                         |> Expect.equal 2
             ]
         ]

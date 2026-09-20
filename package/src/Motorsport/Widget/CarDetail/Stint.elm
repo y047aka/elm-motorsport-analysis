@@ -1,6 +1,6 @@
 module Motorsport.Widget.CarDetail.Stint exposing (view)
 
-{-| [`Analysis.Stints`](Motorsport-Analysis-Stints) drawn as the panel's stints
+{-| [`Analysis.Stint`](Motorsport-Analysis-Stint) drawn as the panel's stints
 section.
 
 @docs view
@@ -10,7 +10,7 @@ section.
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style, title)
 import List.Extra
-import Motorsport.Analysis.Stints as Stints exposing (Summary)
+import Motorsport.Analysis.Stint as AnalysisStint exposing (Summary)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Manufacturer exposing (Manufacturer)
@@ -74,7 +74,7 @@ driverCell metadata summary driver =
             []
         , div [ class "text-[10px] truncate" ] [ text (Driver.toSurname driver) ]
         , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
-            [ text (String.fromInt (Stints.lapsDrivenBy driver summary)) ]
+            [ text (String.fromInt (AnalysisStint.lapsDrivenBy driver summary)) ]
         ]
 
 
@@ -104,7 +104,7 @@ stintLengths : Summary -> String
 stintLengths summary =
     let
         lengths =
-            Stints.endedLengths summary.stints
+            AnalysisStint.endedLengths summary.stints
     in
     case ( List.minimum lengths, List.maximum lengths, summary.medianStintLength ) of
         ( Just shortest, Just longest, Just median_ ) ->
