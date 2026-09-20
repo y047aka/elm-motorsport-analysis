@@ -1,6 +1,6 @@
 module Motorsport.Analysis.LapWindow exposing
     ( LapWindow(..)
-    , laps
+    , range
     )
 
 {-| How much of the race to read: all of it run so far, or the last stretch of
@@ -16,7 +16,7 @@ A reading under `Motorsport/Analysis/`: derived from a snapshot and the
 primitives, holding nothing of its own.
 
 @docs LapWindow
-@docs laps
+@docs range
 
 -}
 
@@ -46,8 +46,8 @@ at the laps its own class reached rather than at the ones it ran inside the
 stretch itself.
 
 -}
-laps : LapWindow -> Class -> Snapshot -> LapRange
-laps window class snapshot =
+range : LapWindow -> Class -> Snapshot -> LapRange
+range window class snapshot =
     let
         classCars =
             Snapshot.inClass class snapshot
