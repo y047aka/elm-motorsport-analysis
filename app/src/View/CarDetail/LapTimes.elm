@@ -21,11 +21,11 @@ import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status
 import View.CarDetail.LapTable as LapTable
-import View.SegmentStrip as SegmentStrip
 
 
 {-| `laps` is the car's whole race, as the race holds it rather than cut at the

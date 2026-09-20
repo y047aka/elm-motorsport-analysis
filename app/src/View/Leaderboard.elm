@@ -62,13 +62,13 @@ import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
+import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
 import UI.DataView as DataView
 import UI.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import View.SegmentStrip as SegmentStrip
 
 
 
