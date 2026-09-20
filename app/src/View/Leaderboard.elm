@@ -1,4 +1,4 @@
-module Motorsport.Widget.Leaderboard exposing
+module View.Leaderboard exposing
     ( stringColumn, intColumn, floatColumn
     , Model, init
     , Msg, update
