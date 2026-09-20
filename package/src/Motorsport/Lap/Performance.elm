@@ -5,7 +5,7 @@ module Motorsport.Lap.Performance exposing
     , SegmentState(..), fromProgress, ratedOf
     , PerformanceLevel(..), performanceLevel
     , isStandard
-    , toColorVariable
+    , toColorVariable, colorOf, textColorOf
     )
 
 {-| How a lap's times read against the baselines they are rated on.
@@ -28,7 +28,7 @@ it as part of the race and a view is free to rate a lap of its own.
 
 @docs PerformanceLevel, performanceLevel
 @docs isStandard
-@docs toColorVariable
+@docs toColorVariable, colorOf, textColorOf
 
 -}
 
@@ -208,3 +208,23 @@ toColorVariable level =
 
         Standard ->
             "var(--performance-standard)"
+
+
+{-| The colour of a rating that may not exist. A time the source data has none
+of takes the standard colour: there is nothing to rate it against.
+-}
+colorOf : Maybe PerformanceLevel -> String
+colorOf =
+    Maybe.withDefault Standard >> toColorVariable
+
+
+{-| The colour of text carrying a rating, `inherit` for a standard one so that
+it takes whatever colour the text around it already has.
+-}
+textColorOf : PerformanceLevel -> String
+textColorOf level =
+    if isStandard level then
+        "inherit"
+
+    else
+        toColorVariable level

@@ -122,30 +122,6 @@ type alias Config data msg =
 
 
 
--- RATING COLOURS
-
-
-{-| The colour of a rating that may not exist. A time the source data has none
-of takes the standard colour: there is nothing to rate it against.
--}
-colorOfPerformance : Maybe Performance.PerformanceLevel -> String
-colorOfPerformance =
-    Maybe.withDefault Performance.Standard >> Performance.toColorVariable
-
-
-{-| The text colour for a performance rating, `inherit` for a standard one so
-it takes whatever colour the surrounding text already has.
--}
-colorOfPerformanceText : Performance.PerformanceLevel -> String
-colorOfPerformanceText performance =
-    if Performance.isStandard performance then
-        "inherit"
-
-    else
-        Performance.toColorVariable performance
-
-
-
 -- COLUMNS
 
 
@@ -406,7 +382,7 @@ viewCurrentLapColumn_Wec { status, currentLap } =
     let
         lapTime { time, performance } =
             div
-                [ class "text-center", style "color" (colorOfPerformanceText performance) ]
+                [ class "text-center", style "color" (Performance.textColorOf performance) ]
                 [ text (Duration.toStringToTenths time) ]
     in
     if Status.hasRetired status then
@@ -468,7 +444,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
                         }
             in
             div
-                [ class "text-center", style "color" (colorOfPerformanceText status_) ]
+                [ class "text-center", style "color" (Performance.textColorOf status_) ]
                 [ text (Duration.toStringToTenths time) ]
     in
     if Status.hasRetired status then
@@ -508,7 +484,7 @@ viewLastLapColumn_Wec lastLap =
     let
         lapTimeView { time, performance } =
             div
-                [ class "text-center", style "color" (colorOfPerformanceText performance) ]
+                [ class "text-center", style "color" (Performance.textColorOf performance) ]
                 [ text (Duration.toString time) ]
     in
     case lastLap of
@@ -544,7 +520,7 @@ viewLastLapColumn_LeMans24h lastLap =
     let
         lapTimeView { time, performance } =
             div
-                [ class "text-center", style "color" (colorOfPerformanceText performance) ]
+                [ class "text-center", style "color" (Performance.textColorOf performance) ]
                 [ text (Duration.toString time) ]
     in
     case lastLap of
@@ -601,7 +577,7 @@ performanceHistory_ bestTimes laps =
                             , fastest = fastestLapTime
                             }
                     )
-                |> colorOfPerformance
+                |> Performance.colorOf
     in
     div
         [ class "px-[0.3vw] grid grid-flow-col auto-cols-[max(5px,0.3vw)] grid-rows-[repeat(5,max(5px,0.3vw))] gap-[1.5px] first:ps-0 last:pe-0 [&:nth-child(n+2)]:[border-left:1px_solid_hsl(0_0%_0%)]" ]
