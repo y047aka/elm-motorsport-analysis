@@ -49,7 +49,7 @@ type alias Model =
     { mode : Mode
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , detailCarNumber : Maybe String
+    , focus : Focus
     , detailState : CarDetail.Model
     }
 
@@ -57,6 +57,11 @@ type alias Model =
 type Mode
     = Default
     | Tracker
+
+
+type Focus
+    = Leader
+    | Picked CarNumber
 
 
 type StandingsTab
@@ -69,7 +74,7 @@ init params =
     ( { mode = Default
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , detailCarNumber = Nothing
+      , focus = Leader
       , detailState = CarDetail.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -87,7 +92,7 @@ type Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | SelectDetailCar String
+    | SelectDetailCar CarNumber
     | CarDetailMsg CarDetail.Msg
 
 
@@ -115,7 +120,7 @@ update msg m =
             )
 
         SelectDetailCar carNumber ->
-            ( { m | detailCarNumber = Just carNumber }, Effect.none )
+            ( { m | focus = Picked carNumber }, Effect.none )
 
         CarDetailMsg detailMsg ->
             ( { m | detailState = CarDetail.update detailMsg m.detailState }
@@ -218,7 +223,7 @@ trackerView track timeline snapshot replay m =
                     , detail = "col-start-3 row-start-1"
                     }
 
-                _ ->
+                Default ->
                     { tracker = "col-start-3 row-start-1"
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
@@ -241,7 +246,7 @@ trackerView track timeline snapshot replay m =
                         ]
                     ]
 
-                _ ->
+                Tracker ->
                     []
     in
     div
@@ -278,18 +283,21 @@ trackerView track timeline snapshot replay m =
         ]
 
 
-{-| The car the middle of the page is given over to: the one the reader picked,
-and until they pick one -- or when the one they picked is not in the field -- the
-car at the front of the race.
+{-| The car the middle of the page is given over to.
 -}
 focusedCar : Snapshot -> Model -> Maybe CarAt
 focusedCar snapshot m =
-    case m.detailCarNumber |> Maybe.andThen (\carNumber -> Snapshot.get carNumber snapshot) of
-        Just car ->
-            Just car
-
-        Nothing ->
+    case m.focus of
+        Leader ->
             Snapshot.leader snapshot
+
+        Picked carNumber ->
+            case Snapshot.get carNumber snapshot of
+                Just car ->
+                    Just car
+
+                Nothing ->
+                    Snapshot.leader snapshot
 
 
 standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg
