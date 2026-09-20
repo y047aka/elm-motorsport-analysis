@@ -44,9 +44,14 @@ type alias PlottedCar =
     }
 
 
+historyOf : LapHistory -> CarAt -> List Lap
+historyOf lapHistory entry =
+    LapHistory.get entry.metadata.carNumber lapHistory
+
+
 lapsOf : LapRange -> LapHistory -> CarAt -> List Lap
 lapsOf range lapHistory entry =
-    LapHistory.get entry.metadata.carNumber lapHistory
+    historyOf lapHistory entry
         |> LapRange.within range
 
 
@@ -91,8 +96,8 @@ gapChartView range lapHistory rivals =
 
         drawn =
             Rivals.nearest baselineRivals rivals
-                |> List.concatMap (lapsOf range lapHistory)
-                |> RelativeGap.baseline
+                |> List.concatMap (historyOf lapHistory)
+                |> RelativeGap.baseline range
                 |> Maybe.map
                     (\baseline ->
                         plotGaps
@@ -196,8 +201,8 @@ gapSparkline range lapHistory rivals =
 
         group =
             Rivals.nearest 2 rivals
-                |> List.concatMap (lapsOf range lapHistory)
-                |> RelativeGap.baseline
+                |> List.concatMap (historyOf lapHistory)
+                |> RelativeGap.baseline range
 
         -- Blank carNumber to omit the end-of-line label on these narrow cards
         -- (renderLine skips empty strings).

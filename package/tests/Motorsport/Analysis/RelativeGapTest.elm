@@ -5,6 +5,7 @@ import Motorsport.Analysis.RelativeGap as RelativeGap
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.LapRange exposing (LapRange)
 import Test exposing (Test, describe, test)
 
 
@@ -47,15 +48,27 @@ suite =
                     gapsOf [ crossing 1 1000, crossing 1 1001 ] [ crossing 1 1001 ]
                         |> Expect.equal [ { lap = 1, gap = 1 } ]
             ]
+        , describe "the stretch of the race the group is read over"
+            [ test "a lap outside the range is no part of the group's moment, and no point" <|
+                \_ ->
+                    gapsOver { first = 1, last = 1 }
+                        [ crossing 1 100000, crossing 2 200000 ]
+                        [ crossing 1 100000, crossing 2 200000 ]
+                        |> Expect.equal [ { lap = 1, gap = 0 } ]
+            ]
         , describe "a group with no lap to be read off"
             [ test "a group that never left the pit lane is no baseline at all" <|
                 \_ ->
-                    RelativeGap.baseline [ stopping 1 100000 ]
+                    RelativeGap.baseline everyLap [ stopping 1 100000 ]
                         |> Expect.equal Nothing
             , test "one racing lap is enough to be one" <|
                 \_ ->
-                    RelativeGap.baseline [ crossing 1 100000 ]
+                    RelativeGap.baseline everyLap [ crossing 1 100000 ]
                         |> Expect.notEqual Nothing
+            , test "a range holding none of the group's laps is no baseline either" <|
+                \_ ->
+                    RelativeGap.baseline { first = 5, last = 9 } [ crossing 1 100000 ]
+                        |> Expect.equal Nothing
             ]
         ]
 
@@ -64,13 +77,26 @@ suite =
 -- FIXTURE
 
 
-{-| The group's laps, then the car's, as the two views hand them over.
+{-| The group's laps, then the car's, as the two views hand them over: whole,
+with the range left to do the cutting.
 -}
 gapsOf : List Lap -> List Lap -> List RelativeGap.Point
-gapsOf groupLaps carLaps =
-    RelativeGap.baseline groupLaps
+gapsOf =
+    gapsOver everyLap
+
+
+gapsOver : LapRange -> List Lap -> List Lap -> List RelativeGap.Point
+gapsOver range groupLaps carLaps =
+    RelativeGap.baseline range groupLaps
         |> Maybe.map (\baseline -> RelativeGap.against baseline carLaps)
         |> Maybe.withDefault []
+
+
+{-| Wide enough to hold every lap these fixtures run.
+-}
+everyLap : LapRange
+everyLap =
+    { first = 1, last = 99 }
 
 
 {-| A lap completed on the road at `elapsed`. Only the lap number and the moment

@@ -12,6 +12,11 @@ do from one lap to the next is the pace between them.
 Which cars the baseline is taken from is the caller's, and need not be the cars
 measured against it.
 
+[`baseline`](#baseline) takes the group's laps whole and cuts them to the range
+itself. A `Baseline` then carries that range, which is why
+[`against`](#against) needs none: a lap outside it finds no moment and produces
+no point.
+
 A reading under `Motorsport/Analysis/`: derived from a snapshot's laps and the
 primitives, holding nothing of its own.
 
@@ -24,6 +29,7 @@ import Dict exposing (Dict)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.LapRange as LapRange exposing (LapRange)
 
 
 {-| The moment the group crossed the line, per lap number.
@@ -41,15 +47,17 @@ type alias Point =
 {-| The mean cumulative time per lap number, over the non-pit laps only --
 including the pit laps would make the baseline jump.
 
-`Nothing` where the group ran no lap on the road at all: there is then no moment
-to measure against, which is not the same as every car being level with it.
+`Nothing` where the group ran no lap on the road inside the range: there is then
+no moment to measure against, which is not the same as every car being level
+with it.
 
 -}
-baseline : List Lap -> Maybe Baseline
-baseline groupLaps =
+baseline : LapRange -> List Lap -> Maybe Baseline
+baseline range groupLaps =
     let
         byLap =
             groupLaps
+                |> LapRange.within range
                 |> List.filter Lap.isRacingLap
                 |> List.foldl
                     (\lap ->

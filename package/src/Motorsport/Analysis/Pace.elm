@@ -16,8 +16,7 @@ import Motorsport.LapRange as LapRange exposing (LapRange)
 
 
 {-| The car's laps on the road inside the range, with the outliers among them
-dropped. It is given the whole of the car's history rather than the range's
-share of it.
+dropped.
 
 The fence comes off the whole race the car has run rather than off the range,
 because what counts as an outlier is a fact about the car's pace and not about
