@@ -23,7 +23,7 @@ lap history is open say nothing about the race and nothing else reads them.
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import List.Extra
-import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
+import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow, Laps)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Duration as Duration exposing (Duration)
@@ -142,7 +142,7 @@ panel state cars snapshot focused =
 switch the chart and nothing else about what is being shown.
 -}
 type alias Comparison =
-    { laps : ( Int, Int )
+    { laps : Laps
     , lapHistory : LapHistory
     , snapshot : Snapshot
     , rivals : Rivals

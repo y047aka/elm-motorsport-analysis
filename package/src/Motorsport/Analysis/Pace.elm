@@ -9,15 +9,15 @@ primitives, holding nothing of its own.
 
 -}
 
-import Motorsport.Analysis.LapWindow as LapWindow
+import Motorsport.Analysis.LapWindow as LapWindow exposing (Laps)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.Statistics exposing (upperFence)
-import Motorsport.Lap as Lap
-import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Lap as Lap exposing (Lap)
 
 
 {-| The car's laps on the road inside the window, with the outliers among them
-dropped.
+dropped. It is given the whole of the car's history and not the window's share
+of it, for the reason the fence has.
 
 The fence comes off the whole race the car has run rather than off the window,
 because what counts as an outlier is a fact about the car's pace and not about
@@ -27,12 +27,9 @@ puts the third quartile up among those laps, and a fence drawn from there lets
 every one of them through.
 
 -}
-racingTimes : LapHistory -> ( Int, Int ) -> CarAt -> List Int
-racingTimes lapHistory window entry =
+racingTimes : Laps -> List Lap -> List Duration
+racingTimes window history =
     let
-        history =
-            LapHistory.get entry.metadata.carNumber lapHistory
-
         -- filterMap, not map: a lap the source data has no time for is not a
         -- lap run in no time, and has no place in a reading of the pace.
         timeOf lap =

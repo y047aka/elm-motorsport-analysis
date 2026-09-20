@@ -41,7 +41,7 @@ view lapHistory allCars item =
                 , summaryStats item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item
-                , Distribution.sparkline ( 1, item.standing.lapsCompleted ) lapHistory item
+                , Distribution.sparkline { first = 1, last = item.standing.lapsCompleted } lapHistory item
                 ]
             ]
         ]

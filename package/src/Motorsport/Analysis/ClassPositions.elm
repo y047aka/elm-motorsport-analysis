@@ -16,7 +16,7 @@ primitives, holding nothing of its own.
 
 -}
 
-import Motorsport.Analysis.LapWindow as LapWindow
+import Motorsport.Analysis.LapWindow as LapWindow exposing (Laps)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
@@ -32,7 +32,7 @@ type alias Point =
 lap the feed gave no position for is not one of them, and a car that was not
 running in the window answers with nothing.
 -}
-held : ( Int, Int ) -> Class -> Snapshot -> List ( CarAt, List Point )
+held : Laps -> Class -> Snapshot -> List ( CarAt, List Point )
 held window class snapshot =
     let
         lapHistory =

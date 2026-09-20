@@ -1,5 +1,6 @@
 module Motorsport.Analysis.LapWindow exposing
     ( LapWindow(..)
+    , Laps
     , laps, within
     )
 
@@ -16,6 +17,7 @@ A reading under `Motorsport/Analysis/`: derived from a snapshot and the
 primitives, holding nothing of its own.
 
 @docs LapWindow
+@docs Laps
 @docs laps, within
 
 -}
@@ -34,7 +36,20 @@ type LapWindow
     | Recent Duration
 
 
-{-| The window as the lap numbers `( first, last )` a chart keeps its laps by.
+{-| The lap numbers a window came out as, both ends drawn.
+
+A record and not a pair, because the pair a chart's axis spans is the same two
+Ints and means something else: what is drawn, rather than what is read. The two
+are the same value in one chart and not in another.
+
+-}
+type alias Laps =
+    { first : Int
+    , last : Int
+    }
+
+
+{-| The window as the lap numbers a chart keeps its laps by.
 
 Both ends are read off the one class rather than off the race: a slower class's
 laps run out short of the race leader's and take longer to come round, so a
@@ -42,7 +57,7 @@ window measured off that leader would leave a chart's axis running on past where
 its lines stop.
 
 -}
-laps : LapWindow -> Class -> Snapshot -> ( Int, Int )
+laps : LapWindow -> Class -> Snapshot -> Laps
 laps window class snapshot =
     let
         classCars =
@@ -57,10 +72,10 @@ laps window class snapshot =
     in
     case window of
         WholeRace ->
-            ( 1, latest )
+            { first = 1, last = latest }
 
         Recent stretch ->
-            ( firstLapSince stretch snapshot classCars, latest )
+            { first = firstLapSince stretch snapshot classCars, last = latest }
 
 
 {-| One car's laps that the window covers, out of everything it has run.
@@ -70,9 +85,9 @@ here, so a car is cut at the laps its own class reached and not at the ones it
 ran inside the stretch itself.
 
 -}
-within : ( Int, Int ) -> List Lap -> List Lap
-within ( first, last ) =
-    List.filter (\lap -> first <= lap.lap && lap.lap <= last)
+within : Laps -> List Lap -> List Lap
+within window =
+    List.filter (\lap -> window.first <= lap.lap && lap.lap <= window.last)
 
 
 {-| Where a chart drawn over `stretch` starts: the lap the car furthest through

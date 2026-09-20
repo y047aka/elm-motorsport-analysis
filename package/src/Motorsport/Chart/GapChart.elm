@@ -15,7 +15,7 @@ wider ring of it to baseline on than they draw; how much wider, and why, is
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
 import Html exposing (Html, text)
 import List.Extra
-import Motorsport.Analysis.LapWindow as LapWindow
+import Motorsport.Analysis.LapWindow as LapWindow exposing (Laps)
 import Motorsport.Analysis.RelativeGap as RelativeGap exposing (Baseline)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
@@ -44,14 +44,18 @@ type alias PlottedCar =
     }
 
 
-carLine : LapHistory -> ( Int, Int ) -> Emphasis -> CarAt -> CarLine
-carLine lapHistory window emphasis entry =
+lapsOf : Laps -> LapHistory -> CarAt -> List Lap
+lapsOf window lapHistory entry =
+    LapHistory.get entry.metadata.carNumber lapHistory
+        |> LapWindow.within window
+
+
+carLine : Laps -> LapHistory -> Emphasis -> CarAt -> CarLine
+carLine window lapHistory emphasis entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
-    , laps =
-        LapHistory.get entry.metadata.carNumber lapHistory
-            |> LapWindow.within window
+    , laps = lapsOf window lapHistory entry
     }
 
 
@@ -65,20 +69,20 @@ The rival either side is drawn in full and labelled, the pair beyond them grey
 and faint with no end label -- the treatment the position chart gives the rest
 of its class.
 
-`Nothing` where the range holds none of the laps the chart would draw; what
+`Nothing` where the window holds none of the laps the chart would draw; what
 stands in its place is the caller's.
 
 -}
-gapChartView : ( Int, Int ) -> LapHistory -> Rivals -> Maybe (Html msg)
-gapChartView ( minLap, maxLap ) lapHistory rivals =
+gapChartView : Laps -> LapHistory -> Rivals -> Maybe (Html msg)
+gapChartView window lapHistory rivals =
     let
         fighting =
             Rivals.nearest fightRivals rivals
                 |> List.map (.metadata >> .carNumber)
 
         lineOf entry =
-            carLine lapHistory
-                ( minLap, maxLap )
+            carLine window
+                lapHistory
                 (if List.member entry.metadata.carNumber fighting then
                     Focused
 
@@ -89,8 +93,8 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
 
         baseline =
             Rivals.nearest baselineRivals rivals
-                |> List.map (carLine lapHistory ( minLap, maxLap ) Focused)
-                |> baselineOf
+                |> List.concatMap (lapsOf window lapHistory)
+                |> RelativeGap.baseline
 
         drawn =
             plotGaps
@@ -102,7 +106,7 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
             drawn |> List.filter (\plotted -> plotted.car.emphasis == Focused)
     in
     -- The cars drawn, not the wider group they are baselined on: a car that
-    -- retired before the range began has nothing in it, and neither do the
+    -- retired before the window began has nothing in it, and neither do the
     -- rivals it is ranked among, while the ring beyond them is still running
     -- and would carry a guard that only asked whether a baseline exists.
     if List.all (.points >> List.isEmpty) drawn then
@@ -111,9 +115,9 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
     else
         Just
             (gapChartViewWith { dimensions = consolidated, showAxes = True }
-                ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
+                ( toFloat window.first, toFloat (max window.last (window.first + 1)) )
                 { scaleOn =
-                    -- The fight owns the frame, unless the range has left none
+                    -- The fight owns the frame, unless the window has left none
                     -- of it to draw and the context is all there is.
                     if List.all (.points >> List.isEmpty) fight then
                         drawn
@@ -156,11 +160,6 @@ baselineRivals =
     4
 
 
-baselineOf : List CarLine -> Baseline
-baselineOf =
-    List.map .laps >> RelativeGap.baseline
-
-
 {-| Each car of `display` against the baseline. The two are taken separately so
 that they can differ — see [`fightRivals`](#fightRivals).
 -}
@@ -179,7 +178,7 @@ laps it has run and not mostly blank. A card with no rival to compare against,
 or with too little of the focused car to draw a line from, is not drawn at all.
 
 -}
-gapSparkline : ( Int, Int ) -> LapHistory -> Rivals -> Html msg
+gapSparkline : Laps -> LapHistory -> Rivals -> Html msg
 gapSparkline window lapHistory rivals =
     let
         focused =
@@ -191,8 +190,8 @@ gapSparkline window lapHistory rivals =
             Rivals.nearest 1 rivals
 
         lineOf entry =
-            carLine lapHistory
-                window
+            carLine window
+                lapHistory
                 (if entry.metadata.carNumber == focused.metadata.carNumber then
                     Focused
 
@@ -202,7 +201,9 @@ gapSparkline window lapHistory rivals =
                 entry
 
         baseline =
-            Rivals.nearest 2 rivals |> List.map lineOf |> baselineOf
+            Rivals.nearest 2 rivals
+                |> List.concatMap (lapsOf window lapHistory)
+                |> RelativeGap.baseline
 
         -- Blank carNumber to omit the end-of-line label on these narrow cards
         -- (renderLine skips empty strings).
@@ -212,8 +213,7 @@ gapSparkline window lapHistory rivals =
                 |> List.map (\line -> { line | carNumber = "" })
 
         focusedLapNumbers =
-            carLine lapHistory window Focused focused
-                |> .laps
+            lapsOf window lapHistory focused
                 |> List.map (.lap >> toFloat)
     in
     case ( focusedLapNumbers, display, RelativeGap.isEmpty baseline ) of

@@ -21,6 +21,7 @@ primitives, holding nothing of its own.
 -}
 
 import Dict exposing (Dict)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 
@@ -33,18 +34,16 @@ type Baseline
 
 type alias Point =
     { lap : Int
-    , gap : Int
+    , gap : Duration
     }
 
 
 {-| The mean cumulative time per lap number, over the non-pit laps only --
-including the pit laps would make the baseline jump. One list per car, so that
-a car contributes its own lap to the lap it ran.
+including the pit laps would make the baseline jump.
 -}
-baseline : List (List Lap) -> Baseline
-baseline histories =
-    histories
-        |> List.concat
+baseline : List Lap -> Baseline
+baseline groupLaps =
+    groupLaps
         |> List.filter Lap.isRacingLap
         |> List.foldl
             (\lap ->

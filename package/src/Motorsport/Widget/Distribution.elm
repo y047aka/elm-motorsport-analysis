@@ -8,11 +8,12 @@ racing laps, the cars laid over one another on a shared scale.
 -}
 
 import Html exposing (Html, text)
+import Motorsport.Analysis.LapWindow exposing (Laps)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
-import Motorsport.Race.LapHistory exposing (LapHistory)
+import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 
 
@@ -23,12 +24,12 @@ are doing.
 Three curves and no more, unlike the gap chart beside it: these overlap where
 they are alike, which is exactly where the chart is being read.
 
-`Nothing` where the range holds no lap to describe; what stands in its place is
+`Nothing` where the window holds no lap to describe; what stands in its place is
 the caller's.
 
 -}
-view : ( Int, Int ) -> LapHistory -> Rivals -> Maybe (Html msg)
-view range lapHistory rivals =
+view : Laps -> LapHistory -> Rivals -> Maybe (Html msg)
+view window lapHistory rivals =
     let
         focused =
             Rivals.focused rivals
@@ -39,7 +40,7 @@ view range lapHistory rivals =
                     (\item ->
                         let
                             own =
-                                seriesOf lapHistory range item
+                                seriesOf window lapHistory item
                         in
                         if item.metadata.carNumber == focused.metadata.carNumber then
                             own
@@ -62,11 +63,11 @@ are the overall order rather than one class, and two classes on one lap-time
 axis flatten both. A car with no laps to describe gets no chart rather than an
 empty one, a card having no room to explain itself.
 -}
-sparkline : ( Int, Int ) -> LapHistory -> CarAt -> Html msg
-sparkline range lapHistory item =
+sparkline : Laps -> LapHistory -> CarAt -> Html msg
+sparkline window lapHistory item =
     let
         series =
-            seriesOf lapHistory range item
+            seriesOf window lapHistory item
     in
     case scaleOf [ series ] of
         Just { domain, maxDensity } ->
@@ -99,14 +100,14 @@ scaleOf series =
             )
 
 
-{-| One car's curve: the pace it held inside the range, and the lap it is on now
-marked as a point on it.
+{-| One car's curve: the pace it held inside the window, and the lap it is on
+now marked as a point on it.
 -}
-seriesOf : LapHistory -> ( Int, Int ) -> CarAt -> LapTimeDistribution.Series
-seriesOf lapHistory range entry =
+seriesOf : Laps -> LapHistory -> CarAt -> LapTimeDistribution.Series
+seriesOf window lapHistory entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = Focused
-    , times = Pace.racingTimes lapHistory range entry
+    , times = Pace.racingTimes window (LapHistory.get entry.metadata.carNumber lapHistory)
     , lastLap = lastLapTime entry
     }
 
