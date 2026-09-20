@@ -1,7 +1,6 @@
 module View.CarNumberBadge exposing (view, viewRow)
 
-{-| Car number badge on a manufacturer-colored background,
-shared by the car cards, the live standings and the car detail panel.
+{-| Car number badge on a manufacturer-coloured background.
 
 Takes the car's metadata rather than a whole car: who the car is, is all a badge
 needs, and none of it moves as the race does.

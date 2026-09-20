@@ -144,7 +144,7 @@ lastLapTime entry =
 
 
 
--- THE CURVES
+-- THE CHART
 
 
 {-| One car's distribution. `times` is expected to have its outliers already

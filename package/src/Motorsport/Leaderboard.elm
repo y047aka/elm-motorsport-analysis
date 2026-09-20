@@ -17,7 +17,8 @@ module Motorsport.Leaderboard exposing
     , Config, view
     )
 
-{-|
+{-| The field as a timing table, drawn from the columns a classification is
+printed in. Which of them, in what order, is the caller's.
 
 
 # Configuration
@@ -172,8 +173,8 @@ went.
 
 `Nothing` is a car with no sector to report at all, and draws nothing. A sector
 the car has not finished is white; one it has is painted by its rating -- which
-is the same reading [`progressCell`](#progressCell) draws the thin strip from,
-told apart the same way.
+is the same reading [`Lap.SegmentStrip`](Motorsport-Lap-SegmentStrip) draws the
+thin strip from, told apart the same way.
 
 -}
 sectorTimeColumn :

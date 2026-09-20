@@ -1,7 +1,6 @@
 module View.CarCardList exposing (view)
 
-{-| Every car of the field as a card, in overall order. The cards are the
-strip's; nothing here is windowed.
+{-| Every car of the field as a card, in overall order.
 
 @docs view
 

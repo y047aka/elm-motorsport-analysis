@@ -330,11 +330,10 @@ leader (Snapshot s) =
     List.head s.cars
 
 
-{-| The car next in the running order, where the car given is not the last of
-them.
+{-| The car next in the running order.
 
-A car is given the gap to the one ahead of it and never the one behind, so this
-is how the gap behind a car is reached.
+A car is given the gap to the one ahead of it and never the one behind, so the
+gap behind a car is read off the car behind it.
 
 -}
 behind : CarAt -> Snapshot -> Maybe CarAt
@@ -348,7 +347,7 @@ behind car (Snapshot s) =
 {-| How far up or down the road one car is from another: the intervals between
 the two, added up along the running order. Each is measured at the same moment,
 so the sum is a time on the road; a lap anywhere between the two makes it no
-time at all, and there is nothing here to say.
+time at all.
 
 Positive where `other` is behind `car`, as a gap on a timing screen is.
 

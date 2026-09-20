@@ -111,15 +111,8 @@ statCell label valueHtml =
         ]
 
 
-{-| Sparkline of relative gap history against the class rivals ahead and behind.
-
-The card's reading is relative pace: a line's slope is how it is going against
-the group, and its level is where that has left it. Rising means the cumulative
-time is below the reference and the relative lead is stretching; falling means
-losing ground. Two lines converging or diverging is the whole point, and that
-reading holds whatever the baseline is -- see
-[`Rivals`](Motorsport-Analysis-Rivals) for why it is wider than the three lines
-drawn.
+{-| The card against the class rivals either side of it, read as
+[`RelativeGap`](Motorsport-Analysis-RelativeGap).
 
 The gaps are matched by lap number, so the rivals are assumed to be on the same
 lap as this car, which in-class neighbours normally are. A lapped neighbour is
@@ -138,7 +131,7 @@ rivalGapSparkline lapHistory allCars item =
         (Rivals.around allCars item)
 
 
-{-| How many laps back the card reaches. A card is a thumbnail of the last
+{-| How many laps back the card reaches: a card is a thumbnail of the last
 stretch of the race, not of the race.
 -}
 recentLapCount : Int

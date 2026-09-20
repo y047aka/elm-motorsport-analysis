@@ -99,9 +99,6 @@ update msg (Model state) =
                 { state | lapHistoryOpen = not state.lapHistoryOpen }
 
 
-{-| Always drawn, whatever the field is doing: only what is inside it is built
-from the car it is given, so it stays live as the race moves.
--}
 view : (Msg -> msg) -> Model -> List Car -> Snapshot -> Maybe CarAt -> Html msg
 view toMsg (Model state) cars snapshot focusedCar =
     div [ id elementId ]
@@ -318,8 +315,6 @@ carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
 
 
-{-| The titled card a section of the panel sits in.
--}
 container : String -> Html msg -> Html msg
 container title content =
     div
@@ -331,8 +326,6 @@ container title content =
         ]
 
 
-{-| What stands inside a section where its content would be.
--}
 emptyState : String -> Html msg
 emptyState message =
     div

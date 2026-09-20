@@ -306,8 +306,7 @@ file scans `/package` too.
 has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
 are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`,
 the sortable, filterable table `Leaderboard` is a configuration of, with the
-`Table` it draws its rows with. None of it is vocabulary, and a name here is
-free to say what it does rather than what the race calls it.
+`Table` it draws its rows with.
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
