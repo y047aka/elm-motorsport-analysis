@@ -1,4 +1,4 @@
-module UI.Table exposing
+module Internal.Table exposing
     ( table
     , thead, tr, td, th
     )

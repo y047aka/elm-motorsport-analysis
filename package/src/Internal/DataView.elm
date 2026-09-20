@@ -1,4 +1,4 @@
-module UI.DataView exposing
+module Internal.DataView exposing
     ( Model, Filter, Sorting, init
     , Msg(..), update
     , Config, Column
@@ -50,10 +50,10 @@ import Html.Attributes as Attributes exposing (class, type_)
 import Html.Events exposing (on, onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy exposing (lazy4)
+import Internal.DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
+import Internal.Table as Table exposing (td, th, tr)
 import Json.Decode as D
 import List.Extra
-import UI.DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import UI.Table as Table exposing (td, th, tr)
 
 
 

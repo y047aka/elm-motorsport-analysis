@@ -57,6 +57,8 @@ module View.Leaderboard exposing
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
+import Internal.DataView as DataView
+import Internal.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -67,8 +69,6 @@ import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
-import UI.DataView as DataView
-import UI.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 
 
 
