@@ -136,8 +136,9 @@ fetched at runtime via `Http`.
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
 - `Page/` — one module per page, plain TEA
 - `Data/` (feed decoding), `UI/` (Table, and `Shadcn/` for the wrappers)
-- `View/` — what a page is laid out of: the car detail panel and its sections,
-  the car cards, the live standings, and the badge those share
+- `View/` — what a page is laid out of: the leaderboard, the car detail panel
+  and its sections, the car cards, the live standings, and the badge and the
+  lap-segment strip those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
 `/api/wec/index.json`. It is the app's only source for which rounds exist, what
@@ -220,9 +221,9 @@ everything it draws.
 UI, not Radix. Each `app/src/shadcn/<name>-element.ts` puts one of them behind
 a custom element, `index.ts` registers them all, and
 `app/src/UI/Shadcn/<Name>.elm` is the Elm side. The Elm wrappers hold no
-Tailwind classes; the class strings are the vendored file's. `UI.Table` is what
-sits beside them: Elm that writes its own Tailwind and answers to no vendored
-file.
+Tailwind classes; the class strings are the vendored file's. `UI.Table` and the
+`UI.DataView` the leaderboard is built on are what sit beside them: Elm that
+writes its own Tailwind and answers to no vendored file.
 
 `components.json` configures the CLI, so `shadcn add <name>` writes these files
 and `shadcn add <name> --diff` reports how far one has drifted from upstream.
@@ -291,21 +292,21 @@ what an object-valued setter compares with, and both are back to zero.
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
 (`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those
-(`Rivals`, `Pace`), `Chart/` and `Widget/` for rendering (`GapChart`,
-`LapTimeDistribution`, `Leaderboard`, `SegmentStrip`), `Internal/` for machinery
-that is not the race's vocabulary (`ChangePoints`, `Statistics`).
+(`Rivals`, `Pace`), `Chart/` for the charts drawn off them (`GapChart`,
+`LapTimeDistribution`), `Internal/` for machinery that is not the race's
+vocabulary (`ChangePoints`, `Statistics`).
 
-What is rendered here draws one reading of the race: a lap as the segments it is
-timed in, the field as a table of them. How a page is laid out of those -- which
-panels, in which boxes, and what the reader has picked -- is `/app/src/View/`'s.
-Everything drawn either side is written in the Tailwind `app/style.css` defines,
-which is why that file scans `/package` too.
+`Chart/` is the whole of what this side draws, and it draws SVG: a reading of
+the race plotted, and nothing about the page it is plotted on. The HTML -- the
+panels, the tables, the strips and the badges, and how a page is laid out of
+them -- is `/app/src/View/`'s. Both sides are written in the Tailwind
+`app/style.css` defines, which is why that file scans `/package` too.
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
 of: a module belongs there when it holds no state of its own and it draws
 nothing -- which is what keeps it out of `Race/`, where nothing owns it, and
-out of `Chart/` and `Widget/`. Drawing is the test that does the work. A
+out of `Chart/`. Drawing is the test that does the work. A
 colour, an emphasis or an axis domain in what a module hands back puts it with
 the chart whatever else it computes, which is why `GapChart` keeps `carLine`
 and `LapTimeDistribution` keeps `seriesOf` while the arithmetic under both of them
@@ -356,10 +357,8 @@ that does, and what reaches `Car.Metadata` is the resolved colour, badge and
 photograph rather than the tables.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
-in three places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
-`Circuit/LeMans`'s type, and `Widget.Leaderboard` carries `*_Wec` and
-`*_LeMans24h` columns beside the generic ones. Reversing that arrow is its own
-change.
+in two places: `Car.Metadata` holds a `Class`, and `Lap.miniSectors` is fixed to
+`Circuit/LeMans`'s type. Reversing that arrow is its own change.
 
 There is no view-model layer between the two. `Race.Snapshot` is the whole
 per-frame derivation — sampling the cars at the clock, ordering the field,
