@@ -1,6 +1,7 @@
 module Motorsport.Analysis.Stint exposing
     ( Summary, summarize
-    , endedLengths, lapsDrivenBy
+    , all, ended, current, medianStintLength
+    , lapsDrivenBy
     )
 
 {-| A car's race read as the runs it made between pit stops.
@@ -11,7 +12,8 @@ those runs: which one the car is on, how the ones behind it compare, and who
 has driven how many of the laps.
 
 @docs Summary, summarize
-@docs endedLengths, lapsDrivenBy
+@docs all, ended, current, medianStintLength
+@docs lapsDrivenBy
 
 -}
 
@@ -22,18 +24,19 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
 
 
-{-| `current` is the run the car is on, which a car sitting in the pits does not
-have: its last lap is the one it came in on.
+{-| The run the car is on is held apart from the ones that ended, which a car
+sitting in the pits does not have: its last lap is the one it came in on.
 
-`medianStintLength` counts only the runs that ended, so the one in progress does
-not drag it down as it goes.
+The median counts only the runs that ended, so the one in progress does not
+drag it down as it goes.
 
 -}
-type alias Summary =
-    { stints : List Stint
-    , current : Maybe Stint
-    , medianStintLength : Maybe Int
-    }
+type Summary
+    = Summary
+        { ended : List Stint
+        , current : Maybe Stint
+        , medianStintLength : Maybe Int
+        }
 
 
 {-| Read a car's completed laps as the runs it made between stops, and the
@@ -42,33 +45,68 @@ readings taken over them.
 summarize : List Lap -> Summary
 summarize laps =
     let
-        stints =
-            RaceStint.fromLaps laps
+        ( endedStints, currentStint ) =
+            split (RaceStint.fromLaps laps)
     in
-    { stints = stints
-    , current = List.Extra.find (.end >> (==) RaceStint.Running) stints
-    , medianStintLength = Statistics.median (endedLengths stints)
-    }
+    Summary
+        { ended = endedStints
+        , current = currentStint
+        , medianStintLength = Statistics.median (List.map .lapCount endedStints)
+        }
 
 
-{-| The laps each completed run took. The run in progress is left out: how long
-it comes to is not settled until it ends.
+{-| The run in progress is the last of them and only ever the last: a run is cut
+at the lap the car came in on, so every run before the final one ended there.
 -}
-endedLengths : List Stint -> List Int
-endedLengths =
-    List.filter hasEnded >> List.map .lapCount
+split : List Stint -> ( List Stint, Maybe Stint )
+split stints =
+    case List.Extra.unconsLast stints of
+        Just ( last, rest ) ->
+            if last.end == RaceStint.Running then
+                ( rest, Just last )
+
+            else
+                ( stints, Nothing )
+
+        Nothing ->
+            ( [], Nothing )
 
 
-hasEnded : Stint -> Bool
-hasEnded stint =
-    stint.end /= RaceStint.Running
+{-| Every run the car has made, in the order it made them.
+-}
+all : Summary -> List Stint
+all (Summary summary) =
+    case summary.current of
+        Just stint ->
+            summary.ended ++ [ stint ]
+
+        Nothing ->
+            summary.ended
+
+
+{-| The runs behind the car, which are the ones there is anything to measure
+across.
+-}
+ended : Summary -> List Stint
+ended (Summary summary) =
+    summary.ended
+
+
+current : Summary -> Maybe Stint
+current (Summary summary) =
+    summary.current
+
+
+medianStintLength : Summary -> Maybe Int
+medianStintLength (Summary summary) =
+    summary.medianStintLength
 
 
 {-| How many laps this driver has driven, over every run they took out.
 -}
 lapsDrivenBy : Driver -> Summary -> Int
 lapsDrivenBy driver summary =
-    summary.stints
+    all summary
         |> List.filter (.driver >> Driver.isSame driver)
         |> List.map .lapCount
         |> List.sum

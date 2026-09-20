@@ -56,7 +56,7 @@ rather than left out.
 -}
 driverShare : Car.Metadata -> Summary -> Html msg
 driverShare metadata summary =
-    if List.isEmpty summary.stints then
+    if List.isEmpty (AnalysisStint.all summary) then
         text ""
 
     else
@@ -104,9 +104,9 @@ stintLengths : Summary -> String
 stintLengths summary =
     let
         lengths =
-            AnalysisStint.endedLengths summary.stints
+            List.map .lapCount (AnalysisStint.ended summary)
     in
-    case ( List.minimum lengths, List.maximum lengths, summary.medianStintLength ) of
+    case ( List.minimum lengths, List.maximum lengths, AnalysisStint.medianStintLength summary ) of
         ( Just shortest, Just longest, Just median_ ) ->
             if shortest == longest then
                 "runs of " ++ inLaps shortest
@@ -130,15 +130,18 @@ and the run in progress is left open on its right-hand edge.
 stintBar : Car.Metadata -> Summary -> Html msg
 stintBar metadata summary =
     let
+        stints =
+            AnalysisStint.all summary
+
         totalLaps =
-            List.sum (List.map .lapCount summary.stints)
+            List.sum (List.map .lapCount stints)
     in
     if totalLaps == 0 then
         text ""
 
     else
         div [ class "flex gap-x-px h-5 rounded overflow-hidden" ]
-            (List.map (stintSegment metadata totalLaps) summary.stints)
+            (List.map (stintSegment metadata totalLaps) stints)
 
 
 stintSegment : Car.Metadata -> Int -> Stint -> Html msg
@@ -221,7 +224,7 @@ trying to match.
 -}
 lastStint : Status -> Summary -> Html msg
 lastStint status summary =
-    case ( status, summary.current, List.Extra.last summary.stints ) of
+    case ( status, AnalysisStint.current summary, List.Extra.last (AnalysisStint.all summary) ) of
         ( Retired, _, Just final ) ->
             stintLine { isRunning = False } final "retired"
 
@@ -282,7 +285,7 @@ much fuel is left or what the plan is.
 -}
 againstMedian : Summary -> Stint -> String
 againstMedian summary stint =
-    case summary.medianStintLength of
+    case AnalysisStint.medianStintLength summary of
         Just median_ ->
             let
                 remaining =

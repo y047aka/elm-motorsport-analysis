@@ -15,14 +15,14 @@ suite =
                 \_ ->
                     [ lap 1 95000, lap 2 96000, lap 3 97000 ]
                         |> Stint.summarize
-                        |> .current
+                        |> Stint.current
                         |> Maybe.map (\stint -> ( stint.number, stint.firstLap, stint.lastLap ))
                         |> Expect.equal (Just ( 1, 1, 3 ))
             , test "a car sitting in the pits is on no run" <|
                 \_ ->
                     [ lap 1 95000, inLap 2 101000 ]
                         |> Stint.summarize
-                        |> .current
+                        |> Stint.current
                         |> Expect.equal Nothing
             , test "the run in progress is left out of the median" <|
                 \_ ->
@@ -37,16 +37,16 @@ suite =
                     , outLap 7 165000 63000
                     ]
                         |> Stint.summarize
-                        |> .medianStintLength
+                        |> Stint.medianStintLength
                         |> Expect.equal (Just 2)
             , test "a car that has turned no lap has run nothing" <|
                 \_ ->
                     []
                         |> Stint.summarize
                         |> Expect.all
-                            [ .stints >> Expect.equal []
-                            , .current >> Expect.equal Nothing
-                            , .medianStintLength >> Expect.equal Nothing
+                            [ Stint.all >> Expect.equal []
+                            , Stint.current >> Expect.equal Nothing
+                            , Stint.medianStintLength >> Expect.equal Nothing
                             ]
             ]
         , describe "lapsDrivenBy"
