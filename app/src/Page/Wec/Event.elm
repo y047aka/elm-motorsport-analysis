@@ -26,7 +26,6 @@ import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), 
 import Motorsport.Replay as Replay
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Leaderboard as Leaderboard
-import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Route
 import Shared
 import Shared.Msg
@@ -38,6 +37,7 @@ import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
 import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
+import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
 
 
@@ -250,7 +250,7 @@ trackerView track timeline snapshot replay m =
             [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
-                [ LiveStandingsWidget.view
+                [ LiveStandings.view
                     { onSelect = SelectDetailCar
                     , selected = Maybe.map (.metadata >> .carNumber) focused
                     }

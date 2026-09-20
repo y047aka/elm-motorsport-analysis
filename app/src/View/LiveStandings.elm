@@ -1,4 +1,4 @@
-module Motorsport.Widget.LiveStandings exposing (view)
+module View.LiveStandings exposing (view)
 
 {-| The field by class, in running order, and the page's one place for picking
 the car everything else is shown for.
