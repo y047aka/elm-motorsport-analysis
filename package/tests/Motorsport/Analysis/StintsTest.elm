@@ -1,27 +1,27 @@
-module Motorsport.Widget.CarDetail.StintTest exposing (suite)
+module Motorsport.Analysis.StintsTest exposing (suite)
 
 import Expect
+import Motorsport.Analysis.Stints as Stints
 import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Widget.CarDetail.Stint as Stint
 import Test exposing (Test, describe, test)
 
 
 suite : Test
 suite =
-    describe "Motorsport.Widget.CarDetail.Stint"
+    describe "Motorsport.Analysis.Stints"
         [ describe "summarize"
             [ test "a car that has not stopped is on its first run" <|
                 \_ ->
                     [ lap 1 95000, lap 2 96000, lap 3 97000 ]
-                        |> Stint.summarize
+                        |> Stints.summarize
                         |> .current
                         |> Maybe.map (\stint -> ( stint.number, stint.firstLap, stint.lastLap ))
                         |> Expect.equal (Just ( 1, 1, 3 ))
             , test "a car sitting in the pits is on no run" <|
                 \_ ->
                     [ lap 1 95000, inLap 2 101000 ]
-                        |> Stint.summarize
+                        |> Stints.summarize
                         |> .current
                         |> Expect.equal Nothing
             , test "the run in progress is left out of the median" <|
@@ -36,18 +36,34 @@ suite =
                     , inLap 6 101000
                     , outLap 7 165000 63000
                     ]
-                        |> Stint.summarize
+                        |> Stints.summarize
                         |> .medianStintLength
                         |> Expect.equal (Just 2)
             , test "a car that has turned no lap has run nothing" <|
                 \_ ->
                     []
-                        |> Stint.summarize
+                        |> Stints.summarize
                         |> Expect.all
                             [ .stints >> Expect.equal []
                             , .current >> Expect.equal Nothing
                             , .medianStintLength >> Expect.equal Nothing
                             ]
+            ]
+        , describe "lapsDrivenBy"
+            [ test "the laps of every run the driver took out" <|
+                \_ ->
+                    -- A run of three and a run of two, the second taken out by
+                    -- the other driver: a run is driven by whoever its first
+                    -- lap names.
+                    [ lap 1 95000
+                    , lap 2 95000
+                    , inLap 3 101000
+                    , outLap 4 165000 63000 |> drivenBy "Mike CONWAY"
+                    , lap 5 95000 |> drivenBy "Mike CONWAY"
+                    ]
+                        |> Stints.summarize
+                        |> Stints.lapsDrivenBy (Driver.fromName "Mike CONWAY")
+                        |> Expect.equal 2
             ]
         ]
 
@@ -65,6 +81,11 @@ inLap lapNumber time =
 outLap : Int -> Int -> Int -> Lap
 outLap lapNumber time stop =
     { empty | lap = lapNumber, time = Just time, pit = Lap.OutLap stop }
+
+
+drivenBy : String -> Lap -> Lap
+drivenBy name aLap =
+    { aLap | driver = Driver.fromName name }
 
 
 empty : Lap

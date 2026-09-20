@@ -316,9 +316,9 @@ numbers rather than a record per car. `Rivals.fight` is the ring every view
 comparing cars draws, named here so that the charts and the legend beside them
 cannot disagree about how wide it is; the wider rings stay the reader's.
 
-**What it comes to.** `ClassPositions`, `RelativeGap` and `Pace` derive from a
-`Race.Snapshot` and the primitives, and are given an answer of the first kind
-to say how much of it to read.
+**What it comes to.** `ClassPositions`, `RelativeGap`, `Pace` and `Stints`
+derive from a `Race.Snapshot` and the primitives, and are given an answer of
+the first kind to say how much of it to read.
 
 A reading of the laps is handed them whole, with a `LapRange` beside them, and
 does its own cutting. Cut laps and whole ones are both `List Lap` at a call

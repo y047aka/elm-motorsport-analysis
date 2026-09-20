@@ -25,6 +25,7 @@ import Html.Attributes exposing (class)
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
+import Motorsport.Analysis.Stints as Stints
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -133,7 +134,7 @@ panel state cars snapshot focused =
             (Stint.view
                 { status = focused.status, stops = focused.pitStops }
                 focused.metadata
-                (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
+                (LapHistory.get focused.metadata.carNumber lapHistory |> Stints.summarize)
             )
         , charts state snapshot rivals
         ]

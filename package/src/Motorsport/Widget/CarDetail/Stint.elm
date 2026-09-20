@@ -1,18 +1,8 @@
-module Motorsport.Widget.CarDetail.Stint exposing
-    ( Summary
-    , summarize
-    , view
-    )
+module Motorsport.Widget.CarDetail.Stint exposing (view)
 
-{-| The car's race drawn as the runs it made between pit stops.
+{-| [`Analysis.Stints`](Motorsport-Analysis-Stints) drawn as the panel's stints
+section.
 
-What a run is, and how the laps are cut into them, is
-[`Race.Stint`](Motorsport-Race-Stint)'s. What this module adds is the readings
-the section is written around: which run the car is on, and how the runs behind
-it compare.
-
-@docs Summary
-@docs summarize
 @docs view
 
 -}
@@ -20,71 +10,13 @@ it compare.
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style, title)
 import List.Extra
+import Motorsport.Analysis.Stints as Stints exposing (Summary)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Status exposing (Status(..))
-
-
-{-| `current` is the run the car is on, which a car sitting in the pits does not
-have: its last lap is the one it came in on.
-
-`medianStintLength` counts only the runs that ended, so the one in progress does
-not drag it down as it goes.
-
--}
-type alias Summary =
-    { stints : List Stint
-    , current : Maybe Stint
-    , medianStintLength : Maybe Int
-    }
-
-
-{-| Read a car's completed laps as the runs it made between stops, and the
-readings taken over them.
--}
-summarize : List Lap -> Summary
-summarize laps =
-    let
-        stints =
-            RaceStint.fromLaps laps
-    in
-    { stints = stints
-    , current = List.Extra.find (.end >> (==) RaceStint.Running) stints
-    , medianStintLength =
-        stints
-            |> List.filter hasEnded
-            |> List.map .lapCount
-            |> median
-    }
-
-
-hasEnded : Stint -> Bool
-hasEnded stint =
-    stint.end /= RaceStint.Running
-
-
-median : List Int -> Maybe Int
-median values =
-    let
-        sorted =
-            List.sort values
-
-        count =
-            List.length sorted
-    in
-    if count == 0 then
-        Nothing
-
-    else
-        sorted |> List.drop ((count - 1) // 2) |> List.head
-
-
-
--- VIEW
 
 
 {-| The run the car is on, the runs behind it as a bar of the laps they took,
@@ -142,16 +74,8 @@ driverCell metadata summary driver =
             []
         , div [ class "text-[10px] truncate" ] [ text (Driver.toSurname driver) ]
         , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
-            [ text (String.fromInt (lapsDrivenBy driver summary)) ]
+            [ text (String.fromInt (Stints.lapsDrivenBy driver summary)) ]
         ]
-
-
-lapsDrivenBy : Driver -> Summary -> Int
-lapsDrivenBy driver summary =
-    summary.stints
-        |> List.filter (.driver >> Driver.isSame driver)
-        |> List.map .lapCount
-        |> List.sum
 
 
 {-| The shape of the race the car is running: how often it has stopped, and how
@@ -180,7 +104,7 @@ stintLengths : Summary -> String
 stintLengths summary =
     let
         lengths =
-            summary.stints |> List.filter hasEnded |> List.map .lapCount
+            Stints.endedLengths summary.stints
     in
     case ( List.minimum lengths, List.maximum lengths, summary.medianStintLength ) of
         ( Just shortest, Just longest, Just median_ ) ->

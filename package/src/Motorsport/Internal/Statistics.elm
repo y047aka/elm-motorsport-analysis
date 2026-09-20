@@ -1,6 +1,10 @@
-module Motorsport.Internal.Statistics exposing (iqrFences, upperFence)
+module Motorsport.Internal.Statistics exposing
+    ( iqrFences, upperFence
+    , median
+    )
 
-{-| The outlier statistics the charts bound themselves by.
+{-| The plain statistics a reading of the race is taken with: the outlier
+fences a chart bounds itself by, and the middle of a set of values.
 
 Nothing here knows anything about a race. A lap behind a safety car and a lap
 spent in the pits are outliers by the same arithmetic as any other sample, and
@@ -9,6 +13,7 @@ which is why this sits beside the other machinery rather than with the race's
 own vocabulary.
 
 @docs iqrFences, upperFence
+@docs median
 
 -}
 
@@ -47,6 +52,22 @@ upperFence values =
     iqrFences (List.sort values)
         |> Maybe.map .upper
         |> Maybe.withDefault (List.maximum values |> Maybe.withDefault 0)
+
+
+{-| The middle value, by nearest rank -- for an even count the lower of the two
+middles rather than the mean of them, so what comes back is always one of the
+values given.
+
+    median [ 3, 1, 2 ]
+    --> Just 2
+
+    median [ 1, 2, 3, 4 ]
+    --> Just 2
+
+-}
+median : List Int -> Maybe Int
+median =
+    List.sort >> quantile 0.5
 
 
 {-| The q-quantile (0–1) of an ascending-sorted list, by nearest rank.
