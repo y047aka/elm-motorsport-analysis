@@ -68,8 +68,7 @@ The rival either side is drawn in full and labelled, the pair beyond them grey
 and faint with no end label -- the treatment the position chart gives the rest
 of its class.
 
-`Nothing` where the range holds none of the laps the chart would draw; what
-stands in its place is the caller's.
+`Nothing` where the range holds none of the laps the chart would draw.
 
 -}
 gapChartView : LapRange -> LapHistory -> Rivals -> Maybe (Html msg)

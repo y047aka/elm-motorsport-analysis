@@ -304,11 +304,10 @@ axis domain in what a module hands back puts it with the chart whatever else it
 computes, which is why `GapChart` keeps `carLine` and `Distribution` keeps
 `seriesOf` while the arithmetic under both of them sits here. How many views
 read a module is not a test: the shelf is organised by the reading and not by
-the reader, so `Rivals` has five readers because who a car is racing is a
-question five views have, and a chart's own sample has one because only that
-chart asks it. `Rivals` answers who a car is racing and `LapWindow` which laps a
-stretch of the race covers; both hand back the snapshot's own `CarAt`s and
-numbers rather than a record per car.
+the reader, so `Rivals` is asked by every view that draws a car among its
+rivals, and a chart's own sample by that chart alone. `Rivals` answers who a car
+is racing and `LapWindow` which laps a stretch of the race covers; both hand
+back the snapshot's own `CarAt`s and numbers rather than a record per car.
 
 `Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
 passed through (`Class`, `Era`), and Le Mans's mini-sectors

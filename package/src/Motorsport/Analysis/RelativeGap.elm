@@ -10,7 +10,7 @@ ahead of it is time in hand and behind it is time lost, so what a car's points
 do from one lap to the next is the pace between them.
 
 Which cars the baseline is taken from is the caller's, and need not be the cars
-measured against it; they are separate arguments for that reason.
+measured against it.
 
 A reading under `Motorsport/Analysis/`: derived from a snapshot's laps and the
 primitives, holding nothing of its own.

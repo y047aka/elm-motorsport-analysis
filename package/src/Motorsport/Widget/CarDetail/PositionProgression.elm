@@ -19,8 +19,7 @@ import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
 
 
-{-| `Nothing` where the range leaves no car of the class with a line to draw;
-what stands in its place is the caller's.
+{-| `Nothing` where the range leaves no car of the class with a line to draw.
 -}
 view : LapRange -> Snapshot -> Rivals -> Maybe (Html msg)
 view range snapshot rivals =

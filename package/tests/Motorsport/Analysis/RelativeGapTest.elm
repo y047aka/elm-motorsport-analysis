@@ -64,8 +64,7 @@ suite =
 -- FIXTURE
 
 
-{-| The group's laps, then the car's, as the two views hand them over. No
-baseline is no gaps, which the views read off the `Maybe` rather than off this.
+{-| The group's laps, then the car's, as the two views hand them over.
 -}
 gapsOf : List Lap -> List Lap -> List RelativeGap.Point
 gapsOf groupLaps carLaps =

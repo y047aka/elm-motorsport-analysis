@@ -24,8 +24,7 @@ are doing.
 Three curves and no more, unlike the gap chart beside it: these overlap where
 they are alike, which is exactly where the chart is being read.
 
-`Nothing` where the range holds no lap to describe; what stands in its place is
-the caller's.
+`Nothing` where the range holds no lap to describe.
 
 -}
 view : LapRange -> LapHistory -> Rivals -> Maybe (Html msg)

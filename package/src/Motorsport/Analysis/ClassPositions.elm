@@ -28,9 +28,8 @@ type alias Point =
     }
 
 
-{-| Every car of the class, each with the places it held inside the range. A
-lap the feed gave no position for is not one of them, and a car that was not
-running in the range answers with nothing.
+{-| A lap the feed gave no position for produces no point, and a car that was
+not running in the range answers with nothing rather than dropping out.
 -}
 byCar : LapRange -> Class -> Snapshot -> List ( CarAt, List Point )
 byCar range class snapshot =

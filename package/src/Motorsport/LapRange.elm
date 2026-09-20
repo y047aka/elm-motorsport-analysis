@@ -10,8 +10,7 @@ same call and because two Ints in a row can be swapped at a call site without a
 word from the compiler.
 
 Which laps a reader asked for is
-[`Analysis.LapWindow`](Motorsport-Analysis-LapWindow)'s; this is the answer, and
-what a chart's axis spans is one of these too.
+[`Analysis.LapWindow`](Motorsport-Analysis-LapWindow)'s; this is the answer.
 
 @docs LapRange
 @docs within
@@ -27,8 +26,6 @@ type alias LapRange =
     }
 
 
-{-| One car's laps that the range covers, out of everything it has run.
--}
 within : LapRange -> List Lap -> List Lap
 within range =
     List.filter (\lap -> range.first <= lap.lap && lap.lap <= range.last)
