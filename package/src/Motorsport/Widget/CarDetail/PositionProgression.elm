@@ -43,7 +43,7 @@ classProgressionSeries range snapshot rivals =
         highlighted =
             Rivals.fight rivals |> List.map (.metadata >> .carNumber)
     in
-    ClassPositions.byCar range (Rivals.focused rivals).metadata.class snapshot
+    ClassPositions.byCar range (Rivals.class rivals) snapshot
         |> List.filter (\( _, points ) -> List.length points >= 2)
         |> List.map
             (\( item, points ) ->

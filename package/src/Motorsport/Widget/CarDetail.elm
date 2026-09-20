@@ -153,7 +153,7 @@ charts : State -> Snapshot -> Rivals -> Html Msg
 charts state snapshot rivals =
     let
         comparison =
-            { range = LapWindow.range state.window (Rivals.focused rivals).metadata.class snapshot
+            { range = LapWindow.range state.window (Rivals.class rivals) snapshot
             , snapshot = snapshot
             , rivals = rivals
             }

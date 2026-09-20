@@ -1,7 +1,8 @@
 module Motorsport.Analysis.Rivals exposing
     ( Rivals
     , around
-    , focused, fight, nearest
+    , focused, class
+    , fight, nearest
     )
 
 {-| The cars a car is racing, as rings around it: the rival either side is the
@@ -15,12 +16,14 @@ averaging a baseline.
 
 @docs Rivals
 @docs around
-@docs focused, fight, nearest
+@docs focused, class
+@docs fight, nearest
 
 -}
 
 import List.Extra
 import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Wec.Class exposing (Class)
 
 
 type Rivals
@@ -67,6 +70,14 @@ from the rest.
 focused : Rivals -> CarAt
 focused (Rivals r) =
     r.car
+
+
+{-| The class the group was taken from, which is the one `around` filtered the
+field by.
+-}
+class : Rivals -> Class
+class (Rivals r) =
+    r.car.metadata.class
 
 
 {-| The car and the rival either side of it: the cars a view compares, and the

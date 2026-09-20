@@ -25,6 +25,11 @@ suite =
                 \_ ->
                     fightAround "2"
                         |> Expect.equal (Just [ "1", "2", "3" ])
+            , test "the class the group was taken from is the car's own, not the field's first" <|
+                \_ ->
+                    rivalsAround "7"
+                        |> Maybe.map Rivals.class
+                        |> Expect.equal (Just (classOf "LMGT3"))
             , test "a car the running order does not hold is its own only company" <|
                 \_ ->
                     fightAround "99"
