@@ -1,6 +1,7 @@
 module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
 
-{-| The place each car of a class has held, lap by lap.
+{-| [`ClassPositions`](Motorsport-Analysis-ClassPositions) drawn as one line per
+car, the cars being compared picked out of the class behind them.
 
 @docs view
 
@@ -9,131 +10,89 @@ module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
 import List.Extra
+import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
-import Motorsport.Lap exposing (Lap)
-import Motorsport.Race.LapHistory as LapHistory
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Wec.Class exposing (Class)
-import Motorsport.Widget as Widget
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, consolidated, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.LapRange exposing (LapRange)
+import Motorsport.Race.Snapshot exposing (Snapshot)
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
 
 
-{-| The whole class over the given laps, the cars of `rivals` picked out of it.
-
-Unlike the other charts of the panel, the population is the class rather than
-the rivals: a car's position only means anything against everyone it could have
-gained or lost one to.
-
+{-| `Nothing` where the range leaves no car of the class with a line to draw.
 -}
-view : ( Int, Int ) -> Snapshot -> Rivals -> Html msg
+view : LapRange -> Snapshot -> Rivals -> Maybe (Html msg)
 view range snapshot rivals =
-    case buildClassProgressionData range snapshot rivals of
-        Ok series ->
-            positionProgressionChart consolidated series
+    case classProgressionSeries range snapshot rivals of
+        [] ->
+            Nothing
 
-        Err message ->
-            Widget.emptyState message
+        series ->
+            Just (positionProgressionChart consolidated series)
 
 
-{-| The size the panel's full-width charts share.
+{-| One line per car of the class, the cars of `rivals` emphasised.
+
+A car with a single point is left out: one place held at one lap is not a line,
+and the chart draws lines.
+
 -}
-consolidated : { width : Float, height : Float }
-consolidated =
-    { width = 1000, height = 250 }
-
-
-{-| Builds the position points inside the range for each car in the class,
-keeping only cars with two or more points.
--}
-classPositionPoints : ( Int, Int ) -> Snapshot -> Class -> List ( CarAt, List PositionPoint )
-classPositionPoints range snapshot class =
-    let
-        lapHistory =
-            Snapshot.lapHistory snapshot
-    in
-    Snapshot.inClass class snapshot
-        |> List.map (\item -> ( item, buildPositionPoints range (LapHistory.get item.metadata.carNumber lapHistory) ))
-        |> List.filter (\( _, points ) -> List.length points >= 2)
-
-
-buildClassProgressionData : ( Int, Int ) -> Snapshot -> Rivals -> Result String (List PositionSeries)
-buildClassProgressionData range snapshot rivals =
+classProgressionSeries : LapRange -> Snapshot -> Rivals -> List PositionSeries
+classProgressionSeries range snapshot rivals =
     let
         highlighted =
-            Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
-
-        series =
-            classPositionPoints range snapshot (Rivals.focused rivals).metadata.class
-                |> List.map
-                    (\( item, points ) ->
-                        { points = points
-                        , color = item.metadata.manufacturer.color
-                        , carNumber = item.metadata.carNumber
-                        , emphasis =
-                            if List.member item.metadata.carNumber highlighted then
-                                Focused
-
-                            else
-                                Muted
-                        }
-                    )
+            Rivals.fight rivals |> List.map (.metadata >> .carNumber)
     in
-    if List.isEmpty series then
-        Err "Lap chart will appear as more laps are completed."
+    ClassPositions.byCar range (Rivals.class rivals) snapshot
+        |> List.filter (\( _, points ) -> List.length points >= 2)
+        |> List.map
+            (\( item, points ) ->
+                { points = points
+                , color = item.metadata.manufacturer.color
+                , carNumber = item.metadata.carNumber
+                , emphasis =
+                    if List.member item.metadata.carNumber highlighted then
+                        Focused
 
-    else
-        Ok series
-
-
-type alias PositionPoint =
-    { lapNumber : Int
-    , position : Int
-    }
+                    else
+                        Muted
+                }
+            )
 
 
 type alias PositionSeries =
-    { points : List PositionPoint
+    { points : List ClassPositions.Point
     , color : String
     , carNumber : String
     , emphasis : Emphasis
     }
 
 
-{-| The lap-number range `(minLap, maxLap)` the point series spans. `(1, 1)` when empty.
+{-| The lap numbers the point series spans, which is what the chart drew rather
+than what it was asked to read. Lap 1 to lap 1 when there is nothing.
 -}
-lapExtent : List PositionPoint -> ( Int, Int )
+lapExtent : List ClassPositions.Point -> LapRange
 lapExtent positions =
     let
         laps =
-            positions |> List.map .lapNumber
+            positions |> List.map .lap
     in
-    ( List.minimum laps |> Maybe.withDefault 1
-    , List.maximum laps |> Maybe.withDefault 1
-    )
+    { first = List.minimum laps |> Maybe.withDefault 1
+    , last = List.maximum laps |> Maybe.withDefault 1
+    }
 
 
-positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
-positionProgressionChart size series =
+positionProgressionChart : Dimensions -> List PositionSeries -> Html msg
+positionProgressionChart dimensions series =
     let
-        dimensions =
-            { width = size.width
-            , height = size.height
-            , padding = axisPadding
-            }
-
         allPoints =
             series |> List.concatMap .points
 
-        lapRange_ =
+        axisLaps =
             lapExtent allPoints
 
-        ( minLap, maxLap ) =
-            lapRange_
-
         scales =
-            { xScale = xContinuousScale dimensions ( toFloat minLap, toFloat maxLap )
+            { xScale = xContinuousScale dimensions ( toFloat axisLaps.first, toFloat axisLaps.last )
             , yScale = yContinuousScale dimensions allPoints
             }
 
@@ -141,26 +100,16 @@ positionProgressionChart size series =
         orderedSeries =
             sortForDrawing .emphasis (.points >> List.Extra.last >> Maybe.map .position) series
     in
-    svg size
-        ([ lapGridLines dimensions scales.xScale lapRange_
-         , lapAxis dimensions scales.xScale lapRange_
+    svg { width = dimensions.width, height = dimensions.height }
+        ([ lapGridLines dimensions scales.xScale axisLaps
+         , lapAxis dimensions scales.xScale axisLaps
          , positionAxis dimensions scales.yScale
          ]
             ++ List.map (positionLine scales) orderedSeries
         )
 
 
-buildPositionPoints : ( Int, Int ) -> List Lap -> List PositionPoint
-buildPositionPoints ( minLap, maxLap ) history =
-    history
-        |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
-        |> List.filterMap
-            (\lap ->
-                lap.position |> Maybe.map (\pos -> { lapNumber = lap.lap, position = pos })
-            )
-
-
-yContinuousScale : Dimensions -> List PositionPoint -> ContinuousScale Float
+yContinuousScale : Dimensions -> List ClassPositions.Point -> ContinuousScale Float
 yContinuousScale { height, padding } positions =
     let
         allPositions =
@@ -218,5 +167,5 @@ positionLine scales series =
         { color = series.color
         , emphasis = series.emphasis
         , label = series.carNumber
-        , points = series.points |> List.map (\p -> ( p.lapNumber, p.position ))
+        , points = series.points |> List.map (\p -> ( p.lap, p.position ))
         }

@@ -1,6 +1,6 @@
 module Motorsport.Analysis.LapWindow exposing
     ( LapWindow(..)
-    , laps
+    , range
     )
 
 {-| How much of the race to read: all of it run so far, or the last stretch of
@@ -12,17 +12,15 @@ it lapping under a safety car or flat out. Turning one into lap numbers is the
 race's to do rather than a chart's: which laps an hour covers depends on who was
 running and how quickly they went round.
 
-A reading under `Motorsport/Analysis/`: derived from a snapshot and the
-primitives, holding nothing of its own.
-
 @docs LapWindow
-@docs laps
+@docs range
 
 -}
 
 import List.Extra
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
+import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
@@ -33,16 +31,20 @@ type LapWindow
     | Recent Duration
 
 
-{-| The window as the lap numbers `( first, last )` a chart keeps its laps by.
+{-| The window as the lap numbers a chart keeps its laps by.
 
 Both ends are read off the one class rather than off the race: a slower class's
 laps run out short of the race leader's and take longer to come round, so a
 window measured off that leader would leave a chart's axis running on past where
 its lines stop.
 
+What comes out is lap numbers and no longer a stretch of time, so a car is cut
+at the laps its own class reached rather than at the ones it ran inside the
+stretch itself.
+
 -}
-laps : LapWindow -> Class -> Snapshot -> ( Int, Int )
-laps window class snapshot =
+range : LapWindow -> Class -> Snapshot -> LapRange
+range window class snapshot =
     let
         classCars =
             Snapshot.inClass class snapshot
@@ -56,10 +58,10 @@ laps window class snapshot =
     in
     case window of
         WholeRace ->
-            ( 1, latest )
+            { first = 1, last = latest }
 
         Recent stretch ->
-            ( firstLapSince stretch snapshot classCars, latest )
+            { first = firstLapSince stretch snapshot classCars, last = latest }
 
 
 {-| Where a chart drawn over `stretch` starts: the lap the car furthest through

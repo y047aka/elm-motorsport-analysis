@@ -1,6 +1,6 @@
 module Motorsport.Chart.Common exposing
     ( Emphasis(..), chooseByEmphasis, emphasisRank, sortForDrawing
-    , Dimensions, Scales, axisPadding, xContinuousScale
+    , Dimensions, Scales, axisPadding, consolidated, xContinuousScale
     , svg, renderLine
     , axisStyle, lapGridLines, lapAxis, yAxis
     )
@@ -10,7 +10,7 @@ charts: the types they draw against, the polyline renderer, the axis and grid
 drawing.
 
 @docs Emphasis, chooseByEmphasis, emphasisRank, sortForDrawing
-@docs Dimensions, Scales, axisPadding, xContinuousScale
+@docs Dimensions, Scales, axisPadding, consolidated, xContinuousScale
 @docs svg, renderLine
 @docs axisStyle, lapGridLines, lapAxis, yAxis
 
@@ -18,6 +18,7 @@ drawing.
 
 import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
 import List.Extra
+import Motorsport.LapRange exposing (LapRange)
 import Path
 import Scale
 import Shape
@@ -104,6 +105,19 @@ type alias Dimensions =
 axisPadding : { top : Float, right : Float, bottom : Float, left : Float }
 axisPadding =
     { top = 20, right = 25, bottom = 20, left = 25 }
+
+
+{-| The size the car detail panel's charts draw at. A wide aspect keeps the
+rendered height low once the svg is stretched to 100% width.
+
+One value rather than one per chart: the panel's tabs switch between them in
+place, so a chart of another height reads as the panel jumping rather than as
+the chart changing.
+
+-}
+consolidated : Dimensions
+consolidated =
+    { width = 1000, height = 250, padding = axisPadding }
 
 
 {-| The scales for drawing polylines. Built once per chart and shared across the
@@ -267,11 +281,11 @@ axisStyle =
 
 {-| Vertical grid lines every 5 laps, across the height of the plot area.
 -}
-lapGridLines : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
-lapGridLines { height, padding } xScale ( minLap, maxLap ) =
+lapGridLines : Dimensions -> Scale.ContinuousScale Float -> LapRange -> Svg msg
+lapGridLines { height, padding } xScale range =
     let
         gridLaps =
-            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
+            List.range range.first range.last |> List.filter (\l -> modBy 5 l == 0)
 
         top =
             padding.top
@@ -301,11 +315,11 @@ lapGridLines { height, padding } xScale ( minLap, maxLap ) =
 {-| Lap-number X axis (bottom). Places a tick at every lap, with a label every 5
 laps.
 -}
-lapAxis : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
-lapAxis { height, padding } xScale ( minLap, maxLap ) =
+lapAxis : Dimensions -> Scale.ContinuousScale Float -> LapRange -> Svg msg
+lapAxis { height, padding } xScale range =
     let
         allLaps =
-            List.range minLap maxLap |> List.map toFloat
+            List.range range.first range.last |> List.map toFloat
 
         axis =
             Axis.bottom

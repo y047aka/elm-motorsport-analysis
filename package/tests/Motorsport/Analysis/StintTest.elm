@@ -1,15 +1,15 @@
-module Motorsport.Widget.CarDetail.StintTest exposing (suite)
+module Motorsport.Analysis.StintTest exposing (suite)
 
 import Expect
+import Motorsport.Analysis.Stint as Stint
 import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Widget.CarDetail.Stint as Stint
 import Test exposing (Test, describe, test)
 
 
 suite : Test
 suite =
-    describe "Motorsport.Widget.CarDetail.Stint"
+    describe "Motorsport.Analysis.Stint"
         [ describe "summarize"
             [ test "a car that has not stopped is on its first run" <|
                 \_ ->
@@ -49,6 +49,22 @@ suite =
                             , .medianStintLength >> Expect.equal Nothing
                             ]
             ]
+        , describe "lapsDrivenBy"
+            [ test "the laps of every run the driver took out" <|
+                \_ ->
+                    -- A run of three and a run of two, the second taken out by
+                    -- the other driver: a run is driven by whoever its first
+                    -- lap names.
+                    [ lap 1 95000
+                    , lap 2 95000
+                    , inLap 3 101000
+                    , outLap 4 165000 63000 |> drivenBy "Mike CONWAY"
+                    , lap 5 95000 |> drivenBy "Mike CONWAY"
+                    ]
+                        |> Stint.summarize
+                        |> Stint.lapsDrivenBy (Driver.fromName "Mike CONWAY")
+                        |> Expect.equal 2
+            ]
         ]
 
 
@@ -65,6 +81,11 @@ inLap lapNumber time =
 outLap : Int -> Int -> Int -> Lap
 outLap lapNumber time stop =
     { empty | lap = lapNumber, time = Just time, pit = Lap.OutLap stop }
+
+
+drivenBy : String -> Lap -> Lap
+drivenBy name aLap =
+    { aLap | driver = Driver.fromName name }
 
 
 empty : Lap

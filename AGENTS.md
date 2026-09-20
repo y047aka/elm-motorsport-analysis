@@ -289,19 +289,53 @@ what an object-valued setter compares with, and both are back to zero.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
-(`Snapshot`, `LapHistory`), `Analysis/` for readings derived from one of those
-(`Rivals`, `LapWindow`), `Widget/` and `Chart/` for rendering (Leaderboard,
+(`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those
+(`Rivals`, `Pace`), `Widget/` and `Chart/` for rendering (Leaderboard,
 GapChart, BoxPlot), `Internal/` for machinery that is not the race's vocabulary
 (`ChangePoints`, `Statistics`).
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
-of: a module belongs there when it derives from a `Race.Snapshot` and the
-primitives, more than one view reads it, and it holds no state of its own --
-which is what keeps it out of `Race/`, where nothing owns it, and out of
-`Chart/` and `Widget/`, which it draws nothing for. `Rivals` answers who a car
-is racing and `LapWindow` which laps a stretch of the race covers; both hand
-back the snapshot's own `CarAt`s and numbers rather than a record per car.
+of: a module belongs there when it holds no state of its own and it draws
+nothing -- which is what keeps it out of `Race/`, where nothing owns it, and
+out of `Chart/` and `Widget/`. Drawing is the test that does the work. A
+colour, an emphasis or an axis domain in what a module hands back puts it with
+the chart whatever else it computes, which is why `GapChart` keeps `carLine`
+and `Distribution` keeps `seriesOf` while the arithmetic under both of them
+sits here. How many views read a module is not a test: the shelf is organised
+by the reading and not by the reader, so `Rivals` is asked by every view that
+draws a car among its rivals, and a chart's own sample by that chart alone.
+
+The shelf holds two kinds, and which kind a module is says what its arguments
+look like.
+
+**What to read.** `Rivals` answers who a car is racing and `LapWindow` which
+laps a stretch of the race covers. Each takes the reader's choice -- how wide a
+ring, how long a stretch -- and answers in the snapshot's own `CarAt`s and
+numbers rather than a record per car. `Rivals.fight` is the ring every view
+comparing cars draws, named here so that the charts and the legend beside them
+cannot disagree about how wide it is; the wider rings stay the reader's.
+
+**What it comes to.** `ClassPositions`, `RelativeGap`, `Pace` and `Stint`
+derive from a `Race.Snapshot` and the primitives, and are given an answer of
+the first kind to say how much of it to read.
+
+A reading of the laps is handed them whole, with a `LapRange` beside them, and
+does its own cutting. Cut laps and whole ones are both `List Lap` at a call
+site, so a module taking one and a module taking the other are
+indistinguishable, and the wrong pairing compiles. The rule earns itself on
+`Pace`, whose outlier fence has to come off the whole race the car ran: there
+the range and the laps are deliberately not the same stretch, and any other
+convention would make that read as a bug.
+
+The three charts the car detail panel tabs between take one shape --
+`LapRange -> Snapshot -> Rivals` -- because they are interchangeable to
+`ChartTabs`, which holds them side by side. The two wanting only the laps read
+`Snapshot.lapHistory` themselves. `ClassPositions` is still given the class and
+the snapshot rather than reading the population off `Rivals`, which holds the
+whole class already: `around` is only handed the whole field by convention, and
+a caller handing it less would leave the position chart drawn against a class
+with cars missing, with nothing to say so.
 
 `Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
 passed through (`Class`, `Era`), and Le Mans's mini-sectors

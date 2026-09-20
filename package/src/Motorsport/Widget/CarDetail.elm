@@ -25,20 +25,22 @@ import Html.Attributes exposing (class)
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
+import Motorsport.Analysis.Stint as AnalysisStint
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (Car)
-import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Widget as Widget
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
 import Motorsport.Widget.CarDetail.Header as Header
 import Motorsport.Widget.CarDetail.LapTimes as LapTimes
 import Motorsport.Widget.CarDetail.PositionProgression as PositionProgression
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
+import Motorsport.Widget.Common as Widget
 import Motorsport.Widget.Distribution as Distribution
 
 
@@ -50,7 +52,7 @@ type Model
 
 type alias State =
     { chart : Chart
-    , range : LapWindow
+    , window : LapWindow
     , lapHistoryOpen : Bool
     }
 
@@ -59,7 +61,7 @@ init : Model
 init =
     Model
         { chart = GapChart
-        , range = LapWindow.WholeRace
+        , window = LapWindow.WholeRace
         , lapHistoryOpen = False
         }
 
@@ -81,7 +83,7 @@ type Chart
 
 type Msg
     = SelectedChart Chart
-    | SelectedRange LapWindow
+    | SelectedWindow LapWindow
     | ToggledLapHistory
 
 
@@ -92,8 +94,8 @@ update msg (Model state) =
             SelectedChart chart ->
                 { state | chart = chart }
 
-            SelectedRange range ->
-                { state | range = range }
+            SelectedWindow window ->
+                { state | window = window }
 
             ToggledLapHistory ->
                 { state | lapHistoryOpen = not state.lapHistoryOpen }
@@ -132,9 +134,9 @@ panel state cars snapshot focused =
             (Stint.view
                 { status = focused.status, stops = focused.pitStops }
                 focused.metadata
-                (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
+                (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
-        , charts state lapHistory snapshot rivals
+        , charts state snapshot rivals
         ]
 
 
@@ -142,19 +144,17 @@ panel state cars snapshot focused =
 switch the chart and nothing else about what is being shown.
 -}
 type alias Comparison =
-    { laps : ( Int, Int )
-    , lapHistory : LapHistory
+    { range : LapRange
     , snapshot : Snapshot
     , rivals : Rivals
     }
 
 
-charts : State -> LapHistory -> Snapshot -> Rivals -> Html Msg
-charts state lapHistory snapshot rivals =
+charts : State -> Snapshot -> Rivals -> Html Msg
+charts state snapshot rivals =
     let
         comparison =
-            { laps = LapWindow.laps state.range (Rivals.focused rivals).metadata.class snapshot
-            , lapHistory = lapHistory
+            { range = LapWindow.range state.window (Rivals.class rivals) snapshot
             , snapshot = snapshot
             , rivals = rivals
             }
@@ -170,12 +170,12 @@ charts state lapHistory snapshot rivals =
 {-| The stretches of the race on offer, in the order the toggle draws them.
 
 One setting for all three charts rather than one each: only one of them is
-showing at a time, and a range that changed as the tabs did would read as the
+showing at a time, and a stretch that changed as the tabs did would read as the
 chart changing.
 
 -}
-rangeOptions : List ( LapWindow, String )
-rangeOptions =
+windowOptions : List ( LapWindow, String )
+windowOptions =
     [ ( LapWindow.Recent (90 * 60 * 1000), "Last 1.5h" )
     , ( LapWindow.Recent (3 * 60 * 60 * 1000), "Last 3h" )
     , ( LapWindow.WholeRace, "All" )
@@ -193,7 +193,7 @@ that colour already, and a second mark beside it is the same ink twice.
 legend : Snapshot -> Rivals -> Html msg
 legend snapshot rivals =
     div [ class "grid gap-y-px" ]
-        (Rivals.nearest 1 rivals
+        (Rivals.fight rivals
             |> List.map (legendEntry snapshot (Rivals.focused rivals))
         )
 
@@ -230,14 +230,24 @@ legendEntry snapshot focused item =
         ]
 
 
+{-| One wording for an empty chart, whatever tab is showing. The three run out
+of laps for reasons of their own -- a stretch holding none of the cars drawn, a
+class with no line to draw, no lap time to describe -- and a wording apiece reads
+as the tabs disagreeing about the race.
+-}
 chartTabs : State -> Comparison -> Html Msg
-chartTabs state { laps, lapHistory, snapshot, rivals } =
+chartTabs state { range, snapshot, rivals } =
+    let
+        orEmptyState : Maybe (Html Msg) -> Html Msg
+        orEmptyState =
+            Maybe.withDefault (Widget.emptyState "No laps to compare yet")
+    in
     ChartTabs.chartTabs SelectedChart
         state.chart
-        (ChartTabs.segmentedControl SelectedRange state.range rangeOptions)
-        [ ( GapChart, "Gap to avg", \() -> GapChart.gapChartView laps lapHistory rivals )
-        , ( PositionChart, "Positions", \() -> PositionProgression.view laps snapshot rivals )
-        , ( DistributionChart, "Distribution", \() -> Distribution.view laps lapHistory rivals )
+        (ChartTabs.segmentedControl SelectedWindow state.window windowOptions)
+        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
+        , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
+        , ( DistributionChart, "Distribution", \() -> orEmptyState (Distribution.view range snapshot rivals) )
         ]
 
 

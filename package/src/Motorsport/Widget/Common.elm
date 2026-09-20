@@ -1,9 +1,10 @@
-module Motorsport.Widget exposing
+module Motorsport.Widget.Common exposing
     ( container
     , emptyState
     )
 
-{-|
+{-| The chrome the widgets share: the titled card one sits in, and what stands
+inside it where its content would be.
 
 @docs container
 @docs emptyState
@@ -14,8 +15,6 @@ import Html exposing (Html, div, h3, text)
 import Html.Attributes exposing (class)
 
 
-{-| Create a standard widget container with consistent styling
--}
 container : String -> Html msg -> Html msg
 container widgetTitle content =
     div
@@ -27,8 +26,6 @@ container widgetTitle content =
         ]
 
 
-{-| Create a consistent empty state message
--}
 emptyState : String -> Html msg
 emptyState message =
     div
