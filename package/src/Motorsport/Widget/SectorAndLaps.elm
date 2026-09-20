@@ -1,7 +1,6 @@
 module Motorsport.Widget.SectorAndLaps exposing (view)
 
-{-| Per-car "sector progress pie + Current lap + Last lap" row,
-shared by SelectedCarsStrip and the car detail panel.
+{-| Per-car "sector progress pie + Current lap + Last lap" row.
 
 @docs view
 

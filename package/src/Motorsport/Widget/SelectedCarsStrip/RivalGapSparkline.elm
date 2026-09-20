@@ -1,7 +1,7 @@
 module Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline exposing (view)
 
 {-| Sparkline of relative gap history against the class rivals ahead and behind,
-shown at the bottom of each SelectedCarsStrip card.
+shown at the bottom of each car card.
 
 @docs view
 

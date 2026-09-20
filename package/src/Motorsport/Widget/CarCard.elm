@@ -1,7 +1,7 @@
 module Motorsport.Widget.CarCard exposing (view)
 
-{-| A single car card for SelectedCarsStrip: where the car stands, who is
-driving it, and how it is running.
+{-| A single car card: where the car stands, who is driving it, and how it is
+running.
 
 @docs view
 
@@ -21,8 +21,8 @@ import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
 
 
-{-| `allCars` is the full overall standings, not just the visible window —
-the sparkline searches it for the class rivals ahead of and behind the car.
+{-| `allCars` is the full overall standings: the sparkline searches it for the
+class rivals ahead of and behind the car.
 -}
 view : LapHistory -> List CarAt -> CarAt -> Html msg
 view lapHistory allCars item =
