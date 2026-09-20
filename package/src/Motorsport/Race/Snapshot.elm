@@ -2,7 +2,8 @@ module Motorsport.Race.Snapshot exposing
     ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..)
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
-    , toList, toClassList, get, inClass, leader, lapCount, elapsed
+    , toList, toClassList, get, inClass, leader, behind, lapCount, elapsed
+    , gapBetween
     , bestTimes, lapHistory
     )
 
@@ -16,7 +17,8 @@ each work them out again -- that sharing is the whole reason the type exists.
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
-@docs toList, toClassList, get, inClass, leader, lapCount, elapsed
+@docs toList, toClassList, get, inClass, leader, behind, lapCount, elapsed
+@docs gapBetween
 @docs bestTimes, lapHistory
 
 -}
@@ -326,6 +328,61 @@ inClass class (Snapshot s) =
 leader : Snapshot -> Maybe CarAt
 leader (Snapshot s) =
     List.head s.cars
+
+
+{-| The car next in the running order, where the car given is not the last of
+them.
+
+A car is given the gap to the one ahead of it and never the one behind, so this
+is how the gap behind a car is reached.
+
+-}
+behind : CarAt -> Snapshot -> Maybe CarAt
+behind car (Snapshot s) =
+    s.cars
+        |> List.Extra.dropWhile (\item -> item.metadata.carNumber /= car.metadata.carNumber)
+        |> List.drop 1
+        |> List.head
+
+
+{-| How far up or down the road one car is from another: the intervals between
+the two, added up along the running order. Each is measured at the same moment,
+so the sum is a time on the road; a lap anywhere between the two makes it no
+time at all, and there is nothing here to say.
+
+Positive where `other` is behind `car`, as a gap on a timing screen is.
+
+-}
+gapBetween : CarAt -> CarAt -> Snapshot -> Maybe Duration
+gapBetween car other (Snapshot s) =
+    let
+        positionOf subject =
+            List.Extra.findIndex
+                (\item -> item.metadata.carNumber == subject.metadata.carNumber)
+                s.cars
+    in
+    Maybe.map2 Tuple.pair (positionOf car) (positionOf other)
+        |> Maybe.andThen
+            (\( ours, theirs ) ->
+                s.cars
+                    |> List.drop (min ours theirs + 1)
+                    |> List.take (abs (theirs - ours))
+                    |> List.map (.standing >> .intervalToAhead >> Gap.toDuration)
+                    |> combine
+                    |> Maybe.map
+                        (\intervals ->
+                            if theirs > ours then
+                                List.sum intervals
+
+                            else
+                                negate (List.sum intervals)
+                        )
+            )
+
+
+combine : List (Maybe a) -> Maybe (List a)
+combine =
+    List.foldr (Maybe.map2 (::)) (Just [])
 
 
 {-| How many laps the leader has completed at this moment.

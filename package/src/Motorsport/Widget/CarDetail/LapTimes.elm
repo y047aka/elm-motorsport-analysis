@@ -16,9 +16,10 @@ before it is over.
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (attribute, class, style)
 import Html.Events exposing (onClick)
+import Motorsport.Analysis.Pace as Pace
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
@@ -43,7 +44,7 @@ view :
 view config laps item =
     let
         best =
-            bestSectors item.standing.lapsCompleted laps
+            Pace.bestSectors { first = 1, last = item.standing.lapsCompleted } laps
     in
     div [ class "grid gap-y-2" ]
         [ bestLap config.bestTimes item
@@ -126,27 +127,6 @@ currentLap best item =
                         , strip = SegmentStrip.sectors item.currentLap.sectorStates
                         }
         }
-
-
-{-| The best each sector has been driven in, over the laps the car has finished.
-
-Laps the car pitted on are left out, as they are everywhere a pace is read --
-see [`Lap.isRacingLap`](Motorsport-Lap#isRacingLap). So are the laps the clock
-has not reached: a lap the car is going to run is not a lap it has driven.
-
--}
-bestSectors : Int -> List Lap -> BySector (Maybe Duration)
-bestSectors lapsCompleted laps =
-    let
-        racingLaps =
-            List.filter (\lap -> Lap.isRacingLap lap && lap.lap <= lapsCompleted) laps
-    in
-    Sector.initialize
-        (\sector ->
-            racingLaps
-                |> List.filterMap (\lap -> (Sector.get sector lap.sectors).time)
-                |> List.minimum
-        )
 
 
 

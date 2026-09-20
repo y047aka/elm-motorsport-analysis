@@ -27,8 +27,7 @@ import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Analysis.Stint as AnalysisStint
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (Car)
@@ -118,7 +117,7 @@ panel state cars snapshot focused =
     div [ class "grid gap-y-3" ]
         [ Header.view
             { startPosition = startPositionOf cars focused
-            , behind = behind snapshot focused
+            , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
             }
             focused
         , Widget.container "Lap times"
@@ -251,14 +250,12 @@ chartTabs state { range, snapshot, rivals } =
         ]
 
 
-{-| How far up or down the road a rival is: the intervals between the two cars,
-added up along the running order. Each is measured at the same moment, so the sum
-is a time on the road; a lap anywhere between the two makes it no time at all,
-and the laps the two are apart are what is left to say.
+{-| How far up or down the road a rival is. Where the two cars have no time
+between them, the laps they are apart are what is left to say.
 -}
 fromFocused : Snapshot -> CarAt -> CarAt -> String
 fromFocused snapshot focused item =
-    case gapBetween snapshot focused item of
+    case Snapshot.gapBetween focused item snapshot of
         Just delta ->
             signed delta ++ Duration.toString (abs delta)
 
@@ -269,41 +266,6 @@ fromFocused snapshot focused item =
 
                 lapsAhead ->
                     signed -lapsAhead ++ String.fromInt (abs lapsAhead) ++ "L"
-
-
-{-| Positive where `item` is behind `focused`, as a gap on a timing screen is.
--}
-gapBetween : Snapshot -> CarAt -> CarAt -> Maybe Duration
-gapBetween snapshot focused item =
-    let
-        field =
-            Snapshot.toList snapshot
-
-        positionOf car =
-            List.Extra.findIndex (\other -> other.metadata.carNumber == car.metadata.carNumber) field
-    in
-    Maybe.map2 Tuple.pair (positionOf focused) (positionOf item)
-        |> Maybe.andThen
-            (\( ours, theirs ) ->
-                field
-                    |> List.drop (min ours theirs + 1)
-                    |> List.take (abs (theirs - ours))
-                    |> List.map (.standing >> .intervalToAhead >> Gap.toDuration)
-                    |> combine
-                    |> Maybe.map
-                        (\intervals ->
-                            if theirs > ours then
-                                List.sum intervals
-
-                            else
-                                negate (List.sum intervals)
-                        )
-            )
-
-
-combine : List (Maybe a) -> Maybe (List a)
-combine =
-    List.foldr (Maybe.map2 (::)) (Just [])
 
 
 signed : Int -> String
@@ -336,15 +298,3 @@ lapsOf cars focused =
 carOf : List Car -> CarAt -> Maybe Car
 carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
-
-
-{-| How far the next car in the running order is behind this one, which is the
-gap that car is given to the one ahead of it.
--}
-behind : Snapshot -> CarAt -> Maybe Gap
-behind snapshot focused =
-    Snapshot.toList snapshot
-        |> List.Extra.dropWhile (\item -> item.metadata.carNumber /= focused.metadata.carNumber)
-        |> List.drop 1
-        |> List.head
-        |> Maybe.map (.standing >> .intervalToAhead)
