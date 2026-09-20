@@ -1,6 +1,6 @@
 module Motorsport.Analysis.LapWindow exposing
     ( LapWindow(..)
-    , laps
+    , laps, within
     )
 
 {-| How much of the race to read: all of it run so far, or the last stretch of
@@ -16,13 +16,14 @@ A reading under `Motorsport/Analysis/`: derived from a snapshot and the
 primitives, holding nothing of its own.
 
 @docs LapWindow
-@docs laps
+@docs laps, within
 
 -}
 
 import List.Extra
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
@@ -60,6 +61,18 @@ laps window class snapshot =
 
         Recent stretch ->
             ( firstLapSince stretch snapshot classCars, latest )
+
+
+{-| One car's laps that the window covers, out of everything it has run.
+
+The window is lap numbers rather than a stretch of time by the time it gets
+here, so a car is cut at the laps its own class reached and not at the ones it
+ran inside the stretch itself.
+
+-}
+within : ( Int, Int ) -> List Lap -> List Lap
+within ( first, last ) =
+    List.filter (\lap -> first <= lap.lap && lap.lap <= last)
 
 
 {-| Where a chart drawn over `stretch` starts: the lap the car furthest through

@@ -1,6 +1,7 @@
 module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
 
-{-| The place each car of a class has held, lap by lap.
+{-| [`ClassPositions`](Motorsport-Analysis-ClassPositions) drawn as one line per
+car, the cars being compared picked out of the class behind them.
 
 @docs view
 
@@ -9,25 +10,16 @@ module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
 import List.Extra
+import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
-import Motorsport.Lap exposing (Lap)
-import Motorsport.Race.LapHistory as LapHistory
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Wec.Class exposing (Class)
+import Motorsport.Race.Snapshot exposing (Snapshot)
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
 
 
-{-| The whole class over the given laps, the cars of `rivals` picked out of it.
-
-Unlike the other charts of the panel, the population is the class rather than
-the rivals: a car's position only means anything against everyone it could have
-gained or lost one to.
-
-`Nothing` where the range leaves no car of the class with a line to draw; what
-stands in its place is the caller's.
-
+{-| `Nothing` where the range leaves no car of the class with a line to draw;
+what stands in its place is the caller's.
 -}
 view : ( Int, Int ) -> Snapshot -> Rivals -> Maybe (Html msg)
 view range snapshot rivals =
@@ -46,27 +38,20 @@ consolidated =
     { width = 1000, height = 250 }
 
 
-{-| Builds the position points inside the range for each car in the class,
-keeping only cars with two or more points.
+{-| One line per car of the class, the cars of `rivals` emphasised.
+
+A car with a single point is left out: one place held at one lap is not a line,
+and the chart draws lines.
+
 -}
-classPositionPoints : ( Int, Int ) -> Snapshot -> Class -> List ( CarAt, List PositionPoint )
-classPositionPoints range snapshot class =
-    let
-        lapHistory =
-            Snapshot.lapHistory snapshot
-    in
-    Snapshot.inClass class snapshot
-        |> List.map (\item -> ( item, buildPositionPoints range (LapHistory.get item.metadata.carNumber lapHistory) ))
-        |> List.filter (\( _, points ) -> List.length points >= 2)
-
-
 classProgressionSeries : ( Int, Int ) -> Snapshot -> Rivals -> List PositionSeries
 classProgressionSeries range snapshot rivals =
     let
         highlighted =
             Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
     in
-    classPositionPoints range snapshot (Rivals.focused rivals).metadata.class
+    ClassPositions.held range (Rivals.focused rivals).metadata.class snapshot
+        |> List.filter (\( _, points ) -> List.length points >= 2)
         |> List.map
             (\( item, points ) ->
                 { points = points
@@ -82,14 +67,8 @@ classProgressionSeries range snapshot rivals =
             )
 
 
-type alias PositionPoint =
-    { lapNumber : Int
-    , position : Int
-    }
-
-
 type alias PositionSeries =
-    { points : List PositionPoint
+    { points : List ClassPositions.Point
     , color : String
     , carNumber : String
     , emphasis : Emphasis
@@ -98,11 +77,11 @@ type alias PositionSeries =
 
 {-| The lap-number range `(minLap, maxLap)` the point series spans. `(1, 1)` when empty.
 -}
-lapExtent : List PositionPoint -> ( Int, Int )
+lapExtent : List ClassPositions.Point -> ( Int, Int )
 lapExtent positions =
     let
         laps =
-            positions |> List.map .lapNumber
+            positions |> List.map .lap
     in
     ( List.minimum laps |> Maybe.withDefault 1
     , List.maximum laps |> Maybe.withDefault 1
@@ -145,17 +124,7 @@ positionProgressionChart size series =
         )
 
 
-buildPositionPoints : ( Int, Int ) -> List Lap -> List PositionPoint
-buildPositionPoints ( minLap, maxLap ) history =
-    history
-        |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
-        |> List.filterMap
-            (\lap ->
-                lap.position |> Maybe.map (\pos -> { lapNumber = lap.lap, position = pos })
-            )
-
-
-yContinuousScale : Dimensions -> List PositionPoint -> ContinuousScale Float
+yContinuousScale : Dimensions -> List ClassPositions.Point -> ContinuousScale Float
 yContinuousScale { height, padding } positions =
     let
         allPositions =
@@ -213,5 +182,5 @@ positionLine scales series =
         { color = series.color
         , emphasis = series.emphasis
         , label = series.carNumber
-        , points = series.points |> List.map (\p -> ( p.lapNumber, p.position ))
+        , points = series.points |> List.map (\p -> ( p.lap, p.position ))
         }

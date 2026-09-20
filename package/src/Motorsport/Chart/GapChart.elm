@@ -1,8 +1,8 @@
 module Motorsport.Chart.GapChart exposing (gapChartView, gapSparkline)
 
-{-| The relative-gap chart: each car's cumulative time against the group
-average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or at card
-size without them ([`gapSparkline`](#gapSparkline)).
+{-| The relative-gap chart: [`RelativeGap`](Motorsport-Analysis-RelativeGap)
+drawn full-width with axes ([`gapChartView`](#gapChartView)) or at card size
+without them ([`gapSparkline`](#gapSparkline)).
 
 Both are given the cars as [`Rivals`](Motorsport-Analysis-Rivals) and take a
 wider ring of it to baseline on than they draw; how much wider, and why, is
@@ -13,14 +13,14 @@ wider ring of it to baseline on than they draw; how much wider, and why, is
 -}
 
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
-import Dict exposing (Dict)
 import Html exposing (Html, text)
 import List.Extra
+import Motorsport.Analysis.LapWindow as LapWindow
+import Motorsport.Analysis.RelativeGap as RelativeGap exposing (Baseline)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
-import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.Statistics exposing (iqrFences)
-import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Scale
@@ -36,28 +36,22 @@ type alias CarLine =
     }
 
 
-type alias LinePoint =
-    { lap : Int
-    , value : Int
-    }
-
-
 {-| One drawing unit: a series paired with its points on the vertical axis.
 -}
 type alias PlottedCar =
     { car : CarLine
-    , points : List LinePoint
+    , points : List RelativeGap.Point
     }
 
 
 carLine : LapHistory -> ( Int, Int ) -> Emphasis -> CarAt -> CarLine
-carLine lapHistory ( minLap, maxLap ) emphasis entry =
+carLine lapHistory window emphasis entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
     , laps =
         LapHistory.get entry.metadata.carNumber lapHistory
-            |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
+            |> LapWindow.within window
     }
 
 
@@ -93,13 +87,14 @@ gapChartView ( minLap, maxLap ) lapHistory rivals =
                 )
                 entry
 
-        referenceLines =
+        baseline =
             Rivals.nearest baselineRivals rivals
                 |> List.map (carLine lapHistory ( minLap, maxLap ) Focused)
+                |> baselineOf
 
         drawn =
             plotGaps
-                { reference = referenceLines
+                { baseline = baseline
                 , display = Rivals.nearest drawnRivals rivals |> List.map lineOf
                 }
 
@@ -161,35 +156,17 @@ baselineRivals =
     4
 
 
-{-| The relative-gap point series, `cumulative time − baseline`. A lap with no
-baseline produces no point.
--}
-gapPoints : Dict Int Instant -> List Lap -> List LinePoint
-gapPoints referenceByLap laps =
-    laps
-        |> List.filterMap
-            (\lap ->
-                Dict.get lap.lap referenceByLap
-                    |> Maybe.map
-                        (\ref ->
-                            { lap = lap.lap
-                            , value = Instant.since { from = ref, to = lap.elapsed }
-                            }
-                        )
-            )
+baselineOf : List CarLine -> Baseline
+baselineOf =
+    List.map .laps >> RelativeGap.baseline
 
 
-{-| Compute the baseline once from `reference`, then project each car of
-`display` onto it. The two are taken separately so that they can differ — see
-[`fightRivals`](#fightRivals).
+{-| Each car of `display` against the baseline. The two are taken separately so
+that they can differ — see [`fightRivals`](#fightRivals).
 -}
-plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar
-plotGaps { reference, display } =
-    let
-        referenceByLap =
-            groupReferenceByLap reference
-    in
-    display |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
+plotGaps : { baseline : Baseline, display : List CarLine } -> List PlottedCar
+plotGaps { baseline, display } =
+    display |> List.map (\car -> { car = car, points = RelativeGap.against baseline car.laps })
 
 
 {-| The same series at card size and without axes: only the polylines and the
@@ -224,8 +201,8 @@ gapSparkline window lapHistory rivals =
                 )
                 entry
 
-        referenceLines =
-            Rivals.nearest 2 rivals |> List.map lineOf
+        baseline =
+            Rivals.nearest 2 rivals |> List.map lineOf |> baselineOf
 
         -- Blank carNumber to omit the end-of-line label on these narrow cards
         -- (renderLine skips empty strings).
@@ -239,7 +216,7 @@ gapSparkline window lapHistory rivals =
                 |> .laps
                 |> List.map (.lap >> toFloat)
     in
-    case ( focusedLapNumbers, display, Dict.isEmpty (groupReferenceByLap referenceLines) ) of
+    case ( focusedLapNumbers, display, RelativeGap.isEmpty baseline ) of
         ( _ :: _ :: _, _ :: _ :: _, False ) ->
             gapChartViewWith { dimensions = rivalStrip, showAxes = False }
                 ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
@@ -247,7 +224,7 @@ gapSparkline window lapHistory rivals =
                 )
                 (let
                     drawn =
-                        plotGaps { reference = referenceLines, display = displayLines }
+                        plotGaps { baseline = baseline, display = displayLines }
                  in
                  { scaleOn = drawn, draw = drawn }
                 )
@@ -300,7 +277,7 @@ gapYScale : Dimensions -> List PlottedCar -> Scale.ContinuousScale Float
 gapYScale { height, padding } carsWithGaps =
     let
         allGaps =
-            carsWithGaps |> List.concatMap (.points >> List.map .value)
+            carsWithGaps |> List.concatMap (.points >> List.map .gap)
 
         fences =
             iqrFences (List.sort allGaps)
@@ -380,7 +357,7 @@ gapLine scales { car, points } =
         { color = car.color
         , emphasis = car.emphasis
         , label = car.carNumber
-        , points = points |> List.map (\p -> ( p.lap, p.value ))
+        , points = points |> List.map (\p -> ( p.lap, p.gap ))
         }
 
 
@@ -398,36 +375,6 @@ zeroReferenceLine { x1, x2, y } =
         , SvgAttr.strokeDasharray "2 2"
         ]
         []
-
-
-{-| The mean cumulative time per lap number, over the non-pit laps only —
-including the pit laps would make the baseline jump.
--}
-groupReferenceByLap : List CarLine -> Dict Int Instant
-groupReferenceByLap carLines =
-    carLines
-        |> List.concatMap .laps
-        |> List.filter Lap.isRacingLap
-        |> List.foldl
-            (\lap ->
-                let
-                    -- Summing moments is meaningless on its own; the mean of
-                    -- them is the moment the group crossed the line.
-                    elapsed =
-                        Instant.toDuration lap.elapsed
-                in
-                Dict.update lap.lap
-                    (\existing ->
-                        case existing of
-                            Just ( sum, count ) ->
-                                Just ( sum + elapsed, count + 1 )
-
-                            Nothing ->
-                                Just ( elapsed, 1 )
-                    )
-            )
-            Dict.empty
-        |> Dict.map (\_ ( sum, count ) -> Instant.fromDuration (sum // count))
 
 
 {-| The full-width chart. A wide aspect keeps the rendered height low once the

@@ -8,12 +8,11 @@ racing laps, the cars laid over one another on a shared scale.
 -}
 
 import Html exposing (Html, text)
+import Motorsport.Analysis.Pace as Pace
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
-import Motorsport.Internal.Statistics exposing (upperFence)
-import Motorsport.Lap as Lap
-import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 
 
@@ -100,14 +99,14 @@ scaleOf series =
             )
 
 
-{-| One car's curve: the laps it ran on the road inside the range, and the lap
-it is on now marked as a point on them.
+{-| One car's curve: the pace it held inside the range, and the lap it is on now
+marked as a point on it.
 -}
 seriesOf : LapHistory -> ( Int, Int ) -> CarAt -> LapTimeDistribution.Series
 seriesOf lapHistory range entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = Focused
-    , times = racingTimes lapHistory range entry
+    , times = Pace.racingTimes lapHistory range entry
     , lastLap = lastLapTime entry
     }
 
@@ -120,37 +119,3 @@ lastLapTime entry =
 
         Snapshot.NoLapYet ->
             Nothing
-
-
-{-| The car's laps in the range, with the outliers among them dropped.
-
-The fence comes off the whole race the car has run rather than off the range,
-because what counts as an outlier is a fact about the car's pace and not about
-how much of the race is being looked at. Measured inside a short range it stops
-working exactly where it is needed: an hour and a half that was half safety car
-puts the third quartile up among those laps, and a fence drawn from there lets
-every one of them through.
-
--}
-racingTimes : LapHistory -> ( Int, Int ) -> CarAt -> List Int
-racingTimes lapHistory ( minLap, maxLap ) entry =
-    let
-        history =
-            LapHistory.get entry.metadata.carNumber lapHistory
-
-        -- filterMap, not map: a lap the source data has no time for is not a
-        -- lap run in no time, and has no place in the distribution.
-        timeOf lap =
-            if Lap.isRacingLap lap then
-                lap.time
-
-            else
-                Nothing
-
-        fence =
-            upperFence (List.filterMap timeOf history)
-    in
-    history
-        |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
-        |> List.filterMap timeOf
-        |> List.filter (\t -> t <= fence)
