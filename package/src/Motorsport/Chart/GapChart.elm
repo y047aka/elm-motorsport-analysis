@@ -15,12 +15,12 @@ wider ring of it to baseline on than they draw; how much wider, and why, is
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
 import Html exposing (Html, text)
 import List.Extra
-import Motorsport.Analysis.LapWindow as LapWindow exposing (LapRange)
 import Motorsport.Analysis.RelativeGap as RelativeGap exposing (Baseline)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Internal.Statistics exposing (iqrFences)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.LapRange as LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Scale
@@ -47,7 +47,7 @@ type alias PlottedCar =
 lapsOf : LapRange -> LapHistory -> CarAt -> List Lap
 lapsOf range lapHistory entry =
     LapHistory.get entry.metadata.carNumber lapHistory
-        |> LapWindow.within range
+        |> LapRange.within range
 
 
 carLine : LapRange -> LapHistory -> Emphasis -> CarAt -> CarLine
@@ -313,7 +313,7 @@ gapDecorations { showAxes } dimensions scales ( minX, maxX ) =
     if showAxes then
         let
             axisLaps =
-                ( ceiling minX, floor maxX )
+                { first = ceiling minX, last = floor maxX }
         in
         [ lapGridLines dimensions scales.xScale axisLaps
         , lapAxis dimensions scales.xScale axisLaps

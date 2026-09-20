@@ -2,13 +2,13 @@ module Motorsport.Analysis.ClassPositionsTest exposing (suite)
 
 import Expect
 import Motorsport.Analysis.ClassPositions as ClassPositions
-import Motorsport.Analysis.LapWindow exposing (LapRange)
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Internal.ChangePoints as ChangePoints
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)

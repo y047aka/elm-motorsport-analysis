@@ -18,6 +18,7 @@ drawing.
 
 import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
 import List.Extra
+import Motorsport.LapRange exposing (LapRange)
 import Path
 import Scale
 import Shape
@@ -267,11 +268,11 @@ axisStyle =
 
 {-| Vertical grid lines every 5 laps, across the height of the plot area.
 -}
-lapGridLines : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
-lapGridLines { height, padding } xScale ( minLap, maxLap ) =
+lapGridLines : Dimensions -> Scale.ContinuousScale Float -> LapRange -> Svg msg
+lapGridLines { height, padding } xScale range =
     let
         gridLaps =
-            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
+            List.range range.first range.last |> List.filter (\l -> modBy 5 l == 0)
 
         top =
             padding.top
@@ -301,11 +302,11 @@ lapGridLines { height, padding } xScale ( minLap, maxLap ) =
 {-| Lap-number X axis (bottom). Places a tick at every lap, with a label every 5
 laps.
 -}
-lapAxis : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
-lapAxis { height, padding } xScale ( minLap, maxLap ) =
+lapAxis : Dimensions -> Scale.ContinuousScale Float -> LapRange -> Svg msg
+lapAxis { height, padding } xScale range =
     let
         allLaps =
-            List.range minLap maxLap |> List.map toFloat
+            List.range range.first range.last |> List.map toFloat
 
         axis =
             Axis.bottom

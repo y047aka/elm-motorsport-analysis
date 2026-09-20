@@ -1,7 +1,6 @@
 module Motorsport.Analysis.LapWindow exposing
     ( LapWindow(..)
-    , LapRange
-    , laps, within
+    , laps
     )
 
 {-| How much of the race to read: all of it run so far, or the last stretch of
@@ -17,15 +16,14 @@ A reading under `Motorsport/Analysis/`: derived from a snapshot and the
 primitives, holding nothing of its own.
 
 @docs LapWindow
-@docs LapRange
-@docs laps, within
+@docs laps
 
 -}
 
 import List.Extra
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
-import Motorsport.Lap exposing (Lap)
+import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
@@ -36,26 +34,16 @@ type LapWindow
     | Recent Duration
 
 
-{-| The lap numbers a window came out as, both ends drawn.
-
-A record and not a pair: two Ints in a row can be swapped at a call site without
-a word from the compiler, and the pair a chart's axis spans is the same shape
-while meaning something else -- what was drawn rather than what was asked for.
-The two are the same value in one chart and not in the other.
-
--}
-type alias LapRange =
-    { first : Int
-    , last : Int
-    }
-
-
 {-| The window as the lap numbers a chart keeps its laps by.
 
 Both ends are read off the one class rather than off the race: a slower class's
 laps run out short of the race leader's and take longer to come round, so a
 window measured off that leader would leave a chart's axis running on past where
 its lines stop.
+
+What comes out is lap numbers and no longer a stretch of time, so a car is cut
+at the laps its own class reached rather than at the ones it ran inside the
+stretch itself.
 
 -}
 laps : LapWindow -> Class -> Snapshot -> LapRange
@@ -77,18 +65,6 @@ laps window class snapshot =
 
         Recent stretch ->
             { first = firstLapSince stretch snapshot classCars, last = latest }
-
-
-{-| One car's laps that the range covers, out of everything it has run.
-
-A range is lap numbers and not a stretch of time by the time it gets here, so a
-car is cut at the laps its own class reached rather than at the ones it ran
-inside the stretch itself.
-
--}
-within : LapRange -> List Lap -> List Lap
-within range =
-    List.filter (\lap -> range.first <= lap.lap && lap.lap <= range.last)
 
 
 {-| Where a chart drawn over `stretch` starts: the lap the car furthest through

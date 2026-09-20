@@ -20,45 +20,27 @@ import Test exposing (Test, describe, test)
 suite : Test
 suite =
     describe "Motorsport.Analysis.LapWindow"
-        [ describe "which laps a window covers"
-            [ test "the whole race is every lap the class has reached" <|
-                \_ ->
-                    LapWindow.laps LapWindow.WholeRace (classOf "HYPERCAR") (fieldAt 25000)
-                        |> Expect.equal { first = 1, last = 4 }
-            , test "and it is that class's laps, not the race's" <|
-                \_ ->
-                    -- The GT3 car is six laps in where the Hypercars are four.
-                    LapWindow.laps LapWindow.WholeRace (classOf "LMGT3") (fieldAt 25000)
-                        |> Expect.equal { first = 1, last = 6 }
-            , test "a stretch starts where the running car opened it, not where a stopped one did" <|
-                \_ ->
-                    -- 13.000 back from 25.000 is 12.000, and the running car
-                    -- was on lap 3 by then. Car 3's last lap is at 6.000, so
-                    -- it has nothing inside the stretch at all: answering for
-                    -- it would open the window back out to the whole race.
-                    LapWindow.laps (LapWindow.Recent 13000) (classOf "HYPERCAR") (fieldAt 25000)
-                        |> Expect.equal { first = 3, last = 4 }
-            , test "a class that has not been running that long yet starts at lap 1" <|
-                \_ ->
-                    LapWindow.laps (LapWindow.Recent 60000) (classOf "HYPERCAR") (fieldAt 25000)
-                        |> Expect.equal { first = 1, last = 4 }
-            ]
-        , describe "the laps a range keeps"
-            [ test "both ends are inside it" <|
-                \_ ->
-                    LapWindow.within { first = 2, last = 4 } (List.map lapNumbered (List.range 1 5))
-                        |> List.map .lap
-                        |> Expect.equal [ 2, 3, 4 ]
-            , test "a range of one lap keeps that lap" <|
-                \_ ->
-                    LapWindow.within { first = 3, last = 3 } (List.map lapNumbered (List.range 1 5))
-                        |> List.map .lap
-                        |> Expect.equal [ 3 ]
-            , test "a range the car never reached keeps none of them" <|
-                \_ ->
-                    LapWindow.within { first = 9, last = 12 } (List.map lapNumbered (List.range 1 5))
-                        |> Expect.equal []
-            ]
+        [ test "the whole race is every lap the class has reached" <|
+            \_ ->
+                LapWindow.laps LapWindow.WholeRace (classOf "HYPERCAR") (fieldAt 25000)
+                    |> Expect.equal { first = 1, last = 4 }
+        , test "and it is that class's laps, not the race's" <|
+            \_ ->
+                -- The GT3 car is six laps in where the Hypercars are four.
+                LapWindow.laps LapWindow.WholeRace (classOf "LMGT3") (fieldAt 25000)
+                    |> Expect.equal { first = 1, last = 6 }
+        , test "a stretch starts where the running car opened it, not where a stopped one did" <|
+            \_ ->
+                -- 13.000 back from 25.000 is 12.000, and the running car was on
+                -- lap 3 by then. Car 3's last lap is at 6.000, so it has nothing
+                -- inside the stretch at all: answering for it would open the
+                -- window back out to the whole race.
+                LapWindow.laps (LapWindow.Recent 13000) (classOf "HYPERCAR") (fieldAt 25000)
+                    |> Expect.equal { first = 3, last = 4 }
+        , test "a class that has not been running that long yet starts at lap 1" <|
+            \_ ->
+                LapWindow.laps (LapWindow.Recent 60000) (classOf "HYPERCAR") (fieldAt 25000)
+                    |> Expect.equal { first = 1, last = 4 }
         ]
 
 
@@ -115,11 +97,6 @@ lapOf carNumber lapNumber elapsed =
         , time = Just 5000
         , elapsed = Instant.fromDuration elapsed
     }
-
-
-lapNumbered : Int -> Lap
-lapNumbered lapNumber =
-    { emptyLap | lap = lapNumber }
 
 
 emptyLap : Lap

@@ -16,7 +16,7 @@ primitives, holding nothing of its own.
 
 -}
 
-import Motorsport.Analysis.LapWindow as LapWindow exposing (LapRange)
+import Motorsport.LapRange as LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
@@ -40,7 +40,7 @@ byCar range class snapshot =
 
         pointsOf car =
             LapHistory.get car.metadata.carNumber lapHistory
-                |> LapWindow.within range
+                |> LapRange.within range
                 |> List.filterMap
                     (\lap -> lap.position |> Maybe.map (\position -> { lap = lap.lap, position = position }))
     in

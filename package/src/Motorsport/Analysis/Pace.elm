@@ -9,10 +9,10 @@ primitives, holding nothing of its own.
 
 -}
 
-import Motorsport.Analysis.LapWindow as LapWindow exposing (LapRange)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.Statistics exposing (upperFence)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.LapRange as LapRange exposing (LapRange)
 
 
 {-| The car's laps on the road inside the range, with the outliers among them
@@ -43,6 +43,6 @@ racingTimes range history =
             upperFence (List.filterMap timeOf history)
     in
     history
-        |> LapWindow.within range
+        |> LapRange.within range
         |> List.filterMap timeOf
         |> List.filter (\t -> t <= fence)

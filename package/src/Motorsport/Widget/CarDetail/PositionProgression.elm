@@ -11,9 +11,9 @@ import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
 import List.Extra
 import Motorsport.Analysis.ClassPositions as ClassPositions
-import Motorsport.Analysis.LapWindow exposing (LapRange)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Snapshot exposing (Snapshot)
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
@@ -76,19 +76,18 @@ type alias PositionSeries =
     }
 
 
-{-| The lap numbers the point series spans, which is the axis rather than the
-range: it is what the chart drew, not what it was asked to read. `(1, 1)` when
-empty.
+{-| The lap numbers the point series spans, which is what the chart drew rather
+than what it was asked to read. Lap 1 to lap 1 when there is nothing.
 -}
-lapExtent : List ClassPositions.Point -> ( Int, Int )
+lapExtent : List ClassPositions.Point -> LapRange
 lapExtent positions =
     let
         laps =
             positions |> List.map .lap
     in
-    ( List.minimum laps |> Maybe.withDefault 1
-    , List.maximum laps |> Maybe.withDefault 1
-    )
+    { first = List.minimum laps |> Maybe.withDefault 1
+    , last = List.maximum laps |> Maybe.withDefault 1
+    }
 
 
 positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
@@ -106,11 +105,8 @@ positionProgressionChart size series =
         axisLaps =
             lapExtent allPoints
 
-        ( minLap, maxLap ) =
-            axisLaps
-
         scales =
-            { xScale = xContinuousScale dimensions ( toFloat minLap, toFloat maxLap )
+            { xScale = xContinuousScale dimensions ( toFloat axisLaps.first, toFloat axisLaps.last )
             , yScale = yContinuousScale dimensions allPoints
             }
 

@@ -23,12 +23,13 @@ lap history is open say nothing about the race and nothing else reads them.
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import List.Extra
-import Motorsport.Analysis.LapWindow as LapWindow exposing (LapRange, LapWindow)
+import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
