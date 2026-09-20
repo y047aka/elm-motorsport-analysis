@@ -135,8 +135,9 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
 - `Page/` — one module per page, plain TEA
-- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Table,
-  and `Shadcn/` for the wrappers)
+- `Data/` (feed decoding), `UI/` (Table, and `Shadcn/` for the wrappers)
+- `View/` — what a page is laid out of: the car detail panel and its sections,
+  the car cards, the live standings, and the badge those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
 `/api/wec/index.json`. It is the app's only source for which rounds exist, what
@@ -290,9 +291,15 @@ what an object-valued setter compares with, and both are back to zero.
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
 (`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those
-(`Rivals`, `Pace`), `Widget/` and `Chart/` for rendering (Leaderboard,
-GapChart, BoxPlot), `Internal/` for machinery that is not the race's vocabulary
-(`ChangePoints`, `Statistics`).
+(`Rivals`, `Pace`), `Chart/` and `Widget/` for rendering (`GapChart`,
+`LapTimeDistribution`, `Leaderboard`, `SegmentStrip`), `Internal/` for machinery
+that is not the race's vocabulary (`ChangePoints`, `Statistics`).
+
+What is rendered here draws one reading of the race: a lap as the segments it is
+timed in, the field as a table of them. How a page is laid out of those -- which
+panels, in which boxes, and what the reader has picked -- is `/app/src/View/`'s.
+Everything drawn either side is written in the Tailwind `app/style.css` defines,
+which is why that file scans `/package` too.
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
