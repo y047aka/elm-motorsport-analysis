@@ -11,11 +11,11 @@ import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Leaderboard exposing (viewPositionChange)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
-import View.Leaderboard exposing (viewPositionChange)
 
 
 {-| `startPosition` is where the car began, which the round's summary estimates

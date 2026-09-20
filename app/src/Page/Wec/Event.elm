@@ -19,6 +19,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
+import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
@@ -36,7 +37,6 @@ import View exposing (View)
 import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarNumberBadge as CarNumberBadge
-import View.Leaderboard as Leaderboard
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
 
