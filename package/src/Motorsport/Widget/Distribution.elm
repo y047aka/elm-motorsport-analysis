@@ -34,7 +34,7 @@ view range lapHistory rivals =
             Rivals.focused rivals
 
         series =
-            Rivals.nearest 1 rivals
+            Rivals.fight rivals
                 |> List.map
                     (\item ->
                         let

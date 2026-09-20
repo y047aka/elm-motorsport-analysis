@@ -6,7 +6,7 @@ without them ([`gapSparkline`](#gapSparkline)).
 
 Both are given the cars as [`Rivals`](Motorsport-Analysis-Rivals) and take a
 wider ring of it to baseline on than they draw; how much wider, and why, is
-[`fightRivals`](#fightRivals).
+[`drawnRivals`](#drawnRivals).
 
 @docs gapChartView, gapSparkline
 
@@ -75,7 +75,7 @@ gapChartView : LapRange -> LapHistory -> Rivals -> Maybe (Html msg)
 gapChartView range lapHistory rivals =
     let
         fighting =
-            Rivals.nearest fightRivals rivals
+            Rivals.fight rivals
                 |> List.map (.metadata >> .carNumber)
 
         lineOf entry =
@@ -129,7 +129,8 @@ gapChartView range lapHistory rivals =
             )
 
 
-{-| How far out the full chart reaches, in rivals a side.
+{-| How far out the full chart reaches, in rivals a side, past
+[`Rivals.fight`](Motorsport-Analysis-Rivals#fight).
 
 `drawnRivals` is one ring past the fight and no further: every extra line is one
 more to follow, and what the chart is read for is what two of them are doing to
@@ -141,19 +142,12 @@ exactly the cars drawn against it locks them into a mirror image of one another
 -- the gaps sum to zero, so the outer lines can only move against each other.
 
 -}
-fightRivals : Int
-fightRivals =
-    1
-
-
-{-| See [`fightRivals`](#fightRivals).
--}
 drawnRivals : Int
 drawnRivals =
     2
 
 
-{-| See [`fightRivals`](#fightRivals).
+{-| See [`drawnRivals`](#drawnRivals).
 -}
 baselineRivals : Int
 baselineRivals =
@@ -161,7 +155,7 @@ baselineRivals =
 
 
 {-| Each car of `display` against the baseline. How much wider the group behind
-that baseline is, and why, is [`fightRivals`](#fightRivals).
+that baseline is, and why, is [`drawnRivals`](#drawnRivals).
 -}
 plotGaps : { baseline : Baseline, display : List CarLine } -> List PlottedCar
 plotGaps { baseline, display } =
@@ -185,9 +179,9 @@ gapSparkline range lapHistory rivals =
             Rivals.focused rivals
 
         -- A card has room for the fight and no more, and baselines a ring
-        -- wider for the reason `fightRivals` gives.
+        -- wider for the reason `drawnRivals` gives.
         display =
-            Rivals.nearest 1 rivals
+            Rivals.fight rivals
 
         lineOf entry =
             carLine range

@@ -194,7 +194,7 @@ that colour already, and a second mark beside it is the same ink twice.
 legend : Snapshot -> Rivals -> Html msg
 legend snapshot rivals =
     div [ class "grid gap-y-px" ]
-        (Rivals.nearest 1 rivals
+        (Rivals.fight rivals
             |> List.map (legendEntry snapshot (Rivals.focused rivals))
         )
 

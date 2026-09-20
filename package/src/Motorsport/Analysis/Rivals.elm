@@ -1,23 +1,24 @@
 module Motorsport.Analysis.Rivals exposing
     ( Rivals
     , around
-    , focused, nearest
+    , focused, fight, nearest
     )
 
 {-| The cars a car is racing, as rings around it: the rival either side is the
 fight, the ones beyond them are what is coming, and wider still is a population
 to measure the lot against.
 
-How far out to look is the reader's, not this module's -- a chart drawing lines
-wants fewer cars than one averaging a baseline -- so the rings come out through
-[`nearest`](#nearest) rather than as named groups.
+The fight -- the car and the rival either side -- is named here, being the ring
+every view comparing cars draws. The wider rings are the reader's and come out
+through [`nearest`](#nearest): a chart drawing lines wants fewer cars than one
+averaging a baseline.
 
 A reading under `Motorsport/Analysis/`: derived from a snapshot and the
 primitives, holding nothing of its own.
 
 @docs Rivals
 @docs around
-@docs focused, nearest
+@docs focused, fight, nearest
 
 -}
 
@@ -69,6 +70,14 @@ from the rest.
 focused : Rivals -> CarAt
 focused (Rivals r) =
     r.car
+
+
+{-| The car and the rival either side of it: the cars a view compares, and the
+ones a legend beside it names.
+-}
+fight : Rivals -> List CarAt
+fight =
+    nearest 1
 
 
 {-| The car and up to `count` rivals either side of it, in running order. Fewer

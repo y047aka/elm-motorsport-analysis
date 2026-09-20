@@ -48,7 +48,7 @@ classProgressionSeries : LapRange -> Snapshot -> Rivals -> List PositionSeries
 classProgressionSeries range snapshot rivals =
     let
         highlighted =
-            Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
+            Rivals.fight rivals |> List.map (.metadata >> .carNumber)
     in
     ClassPositions.byCar range (Rivals.focused rivals).metadata.class snapshot
         |> List.filter (\( _, points ) -> List.length points >= 2)
