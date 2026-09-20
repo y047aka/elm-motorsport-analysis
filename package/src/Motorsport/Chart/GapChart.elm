@@ -22,7 +22,7 @@ import Motorsport.Internal.Statistics exposing (iqrFences)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange as LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Scale
 import Svg exposing (Svg, line)
 import Svg.Attributes as SvgAttr
@@ -76,9 +76,12 @@ of its class.
 `Nothing` where the range holds none of the laps the chart would draw.
 
 -}
-gapChartView : LapRange -> LapHistory -> Rivals -> Maybe (Html msg)
-gapChartView range lapHistory rivals =
+gapChartView : LapRange -> Snapshot -> Rivals -> Maybe (Html msg)
+gapChartView range snapshot rivals =
     let
+        lapHistory =
+            Snapshot.lapHistory snapshot
+
         fighting =
             Rivals.fight rivals
                 |> List.map (.metadata >> .carNumber)

@@ -31,7 +31,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (Car)
-import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
 import Motorsport.Widget.CarDetail.Header as Header
@@ -135,7 +135,7 @@ panel state cars snapshot focused =
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> Stint.summarize)
             )
-        , charts state lapHistory snapshot rivals
+        , charts state snapshot rivals
         ]
 
 
@@ -144,18 +144,16 @@ switch the chart and nothing else about what is being shown.
 -}
 type alias Comparison =
     { range : LapRange
-    , lapHistory : LapHistory
     , snapshot : Snapshot
     , rivals : Rivals
     }
 
 
-charts : State -> LapHistory -> Snapshot -> Rivals -> Html Msg
-charts state lapHistory snapshot rivals =
+charts : State -> Snapshot -> Rivals -> Html Msg
+charts state snapshot rivals =
     let
         comparison =
             { range = LapWindow.range state.window (Rivals.focused rivals).metadata.class snapshot
-            , lapHistory = lapHistory
             , snapshot = snapshot
             , rivals = rivals
             }
@@ -237,7 +235,7 @@ class with no line to draw, no lap time to describe -- and a wording apiece read
 as the tabs disagreeing about the race.
 -}
 chartTabs : State -> Comparison -> Html Msg
-chartTabs state { range, lapHistory, snapshot, rivals } =
+chartTabs state { range, snapshot, rivals } =
     let
         orEmptyState : Maybe (Html Msg) -> Html Msg
         orEmptyState =
@@ -246,9 +244,9 @@ chartTabs state { range, lapHistory, snapshot, rivals } =
     ChartTabs.chartTabs SelectedChart
         state.chart
         (ChartTabs.segmentedControl SelectedWindow state.window windowOptions)
-        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range lapHistory rivals) )
+        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
-        , ( DistributionChart, "Distribution", \() -> orEmptyState (Distribution.view range lapHistory rivals) )
+        , ( DistributionChart, "Distribution", \() -> orEmptyState (Distribution.view range snapshot rivals) )
         ]
 
 

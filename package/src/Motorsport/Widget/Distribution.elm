@@ -14,7 +14,7 @@ import Motorsport.Chart.Common exposing (Emphasis(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 
 
 {-| The car and the rival either side on one scale, the car's own curve the
@@ -27,9 +27,12 @@ they are alike, which is exactly where the chart is being read.
 `Nothing` where the range holds no lap to describe.
 
 -}
-view : LapRange -> LapHistory -> Rivals -> Maybe (Html msg)
-view range lapHistory rivals =
+view : LapRange -> Snapshot -> Rivals -> Maybe (Html msg)
+view range snapshot rivals =
     let
+        lapHistory =
+            Snapshot.lapHistory snapshot
+
         focused =
             Rivals.focused rivals
 
