@@ -18,7 +18,7 @@ import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
-import Motorsport.Widget.CarNumberBadge as CarNumberBadge
+import View.CarNumberBadge as CarNumberBadge
 import View.SectorAndLaps as SectorAndLaps
 
 

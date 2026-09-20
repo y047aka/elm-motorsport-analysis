@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarNumberBadge exposing (view, viewRow)
+module View.CarNumberBadge exposing (view, viewRow)
 
 {-| Car number badge on a manufacturer-colored background,
 shared by the car cards, the live standings and the car detail panel.

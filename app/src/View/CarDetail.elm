@@ -35,11 +35,11 @@ import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import View.CarDetail.ChartTabs as ChartTabs
 import View.CarDetail.Header as Header
 import View.CarDetail.LapTimes as LapTimes
 import View.CarDetail.Stint as Stint
+import View.CarNumberBadge as CarNumberBadge
 
 
 {-| What the panel is showing, which nothing outside it reads.

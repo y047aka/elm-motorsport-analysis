@@ -17,7 +17,7 @@ import Motorsport.Race.Car exposing (CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
-import Motorsport.Widget.CarNumberBadge as CarNumberBadge
+import View.CarNumberBadge as CarNumberBadge
 
 
 {-| `selected` is the car the rest of the page is following, which is always one

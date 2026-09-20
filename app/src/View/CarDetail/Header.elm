@@ -14,8 +14,8 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
-import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Leaderboard exposing (viewPositionChange)
+import View.CarNumberBadge as CarNumberBadge
 
 
 {-| `startPosition` is where the car began, which the round's summary estimates
