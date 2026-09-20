@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarCardList exposing (view)
+module View.CarCardList exposing (view)
 
 {-| Every car of the field as a card, in overall order. The cards are the
 strip's; nothing here is windowed.
@@ -10,7 +10,7 @@ strip's; nothing here is windowed.
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
-import Motorsport.Widget.CarCard as CarCard
+import View.CarCard as CarCard
 
 
 view : Snapshot -> Html msg

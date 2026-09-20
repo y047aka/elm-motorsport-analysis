@@ -1,4 +1,4 @@
-module Motorsport.Widget.SectorAndLaps exposing (view)
+module View.SectorAndLaps exposing (view)
 
 {-| Per-car "sector progress pie + Current lap + Last lap" row.
 

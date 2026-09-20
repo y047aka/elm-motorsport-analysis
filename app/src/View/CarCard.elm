@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarCard exposing (view)
+module View.CarCard exposing (view)
 
 {-| A single car card: where the car stands, who is driving it, and how it is
 running.
@@ -19,7 +19,7 @@ import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.SectorAndLaps as SectorAndLaps
+import View.SectorAndLaps as SectorAndLaps
 
 
 {-| `allCars` is the full overall standings: the sparkline searches it for the

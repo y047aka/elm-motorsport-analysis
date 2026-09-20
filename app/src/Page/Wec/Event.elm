@@ -24,7 +24,6 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Widget.CarCardList as CarCardList
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -37,6 +36,7 @@ import UI.Notice as Notice
 import UI.Shadcn.Card as Card
 import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
+import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.PlaybackControls as PlaybackControls
 
