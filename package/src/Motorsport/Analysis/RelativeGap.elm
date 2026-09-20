@@ -17,9 +17,6 @@ itself. A `Baseline` then carries that range, which is why
 [`against`](#against) needs none: a lap outside it finds no moment and produces
 no point.
 
-A reading under `Motorsport/Analysis/`: derived from a snapshot's laps and the
-primitives, holding nothing of its own.
-
 @docs Baseline, baseline
 @docs Point, against
 

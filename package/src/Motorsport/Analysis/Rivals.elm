@@ -13,9 +13,6 @@ every view comparing cars draws. The wider rings are the reader's and come out
 through [`nearest`](#nearest): a chart drawing lines wants fewer cars than one
 averaging a baseline.
 
-A reading under `Motorsport/Analysis/`: derived from a snapshot and the
-primitives, holding nothing of its own.
-
 @docs Rivals
 @docs around
 @docs focused, fight, nearest

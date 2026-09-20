@@ -8,9 +8,6 @@ module Motorsport.Analysis.ClassPositions exposing
 The population is the class and not the cars being compared: a position only
 means anything against everyone it could have been gained from or lost to.
 
-A reading under `Motorsport/Analysis/`: derived from a snapshot and the
-primitives, holding nothing of its own.
-
 @docs Point
 @docs byCar
 

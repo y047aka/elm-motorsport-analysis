@@ -2,9 +2,6 @@ module Motorsport.Analysis.Pace exposing (racingTimes)
 
 {-| How quickly a car went round, over a stretch of the race.
 
-A reading under `Motorsport/Analysis/`: derived from a snapshot's laps and the
-primitives, holding nothing of its own.
-
 @docs racingTimes
 
 -}

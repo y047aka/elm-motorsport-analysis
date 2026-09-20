@@ -12,9 +12,6 @@ it lapping under a safety car or flat out. Turning one into lap numbers is the
 race's to do rather than a chart's: which laps an hour covers depends on who was
 running and how quickly they went round.
 
-A reading under `Motorsport/Analysis/`: derived from a snapshot and the
-primitives, holding nothing of its own.
-
 @docs LapWindow
 @docs range
 
