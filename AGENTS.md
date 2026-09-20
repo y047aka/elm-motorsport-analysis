@@ -135,10 +135,9 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
 - `Page/` — one module per page, plain TEA
-- `Data/` (feed decoding), `UI/` (Table, and `Shadcn/` for the wrappers)
-- `View/` — what a page is laid out of: the leaderboard, the car detail panel
-  and its sections, the car cards, the live standings, and the badge and the
-  lap-segment strip those share
+- `Data/` (feed decoding), `UI/` (Notice, and `Shadcn/` for the wrappers)
+- `View/` — what a page is laid out of: the car detail panel and its sections,
+  the car cards, the live standings, and the badge those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
 `/api/wec/index.json`. It is the app's only source for which rounds exist, what
@@ -221,9 +220,9 @@ everything it draws.
 UI, not Radix. Each `app/src/shadcn/<name>-element.ts` puts one of them behind
 a custom element, `index.ts` registers them all, and
 `app/src/UI/Shadcn/<Name>.elm` is the Elm side. The Elm wrappers hold no
-Tailwind classes; the class strings are the vendored file's. `UI.Table` and the
-`UI.DataView` the leaderboard is built on are what sit beside them: Elm that
-writes its own Tailwind and answers to no vendored file.
+Tailwind classes; the class strings are the vendored file's. `UI.Notice` is what
+sits beside them: Elm that writes its own Tailwind and answers to no vendored
+file.
 
 `components.json` configures the CLI, so `shadcn add <name>` writes these files
 and `shadcn add <name> --diff` reports how far one has drifted from upstream.
@@ -293,14 +292,22 @@ what an object-valued setter compares with, and both are back to zero.
 `Race/` for the loaded race, its indices, and readings of it at a moment
 (`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those
 (`Rivals`, `Pace`), `Chart/` for the charts drawn off them (`GapChart`,
-`LapTimeDistribution`), `Internal/` for machinery that is not the race's
-vocabulary (`ChangePoints`, `Statistics`).
+`LapTimeDistribution`), `Leaderboard` and `Lap/SegmentStrip` for the field and a
+lap drawn the way this sport prints them, `Internal/` for machinery that is not
+the race's vocabulary (`ChangePoints`, `Statistics`).
 
-`Chart/` is the whole of what this side draws, and it draws SVG: a reading of
-the race plotted, and nothing about the page it is plotted on. The HTML -- the
-panels, the tables, the strips and the badges, and how a page is laid out of
-them -- is `/app/src/View/`'s. Both sides are written in the Tailwind
-`app/style.css` defines, which is why that file scans `/package` too.
+What is drawn here is a reading of the race in a form the sport is read in: the
+field as a timing table, a lap as the segments the circuit times it in, the
+charts. How a page is laid out of those -- which panels, in which boxes, what
+the reader has picked and what they have open -- is `/app/src/View/`'s. Both
+sides are written in the Tailwind `app/style.css` defines, which is why that
+file scans `/package` too.
+
+**`/package/src/Internal/`** sits outside `Motorsport/` because the sport has no
+word for it at all: `DataView`, the sortable, filterable table `Leaderboard` is
+a configuration of, and the `Table` it draws its rows with, which nothing else
+reads. `Motorsport/Internal/` is the other kind -- machinery the race does have
+a word for, kept out of its vocabulary.
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
@@ -357,8 +364,9 @@ that does, and what reaches `Car.Metadata` is the resolved colour, badge and
 photograph rather than the tables.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
-in two places: `Car.Metadata` holds a `Class`, and `Lap.miniSectors` is fixed to
-`Circuit/LeMans`'s type. Reversing that arrow is its own change.
+in three places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
+`Circuit/LeMans`'s type, and `Leaderboard` carries `*_Wec` and `*_LeMans24h`
+columns beside the generic ones. Reversing that arrow is its own change.
 
 There is no view-model layer between the two. `Race.Snapshot` is the whole
 per-frame derivation — sampling the cars at the clock, ordering the field,
