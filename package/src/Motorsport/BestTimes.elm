@@ -9,7 +9,7 @@ them.
 
 Nineteen records make up the baseline a timing screen rates against: the fastest
 lap, three sectors and fifteen mini-sectors. Each is a
-[`ChangePoints`](Motorsport-Internal-ChangePoints) over the moments it was
+[`ChangePoints`](Internal-ChangePoints) over the moments it was
 beaten, which is what keeps reading the baseline off a binary search rather than
 nineteen passes over every lap of the race.
 
@@ -27,12 +27,12 @@ owns it: [`Race`](Motorsport-Race) holds the records, and
 
 -}
 
+import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Json.Decode as Decode exposing (Decoder, field)
 import Json.Decode.Pipeline exposing (required)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 

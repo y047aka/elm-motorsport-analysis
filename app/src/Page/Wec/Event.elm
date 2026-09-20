@@ -19,16 +19,12 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
+import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Widget.CarCardList as CarCardList
-import Motorsport.Widget.CarDetail as CarDetailWidget
-import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Leaderboard as Leaderboard
-import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Route
 import Shared
 import Shared.Msg
@@ -38,7 +34,10 @@ import UI.Notice as Notice
 import UI.Shadcn.Card as Card
 import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
+import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
+import View.CarNumberBadge as CarNumberBadge
+import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
 
 
@@ -51,7 +50,7 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , detailCarNumber : Maybe String
-    , detailState : CarDetailWidget.Model
+    , detailState : CarDetail.Model
     }
 
 
@@ -71,7 +70,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , detailCarNumber = Nothing
-      , detailState = CarDetailWidget.init
+      , detailState = CarDetail.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -89,7 +88,7 @@ type Msg
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | SelectDetailCar String
-    | CarDetailMsg CarDetailWidget.Msg
+    | CarDetailMsg CarDetail.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -119,7 +118,7 @@ update msg m =
             ( { m | detailCarNumber = Just carNumber }, Effect.none )
 
         CarDetailMsg detailMsg ->
-            ( { m | detailState = CarDetailWidget.update detailMsg m.detailState }
+            ( { m | detailState = CarDetail.update detailMsg m.detailState }
             , Effect.none
             )
 
@@ -251,7 +250,7 @@ trackerView track timeline snapshot replay m =
             [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
-                [ LiveStandingsWidget.view
+                [ LiveStandings.view
                     { onSelect = SelectDetailCar
                     , selected = Maybe.map (.metadata >> .carNumber) focused
                     }

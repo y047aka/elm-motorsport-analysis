@@ -32,11 +32,11 @@ race. Reading a count off every car on every frame is a different question, and
 -}
 
 import Dict exposing (Dict)
+import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import List.Extra
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant exposing (Instant)
-import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 
@@ -190,7 +190,7 @@ affordable for the one car a panel is given over to and not for the field on
 every frame: a race is twenty thousand laps. The stops are under two thousand of
 them, so collecting those once and reading the count back is a binary search
 over a fraction of the data. See
-[`ChangePoints`](Motorsport-Internal-ChangePoints).
+[`ChangePoints`](Internal-ChangePoints).
 
 Keyed by car number, so two cars sharing one -- which the source data
 occasionally has -- come to a single entry, as they do in

@@ -1,4 +1,4 @@
-module Motorsport.Widget.Leaderboard exposing
+module Motorsport.Leaderboard exposing
     ( stringColumn, intColumn, floatColumn
     , Model, init
     , Msg, update
@@ -17,7 +17,8 @@ module Motorsport.Widget.Leaderboard exposing
     , Config, view
     )
 
-{-|
+{-| The field as a timing table, drawn from the columns a classification is
+printed in. Which of them, in what order, is the caller's.
 
 
 # Configuration
@@ -54,21 +55,21 @@ module Motorsport.Widget.Leaderboard exposing
 
 -}
 
-import DataView
-import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
+import Internal.DataView as DataView
+import Internal.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
+import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
-import Motorsport.Widget.SegmentStrip as SegmentStrip
 
 
 
@@ -86,7 +87,7 @@ init =
 
 options : Options
 options =
-    DataView.Options.defaultOptions
+    Options.defaultOptions
         |> (\options_ ->
                 { options_
                     | sorting = NoSorting
@@ -119,30 +120,6 @@ update =
 
 type alias Config data msg =
     DataView.Config data msg
-
-
-
--- RATING COLOURS
-
-
-{-| The colour of a rating that may not exist. A time the source data has none
-of takes the standard colour: there is nothing to rate it against.
--}
-colorOfPerformance : Maybe Performance.PerformanceLevel -> String
-colorOfPerformance =
-    Maybe.withDefault Performance.Standard >> Performance.toColorVariable
-
-
-{-| The text colour for a performance rating, `inherit` for a standard one so
-it takes whatever colour the surrounding text already has.
--}
-colorOfPerformanceText : Performance.PerformanceLevel -> String
-colorOfPerformanceText performance =
-    if Performance.isStandard performance then
-        "inherit"
-
-    else
-        Performance.toColorVariable performance
 
 
 
@@ -196,8 +173,8 @@ went.
 
 `Nothing` is a car with no sector to report at all, and draws nothing. A sector
 the car has not finished is white; one it has is painted by its rating -- which
-is the same reading [`progressCell`](#progressCell) draws the thin strip from,
-told apart the same way.
+is the same reading [`Lap.SegmentStrip`](Motorsport-Lap-SegmentStrip) draws the
+thin strip from, told apart the same way.
 
 -}
 sectorTimeColumn :
@@ -406,7 +383,7 @@ viewCurrentLapColumn_Wec { status, currentLap } =
     let
         lapTime { time, performance } =
             div
-                [ class "text-center", style "color" (colorOfPerformanceText performance) ]
+                [ class "text-center", style "color" (Performance.textColorOf performance) ]
                 [ text (Duration.toStringToTenths time) ]
     in
     if Status.hasRetired status then
@@ -468,7 +445,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
                         }
             in
             div
-                [ class "text-center", style "color" (colorOfPerformanceText status_) ]
+                [ class "text-center", style "color" (Performance.textColorOf status_) ]
                 [ text (Duration.toStringToTenths time) ]
     in
     if Status.hasRetired status then
@@ -508,7 +485,7 @@ viewLastLapColumn_Wec lastLap =
     let
         lapTimeView { time, performance } =
             div
-                [ class "text-center", style "color" (colorOfPerformanceText performance) ]
+                [ class "text-center", style "color" (Performance.textColorOf performance) ]
                 [ text (Duration.toString time) ]
     in
     case lastLap of
@@ -544,7 +521,7 @@ viewLastLapColumn_LeMans24h lastLap =
     let
         lapTimeView { time, performance } =
             div
-                [ class "text-center", style "color" (colorOfPerformanceText performance) ]
+                [ class "text-center", style "color" (Performance.textColorOf performance) ]
                 [ text (Duration.toString time) ]
     in
     case lastLap of
@@ -601,7 +578,7 @@ performanceHistory_ bestTimes laps =
                             , fastest = fastestLapTime
                             }
                     )
-                |> colorOfPerformance
+                |> Performance.colorOf
     in
     div
         [ class "px-[0.3vw] grid grid-flow-col auto-cols-[max(5px,0.3vw)] grid-rows-[repeat(5,max(5px,0.3vw))] gap-[1.5px] first:ps-0 last:pe-0 [&:nth-child(n+2)]:[border-left:1px_solid_hsl(0_0%_0%)]" ]

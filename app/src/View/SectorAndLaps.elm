@@ -1,7 +1,6 @@
-module Motorsport.Widget.SectorAndLaps exposing (view)
+module View.SectorAndLaps exposing (view)
 
-{-| Per-car "sector progress pie + Current lap + Last lap" row,
-shared by SelectedCarsStrip and the car detail panel.
+{-| Per-car "sector progress pie + Current lap + Last lap" row.
 
 @docs view
 
@@ -60,7 +59,7 @@ currentLapTimeCell : CarAt -> Html msg
 currentLapTimeCell item =
     div
         [ class "text-[13px] tabular-nums text-right"
-        , style "color" (performanceColor item.currentLap.performance)
+        , style "color" (Performance.textColorOf item.currentLap.performance)
         ]
         [ text
             (if Status.hasStopped item.status then
@@ -85,18 +84,9 @@ lastLapTimeCell item =
     in
     div
         [ class "text-[13px] tabular-nums text-right"
-        , style "color" (rated |> Maybe.map (.performance >> performanceColor) |> Maybe.withDefault "inherit")
+        , style "color" (rated |> Maybe.map (.performance >> Performance.textColorOf) |> Maybe.withDefault "inherit")
         ]
         [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
-
-
-performanceColor : Performance.PerformanceLevel -> String
-performanceColor performance =
-    if Performance.isStandard performance then
-        "inherit"
-
-    else
-        Performance.toColorVariable performance
 
 
 {-| Small three-slot donut showing sector results of the current lap.
@@ -126,13 +116,7 @@ currentSectorSlot state =
             ( "oklch(1 0 0)", progress )
 
         Performance.Completed rated ->
-            -- A sector the source data has no time for has no rating to colour it by.
-            ( rated
-                |> Maybe.map .performance
-                |> Maybe.withDefault Performance.Standard
-                |> Performance.toColorVariable
-            , 1
-            )
+            ( Performance.colorOf (Maybe.map .performance rated), 1 )
 
 
 {-| Draw three slots as 120° donut arcs. Each element is

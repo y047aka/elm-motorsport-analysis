@@ -1,4 +1,4 @@
-module Motorsport.Widget.SegmentStrip exposing
+module Motorsport.Lap.SegmentStrip exposing
     ( sectors, miniSectors
     , sectorsRated, miniSectorsRated
     , overSectors, overMiniSectors
@@ -228,6 +228,4 @@ either, and takes the standard colour: there is nothing to rate it against.
 -}
 colorOfRated : Maybe RatedTime -> String
 colorOfRated =
-    Maybe.map .performance
-        >> Maybe.withDefault Performance.Standard
-        >> Performance.toColorVariable
+    Maybe.map .performance >> Performance.colorOf

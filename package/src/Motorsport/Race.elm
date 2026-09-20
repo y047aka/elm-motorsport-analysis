@@ -22,19 +22,19 @@ moment is derived from the two, in
 
 -}
 
+import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Json.Decode as Decode exposing (Decoder, field)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Stint as Stint
 import Motorsport.Status as Status exposing (Status)
 
 
 {-| The three indices read the same race at an instant, and are all
-[`ChangePoints`](Motorsport-Internal-ChangePoints) underneath.
+[`ChangePoints`](Internal-ChangePoints) underneath.
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race

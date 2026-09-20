@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetail.Header exposing (view)
+module View.CarDetail.Header exposing (view)
 
 {-| Who the car is and where it stands: the line a classification prints, with
 the two cars it is actually racing on either side of it.
@@ -11,11 +11,11 @@ import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Leaderboard exposing (viewPositionChange)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
-import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Leaderboard exposing (viewPositionChange)
+import View.CarNumberBadge as CarNumberBadge
 
 
 {-| `startPosition` is where the car began, which the round's summary estimates

@@ -1,19 +1,19 @@
 module Motorsport.ReplayTest exposing (suite)
 
 import Expect
+import Internal.ChangePoints as ChangePoints
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Internal.ChangePoints as ChangePoints
-import Motorsport.Wec.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
-import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race as Race
+import Motorsport.Race.Car as Car exposing (Car, CarNumber)
+import Motorsport.Race.Snapshot as Snapshot
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.Race.Snapshot as Snapshot
+import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 import Time exposing (millisToPosix)
 

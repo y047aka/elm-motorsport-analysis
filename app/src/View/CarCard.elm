@@ -1,7 +1,7 @@
-module Motorsport.Widget.CarCard exposing (view)
+module View.CarCard exposing (view)
 
-{-| A single car card for SelectedCarsStrip: where the car stands, who is
-driving it, and how it is running.
+{-| A single car card: where the car stands, who is driving it, and how it is
+running.
 
 @docs view
 
@@ -9,20 +9,21 @@ driving it, and how it is running.
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
+import Motorsport.Analysis.Rivals as Rivals
+import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
-import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Distribution as Distribution
-import Motorsport.Widget.SectorAndLaps as SectorAndLaps
-import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
+import View.CarNumberBadge as CarNumberBadge
+import View.SectorAndLaps as SectorAndLaps
 
 
-{-| `allCars` is the full overall standings, not just the visible window —
-the sparkline searches it for the class rivals ahead of and behind the car.
+{-| `allCars` is the full overall standings: the sparkline searches it for the
+class rivals ahead of and behind the car.
 -}
 view : LapHistory -> List CarAt -> CarAt -> Html msg
 view lapHistory allCars item =
@@ -40,8 +41,8 @@ view lapHistory allCars item =
                 , portrait item.metadata.imageUrl item
                 , summaryStats item
                 , SectorAndLaps.view item
-                , RivalGapSparkline.view lapHistory allCars item
-                , Distribution.sparkline { first = 1, last = item.standing.lapsCompleted } lapHistory item
+                , rivalGapSparkline lapHistory allCars item
+                , LapTimeDistribution.sparkline { first = 1, last = item.standing.lapsCompleted } lapHistory item
                 ]
             ]
         ]
@@ -108,6 +109,34 @@ statCell label valueHtml =
             [ class "text-[12px] tabular-nums" ]
             [ valueHtml ]
         ]
+
+
+{-| The card against the class rivals either side of it, read as
+[`RelativeGap`](Motorsport-Analysis-RelativeGap).
+
+The gaps are matched by lap number, so the rivals are assumed to be on the same
+lap as this car, which in-class neighbours normally are. A lapped neighbour is
+about a lap of cumulative time away at the same lap number and is clipped
+outside the band as an outlier rather than flattening it.
+
+-}
+rivalGapSparkline : LapHistory -> List CarAt -> CarAt -> Html msg
+rivalGapSparkline lapHistory allCars item =
+    let
+        currentLap =
+            item.standing.lapsCompleted
+    in
+    GapChart.gapSparkline { first = currentLap - recentLapCount, last = currentLap }
+        lapHistory
+        (Rivals.around allCars item)
+
+
+{-| How many laps back the card reaches: a card is a thumbnail of the last
+stretch of the race, not of the race.
+-}
+recentLapCount : Int
+recentLapCount =
+    20
 
 
 statusBadge : Status -> Html msg

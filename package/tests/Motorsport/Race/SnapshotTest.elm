@@ -1,16 +1,13 @@
 module Motorsport.Race.SnapshotTest exposing (suite)
 
 import Expect
+import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Wec.Class as Class exposing (Class)
-import Motorsport.Wec.Era as Era
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
-import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..), SegmentState(..))
 import Motorsport.Manufacturer as Manufacturer
@@ -19,6 +16,9 @@ import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Status as Status exposing (Status)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
 
 

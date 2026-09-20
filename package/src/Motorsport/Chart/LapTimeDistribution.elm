@@ -1,17 +1,26 @@
-module Motorsport.Chart.LapTimeDistribution exposing (Series, domainOf, maxDensityOf, view)
+module Motorsport.Chart.LapTimeDistribution exposing (view, sparkline)
 
-{-| A car's lap-time distribution as a kernel density estimate: pace
-consistency, typical lap and spread, which a time-series sparkline does not
-show. Passing several `Series` to `view` overlays them on a shared lap-time axis.
+{-| The lap-time distribution chart: each car's racing laps as a kernel density
+estimate, which says what a time-series line cannot -- the pace a car holds, and
+how tightly it holds it.
 
-@docs Series, domainOf, maxDensityOf, view
+The cars are laid over one another on a shared scale, drawn full-width with an
+axis ([`view`](#view)) or one car at card size without one
+([`sparkline`](#sparkline)).
+
+@docs view, sparkline
 
 -}
 
 import Axis
 import Html exposing (Html, text)
-import Motorsport.Chart.Common as Common exposing (Emphasis)
+import Motorsport.Analysis.Pace as Pace
+import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
+import Motorsport.Chart.Common as Common exposing (Emphasis(..), consolidated)
 import Motorsport.Duration as Duration
+import Motorsport.LapRange exposing (LapRange)
+import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Path
 import Scale exposing (ContinuousScale)
 import Shape
@@ -21,6 +30,121 @@ import Svg.Attributes as SvgAttr
 import TypedSvg.Attributes exposing (transform)
 import TypedSvg.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
+
+
+{-| The car and the rival either side on one scale, the car's own curve the
+emphasised one: how quick a car is reads only against what the cars it is racing
+are doing.
+
+Three curves and no more, unlike the gap chart beside it: these overlap where
+they are alike, which is exactly where the chart is being read.
+
+`Nothing` where the range holds no lap to describe.
+
+-}
+view : LapRange -> Snapshot -> Rivals -> Maybe (Html msg)
+view range snapshot rivals =
+    let
+        lapHistory =
+            Snapshot.lapHistory snapshot
+
+        focused =
+            Rivals.focused rivals
+
+        series =
+            Rivals.fight rivals
+                |> List.map
+                    (\item ->
+                        let
+                            own =
+                                seriesOf range lapHistory item
+                        in
+                        if item.metadata.carNumber == focused.metadata.carNumber then
+                            own
+
+                        else
+                            { own | emphasis = Related }
+                    )
+    in
+    boundsOf series
+        |> Maybe.map
+            (\{ domain, maxDensity } ->
+                chart
+                    { width = consolidated.width
+                    , height = consolidated.height
+                    , domain = domain
+                    , maxDensity = maxDensity
+                    }
+                    series
+            )
+
+
+{-| One car's own laps at card size, on a scale of its own: the cards beside it
+are the overall order rather than one class, and two classes on one lap-time
+axis flatten both. A car with no laps to describe gets no chart rather than an
+empty one, a card having no room to explain itself.
+-}
+sparkline : LapRange -> LapHistory -> CarAt -> Html msg
+sparkline range lapHistory item =
+    let
+        series =
+            seriesOf range lapHistory item
+    in
+    case boundsOf [ series ] of
+        Just { domain, maxDensity } ->
+            chart
+                { width = 220, height = 50, domain = domain, maxDensity = maxDensity }
+                [ series ]
+
+        Nothing ->
+            text ""
+
+
+{-| Shared bounds for the chart. Aligns the X axis (domain) and the Y axis
+(max density) across several cars so they are drawn on the same scale in both
+directions.
+-}
+type alias Bounds =
+    { domain : ( Float, Float )
+    , maxDensity : Float
+    }
+
+
+boundsOf : List Series -> Maybe Bounds
+boundsOf series =
+    domainOf series
+        |> Maybe.map
+            (\domain ->
+                { domain = domain
+                , maxDensity = maxDensityOf domain series
+                }
+            )
+
+
+{-| One car's curve: the pace it held inside the range, and the lap it is on
+now marked as a point on it.
+-}
+seriesOf : LapRange -> LapHistory -> CarAt -> Series
+seriesOf range lapHistory entry =
+    { color = entry.metadata.manufacturer.color
+    , emphasis = Focused
+    , times = Pace.racingTimes range (LapHistory.get entry.metadata.carNumber lapHistory)
+    , lastLap = lastLapTime entry
+    }
+
+
+lastLapTime : CarAt -> Maybe Int
+lastLapTime entry =
+    case entry.lastLap of
+        Snapshot.Completed { rated } ->
+            rated |> Maybe.map .time
+
+        Snapshot.NoLapYet ->
+            Nothing
+
+
+
+-- THE CHART
 
 
 {-| One car's distribution. `times` is expected to have its outliers already
@@ -71,8 +195,8 @@ maxDensityOf domain seriesList =
 {-| Overlay each `Series` on the given domain, at the given density scale.
 A `Series` with no times is ignored.
 -}
-view : { width : Float, height : Float, domain : ( Float, Float ), maxDensity : Float } -> List Series -> Html msg
-view { width, height, domain, maxDensity } seriesList =
+chart : { width : Float, height : Float, domain : ( Float, Float ), maxDensity : Float } -> List Series -> Html msg
+chart { width, height, domain, maxDensity } seriesList =
     let
         densities =
             seriesList

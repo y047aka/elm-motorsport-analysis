@@ -1,16 +1,16 @@
 module Motorsport.RaceTest exposing (suite)
 
 import Expect
+import Internal.ChangePoints as ChangePoints
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Internal.ChangePoints as ChangePoints
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Status as Status
+import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
 

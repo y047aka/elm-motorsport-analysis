@@ -1,12 +1,12 @@
 module Motorsport.Analysis.LapWindowTest exposing (suite)
 
 import Expect
+import Internal.ChangePoints as ChangePoints
 import Motorsport.Analysis.LapWindow as LapWindow
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
-import Motorsport.Internal.ChangePoints as ChangePoints
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race

@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetail.PositionProgression exposing (view)
+module Motorsport.Chart.PositionProgression exposing (view)
 
 {-| [`ClassPositions`](Motorsport-Analysis-ClassPositions) drawn as one line per
 car, the cars being compared picked out of the class behind them.

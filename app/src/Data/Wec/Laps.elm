@@ -13,13 +13,13 @@ module Data.Wec.Laps exposing
 -}
 
 import Dict exposing (Dict)
+import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Internal.Jsonl as Jsonl
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)

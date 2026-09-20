@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetail.Stint exposing (view)
+module View.CarDetail.Stint exposing (view)
 
 {-| [`Analysis.Stint`](Motorsport-Analysis-Stint) drawn as the panel's stints
 section.
