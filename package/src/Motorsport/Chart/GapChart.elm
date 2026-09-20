@@ -17,7 +17,7 @@ import Html exposing (Html, text)
 import List.Extra
 import Motorsport.Analysis.RelativeGap as RelativeGap exposing (Baseline)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, consolidated, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Internal.Statistics exposing (iqrFences)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange as LapRange exposing (LapRange)
@@ -377,14 +377,6 @@ zeroReferenceLine { x1, x2, y } =
         , SvgAttr.strokeDasharray "2 2"
         ]
         []
-
-
-{-| The full-width chart. A wide aspect keeps the rendered height low once the
-svg is stretched to 100% width.
--}
-consolidated : Dimensions
-consolidated =
-    { width = 1000, height = 250, padding = axisPadding }
 
 
 {-| The in-card rival comparison.

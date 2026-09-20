@@ -10,7 +10,7 @@ racing laps, the cars laid over one another on a shared scale.
 import Html exposing (Html, text)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
-import Motorsport.Chart.Common exposing (Emphasis(..))
+import Motorsport.Chart.Common exposing (Emphasis(..), consolidated)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
@@ -55,7 +55,11 @@ view range snapshot rivals =
         |> Maybe.map
             (\{ domain, maxDensity } ->
                 LapTimeDistribution.view
-                    { width = 1000, height = 250, domain = domain, maxDensity = maxDensity }
+                    { width = consolidated.width
+                    , height = consolidated.height
+                    , domain = domain
+                    , maxDensity = maxDensity
+                    }
                     series
             )
 

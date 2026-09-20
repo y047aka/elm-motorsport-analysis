@@ -12,7 +12,7 @@ import Html exposing (Html)
 import List.Extra
 import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, consolidated, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Snapshot exposing (Snapshot)
 import Scale exposing (ContinuousScale)
@@ -29,13 +29,6 @@ view range snapshot rivals =
 
         series ->
             Just (positionProgressionChart consolidated series)
-
-
-{-| The size the panel's full-width charts share.
--}
-consolidated : { width : Float, height : Float }
-consolidated =
-    { width = 1000, height = 250 }
 
 
 {-| One line per car of the class, the cars of `rivals` emphasised.
@@ -89,15 +82,9 @@ lapExtent positions =
     }
 
 
-positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
-positionProgressionChart size series =
+positionProgressionChart : Dimensions -> List PositionSeries -> Html msg
+positionProgressionChart dimensions series =
     let
-        dimensions =
-            { width = size.width
-            , height = size.height
-            , padding = axisPadding
-            }
-
         allPoints =
             series |> List.concatMap .points
 
@@ -113,7 +100,7 @@ positionProgressionChart size series =
         orderedSeries =
             sortForDrawing .emphasis (.points >> List.Extra.last >> Maybe.map .position) series
     in
-    svg size
+    svg { width = dimensions.width, height = dimensions.height }
         ([ lapGridLines dimensions scales.xScale axisLaps
          , lapAxis dimensions scales.xScale axisLaps
          , positionAxis dimensions scales.yScale
