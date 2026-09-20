@@ -1,4 +1,4 @@
-module DataView exposing
+module UI.DataView exposing
     ( Model, Filter, Sorting, init
     , Msg(..), update
     , Config, Column
@@ -45,7 +45,6 @@ truth is pretty great!
 
 import Array exposing (Array)
 import Compare exposing (Comparator)
-import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html exposing (Attribute, Html, button, div, input, span, text)
 import Html.Attributes as Attributes exposing (class, type_)
 import Html.Events exposing (on, onClick)
@@ -53,6 +52,7 @@ import Html.Keyed as Keyed
 import Html.Lazy as Lazy exposing (lazy4)
 import Json.Decode as D
 import List.Extra
+import UI.DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import UI.Table as Table exposing (td, th, tr)
 
 
@@ -207,12 +207,7 @@ findSorting key sorting =
 
 listContains : a -> List a -> Bool
 listContains item list =
-    case List.head <| List.filter (\i -> i == item) list of
-        Just found ->
-            True
-
-        Nothing ->
-            False
+    List.any (\i -> i == item) list
 
 
 onToggleCheck : msg -> Attribute msg

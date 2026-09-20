@@ -1,4 +1,4 @@
-module DataView.Options exposing
+module UI.DataView.Options exposing
     ( SortingOption(..), FilteringOption(..), SelectingOption(..), PaginationOption(..), Options
     , defaultOptions
     )

@@ -54,8 +54,6 @@ module View.Leaderboard exposing
 
 -}
 
-import DataView
-import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
@@ -69,6 +67,8 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
 import Motorsport.Widget.SegmentStrip as SegmentStrip
+import UI.DataView as DataView
+import UI.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 
 
 
@@ -86,7 +86,7 @@ init =
 
 options : Options
 options =
-    DataView.Options.defaultOptions
+    Options.defaultOptions
         |> (\options_ ->
                 { options_
                     | sorting = NoSorting
