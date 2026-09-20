@@ -16,6 +16,7 @@ before it is over.
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (attribute, class, style)
 import Html.Events exposing (onClick)
+import Internal.Color as Color
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -289,7 +290,7 @@ ratedText : String -> Maybe RatedTime -> Maybe String -> Html msg
 ratedText size rated reading =
     div
         [ class (size ++ " tabular-nums")
-        , style "color" (rated |> Maybe.map (.performance >> Performance.toColorVariable) |> Maybe.withDefault "inherit")
+        , style "color" (Color.toCss (rated |> Maybe.map (.performance >> Performance.toColor) |> Maybe.withDefault Color.inherit))
         ]
         [ text (Maybe.withDefault "-" reading) ]
 

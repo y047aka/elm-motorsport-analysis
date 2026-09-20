@@ -12,6 +12,7 @@ import Html.Attributes exposing (attribute, class)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
+import Internal.Color as Color
 import Motorsport.Driver as Driver
 import Motorsport.Race.Car exposing (CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
@@ -34,7 +35,7 @@ view { onSelect, selected } snapshot =
                     [ class "rounded-lg border border-border bg-card overflow-hidden grid grid-rows-[auto_1fr]" ]
                     [ div
                         [ class "flex items-center gap-x-[0.5em] py-2 px-2.5 text-[10px] font-bold before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-                        , attribute "style" ("--class-color: " ++ Class.toColor class_ ++ ";")
+                        , attribute "style" ("--class-color: " ++ Color.toCss (Class.toColor class_) ++ ";")
                         ]
                         [ text (Class.toString class_) ]
                     , Keyed.node "ul"

@@ -1,5 +1,6 @@
 {
   "tests": [
+    "Internal.Color",
     "Internal.Statistics",
     "Motorsport.Driver",
     "Motorsport.Duration",

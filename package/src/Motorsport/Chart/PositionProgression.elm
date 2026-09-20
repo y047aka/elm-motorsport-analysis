@@ -9,6 +9,7 @@ car, the cars being compared picked out of the class behind them.
 
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
+import Internal.Color exposing (Color)
 import List.Extra
 import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
@@ -63,7 +64,7 @@ classProgressionSeries range snapshot rivals =
 
 type alias PositionSeries =
     { points : List ClassPositions.Point
-    , color : String
+    , color : Color
     , carNumber : String
     , emphasis : Emphasis
     }

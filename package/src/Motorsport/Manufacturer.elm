@@ -12,24 +12,23 @@ module Motorsport.Manufacturer exposing
 
 -}
 
+import Internal.Color as Color exposing (Color)
+
 
 {-| Whether the hand-written table names this manufacturer, which is where a
 logo comes from and nowhere else does.
-
-`color` is a CSS value.
-
 -}
 type Manufacturer
-    = Registered { name : String, color : String, logoUrl : Maybe String }
-    | Unregistered { name : String, color : String }
+    = Registered { name : String, color : Color, logoUrl : Maybe String }
+    | Unregistered { name : String, color : Color }
 
 
-registered : { name : String, color : String, logoUrl : Maybe String } -> Manufacturer
+registered : { name : String, color : Color, logoUrl : Maybe String } -> Manufacturer
 registered =
     Registered
 
 
-unregistered : { name : String, color : String } -> Manufacturer
+unregistered : { name : String, color : Color } -> Manufacturer
 unregistered =
     Unregistered
 
@@ -42,7 +41,7 @@ unregistered =
 -}
 unknown : Manufacturer
 unknown =
-    Unregistered { name = "", color = "oklch(0.5 0 0)" }
+    Unregistered { name = "", color = Color.oklch 0.5 0 0 }
 
 
 name : Manufacturer -> String
@@ -55,7 +54,7 @@ name manufacturer =
             m.name
 
 
-color : Manufacturer -> String
+color : Manufacturer -> Color
 color manufacturer =
     case manufacturer of
         Registered m ->

@@ -58,6 +58,7 @@ printed in. Which of them, in what order, is the caller's.
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
+import Internal.Color as Color exposing (Color)
 import Internal.DataView as DataView
 import Internal.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Motorsport.BestTimes as BestTimes exposing (Holder)
@@ -191,15 +192,16 @@ sectorTimeColumn { label, getter } =
                     div
                         [ class "h-[18px] rounded-[1px]"
                         , style "background-color"
-                            (case state of
-                                Performance.Completed rated ->
-                                    SegmentStrip.colorOfRated rated
+                            (Color.toCss <|
+                                case state of
+                                    Performance.Completed rated ->
+                                        SegmentStrip.colorOfRated rated
 
-                                Performance.InProgress _ ->
-                                    "oklch(1 0 0 / 0.9)"
+                                    Performance.InProgress _ ->
+                                        Color.withAlpha 0.9 (Color.oklch 1 0 0)
 
-                                Performance.NotEntered ->
-                                    "oklch(1 0 0 / 0.9)"
+                                    Performance.NotEntered ->
+                                        Color.withAlpha 0.9 (Color.oklch 1 0 0)
                             )
                         ]
                         []
@@ -245,7 +247,7 @@ viewCarNumberColumn_Wec : { a | carNumber : String, class : Class, manufacturer 
 viewCarNumberColumn_Wec { carNumber, manufacturer } =
     div
         [ class "w-[2.5em] p-1 flex flex-col gap-1 place-items-center text-center text-[12px] font-bold rounded-[5px] leading-none"
-        , style "background-color" (Manufacturer.color manufacturer)
+        , style "background-color" (Color.toCss (Manufacturer.color manufacturer))
         ]
         (case Manufacturer.logoUrl manufacturer of
             Just logoUrl ->
@@ -568,7 +570,7 @@ performanceHistory_ bestTimes laps =
         fastestLapTime =
             BestTimes.timeOf bestTimes.fastestLapTime
 
-        toCssColor lap =
+        colorOf lap =
             lap.time
                 |> Maybe.map
                     (\time ->
@@ -582,13 +584,13 @@ performanceHistory_ bestTimes laps =
     in
     div
         [ class "px-[0.3vw] grid grid-flow-col auto-cols-[max(5px,0.3vw)] grid-rows-[repeat(5,max(5px,0.3vw))] gap-[1.5px] first:ps-0 last:pe-0 [&:nth-child(n+2)]:[border-left:1px_solid_hsl(0_0%_0%)]" ]
-        (List.map (\lap -> coloredCell (toCssColor lap)) laps)
+        (List.map (\lap -> coloredCell (colorOf lap)) laps)
 
 
-coloredCell : String -> Html msg
+coloredCell : Color -> Html msg
 coloredCell backgroundColor_ =
     div
         [ class "w-full h-full rounded-[10%]"
-        , style "background-color" backgroundColor_
+        , style "background-color" (Color.toCss backgroundColor_)
         ]
         []

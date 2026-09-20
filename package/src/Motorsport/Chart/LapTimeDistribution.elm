@@ -14,6 +14,7 @@ axis ([`view`](#view)) or one car at card size without one
 
 import Axis
 import Html exposing (Html, text)
+import Internal.Color as Color exposing (Color)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common as Common exposing (Emphasis(..), consolidated)
@@ -152,7 +153,7 @@ lastLapTime entry =
 removed; `lastLap` is marked as a single point on the curve.
 -}
 type alias Series =
-    { color : String
+    { color : Color
     , emphasis : Emphasis
     , times : List Int
     , lastLap : Maybe Int
@@ -328,9 +329,9 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
     in
     g []
         [ Path.element (Shape.area Shape.monotoneInXCurve areaPoints)
-            [ SvgAttr.fill ("oklch(from " ++ series.color ++ " l c h / 0.15)") ]
+            [ SvgAttr.fill (Color.toCss (Color.withAlpha 0.15 series.color)) ]
         , Path.element (Shape.line Shape.monotoneInXCurve linePoints)
-            [ SvgAttr.stroke series.color
+            [ SvgAttr.stroke (Color.toCss series.color)
             , SvgAttr.strokeWidth "2"
             , SvgAttr.fill "none"
             ]
@@ -356,14 +357,14 @@ lastLapMarker xScale yScale series lastLapPoint =
                     [ InPx.cx px
                     , InPx.cy py
                     , InPx.r 2.5
-                    , SvgAttr.fill series.color
+                    , SvgAttr.fill (Color.toCss series.color)
                     ]
                     []
                 , text_
                     [ InPx.x px
                     , InPx.y (py - 6)
                     , SvgAttr.textAnchor "middle"
-                    , SvgAttr.fill series.color
+                    , SvgAttr.fill (Color.toCss series.color)
                     , SvgAttr.class "text-[9px]"
                     ]
                     [ text (Duration.toString (round x)) ]

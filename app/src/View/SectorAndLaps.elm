@@ -8,6 +8,7 @@ module View.SectorAndLaps exposing (view)
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style)
+import Internal.Color as Color exposing (Color)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (SegmentState)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
@@ -59,7 +60,7 @@ currentLapTimeCell : CarAt -> Html msg
 currentLapTimeCell item =
     div
         [ class "text-[13px] tabular-nums text-right"
-        , style "color" (Performance.textColorOf item.currentLap.performance)
+        , style "color" (Color.toCss (Performance.textColorOf item.currentLap.performance))
         ]
         [ text
             (if Status.hasStopped item.status then
@@ -84,7 +85,7 @@ lastLapTimeCell item =
     in
     div
         [ class "text-[13px] tabular-nums text-right"
-        , style "color" (rated |> Maybe.map (.performance >> Performance.textColorOf) |> Maybe.withDefault "inherit")
+        , style "color" (Color.toCss (rated |> Maybe.map (.performance >> Performance.textColorOf) |> Maybe.withDefault Color.inherit))
         ]
         [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
@@ -106,14 +107,14 @@ currentSectorPie item =
 white partial fill while in progress, full performance color once completed.
 A sector the car has not reached fills nothing, so its colour never shows.
 -}
-currentSectorSlot : SegmentState -> ( String, Float )
+currentSectorSlot : SegmentState -> ( Color, Float )
 currentSectorSlot state =
     case state of
         Performance.NotEntered ->
-            ( "oklch(1 0 0)", 0 )
+            ( Color.oklch 1 0 0, 0 )
 
         Performance.InProgress progress ->
-            ( "oklch(1 0 0)", progress )
+            ( Color.oklch 1 0 0, progress )
 
         Performance.Completed rated ->
             ( Performance.colorOf (Maybe.map .performance rated), 1 )
@@ -123,7 +124,7 @@ currentSectorSlot state =
 `(fill color, fill fraction 0..1)`; the fill grows from the slot start,
 over a faint full-length track.
 -}
-sectorPie : List ( String, Float ) -> Html msg
+sectorPie : List ( Color, Float ) -> Html msg
 sectorPie slots =
     svg
         [ SvgAttr.width (String.fromFloat pieSize ++ "px")
@@ -141,10 +142,10 @@ sectorPie slots =
 
 emptyPie : Html msg
 emptyPie =
-    sectorPie [ ( "transparent", 0 ), ( "transparent", 0 ), ( "transparent", 0 ) ]
+    sectorPie [ ( Color.transparent, 0 ), ( Color.transparent, 0 ), ( Color.transparent, 0 ) ]
 
 
-sectorSlot : Int -> ( String, Float ) -> List (Svg msg)
+sectorSlot : Int -> ( Color, Float ) -> List (Svg msg)
 sectorSlot index ( color, fraction ) =
     let
         slot =
@@ -168,7 +169,7 @@ sectorSlot index ( color, fraction ) =
         [ track ]
 
     else
-        [ track, Path.element (arc fraction) [ SvgAttr.fill color ] ]
+        [ track, Path.element (arc fraction) [ SvgAttr.fill (Color.toCss color) ] ]
 
 
 pieSize : Float

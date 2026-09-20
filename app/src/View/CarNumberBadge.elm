@@ -11,6 +11,7 @@ needs, and none of it moves as the race does.
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, class, src, style)
+import Internal.Color as Color
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
 
@@ -43,7 +44,7 @@ badge : String -> List (Html msg) -> Car.Metadata -> Html msg
 badge containerClass children metadata =
     div
         [ class containerClass
-        , style "background-color" (Manufacturer.color metadata.manufacturer)
+        , style "background-color" (Color.toCss (Manufacturer.color metadata.manufacturer))
         ]
         children
 

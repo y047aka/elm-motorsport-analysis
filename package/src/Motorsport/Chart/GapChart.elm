@@ -14,6 +14,7 @@ wider ring of it to baseline on than they draw; how much wider, and why, is
 
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
 import Html exposing (Html, text)
+import Internal.Color exposing (Color)
 import Internal.Statistics exposing (iqrFences)
 import List.Extra
 import Motorsport.Analysis.RelativeGap as RelativeGap exposing (Baseline)
@@ -30,7 +31,7 @@ import Svg.Attributes as SvgAttr
 
 
 type alias CarLine =
-    { color : String
+    { color : Color
     , emphasis : Emphasis
     , carNumber : String
     , laps : List Lap

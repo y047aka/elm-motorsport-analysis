@@ -13,6 +13,7 @@ a chart raised a question about is in here whichever lap it was.
 import Html exposing (Html, div, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (class, style)
 import Html.Lazy as Lazy
+import Internal.Color as Color
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -103,6 +104,6 @@ timeCell : Maybe RatedTime -> Html msg
 timeCell rated =
     td
         [ class "py-0.5 px-1 text-right"
-        , style "color" (rated |> Maybe.map (.performance >> Performance.toColorVariable) |> Maybe.withDefault "inherit")
+        , style "color" (Color.toCss (rated |> Maybe.map (.performance >> Performance.toColor) |> Maybe.withDefault Color.inherit))
         ]
         [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]

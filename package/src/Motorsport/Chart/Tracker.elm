@@ -6,6 +6,7 @@ module Motorsport.Chart.Tracker exposing (Detail(..), Track, fromConfig, view)
 
 -}
 
+import Internal.Color as Color exposing (Color)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -386,8 +387,8 @@ renderCar detail car { angle, x, y } =
                 ]
 
 
-carMarker : Float -> Int -> String -> Svg msg
-carMarker size positionInClass classColorValue =
+carMarker : Float -> Int -> Color -> Svg msg
+carMarker size positionInClass classColor =
     let
         scaleFactor =
             max 0.4 (1 - (toFloat positionInClass * 0.1))
@@ -406,7 +407,7 @@ carMarker size positionInClass classColorValue =
         [ Attributes.cx (px 0)
         , Attributes.cy (px 0)
         , Attributes.r (px carSize)
-        , fill classColorValue
+        , fill (Color.toCss classColor)
         , style ("filter: saturate(" ++ saturation ++ ");")
         ]
         []

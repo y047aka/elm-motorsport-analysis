@@ -18,6 +18,7 @@ module Motorsport.Wec.Class exposing
 
 -}
 
+import Internal.Color as Color exposing (Color)
 import List.Extra
 import Motorsport.Wec.Era as Era exposing (Era)
 
@@ -35,7 +36,7 @@ that season's grid of three.
 -}
 type Class
     = None
-    | Racing { category : Category, index : Int, color : String }
+    | Racing { category : Category, index : Int, color : Color }
 
 
 {-| Which category, regardless of era -- only the name it prints depends on it.
@@ -67,7 +68,7 @@ The single source of era-dependent knowledge: a new era is a case here, a new
 season is nothing at all.
 
 -}
-grid : Era -> List ( Category, String )
+grid : Era -> List ( Category, Color )
 grid era =
     case era of
         Era.GteProAndAm ->
@@ -185,36 +186,40 @@ compare a b =
 
 {-| The color a class was drawn in, in its own era.
 -}
-toColor : Class -> String
+toColor : Class -> Color
 toColor class =
     case class of
         Racing { color } ->
             color
 
         None ->
-            oklch 0 0 0
+            black
 
 
-red : String
+{-| Built once rather than per call: [`Chart.Tracker`](Motorsport-Chart-Tracker)
+draws a car through `Svg.Lazy`, which compares this against the last one by
+reference.
+-}
+black : Color
+black =
+    Color.oklch 0 0 0
+
+
+red : Color
 red =
-    oklch 0.5 0.25 29
+    Color.oklch 0.5 0.25 29
 
 
-blue : String
+blue : Color
 blue =
-    oklch 0.5 0.25 264
+    Color.oklch 0.5 0.25 264
 
 
-green : String
+green : Color
 green =
-    oklch 0.5 0.25 142
+    Color.oklch 0.5 0.25 142
 
 
-orange : String
+orange : Color
 orange =
-    oklch 0.7 0.2 43
-
-
-oklch : Float -> Float -> Float -> String
-oklch luminance chroma hue =
-    "oklch(" ++ String.fromFloat (luminance * 100) ++ "% " ++ String.fromFloat chroma ++ " " ++ String.fromFloat hue ++ ")"
+    Color.oklch 0.7 0.2 43

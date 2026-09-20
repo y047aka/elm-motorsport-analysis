@@ -1,6 +1,7 @@
 module Motorsport.Wec.ClassTest exposing (tests)
 
 import Expect
+import Internal.Color as Color exposing (Color)
 import List.Extra
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era exposing (Era)
@@ -204,20 +205,20 @@ classIn =
     Class.fromString
 
 
-colorOf : Int -> String -> Maybe String
+colorOf : Int -> String -> Maybe Color
 colorOf season name =
     Era.fromSeason season
         |> Maybe.map (\era -> Class.fromString era name |> Class.toColor)
 
 
-green : String
+green : Color
 green =
-    "oklch(50% 0.25 142)"
+    Color.oklch 0.5 0.25 142
 
 
-orange : String
+orange : Color
 orange =
-    "oklch(70% 0.2 43)"
+    Color.oklch 0.7 0.2 43
 
 
 {-| Every ordered pair, including each element with itself.

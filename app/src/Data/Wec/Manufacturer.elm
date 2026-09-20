@@ -9,6 +9,7 @@ The table is `/static/manufacturers.json`, which is written by hand.
 -}
 
 import Dict exposing (Dict)
+import Internal.Color as Color exposing (Color)
 import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
@@ -33,7 +34,7 @@ entryDecoder =
             ( name, Manufacturer.registered { name = name, color = color, logoUrl = logoUrl } )
         )
         |> required "name" string
-        |> required "color" string
+        |> required "color" (Decode.map Color.css string)
         -- `optional` rather than `maybe`, which cannot tell a manufacturer with
         -- no logo from a `logo` written wrong.
         |> optional "logo" (Decode.map Just string) Nothing
@@ -52,7 +53,7 @@ fromName manufacturers { name, carNumber } =
             Manufacturer.unregistered { name = name, color = generatedColor carNumber }
 
 
-generatedColor : String -> String
+generatedColor : String -> Color
 generatedColor carNumber =
     let
         carHash =
@@ -61,4 +62,4 @@ generatedColor carNumber =
         hue =
             carHash * 37 |> modBy 360 |> toFloat
     in
-    "oklch(0.55 0.25 " ++ String.fromFloat hue ++ ")"
+    Color.oklch 0.55 0.25 hue

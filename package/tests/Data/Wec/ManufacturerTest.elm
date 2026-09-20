@@ -3,6 +3,7 @@ module Data.Wec.ManufacturerTest exposing (suite)
 import Data.Wec.Manufacturer as Manufacturer
 import Dict
 import Expect
+import Internal.Color as Color
 import Json.Decode as Decode
 import Motorsport.Manufacturer exposing (color, logoUrl, name, registered, unknown)
 import Test exposing (Test, describe, test)
@@ -49,7 +50,7 @@ suite =
                         |> Expect.equal
                             (registered
                                 { name = "Aston Martin"
-                                , color = "oklch(0.5 0.25 180)"
+                                , color = Color.css "oklch(0.5 0.25 180)"
                                 , logoUrl = Just "/assets/manufacturer-logos/aston-martin.png"
                                 }
                             )
@@ -59,7 +60,7 @@ suite =
                         |> Expect.equal
                             (registered
                                 { name = "Oreca"
-                                , color = "oklch(0.4 0.2 20)"
+                                , color = Color.css "oklch(0.4 0.2 20)"
                                 , logoUrl = Nothing
                                 }
                             )

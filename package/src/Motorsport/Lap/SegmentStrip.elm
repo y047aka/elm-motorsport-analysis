@@ -23,6 +23,7 @@ else.
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style, title)
+import Internal.Color as Color exposing (Color)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
@@ -178,10 +179,10 @@ progressCell label state =
         ( widthPercent, backgroundColor_ ) =
             case state of
                 Performance.NotEntered ->
-                    ( "0%", "transparent" )
+                    ( "0%", Color.transparent )
 
                 Performance.InProgress progress ->
-                    ( String.fromFloat (progress * 100) ++ "%", "oklch(1 0 0)" )
+                    ( String.fromFloat (progress * 100) ++ "%", Color.oklch 1 0 0 )
 
                 Performance.Completed rated ->
                     ( "100%", colorOfRated rated )
@@ -189,7 +190,7 @@ progressCell label state =
     div
         [ class "h-[3px] rounded-[1px]"
         , style "width" widthPercent
-        , style "background-color" backgroundColor_
+        , style "background-color" (Color.toCss backgroundColor_)
         , title (readingOf label (Performance.ratedOf state))
         ]
         []
@@ -201,7 +202,7 @@ ratedCell : String -> Maybe RatedTime -> Html msg
 ratedCell label rated =
     div
         [ class "h-[3px] rounded-[1px]"
-        , style "background-color" (colorOfRated rated)
+        , style "background-color" (Color.toCss (colorOfRated rated))
         , title (readingOf label rated)
         ]
         []
@@ -226,6 +227,6 @@ A sector, mini-sector or lap the source data has no time for has no rating
 either, and takes the standard colour: there is nothing to rate it against.
 
 -}
-colorOfRated : Maybe RatedTime -> String
+colorOfRated : Maybe RatedTime -> Color
 colorOfRated =
     Maybe.map .performance >> Performance.colorOf

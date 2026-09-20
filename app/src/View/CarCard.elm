@@ -9,6 +9,7 @@ running.
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
+import Internal.Color as Color
 import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
@@ -160,7 +161,7 @@ positionLabel : CarAt -> Html msg
 positionLabel item =
     div
         [ class "flex items-center gap-x-1 text-[10px] before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-        , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
+        , attribute "style" ("--class-color: " ++ Color.toCss (Class.toColor item.metadata.class) ++ ";")
         ]
         [ text ("P" ++ String.fromInt item.standing.position)
         , div [ class "text-muted-foreground" ]

@@ -9,6 +9,7 @@ the two cars it is actually racing on either side of it.
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
+import Internal.Color as Color
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Leaderboard exposing (viewPositionChange)
@@ -79,7 +80,7 @@ classBadge : CarAt -> Html msg
 classBadge item =
     div
         [ class "flex items-center gap-x-1 text-[11px] font-bold whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-        , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
+        , attribute "style" ("--class-color: " ++ Color.toCss (Class.toColor item.metadata.class) ++ ";")
         ]
         [ text (Class.toString item.metadata.class) ]
 

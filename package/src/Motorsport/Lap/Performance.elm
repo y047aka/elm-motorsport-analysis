@@ -5,7 +5,7 @@ module Motorsport.Lap.Performance exposing
     , SegmentState(..), fromProgress, ratedOf
     , PerformanceLevel(..), performanceLevel
     , isStandard
-    , toColorVariable, colorOf, textColorOf
+    , toColor, colorOf, textColorOf
     )
 
 {-| How a lap's times read against the baselines they are rated on.
@@ -28,10 +28,11 @@ it as part of the race and a view is free to rate a lap of its own.
 
 @docs PerformanceLevel, performanceLevel
 @docs isStandard
-@docs toColorVariable, colorOf, textColorOf
+@docs toColor, colorOf, textColorOf
 
 -}
 
+import Internal.Color as Color exposing (Color)
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
@@ -197,34 +198,34 @@ isStandard level =
     level == Standard
 
 
-toColorVariable : PerformanceLevel -> String
-toColorVariable level =
+toColor : PerformanceLevel -> Color
+toColor level =
     case level of
         Fastest ->
-            "var(--performance-fastest)"
+            Color.variable "--performance-fastest"
 
         PersonalBest ->
-            "var(--performance-personal-best)"
+            Color.variable "--performance-personal-best"
 
         Standard ->
-            "var(--performance-standard)"
+            Color.variable "--performance-standard"
 
 
 {-| The colour of a rating that may not exist. A time the source data has none
 of takes the standard colour: there is nothing to rate it against.
 -}
-colorOf : Maybe PerformanceLevel -> String
+colorOf : Maybe PerformanceLevel -> Color
 colorOf =
-    Maybe.withDefault Standard >> toColorVariable
+    Maybe.withDefault Standard >> toColor
 
 
 {-| The colour of text carrying a rating, `inherit` for a standard one so that
 it takes whatever colour the text around it already has.
 -}
-textColorOf : PerformanceLevel -> String
+textColorOf : PerformanceLevel -> Color
 textColorOf level =
     if isStandard level then
-        "inherit"
+        Color.inherit
 
     else
-        toColorVariable level
+        toColor level

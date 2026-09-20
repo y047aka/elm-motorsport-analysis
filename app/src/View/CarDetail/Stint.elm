@@ -9,11 +9,12 @@ section.
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style, title)
+import Internal.Color as Color exposing (Color)
 import List.Extra
 import Motorsport.Analysis.Stint as AnalysisStint exposing (Summary)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Status exposing (Status(..))
@@ -69,7 +70,7 @@ driverCell metadata summary driver =
     div [ class "flex items-center gap-x-1 min-w-0" ]
         [ div
             [ class "size-2 shrink-0 rounded-[1px]"
-            , style "background-color" (driverShade metadata driver)
+            , style "background-color" (Color.toCss (driverShade metadata driver))
             ]
             []
         , div [ class "text-[10px] truncate" ] [ text (Driver.toSurname driver) ]
@@ -157,7 +158,7 @@ stintSegment metadata totalLaps stint =
             )
         , style "flex-grow" (String.fromInt stint.lapCount)
         , style "flex-basis" (String.fromFloat (100 * toFloat stint.lapCount / toFloat totalLaps) ++ "%")
-        , style "background-color" (driverShade metadata stint.driver)
+        , style "background-color" (Color.toCss (driverShade metadata stint.driver))
         , title (stintTitle stint)
         ]
         [ text (String.fromInt stint.lapCount) ]
@@ -188,29 +189,24 @@ stintTitle stint =
 There is no colour of a driver's own in the data, and which of the car's own
 drivers is out is the only thing the bar has to tell apart.
 -}
-driverShade : Car.Metadata -> Driver -> String
+driverShade : Car.Metadata -> Driver -> Color
 driverShade metadata driver =
     let
         alpha =
             case List.Extra.findIndex (Driver.isSame driver) metadata.drivers of
                 Just 0 ->
-                    "0.9"
+                    0.9
 
                 Just 1 ->
-                    "0.6"
+                    0.6
 
                 Just 2 ->
-                    "0.35"
+                    0.35
 
                 _ ->
-                    "0.2"
+                    0.2
     in
-    shadeOf metadata.manufacturer alpha
-
-
-shadeOf : Manufacturer -> String -> String
-shadeOf manufacturer alpha =
-    "oklch(from " ++ Manufacturer.color manufacturer ++ " l c h / " ++ alpha ++ ")"
+    Color.withAlpha alpha (Manufacturer.color metadata.manufacturer)
 
 
 {-| The run the car is on, or the one it stopped on.
