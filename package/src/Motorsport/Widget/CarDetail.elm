@@ -27,6 +27,7 @@ import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Analysis.Stint as AnalysisStint
 import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Chart.PositionProgression as PositionProgression
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
@@ -36,7 +37,6 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget.CarDetail.ChartTabs as ChartTabs
 import Motorsport.Widget.CarDetail.Header as Header
 import Motorsport.Widget.CarDetail.LapTimes as LapTimes
-import Motorsport.Widget.CarDetail.PositionProgression as PositionProgression
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Common as Widget
