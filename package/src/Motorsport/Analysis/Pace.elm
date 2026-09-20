@@ -6,8 +6,8 @@ module Motorsport.Analysis.Pace exposing (racingTimes, bestSectors)
 
 -}
 
+import Internal.Statistics exposing (upperFence)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Internal.Statistics exposing (upperFence)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.LapRange as LapRange exposing (LapRange)
 import Motorsport.Sector as Sector exposing (BySector)

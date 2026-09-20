@@ -15,9 +15,9 @@ has driven how many of the laps.
 
 -}
 
+import Internal.Statistics as Statistics
 import List.Extra
 import Motorsport.Driver as Driver exposing (Driver)
-import Motorsport.Internal.Statistics as Statistics
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
 

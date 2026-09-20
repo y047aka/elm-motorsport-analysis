@@ -293,8 +293,7 @@ what an object-valued setter compares with, and both are back to zero.
 (`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those
 (`Rivals`, `Pace`), `Chart/` for the charts drawn off them (`GapChart`,
 `LapTimeDistribution`), `Leaderboard` and `Lap/SegmentStrip` for the field and a
-lap drawn the way this sport prints them, `Internal/` for machinery that is not
-the race's vocabulary (`ChangePoints`, `Statistics`).
+lap drawn the way this sport prints them.
 
 What is drawn here is a reading of the race in a form the sport is read in: the
 field as a timing table, a lap as the segments the circuit times it in, the
@@ -303,11 +302,12 @@ the reader has picked and what they have open -- is `/app/src/View/`'s. Both
 sides are written in the Tailwind `app/style.css` defines, which is why that
 file scans `/package` too.
 
-**`/package/src/Internal/`** sits outside `Motorsport/` because the sport has no
-word for it at all: `DataView`, the sortable, filterable table `Leaderboard` is
-a configuration of, and the `Table` it draws its rows with, which nothing else
-reads. `Motorsport/Internal/` is the other kind -- machinery the race does have
-a word for, kept out of its vocabulary.
+**`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport
+has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
+are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`,
+the sortable, filterable table `Leaderboard` is a configuration of, with the
+`Table` it draws its rows with. None of it is vocabulary, and a name here is
+free to say what it does rather than what the race calls it.
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made

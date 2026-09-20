@@ -1,9 +1,9 @@
-module Motorsport.Internal.ChangePointsTest exposing (suite)
+module Internal.ChangePointsTest exposing (suite)
 
 import Expect
+import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Test exposing (Test, describe, test)
 
 

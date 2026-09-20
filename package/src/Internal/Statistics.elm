@@ -1,4 +1,4 @@
-module Motorsport.Internal.Statistics exposing
+module Internal.Statistics exposing
     ( iqrFences, upperFence
     , median
     )

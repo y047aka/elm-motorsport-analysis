@@ -1,4 +1,4 @@
-module Motorsport.Internal.Jsonl exposing (decode)
+module Internal.Jsonl exposing (decode)
 
 {-| The files the CLI writes one record per line.
 

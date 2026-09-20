@@ -1,4 +1,4 @@
-module Motorsport.Internal.ChangePoints exposing
+module Internal.ChangePoints exposing
     ( ChangePoints
     , empty, fromList
     , valueAt, countUpTo, timeOfNth, length

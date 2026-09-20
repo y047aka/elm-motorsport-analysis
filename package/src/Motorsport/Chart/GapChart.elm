@@ -14,11 +14,11 @@ wider ring of it to baseline on than they draw; how much wider, and why, is
 
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
 import Html exposing (Html, text)
+import Internal.Statistics exposing (iqrFences)
 import List.Extra
 import Motorsport.Analysis.RelativeGap as RelativeGap exposing (Baseline)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, consolidated, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
-import Motorsport.Internal.Statistics exposing (iqrFences)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange as LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)

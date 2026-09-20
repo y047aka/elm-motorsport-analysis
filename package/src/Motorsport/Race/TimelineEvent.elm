@@ -12,9 +12,9 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 
 -}
 
+import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Internal.Jsonl as Jsonl
 import Motorsport.Race.Car exposing (CarNumber)
 
 
