@@ -2,7 +2,7 @@ module Motorsport.Analysis.ClassPositionsTest exposing (suite)
 
 import Expect
 import Motorsport.Analysis.ClassPositions as ClassPositions
-import Motorsport.Analysis.LapWindow exposing (Laps)
+import Motorsport.Analysis.LapWindow exposing (LapRange)
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
@@ -32,7 +32,7 @@ suite =
                 \_ ->
                     ClassPositions.byCar wholeRace (classOf "LMP2") field
                         |> Expect.equal []
-            , test "a car with nothing inside the window answers with nothing, rather than dropping out" <|
+            , test "a car with nothing inside the range answers with nothing, rather than dropping out" <|
                 \_ ->
                     ClassPositions.byCar { first = 10, last = 12 } (classOf "HYPERCAR") field
                         |> List.map Tuple.second
@@ -48,7 +48,7 @@ suite =
                             , { lap = 2, position = 1 }
                             , { lap = 4, position = 2 }
                             ]
-            , test "the window keeps only the laps inside it" <|
+            , test "the range keeps only the laps inside it" <|
                 \_ ->
                     pointsFor "3" { first = 2, last = 3 }
                         |> Expect.equal
@@ -67,14 +67,14 @@ suite =
 -- it, which is what a lap the feed did not record reads as.
 
 
-wholeRace : Laps
+wholeRace : LapRange
 wholeRace =
     { first = 1, last = 4 }
 
 
-pointsFor : String -> Laps -> List ClassPositions.Point
-pointsFor carNumber window =
-    ClassPositions.byCar window (classOf "HYPERCAR") field
+pointsFor : String -> LapRange -> List ClassPositions.Point
+pointsFor carNumber range =
+    ClassPositions.byCar range (classOf "HYPERCAR") field
         |> List.filter (\( car, _ ) -> car.metadata.carNumber == carNumber)
         |> List.concatMap Tuple.second
 

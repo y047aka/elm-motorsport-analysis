@@ -10,7 +10,7 @@ import Test exposing (Test, describe, test)
 suite : Test
 suite =
     describe "Motorsport.Analysis.Pace"
-        [ describe "which laps the window reports"
+        [ describe "which laps the range reports"
             [ test "the laps inside it, both ends drawn" <|
                 \_ ->
                     Pace.racingTimes { first = 1, last = 3 } safetyCarLate
@@ -26,7 +26,7 @@ suite =
                         |> Expect.equal [ 100000, 100000 ]
             ]
         , describe "where the outlier fence is drawn from"
-            [ test "the safety-car laps are outliers even where they are most of the window" <|
+            [ test "the safety-car laps are outliers even where they are most of the range" <|
                 \_ ->
                     -- Read over laps 15-20 alone, four of those six are 200.000
                     -- and the fence sits above every one of them. Read over the
@@ -47,7 +47,7 @@ suite =
 
 
 {-| Sixteen laps at the car's own pace and then four behind a safety car: the
-shape the fence has to be read over the whole of rather than over a window.
+shape the fence has to be read over the whole of rather than over a range.
 -}
 safetyCarLate : List Lap
 safetyCarLate =

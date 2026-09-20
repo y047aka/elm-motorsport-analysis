@@ -43,18 +43,18 @@ suite =
                     LapWindow.laps (LapWindow.Recent 60000) (classOf "HYPERCAR") (fieldAt 25000)
                         |> Expect.equal { first = 1, last = 4 }
             ]
-        , describe "the laps a window keeps"
+        , describe "the laps a range keeps"
             [ test "both ends are inside it" <|
                 \_ ->
                     LapWindow.within { first = 2, last = 4 } (List.map lapNumbered (List.range 1 5))
                         |> List.map .lap
                         |> Expect.equal [ 2, 3, 4 ]
-            , test "a window of one lap keeps that lap" <|
+            , test "a range of one lap keeps that lap" <|
                 \_ ->
                     LapWindow.within { first = 3, last = 3 } (List.map lapNumbered (List.range 1 5))
                         |> List.map .lap
                         |> Expect.equal [ 3 ]
-            , test "a window the car never reached keeps none of them" <|
+            , test "a range the car never reached keeps none of them" <|
                 \_ ->
                     LapWindow.within { first = 9, last = 12 } (List.map lapNumbered (List.range 1 5))
                         |> Expect.equal []

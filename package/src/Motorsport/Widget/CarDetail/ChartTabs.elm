@@ -20,7 +20,7 @@ state). Each content is passed as a lazy thunk so inactive charts are not
 rendered.
 
 `controls` sits at the other end of the bar, for what the chart showing is drawn
-with rather than which chart it is -- the range of the race, which all of them
+with rather than which chart it is -- the stretch of the race, which all of them
 share.
 
 The bar and the chart are drawn plain: what they sit in is the section they

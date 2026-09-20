@@ -16,7 +16,7 @@ primitives, holding nothing of its own.
 
 -}
 
-import Motorsport.Analysis.LapWindow as LapWindow exposing (Laps)
+import Motorsport.Analysis.LapWindow as LapWindow exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
@@ -28,19 +28,19 @@ type alias Point =
     }
 
 
-{-| Every car of the class, each with the places it held inside the window. A
+{-| Every car of the class, each with the places it held inside the range. A
 lap the feed gave no position for is not one of them, and a car that was not
-running in the window answers with nothing.
+running in the range answers with nothing.
 -}
-byCar : Laps -> Class -> Snapshot -> List ( CarAt, List Point )
-byCar window class snapshot =
+byCar : LapRange -> Class -> Snapshot -> List ( CarAt, List Point )
+byCar range class snapshot =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
 
         pointsOf car =
             LapHistory.get car.metadata.carNumber lapHistory
-                |> LapWindow.within window
+                |> LapWindow.within range
                 |> List.filterMap
                     (\lap -> lap.position |> Maybe.map (\position -> { lap = lap.lap, position = position }))
     in

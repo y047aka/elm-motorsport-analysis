@@ -23,7 +23,7 @@ lap history is open say nothing about the race and nothing else reads them.
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import List.Extra
-import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow, Laps)
+import Motorsport.Analysis.LapWindow as LapWindow exposing (LapRange, LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Duration as Duration exposing (Duration)
@@ -50,7 +50,7 @@ type Model
 
 type alias State =
     { chart : Chart
-    , range : LapWindow
+    , window : LapWindow
     , lapHistoryOpen : Bool
     }
 
@@ -59,7 +59,7 @@ init : Model
 init =
     Model
         { chart = GapChart
-        , range = LapWindow.WholeRace
+        , window = LapWindow.WholeRace
         , lapHistoryOpen = False
         }
 
@@ -81,7 +81,7 @@ type Chart
 
 type Msg
     = SelectedChart Chart
-    | SelectedRange LapWindow
+    | SelectedWindow LapWindow
     | ToggledLapHistory
 
 
@@ -92,8 +92,8 @@ update msg (Model state) =
             SelectedChart chart ->
                 { state | chart = chart }
 
-            SelectedRange range ->
-                { state | range = range }
+            SelectedWindow window ->
+                { state | window = window }
 
             ToggledLapHistory ->
                 { state | lapHistoryOpen = not state.lapHistoryOpen }
@@ -142,7 +142,7 @@ panel state cars snapshot focused =
 switch the chart and nothing else about what is being shown.
 -}
 type alias Comparison =
-    { laps : Laps
+    { range : LapRange
     , lapHistory : LapHistory
     , snapshot : Snapshot
     , rivals : Rivals
@@ -153,7 +153,7 @@ charts : State -> LapHistory -> Snapshot -> Rivals -> Html Msg
 charts state lapHistory snapshot rivals =
     let
         comparison =
-            { laps = LapWindow.laps state.range (Rivals.focused rivals).metadata.class snapshot
+            { range = LapWindow.laps state.window (Rivals.focused rivals).metadata.class snapshot
             , lapHistory = lapHistory
             , snapshot = snapshot
             , rivals = rivals
@@ -170,12 +170,12 @@ charts state lapHistory snapshot rivals =
 {-| The stretches of the race on offer, in the order the toggle draws them.
 
 One setting for all three charts rather than one each: only one of them is
-showing at a time, and a range that changed as the tabs did would read as the
+showing at a time, and a stretch that changed as the tabs did would read as the
 chart changing.
 
 -}
-rangeOptions : List ( LapWindow, String )
-rangeOptions =
+windowOptions : List ( LapWindow, String )
+windowOptions =
     [ ( LapWindow.Recent (90 * 60 * 1000), "Last 1.5h" )
     , ( LapWindow.Recent (3 * 60 * 60 * 1000), "Last 3h" )
     , ( LapWindow.WholeRace, "All" )
@@ -236,7 +236,7 @@ class with no line to draw, no lap time to describe -- and a wording apiece read
 as the tabs disagreeing about the race.
 -}
 chartTabs : State -> Comparison -> Html Msg
-chartTabs state { laps, lapHistory, snapshot, rivals } =
+chartTabs state { range, lapHistory, snapshot, rivals } =
     let
         orEmptyState : Maybe (Html Msg) -> Html Msg
         orEmptyState =
@@ -244,10 +244,10 @@ chartTabs state { laps, lapHistory, snapshot, rivals } =
     in
     ChartTabs.chartTabs SelectedChart
         state.chart
-        (ChartTabs.segmentedControl SelectedRange state.range rangeOptions)
-        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView laps lapHistory rivals) )
-        , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view laps snapshot rivals) )
-        , ( DistributionChart, "Distribution", \() -> orEmptyState (Distribution.view laps lapHistory rivals) )
+        (ChartTabs.segmentedControl SelectedWindow state.window windowOptions)
+        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range lapHistory rivals) )
+        , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
+        , ( DistributionChart, "Distribution", \() -> orEmptyState (Distribution.view range lapHistory rivals) )
         ]
 
 

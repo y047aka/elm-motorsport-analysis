@@ -15,7 +15,7 @@ wider ring of it to baseline on than they draw; how much wider, and why, is
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
 import Html exposing (Html, text)
 import List.Extra
-import Motorsport.Analysis.LapWindow as LapWindow exposing (Laps)
+import Motorsport.Analysis.LapWindow as LapWindow exposing (LapRange)
 import Motorsport.Analysis.RelativeGap as RelativeGap exposing (Baseline)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
@@ -44,18 +44,18 @@ type alias PlottedCar =
     }
 
 
-lapsOf : Laps -> LapHistory -> CarAt -> List Lap
-lapsOf window lapHistory entry =
+lapsOf : LapRange -> LapHistory -> CarAt -> List Lap
+lapsOf range lapHistory entry =
     LapHistory.get entry.metadata.carNumber lapHistory
-        |> LapWindow.within window
+        |> LapWindow.within range
 
 
-carLine : Laps -> LapHistory -> Emphasis -> CarAt -> CarLine
-carLine window lapHistory emphasis entry =
+carLine : LapRange -> LapHistory -> Emphasis -> CarAt -> CarLine
+carLine range lapHistory emphasis entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
-    , laps = lapsOf window lapHistory entry
+    , laps = lapsOf range lapHistory entry
     }
 
 
@@ -68,19 +68,19 @@ The rival either side is drawn in full and labelled, the pair beyond them grey
 and faint with no end label -- the treatment the position chart gives the rest
 of its class.
 
-`Nothing` where the window holds none of the laps the chart would draw; what
+`Nothing` where the range holds none of the laps the chart would draw; what
 stands in its place is the caller's.
 
 -}
-gapChartView : Laps -> LapHistory -> Rivals -> Maybe (Html msg)
-gapChartView window lapHistory rivals =
+gapChartView : LapRange -> LapHistory -> Rivals -> Maybe (Html msg)
+gapChartView range lapHistory rivals =
     let
         fighting =
             Rivals.nearest fightRivals rivals
                 |> List.map (.metadata >> .carNumber)
 
         lineOf entry =
-            carLine window
+            carLine range
                 lapHistory
                 (if List.member entry.metadata.carNumber fighting then
                     Focused
@@ -92,7 +92,7 @@ gapChartView window lapHistory rivals =
 
         drawn =
             Rivals.nearest baselineRivals rivals
-                |> List.concatMap (lapsOf window lapHistory)
+                |> List.concatMap (lapsOf range lapHistory)
                 |> RelativeGap.baseline
                 |> Maybe.map
                     (\baseline ->
@@ -107,7 +107,7 @@ gapChartView window lapHistory rivals =
             drawn |> List.filter (\plotted -> plotted.car.emphasis == Focused)
     in
     -- The cars drawn, not the wider group they are baselined on: a car that
-    -- retired before the window began has nothing in it, and neither do the
+    -- retired before the range began has nothing in it, and neither do the
     -- rivals it is ranked among, while the ring beyond them is still running
     -- and would carry a guard that only asked whether a baseline exists.
     if List.all (.points >> List.isEmpty) drawn then
@@ -116,9 +116,9 @@ gapChartView window lapHistory rivals =
     else
         Just
             (gapChartViewWith { dimensions = consolidated, showAxes = True }
-                ( toFloat window.first, toFloat (max window.last (window.first + 1)) )
+                ( toFloat range.first, toFloat (max range.last (range.first + 1)) )
                 { scaleOn =
-                    -- The fight owns the frame, unless the window has left none
+                    -- The fight owns the frame, unless the range has left none
                     -- of it to draw and the context is all there is.
                     if List.all (.points >> List.isEmpty) fight then
                         drawn
@@ -173,14 +173,14 @@ plotGaps { baseline, display } =
 zero baseline, and only `focused` drawn emphasised, the rivals beside it held
 back.
 
-The horizontal extent is the laps the focused car actually has inside `window`
-rather than the window itself, so a card of a car that has just come out is the
+The horizontal extent is the laps the focused car actually has inside `range`
+rather than the range itself, so a card of a car that has just come out is the
 laps it has run and not mostly blank. A card with no rival to compare against,
 or with too little of the focused car to draw a line from, is not drawn at all.
 
 -}
-gapSparkline : Laps -> LapHistory -> Rivals -> Html msg
-gapSparkline window lapHistory rivals =
+gapSparkline : LapRange -> LapHistory -> Rivals -> Html msg
+gapSparkline range lapHistory rivals =
     let
         focused =
             Rivals.focused rivals
@@ -191,7 +191,7 @@ gapSparkline window lapHistory rivals =
             Rivals.nearest 1 rivals
 
         lineOf entry =
-            carLine window
+            carLine range
                 lapHistory
                 (if entry.metadata.carNumber == focused.metadata.carNumber then
                     Focused
@@ -203,7 +203,7 @@ gapSparkline window lapHistory rivals =
 
         group =
             Rivals.nearest 2 rivals
-                |> List.concatMap (lapsOf window lapHistory)
+                |> List.concatMap (lapsOf range lapHistory)
                 |> RelativeGap.baseline
 
         -- Blank carNumber to omit the end-of-line label on these narrow cards
@@ -214,7 +214,7 @@ gapSparkline window lapHistory rivals =
                 |> List.map (\line -> { line | carNumber = "" })
 
         focusedLapNumbers =
-            lapsOf window lapHistory focused
+            lapsOf range lapHistory focused
                 |> List.map (.lap >> toFloat)
     in
     case ( focusedLapNumbers, display, group ) of
@@ -312,11 +312,11 @@ gapDecorations : { showAxes : Bool } -> Dimensions -> Scales -> ( Float, Float )
 gapDecorations { showAxes } dimensions scales ( minX, maxX ) =
     if showAxes then
         let
-            lapRange_ =
+            axisLaps =
                 ( ceiling minX, floor maxX )
         in
-        [ lapGridLines dimensions scales.xScale lapRange_
-        , lapAxis dimensions scales.xScale lapRange_
+        [ lapGridLines dimensions scales.xScale axisLaps
+        , lapAxis dimensions scales.xScale axisLaps
         , gapAxis dimensions scales.yScale
         ]
 

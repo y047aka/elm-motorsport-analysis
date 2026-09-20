@@ -1,6 +1,6 @@
 module Motorsport.Analysis.LapWindow exposing
     ( LapWindow(..)
-    , Laps
+    , LapRange
     , laps, within
     )
 
@@ -17,7 +17,7 @@ A reading under `Motorsport/Analysis/`: derived from a snapshot and the
 primitives, holding nothing of its own.
 
 @docs LapWindow
-@docs Laps
+@docs LapRange
 @docs laps, within
 
 -}
@@ -38,12 +38,13 @@ type LapWindow
 
 {-| The lap numbers a window came out as, both ends drawn.
 
-A record and not a pair, because the pair a chart's axis spans is the same two
-Ints and means something else: what is drawn, rather than what is read. The two
-are the same value in one chart and not in another.
+A record and not a pair: two Ints in a row can be swapped at a call site without
+a word from the compiler, and the pair a chart's axis spans is the same shape
+while meaning something else -- what was drawn rather than what was asked for.
+The two are the same value in one chart and not in the other.
 
 -}
-type alias Laps =
+type alias LapRange =
     { first : Int
     , last : Int
     }
@@ -57,7 +58,7 @@ window measured off that leader would leave a chart's axis running on past where
 its lines stop.
 
 -}
-laps : LapWindow -> Class -> Snapshot -> Laps
+laps : LapWindow -> Class -> Snapshot -> LapRange
 laps window class snapshot =
     let
         classCars =
@@ -78,16 +79,16 @@ laps window class snapshot =
             { first = firstLapSince stretch snapshot classCars, last = latest }
 
 
-{-| One car's laps that the window covers, out of everything it has run.
+{-| One car's laps that the range covers, out of everything it has run.
 
-The window is lap numbers rather than a stretch of time by the time it gets
-here, so a car is cut at the laps its own class reached and not at the ones it
-ran inside the stretch itself.
+A range is lap numbers and not a stretch of time by the time it gets here, so a
+car is cut at the laps its own class reached rather than at the ones it ran
+inside the stretch itself.
 
 -}
-within : Laps -> List Lap -> List Lap
-within window =
-    List.filter (\lap -> window.first <= lap.lap && lap.lap <= window.last)
+within : LapRange -> List Lap -> List Lap
+within range =
+    List.filter (\lap -> range.first <= lap.lap && lap.lap <= range.last)
 
 
 {-| Where a chart drawn over `stretch` starts: the lap the car furthest through

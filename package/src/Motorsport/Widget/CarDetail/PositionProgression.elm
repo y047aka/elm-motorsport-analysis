@@ -11,7 +11,7 @@ import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Html exposing (Html)
 import List.Extra
 import Motorsport.Analysis.ClassPositions as ClassPositions
-import Motorsport.Analysis.LapWindow exposing (Laps)
+import Motorsport.Analysis.LapWindow exposing (LapRange)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Race.Snapshot exposing (Snapshot)
@@ -19,12 +19,12 @@ import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
 
 
-{-| `Nothing` where the window leaves no car of the class with a line to draw;
+{-| `Nothing` where the range leaves no car of the class with a line to draw;
 what stands in its place is the caller's.
 -}
-view : Laps -> Snapshot -> Rivals -> Maybe (Html msg)
-view window snapshot rivals =
-    case classProgressionSeries window snapshot rivals of
+view : LapRange -> Snapshot -> Rivals -> Maybe (Html msg)
+view range snapshot rivals =
+    case classProgressionSeries range snapshot rivals of
         [] ->
             Nothing
 
@@ -45,13 +45,13 @@ A car with a single point is left out: one place held at one lap is not a line,
 and the chart draws lines.
 
 -}
-classProgressionSeries : Laps -> Snapshot -> Rivals -> List PositionSeries
-classProgressionSeries window snapshot rivals =
+classProgressionSeries : LapRange -> Snapshot -> Rivals -> List PositionSeries
+classProgressionSeries range snapshot rivals =
     let
         highlighted =
             Rivals.nearest 1 rivals |> List.map (.metadata >> .carNumber)
     in
-    ClassPositions.byCar window (Rivals.focused rivals).metadata.class snapshot
+    ClassPositions.byCar range (Rivals.focused rivals).metadata.class snapshot
         |> List.filter (\( _, points ) -> List.length points >= 2)
         |> List.map
             (\( item, points ) ->
@@ -77,7 +77,7 @@ type alias PositionSeries =
 
 
 {-| The lap numbers the point series spans, which is the axis rather than the
-window: it is what the chart drew, not what it was asked to read. `(1, 1)` when
+range: it is what the chart drew, not what it was asked to read. `(1, 1)` when
 empty.
 -}
 lapExtent : List ClassPositions.Point -> ( Int, Int )
@@ -103,11 +103,11 @@ positionProgressionChart size series =
         allPoints =
             series |> List.concatMap .points
 
-        lapRange_ =
+        axisLaps =
             lapExtent allPoints
 
         ( minLap, maxLap ) =
-            lapRange_
+            axisLaps
 
         scales =
             { xScale = xContinuousScale dimensions ( toFloat minLap, toFloat maxLap )
@@ -119,8 +119,8 @@ positionProgressionChart size series =
             sortForDrawing .emphasis (.points >> List.Extra.last >> Maybe.map .position) series
     in
     svg size
-        ([ lapGridLines dimensions scales.xScale lapRange_
-         , lapAxis dimensions scales.xScale lapRange_
+        ([ lapGridLines dimensions scales.xScale axisLaps
+         , lapAxis dimensions scales.xScale axisLaps
          , positionAxis dimensions scales.yScale
          ]
             ++ List.map (positionLine scales) orderedSeries
