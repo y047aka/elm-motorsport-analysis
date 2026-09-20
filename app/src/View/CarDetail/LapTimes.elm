@@ -24,8 +24,8 @@ import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status
-import Motorsport.Widget.SegmentStrip as SegmentStrip
 import View.CarDetail.LapTable as LapTable
+import View.SegmentStrip as SegmentStrip
 
 
 {-| `laps` is the car's whole race, as the race holds it rather than cut at the

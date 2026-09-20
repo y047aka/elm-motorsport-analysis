@@ -66,9 +66,9 @@ import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
-import Motorsport.Widget.SegmentStrip as SegmentStrip
 import UI.DataView as DataView
 import UI.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
+import View.SegmentStrip as SegmentStrip
 
 
 

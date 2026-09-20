@@ -1,4 +1,4 @@
-module Motorsport.Widget.SegmentStrip exposing
+module View.SegmentStrip exposing
     ( sectors, miniSectors
     , sectorsRated, miniSectorsRated
     , overSectors, overMiniSectors
