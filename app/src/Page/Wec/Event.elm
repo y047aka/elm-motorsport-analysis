@@ -25,7 +25,6 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.CarCardList as CarCardList
-import Motorsport.Widget.CarDetail as CarDetailWidget
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -51,7 +50,7 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , detailCarNumber : Maybe String
-    , detailState : CarDetailWidget.Model
+    , detailState : CarDetail.Model
     }
 
 
@@ -71,7 +70,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , detailCarNumber = Nothing
-      , detailState = CarDetailWidget.init
+      , detailState = CarDetail.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -89,7 +88,7 @@ type Msg
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | SelectDetailCar String
-    | CarDetailMsg CarDetailWidget.Msg
+    | CarDetailMsg CarDetail.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -119,7 +118,7 @@ update msg m =
             ( { m | detailCarNumber = Just carNumber }, Effect.none )
 
         CarDetailMsg detailMsg ->
-            ( { m | detailState = CarDetailWidget.update detailMsg m.detailState }
+            ( { m | detailState = CarDetail.update detailMsg m.detailState }
             , Effect.none
             )
 

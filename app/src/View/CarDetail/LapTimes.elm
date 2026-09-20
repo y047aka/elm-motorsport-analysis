@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetail.LapTimes exposing (view)
+module View.CarDetail.LapTimes exposing (view)
 
 {-| The car's lap times, newest first: the lap it is driving, the lap it has
 just finished, the best it has turned, and every lap behind those.
@@ -24,8 +24,8 @@ import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status
-import Motorsport.Widget.CarDetail.LapTable as LapTable
 import Motorsport.Widget.SegmentStrip as SegmentStrip
+import View.CarDetail.LapTable as LapTable
 
 
 {-| `laps` is the car's whole race, as the race holds it rather than cut at the

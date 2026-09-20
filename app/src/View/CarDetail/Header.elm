@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetail.Header exposing (view)
+module View.CarDetail.Header exposing (view)
 
 {-| Who the car is and where it stands: the line a classification prints, with
 the two cars it is actually racing on either side of it.

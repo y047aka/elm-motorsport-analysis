@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetail.LapTable exposing (view)
+module View.CarDetail.LapTable exposing (view)
 
 {-| Every lap the car has turned, as it was timed, newest first.
 
