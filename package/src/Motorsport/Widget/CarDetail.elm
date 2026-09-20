@@ -27,6 +27,7 @@ import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Analysis.Stint as AnalysisStint
 import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Chart.PositionProgression as PositionProgression
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
@@ -40,7 +41,6 @@ import Motorsport.Widget.CarDetail.LapTimes as LapTimes
 import Motorsport.Widget.CarDetail.Stint as Stint
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Common as Widget
-import Motorsport.Widget.Distribution as Distribution
 
 
 {-| What the panel is showing, which nothing outside it reads.
@@ -246,7 +246,7 @@ chartTabs state { range, snapshot, rivals } =
         (ChartTabs.segmentedControl SelectedWindow state.window windowOptions)
         [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
-        , ( DistributionChart, "Distribution", \() -> orEmptyState (Distribution.view range snapshot rivals) )
+        , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
         ]
 
 

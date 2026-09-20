@@ -9,6 +9,7 @@ running.
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
+import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Race.LapHistory exposing (LapHistory)
@@ -16,7 +17,6 @@ import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Distribution as Distribution
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
 
@@ -41,7 +41,7 @@ view lapHistory allCars item =
                 , summaryStats item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item
-                , Distribution.sparkline { first = 1, last = item.standing.lapsCompleted } lapHistory item
+                , LapTimeDistribution.sparkline { first = 1, last = item.standing.lapsCompleted } lapHistory item
                 ]
             ]
         ]

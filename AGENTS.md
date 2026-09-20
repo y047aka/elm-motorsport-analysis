@@ -301,7 +301,7 @@ nothing -- which is what keeps it out of `Race/`, where nothing owns it, and
 out of `Chart/` and `Widget/`. Drawing is the test that does the work. A
 colour, an emphasis or an axis domain in what a module hands back puts it with
 the chart whatever else it computes, which is why `GapChart` keeps `carLine`
-and `Distribution` keeps `seriesOf` while the arithmetic under both of them
+and `LapTimeDistribution` keeps `seriesOf` while the arithmetic under both of them
 sits here. How many views read a module is not a test: the shelf is organised
 by the reading and not by the reader, so `Rivals` is asked by every view that
 draws a car among its rivals, and a chart's own sample by that chart alone.
