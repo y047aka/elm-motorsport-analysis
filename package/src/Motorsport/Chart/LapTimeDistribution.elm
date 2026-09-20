@@ -19,6 +19,7 @@ import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common as Common exposing (Emphasis(..), consolidated)
 import Motorsport.Duration as Duration
 import Motorsport.LapRange exposing (LapRange)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Path
@@ -126,7 +127,7 @@ now marked as a point on it.
 -}
 seriesOf : LapRange -> LapHistory -> CarAt -> Series
 seriesOf range lapHistory entry =
-    { color = entry.metadata.manufacturer.color
+    { color = Manufacturer.color entry.metadata.manufacturer
     , emphasis = Focused
     , times = Pace.racingTimes range (LapHistory.get entry.metadata.carNumber lapHistory)
     , lastLap = lastLapTime entry

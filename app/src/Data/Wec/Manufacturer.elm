@@ -11,7 +11,7 @@ The table is `/static/manufacturers.json`, which is written by hand.
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Decode.Pipeline exposing (optional, required)
-import Motorsport.Manufacturer exposing (Manufacturer, unknown)
+import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 
 
 {-| Keyed by the name the feed writes.
@@ -30,7 +30,7 @@ entryDecoder : Decoder ( String, Manufacturer )
 entryDecoder =
     Decode.succeed
         (\name color logoUrl ->
-            ( name, { name = name, color = color, logoUrl = logoUrl } )
+            ( name, Manufacturer.registered { name = name, color = color, logoUrl = logoUrl } )
         )
         |> required "name" string
         |> required "color" string
@@ -49,10 +49,7 @@ fromName manufacturers { name, carNumber } =
             manufacturer
 
         Nothing ->
-            { unknown
-                | name = name
-                , color = generatedColor carNumber
-            }
+            Manufacturer.unregistered { name = name, color = generatedColor carNumber }
 
 
 generatedColor : String -> String

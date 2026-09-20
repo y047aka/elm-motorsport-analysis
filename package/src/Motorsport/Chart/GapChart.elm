@@ -21,6 +21,7 @@ import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, consolidated, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange as LapRange exposing (LapRange)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Scale
@@ -57,7 +58,7 @@ lapsOf range lapHistory entry =
 
 carLine : LapRange -> LapHistory -> Emphasis -> CarAt -> CarLine
 carLine range lapHistory emphasis entry =
-    { color = entry.metadata.manufacturer.color
+    { color = Manufacturer.color entry.metadata.manufacturer
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
     , laps = lapsOf range lapHistory entry

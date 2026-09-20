@@ -14,6 +14,7 @@ import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, consolidated, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.LapRange exposing (LapRange)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Snapshot exposing (Snapshot)
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg)
@@ -48,7 +49,7 @@ classProgressionSeries range snapshot rivals =
         |> List.map
             (\( item, points ) ->
                 { points = points
-                , color = item.metadata.manufacturer.color
+                , color = Manufacturer.color item.metadata.manufacturer
                 , carNumber = item.metadata.carNumber
                 , emphasis =
                     if List.member item.metadata.carNumber highlighted then

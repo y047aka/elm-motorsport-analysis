@@ -66,7 +66,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
 import Motorsport.Lap.SegmentStrip as SegmentStrip
-import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
@@ -245,13 +245,13 @@ viewCarNumberColumn_Wec : { a | carNumber : String, class : Class, manufacturer 
 viewCarNumberColumn_Wec { carNumber, manufacturer } =
     div
         [ class "w-[2.5em] p-1 flex flex-col gap-1 place-items-center text-center text-[12px] font-bold rounded-[5px] leading-none"
-        , style "background-color" manufacturer.color
+        , style "background-color" (Manufacturer.color manufacturer)
         ]
-        (case manufacturer.logoUrl of
+        (case Manufacturer.logoUrl manufacturer of
             Just logoUrl ->
                 [ img
                     [ src logoUrl
-                    , alt manufacturer.name
+                    , alt (Manufacturer.name manufacturer)
                     , class "object-contain h-[14px]"
                     ]
                     []

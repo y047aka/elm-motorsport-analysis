@@ -13,7 +13,7 @@ import List.Extra
 import Motorsport.Analysis.Stint as AnalysisStint exposing (Summary)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Status exposing (Status(..))
@@ -207,7 +207,7 @@ driverShade metadata driver =
 
 shadeOf : Manufacturer -> String -> String
 shadeOf manufacturer alpha =
-    "oklch(from " ++ manufacturer.color ++ " l c h / " ++ alpha ++ ")"
+    "oklch(from " ++ Manufacturer.color manufacturer ++ " l c h / " ++ alpha ++ ")"
 
 
 {-| The run the car is on, or the one it stopped on.

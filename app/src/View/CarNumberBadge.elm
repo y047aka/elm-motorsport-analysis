@@ -11,7 +11,7 @@ needs, and none of it moves as the race does.
 
 import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, class, src, style)
-import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
 
 
@@ -43,16 +43,16 @@ badge : String -> List (Html msg) -> Car.Metadata -> Html msg
 badge containerClass children metadata =
     div
         [ class containerClass
-        , style "background-color" metadata.manufacturer.color
+        , style "background-color" (Manufacturer.color metadata.manufacturer)
         ]
         children
 
 
 manufacturerLogo : String -> Manufacturer -> Html msg
 manufacturerLogo logoClass manufacturer =
-    case manufacturer.logoUrl of
+    case Manufacturer.logoUrl manufacturer of
         Just url ->
-            img [ src url, alt manufacturer.name, class logoClass ] []
+            img [ src url, alt (Manufacturer.name manufacturer), class logoClass ] []
 
         Nothing ->
             div [ class logoClass ] []
