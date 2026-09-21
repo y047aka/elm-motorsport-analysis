@@ -1,8 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
 export default defineConfig({
   testDir: './tests',
   snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
@@ -23,7 +20,6 @@ export default defineConfig({
   },
 
   expect: {
-    timeout: 5000,
     toHaveScreenshot: {
       // Greyscale antialiasing, so a local run compares against CI's Linux
       // baselines with room to spare. See tests/screenshot.css.
