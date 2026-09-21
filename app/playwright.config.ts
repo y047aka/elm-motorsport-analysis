@@ -41,7 +41,7 @@ export default defineConfig({
       stylePath: './tests/screenshot.css',
       ...(process.env.CI
         ? { maxDiffPixels: 0 }
-        : { maxDiffPixelRatio: 0.001 }),
+        : { maxDiffPixelRatio: 0.0003 }),
     },
   },
 

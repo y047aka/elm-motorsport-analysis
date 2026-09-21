@@ -479,8 +479,8 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives
   2025's Le Mans because that is the round a checkout keeps; a test reaching
-  for another needs `.#serve-api` behind it. Local runs allow a 0.1%
-  pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
+  for another needs `.#serve-api` behind it. Local runs allow a 0.03%
+  pixel-ratio tolerance (`maxDiffPixelRatio: 0.0003`) for cross-platform
   diffs; CI is strict 0.
 
 The baselines are CI's. They are rendered on Linux, they are the ones a merge
@@ -493,7 +493,9 @@ what a change did, never to land a baseline.
 What separates the two platforms is the rasteriser (CoreText against
 FreeType), which no Chromium flag touches; `tests/screenshot.css` narrows it
 by asking for greyscale antialiasing, and the tolerance above absorbs what is
-left, with roughly 4x of room on the worst snapshot. What it cannot absorb is
+left -- though only just, on the worst of them: `lap-180` differs by 336
+pixels against a budget of 389, so a local failure there is worth measuring
+before it is believed. What it cannot absorb is
 a change smaller than itself: a single digit redrawn is tens of pixels, which
 is why local runs are a check on layout rather than a verdict, and why CI
 stays strict. A local failure is usually real; a local pass is not a promise.
