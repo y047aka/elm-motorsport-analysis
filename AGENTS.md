@@ -493,10 +493,13 @@ it to see what a change did, never to land a baseline.
 What separates the two platforms is the rasteriser (CoreText against
 FreeType), which no Chromium flag touches. `tests/screenshot.css` narrows it
 by asking for greyscale antialiasing and the tolerance absorbs the rest, but
-only just where the gap is widest: `lap-180` differs by 336 pixels against a
-budget of 389. What no tolerance can absorb is a change smaller than itself —
-a digit redrawn is tens of pixels — so a local pass is not a promise, and a
-local failure on `lap-180` is worth measuring before it is believed. CI stays
+barely. The tolerance is a ratio, so a smaller snapshot gets a smaller budget
+while the gap does not shrink with it, and the tightest are the two 850x814
+car-detail panels: 188 differing pixels against a budget of 208, where
+`lap-180` has 336 against 389. What no tolerance can absorb is a change
+smaller than itself — a digit redrawn is tens of pixels — so a local pass is
+not a promise, and a local failure on `position-tab` or
+`selected-car-with-rivals` is worth measuring before it is believed. CI stays
 strict for both reasons.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and

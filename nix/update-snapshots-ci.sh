@@ -39,19 +39,32 @@ fi
 # workflows a bot's push would start rather than running them. Left
 # alone, the pull request keeps the red check that sent you here and
 # gets no run to replace it.
+#
+# Three outcomes, and they are not the same answer: runs held, which is
+# what this is for; runs that started by themselves, which need nothing;
+# and no run at all, which leaves the pushed baselines unchecked and is
+# the one worth failing over.
 held=""
+seen=""
 attempt=0
 while [ -z "$held" ] && [ "$attempt" -lt 10 ]; do
   sleep 3
   attempt=$((attempt + 1))
-  held=$(SHA="$head_sha" gh run list --branch "$branch" --limit 20 --json databaseId,headSha,conclusion --jq '[.[] | select(.headSha == env.SHA and .conclusion == "action_required") | .databaseId] | .[]')
+  at_head=$(SHA="$head_sha" gh run list --branch "$branch" --limit 20 --json databaseId,headSha,conclusion --jq '[.[] | select(.headSha == env.SHA)] | map("\(.databaseId) \(.conclusion)") | .[]')
+  if [ -n "$at_head" ]; then
+    seen=yes
+  fi
+  held=$(printf '%s\n' "$at_head" | awk '$2 == "action_required" { print $1 }')
 done
 
-if [ -z "$held" ]; then
-  echo "No run is waiting on approval." >&2
-else
+if [ -n "$held" ]; then
   printf '%s\n' "$held" | while IFS= read -r id; do
     gh api -X POST "repos/{owner}/{repo}/actions/runs/$id/approve" >/dev/null
     echo "Approved run $id." >&2
   done
+elif [ -n "$seen" ]; then
+  echo "The runs for $head_sha started on their own; none needed approving." >&2
+else
+  echo "update-snapshots-ci: no run has appeared for $head_sha, so the baselines just pushed are unchecked -- look at the pull request." >&2
+  exit 1
 fi
