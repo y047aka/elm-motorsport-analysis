@@ -210,13 +210,59 @@
           '';
         };
 
+        # The VRT's baselines are rendered on CI's Linux, so refreshing them
+        # means dispatching the workflow that renders them. Doing that by hand
+        # asked for the branch twice -- once to dispatch on, once as an input
+        # to push to -- and the two could disagree. Here the branch is read
+        # off the checkout, so it cannot.
+        #
+        # This is the only `gh` reachable through `nix run`, and it is one
+        # because it is a project command rather than the tool: it takes no
+        # arguments, and one workflow is its whole surface.
+        updateSnapshotsCiApp = pkgs.writeShellApplication {
+          name = "update-snapshots-ci";
+          runtimeInputs = [ pkgs.gh pkgs.git ];
+          text = ''
+            branch=$(git rev-parse --abbrev-ref HEAD)
+            if [ "$branch" = "HEAD" ] || [ "$branch" = "main" ]; then
+              echo "update-snapshots-ci: check out the branch whose snapshots you want updated (on '$branch')" >&2
+              exit 1
+            fi
+
+            # The dispatch hands back nothing to watch, so the run has to be
+            # found afterwards -- and only a run that was not already there
+            # is this one.
+            before=$(gh run list --workflow update-snapshots.yml --branch "$branch" --limit 1 --json databaseId --jq '.[0].databaseId // 0')
+            echo "Dispatching update-snapshots.yml on $branch" >&2
+            gh workflow run update-snapshots.yml --ref "$branch"
+
+            run=$before
+            attempt=0
+            while [ "$run" = "$before" ] && [ "$attempt" -lt 30 ]; do
+              sleep 2
+              attempt=$((attempt + 1))
+              run=$(gh run list --workflow update-snapshots.yml --branch "$branch" --limit 1 --json databaseId --jq '.[0].databaseId // 0')
+            done
+            if [ "$run" = "$before" ]; then
+              echo "update-snapshots-ci: the run never appeared; watch it with 'gh run list --workflow update-snapshots.yml'" >&2
+              exit 1
+            fi
+
+            gh run watch "$run" --exit-status
+            # Named rather than left to the upstream: a branch pushed with
+            # `git push origin HEAD` has none to pull from.
+            git pull --ff-only origin "$branch"
+          '';
+        };
+
       in {
         # `gh` is here rather than in an app: it is not a project command but a
         # tool with a surface of its own, and reaching it through
         # `nix develop --command gh ...` keeps it outside the blanket
         # `nix run .#*` permission, so each subcommand is allowed on its own
         # merits. It reads the credentials `gh auth login` wrote; nix supplies
-        # the binary, not the login.
+        # the binary, not the login. `update-snapshots-ci` is the exception
+        # the comment above it argues for.
         devShells.default = pkgs.mkShell (playwrightEnv // {
           buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh ]
             ++ [ flix ] ++ elmTools;
@@ -228,6 +274,7 @@
           test                 = { type = "app"; program = "${mkNodeApp "test"                 "cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
           test-vrt             = { type = "app"; program = "${mkVrtApp  "test-vrt"             "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
           update-snapshots-vrt = { type = "app"; program = "${mkVrtApp  "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
+          update-snapshots-ci  = { type = "app"; program = "${updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
           benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "cd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
           typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                       meta.description = "Type-check the app's TypeScript (tsc --noEmit)"; };
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };

@@ -28,7 +28,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#test` | elm-verify-examples + elm-test |
 | `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
 | `nix run .#test-vrt` | Playwright VRT |
-| `nix run .#update-snapshots-vrt` | Update VRT snapshots |
+| `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
+| `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
@@ -480,8 +481,14 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   2025's Le Mans because that is the round a checkout keeps; a test reaching
   for another needs `.#serve-api` behind it. Local runs allow a 0.1%
   pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
-  diffs; CI is strict 0. Update snapshots locally, or trigger the
-  workflow_dispatch in CI to auto-push to the branch.
+  diffs; CI is strict 0.
+
+The baselines are CI's. They are rendered on Linux, they are the ones a merge
+is judged against, and `nix run .#update-snapshots-ci` is how they are
+refreshed: it dispatches the workflow on the branch you have checked out,
+waits for it, and pulls the commit it pushes back. `.#update-snapshots-vrt`
+writes macOS renderings, which CI will reject -- reach for it only to see
+what a change did, never to land a baseline.
 
 What separates the two platforms is the rasteriser (CoreText against
 FreeType), which no Chromium flag touches; `tests/screenshot.css` narrows it
