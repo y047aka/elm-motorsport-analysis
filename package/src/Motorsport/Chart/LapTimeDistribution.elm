@@ -36,10 +36,6 @@ import TypedSvg.Types exposing (Transform(..))
 emphasised one: how quick a car is reads only against what the cars it is racing
 are doing.
 
-The emphasis is drawn the way the two charts beside it draw it -- the rivals'
-curves thinner and more transparent, their fills fainter with them, and the car's
-own curve laid over the other two wherever they cross.
-
 Three curves and no more, unlike the gap chart beside it: these overlap where
 they are alike, which is exactly where the chart is being read.
 
@@ -131,9 +127,6 @@ now marked as a point on it.
 seriesOf : LapRange -> LapHistory -> CarAt -> Series
 seriesOf range lapHistory entry =
     { color = entry.metadata.manufacturer.color
-
-    -- Until `view` says which of the three this is: a sparkline holds one car,
-    -- with no rival to be drawn behind.
     , emphasis = Focused
     , position = entry.standing.position
     , times = Pace.racingTimes range (LapHistory.get entry.metadata.carNumber lapHistory)
@@ -158,9 +151,7 @@ lastLapTime entry =
 {-| One car's distribution. `times` is expected to have its outliers already
 removed; `lastLap` is marked as a single point on the curve.
 
-`emphasis` is how hard the curve is drawn and `position` what orders two drawn
-alike, the running order being what tells apart two cars a lap-time axis has
-nothing else to separate.
+`emphasis` and `position` are what the draw order is taken from.
 
 -}
 type alias Series =
@@ -324,9 +315,7 @@ densityOf domain series =
 -- RENDER
 
 
-{-| How faint the area under a curve is drawn. The stroke's own step back, taken
-again: three fills at full strength read as one band of colour rather than as
-three curves, so the fill gives way first.
+{-| How faint the area under a curve is drawn.
 -}
 fillAlphaOf : Emphasis -> String
 fillAlphaOf =
@@ -370,8 +359,7 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
 
 
 {-| Where the latest lap falls on the curve: a dot and its lap time, at the
-opacity its curve is stroked at -- a rival's time left at full strength reads
-louder than the line it belongs to.
+opacity its curve is stroked at.
 -}
 lastLapMarker : ContinuousScale Float -> ContinuousScale Float -> Series -> Maybe ( Float, Float ) -> Svg msg
 lastLapMarker xScale yScale series lastLapPoint =

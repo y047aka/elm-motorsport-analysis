@@ -205,13 +205,8 @@ renderLine scales { color, emphasis, label, points } =
         ]
 
 
-{-| How a series of each emphasis is stroked: the focused one at full weight and
-full colour, the ones behind it thinner and more transparent.
-
-Named here rather than left inside [`renderLine`](#renderLine) so that a chart
-drawing something other than a polyline -- a filled curve, a marker -- steps back
-by the same numbers, the panel's tabs being read as one chart changing.
-
+{-| How a series of each emphasis is stroked: the focused one at full weight,
+the ones behind it thinner and more transparent.
 -}
 strokeStyleOf : Emphasis -> { width : String, opacity : String }
 strokeStyleOf =
