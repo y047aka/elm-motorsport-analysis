@@ -486,7 +486,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 The baselines are CI's. They are rendered on Linux, they are the ones a merge
 is judged against, and `nix run .#update-snapshots-ci` is how they are
 refreshed: it dispatches the workflow on the branch you have checked out,
-waits for it, and pulls the commit it pushes back. `.#update-snapshots-vrt`
+waits for it, pulls the commit it pushes back, and approves the runs GitHub
+holds because a bot pushed it -- without that last step a pull request keeps
+the red check that sent you there. `.#update-snapshots-vrt`
 writes macOS renderings, which CI will reject -- reach for it only to see
 what a change did, never to land a baseline.
 
