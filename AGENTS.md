@@ -483,10 +483,16 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   diffs; CI is strict 0. Update snapshots locally, or trigger the
   workflow_dispatch in CI to auto-push to the branch.
 
+What separates the two platforms is the rasteriser (CoreText against
+FreeType), which no Chromium flag touches; `tests/screenshot.css` narrows it
+by asking for greyscale antialiasing, and the tolerance above absorbs what is
+left, with roughly 4x of room on the worst snapshot. What it cannot absorb is
+a change smaller than itself: a single digit redrawn is tens of pixels, which
+is why local runs are a check on layout rather than a verdict, and why CI
+stays strict. A local failure is usually real; a local pass is not a promise.
+
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.
-Snapshots are generated on Linux, so VRT failures on macOS are usually the
-platform, not the change.
 
 ## Environment
 

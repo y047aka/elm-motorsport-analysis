@@ -35,9 +35,14 @@ export default defineConfig({
 
   expect: {
     timeout: 5000,
-    toHaveScreenshot: process.env.CI
-      ? { maxDiffPixels: 0 }
-      : { maxDiffPixelRatio: 0.001 },
+    toHaveScreenshot: {
+      // Greyscale antialiasing, so a local run compares against CI's Linux
+      // baselines with room to spare. See tests/screenshot.css.
+      stylePath: './tests/screenshot.css',
+      ...(process.env.CI
+        ? { maxDiffPixels: 0 }
+        : { maxDiffPixelRatio: 0.001 }),
+    },
   },
 
   projects: [
