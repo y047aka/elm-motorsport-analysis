@@ -512,6 +512,11 @@ toolchain for `app/src-tauri` — the repository's only Rust package). Enter it
 with `nix develop`, or run one command in it with `nix develop --command <cmd>`,
 which is what CI does. There is no direnv hook.
 
+`flake.nix` holds every command; `nix/` holds the one subject that outgrew
+it. `nix/vrt.nix` carries what the visual regression tests render with and
+the command that refreshes their baselines, and `nix/update-snapshots-ci.sh`
+is that command's shell, in a file because Nix has nothing to say about it.
+
 `gh` is in the dev shell, so it is reached as `nix develop --command gh ...`.
 Authentication is the user's own step (`gh auth login`); no agent performs it.
 
