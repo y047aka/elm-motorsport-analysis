@@ -17,6 +17,14 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
+      # Coursier caches what Flix resolves under `flix/lib`, not under
+      # ~/.cache/coursier. Uncached, every run asks Maven Central again, and
+      # Central answers a busy runner with a 429.
+      - uses: actions/cache@v6
+        with:
+          path: flix/lib
+          key: flix-deps-${{ runner.os }}-${{ hashFiles('flix/flix.toml') }}
+          restore-keys: flix-deps-${{ runner.os }}-
       - name: Install dependencies
         run: nix develop --command pnpm -C app install --frozen-lockfile
       - name: Build Tauri app (macOS bundle)

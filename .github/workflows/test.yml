@@ -23,6 +23,14 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
+      # Coursier caches what Flix resolves under `flix/lib`, not under
+      # ~/.cache/coursier. Uncached, every run asks Maven Central again, and
+      # Central answers a busy runner with a 429.
+      - uses: actions/cache@v6
+        with:
+          path: flix/lib
+          key: flix-deps-${{ runner.os }}-${{ hashFiles('flix/flix.toml') }}
+          restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: neither command touches node_modules. The Elm tests
       # need only the elm toolchain the flake supplies, and the CLI resolves
       # its own dependencies through flix.

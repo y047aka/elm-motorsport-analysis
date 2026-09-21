@@ -18,17 +18,7 @@
           elm-verify-examples
         ];
 
-        playwrightEnv = {
-          FONTCONFIG_FILE = pkgs.makeFontsConf {
-            fontDirectories = with pkgs; [ ipafont freefont_ttf wqy_zenhei ];
-          };
-          PLAYWRIGHT_BROWSERS_PATH = pkgs.playwright-driver.browsers.override {
-            withFirefox = false;
-            withWebkit = false;
-          };
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-        };
+        vrt = import ./nix/vrt.nix { inherit pkgs elmTools; };
 
         # Runner carrying the Node and Elm toolchains. Every command names the
         # subproject it works on, because there is no manifest above them to
@@ -39,26 +29,6 @@
             inherit name;
             runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm ] ++ elmTools;
             text = cmd;
-          };
-
-        playwrightModules = "${pkgs.playwright-test}/lib/node_modules";
-
-        mkVrtApp = name: cmd:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.playwright-test ] ++ elmTools;
-            text = ''
-              export FONTCONFIG_FILE=${playwrightEnv.FONTCONFIG_FILE}
-              export PLAYWRIGHT_BROWSERS_PATH=${playwrightEnv.PLAYWRIGHT_BROWSERS_PATH}
-              export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=${playwrightEnv.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD}
-              export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=${playwrightEnv.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS}
-
-              # Symlink @playwright/test into node_modules for ESM resolution
-              mkdir -p app/node_modules/@playwright
-              ln -sfn ${playwrightModules}/@playwright/test app/node_modules/@playwright/test
-
-              ${cmd}
-            '';
           };
 
         # Runner for the Tauri v2 native app. Runs cargo-tauri with app/ as the cwd
@@ -216,8 +186,9 @@
         # `nix develop --command gh ...` keeps it outside the blanket
         # `nix run .#*` permission, so each subcommand is allowed on its own
         # merits. It reads the credentials `gh auth login` wrote; nix supplies
-        # the binary, not the login.
-        devShells.default = pkgs.mkShell (playwrightEnv // {
+        # the binary, not the login. `update-snapshots-ci` is the exception,
+        # argued for where it is defined.
+        devShells.default = pkgs.mkShell (vrt.env // {
           buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh ]
             ++ [ flix ] ++ elmTools;
         });
@@ -226,8 +197,9 @@
           dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "cd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
           build                = { type = "app"; program = "${mkNodeApp "build"                "cd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
           test                 = { type = "app"; program = "${mkNodeApp "test"                 "cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
-          test-vrt             = { type = "app"; program = "${mkVrtApp  "test-vrt"             "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
-          update-snapshots-vrt = { type = "app"; program = "${mkVrtApp  "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
+          test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt"             "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
+          update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
+          update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
           benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "cd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
           typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                       meta.description = "Type-check the app's TypeScript (tsc --noEmit)"; };
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };

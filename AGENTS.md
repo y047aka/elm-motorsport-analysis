@@ -28,7 +28,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#test` | elm-verify-examples + elm-test |
 | `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
 | `nix run .#test-vrt` | Playwright VRT |
-| `nix run .#update-snapshots-vrt` | Update VRT snapshots |
+| `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
+| `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
@@ -478,15 +479,31 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives
   2025's Le Mans because that is the round a checkout keeps; a test reaching
-  for another needs `.#serve-api` behind it. Local runs allow a 0.1%
-  pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
-  diffs; CI is strict 0. Update snapshots locally, or trigger the
-  workflow_dispatch in CI to auto-push to the branch.
+  for another needs `.#serve-api` behind it. Local runs allow a 0.03%
+  pixel-ratio tolerance (`maxDiffPixelRatio: 0.0003`) for cross-platform
+  diffs; CI is strict 0.
+
+The baselines are CI's: rendered on Linux, and what a merge is judged
+against. `nix run .#update-snapshots-ci` refreshes them — it dispatches the
+workflow on the branch you have checked out, waits for it, pulls the commit
+it pushes back, and approves the runs GitHub holds because a bot pushed them.
+`.#update-snapshots-vrt` writes macOS renderings, which CI rejects: reach for
+it to see what a change did, never to land a baseline.
+
+What separates the two platforms is the rasteriser (CoreText against
+FreeType), which no Chromium flag touches. `tests/screenshot.css` narrows it
+by asking for greyscale antialiasing and the tolerance absorbs the rest, but
+barely. The tolerance is a ratio, so a smaller snapshot gets a smaller budget
+while the gap does not shrink with it, and the tightest are the two 850x814
+car-detail panels: 188 differing pixels against a budget of 208, where
+`lap-180` has 336 against 389. What no tolerance can absorb is a change
+smaller than itself — a digit redrawn is tens of pixels — so a local pass is
+not a promise, and a local failure on `position-tab` or
+`selected-car-with-rivals` is worth measuring before it is believed. CI stays
+strict for both reasons.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.
-Snapshots are generated on Linux, so VRT failures on macOS are usually the
-platform, not the change.
 
 ## Environment
 
@@ -494,6 +511,9 @@ Nix flake provides the reproducible dev environment (Node.js 26, and a Rust
 toolchain for `app/src-tauri` — the repository's only Rust package). Enter it
 with `nix develop`, or run one command in it with `nix develop --command <cmd>`,
 which is what CI does. There is no direnv hook.
+
+`flake.nix` holds the commands; `nix/` holds a subject that outgrew it,
+which so far is only the VRT (`nix/vrt.nix`, and the shell it reads).
 
 `gh` is in the dev shell, so it is reached as `nix develop --command gh ...`.
 Authentication is the user's own step (`gh auth login`); no agent performs it.

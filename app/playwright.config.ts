@@ -1,19 +1,7 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
 
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
 export default defineConfig({
   testDir: './tests',
-  globalSetup: './tests/global-setup.ts',
   snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -25,33 +13,32 @@ export default defineConfig({
     baseURL: 'http://localhost:1234',
     trace: 'on-first-retry',
     launchOptions: {
-      args: [
-        '--font-render-hinting=none',
-        '--disable-lcd-text',
-        ...(process.env.CI ? ['--no-sandbox'] : []),
-      ],
+      // Playwright already launches Chromium with `--no-sandbox`, unless
+      // `chromiumSandbox: true` asks it not to.
+      args: ['--font-render-hinting=none', '--disable-lcd-text'],
     },
   },
 
   expect: {
-    timeout: 5000,
-    toHaveScreenshot: process.env.CI
-      ? { maxDiffPixels: 0 }
-      : { maxDiffPixelRatio: 0.001 },
+    toHaveScreenshot: {
+      // Greyscale antialiasing, so a local run compares against CI's Linux
+      // baselines with room to spare. See tests/screenshot.css.
+      stylePath: './tests/screenshot.css',
+      ...(process.env.CI
+        ? { maxDiffPixels: 0 }
+        : { maxDiffPixelRatio: 0.0003 }),
+    },
   },
 
   projects: [
     {
-      name: 'Google Chrome',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 1440, height: 900 }
-      },
+      name: 'chromium',
+      use: { browserName: 'chromium', viewport: { width: 1440, height: 900 } },
     },
   ],
 
   webServer: {
-    command: 'npm start',
+    command: 'pnpm start',
     port: 1234,
     timeout: 120000,
     reuseExistingServer: !process.env.CI,
