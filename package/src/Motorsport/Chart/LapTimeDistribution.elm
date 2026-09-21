@@ -128,6 +128,7 @@ seriesOf : LapRange -> LapHistory -> CarAt -> Series
 seriesOf range lapHistory entry =
     { color = entry.metadata.manufacturer.color
     , emphasis = Focused
+    , position = entry.standing.position
     , times = Pace.racingTimes range (LapHistory.get entry.metadata.carNumber lapHistory)
     , lastLap = lastLapTime entry
     }
@@ -149,10 +150,14 @@ lastLapTime entry =
 
 {-| One car's distribution. `times` is expected to have its outliers already
 removed; `lastLap` is marked as a single point on the curve.
+
+`emphasis` and `position` are what the draw order is taken from.
+
 -}
 type alias Series =
     { color : String
     , emphasis : Emphasis
+    , position : Int
     , times : List Int
     , lastLap : Maybe Int
     }
@@ -201,6 +206,7 @@ chart { width, height, domain, maxDensity } seriesList =
         densities =
             seriesList
                 |> List.filter (\s -> not (List.isEmpty s.times))
+                |> Common.sortForDrawing .emphasis (.position >> Just)
                 |> List.map (densityOf domain)
     in
     if List.isEmpty densities then
@@ -309,9 +315,23 @@ densityOf domain series =
 -- RENDER
 
 
+{-| How faint the area under a curve is drawn.
+-}
+fillAlphaOf : Emphasis -> String
+fillAlphaOf =
+    Common.chooseByEmphasis
+        { focused = "0.15"
+        , related = "0.07"
+        , muted = "0.05"
+        }
+
+
 densityShape : ContinuousScale Float -> ContinuousScale Float -> Density -> Svg msg
 densityShape xScale yScale { series, samples, lastLapPoint } =
     let
+        strokeStyle =
+            Common.strokeStyleOf series.emphasis
+
         scaled =
             samples
                 |> List.map (\( x, d ) -> ( Scale.convert xScale x, Scale.convert yScale d ))
@@ -327,17 +347,19 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
     in
     g []
         [ Path.element (Shape.area Shape.monotoneInXCurve areaPoints)
-            [ SvgAttr.fill ("oklch(from " ++ series.color ++ " l c h / 0.15)") ]
+            [ SvgAttr.fill ("oklch(from " ++ series.color ++ " l c h / " ++ fillAlphaOf series.emphasis ++ ")") ]
         , Path.element (Shape.line Shape.monotoneInXCurve linePoints)
             [ SvgAttr.stroke series.color
-            , SvgAttr.strokeWidth "2"
+            , SvgAttr.strokeWidth strokeStyle.width
+            , SvgAttr.strokeOpacity strokeStyle.opacity
             , SvgAttr.fill "none"
             ]
         , lastLapMarker xScale yScale series lastLapPoint
         ]
 
 
-{-| Where the latest lap falls on the curve: a dot and its lap time.
+{-| Where the latest lap falls on the curve: a dot and its lap time, at the
+opacity its curve is stroked at.
 -}
 lastLapMarker : ContinuousScale Float -> ContinuousScale Float -> Series -> Maybe ( Float, Float ) -> Svg msg
 lastLapMarker xScale yScale series lastLapPoint =
@@ -350,7 +372,7 @@ lastLapMarker xScale yScale series lastLapPoint =
                 py =
                     Scale.convert yScale d
             in
-            g []
+            g [ SvgAttr.opacity (Common.strokeStyleOf series.emphasis).opacity ]
                 [ circle
                     [ InPx.cx px
                     , InPx.cy py

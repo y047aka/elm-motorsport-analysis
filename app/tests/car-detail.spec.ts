@@ -31,6 +31,11 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(page.locator(DETAIL)).toHaveScreenshot('position-tab.png');
   });
 
+  test('should draw the car\'s own curve over its rivals\' in the distribution', async ({ page }) => {
+    await page.locator(DETAIL).getByRole('button', { name: 'Distribution' }).click();
+    await expect(page.locator(DETAIL)).toHaveScreenshot('distribution-tab.png');
+  });
+
   test('should render the car\'s own laps under its lap times', async ({ page }) => {
     await page.locator(DETAIL).getByRole('button', { name: 'Lap history' }).click();
     await expect(page.locator(DETAIL)).toHaveScreenshot('lap-history.png');
