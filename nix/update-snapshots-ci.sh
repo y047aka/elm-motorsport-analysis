@@ -36,10 +36,9 @@ if [ "$head_sha" = "$before_head" ]; then
 fi
 
 # The commit that just arrived is the bot's, and GitHub holds the
-# workflows a bot's push would start rather than running them.
-# Left alone, the pull request keeps the red Playwright check that
-# sent you here and gets no run to replace it -- approving the held
-# runs is the button in the Actions tab, and this is it.
+# workflows a bot's push would start rather than running them. Left
+# alone, the pull request keeps the red check that sent you here and
+# gets no run to replace it.
 held=""
 attempt=0
 while [ -z "$held" ] && [ "$attempt" -lt 10 ]; do

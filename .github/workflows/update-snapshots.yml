@@ -1,8 +1,7 @@
 name: Update VRT Snapshots
 
 # Dispatch this on the branch whose snapshots you want updated: the run reads
-# that branch and pushes back onto it. There is no branch input, so there is
-# no way to generate snapshots from one branch and land them on another.
+# that branch and pushes back onto it.
 on:
   workflow_dispatch:
 

@@ -1,14 +1,10 @@
 /* Injected while a screenshot is taken, never into the app itself: how the
-   VRT reads text is a test concern, and what a mac user sees is not.
+   VRT reads text is a test's concern and what a mac user sees is not.
 
    macOS rasterises glyphs through CoreText and Linux through FreeType, and
-   nothing in Chromium bridges that -- the baselines are generated on CI's
-   Linux, so a local run is always comparing across it. Subpixel-antialiased,
-   Chromium's default, is where the two are furthest apart; asking for
-   greyscale antialiasing closes most of the gap (measured on this suite: the
-   worst snapshot falls from 1254 differing pixels to 336, the best from 272
-   to 5). Blink honours the property on macOS alone, so CI renders exactly as
-   it did before this file existed. */
+   the baselines are Linux's, so a local run always compares across that.
+   Greyscale antialiasing is where the two are closest. Blink honours the
+   property on macOS alone, so this does nothing to what CI renders. */
 * {
   -webkit-font-smoothing: antialiased;
 }

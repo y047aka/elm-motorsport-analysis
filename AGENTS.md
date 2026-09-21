@@ -483,24 +483,21 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   pixel-ratio tolerance (`maxDiffPixelRatio: 0.0003`) for cross-platform
   diffs; CI is strict 0.
 
-The baselines are CI's. They are rendered on Linux, they are the ones a merge
-is judged against, and `nix run .#update-snapshots-ci` is how they are
-refreshed: it dispatches the workflow on the branch you have checked out,
-waits for it, pulls the commit it pushes back, and approves the runs GitHub
-holds because a bot pushed it -- without that last step a pull request keeps
-the red check that sent you there. `.#update-snapshots-vrt`
-writes macOS renderings, which CI will reject -- reach for it only to see
-what a change did, never to land a baseline.
+The baselines are CI's: rendered on Linux, and what a merge is judged
+against. `nix run .#update-snapshots-ci` refreshes them — it dispatches the
+workflow on the branch you have checked out, waits for it, pulls the commit
+it pushes back, and approves the runs GitHub holds because a bot pushed them.
+`.#update-snapshots-vrt` writes macOS renderings, which CI rejects: reach for
+it to see what a change did, never to land a baseline.
 
 What separates the two platforms is the rasteriser (CoreText against
-FreeType), which no Chromium flag touches; `tests/screenshot.css` narrows it
-by asking for greyscale antialiasing, and the tolerance above absorbs what is
-left -- though only just, on the worst of them: `lap-180` differs by 336
-pixels against a budget of 389, so a local failure there is worth measuring
-before it is believed. What it cannot absorb is
-a change smaller than itself: a single digit redrawn is tens of pixels, which
-is why local runs are a check on layout rather than a verdict, and why CI
-stays strict. A local failure is usually real; a local pass is not a promise.
+FreeType), which no Chromium flag touches. `tests/screenshot.css` narrows it
+by asking for greyscale antialiasing and the tolerance absorbs the rest, but
+only just where the gap is widest: `lap-180` differs by 336 pixels against a
+budget of 389. What no tolerance can absorb is a change smaller than itself —
+a digit redrawn is tens of pixels — so a local pass is not a promise, and a
+local failure on `lap-180` is worth measuring before it is believed. CI stays
+strict for both reasons.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.
@@ -512,10 +509,8 @@ toolchain for `app/src-tauri` — the repository's only Rust package). Enter it
 with `nix develop`, or run one command in it with `nix develop --command <cmd>`,
 which is what CI does. There is no direnv hook.
 
-`flake.nix` holds every command; `nix/` holds the one subject that outgrew
-it. `nix/vrt.nix` carries what the visual regression tests render with and
-the command that refreshes their baselines, and `nix/update-snapshots-ci.sh`
-is that command's shell, in a file because Nix has nothing to say about it.
+`flake.nix` holds the commands; `nix/` holds a subject that outgrew it,
+which so far is only the VRT (`nix/vrt.nix`, and the shell it reads).
 
 `gh` is in the dev shell, so it is reached as `nix develop --command gh ...`.
 Authentication is the user's own step (`gh auth login`); no agent performs it.

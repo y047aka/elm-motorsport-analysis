@@ -18,8 +18,6 @@
           elm-verify-examples
         ];
 
-        # The visual regression tests, which carry an environment and a
-        # command of their own. `nix/vrt.nix` says why they are kept apart.
         vrt = import ./nix/vrt.nix { inherit pkgs elmTools; };
 
         # Runner carrying the Node and Elm toolchains. Every command names the

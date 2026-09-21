@@ -23,11 +23,9 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      # Flix resolves its Maven dependencies through Coursier, which caches
-      # them inside the project rather than under ~/.cache/coursier. Without
-      # this every run asks Maven Central for the JDBC driver again, and
-      # Central answers a busy runner with a 429 that fails the job for a
-      # reason that has nothing to do with the code.
+      # Coursier caches what Flix resolves under `flix/lib`, not under
+      # ~/.cache/coursier. Uncached, every run asks Maven Central again, and
+      # Central answers a busy runner with a 429.
       - uses: actions/cache@v6
         with:
           path: flix/lib
