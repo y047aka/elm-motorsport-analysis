@@ -1,7 +1,7 @@
 module Motorsport.Chart.Common exposing
     ( Emphasis(..), chooseByEmphasis, emphasisRank, sortForDrawing
     , Dimensions, Scales, axisPadding, consolidated, xContinuousScale
-    , svg, renderLine
+    , svg, renderLine, strokeStyleOf
     , axisStyle, lapGridLines, lapAxis, yAxis
     )
 
@@ -11,7 +11,7 @@ drawing.
 
 @docs Emphasis, chooseByEmphasis, emphasisRank, sortForDrawing
 @docs Dimensions, Scales, axisPadding, consolidated, xContinuousScale
-@docs svg, renderLine
+@docs svg, renderLine, strokeStyleOf
 @docs axisStyle, lapGridLines, lapAxis, yAxis
 
 -}
@@ -178,12 +178,7 @@ renderLine scales { color, emphasis, label, points } =
                     color
 
         strokeStyle =
-            chooseByEmphasis
-                { focused = { width = "2", opacity = "1" }
-                , related = { width = "1.5", opacity = "0.5" }
-                , muted = { width = "1.5", opacity = "0.3" }
-                }
-                emphasis
+            strokeStyleOf emphasis
 
         linePath =
             visible |> List.map (projectPoint scales >> Just) |> Shape.line Shape.linearCurve
@@ -208,6 +203,23 @@ renderLine scales { color, emphasis, label, points } =
             ]
         , terminalDot
         ]
+
+
+{-| How a series of each emphasis is stroked: the focused one at full weight and
+full colour, the ones behind it thinner and more transparent.
+
+Named here rather than left inside [`renderLine`](#renderLine) so that a chart
+drawing something other than a polyline -- a filled curve, a marker -- steps back
+by the same numbers, the panel's tabs being read as one chart changing.
+
+-}
+strokeStyleOf : Emphasis -> { width : String, opacity : String }
+strokeStyleOf =
+    chooseByEmphasis
+        { focused = { width = "2", opacity = "1" }
+        , related = { width = "1.5", opacity = "0.5" }
+        , muted = { width = "1.5", opacity = "0.3" }
+        }
 
 
 projectPoint : Scales -> ( Int, Int ) -> ( Float, Float )
