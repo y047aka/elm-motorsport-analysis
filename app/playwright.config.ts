@@ -16,11 +16,9 @@ export default defineConfig({
     baseURL: 'http://localhost:1234',
     trace: 'on-first-retry',
     launchOptions: {
-      args: [
-        '--font-render-hinting=none',
-        '--disable-lcd-text',
-        ...(process.env.CI ? ['--no-sandbox'] : []),
-      ],
+      // Playwright already launches Chromium with `--no-sandbox`, unless
+      // `chromiumSandbox: true` asks it not to.
+      args: ['--font-render-hinting=none', '--disable-lcd-text'],
     },
   },
 
