@@ -169,7 +169,7 @@ test.describe('Car Detail Columns', () => {
       await selectCar(page, carNumber);
     }
     await expectColumns(page, ['12', '8', '7', '83', '51', '50']);
-    await expect(page.locator('.col-start-1')).toHaveScreenshot('standings-at-the-limit.png');
+    await expect(page.locator('[data-live-standings]')).toHaveScreenshot('standings-at-the-limit.png');
   });
 
   test('should show the same chart in every column, whichever one picks it', async ({ page }) => {

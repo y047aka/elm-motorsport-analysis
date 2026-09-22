@@ -245,11 +245,15 @@ One setting for all three charts rather than one each: only one of them is
 showing at a time, and a stretch that changed as the tabs did would read as the
 chart changing.
 
+The durations are given bare. `Last` was on two of the three and said nothing
+the third did not also mean, and this row is the widest thing in the panel --
+what it asks for is what a column has to be.
+
 -}
 windowOptions : List ( LapWindow, String )
 windowOptions =
-    [ ( LapWindow.Recent (90 * 60 * 1000), "Last 1.5h" )
-    , ( LapWindow.Recent (3 * 60 * 60 * 1000), "Last 3h" )
+    [ ( LapWindow.Recent (90 * 60 * 1000), "1.5h" )
+    , ( LapWindow.Recent (3 * 60 * 60 * 1000), "3h" )
     , ( LapWindow.WholeRace, "All" )
     ]
 

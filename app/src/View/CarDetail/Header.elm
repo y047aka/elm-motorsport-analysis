@@ -67,23 +67,34 @@ portrait carImageUrl item =
             text ""
 
 
+{-| Two rows: where the car stands, and who it is.
+
+The standing is the car's place in the field and the class it holds that place
+in, which are not part of its name and do not belong on the line with it. Put
+above, they leave the badge to start where the team's name starts -- the badge
+and the name being the one thing, read together -- instead of the badge sitting
+a line higher than everything it labels.
+
+The name has a line to itself within that. Sharing one with the badges left it
+what they did not want, which in a column is not much: they do not wrap, and the
+name is the part worth reading in full.
+
+-}
 who : { startPosition : Maybe Int, onClose : Maybe msg } -> CarAt -> Html msg
 who { startPosition, onClose } item =
-    div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
-        [ CarNumberBadge.view item.metadata
-        , div [ class "grid gap-y-0.5 min-w-0" ]
-            -- The name has a line to itself. Sharing one with the badges left
-            -- it what they did not want, which in a column is not much: they do
-            -- not wrap, and the name is the part worth reading in full.
-            [ div [ class "flex items-center gap-x-2 min-w-0" ]
-                [ overall startPosition item
-                , classBadge item
-                ]
-            , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
+    div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 gap-y-0.5" ]
+        [ div [ class "col-start-1 col-span-2 row-start-1 flex items-center gap-x-2 min-w-0" ]
+            [ overall startPosition item
+            , classBadge item
+            ]
+        , div [ class "col-start-4 row-start-1" ] [ corner onClose item.status ]
+        , div [ class "col-start-1 row-start-2" ] [ CarNumberBadge.view item.metadata ]
+        , div [ class "col-start-2 row-start-2 grid gap-y-0.5 min-w-0" ]
+            [ div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
             , currentDriver item
             ]
-        , portrait item.metadata.imageUrl item
-        , corner onClose item.status
+        , div [ class "col-start-3 row-start-1 row-span-2 self-center" ]
+            [ portrait item.metadata.imageUrl item ]
         ]
 
 

@@ -34,7 +34,13 @@ reader.
 view : { onSelect : CarNumber -> msg, shown : List CarNumber, atLimit : Bool } -> Snapshot -> Html msg
 view { onSelect, shown, atLimit } snapshot =
     div
-        [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5" ]
+        -- Marked, which the visual tests locate the standings by: the cell it
+        -- sits in is named by the Tailwind utilities that place it, and those
+        -- are not its own -- a panel's header grid places its cells with the
+        -- same ones.
+        [ attribute "data-live-standings" ""
+        , class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5"
+        ]
         (List.map
             (\( class_, cars ) ->
                 div
