@@ -67,7 +67,7 @@ portrait carImageUrl item =
 
                 -- Placed itself rather than wrapped in a box that is placed,
                 -- there being nothing for the box to do.
-                , class "col-start-3 row-start-2 w-[120px] h-auto object-contain"
+                , class "col-start-3 row-start-2 self-center w-[120px] h-auto object-contain"
                 ]
                 []
 
@@ -96,8 +96,13 @@ who { startPosition, onClose } item =
             , classBadge item
             ]
         , div [ class "col-start-4 row-start-1" ] [ corner onClose item.status ]
-        , div [ class "col-start-1 row-start-2" ] [ CarNumberBadge.view item.metadata ]
-        , div [ class "col-start-2 row-start-2 grid gap-y-0.5 min-w-0" ]
+
+        -- The three of the lower row are centred on it rather than hung from
+        -- its top: they are three heights of the same thing, and the tallest
+        -- of them deciding where the other two begin left the name and the
+        -- picture riding high against a badge neither of them matches.
+        , div [ class "col-start-1 row-start-2 self-center" ] [ CarNumberBadge.view item.metadata ]
+        , div [ class "col-start-2 row-start-2 self-center grid gap-y-0.5 min-w-0" ]
             [ div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
             , currentDriver item
             ]
