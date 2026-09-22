@@ -46,9 +46,11 @@ view config laps item =
             lastLap item
 
           else
-            -- Side by side, so that a sector of the lap under way sits beside
-            -- the same sector of the lap before it.
-            div [ class "grid grid-cols-2 gap-x-3" ]
+            -- One above the other, each across the panel. Side by side they
+            -- had half of it each, which is not enough for three sector times:
+            -- the middle sector of a GT3 car runs over a minute, and the
+            -- reading of it ran into the reading beside it.
+            div [ class "grid gap-y-2" ]
                 [ currentLap best item
                 , lastLap item
                 ]
@@ -176,12 +178,18 @@ lapBlock :
     }
     -> Html msg
 lapBlock { label, lapNumber, time, segments } =
-    div [ class "grid gap-y-1 min-w-0" ]
-        [ div [ class "flex items-baseline gap-x-1.5" ]
-            [ rowLabel label
-            , div [ class "text-[10px] text-muted-foreground tabular-nums" ]
-                [ text (lapNumber |> Maybe.map (\number -> "L" ++ String.fromInt number) |> Maybe.withDefault "") ]
-            , div [ class "flex-1" ] []
+    -- Which lap it is and what it took stand beside the sectors rather than on
+    -- a line of their own above them: a line for a label and one figure is a
+    -- row of the panel's height spent on what fits in the margin of the row
+    -- under it, and the sectors want the width more than the lap time wants a
+    -- line.
+    div [ class "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3" ]
+        [ div [ class "grid gap-y-0.5" ]
+            [ div [ class "flex items-baseline gap-x-1.5" ]
+                [ rowLabel label
+                , div [ class "text-[10px] text-muted-foreground tabular-nums" ]
+                    [ text (lapNumber |> Maybe.map (\number -> "L" ++ String.fromInt number) |> Maybe.withDefault "") ]
+                ]
             , timeText "text-[14px]" time
             ]
         , segments
