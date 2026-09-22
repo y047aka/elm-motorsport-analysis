@@ -329,8 +329,13 @@ shownCars snapshot selection =
 rather than as wide as the cell can spare, so the third of them is already off
 the edge and the cell scrolls sideways to it.
 
+400px, which is what the panel asks for with room over: the widest thing in it
+is the comparison's tab row, wanting 341px of the 368 a column of this width
+hands it. The figure was 440 while the tab row read `Last 1.5h` and the sections
+were boxed, and neither is true any more.
+
 One car is drawn in a column too, and not given the cell whole. A panel that
-was 880px wide alone and 440 the moment a second car arrived was two panels to
+was 880px wide alone and 400 the moment a second car arrived was two panels to
 read rather than one, and the wider of them was mostly the room left over: the
 figures in it are the same figures, set further apart.
 
@@ -358,7 +363,7 @@ detailColumns cell m replay snapshot shown =
                 (List.map
                     (\car ->
                         ( car.metadata.carNumber
-                        , div [ Attributes.class "shrink-0 w-[440px] grid" ] [ card car ]
+                        , div [ Attributes.class "shrink-0 w-[400px] grid" ] [ card car ]
                         )
                     )
                     shown
