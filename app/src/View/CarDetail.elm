@@ -203,7 +203,9 @@ panel comparison (Model showing) cars snapshot rivals focused =
         laps =
             lapsOf cars focused
     in
-    div [ class "grid gap-y-3" ]
+    -- No gap: the sections carry their own padding, and the rule between two of
+    -- them wants to sit in the middle of that rather than have space of its own.
+    div [ class "grid" ]
         [ container "Rivals" (legend snapshot rivals)
         , container "Lap times"
             (LapTimes.view { bestTimes = Snapshot.bestTimes snapshot } laps focused)
@@ -357,7 +359,7 @@ carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
 
 
-{-| A section the reader opens, drawn as the sections beside it are so that the
+{-| A section the reader opens, drawn as the sections above it are so that the
 panel keeps one rhythm. The title is the control: a title with a control beside
 it would be two things to press for one thing to happen.
 
@@ -368,49 +370,59 @@ sixty times a second behind a closed section.
 disclosure : { title : String, open : Bool, onToggle : msg } -> (() -> Html msg) -> Html msg
 disclosure config content =
     div
-        [ class "rounded-lg border border-border bg-card" ]
-        [ div [ class "flex flex-col gap-2 p-3" ]
-            (button
-                [ onClick config.onToggle
-                , attribute "aria-expanded"
+        [ class sectionClass ]
+        (button
+            [ onClick config.onToggle
+            , attribute "aria-expanded"
+                (if config.open then
+                    "true"
+
+                 else
+                    "false"
+                )
+            , class "flex items-center gap-x-1.5 font-semibold text-sm text-left cursor-pointer transition-colors hover:text-muted-foreground"
+            ]
+            [ div [ class "text-[9px]" ]
+                [ text
                     (if config.open then
-                        "true"
+                        "▼"
 
                      else
-                        "false"
+                        "▶"
                     )
-                , class "flex items-center gap-x-1.5 font-semibold text-sm text-left cursor-pointer transition-colors hover:text-muted-foreground"
                 ]
-                [ div [ class "text-[9px]" ]
-                    [ text
-                        (if config.open then
-                            "▼"
+            , text config.title
+            ]
+            :: (if config.open then
+                    [ content () ]
 
-                         else
-                            "▶"
-                        )
-                    ]
-                , text config.title
-                ]
-                :: (if config.open then
-                        [ content () ]
-
-                    else
-                        []
-                   )
-            )
-        ]
+                else
+                    []
+               )
+        )
 
 
 container : String -> Html msg -> Html msg
 container title content =
     div
-        [ class "rounded-lg border border-border bg-card" ]
-        [ div [ class "flex flex-col gap-2 p-3" ]
-            [ h3 [ class "font-semibold text-sm" ] [ text title ]
-            , content
-            ]
+        [ class sectionClass ]
+        [ h3 [ class "font-semibold text-sm" ] [ text title ]
+        , content
         ]
+
+
+{-| What a section is, which is a title and its content and a rule above to say
+where the one before it ended. A card apiece drew five boxes inside a sixth --
+the column is already a card, and boxing what is in it said nothing about the
+panel except that its parts are parts.
+
+The rule is skipped on the first section, which the header above it already
+parts from, and so is the padding the rule needs under it.
+
+-}
+sectionClass : String
+sectionClass =
+    "grid gap-y-2 py-3 border-t border-t-border first:border-t-0 first:pt-0"
 
 
 emptyState : String -> Html msg
