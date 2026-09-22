@@ -1,12 +1,14 @@
 module Motorsport.Position exposing
     ( Position
     , toOrdinal
+    , Movement(..), movement, toArrow
     )
 
 {-| Where a car stands in a classification, and how that is said.
 
 @docs Position
 @docs toOrdinal
+@docs Movement, movement, toArrow
 
 -}
 
@@ -80,3 +82,63 @@ suffix position =
 
             _ ->
                 "th"
+
+
+{-| Places made up or dropped since the start. Never by nought: a car that holds
+its place has no movement.
+-}
+type Movement
+    = Gained Int
+    | Lost Int
+
+
+{-| How far a car has come from where it started. Nothing where it holds that
+place, or where the place it started from is not known.
+
+    movement { startPosition = Just 5, position = 3 }
+    --> Just (Gained 2)
+
+    movement { startPosition = Just 3, position = 5 }
+    --> Just (Lost 2)
+
+    movement { startPosition = Just 4, position = 4 }
+    --> Nothing
+
+    movement { startPosition = Nothing, position = 4 }
+    --> Nothing
+
+-}
+movement : { startPosition : Maybe Position, position : Position } -> Maybe Movement
+movement { startPosition, position } =
+    startPosition
+        |> Maybe.andThen
+            (\start ->
+                if start > position then
+                    Just (Gained (start - position))
+
+                else if start < position then
+                    Just (Lost (position - start))
+
+                else
+                    Nothing
+            )
+
+
+{-| A movement as a timing screen prints it, in two parts so that the arrow can
+be drawn apart from the number.
+
+    toArrow (Gained 2)
+    --> { arrow = "↑", places = "2" }
+
+    toArrow (Lost 3)
+    --> { arrow = "↓", places = "3" }
+
+-}
+toArrow : Movement -> { arrow : String, places : String }
+toArrow m =
+    case m of
+        Gained places ->
+            { arrow = "↑", places = String.fromInt places }
+
+        Lost places ->
+            { arrow = "↓", places = String.fromInt places }

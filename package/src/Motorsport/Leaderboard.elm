@@ -67,7 +67,7 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
 import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Manufacturer exposing (Manufacturer)
-import Motorsport.Position exposing (Position)
+import Motorsport.Position as Position exposing (Movement(..), Position)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
@@ -323,9 +323,9 @@ held its place or whose grid place is not known.
 -}
 viewPositionChange : { startPosition : Maybe Position, position : Position } -> Html msg
 viewPositionChange change =
-    case placesGained change of
-        Just gained ->
-            div [ class "text-center font-bold tabular-nums" ] (arrow gained)
+    case Position.movement change of
+        Just movement ->
+            div [ class "text-center font-bold tabular-nums" ] (arrow movement)
 
         Nothing ->
             text "-"
@@ -337,31 +337,29 @@ part of the position.
 -}
 viewPositionChangeInline : { startPosition : Maybe Position, position : Position } -> Html msg
 viewPositionChangeInline change =
-    case placesGained change of
-        Just gained ->
-            span [ class "tabular-nums" ] (arrow gained)
+    case Position.movement change of
+        Just movement ->
+            span [ class "tabular-nums" ] (arrow movement)
 
         Nothing ->
             text ""
 
 
-placesGained : { startPosition : Maybe Position, position : Position } -> Maybe Int
-placesGained { startPosition, position } =
-    case Maybe.map (\start -> start - position) startPosition of
-        Just 0 ->
-            Nothing
+arrow : Movement -> List (Html msg)
+arrow movement =
+    let
+        printed =
+            Position.toArrow movement
 
-        gained ->
-            gained
+        color =
+            case movement of
+                Gained _ ->
+                    "text-green-500"
 
-
-arrow : Int -> List (Html msg)
-arrow gained =
-    if gained > 0 then
-        [ span [ class "text-green-500" ] [ text "↑" ], text (String.fromInt gained) ]
-
-    else
-        [ span [ class "text-red-500" ] [ text "↓" ], text (String.fromInt (abs gained)) ]
+                Lost _ ->
+                    "text-red-500"
+    in
+    [ span [ class color ] [ text printed.arrow ], text printed.places ]
 
 
 currentLapColumn_Wec :
