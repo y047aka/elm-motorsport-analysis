@@ -1,10 +1,22 @@
-module Motorsport.Position exposing (toOrdinal)
+module Motorsport.Position exposing
+    ( Position
+    , toOrdinal
+    )
 
-{-| Where a car stands, written the way it is said.
+{-| Where a car stands in a classification, and how that is said.
 
+@docs Position
 @docs toOrdinal
 
 -}
+
+
+{-| A place in a classification, counted from 1. The field's or a class's,
+depending on which the caller asked the standing for -- the number does not
+carry which, and at Le Mans an LMGT3 car is 3rd and 41st at the same moment.
+-}
+type alias Position =
+    Int
 
 
 {-| An English ordinal, suffix and all.
@@ -45,12 +57,12 @@ A grid of 62 never reaches them, but every hundred repeats the pattern:
     --> "111th"
 
 -}
-toOrdinal : Int -> String
+toOrdinal : Position -> String
 toOrdinal position =
     String.fromInt position ++ suffix position
 
 
-suffix : Int -> String
+suffix : Position -> String
 suffix position =
     if modBy 100 position // 10 == 1 then
         "th"

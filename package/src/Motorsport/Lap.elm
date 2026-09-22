@@ -45,6 +45,7 @@ import List.Extra
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Position exposing (Position)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 
@@ -53,7 +54,7 @@ type alias Lap =
     { carNumber : String
     , driver : Driver
     , lap : Int
-    , position : Maybe Int
+    , position : Maybe Position
     , time : Maybe Duration
     , best : Maybe Duration
     , sectors : SectorTimes

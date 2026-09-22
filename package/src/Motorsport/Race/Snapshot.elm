@@ -32,6 +32,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
+import Motorsport.Position exposing (Position)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
@@ -90,8 +91,8 @@ and only for it.
 
 -}
 type alias Standing =
-    { position : Int
-    , positionInClass : Int
+    { position : Position
+    , positionInClass : Position
     , lapsCompleted : Int
     , gapToLeader : Gap
     , intervalToAhead : Gap
@@ -578,8 +579,8 @@ gapTo raceClock car ahead =
 
 type alias Placed =
     { car : SampledCar
-    , position : Int
-    , positionInClass : Int
+    , position : Position
+    , positionInClass : Position
     , ahead : Maybe SampledCar
     }
 

@@ -67,6 +67,7 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
 import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
@@ -307,7 +308,7 @@ estimated off the opening lap once and never moves again — so the caller looks
 it up by car number rather than the column doing it.
 
 -}
-positionChangeColumn : { getter : data -> { startPosition : Maybe Int, position : Int } } -> Column data msg
+positionChangeColumn : { getter : data -> { startPosition : Maybe Position, position : Position } } -> Column data msg
 positionChangeColumn { getter } =
     { name = "Pos"
     , view = getter >> Lazy.lazy viewPositionChange
@@ -320,7 +321,7 @@ positionChangeColumn { getter } =
 and red for a loss and the number always grey, and a grey `-` for a car that has
 held its place or whose grid place is not known.
 -}
-viewPositionChange : { startPosition : Maybe Int, position : Int } -> Html msg
+viewPositionChange : { startPosition : Maybe Position, position : Position } -> Html msg
 viewPositionChange { startPosition, position } =
     case Maybe.map (\start -> start - position) startPosition of
         Just gained ->

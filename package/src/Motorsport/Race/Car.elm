@@ -18,12 +18,13 @@ from one of these and an elapsed time, in
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Position exposing (Position)
 import Motorsport.Wec.Class exposing (Class)
 
 
 type alias Car =
     { metadata : Metadata
-    , startPosition : Int
+    , startPosition : Position
     , laps : List Lap
     }
 
@@ -53,7 +54,7 @@ The grid is estimated from the race itself, so how much the place is worth is
 the file's `basis` to say, not this type's.
 
 -}
-fromStartingGrid : { position : Int, car : Metadata } -> Car
+fromStartingGrid : { position : Position, car : Metadata } -> Car
 fromStartingGrid item =
     { metadata = item.car
     , startPosition = item.position

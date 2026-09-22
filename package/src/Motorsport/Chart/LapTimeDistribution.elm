@@ -19,6 +19,7 @@ import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common as Common exposing (Emphasis(..), consolidated)
 import Motorsport.Duration as Duration
 import Motorsport.LapRange exposing (LapRange)
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Path
@@ -157,7 +158,7 @@ removed; `lastLap` is marked as a single point on the curve.
 type alias Series =
     { color : String
     , emphasis : Emphasis
-    , position : Int
+    , position : Position
     , times : List Int
     , lastLap : Maybe Int
     }

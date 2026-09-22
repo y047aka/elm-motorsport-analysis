@@ -13,7 +13,7 @@ import Html.Events exposing (onClick)
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Leaderboard exposing (viewPositionChange)
-import Motorsport.Position as Position
+import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
@@ -33,7 +33,7 @@ directly below.
 
 -}
 view :
-    { startPosition : Maybe Int
+    { startPosition : Maybe Position
     , toLeader : Gap
     , onClose : Maybe msg
     }
@@ -85,7 +85,7 @@ left it what they did not want, which in a column is not much, and the name is
 the part worth reading in full.
 
 -}
-who : { startPosition : Maybe Int, onClose : Maybe msg } -> CarAt -> Html msg
+who : { startPosition : Maybe Position, onClose : Maybe msg } -> CarAt -> Html msg
 who { startPosition, onClose } item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 gap-y-1.5" ]
         [ div [ class "col-start-1 col-span-2 row-start-1 flex items-center gap-x-2 min-w-0" ]
@@ -136,7 +136,7 @@ corner onClose status =
 drawn no larger than the class badge beside it: none of the three is read
 before the others.
 -}
-overall : Maybe Int -> CarAt -> Html msg
+overall : Maybe Position -> CarAt -> Html msg
 overall startPosition item =
     div [ class "flex items-center gap-x-1.5 text-[12px] tabular-nums whitespace-nowrap" ]
         [ text (Position.toOrdinal item.standing.position)
@@ -148,7 +148,7 @@ overall startPosition item =
 nothing to say. A cell of its own could print a dash for that and be read as an
 empty cell; beside a position, a dash reads as part of the position.
 -}
-movement : Maybe Int -> Int -> Html msg
+movement : Maybe Position -> Position -> Html msg
 movement startPosition position =
     case Maybe.map (\start -> start - position) startPosition of
         Nothing ->
