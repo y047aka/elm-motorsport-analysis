@@ -32,7 +32,6 @@ import Motorsport.Analysis.Stint as AnalysisStint
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Chart.PositionProgression as PositionProgression
-import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
@@ -187,11 +186,15 @@ gapOf snapshot pair =
 
 {-| Everything under the header, which is the column's own and reports to it.
 
-The sections run from the lap the car is on to the race it has run: what it is
-doing now, the shape of the race behind that, the rivals it is doing it among,
-and last the whole of it lap by lap. The lap table is last because it is the one
-thing here that is not a summary -- four hundred rows opened in the middle would
-push everything a reader had come for off the bottom of a column.
+The sections run from the car on its own to the car among the others and back
+out to its whole race: the lap it is turning, the rivals that lap is being
+turned against, the shape of the race it has run, and last the whole of it lap
+by lap. The rivals come second because they are what the panel is for -- a lap
+time means little until there is something beside it -- and the stints are the
+background a reader turns to once they have seen it. The lap table is last
+because it is the one thing here that is not a summary: four hundred rows opened
+in the middle would push everything a reader had come for off the bottom of a
+column.
 
 -}
 panel : Comparison -> Model -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
@@ -206,13 +209,13 @@ panel comparison (Model showing) cars snapshot rivals focused =
     div [ class "grid gap-y-3" ]
         [ container "Lap times"
             (LapTimes.view { bestTimes = Snapshot.bestTimes snapshot } laps focused)
+        , charts comparison snapshot rivals
         , container "Stints"
             (Stint.view
                 { status = focused.status, stops = focused.pitStops }
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
-        , charts comparison snapshot rivals
         , disclosure
             { title = "Lap history"
             , open = showing.lapHistoryOpen
@@ -251,9 +254,15 @@ windowOptions =
     ]
 
 
-{-| The cars the panel is comparing, in running order, and how far up or down
-the road each of them is, which is what the charts above are drawn to show.
-Only these are named, whatever else a chart draws behind them.
+{-| The cars the panel is comparing, in class order, and the interval down the
+order to each, which is what the charts above are drawn to show. Only these are
+named, whatever else a chart draws behind them.
+
+A row's time is measured against the row above it rather than out from the car
+the panel is for, which is how a classification prints an interval and how the
+header above reads. Measured out from the middle, the same figure appeared on
+whichever row was not the reader's car and with the sign the wrong way round --
+the car ahead carried the gap belonging to the car chasing it.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
@@ -261,20 +270,28 @@ that colour already, and a second mark beside it is the same ink twice.
 -}
 legend : Snapshot -> Rivals -> Html msg
 legend snapshot rivals =
+    let
+        shown =
+            Rivals.fight rivals
+    in
     div [ class "grid gap-y-px" ]
-        (Rivals.fight rivals
-            |> List.map (legendEntry snapshot (Rivals.focused rivals))
+        (List.map2 (legendEntry snapshot (Rivals.focused rivals))
+            (Nothing :: List.map Just shown)
+            shown
         )
 
 
-legendEntry : Snapshot -> CarAt -> CarAt -> Html msg
-legendEntry snapshot focused item =
+legendEntry : Snapshot -> CarAt -> Maybe CarAt -> CarAt -> Html msg
+legendEntry snapshot focused inFront item =
     let
         isFocused =
             item.metadata.carNumber == focused.metadata.carNumber
     in
+    -- A grid rather than a row of flexed boxes, so that the places read as a
+    -- column and the badges start where one another do.
     div
-        [ class "flex items-center gap-x-2 py-0.5 px-1 rounded"
+        [ attribute "data-rival" item.metadata.carNumber
+        , class "grid grid-cols-[1.75rem_auto_1fr_auto] items-center gap-x-2 py-0.5 px-1 rounded"
         , class
             (if isFocused then
                 "bg-accent/40"
@@ -283,19 +300,12 @@ legendEntry snapshot focused item =
                 ""
             )
         ]
-        [ CarNumberBadge.viewRow item.metadata
-        , div [ class "text-[11px] truncate flex-1" ] [ text item.metadata.team ]
-        , div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
+        [ div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
             [ text ("P" ++ String.fromInt item.standing.positionInClass) ]
-        , div [ class "text-[12px] tabular-nums" ]
-            [ text
-                (if isFocused then
-                    "-"
-
-                 else
-                    fromFocused snapshot focused item
-                )
-            ]
+        , CarNumberBadge.viewRow item.metadata
+        , div [ class "text-[11px] truncate" ] [ text item.metadata.team ]
+        , div [ class "text-[12px] tabular-nums whitespace-nowrap" ]
+            [ text (Gap.toString (gapOf snapshot { inFront = inFront, chasing = Just item })) ]
         ]
 
 
@@ -318,33 +328,6 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
         , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
         ]
-
-
-{-| How far up or down the road a rival is. Where the two cars have no time
-between them, the laps they are apart are what is left to say.
--}
-fromFocused : Snapshot -> CarAt -> CarAt -> String
-fromFocused snapshot focused item =
-    case Snapshot.gapBetween focused item snapshot of
-        Just delta ->
-            signed delta ++ Duration.toString (abs delta)
-
-        Nothing ->
-            case item.standing.lapsCompleted - focused.standing.lapsCompleted of
-                0 ->
-                    "-"
-
-                lapsAhead ->
-                    signed -lapsAhead ++ String.fromInt (abs lapsAhead) ++ "L"
-
-
-signed : Int -> String
-signed value =
-    if value >= 0 then
-        "+"
-
-    else
-        "-"
 
 
 rivalsOf : Snapshot -> CarAt -> Rivals

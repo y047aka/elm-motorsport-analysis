@@ -10,7 +10,7 @@ the two cars it is actually racing on either side of it.
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, title)
 import Html.Events exposing (onClick)
-import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Leaderboard exposing (viewPositionChange)
 import Motorsport.Race.Snapshot exposing (CarAt)
@@ -68,7 +68,7 @@ portrait carImageUrl item =
             img
                 [ src url
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
-                , class "self-center w-[140px] h-auto object-contain"
+                , class "self-center w-[120px] h-auto object-contain"
                 ]
                 []
 
@@ -81,14 +81,12 @@ who onClose item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
         [ CarNumberBadge.view item.metadata
         , div [ class "grid gap-y-0.5 min-w-0" ]
-            -- The class badge does not wrap, so without a floor of its own this
-            -- line is as wide as the team's name and pushes the car's picture
-            -- off the end of the row rather than cutting the name.
-            [ div [ class "flex items-center gap-x-2 min-w-0" ]
-                [ classBadge item
-                , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
-                ]
-            , lineup item
+            -- A line each. Sharing one with the class badge left the name what
+            -- the badge did not want, which in a column is not much: the badge
+            -- does not wrap, and the name is the part worth reading in full.
+            [ classBadge item
+            , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
+            , currentDriver item
             ]
         , portrait item.metadata.imageUrl item
         , corner onClose item.status
@@ -127,27 +125,15 @@ classBadge item =
         [ text (Class.toString item.metadata.class) ]
 
 
-{-| Every driver entered on the car, the one out on it marked. Which of them is
-driving is the thing about a car that changes without the order changing.
+{-| The driver out on the car, and only that one. The whole entry is three names
+on a line, which in a column this wide is three lines of a header that has four
+of them; which of the three is driving is the part that changes as the race runs
+and the part a reader is looking for.
 -}
-lineup : CarAt -> Html msg
-lineup item =
-    div [ class "flex flex-wrap items-baseline gap-x-2 text-[11px]" ]
-        (List.map (driverName item.currentDriver) item.metadata.drivers)
-
-
-driverName : Driver -> Driver -> Html msg
-driverName current driver =
-    div
-        [ class
-            (if Driver.isSame current driver then
-                "font-bold"
-
-             else
-                "text-muted-foreground"
-            )
-        ]
-        [ text (Driver.toInitialAndSurname driver) ]
+currentDriver : CarAt -> Html msg
+currentDriver item =
+    div [ class "text-[11px] truncate" ]
+        [ text (Driver.toInitialAndSurname item.currentDriver) ]
 
 
 {-| The line a classification prints. The first four cells are the car's place

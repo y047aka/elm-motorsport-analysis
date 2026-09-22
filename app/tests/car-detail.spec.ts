@@ -78,6 +78,26 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(page.locator(DETAIL)).toContainText('AF Corse');
   });
 
+  test('should read the legend down the order, not out from the picked car', async ({ page }) => {
+    const rows = page.locator(DETAIL).locator('[data-rival]');
+    await expect(rows).toHaveCount(3);
+    const read = await rows.evaluateAll((els) =>
+      els.map((el) => [
+        el.getAttribute('data-rival'),
+        el.firstElementChild!.textContent!.trim(),
+        el.lastElementChild!.textContent!.trim(),
+      ]),
+    );
+    // #6 leads the class and so is measured against nothing. The picked car
+    // carries its own gap to it, where that figure used to sit on #6's row
+    // with the sign the other way round. The place leads the row.
+    expect(read).toEqual([
+      ['6', 'P1', '-'],
+      ['83', 'P2', '+ 14.766'],
+      ['8', 'P3', '+ 58.731'],
+    ]);
+  });
+
   test('should lead the race when no car has been picked', async ({ page }) => {
     await openEvent(page);
     await expect(page.locator(DETAIL)).toHaveScreenshot('leader-by-default.png');
