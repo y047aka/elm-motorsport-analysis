@@ -324,6 +324,12 @@ shownCars snapshot selection =
 {-| The cars on show, side by side. A column is as wide as the panel needs
 rather than as wide as the cell can spare, so the third of them is already off
 the edge and the cell scrolls sideways to it.
+
+One car is drawn in a column too, and not given the cell whole. A panel that
+was 880px wide alone and 440 the moment a second car arrived was two panels to
+read rather than one, and the wider of them was mostly the room left over: the
+figures in it are the same figures, set further apart.
+
 -}
 detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
 detailColumns cell m replay snapshot shown =
@@ -335,9 +341,6 @@ detailColumns cell m replay snapshot shown =
         [] ->
             -- The tracker has the room, and before any car has turned a lap.
             div [ Attributes.class (cell ++ " grid") ] [ Card.card [] [] ]
-
-        [ only ] ->
-            div [ Attributes.class (cell ++ " grid") ] [ card only ]
 
         _ ->
             -- Keyed on the car: a column matched by position instead would hand
