@@ -186,15 +186,14 @@ gapOf snapshot pair =
 
 {-| Everything under the header, which is the column's own and reports to it.
 
-The sections run from the car on its own to the car among the others and back
-out to its whole race: the lap it is turning, the rivals that lap is being
-turned against, the shape of the race it has run, and last the whole of it lap
-by lap. The rivals come second because they are what the panel is for -- a lap
-time means little until there is something beside it -- and the stints are the
-background a reader turns to once they have seen it. The lap table is last
-because it is the one thing here that is not a summary: four hundred rows opened
-in the middle would push everything a reader had come for off the bottom of a
-column.
+The rivals are named first, under the header and above everything measured: the
+three of them are where the header's standing line stops, so a reader has who
+this car is racing before they have a single time. Then the lap it is turning,
+then those three drawn out over the race, then the shape of the race it has run.
+
+The lap table is last because it is the one thing here that is not a summary:
+four hundred rows opened in the middle would push everything a reader had come
+for off the bottom of a column.
 
 -}
 panel : Comparison -> Model -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
@@ -207,7 +206,8 @@ panel comparison (Model showing) cars snapshot rivals focused =
             lapsOf cars focused
     in
     div [ class "grid gap-y-3" ]
-        [ container "Lap times"
+        [ container "Rivals" (legend snapshot rivals)
+        , container "Lap times"
             (LapTimes.view { bestTimes = Snapshot.bestTimes snapshot } laps focused)
         , charts comparison snapshot rivals
         , container "Stints"
@@ -225,18 +225,20 @@ panel comparison (Model showing) cars snapshot rivals focused =
         ]
 
 
+{-| The three cars of the fight drawn out over the race, one view at a time.
+
+Named for the state the page hands it, which is what the tabs and the stretch
+controls set: the section is one comparison, and the columns beside it are all
+showing it.
+
+-}
 charts : Comparison -> Snapshot -> Rivals -> Html Msg
 charts ((Comparison { window }) as comparison) snapshot rivals =
     let
         range =
             LapWindow.range window (Rivals.class rivals) snapshot
     in
-    container "Rivals"
-        (div [ class "grid gap-y-2" ]
-            [ chartTabs comparison range snapshot rivals
-            , legend snapshot rivals
-            ]
-        )
+    container "Comparison" (chartTabs comparison range snapshot rivals)
 
 
 {-| The stretches of the race on offer, in the order the toggle draws them.
@@ -255,8 +257,8 @@ windowOptions =
 
 
 {-| The cars the panel is comparing, in class order, and the interval down the
-order to each, which is what the charts above are drawn to show. Only these are
-named, whatever else a chart draws behind them.
+order to each. Only these are named, whatever else a chart below draws behind
+them.
 
 A row's time is measured against the row above it rather than out from the car
 the panel is for, which is how a classification prints an interval and how the

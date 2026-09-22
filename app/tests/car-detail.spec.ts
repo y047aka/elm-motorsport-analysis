@@ -64,10 +64,11 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(history).toHaveAttribute('aria-expanded', 'false');
     await history.click();
     // Last, so that four hundred rows push nothing a reader came for off the
-    // bottom of the panel.
+    // bottom of the panel. The rivals lead, being where the header's standing
+    // line stops.
     const sections = await page.locator(DETAIL).locator('h3, [aria-expanded]').allTextContents();
     expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
-      .toEqual(['Lap times', 'Stints', 'Rivals', 'Lap history']);
+      .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history']);
     await expect(page.locator(DETAIL)).toHaveScreenshot('lap-history.png');
   });
 

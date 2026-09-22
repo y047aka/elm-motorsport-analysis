@@ -81,10 +81,13 @@ who onClose item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
         [ CarNumberBadge.view item.metadata
         , div [ class "grid gap-y-0.5 min-w-0" ]
-            -- A line each. Sharing one with the class badge left the name what
-            -- the badge did not want, which in a column is not much: the badge
-            -- does not wrap, and the name is the part worth reading in full.
-            [ classBadge item
+            -- The name has a line to itself. Sharing one with the badges left
+            -- it what they did not want, which in a column is not much: they do
+            -- not wrap, and the name is the part worth reading in full.
+            [ div [ class "flex items-center gap-x-2 min-w-0" ]
+                [ overall item
+                , classBadge item
+                ]
             , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
             , currentDriver item
             ]
@@ -116,6 +119,18 @@ corner onClose status =
                 ]
 
 
+{-| Where the car stands in the field, at the top of the panel beside the class
+it stands there in. The two are one fact between them -- which race this car is
+in, and where in it -- and drawn alike, because neither is read before the
+other. Everything under this line is the class's, so the field's place is said
+once, here.
+-}
+overall : CarAt -> Html msg
+overall item =
+    div [ class "text-[11px] font-bold tabular-nums whitespace-nowrap" ]
+        [ text ("P" ++ String.fromInt item.standing.position) ]
+
+
 classBadge : CarAt -> Html msg
 classBadge item =
     div
@@ -136,16 +151,16 @@ currentDriver item =
         [ text (Driver.toInitialAndSurname item.currentDriver) ]
 
 
-{-| The line a classification prints. The first four cells are the car's place
-in the field and in its class; the last two are the race it is actually in, and
-say so on themselves rather than leaving a reader to assume which of the two
-they belong to.
+{-| The line a classification prints, the field's place having been said at the
+top of the panel already. What is left is the car's class: where it stands in
+it, how far it has come, and the two gaps that say what it is racing -- which
+say `Class` on themselves rather than leaving a reader to assume which of the
+two scales they belong to.
 -}
 standing : { startPosition : Maybe Int, toLeader : Gap, toAhead : Gap, toBehind : Gap } -> CarAt -> Html msg
 standing { startPosition, toLeader, toAhead, toBehind } item =
-    div [ class "border border-border rounded-lg grid grid-cols-6" ]
-        [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
-        , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
+    div [ class "border border-border rounded-lg grid grid-cols-5" ]
+        [ statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
         , statCell "Position" (viewPositionChange { startPosition = startPosition, position = item.standing.position })
         , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
         , statCell "Class leader" (text (Gap.toString toLeader))
