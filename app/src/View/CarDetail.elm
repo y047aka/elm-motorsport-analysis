@@ -22,8 +22,9 @@ and whether the lap history is open is one column's own.
 
 -}
 
-import Html exposing (Html, div, h3, text)
+import Html exposing (Html, button, div, h3, text)
 import Html.Attributes exposing (attribute, class)
+import Html.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
@@ -32,6 +33,7 @@ import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Chart.PositionProgression as PositionProgression
 import Motorsport.Duration as Duration
+import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (Car)
@@ -39,6 +41,7 @@ import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import View.CarDetail.ChartTabs as ChartTabs
 import View.CarDetail.Header as Header
+import View.CarDetail.LapTable as LapTable
 import View.CarDetail.LapTimes as LapTimes
 import View.CarDetail.Stint as Stint
 import View.CarNumberBadge as CarNumberBadge
@@ -142,41 +145,67 @@ view :
     -> CarAt
     -> Html msg
 view config cars snapshot focused =
+    let
+        rivals =
+            rivalsOf snapshot focused
+    in
     div
         [ attribute "data-car-detail" focused.metadata.carNumber
         , class "grid gap-y-3"
         ]
         [ Header.view
             { startPosition = startPositionOf cars focused
-            , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
+            , toLeader = gapOf snapshot { inFront = Rivals.leader rivals, chasing = Just focused }
+            , toAhead = gapOf snapshot { inFront = Rivals.ahead rivals, chasing = Just focused }
+            , toBehind = gapOf snapshot { inFront = Just focused, chasing = Rivals.behind rivals }
             , onClose = config.onClose
             }
             focused
-        , Html.map config.toMsg (panel config.comparison config.showing cars snapshot focused)
+        , Html.map config.toMsg (panel config.comparison config.showing cars snapshot rivals focused)
         ]
 
 
-{-| Everything under the header, which is the column's own and reports to it.
+{-| The gap a classification prints between two cars: the time between them
+where the road holds them together, and the whole laps where it does not. No
+gap at all where one of them is not there, which is what a class runs out of at
+its edges.
 -}
-panel : Comparison -> Model -> List Car -> Snapshot -> CarAt -> Html Msg
-panel comparison (Model showing) cars snapshot focused =
+gapOf : Snapshot -> { inFront : Maybe CarAt, chasing : Maybe CarAt } -> Gap
+gapOf snapshot pair =
+    case ( pair.inFront, pair.chasing ) of
+        ( Just inFront, Just chasing ) ->
+            case Snapshot.gapBetween inFront chasing snapshot of
+                Just delta ->
+                    Gap.seconds delta
+
+                Nothing ->
+                    Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted)
+
+        _ ->
+            Gap.none
+
+
+{-| Everything under the header, which is the column's own and reports to it.
+
+The sections run from the lap the car is on to the race it has run: what it is
+doing now, the shape of the race behind that, the rivals it is doing it among,
+and last the whole of it lap by lap. The lap table is last because it is the one
+thing here that is not a summary -- four hundred rows opened in the middle would
+push everything a reader had come for off the bottom of a column.
+
+-}
+panel : Comparison -> Model -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
+panel comparison (Model showing) cars snapshot rivals focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
 
-        rivals =
-            rivalsOf snapshot focused
+        laps =
+            lapsOf cars focused
     in
     div [ class "grid gap-y-3" ]
         [ container "Lap times"
-            (LapTimes.view
-                { bestTimes = Snapshot.bestTimes snapshot
-                , historyOpen = showing.lapHistoryOpen
-                , onToggleHistory = ToggledLapHistory
-                }
-                (lapsOf cars focused)
-                focused
-            )
+            (LapTimes.view { bestTimes = Snapshot.bestTimes snapshot } laps focused)
         , container "Stints"
             (Stint.view
                 { status = focused.status, stops = focused.pitStops }
@@ -184,6 +213,12 @@ panel comparison (Model showing) cars snapshot focused =
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
         , charts comparison snapshot rivals
+        , disclosure
+            { title = "Lap history"
+            , open = showing.lapHistoryOpen
+            , onToggle = ToggledLapHistory
+            }
+            (\() -> LapTable.view laps focused.standing.lapsCompleted)
         ]
 
 
@@ -333,6 +368,51 @@ lapsOf cars focused =
 carOf : List Car -> CarAt -> Maybe Car
 carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
+
+
+{-| A section the reader opens, drawn as the sections beside it are so that the
+panel keeps one rhythm. The title is the control: a title with a control beside
+it would be two things to press for one thing to happen.
+
+The content is a thunk, so a table the reader has not asked for is not built
+sixty times a second behind a closed section.
+
+-}
+disclosure : { title : String, open : Bool, onToggle : msg } -> (() -> Html msg) -> Html msg
+disclosure config content =
+    div
+        [ class "rounded-lg border border-border bg-card" ]
+        [ div [ class "flex flex-col gap-2 p-3" ]
+            (button
+                [ onClick config.onToggle
+                , attribute "aria-expanded"
+                    (if config.open then
+                        "true"
+
+                     else
+                        "false"
+                    )
+                , class "flex items-center gap-x-1.5 font-semibold text-sm text-left cursor-pointer transition-colors hover:text-muted-foreground"
+                ]
+                [ div [ class "text-[9px]" ]
+                    [ text
+                        (if config.open then
+                            "▼"
+
+                         else
+                            "▶"
+                        )
+                    ]
+                , text config.title
+                ]
+                :: (if config.open then
+                        [ content () ]
+
+                    else
+                        []
+                   )
+            )
+        ]
 
 
 container : String -> Html msg -> Html msg

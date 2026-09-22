@@ -13,9 +13,8 @@ before it is over.
 
 -}
 
-import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (attribute, class, style)
-import Html.Events exposing (onClick)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class, style)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -25,19 +24,14 @@ import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status
-import View.CarDetail.LapTable as LapTable
 
 
 {-| `laps` is the car's whole race, as the race holds it rather than cut at the
-clock: what the sectors of the lap in progress are measured against, and -- once
-the reader asks for them -- the rows under everything else. Both readings cut it
-at the lap the car has reached themselves.
+clock: what the sectors of the lap in progress are measured against. The section
+cuts it at the lap the car has reached itself.
 -}
 view :
-    { bestTimes : BestTimes.Snapshot
-    , historyOpen : Bool
-    , onToggleHistory : msg
-    }
+    { bestTimes : BestTimes.Snapshot }
     -> List Lap
     -> CarAt
     -> Html msg
@@ -58,44 +52,6 @@ view config laps item =
                 [ currentLap best item
                 , lastLap item
                 ]
-        , history config laps item.standing.lapsCompleted
-        ]
-
-
-{-| Every lap the car has turned, under the three the section leads with, and
-behind a disclosure: four hundred rows are the end of the section rather than
-the middle of it.
--}
-history : { a | historyOpen : Bool, onToggleHistory : msg } -> List Lap -> Int -> Html msg
-history { historyOpen, onToggleHistory } laps lapsCompleted =
-    div [ class "grid gap-y-1 border-t border-t-border pt-1.5" ]
-        [ button
-            [ onClick onToggleHistory
-            , attribute "aria-expanded"
-                (if historyOpen then
-                    "true"
-
-                 else
-                    "false"
-                )
-            , class "flex items-center gap-x-1 text-[9px] uppercase tracking-[0.03em] text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-            ]
-            [ div [ class "text-[8px]" ]
-                [ text
-                    (if historyOpen then
-                        "▼"
-
-                     else
-                        "▶"
-                    )
-                ]
-            , text "Lap history"
-            ]
-        , if historyOpen then
-            LapTable.view laps lapsCompleted
-
-          else
-            text ""
         ]
 
 

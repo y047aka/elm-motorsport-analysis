@@ -20,9 +20,15 @@ import View.CarNumberBadge as CarNumberBadge
 
 
 {-| `startPosition` is where the car began, which the round's summary estimates
-off the opening lap rather than reading off a grid sheet. `behind` is the car
-next in the running order measured against this one, which no `CarAt` carries:
-a car is given the gap to the one ahead of it, never the one behind.
+off the opening lap rather than reading off a grid sheet.
+
+The three gaps are the caller's rather than read off the car, because a `CarAt`
+carries them measured against the field and this line reports the car's class.
+The two are not the same race: the car ahead of an LMGT3 car on the road is
+often a Hypercar lapping it, and the field's leader is several laps up in a
+class it is not racing. The legend under the charts names the class rivals, so
+gaps taken against the field here would be the same shape as gaps taken against
+the class there, and read as the same thing.
 
 `onClose` closes the column. It is `Nothing` for the only column on show, which
 is the one the middle of the page is never without.
@@ -30,15 +36,23 @@ is the one the middle of the page is never without.
 -}
 view :
     { startPosition : Maybe Int
-    , behind : Maybe Gap
+    , toLeader : Gap
+    , toAhead : Gap
+    , toBehind : Gap
     , onClose : Maybe msg
     }
     -> CarAt
     -> Html msg
-view { startPosition, behind, onClose } item =
+view { startPosition, toLeader, toAhead, toBehind, onClose } item =
     div [ class "grid gap-y-2" ]
         [ who onClose item
-        , standing { startPosition = startPosition, behind = behind } item
+        , standing
+            { startPosition = startPosition
+            , toLeader = toLeader
+            , toAhead = toAhead
+            , toBehind = toBehind
+            }
+            item
         ]
 
 
@@ -136,21 +150,21 @@ driverName current driver =
         [ text (Driver.toInitialAndSurname driver) ]
 
 
-standing : { startPosition : Maybe Int, behind : Maybe Gap } -> CarAt -> Html msg
-standing { startPosition, behind } item =
+{-| The line a classification prints. The first four cells are the car's place
+in the field and in its class; the last two are the race it is actually in, and
+say so on themselves rather than leaving a reader to assume which of the two
+they belong to.
+-}
+standing : { startPosition : Maybe Int, toLeader : Gap, toAhead : Gap, toBehind : Gap } -> CarAt -> Html msg
+standing { startPosition, toLeader, toAhead, toBehind } item =
     div [ class "border border-border rounded-lg grid grid-cols-6" ]
         [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
         , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
         , statCell "Position" (viewPositionChange { startPosition = startPosition, position = item.standing.position })
         , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
-        , statCell "Leader" (text (Gap.toString item.standing.gapToLeader))
-        , statCell "Ahead / behind"
-            (text
-                (Gap.toString item.standing.intervalToAhead
-                    ++ " / "
-                    ++ (behind |> Maybe.map Gap.toString |> Maybe.withDefault "-")
-                )
-            )
+        , statCell "Class leader" (text (Gap.toString toLeader))
+        , statCell "Class ahead / behind"
+            (text (Gap.toString toAhead ++ " / " ++ Gap.toString toBehind))
         ]
 
 

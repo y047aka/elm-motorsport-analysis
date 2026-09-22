@@ -2,6 +2,7 @@ module Motorsport.Analysis.Rivals exposing
     ( Rivals
     , around
     , focused, class
+    , leader, ahead, behind
     , fight, nearest
     )
 
@@ -17,6 +18,7 @@ averaging a baseline.
 @docs Rivals
 @docs around
 @docs focused, class
+@docs leader, ahead, behind
 @docs fight, nearest
 
 -}
@@ -78,6 +80,39 @@ field by.
 class : Rivals -> Class
 class (Rivals r) =
     r.car.metadata.class
+
+
+{-| The car at the front of the class, and `Nothing` where that is the car
+itself -- a car does not lead itself by anything, so a reading taken against
+this one has nothing to report rather than nought to report.
+
+The class's front rather than the field's: the car a class car is chasing is the
+one in its own class, and the field's leader may be a class it is not racing and
+several laps up the road.
+
+-}
+leader : Rivals -> Maybe CarAt
+leader (Rivals r) =
+    List.Extra.last r.ahead
+
+
+{-| The rival immediately ahead of the car in its class, and the one immediately
+behind. `Nothing` at the edges of the class.
+
+These are not the cars either side of it on the road, which is what the running
+order gives: a class car is lapped by, and laps, cars it is not racing.
+
+-}
+ahead : Rivals -> Maybe CarAt
+ahead (Rivals r) =
+    List.head r.ahead
+
+
+{-| The rival immediately behind the car in its class. See [`ahead`](#ahead).
+-}
+behind : Rivals -> Maybe CarAt
+behind (Rivals r) =
+    List.head r.behind
 
 
 {-| The car and the rival either side of it: the cars a view compares, and the

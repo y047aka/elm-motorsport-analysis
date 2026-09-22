@@ -59,8 +59,15 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(page.locator(DETAIL)).toHaveScreenshot('distribution-tab.png');
   });
 
-  test('should render the car\'s own laps under its lap times', async ({ page }) => {
-    await page.locator(DETAIL).getByRole('button', { name: 'Lap history' }).click();
+  test('should open the car\'s own laps at the end of the panel', async ({ page }) => {
+    const history = page.locator(DETAIL).getByRole('button', { name: 'Lap history' });
+    await expect(history).toHaveAttribute('aria-expanded', 'false');
+    await history.click();
+    // Last, so that four hundred rows push nothing a reader came for off the
+    // bottom of the panel.
+    const sections = await page.locator(DETAIL).locator('h3, [aria-expanded]').allTextContents();
+    expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
+      .toEqual(['Lap times', 'Stints', 'Rivals', 'Lap history']);
     await expect(page.locator(DETAIL)).toHaveScreenshot('lap-history.png');
   });
 
