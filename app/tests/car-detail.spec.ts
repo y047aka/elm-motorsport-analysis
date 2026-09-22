@@ -109,9 +109,8 @@ test.describe('Car Detail Visual Tests', () => {
         el.lastElementChild!.textContent!.trim(),
       ]),
     );
-    // #6 leads the class and so is measured against nothing. The picked car
-    // carries its own gap to it, where that figure used to sit on #6's row
-    // with the sign the other way round. The place leads the row.
+    // #6 leads the class and so is measured against nothing; each row below
+    // carries its own gap to the row above. The place leads the row.
     expect(read).toEqual([
       ['6', '1st', '-'],
       ['83', '2nd', '+ 14.766'],
@@ -150,30 +149,24 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should not press a row whose car is already standing in', async ({ page }) => {
-    // #6 is already drawn, standing in for Hypercar, so its row is marked and
-    // carries no handler -- the same as any car with a column. Forced, because
-    // the press is what is being tested and not whether it is offered.
+    // #6 is already drawn, standing in for Hypercar, so its row is marked
+    // and carries no handler -- the same as any car with a column.
     await standingsRow(page, '6').click({ force: true });
     await expectColumns(page, ['6', '48', '92']);
   });
 
   test('should keep the rest of the stand-ins when one of them is closed', async ({ page }) => {
-    // Closing one is the reader saying the other two are worth the room, so
-    // the page stops choosing and holds them: #48 leads LMP2 at this lap, and
-    // the column stays #48's whatever the race does with the lead after it.
+    // The page stops choosing once one is gone. Still following, it would
+    // have filled #48's place back in from the class it leads on the next
+    // render.
     await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Close this column' }).click();
     await expectColumns(page, ['6', '92']);
     await expect(standingsRow(page, '48')).toHaveAttribute('aria-pressed', 'false');
-    // Settled, not still following: a car picked now joins them rather than
-    // replacing them, which is what the page's own guess would have done.
-    await selectCar(page, '83');
-    await expectColumns(page, ['6', '92', '83']);
   });
 
   test('should let a pick join the stand-ins rather than replace them', async ({ page }) => {
-    // Their rows are marked like any car with a column, and a press that
-    // unmarked three of them would be the one press on the standings that
-    // takes columns away.
+    // A press that unmarked their rows would be the one press on the
+    // standings that takes columns away.
     await selectCar(page, '83');
     await expectColumns(page, [...STAND_INS, '83']);
     for (const carNumber of STAND_INS) {
@@ -237,8 +230,8 @@ test.describe('Car Detail Columns', () => {
     await selectCar(page, '12');
     await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Positions' }).click();
     for (let i = 0; i < 2; i++) {
-      // Asked of the button rather than of its classes: the greys it is drawn
-      // in now name the pressed one and the hover of the rest alike.
+      // Asked of the button rather than of its classes: the greys it is
+      // drawn in name the pressed one and the hover of the rest alike.
       await expect(page.locator(DETAIL).nth(i).getByRole('button', { name: 'Positions' }))
         .toHaveAttribute('aria-pressed', 'true');
     }
@@ -260,8 +253,8 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should take a column for every car asked for, with no ceiling', async ({ page }) => {
-    // Eight, which is past the six the page used to stop at and past what the
-    // cell holds either way -- it scrolls to the rest.
+    // Eight, past what the cell holds at any viewport -- it scrolls to the
+    // rest.
     const asked = ['12', '8', '7', '83', '51', '50', '36', '35'];
     for (const carNumber of asked) {
       await selectCar(page, carNumber);

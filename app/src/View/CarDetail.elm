@@ -249,8 +249,7 @@ One setting for all three charts rather than one each: only one of them is
 showing at a time, and a stretch that changed as the tabs did would read as the
 chart changing.
 
-The durations are given bare. `Last` was on two of the three and said nothing
-the third did not also mean, and this row is the widest thing in the panel --
+The durations are given bare: this row is the widest thing in the panel, and
 what it asks for is what a column has to be.
 
 -}
@@ -268,9 +267,7 @@ them.
 
 A row's time is measured against the row above it rather than out from the car
 the panel is for, which is how a classification prints an interval and how the
-header above reads. Measured out from the middle, the same figure appeared on
-whichever row was not the reader's car and with the sign the wrong way round --
-the car ahead carried the gap belonging to the car chasing it.
+header above reads.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
@@ -333,10 +330,9 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
     ChartTabs.chartTabs SelectedChart
         chart
         (ChartTabs.segmentedControl SelectedWindow window windowOptions)
-        -- `Gap` rather than `Gap to avg`: the tab row is the widest thing in
-        -- the panel and so decides how narrow a column can be, and those two
-        -- words cost 38px of it. What they said is said by the chart, whose
-        -- baseline is drawn and labelled where the reader is looking.
+        -- `Gap` alone, the row being what decides how narrow a column can
+        -- be: what it is a gap to is said by the chart, whose baseline is
+        -- drawn and labelled where the reader is looking.
         [ ( GapChart, "Gap", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
         , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
@@ -419,9 +415,8 @@ container title content =
 
 
 {-| What a section is, which is a title and its content and a rule above to say
-where the one before it ended. A card apiece drew five boxes inside a sixth --
-the column is already a card, and boxing what is in it said nothing about the
-panel except that its parts are parts.
+where the one before it ended. A rule rather than a card: the column is already
+a card, and boxing what is in it says nothing except that its parts are parts.
 
 The rule is skipped on the first section, which the header above it already
 parts from, and so is the padding the rule needs under it.

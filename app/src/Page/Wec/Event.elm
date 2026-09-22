@@ -168,13 +168,10 @@ update shared msg m =
             )
 
 
-{-| A column for `carNumber`, opened at the end. A car that already has one
-keeps the one it has rather than being moved to the end.
-
-A pick joins what is up rather than replacing it, the stand-ins included. They
-are marked in the standings like any car with a column, and a press that
-unmarked three rows would be the one press on that list that takes columns
-away -- which is the one thing the list does not do.
+{-| A column for `carNumber`, opened at the end of the ones already up -- the
+stand-ins among them, so that nothing a press does takes a column away. A car
+that already has a column keeps the one it has rather than being moved to the
+end.
 
 There is no ceiling on how many. The cell scrolls sideways however many there
 are, and the cost of a column the reader has opened is the reader's to weigh --
@@ -195,10 +192,9 @@ showCar shared carNumber selection =
         pickedFrom selection (current ++ [ carNumber ])
 
 
-{-| The column for `carNumber` taken away, and what is left of the stand-ins
-kept as they stand. Closing one of them is the reader saying something about
-the other two -- that they are worth the room the third was taking -- and a set
-that went on following the race would answer by replacing them.
+{-| The column for `carNumber` taken away, and whatever is left held where it
+stands: closing one stand-in says the others are worth the room, which a set
+still following the race would answer by replacing them.
 -}
 closeCar : Shared.Model -> CarNumber -> Selection -> Selection
 closeCar shared carNumber selection =
@@ -424,20 +420,11 @@ rather than as wide as the cell can spare, so the third of them is already off
 the edge and the cell scrolls sideways to it.
 
 360px. The widest thing in the panel is the comparison's tab row, which wants
-302px of the 328 a column of this width hands it -- 26px over, which is the room
-to leave for a font that is not the one this was measured in.
+302px of the 328 a column of this width hands it. The floor is 335, so the
+26px over is what is left for a font that is not the one this was measured in.
 
-The figure has come down as the things that set it have: 440 while the stretch
-controls read `Last 1.5h` and every section was a boxed card, 400 until the two
-laps stopped sitting abreast, 380 until the first tab stopped reading `Gap to
-avg`, 350 for a while after that. The floor under the tab row as it now reads
-is 335, so this is not the narrowest a column goes -- it is the narrowest that
-still reads as a page rather than as a measurement.
-
-One car is drawn in a column too, and not given the cell whole. A panel that
-was 880px wide alone and 360 the moment a second car arrived was two panels to
-read rather than one, and the wider of them was mostly the room left over: the
-figures in it are the same figures, set further apart.
+One car is drawn in a column too, and not given the cell whole: the figures in
+a wider panel are the same figures, set further apart.
 
 -}
 detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg

@@ -137,8 +137,10 @@ stintBar metadata summary =
         text ""
 
     else
-        -- h-6: the bar is the one thing in the panel drawn at a size rather
-        -- than written at one, and the lap counts sit inside it.
+        -- Tall enough to leave the lap counts set inside it room above and
+        -- below: at the height of the figures themselves the bar reads as a
+        -- row of numbers with a colour behind it, rather than as a length of
+        -- race the numbers label.
         div [ class "flex gap-x-px h-6 rounded overflow-hidden" ]
             (List.map (stintSegment metadata totalLaps) summary.stints)
 

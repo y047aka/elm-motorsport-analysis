@@ -33,9 +33,8 @@ car's laps is the one place a colour for "quickest of sixty-two cars" never
 fires, while the lap that moved this car's own best is on every one of them.
 
 The rows are cut into the runs they were driven in, each under a heading naming
-the run and whose it was. A column of the driver's name repeated down forty rows
-said the same thing in the width the times want -- the name changes where the
-runs change, and that is where the heading is.
+the run and whose it was. The driver changes where the runs change, which is
+where the heading is, so no column of the table repeats the name down it.
 
 -}
 view : List Lap -> Int -> Html msg

@@ -23,14 +23,9 @@ import View.CarNumberBadge as CarNumberBadge
 {-| `picked` is the cars with columns, which is what a marked row means -- the
 cars standing in before anything is chosen among them, since a stand-in has a
 column like any other. Clicking a row hands `onSelect` the car it names and it
-is given a column of its own; clicking a row already marked does nothing, and
-there is no clicking a car away again -- a column is closed from the column
-itself.
-
-So a mark follows its column and never comes off on its own: picking a car adds
-a column to the ones already up, the stand-ins among them, and the only thing
-that unmarks a row is that row's column being closed.
-
+is given one; clicking a row already marked does nothing, and there is no
+clicking a car away again. A mark comes off only when that row's column is
+closed, which is done from the column itself.
 -}
 view : { onSelect : CarNumber -> msg, picked : List CarNumber } -> Snapshot -> Html msg
 view { onSelect, picked } snapshot =

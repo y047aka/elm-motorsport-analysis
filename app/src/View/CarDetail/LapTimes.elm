@@ -42,16 +42,15 @@ view config laps item =
     in
     div [ class "grid gap-y-2" ]
         [ bestLap config.bestTimes item
-        , -- One above the other, each across the panel. Side by side they had
-          -- half of it each, which is not enough for three sector times: the
-          -- middle sector of a GT3 car runs over a minute, and the reading of
-          -- it ran into the reading beside it.
+        , -- One above the other, each across the panel: half of it each is
+          -- not enough for three sector times, the middle sector of a GT3 car
+          -- running over a minute.
           --
           -- One grid between the two rather than one apiece, so that the rail
           -- is as wide as the wider of them and the sectors of the two laps
-          -- begin at the same place. A grid each sized its own rail, and
-          -- `CURRENT L28` being longer than `LAST L27` was enough to set the
-          -- two rows of segments a few pixels out from one another.
+          -- begin at the same place -- `CURRENT L28` is longer than
+          -- `LAST L27`, which is enough to set two rows of segments out from
+          -- one another.
           div [ class "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2" ]
             (if Status.hasStopped item.status then
                 lastLap item

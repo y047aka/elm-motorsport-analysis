@@ -27,8 +27,7 @@ off the opening lap rather than reading off a grid sheet.
 carries the gap to the field's leader and this line reports the car's class --
 which for an LMGT3 car is several laps and another race away. It is the only gap
 left here: the rivals either side are named, placed and timed in the section
-directly below, which said the same two figures over again and without saying
-whose they were.
+directly below.
 
 `onClose` closes the column. It is `Nothing` for the only column on show, which
 is the one the middle of the page is never without.
@@ -48,14 +47,13 @@ view { startPosition, toLeader, onClose } item =
         ]
 
 
-{-| The car itself, side on, in the width the name and the driver leave beside
-them: the panel is wide enough that a line of text does not fill it, where a row
-of the photograph's own took more of the panel's height than the lap times below
-it.
+{-| The car itself, side on, at the right of the row the badge and the name are
+on. The three are the one thing -- which car this is -- and the line above them
+is where it stands, which is not.
 
-It sits on their row rather than across both, as the number badge does. The
-badge, the name and the picture are the one thing -- which car this is -- and
-the line above them is where it stands, which is not.
+Its width is the name's loss, the name being the one thing on the row with more
+to say than fits, and a car in profile stays legible far smaller than a string
+of words does.
 
 -}
 portrait : Maybe String -> CarAt -> Html msg
@@ -66,17 +64,10 @@ portrait carImageUrl item =
                 [ src url
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
 
-                -- Placed itself rather than wrapped in a box that is placed,
-                -- there being nothing for the box to do. It runs to the end of
-                -- the row: the last column is the close button's, which is on
-                -- the row above, and a picture stopping short of the edge for
-                -- a button that is not beside it reads as a margin nothing
-                -- asked for.
-                --
-                -- 104px rather than 120: the picture's width is the name's
-                -- loss, the name being the one thing on the row that has more
-                -- to say than fits, and a car in profile stays legible far
-                -- smaller than a string of words does.
+                -- To the end of the row: the last column is the close
+                -- button's, which is on the row above, and a picture stopping
+                -- short of the edge for a button that is not beside it reads
+                -- as a margin nothing asked for.
                 , class "col-start-3 -col-end-1 row-start-2 justify-self-end self-center w-[104px] h-auto object-contain"
                 ]
                 []
@@ -113,12 +104,9 @@ who { startPosition, onClose } item =
         -- picture riding high against a badge neither of them matches.
         , div [ class "col-start-1 row-start-2 self-center" ] [ CarNumberBadge.view item.metadata ]
         , div [ class "col-start-2 row-start-2 self-center grid gap-y-0.5 min-w-0" ]
-            [ -- 12px rather than 14: the name is the longest string in the
-              -- header and the one that truncates, and it was the only thing
-              -- here set above the scale the rest of the panel reads at. It
-              -- now sits level with the position and the class badge above it
-              -- -- the header says four short things and one long one, and the
-              -- long one does not need a size to be found.
+            [ -- Level with the position and the class badge above it: the
+              -- header says four short things and one long one, and the long
+              -- one is found by its length rather than by its size.
               div [ class "text-[12px] truncate" ] [ text item.metadata.team ]
             , currentDriver item
             ]
@@ -126,9 +114,8 @@ who { startPosition, onClose } item =
         ]
 
 
-{-| The top right of the header. The status badge has always been what sits
-there; the close button joins it only where there is a column to close, so a
-panel given the cell whole is drawn exactly as it was.
+{-| The top right of the header: the status badge, and beside it the close
+button wherever there is more than one column to close.
 -}
 corner : Maybe msg -> Status -> Html msg
 corner onClose status =
