@@ -115,8 +115,8 @@ type Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | ShowDetailCar CarNumber
-    | CloseDetailCar CarNumber
+    | OpenColumn CarNumber
+    | CloseColumn CarNumber
     | CarDetailMsg CarNumber CarDetail.Msg
 
 
@@ -148,11 +148,11 @@ update shared msg m =
             , Effect.none
             )
 
-        ShowDetailCar carNumber ->
-            ( { m | selection = showCar shared carNumber m.selection }, Effect.none )
+        OpenColumn carNumber ->
+            ( { m | selection = openColumn shared carNumber m.selection }, Effect.none )
 
-        CloseDetailCar carNumber ->
-            ( { m | selection = closeCar shared carNumber m.selection }, Effect.none )
+        CloseColumn carNumber ->
+            ( { m | selection = closeColumn shared carNumber m.selection }, Effect.none )
 
         CarDetailMsg carNumber detailMsg ->
             let
@@ -179,8 +179,8 @@ each draws its own charts on every frame of playback, so a great many of them
 running is a great deal of work.
 
 -}
-showCar : Shared.Model -> CarNumber -> Selection -> Selection
-showCar shared carNumber selection =
+openColumn : Shared.Model -> CarNumber -> Selection -> Selection
+openColumn shared carNumber selection =
     let
         selected =
             selectedCarNumbers shared selection
@@ -196,8 +196,8 @@ showCar shared carNumber selection =
 stands: closing one stand-in says the others are worth the room, which a set
 still following the race would answer by replacing them.
 -}
-closeCar : Shared.Model -> CarNumber -> Selection -> Selection
-closeCar shared carNumber selection =
+closeColumn : Shared.Model -> CarNumber -> Selection -> Selection
+closeColumn shared carNumber selection =
     selectedCarNumbers shared selection
         |> List.filter ((/=) carNumber)
         |> pickedFrom selection
@@ -363,7 +363,7 @@ trackerView track timeline snapshot replay m =
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
-                    { onSelect = ShowDetailCar
+                    { onSelect = OpenColumn
                     , withColumns = List.map (.metadata >> .carNumber) having
                     }
                     snapshot
@@ -485,7 +485,7 @@ detailCard columns m replay snapshot car =
                     { toMsg = CarDetailMsg carNumber
                     , onClose =
                         if columns.closable then
-                            Just (CloseDetailCar carNumber)
+                            Just (CloseColumn carNumber)
 
                         else
                             Nothing

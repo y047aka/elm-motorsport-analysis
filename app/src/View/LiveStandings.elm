@@ -26,6 +26,11 @@ any other. Clicking a row hands `onSelect` the car it names and it is given
 one; clicking a marked row does nothing, and there is no clicking a car away
 again. A mark comes off only when that row's column is closed, which is done
 from the column itself.
+
+`onSelect` is held as it is handed over, so pass a message constructor: the
+rows are thunked, and a lambda or a composition built afresh on each render
+compares unequal and draws every one of them again.
+
 -}
 view : { onSelect : CarNumber -> msg, withColumns : List CarNumber } -> Snapshot -> Html msg
 view { onSelect, withColumns } snapshot =
