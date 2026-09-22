@@ -125,6 +125,11 @@ update msg state =
 {-| The panel, marked with the car it is drawing, which the visual tests locate
 it by: an `id` would name one panel, and the reader can have several of these
 open at once.
+
+The car is the one the column was opened for, so it is a car and not a `Maybe`
+one: a field with nothing in it yet is a page with no columns, which the page
+draws without asking for a panel at all.
+
 -}
 view :
     { toMsg : Msg -> msg
@@ -134,26 +139,20 @@ view :
     }
     -> List Car
     -> Snapshot
-    -> Maybe CarAt
+    -> CarAt
     -> Html msg
-view config cars snapshot focusedCar =
-    div [ attribute "data-car-detail" (focusedCar |> Maybe.map (.metadata >> .carNumber) |> Maybe.withDefault "") ]
-        [ case focusedCar of
-            Nothing ->
-                -- Only before a car of the field has turned a lap, which is not
-                -- a moment the page is read at.
-                text ""
-
-            Just focused ->
-                div [ class "grid gap-y-3" ]
-                    [ Header.view
-                        { startPosition = startPositionOf cars focused
-                        , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
-                        , onClose = config.onClose
-                        }
-                        focused
-                    , Html.map config.toMsg (panel config.comparison config.showing cars snapshot focused)
-                    ]
+view config cars snapshot focused =
+    div
+        [ attribute "data-car-detail" focused.metadata.carNumber
+        , class "grid gap-y-3"
+        ]
+        [ Header.view
+            { startPosition = startPositionOf cars focused
+            , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
+            , onClose = config.onClose
+            }
+            focused
+        , Html.map config.toMsg (panel config.comparison config.showing cars snapshot focused)
         ]
 
 

@@ -122,7 +122,7 @@ update msg m =
             )
 
         ShowDetailCar carNumber ->
-            ( { m | selection = showCars carNumber m.selection }, Effect.none )
+            ( { m | selection = showCar carNumber m.selection }, Effect.none )
 
         CloseDetailCar carNumber ->
             ( { m | selection = List.filter ((/=) carNumber) m.selection }, Effect.none )
@@ -145,13 +145,22 @@ update msg m =
 keeps the one it has rather than being moved to the end, and a page with no
 room left takes nothing.
 -}
-showCars : CarNumber -> List CarNumber -> List CarNumber
-showCars carNumber selection =
-    if List.member carNumber selection || List.length selection >= columnLimit then
+showCar : CarNumber -> List CarNumber -> List CarNumber
+showCar carNumber selection =
+    if List.member carNumber selection || isFull selection then
         selection
 
     else
         selection ++ [ carNumber ]
+
+
+{-| Whether the page will take another column. Asked of the selection rather
+than of what is drawn: the front of the race stands in for an empty selection,
+and a page standing in for nothing is not a page with a column spent.
+-}
+isFull : List CarNumber -> Bool
+isFull selection =
+    List.length selection >= columnLimit
 
 
 {-| As many columns as the reader can have open at once.
@@ -260,6 +269,11 @@ trackerView track timeline snapshot replay m =
         onShow =
             shownCars snapshot m.selection
 
+        -- Everything the mode decides, read off it once. `shown` is empty
+        -- under the tracker because the tracker has the room the columns
+        -- want; the standings are handed `onShow` regardless, so that they go
+        -- on saying which cars the reader has open and going back to them is
+        -- going back to what was there.
         layout =
             case m.mode of
                 Tracker ->
@@ -267,6 +281,7 @@ trackerView track timeline snapshot replay m =
                     , trackerDetail = TrackerChart.Full
                     , onTracker = ModeChange Columns
                     , detail = "col-start-3 row-start-1"
+                    , shown = []
                     }
 
                 Columns ->
@@ -274,18 +289,8 @@ trackerView track timeline snapshot replay m =
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
                     , detail = "col-start-2 row-start-1 row-span-2"
+                    , shown = onShow
                     }
-
-        -- The standings go on saying which cars the reader has open while the
-        -- tracker has their room, so that going back to them is going back to
-        -- what was there.
-        shown =
-            case m.mode of
-                Tracker ->
-                    []
-
-                Columns ->
-                    onShow
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
@@ -296,11 +301,11 @@ trackerView track timeline snapshot replay m =
                 [ LiveStandings.view
                     { onSelect = ShowDetailCar
                     , shown = List.map (.metadata >> .carNumber) onShow
-                    , atLimit = List.length m.selection >= columnLimit
+                    , atLimit = isFull m.selection
                     }
                     snapshot
                 ]
-            , detailColumns layout.detail m replay snapshot shown
+            , detailColumns layout.detail m replay snapshot layout.shown
             , div
                 -- The cell is the only box in the chain whose height is settled,
                 -- so a square SVG measured against the width overflows the card.
@@ -394,7 +399,7 @@ detailCard columns m replay snapshot car =
                     }
                     replay.race.cars
                     snapshot
-                    (Just car)
+                    car
                 ]
             ]
         ]
