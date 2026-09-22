@@ -13,7 +13,9 @@ import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
+import Html.Keyed
 import Html.Lazy
+import Motorsport.Analysis.Entrant as Entrant
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -49,13 +51,17 @@ type alias Model =
     { mode : Mode
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , detailCarNumber : Maybe String
-    , detailState : CarDetail.Model
+    , selection : List CarNumber
+    , detailComparison : CarDetail.Comparison
+    , detailPanels : Dict CarNumber CarDetail.Model
     }
 
 
+{-| What the middle of the page is given over to. The tracker takes the room the
+columns need, so the two are never both on show.
+-}
 type Mode
-    = Default
+    = Columns
     | Tracker
 
 
@@ -66,11 +72,12 @@ type StandingsTab
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
-    ( { mode = Default
+    ( { mode = Columns
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , detailCarNumber = Nothing
-      , detailState = CarDetail.init
+      , selection = []
+      , detailComparison = CarDetail.initialComparison
+      , detailPanels = Dict.empty
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -87,8 +94,10 @@ type Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | SelectDetailCar String
-    | CarDetailMsg CarDetail.Msg
+    | ShowDetailCar CarNumber
+    | ShowDetailCars (List CarNumber)
+    | CloseDetailCar CarNumber
+    | CarDetailMsg CarNumber CarDetail.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -114,13 +123,65 @@ update msg m =
             , Effect.none
             )
 
-        SelectDetailCar carNumber ->
-            ( { m | detailCarNumber = Just carNumber }, Effect.none )
+        ShowDetailCar carNumber ->
+            ( { m | selection = showCars [ carNumber ] m.selection }, Effect.none )
 
-        CarDetailMsg detailMsg ->
-            ( { m | detailState = CarDetail.update detailMsg m.detailState }
+        ShowDetailCars carNumbers ->
+            ( { m | selection = showCars carNumbers m.selection }, Effect.none )
+
+        CloseDetailCar carNumber ->
+            ( { m | selection = List.filter ((/=) carNumber) m.selection }, Effect.none )
+
+        CarDetailMsg carNumber detailMsg ->
+            let
+                next =
+                    CarDetail.update detailMsg
+                        { comparison = m.detailComparison, panel = panelFor carNumber m }
+            in
+            ( { m
+                | detailComparison = next.comparison
+                , detailPanels = Dict.insert carNumber next.panel m.detailPanels
+              }
             , Effect.none
             )
+
+
+{-| The columns `carNumbers` asks for, opened at the end in the order they were
+asked for. A car that already has a column keeps the one it has rather than
+being moved to the end, and the ones there is no room for are dropped.
+-}
+showCars : List CarNumber -> List CarNumber -> List CarNumber
+showCars carNumbers selection =
+    List.foldl
+        (\carNumber shown ->
+            if List.member carNumber shown || List.length shown >= columnLimit then
+                shown
+
+            else
+                shown ++ [ carNumber ]
+        )
+        selection
+        carNumbers
+
+
+{-| As many columns as the reader can have open at once.
+
+A column is 440px, so at 1440x900 the middle of the page holds two of them and
+six is three of those across. Past that, finding a car among the columns is
+more work than finding it in the running order on the left, which is where it
+was picked from in the first place -- and every column draws its own charts on
+every frame of playback, so the ceiling is what holds the cost of the page down
+as well.
+
+-}
+columnLimit : Int
+columnLimit =
+    6
+
+
+panelFor : CarNumber -> Model -> CarDetail.Model
+panelFor carNumber m =
+    Dict.get carNumber m.detailPanels |> Maybe.withDefault CarDetail.init
 
 
 
@@ -206,43 +267,35 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
-        focused =
-            focusedCar snapshot m
+        onShow =
+            shownCars snapshot m.selection
 
         layout =
             case m.mode of
                 Tracker ->
                     { tracker = "col-start-2 row-start-1 row-span-2"
                     , trackerDetail = TrackerChart.Full
-                    , onTracker = ModeChange Default
+                    , onTracker = ModeChange Columns
                     , detail = "col-start-3 row-start-1"
                     }
 
-                _ ->
+                Columns ->
                     { tracker = "col-start-3 row-start-1"
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
                     , detail = "col-start-2 row-start-1 row-span-2"
                     }
 
-        detailBody =
+        -- The standings go on saying which cars the reader has open while the
+        -- tracker has their room, so that going back to them is going back to
+        -- what was there.
+        shown =
             case m.mode of
-                Default ->
-                    -- A card's content does not shrink below what it holds, so
-                    -- the box that scrolls has to be a flex child of the card.
-                    [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
-                        [ Card.content []
-                            [ CarDetail.view CarDetailMsg
-                                m.detailState
-                                replay.race.cars
-                                snapshot
-                                focused
-                            ]
-                        ]
-                    ]
-
-                _ ->
+                Tracker ->
                     []
+
+                Columns ->
+                    onShow
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
@@ -251,12 +304,13 @@ trackerView track timeline snapshot replay m =
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
-                    { onSelect = SelectDetailCar
-                    , selected = Maybe.map (.metadata >> .carNumber) focused
+                    { onSelect = ShowDetailCar
+                    , shown = List.map (.metadata >> .carNumber) onShow
+                    , atLimit = List.length m.selection >= columnLimit
                     }
                     snapshot
                 ]
-            , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
+            , detailColumns layout.detail m replay snapshot shown
             , div
                 -- The cell is the only box in the chain whose height is settled,
                 -- so a square SVG measured against the width overflows the card.
@@ -278,18 +332,116 @@ trackerView track timeline snapshot replay m =
         ]
 
 
-{-| The car the middle of the page is given over to: the one the reader picked,
-and until they pick one -- or when the one they picked is not in the field -- the
-car at the front of the race.
+{-| The cars the columns are drawn for: the ones the reader picked, in the order
+they picked them, and until they have picked any -- or when not one of the ones
+they picked is in the field -- the car at the front of the race.
 -}
-focusedCar : Snapshot -> Model -> Maybe CarAt
-focusedCar snapshot m =
-    case m.detailCarNumber |> Maybe.andThen (\carNumber -> Snapshot.get carNumber snapshot) of
-        Just car ->
-            Just car
+shownCars : Snapshot -> List CarNumber -> List CarAt
+shownCars snapshot selection =
+    case List.filterMap (\carNumber -> Snapshot.get carNumber snapshot) selection of
+        [] ->
+            Snapshot.leader snapshot |> Maybe.map List.singleton |> Maybe.withDefault []
 
-        Nothing ->
-            Snapshot.leader snapshot
+        picked ->
+            picked
+
+
+{-| The cars on show, side by side. A column is as wide as the panel needs
+rather than as wide as the cell can spare, so the third of them is already off
+the edge and the cell scrolls sideways to it.
+-}
+detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
+detailColumns cell m replay snapshot shown =
+    let
+        card =
+            detailCard
+                { closable = List.length shown > 1
+                , shown = List.map (.metadata >> .carNumber) shown
+                }
+                m
+                replay
+                snapshot
+    in
+    case shown of
+        [] ->
+            -- The tracker has the room, and before any car has turned a lap.
+            div [ Attributes.class (cell ++ " grid") ] [ Card.card [] [] ]
+
+        [ only ] ->
+            div [ Attributes.class (cell ++ " grid") ] [ card only ]
+
+        _ ->
+            -- Keyed on the car: a column matched by position instead would hand
+            -- how far the reader had scrolled it to whichever car moved up into
+            -- its place when the one before it was closed.
+            Html.Keyed.node "div"
+                [ Attributes.class (cell ++ " flex gap-2.5 overflow-x-auto") ]
+                (List.map
+                    (\car ->
+                        ( car.metadata.carNumber
+                        , div [ Attributes.class "shrink-0 w-[440px] grid" ] [ card car ]
+                        )
+                    )
+                    shown
+                )
+
+
+detailCard : { closable : Bool, shown : List CarNumber } -> Model -> Replay.Model -> Snapshot -> CarAt -> Html Msg
+detailCard columns m replay snapshot car =
+    let
+        carNumber =
+            car.metadata.carNumber
+    in
+    Card.card []
+        -- A card's content does not shrink below what it holds, so the box that
+        -- scrolls has to be a flex child of the card.
+        [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+            [ Card.content []
+                [ CarDetail.view
+                    { toMsg = CarDetailMsg carNumber
+                    , onEntrant = entrantMsg columns m snapshot car
+                    , onClose =
+                        if columns.closable then
+                            Just (CloseDetailCar carNumber)
+
+                        else
+                            Nothing
+                    , comparison = m.detailComparison
+                    , showing = panelFor carNumber m
+                    }
+                    replay.race.cars
+                    snapshot
+                    (Just car)
+                ]
+            ]
+        ]
+
+
+{-| What pressing the team's name asks for: every car it entered in this class,
+the ones already up among them, so that pressing it is not a way of moving those
+to the end.
+
+`Nothing` where the press would put nothing new on the page -- the team entered
+this car alone in its class, or all of them are up already -- and where there is
+no room left for a column, which is a thing to say on the name rather than to
+find out by pressing it.
+
+-}
+entrantMsg : { closable : Bool, shown : List CarNumber } -> Model -> Snapshot -> CarAt -> Maybe Msg
+entrantMsg columns m snapshot car =
+    let
+        entrant =
+            Entrant.cars (Snapshot.toList snapshot) car
+                |> List.map (.metadata >> .carNumber)
+    in
+    if List.length m.selection >= columnLimit then
+        Nothing
+
+    else if List.all (\carNumber -> List.member carNumber columns.shown) entrant then
+        Nothing
+
+    else
+        Just (ShowDetailCars entrant)
 
 
 standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg

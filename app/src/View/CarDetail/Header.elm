@@ -7,8 +7,9 @@ the two cars it is actually racing on either side of it.
 
 -}
 
-import Html exposing (Html, div, img, text)
-import Html.Attributes exposing (alt, attribute, class, src)
+import Html exposing (Html, button, div, img, text)
+import Html.Attributes exposing (alt, attribute, class, src, title)
+import Html.Events exposing (onClick)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Leaderboard exposing (viewPositionChange)
@@ -22,16 +23,27 @@ import View.CarNumberBadge as CarNumberBadge
 off the opening lap rather than reading off a grid sheet. `behind` is the car
 next in the running order measured against this one, which no `CarAt` carries:
 a car is given the gap to the one ahead of it, never the one behind.
+
+`onEntrant` is what pressing the team's name asks for: the name and the class
+badge sit on one line here and together are the entrant, so that line is what a
+reader would point at to mean "the rest of these". It is `Nothing` when the
+press would put nothing new on the page.
+
+`onClose` closes the column. It is `Nothing` for the only column on show, which
+is the one the middle of the page is never without.
+
 -}
 view :
     { startPosition : Maybe Int
     , behind : Maybe Gap
+    , onEntrant : Maybe msg
+    , onClose : Maybe msg
     }
     -> CarAt
     -> Html msg
-view { startPosition, behind } item =
+view { startPosition, behind, onEntrant, onClose } item =
     div [ class "grid gap-y-2" ]
-        [ who item
+        [ who { onEntrant = onEntrant, onClose = onClose } item
         , standing { startPosition = startPosition, behind = behind } item
         ]
 
@@ -56,8 +68,8 @@ portrait carImageUrl item =
             text ""
 
 
-who : CarAt -> Html msg
-who item =
+who : { onEntrant : Maybe msg, onClose : Maybe msg } -> CarAt -> Html msg
+who { onEntrant, onClose } item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
         [ CarNumberBadge.view item.metadata
         , div [ class "grid gap-y-0.5 min-w-0" ]
@@ -66,13 +78,59 @@ who item =
             -- off the end of the row rather than cutting the name.
             [ div [ class "flex items-center gap-x-2 min-w-0" ]
                 [ classBadge item
-                , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
+                , teamName onEntrant item
                 ]
             , lineup item
             ]
         , portrait item.metadata.imageUrl item
-        , statusBadge item.status
+        , corner onClose item.status
         ]
+
+
+{-| The team's name, which asks for the rest of the cars it entered in this
+class. It stays a button when there is nothing left to ask for rather than
+turning back into text, so that a name does not change what kind of thing it is
+under the reader as the columns fill up.
+-}
+teamName : Maybe msg -> CarAt -> Html msg
+teamName onEntrant item =
+    button
+        (class "text-[14px] truncate text-left"
+            :: (case onEntrant of
+                    Just msg ->
+                        [ onClick msg
+                        , title "Show the cars this team entered in this class"
+                        , class "cursor-pointer"
+                        ]
+
+                    Nothing ->
+                        [ attribute "aria-disabled" "true" ]
+               )
+        )
+        [ text item.metadata.team ]
+
+
+{-| The top right of the header. The status badge has always been what sits
+there; the close button joins it only where there is a column to close, so a
+panel given the cell whole is drawn exactly as it was.
+-}
+corner : Maybe msg -> Status -> Html msg
+corner onClose status =
+    case onClose of
+        Nothing ->
+            statusBadge status
+
+        Just msg ->
+            div [ class "flex items-start gap-x-1" ]
+                [ statusBadge status
+                , button
+                    [ onClick msg
+                    , attribute "aria-label" "Close this column"
+                    , title "Close this column"
+                    , class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
+                    ]
+                    [ text "✕" ]
+                ]
 
 
 classBadge : CarAt -> Html msg

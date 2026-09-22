@@ -1,7 +1,8 @@
 module View.CarDetail exposing
-    ( Model, init
+    ( Comparison, initialComparison
+    , Model, init
     , Msg, update
-    , elementId, view
+    , view
     )
 
 {-| Everything the race says about one car, drawn in place on the event page.
@@ -10,18 +11,19 @@ The car is the caller's selection; the rivals it is measured against are read
 off the field around it, so the panel follows the race without the selection
 changing.
 
-Which of them is on show is the panel's own, though, and is held here rather
-than by the page: the chart, the stretch of the race it covers and whether the
-lap history is open say nothing about the race and nothing else reads them.
+What is on show splits in two: the chart and the stretch of the race it covers
+are the page's, so that columns beside one another are showing the same thing,
+and whether the lap history is open is one column's own.
 
+@docs Comparison, initialComparison
 @docs Model, init
 @docs Msg, update
-@docs elementId, view
+@docs view
 
 -}
 
 import Html exposing (Html, div, h3, text)
-import Html.Attributes exposing (class, id)
+import Html.Attributes exposing (attribute, class)
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
@@ -42,25 +44,35 @@ import View.CarDetail.Stint as Stint
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| What the panel is showing, which nothing outside it reads.
+{-| What one column is showing that the columns beside it are not.
 -}
 type Model
-    = Model State
-
-
-type alias State =
-    { chart : Chart
-    , window : LapWindow
-    , lapHistoryOpen : Bool
-    }
+    = Model { lapHistoryOpen : Bool }
 
 
 init : Model
 init =
-    Model
+    Model { lapHistoryOpen = False }
+
+
+{-| Which chart the rivals are drawn in, and how much of the race it covers.
+
+The page hands every column the same one: a neighbour drawing a different chart
+over a different stretch of the race is not something to read anything against.
+
+-}
+type Comparison
+    = Comparison
+        { chart : Chart
+        , window : LapWindow
+        }
+
+
+initialComparison : Comparison
+initialComparison =
+    Comparison
         { chart = GapChart
         , window = LapWindow.WholeRace
-        , lapHistoryOpen = False
         }
 
 
@@ -85,23 +97,48 @@ type Msg
     | ToggledLapHistory
 
 
-update : Msg -> Model -> Model
-update msg (Model state) =
-    Model <|
-        case msg of
-            SelectedChart chart ->
-                { state | chart = chart }
+{-| Takes both, because one set of messages lands in two places.
+-}
+update :
+    Msg
+    -> { comparison : Comparison, panel : Model }
+    -> { comparison : Comparison, panel : Model }
+update msg state =
+    let
+        (Comparison comparison) =
+            state.comparison
 
-            SelectedWindow window ->
-                { state | window = window }
+        (Model showing) =
+            state.panel
+    in
+    case msg of
+        SelectedChart chart ->
+            { state | comparison = Comparison { comparison | chart = chart } }
 
-            ToggledLapHistory ->
-                { state | lapHistoryOpen = not state.lapHistoryOpen }
+        SelectedWindow window ->
+            { state | comparison = Comparison { comparison | window = window } }
+
+        ToggledLapHistory ->
+            { state | panel = Model { showing | lapHistoryOpen = not showing.lapHistoryOpen } }
 
 
-view : (Msg -> msg) -> Model -> List Car -> Snapshot -> Maybe CarAt -> Html msg
-view toMsg (Model state) cars snapshot focusedCar =
-    div [ id elementId ]
+{-| The panel, marked with the car it is drawing, which the visual tests locate
+it by: an `id` would name one panel, and the reader can have several of these
+open at once.
+-}
+view :
+    { toMsg : Msg -> msg
+    , onEntrant : Maybe msg
+    , onClose : Maybe msg
+    , comparison : Comparison
+    , showing : Model
+    }
+    -> List Car
+    -> Snapshot
+    -> Maybe CarAt
+    -> Html msg
+view config cars snapshot focusedCar =
+    div [ attribute "data-car-detail" (focusedCar |> Maybe.map (.metadata >> .carNumber) |> Maybe.withDefault "") ]
         [ case focusedCar of
             Nothing ->
                 -- Only before a car of the field has turned a lap, which is not
@@ -109,19 +146,23 @@ view toMsg (Model state) cars snapshot focusedCar =
                 text ""
 
             Just focused ->
-                Html.map toMsg (panel state cars snapshot focused)
+                div [ class "grid gap-y-3" ]
+                    [ Header.view
+                        { startPosition = startPositionOf cars focused
+                        , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
+                        , onEntrant = config.onEntrant
+                        , onClose = config.onClose
+                        }
+                        focused
+                    , Html.map config.toMsg (panel config.comparison config.showing cars snapshot focused)
+                    ]
         ]
 
 
-{-| The element the detail is drawn in, which the visual tests locate it by.
+{-| Everything under the header, which is the column's own and reports to it.
 -}
-elementId : String
-elementId =
-    "car-detail"
-
-
-panel : State -> List Car -> Snapshot -> CarAt -> Html Msg
-panel state cars snapshot focused =
+panel : Comparison -> Model -> List Car -> Snapshot -> CarAt -> Html Msg
+panel comparison (Model showing) cars snapshot focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -130,15 +171,10 @@ panel state cars snapshot focused =
             rivalsOf snapshot focused
     in
     div [ class "grid gap-y-3" ]
-        [ Header.view
-            { startPosition = startPositionOf cars focused
-            , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
-            }
-            focused
-        , container "Lap times"
+        [ container "Lap times"
             (LapTimes.view
                 { bestTimes = Snapshot.bestTimes snapshot
-                , historyOpen = state.lapHistoryOpen
+                , historyOpen = showing.lapHistoryOpen
                 , onToggleHistory = ToggledLapHistory
                 }
                 (lapsOf cars focused)
@@ -150,32 +186,19 @@ panel state cars snapshot focused =
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
-        , charts state snapshot rivals
+        , charts comparison snapshot rivals
         ]
 
 
-{-| What the three charts are all drawn from, built once here so that the tabs
-switch the chart and nothing else about what is being shown.
--}
-type alias Comparison =
-    { range : LapRange
-    , snapshot : Snapshot
-    , rivals : Rivals
-    }
-
-
-charts : State -> Snapshot -> Rivals -> Html Msg
-charts state snapshot rivals =
+charts : Comparison -> Snapshot -> Rivals -> Html Msg
+charts ((Comparison { window }) as comparison) snapshot rivals =
     let
-        comparison =
-            { range = LapWindow.range state.window (Rivals.class rivals) snapshot
-            , snapshot = snapshot
-            , rivals = rivals
-            }
+        range =
+            LapWindow.range window (Rivals.class rivals) snapshot
     in
     container "Rivals"
         (div [ class "grid gap-y-2" ]
-            [ chartTabs state comparison
+            [ chartTabs comparison range snapshot rivals
             , legend snapshot rivals
             ]
         )
@@ -249,16 +272,16 @@ of laps for reasons of their own -- a stretch holding none of the cars drawn, a
 class with no line to draw, no lap time to describe -- and a wording apiece reads
 as the tabs disagreeing about the race.
 -}
-chartTabs : State -> Comparison -> Html Msg
-chartTabs state { range, snapshot, rivals } =
+chartTabs : Comparison -> LapRange -> Snapshot -> Rivals -> Html Msg
+chartTabs (Comparison { chart, window }) range snapshot rivals =
     let
         orEmptyState : Maybe (Html Msg) -> Html Msg
         orEmptyState =
             Maybe.withDefault (emptyState "No laps to compare yet")
     in
     ChartTabs.chartTabs SelectedChart
-        state.chart
-        (ChartTabs.segmentedControl SelectedWindow state.window windowOptions)
+        chart
+        (ChartTabs.segmentedControl SelectedWindow window windowOptions)
         [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
         , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )

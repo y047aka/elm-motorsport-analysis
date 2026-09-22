@@ -1,14 +1,14 @@
 module View.LiveStandings exposing (view)
 
 {-| The field by class, in running order, and the page's one place for picking
-the car everything else is shown for.
+the cars the middle of it is given over to.
 
 @docs view
 
 -}
 
 import Html exposing (Html, button, div, li, text)
-import Html.Attributes exposing (attribute, class)
+import Html.Attributes exposing (attribute, class, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
@@ -20,12 +20,19 @@ import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| `selected` is the car the rest of the page is following, which is always one
-of them: clicking a row hands `onSelect` the car it names, and there is no
-clicking a car away again.
+{-| `shown` is the cars the middle of the page has columns open for, which is
+always at least one of them. Clicking a row hands `onSelect` the car it names
+and it is given a column of its own; clicking a row that already has one does
+nothing, and there is no clicking a car away again -- a column is closed from
+the column itself.
+
+`atLimit` is whether the page will take another column at all. A row that it
+will not take says so on itself rather than going quietly dead under the
+reader.
+
 -}
-view : { onSelect : CarNumber -> msg, selected : Maybe CarNumber } -> Snapshot -> Html msg
-view { onSelect, selected } snapshot =
+view : { onSelect : CarNumber -> msg, shown : List CarNumber, atLimit : Bool } -> Snapshot -> Html msg
+view { onSelect, shown, atLimit } snapshot =
     div
         [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5" ]
         (List.map
@@ -43,13 +50,14 @@ view { onSelect, selected } snapshot =
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
-                                    , Lazy.lazy6 carRow
+                                    , Lazy.lazy7 carRow
                                         onSelect
                                         item.metadata
                                         item.standing.position
                                         (Driver.toSurname item.currentDriver)
                                         (item.status == Status.InPit)
-                                        (selected == Just item.metadata.carNumber)
+                                        (List.member item.metadata.carNumber shown)
+                                        atLimit
                                     )
                                 )
                         )
@@ -69,28 +77,38 @@ columns, which are the position and driver the reader already has in front of
 them.
 
 -}
-carRow : (CarNumber -> msg) -> Metadata -> Int -> String -> Bool -> Bool -> Html msg
-carRow onSelect metadata position driverSurname isInPit isSelected =
+carRow : (CarNumber -> msg) -> Metadata -> Int -> String -> Bool -> Bool -> Bool -> Html msg
+carRow onSelect metadata position driverSurname isInPit isShown atLimit =
     li []
         [ button
-            [ onClick (onSelect metadata.carNumber)
-            , attribute "aria-label" ("Car #" ++ metadata.carNumber)
-            , attribute "aria-pressed"
-                (if isSelected then
+            ([ attribute "aria-label" ("Car #" ++ metadata.carNumber)
+             , attribute "aria-pressed"
+                (if isShown then
                     "true"
 
                  else
                     "false"
                 )
-            , class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word] rounded cursor-pointer transition-colors"
-            , class
-                (if isSelected then
-                    "bg-accent text-accent-foreground"
+             , class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
+             ]
+                ++ (if isShown then
+                        -- No handler: the car already has a column, and the
+                        -- press that would give it one is the press that
+                        -- gave it the one it has.
+                        [ class "bg-accent text-accent-foreground" ]
 
-                 else
-                    "hover:bg-accent/40"
-                )
-            ]
+                    else if atLimit then
+                        [ attribute "aria-disabled" "true"
+                        , title "The middle of the page is full"
+                        , class "opacity-60"
+                        ]
+
+                    else
+                        [ onClick (onSelect metadata.carNumber)
+                        , class "cursor-pointer hover:bg-accent/40"
+                        ]
+                   )
+            )
             [ div [ class "text-center text-xs" ] [ text (String.fromInt position) ]
             , CarNumberBadge.viewRow metadata
             , div [ class "text-xs" ]
