@@ -137,7 +137,9 @@ stintBar metadata summary =
         text ""
 
     else
-        div [ class "flex gap-x-px h-5 rounded overflow-hidden" ]
+        -- h-6: the bar is the one thing in the panel drawn at a size rather
+        -- than written at one, and the lap counts sit inside it.
+        div [ class "flex gap-x-px h-6 rounded overflow-hidden" ]
             (List.map (stintSegment metadata totalLaps) summary.stints)
 
 
