@@ -32,9 +32,9 @@ is the baseline the lap carries. The race's records are not read: a table of one
 car's laps is the one place a colour for "quickest of sixty-two cars" never
 fires, while the lap that moved this car's own best is on every one of them.
 
-The rows are cut into the runs they were driven in, each under a heading naming
-the run and whose it was. The driver changes where the runs change, which is
-where the heading is, so no column of the table repeats the name down it.
+The rows are cut into the stints they were driven in, each under a heading
+naming its driver, by the same `Motorsport.Race.Stint` reading as the section
+above.
 
 -}
 view : List Lap -> Int -> Html msg
@@ -55,23 +55,11 @@ rows laps lapsCompleted =
                         [ tr [ class "text-[9px] uppercase tracking-[0.03em] text-muted-foreground" ]
                             (heading "Lap" :: heading "Time" :: List.map (Sector.toString >> heading) Sector.all ++ [ heading "Pit" ])
                         ]
-                    , tbody [] (List.concatMap (stintRows completed) (runsOf completed))
+                    , tbody [] (List.concatMap (stintRows completed) (RaceStint.fromLaps completed))
                     ]
                 ]
 
 
-{-| The runs, in the order they were driven. Cut by the same reading as
-everywhere else the page says "stint", so the table and the section above it
-break the race in the same places.
--}
-runsOf : List Lap -> List Stint
-runsOf =
-    RaceStint.fromLaps
-
-
-{-| A run's heading and the laps of it, ascending within the run as the runs
-themselves are.
--}
 stintRows : List Lap -> Stint -> List (Html msg)
 stintRows completed stint =
     stintHeading stint

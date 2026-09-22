@@ -20,12 +20,9 @@ import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| A row is marked when its car has a column -- the cars standing in before
-anything has been chosen among them included, a stand-in having a column like
-any other. Clicking a row hands `onSelect` the car it names and it is given
-one; clicking a marked row does nothing, and there is no clicking a car away
-again. A mark comes off only when that row's column is closed, which is done
-from the column itself.
+{-| A row is marked when its car is in `withColumns`. Clicking an unmarked row
+hands `onSelect` the car it names; a marked row does nothing, its column being
+closed from the column itself.
 
 `onSelect` is held as it is handed over, so pass a message constructor: the
 rows are thunked, and a lambda or a composition built afresh on each render
@@ -35,10 +32,8 @@ compares unequal and draws every one of them again.
 view : { onSelect : CarNumber -> msg, withColumns : List CarNumber } -> Snapshot -> Html msg
 view { onSelect, withColumns } snapshot =
     div
-        -- Marked, which the visual tests locate the standings by: the cell it
-        -- sits in is named by the Tailwind utilities that place it, and those
-        -- are not its own -- a panel's header grid places its cells with the
-        -- same ones.
+        -- Which the visual tests locate the standings by: the utilities
+        -- placing its cell are used by a panel's header grid too.
         [ attribute "data-live-standings" ""
         , class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5"
         ]
@@ -98,9 +93,6 @@ carRow onSelect metadata position driverSurname isInPit hasColumn =
              , class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
              ]
                 ++ (if hasColumn then
-                        -- No handler: the car already has a column, and the
-                        -- press that would give it one is the press that
-                        -- gave it the one it has.
                         [ class "bg-accent text-accent-foreground" ]
 
                     else

@@ -60,10 +60,6 @@ init =
 
 
 {-| Which chart the rivals are drawn in, and how much of the race it covers.
-
-The page hands every column the same one: a neighbour drawing a different chart
-over a different stretch of the race is not something to read anything against.
-
 -}
 type Comparison
     = Comparison
@@ -101,8 +97,6 @@ type Msg
     | ToggledLapHistory
 
 
-{-| Takes both, because one set of messages lands in two places.
--}
 update :
     Msg
     -> { comparison : Comparison, panel : Model }
@@ -126,14 +120,7 @@ update msg state =
             { state | panel = Model { showing | lapHistoryOpen = not showing.lapHistoryOpen } }
 
 
-{-| The panel, marked with the car it is drawing, which the visual tests locate
-it by: an `id` would name one panel, and the reader can have several of these
-open at once.
-
-The car is the one the column was opened for, so it is a car and not a `Maybe`
-one: a field with nothing in it yet is a page with no columns, which the page
-draws without asking for a panel at all.
-
+{-| The panel carries `data-car-detail`, which the visual tests locate it by.
 -}
 view :
     { toMsg : Msg -> msg
@@ -167,10 +154,8 @@ view config cars snapshot focused =
 {-| The gap a classification prints between two cars: the time between them
 where the road holds them together, and the whole laps where it does not.
 
-No gap at all where one of them is not there, which is what a class runs out of
-at its edges, and none where they are the same car -- a car leading its class is
-asked for its gap to the leader like any other, and does not lead itself by
-nought.
+No gap at all where one of them is not there, and none where they are the same
+car: a car leading its class is asked for its gap to the leader too.
 
 -}
 gapOf : Snapshot -> { inFront : Maybe CarAt, chasing : Maybe CarAt } -> Gap
@@ -192,18 +177,6 @@ gapOf snapshot pair =
             Gap.none
 
 
-{-| Everything under the header, which is the column's own and reports to it.
-
-The rivals are named first, under the header and above everything measured: the
-three of them are where the header's standing line stops, so a reader has who
-this car is racing before they have a single time. Then the lap it is turning,
-then those three drawn out over the race, then the shape of the race it has run.
-
-The lap table is last because it is the one thing here that is not a summary:
-four hundred rows opened in the middle would push everything a reader had come
-for off the bottom of a column.
-
--}
 panel : Comparison -> Model -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
 panel comparison (Model showing) cars snapshot rivals focused =
     let
@@ -235,8 +208,6 @@ panel comparison (Model showing) cars snapshot rivals focused =
         ]
 
 
-{-| The three cars of the fight drawn out over the race, one view at a time.
--}
 charts : Comparison -> Snapshot -> Rivals -> Html Msg
 charts ((Comparison { window }) as comparison) snapshot rivals =
     let
@@ -253,7 +224,7 @@ showing at a time, and a stretch that changed as the tabs did would read as the
 chart changing.
 
 The durations are given bare: this row is the widest thing in the panel, and
-what it asks for is what a column has to be.
+sets how wide a column has to be.
 
 -}
 windowOptions : List ( LapWindow, String )
@@ -269,8 +240,7 @@ order to each. Only these are named, whatever else a chart below draws behind
 them.
 
 A row's time is measured against the row above it rather than out from the car
-the panel is for, which is how a classification prints an interval and how the
-header above reads.
+the panel is for, which is how a classification prints an interval.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
@@ -333,9 +303,8 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
     ChartTabs.chartTabs SelectedChart
         chart
         (ChartTabs.segmentedControl SelectedWindow window windowOptions)
-        -- `Gap` alone, the row being what decides how narrow a column can
-        -- be: what it is a gap to is said by the chart, whose baseline is
-        -- drawn and labelled where the reader is looking.
+        -- `Gap` alone: this row sets how narrow a column can be, and the
+        -- chart labels its own baseline.
         [ ( GapChart, "Gap", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
         , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
@@ -365,13 +334,8 @@ carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
 
 
-{-| A section the reader opens, drawn as the sections above it are so that the
-panel keeps one rhythm. The title is the control: a title with a control beside
-it would be two things to press for one thing to happen.
-
-The content is a thunk, so a table the reader has not asked for is not built
+{-| The content is a thunk, so a table the reader has not asked for is not built
 sixty times a second behind a closed section.
-
 -}
 disclosure : { title : String, open : Bool, onToggle : msg } -> (() -> Html msg) -> Html msg
 disclosure config content =
@@ -417,14 +381,6 @@ container title content =
         ]
 
 
-{-| What a section is, which is a title and its content and a rule above to say
-where the one before it ended. A rule rather than a card: the column is already
-a card, and boxing what is in it says nothing except that its parts are parts.
-
-The rule is skipped on the first section, which the header above it already
-parts from, and so is the padding the rule needs under it.
-
--}
 sectionClass : String
 sectionClass =
     "grid gap-y-2 py-3 border-t border-t-border first:border-t-0 first:pt-0"

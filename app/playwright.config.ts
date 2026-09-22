@@ -26,9 +26,7 @@ export default defineConfig({
       //
       // The room a shot needs grows with how much text and how many chart
       // strokes it holds: the panel on its own sat under 0.0003, two panels
-      // side by side wanted 0.0004 and the standings 0.00032. A local run is a
-      // smoke test either way -- CI holds the baselines to the pixel, which is
-      // where a real change is caught.
+      // side by side wanted 0.0004 and the standings 0.00032.
       stylePath: './tests/screenshot.css',
       ...(process.env.CI
         ? { maxDiffPixels: 0 }

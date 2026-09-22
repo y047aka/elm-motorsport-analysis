@@ -25,9 +25,7 @@ off the opening lap rather than reading off a grid sheet.
 
 `toLeader` is the caller's rather than read off the car, because a `CarAt`
 carries the gap to the field's leader and this line reports the car's class --
-which for an LMGT3 car is several laps and another race away. It is the only gap
-left here: the rivals either side are named, placed and timed in the section
-directly below.
+which for an LMGT3 car is several laps and another race away.
 
 `onClose` closes the column, and is `Nothing` for the only column on show.
 
@@ -46,11 +44,6 @@ view { startPosition, toLeader, onClose } item =
         ]
 
 
-{-| The car itself, side on, at the right of the row the badge and the name are
-on. Its width is the name's loss, the name being the one thing on the row with
-more to say than fits, and a car in profile stays legible far smaller than a
-string of words does.
--}
 portrait : Maybe String -> CarAt -> Html msg
 portrait carImageUrl item =
     case carImageUrl of
@@ -59,10 +52,8 @@ portrait carImageUrl item =
                 [ src url
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
 
-                -- To the end of the row: the last column is the close
-                -- button's, which is on the row above, and a picture stopping
-                -- short of the edge for a button that is not beside it reads
-                -- as a margin nothing asked for.
+                -- Through the last column, which is the close button's on the
+                -- row above.
                 , class "col-start-3 -col-end-1 row-start-2 justify-self-end self-center w-[104px] h-auto object-contain"
                 ]
                 []
@@ -72,18 +63,6 @@ portrait carImageUrl item =
 
 
 {-| Two rows: where the car stands, and who it is.
-
-The standing -- its place in the field, and the class it holds that place in --
-is not part of the car's name and does not belong on the line with it. Put
-above, it leaves the number badge to start where the team's name starts, the
-two of them being the one thing and read together, instead of the badge sitting
-a line higher than everything it labels. Everything below this line is the
-class's, so the field's place is said once, here.
-
-Within the lower row the name has a line to itself: sharing one with the badges
-left it what they did not want, which in a column is not much, and the name is
-the part worth reading in full.
-
 -}
 nameplate : { startPosition : Maybe Position, onClose : Maybe msg } -> CarAt -> Html msg
 nameplate { startPosition, onClose } item =
@@ -94,25 +73,17 @@ nameplate { startPosition, onClose } item =
             ]
         , div [ class "col-start-4 row-start-1" ] [ corner onClose item.status ]
 
-        -- The three of the lower row are centred on it rather than hung from
-        -- its top: they are three heights of the same thing, and the tallest
-        -- of them deciding where the other two begin left the name and the
-        -- picture riding high against a badge neither of them matches.
+        -- Centred rather than hung from the top: the three are different
+        -- heights, and the tallest would otherwise set where the others begin.
         , div [ class "col-start-1 row-start-2 self-center" ] [ CarNumberBadge.view item.metadata ]
         , div [ class "col-start-2 row-start-2 self-center grid gap-y-0.5 min-w-0" ]
-            [ -- Level with the position and the class badge above it: the
-              -- header says four short things and one long one, and the long
-              -- one is found by its length rather than by its size.
-              div [ class "text-[12px] truncate" ] [ text item.metadata.team ]
+            [ div [ class "text-[12px] truncate" ] [ text item.metadata.team ]
             , currentDriver item
             ]
         , portrait item.metadata.imageUrl item
         ]
 
 
-{-| The top right of the header: the status badge, and beside it the close
-button wherever there is more than one column to close.
--}
 corner : Maybe msg -> Status -> Html msg
 corner onClose status =
     case onClose of
@@ -132,10 +103,7 @@ corner onClose status =
                 ]
 
 
-{-| Where the car stands in the field -- the field's and not the class's, which
-the strip below reports -- and how far it has come to stand there. Drawn no
-larger than the class badge beside it: none of the three is read before the
-others.
+{-| The field's place and not the class's, which the strip below reports.
 -}
 fieldPosition : Maybe Position -> CarAt -> Html msg
 fieldPosition startPosition item =
@@ -176,21 +144,12 @@ classBadge item =
         [ text (Class.toString item.metadata.class) ]
 
 
-{-| The driver out on the car, and only that one. The whole entry is three names
-on a line, which in a column this wide is three lines of a header that has four
-of them; which of the three is driving is the part that changes as the race runs
-and the part a reader is looking for.
--}
 currentDriver : CarAt -> Html msg
 currentDriver item =
     div [ class "text-[11px] truncate" ]
         [ text (Driver.toInitialAndSurname item.currentDriver) ]
 
 
-{-| The three readings neither the line above nor the section below gives:
-where the car stands in its class, how far it has come, and how far that is
-from the front of the class.
--}
 standing : Gap -> CarAt -> Html msg
 standing toLeader item =
     div [ class "border border-border rounded-lg grid grid-cols-3" ]

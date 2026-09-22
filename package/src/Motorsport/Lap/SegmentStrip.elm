@@ -195,10 +195,6 @@ progressCell label state =
         []
 
 
-{-| How tall a segment reads as, and the one figure for both kinds of cell: a
-strip whose finished segments stood taller than the segment in progress would
-read as two strips.
--}
 cellClass : String
 cellClass =
     "h-[6px] rounded-[1px]"

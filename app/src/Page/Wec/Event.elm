@@ -56,30 +56,14 @@ type alias Model =
     }
 
 
-{-| What the middle of the page is given over to. The tracker takes the room the
-columns need, so the two are never both on show.
--}
 type Mode
     = Columns
     | Tracker
 
 
-{-| The columns the middle of the page is holding, as the cars they are for.
-
-`ClassLeaders` is the page's own: the car at the front of each class, re-read
-from the snapshot as the race runs, which is what the page opens on.
-`Picked` is the reader's, fixed, in the order they asked for them.
-
-The two are drawn alike -- marked in the standings, each with a close button --
-because a mark there says the car has a column, which is as true of a stand-in
-as of a pick. What separates them is only that one follows the race, and any
-word from the reader ends that: a pick joins them, a close takes one away, and
-either settles the rest where they stand.
-
-`Picked` holds its head apart from its tail because the middle of the page is
-never without a column. Closing the last one is not a thing the view declines
-to offer -- it is not a state.
-
+{-| `ClassLeaders` is the car at the front of each class, re-read from the
+snapshot as the race runs. `Picked` is fixed, in the order the reader asked for
+them, and any open or close settles the stand-ins into one.
 -}
 type CarColumns
     = ClassLeaders
@@ -163,8 +147,6 @@ update shared msg m =
             )
 
 
-{-| A round still on its way has no columns to open or close.
--}
 rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
 rearrange shared f columns =
     case Shared.loadedRound shared of
@@ -175,16 +157,8 @@ rearrange shared f columns =
             columns
 
 
-{-| A column for `carNumber`, opened at the end of the ones already up -- the
-stand-ins among them, so that nothing a press does takes a column away. A car
-that already has a column keeps the one it has rather than being moved to the
-end.
-
-There is no ceiling on how many. The cell scrolls sideways however many there
-are, and the cost of a column the reader has opened is the reader's to weigh --
-each draws its own charts on every frame of playback, so a great many of them
-running is a great deal of work.
-
+{-| There is no ceiling on how many, and each column draws its own charts on
+every frame of playback.
 -}
 openColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
 openColumn carNumber snapshot columns =
@@ -199,10 +173,6 @@ openColumn carNumber snapshot columns =
         pickedOr columns (current ++ [ carNumber ])
 
 
-{-| The column for `carNumber` taken away, and whatever is left held where it
-stands: closing one stand-in says the others are worth the room, which a set
-still following the race would answer by replacing them.
--}
 closeColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
 closeColumn carNumber snapshot columns =
     columnCarNumbers snapshot columns
@@ -210,10 +180,6 @@ closeColumn carNumber snapshot columns =
         |> pickedOr columns
 
 
-{-| `Picked` from a list the caller knows is not empty, or the columns as they
-stand where it is empty after all -- which is the same answer the view gives by
-withholding the close button from a column that is the only one.
--}
 pickedOr : CarColumns -> List CarNumber -> CarColumns
 pickedOr fallback carNumbers =
     case carNumbers of
@@ -312,15 +278,11 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
-        -- Resolved once. The standings are marked from this and not from
-        -- `layout.shown`, which the tracker empties: going back from the
-        -- tracker is going back to what was there, and the marks say so while
-        -- it is up.
+        -- The standings are marked from this and not from `layout.shown`,
+        -- which the tracker empties.
         carsWithColumns =
             shownCars snapshot m.columns
 
-        -- Everything the mode decides, read off it once. `shown` is empty under
-        -- the tracker, which has the room the columns want.
         layout =
             case m.mode of
                 Tracker ->
@@ -373,10 +335,6 @@ trackerView track timeline snapshot replay m =
         ]
 
 
-{-| The cars the columns are for, as numbers: the ones the reader picked, in the
-order they picked them, or -- until they have picked any -- the car at the front
-of each class.
--}
 columnCarNumbers : Snapshot -> CarColumns -> List CarNumber
 columnCarNumbers snapshot columns =
     case columns of
@@ -393,14 +351,7 @@ shownCars snapshot columns =
         |> List.filterMap (\carNumber -> Snapshot.get carNumber snapshot)
 
 
-{-| The car at the front of each class -- one apiece, not one class's order.
-
-The front of each class rather than the front of the race, because the race is
-several races: the car leading the field is leading one of them, and a page that
-opened on it alone opened on a third of what was going on. The classes come in
-the order the running order puts them in, which is the order their leaders are
-in.
-
+{-| The classes come in the order their leaders run in.
 -}
 leaderOfEachClass : Snapshot -> List CarAt
 leaderOfEachClass snapshot =
@@ -408,23 +359,14 @@ leaderOfEachClass snapshot =
         |> List.filterMap (Tuple.second >> List.head)
 
 
-{-| The cars on show, side by side. A column is as wide as the panel needs
-rather than as wide as the cell can spare, so the third of them is already off
-the edge and the cell scrolls sideways to it.
-
-360px. The widest thing in the panel is the comparison's tab row, which wants
-302px of the 328 a column of this width hands it. The floor is 335, so the
-26px over is what is left for a font that is not the one this was measured in.
-
-One car is drawn in a column too, and not given the cell whole.
-
+{-| A column is 360px, not a share of the cell. The widest thing in the panel is
+the comparison's tab row, which wants 302px of the 328 a column of this width
+hands it. The floor is 335, so the 26px over is what is left for a font that is
+not the one this was measured in.
 -}
 columnStrip : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
 columnStrip cell m replay snapshot shown =
     let
-        -- Asked of what is drawn: a stand-in column is as closable as a picked
-        -- one, and closing it is what turns the rest of them into a pick. What
-        -- is never offered is the close of the only column there is.
         card =
             columnCard { closable = List.length shown > 1 } m replay snapshot
     in

@@ -53,9 +53,8 @@ segmentedControl onSelect active options =
 
 
 {-| One button of a group, at the size a panel column has room for and in the
-greys the playback controls use: the one that is pressed is filled, the rest are
-not. A colour here would be the page's one accent spent on saying which of three
-charts is up, next to charts drawing cars in the colours that mean something.
+greys the playback controls use. No colour: the charts beside it draw cars in
+the colours that mean something.
 -}
 segmentButton : (option -> msg) -> option -> String -> Bool -> Html msg
 segmentButton onSelect value label isActive =

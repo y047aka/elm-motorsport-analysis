@@ -324,9 +324,8 @@ inClass class (Snapshot s) =
         |> Maybe.withDefault []
 
 
-{-| The car leading the race, where there is one. The race, not a class of it:
-for a GT car this is a car several laps up the road in a contest it is not in.
-See [`classLeader`](#classLeader).
+{-| The car leading the race, where there is one -- not a class of it, which is
+[`classLeader`](#classLeader).
 -}
 leader : Snapshot -> Maybe CarAt
 leader (Snapshot s) =
@@ -334,12 +333,6 @@ leader (Snapshot s) =
 
 
 {-| The car at the front of one class, where the class has any cars.
-
-Read off the running order the snapshot already holds the class grouped by,
-rather than off a car's own rivals: the leader is not a car in the neighbourhood
-of any particular one, and a group built around a car is free to hold as few of
-its classmates as its own readers need.
-
 -}
 classLeader : Class -> Snapshot -> Maybe CarAt
 classLeader class snapshot =
