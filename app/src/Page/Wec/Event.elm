@@ -120,11 +120,6 @@ type Msg
     | CarDetailMsg CarNumber CarDetail.Msg
 
 
-{-| Takes the shared model because opening or closing a column has to know what
-the columns beside it hold: the stand-ins are whoever leads each class at this
-moment, and settling them into a fixed set is a question only the snapshot
-answers.
--}
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update shared msg m =
     case msg of
@@ -149,10 +144,10 @@ update shared msg m =
             )
 
         OpenColumn carNumber ->
-            ( { m | columns = openColumn shared carNumber m.columns }, Effect.none )
+            ( { m | columns = rearrange shared (openColumn carNumber) m.columns }, Effect.none )
 
         CloseColumn carNumber ->
-            ( { m | columns = closeColumn shared carNumber m.columns }, Effect.none )
+            ( { m | columns = rearrange shared (closeColumn carNumber) m.columns }, Effect.none )
 
         CarDetailMsg carNumber detailMsg ->
             let
@@ -168,6 +163,18 @@ update shared msg m =
             )
 
 
+{-| A round still on its way has no columns to open or close.
+-}
+rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
+rearrange shared f columns =
+    case Shared.loadedRound shared of
+        Just round ->
+            f round.snapshot columns
+
+        Nothing ->
+            columns
+
+
 {-| A column for `carNumber`, opened at the end of the ones already up -- the
 stand-ins among them, so that nothing a press does takes a column away. A car
 that already has a column keeps the one it has rather than being moved to the
@@ -179,26 +186,26 @@ each draws its own charts on every frame of playback, so a great many of them
 running is a great deal of work.
 
 -}
-openColumn : Shared.Model -> CarNumber -> CarColumns -> CarColumns
-openColumn shared carNumber columns =
+openColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
+openColumn carNumber snapshot columns =
     let
-        selected =
-            selectedCarNumbers shared columns
+        current =
+            columnCarNumbers snapshot columns
     in
-    if List.member carNumber selected then
+    if List.member carNumber current then
         columns
 
     else
-        pickedOr columns (selected ++ [ carNumber ])
+        pickedOr columns (current ++ [ carNumber ])
 
 
 {-| The column for `carNumber` taken away, and whatever is left held where it
 stands: closing one stand-in says the others are worth the room, which a set
 still following the race would answer by replacing them.
 -}
-closeColumn : Shared.Model -> CarNumber -> CarColumns -> CarColumns
-closeColumn shared carNumber columns =
-    selectedCarNumbers shared columns
+closeColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
+closeColumn carNumber snapshot columns =
+    columnCarNumbers snapshot columns
         |> List.filter ((/=) carNumber)
         |> pickedOr columns
 
@@ -215,30 +222,6 @@ pickedOr fallback carNumbers =
 
         first :: rest ->
             Picked first rest
-
-
-{-| What the columns amount to, in car numbers -- the reader's own list, or the
-cars standing in for it, which is a question for the snapshot.
-
-Not the numbers of [`shownCars`](#shownCars), which is what the columns are
-actually drawn for: that one answers the field and drops a car the snapshot has
-no lap for at this moment. Opening and closing work from this list instead, so
-that scrubbing back past a car's first lap does not quietly drop a car the
-reader chose.
-
-A round still on its way names nothing, and has no columns to close.
-
--}
-selectedCarNumbers : Shared.Model -> CarColumns -> List CarNumber
-selectedCarNumbers shared columns =
-    case columns of
-        ClassLeaders ->
-            Shared.loadedRound shared
-                |> Maybe.map (.snapshot >> leaderOfEachClass >> List.map (.metadata >> .carNumber))
-                |> Maybe.withDefault []
-
-        Picked first rest ->
-            first :: rest
 
 
 panelFor : CarNumber -> Model -> CarDetail.Model
@@ -390,28 +373,24 @@ trackerView track timeline snapshot replay m =
         ]
 
 
-{-| The cars the columns are drawn for, answered against the field: the ones the
-reader picked and the snapshot has a lap for, in the order they picked them,
-and -- until they have picked any, or when not one of the ones they picked is
-out there -- the car at the front of each class.
-
-[`selectedCarNumbers`](#selectedCarNumbers) is the list this is resolved from,
-and is not the same set.
-
+{-| The cars the columns are for, as numbers: the ones the reader picked, in the
+order they picked them, or -- until they have picked any -- the car at the front
+of each class.
 -}
-shownCars : Snapshot -> CarColumns -> List CarAt
-shownCars snapshot columns =
+columnCarNumbers : Snapshot -> CarColumns -> List CarNumber
+columnCarNumbers snapshot columns =
     case columns of
         ClassLeaders ->
-            leaderOfEachClass snapshot
+            leaderOfEachClass snapshot |> List.map (.metadata >> .carNumber)
 
         Picked first rest ->
-            case List.filterMap (\carNumber -> Snapshot.get carNumber snapshot) (first :: rest) of
-                [] ->
-                    leaderOfEachClass snapshot
+            first :: rest
 
-                picked ->
-                    picked
+
+shownCars : Snapshot -> CarColumns -> List CarAt
+shownCars snapshot columns =
+    columnCarNumbers snapshot columns
+        |> List.filterMap (\carNumber -> Snapshot.get carNumber snapshot)
 
 
 {-| The car at the front of each class -- one apiece, not one class's order.
