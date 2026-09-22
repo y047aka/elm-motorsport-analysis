@@ -47,10 +47,15 @@ view { startPosition, toLeader, onClose } item =
         ]
 
 
-{-| The car itself, side on, in the width the name and the drivers leave beside
+{-| The car itself, side on, in the width the name and the driver leave beside
 them: the panel is wide enough that a line of text does not fill it, where a row
 of the photograph's own took more of the panel's height than the lap times below
 it.
+
+It sits on their row rather than across both, as the number badge does. The
+badge, the name and the picture are the one thing -- which car this is -- and
+the line above them is where it stands, which is not.
+
 -}
 portrait : Maybe String -> CarAt -> Html msg
 portrait carImageUrl item =
@@ -59,7 +64,10 @@ portrait carImageUrl item =
             img
                 [ src url
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
-                , class "self-center w-[120px] h-auto object-contain"
+
+                -- Placed itself rather than wrapped in a box that is placed,
+                -- there being nothing for the box to do.
+                , class "col-start-3 row-start-2 w-[120px] h-auto object-contain"
                 ]
                 []
 
@@ -93,8 +101,7 @@ who { startPosition, onClose } item =
             [ div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
             , currentDriver item
             ]
-        , div [ class "col-start-3 row-start-1 row-span-2 self-center" ]
-            [ portrait item.metadata.imageUrl item ]
+        , portrait item.metadata.imageUrl item
         ]
 
 
