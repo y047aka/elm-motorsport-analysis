@@ -188,8 +188,10 @@ test.describe('Car Detail Columns', () => {
     await selectCar(page, '12');
     await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Positions' }).click();
     for (let i = 0; i < 2; i++) {
+      // Asked of the button rather than of its classes: the greys it is drawn
+      // in now name the pressed one and the hover of the rest alike.
       await expect(page.locator(DETAIL).nth(i).getByRole('button', { name: 'Positions' }))
-        .toHaveClass(/bg-primary/);
+        .toHaveAttribute('aria-pressed', 'true');
     }
   });
 

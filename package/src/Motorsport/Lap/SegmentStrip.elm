@@ -187,7 +187,7 @@ progressCell label state =
                     ( "100%", colorOfRated rated )
     in
     div
-        [ class "h-[3px] rounded-[1px]"
+        [ class cellClass
         , style "width" widthPercent
         , style "background-color" backgroundColor_
         , title (readingOf label (Performance.ratedOf state))
@@ -195,12 +195,21 @@ progressCell label state =
         []
 
 
+{-| How tall a segment reads as, and the one figure for both kinds of cell: a
+strip whose finished segments stood taller than the segment in progress would
+read as two strips.
+-}
+cellClass : String
+cellClass =
+    "h-[6px] rounded-[1px]"
+
+
 {-| One cell of a strip drawn from a segment that is over.
 -}
 ratedCell : String -> Maybe RatedTime -> Html msg
 ratedCell label rated =
     div
-        [ class "h-[3px] rounded-[1px]"
+        [ class cellClass
         , style "background-color" (colorOfRated rated)
         , title (readingOf label rated)
         ]

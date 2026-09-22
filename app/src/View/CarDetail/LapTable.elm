@@ -11,12 +11,13 @@ a chart raised a question about is in here whichever lap it was.
 -}
 
 import Html exposing (Html, div, table, tbody, td, text, th, thead, tr)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, colspan, style)
 import Html.Lazy as Lazy
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Sector as Sector
 
 
@@ -30,6 +31,11 @@ Each time is rated against the driver's best up to the lap it was set on, which
 is the baseline the lap carries. The race's records are not read: a table of one
 car's laps is the one place a colour for "quickest of sixty-two cars" never
 fires, while the lap that moved this car's own best is on every one of them.
+
+The rows are cut into the runs they were driven in, each under a heading naming
+the run and whose it was. A column of the driver's name repeated down forty rows
+said the same thing in the width the times want -- the name changes where the
+runs change, and that is where the heading is.
 
 -}
 view : List Lap -> Int -> Html msg
@@ -48,15 +54,50 @@ rows laps lapsCompleted =
                 [ table [ class "w-full border-collapse text-[11px] tabular-nums" ]
                     [ thead [ class "sticky top-0 bg-background" ]
                         [ tr [ class "text-[9px] uppercase tracking-[0.03em] text-muted-foreground" ]
-                            (heading "Lap" :: heading "Driver" :: heading "Time" :: List.map (Sector.toString >> heading) Sector.all ++ [ heading "Pit" ])
+                            (heading "Lap" :: heading "Time" :: List.map (Sector.toString >> heading) Sector.all ++ [ heading "Pit" ])
                         ]
-                    , tbody []
-                        (completed
-                            |> List.sortBy (.lap >> negate)
-                            |> List.map row
-                        )
+                    , tbody [] (List.concatMap (stintRows completed) (runsOf completed))
                     ]
                 ]
+
+
+{-| The runs, newest first. Cut by the same reading as everywhere else the page
+says "stint", so the table and the section above it break the race in the same
+places.
+-}
+runsOf : List Lap -> List Stint
+runsOf completed =
+    RaceStint.fromLaps completed |> List.reverse
+
+
+{-| A run's heading and the laps of it, newest first within the run as the runs
+themselves are.
+-}
+stintRows : List Lap -> Stint -> List (Html msg)
+stintRows completed stint =
+    stintHeading stint
+        :: (completed
+                |> List.filter (\lap -> lap.lap >= stint.firstLap && lap.lap <= stint.lastLap)
+                |> List.sortBy (.lap >> negate)
+                |> List.map row
+           )
+
+
+stintHeading : Stint -> Html msg
+stintHeading stint =
+    tr [ class "border-t border-t-border" ]
+        [ td
+            [ colspan (2 + List.length Sector.all + 1)
+            , class "py-1 px-1 text-[9px] uppercase tracking-[0.03em] text-muted-foreground"
+            ]
+            [ text
+                ("Stint "
+                    ++ String.fromInt stint.number
+                    ++ " · "
+                    ++ Driver.toInitialAndSurname stint.driver
+                )
+            ]
+        ]
 
 
 heading : String -> Html msg
@@ -68,8 +109,6 @@ row : Lap -> Html msg
 row lap =
     tr [ class "border-t border-t-border" ]
         (td [ class "py-0.5 px-1" ] [ text (String.fromInt lap.lap) ]
-            :: td [ class "py-0.5 px-1 text-right text-muted-foreground" ]
-                [ text (Driver.toSurname lap.driver) ]
             :: timeCell (againstOwnBest { time = lap.time, personalBest = lap.best })
             :: (Sector.values lap.sectors |> List.map (againstOwnBest >> timeCell))
             ++ [ td [ class "py-0.5 px-1 text-right text-muted-foreground" ]

@@ -90,7 +90,7 @@ name is the part worth reading in full.
 -}
 who : { startPosition : Maybe Int, onClose : Maybe msg } -> CarAt -> Html msg
 who { startPosition, onClose } item =
-    div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 gap-y-0.5" ]
+    div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 gap-y-1.5" ]
         [ div [ class "col-start-1 col-span-2 row-start-1 flex items-center gap-x-2 min-w-0" ]
             [ overall startPosition item
             , classBadge item
