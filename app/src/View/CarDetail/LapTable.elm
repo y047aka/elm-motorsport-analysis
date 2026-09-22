@@ -1,6 +1,6 @@
 module View.CarDetail.LapTable exposing (view)
 
-{-| Every lap the car has turned, as it was timed, newest first.
+{-| Every lap the car has turned, as it was timed, in the order it was driven.
 
 Every chart on the page reads these laps and draws them as a shape; this is the
 numbers themselves, which is what a shape cannot be checked against -- so the lap
@@ -61,16 +61,16 @@ rows laps lapsCompleted =
                 ]
 
 
-{-| The runs, newest first. Cut by the same reading as everywhere else the page
-says "stint", so the table and the section above it break the race in the same
-places.
+{-| The runs, in the order they were driven. Cut by the same reading as
+everywhere else the page says "stint", so the table and the section above it
+break the race in the same places.
 -}
 runsOf : List Lap -> List Stint
-runsOf completed =
-    RaceStint.fromLaps completed |> List.reverse
+runsOf =
+    RaceStint.fromLaps
 
 
-{-| A run's heading and the laps of it, newest first within the run as the runs
+{-| A run's heading and the laps of it, ascending within the run as the runs
 themselves are.
 -}
 stintRows : List Lap -> Stint -> List (Html msg)
@@ -78,7 +78,7 @@ stintRows completed stint =
     stintHeading stint
         :: (completed
                 |> List.filter (\lap -> lap.lap >= stint.firstLap && lap.lap <= stint.lastLap)
-                |> List.sortBy (.lap >> negate)
+                |> List.sortBy .lap
                 |> List.map row
            )
 
@@ -102,13 +102,13 @@ stintHeading stint =
 
 heading : String -> Html msg
 heading label =
-    th [ class "py-0.5 px-1 text-right font-normal first:text-left" ] [ text label ]
+    th [ class "py-0.5 px-1 text-right font-normal" ] [ text label ]
 
 
 row : Lap -> Html msg
 row lap =
     tr [ class "border-t border-t-border" ]
-        (td [ class "py-0.5 px-1" ] [ text (String.fromInt lap.lap) ]
+        (td [ class "py-0.5 px-1 text-right" ] [ text (String.fromInt lap.lap) ]
             :: timeCell (againstOwnBest { time = lap.time, personalBest = lap.best })
             :: (Sector.values lap.sectors |> List.map (againstOwnBest >> timeCell))
             ++ [ td [ class "py-0.5 px-1 text-right text-muted-foreground" ]

@@ -66,8 +66,12 @@ portrait carImageUrl item =
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
 
                 -- Placed itself rather than wrapped in a box that is placed,
-                -- there being nothing for the box to do.
-                , class "col-start-3 row-start-2 self-center w-[120px] h-auto object-contain"
+                -- there being nothing for the box to do. It runs to the end of
+                -- the row: the last column is the close button's, which is on
+                -- the row above, and a picture stopping short of the edge for
+                -- a button that is not beside it reads as a margin nothing
+                -- asked for.
+                , class "col-start-3 -col-end-1 row-start-2 justify-self-end self-center w-[120px] h-auto object-contain"
                 ]
                 []
 
@@ -141,7 +145,7 @@ line is the class's, so the field's place is said once, here.
 -}
 overall : Maybe Int -> CarAt -> Html msg
 overall startPosition item =
-    div [ class "flex items-center gap-x-1.5 text-[11px] font-bold tabular-nums whitespace-nowrap" ]
+    div [ class "flex items-center gap-x-1.5 text-[12px] tabular-nums whitespace-nowrap" ]
         [ text ("P" ++ String.fromInt item.standing.position)
         , movement startPosition item.standing.position
         ]
@@ -161,13 +165,18 @@ movement startPosition position =
             text ""
 
         Just _ ->
-            viewPositionChange { startPosition = startPosition, position = position }
+            -- The shared cell draws its arrow bold, which is right in a column
+            -- of them and wrong on a line of text. `.x > div` outranks the
+            -- `.font-bold` the cell sets on itself, so the weight is settled
+            -- here rather than by changing what the cell is everywhere.
+            div [ class "[&>div]:font-normal" ]
+                [ viewPositionChange { startPosition = startPosition, position = position } ]
 
 
 classBadge : CarAt -> Html msg
 classBadge item =
     div
-        [ class "flex items-center gap-x-1 text-[11px] font-bold whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        [ class "flex items-center gap-x-1 text-[12px] whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
         , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
         ]
         [ text (Class.toString item.metadata.class) ]
