@@ -76,7 +76,10 @@ currentLap best item =
     lapBlock
         { label = "Current"
         , lapNumber = Just (item.standing.lapsCompleted + 1)
-        , time = Just { time = item.currentLap.elapsed, performance = item.currentLap.performance }
+        , -- Unrated: the lap is still being timed.
+          time =
+            div [ class "text-[14px] tabular-nums", style "color" Performance.inProgressColor ]
+                [ text (Duration.toString item.currentLap.elapsed) ]
         , segments =
             case item.currentLap.miniSectors of
                 Snapshot.Recorded { states } ->
@@ -106,7 +109,7 @@ lastLap item =
             lapBlock
                 { label = "Last"
                 , lapNumber = Just item.standing.lapsCompleted
-                , time = rated
+                , time = timeText "text-[14px]" rated
                 , segments =
                     case miniSectors of
                         Just rating ->
@@ -122,7 +125,7 @@ lastLap item =
             lapBlock
                 { label = "Last"
                 , lapNumber = Nothing
-                , time = Nothing
+                , time = timeText "text-[14px]" Nothing
                 , segments =
                     SegmentStrip.overSectors
                         { cells = Sector.initialize (\_ -> timeCell Nothing)
@@ -177,7 +180,7 @@ and the strip of the segments the circuit times it in.
 lapBlock :
     { label : String
     , lapNumber : Maybe Int
-    , time : Maybe RatedTime
+    , time : Html msg
     , segments : Html msg
     }
     -> List (Html msg)
@@ -194,7 +197,7 @@ lapBlock { label, lapNumber, time, segments } =
             , div [ class "text-[10px] text-muted-foreground tabular-nums" ]
                 [ text (lapNumber |> Maybe.map (\number -> "L" ++ String.fromInt number) |> Maybe.withDefault "") ]
             ]
-        , timeText "text-[14px]" time
+        , time
         ]
     , segments
     ]

@@ -181,7 +181,7 @@ progressCell label state =
                     ( "0%", "transparent" )
 
                 Performance.InProgress progress ->
-                    ( String.fromFloat (progress * 100) ++ "%", "oklch(1 0 0)" )
+                    ( String.fromFloat (progress * 100) ++ "%", Performance.inProgressColor )
 
                 Performance.Completed rated ->
                     ( "100%", colorOfRated rated )

@@ -5,7 +5,7 @@ module Motorsport.Lap.Performance exposing
     , SegmentState(..), fromProgress, ratedOf
     , PerformanceLevel(..), performanceLevel
     , isStandard
-    , toColorVariable, colorOf, textColorOf
+    , toColorVariable, colorOf, textColorOf, inProgressColor
     )
 
 {-| How a lap's times read against the baselines they are rated on.
@@ -28,7 +28,7 @@ it as part of the race and a view is free to rate a lap of its own.
 
 @docs PerformanceLevel, performanceLevel
 @docs isStandard
-@docs toColorVariable, colorOf, textColorOf
+@docs toColorVariable, colorOf, textColorOf, inProgressColor
 
 -}
 
@@ -208,6 +208,14 @@ toColorVariable level =
 
         Standard ->
             "var(--performance-standard)"
+
+
+{-| The colour of a time still running, a segment the car is in or a lap it is
+on, which has no rating until it is over.
+-}
+inProgressColor : String
+inProgressColor =
+    "var(--performance-in-progress)"
 
 
 {-| The colour of a rating that may not exist. A time the source data has none
