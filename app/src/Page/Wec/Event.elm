@@ -182,14 +182,14 @@ running is a great deal of work.
 showCar : Shared.Model -> CarNumber -> Selection -> Selection
 showCar shared carNumber selection =
     let
-        current =
-            shownCarNumbers shared selection
+        selected =
+            selectedCarNumbers shared selection
     in
-    if List.member carNumber current then
+    if List.member carNumber selected then
         selection
 
     else
-        pickedFrom selection (current ++ [ carNumber ])
+        pickedFrom selection (selected ++ [ carNumber ])
 
 
 {-| The column for `carNumber` taken away, and whatever is left held where it
@@ -198,7 +198,7 @@ still following the race would answer by replacing them.
 -}
 closeCar : Shared.Model -> CarNumber -> Selection -> Selection
 closeCar shared carNumber selection =
-    shownCarNumbers shared selection
+    selectedCarNumbers shared selection
         |> List.filter ((/=) carNumber)
         |> pickedFrom selection
 
@@ -217,11 +217,20 @@ pickedFrom fallback carNumbers =
             Picked first rest
 
 
-{-| The cars with columns right now, which for the stand-ins is a question for
-the snapshot. A round still on its way has no leaders, and no columns to close.
+{-| What the selection amounts to, in car numbers -- the reader's own list, or
+the cars standing in for it, which is a question for the snapshot.
+
+Not the numbers of [`shownCars`](#shownCars), which is what the columns are
+actually drawn for: that one answers the field and drops a car the snapshot has
+no lap for at this moment. Opening and closing work from this list instead, so
+that scrubbing back past a car's first lap does not quietly drop it from a
+selection the reader made.
+
+A round still on its way names nothing, and has no columns to close.
+
 -}
-shownCarNumbers : Shared.Model -> Selection -> List CarNumber
-shownCarNumbers shared selection =
+selectedCarNumbers : Shared.Model -> Selection -> List CarNumber
+selectedCarNumbers shared selection =
     case selection of
         ClassLeaders ->
             Shared.loadedRound shared
@@ -355,7 +364,7 @@ trackerView track timeline snapshot replay m =
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
                     { onSelect = ShowDetailCar
-                    , picked = List.map (.metadata >> .carNumber) having
+                    , withColumns = List.map (.metadata >> .carNumber) having
                     }
                     snapshot
                 ]
@@ -381,9 +390,14 @@ trackerView track timeline snapshot replay m =
         ]
 
 
-{-| The cars the columns are drawn for: the ones the reader picked, in the order
-they picked them, and until they have picked any -- or when not one of the ones
-they picked is in the field -- the car at the front of each class.
+{-| The cars the columns are drawn for, answered against the field: the ones the
+reader picked and the snapshot has a lap for, in the order they picked them,
+and -- until they have picked any, or when not one of the ones they picked is
+out there -- the car at the front of each class.
+
+[`selectedCarNumbers`](#selectedCarNumbers) is the list this is resolved from,
+and is not the same set.
+
 -}
 shownCars : Snapshot -> Selection -> List CarAt
 shownCars snapshot selection =
