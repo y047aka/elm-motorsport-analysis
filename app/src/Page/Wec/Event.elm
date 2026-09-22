@@ -329,17 +329,19 @@ shownCars snapshot selection =
 rather than as wide as the cell can spare, so the third of them is already off
 the edge and the cell scrolls sideways to it.
 
-350px. The widest thing in the panel is the comparison's tab row, which wants
-302px of the 318 a column of this width hands it -- 16px over, which is the room
+360px. The widest thing in the panel is the comparison's tab row, which wants
+302px of the 328 a column of this width hands it -- 26px over, which is the room
 to leave for a font that is not the one this was measured in.
 
 The figure has come down as the things that set it have: 440 while the stretch
 controls read `Last 1.5h` and every section was a boxed card, 400 until the two
 laps stopped sitting abreast, 380 until the first tab stopped reading `Gap to
-avg`. The floor under the tab row as it now reads is 335.
+avg`, 350 for a while after that. The floor under the tab row as it now reads
+is 335, so this is not the narrowest a column goes -- it is the narrowest that
+still reads as a page rather than as a measurement.
 
 One car is drawn in a column too, and not given the cell whole. A panel that
-was 880px wide alone and 350 the moment a second car arrived was two panels to
+was 880px wide alone and 360 the moment a second car arrived was two panels to
 read rather than one, and the wider of them was mostly the room left over: the
 figures in it are the same figures, set further apart.
 
@@ -367,7 +369,7 @@ detailColumns cell m replay snapshot shown =
                 (List.map
                     (\car ->
                         ( car.metadata.carNumber
-                        , div [ Attributes.class "shrink-0 w-[350px] grid" ] [ card car ]
+                        , div [ Attributes.class "shrink-0 w-[360px] grid" ] [ card car ]
                         )
                     )
                     shown

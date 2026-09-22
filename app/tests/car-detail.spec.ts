@@ -151,12 +151,12 @@ test.describe('Car Detail Columns', () => {
   test('should hold every column to a width its panel stays readable at', async ({ page }) => {
     // Before a car has been picked at all: the leader stands in, and stands in
     // a column rather than being handed the cell whole.
-    await expect(column(page, 0)).toHaveCSS('width', '350px');
+    await expect(column(page, 0)).toHaveCSS('width', '360px');
     await selectCar(page, '83');
-    await expect(column(page, 0)).toHaveCSS('width', '350px');
+    await expect(column(page, 0)).toHaveCSS('width', '360px');
     await selectCar(page, '12');
     for (let i = 0; i < 2; i++) {
-      await expect(column(page, i)).toHaveCSS('width', '350px');
+      await expect(column(page, i)).toHaveCSS('width', '360px');
     }
   });
 
@@ -179,7 +179,7 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['83', '12']);
     // The strip the columns sit in, so that what is recorded is the pair
     // together -- their width, the gap, and where the close button lands in a
-    // header 350px wide -- rather than one panel on its own.
+    // header 360px wide -- rather than one panel on its own.
     await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('columns-side-by-side.png');
   });
 
