@@ -42,18 +42,23 @@ view config laps item =
     in
     div [ class "grid gap-y-2" ]
         [ bestLap config.bestTimes item
-        , if Status.hasStopped item.status then
-            lastLap item
+        , -- One above the other, each across the panel. Side by side they had
+          -- half of it each, which is not enough for three sector times: the
+          -- middle sector of a GT3 car runs over a minute, and the reading of
+          -- it ran into the reading beside it.
+          --
+          -- One grid between the two rather than one apiece, so that the rail
+          -- is as wide as the wider of them and the sectors of the two laps
+          -- begin at the same place. A grid each sized its own rail, and
+          -- `CURRENT L28` being longer than `LAST L27` was enough to set the
+          -- two rows of segments a few pixels out from one another.
+          div [ class "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2" ]
+            (if Status.hasStopped item.status then
+                lastLap item
 
-          else
-            -- One above the other, each across the panel. Side by side they
-            -- had half of it each, which is not enough for three sector times:
-            -- the middle sector of a GT3 car runs over a minute, and the
-            -- reading of it ran into the reading beside it.
-            div [ class "grid gap-y-2" ]
-                [ currentLap best item
-                , lastLap item
-                ]
+             else
+                currentLap best item ++ lastLap item
+            )
         ]
 
 
@@ -61,7 +66,7 @@ view config laps item =
 -- THE LAP IN PROGRESS
 
 
-currentLap : BySector (Maybe Duration) -> CarAt -> Html msg
+currentLap : BySector (Maybe Duration) -> CarAt -> List (Html msg)
 currentLap best item =
     let
         cells =
@@ -91,7 +96,7 @@ currentLap best item =
 -- THE LAPS BEHIND IT
 
 
-lastLap : CarAt -> Html msg
+lastLap : CarAt -> List (Html msg)
 lastLap item =
     case item.lastLap of
         Snapshot.Completed { rated, sectors, miniSectors } ->
@@ -176,24 +181,28 @@ lapBlock :
     , time : Maybe RatedTime
     , segments : Html msg
     }
-    -> Html msg
+    -> List (Html msg)
 lapBlock { label, lapNumber, time, segments } =
-    -- Which lap it is and what it took stand beside the sectors rather than on
-    -- a line of their own above them: a line for a label and one figure is a
-    -- row of the panel's height spent on what fits in the margin of the row
-    -- under it, and the sectors want the width more than the lap time wants a
-    -- line.
-    div [ class "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3" ]
-        [ div [ class "grid gap-y-0.5" ]
-            [ div [ class "flex items-baseline gap-x-1.5" ]
-                [ rowLabel label
-                , div [ class "text-[10px] text-muted-foreground tabular-nums" ]
-                    [ text (lapNumber |> Maybe.map (\number -> "L" ++ String.fromInt number) |> Maybe.withDefault "") ]
-                ]
-            , timeText "text-[14px]" time
+    -- Two cells of the caller's grid rather than a grid of its own. Which lap
+    -- it is and what it took stand beside the sectors rather than on a line of
+    -- their own above them: a line for a label and one figure is a row of the
+    -- panel's height spent on what fits in the margin of the row under it, and
+    -- the sectors want the width more than the lap time wants a line.
+    --
+    -- `text-right` on the rail reaches the time and not the line above it,
+    -- which is a flex row and lays its own out: the label stays against the
+    -- left edge the other lap's label is on, and the times end together where
+    -- the sectors begin.
+    [ div [ class "grid gap-y-0.5 text-right" ]
+        [ div [ class "flex items-baseline gap-x-1.5" ]
+            [ rowLabel label
+            , div [ class "text-[10px] text-muted-foreground tabular-nums" ]
+                [ text (lapNumber |> Maybe.map (\number -> "L" ++ String.fromInt number) |> Maybe.withDefault "") ]
             ]
-        , segments
+        , timeText "text-[14px]" time
         ]
+    , segments
+    ]
 
 
 {-| A sector of the lap under way, as how far off the best the car has driven it
