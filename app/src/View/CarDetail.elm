@@ -156,7 +156,7 @@ view config cars snapshot focused =
         ]
         [ Header.view
             { startPosition = startPositionOf cars focused
-            , toLeader = gapOf snapshot { inFront = Rivals.leader rivals, chasing = Just focused }
+            , toLeader = gapOf snapshot { inFront = Rivals.classLeader rivals, chasing = Just focused }
             , onClose = config.onClose
             }
             focused

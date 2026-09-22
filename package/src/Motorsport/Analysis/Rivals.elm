@@ -2,7 +2,7 @@ module Motorsport.Analysis.Rivals exposing
     ( Rivals
     , around
     , focused, class
-    , leader
+    , classLeader
     , fight, nearest
     )
 
@@ -18,7 +18,7 @@ averaging a baseline.
 @docs Rivals
 @docs around
 @docs focused, class
-@docs leader
+@docs classLeader
 @docs fight, nearest
 
 -}
@@ -86,13 +86,13 @@ class (Rivals r) =
 itself -- a car does not lead itself by anything, so a reading taken against
 this one has nothing to report rather than nought to report.
 
-The class's front rather than the field's: the car a class car is chasing is the
-one in its own class, and the field's leader may be a class it is not racing and
-several laps up the road.
+Named for the class and not left as `leader`, which is what the field's front
+is called wherever a whole snapshot is in hand. They are different cars, and a
+panel that took one for the other reported a race its car was not in.
 
 -}
-leader : Rivals -> Maybe CarAt
-leader (Rivals r) =
+classLeader : Rivals -> Maybe CarAt
+classLeader (Rivals r) =
     List.Extra.last r.ahead
 
 

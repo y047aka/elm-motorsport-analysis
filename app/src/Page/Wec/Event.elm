@@ -234,7 +234,7 @@ selectedCarNumbers shared columns =
     case columns of
         ClassLeaders ->
             Shared.loadedRound shared
-                |> Maybe.map (.snapshot >> classLeaders >> List.map (.metadata >> .carNumber))
+                |> Maybe.map (.snapshot >> leaderOfEachClass >> List.map (.metadata >> .carNumber))
                 |> Maybe.withDefault []
 
         Picked first rest ->
@@ -403,18 +403,18 @@ shownCars : Snapshot -> CarColumns -> List CarAt
 shownCars snapshot columns =
     case columns of
         ClassLeaders ->
-            classLeaders snapshot
+            leaderOfEachClass snapshot
 
         Picked first rest ->
             case List.filterMap (\carNumber -> Snapshot.get carNumber snapshot) (first :: rest) of
                 [] ->
-                    classLeaders snapshot
+                    leaderOfEachClass snapshot
 
                 picked ->
                     picked
 
 
-{-| The car at the front of each class.
+{-| The car at the front of each class -- one apiece, not one class's order.
 
 The front of each class rather than the front of the race, because the race is
 several races: the car leading the field is leading one of them, and a page that
@@ -423,8 +423,8 @@ the order the running order puts them in, which is the order their leaders are
 in.
 
 -}
-classLeaders : Snapshot -> List CarAt
-classLeaders snapshot =
+leaderOfEachClass : Snapshot -> List CarAt
+leaderOfEachClass snapshot =
     Snapshot.toClassList snapshot
         |> List.filterMap (Tuple.second >> List.head)
 

@@ -48,17 +48,17 @@ suite =
         , describe "the car a reading is taken against"
             [ test "the leader is the front of the class, however far up the order it is" <|
                 \_ ->
-                    leaderOf "4"
+                    classLeaderOf "4"
                         |> Expect.equal (Just (Just "1"))
             , test "a car leading its class has no leader to be measured against" <|
                 \_ ->
-                    leaderOf "1"
+                    classLeaderOf "1"
                         |> Expect.equal (Just Nothing)
             , test "a car of another class does not become the leader of this one" <|
                 \_ ->
                     -- 1, 7 and 2 are the first three on the road; 7 is LMGT3,
                     -- so the LMGT3 leader is 7 and not 1.
-                    leaderOf "8"
+                    classLeaderOf "8"
                         |> Expect.equal (Just (Just "7"))
             ]
         , describe "how far out a reader asks"
@@ -100,9 +100,9 @@ fightAround carNumber =
     rivalsAround carNumber |> Maybe.map (Rivals.fight >> carNumbers)
 
 
-leaderOf : String -> Maybe (Maybe String)
-leaderOf =
-    around Rivals.leader
+classLeaderOf : String -> Maybe (Maybe String)
+classLeaderOf =
+    around Rivals.classLeader
 
 
 around : (Rivals.Rivals -> Maybe CarAt) -> String -> Maybe (Maybe String)
