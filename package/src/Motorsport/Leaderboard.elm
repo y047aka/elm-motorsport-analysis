@@ -10,7 +10,7 @@ module Motorsport.Leaderboard exposing
     , positionChangeColumn
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
     , lastLapColumn_Wec, lastLapColumn_LeMans24h
-    , viewPositionChange
+    , viewPositionChange, viewPositionChangeInline
     , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
     , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
     , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -48,7 +48,7 @@ printed in. Which of them, in what order, is the caller's.
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
 @docs lastLapColumn_Wec, lastLapColumn_LeMans24h
 
-@docs viewPositionChange
+@docs viewPositionChange, viewPositionChangeInline
 @docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
 @docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
 @docs viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -322,28 +322,46 @@ and red for a loss and the number always grey, and a grey `-` for a car that has
 held its place or whose grid place is not known.
 -}
 viewPositionChange : { startPosition : Maybe Position, position : Position } -> Html msg
-viewPositionChange { startPosition, position } =
-    case Maybe.map (\start -> start - position) startPosition of
+viewPositionChange change =
+    case placesGained change of
         Just gained ->
-            if gained > 0 then
-                arrow "text-green-500" "↑" (String.fromInt gained)
-
-            else if gained < 0 then
-                arrow "text-red-500" "↓" (String.fromInt (abs gained))
-
-            else
-                text "-"
+            div [ class "text-center font-bold tabular-nums" ] (arrow gained)
 
         Nothing ->
             text "-"
 
 
-arrow : String -> String -> String -> Html msg
-arrow look glyph number =
-    div [ class "text-center font-bold tabular-nums" ]
-        [ span [ class look ] [ text glyph ]
-        , text number
-        ]
+{-| The same change set in a line of text: in the weight of the text around it,
+and nothing at all where the cell prints `-`, which beside a position reads as
+part of the position.
+-}
+viewPositionChangeInline : { startPosition : Maybe Position, position : Position } -> Html msg
+viewPositionChangeInline change =
+    case placesGained change of
+        Just gained ->
+            span [ class "tabular-nums" ] (arrow gained)
+
+        Nothing ->
+            text ""
+
+
+placesGained : { startPosition : Maybe Position, position : Position } -> Maybe Int
+placesGained { startPosition, position } =
+    case Maybe.map (\start -> start - position) startPosition of
+        Just 0 ->
+            Nothing
+
+        gained ->
+            gained
+
+
+arrow : Int -> List (Html msg)
+arrow gained =
+    if gained > 0 then
+        [ span [ class "text-green-500" ] [ text "↑" ], text (String.fromInt gained) ]
+
+    else
+        [ span [ class "text-red-500" ] [ text "↓" ], text (String.fromInt (abs gained)) ]
 
 
 currentLapColumn_Wec :

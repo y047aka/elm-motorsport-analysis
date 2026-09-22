@@ -12,7 +12,7 @@ import Html.Attributes exposing (alt, attribute, class, src, title)
 import Html.Events exposing (onClick)
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Leaderboard exposing (viewPositionChange)
+import Motorsport.Leaderboard exposing (viewPositionChangeInline)
 import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
@@ -109,30 +109,8 @@ fieldPosition : Maybe Position -> CarAt -> Html msg
 fieldPosition startPosition item =
     div [ class "flex items-center gap-x-1.5 text-[12px] tabular-nums whitespace-nowrap" ]
         [ text (Position.toOrdinal item.standing.position)
-        , movement startPosition item.standing.position
+        , viewPositionChangeInline { startPosition = startPosition, position = item.standing.position }
         ]
-
-
-{-| How far the car has come since the start, and nothing at all where there is
-nothing to say. A cell of its own could print a dash for that and be read as an
-empty cell; beside a position, a dash reads as part of the position.
--}
-movement : Maybe Position -> Position -> Html msg
-movement startPosition position =
-    case Maybe.map (\start -> start - position) startPosition of
-        Nothing ->
-            text ""
-
-        Just 0 ->
-            text ""
-
-        Just _ ->
-            -- The shared cell draws its arrow bold, which is right in a column
-            -- of them and wrong on a line of text. `.x > div` outranks the
-            -- `.font-bold` the cell sets on itself, so the weight is settled
-            -- here rather than by changing what the cell is everywhere.
-            div [ class "[&>div]:font-normal" ]
-                [ viewPositionChange { startPosition = startPosition, position = position } ]
 
 
 classBadge : CarAt -> Html msg
