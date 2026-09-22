@@ -332,7 +332,11 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
     ChartTabs.chartTabs SelectedChart
         chart
         (ChartTabs.segmentedControl SelectedWindow window windowOptions)
-        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
+        -- `Gap` rather than `Gap to avg`: the tab row is the widest thing in
+        -- the panel and so decides how narrow a column can be, and those two
+        -- words cost 38px of it. What they said is said by the chart, whose
+        -- baseline is drawn and labelled where the reader is looking.
+        [ ( GapChart, "Gap", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
         , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
         ]

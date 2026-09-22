@@ -329,17 +329,17 @@ shownCars snapshot selection =
 rather than as wide as the cell can spare, so the third of them is already off
 the edge and the cell scrolls sideways to it.
 
-380px, which is what the panel asks for with a little over: the widest thing in
-it is the comparison's tab row, wanting 341px of the 348 a column of this width
-hands it. That 7px is the whole of the slack -- at 370 the tab row is 3px past
-the edge -- so a column narrower than this wants the tab row to fold, which is a
-change to make on its own.
+350px. The widest thing in the panel is the comparison's tab row, which wants
+302px of the 318 a column of this width hands it -- 16px over, which is the room
+to leave for a font that is not the one this was measured in.
 
-The figure was 440 while the tab row read `Last 1.5h` and the sections were
-boxed, and 400 until the lap times stopped sitting two abreast.
+The figure has come down as the things that set it have: 440 while the stretch
+controls read `Last 1.5h` and every section was a boxed card, 400 until the two
+laps stopped sitting abreast, 380 until the first tab stopped reading `Gap to
+avg`. The floor under the tab row as it now reads is 335.
 
 One car is drawn in a column too, and not given the cell whole. A panel that
-was 880px wide alone and 380 the moment a second car arrived was two panels to
+was 880px wide alone and 350 the moment a second car arrived was two panels to
 read rather than one, and the wider of them was mostly the room left over: the
 figures in it are the same figures, set further apart.
 
@@ -367,7 +367,7 @@ detailColumns cell m replay snapshot shown =
                 (List.map
                     (\car ->
                         ( car.metadata.carNumber
-                        , div [ Attributes.class "shrink-0 w-[380px] grid" ] [ card car ]
+                        , div [ Attributes.class "shrink-0 w-[350px] grid" ] [ card car ]
                         )
                     )
                     shown
