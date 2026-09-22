@@ -126,6 +126,24 @@ test.describe('Car Detail Columns', () => {
     expect(scrollWidth).toBeGreaterThan(clientWidth);
   });
 
+  test('should draw the columns side by side, each with its own close button', async ({ page }) => {
+    await selectCar(page, '83');
+    await selectCar(page, '12');
+    await expectColumns(page, ['83', '12']);
+    // The strip the columns sit in, so that what is recorded is the pair
+    // together -- their width, the gap, and where the close button lands in a
+    // header 440px wide -- rather than one panel on its own.
+    await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('columns-side-by-side.png');
+  });
+
+  test('should dim the rows it will not take once six columns are up', async ({ page }) => {
+    for (const carNumber of ['12', '8', '7', '83', '51', '50']) {
+      await selectCar(page, carNumber);
+    }
+    await expectColumns(page, ['12', '8', '7', '83', '51', '50']);
+    await expect(page.locator('.col-start-1')).toHaveScreenshot('standings-at-the-limit.png');
+  });
+
   test('should show the same chart in every column, whichever one picks it', async ({ page }) => {
     await selectCar(page, '83');
     await selectCar(page, '12');
