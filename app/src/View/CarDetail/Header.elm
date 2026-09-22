@@ -22,13 +22,12 @@ import View.CarNumberBadge as CarNumberBadge
 {-| `startPosition` is where the car began, which the round's summary estimates
 off the opening lap rather than reading off a grid sheet.
 
-The three gaps are the caller's rather than read off the car, because a `CarAt`
-carries them measured against the field and this line reports the car's class.
-The two are not the same race: the car ahead of an LMGT3 car on the road is
-often a Hypercar lapping it, and the field's leader is several laps up in a
-class it is not racing. The legend under the charts names the class rivals, so
-gaps taken against the field here would be the same shape as gaps taken against
-the class there, and read as the same thing.
+`toLeader` is the caller's rather than read off the car, because a `CarAt`
+carries the gap to the field's leader and this line reports the car's class --
+which for an LMGT3 car is several laps and another race away. It is the only gap
+left here: the rivals either side are named, placed and timed in the section
+directly below, which said the same two figures over again and without saying
+whose they were.
 
 `onClose` closes the column. It is `Nothing` for the only column on show, which
 is the one the middle of the page is never without.
@@ -37,22 +36,14 @@ is the one the middle of the page is never without.
 view :
     { startPosition : Maybe Int
     , toLeader : Gap
-    , toAhead : Gap
-    , toBehind : Gap
     , onClose : Maybe msg
     }
     -> CarAt
     -> Html msg
-view { startPosition, toLeader, toAhead, toBehind, onClose } item =
+view { startPosition, toLeader, onClose } item =
     div [ class "grid gap-y-2" ]
-        [ who onClose item
-        , standing
-            { startPosition = startPosition
-            , toLeader = toLeader
-            , toAhead = toAhead
-            , toBehind = toBehind
-            }
-            item
+        [ who { startPosition = startPosition, onClose = onClose } item
+        , standing toLeader item
         ]
 
 
@@ -76,8 +67,8 @@ portrait carImageUrl item =
             text ""
 
 
-who : Maybe msg -> CarAt -> Html msg
-who onClose item =
+who : { startPosition : Maybe Int, onClose : Maybe msg } -> CarAt -> Html msg
+who { startPosition, onClose } item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
         [ CarNumberBadge.view item.metadata
         , div [ class "grid gap-y-0.5 min-w-0" ]
@@ -85,7 +76,7 @@ who onClose item =
             -- it what they did not want, which in a column is not much: they do
             -- not wrap, and the name is the part worth reading in full.
             [ div [ class "flex items-center gap-x-2 min-w-0" ]
-                [ overall item
+                [ overall startPosition item
                 , classBadge item
                 ]
             , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
@@ -119,16 +110,35 @@ corner onClose status =
                 ]
 
 
-{-| Where the car stands in the field, at the top of the panel beside the class
-it stands there in. The two are one fact between them -- which race this car is
-in, and where in it -- and drawn alike, because neither is read before the
-other. Everything under this line is the class's, so the field's place is said
-once, here.
+{-| Where the car stands in the field and how far it has come to stand there,
+at the top of the panel beside the class it stands there in. The three are one
+fact between them -- which race this car is in, and where in it -- and drawn
+alike, because none of them is read before the others. Everything under this
+line is the class's, so the field's place is said once, here.
 -}
-overall : CarAt -> Html msg
-overall item =
-    div [ class "text-[11px] font-bold tabular-nums whitespace-nowrap" ]
-        [ text ("P" ++ String.fromInt item.standing.position) ]
+overall : Maybe Int -> CarAt -> Html msg
+overall startPosition item =
+    div [ class "flex items-center gap-x-1.5 text-[11px] font-bold tabular-nums whitespace-nowrap" ]
+        [ text ("P" ++ String.fromInt item.standing.position)
+        , movement startPosition item.standing.position
+        ]
+
+
+{-| How far the car has come since the start, and nothing at all where there is
+nothing to say. A cell of its own could print a dash for that and be read as an
+empty cell; beside a position, a dash reads as part of the position.
+-}
+movement : Maybe Int -> Int -> Html msg
+movement startPosition position =
+    case Maybe.map (\start -> start - position) startPosition of
+        Nothing ->
+            text ""
+
+        Just 0 ->
+            text ""
+
+        Just _ ->
+            viewPositionChange { startPosition = startPosition, position = position }
 
 
 classBadge : CarAt -> Html msg
@@ -151,21 +161,18 @@ currentDriver item =
         [ text (Driver.toInitialAndSurname item.currentDriver) ]
 
 
-{-| The line a classification prints, the field's place having been said at the
-top of the panel already. What is left is the car's class: where it stands in
-it, how far it has come, and the two gaps that say what it is racing -- which
-say `Class` on themselves rather than leaving a reader to assume which of the
-two scales they belong to.
+{-| The line a classification prints, once the top of the panel has said where
+the car stands in the field and the section below has named the cars either side
+of it. What is left is the three readings neither of those gives: where it
+stands in its class, how far it has come, and how far that is from the front of
+the class.
 -}
-standing : { startPosition : Maybe Int, toLeader : Gap, toAhead : Gap, toBehind : Gap } -> CarAt -> Html msg
-standing { startPosition, toLeader, toAhead, toBehind } item =
-    div [ class "border border-border rounded-lg grid grid-cols-5" ]
+standing : Gap -> CarAt -> Html msg
+standing toLeader item =
+    div [ class "border border-border rounded-lg grid grid-cols-3" ]
         [ statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
-        , statCell "Position" (viewPositionChange { startPosition = startPosition, position = item.standing.position })
         , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
         , statCell "Class leader" (text (Gap.toString toLeader))
-        , statCell "Class ahead / behind"
-            (text (Gap.toString toAhead ++ " / " ++ Gap.toString toBehind))
         ]
 
 

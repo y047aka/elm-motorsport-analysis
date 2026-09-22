@@ -2,7 +2,7 @@ module Motorsport.Race.Snapshot exposing
     ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..)
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
-    , toList, toClassList, get, inClass, leader, behind, lapCount, elapsed
+    , toList, toClassList, get, inClass, leader, lapCount, elapsed
     , gapBetween
     , bestTimes, lapHistory
     )
@@ -17,7 +17,7 @@ each work them out again -- that sharing is the whole reason the type exists.
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
-@docs toList, toClassList, get, inClass, leader, behind, lapCount, elapsed
+@docs toList, toClassList, get, inClass, leader, lapCount, elapsed
 @docs gapBetween
 @docs bestTimes, lapHistory
 
@@ -328,20 +328,6 @@ inClass class (Snapshot s) =
 leader : Snapshot -> Maybe CarAt
 leader (Snapshot s) =
     List.head s.cars
-
-
-{-| The car next in the running order.
-
-A car is given the gap to the one ahead of it and never the one behind, so the
-gap behind a car is read off the car behind it.
-
--}
-behind : CarAt -> Snapshot -> Maybe CarAt
-behind car (Snapshot s) =
-    s.cars
-        |> List.Extra.dropWhile (\item -> item.metadata.carNumber /= car.metadata.carNumber)
-        |> List.drop 1
-        |> List.head
 
 
 {-| How far up or down the road one car is from another: the intervals between

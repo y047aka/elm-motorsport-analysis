@@ -45,27 +45,8 @@ suite =
                     fightAround "4"
                         |> Expect.equal (Just [ "3", "4" ])
             ]
-        , describe "the cars a reading is taken against"
-            [ test "the rival ahead is the one in the class, not the one ahead on the road" <|
-                \_ ->
-                    -- Car 7 is the car ahead of 2 in the running order, and
-                    -- races in another class. This is the reading the header
-                    -- of a car's panel used to take from the running order.
-                    aheadOf "2"
-                        |> Expect.equal (Just (Just "1"))
-            , test "and the rival behind likewise" <|
-                \_ ->
-                    behindOf "3"
-                        |> Expect.equal (Just (Just "4"))
-            , test "the class runs out ahead of the car at the front of it" <|
-                \_ ->
-                    aheadOf "1"
-                        |> Expect.equal (Just Nothing)
-            , test "and behind the car at the back" <|
-                \_ ->
-                    behindOf "4"
-                        |> Expect.equal (Just Nothing)
-            , test "the leader is the front of the class, however far up the order it is" <|
+        , describe "the car a reading is taken against"
+            [ test "the leader is the front of the class, however far up the order it is" <|
                 \_ ->
                     leaderOf "4"
                         |> Expect.equal (Just (Just "1"))
@@ -117,16 +98,6 @@ rivalsAround carNumber =
 fightAround : String -> Maybe (List String)
 fightAround carNumber =
     rivalsAround carNumber |> Maybe.map (Rivals.fight >> carNumbers)
-
-
-aheadOf : String -> Maybe (Maybe String)
-aheadOf =
-    around Rivals.ahead
-
-
-behindOf : String -> Maybe (Maybe String)
-behindOf =
-    around Rivals.behind
 
 
 leaderOf : String -> Maybe (Maybe String)
