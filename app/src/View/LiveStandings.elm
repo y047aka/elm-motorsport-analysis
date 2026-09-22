@@ -8,7 +8,7 @@ the cars the middle of it is given over to.
 -}
 
 import Html exposing (Html, button, div, li, text)
-import Html.Attributes exposing (attribute, class, title)
+import Html.Attributes exposing (attribute, class)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
@@ -26,13 +26,11 @@ and it is given a column of its own; clicking a row that already has one does
 nothing, and there is no clicking a car away again -- a column is closed from
 the column itself.
 
-`atLimit` is whether the page will take another column at all. A row that it
-will not take says so on itself rather than going quietly dead under the
-reader.
+Every row of the field will take a column, however many are open already.
 
 -}
-view : { onSelect : CarNumber -> msg, shown : List CarNumber, atLimit : Bool } -> Snapshot -> Html msg
-view { onSelect, shown, atLimit } snapshot =
+view : { onSelect : CarNumber -> msg, shown : List CarNumber } -> Snapshot -> Html msg
+view { onSelect, shown } snapshot =
     div
         -- Marked, which the visual tests locate the standings by: the cell it
         -- sits in is named by the Tailwind utilities that place it, and those
@@ -56,14 +54,13 @@ view { onSelect, shown, atLimit } snapshot =
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
-                                    , Lazy.lazy7 carRow
+                                    , Lazy.lazy6 carRow
                                         onSelect
                                         item.metadata
                                         item.standing.position
                                         (Driver.toSurname item.currentDriver)
                                         (item.status == Status.InPit)
                                         (List.member item.metadata.carNumber shown)
-                                        atLimit
                                     )
                                 )
                         )
@@ -83,8 +80,8 @@ columns, which are the position and driver the reader already has in front of
 them.
 
 -}
-carRow : (CarNumber -> msg) -> Metadata -> Int -> String -> Bool -> Bool -> Bool -> Html msg
-carRow onSelect metadata position driverSurname isInPit isShown atLimit =
+carRow : (CarNumber -> msg) -> Metadata -> Int -> String -> Bool -> Bool -> Html msg
+carRow onSelect metadata position driverSurname isInPit isShown =
     li []
         [ button
             ([ attribute "aria-label" ("Car #" ++ metadata.carNumber)
@@ -102,12 +99,6 @@ carRow onSelect metadata position driverSurname isInPit isShown atLimit =
                         -- press that would give it one is the press that
                         -- gave it the one it has.
                         [ class "bg-accent text-accent-foreground" ]
-
-                    else if atLimit then
-                        [ attribute "aria-disabled" "true"
-                        , title "The middle of the page is full"
-                        , class "opacity-60"
-                        ]
 
                     else
                         [ onClick (onSelect metadata.carNumber)

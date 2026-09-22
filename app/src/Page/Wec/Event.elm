@@ -142,40 +142,21 @@ update msg m =
 
 
 {-| A column for `carNumber`, opened at the end. A car that already has one
-keeps the one it has rather than being moved to the end, and a page with no
-room left takes nothing.
+keeps the one it has rather than being moved to the end.
+
+There is no ceiling on how many. The cell scrolls sideways however many there
+are, and the cost of a column the reader has opened is the reader's to weigh --
+each draws its own charts on every frame of playback, so a great many of them
+running is a great deal of work.
+
 -}
 showCar : CarNumber -> List CarNumber -> List CarNumber
 showCar carNumber selection =
-    if List.member carNumber selection || isFull selection then
+    if List.member carNumber selection then
         selection
 
     else
         selection ++ [ carNumber ]
-
-
-{-| Whether the page will take another column. Asked of the selection rather
-than of what is drawn: the front of the race stands in for an empty selection,
-and a page standing in for nothing is not a page with a column spent.
--}
-isFull : List CarNumber -> Bool
-isFull selection =
-    List.length selection >= columnLimit
-
-
-{-| As many columns as the reader can have open at once.
-
-A column is 440px, so at 1440x900 the middle of the page holds two of them and
-six is three of those across. Past that, finding a car among the columns is
-more work than finding it in the running order on the left, which is where it
-was picked from in the first place -- and every column draws its own charts on
-every frame of playback, so the ceiling is what holds the cost of the page down
-as well.
-
--}
-columnLimit : Int
-columnLimit =
-    6
 
 
 panelFor : CarNumber -> Model -> CarDetail.Model
@@ -301,7 +282,6 @@ trackerView track timeline snapshot replay m =
                 [ LiveStandings.view
                     { onSelect = ShowDetailCar
                     , shown = List.map (.metadata >> .carNumber) onShow
-                    , atLimit = isFull m.selection
                     }
                     snapshot
                 ]

@@ -107,7 +107,7 @@ test.describe('Car Detail Visual Tests', () => {
 
 /**
  * As many columns as the reader asks for, each drawn against the rivals of the
- * car it holds, up to a ceiling of six.
+ * car it holds.
  */
 test.describe('Car Detail Columns', () => {
   /** The column a panel is drawn in, which is what carries its width. */
@@ -164,14 +164,6 @@ test.describe('Car Detail Columns', () => {
     await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('columns-side-by-side.png');
   });
 
-  test('should dim the rows it will not take once six columns are up', async ({ page }) => {
-    for (const carNumber of ['12', '8', '7', '83', '51', '50']) {
-      await selectCar(page, carNumber);
-    }
-    await expectColumns(page, ['12', '8', '7', '83', '51', '50']);
-    await expect(page.locator('[data-live-standings]')).toHaveScreenshot('standings-at-the-limit.png');
-  });
-
   test('should show the same chart in every column, whichever one picks it', async ({ page }) => {
     await selectCar(page, '83');
     await selectCar(page, '12');
@@ -196,18 +188,14 @@ test.describe('Car Detail Columns', () => {
     await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(0);
   });
 
-  test('should stop at six columns, and say so on the rows it will not take', async ({ page }) => {
-    for (const carNumber of ['12', '8', '7', '83', '51', '50']) {
+  test('should take a column for every car asked for, with no ceiling', async ({ page }) => {
+    // Eight, which is past the six the page used to stop at and past what the
+    // cell holds either way -- it scrolls to the rest.
+    const asked = ['12', '8', '7', '83', '51', '50', '36', '35'];
+    for (const carNumber of asked) {
       await selectCar(page, carNumber);
     }
-    await expectColumns(page, ['12', '8', '7', '83', '51', '50']);
-
-    const seventh = standingsRow(page, '36');
-    await expect(seventh).toHaveAttribute('aria-disabled', 'true');
-    // Forced, because Playwright will not click a row it can see is disabled.
-    // What is being checked is the row underneath that: it carries no handler,
-    // so a press that does get through still opens nothing.
-    await seventh.click({ force: true });
-    await expectColumns(page, ['12', '8', '7', '83', '51', '50']);
+    await expectColumns(page, asked);
+    await expect(standingsRow(page, '35')).toHaveAttribute('aria-pressed', 'true');
   });
 });
