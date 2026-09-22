@@ -350,9 +350,9 @@ disclosure config content =
                  else
                     "false"
                 )
-            , class "flex items-center gap-x-1.5 font-semibold text-sm text-left cursor-pointer transition-colors hover:text-muted-foreground"
+            , class ("flex items-center gap-x-1.5 text-left cursor-pointer transition-colors hover:text-foreground " ++ headingClass)
             ]
-            [ div [ class "text-[9px]" ]
+            [ div [ class "text-[8px]" ]
                 [ text
                     (if config.open then
                         "▼"
@@ -376,7 +376,7 @@ container : String -> Html msg -> Html msg
 container title content =
     div
         [ class sectionClass ]
-        [ h3 [ class "font-semibold text-sm" ] [ text title ]
+        [ h3 [ class headingClass ] [ text title ]
         , content
         ]
 
@@ -384,6 +384,11 @@ container title content =
 sectionClass : String
 sectionClass =
     "grid gap-y-2 py-3 border-t border-t-border first:border-t-0 first:pt-0"
+
+
+headingClass : String
+headingClass =
+    "text-[10px] font-medium uppercase tracking-[0.03em] text-muted-foreground"
 
 
 emptyState : String -> Html msg
