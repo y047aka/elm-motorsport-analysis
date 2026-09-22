@@ -36,6 +36,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
+import Motorsport.Position as Position
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -308,7 +309,7 @@ legendEntry snapshot focused inFront item =
             )
         ]
         [ div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
-            [ text ("P" ++ String.fromInt item.standing.positionInClass) ]
+            [ text (Position.toOrdinal item.standing.positionInClass) ]
         , CarNumberBadge.viewRow item.metadata
         , div [ class "text-[11px] truncate" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]

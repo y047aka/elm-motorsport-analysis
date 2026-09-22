@@ -13,6 +13,7 @@ import Html.Events exposing (onClick)
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Leaderboard exposing (viewPositionChange)
+import Motorsport.Position as Position
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
@@ -157,7 +158,7 @@ line is the class's, so the field's place is said once, here.
 overall : Maybe Int -> CarAt -> Html msg
 overall startPosition item =
     div [ class "flex items-center gap-x-1.5 text-[12px] tabular-nums whitespace-nowrap" ]
-        [ text ("P" ++ String.fromInt item.standing.position)
+        [ text (Position.toOrdinal item.standing.position)
         , movement startPosition item.standing.position
         ]
 
@@ -213,7 +214,7 @@ the class.
 standing : Gap -> CarAt -> Html msg
 standing toLeader item =
     div [ class "border border-border rounded-lg grid grid-cols-3" ]
-        [ statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
+        [ statCell "Class" (text (Position.toOrdinal item.standing.positionInClass))
         , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
         , statCell "Class leader" (text (Gap.toString toLeader))
         ]

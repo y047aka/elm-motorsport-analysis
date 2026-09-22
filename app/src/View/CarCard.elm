@@ -14,6 +14,7 @@ import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
+import Motorsport.Position as Position
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
@@ -162,7 +163,7 @@ positionLabel item =
         [ class "flex items-center gap-x-1 text-[10px] before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
         , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
         ]
-        [ text ("P" ++ String.fromInt item.standing.position)
+        [ text (Position.toOrdinal item.standing.position)
         , div [ class "text-muted-foreground" ]
-            [ text ("Class P" ++ String.fromInt item.standing.positionInClass) ]
+            [ text (Position.toOrdinal item.standing.positionInClass ++ " in class") ]
         ]
