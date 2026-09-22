@@ -182,16 +182,15 @@ lapBlock :
     }
     -> List (Html msg)
 lapBlock { label, lapNumber, time, segments } =
-    -- Two cells of the caller's grid rather than a grid of its own. Which lap
-    -- it is and what it took stand beside the sectors rather than on a line of
-    -- their own above them: a line for a label and one figure is a row of the
-    -- panel's height spent on what fits in the margin of the row under it, and
-    -- the sectors want the width more than the lap time wants a line.
+    -- Two cells of the caller's grid rather than a grid of its own: which lap
+    -- it is and what it took stand beside the sectors, a line of their own
+    -- above them being a row of the panel's height spent on what fits in the
+    -- margin of the row under it.
     --
-    -- `text-right` on the rail reaches the time and not the line above it,
-    -- which is a flex row and lays its own out: the label stays against the
-    -- left edge the other lap's label is on, and the times end together where
-    -- the sectors begin.
+    -- `text-right` reaches the time and not the line above it, which is a flex
+    -- row and lays its own out: the label stays against the left edge the
+    -- other lap's label is on, and the times end together where the sectors
+    -- begin.
     [ div [ class "grid gap-y-0.5 text-right" ]
         [ div [ class "flex items-baseline gap-x-1.5" ]
             [ rowLabel label

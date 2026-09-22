@@ -423,8 +423,7 @@ the edge and the cell scrolls sideways to it.
 302px of the 328 a column of this width hands it. The floor is 335, so the
 26px over is what is left for a font that is not the one this was measured in.
 
-One car is drawn in a column too, and not given the cell whole: the figures in
-a wider panel are the same figures, set further apart.
+One car is drawn in a column too, and not given the cell whole.
 
 -}
 detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg

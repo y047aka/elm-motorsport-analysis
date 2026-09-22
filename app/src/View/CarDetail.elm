@@ -228,11 +228,6 @@ panel comparison (Model showing) cars snapshot rivals focused =
 
 
 {-| The three cars of the fight drawn out over the race, one view at a time.
-
-Named for the state the page hands it, which is what the tabs and the stretch
-controls set: the section is one comparison, and the columns beside it are all
-showing it.
-
 -}
 charts : Comparison -> Snapshot -> Rivals -> Html Msg
 charts ((Comparison { window }) as comparison) snapshot rivals =

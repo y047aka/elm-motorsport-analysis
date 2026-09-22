@@ -29,8 +29,7 @@ which for an LMGT3 car is several laps and another race away. It is the only gap
 left here: the rivals either side are named, placed and timed in the section
 directly below.
 
-`onClose` closes the column. It is `Nothing` for the only column on show, which
-is the one the middle of the page is never without.
+`onClose` closes the column, and is `Nothing` for the only column on show.
 
 -}
 view :
@@ -48,13 +47,9 @@ view { startPosition, toLeader, onClose } item =
 
 
 {-| The car itself, side on, at the right of the row the badge and the name are
-on. The three are the one thing -- which car this is -- and the line above them
-is where it stands, which is not.
-
-Its width is the name's loss, the name being the one thing on the row with more
-to say than fits, and a car in profile stays legible far smaller than a string
-of words does.
-
+on. Its width is the name's loss, the name being the one thing on the row with
+more to say than fits, and a car in profile stays legible far smaller than a
+string of words does.
 -}
 portrait : Maybe String -> CarAt -> Html msg
 portrait carImageUrl item =
@@ -78,15 +73,16 @@ portrait carImageUrl item =
 
 {-| Two rows: where the car stands, and who it is.
 
-The standing is the car's place in the field and the class it holds that place
-in, which are not part of its name and do not belong on the line with it. Put
-above, they leave the badge to start where the team's name starts -- the badge
-and the name being the one thing, read together -- instead of the badge sitting
-a line higher than everything it labels.
+The standing -- its place in the field, and the class it holds that place in --
+is not part of the car's name and does not belong on the line with it. Put
+above, it leaves the number badge to start where the team's name starts, the
+two of them being the one thing and read together, instead of the badge sitting
+a line higher than everything it labels. Everything below this line is the
+class's, so the field's place is said once, here.
 
-The name has a line to itself within that. Sharing one with the badges left it
-what they did not want, which in a column is not much: they do not wrap, and the
-name is the part worth reading in full.
+Within the lower row the name has a line to itself: sharing one with the badges
+left it what they did not want, which in a column is not much, and the name is
+the part worth reading in full.
 
 -}
 who : { startPosition : Maybe Int, onClose : Maybe msg } -> CarAt -> Html msg
@@ -137,10 +133,8 @@ corner onClose status =
 
 
 {-| Where the car stands in the field and how far it has come to stand there,
-at the top of the panel beside the class it stands there in. The three are one
-fact between them -- which race this car is in, and where in it -- and drawn
-alike, because none of them is read before the others. Everything under this
-line is the class's, so the field's place is said once, here.
+drawn no larger than the class badge beside it: none of the three is read
+before the others.
 -}
 overall : Maybe Int -> CarAt -> Html msg
 overall startPosition item =
@@ -192,11 +186,9 @@ currentDriver item =
         [ text (Driver.toInitialAndSurname item.currentDriver) ]
 
 
-{-| The line a classification prints, once the top of the panel has said where
-the car stands in the field and the section below has named the cars either side
-of it. What is left is the three readings neither of those gives: where it
-stands in its class, how far it has come, and how far that is from the front of
-the class.
+{-| The three readings neither the line above nor the section below gives:
+where the car stands in its class, how far it has come, and how far that is
+from the front of the class.
 -}
 standing : Gap -> CarAt -> Html msg
 standing toLeader item =
