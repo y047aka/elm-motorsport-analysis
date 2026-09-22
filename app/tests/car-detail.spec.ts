@@ -32,7 +32,7 @@ const STAND_INS = ['6', '48', '92'];
  * A column for this car and no other. A pick joins the columns already up, so
  * the three the page stands in with have to be closed to be rid of them.
  */
-async function soloCar(page: Page, carNumber: string) {
+async function selectOnlyCar(page: Page, carNumber: string) {
   await selectCar(page, carNumber);
   const others = () => page.locator(`${DETAIL}:not([data-car-detail="${carNumber}"])`);
   for (let left = await others().count(); left > 0; left -= 1) {
@@ -60,7 +60,7 @@ test.describe('Car Detail Visual Tests', () => {
     await openEvent(page);
     // One panel: these locate by `DETAIL` alone, which is a strict-mode
     // violation the moment there are two.
-    await soloCar(page, '83');
+    await selectOnlyCar(page, '83');
   });
 
   test('should render the selected car with its rivals ahead and behind', async ({ page }) => {
@@ -204,7 +204,7 @@ test.describe('Car Detail Columns', () => {
     // Before a car has been picked at all: the leader stands in, and stands in
     // a column rather than being handed the cell whole.
     await expect(column(page, 0)).toHaveCSS('width', '360px');
-    await soloCar(page, '83');
+    await selectOnlyCar(page, '83');
     await expect(column(page, 0)).toHaveCSS('width', '360px');
     await selectCar(page, '12');
     for (let i = 0; i < 2; i++) {
@@ -228,7 +228,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should draw the columns side by side, each with its own close button', async ({ page }) => {
-    await soloCar(page, '83');
+    await selectOnlyCar(page, '83');
     await selectCar(page, '12');
     await expectColumns(page, ['83', '12']);
     // The strip the columns sit in, so that what is recorded is the pair
@@ -238,7 +238,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should show the same chart in every column, whichever one picks it', async ({ page }) => {
-    await soloCar(page, '83');
+    await selectOnlyCar(page, '83');
     await selectCar(page, '12');
     await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Positions' }).click();
     for (let i = 0; i < 2; i++) {
@@ -250,7 +250,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should close a column from the column itself', async ({ page }) => {
-    await soloCar(page, '83');
+    await selectOnlyCar(page, '83');
     await selectCar(page, '12');
     await page.locator(DETAIL).nth(0).getByRole('button', { name: 'Close this column' }).click();
     await expectColumns(page, ['12']);
@@ -259,7 +259,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should not offer to close the only column there is', async ({ page }) => {
-    await soloCar(page, '83');
+    await selectOnlyCar(page, '83');
     await expectColumns(page, ['83']);
     await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(0);
   });

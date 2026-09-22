@@ -51,8 +51,8 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , columns : CarColumns
-    , detailComparison : CarDetail.Comparison
-    , detailPanels : Dict CarNumber CarDetail.Model
+    , comparison : CarDetail.Comparison
+    , panels : Dict CarNumber CarDetail.Model
     }
 
 
@@ -97,8 +97,8 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , columns = ClassLeaders
-      , detailComparison = CarDetail.initialComparison
-      , detailPanels = Dict.empty
+      , comparison = CarDetail.initialComparison
+      , panels = Dict.empty
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -158,11 +158,11 @@ update shared msg m =
             let
                 next =
                     CarDetail.update detailMsg
-                        { comparison = m.detailComparison, panel = panelFor carNumber m }
+                        { comparison = m.comparison, panel = panelFor carNumber m }
             in
             ( { m
-                | detailComparison = next.comparison
-                , detailPanels = Dict.insert carNumber next.panel m.detailPanels
+                | comparison = next.comparison
+                , panels = Dict.insert carNumber next.panel m.panels
               }
             , Effect.none
             )
@@ -189,7 +189,7 @@ openColumn shared carNumber columns =
         columns
 
     else
-        pickedFrom columns (selected ++ [ carNumber ])
+        pickedOr columns (selected ++ [ carNumber ])
 
 
 {-| The column for `carNumber` taken away, and whatever is left held where it
@@ -200,15 +200,15 @@ closeColumn : Shared.Model -> CarNumber -> CarColumns -> CarColumns
 closeColumn shared carNumber columns =
     selectedCarNumbers shared columns
         |> List.filter ((/=) carNumber)
-        |> pickedFrom columns
+        |> pickedOr columns
 
 
-{-| `Picked` from a list the caller knows is not empty. An empty one leaves the
-columns as they stand, which is the same answer the view gives by withholding
-the close button from a column that is the only one.
+{-| `Picked` from a list the caller knows is not empty, or the columns as they
+stand where it is empty after all -- which is the same answer the view gives by
+withholding the close button from a column that is the only one.
 -}
-pickedFrom : CarColumns -> List CarNumber -> CarColumns
-pickedFrom fallback carNumbers =
+pickedOr : CarColumns -> List CarNumber -> CarColumns
+pickedOr fallback carNumbers =
     case carNumbers of
         [] ->
             fallback
@@ -243,7 +243,7 @@ selectedCarNumbers shared columns =
 
 panelFor : CarNumber -> Model -> CarDetail.Model
 panelFor carNumber m =
-    Dict.get carNumber m.detailPanels |> Maybe.withDefault CarDetail.init
+    Dict.get carNumber m.panels |> Maybe.withDefault CarDetail.init
 
 
 
@@ -329,11 +329,11 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
-        -- The cars with columns, resolved once. The standings are marked from
-        -- this and not from `layout.shown`, which the tracker empties: going
-        -- back from the tracker is going back to what was there, and the marks
-        -- say so while it is up.
-        having =
+        -- Resolved once. The standings are marked from this and not from
+        -- `layout.shown`, which the tracker empties: going back from the
+        -- tracker is going back to what was there, and the marks say so while
+        -- it is up.
+        carsWithColumns =
             shownCars snapshot m.columns
 
         -- Everything the mode decides, read off it once. `shown` is empty under
@@ -353,7 +353,7 @@ trackerView track timeline snapshot replay m =
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
                     , detail = "col-start-2 row-start-1 row-span-2"
-                    , shown = having
+                    , shown = carsWithColumns
                     }
     in
     div
@@ -364,11 +364,11 @@ trackerView track timeline snapshot replay m =
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
                     { onSelect = OpenColumn
-                    , withColumns = List.map (.metadata >> .carNumber) having
+                    , withColumns = List.map (.metadata >> .carNumber) carsWithColumns
                     }
                     snapshot
                 ]
-            , detailColumns layout.detail m replay snapshot layout.shown
+            , columnStrip layout.detail m replay snapshot layout.shown
             , div
                 -- The cell is the only box in the chain whose height is settled,
                 -- so a square SVG measured against the width overflows the card.
@@ -440,14 +440,14 @@ the edge and the cell scrolls sideways to it.
 One car is drawn in a column too, and not given the cell whole.
 
 -}
-detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
-detailColumns cell m replay snapshot shown =
+columnStrip : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
+columnStrip cell m replay snapshot shown =
     let
         -- Asked of what is drawn: a stand-in column is as closable as a picked
         -- one, and closing it is what turns the rest of them into a pick. What
         -- is never offered is the close of the only column there is.
         card =
-            detailCard { closable = List.length shown > 1 } m replay snapshot
+            columnCard { closable = List.length shown > 1 } m replay snapshot
     in
     case shown of
         [] ->
@@ -470,8 +470,8 @@ detailColumns cell m replay snapshot shown =
                 )
 
 
-detailCard : { closable : Bool } -> Model -> Replay.Model -> Snapshot -> CarAt -> Html Msg
-detailCard column m replay snapshot car =
+columnCard : { closable : Bool } -> Model -> Replay.Model -> Snapshot -> CarAt -> Html Msg
+columnCard column m replay snapshot car =
     let
         carNumber =
             car.metadata.carNumber
@@ -489,7 +489,7 @@ detailCard column m replay snapshot car =
 
                         else
                             Nothing
-                    , comparison = m.detailComparison
+                    , comparison = m.comparison
                     , showing = panelFor carNumber m
                     }
                     replay.race.cars

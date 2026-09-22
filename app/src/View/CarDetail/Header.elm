@@ -41,7 +41,7 @@ view :
     -> Html msg
 view { startPosition, toLeader, onClose } item =
     div [ class "grid gap-y-2" ]
-        [ who { startPosition = startPosition, onClose = onClose } item
+        [ nameplate { startPosition = startPosition, onClose = onClose } item
         , standing toLeader item
         ]
 
@@ -85,11 +85,11 @@ left it what they did not want, which in a column is not much, and the name is
 the part worth reading in full.
 
 -}
-who : { startPosition : Maybe Position, onClose : Maybe msg } -> CarAt -> Html msg
-who { startPosition, onClose } item =
+nameplate : { startPosition : Maybe Position, onClose : Maybe msg } -> CarAt -> Html msg
+nameplate { startPosition, onClose } item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 gap-y-1.5" ]
         [ div [ class "col-start-1 col-span-2 row-start-1 flex items-center gap-x-2 min-w-0" ]
-            [ overall startPosition item
+            [ fieldPosition startPosition item
             , classBadge item
             ]
         , div [ class "col-start-4 row-start-1" ] [ corner onClose item.status ]
@@ -132,12 +132,13 @@ corner onClose status =
                 ]
 
 
-{-| Where the car stands in the field and how far it has come to stand there,
-drawn no larger than the class badge beside it: none of the three is read
-before the others.
+{-| Where the car stands in the field -- the field's and not the class's, which
+the strip below reports -- and how far it has come to stand there. Drawn no
+larger than the class badge beside it: none of the three is read before the
+others.
 -}
-overall : Maybe Position -> CarAt -> Html msg
-overall startPosition item =
+fieldPosition : Maybe Position -> CarAt -> Html msg
+fieldPosition startPosition item =
     div [ class "flex items-center gap-x-1.5 text-[12px] tabular-nums whitespace-nowrap" ]
         [ text (Position.toOrdinal item.standing.position)
         , movement startPosition item.standing.position
