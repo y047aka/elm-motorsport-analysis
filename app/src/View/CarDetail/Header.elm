@@ -71,7 +71,12 @@ portrait carImageUrl item =
                 -- the row above, and a picture stopping short of the edge for
                 -- a button that is not beside it reads as a margin nothing
                 -- asked for.
-                , class "col-start-3 -col-end-1 row-start-2 justify-self-end self-center w-[120px] h-auto object-contain"
+                --
+                -- 104px rather than 120: the picture's width is the name's
+                -- loss, the name being the one thing on the row that has more
+                -- to say than fits, and a car in profile stays legible far
+                -- smaller than a string of words does.
+                , class "col-start-3 -col-end-1 row-start-2 justify-self-end self-center w-[104px] h-auto object-contain"
                 ]
                 []
 
@@ -107,7 +112,13 @@ who { startPosition, onClose } item =
         -- picture riding high against a badge neither of them matches.
         , div [ class "col-start-1 row-start-2 self-center" ] [ CarNumberBadge.view item.metadata ]
         , div [ class "col-start-2 row-start-2 self-center grid gap-y-0.5 min-w-0" ]
-            [ div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
+            [ -- 12px rather than 14: the name is the longest string in the
+              -- header and the one that truncates, and it was the only thing
+              -- here set above the scale the rest of the panel reads at. It
+              -- now sits level with the position and the class badge above it
+              -- -- the header says four short things and one long one, and the
+              -- long one does not need a size to be found.
+              div [ class "text-[12px] truncate" ] [ text item.metadata.team ]
             , currentDriver item
             ]
         , portrait item.metadata.imageUrl item
