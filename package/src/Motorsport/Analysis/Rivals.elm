@@ -2,7 +2,6 @@ module Motorsport.Analysis.Rivals exposing
     ( Rivals
     , around
     , focused, class
-    , classLeader
     , fight, nearest
     )
 
@@ -18,7 +17,6 @@ averaging a baseline.
 @docs Rivals
 @docs around
 @docs focused, class
-@docs classLeader
 @docs fight, nearest
 
 -}
@@ -80,20 +78,6 @@ field by.
 class : Rivals -> Class
 class (Rivals r) =
     r.car.metadata.class
-
-
-{-| The car at the front of the class, and `Nothing` where that is the car
-itself -- a car does not lead itself by anything, so a reading taken against
-this one has nothing to report rather than nought to report.
-
-Named for the class and not left as `leader`, which is what the field's front
-is called wherever a whole snapshot is in hand. They are different cars, and a
-panel that took one for the other reported a race its car was not in.
-
--}
-classLeader : Rivals -> Maybe CarAt
-classLeader (Rivals r) =
-    List.Extra.last r.ahead
 
 
 {-| The car and the rival either side of it: the cars a view compares, and the

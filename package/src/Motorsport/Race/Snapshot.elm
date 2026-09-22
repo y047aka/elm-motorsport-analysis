@@ -2,7 +2,7 @@ module Motorsport.Race.Snapshot exposing
     ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..)
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
-    , toList, toClassList, get, inClass, leader, lapCount, elapsed
+    , toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
     , gapBetween
     , bestTimes, lapHistory
     )
@@ -17,7 +17,7 @@ each work them out again -- that sharing is the whole reason the type exists.
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
-@docs toList, toClassList, get, inClass, leader, lapCount, elapsed
+@docs toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
 @docs gapBetween
 @docs bestTimes, lapHistory
 
@@ -324,11 +324,26 @@ inClass class (Snapshot s) =
         |> Maybe.withDefault []
 
 
-{-| The car leading the race, where there is one.
+{-| The car leading the race, where there is one. The race, not a class of it:
+for a GT car this is a car several laps up the road in a contest it is not in.
+See [`classLeader`](#classLeader).
 -}
 leader : Snapshot -> Maybe CarAt
 leader (Snapshot s) =
     List.head s.cars
+
+
+{-| The car at the front of one class, where the class has any cars.
+
+Read off the running order the snapshot already holds the class grouped by,
+rather than off a car's own rivals: the leader is not a car in the neighbourhood
+of any particular one, and a group built around a car is free to hold as few of
+its classmates as its own readers need.
+
+-}
+classLeader : Class -> Snapshot -> Maybe CarAt
+classLeader class snapshot =
+    inClass class snapshot |> List.head
 
 
 {-| How far up or down the road one car is from another: the intervals between

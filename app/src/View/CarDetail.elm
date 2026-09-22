@@ -156,7 +156,7 @@ view config cars snapshot focused =
         ]
         [ Header.view
             { startPosition = startPositionOf cars focused
-            , toLeader = gapOf snapshot { inFront = Rivals.classLeader rivals, chasing = Just focused }
+            , toLeader = gapOf snapshot { inFront = Snapshot.classLeader focused.metadata.class snapshot, chasing = Just focused }
             , onClose = config.onClose
             }
             focused
@@ -165,20 +165,28 @@ view config cars snapshot focused =
 
 
 {-| The gap a classification prints between two cars: the time between them
-where the road holds them together, and the whole laps where it does not. No
-gap at all where one of them is not there, which is what a class runs out of at
-its edges.
+where the road holds them together, and the whole laps where it does not.
+
+No gap at all where one of them is not there, which is what a class runs out of
+at its edges, and none where they are the same car -- a car leading its class is
+asked for its gap to the leader like any other, and does not lead itself by
+nought.
+
 -}
 gapOf : Snapshot -> { inFront : Maybe CarAt, chasing : Maybe CarAt } -> Gap
 gapOf snapshot pair =
     case ( pair.inFront, pair.chasing ) of
         ( Just inFront, Just chasing ) ->
-            case Snapshot.gapBetween inFront chasing snapshot of
-                Just delta ->
-                    Gap.seconds delta
+            if inFront.metadata.carNumber == chasing.metadata.carNumber then
+                Gap.none
 
-                Nothing ->
-                    Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted)
+            else
+                case Snapshot.gapBetween inFront chasing snapshot of
+                    Just delta ->
+                        Gap.seconds delta
+
+                    Nothing ->
+                        Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted)
 
         _ ->
             Gap.none

@@ -86,6 +86,22 @@ suite =
                         |> Snapshot.toClassList
                         |> List.map (Tuple.second >> List.map (.metadata >> .carNumber))
                         |> Expect.equal [ [ "2" ], [ "1" ] ]
+            , test "a class is led by its own front, however far down the order that car is" <|
+                \_ ->
+                    -- Car 2 is LMGT3 and leads the field; the Hypercars it is
+                    -- ahead of are racing car 1, which is second overall.
+                    Snapshot.classLeader (classOf "HYPERCAR") fieldWithTailenders
+                        |> Maybe.map (.metadata >> .carNumber)
+                        |> Expect.equal (Just "1")
+            , test "a car of another class does not become the leader of this one" <|
+                \_ ->
+                    Snapshot.classLeader (classOf "LMGT3") fieldWithTailenders
+                        |> Maybe.map (.metadata >> .carNumber)
+                        |> Expect.equal (Just "2")
+            , test "a class no car races in has no leader" <|
+                \_ ->
+                    Snapshot.classLeader (classOf "LMP2") fieldWithTailenders
+                        |> Expect.equal Nothing
             ]
         , describe "the sectors of the lap a car is on"
             [ test "are complete behind it and untouched ahead of it" <|

@@ -145,6 +145,18 @@ test.describe('Car Detail Columns', () => {
       .locator('[data-live-standings] [aria-pressed="true"]')
       .evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
     expect(marked).toEqual(['Car #6', 'Car #48', 'Car #92']);
+    // Each of the three leads the class its panel reports, and a car does not
+    // lead itself by nought: the reading against the class leader is no
+    // reading at all.
+    const toLeader = await page.locator(DETAIL).evaluateAll((panels) =>
+      panels.map((panel) => {
+        const label = [...panel.querySelectorAll('div')].find(
+          (el) => el.textContent === 'Class leader',
+        );
+        return label?.nextElementSibling?.textContent?.trim() ?? null;
+      }),
+    );
+    expect(toLeader).toEqual(['-', '-', '-']);
     await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('class-leaders-by-default.png');
   });
 
