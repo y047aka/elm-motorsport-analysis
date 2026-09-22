@@ -79,8 +79,7 @@ test.describe('Car Detail Visual Tests', () => {
 
 /**
  * As many columns as the reader asks for, each drawn against the rivals of the
- * car it holds. Six is the ceiling, and Porsche Penske ran three at Le Mans in
- * 2025, which is the most any entrant ran.
+ * car it holds, up to a ceiling of six.
  */
 test.describe('Car Detail Columns', () => {
   /** The column a panel is drawn in, which is what carries its width. */
@@ -164,21 +163,5 @@ test.describe('Car Detail Columns', () => {
     // so a press that does get through still opens nothing.
     await seventh.click({ force: true });
     await expectColumns(page, ['12', '8', '7', '83', '51', '50']);
-  });
-
-  test('should open the cars a team entered in this class from its name', async ({ page }) => {
-    await selectCar(page, '6');
-    await page.locator(DETAIL).getByRole('button', { name: 'Porsche Penske Motorsport' }).click();
-    // The two teammates join the car that was already up, which keeps its place
-    // rather than being reopened at the end.
-    await expectColumns(page, ['6', '5', '4']);
-  });
-
-  test('should not offer a team that entered this car alone in its class', async ({ page }) => {
-    // AF Corse ran #83 by itself in Hypercar; Ferrari AF Corse's pair is a
-    // different entrant.
-    await selectCar(page, '83');
-    await expect(page.locator(DETAIL).getByRole('button', { name: 'AF Corse', exact: true }))
-      .toHaveAttribute('aria-disabled', 'true');
   });
 });

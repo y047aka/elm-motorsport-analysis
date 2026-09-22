@@ -128,7 +128,6 @@ open at once.
 -}
 view :
     { toMsg : Msg -> msg
-    , onEntrant : Maybe msg
     , onClose : Maybe msg
     , comparison : Comparison
     , showing : Model
@@ -150,7 +149,6 @@ view config cars snapshot focusedCar =
                     [ Header.view
                         { startPosition = startPositionOf cars focused
                         , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
-                        , onEntrant = config.onEntrant
                         , onClose = config.onClose
                         }
                         focused

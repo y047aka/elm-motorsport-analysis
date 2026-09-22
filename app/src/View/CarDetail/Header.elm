@@ -24,11 +24,6 @@ off the opening lap rather than reading off a grid sheet. `behind` is the car
 next in the running order measured against this one, which no `CarAt` carries:
 a car is given the gap to the one ahead of it, never the one behind.
 
-`onEntrant` is what pressing the team's name asks for: the name and the class
-badge sit on one line here and together are the entrant, so that line is what a
-reader would point at to mean "the rest of these". It is `Nothing` when the
-press would put nothing new on the page.
-
 `onClose` closes the column. It is `Nothing` for the only column on show, which
 is the one the middle of the page is never without.
 
@@ -36,14 +31,13 @@ is the one the middle of the page is never without.
 view :
     { startPosition : Maybe Int
     , behind : Maybe Gap
-    , onEntrant : Maybe msg
     , onClose : Maybe msg
     }
     -> CarAt
     -> Html msg
-view { startPosition, behind, onEntrant, onClose } item =
+view { startPosition, behind, onClose } item =
     div [ class "grid gap-y-2" ]
-        [ who { onEntrant = onEntrant, onClose = onClose } item
+        [ who onClose item
         , standing { startPosition = startPosition, behind = behind } item
         ]
 
@@ -68,8 +62,8 @@ portrait carImageUrl item =
             text ""
 
 
-who : { onEntrant : Maybe msg, onClose : Maybe msg } -> CarAt -> Html msg
-who { onEntrant, onClose } item =
+who : Maybe msg -> CarAt -> Html msg
+who onClose item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
         [ CarNumberBadge.view item.metadata
         , div [ class "grid gap-y-0.5 min-w-0" ]
@@ -78,36 +72,13 @@ who { onEntrant, onClose } item =
             -- off the end of the row rather than cutting the name.
             [ div [ class "flex items-center gap-x-2 min-w-0" ]
                 [ classBadge item
-                , teamName onEntrant item
+                , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
                 ]
             , lineup item
             ]
         , portrait item.metadata.imageUrl item
         , corner onClose item.status
         ]
-
-
-{-| The team's name, which asks for the rest of the cars it entered in this
-class. It stays a button when there is nothing left to ask for rather than
-turning back into text, so that a name does not change what kind of thing it is
-under the reader as the columns fill up.
--}
-teamName : Maybe msg -> CarAt -> Html msg
-teamName onEntrant item =
-    button
-        (class "text-[14px] truncate text-left"
-            :: (case onEntrant of
-                    Just msg ->
-                        [ onClick msg
-                        , title "Show the cars this team entered in this class"
-                        , class "cursor-pointer"
-                        ]
-
-                    Nothing ->
-                        [ attribute "aria-disabled" "true" ]
-               )
-        )
-        [ text item.metadata.team ]
 
 
 {-| The top right of the header. The status badge has always been what sits

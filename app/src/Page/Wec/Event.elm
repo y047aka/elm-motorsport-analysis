@@ -15,7 +15,6 @@ import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
-import Motorsport.Analysis.Entrant as Entrant
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -95,7 +94,6 @@ type Msg
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | ShowDetailCar CarNumber
-    | ShowDetailCars (List CarNumber)
     | CloseDetailCar CarNumber
     | CarDetailMsg CarNumber CarDetail.Msg
 
@@ -124,10 +122,7 @@ update msg m =
             )
 
         ShowDetailCar carNumber ->
-            ( { m | selection = showCars [ carNumber ] m.selection }, Effect.none )
-
-        ShowDetailCars carNumbers ->
-            ( { m | selection = showCars carNumbers m.selection }, Effect.none )
+            ( { m | selection = showCars carNumber m.selection }, Effect.none )
 
         CloseDetailCar carNumber ->
             ( { m | selection = List.filter ((/=) carNumber) m.selection }, Effect.none )
@@ -146,22 +141,17 @@ update msg m =
             )
 
 
-{-| The columns `carNumbers` asks for, opened at the end in the order they were
-asked for. A car that already has a column keeps the one it has rather than
-being moved to the end, and the ones there is no room for are dropped.
+{-| A column for `carNumber`, opened at the end. A car that already has one
+keeps the one it has rather than being moved to the end, and a page with no
+room left takes nothing.
 -}
-showCars : List CarNumber -> List CarNumber -> List CarNumber
-showCars carNumbers selection =
-    List.foldl
-        (\carNumber shown ->
-            if List.member carNumber shown || List.length shown >= columnLimit then
-                shown
-
-            else
-                shown ++ [ carNumber ]
-        )
+showCars : CarNumber -> List CarNumber -> List CarNumber
+showCars carNumber selection =
+    if List.member carNumber selection || List.length selection >= columnLimit then
         selection
-        carNumbers
+
+    else
+        selection ++ [ carNumber ]
 
 
 {-| As many columns as the reader can have open at once.
@@ -354,13 +344,7 @@ detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Htm
 detailColumns cell m replay snapshot shown =
     let
         card =
-            detailCard
-                { closable = List.length shown > 1
-                , shown = List.map (.metadata >> .carNumber) shown
-                }
-                m
-                replay
-                snapshot
+            detailCard { closable = List.length shown > 1 } m replay snapshot
     in
     case shown of
         [] ->
@@ -386,7 +370,7 @@ detailColumns cell m replay snapshot shown =
                 )
 
 
-detailCard : { closable : Bool, shown : List CarNumber } -> Model -> Replay.Model -> Snapshot -> CarAt -> Html Msg
+detailCard : { closable : Bool } -> Model -> Replay.Model -> Snapshot -> CarAt -> Html Msg
 detailCard columns m replay snapshot car =
     let
         carNumber =
@@ -399,7 +383,6 @@ detailCard columns m replay snapshot car =
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg carNumber
-                    , onEntrant = entrantMsg columns m snapshot car
                     , onClose =
                         if columns.closable then
                             Just (CloseDetailCar carNumber)
@@ -415,33 +398,6 @@ detailCard columns m replay snapshot car =
                 ]
             ]
         ]
-
-
-{-| What pressing the team's name asks for: every car it entered in this class,
-the ones already up among them, so that pressing it is not a way of moving those
-to the end.
-
-`Nothing` where the press would put nothing new on the page -- the team entered
-this car alone in its class, or all of them are up already -- and where there is
-no room left for a column, which is a thing to say on the name rather than to
-find out by pressing it.
-
--}
-entrantMsg : { closable : Bool, shown : List CarNumber } -> Model -> Snapshot -> CarAt -> Maybe Msg
-entrantMsg columns m snapshot car =
-    let
-        entrant =
-            Entrant.cars (Snapshot.toList snapshot) car
-                |> List.map (.metadata >> .carNumber)
-    in
-    if List.length m.selection >= columnLimit then
-        Nothing
-
-    else if List.all (\carNumber -> List.member carNumber columns.shown) entrant then
-        Nothing
-
-    else
-        Just (ShowDetailCars entrant)
 
 
 standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg
