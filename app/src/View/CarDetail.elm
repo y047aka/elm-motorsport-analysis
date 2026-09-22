@@ -143,7 +143,7 @@ view config cars snapshot focused =
         ]
         [ Header.view
             { startPosition = startPositionOf cars focused
-            , toLeader = gapOf snapshot { inFront = Snapshot.classLeader focused.metadata.class snapshot, chasing = Just focused }
+            , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
             , onClose = config.onClose
             }
             focused
@@ -154,14 +154,14 @@ view config cars snapshot focused =
 {-| The gap a classification prints between two cars: the time between them
 where the road holds them together, and the whole laps where it does not.
 
-No gap at all where one of them is not there, and none where they are the same
+No gap at all where there is no car in front, and none where it is the same
 car: a car leading its class is asked for its gap to the leader too.
 
 -}
-gapOf : Snapshot -> { inFront : Maybe CarAt, chasing : Maybe CarAt } -> Gap
-gapOf snapshot pair =
-    case ( pair.inFront, pair.chasing ) of
-        ( Just inFront, Just chasing ) ->
+gapOf : Snapshot -> Maybe CarAt -> CarAt -> Gap
+gapOf snapshot maybeInFront chasing =
+    case maybeInFront of
+        Just inFront ->
             if inFront.metadata.carNumber == chasing.metadata.carNumber then
                 Gap.none
 
@@ -173,7 +173,7 @@ gapOf snapshot pair =
                     Nothing ->
                         Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted)
 
-        _ ->
+        Nothing ->
             Gap.none
 
 
@@ -284,7 +284,7 @@ legendEntry snapshot focused inFront item =
         , div [ class "text-[11px] truncate" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , div [ class "text-[12px] tabular-nums whitespace-nowrap" ]
-            [ text (Gap.toString (gapOf snapshot { inFront = inFront, chasing = Just item })) ]
+            [ text (Gap.toString (gapOf snapshot inFront item)) ]
         ]
 
 
