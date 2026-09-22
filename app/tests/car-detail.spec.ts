@@ -98,11 +98,6 @@ test.describe('Car Detail Visual Tests', () => {
       ['8', 'P3', '+ 58.731'],
     ]);
   });
-
-  test('should lead the race when no car has been picked', async ({ page }) => {
-    await openEvent(page);
-    await expect(page.locator(DETAIL)).toHaveScreenshot('leader-by-default.png');
-  });
 });
 
 /**
@@ -117,6 +112,26 @@ test.describe('Car Detail Columns', () => {
 
   test.beforeEach(async ({ page }) => {
     await openEvent(page);
+  });
+
+  test('should show the leader of each class when no car has been picked', async ({ page }) => {
+    // Each class's own leader, in the order the running order puts the classes
+    // in -- which is the order their leaders are in. The race is several races,
+    // and the car leading the field is leading one of them.
+    await expectColumns(page, ['6', '48', '92']);
+    // Nothing is picked, so nothing here is the reader's: no column is theirs
+    // to close, and no row in the standings says it is theirs.
+    await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(0);
+    await expect(page.locator('[data-live-standings] [aria-pressed="true"]')).toHaveCount(0);
+    await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('class-leaders-by-default.png');
+  });
+
+  test('should take a car standing in as a pick when its own row is pressed', async ({ page }) => {
+    // #6 is already drawn, standing in for Hypercar. Its row still has to take
+    // the press, or three of the field's rows would be dead until something
+    // else was picked first.
+    await selectCar(page, '6');
+    await expectColumns(page, ['6']);
   });
 
   test('should give a picked car a column without taking the last one away', async ({ page }) => {

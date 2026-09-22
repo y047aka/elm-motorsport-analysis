@@ -247,14 +247,10 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
-        onShow =
-            shownCars snapshot m.selection
-
-        -- Everything the mode decides, read off it once. `shown` is empty
-        -- under the tracker because the tracker has the room the columns
-        -- want; the standings are handed `onShow` regardless, so that they go
-        -- on saying which cars the reader has open and going back to them is
-        -- going back to what was there.
+        -- Everything the mode decides, read off it once. `shown` is empty under
+        -- the tracker, which has the room the columns want. The standings are
+        -- handed the selection rather than this, so that going back from the
+        -- tracker is going back to what was there.
         layout =
             case m.mode of
                 Tracker ->
@@ -270,7 +266,7 @@ trackerView track timeline snapshot replay m =
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
                     , detail = "col-start-2 row-start-1 row-span-2"
-                    , shown = onShow
+                    , shown = shownCars snapshot m.selection
                     }
     in
     div
@@ -281,7 +277,7 @@ trackerView track timeline snapshot replay m =
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
                     { onSelect = ShowDetailCar
-                    , shown = List.map (.metadata >> .carNumber) onShow
+                    , picked = m.selection
                     }
                     snapshot
                 ]
@@ -309,13 +305,21 @@ trackerView track timeline snapshot replay m =
 
 {-| The cars the columns are drawn for: the ones the reader picked, in the order
 they picked them, and until they have picked any -- or when not one of the ones
-they picked is in the field -- the car at the front of the race.
+they picked is in the field -- the car at the front of each class.
+
+The front of each class rather than the front of the race, because the race is
+several races: the car leading the field is leading one of them, and a page that
+opened on it alone opened on a third of what was going on. The classes come in
+the order the running order puts them in, which is the order their leaders are
+in.
+
 -}
 shownCars : Snapshot -> List CarNumber -> List CarAt
 shownCars snapshot selection =
     case List.filterMap (\carNumber -> Snapshot.get carNumber snapshot) selection of
         [] ->
-            Snapshot.leader snapshot |> Maybe.map List.singleton |> Maybe.withDefault []
+            Snapshot.toClassList snapshot
+                |> List.filterMap (Tuple.second >> List.head)
 
         picked ->
             picked
@@ -334,8 +338,11 @@ figures in it are the same figures, set further apart.
 detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
 detailColumns cell m replay snapshot shown =
     let
+        -- Asked of the selection and not of what is drawn: the columns standing
+        -- in before a car is picked are not the reader's to close, there being
+        -- nothing of theirs to take away.
         card =
-            detailCard { closable = List.length shown > 1 } m replay snapshot
+            detailCard { closable = List.length m.selection > 1 } m replay snapshot
     in
     case shown of
         [] ->

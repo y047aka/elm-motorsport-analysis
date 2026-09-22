@@ -20,17 +20,18 @@ import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| `shown` is the cars the middle of the page has columns open for, which is
-always at least one of them. Clicking a row hands `onSelect` the car it names
-and it is given a column of its own; clicking a row that already has one does
-nothing, and there is no clicking a car away again -- a column is closed from
-the column itself.
+{-| `picked` is the cars the reader has chosen, which is what a marked row
+means. Clicking a row hands `onSelect` the car it names and it is given a column
+of its own; clicking a row already marked does nothing, and there is no clicking
+a car away again -- a column is closed from the column itself.
 
-Every row of the field will take a column, however many are open already.
+The cars standing in before anything is picked are not marked, though the middle
+of the page is drawing them: nothing is picked, so nothing here says it is, and
+every row of the field -- theirs among them -- will still take a column.
 
 -}
-view : { onSelect : CarNumber -> msg, shown : List CarNumber } -> Snapshot -> Html msg
-view { onSelect, shown } snapshot =
+view : { onSelect : CarNumber -> msg, picked : List CarNumber } -> Snapshot -> Html msg
+view { onSelect, picked } snapshot =
     div
         -- Marked, which the visual tests locate the standings by: the cell it
         -- sits in is named by the Tailwind utilities that place it, and those
@@ -60,7 +61,7 @@ view { onSelect, shown } snapshot =
                                         item.standing.position
                                         (Driver.toSurname item.currentDriver)
                                         (item.status == Status.InPit)
-                                        (List.member item.metadata.carNumber shown)
+                                        (List.member item.metadata.carNumber picked)
                                     )
                                 )
                         )
@@ -81,12 +82,12 @@ them.
 
 -}
 carRow : (CarNumber -> msg) -> Metadata -> Int -> String -> Bool -> Bool -> Html msg
-carRow onSelect metadata position driverSurname isInPit isShown =
+carRow onSelect metadata position driverSurname isInPit isPicked =
     li []
         [ button
             ([ attribute "aria-label" ("Car #" ++ metadata.carNumber)
              , attribute "aria-pressed"
-                (if isShown then
+                (if isPicked then
                     "true"
 
                  else
@@ -94,7 +95,7 @@ carRow onSelect metadata position driverSurname isInPit isShown =
                 )
              , class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
              ]
-                ++ (if isShown then
+                ++ (if isPicked then
                         -- No handler: the car already has a column, and the
                         -- press that would give it one is the press that
                         -- gave it the one it has.
