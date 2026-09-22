@@ -128,7 +128,7 @@ update msg model =
             )
 
         ( WecEventMsg pageMsg, WecEventPage pageModel ) ->
-            Page.Wec.Event.update pageMsg pageModel
+            Page.Wec.Event.update model.shared pageMsg pageModel
                 |> updatePage model WecEventPage WecEventMsg
 
         _ ->

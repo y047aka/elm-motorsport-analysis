@@ -93,9 +93,9 @@ test.describe('Car Detail Visual Tests', () => {
     // carries its own gap to it, where that figure used to sit on #6's row
     // with the sign the other way round. The place leads the row.
     expect(read).toEqual([
-      ['6', 'P1', '-'],
-      ['83', 'P2', '+ 14.766'],
-      ['8', 'P3', '+ 58.731'],
+      ['6', '1st', '-'],
+      ['83', '2nd', '+ 14.766'],
+      ['8', '3rd', '+ 58.731'],
     ]);
   });
 });
@@ -119,19 +119,42 @@ test.describe('Car Detail Columns', () => {
     // in -- which is the order their leaders are in. The race is several races,
     // and the car leading the field is leading one of them.
     await expectColumns(page, ['6', '48', '92']);
-    // Nothing is picked, so nothing here is the reader's: no column is theirs
-    // to close, and no row in the standings says it is theirs.
-    await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(0);
-    await expect(page.locator('[data-live-standings] [aria-pressed="true"]')).toHaveCount(0);
+    // Drawn as any column is: a mark on the row says the car has one, which is
+    // as true of a stand-in as of a pick, and each is the reader's to close.
+    await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(3);
+    const marked = await page
+      .locator('[data-live-standings] [aria-pressed="true"]')
+      .evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
+    expect(marked).toEqual(['Car #6', 'Car #48', 'Car #92']);
     await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('class-leaders-by-default.png');
   });
 
-  test('should take a car standing in as a pick when its own row is pressed', async ({ page }) => {
-    // #6 is already drawn, standing in for Hypercar. Its row still has to take
-    // the press, or three of the field's rows would be dead until something
-    // else was picked first.
-    await selectCar(page, '6');
-    await expectColumns(page, ['6']);
+  test('should not press a row whose car is already standing in', async ({ page }) => {
+    // #6 is already drawn, standing in for Hypercar, so its row is marked and
+    // carries no handler -- the same as any car with a column. Forced, because
+    // the press is what is being tested and not whether it is offered.
+    await standingsRow(page, '6').click({ force: true });
+    await expectColumns(page, ['6', '48', '92']);
+  });
+
+  test('should keep the rest of the stand-ins when one of them is closed', async ({ page }) => {
+    // Closing one is the reader saying the other two are worth the room, so
+    // the page stops choosing and holds them: #48 leads LMP2 at this lap, and
+    // the column stays #48's whatever the race does with the lead after it.
+    await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Close this column' }).click();
+    await expectColumns(page, ['6', '92']);
+    await expect(standingsRow(page, '48')).toHaveAttribute('aria-pressed', 'false');
+    // Settled, not still following: a car picked now joins them rather than
+    // replacing them, which is what the page's own guess would have done.
+    await selectCar(page, '83');
+    await expectColumns(page, ['6', '92', '83']);
+  });
+
+  test('should let the reader\'s first pick answer the page\'s guess', async ({ page }) => {
+    // The stand-ins are three cars nobody asked for. Someone asking for one
+    // car wants that car, not that car alongside them.
+    await selectCar(page, '83');
+    await expectColumns(page, ['83']);
   });
 
   test('should give a picked car a column without taking the last one away', async ({ page }) => {

@@ -50,7 +50,7 @@ type alias Model =
     { mode : Mode
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , selection : List CarNumber
+    , selection : Selection
     , detailComparison : CarDetail.Comparison
     , detailPanels : Dict CarNumber CarDetail.Model
     }
@@ -64,6 +64,28 @@ type Mode
     | Tracker
 
 
+{-| Which cars have columns.
+
+`ClassLeaders` is what the page opens on and is not a selection: it is three
+cars the race picks, and it re-picks them as the race runs. `Picked` is the
+reader's own, fixed, in the order they asked for them.
+
+The two are drawn alike -- marked in the standings, each column with a close
+button -- because a mark there says the car has a column, which is as true of a
+stand-in as of a pick. What separates them is only that one follows the race,
+and any word from the reader ends that: a pick answers the page's guess, and a
+close settles what is left of it.
+
+`Picked` holds its head apart from its tail because the middle of the page is
+never without a column. Closing the last one is not a thing the view declines
+to offer -- it is not a state.
+
+-}
+type Selection
+    = ClassLeaders
+    | Picked CarNumber (List CarNumber)
+
+
 type StandingsTab
     = LeaderboardTab
     | CardsTab
@@ -74,7 +96,7 @@ init params =
     ( { mode = Columns
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , selection = []
+      , selection = ClassLeaders
       , detailComparison = CarDetail.initialComparison
       , detailPanels = Dict.empty
       }
@@ -98,8 +120,12 @@ type Msg
     | CarDetailMsg CarNumber CarDetail.Msg
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg m =
+{-| Takes the shared model because closing a column has to know who is in the
+one beside it: the stand-ins are whoever leads each class at this moment, and
+settling them into a selection is a question only the snapshot answers.
+-}
+update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
+update shared msg m =
     case msg of
         StartRace ->
             ( m, Task.perform (Replay.Start >> ReplayMsg) Time.now |> Effect.sendCmd )
@@ -125,7 +151,7 @@ update msg m =
             ( { m | selection = showCar carNumber m.selection }, Effect.none )
 
         CloseDetailCar carNumber ->
-            ( { m | selection = List.filter ((/=) carNumber) m.selection }, Effect.none )
+            ( { m | selection = closeCar shared carNumber m.selection }, Effect.none )
 
         CarDetailMsg carNumber detailMsg ->
             let
@@ -144,19 +170,70 @@ update msg m =
 {-| A column for `carNumber`, opened at the end. A car that already has one
 keeps the one it has rather than being moved to the end.
 
+The reader's first ask answers the page's guess rather than joining it: the
+stand-ins are three cars nobody asked for, and someone who asks for one car
+wants that car and not that car alongside them. Every ask after that adds,
+there being a selection by then to add to.
+
 There is no ceiling on how many. The cell scrolls sideways however many there
 are, and the cost of a column the reader has opened is the reader's to weigh --
 each draws its own charts on every frame of playback, so a great many of them
 running is a great deal of work.
 
 -}
-showCar : CarNumber -> List CarNumber -> List CarNumber
+showCar : CarNumber -> Selection -> Selection
 showCar carNumber selection =
-    if List.member carNumber selection then
-        selection
+    case selection of
+        ClassLeaders ->
+            Picked carNumber []
 
-    else
-        selection ++ [ carNumber ]
+        Picked first rest ->
+            if List.member carNumber (first :: rest) then
+                selection
+
+            else
+                Picked first (rest ++ [ carNumber ])
+
+
+{-| The column for `carNumber` taken away, and what is left of the stand-ins
+kept as they stand. Closing one of them is the reader saying something about
+the other two -- that they are worth the room the third was taking -- and a set
+that went on following the race would answer by replacing them.
+-}
+closeCar : Shared.Model -> CarNumber -> Selection -> Selection
+closeCar shared carNumber selection =
+    shownCarNumbers shared selection
+        |> List.filter ((/=) carNumber)
+        |> pickedFrom selection
+
+
+{-| `Picked` from a list the caller knows is not empty. An empty one leaves the
+selection as it stands, which is the same answer the view gives by withholding
+the close button from a column that is the only one.
+-}
+pickedFrom : Selection -> List CarNumber -> Selection
+pickedFrom fallback carNumbers =
+    case carNumbers of
+        [] ->
+            fallback
+
+        first :: rest ->
+            Picked first rest
+
+
+{-| The cars with columns right now, which for the stand-ins is a question for
+the snapshot. A round still on its way has no leaders, and no columns to close.
+-}
+shownCarNumbers : Shared.Model -> Selection -> List CarNumber
+shownCarNumbers shared selection =
+    case selection of
+        ClassLeaders ->
+            Shared.loadedRound shared
+                |> Maybe.map (.snapshot >> classLeaders >> List.map (.metadata >> .carNumber))
+                |> Maybe.withDefault []
+
+        Picked first rest ->
+            first :: rest
 
 
 panelFor : CarNumber -> Model -> CarDetail.Model
@@ -247,10 +324,15 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
+        -- The cars with columns, resolved once. The standings are marked from
+        -- this and not from `layout.shown`, which the tracker empties: going
+        -- back from the tracker is going back to what was there, and the marks
+        -- say so while it is up.
+        having =
+            shownCars snapshot m.selection
+
         -- Everything the mode decides, read off it once. `shown` is empty under
-        -- the tracker, which has the room the columns want. The standings are
-        -- handed the selection rather than this, so that going back from the
-        -- tracker is going back to what was there.
+        -- the tracker, which has the room the columns want.
         layout =
             case m.mode of
                 Tracker ->
@@ -266,7 +348,7 @@ trackerView track timeline snapshot replay m =
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
                     , detail = "col-start-2 row-start-1 row-span-2"
-                    , shown = shownCars snapshot m.selection
+                    , shown = having
                     }
     in
     div
@@ -277,7 +359,7 @@ trackerView track timeline snapshot replay m =
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
                     { onSelect = ShowDetailCar
-                    , picked = m.selection
+                    , picked = List.map (.metadata >> .carNumber) having
                     }
                     snapshot
                 ]
@@ -306,6 +388,23 @@ trackerView track timeline snapshot replay m =
 {-| The cars the columns are drawn for: the ones the reader picked, in the order
 they picked them, and until they have picked any -- or when not one of the ones
 they picked is in the field -- the car at the front of each class.
+-}
+shownCars : Snapshot -> Selection -> List CarAt
+shownCars snapshot selection =
+    case selection of
+        ClassLeaders ->
+            classLeaders snapshot
+
+        Picked first rest ->
+            case List.filterMap (\carNumber -> Snapshot.get carNumber snapshot) (first :: rest) of
+                [] ->
+                    classLeaders snapshot
+
+                picked ->
+                    picked
+
+
+{-| The car at the front of each class.
 
 The front of each class rather than the front of the race, because the race is
 several races: the car leading the field is leading one of them, and a page that
@@ -314,15 +413,10 @@ the order the running order puts them in, which is the order their leaders are
 in.
 
 -}
-shownCars : Snapshot -> List CarNumber -> List CarAt
-shownCars snapshot selection =
-    case List.filterMap (\carNumber -> Snapshot.get carNumber snapshot) selection of
-        [] ->
-            Snapshot.toClassList snapshot
-                |> List.filterMap (Tuple.second >> List.head)
-
-        picked ->
-            picked
+classLeaders : Snapshot -> List CarAt
+classLeaders snapshot =
+    Snapshot.toClassList snapshot
+        |> List.filterMap (Tuple.second >> List.head)
 
 
 {-| The cars on show, side by side. A column is as wide as the panel needs
@@ -349,11 +443,11 @@ figures in it are the same figures, set further apart.
 detailColumns : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
 detailColumns cell m replay snapshot shown =
     let
-        -- Asked of the selection and not of what is drawn: the columns standing
-        -- in before a car is picked are not the reader's to close, there being
-        -- nothing of theirs to take away.
+        -- Asked of what is drawn: a stand-in column is as closable as a picked
+        -- one, and closing it is what turns the rest of them into a pick. What
+        -- is never offered is the close of the only column there is.
         card =
-            detailCard { closable = List.length m.selection > 1 } m replay snapshot
+            detailCard { closable = List.length shown > 1 } m replay snapshot
     in
     case shown of
         [] ->

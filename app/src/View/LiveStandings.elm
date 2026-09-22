@@ -20,14 +20,16 @@ import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| `picked` is the cars the reader has chosen, which is what a marked row
-means. Clicking a row hands `onSelect` the car it names and it is given a column
-of its own; clicking a row already marked does nothing, and there is no clicking
-a car away again -- a column is closed from the column itself.
+{-| `picked` is the cars with columns, which is what a marked row means -- the
+cars standing in before anything is chosen among them, since a stand-in has a
+column like any other. Clicking a row hands `onSelect` the car it names and it
+is given a column of its own; clicking a row already marked does nothing, and
+there is no clicking a car away again -- a column is closed from the column
+itself.
 
-The cars standing in before anything is picked are not marked, though the middle
-of the page is drawing them: nothing is picked, so nothing here says it is, and
-every row of the field -- theirs among them -- will still take a column.
+So a mark follows its column rather than the reader's history. The stand-ins
+lose theirs the moment a car is chosen, which is the page's guess giving way,
+and their rows go back to being rows that will take a column.
 
 -}
 view : { onSelect : CarNumber -> msg, picked : List CarNumber } -> Snapshot -> Html msg
