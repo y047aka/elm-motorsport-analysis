@@ -73,8 +73,8 @@ reader's own, fixed, in the order they asked for them.
 The two are drawn alike -- marked in the standings, each column with a close
 button -- because a mark there says the car has a column, which is as true of a
 stand-in as of a pick. What separates them is only that one follows the race,
-and any word from the reader ends that: a pick answers the page's guess, and a
-close settles what is left of it.
+and any word from the reader ends that: a pick joins them, a close takes one
+away, and either settles the rest where they stand.
 
 `Picked` holds its head apart from its tail because the middle of the page is
 never without a column. Closing the last one is not a thing the view declines
@@ -120,9 +120,10 @@ type Msg
     | CarDetailMsg CarNumber CarDetail.Msg
 
 
-{-| Takes the shared model because closing a column has to know who is in the
-one beside it: the stand-ins are whoever leads each class at this moment, and
-settling them into a selection is a question only the snapshot answers.
+{-| Takes the shared model because opening or closing a column has to know what
+the columns beside it hold: the stand-ins are whoever leads each class at this
+moment, and settling them into a selection is a question only the snapshot
+answers.
 -}
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
 update shared msg m =
@@ -148,7 +149,7 @@ update shared msg m =
             )
 
         ShowDetailCar carNumber ->
-            ( { m | selection = showCar carNumber m.selection }, Effect.none )
+            ( { m | selection = showCar shared carNumber m.selection }, Effect.none )
 
         CloseDetailCar carNumber ->
             ( { m | selection = closeCar shared carNumber m.selection }, Effect.none )
@@ -170,10 +171,10 @@ update shared msg m =
 {-| A column for `carNumber`, opened at the end. A car that already has one
 keeps the one it has rather than being moved to the end.
 
-The reader's first ask answers the page's guess rather than joining it: the
-stand-ins are three cars nobody asked for, and someone who asks for one car
-wants that car and not that car alongside them. Every ask after that adds,
-there being a selection by then to add to.
+A pick joins what is up rather than replacing it, the stand-ins included. They
+are marked in the standings like any car with a column, and a press that
+unmarked three rows would be the one press on that list that takes columns
+away -- which is the one thing the list does not do.
 
 There is no ceiling on how many. The cell scrolls sideways however many there
 are, and the cost of a column the reader has opened is the reader's to weigh --
@@ -181,18 +182,17 @@ each draws its own charts on every frame of playback, so a great many of them
 running is a great deal of work.
 
 -}
-showCar : CarNumber -> Selection -> Selection
-showCar carNumber selection =
-    case selection of
-        ClassLeaders ->
-            Picked carNumber []
+showCar : Shared.Model -> CarNumber -> Selection -> Selection
+showCar shared carNumber selection =
+    let
+        current =
+            shownCarNumbers shared selection
+    in
+    if List.member carNumber current then
+        selection
 
-        Picked first rest ->
-            if List.member carNumber (first :: rest) then
-                selection
-
-            else
-                Picked first (rest ++ [ carNumber ])
+    else
+        pickedFrom selection (current ++ [ carNumber ])
 
 
 {-| The column for `carNumber` taken away, and what is left of the stand-ins

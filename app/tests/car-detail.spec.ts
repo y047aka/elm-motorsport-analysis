@@ -25,6 +25,22 @@ async function selectCar(page: Page, carNumber: string) {
   await expect(standingsRow(page, carNumber)).toHaveAttribute('aria-pressed', 'true');
 }
 
+/** The stand-in columns the page opens on, before anything has been picked. */
+const STAND_INS = ['6', '48', '92'];
+
+/**
+ * A column for this car and no other. A pick joins the columns already up, so
+ * the three the page stands in with have to be closed to be rid of them.
+ */
+async function soloCar(page: Page, carNumber: string) {
+  await selectCar(page, carNumber);
+  const others = () => page.locator(`${DETAIL}:not([data-car-detail="${carNumber}"])`);
+  for (let left = await others().count(); left > 0; left -= 1) {
+    await others().first().getByRole('button', { name: 'Close this column' }).click();
+    await expect(others()).toHaveCount(left - 1);
+  }
+}
+
 /**
  * The cars the columns are drawn for, left to right. Polled: Elm renders on the
  * next frame, so a press has not reached the page by the time it returns.
@@ -42,7 +58,9 @@ function expectColumns(page: Page, carNumbers: string[]) {
 test.describe('Car Detail Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await openEvent(page);
-    await selectCar(page, '83');
+    // One panel: these locate by `DETAIL` alone, which is a strict-mode
+    // violation the moment there are two.
+    await soloCar(page, '83');
   });
 
   test('should render the selected car with its rivals ahead and behind', async ({ page }) => {
@@ -73,7 +91,9 @@ test.describe('Car Detail Visual Tests', () => {
   });
 
   test('should keep the car it was given when its own row is clicked again', async ({ page }) => {
-    await standingsRow(page, '83').click();
+    // Forced: the row is marked and carries no handler, and what is being
+    // tested is the press rather than whether it is offered.
+    await standingsRow(page, '83').click({ force: true });
     await expect(standingsRow(page, '83')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator(DETAIL)).toHaveCount(1);
     await expect(page.locator(DETAIL)).toContainText('AF Corse');
@@ -150,17 +170,21 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['6', '92', '83']);
   });
 
-  test('should let the reader\'s first pick answer the page\'s guess', async ({ page }) => {
-    // The stand-ins are three cars nobody asked for. Someone asking for one
-    // car wants that car, not that car alongside them.
+  test('should let a pick join the stand-ins rather than replace them', async ({ page }) => {
+    // Their rows are marked like any car with a column, and a press that
+    // unmarked three of them would be the one press on the standings that
+    // takes columns away.
     await selectCar(page, '83');
-    await expectColumns(page, ['83']);
+    await expectColumns(page, [...STAND_INS, '83']);
+    for (const carNumber of STAND_INS) {
+      await expect(standingsRow(page, carNumber)).toHaveAttribute('aria-pressed', 'true');
+    }
   });
 
   test('should give a picked car a column without taking the last one away', async ({ page }) => {
     await selectCar(page, '83');
     await selectCar(page, '12');
-    await expectColumns(page, ['83', '12']);
+    await expectColumns(page, [...STAND_INS, '83', '12']);
   });
 
   test('should keep the columns in the order they were opened', async ({ page }) => {
@@ -168,14 +192,14 @@ test.describe('Car Detail Columns', () => {
     // round, so one of the two orders is one it could not have produced.
     await selectCar(page, '12');
     await selectCar(page, '83');
-    await expectColumns(page, ['12', '83']);
+    await expectColumns(page, [...STAND_INS, '12', '83']);
   });
 
   test('should hold every column to a width its panel stays readable at', async ({ page }) => {
     // Before a car has been picked at all: the leader stands in, and stands in
     // a column rather than being handed the cell whole.
     await expect(column(page, 0)).toHaveCSS('width', '360px');
-    await selectCar(page, '83');
+    await soloCar(page, '83');
     await expect(column(page, 0)).toHaveCSS('width', '360px');
     await selectCar(page, '12');
     for (let i = 0; i < 2; i++) {
@@ -184,10 +208,12 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should leave the third column off the edge, reachable by scrolling', async ({ page }) => {
+    // Three stood in with and three picked, which is past what the cell holds
+    // at any viewport the suite runs at.
     for (const carNumber of ['83', '12', '8']) {
       await selectCar(page, carNumber);
     }
-    await expect(page.locator(DETAIL)).toHaveCount(3);
+    await expect(page.locator(DETAIL)).toHaveCount(6);
     const columns = column(page, 0).locator('xpath=..');
     const { clientWidth, scrollWidth } = await columns.evaluate((el) => ({
       clientWidth: el.clientWidth,
@@ -197,7 +223,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should draw the columns side by side, each with its own close button', async ({ page }) => {
-    await selectCar(page, '83');
+    await soloCar(page, '83');
     await selectCar(page, '12');
     await expectColumns(page, ['83', '12']);
     // The strip the columns sit in, so that what is recorded is the pair
@@ -207,7 +233,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should show the same chart in every column, whichever one picks it', async ({ page }) => {
-    await selectCar(page, '83');
+    await soloCar(page, '83');
     await selectCar(page, '12');
     await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Positions' }).click();
     for (let i = 0; i < 2; i++) {
@@ -219,7 +245,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should close a column from the column itself', async ({ page }) => {
-    await selectCar(page, '83');
+    await soloCar(page, '83');
     await selectCar(page, '12');
     await page.locator(DETAIL).nth(0).getByRole('button', { name: 'Close this column' }).click();
     await expectColumns(page, ['12']);
@@ -228,7 +254,8 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should not offer to close the only column there is', async ({ page }) => {
-    await selectCar(page, '83');
+    await soloCar(page, '83');
+    await expectColumns(page, ['83']);
     await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(0);
   });
 
@@ -239,7 +266,7 @@ test.describe('Car Detail Columns', () => {
     for (const carNumber of asked) {
       await selectCar(page, carNumber);
     }
-    await expectColumns(page, asked);
+    await expectColumns(page, [...STAND_INS, ...asked]);
     await expect(standingsRow(page, '35')).toHaveAttribute('aria-pressed', 'true');
   });
 });

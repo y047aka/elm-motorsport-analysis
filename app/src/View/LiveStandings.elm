@@ -27,9 +27,9 @@ is given a column of its own; clicking a row already marked does nothing, and
 there is no clicking a car away again -- a column is closed from the column
 itself.
 
-So a mark follows its column rather than the reader's history. The stand-ins
-lose theirs the moment a car is chosen, which is the page's guess giving way,
-and their rows go back to being rows that will take a column.
+So a mark follows its column and never comes off on its own: picking a car adds
+a column to the ones already up, the stand-ins among them, and the only thing
+that unmarks a row is that row's column being closed.
 
 -}
 view : { onSelect : CarNumber -> msg, picked : List CarNumber } -> Snapshot -> Html msg
