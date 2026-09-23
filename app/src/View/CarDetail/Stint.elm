@@ -137,7 +137,9 @@ stintBar metadata summary =
         text ""
 
     else
-        div [ class "flex gap-x-px h-5 rounded overflow-hidden" ]
+        -- Tall enough to leave the lap counts set inside it room above and
+        -- below.
+        div [ class "flex gap-x-px h-6 rounded overflow-hidden" ]
             (List.map (stintSegment metadata totalLaps) summary.stints)
 
 

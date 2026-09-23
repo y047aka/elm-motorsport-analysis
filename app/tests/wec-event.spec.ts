@@ -7,9 +7,9 @@ test.describe('Le Mans 2025 Visual Tests', () => {
     await waitForPageReady(page, 'text=24 Hours of Le Mans');
   });
 
-  // Mid-race state: verifies the standings gaps, car positions on the
-  // tracker, and the populated SelectedCarsStrip. The rendering at lap 180
-  // is determined solely by the lap data.
+  // Mid-race state: the standings and their gaps, the cars on the tracker, and
+  // the columns the page opens on, one for each class's leader. The rendering
+  // at lap 180 is determined solely by the lap data.
   test('should render a mid-race state correctly', async ({ page }) => {
     await setLapCount(page, 180);
     await expect(page.getByText('KUBICA').first()).toBeVisible();

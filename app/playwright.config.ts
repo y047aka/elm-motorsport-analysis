@@ -23,10 +23,13 @@ export default defineConfig({
     toHaveScreenshot: {
       // Greyscale antialiasing, so a local run compares against CI's Linux
       // baselines with room to spare. See tests/screenshot.css.
+      //
+      // The room a shot needs grows with how much text and how many chart
+      // strokes it holds. AGENTS.md has the counts each shot sits at.
       stylePath: './tests/screenshot.css',
       ...(process.env.CI
         ? { maxDiffPixels: 0 }
-        : { maxDiffPixelRatio: 0.0003 }),
+        : { maxDiffPixelRatio: 0.001 }),
     },
   },
 

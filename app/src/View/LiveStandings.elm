@@ -1,7 +1,7 @@
 module View.LiveStandings exposing (view)
 
 {-| The field by class, in running order, and the page's one place for picking
-the car everything else is shown for.
+the cars the middle of it is given over to.
 
 @docs view
 
@@ -20,14 +20,23 @@ import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| `selected` is the car the rest of the page is following, which is always one
-of them: clicking a row hands `onSelect` the car it names, and there is no
-clicking a car away again.
+{-| A row is marked when its car is in `withColumns`. Clicking an unmarked row
+hands `onSelect` the car it names; a marked row does nothing, its column being
+closed from the column itself.
+
+`onSelect` is held as it is handed over, so pass a message constructor: the
+rows are thunked, and a lambda or a composition built afresh on each render
+compares unequal and draws every one of them again.
+
 -}
-view : { onSelect : CarNumber -> msg, selected : Maybe CarNumber } -> Snapshot -> Html msg
-view { onSelect, selected } snapshot =
+view : { onSelect : CarNumber -> msg, withColumns : List CarNumber } -> Snapshot -> Html msg
+view { onSelect, withColumns } snapshot =
     div
-        [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5" ]
+        -- Which the visual tests locate the standings by: the utilities
+        -- placing its cell are used by a panel's header grid too.
+        [ attribute "data-live-standings" ""
+        , class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-2.5"
+        ]
         (List.map
             (\( class_, cars ) ->
                 div
@@ -49,7 +58,7 @@ view { onSelect, selected } snapshot =
                                         item.standing.position
                                         (Driver.toSurname item.currentDriver)
                                         (item.status == Status.InPit)
-                                        (selected == Just item.metadata.carNumber)
+                                        (List.member item.metadata.carNumber withColumns)
                                     )
                                 )
                         )
@@ -70,27 +79,28 @@ them.
 
 -}
 carRow : (CarNumber -> msg) -> Metadata -> Int -> String -> Bool -> Bool -> Html msg
-carRow onSelect metadata position driverSurname isInPit isSelected =
+carRow onSelect metadata position driverSurname isInPit hasColumn =
     li []
         [ button
-            [ onClick (onSelect metadata.carNumber)
-            , attribute "aria-label" ("Car #" ++ metadata.carNumber)
-            , attribute "aria-pressed"
-                (if isSelected then
+            ([ attribute "aria-label" ("Car #" ++ metadata.carNumber)
+             , attribute "aria-pressed"
+                (if hasColumn then
                     "true"
 
                  else
                     "false"
                 )
-            , class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word] rounded cursor-pointer transition-colors"
-            , class
-                (if isSelected then
-                    "bg-accent text-accent-foreground"
+             , class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
+             ]
+                ++ (if hasColumn then
+                        [ class "bg-accent text-accent-foreground" ]
 
-                 else
-                    "hover:bg-accent/40"
-                )
-            ]
+                    else
+                        [ onClick (onSelect metadata.carNumber)
+                        , class "cursor-pointer hover:bg-accent/40"
+                        ]
+                   )
+            )
             [ div [ class "text-center text-xs" ] [ text (String.fromInt position) ]
             , CarNumberBadge.viewRow metadata
             , div [ class "text-xs" ]

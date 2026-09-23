@@ -13,6 +13,7 @@ import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
+import Html.Keyed
 import Html.Lazy
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
@@ -20,6 +21,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Leaderboard as Leaderboard
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
@@ -49,14 +51,23 @@ type alias Model =
     { mode : Mode
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , detailCarNumber : Maybe String
-    , detailState : CarDetail.Model
+    , columns : CarColumns
+    , comparison : CarDetail.Comparison
     }
 
 
 type Mode
-    = Default
+    = Columns
     | Tracker
+
+
+{-| `ClassLeaders` is the car at the front of each class, re-read from the
+snapshot as the race runs. `Picked` is fixed, in the order the reader asked for
+them, and any open or close settles the stand-ins into one.
+-}
+type CarColumns
+    = ClassLeaders
+    | Picked CarNumber (List CarNumber)
 
 
 type StandingsTab
@@ -66,11 +77,11 @@ type StandingsTab
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
-    ( { mode = Default
+    ( { mode = Columns
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , detailCarNumber = Nothing
-      , detailState = CarDetail.init
+      , columns = ClassLeaders
+      , comparison = CarDetail.initialComparison
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -87,12 +98,13 @@ type Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | SelectDetailCar String
+    | OpenColumn CarNumber
+    | CloseColumn CarNumber
     | CarDetailMsg CarDetail.Msg
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg m =
+update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
+update shared msg m =
     case msg of
         StartRace ->
             ( m, Task.perform (Replay.Start >> ReplayMsg) Time.now |> Effect.sendCmd )
@@ -114,13 +126,57 @@ update msg m =
             , Effect.none
             )
 
-        SelectDetailCar carNumber ->
-            ( { m | detailCarNumber = Just carNumber }, Effect.none )
+        OpenColumn carNumber ->
+            ( { m | columns = rearrange shared (openColumn carNumber) m.columns }, Effect.none )
+
+        CloseColumn carNumber ->
+            ( { m | columns = rearrange shared (closeColumn carNumber) m.columns }, Effect.none )
 
         CarDetailMsg detailMsg ->
-            ( { m | detailState = CarDetail.update detailMsg m.detailState }
-            , Effect.none
-            )
+            ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
+
+
+rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
+rearrange shared f columns =
+    case Shared.loadedRound shared of
+        Just round ->
+            f round.snapshot columns
+
+        Nothing ->
+            columns
+
+
+{-| There is no ceiling on how many, and each column draws its own charts on
+every frame of playback.
+-}
+openColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
+openColumn carNumber snapshot columns =
+    let
+        current =
+            columnCarNumbers snapshot columns
+    in
+    if List.member carNumber current then
+        columns
+
+    else
+        pickedOr columns (current ++ [ carNumber ])
+
+
+closeColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
+closeColumn carNumber snapshot columns =
+    columnCarNumbers snapshot columns
+        |> List.filter ((/=) carNumber)
+        |> pickedOr columns
+
+
+pickedOr : CarColumns -> List CarNumber -> CarColumns
+pickedOr fallback carNumbers =
+    case carNumbers of
+        [] ->
+            fallback
+
+        first :: rest ->
+            Picked first rest
 
 
 
@@ -206,43 +262,28 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
-        focused =
-            focusedCar snapshot m
+        -- The standings are marked from this and not from `layout.shown`,
+        -- which the tracker empties.
+        carsWithColumns =
+            shownCars snapshot m.columns
 
         layout =
             case m.mode of
                 Tracker ->
                     { tracker = "col-start-2 row-start-1 row-span-2"
                     , trackerDetail = TrackerChart.Full
-                    , onTracker = ModeChange Default
+                    , onTracker = ModeChange Columns
                     , detail = "col-start-3 row-start-1"
+                    , shown = []
                     }
 
-                _ ->
+                Columns ->
                     { tracker = "col-start-3 row-start-1"
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
                     , detail = "col-start-2 row-start-1 row-span-2"
+                    , shown = carsWithColumns
                     }
-
-        detailBody =
-            case m.mode of
-                Default ->
-                    -- A card's content does not shrink below what it holds, so
-                    -- the box that scrolls has to be a flex child of the card.
-                    [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
-                        [ Card.content []
-                            [ CarDetail.view CarDetailMsg
-                                m.detailState
-                                replay.race.cars
-                                snapshot
-                                focused
-                            ]
-                        ]
-                    ]
-
-                _ ->
-                    []
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
@@ -251,12 +292,12 @@ trackerView track timeline snapshot replay m =
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
-                    { onSelect = SelectDetailCar
-                    , selected = Maybe.map (.metadata >> .carNumber) focused
+                    { onSelect = OpenColumn
+                    , withColumns = List.map (.metadata >> .carNumber) carsWithColumns
                     }
                     snapshot
                 ]
-            , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
+            , columnStrip layout.detail m replay snapshot layout.shown
             , div
                 -- The cell is the only box in the chain whose height is settled,
                 -- so a square SVG measured against the width overflows the card.
@@ -278,18 +319,89 @@ trackerView track timeline snapshot replay m =
         ]
 
 
-{-| The car the middle of the page is given over to: the one the reader picked,
-and until they pick one -- or when the one they picked is not in the field -- the
-car at the front of the race.
--}
-focusedCar : Snapshot -> Model -> Maybe CarAt
-focusedCar snapshot m =
-    case m.detailCarNumber |> Maybe.andThen (\carNumber -> Snapshot.get carNumber snapshot) of
-        Just car ->
-            Just car
+columnCarNumbers : Snapshot -> CarColumns -> List CarNumber
+columnCarNumbers snapshot columns =
+    case columns of
+        ClassLeaders ->
+            leaderOfEachClass snapshot |> List.map (.metadata >> .carNumber)
 
-        Nothing ->
-            Snapshot.leader snapshot
+        Picked first rest ->
+            first :: rest
+
+
+shownCars : Snapshot -> CarColumns -> List CarAt
+shownCars snapshot columns =
+    columnCarNumbers snapshot columns
+        |> List.filterMap (\carNumber -> Snapshot.get carNumber snapshot)
+
+
+{-| The classes come in the order their leaders run in.
+-}
+leaderOfEachClass : Snapshot -> List CarAt
+leaderOfEachClass snapshot =
+    Snapshot.toClassList snapshot
+        |> List.filterMap (Tuple.second >> List.head)
+
+
+{-| A column is 360px, not a share of the cell. The widest thing in the panel is
+the comparison's tab row, which wants 302px of the 328 a column of this width
+hands it. The floor is 335, so the 26px over is what is left for a font that is
+not the one this was measured in.
+-}
+columnStrip : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
+columnStrip cell m replay snapshot shown =
+    let
+        card =
+            columnCard { closable = List.length shown > 1 } m replay snapshot
+    in
+    case shown of
+        [] ->
+            -- The tracker has the room, and before any car has turned a lap.
+            div [ Attributes.class (cell ++ " grid") ] [ Card.card [] [] ]
+
+        _ ->
+            -- Keyed on the car: a column matched by position instead would hand
+            -- how far the reader had scrolled it to whichever car moved up into
+            -- its place when the one before it was closed.
+            Html.Keyed.node "div"
+                [ Attributes.class (cell ++ " flex gap-2.5 overflow-x-auto") ]
+                (List.map
+                    (\car ->
+                        ( car.metadata.carNumber
+                        , div [ Attributes.class "shrink-0 w-[360px] grid" ] [ card car ]
+                        )
+                    )
+                    shown
+                )
+
+
+columnCard : { closable : Bool } -> Model -> Replay.Model -> Snapshot -> CarAt -> Html Msg
+columnCard column m replay snapshot car =
+    let
+        carNumber =
+            car.metadata.carNumber
+    in
+    Card.card []
+        -- A card's content does not shrink below what it holds, so the box that
+        -- scrolls has to be a flex child of the card.
+        [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+            [ Card.content []
+                [ CarDetail.view
+                    { toMsg = CarDetailMsg
+                    , onClose =
+                        if column.closable then
+                            Just (CloseColumn carNumber)
+
+                        else
+                            Nothing
+                    , comparison = m.comparison
+                    }
+                    replay.race.cars
+                    snapshot
+                    car
+                ]
+            ]
+        ]
 
 
 standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg
@@ -437,7 +549,7 @@ leaderboardConfig cars =
         -- the whole race, and the table is rebuilt on every frame of playback,
         -- so a scan of the field per row is the same answer found afresh sixty
         -- times a second.
-        startPositions : Dict CarNumber Int
+        startPositions : Dict CarNumber Position
         startPositions =
             -- foldr, so that where the source data has two cars under one
             -- number the one running ahead wins, as the scan this replaces did
@@ -445,7 +557,7 @@ leaderboardConfig cars =
             cars
                 |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
 
-        startPositionOf : CarAt -> Maybe Int
+        startPositionOf : CarAt -> Maybe Position
         startPositionOf item =
             Dict.get item.metadata.carNumber startPositions
     in

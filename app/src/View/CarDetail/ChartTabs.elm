@@ -9,7 +9,7 @@ the same joined button group.
 -}
 
 import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (attribute, class)
 import Html.Events exposing (onClick)
 import List.Extra
 
@@ -52,20 +52,28 @@ segmentedControl onSelect active options =
         (List.map (\( value, label ) -> segmentButton onSelect value label (value == active)) options)
 
 
-{-| One button of a group, the Event page's joined button group at the size a
-panel column has room for.
+{-| One button of a group, at the size a panel column has room for and in the
+greys the playback controls use. No colour: the charts beside it draw cars in
+the colours that mean something.
 -}
 segmentButton : (option -> msg) -> option -> String -> Bool -> Html msg
 segmentButton onSelect value label isActive =
     button
         [ onClick (onSelect value)
+        , attribute "aria-pressed"
+            (if isActive then
+                "true"
+
+             else
+                "false"
+            )
         , class
-            ("inline-flex h-7 items-center justify-center border border-border px-2 text-xs font-medium whitespace-nowrap cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md"
+            ("inline-flex h-7 items-center justify-center border border-border px-2 text-xs font-medium whitespace-nowrap cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md text-foreground"
                 ++ (if isActive then
-                        " bg-primary text-primary-foreground border-primary"
+                        " bg-muted"
 
                     else
-                        " bg-accent/40 text-foreground hover:bg-accent/70"
+                        " hover:bg-muted/50"
                    )
             )
         ]

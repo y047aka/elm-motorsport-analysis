@@ -7,11 +7,13 @@ the two cars it is actually racing on either side of it.
 
 -}
 
-import Html exposing (Html, div, img, text)
-import Html.Attributes exposing (alt, attribute, class, src)
-import Motorsport.Driver as Driver exposing (Driver)
+import Html exposing (Html, button, div, img, text)
+import Html.Attributes exposing (alt, attribute, class, src, title)
+import Html.Events exposing (onClick)
+import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Leaderboard exposing (viewPositionChange)
+import Motorsport.Leaderboard exposing (viewPositionChangeInline)
+import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
@@ -19,28 +21,29 @@ import View.CarNumberBadge as CarNumberBadge
 
 
 {-| `startPosition` is where the car began, which the round's summary estimates
-off the opening lap rather than reading off a grid sheet. `behind` is the car
-next in the running order measured against this one, which no `CarAt` carries:
-a car is given the gap to the one ahead of it, never the one behind.
+off the opening lap rather than reading off a grid sheet.
+
+`toLeader` is the caller's rather than read off the car, because a `CarAt`
+carries the gap to the field's leader and this line reports the car's class --
+which for an LMGT3 car is several laps and another race away.
+
+`onClose` closes the column, and is `Nothing` for the only column on show.
+
 -}
 view :
-    { startPosition : Maybe Int
-    , behind : Maybe Gap
+    { startPosition : Maybe Position
+    , toLeader : Gap
+    , onClose : Maybe msg
     }
     -> CarAt
     -> Html msg
-view { startPosition, behind } item =
+view { startPosition, toLeader, onClose } item =
     div [ class "grid gap-y-2" ]
-        [ who item
-        , standing { startPosition = startPosition, behind = behind } item
+        [ nameplate { startPosition = startPosition, onClose = onClose } item
+        , standing toLeader item
         ]
 
 
-{-| The car itself, side on, in the width the name and the drivers leave beside
-them: the panel is wide enough that a line of text does not fill it, where a row
-of the photograph's own took more of the panel's height than the lap times below
-it.
--}
 portrait : Maybe String -> CarAt -> Html msg
 portrait carImageUrl item =
     case carImageUrl of
@@ -48,7 +51,10 @@ portrait carImageUrl item =
             img
                 [ src url
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
-                , class "self-center w-[140px] h-auto object-contain"
+
+                -- Through the last column, which is the close button's on the
+                -- row above.
+                , class "col-start-3 -col-end-1 row-start-2 justify-self-end self-center w-[104px] h-auto object-contain"
                 ]
                 []
 
@@ -56,72 +62,78 @@ portrait carImageUrl item =
             text ""
 
 
-who : CarAt -> Html msg
-who item =
-    div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3" ]
-        [ CarNumberBadge.view item.metadata
-        , div [ class "grid gap-y-0.5 min-w-0" ]
-            -- The class badge does not wrap, so without a floor of its own this
-            -- line is as wide as the team's name and pushes the car's picture
-            -- off the end of the row rather than cutting the name.
-            [ div [ class "flex items-center gap-x-2 min-w-0" ]
-                [ classBadge item
-                , div [ class "text-[14px] truncate" ] [ text item.metadata.team ]
-                ]
-            , lineup item
+{-| Two rows: where the car stands, and who it is.
+-}
+nameplate : { startPosition : Maybe Position, onClose : Maybe msg } -> CarAt -> Html msg
+nameplate { startPosition, onClose } item =
+    div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 gap-y-1.5" ]
+        [ div [ class "col-start-1 col-span-2 row-start-1 flex items-center gap-x-2 min-w-0" ]
+            [ fieldPosition startPosition item
+            , classBadge item
+            ]
+        , div [ class "col-start-4 row-start-1" ] [ corner onClose item.status ]
+
+        -- Centred rather than hung from the top: the three are different
+        -- heights, and the tallest would otherwise set where the others begin.
+        , div [ class "col-start-1 row-start-2 self-center" ] [ CarNumberBadge.view item.metadata ]
+        , div [ class "col-start-2 row-start-2 self-center grid gap-y-0.5 min-w-0" ]
+            [ div [ class "text-[12px] truncate" ] [ text item.metadata.team ]
+            , currentDriver item
             ]
         , portrait item.metadata.imageUrl item
-        , statusBadge item.status
+        ]
+
+
+corner : Maybe msg -> Status -> Html msg
+corner onClose status =
+    case onClose of
+        Nothing ->
+            statusBadge status
+
+        Just msg ->
+            div [ class "flex items-start gap-x-1" ]
+                [ statusBadge status
+                , button
+                    [ onClick msg
+                    , attribute "aria-label" "Close this column"
+                    , title "Close this column"
+                    , class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
+                    ]
+                    [ text "✕" ]
+                ]
+
+
+{-| The field's place and not the class's, which the strip below reports.
+-}
+fieldPosition : Maybe Position -> CarAt -> Html msg
+fieldPosition startPosition item =
+    div [ class "flex items-center gap-x-1.5 text-[12px] tabular-nums whitespace-nowrap" ]
+        [ text (Position.toOrdinal item.standing.position)
+        , viewPositionChangeInline { startPosition = startPosition, position = item.standing.position }
         ]
 
 
 classBadge : CarAt -> Html msg
 classBadge item =
     div
-        [ class "flex items-center gap-x-1 text-[11px] font-bold whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        [ class "flex items-center gap-x-1 text-[12px] whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
         , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
         ]
         [ text (Class.toString item.metadata.class) ]
 
 
-{-| Every driver entered on the car, the one out on it marked. Which of them is
-driving is the thing about a car that changes without the order changing.
--}
-lineup : CarAt -> Html msg
-lineup item =
-    div [ class "flex flex-wrap items-baseline gap-x-2 text-[11px]" ]
-        (List.map (driverName item.currentDriver) item.metadata.drivers)
+currentDriver : CarAt -> Html msg
+currentDriver item =
+    div [ class "text-[11px] truncate" ]
+        [ text (Driver.toInitialAndSurname item.currentDriver) ]
 
 
-driverName : Driver -> Driver -> Html msg
-driverName current driver =
-    div
-        [ class
-            (if Driver.isSame current driver then
-                "font-bold"
-
-             else
-                "text-muted-foreground"
-            )
-        ]
-        [ text (Driver.toInitialAndSurname driver) ]
-
-
-standing : { startPosition : Maybe Int, behind : Maybe Gap } -> CarAt -> Html msg
-standing { startPosition, behind } item =
-    div [ class "border border-border rounded-lg grid grid-cols-6" ]
-        [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
-        , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
-        , statCell "Position" (viewPositionChange { startPosition = startPosition, position = item.standing.position })
+standing : Gap -> CarAt -> Html msg
+standing toLeader item =
+    div [ class "border border-border rounded-lg grid grid-cols-3" ]
+        [ statCell "Class" (text (Position.toOrdinal item.standing.positionInClass))
         , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
-        , statCell "Leader" (text (Gap.toString item.standing.gapToLeader))
-        , statCell "Ahead / behind"
-            (text
-                (Gap.toString item.standing.intervalToAhead
-                    ++ " / "
-                    ++ (behind |> Maybe.map Gap.toString |> Maybe.withDefault "-")
-                )
-            )
+        , statCell "Class leader" (text (Gap.toString toLeader))
         ]
 
 

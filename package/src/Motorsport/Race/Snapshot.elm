@@ -2,7 +2,7 @@ module Motorsport.Race.Snapshot exposing
     ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..)
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
-    , toList, toClassList, get, inClass, leader, behind, lapCount, elapsed
+    , toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
     , gapBetween
     , bestTimes, lapHistory
     )
@@ -17,7 +17,7 @@ each work them out again -- that sharing is the whole reason the type exists.
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
-@docs toList, toClassList, get, inClass, leader, behind, lapCount, elapsed
+@docs toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
 @docs gapBetween
 @docs bestTimes, lapHistory
 
@@ -32,6 +32,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
+import Motorsport.Position exposing (Position)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
@@ -90,8 +91,8 @@ and only for it.
 
 -}
 type alias Standing =
-    { position : Int
-    , positionInClass : Int
+    { position : Position
+    , positionInClass : Position
     , lapsCompleted : Int
     , gapToLeader : Gap
     , intervalToAhead : Gap
@@ -323,25 +324,19 @@ inClass class (Snapshot s) =
         |> Maybe.withDefault []
 
 
-{-| The car leading the race, where there is one.
+{-| The car leading the race, where there is one -- not a class of it, which is
+[`classLeader`](#classLeader).
 -}
 leader : Snapshot -> Maybe CarAt
 leader (Snapshot s) =
     List.head s.cars
 
 
-{-| The car next in the running order.
-
-A car is given the gap to the one ahead of it and never the one behind, so the
-gap behind a car is read off the car behind it.
-
+{-| The car at the front of one class, where the class has any cars.
 -}
-behind : CarAt -> Snapshot -> Maybe CarAt
-behind car (Snapshot s) =
-    s.cars
-        |> List.Extra.dropWhile (\item -> item.metadata.carNumber /= car.metadata.carNumber)
-        |> List.drop 1
-        |> List.head
+classLeader : Class -> Snapshot -> Maybe CarAt
+classLeader class snapshot =
+    inClass class snapshot |> List.head
 
 
 {-| How far up or down the road one car is from another: the intervals between
@@ -592,8 +587,8 @@ gapTo raceClock car ahead =
 
 type alias Placed =
     { car : SampledCar
-    , position : Int
-    , positionInClass : Int
+    , position : Position
+    , positionInClass : Position
     , ahead : Maybe SampledCar
     }
 

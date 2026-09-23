@@ -10,7 +10,7 @@ module Motorsport.Leaderboard exposing
     , positionChangeColumn
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
     , lastLapColumn_Wec, lastLapColumn_LeMans24h
-    , viewPositionChange
+    , viewPositionChange, viewPositionChangeInline
     , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
     , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
     , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -48,7 +48,7 @@ printed in. Which of them, in what order, is the caller's.
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
 @docs lastLapColumn_Wec, lastLapColumn_LeMans24h
 
-@docs viewPositionChange
+@docs viewPositionChange, viewPositionChangeInline
 @docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
 @docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
 @docs viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -67,6 +67,7 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
 import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Position as Position exposing (Movement(..), Position)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
@@ -307,7 +308,7 @@ estimated off the opening lap once and never moves again — so the caller looks
 it up by car number rather than the column doing it.
 
 -}
-positionChangeColumn : { getter : data -> { startPosition : Maybe Int, position : Int } } -> Column data msg
+positionChangeColumn : { getter : data -> { startPosition : Maybe Position, position : Position } } -> Column data msg
 positionChangeColumn { getter } =
     { name = "Pos"
     , view = getter >> Lazy.lazy viewPositionChange
@@ -320,29 +321,58 @@ positionChangeColumn { getter } =
 and red for a loss and the number always grey, and a grey `-` for a car that has
 held its place or whose grid place is not known.
 -}
-viewPositionChange : { startPosition : Maybe Int, position : Int } -> Html msg
-viewPositionChange { startPosition, position } =
-    case Maybe.map (\start -> start - position) startPosition of
-        Just gained ->
-            if gained > 0 then
-                arrow "text-green-500" "↑" (String.fromInt gained)
-
-            else if gained < 0 then
-                arrow "text-red-500" "↓" (String.fromInt (abs gained))
-
-            else
-                text "-"
-
-        Nothing ->
+viewPositionChange : { startPosition : Maybe Position, position : Position } -> Html msg
+viewPositionChange change =
+    case movementOf change of
+        Held ->
             text "-"
 
+        movement ->
+            div [ class "text-center font-bold tabular-nums" ] (arrow movement)
 
-arrow : String -> String -> String -> Html msg
-arrow look glyph number =
-    div [ class "text-center font-bold tabular-nums" ]
-        [ span [ class look ] [ text glyph ]
-        , text number
-        ]
+
+{-| The same change set in a line of text: in the weight of the text around it,
+and nothing at all where the cell prints `-`, which beside a position reads as
+part of the position.
+-}
+viewPositionChangeInline : { startPosition : Maybe Position, position : Position } -> Html msg
+viewPositionChangeInline change =
+    case movementOf change of
+        Held ->
+            text ""
+
+        movement ->
+            span [ class "tabular-nums" ] (arrow movement)
+
+
+{-| A grid place that is not known reads as one held: there is no movement to
+draw either way.
+-}
+movementOf : { startPosition : Maybe Position, position : Position } -> Movement
+movementOf { startPosition, position } =
+    startPosition
+        |> Maybe.map (\start -> Position.movement { from = start, to = position })
+        |> Maybe.withDefault Held
+
+
+arrow : Movement -> List (Html msg)
+arrow movement =
+    let
+        printed =
+            Position.toArrow movement
+
+        color =
+            case movement of
+                Gained _ ->
+                    "text-green-500"
+
+                Held ->
+                    ""
+
+                Lost _ ->
+                    "text-red-500"
+    in
+    [ span [ class color ] [ text printed.arrow ], text printed.places ]
 
 
 currentLapColumn_Wec :

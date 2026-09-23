@@ -1,27 +1,27 @@
 module View.CarDetail exposing
-    ( Model, init
+    ( Comparison, initialComparison
     , Msg, update
-    , elementId, view
+    , view
     )
 
 {-| Everything the race says about one car, drawn in place on the event page.
 
-The car is the caller's selection; the rivals it is measured against are read
-off the field around it, so the panel follows the race without the selection
+The car is the caller's; the rivals it is measured against are read off the
+field around it, so the panel follows the race without the car it is for
 changing.
 
-Which of them is on show is the panel's own, though, and is held here rather
-than by the page: the chart, the stretch of the race it covers and whether the
-lap history is open say nothing about the race and nothing else reads them.
+The chart and the stretch of the race it covers are the page's, so that columns
+beside one another are showing the same thing. Whether the lap history is open
+is the `details` element's own, and lasts as long as the column's DOM does.
 
-@docs Model, init
+@docs Comparison, initialComparison
 @docs Msg, update
-@docs elementId, view
+@docs view
 
 -}
 
-import Html exposing (Html, div, h3, text)
-import Html.Attributes exposing (class, id)
+import Html exposing (Html, details, div, h3, summary, text)
+import Html.Attributes exposing (attribute, class)
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
@@ -29,38 +29,36 @@ import Motorsport.Analysis.Stint as AnalysisStint
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Chart.PositionProgression as PositionProgression
-import Motorsport.Duration as Duration
+import Motorsport.Driver as Driver
+import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
+import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import View.CarDetail.ChartTabs as ChartTabs
 import View.CarDetail.Header as Header
+import View.CarDetail.LapTable as LapTable
 import View.CarDetail.LapTimes as LapTimes
 import View.CarDetail.Stint as Stint
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| What the panel is showing, which nothing outside it reads.
+{-| Which chart the rivals are drawn in, and how much of the race it covers.
 -}
-type Model
-    = Model State
+type Comparison
+    = Comparison
+        { chart : Chart
+        , window : LapWindow
+        }
 
 
-type alias State =
-    { chart : Chart
-    , window : LapWindow
-    , lapHistoryOpen : Bool
-    }
-
-
-init : Model
-init =
-    Model
+initialComparison : Comparison
+initialComparison =
+    Comparison
         { chart = GapChart
         , window = LapWindow.WholeRace
-        , lapHistoryOpen = False
         }
 
 
@@ -82,103 +80,107 @@ type Chart
 type Msg
     = SelectedChart Chart
     | SelectedWindow LapWindow
-    | ToggledLapHistory
 
 
-update : Msg -> Model -> Model
-update msg (Model state) =
-    Model <|
-        case msg of
-            SelectedChart chart ->
-                { state | chart = chart }
+update : Msg -> Comparison -> Comparison
+update msg (Comparison comparison) =
+    case msg of
+        SelectedChart chart ->
+            Comparison { comparison | chart = chart }
 
-            SelectedWindow window ->
-                { state | window = window }
-
-            ToggledLapHistory ->
-                { state | lapHistoryOpen = not state.lapHistoryOpen }
+        SelectedWindow window ->
+            Comparison { comparison | window = window }
 
 
-view : (Msg -> msg) -> Model -> List Car -> Snapshot -> Maybe CarAt -> Html msg
-view toMsg (Model state) cars snapshot focusedCar =
-    div [ id elementId ]
-        [ case focusedCar of
-            Nothing ->
-                -- Only before a car of the field has turned a lap, which is not
-                -- a moment the page is read at.
-                text ""
-
-            Just focused ->
-                Html.map toMsg (panel state cars snapshot focused)
+{-| The panel carries `data-car-detail`, which the visual tests locate it by.
+-}
+view :
+    { toMsg : Msg -> msg
+    , onClose : Maybe msg
+    , comparison : Comparison
+    }
+    -> List Car
+    -> Snapshot
+    -> CarAt
+    -> Html msg
+view config cars snapshot focused =
+    let
+        rivals =
+            rivalsOf snapshot focused
+    in
+    div
+        [ attribute "data-car-detail" focused.metadata.carNumber
+        , class "grid gap-y-3"
+        ]
+        [ Header.view
+            { startPosition = startPositionOf cars focused
+            , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
+            , onClose = config.onClose
+            }
+            focused
+        , Html.map config.toMsg (panel config.comparison cars snapshot rivals focused)
         ]
 
 
-{-| The element the detail is drawn in, which the visual tests locate it by.
+{-| The gap a classification prints between two cars: the time between them
+where the road holds them together, and the whole laps where it does not.
+
+No gap at all where there is no car in front, and none where it is the same
+car: a car leading its class is asked for its gap to the leader too.
+
 -}
-elementId : String
-elementId =
-    "car-detail"
+gapOf : Snapshot -> Maybe CarAt -> CarAt -> Gap
+gapOf snapshot maybeInFront chasing =
+    case maybeInFront of
+        Just inFront ->
+            if inFront.metadata.carNumber == chasing.metadata.carNumber then
+                Gap.none
+
+            else
+                case Snapshot.gapBetween inFront chasing snapshot of
+                    Just delta ->
+                        Gap.seconds delta
+
+                    Nothing ->
+                        Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted)
+
+        Nothing ->
+            Gap.none
 
 
-panel : State -> List Car -> Snapshot -> CarAt -> Html Msg
-panel state cars snapshot focused =
+panel : Comparison -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
+panel comparison cars snapshot rivals focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
 
-        rivals =
-            rivalsOf snapshot focused
+        laps =
+            lapsOf cars focused
     in
-    div [ class "grid gap-y-3" ]
-        [ Header.view
-            { startPosition = startPositionOf cars focused
-            , behind = Snapshot.behind focused snapshot |> Maybe.map (.standing >> .intervalToAhead)
-            }
-            focused
+    -- No gap: the sections carry their own padding, and the rule between two of
+    -- them wants to sit in the middle of that rather than have space of its own.
+    div [ class "grid" ]
+        [ container "Rivals" (legend snapshot rivals)
         , container "Lap times"
-            (LapTimes.view
-                { bestTimes = Snapshot.bestTimes snapshot
-                , historyOpen = state.lapHistoryOpen
-                , onToggleHistory = ToggledLapHistory
-                }
-                (lapsOf cars focused)
-                focused
-            )
+            (LapTimes.view { bestTimes = Snapshot.bestTimes snapshot } laps focused)
+        , charts comparison snapshot rivals
         , container "Stints"
             (Stint.view
                 { status = focused.status, stops = focused.pitStops }
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
-        , charts state snapshot rivals
+        , disclosure "Lap history" (LapTable.view laps focused.standing.lapsCompleted)
         ]
 
 
-{-| What the three charts are all drawn from, built once here so that the tabs
-switch the chart and nothing else about what is being shown.
--}
-type alias Comparison =
-    { range : LapRange
-    , snapshot : Snapshot
-    , rivals : Rivals
-    }
-
-
-charts : State -> Snapshot -> Rivals -> Html Msg
-charts state snapshot rivals =
+charts : Comparison -> Snapshot -> Rivals -> Html Msg
+charts ((Comparison { window }) as comparison) snapshot rivals =
     let
-        comparison =
-            { range = LapWindow.range state.window (Rivals.class rivals) snapshot
-            , snapshot = snapshot
-            , rivals = rivals
-            }
+        range =
+            LapWindow.range window (Rivals.class rivals) snapshot
     in
-    container "Rivals"
-        (div [ class "grid gap-y-2" ]
-            [ chartTabs state comparison
-            , legend snapshot rivals
-            ]
-        )
+    container "Comparison" (chartTabs comparison range snapshot rivals)
 
 
 {-| The stretches of the race on offer, in the order the toggle draws them.
@@ -187,18 +189,24 @@ One setting for all three charts rather than one each: only one of them is
 showing at a time, and a stretch that changed as the tabs did would read as the
 chart changing.
 
+The durations are given bare: this row is the widest thing in the panel, and
+sets how wide a column has to be.
+
 -}
 windowOptions : List ( LapWindow, String )
 windowOptions =
-    [ ( LapWindow.Recent (90 * 60 * 1000), "Last 1.5h" )
-    , ( LapWindow.Recent (3 * 60 * 60 * 1000), "Last 3h" )
+    [ ( LapWindow.Recent (90 * 60 * 1000), "1.5h" )
+    , ( LapWindow.Recent (3 * 60 * 60 * 1000), "3h" )
     , ( LapWindow.WholeRace, "All" )
     ]
 
 
-{-| The cars the panel is comparing, in running order, and how far up or down
-the road each of them is, which is what the charts above are drawn to show.
-Only these are named, whatever else a chart draws behind them.
+{-| The cars the panel is comparing, in class order, and the interval down the
+order to each. Only these are named, whatever else a chart below draws behind
+them.
+
+A row's time is measured against the row above it rather than out from the car
+the panel is for, which is how a classification prints an interval.
 
 Nothing here restates the colour the charts draw a car in: the car's badge is
 that colour already, and a second mark beside it is the same ink twice.
@@ -206,20 +214,28 @@ that colour already, and a second mark beside it is the same ink twice.
 -}
 legend : Snapshot -> Rivals -> Html msg
 legend snapshot rivals =
+    let
+        shown =
+            Rivals.fight rivals
+    in
     div [ class "grid gap-y-px" ]
-        (Rivals.fight rivals
-            |> List.map (legendEntry snapshot (Rivals.focused rivals))
+        (List.map2 (legendEntry snapshot (Rivals.focused rivals))
+            (Nothing :: List.map Just shown)
+            shown
         )
 
 
-legendEntry : Snapshot -> CarAt -> CarAt -> Html msg
-legendEntry snapshot focused item =
+legendEntry : Snapshot -> CarAt -> Maybe CarAt -> CarAt -> Html msg
+legendEntry snapshot focused inFront item =
     let
         isFocused =
             item.metadata.carNumber == focused.metadata.carNumber
     in
+    -- A grid rather than a row of flexed boxes, so that the places read as a
+    -- column and the badges start where one another do.
     div
-        [ class "flex items-center gap-x-2 py-0.5 px-1 rounded"
+        [ attribute "data-rival" item.metadata.carNumber
+        , class "grid grid-cols-[1.75rem_auto_1fr_auto] items-center gap-x-2 py-0.5 px-1 rounded"
         , class
             (if isFocused then
                 "bg-accent/40"
@@ -228,19 +244,13 @@ legendEntry snapshot focused item =
                 ""
             )
         ]
-        [ CarNumberBadge.viewRow item.metadata
-        , div [ class "text-[11px] truncate flex-1" ] [ text item.metadata.team ]
-        , div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
-            [ text ("P" ++ String.fromInt item.standing.positionInClass) ]
-        , div [ class "text-[12px] tabular-nums" ]
-            [ text
-                (if isFocused then
-                    "-"
-
-                 else
-                    fromFocused snapshot focused item
-                )
-            ]
+        [ div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
+            [ text (Position.toOrdinal item.standing.positionInClass) ]
+        , CarNumberBadge.viewRow item.metadata
+        , div [ class "text-[11px] truncate" ]
+            [ text (Driver.toInitialAndSurname item.currentDriver) ]
+        , div [ class "text-[12px] tabular-nums whitespace-nowrap" ]
+            [ text (Gap.toString (gapOf snapshot inFront item)) ]
         ]
 
 
@@ -249,47 +259,22 @@ of laps for reasons of their own -- a stretch holding none of the cars drawn, a
 class with no line to draw, no lap time to describe -- and a wording apiece reads
 as the tabs disagreeing about the race.
 -}
-chartTabs : State -> Comparison -> Html Msg
-chartTabs state { range, snapshot, rivals } =
+chartTabs : Comparison -> LapRange -> Snapshot -> Rivals -> Html Msg
+chartTabs (Comparison { chart, window }) range snapshot rivals =
     let
         orEmptyState : Maybe (Html Msg) -> Html Msg
         orEmptyState =
             Maybe.withDefault (emptyState "No laps to compare yet")
     in
     ChartTabs.chartTabs SelectedChart
-        state.chart
-        (ChartTabs.segmentedControl SelectedWindow state.window windowOptions)
-        [ ( GapChart, "Gap to avg", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
+        chart
+        (ChartTabs.segmentedControl SelectedWindow window windowOptions)
+        -- `Gap` alone: this row sets how narrow a column can be, and the
+        -- chart labels its own baseline.
+        [ ( GapChart, "Gap", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
         , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
         ]
-
-
-{-| How far up or down the road a rival is. Where the two cars have no time
-between them, the laps they are apart are what is left to say.
--}
-fromFocused : Snapshot -> CarAt -> CarAt -> String
-fromFocused snapshot focused item =
-    case Snapshot.gapBetween focused item snapshot of
-        Just delta ->
-            signed delta ++ Duration.toString (abs delta)
-
-        Nothing ->
-            case item.standing.lapsCompleted - focused.standing.lapsCompleted of
-                0 ->
-                    "-"
-
-                lapsAhead ->
-                    signed -lapsAhead ++ String.fromInt (abs lapsAhead) ++ "L"
-
-
-signed : Int -> String
-signed value =
-    if value >= 0 then
-        "+"
-
-    else
-        "-"
 
 
 rivalsOf : Snapshot -> CarAt -> Rivals
@@ -297,7 +282,7 @@ rivalsOf snapshot focused =
     Rivals.around (Snapshot.toList snapshot) focused
 
 
-startPositionOf : List Car -> CarAt -> Maybe Int
+startPositionOf : List Car -> CarAt -> Maybe Position
 startPositionOf cars focused =
     carOf cars focused |> Maybe.map .startPosition
 
@@ -315,15 +300,35 @@ carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
 
 
+{-| Open or shut is the element's and not the model's, so the content is built
+whether it is showing or not: hand it something lazy.
+-}
+disclosure : String -> Html msg -> Html msg
+disclosure title content =
+    details [ class sectionClass ]
+        [ summary [ class ("cursor-pointer transition-colors hover:text-foreground " ++ headingClass) ]
+            [ text title ]
+        , div [ class "mt-2" ] [ content ]
+        ]
+
+
 container : String -> Html msg -> Html msg
 container title content =
     div
-        [ class "rounded-lg border border-border bg-card" ]
-        [ div [ class "flex flex-col gap-2 p-3" ]
-            [ h3 [ class "font-semibold text-sm" ] [ text title ]
-            , content
-            ]
+        [ class ("grid gap-y-2 " ++ sectionClass) ]
+        [ h3 [ class headingClass ] [ text title ]
+        , content
         ]
+
+
+sectionClass : String
+sectionClass =
+    "py-3 border-t border-t-border first:border-t-0 first:pt-0"
+
+
+headingClass : String
+headingClass =
+    "text-[10px] font-medium uppercase tracking-[0.03em] text-muted-foreground"
 
 
 emptyState : String -> Html msg

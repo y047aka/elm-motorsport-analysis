@@ -13,9 +13,8 @@ before it is over.
 
 -}
 
-import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (attribute, class, style)
-import Html.Events exposing (onClick)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class, style)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -25,19 +24,14 @@ import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status
-import View.CarDetail.LapTable as LapTable
 
 
 {-| `laps` is the car's whole race, as the race holds it rather than cut at the
-clock: what the sectors of the lap in progress are measured against, and -- once
-the reader asks for them -- the rows under everything else. Both readings cut it
-at the lap the car has reached themselves.
+clock: what the sectors of the lap in progress are measured against. The section
+cuts it at the lap the car has reached itself.
 -}
 view :
-    { bestTimes : BestTimes.Snapshot
-    , historyOpen : Bool
-    , onToggleHistory : msg
-    }
+    { bestTimes : BestTimes.Snapshot }
     -> List Lap
     -> CarAt
     -> Html msg
@@ -48,54 +42,22 @@ view config laps item =
     in
     div [ class "grid gap-y-2" ]
         [ bestLap config.bestTimes item
-        , if Status.hasStopped item.status then
-            lastLap item
+        , -- One above the other, each across the panel: half of it each is
+          -- not enough for three sector times, the middle sector of a GT3 car
+          -- running over a minute.
+          --
+          -- One grid between the two rather than one apiece, so that the rail
+          -- is as wide as the wider of them and the sectors of the two laps
+          -- begin at the same place -- `CURRENT L28` is longer than
+          -- `LAST L27`, which is enough to set two rows of segments out from
+          -- one another.
+          div [ class "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2" ]
+            (if Status.hasStopped item.status then
+                lastLap item
 
-          else
-            -- Side by side, so that a sector of the lap under way sits beside
-            -- the same sector of the lap before it.
-            div [ class "grid grid-cols-2 gap-x-3" ]
-                [ currentLap best item
-                , lastLap item
-                ]
-        , history config laps item.standing.lapsCompleted
-        ]
-
-
-{-| Every lap the car has turned, under the three the section leads with, and
-behind a disclosure: four hundred rows are the end of the section rather than
-the middle of it.
--}
-history : { a | historyOpen : Bool, onToggleHistory : msg } -> List Lap -> Int -> Html msg
-history { historyOpen, onToggleHistory } laps lapsCompleted =
-    div [ class "grid gap-y-1 border-t border-t-border pt-1.5" ]
-        [ button
-            [ onClick onToggleHistory
-            , attribute "aria-expanded"
-                (if historyOpen then
-                    "true"
-
-                 else
-                    "false"
-                )
-            , class "flex items-center gap-x-1 text-[9px] uppercase tracking-[0.03em] text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-            ]
-            [ div [ class "text-[8px]" ]
-                [ text
-                    (if historyOpen then
-                        "▼"
-
-                     else
-                        "▶"
-                    )
-                ]
-            , text "Lap history"
-            ]
-        , if historyOpen then
-            LapTable.view laps lapsCompleted
-
-          else
-            text ""
+             else
+                currentLap best item ++ lastLap item
+            )
         ]
 
 
@@ -103,7 +65,7 @@ history { historyOpen, onToggleHistory } laps lapsCompleted =
 -- THE LAP IN PROGRESS
 
 
-currentLap : BySector (Maybe Duration) -> CarAt -> Html msg
+currentLap : BySector (Maybe Duration) -> CarAt -> List (Html msg)
 currentLap best item =
     let
         cells =
@@ -114,7 +76,10 @@ currentLap best item =
     lapBlock
         { label = "Current"
         , lapNumber = Just (item.standing.lapsCompleted + 1)
-        , time = Just { time = item.currentLap.elapsed, performance = item.currentLap.performance }
+        , -- Unrated: the lap is still being timed.
+          time =
+            div [ class "text-[14px] tabular-nums", style "color" Performance.inProgressColor ]
+                [ text (Duration.toString item.currentLap.elapsed) ]
         , segments =
             case item.currentLap.miniSectors of
                 Snapshot.Recorded { states } ->
@@ -133,7 +98,7 @@ currentLap best item =
 -- THE LAPS BEHIND IT
 
 
-lastLap : CarAt -> Html msg
+lastLap : CarAt -> List (Html msg)
 lastLap item =
     case item.lastLap of
         Snapshot.Completed { rated, sectors, miniSectors } ->
@@ -144,7 +109,7 @@ lastLap item =
             lapBlock
                 { label = "Last"
                 , lapNumber = Just item.standing.lapsCompleted
-                , time = rated
+                , time = timeText "text-[14px]" rated
                 , segments =
                     case miniSectors of
                         Just rating ->
@@ -160,7 +125,7 @@ lastLap item =
             lapBlock
                 { label = "Last"
                 , lapNumber = Nothing
-                , time = Nothing
+                , time = timeText "text-[14px]" Nothing
                 , segments =
                     SegmentStrip.overSectors
                         { cells = Sector.initialize (\_ -> timeCell Nothing)
@@ -215,21 +180,27 @@ and the strip of the segments the circuit times it in.
 lapBlock :
     { label : String
     , lapNumber : Maybe Int
-    , time : Maybe RatedTime
+    , time : Html msg
     , segments : Html msg
     }
-    -> Html msg
+    -> List (Html msg)
 lapBlock { label, lapNumber, time, segments } =
-    div [ class "grid gap-y-1 min-w-0" ]
+    -- Two cells of the caller's grid.
+    --
+    -- `text-right` reaches the time and not the line above it, which is a flex
+    -- row and lays its own out: the label stays against the left edge the
+    -- other lap's label is on, and the times end together where the sectors
+    -- begin.
+    [ div [ class "grid gap-y-0.5 text-right" ]
         [ div [ class "flex items-baseline gap-x-1.5" ]
             [ rowLabel label
             , div [ class "text-[10px] text-muted-foreground tabular-nums" ]
                 [ text (lapNumber |> Maybe.map (\number -> "L" ++ String.fromInt number) |> Maybe.withDefault "") ]
-            , div [ class "flex-1" ] []
-            , timeText "text-[14px]" time
             ]
-        , segments
+        , time
         ]
+    , segments
+    ]
 
 
 {-| A sector of the lap under way, as how far off the best the car has driven it

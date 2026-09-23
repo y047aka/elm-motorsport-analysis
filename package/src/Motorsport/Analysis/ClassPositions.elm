@@ -14,6 +14,7 @@ means anything against everyone it could have been gained from or lost to.
 -}
 
 import Motorsport.LapRange as LapRange exposing (LapRange)
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
@@ -21,7 +22,7 @@ import Motorsport.Wec.Class exposing (Class)
 
 type alias Point =
     { lap : Int
-    , position : Int
+    , position : Position
     }
 
 

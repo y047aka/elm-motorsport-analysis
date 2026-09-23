@@ -7,6 +7,7 @@
     "Motorsport.Instant",
     "Motorsport.Lap",
     "Motorsport.Lap.Performance",
+    "Motorsport.Position",
     "Motorsport.Sector",
     "Motorsport.Status",
     "Motorsport.Wec.Circuit.LeMans",
