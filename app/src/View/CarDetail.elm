@@ -1,6 +1,5 @@
 module View.CarDetail exposing
     ( Comparison, initialComparison
-    , Model, init
     , Msg, update
     , view
     )
@@ -11,20 +10,18 @@ The car is the caller's selection; the rivals it is measured against are read
 off the field around it, so the panel follows the race without the selection
 changing.
 
-What is on show splits in two: the chart and the stretch of the race it covers
-are the page's, so that columns beside one another are showing the same thing,
-and whether the lap history is open is one column's own.
+The chart and the stretch of the race it covers are the page's, so that columns
+beside one another are showing the same thing. Whether the lap history is open
+is the `details` element's own, and lasts as long as the column's DOM does.
 
 @docs Comparison, initialComparison
-@docs Model, init
 @docs Msg, update
 @docs view
 
 -}
 
-import Html exposing (Html, button, div, h3, text)
+import Html exposing (Html, details, div, h3, summary, text)
 import Html.Attributes exposing (attribute, class)
-import Html.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
@@ -46,17 +43,6 @@ import View.CarDetail.LapTable as LapTable
 import View.CarDetail.LapTimes as LapTimes
 import View.CarDetail.Stint as Stint
 import View.CarNumberBadge as CarNumberBadge
-
-
-{-| What one column is showing that the columns beside it are not.
--}
-type Model
-    = Model { lapHistoryOpen : Bool }
-
-
-init : Model
-init =
-    Model { lapHistoryOpen = False }
 
 
 {-| Which chart the rivals are drawn in, and how much of the race it covers.
@@ -94,30 +80,16 @@ type Chart
 type Msg
     = SelectedChart Chart
     | SelectedWindow LapWindow
-    | ToggledLapHistory
 
 
-update :
-    Msg
-    -> { comparison : Comparison, panel : Model }
-    -> { comparison : Comparison, panel : Model }
-update msg state =
-    let
-        (Comparison comparison) =
-            state.comparison
-
-        (Model showing) =
-            state.panel
-    in
+update : Msg -> Comparison -> Comparison
+update msg (Comparison comparison) =
     case msg of
         SelectedChart chart ->
-            { state | comparison = Comparison { comparison | chart = chart } }
+            Comparison { comparison | chart = chart }
 
         SelectedWindow window ->
-            { state | comparison = Comparison { comparison | window = window } }
-
-        ToggledLapHistory ->
-            { state | panel = Model { showing | lapHistoryOpen = not showing.lapHistoryOpen } }
+            Comparison { comparison | window = window }
 
 
 {-| The panel carries `data-car-detail`, which the visual tests locate it by.
@@ -126,7 +98,6 @@ view :
     { toMsg : Msg -> msg
     , onClose : Maybe msg
     , comparison : Comparison
-    , showing : Model
     }
     -> List Car
     -> Snapshot
@@ -147,7 +118,7 @@ view config cars snapshot focused =
             , onClose = config.onClose
             }
             focused
-        , Html.map config.toMsg (panel config.comparison config.showing cars snapshot rivals focused)
+        , Html.map config.toMsg (panel config.comparison cars snapshot rivals focused)
         ]
 
 
@@ -177,8 +148,8 @@ gapOf snapshot maybeInFront chasing =
             Gap.none
 
 
-panel : Comparison -> Model -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
-panel comparison (Model showing) cars snapshot rivals focused =
+panel : Comparison -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
+panel comparison cars snapshot rivals focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -199,12 +170,7 @@ panel comparison (Model showing) cars snapshot rivals focused =
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
-        , disclosure
-            { title = "Lap history"
-            , open = showing.lapHistoryOpen
-            , onToggle = ToggledLapHistory
-            }
-            (\() -> LapTable.view laps focused.standing.lapsCompleted)
+        , disclosure "Lap history" (LapTable.view laps focused.standing.lapsCompleted)
         ]
 
 
@@ -334,48 +300,25 @@ carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
 
 
-{-| The content is a thunk, so a table the reader has not asked for is not built
-sixty times a second behind a closed section.
+{-| Open or shut is the element's and not the model's, so the content is built
+whether it is showing or not: hand it something lazy.
 -}
-disclosure : { title : String, open : Bool, onToggle : msg } -> (() -> Html msg) -> Html msg
-disclosure config content =
-    div
-        [ class sectionClass ]
-        (button
-            [ onClick config.onToggle
-            , attribute "aria-expanded"
-                (if config.open then
-                    "true"
-
-                 else
-                    "false"
-                )
-            , class ("flex items-center gap-x-1.5 text-left cursor-pointer transition-colors hover:text-foreground " ++ headingClass)
+disclosure : String -> Html msg -> Html msg
+disclosure title content =
+    details [ class ("group " ++ sectionClass) ]
+        [ summary
+            [ class ("flex items-center gap-x-1.5 list-none [&::-webkit-details-marker]:hidden cursor-pointer transition-colors hover:text-foreground " ++ headingClass) ]
+            [ div [ class "text-[8px] transition-transform group-open:rotate-90" ] [ text "▶" ]
+            , text title
             ]
-            [ div [ class "text-[8px]" ]
-                [ text
-                    (if config.open then
-                        "▼"
-
-                     else
-                        "▶"
-                    )
-                ]
-            , text config.title
-            ]
-            :: (if config.open then
-                    [ content () ]
-
-                else
-                    []
-               )
-        )
+        , div [ class "mt-2" ] [ content ]
+        ]
 
 
 container : String -> Html msg -> Html msg
 container title content =
     div
-        [ class sectionClass ]
+        [ class ("grid gap-y-2 " ++ sectionClass) ]
         [ h3 [ class headingClass ] [ text title ]
         , content
         ]
@@ -383,7 +326,7 @@ container title content =
 
 sectionClass : String
 sectionClass =
-    "grid gap-y-2 py-3 border-t border-t-border first:border-t-0 first:pt-0"
+    "py-3 border-t border-t-border first:border-t-0 first:pt-0"
 
 
 headingClass : String

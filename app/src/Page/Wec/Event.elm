@@ -52,7 +52,6 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , columns : CarColumns
     , comparison : CarDetail.Comparison
-    , panels : Dict CarNumber CarDetail.Model
     }
 
 
@@ -82,7 +81,6 @@ init params =
       , leaderboardState = Leaderboard.init
       , columns = ClassLeaders
       , comparison = CarDetail.initialComparison
-      , panels = Dict.empty
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -101,7 +99,7 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | OpenColumn CarNumber
     | CloseColumn CarNumber
-    | CarDetailMsg CarNumber CarDetail.Msg
+    | CarDetailMsg CarDetail.Msg
 
 
 update : Shared.Model -> Msg -> Model -> ( Model, Effect Msg )
@@ -133,18 +131,8 @@ update shared msg m =
         CloseColumn carNumber ->
             ( { m | columns = rearrange shared (closeColumn carNumber) m.columns }, Effect.none )
 
-        CarDetailMsg carNumber detailMsg ->
-            let
-                next =
-                    CarDetail.update detailMsg
-                        { comparison = m.comparison, panel = panelFor carNumber m }
-            in
-            ( { m
-                | comparison = next.comparison
-                , panels = Dict.insert carNumber next.panel m.panels
-              }
-            , Effect.none
-            )
+        CarDetailMsg detailMsg ->
+            ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
 
 
 rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
@@ -188,11 +176,6 @@ pickedOr fallback carNumbers =
 
         first :: rest ->
             Picked first rest
-
-
-panelFor : CarNumber -> Model -> CarDetail.Model
-panelFor carNumber m =
-    Dict.get carNumber m.panels |> Maybe.withDefault CarDetail.init
 
 
 
@@ -403,7 +386,7 @@ columnCard column m replay snapshot car =
         [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
             [ Card.content []
                 [ CarDetail.view
-                    { toMsg = CarDetailMsg carNumber
+                    { toMsg = CarDetailMsg
                     , onClose =
                         if column.closable then
                             Just (CloseColumn carNumber)
@@ -411,7 +394,6 @@ columnCard column m replay snapshot car =
                         else
                             Nothing
                     , comparison = m.comparison
-                    , showing = panelFor carNumber m
                     }
                     replay.race.cars
                     snapshot

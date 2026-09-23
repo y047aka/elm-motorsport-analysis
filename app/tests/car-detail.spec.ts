@@ -78,13 +78,14 @@ test.describe('Car Detail Visual Tests', () => {
   });
 
   test('should open the car\'s own laps at the end of the panel', async ({ page }) => {
-    const history = page.locator(DETAIL).getByRole('button', { name: 'Lap history' });
-    await expect(history).toHaveAttribute('aria-expanded', 'false');
-    await history.click();
+    const history = page.locator(DETAIL).locator('details');
+    await expect(history).not.toHaveAttribute('open');
+    await history.locator('summary', { hasText: 'Lap history' }).click();
+    await expect(history).toHaveAttribute('open', '');
     // Last, so that four hundred rows push nothing a reader came for off the
     // bottom of the panel. The rivals lead, being where the header's standing
     // line stops.
-    const sections = await page.locator(DETAIL).locator('h3, [aria-expanded]').allTextContents();
+    const sections = await page.locator(DETAIL).locator('h3, summary').allTextContents();
     expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
       .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history']);
     await expect(page.locator(DETAIL)).toHaveScreenshot('lap-history.png');
