@@ -305,12 +305,9 @@ whether it is showing or not: hand it something lazy.
 -}
 disclosure : String -> Html msg -> Html msg
 disclosure title content =
-    details [ class ("group " ++ sectionClass) ]
-        [ summary
-            [ class ("flex items-center gap-x-1.5 list-none [&::-webkit-details-marker]:hidden cursor-pointer transition-colors hover:text-foreground " ++ headingClass) ]
-            [ div [ class "text-[8px] transition-transform group-open:rotate-90" ] [ text "▶" ]
-            , text title
-            ]
+    details [ class sectionClass ]
+        [ summary [ class ("cursor-pointer transition-colors hover:text-foreground " ++ headingClass) ]
+            [ text title ]
         , div [ class "mt-2" ] [ content ]
         ]
 
