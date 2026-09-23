@@ -21,6 +21,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Leaderboard as Leaderboard
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
@@ -548,7 +549,7 @@ leaderboardConfig cars =
         -- the whole race, and the table is rebuilt on every frame of playback,
         -- so a scan of the field per row is the same answer found afresh sixty
         -- times a second.
-        startPositions : Dict CarNumber Int
+        startPositions : Dict CarNumber Position
         startPositions =
             -- foldr, so that where the source data has two cars under one
             -- number the one running ahead wins, as the scan this replaces did
@@ -556,7 +557,7 @@ leaderboardConfig cars =
             cars
                 |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
 
-        startPositionOf : CarAt -> Maybe Int
+        startPositionOf : CarAt -> Maybe Position
         startPositionOf item =
             Dict.get item.metadata.carNumber startPositions
     in

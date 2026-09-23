@@ -6,8 +6,8 @@ module View.CarDetail exposing
 
 {-| Everything the race says about one car, drawn in place on the event page.
 
-The car is the caller's selection; the rivals it is measured against are read
-off the field around it, so the panel follows the race without the selection
+The car is the caller's; the rivals it is measured against are read off the
+field around it, so the panel follows the race without the car it is for
 changing.
 
 The chart and the stretch of the race it covers are the page's, so that columns
@@ -33,7 +33,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
-import Motorsport.Position as Position
+import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -282,7 +282,7 @@ rivalsOf snapshot focused =
     Rivals.around (Snapshot.toList snapshot) focused
 
 
-startPositionOf : List Car -> CarAt -> Maybe Int
+startPositionOf : List Car -> CarAt -> Maybe Position
 startPositionOf cars focused =
     carOf cars focused |> Maybe.map .startPosition
 
