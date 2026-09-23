@@ -479,8 +479,8 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives
   2025's Le Mans because that is the round a checkout keeps; a test reaching
-  for another needs `.#serve-api` behind it. Local runs allow a 0.03%
-  pixel-ratio tolerance (`maxDiffPixelRatio: 0.0003`) for cross-platform
+  for another needs `.#serve-api` behind it. Local runs allow a 0.1%
+  pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
   diffs; CI is strict 0.
 
 The baselines are CI's: rendered on Linux, and what a merge is judged
@@ -494,9 +494,11 @@ What separates the two platforms is the rasteriser (CoreText against
 FreeType), which no Chromium flag touches. `tests/screenshot.css` narrows it
 by asking for greyscale antialiasing and the tolerance absorbs the rest, but
 barely. The tolerance is a ratio, so a smaller snapshot gets a smaller budget
-while the gap does not shrink with it, and the tightest are the two 850x814
-car-detail panels: 188 differing pixels against a budget of 208, where
-`lap-180` has 336 against 389. What no tolerance can absorb is a change
+while the gap does not shrink with it, and the tightest are the 328x751 shots
+of a single panel: `selected-car-with-rivals` differs by 221 pixels against a
+budget of 246 and `position-tab` by 217, where `lap-180` has 738 against 1,296.
+The counts are the same from one run to the next, so a count that moves is a
+rendering that moved. What no tolerance can absorb is a change
 smaller than itself — a digit redrawn is tens of pixels — so a local pass is
 not a promise, and a local failure on `position-tab` or
 `selected-car-with-rivals` is worth measuring before it is believed. CI stays

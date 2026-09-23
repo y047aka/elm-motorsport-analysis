@@ -25,8 +25,7 @@ export default defineConfig({
       // baselines with room to spare. See tests/screenshot.css.
       //
       // The room a shot needs grows with how much text and how many chart
-      // strokes it holds: the panel on its own sat under 0.0003, two panels
-      // side by side wanted 0.0004 and the standings 0.00032.
+      // strokes it holds. AGENTS.md has the counts each shot sits at.
       stylePath: './tests/screenshot.css',
       ...(process.env.CI
         ? { maxDiffPixels: 0 }
