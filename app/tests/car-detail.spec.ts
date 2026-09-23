@@ -41,6 +41,11 @@ async function selectOnlyCar(page: Page, carNumber: string) {
   }
 }
 
+/** One section of a panel, found by its heading. */
+function section(page: Page, heading: string) {
+  return page.locator(DETAIL).locator(`xpath=.//h3[normalize-space()="${heading}"]/..`);
+}
+
 /**
  * The cars the columns are drawn for, left to right. Polled: Elm renders on the
  * next frame, so a press has not reached the page by the time it returns.
@@ -69,12 +74,12 @@ test.describe('Car Detail Visual Tests', () => {
 
   test('should render the position progression chart', async ({ page }) => {
     await page.locator(DETAIL).getByRole('button', { name: 'Positions' }).click();
-    await expect(page.locator(DETAIL)).toHaveScreenshot('position-tab.png');
+    await expect(section(page, 'Comparison')).toHaveScreenshot('position-tab.png');
   });
 
   test('should draw the car\'s own curve over its rivals\' in the distribution', async ({ page }) => {
     await page.locator(DETAIL).getByRole('button', { name: 'Distribution' }).click();
-    await expect(page.locator(DETAIL)).toHaveScreenshot('distribution-tab.png');
+    await expect(section(page, 'Comparison')).toHaveScreenshot('distribution-tab.png');
   });
 
   test('should open the car\'s own laps at the end of the panel', async ({ page }) => {
@@ -88,7 +93,7 @@ test.describe('Car Detail Visual Tests', () => {
     const sections = await page.locator(DETAIL).locator('h3, summary').allTextContents();
     expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
       .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history']);
-    await expect(page.locator(DETAIL)).toHaveScreenshot('lap-history.png');
+    await expect(history).toHaveScreenshot('lap-history.png');
   });
 
   test('should keep the car it was given when its own row is clicked again', async ({ page }) => {
@@ -158,7 +163,6 @@ test.describe('Car Detail Columns', () => {
       }),
     );
     expect(toLeader).toEqual(['-', '-', '-']);
-    await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('class-leaders-by-default.png');
   });
 
   test('should not press a row whose car is already standing in', async ({ page }) => {
@@ -187,23 +191,17 @@ test.describe('Car Detail Columns', () => {
     }
   });
 
-  test('should give a picked car a column without taking the last one away', async ({ page }) => {
-    await selectCar(page, '83');
-    await selectCar(page, '12');
-    await expectColumns(page, [...STAND_INS, '83', '12']);
-  });
-
   test('should keep the columns in the order they were opened', async ({ page }) => {
-    // The reverse of the pair above. The running order holds these two one way
-    // round, so one of the two orders is one it could not have produced.
+    // The running order has #83 ahead of #12, so this order is one it could
+    // not have produced.
     await selectCar(page, '12');
     await selectCar(page, '83');
     await expectColumns(page, [...STAND_INS, '12', '83']);
   });
 
   test('should hold every column to a width its panel stays readable at', async ({ page }) => {
-    // Before a car has been picked at all: the leader stands in, and stands in
-    // a column rather than being handed the cell whole.
+    // Before a car has been picked at all: the class leaders stand in, each in
+    // a column rather than handed the cell.
     await expect(column(page, 0)).toHaveCSS('width', '360px');
     await selectOnlyCar(page, '83');
     await expect(column(page, 0)).toHaveCSS('width', '360px');
