@@ -84,44 +84,37 @@ suffix position =
                 "th"
 
 
-{-| Places made up or dropped since the start. Never by nought: a car that holds
-its place has no movement.
+{-| Places made up or dropped between two moments. `Gained` and `Lost` are never
+by nought: a car in the place it was in has `Held` it.
 -}
 type Movement
     = Gained Int
+    | Held
     | Lost Int
 
 
-{-| How far a car has come from where it started. Nothing where it holds that
-place, or where the place it started from is not known.
+{-| How far a car has come from one place to another.
 
-    movement { startPosition = Just 5, position = 3 }
-    --> Just (Gained 2)
+    movement { from = 5, to = 3 }
+    --> Gained 2
 
-    movement { startPosition = Just 3, position = 5 }
-    --> Just (Lost 2)
+    movement { from = 3, to = 5 }
+    --> Lost 2
 
-    movement { startPosition = Just 4, position = 4 }
-    --> Nothing
-
-    movement { startPosition = Nothing, position = 4 }
-    --> Nothing
+    movement { from = 4, to = 4 }
+    --> Held
 
 -}
-movement : { startPosition : Maybe Position, position : Position } -> Maybe Movement
-movement { startPosition, position } =
-    startPosition
-        |> Maybe.andThen
-            (\start ->
-                if start > position then
-                    Just (Gained (start - position))
+movement : { from : Position, to : Position } -> Movement
+movement { from, to } =
+    if from > to then
+        Gained (from - to)
 
-                else if start < position then
-                    Just (Lost (position - start))
+    else if from < to then
+        Lost (to - from)
 
-                else
-                    Nothing
-            )
+    else
+        Held
 
 
 {-| A movement as a timing screen prints it, in two parts so that the arrow can
@@ -133,12 +126,20 @@ be drawn apart from the number.
     toArrow (Lost 3)
     --> { arrow = "↓", places = "3" }
 
+A place held is a dash, as a timing screen prints no gap:
+
+    toArrow Held
+    --> { arrow = "-", places = "" }
+
 -}
 toArrow : Movement -> { arrow : String, places : String }
 toArrow m =
     case m of
         Gained places ->
             { arrow = "↑", places = String.fromInt places }
+
+        Held ->
+            { arrow = "-", places = "" }
 
         Lost places ->
             { arrow = "↓", places = String.fromInt places }

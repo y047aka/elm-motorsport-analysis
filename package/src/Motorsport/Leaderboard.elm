@@ -323,12 +323,12 @@ held its place or whose grid place is not known.
 -}
 viewPositionChange : { startPosition : Maybe Position, position : Position } -> Html msg
 viewPositionChange change =
-    case Position.movement change of
-        Just movement ->
-            div [ class "text-center font-bold tabular-nums" ] (arrow movement)
-
-        Nothing ->
+    case movementOf change of
+        Held ->
             text "-"
+
+        movement ->
+            div [ class "text-center font-bold tabular-nums" ] (arrow movement)
 
 
 {-| The same change set in a line of text: in the weight of the text around it,
@@ -337,12 +337,22 @@ part of the position.
 -}
 viewPositionChangeInline : { startPosition : Maybe Position, position : Position } -> Html msg
 viewPositionChangeInline change =
-    case Position.movement change of
-        Just movement ->
+    case movementOf change of
+        Held ->
+            text ""
+
+        movement ->
             span [ class "tabular-nums" ] (arrow movement)
 
-        Nothing ->
-            text ""
+
+{-| A grid place that is not known reads as one held: there is no movement to
+draw either way.
+-}
+movementOf : { startPosition : Maybe Position, position : Position } -> Movement
+movementOf { startPosition, position } =
+    startPosition
+        |> Maybe.map (\start -> Position.movement { from = start, to = position })
+        |> Maybe.withDefault Held
 
 
 arrow : Movement -> List (Html msg)
@@ -355,6 +365,9 @@ arrow movement =
             case movement of
                 Gained _ ->
                     "text-green-500"
+
+                Held ->
+                    ""
 
                 Lost _ ->
                     "text-red-500"
