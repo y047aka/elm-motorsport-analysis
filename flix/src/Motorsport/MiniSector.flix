@@ -80,7 +80,7 @@ mod Motorsport.MiniSector {
         }
 
     /// JSON object key — lower-case `csvName` with the hyphen reverted to an
-    /// underscore (matches the Elm `Motorsport.Lap.MiniSectors` field names).
+    /// underscore (the keys `Data.Wec.Laps` decodes on the Elm side).
     pub def jsonKey(id: MiniSectorId): String =
         match id {
             case MiniSectorId.SCL2    => "scl2"

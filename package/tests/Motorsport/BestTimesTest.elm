@@ -1,9 +1,8 @@
 module Motorsport.BestTimesTest exposing (tests)
 
-{-| Which lap took which record is counted where the laps are, in
-`Round.Index`, and driven by `Round.TestIndex`. What is left here is the two
-halves this module does hold: reading the round's summary, and reading the
-records back at a moment of the race.
+{-| Which lap took which record is counted in `Round.Index` and tested by
+`Round.TestIndex`. Here: reading the round's summary, and reading the records
+back at a moment of the race.
 -}
 
 import Expect

@@ -3,11 +3,8 @@ module View.CarDetail.LapTimes exposing (view)
 {-| The car's lap times, newest first: the lap it is driving, the lap it has
 just finished, the best it has turned, and every lap behind those.
 
-The whole page is a timing screen, so nothing here is labelled live. What the
-section is for is the one thing a timing screen is short of room for: the lap in
-progress measured against something -- each sector of it against the best the car
-has managed, which is the reading that says whether this lap is going anywhere
-before it is over.
+Each sector of the lap in progress is measured against the best the car has
+managed.
 
 @docs view
 
@@ -204,9 +201,7 @@ lapBlock { label, lapNumber, time, segments } =
 
 
 {-| A sector of the lap under way, as how far off the best the car has driven it
-in it was -- which is what there is to say about a sector while the lap it
-belongs to is still being driven. What it took is on the strip below it, and the
-lap beside it is where the times are read.
+in it was.
 -}
 deltaCell : Maybe Duration -> Maybe RatedTime -> Html msg
 deltaCell best rated =

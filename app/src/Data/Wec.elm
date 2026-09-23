@@ -55,9 +55,7 @@ type alias Event =
 
 {-| The circuit as the summary describes it: which way round it goes, and how
 the lap divides. Handed to
-[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig) by whoever holds
-both -- drawing it is not this module's business, and the field names are the
-ones that function asks for.
+[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
 -}
 type alias Track =
     { direction : Direction

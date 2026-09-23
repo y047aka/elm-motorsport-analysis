@@ -30,9 +30,8 @@ mod Motorsport.Timeline {
     /// What the events of one round are gathered from: each car's first and
     /// last moment, and every change of the lead.
     ///
-    /// Not the stops. Both halves of one are counted off `pit_time` and the
-    /// laps still carry it, so the app reads them there rather than here --
-    /// where they were 95% of a round's events and buried the rest.
+    /// Not the stops: both halves of one are counted off `pit_time`, which the
+    /// laps carry, so the app reads them there.
     pub type alias Readings = {
         timeLimit = Duration,
         cars      = List[(String, Duration)],

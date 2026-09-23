@@ -1,4 +1,3 @@
-// The Rust version emits log::warn! (warn_once) for unknown IDs, omitted here to keep this pure.
 mod Motorsport.Events {
 
     use Motorsport.Circuit.Direction.Direction

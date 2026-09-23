@@ -1,8 +1,6 @@
 name: Tauri Build (macOS)
 
-# Builds the Tauri v2 native app (macOS) after ending web publishing (GitHub Pages).
-# Manual (workflow_dispatch) only for now; tag-driven releases and other platforms
-# are future work.
+# Builds the Tauri v2 native app (macOS), on manual dispatch.
 on:
   workflow_dispatch:
 

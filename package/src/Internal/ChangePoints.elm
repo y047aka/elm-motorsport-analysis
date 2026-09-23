@@ -7,10 +7,8 @@ module Internal.ChangePoints exposing
 {-| A value that changes at known moments of the race, indexed so it can be read
 back at any elapsed time.
 
-The race's own shape is what makes this worth building. A car's status changes a
-few dozen times across a twenty-thousand-lap race; a lap record a few hundred.
-Collect the moments it changes once, when the race loads, and reading the value
-at an elapsed time becomes a binary search rather than a scan of every lap.
+Built once when the race loads, so reading the value at an elapsed time is a
+binary search rather than a scan of every lap.
 
 The reading depends on nothing but `elapsed`, so a clock that jumped an hour or
 scrubbed backwards lands on the same value as one that played through.
@@ -65,11 +63,6 @@ countUpTo elapsed (ChangePoints points) =
 
 
 {-| When the `n`th change happened, counting from zero.
-
-Takes a position in the index, where `valueAt` takes a moment of the race --
-which is the whole difference between an `Int` and an
-[`Instant`](Motorsport-Instant).
-
 -}
 timeOfNth : Int -> ChangePoints a -> Maybe Instant
 timeOfNth n (ChangePoints points) =

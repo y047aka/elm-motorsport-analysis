@@ -31,13 +31,11 @@
             text = cmd;
           };
 
-        # Runner for the Tauri v2 native app. Runs cargo-tauri with app/ as the cwd
-        # (cargo-tauri finds ./src-tauri/tauri.conf.json and runs
-        # beforeDevCommand=`pnpm run start` from app/).
-        # Targets macOS, which uses the OS-provided WebView (no extra system deps).
-        # Targeting Linux would additionally need pkg-config + webkitgtk_4_1/libsoup_3/gtk3.
-        # `before` runs from the repository root, which is where the build
-        # writes the rounds it is about to bundle.
+        # Runner for the Tauri v2 native app, from app/. Targets macOS, which
+        # uses the OS-provided WebView; Linux would additionally need
+        # pkg-config + webkitgtk_4_1/libsoup_3/gtk3. `before` runs from the
+        # repository root, which is where the build writes the rounds it is
+        # about to bundle.
         mkTauriApp = name: before: cmd:
           pkgs.writeShellApplication {
             inherit name;
@@ -146,15 +144,9 @@
         cliLoadCmd   = "flix run -- --load ../app/static/wec \"$@\"";
         cliExportCmd = "flix run -- --export ${exportedRound} ../app/static/wec \"$@\"";
 
-        # Audit helpers for the update-deps skill. The jar is located via the
-        # git root so the caller's working directory is left untouched —
-        # subcommands resolve flake.lock, app/elm.json and node_modules
-        # relative to the cwd. Rebuilds the jar when a source is newer than the
-        # marker a finished build leaves, as `mkFlixServerApp` does; cargo is
-        # needed by the rust-major-audit subcommand.
         # The fetcher encodes what it downloads, so it needs libwebp beside Node.
-        # Kept apart from `mkNodeApp` rather than added to it: every other Node
-        # command would carry the encoder for nothing.
+        # Kept apart from `mkNodeApp`: every other Node command would carry the
+        # encoder for nothing.
         carImagesApp = pkgs.writeShellApplication {
           name = "car-images";
           runtimeInputs = [ pkgs.nodejs_26 pkgs.libwebp ];
@@ -164,6 +156,11 @@
           '';
         };
 
+        # Audit helpers for the update-deps skill. The jar is located via the
+        # git root so the caller's working directory is left untouched --
+        # subcommands resolve flake.lock, app/elm.json and node_modules
+        # relative to the cwd. Rebuilt as `mkFlixServerApp` is; cargo is needed
+        # by the rust-major-audit subcommand.
         depsAuditApp = pkgs.writeShellApplication {
           name = "deps-audit";
           runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
@@ -181,13 +178,10 @@
         };
 
       in {
-        # `gh` is here rather than in an app: it is not a project command but a
-        # tool with a surface of its own, and reaching it through
+        # `gh` is here rather than in an app: reaching it through
         # `nix develop --command gh ...` keeps it outside the blanket
         # `nix run .#*` permission, so each subcommand is allowed on its own
-        # merits. It reads the credentials `gh auth login` wrote; nix supplies
-        # the binary, not the login. `update-snapshots-ci` is the exception,
-        # argued for where it is defined.
+        # merits. `update-snapshots-ci` is the exception (nix/vrt.nix).
         devShells.default = pkgs.mkShell (vrt.env // {
           buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh ]
             ++ [ flix ] ++ elmTools;

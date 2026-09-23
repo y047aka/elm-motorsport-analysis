@@ -7,7 +7,7 @@ import Test exposing (Test, describe, test)
 
 
 {-| Two seasons running the same round, which is the case the app cannot resolve
-on the id alone. Shaped as `Motorsport.Calendar.toJson` writes it.
+on the id alone. Shaped as `Manifest.toJson` writes it.
 -}
 json : String
 json =

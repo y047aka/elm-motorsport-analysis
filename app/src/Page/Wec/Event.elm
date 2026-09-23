@@ -1,7 +1,7 @@
 module Page.Wec.Event exposing (Model, Msg, init, subscriptions, update, view)
 
-{-| WEC event page (`/wec/:season/:event`). Migrated from the elm-pages route to
-plain TEA. Route parameters are passed into `init` by `Main`.
+{-| WEC event page (`/wec/:season/:event`). Route parameters are passed into
+`init` by `Main`.
 
 @docs Model, Msg, init, subscriptions, update, view
 
@@ -545,15 +545,12 @@ eventTypeToString eventType =
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
 leaderboardConfig cars =
     let
-        -- Worked out once rather than per row: where a car started is fixed for
-        -- the whole race, and the table is rebuilt on every frame of playback,
-        -- so a scan of the field per row is the same answer found afresh sixty
-        -- times a second.
+        -- Worked out once rather than per row: the table is rebuilt on every
+        -- frame of playback.
         startPositions : Dict CarNumber Position
         startPositions =
             -- foldr, so that where the source data has two cars under one
-            -- number the one running ahead wins, as the scan this replaces did
-            -- and as `Snapshot.get` does.
+            -- number the one running ahead wins, as in `Snapshot.get`.
             cars
                 |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
 
@@ -639,8 +636,8 @@ navigation title maybeRound =
         ]
 
 
-{-| The app now ships as a native window without browser back navigation, so the
-race list has to be reachable from the page itself.
+{-| The app ships as a native window without browser back navigation, so the race
+list has to be reachable from the page itself.
 -}
 backLink : Html Msg
 backLink =

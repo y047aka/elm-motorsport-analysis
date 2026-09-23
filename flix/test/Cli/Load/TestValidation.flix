@@ -155,8 +155,7 @@ mod Cli.Load.TestValidation {
     def testElapsedDriftCumulativeReportsTrailingLaps(): Unit \ {Assert, IO} =
         // Cumulative-sum: when lap 2 drifts by 500ms, lap 3 is "consistent
         // relative to lap 2" (an adjacent-diff check would clear it) but still
-        // disagrees with the running sum, so it must be reported too. This
-        // mirrors the Rust implementation's behaviour.
+        // disagrees with the running sum, so it must be reported too.
         let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.500", "14:04:00.500");
         let l3 = buildLap("7", 3, "2:00.000", "30.000", "60.000", "30.000", "6:00.500", "14:06:00.500");
@@ -429,7 +428,7 @@ mod Cli.Load.TestValidation {
 
     @Test
     def testValidateRendersFormattedString(): Unit \ {Assert, IO} =
-        // New format: "sector-sum" slug + "expected=...ms... actual=...ms...".
+        // "sector-sum" slug + "expected=...ms... actual=...ms...".
         // elapsed and hour are aligned with lapTime so the formatted output
         // is validated solely against the SectorSum case.
         let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.000", "14:02:00.000");

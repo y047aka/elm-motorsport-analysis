@@ -165,12 +165,8 @@ spacer =
     div [] []
 
 
-{-| One cell of a strip drawn from where the car has got to.
-
-A stretch the car has not reached draws nothing, which is what a zero-width fill
-came to anyway -- the difference is that the reading now says so, rather than
-leaving the cell to read it back out of a number.
-
+{-| One cell of a strip drawn from where the car has got to. A stretch the car
+has not reached draws nothing.
 -}
 progressCell : String -> SegmentState -> Html msg
 progressCell label state =

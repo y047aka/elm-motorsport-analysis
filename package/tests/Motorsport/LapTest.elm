@@ -196,8 +196,7 @@ tests =
             , test "drops the one whose running total is missing, and the one after it" <|
                 \_ ->
                     -- IP1's total is what places IP1 and starts Z12, so losing
-                    -- it loses both. The rest are placed as before -- which is
-                    -- the whole reason the source records running totals.
+                    -- it loses both. The rest are placed as before.
                     Lap.miniSegments (withoutRunningTotalFor IP1)
                         |> List.map Tuple.first
                         |> Expect.equal (List.filter (\m -> m /= IP1 && m /= Z12) LeMans.all)

@@ -195,8 +195,8 @@ skipBy duration =
     Replay.update (Replay.SkipTime duration)
 
 
-{-| The status as a snapshot of the race shows it, which is the whole point: the
-model holds no status of its own, it is read back out of the race at the clock.
+{-| The status as a snapshot of the race shows it: the model holds no status of
+its own.
 -}
 statusOf : CarNumber -> Replay.Model -> Maybe Status
 statusOf carNumber { race, playback } =

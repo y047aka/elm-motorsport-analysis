@@ -13,10 +13,6 @@ module Motorsport.Lap.Performance exposing
 The baselines come from [`BestTimes`](Motorsport-BestTimes); this module says
 what a time rated against them is, and rates the times of a lap one by one.
 
-Rating belongs to neither the race nor the view: a rated time is settled by the
-lap and the record alone, so [`Race.Snapshot`](Motorsport-Race-Snapshot) reads
-it as part of the race and a view is free to rate a lap of its own.
-
 @docs RatedTime, rateTime
 @docs SectorPerformance, ofSectors
 @docs MiniSectorPerformance, ofMiniSectors
@@ -66,28 +62,19 @@ rateTime fastest { time, personalBest } =
             )
 
 
-{-| A lap's sector times, each rated.
--}
 type alias SectorPerformance =
     BySector (Maybe RatedTime)
 
 
-{-| Rate each sector of a lap.
--}
 ofSectors : BestTimes.Snapshot -> Lap -> SectorPerformance
 ofSectors bestTimes lap =
     Sector.map2 (BestTimes.timeOf >> rateTime) bestTimes.fastestSectors lap.sectors
 
 
-{-| A lap's mini-sector times, each rated. Only laps from a circuit with
-mini-sectors have them.
--}
 type alias MiniSectorPerformance =
     ByMiniSector (Maybe RatedTime)
 
 
-{-| Rate each mini-sector of a lap, where the lap has any.
--}
 ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance
 ofMiniSectors bestTimes lap =
     let
@@ -124,8 +111,7 @@ it the clock puts them.
 
 A progress of 1 is a segment behind the car, not one it is still in: callers
 clamp progress to at most 1, so a clock past the end of the lap reads as exactly
-1 of the final segment. Routing that to `Completed` here saves every caller from
-having to know that 1 is a boundary.
+1 of the final segment.
 
     fromProgress 0.5 Nothing
     --> InProgress 0.5
@@ -175,9 +161,8 @@ type PerformanceLevel
 
 {-| How a time reads against the two baselines it is rated on.
 
-Both baselines are `Nothing` until some lap sets them, and nothing has beaten a
-record that has not been set -- so an unset baseline matches no time, and the
-comparison needs no guard of its own.
+Both baselines are `Nothing` until some lap sets them, and an unset baseline
+matches no time.
 
 -}
 performanceLevel : { a | time : Duration, personalBest : Maybe Duration, fastest : Maybe Duration } -> PerformanceLevel

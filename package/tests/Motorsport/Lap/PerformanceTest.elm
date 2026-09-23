@@ -23,10 +23,7 @@ suite =
                     rate { time = 7000, personalBest = Just 6000, fastest = Just 5000 }
                         |> Expect.equal Standard
             , test "a baseline no lap has set yet matches nothing" <|
-                -- Nothing has beaten a record that has not been set. This used
-                -- to need a guard of its own: an unset baseline read back as a
-                -- zero, and so rated every unrecorded time as the fastest of
-                -- the race until the first real one was set.
+                -- Nothing has beaten a record that has not been set.
                 \_ ->
                     rate { time = 5000, personalBest = Nothing, fastest = Nothing }
                         |> Expect.equal Standard

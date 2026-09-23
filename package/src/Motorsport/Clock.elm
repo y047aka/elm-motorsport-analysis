@@ -150,8 +150,7 @@ setElapsed asked m =
     case m.state of
         -- Moving the clock before the race has been started leaves it
         -- stopped, at the moment asked for -- the same state as pausing
-        -- there. Ignoring it instead would leave the clock reading zero
-        -- while the rest of the replay had moved on.
+        -- there.
         Initial ->
             { m | state = Paused instant }
 

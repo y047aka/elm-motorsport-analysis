@@ -256,8 +256,8 @@ fromPositiveString str =
             String.toInt m |> Maybe.map ((*) 60000)
 
         -- Read as digits rather than through `String.toFloat`, which cannot
-        -- hold a millisecond exactly and had to be rounded back out of.
-        -- A shorter fraction is padded out; a longer one is not read.
+        -- hold a millisecond exactly. A shorter fraction is padded out; a
+        -- longer one is not read.
         fromSeconds s =
             case String.split "." s of
                 [ whole, fraction ] ->

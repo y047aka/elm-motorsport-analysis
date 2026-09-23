@@ -28,10 +28,8 @@ mod DepsAudit.Npm {
                 if (i#current != i#wanted)
                     Some("${name}: ${i#current} -> ${i#wanted}")
                 else None);
-            // `latest != wanted`, not a numeric comparison: an earlier
-            // TypeScript predecessor used `parseInt(latest) > parseInt(current)`,
-            // which silently dropped same-major bumps (e.g. 2.4.9 -> 2.4.10)
-            // from this section. Keep this as `!=`.
+            // `latest != wanted`, not a comparison of the leading numbers,
+            // which would silently drop same-major bumps (2.4.9 -> 2.4.10).
             let major = infos |> List.filterMap(match (name, i) ->
                 if (i#latest != i#wanted)
                     Some("${name}: ${i#current} -> ${i#latest}")

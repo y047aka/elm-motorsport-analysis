@@ -95,8 +95,7 @@ tests =
                         |> Expect.notEqual Class.none
             , test "settles order and color, so the same name reads differently in two eras" <|
                 \_ ->
-                    -- LMGT3 came fourth in 2024 and third in 2025: two distinct values,
-                    -- and nothing downstream has to ask which era they came from.
+                    -- LMGT3 came fourth in 2024 and third in 2025: two distinct values.
                     Class.fromString Era.Gt3AsFourthClass "LMGT3"
                         |> Expect.notEqual (Class.fromString Era.Gt3AsThirdClass "LMGT3")
             , test "reads the name of `none` back as `none`" <|

@@ -8,8 +8,7 @@ module Motorsport.Wec.Circuit.LeMans exposing
     )
 
 {-| The mini-sectors of Le Mans, the counterpart of
-[`Sector`](Motorsport-Sector) at the finer grain. Everything above is spelled
-the way that module spells it, so a caller that knows one knows the other.
+[`Sector`](Motorsport-Sector) at the finer grain.
 
 @docs LeMans2025MiniSector
 @docs all
@@ -78,8 +77,7 @@ all =
 
 
 {-| Fifteen values, one per mini sector — [`BySector`](Motorsport-Sector#BySector)
-at the finer granularity, transparent for the same reasons. Fields are in track
-order.
+at the finer granularity. Fields are in track order.
 -}
 type alias ByMiniSector a =
     { scl2 : a
@@ -251,8 +249,7 @@ toString mini =
 
 
 {-| Order two mini-sectors by where they fall on the lap. The counterpart of
-[`Sector.compare`](Motorsport-Sector#compare), and there for the same reason:
-placing a mini-sector against the one the car is in.
+[`Sector.compare`](Motorsport-Sector#compare).
 
     Motorsport.Wec.Circuit.LeMans.compare IP1 Z12
     --> LT

@@ -69,8 +69,7 @@ repeats over every lap, and `entries` the cars a season was contested by.
 `timeline_events` is the one that is not a reading of the file. Its rows are
 the laps counted and then weighed against a time limit no row carries, so the
 load decides it once and the two readers read back what it decided rather than
-each deciding it again. The whole archive's 17,257 events are 0.56MB against
-`laps`' 12.94MB.
+each deciding it again.
 
 The archive is what says the three can be split off: no car of a round in it is
 described two ways, and no seat of one is named two ways. A lap carries its
@@ -172,28 +171,24 @@ reads one back with, one row per marker, keyed from zero where
 wants rather than the shape the JSON output has, which is the whole reason they
 are not the object `Motorsport.Wec` writes.
 
-What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
-`Motorsport.Track` still choose the grid's basis, break its ties, and divide the
-lap; they take the readings those decisions are made from rather than the laps
-they were counted out of, and neither imports `Motorsport.Wec` any more.
-Counting is what a `GROUP BY` is better at than a fold over the laps, and it is
-what cost the most.
+SQL does the counting, not the deciding. `Motorsport.Metadata` and
+`Motorsport.Track` choose the grid's basis, break its ties, and divide the lap;
+they take the readings those decisions are made from rather than the laps they
+were counted out of, and neither imports `Motorsport.Wec`.
 
 `Cli.Load.Validation` runs its five rules as SQL
 over the round just loaded, leaving only the message formatting in Flix: three
 are a comparison per row, and the two that walk a lap need the mini-sectors in
 track order, which is what those columns are for. `Round.Index` reads the two
 indices a race is read at a moment through -- when the lap counter went up, and
-when each of the twenty records changed hands -- which are a walk of every lap
+when each of the nineteen records changed hands -- which are a walk of every lap
 of the round each: a `GROUP BY` for the first, and for the second one window
-over every record's readings stacked into a single column. They are twenty
-readings and a few hundred rows, so they ride in the summary rather than in a
-file of their own.
+over every record's readings stacked into a single column. They ride in the
+summary.
 
-`Round.Timeline` is the third such walk and does not: it is thousands of records
-rather than hundreds -- Le Mans is 3983 of them against the summary's 100KB --
-so it is written a line at a time as the laps are, and a round is three files
-and three URLs. It is also the only one of the walks a reader does not make:
+`Round.Timeline` is the third such walk and does not: it is written a line at a
+time as the laps are, and a round is three files and three URLs. It is also the
+only one of the walks a reader does not make:
 `Round.Timeline.fromLaps` is the load's, and `Round.Timeline.read` is the
 round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
 rather than read in their key's order, which is the same list until a row is
@@ -203,9 +198,7 @@ Each car's first and last crossing is one `GROUP BY`, and the lead is
 `ROW_NUMBER` picking each lap's first crossing with `LAG` asking who held the one
 before -- two queries rather than one, since SQLite settles a `WHERE` before
 either window. The stops are not counted at all: both halves of one are read off
-`pit_time` and the laps still carry it, so the app reads them there, and the
-timeline is the 191 events of a round rather than the 3,983 that buried them.
-What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's
+`pit_time`, which the laps carry, so the app reads them there. What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's
 last crossing against the time limit, which is `Metadata`'s estimate and the one
 reading here the laps do not carry, so `Round.Summary.particulars` is read first
 and hands it over -- the whole of what the load wants a summary for. It also
@@ -295,8 +288,8 @@ caller's own context. sqlfx found the same thing and answers it the same way.
 So nothing outside `Db` calls an operation: `Db.fetch`, `Db.execute` and
 `Db.insertMany` are the same statements with that step already taken, and they
 are what `Sql` and `Db.Schema` reach. `Db.Jdbc.withConnection` is the other
-one -- a database opened, worked in, and closed however that went, which is
-what a run, a test and the server each did for themselves before.
+one -- a database opened, worked in, and closed however that went, for a run,
+a test and the server alike.
 
 What a failure is is a `Db.Error` rather than a sentence, and which of the six
 says where the fix is: `Unreachable` is no database reached at all, `Refused` is
@@ -411,14 +404,13 @@ that write one. Each names the table it is of, and a source that renames it
 says so itself: `Db.Rounds.scope` takes the column under that name, which is
 what `Round.Summary.carBuilds` hands its `c`. The type is what carries
 nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
-asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
-column list already knows and no longer a thing to notice. A column a common
+asked of `mini_sector_time_ms` and not of `lap_time_ms`. A column a common
 table expression made up is `Sql.column`, named rather than drawn, and its type
 is the caller's word.
 
 `Sql.unionAllTagged` stacks arms of a `UNION ALL` and labels each with a number
 it picks, handing back a reading of that number as the thing the arm was about.
-`Round.Index` is the caller: its twenty records are five arms of one reading
+`Round.Index` is the caller: its nineteen records are four arms of one reading
 each and one arm of fifteen, and neither the arms nor the reading names a
 number.
 
@@ -441,8 +433,7 @@ row cannot come to be bound in an order the statement does not name. A
 `primary = .id` is the field rather than a string, so a key over a column the
 table has not declared does not typecheck. What it does not reach is `all`:
 that ordering is restated by hand, and `Db.TestLapRow` is what says the key's
-columns are in it. `Db.Schema` declares; `Sql` renders. Neither the DDL nor
-the insert is written out in this repository any more.
+columns are in it. `Db.Schema` declares; `Sql` renders.
 
 What the query does not reach is its source. The source is text however it is
 named, so the columns `Sql.access` carries are the caller's word that the text

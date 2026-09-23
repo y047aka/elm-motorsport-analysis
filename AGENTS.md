@@ -134,7 +134,7 @@ fetched at runtime via `Http`.
 - `Main.elm` — top-level Model/Msg, URL handling, page dispatch
 - `Route.elm` — `Url.Parser` routes: `/`, `/debug`, `/wec/:season/:event`
 - `Shared.elm` — app-wide state (race control, view model) + data loading
-- `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
+- `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` — one module per page, plain TEA
 - `Data/` (feed decoding), `UI/` (Notice, and `Shadcn/` for the wrappers)
 - `View/` — what a page is laid out of: the car detail panel and its sections,
@@ -159,55 +159,22 @@ them the file has no row for is one query rather than a reading of the cars.
 `Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the
 manufacturer table is, which names each season's photographs and the directory
 under `static/images/wec` they sit in. `.#car-images --season <year>` writes one
-season of it.
-
-It reads two sources because neither has all of it. Le Mans's LMP2 field is the
-organiser's class and not the championship's, so fiawec.com — whose categories
-are Hypercar and LMGT3 — does not carry it and `api-he.lemans.org` does; and
-that API has no list of which races a season ran, which the grid page has. A
-season the grid page is not showing is reached through its season filter, which
-takes the ids `/evo/1/seasons` publishes and answers for seasons the page itself
-no longer offers: 2024 is reached that way and nowhere else, `/en/car/2024`
-having become a redirect to the current season.
-
-A season still being run is a photograph per car on the grid page, and a round
-is compared against it. One the site keeps only in its archive lists the cars
-without their pictures, and then the rounds are the whole of where a car's
-photographs come from — its first of them is what the car carries, which is how
-2024 reads.
-
-Every round has an upload of its own for every car, most of them the season's
-picture again under another name, so a round is registered for the picture
-differing and not the file: they are compared by what they hold. Of 2025's, 179
-were the season's again and 134 were not.
+season of it; `app/scripts/fetch-car-images.mjs` says which two sources it reads
+and why. A season the grid page is not showing is reached through its season
+filter, which takes the ids `/evo/1/seasons` publishes and answers for seasons
+the page itself no longer offers: 2024 is reached that way and nowhere else,
+`/en/car/2024` being a redirect to the current season.
 
 The photographs are kept as WebP at `-q 75 -sharp_yuv`, at the width they are
 published rather than a narrower one — measured as the card draws them, bytes
-spent on resolution beat bytes spent on quality. `-sharp_yuv` is the one flag
-worth its cost: WebP's lossy mode is YUV 4:2:0 at every quality, and the
-sharper conversion recovers a tenth of the error for a twenty-fifth of the size.
-Three seasons come to 13MB, where the same pictures as PNG were 71MB.
+spent on resolution beat bytes spent on quality.
 
-**A photograph already here is never asked for again.** The one place an image
-is requested is reached from two, and both are behind that check, so a run that
-cannot compare a file it holds stops and says which. Comparing needs the
+**A photograph already here is never asked for again.** Comparing needs the
 original and not the WebP written from it, so `app/scripts/car-image-origins.json`
 holds each original's digest — every one a run fetched and not only the ones it
-kept, each written as it arrives, so an error, an interrupt or a `--dry-run`
-cannot drop what was already paid for. Everything else is bounded by what was
-read: one request for the grid page, two more for a season it is not showing,
-one for each race the calendar has a round for. A run says how many images it
-asked the site for, which is the number to read rather than how many it kept.
-Requests are a second apart and nothing is retried.
-
-A photograph is put in place by a rename: half of one would read as a photograph
-already here, never be asked for again, and be served.
-
-A run ends by naming **the cars the table has that no source named** — a car
-that has left the entry lists keeps whatever the table said of it, which is the
-one way a photograph goes unreplaced — and **the photographs narrower than the
-rest**, read off the WebP header. 2024's 14 and 2025's 199 are on neither
-source and are the two still at 300px.
+kept, each written as it arrives. A run says how many images it asked the site
+for, which is the number to read rather than how many it kept. Requests are a
+second apart and nothing is retried.
 
 Both tables are read where the cars decode rather than where they are drawn:
 `Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
@@ -264,9 +231,8 @@ running it rather than by building it:
 Two of the elements mount React: the slider and the toggle-group, which are
 the two that borrow behaviour — a drag, and a row that answers the arrow keys.
 The rest are class strings, and the registry hands those out without React:
-`badgeVariants`, `buttonVariants` and `buttonGroupVariants` are all exported,
-so the badge, button and button-group elements build their own DOM from them
-with nothing vendored changed. A class the registry has no variant for goes on
+`badgeVariants` and `buttonVariants` are both exported, so the badge and button
+elements build their own DOM from them with nothing vendored changed. A class the registry has no variant for goes on
 through `cn`, which is also what drops a base class a variant contradicts.
 
 `card-elements.ts` has a second reason to mount nothing. Card's classes read
@@ -287,7 +253,7 @@ or record arrives as a write however little it has changed, and a view that
 runs every animation frame then renders React every animation frame. Measured
 on the event page: the two elements taking an `items` array rendered on 181 of
 181 frames of playback, showing nothing new. `changed` in `react-element.ts` is
-what an object-valued setter compares with, and both are back to zero.
+what an object-valued setter compares with.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
@@ -388,8 +354,7 @@ Neither walks a lap of the race. Which lap took which record is counted in
 does, so `Race.fromCars` is given a `Race.Index` rather than building one.
 `Race.TimelineEvent` is read the same way, off `Round.Timeline` — the race as a
 list of what happened, which the round's report is drawn from — though it
-arrives in a file of its own rather than in the summary, being the same order of
-size as the laps rather than of the indices. Nothing a `Race` holds is counted
+arrives in a file of its own rather than in the summary. Nothing a `Race` holds is counted
 off it: a car's status is its own laps read against the time limit, so a round
 draws without it and `Shared` does not wait for it.
 

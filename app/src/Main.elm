@@ -1,8 +1,7 @@
 module Main exposing (main)
 
-{-| Application entry point. A hand-written `Browser.application` that wires
-together the shared model, the client-side router, and each page — replacing the
-elm-pages framework.
+{-| A hand-written `Browser.application` wiring together the shared model, the
+router, and each page.
 -}
 
 import Browser

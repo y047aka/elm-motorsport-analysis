@@ -9,8 +9,8 @@ mod DepsAudit.TestNix {
     // 2026-07-19 as epoch seconds, used as "now" for the channel audit.
     def now(): Int64 = 1784438400i64
 
-    /// Regression: the audit only matched `nixpkgs-YY.MM-darwin`, so this
-    /// repository's `nixos-YY.MM` flake always reported `channel: unknown`.
+    /// This repository's spelling. Missing it reports `channel: unknown`,
+    /// which reads as nothing to report rather than as a failure to parse.
     @Test
     def testChannelParsesNixosSpelling(): Unit \ Assert =
         let flake = "nixpkgs.url = \"github:nixos/nixpkgs/nixos-26.05\";";

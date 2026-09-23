@@ -13,10 +13,6 @@ module Motorsport.Instant exposing
 when it happened. Both are milliseconds underneath, and keeping this one opaque
 is what stops a lap time being compared against a lap's completion time.
 
-The algebra is the one the names imply: a moment shifted by a length is another
-moment ([`add`](#add), [`subtract`](#subtract)), and the distance between two
-moments is a length ([`since`](#since)). Nothing else is offered.
-
 @docs Instant
 
 
@@ -132,10 +128,9 @@ subtract duration (Instant ms) =
 
 {-| How long it took to get from one moment to another.
 
-Signed, and deliberately not clamped the way [`subtract`](#subtract) is: `to`
-being the earlier of the two is a meaningful answer rather than an impossible
-moment, and callers read it. [`Gap.seconds`](Motorsport-Gap#seconds) takes a
-negative here to mean the two cars were handed over the wrong way round.
+Signed, and not clamped the way [`subtract`](#subtract) is:
+[`Gap.seconds`](Motorsport-Gap#seconds) reads a negative here as the two cars
+handed over the wrong way round.
 
     since { from = fromDuration 1000, to = fromDuration 1500 }
     --> 500
@@ -204,8 +199,7 @@ later a b =
 -- READING A MOMENT
 
 
-{-| How long into the race this moment is -- the way out of the type, for the
-arithmetic the algebra above has no name for.
+{-| How long into the race this moment is.
 
     fromDuration 90000 |> toDuration
     --> 90000

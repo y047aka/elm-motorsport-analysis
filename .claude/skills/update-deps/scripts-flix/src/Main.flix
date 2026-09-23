@@ -26,24 +26,10 @@ use DepsAudit.RustMajor
 /// (the filesystem) and `CrateRegistry` (crates.io) — so below `main` a
 /// test can run any subcommand against in-memory substitutes.
 ///
-/// This file owns the input paths and only wires modules together; paths
-/// whose structure is itself domain knowledge (candidate orders,
-/// the Cargo manifests to scan) stay in their modules. Syntactic parsing
-/// (`JsonUtil.parseDoc`) also happens here — each read names its path
-/// once, for both the `FileIO.read` and the parse-error label — so a
-/// subcommand reads as read -> parse -> render, and most module renderers
-/// are total `Json -> String` functions; only semantic validation (a
-/// required key missing, a malformed entry) stays in the modules as
-/// `Result`. Fallible steps chain with `forM`/`yield` over
-/// `Result[String, _]`, so the steps read top-to-bottom in the order they
-/// run, with failure handled once at the boundary rather than at each
-/// step.
-///
-/// This began as a port of a Rust implementation under
-/// `.claude/skills/update-deps/scripts/`, deleted in dc1df28. It is recorded
-/// here once and nowhere else: the port is finished, so the code below is the
-/// specification, and where it deliberately differs from what it replaced the
-/// comment states the rule rather than the comparison.
+/// This file owns the input paths and the parsing (`JsonUtil.parseDoc`), so
+/// each read names its path once; paths whose structure is itself domain
+/// knowledge (candidate orders, the Cargo manifests to scan) stay in their
+/// modules, and so does semantic validation.
 ///
 def main(): Unit \ {Env, IO, Exit, Console, Clock} =
     Exit.exit(Cli.emit(Io.runWithIO(() -> Crates.runWithIO(() -> route(Env.getArgs())))))

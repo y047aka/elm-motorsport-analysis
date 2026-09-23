@@ -26,8 +26,7 @@ mod Cli.Load.TestUnlisted {
         let found = "../app/static/wec/2024/imola_6h.csv" :: Nil;
         Assert.assertTrue(List.length(Unlisted.detect(tasks("../app/static/wec"), found)) == 1)
 
-    /// The half that used to be wrong: both sides name the same file and only
-    /// the root is spelled differently.
+    /// Both sides name the same file and only the root is spelled differently.
     @Test
     def testTheSpellingOfTheRootDoesNotMatter(): Unit \ Assert =
         let found = listedCsv() :: Nil;

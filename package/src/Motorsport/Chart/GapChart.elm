@@ -70,8 +70,7 @@ Ahead of the baseline goes up and behind it goes down, so a line's vertical
 motion reads as relative pace.
 
 The rival either side is drawn in full and labelled, the pair beyond them grey
-and faint with no end label -- the treatment the position chart gives the rest
-of its class.
+and faint with no end label.
 
 `Nothing` where the range holds none of the laps the chart would draw.
 
@@ -140,10 +139,9 @@ gapChartView range snapshot rivals =
 {-| How far out the full chart reaches, in rivals a side, past
 [`Rivals.fight`](Motorsport-Analysis-Rivals#fight).
 
-`drawnRivals` is one ring past the fight and no further: every extra line is one
-more to follow, and what the chart is read for is what two of them are doing to
-each other. The ring past the fight is drawn muted for the same reason, and the
-vertical band is taken off the fight alone so that it costs the fight no frame.
+`drawnRivals` is one ring past the fight and no further. That ring is drawn
+muted, and the vertical band is taken off the fight alone so that it costs the
+fight no frame.
 
 `baselineRivals` goes two further again, because a baseline averaged from
 exactly the cars drawn against it locks them into a mirror image of one another

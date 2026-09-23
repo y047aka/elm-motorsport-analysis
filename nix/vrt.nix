@@ -42,9 +42,8 @@ rec {
     };
 
   # The only `gh` reachable through `nix run`, against the rule set out
-  # beside the devShell, and admissible because it is a project command
-  # rather than the tool: it takes no arguments, and one workflow is its
-  # whole surface. A second one would need the same argument made again.
+  # beside the devShell: it takes no arguments, and one workflow is its whole
+  # surface.
   updateSnapshotsCiApp = pkgs.writeShellApplication {
     name = "update-snapshots-ci";
     runtimeInputs = [ pkgs.gh pkgs.git ];

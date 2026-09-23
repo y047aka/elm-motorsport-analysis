@@ -19,8 +19,7 @@ mod Round.TestRender {
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
 
-    /// The three rows Rust's create_test_csv_data uses (integration.rs L500-505):
-    /// semicolon-separated, 22 columns or more.
+    /// Three rows, semicolon-separated, 22 columns or more.
     def sampleRawLaps(): List[RawLap] =
         let csv =
             header() + "\n" +

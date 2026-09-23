@@ -34,8 +34,7 @@ import TypedSvg.Types exposing (Transform(..))
 
 
 {-| The car and the rival either side on one scale, the car's own curve the
-emphasised one: how quick a car is reads only against what the cars it is racing
-are doing.
+emphasised one.
 
 Three curves and no more, unlike the gap chart beside it: these overlap where
 they are alike, which is exactly where the chart is being read.
@@ -83,7 +82,7 @@ view range snapshot rivals =
 {-| One car's own laps at card size, on a scale of its own: the cards beside it
 are the overall order rather than one class, and two classes on one lap-time
 axis flatten both. A car with no laps to describe gets no chart rather than an
-empty one, a card having no room to explain itself.
+empty one.
 -}
 sparkline : LapRange -> LapHistory -> CarAt -> Html msg
 sparkline range lapHistory item =

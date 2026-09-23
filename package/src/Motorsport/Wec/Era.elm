@@ -13,10 +13,6 @@ module Motorsport.Wec.Era exposing
 
 {-| A stretch of seasons over which the grid keeps the same shape.
 
-Seasons arrive every year; the grid does not change with them. Keying on the
-season number would mean revisiting it each January, so `Motorsport.Wec.Class` keys
-the classes, their order and their colors on the era instead.
-
 An era ends when a category is added, dropped, or moves in the order:
 
   - `GteProAndAm` -- 2021 to 2022. Hypercar took the top place over from LMP1,
@@ -28,8 +24,8 @@ An era ends when a category is added, dropped, or moves in the order:
   - `Gt3AsThirdClass` -- 2025 onwards. With no GTE field left, LMGT3 moved up
     to third.
 
-Only eras the app has data for are named: inventing one for a season nobody can
-load would mean guessing at its grid. The LMP1 era, before 2021, is not one.
+Only eras the app has data for are named. The LMP1 era, before 2021, is not
+one.
 
 -}
 type Era
@@ -45,7 +41,7 @@ type Era
     --> Nothing
 
 The most recent era has no end, so seasons the calendar has not reached resolve
-too -- 2027 will cost nothing here:
+too:
 
     Maybe.map2 (==) (fromSeason 2025) (fromSeason 2030)
     --> Just True

@@ -250,9 +250,8 @@ accumulate raw ( bests, acc ) =
             , sectors = Sector.map2 minMaybe bests.sectors raw.sectors
             , miniSectors =
                 -- The feed records mini-sectors on a lap it has no lap time
-                -- for, which is not a lap of the circuit.
-                -- `BestTimes.miniSectorTime` and the CLI that measures the
-                -- track both throw those out, and a baseline that kept them
+                -- for, which is not a lap of the circuit. `Round.Index` throws
+                -- those out of the records, and a baseline that kept them
                 -- would rate a time against a record no one holds.
                 case ( lapTime, raw.miniSectors ) of
                     ( Just _, Just miniSectors ) ->

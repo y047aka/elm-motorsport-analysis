@@ -48,7 +48,7 @@ does for `cause`.
 
 `mod Sql { ... }` cannot span two files. Splitting it means submodules, and
 since Flix has no wildcard `use`, every call site would grow a segment or a
-`use` line per name. That is why `src/Sql.flix` is one 600-line file, and the
+`use` line per name. That is why `src/Sql.flix` is one long file, and the
 reason belongs in `flix/README.md` rather than in a comment.
 
 ### Java interop

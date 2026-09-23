@@ -4,8 +4,7 @@ module Shared exposing
     , loadedRound, roundId, isPlaying, problem
     )
 
-{-| Application-wide state, preserved from the elm-pages version. The data is
-loaded at runtime via `Http`, so no `BackendTask` is involved.
+{-| Application-wide state.
 
 @docs Model, LoadedRound, RoundId, Catalogue, Problem
 @docs init, update, subscriptions
@@ -122,14 +121,8 @@ nothingYet =
     { files = NothingYet, timeline = Nothing }
 
 
-{-| A loaded round, as the pages read it: the race, the playback head over it,
-and the derived values worth keeping rather than working out where they are
-used.
-
-The race itself is `replay.race`, a [`Motorsport.Race`](Motorsport-Race). This
-is the round around it -- what the app holds in order to draw one -- which is
-why it is not called a race. A `Race` answers what is true at a moment of it,
-and none of the four fields here does.
+{-| A loaded round, as the pages read it. The race itself is `replay.race`, a
+[`Motorsport.Race`](Motorsport-Race).
 
 `track` never moves once the data has loaded. `snapshot` is `replay` read at the
 clock, cached because every view of a frame shares it, and the one of the four
@@ -138,9 +131,6 @@ that is rebuilt as playback runs.
 `timeline` is the events themselves, kept for the events table to read the clock
 against, and the only one of the four a round can go without: nothing playback
 reads is counted off them.
-
-It is the round's report rather than everything the file holds -- see
-[`reported`](#reported).
 
 -}
 type alias LoadedRound =
@@ -180,8 +170,8 @@ init _ =
 -- QUERIES
 
 
-{-| Answers while the round is still loading, which is why it is separate from
-[`race`](#race).
+{-| Answers while the round is still loading, unlike
+[`loadedRound`](#loadedRound).
 -}
 roundId : Model -> Maybe RoundId
 roundId model =
@@ -220,13 +210,9 @@ loadedRound model =
             Nothing
 
 
-{-| Whether playback is running, which is the whole of what deciding about
-animation frames takes. Asked here so that page does not reach through a race to
-its clock for one constructor.
-
-[`Clock`](Motorsport-Clock) leaves `Started` by itself when playback runs out, so
-nothing here has to know how long the race was.
-
+{-| Whether playback is running. [`Clock`](Motorsport-Clock) leaves `Started` by
+itself when playback runs out, so nothing here has to know how long the race
+was.
 -}
 isPlaying : Model -> Bool
 isPlaying model =

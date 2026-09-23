@@ -120,8 +120,8 @@ consolidated =
     { width = 1000, height = 250, padding = axisPadding }
 
 
-{-| The scales for drawing polylines. Built once per chart and shared across the
-axis, grid and per-series drawing rather than rebuilt per series.
+{-| The scales for drawing polylines, shared by the axis, the grid and every
+series of one chart.
 -}
 type alias Scales =
     { xScale : Scale.ContinuousScale Float
@@ -141,8 +141,6 @@ xContinuousScale { width, padding } domain =
 -- Line drawing
 
 
-{-| Common svg wrapper for charts.
--}
 svg : { width : Float, height : Float } -> List (Svg msg) -> Svg msg
 svg { width, height } children =
     Svg.svg

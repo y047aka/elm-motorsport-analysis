@@ -24,9 +24,7 @@ import Motorsport.Wec.Era as Era exposing (Era)
 
 {-| The category a car races in, as it stood in the era it was read for.
 
-A `Class` carries the order and the color that era gave it, settled once at the
-boundary, so [`compare`](#compare) and [`toColor`](#toColor) are plain functions
-of the value and nothing downstream needs to know what an era is.
+A `Class` carries the order and the color that era gave it.
 
 The `index` is a position in the era's grid counted from zero, not the class's
 number in a classification: LMGTE Am, the fourth class of 2023, has index 2 on

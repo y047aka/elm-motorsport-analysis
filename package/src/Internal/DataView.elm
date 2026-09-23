@@ -8,11 +8,8 @@ module Internal.DataView exposing
     , view
     )
 
-{-| This library helps you create sortable tables. The crucial feature is that it
-lets you own your data separately and keep it in whatever format is best for
-you. This way you are free to change your data without worrying about the table
-&ldquo;getting out of sync&rdquo; with the data. Having a single source of
-truth is pretty great!
+{-| A sortable, filterable, paginated table over rows the caller keeps in its
+own shape.
 
 
 # Model
@@ -60,8 +57,6 @@ import List.Extra
 -- MODEL
 
 
-{-| Tracks which column to sort by.
--}
 type alias Model =
     { key : String
     , options : Options
@@ -86,15 +81,6 @@ type Direction
     | None
 
 
-{-| Create a table state. By providing a column name, you determine which
-column should be used for sorting by default. So if you want your table of
-yachts to be sorted by length by default, you might say:
-
-    import Table
-
-    Table.init "Length"
-
--}
 init : String -> Options -> Model
 init key options =
     { key = key
@@ -224,11 +210,8 @@ findColumn key columns =
 -- CONFIG
 
 
-{-| Configuration for your table, describing your columns.
-
-**Note:** Your `Config` should _never_ be held in your model.
-It should only appear in `view` code.
-
+{-| Never held in the model: it carries functions, and belongs in `view` code
+only.
 -}
 type alias Config data msg =
     { toId : data -> String
@@ -241,8 +224,6 @@ type alias Config data msg =
 -- COLUMNS
 
 
-{-| Describes how to turn `data` into a column in your table.
--}
 type alias Column data msg =
     { name : String
     , view : data -> Html msg
@@ -251,7 +232,6 @@ type alias Column data msg =
     }
 
 
-{-| -}
 stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn { label, getter } =
     { name = label
@@ -261,7 +241,6 @@ stringColumn { label, getter } =
     }
 
 
-{-| -}
 intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn { label, getter } =
     { name = label
@@ -271,7 +250,6 @@ intColumn { label, getter } =
     }
 
 
-{-| -}
 floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn { label, getter } =
     { name = label
@@ -281,7 +259,6 @@ floatColumn { label, getter } =
     }
 
 
-{-| -}
 customColumn :
     { label : String
     , getter : data -> String
@@ -296,7 +273,6 @@ customColumn { label, getter, sorter } =
     }
 
 
-{-| -}
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
@@ -315,8 +291,6 @@ veryCustomColumn { label, getter, sorter } =
 -- FILTER, SORTING, PAGINATION
 
 
-{-| フィルタリング処理を関数として分離
--}
 applyFilters : List Filter -> List (Column data msg) -> Array data -> List Int -> List Int
 applyFilters filters columns dataArray indexes =
     List.foldl
@@ -341,8 +315,6 @@ applyFilters filters columns dataArray indexes =
         filters
 
 
-{-| ソート処理を関数として分離
--}
 applySorting : List Sorting -> List (Column data msg) -> Array data -> List Int -> List Int
 applySorting sortings columns dataArray indexes =
     List.foldl
@@ -408,8 +380,6 @@ applyPagination option page indexes =
 -- VIEW
 
 
-{-| Render table.
--}
 view : Config data msg -> Model -> List data -> Html msg
 view ({ columns } as config) model dataList =
     let
@@ -599,15 +569,11 @@ paginationButton toMsg activePage n =
         [ text <| String.fromInt page ]
 
 
-{-| No-op function for disabled sorting. This will go away one day.
--}
 noSorting : a -> String
 noSorting _ =
     ""
 
 
-{-| No-op function for diabled filtering. This will also go away one day.
--}
 noFiltering : a -> String -> Bool
 noFiltering _ _ =
     True

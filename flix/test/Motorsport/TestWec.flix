@@ -229,8 +229,8 @@ mod Motorsport.TestWec {
 
     @Test
     def testLeMansRowJsonContainsMiniSectorsWithHyphenedKeys(): Unit \ Assert =
-        // Confirm A7-1 / A8-1 round-trip to a7_1 / a8_1 in the JSON output
-        // (matches Motorsport.Lap.MiniSectors field names on the Elm side).
+        // A7-1 / A8-1 round-trip to a7_1 / a8_1 in the JSON output, the keys
+        // `Data.Wec.Laps` decodes on the Elm side.
         match decodeLeMansOne(realLeMansLapRow()) {
             case Ok(r) =>
                 let json = Encode.render(Wec.toJson(r));

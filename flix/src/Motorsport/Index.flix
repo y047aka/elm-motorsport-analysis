@@ -1,5 +1,5 @@
 /// The race's indices: the moments the lap counter went up, and the moments
-/// each of the twenty records changed hands.
+/// each of the nineteen records changed hands.
 ///
 /// The mirror of `Motorsport.Race.Index` on the Elm side, which reads these
 /// back out of the summary.

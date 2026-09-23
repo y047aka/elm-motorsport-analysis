@@ -2,11 +2,7 @@ import { expect, Page } from '@playwright/test';
 
 export const WAIT_TIMEOUT = 10_000;
 
-/**
- * Wait until the page has finished rendering.
- * @param page Playwright page object
- * @param contentSelector Selector for page-specific content
- */
+/** Wait until `contentSelector` is visible and the fonts have loaded. */
 export async function waitForPageReady(page: Page, contentSelector: string) {
   await page.locator(contentSelector).waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   await page.waitForFunction(async () => {
@@ -20,12 +16,11 @@ export async function waitForPageReady(page: Page, contentSelector: string) {
 }
 
 /**
- * Move the lap slider (RaceControl.SetCount) to the given lap.
+ * Move the lap slider (`Replay.SetCount`) to the given lap.
  *
- * SetCount derives elapsed time purely from lap data, so any mid-race
- * state (positions, gaps, lap-history-based charts) can be reproduced
- * deterministically without playback (▶). The value is set through the
- * native setter and an input event is dispatched, which Base UI's slider
+ * SetCount derives elapsed time purely from lap data, so any mid-race state can
+ * be reproduced deterministically without playback. The value is set through
+ * the native setter and an input event is dispatched, which Base UI's slider
  * turns into the value change the custom element reports to Elm.
  *
  * The range input belongs to Base UI and is clipped away from sight, so it is

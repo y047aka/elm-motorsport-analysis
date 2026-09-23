@@ -23,11 +23,8 @@ module Motorsport.Sector exposing
 -}
 
 
-{-| A sector is a segment of a racing circuit.
-
-The three constructors are written in the order a car drives them, and that
+{-| The three constructors are written in the order a car drives them, and that
 order is the module's business: see [`compare`](#compare).
-
 -}
 type Sector
     = S1
@@ -104,9 +101,8 @@ toString sector =
 {-| Three values, one per sector — a sector time, a progress percentage, a
 fastest time to compare against.
 
-The wire formats spell this out flat (`sector_1`, `sector_2`, `sector_3`);
-converting once at the boundary makes the picking [`get`](#get) everywhere
-after. `s1` / `s2` / `s3` are public, but prefer [`get`](#get) and
+The wire formats spell this out flat (`sector_1`, `sector_2`, `sector_3`).
+`s1` / `s2` / `s3` are public, but prefer [`get`](#get) and
 [`values`](#values), which say which sector is meant.
 
 -}

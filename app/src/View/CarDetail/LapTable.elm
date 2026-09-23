@@ -2,10 +2,6 @@ module View.CarDetail.LapTable exposing (view)
 
 {-| Every lap the car has turned, as it was timed, in the order it was driven.
 
-Every chart on the page reads these laps and draws them as a shape; this is the
-numbers themselves, which is what a shape cannot be checked against -- so the lap
-a chart raised a question about is in here whichever lap it was.
-
 @docs view
 
 -}

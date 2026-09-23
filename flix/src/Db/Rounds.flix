@@ -4,8 +4,7 @@
 /// The calendar stays the run's worklist and the server's answer -- none of it
 /// is in the feed, and a database that is down must not stop the app being
 /// used -- so this table is that calendar written down rather than a second
-/// one. What it adds is an id: `laps` and `cars` carried a season and a round
-/// name on every row, and 130,017 of those are the same fourteen pairs.
+/// one. What it adds is an id.
 mod Db.Rounds {
 
     use Db.Schema

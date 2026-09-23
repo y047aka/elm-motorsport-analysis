@@ -7,8 +7,6 @@ module Motorsport.Circuit.Direction exposing (Direction(..))
 -}
 
 
-{-| Circuit direction
--}
 type Direction
     = Clockwise
     | CounterClockwise

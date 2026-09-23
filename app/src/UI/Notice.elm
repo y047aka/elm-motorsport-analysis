@@ -12,7 +12,6 @@ import Html.Attributes exposing (class)
 import Http
 
 
-{-| -}
 view : { headline : String, detail : String } -> Html msg
 view notice =
     div [ class "mx-auto max-w-md px-6 py-20 text-center" ]

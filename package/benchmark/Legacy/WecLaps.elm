@@ -1,8 +1,7 @@
 module Legacy.WecLaps exposing (RawLap, assignPositions, attach, fromJsonl)
 
-{-| `Data.Wec.Laps` as it stood before the round's laps carried a position,
-kept so that what moving it into SQL was worth can be measured rather than
-argued. `PositionBenchmark` is the only reader.
+{-| `Data.Wec.Laps` as it stood before the round's laps carried a position.
+`PositionBenchmark` is the only reader.
 
 The decoder here has no `position` field and `attach` leaves every lap's
 `Nothing`, which `assignPositions` then fills -- the work that is now a window
@@ -255,9 +254,8 @@ accumulate raw ( bests, acc ) =
             , sectors = Sector.map2 minMaybe bests.sectors raw.sectors
             , miniSectors =
                 -- The feed records mini-sectors on a lap it has no lap time
-                -- for, which is not a lap of the circuit.
-                -- `BestTimes.miniSectorTime` and the CLI that measures the
-                -- track both throw those out, and a baseline that kept them
+                -- for, which is not a lap of the circuit. `Round.Index` throws
+                -- those out of the records, and a baseline that kept them
                 -- would rate a time against a record no one holds.
                 case ( lapTime, raw.miniSectors ) of
                     ( Just _, Just miniSectors ) ->
@@ -310,10 +308,7 @@ accumulate raw ( bests, acc ) =
 
 
 -- POSITIONS
--- `Lap.position` is not in the source data; it is worked out here. Two things
--- downstream depend on it having been: the position-progression chart, and the
--- lead changes in `Motorsport.Race.TimelineEvent`. Both go quiet rather than
--- fail if it is skipped.
+-- `Lap.position` is not in the source data; it is worked out here.
 
 
 assignPositions : List Car -> List Car

@@ -6,11 +6,9 @@ module Motorsport.Analysis.LapWindow exposing
 {-| How much of the race to read: all of it run so far, or the last stretch of
 it.
 
-The stretch is a length of time rather than a count of laps, because that is
-what a race is read in -- an hour of it is an hour of it whether the cars spent
-it lapping under a safety car or flat out. Turning one into lap numbers is the
-race's to do rather than a chart's: which laps an hour covers depends on who was
-running and how quickly they went round.
+The stretch is a length of time rather than a count of laps: an hour of it is an
+hour of it whether the cars spent it under a safety car or flat out. Which laps
+that covers depends on who was running and how quickly they went round.
 
 @docs LapWindow
 @docs range

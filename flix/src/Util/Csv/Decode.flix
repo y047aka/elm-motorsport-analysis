@@ -62,11 +62,9 @@ mod Util.Csv.Decode {
             }
         )
 
-    /// Decode a string.
     pub def string(): Decoder[String] =
         fromString(s -> Ok(s))
 
-    /// Decode an integer.
     pub def int(): Decoder[Int32] =
         fromString(value ->
             match Int32.fromString(String.trim(value)) {
@@ -75,7 +73,6 @@ mod Util.Csv.Decode {
             }
         )
 
-    /// Decode a floating-point number.
     pub def float(): Decoder[Float64] =
         fromString(value ->
             match Float64.fromString(String.trim(value)) {
@@ -84,8 +81,8 @@ mod Util.Csv.Decode {
             }
         )
 
-    /// Handle blank fields by turning them intoRecord `Option`s. We consider a field
-    /// to be blank if it's empty or consists solely of whitespace characters.
+    /// Handle blank fields by turning them into `Option`s. A field is blank if
+    /// it is empty or consists solely of whitespace characters.
     pub def blank(decoder: Decoder[a]): Decoder[Option[a]] =
         andThen(
             maybeBlank ->
@@ -202,7 +199,7 @@ mod Util.Csv.Decode {
                 }
         }
 
-    /// Convert a CSV string intoRecord some type you care about using the Decoders in this module.
+    /// Decode every row of a CSV string.
     pub def decodeCsv(fieldNames: FieldNames, decoder: Decoder[a], source: String): Result[Error, List[a]] =
         decodeCustom({fieldSeparator = ','}, fieldNames, decoder, source)
 
@@ -247,7 +244,7 @@ mod Util.Csv.Decode {
 
     /// Errors that can occur while decoding a CSV.
     ///
-    ///   - `ParsingError`: a problem parsing the CSV intoRecord rows and columns (quoting issues).
+    ///   - `ParsingError`: a problem parsing the CSV into rows and columns (quoting issues).
     ///   - `NoFieldNamesOnFirstRow`: tried to get field names from the first row but found none.
     ///   - `DecodingErrors`: one or more rows failed to decode.
     pub enum Error with Eq, ToString {
@@ -303,7 +300,6 @@ mod Util.Csv.Decode {
         case Failure(String)
     }
 
-    /// Produce a human-readable version of an `Error`.
     pub def errorToString(error: Error): String =
         match error {
             case Error.ParsingError(Util.Csv.Parser.Problem.SourceEndedWithoutClosingQuote(row)) =>
@@ -441,14 +437,12 @@ mod Util.Csv.Decode {
     /// ===== MAPPING =====
     ///
 
-    /// Transform a decoded value.
     pub def map(transform: a -> b, decoder: Decoder[a]): Decoder[b] =
         let Decoder.Decoder(decode) = decoder;
         Decoder.Decoder((location, fieldNames, rowNum, row) ->
             Result.map(transform, decode(location, fieldNames, rowNum, row))
         )
 
-    /// Combine two decoders to make something else.
     pub def map2(transform: (a, b) -> c, decoderA: Decoder[a], decoderB: Decoder[b]): Decoder[c] =
         let Decoder.Decoder(decodeA) = decoderA;
         let Decoder.Decoder(decodeB) = decoderB;

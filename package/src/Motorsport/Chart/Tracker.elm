@@ -115,8 +115,8 @@ constants detail =
             }
 
 
-{-| Scale function converting a track progress value (0-1) into an angle (radians).
-Depending on rotation direction, maps to 0-2π clockwise or counter-clockwise from the 12 o'clock position.
+{-| A track progress (0-1) as an angle in radians, round from 12 o'clock in the
+direction the circuit is driven.
 -}
 progressToAngleScale : Direction -> ContinuousScale Float
 progressToAngleScale direction =
@@ -126,11 +126,9 @@ progressToAngleScale direction =
     in
     case direction of
         Clockwise ->
-            -- Map to 0-2π clockwise from the 12 o'clock position
             Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
 
         CounterClockwise ->
-            -- Map to 0-2π counter-clockwise from the 12 o'clock position
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 

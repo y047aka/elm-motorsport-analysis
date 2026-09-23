@@ -131,25 +131,21 @@ type alias Column data msg =
     DataView.Column data msg
 
 
-{-| -}
 stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn =
     DataView.stringColumn
 
 
-{-| -}
 intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn =
     DataView.intColumn
 
 
-{-| -}
 floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn =
     DataView.floatColumn
 
 
-{-| -}
 customColumn :
     { label : String
     , getter : data -> String
@@ -159,7 +155,6 @@ customColumn { label, getter } =
     DataView.customColumn { label = label, getter = getter, sorter = noSorter }
 
 
-{-| -}
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
@@ -303,9 +298,8 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
 
 {-| How far the car has moved from where it started, and no more than that.
 
-`startPosition` is the one a `Car` holds and a `CarAt` does not — the grid is
-estimated off the opening lap once and never moves again — so the caller looks
-it up by car number rather than the column doing it.
+`startPosition` is held by a `Car` and not a `CarAt`, so the caller looks it up
+by car number.
 
 -}
 positionChangeColumn : { getter : data -> { startPosition : Maybe Position, position : Position } } -> Column data msg
@@ -579,10 +573,6 @@ viewLastLapColumn_LeMans24h lastLap =
 view : Config CarAt msg -> Model -> Snapshot -> Html msg
 view config state standings =
     DataView.view config state (Snapshot.toList standings)
-
-
-
--- VIEW
 
 
 performanceHistory : { a | fastestLapTime : Maybe Holder } -> List Lap -> Html msg

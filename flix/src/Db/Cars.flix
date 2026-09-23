@@ -52,7 +52,7 @@ mod Db.Cars {
     /// The order the table declares them in, and so the order the insert binds
     /// them.
     ///
-    /// This and `Db.CarRow.selection` are two orderings of the same columns,
+    /// This and `selection` are two orderings of the same columns,
     /// and no compiler sees them together.
     pub def all(): List[Bound[CarRow]] =
         let c = columns();

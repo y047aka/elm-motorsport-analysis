@@ -19,8 +19,6 @@ import View exposing (View)
 
 
 {-| The seasons come out in the order the file lists them, first one latest.
-Sorting them here would be this page holding an opinion the file already
-carries.
 -}
 view : Shared.Model -> View msg
 view { calendar } =

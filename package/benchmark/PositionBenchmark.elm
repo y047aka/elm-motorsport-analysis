@@ -1,41 +1,20 @@
 module PositionBenchmark exposing (main)
 
-{-| What moving a lap's position out of Elm and into SQL was worth.
+{-| What reading a lap's position off the file costs, against counting it in Elm.
 
-The round's laps now carry the place the car was in as it crossed the line,
-counted by a window function over `laps` as the round is exported.
-`Data.Wec.Laps` reads it off the lap; before, it worked the field out for
-itself, once per lap number over every car.
+`Legacy.WecLaps` is `Data.Wec.Laps` without the position, which its
+`assignPositions` counts out of the laps instead. Decoding is per line, so it is
+asked of one lap; a round is that times the laps. Attaching groups the round's
+laps and walks the field per lap number, so it takes the fixture whole.
 
-Both halves of that trade are here. Reading a position costs a field on every
-line of the JSONL, which is what the first comparison measures, and it saves
-`assignPositions`, which is what the second does. `Legacy.WecLaps` is the
-module as it stood before, so the two sides are the code that actually ran
-rather than a sketch of it.
-
-Each is asked in the unit it works in, since a benchmark is run until its
-sample is trusted and a round of laps is too much work per run to reach one.
-Decoding is per line, so it is asked of one lap: the extra field costs what it
-costs there, and a round is that times the laps. Attaching is not -- it groups
-the round's laps and walks the field per lap number -- so it takes the fixture
-whole.
-
-That fixture is 2025's Le Mans bounded by lap number: the whole field of
-sixty-two cars, since `assignPositions` costs the laps times the cars and a
-smaller field would be a different race. The bound has to be low enough to
-sample, which is low enough to hide how the cost grows -- so `assignPositions`
-is asked at the bound and at the eighth, quarter and half of it, and what the
-four say together is the shape.
-
-Four because the cost is two terms and not one: finding the round's last lap
-walks every lap once, and placing the field walks the cars once per lap number.
-The second overtakes the first somewhere above forty laps, so no single bound
-low enough to run says what a whole round would cost, and a pair of them says
-it wrong -- two terms need three points to fix and a fourth to be checked by.
-`generate-position-fixture.mjs --laps=N` moves all four.
-
-It is a fixture of its own because `PerFrameBenchmark`'s is a whole round: half
-distance means nothing in a bounded one.
+The fixture is 2025's Le Mans bounded by lap number, with the whole field of
+sixty-two cars: `assignPositions` costs the laps times the cars, so a smaller
+field would be a different race. The cost is two terms -- finding the round's
+last lap walks every lap once, and placing the field walks the cars once per lap
+number, overtaking the first somewhere above forty laps -- so it is asked at the
+bound and at the eighth, quarter and half of it: two terms need three points to
+fix and a fourth to be checked by. `generate-position-fixture.mjs --laps=N`
+moves all four.
 
 -}
 

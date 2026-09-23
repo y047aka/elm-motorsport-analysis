@@ -14,10 +14,8 @@ import Html.Events exposing (onClick)
 import List.Extra
 
 
-{-| The tab mechanism is the same joined button group as the Event page's mode
-selector: clicking fires `onSelect` to switch `active` (the caller holds the
-state). Each content is passed as a lazy thunk so inactive charts are not
-rendered.
+{-| The caller holds `active`. Each content is passed as a lazy thunk so inactive
+charts are not rendered.
 
 `controls` sits at the other end of the bar, for what the chart showing is drawn
 with rather than which chart it is -- the stretch of the race, which all of them

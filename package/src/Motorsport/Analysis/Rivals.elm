@@ -34,9 +34,7 @@ type Rivals
         }
 
 
-{-| The cars either side of `item` in its own class, taken from the overall
-running order so the group follows the field as positions change. Filtering by
-class preserves that order, so what comes out is the in-class order as-is.
+{-| The cars either side of `item` in its own class, in running order.
 
 At a class edge only the available rivals are there, and a car the list does not
 hold is its own only company.
@@ -72,9 +70,6 @@ focused (Rivals r) =
     r.car
 
 
-{-| The class the group was taken from, which is the one `around` filtered the
-field by.
--}
 class : Rivals -> Class
 class (Rivals r) =
     r.car.metadata.class

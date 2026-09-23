@@ -6,10 +6,8 @@ module Motorsport.Replay exposing
 
 {-| A race, and where playback has got to in it.
 
-Two fields, and only one of them moves. `race` is settled when the data loads;
-`playback` is the head running over it. Nothing derived is kept here -- what the
-cars are doing at the current moment is a function of `race` and the elapsed time,
-worked out where it is needed.
+`race` is settled when the data loads; `playback` is the head running over it.
+Nothing derived is kept here.
 
 @docs Model, fromCars
 @docs Msg, update
@@ -46,10 +44,6 @@ fromCars { timeLimit, finishedAt, index } cars =
 
 
 {-| The lap counter as it reads now.
-
-Not a field: the race knows when the counter goes up, so where the playback head
-sits is enough to say what it reads.
-
 -}
 lapCount : Model -> Int
 lapCount m =

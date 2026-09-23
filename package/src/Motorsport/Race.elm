@@ -36,13 +36,8 @@ import Motorsport.Status as Status exposing (Status)
 {-| The three indices read the same race at an instant, and are all
 [`ChangePoints`](Internal-ChangePoints) underneath.
 
-`lapTotal` is read off `lapCompletions` rather than counted separately, so the
-counter's ceiling and `lapCountAt` can never disagree about how long the race
-was.
-
-`lapCompletions` and `bestTimeChanges` come with the round's summary.
-`pitStops` is counted here, off the cars: the laps carry both ends of a stop, so
-nothing has to be read for it, and neither is anything read for a status.
+`lapCompletions` and `bestTimeChanges` come with the round's summary;
+`pitStops` is counted here, off the cars.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
@@ -63,7 +58,7 @@ type alias Race =
 
 
 {-| The two indices a round is read with rather than counted out of: when the
-lap counter went up, and when each of the twenty records changed hands. Both
+lap counter went up, and when each of the nineteen records changed hands. Both
 arrive with the round's summary, from `Round.Index`.
 -}
 type alias Index =

@@ -20,8 +20,8 @@ mod DepsAudit.JsonUtil {
         case _          => None
     }
 
-    /// The value reached by following `path` key by key — the counterpart
-    /// of optional chaining (`j?.a?.b`) in the TypeScript predecessor.
+    /// The value reached by following `path` key by key, as optional chaining
+    /// (`j?.a?.b`) would.
     pub def getAt(path: List[String], j: Json): Option[Json] =
         List.foldLeft((acc, key) -> Option.flatMap(getKey(key), acc), Some(j), path)
 

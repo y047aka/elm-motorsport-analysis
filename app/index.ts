@@ -9,6 +9,6 @@ const node = document.getElementById("app");
 
 Elm.Main.init({
   node,
-  // A plain string flag, decoded in Shared.elm (currently ignored there).
+  // `Shared.init` ignores the flags.
   flags: "You can decode this in Shared.elm using Json.Decode.string!",
 });

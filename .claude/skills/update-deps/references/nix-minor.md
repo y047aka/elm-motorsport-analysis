@@ -23,3 +23,7 @@ nix run .#test
 nix run .#flix-test
 nix run .#build
 ```
+
+A new nixpkgs can move `playwright-test`, which the VRT renders with, so run
+`nix run .#test-vrt` as well; baselines that move are refreshed with
+`nix run .#update-snapshots-ci`.

@@ -16,10 +16,6 @@ import List.Extra
 
 
 {-| A driver, identified by the name the source data gives.
-
-The given name and surname are split once, at construction, so display is a
-lookup rather than a re-parse.
-
 -}
 type Driver
     = Driver Name
@@ -92,8 +88,7 @@ unknown =
 
 
 {-| Whether two drivers are the same person. Identity rests on the name alone,
-so namesakes are indistinguishable; going through this rather than `==` keeps
-that decision in one place.
+so namesakes are indistinguishable.
 
     isSame (fromName "Kamui KOBAYASHI") (fromName "Kamui KOBAYASHI")
     --> True

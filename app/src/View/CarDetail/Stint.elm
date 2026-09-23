@@ -22,10 +22,6 @@ import Motorsport.Status exposing (Status(..))
 {-| The run the car is on, the runs behind it as a bar of the laps they took,
 and who has driven how many of them.
 
-What a stop cost is the stop's own business and is on the run it ended; what the
-section is for is the shape of the race the car is running -- how long it goes
-between stops, and how the driving has been shared out.
-
 Two readings come from the race rather than from the laps, both because the laps
 here are cut at the clock. `status` settles whether the run they end on is still
 going: a car that has retired leaves the same trace as one out on the road.

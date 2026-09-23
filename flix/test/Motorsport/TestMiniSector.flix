@@ -12,7 +12,7 @@ mod Motorsport.TestMiniSector {
 
     @Test
     def testJsonKeysPreserveUnderscores(): Unit \ Assert =
-        // JSON keys keep the underscore (matches Elm `Motorsport.Lap.MiniSectors`).
+        // JSON keys keep the underscore, as `Data.Wec.Laps` decodes them.
         Assert.assertTrue(MiniSector.jsonKey(MiniSectorId.A7_1) == "a7_1");
         Assert.assertTrue(MiniSector.jsonKey(MiniSectorId.A8_1) == "a8_1")
 

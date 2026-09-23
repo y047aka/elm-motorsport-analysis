@@ -6,12 +6,6 @@ module Internal.Statistics exposing
 {-| The plain statistics a reading of the race is taken with: the outlier
 fences a chart bounds itself by, and the middle of a set of values.
 
-Nothing here knows anything about a race. A lap behind a safety car and a lap
-spent in the pits are outliers by the same arithmetic as any other sample, and
-what counts as one is a question about the numbers rather than about the cars --
-which is why this sits beside the other machinery rather than with the race's
-own vocabulary.
-
 @docs iqrFences, upperFence
 @docs median
 
@@ -39,9 +33,9 @@ iqrFences sorted =
         (quantile 0.75 sorted)
 
 
-{-| Upper outlier fence `Q3 + 1.5×IQR`, used as the upper bound of the racing
-band. Falls back to the maximum when there are too few values to compute a fence
-(0 for an empty list). Input need not be sorted.
+{-| Upper outlier fence `Q3 + 1.5×IQR`. Falls back to the maximum when there are
+too few values to compute a fence (0 for an empty list). Input need not be
+sorted.
 
     upperFence [ 1, 2, 3, 4, 5, 6, 7, 8 ]
     --> 12

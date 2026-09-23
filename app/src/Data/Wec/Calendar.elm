@@ -72,7 +72,6 @@ findRound params calendar =
         |> List.head
 
 
-{-| -}
 decoder : Decoder Calendar
 decoder =
     field "seasons" (list seasonDecoder)

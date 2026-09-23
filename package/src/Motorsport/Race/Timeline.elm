@@ -9,7 +9,6 @@ against it without walking it.
 
 The events are in time order, so how many of them have happened by an elapsed
 time is a binary search, and the most recent of them are the tail of that count.
-Playback reads both on every frame.
 
 @docs Timeline
 @docs empty, fromList
@@ -35,9 +34,8 @@ empty =
 
 {-| Index the timeline, whatever order it was read in.
 
-The sort is stable, so events sharing an instant keep the order they came in --
-the order `Round.Timeline` gathered them in, and the one
-[`StatusChanges`](Motorsport-Race-StatusChanges) indexes the same events by.
+The sort is stable, so events sharing an instant keep the order `Round.Timeline`
+gathered them in.
 
 -}
 fromList : List TimelineEvent -> Timeline

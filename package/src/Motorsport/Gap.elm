@@ -100,11 +100,6 @@ type alias Clock =
 
 {-| Whatever carries a lap history and a lap it is driving -- all that measuring
 a gap needs of a car.
-
-The lap in progress is a lap, not a `Maybe` of one: a car not driving one is
-racing nobody, and [`Race.Snapshot`](Motorsport-Race-Snapshot) keeps it out of
-the field.
-
 -}
 type alias Competitor a =
     { a | currentLap : Lap, laps : List Lap }
@@ -249,8 +244,7 @@ toString gap =
             "+ " ++ String.fromInt count ++ " Laps"
 
 
-{-| The time a gap stands for, if it is a time at all. Laps do not convert —
-how long a lap takes is the cars' business, not the gap's.
+{-| The time a gap stands for, if it is a time at all. Laps do not convert.
 
     toDuration (seconds 1500)
     --> Just 1500

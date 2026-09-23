@@ -23,10 +23,6 @@ one out on the road. See [`Status`](Motorsport-Status).
 
 ## The field's stops, read at a clock
 
-Cutting a car's laps answers everything about one car and costs a pass over its
-race. Reading a count off every car on every frame is a different question, and
-[`Index`](#Index) is what makes it cheap.
-
 @docs Index, emptyIndex, indexOf, stopsAt
 
 -}
@@ -183,14 +179,9 @@ average durations =
 -- THE FIELD'S STOPS, READ AT A CLOCK
 
 
-{-| Every car's stops, indexed by the moment each of them ended.
-
-[`fromLaps`](#fromLaps) counts a car's stops by cutting its laps, which is
-affordable for the one car a panel is given over to and not for the field on
-every frame: a race is twenty thousand laps. The stops are under two thousand of
-them, so collecting those once and reading the count back is a binary search
-over a fraction of the data. See
-[`ChangePoints`](Internal-ChangePoints).
+{-| Every car's stops, indexed by the moment each of them ended, for reading the
+whole field's counts every frame: a race is twenty thousand laps and under two
+thousand stops. See [`ChangePoints`](Internal-ChangePoints).
 
 Keyed by car number, so two cars sharing one -- which the source data
 occasionally has -- come to a single entry, as they do in

@@ -2,16 +2,11 @@
 /// The process boundary: reading stdin, and describing what a subcommand
 /// wants written where.
 ///
-/// Every subcommand returns an `Output` instead of printing as it goes, so
-/// "what happened" stays data until the single `emit` call in `main`. That
-/// keeps the decision of *what* to report separate from *how* it reaches
-/// the terminal, and makes command results comparable in tests without
-/// capturing a stream.
+/// Every subcommand returns an `Output` instead of printing as it goes, and
+/// the single `emit` call in `main` is the only place that prints.
 ///
 /// `Output` is opaque: it can only be built through the constructors below,
-/// so an exit code never disagrees with the streams it came with. Combining
-/// outputs is `append`/`empty` — a monoid — and the `SemiGroup`/`Monoid`
-/// instances make that structure available to the stdlib's combinators.
+/// so an exit code never disagrees with the streams it came with.
 ///
 mod DepsAudit.Cli {
 

@@ -9,17 +9,10 @@ them.
 
 Nineteen records make up the baseline a timing screen rates against: the fastest
 lap, three sectors and fifteen mini-sectors. Each is a
-[`ChangePoints`](Internal-ChangePoints) over the moments it was
-beaten, which is what keeps reading the baseline off a binary search rather than
-nineteen passes over every lap of the race.
+[`ChangePoints`](Internal-ChangePoints) over the moments it was beaten.
 
 Which lap took which record is counted where the laps are, in `Round.Index`, and
 arrives with the round's summary.
-
-The module sits beside [`Lap`](Motorsport-Lap) and [`Gap`](Motorsport-Gap)
-rather than under either side it serves, because both sides need it and neither
-owns it: [`Race`](Motorsport-Race) holds the records, and
-[`Race.Snapshot`](Motorsport-Race-Snapshot) reads them back at the clock.
 
 @docs Changes, empty, changesDecoder
 @docs Snapshot, Holder
@@ -37,13 +30,8 @@ import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
-{-| Every moment one of the race's records changed hands, collected once.
-
-Named for the changes rather than the times, like the
-[`StatusChanges`](Motorsport-Race-StatusChanges) it sits beside in a
-[`Race`](Motorsport-Race): what the times actually are at a moment of the race
-is a [`Snapshot`](#Snapshot), read back out of this.
-
+{-| Every moment one of the race's records changed hands. What the times are at
+a moment of the race is a [`Snapshot`](#Snapshot), read back out of this.
 -}
 type alias Changes =
     ByRecord (ChangePoints Holder)
@@ -72,11 +60,8 @@ type alias Snapshot =
     ByRecord (Maybe Holder)
 
 
-{-| One value per record: the shape `Changes` and `Snapshot` share.
-
-Everything this module does to the nineteen records goes through `map`, so they
-are enumerated in exactly one place.
-
+{-| One value per record: the shape `Changes` and `Snapshot` share. Everything
+done to the nineteen records goes through `map`, so they are enumerated once.
 -}
 type alias ByRecord a =
     { fastestLapTime : a

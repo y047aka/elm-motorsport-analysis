@@ -7,8 +7,7 @@ module Motorsport.Chart.Tracker.Config exposing
 {-| The track's proportions: how much of the lap each stretch of it takes, and
 where round the lap that stretch begins.
 
-Divided by the CLI, which reads the whole file where this side would have to
-wait for every lap of it to arrive first, and decoded in `Data.Wec`.
+Divided by the CLI and decoded in `Data.Wec`.
 
 Read for every car of every frame, which is what decides the shape here: the
 shares are held per sector and per mini-sector, so reading one is
@@ -36,7 +35,7 @@ type alias TrackConfig =
 
 {-| One stretch of the lap: where it begins and how much of the lap it takes,
 both as fractions of the whole. Which stretch it is belongs to the position in
-a `BySector` or a `ByMiniSector`, which is what lets both grains share the type.
+a `BySector` or a `ByMiniSector`.
 -}
 type alias Share =
     { start : Float

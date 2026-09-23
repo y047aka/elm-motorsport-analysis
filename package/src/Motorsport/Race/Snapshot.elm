@@ -9,10 +9,7 @@ module Motorsport.Race.Snapshot exposing
 
 {-| A [`Race`](Motorsport-Race) read at one moment of it.
 
-The race itself never moves; a snapshot is what the cars are doing once a clock
-is applied to it. Rebuilt on every frame rather than stored, and built once per
-frame so that the several views needing the same order and the same gaps do not
-each work them out again -- that sharing is the whole reason the type exists.
+Built once per frame and shared by every view that reads it.
 
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
@@ -173,8 +170,7 @@ type alias CurrentMiniSectorStates =
 {-| Read the whole race at a moment of it.
 
 Every number is read at the same clock, the records included: a time is rated
-against the record as it stood then, not as it ends up. Right after the data
-loads the clock sits at the start, so nothing holds a record yet.
+against the record as it stood then, not as it ends up.
 
 -}
 at : { elapsed : Instant } -> Race -> Snapshot
@@ -300,9 +296,8 @@ toClassList (Snapshot s) =
 
 {-| One car of the field by its number, where the race has such a car.
 
-A scan rather than an index: an index would be built every frame whether
-anything asked for a car or not. Two cars sharing a number -- which the source
-data occasionally has -- give the one running ahead.
+Two cars sharing a number -- which the source data occasionally has -- give
+the one running ahead.
 
 -}
 get : CarNumber -> Snapshot -> Maybe CarAt
@@ -324,16 +319,11 @@ inClass class (Snapshot s) =
         |> Maybe.withDefault []
 
 
-{-| The car leading the race, where there is one -- not a class of it, which is
-[`classLeader`](#classLeader).
--}
 leader : Snapshot -> Maybe CarAt
 leader (Snapshot s) =
     List.head s.cars
 
 
-{-| The car at the front of one class, where the class has any cars.
--}
 classLeader : Class -> Snapshot -> Maybe CarAt
 classLeader class snapshot =
     inClass class snapshot |> List.head
@@ -386,15 +376,11 @@ lapCount (Snapshot s) =
     s.lapCount
 
 
-{-| The moment of the race this snapshot was taken at.
--}
 elapsed : Snapshot -> Instant
 elapsed (Snapshot s) =
     s.elapsed
 
 
-{-| The records the race held at this moment.
--}
 bestTimes : Snapshot -> BestTimes.Snapshot
 bestTimes (Snapshot s) =
     s.bestTimes
@@ -412,13 +398,8 @@ lapHistory (Snapshot s) =
 
 
 {-| A car before the field has been put in order: everything that can be read
-from the car alone, without knowing who else is out there.
-
-A [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added on, because
-that is the shape the ordering depends on: `Gap.at` and `Ordering.runningOrder`
-reach for `laps` and `currentLap` directly. The constraint stops at this type;
-what comes out the other side is a `CarAt`, which carries neither.
-
+from the car alone. A [`Gap.Competitor`](Motorsport-Gap#Competitor), since
+`Gap.at` reads `laps` and `currentLap` directly.
 -}
 type alias SampledCar =
     Gap.Competitor
@@ -430,13 +411,8 @@ type alias SampledCar =
         }
 
 
-{-| Read a car at the clock, where it is running.
-
-`Nothing` for a car with no lap in progress, which is one that has turned no lap
-at all. Such a car is not in the field, and settling that here is what lets
-everything downstream -- `Ordering.runningOrder`, `Gap.Competitor`, `CarAt` --
-ask for a lap rather than a `Maybe` of one.
-
+{-| `Nothing` for a car with no lap in progress, which is one that has turned no
+lap at all and is not in the field.
 -}
 sampleCar : { elapsed : Instant } -> Race -> Car -> Maybe SampledCar
 sampleCar clock race car =
@@ -503,7 +479,6 @@ timingOf raceElapsed rivals car =
     { currentLapElapsed =
         Instant.since
             { from =
-                -- A car on its opening lap began where the race did.
                 case car.lastLap of
                     Just lap ->
                         lap.elapsed
@@ -652,7 +627,6 @@ readCarAt frame placed =
         timing =
             timingOf frame.raceElapsed
                 { leader =
-                    -- The leader is not behind itself; it has no gap to report.
                     if placed.position == 1 then
                         Nothing
 

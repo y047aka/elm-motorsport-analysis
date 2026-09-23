@@ -77,14 +77,10 @@ type alias SectorTime =
     }
 
 
-{-| A lap's three sector times.
--}
 type alias SectorTimes =
     BySector SectorTime
 
 
-{-| A lap's fifteen mini-sector times, where the circuit records them.
--}
 type alias MiniSectors =
     ByMiniSector MiniSectorTime
 
@@ -180,15 +176,9 @@ isInLap lap =
             False
 
 
-{-| Whether the car drove the whole of this lap on the road, which is what a
-reading of pace wants: a time with the pit lane in it is not a lap the car
-drove, and a sector nothing can beat is no baseline at all.
-
-It says only that the lap touched the pit lane at neither end -- not that it is
-a representative one. A lap behind a safety car and a lap spent in traffic both
-pass. What to do about those is the reading's own business; the usual answer is
-an IQR fence over the times rather than a rule about laps.
-
+{-| Whether the lap touched the pit lane at neither end -- not that it is a
+representative one. A lap behind a safety car and a lap spent in traffic both
+pass.
 -}
 isRacingLap : Lap -> Bool
 isRacingLap lap =
@@ -354,9 +344,8 @@ lapStart lap =
 
 {-| Cut a lap into its three sectors.
 
-The lap stores only how long each sector took, so where one begins has to be
-added up; this is the only place that happens. A sector with no recorded time is
-empty rather than absent, so the ones after it still start where they should.
+A sector with no recorded time is empty rather than absent, so the ones after it
+still start where they should.
 
 -}
 segments : Lap -> BySector Segment
@@ -410,8 +399,7 @@ currentSector clock lap =
 {-| How far around the lap the car is: which sector, and how far through it.
 
 Not clamped: past the end of the lap gives more than 1 and before its start
-gives a negative. Capping is a question about what is being drawn, so it is left
-to the caller.
+gives a negative.
 
 -}
 type alias SectorProgress =

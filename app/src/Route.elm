@@ -1,7 +1,6 @@
 module Route exposing (Route(..), fromUrl, toString, href)
 
-{-| Hand-written client-side routing, replacing elm-pages' generated `Route`
-module.
+{-| Client-side routing.
 
 @docs Route, fromUrl, toString, href
 
@@ -13,7 +12,6 @@ import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, s, string, top)
 
 
-{-| -}
 type Route
     = Index
     | WecEvent { season : String, event : String }
@@ -28,15 +26,11 @@ parser =
         ]
 
 
-{-| Parse a `Url` into a `Route`. Returns `Nothing` for unknown paths.
--}
 fromUrl : Url -> Maybe Route
 fromUrl =
     Parser.parse parser
 
 
-{-| Render a `Route` as an absolute path.
--}
 toString : Route -> String
 toString route =
     case route of
@@ -47,8 +41,6 @@ toString route =
             "/wec/" ++ season ++ "/" ++ event
 
 
-{-| A convenient `href` attribute for internal links.
--}
 href : Route -> Html.Attribute msg
 href route =
     Html.Attributes.href (toString route)

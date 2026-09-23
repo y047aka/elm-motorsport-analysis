@@ -30,11 +30,9 @@ const summary = readFileSync(summarySource, "utf8");
 
 // The bound is on the lap number rather than on the cars: `assignPositions`
 // costs the laps times the cars, so a smaller field would be a different race.
-//
 // It is low because elm-benchmark runs a benchmark until it has a sample it
-// trusts, and a round of laps is far too much work per run to get one. The
-// bound is carried into the fixture so that `Benchmark.scale` can take it and
-// the halves of it, which is how the shape is read without running twice.
+// trusts. It is carried into the fixture so that `Benchmark.scale` can take it
+// and the fractions of it.
 const lines = readFileSync(lapsSource, "utf8").split("\n").filter((line) => line.length > 0);
 const kept = lines.filter((line) => JSON.parse(line).lapNumber <= lapCap);
 const jsonl = kept.join("\n") + "\n";

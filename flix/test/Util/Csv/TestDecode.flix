@@ -7,8 +7,7 @@ mod Util.Csv.TestDecode {
     // Helpers
     // ---------------------------------------------------------------------------
 
-    /// `Hex.fromString` 相当。`elm-community/elm-hex` の `Hex.fromString` を Flix へ
-    /// 移植した小さなヘルパー。`fromResultTest` でのみ使う。
+    /// `Hex.fromString` from `rtfeldman/elm-hex`, for the `fromResult` tests.
     def hexFromString(input: String): Result[String, Int32] =
         def hexDigit(c) = match c {
             case '0' => Ok(0)

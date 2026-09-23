@@ -5,9 +5,8 @@ module Effect exposing
     , map, toCmd
     )
 
-{-| The `Effect` type describes side-effects a page (or the shared model) wants
-to perform, without direct access to the top-level `Msg` type. This mirrors
-the pattern popularised by elm-spa / elm-land and replaces elm-pages' `Effect`.
+{-| Side-effects a page (or the shared model) wants to perform, without direct
+access to the top-level `Msg` type, in the elm-spa / elm-land style.
 
 @docs Effect
 @docs none, batch
@@ -20,7 +19,6 @@ import Shared.Msg
 import Task
 
 
-{-| -}
 type Effect msg
     = None
     | Batch (List (Effect msg))
@@ -28,20 +26,16 @@ type Effect msg
     | SendSharedMsg Shared.Msg.Msg
 
 
-{-| -}
 none : Effect msg
 none =
     None
 
 
-{-| -}
 batch : List (Effect msg) -> Effect msg
 batch =
     Batch
 
 
-{-| Run a `Cmd` as an effect.
--}
 sendCmd : Cmd msg -> Effect msg
 sendCmd =
     SendCmd
@@ -55,7 +49,6 @@ sendSharedMsg =
     SendSharedMsg
 
 
-{-| -}
 map : (a -> b) -> Effect a -> Effect b
 map fn effect =
     case effect of

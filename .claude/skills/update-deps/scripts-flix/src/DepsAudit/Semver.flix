@@ -6,9 +6,6 @@
 /// compare as 0. The input is whatever cargo, npm and elm print, which is
 /// not always three numeric components.
 ///
-/// `Semver` is a parsed version as a value with `Eq`/`Order`, so
-/// version ordering travels with the type: sorting version strings is
-/// `List.sortBy(Semver.parse)` rather than a hand-written comparator.
 /// Trailing zero components are normalized away at parse time, which is
 /// what makes the derived `Eq` agree with `Order` ("1.2" == "1.2.0").
 ///
