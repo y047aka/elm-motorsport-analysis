@@ -184,6 +184,14 @@ mod Db.Laps {
         "(${Schema.name(columns()#crossingFinishLineInPit)} = 1"
             + " OR ${Schema.name(columns()#pitTimeMs)} IS NOT NULL)"
 
+    /// The crossing a stop is timed at, and the one that says a stop happened at
+    /// all: the crossing back out, which carries `pit_time`. The in-lap of a stop is
+    /// sometimes missing from a file and the out-lap is sometimes marked as a pit
+    /// crossing too, so a query counting stops counts these and not `pitLap`. Like
+    /// `pitLap` it is a clause, for a common table expression's source.
+    pub def pitOutLap(): String =
+        "(${Schema.name(columns()#pitTimeMs)} IS NOT NULL)"
+
     /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them. Named for
     /// the table, since a join's other side has a `round_id` too.

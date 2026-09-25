@@ -8,8 +8,9 @@
 - 日付: 2026-09-25(`d406766`)
 - 数値の再測方法は末尾の付録に。`.#cli-load` → `.#cli-export` でファイルは再生成される。
 - 適用済み: §5-4 の `start` を削除(191 → 129行)、§5-3 のとおり首位交代を2種に分割
-  (`tookLead` 66 → `tookLeadOnTrack` 5 + `leaderPitted` 61)。後者は交代のイベントではなく
-  「首位がピットインした」イベントで、首位だった車の in-lap の横断に生える。
+  (`tookLead` 66 → `tookLeadOnTrack` 5 + `leaderPitted` 68、136行)。後者は交代のイベントでは
+  なく「首位がピットインした」イベントで、首位だった車の in-lap の横断に生える。
+  交代から数えた初版では首位のままピットアウトした7件が漏れていた(→§5-3)。
   下の節は削除・分割前の実測。
 
 ## 1. 出力されているもの
@@ -101,12 +102,14 @@
 2. **`tookLead` にクラスを持たせる**(LMP2/LMGT3 の展開が出る。+72行程度)。
 3. **首位交代を2種に割る** — 先頭がピットに来ての交代と、コース上で抜き合った交代。
    `laps` は1回のストップを2つの横断に書いて持つ(ピットレーンに切れ込んだ横断と、
-   ピットタイム付きの復帰横断)ので、「首位を失った車がこの周回をどちらかで横切ったか」
-   で判別できる。SC明けかどうかの区別はしない —— 目的は交代の2種を分けること。
-   **適用した形**: 判別は交代周回とその前周の両方にまたがる(ストップの2横断が1周離れて
-   書かれるため)。当たりつきのイベントは交代としてではなく **`leaderPitted`** ——首位が
-   ピットインした——として、首位だった車の in-lap の横断時刻に生やす。誰が首位に立ったかは
-   表現しない。
+   ピットタイム付きの復帰横断)ので判別できる。SC明けかどうかの区別はしない ——
+   目的は2種を分けること。
+   **適用した形**: 交代から割るのをやめ、**首位車のストップを交代と独立に数える**関数に
+   分けた。交代（`tookLeadOnTrack`）は前首位が stop 横断を持たない周回境界だけ、
+   **`leaderPitted`** は out-lap（`pit_time` 付き。1ストップ1行なので数えの anchor にする）
+   を中心に、その2周前までに首位だった車を、切れ込んだ in-lap の横断時刻に出す。
+   交代を先に聞くと**首位のままピットアウトした7件**（うち6件は #51 が後半に引き離した
+   後）がイベントにならない。首位交代そのものは表現しない。
 4. **`start` を削るか `raceStart` に寄せる**(62行・32%が情報ゼロ)。 **適用済み**: 削った。
 
 いずれも `Round.Timeline`(集計)+ `Motorsport.Timeline`(語彙と JSON 形)+
@@ -156,23 +159,25 @@ tl=[json.loads(l) for l in open('app/static/wec/2025/le_mans_24h_timeline.jsonl'
 n=[sum(1 for u in pit if sec(e['elapsed'])-180<u<=sec(e['elapsed'])) for e in tl]
 print('pits in the 3 min before a lead change: median',statistics.median(n),'>=4:',sum(1 for k in n if k>=4),'of',len(n))"
 
-# 首位交代がコース上か、先頭がピットに来たためのものか(読み込み済みの行から)
-# 2種に割る判別と同じ式:首位を失った車が in-lap か out-lap をこの周回か前周に横切ったか
+# パッシングと首位車のストップ(納品した SQL と同じ式)。交代から数えると 61 になり、
+# 首位のままピットアウトした7件が落ちる
 sqlite3 flix/.db/motorsport.sqlite "
-WITH l AS (SELECT car_number, lap_number, elapsed_ms,
+WITH l AS (SELECT car_number, lap_number, elapsed_ms, source_row,
    (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL) AS pitted,
+   (pit_time_ms IS NOT NULL) AS stopped,
    ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) AS rn
    FROM laps WHERE round_id =
-     (SELECT round_id FROM rounds WHERE season = 2025 AND round_key = 'le_mans_24h'))
-SELECT sum(came_in IS NOT NULL) AS leader_pitted,
-       sum(came_in IS NULL) AS took_lead_on_track, count(*) AS changes
-FROM (SELECT (SELECT l.elapsed_ms FROM l
-               WHERE l.car_number = led.held
-                 AND l.lap_number BETWEEN led.lap_number - 1 AND led.lap_number
-                 AND l.pitted
-               ORDER BY l.lap_number ASC LIMIT 1) AS came_in
-      FROM (SELECT car_number, lap_number, elapsed_ms,
-                   LAG(car_number) OVER (ORDER BY lap_number) AS held
-            FROM l WHERE rn = 1) AS led
-      WHERE held IS NOT NULL AND held <> car_number);"
+     (SELECT round_id FROM rounds WHERE season = 2025 AND round_key = 'le_mans_24h')),
+led AS (SELECT car_number, lap_number FROM l WHERE rn = 1)
+SELECT (SELECT count(*) FROM (
+          SELECT 1 FROM (SELECT car_number, lap_number, elapsed_ms,
+                          LAG(car_number) OVER (ORDER BY lap_number) AS held
+                         FROM l WHERE rn = 1) AS chg
+          WHERE held IS NOT NULL AND held <> car_number
+            AND (SELECT x.elapsed_ms FROM l x WHERE x.car_number = chg.held
+                   AND x.lap_number BETWEEN chg.lap_number - 1 AND chg.lap_number
+                   AND x.pitted ORDER BY x.lap_number ASC LIMIT 1) IS NULL)) AS took_lead_on_track,
+       (SELECT count(*) FROM l AS stop WHERE stop.stopped
+          AND EXISTS (SELECT 1 FROM led WHERE led.car_number = stop.car_number
+                       AND led.lap_number IN (stop.lap_number - 2, stop.lap_number - 1))) AS leader_pitted;"
 ```

@@ -2,9 +2,9 @@
 ///
 /// The mirror of `Motorsport.Race.TimelineEvent` on the Elm side, which reads
 /// these back a line at a time. What is decided here is what the rows do not
-/// say -- whether a car's last lap was the flag or a retirement, and whether a
-/// change of the lead was a pass or the leader coming into the pits -- and the
-/// counting that finds each event is `Round.Timeline`'s.
+/// say -- whether a car's last lap was the flag or a retirement, which changes of
+/// the lead were passes, and which stops were the leader's -- and the counting that
+/// finds each event is `Round.Timeline`'s.
 mod Motorsport.Timeline {
 
     use Util.Duration.Duration
@@ -31,30 +31,35 @@ mod Motorsport.Timeline {
         eventType = EventType
     }
 
-    /// What a lap boundary where the lead changed hands is worth to the timeline,
-    /// and about which car. Each case carries the car and crossing its own kind is
-    /// about, so the two cannot be handed to the wrong event at a call site -- the
-    /// stop is not about the car that went in front, and writing it as one tuple
-    /// where a flag says which is how that mix-up happens.
-    pub enum Handover with Eq {
-        case Passed(String, Duration)
-        case LeaderStopped(String, Duration)
+    /// A car that took the lead by passing the field, and the crossing that did it.
+    /// Not every change of the lead is one: `Stop` is the reading of the laps that
+    /// says who was in the pits.
+    pub type alias Pass = {
+        carNumber = String,
+        elapsed   = Duration
     }
 
-    /// What the events of one round are gathered from: each car's last moment, and
-    /// every lap boundary where the lead changed hands.
+    /// The leader's crossing into the pit lane, and whose it was. Whether the lead
+    /// changed hands over the stop is neither asked nor said.
+    pub type alias Stop = {
+        carNumber = String,
+        elapsed   = Duration
+    }
+
+    /// What the events of one round are gathered from: each car's last moment, every
+    /// pass for the lead, and every stop the leader made.
     ///
-    /// Not the stops themselves: both halves of one are counted off `pit_time`,
-    /// which the laps carry, so the app reads them there. A stop is read here only
-    /// where it is what the lead changed hands over.
+    /// A change of the lead the leader's stop settled is in neither: the stop is, and
+    /// the car that stayed out in front is in no event at all.
     pub type alias Readings = {
         timeLimit = Duration,
         cars      = List[(String, Duration)],
-        leads     = List[Handover]
+        passes    = List[Pass],
+        stops     = List[Stop]
     }
 
-    /// The race start, one terminal event per car, and one per lap boundary where
-    /// the lead changed hands -- the pass, or the leader's stop -- in time order.
+    /// The race start, one terminal event per car, one per pass for the lead, and one
+    /// per stop the leader made, in time order.
     ///
     /// Not who took the green flag: every car that turned a lap took it, all at
     /// nought, and who was ahead of whom is `Motorsport.Metadata`'s starting grid.
@@ -66,7 +71,8 @@ mod Motorsport.Timeline {
     pub def fromReadings(readings: Readings): List[Event] =
         List.flatten(
             (raceStart() :: Nil) ::
-            leads(readings#leads) ::
+            tookTheLead(readings#passes) ::
+            leaderPitStops(readings#stops) ::
             terminals(readings#timeLimit, readings#cars) ::
             Nil
         )
@@ -77,22 +83,21 @@ mod Motorsport.Timeline {
     def raceStart(): Event =
         { elapsed = Util.Duration.zero(), eventType = EventType.RaceStart }
 
-    /// One event per lap boundary where the lead changed hands: the pass about the
-    /// car that took the lead, the stop about the leader that came in.
-    def leads(handovers: List[Handover]): List[Event] =
-        handovers |> List.map(handover ->
-            match handover {
-                case Handover.Passed(carNumber, elapsed) =>
-                    {
-                        elapsed = elapsed,
-                        eventType = EventType.Of(carNumber, CarEvent.TookLeadOnTrack)
-                    }
+    /// One event per pass for the lead, about the car that took it.
+    def tookTheLead(passes: List[Pass]): List[Event] =
+        passes |> List.map(pass ->
+            {
+                elapsed = pass#elapsed,
+                eventType = EventType.Of(pass#carNumber, CarEvent.TookLeadOnTrack)
+            })
 
-                case Handover.LeaderStopped(carNumber, elapsed) =>
-                    {
-                        elapsed = elapsed,
-                        eventType = EventType.Of(carNumber, CarEvent.LeaderPitted)
-                    }
+    /// One event per stop the leader made, about the leader and not about the field
+    /// behind it, which may not have moved at all.
+    def leaderPitStops(stops: List[Stop]): List[Event] =
+        stops |> List.map(stop ->
+            {
+                elapsed = stop#elapsed,
+                eventType = EventType.Of(stop#carNumber, CarEvent.LeaderPitted)
             })
 
     /// A car still running when the race was scheduled to end took the flag;

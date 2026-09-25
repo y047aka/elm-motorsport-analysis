@@ -149,10 +149,9 @@ mod Round.TestTimeline {
             Nil);
         Assert.assertTrue(leadChanges(events) == ("2:40.000", "leaderPitted", "7") :: Nil)
 
-    /// The other half of a stop settles a change too: the leader crossed the line
-    /// and turned down the pit lane on the crossing that lost it the lead, with no
-    /// time written on that crossing at all. The event is timed there, where it came
-    /// in, and not at the crossing that went in front.
+    /// A stop written over its two crossings is timed at the in-lap, where the car
+    /// turned down the lane, and the change of the lead the stop settled is no event:
+    /// whoever stayed out passed no one. Taking the lead back a lap later is a pass.
     @Test
     def aLeadTheLeaderLostByTurningIntoThePits(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
@@ -160,29 +159,45 @@ mod Round.TestTimeline {
             lap("8", 1, "62.000") ::
             lap("8", 2, "2:00.000") ::
             boxLap("7", 2, "2:01.000") ::
-            Nil);
-        Assert.assertTrue(leadChanges(events) == ("2:01.000", "leaderPitted", "7") :: Nil)
-
-    /// A stop is written over two crossings a lap apart and the lead may change
-    /// hands on either of them, so a change counted on the out-lap is timed at the
-    /// in-lap. Taking the lead back a lap later is a pass: neither car stopped on
-    /// either of those two laps.
-    @Test
-    def aLeadGivenUpTheLapAfterComingInIsTimedAtTheInLap(): Unit \ {Assert, IO} =
-        let events = timelineOf("1:00:00.000",
-            lap("7", 1, "60.000") ::
-            lap("8", 1, "62.000") ::
-            boxLap("7", 2, "2:00.000") ::
-            lap("8", 2, "2:10.000") ::
-            lap("8", 3, "2:30.000") ::
-            pitLap("7", 3, "2:50.000", "45.000") ::
-            lap("7", 4, "3:20.000") ::
-            lap("8", 4, "3:40.000") ::
+            pitLap("7", 3, "2:45.000", "44.000") ::
+            lap("8", 3, "3:00.000") ::
             Nil);
         Assert.assertTrue(leadChanges(events) ==
-            ("2:00.000", "leaderPitted", "7") ::
-            ("3:20.000", "tookLeadOnTrack", "7") ::
+            ("2:01.000", "leaderPitted", "7") ::
+            ("2:45.000", "tookLeadOnTrack", "7") ::
             Nil)
+
+    /// The case the lead says nothing about: the leader came in and came back out in
+    /// front of the field, so no lap boundary changed hands and there is no pass to
+    /// hang the stop on. Seven of Le Mans's leader stops are this, and the event is
+    /// timed at where the car turned down the lane.
+    @Test
+    def aLeaderThatCameInAndStayedLeaderIsAnEvent(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "70.000") ::
+            lap("7", 2, "2:00.000") ::
+            lap("8", 2, "2:20.000") ::
+            boxLap("7", 3, "3:00.000") ::
+            lap("8", 3, "3:30.000") ::
+            pitLap("7", 4, "4:10.000", "45.000") ::
+            lap("8", 4, "4:40.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == ("3:00.000", "leaderPitted", "7") :: Nil)
+
+    /// A stop by a car that was never in the lead is not a leader's stop: it led
+    /// neither the lap before its out-lap nor the lap before that.
+    @Test
+    def aStopByACarThatNeverLedIsNoEvent(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "70.000") ::
+            lap("7", 2, "2:00.000") ::
+            boxLap("8", 2, "2:20.000") ::
+            lap("7", 3, "3:00.000") ::
+            pitLap("8", 3, "3:20.000", "45.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == Nil)
 
     /// Whoever led the opening lap took it from nobody.
     @Test
