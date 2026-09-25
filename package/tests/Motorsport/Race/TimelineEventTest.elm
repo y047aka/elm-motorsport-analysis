@@ -16,8 +16,8 @@ suite =
                     |> Expect.equal (Ok ( Instant.raceStart, RaceStart ))
         , test "every other event names the car it was" <|
             \_ ->
-                decoded """{ "elapsed": "0.000", "event": "start", "carNumber": "7" }"""
-                    |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" Start ))
+                decoded """{ "elapsed": "0.000", "event": "tookLead", "carNumber": "7" }"""
+                    |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" TookLead ))
         , test "each of the remaining kinds reads back as itself" <|
             \_ ->
                 [ "tookLead", "retirement", "checkered" ]
@@ -35,6 +35,10 @@ suite =
             \_ ->
                 -- Carried on from, it would read as a car that never stopped.
                 decoded """{ "elapsed": "0.000", "event": "safetyCar" }"""
+                    |> Expect.err
+        , test "who took the green flag is not an event" <|
+            \_ ->
+                decoded """{ "elapsed": "0.000", "event": "start", "carNumber": "7" }"""
                     |> Expect.err
         ]
 

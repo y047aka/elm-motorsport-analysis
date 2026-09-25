@@ -93,9 +93,9 @@ mod Round.TestRender {
             line -> String.startsWith({prefix = "{ "}, line) and String.endsWith({suffix = " }"}, line),
             lines
         ));
-        // The start, the two cars taking it, car 7's flag, car 12 taking the
-        // lead on the lap it had to itself, and its own flag.
-        Assert.assertTrue(List.length(lines) == 6)
+        // The race's own start, car 7's flag, car 12 taking the lead on the lap
+        // it had to itself, and its own flag.
+        Assert.assertTrue(List.length(lines) == 4)
 
     /// A round with no laps has no cars in it, and the race still started.
     @Test

@@ -194,7 +194,7 @@ round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
 rather than read in their key's order, which is the same list until a row is
 corrected in SQL and then is the list that moment used to be in.
 
-Each car's first and last crossing is one `GROUP BY`, and the lead is
+Each car's last crossing is one `GROUP BY`, and the lead is
 `ROW_NUMBER` picking each lap's first crossing with `LAG` asking who held the one
 before -- two queries rather than one, since SQLite settles a `WHERE` before
 either window. The stops are not counted at all: both halves of one are read off

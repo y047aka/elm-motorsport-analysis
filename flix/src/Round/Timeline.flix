@@ -1,7 +1,7 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// two readings of the laps -- each car's first and last moment, and each
-/// change of the lead -- and what they add up to is `Motorsport.Timeline`'s.
+/// two readings of the laps -- each car's last moment, and each change of the
+/// lead -- and what they add up to is `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
     use Db.Laps
@@ -44,7 +44,7 @@ mod Round.Timeline {
 
     // ------------------------------------------------------------------ cars
 
-    /// Each car that took the start, with the moment it last crossed the line,
+    /// Each car that turned a lap, with the moment it last crossed the line,
     /// in the order the file first showed them.
     ///
     /// A car's laps only ever run forwards, so its latest crossing is the one

@@ -36,7 +36,6 @@ mod Round.TestTimeline {
 
     def name(carEvent: CarEvent): String =
         match carEvent {
-            case CarEvent.Start      => "start"
             case CarEvent.TookLead   => "tookLead"
             case CarEvent.Retirement => "retirement"
             case CarEvent.Checkered  => "checkered"
@@ -65,19 +64,18 @@ mod Round.TestTimeline {
             + "${num};1;${lapNumber};60.000;0;;20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
             + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};HYPERCAR;H;Team;Maker;GF;20.000;20.000;20.000;")
 
-    // --------------------------------------------------------------- starts
+    // ------------------------------------------------------------ race start
 
-    /// One per car that turned a lap, and the race's own start beside them.
+    /// One event at nought, the race's own: no row per car sits beside it.
     @Test
-    def everyCarThatTookTheStartIsOne(): Unit \ {Assert, IO} =
+    def theRaceStartIsTheOnlyEventAtNought(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
             lap("7", 1, "60.000") ::
             lap("8", 1, "62.000") ::
             Nil);
-        Assert.assertTrue(named("raceStart", events) == ("0.000", "raceStart", "") :: Nil);
-        Assert.assertTrue(named("start", events) ==
-            ("0.000", "start", "7") ::
-            ("0.000", "start", "8") :: Nil)
+        Assert.assertTrue(events
+            |> List.filter(event -> event#elapsed == Util.Duration.zero())
+            |> List.map(shape) == ("0.000", "raceStart", "") :: Nil)
 
     // ------------------------------------------------------------ terminals
 
@@ -195,9 +193,6 @@ mod Round.TestTimeline {
         match loadedAndCounted() {
             case (readBack, _) =>
                 Assert.assertTrue(named("raceStart", readBack) == ("0.000", "raceStart", "") :: Nil);
-                Assert.assertTrue(named("start", readBack) ==
-                    ("0.000", "start", "7") ::
-                    ("0.000", "start", "8") :: Nil);
                 Assert.assertTrue(named("tookLead", readBack) ==
                     ("50:00.000", "tookLead", "8") ::
                     ("1:30:00.000", "tookLead", "7") :: Nil);
