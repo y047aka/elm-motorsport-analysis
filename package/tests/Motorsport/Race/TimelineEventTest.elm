@@ -3,7 +3,7 @@ module Motorsport.Race.TimelineEventTest exposing (suite)
 import Expect
 import Json.Decode as Decode
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..))
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), RaceFlag(..))
 import Test exposing (Test, describe, test)
 
 
@@ -30,10 +30,21 @@ suite =
                         , Ok (CarEvent "7" Retired)
                         , Ok (CarEvent "7" Finished)
                         ]
+        , test "a flag is nobody's, and reads back as itself" <|
+            \_ ->
+                [ "fullCourseYellow", "safetyCar", "redFlag", "greenFlag" ]
+                    |> List.map (\name -> decoded ("{ \"elapsed\": \"1:00.000\", \"event\": \"" ++ name ++ "\" }") |> Result.map Tuple.second)
+                    |> Expect.equal
+                        [ Ok (Flag FullCourseYellow)
+                        , Ok (Flag SafetyCar)
+                        , Ok (Flag RedFlag)
+                        , Ok (Flag GreenFlag)
+                        ]
         , test "a kind this app has no case for fails the round" <|
             \_ ->
-                -- A caution episode would read as a car that never stopped running.
-                decoded """{ "elapsed": "0.000", "event": "safetyCar" }"""
+                -- Carried on from, a car's event of a kind this app cannot read
+                -- would read as a car that never stopped running.
+                decoded """{ "elapsed": "0.000", "event": "slowZone" }"""
                     |> Expect.err
         , test "a name this timeline no longer writes fails the round" <|
             \_ ->

@@ -1,8 +1,8 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// five readings of the laps -- each car's last moment, each overtake for a
-/// class's lead, each time a class's leader went into the pits, each class's
-/// fastest lap, each driver change -- and what they add up to is
+/// six readings of the laps -- each car's last moment, each change of flag, each
+/// overtake for a class's lead, each time a class's leader went into the pits,
+/// each class's fastest lap, each driver change -- and what they add up to is
 /// `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
@@ -10,6 +10,7 @@ mod Round.Timeline {
     use Db.Entries
     use Db.Laps
     use Db.Schema
+    use Motorsport.Wec
     use Db.TimelineEvents
     use Db.TimelineEvents.EventRow
     use Motorsport.Calendar.Entry
@@ -41,8 +42,9 @@ mod Round.Timeline {
     /// particulars are read first and hand it over.
     pub def fromLaps(entry: Entry, timeLimit: Duration): List[Timeline.Event] \ DbRead =
         Timeline.fromReadings({
-            timeLimit = timeLimit,
-            cars      = cars(entry),
+            timeLimit     = timeLimit,
+            cars          = cars(entry),
+            flags         = flags(entry),
             overtakes     = overtakes(entry),
             inPits        = leadersInPit(entry),
             fastestLaps   = fastestLaps(entry),
@@ -64,6 +66,41 @@ mod Round.Timeline {
             |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)")))
             |> Sql.reading(match (carNumber, last) -> (carNumber, Util.Duration.fromMillis(last)))
             |> Sql.selectAll
+
+    // ------------------------------------------------------------------ flags
+
+    /// Every crossing whose flag is not the one the crossing before it read, over
+    /// the whole field in the order the line saw them. The race starts green, so a
+    /// start behind the safety car is a change at the first crossing. The finish's
+    /// own flag is no change: each car's is its `Finished`.
+    def flags(entry: Entry): List[Timeline.FlagShown] \ DbRead =
+        let green = Wec.flagToString(Wec.Flag.Green);
+        let finish = Wec.flagToString(Wec.Flag.Finish);
+        Sql.rows(Sql.raw("shown"))
+            |> Sql.using(Sql.frags(
+                Sql.raw("shown AS (SELECT elapsed_ms, flag_at_fl,"
+                    + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
+                    + " FROM " + Laps.table() + " WHERE flag_at_fl <> '${finish}' AND") ::
+                Sql.term(Laps.inRound(entry)) ::
+                Sql.raw(")") :: Nil
+            ))
+            |> Sql.filter(_ -> Sql.column("flag_at_fl <> prior"))
+            |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
+            |> Sql.map(_ -> (Sql.text("flag_at_fl"), Sql.int("elapsed_ms")))
+            |> Sql.selectAll
+            |> List.filterMap(match (flag, elapsed) ->
+                Wec.flagFromString(flag)
+                    |> Option.flatMap(raceFlag)
+                    |> Option.map(shown -> { flag = shown, elapsed = Util.Duration.fromMillis(elapsed) }))
+
+    def raceFlag(flag: Wec.Flag): Option[Timeline.RaceFlag] =
+        match flag {
+            case Wec.Flag.Green            => Some(Timeline.RaceFlag.GreenFlag)
+            case Wec.Flag.SlowZone         => Some(Timeline.RaceFlag.SafetyCar)
+            case Wec.Flag.FullCourseYellow => Some(Timeline.RaceFlag.FullCourseYellow)
+            case Wec.Flag.Red              => Some(Timeline.RaceFlag.RedFlag)
+            case Wec.Flag.Finish           => None
+        }
 
     // ----------------------------------------------------------- fastest laps
 

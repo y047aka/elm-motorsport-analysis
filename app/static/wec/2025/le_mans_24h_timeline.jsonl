@@ -126,6 +126,8 @@
 { "elapsed": "3:18:00.014", "event": "driverChange", "carNumber": "63" }
 { "elapsed": "3:25:15.731", "event": "driverChange", "carNumber": "22" }
 { "elapsed": "3:26:34.481", "event": "leaderInPit", "carNumber": "43" }
+{ "elapsed": "3:26:48.965", "event": "fullCourseYellow" }
+{ "elapsed": "3:31:00.929", "event": "greenFlag" }
 { "elapsed": "3:31:41.358", "event": "driverChange", "carNumber": "81" }
 { "elapsed": "3:31:54.518", "event": "driverChange", "carNumber": "11" }
 { "elapsed": "3:33:31.250", "event": "leaderInPit", "carNumber": "43" }
@@ -216,7 +218,9 @@
 { "elapsed": "5:37:44.835", "event": "driverChange", "carNumber": "92" }
 { "elapsed": "5:38:18.164", "event": "driverChange", "carNumber": "12" }
 { "elapsed": "5:38:47.511", "event": "driverChange", "carNumber": "11" }
+{ "elapsed": "5:40:32.077", "event": "fullCourseYellow" }
 { "elapsed": "5:40:39.167", "event": "leaderInPit", "carNumber": "43" }
+{ "elapsed": "5:42:03.324", "event": "greenFlag" }
 { "elapsed": "5:42:43.791", "event": "driverChange", "carNumber": "150" }
 { "elapsed": "5:43:01.049", "event": "leaderInPit", "carNumber": "46" }
 { "elapsed": "5:43:01.049", "event": "driverChange", "carNumber": "46" }
@@ -398,6 +402,8 @@
 { "elapsed": "10:40:08.309", "event": "driverChange", "carNumber": "85" }
 { "elapsed": "10:41:24.425", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "10:41:50.543", "event": "driverChange", "carNumber": "77" }
+{ "elapsed": "10:45:10.811", "event": "fullCourseYellow" }
+{ "elapsed": "10:47:09.774", "event": "greenFlag" }
 { "elapsed": "10:49:59.837", "event": "driverChange", "carNumber": "4" }
 { "elapsed": "10:50:12.363", "event": "driverChange", "carNumber": "12" }
 { "elapsed": "10:56:10.342", "event": "fastestLap", "carNumber": "87" }
@@ -411,6 +417,7 @@
 { "elapsed": "11:07:45.532", "event": "driverChange", "carNumber": "28" }
 { "elapsed": "11:10:29.565", "event": "retired", "carNumber": "24" }
 { "elapsed": "11:10:33.615", "event": "driverChange", "carNumber": "36" }
+{ "elapsed": "11:11:48.962", "event": "safetyCar" }
 { "elapsed": "11:12:03.285", "event": "driverChange", "carNumber": "199" }
 { "elapsed": "11:12:25.719", "event": "driverChange", "carNumber": "59" }
 { "elapsed": "11:13:10.040", "event": "driverChange", "carNumber": "27" }
@@ -430,6 +437,7 @@
 { "elapsed": "11:21:54.127", "event": "driverChange", "carNumber": "43" }
 { "elapsed": "11:27:26.884", "event": "driverChange", "carNumber": "87" }
 { "elapsed": "11:29:13.828", "event": "driverChange", "carNumber": "23" }
+{ "elapsed": "11:51:36.497", "event": "greenFlag" }
 { "elapsed": "11:51:55.148", "event": "driverChange", "carNumber": "20" }
 { "elapsed": "11:52:45.753", "event": "driverChange", "carNumber": "31" }
 { "elapsed": "11:55:38.240", "event": "retired", "carNumber": "101" }
@@ -535,6 +543,8 @@
 { "elapsed": "14:32:03.383", "event": "leaderInPit", "carNumber": "51" }
 { "elapsed": "14:33:30.977", "event": "leaderInPit", "carNumber": "21" }
 { "elapsed": "14:33:30.977", "event": "driverChange", "carNumber": "21" }
+{ "elapsed": "14:38:00.338", "event": "fullCourseYellow" }
+{ "elapsed": "14:42:05.651", "event": "greenFlag" }
 { "elapsed": "14:45:26.455", "event": "overtakeForLead", "carNumber": "92" }
 { "elapsed": "14:46:19.814", "event": "overtakeForLead", "carNumber": "51" }
 { "elapsed": "14:52:08.462", "event": "driverChange", "carNumber": "20" }
@@ -614,6 +624,8 @@
 { "elapsed": "16:48:40.436", "event": "leaderInPit", "carNumber": "51" }
 { "elapsed": "16:49:29.912", "event": "driverChange", "carNumber": "6" }
 { "elapsed": "16:50:33.920", "event": "driverChange", "carNumber": "45" }
+{ "elapsed": "16:52:37.977", "event": "fullCourseYellow" }
+{ "elapsed": "16:58:50.757", "event": "greenFlag" }
 { "elapsed": "17:07:49.269", "event": "driverChange", "carNumber": "59" }
 { "elapsed": "17:08:35.348", "event": "driverChange", "carNumber": "193" }
 { "elapsed": "17:10:11.841", "event": "driverChange", "carNumber": "29" }
@@ -622,6 +634,8 @@
 { "elapsed": "17:11:32.979", "event": "driverChange", "carNumber": "4" }
 { "elapsed": "17:11:40.874", "event": "driverChange", "carNumber": "34" }
 { "elapsed": "17:14:19.462", "event": "driverChange", "carNumber": "38" }
+{ "elapsed": "17:15:30.898", "event": "fullCourseYellow" }
+{ "elapsed": "17:17:37.116", "event": "greenFlag" }
 { "elapsed": "17:21:30.738", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "17:24:29.227", "event": "driverChange", "carNumber": "9" }
 { "elapsed": "17:26:07.509", "event": "driverChange", "carNumber": "150" }
@@ -668,6 +682,8 @@
 { "elapsed": "18:37:31.360", "event": "driverChange", "carNumber": "48" }
 { "elapsed": "18:38:16.590", "event": "driverChange", "carNumber": "150" }
 { "elapsed": "18:40:15.227", "event": "driverChange", "carNumber": "4" }
+{ "elapsed": "18:41:38.729", "event": "fullCourseYellow" }
+{ "elapsed": "18:43:02.228", "event": "greenFlag" }
 { "elapsed": "18:45:35.947", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "18:45:35.947", "event": "driverChange", "carNumber": "43" }
 { "elapsed": "18:47:28.879", "event": "driverChange", "carNumber": "11" }
@@ -680,7 +696,9 @@
 { "elapsed": "18:57:42.059", "event": "driverChange", "carNumber": "007" }
 { "elapsed": "19:02:41.151", "event": "retired", "carNumber": "78" }
 { "elapsed": "19:02:41.483", "event": "driverChange", "carNumber": "8" }
+{ "elapsed": "19:03:48.744", "event": "fullCourseYellow" }
 { "elapsed": "19:05:27.344", "event": "leaderInPit", "carNumber": "51" }
+{ "elapsed": "19:06:01.697", "event": "greenFlag" }
 { "elapsed": "19:06:34.137", "event": "driverChange", "carNumber": "87" }
 { "elapsed": "19:09:47.472", "event": "driverChange", "carNumber": "36" }
 { "elapsed": "19:10:12.668", "event": "leaderInPit", "carNumber": "51" }
@@ -731,6 +749,8 @@
 { "elapsed": "20:25:52.553", "event": "leaderInPit", "carNumber": "83" }
 { "elapsed": "20:25:52.553", "event": "driverChange", "carNumber": "83" }
 { "elapsed": "20:28:06.250", "event": "driverChange", "carNumber": "12" }
+{ "elapsed": "20:30:17.945", "event": "fullCourseYellow" }
+{ "elapsed": "20:31:31.462", "event": "greenFlag" }
 { "elapsed": "20:37:55.789", "event": "driverChange", "carNumber": "36" }
 { "elapsed": "20:38:14.220", "event": "leaderInPit", "carNumber": "51" }
 { "elapsed": "20:38:31.497", "event": "driverChange", "carNumber": "37" }
@@ -771,6 +791,8 @@
 { "elapsed": "21:34:17.485", "event": "driverChange", "carNumber": "81" }
 { "elapsed": "21:35:52.462", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "21:37:35.595", "event": "driverChange", "carNumber": "90" }
+{ "elapsed": "21:39:06.525", "event": "fullCourseYellow" }
+{ "elapsed": "21:40:31.706", "event": "greenFlag" }
 { "elapsed": "21:41:24.413", "event": "leaderInPit", "carNumber": "92" }
 { "elapsed": "21:41:24.413", "event": "driverChange", "carNumber": "92" }
 { "elapsed": "21:42:00.853", "event": "driverChange", "carNumber": "8" }
@@ -822,6 +844,8 @@
 { "elapsed": "22:53:16.475", "event": "driverChange", "carNumber": "007" }
 { "elapsed": "22:53:43.817", "event": "driverChange", "carNumber": "183" }
 { "elapsed": "22:56:34.228", "event": "leaderInPit", "carNumber": "43" }
+{ "elapsed": "22:58:37.876", "event": "fullCourseYellow" }
+{ "elapsed": "23:02:05.110", "event": "greenFlag" }
 { "elapsed": "23:02:19.114", "event": "driverChange", "carNumber": "5" }
 { "elapsed": "23:05:23.097", "event": "leaderInPit", "carNumber": "92" }
 { "elapsed": "23:05:23.097", "event": "driverChange", "carNumber": "92" }

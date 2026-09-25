@@ -9,6 +9,7 @@ mod Round.TestTimeline {
     use Motorsport.Timeline.CarEvent
     use Motorsport.Timeline.Event
     use Motorsport.Timeline.EventType
+    use Motorsport.Timeline.RaceFlag
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
@@ -26,12 +27,22 @@ mod Round.TestTimeline {
         }
 
     /// `(when, what, whose)`, which is what a test is asserting about an event.
-    /// The race start is nobody's, and reads back with an empty car number.
+    /// The race start and a flag are nobody's, and read back with an empty car
+    /// number.
     def shape(event: Event): (String, String, String) =
         let when = Util.Duration.format(event#elapsed);
         match event#eventType {
             case EventType.RaceStart => (when, "raceStart", "")
+            case EventType.Flag(flag) => (when, flagName(flag), "")
             case EventType.Of(carNumber, carEvent) => (when, name(carEvent), carNumber)
+        }
+
+    def flagName(flag: RaceFlag): String =
+        match flag {
+            case RaceFlag.FullCourseYellow => "fullCourseYellow"
+            case RaceFlag.SafetyCar        => "safetyCar"
+            case RaceFlag.RedFlag          => "redFlag"
+            case RaceFlag.GreenFlag        => "greenFlag"
         }
 
     def name(carEvent: CarEvent): String =
@@ -137,9 +148,33 @@ mod Round.TestTimeline {
         box: String,
         pit: String
     ): RawLap =
+        flaggedCrossingOf(classAndGroup, num, driver, lapNumber, elapsed, lapTime, box, pit, "GF")
+
+    /// `flag` is the file's `FLAG_AT_FL`: `GF`, `FCY`, `SF`, `RF` or `FF`.
+    def flaggedCrossingOf(
+        classAndGroup: String,
+        num: String,
+        driver: String,
+        lapNumber: Int32,
+        elapsed: String,
+        lapTime: String,
+        box: String,
+        pit: String,
+        flag: String
+    ): RawLap =
         decodeOne(header() + "\n"
             + "${num};${driver};${lapNumber};${lapTime};0;${box};20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
-            + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};${classAndGroup};Team;Maker;GF;20.000;20.000;20.000;")
+            + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};${classAndGroup};Team;Maker;${flag};20.000;20.000;20.000;")
+
+    /// A Hypercar's lap completed under the flag given.
+    def flaggedLap(num: String, lapNumber: Int32, elapsed: String, flag: String): RawLap =
+        flaggedCrossingOf("HYPERCAR;H", num, "1", lapNumber, elapsed, "60.000", "", "", flag)
+
+    /// The flags a timeline shows, in the order it shows them.
+    def flagsOf(events: List[Event]): List[(String, String, String)] =
+        events |> List.map(shape)
+            |> List.filter(match (_, kind, _) ->
+                List.memberOf(kind, "fullCourseYellow" :: "safetyCar" :: "redFlag" :: "greenFlag" :: Nil))
 
     // ------------------------------------------------------------ race start
 
@@ -328,6 +363,56 @@ mod Round.TestTimeline {
             lap("8", 2, "2:02.000") ::
             Nil);
         Assert.assertTrue(leadChanges(events) == Nil)
+
+    // ------------------------------------------------------------------ flags
+
+    /// A caution is the first crossing under its flag, whoever made it, and green
+    /// is the first crossing under green after it.
+    @Test
+    def aCautionAndItsEndAreTheCrossingsTheFlagChangedAt(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            flaggedLap("7", 1, "60.000", "GF") ::
+            flaggedLap("8", 1, "62.000", "GF") ::
+            flaggedLap("7", 2, "2:00.000", "FCY") ::
+            flaggedLap("8", 2, "2:03.000", "FCY") ::
+            flaggedLap("7", 3, "3:10.000", "GF") ::
+            flaggedLap("8", 3, "3:13.000", "GF") ::
+            Nil);
+        Assert.assertTrue(flagsOf(events) ==
+            ("2:00.000", "fullCourseYellow", "") ::
+            ("3:10.000", "greenFlag", "") :: Nil)
+
+    /// A yellow the safety car takes over from is two cautions and one green: no
+    /// racing ran between them.
+    @Test
+    def aSafetyCarAfterAYellowIsNoGreenBetweenThem(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            flaggedLap("7", 1, "60.000", "GF") ::
+            flaggedLap("7", 2, "2:00.000", "FCY") ::
+            flaggedLap("7", 3, "3:30.000", "SF") ::
+            flaggedLap("7", 4, "5:00.000", "RF") ::
+            flaggedLap("7", 5, "8:00.000", "SF") ::
+            flaggedLap("7", 6, "9:30.000", "GF") ::
+            Nil);
+        Assert.assertTrue(flagsOf(events) ==
+            ("2:00.000", "fullCourseYellow", "") ::
+            ("3:30.000", "safetyCar", "") ::
+            ("5:00.000", "redFlag", "") ::
+            ("8:00.000", "safetyCar", "") ::
+            ("9:30.000", "greenFlag", "") :: Nil)
+
+    /// The race starts green, so a start behind the safety car is a change at the
+    /// first crossing; and the finish's own flag is no change at all.
+    @Test
+    def aSafetyCarStartIsAChangeAndTheFinishIsNone(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            flaggedLap("7", 1, "1:30.000", "SF") ::
+            flaggedLap("7", 2, "3:00.000", "GF") ::
+            flaggedLap("7", 3, "4:00.000", "FF") ::
+            Nil);
+        Assert.assertTrue(flagsOf(events) ==
+            ("1:30.000", "safetyCar", "") ::
+            ("3:00.000", "greenFlag", "") :: Nil)
 
     // ----------------------------------------------------------- fastest laps
 

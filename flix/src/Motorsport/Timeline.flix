@@ -26,8 +26,19 @@ mod Motorsport.Timeline {
         case Finished
     }
 
+    /// A flag the whole field is shown, as the line first reads it: `SafetyCar` is
+    /// the feed's `SF`, a neutralisation every car crosses under at a crawl rather
+    /// than a slow zone, and `GreenFlag` is racing resumed after any of the others.
+    pub enum RaceFlag with Eq {
+        case FullCourseYellow
+        case SafetyCar
+        case RedFlag
+        case GreenFlag
+    }
+
     pub enum EventType with Eq {
         case RaceStart
+        case Flag(RaceFlag)
         case Of(String, CarEvent)
     }
 
@@ -65,24 +76,31 @@ mod Motorsport.Timeline {
         elapsed   = Duration
     }
 
+    /// A flag the line read for the first time since a different one.
+    pub type alias FlagShown = {
+        flag    = RaceFlag,
+        elapsed = Duration
+    }
+
     /// What the events of one round are gathered from: each car's last moment, every
-    /// overtake for the lead, every time the leader went into the pits, every
-    /// fastest lap, and every driver change.
+    /// change of flag, every overtake for the lead, every time the leader went into
+    /// the pits, every fastest lap, and every driver change.
     ///
     /// A change of the lead the leader's stop settled is in neither: the stop is, and
     /// the car that stayed out in front is in no event at all.
     pub type alias Readings = {
-        timeLimit = Duration,
-        cars      = List[(String, Duration)],
+        timeLimit     = Duration,
+        cars          = List[(String, Duration)],
+        flags         = List[FlagShown],
         overtakes     = List[Overtake],
         inPits        = List[InPit],
         fastestLaps   = List[FastestLap],
         driverChanges = List[DriverChange]
     }
 
-    /// The race start, one terminal event per car, one per overtake for the lead, one
-    /// per time the leader went into the pits, one per fastest lap, and one per
-    /// driver change, in time order.
+    /// The race start, one per change of flag, one terminal event per car, one per
+    /// overtake for the lead, one per time the leader went into the pits, one per
+    /// fastest lap, and one per driver change, in time order.
     ///
     /// Not who took the green flag: every car that turned a lap took it, all at
     /// nought, and who was ahead of whom is `Motorsport.Metadata`'s starting grid.
@@ -94,6 +112,7 @@ mod Motorsport.Timeline {
     pub def fromReadings(readings: Readings): List[Event] =
         List.flatten(
             (raceStart() :: Nil) ::
+            flagsShown(readings#flags) ::
             overtakesForLead(readings#overtakes) ::
             leadersInPit(readings#inPits) ::
             fastestLaps(readings#fastestLaps) ::
@@ -124,6 +143,9 @@ mod Motorsport.Timeline {
                 elapsed = inPit#elapsed,
                 eventType = EventType.Of(inPit#carNumber, CarEvent.LeaderInPit)
             })
+
+    def flagsShown(flags: List[FlagShown]): List[Event] =
+        flags |> List.map(shown -> { elapsed = shown#elapsed, eventType = EventType.Flag(shown#flag) })
 
     def fastestLaps(laps: List[FastestLap]): List[Event] =
         laps |> List.map(lap ->
@@ -161,6 +183,10 @@ mod Motorsport.Timeline {
     /// checked against.
     pub def names(): List[String] =
         "raceStart" ::
+        "fullCourseYellow" ::
+        "safetyCar" ::
+        "redFlag" ::
+        "greenFlag" ::
         "overtakeForLead" ::
         "leaderInPit" ::
         "fastestLap" ::
@@ -172,6 +198,7 @@ mod Motorsport.Timeline {
     pub def parts(eventType: EventType): Parts =
         match eventType {
             case EventType.RaceStart               => named("raceStart")
+            case EventType.Flag(flag)              => named(flagName(flag))
             case EventType.Of(carNumber, carEvent) =>
                 { carNumber = Some(carNumber) | carParts(carEvent) }
         }
@@ -186,16 +213,33 @@ mod Motorsport.Timeline {
             case CarEvent.Finished        => named("finished")
         }
 
+    def flagName(flag: RaceFlag): String =
+        match flag {
+            case RaceFlag.FullCourseYellow => "fullCourseYellow"
+            case RaceFlag.SafetyCar        => "safetyCar"
+            case RaceFlag.RedFlag          => "redFlag"
+            case RaceFlag.GreenFlag        => "greenFlag"
+        }
+
+    def flagOf(event: String): Option[RaceFlag] =
+        match event {
+            case "fullCourseYellow" => Some(RaceFlag.FullCourseYellow)
+            case "safetyCar"        => Some(RaceFlag.SafetyCar)
+            case "redFlag"          => Some(RaceFlag.RedFlag)
+            case "greenFlag"        => Some(RaceFlag.GreenFlag)
+            case _                  => None
+        }
+
     def named(event: String): Parts =
         { event = event, carNumber = None }
 
     pub def eventTypeOf(p: Parts): Option[EventType] =
         match (p#event, p#carNumber) {
             case ("raceStart", None)     => Some(EventType.RaceStart)
+            case (_, None)               => flagOf(p#event) |> Option.map(EventType.Flag)
             case (_, Some(carNumber))    =>
                 carEventOf(p#event)
                     |> Option.map(carEvent -> EventType.Of(carNumber, carEvent))
-            case _                       => None
         }
 
     def carEventOf(event: String): Option[CarEvent] =

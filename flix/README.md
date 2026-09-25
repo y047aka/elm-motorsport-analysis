@@ -199,7 +199,10 @@ Each car's last crossing is one `GROUP BY`, and a class's lead is
 held the one before -- two queries rather than one, since SQLite settles a `WHERE`
 before either window. The class is the car's entry's, joined through `cars`; the
 top class's lead is the field's in every round loaded, so the field's is not
-counted beside it. A driver change is a third `LAG`, over each car's laps, timed
+counted beside it. A change of flag is a `LAG` over the whole field's crossings
+in the order the line saw them, the race starting green and the finish's own
+flag being no change; `SF` is written a safety car, which every car crosses
+under at a crawl. A driver change is a third `LAG`, over each car's laps, timed
 at the crossing before the new driver's first lap, and a class's fastest lap is
 `Round.Index`'s running minimum partitioned by class -- lap 1 left out of both,
 its time and its S1 being over a shorter stretch than any later lap's. An overtake for the lead and a leader in the pits are then read

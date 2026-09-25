@@ -27,7 +27,7 @@ import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), RaceFlag(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Class as Class
 import Route
@@ -509,7 +509,7 @@ eventRow carsByNumber event =
                 CarEvent carNumber _ ->
                     Dict.get carNumber carsByNumber
 
-                RaceStart ->
+                _ ->
                     Nothing
 
         cell classes children =
@@ -559,7 +559,7 @@ carBadge car eventType =
         ( Nothing, CarEvent carNumber _ ) ->
             span [] [ text carNumber ]
 
-        ( Nothing, RaceStart ) ->
+        ( Nothing, _ ) ->
             text ""
 
 
@@ -568,6 +568,18 @@ describe eventType =
     case eventType of
         RaceStart ->
             "Race Start"
+
+        Flag FullCourseYellow ->
+            "Full Course Yellow"
+
+        Flag SafetyCar ->
+            "Safety Car"
+
+        Flag RedFlag ->
+            "Red Flag"
+
+        Flag GreenFlag ->
+            "Green Flag"
 
         CarEvent _ OvertakeForLead ->
             "Overtake for Lead"
