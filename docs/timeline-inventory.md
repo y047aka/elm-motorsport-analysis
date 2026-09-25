@@ -14,7 +14,7 @@
   あわせて `retirement` → `retired`、`checkered` → `finished` と、表示名
   (Race Start / Overtake for Lead / Leader In Pit / Retired / Finished)に名前をそろえた。
   §5-2 のとおり首位をクラスごとに数えるようにした(`overtakeForLead` 10 + `leaderInPit` 175、
-  248行)。
+  248行)。§3 のドライバー交代を全車分 `driverChange` として足した(+611、859行)。
   下の節は削除・分割・改名・クラス別化の前の実測で、旧名のまま書いてある。
 
 ## 1. 出力されているもの
@@ -72,6 +72,10 @@
 - **ベストタイム更新。** summary の `index.bestTimeChanges` には出ていて timeline には無い。
   同じ時系列情報が2ファイルに分かれている。
 - **ドライバー交代。** laps は `driverNumber` / driver name を持つ(車ごと表示のみ)。
+  **適用済み**: 全車の交代を `driverChange` として出す(Le Mans 2025 で611回、全ラウンドで
+  交代はすべてピット明けの周回)。時刻は新ドライバーの最初の周の直前の通過で、アプリが
+  `currentDriver` を切り替える瞬間と同じ。交代先の名前はファイルに持たせず、アプリがその車の
+  周回から引く。パネルの100件は、180周目(最新 11:02:00)の時点で 8:17:20 まで遡る。
 
 ### caution が「展開」である決定的な根拠
 

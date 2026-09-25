@@ -38,6 +38,7 @@ mod Round.TestTimeline {
         match carEvent {
             case CarEvent.OvertakeForLead => "overtakeForLead"
             case CarEvent.LeaderInPit     => "leaderInPit"
+            case CarEvent.DriverChange    => "driverChange"
             case CarEvent.Retired         => "retired"
             case CarEvent.Finished        => "finished"
         }
@@ -71,13 +72,21 @@ mod Round.TestTimeline {
 
     /// A lap of an LMGT3 car, the class every other helper's car is not in.
     def gtLap(num: String, lapNumber: Int32, elapsed: String): RawLap =
-        crossingOf("LMGT3;", num, lapNumber, elapsed, "", "")
+        crossingOf("LMGT3;", num, "1", lapNumber, elapsed, "", "")
 
     def gtPitLap(num: String, lapNumber: Int32, elapsed: String, pit: String): RawLap =
-        crossingOf("LMGT3;", num, lapNumber, elapsed, "", pit)
+        crossingOf("LMGT3;", num, "1", lapNumber, elapsed, "", pit)
 
     def gtBoxLap(num: String, lapNumber: Int32, elapsed: String): RawLap =
-        crossingOf("LMGT3;", num, lapNumber, elapsed, "B", "")
+        crossingOf("LMGT3;", num, "1", lapNumber, elapsed, "B", "")
+
+    /// A car's out-lap under the driver the car was handed to.
+    def handedPitLap(num: String, driver: String, lapNumber: Int32, elapsed: String, pit: String): RawLap =
+        crossingOf("HYPERCAR;H", num, driver, lapNumber, elapsed, "", pit)
+
+    /// A lap under a driver other than the car's first.
+    def seatedLap(num: String, driver: String, lapNumber: Int32, elapsed: String): RawLap =
+        crossingOf("HYPERCAR;H", num, driver, lapNumber, elapsed, "", "")
 
     /// The lap a car came back out on, which is the one the stop's length is
     /// written on.
@@ -96,19 +105,20 @@ mod Round.TestTimeline {
         box: String,
         pit: String
     ): RawLap =
-        crossingOf("HYPERCAR;H", num, lapNumber, elapsed, box, pit)
+        crossingOf("HYPERCAR;H", num, "1", lapNumber, elapsed, box, pit)
 
     /// `classAndGroup` is the file's `CLASS;GROUP`, two fields in one.
     def crossingOf(
         classAndGroup: String,
         num: String,
+        driver: String,
         lapNumber: Int32,
         elapsed: String,
         box: String,
         pit: String
     ): RawLap =
         decodeOne(header() + "\n"
-            + "${num};1;${lapNumber};60.000;0;${box};20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
+            + "${num};${driver};${lapNumber};60.000;0;${box};20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
             + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};${classAndGroup};Team;Maker;GF;20.000;20.000;20.000;")
 
     // ------------------------------------------------------------ race start
@@ -298,6 +308,37 @@ mod Round.TestTimeline {
             lap("8", 2, "2:02.000") ::
             Nil);
         Assert.assertTrue(leadChanges(events) == Nil)
+
+    // -------------------------------------------------------- driver changes
+
+    /// A car handed over at a stop is one event, timed where the driver before it
+    /// turned into the pit lane; a stop that kept its driver is none.
+    @Test
+    def aDriverChangeIsTimedAtTheCrossingIntoThePits(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "62.000") ::
+            boxLap("7", 2, "2:00.000") ::
+            boxLap("8", 2, "2:02.000") ::
+            handedPitLap("7", "2", 3, "3:00.000", "40.000") ::
+            pitLap("8", 3, "3:02.000", "40.000") ::
+            seatedLap("7", "2", 4, "4:00.000") ::
+            lap("8", 4, "4:02.000") ::
+            Nil);
+        Assert.assertTrue(named("driverChange", events) == ("2:00.000", "driverChange", "7") :: Nil)
+
+    /// A driver sharing a car with another sits in it again: each hand-over is
+    /// one, whichever of them it goes to.
+    @Test
+    def everyHandOverIsOneEvenBackToADriverBefore(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            handedPitLap("7", "2", 2, "2:00.000", "30.000") ::
+            handedPitLap("7", "1", 3, "3:00.000", "30.000") ::
+            Nil);
+        Assert.assertTrue(named("driverChange", events) ==
+            ("1:00.000", "driverChange", "7") ::
+            ("2:00.000", "driverChange", "7") :: Nil)
 
     // ---------------------------------------------------------------- order
 

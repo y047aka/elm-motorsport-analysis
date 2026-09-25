@@ -17,9 +17,11 @@ import Html.Keyed
 import Html.Lazy
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
+import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
+import Motorsport.Lap as Lap
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
@@ -483,76 +485,78 @@ number. Anything frame-made passed instead -- a snapshot, or the cut list itself
 eventRows : List Car -> Timeline -> Int -> Html Msg
 eventRows cars timeline occurredCount =
     let
-        metadataByNumber =
+        carsByNumber =
             cars
-                |> List.map (\car -> ( car.metadata.carNumber, car.metadata ))
+                |> List.map (\car -> ( car.metadata.carNumber, car ))
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
-        |> List.map (eventRow metadataByNumber)
+        |> List.map (eventRow carsByNumber)
         |> tbody []
 
 
 {-| One row per event: its car's class, what it was, whose it was, when.
 -}
-eventRow : Dict CarNumber Metadata -> TimelineEvent -> Html Msg
-eventRow metadataByNumber event =
+eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
+eventRow carsByNumber event =
+    let
+        car =
+            case event.eventType of
+                CarEvent carNumber _ ->
+                    Dict.get carNumber carsByNumber
+
+                RaceStart ->
+                    Nothing
+    in
     tr []
         [ td [ Attributes.class "w-px py-0.5 pr-2" ]
-            [ classBar metadataByNumber event.eventType ]
+            [ car |> Maybe.map (.metadata >> classBar) |> Maybe.withDefault (text "") ]
         , td [ Attributes.class "py-0.5 pr-2" ]
-            [ text (eventTypeToString event.eventType) ]
+            [ text (describe car event) ]
         , td [ Attributes.class "w-px py-0.5 pr-2" ]
-            [ carBadge metadataByNumber event.eventType ]
+            [ carBadge car event.eventType ]
         , td [ Attributes.class "whitespace-nowrap py-0.5 text-right tabular-nums text-muted-foreground" ]
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
 
 
 {-| The class of the car the event was, in the colour the standings' class headings
-carry, since a lead is its class's. A race start and a number no car of the field
-answers to have none.
+carry, since a lead is its class's.
 -}
-classBar : Dict CarNumber Metadata -> EventType -> Html Msg
-classBar metadataByNumber eventType =
-    case eventType of
-        CarEvent carNumber _ ->
-            metadataByNumber
-                |> Dict.get carNumber
-                |> Maybe.map
-                    (\metadata ->
-                        div
-                            [ Attributes.class "flex before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-                            , attribute "style" ("--class-color: " ++ Class.toColor metadata.class ++ ";")
-                            ]
-                            []
-                    )
-                |> Maybe.withDefault (text "")
-
-        RaceStart ->
-            text ""
+classBar : Metadata -> Html Msg
+classBar metadata =
+    div
+        [ Attributes.class "flex before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        , attribute "style" ("--class-color: " ++ Class.toColor metadata.class ++ ";")
+        ]
+        []
 
 
 {-| Whose event this was, badged like the standings badge it sits beside. A race
 start belongs to nobody, and a number no car of the field answers to keeps its
 bare digits rather than vanishing.
 -}
-carBadge : Dict CarNumber Metadata -> EventType -> Html Msg
-carBadge metadataByNumber eventType =
-    case eventType of
-        CarEvent carNumber _ ->
-            metadataByNumber
-                |> Dict.get carNumber
-                |> Maybe.map CarNumberBadge.viewRow
-                |> Maybe.withDefault (span [] [ text carNumber ])
+carBadge : Maybe Car -> EventType -> Html Msg
+carBadge car eventType =
+    case ( car, eventType ) of
+        ( Just { metadata }, _ ) ->
+            CarNumberBadge.viewRow metadata
 
-        RaceStart ->
+        ( Nothing, CarEvent carNumber _ ) ->
+            span [] [ text carNumber ]
+
+        ( Nothing, RaceStart ) ->
             text ""
 
 
-eventTypeToString : EventType -> String
-eventTypeToString eventType =
-    case eventType of
+{-| A driver change is the two drivers and nothing else, the badge beside it saying
+whose car: the one of the lap the event completes, and the one of the lap in
+progress from it, which is the lap the car's `currentDriver` is read off from then
+on.
+-}
+describe : Maybe Car -> TimelineEvent -> String
+describe car event =
+    case event.eventType of
         RaceStart ->
             "Race Start"
 
@@ -561,6 +565,20 @@ eventTypeToString eventType =
 
         CarEvent _ LeaderInPit ->
             "Leader In Pit"
+
+        CarEvent _ DriverChange ->
+            let
+                driverOf find =
+                    car
+                        |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
+                        |> Maybe.map (.driver >> Driver.toInitialAndSurname)
+            in
+            case ( driverOf Lap.findLastLapAt, driverOf Lap.findCurrentLap ) of
+                ( Just handedOver, Just tookOver ) ->
+                    handedOver ++ " → " ++ tookOver
+
+                _ ->
+                    "Driver Change"
 
         CarEvent _ Retired ->
             "Retired"

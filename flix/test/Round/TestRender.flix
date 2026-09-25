@@ -94,8 +94,8 @@ mod Round.TestRender {
             lines
         ));
         // The race's own start, car 7's flag, car 12 taking the lead on the lap
-        // it had to itself, and its own flag.
-        Assert.assertTrue(List.length(lines) == 4)
+        // it had to itself, car 12 changing driver, and its own flag.
+        Assert.assertTrue(List.length(lines) == 5)
 
     /// A round with no laps has no cars in it, and the race still started.
     @Test

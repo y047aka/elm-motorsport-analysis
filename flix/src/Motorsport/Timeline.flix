@@ -4,7 +4,8 @@
 /// these back a line at a time. What is decided here is what the rows do not
 /// say -- whether a car's last lap was the flag or a retirement, which changes of
 /// the lead were overtakes, and which cars went into the pits leading -- and the
-/// counting that finds each event is `Round.Timeline`'s.
+/// counting that finds each event is `Round.Timeline`'s. A driver change is the
+/// laps' own saying and is only carried through.
 mod Motorsport.Timeline {
 
     use Util.Duration.Duration
@@ -14,10 +15,12 @@ mod Motorsport.Timeline {
     /// What one car did. The lead is the car's class's, and the top class's is the
     /// field's. `OvertakeForLead` is about the car that came in front of its class;
     /// `LeaderInPit` is about the car that led it and turned into the pit lane, and
-    /// says nothing about who took the lead in its place.
+    /// says nothing about who took the lead in its place. `DriverChange` says the
+    /// car's driver changed and not to whom: that is the car's own laps' to say.
     pub enum CarEvent with Eq {
         case OvertakeForLead
         case LeaderInPit
+        case DriverChange
         case Retired
         case Finished
     }
@@ -47,20 +50,30 @@ mod Motorsport.Timeline {
         elapsed   = Duration
     }
 
+    /// A car handed to another driver, and the crossing that did it: the last one
+    /// the driver before made, where the car turned into the pit lane.
+    pub type alias DriverChange = {
+        carNumber = String,
+        elapsed   = Duration
+    }
+
     /// What the events of one round are gathered from: each car's last moment, every
-    /// overtake for the lead, and every time the leader went into the pits.
+    /// overtake for the lead, every time the leader went into the pits, and every
+    /// driver change.
     ///
     /// A change of the lead the leader's stop settled is in neither: the stop is, and
     /// the car that stayed out in front is in no event at all.
     pub type alias Readings = {
         timeLimit = Duration,
         cars      = List[(String, Duration)],
-        overtakes = List[Overtake],
-        inPits    = List[InPit]
+        overtakes     = List[Overtake],
+        inPits        = List[InPit],
+        driverChanges = List[DriverChange]
     }
 
-    /// The race start, one terminal event per car, one per overtake for the lead, and
-    /// one per time the leader went into the pits, in time order.
+    /// The race start, one terminal event per car, one per overtake for the lead, one
+    /// per time the leader went into the pits, and one per driver change, in time
+    /// order.
     ///
     /// Not who took the green flag: every car that turned a lap took it, all at
     /// nought, and who was ahead of whom is `Motorsport.Metadata`'s starting grid.
@@ -74,6 +87,7 @@ mod Motorsport.Timeline {
             (raceStart() :: Nil) ::
             overtakesForLead(readings#overtakes) ::
             leadersInPit(readings#inPits) ::
+            driverChanges(readings#driverChanges) ::
             terminals(readings#timeLimit, readings#cars) ::
             Nil
         )
@@ -101,6 +115,13 @@ mod Motorsport.Timeline {
                 eventType = EventType.Of(inPit#carNumber, CarEvent.LeaderInPit)
             })
 
+    def driverChanges(changes: List[DriverChange]): List[Event] =
+        changes |> List.map(change ->
+            {
+                elapsed = change#elapsed,
+                eventType = EventType.Of(change#carNumber, CarEvent.DriverChange)
+            })
+
     /// A car still running when the race was scheduled to end took the flag;
     /// one whose last lap fell short of it retired. The rows say when each car
     /// stopped and not why, and the time limit is `Metadata`'s estimate rather
@@ -125,6 +146,7 @@ mod Motorsport.Timeline {
         "raceStart" ::
         "overtakeForLead" ::
         "leaderInPit" ::
+        "driverChange" ::
         "retired" ::
         "finished" ::
         Nil
@@ -140,6 +162,7 @@ mod Motorsport.Timeline {
         match carEvent {
             case CarEvent.OvertakeForLead => named("overtakeForLead")
             case CarEvent.LeaderInPit     => named("leaderInPit")
+            case CarEvent.DriverChange    => named("driverChange")
             case CarEvent.Retired         => named("retired")
             case CarEvent.Finished        => named("finished")
         }
@@ -160,6 +183,7 @@ mod Motorsport.Timeline {
         match event {
             case "overtakeForLead" => Some(CarEvent.OvertakeForLead)
             case "leaderInPit"     => Some(CarEvent.LeaderInPit)
+            case "driverChange"    => Some(CarEvent.DriverChange)
             case "retired"         => Some(CarEvent.Retired)
             case "finished"        => Some(CarEvent.Finished)
             case _                 => None

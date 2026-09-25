@@ -17,6 +17,7 @@ mod Db.TestTimelineEvents {
         at(0, EventType.RaceStart) ::
         at(1000, EventType.Of("7", CarEvent.OvertakeForLead)) ::
         at(1200, EventType.Of("8", CarEvent.LeaderInPit)) ::
+        at(1200, EventType.Of("8", CarEvent.DriverChange)) ::
         at(4000, EventType.Of("8", CarEvent.Retired)) ::
         at(5000, EventType.Of("7", CarEvent.Finished)) ::
         Nil
@@ -29,7 +30,7 @@ mod Db.TestTimelineEvents {
     @Test
     def theEventsAreNumberedFromNoughtInOrder(): Unit \ Assert =
         let rows = TimelineEvents.fromEvents(3, oneOfEach());
-        Assert.assertTrue(rows |> List.map(r -> r#seq) == List.range(0, 5));
+        Assert.assertTrue(rows |> List.map(r -> r#seq) == List.range(0, 6));
         Assert.assertTrue(rows |> List.forAll(r -> r#roundId == 3))
 
     /// Compared as the line the event is written out as, which is the other

@@ -1,8 +1,8 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// three readings of the laps -- each car's last moment, each overtake for a
-/// class's lead, each time a class's leader went into the pits -- and what they
-/// add up to is `Motorsport.Timeline`'s.
+/// four readings of the laps -- each car's last moment, each overtake for a
+/// class's lead, each time a class's leader went into the pits, each driver
+/// change -- and what they add up to is `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
     use Db.Cars
@@ -42,8 +42,9 @@ mod Round.Timeline {
         Timeline.fromReadings({
             timeLimit = timeLimit,
             cars      = cars(entry),
-            overtakes = overtakes(entry),
-            inPits    = leadersInPit(entry)
+            overtakes     = overtakes(entry),
+            inPits        = leadersInPit(entry),
+            driverChanges = driverChanges(entry)
         })
 
     // ------------------------------------------------------------------ cars
@@ -60,6 +61,31 @@ mod Round.Timeline {
             |> Sql.orderBy(Sql.raw("MIN(source_row)") :: Nil)
             |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)")))
             |> Sql.reading(match (carNumber, last) -> (carNumber, Util.Duration.fromMillis(last)))
+            |> Sql.selectAll
+
+    // --------------------------------------------------------- driver changes
+
+    /// Every lap whose driver is not the one of the car's lap before it, timed at
+    /// that lap before's crossing: the lap in progress from there on is the new
+    /// driver's, which is when the app reads the car as theirs.
+    ///
+    /// Every change in the rounds loaded falls on an out-lap, but nothing here asks
+    /// for one: a change the feed writes elsewhere is still a change.
+    def driverChanges(entry: Entry): List[Timeline.DriverChange] \ DbRead =
+        Sql.rows(Sql.raw("seated"))
+            |> Sql.using(Sql.frags(
+                Sql.raw("seated AS (SELECT car_number, driver_number,"
+                    + " LAG(driver_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS prior,"
+                    + " LAG(elapsed_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_at"
+                    + " FROM " + Laps.table() + " WHERE") ::
+                Sql.term(Laps.inRound(entry)) ::
+                Sql.raw(")") :: Nil
+            ))
+            |> Sql.filter(_ -> Sql.column("prior IS NOT NULL AND prior <> driver_number"))
+            |> Sql.orderBy(Sql.raw("handed_at") :: Nil)
+            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("handed_at")))
+            |> Sql.reading(match (carNumber, elapsed) ->
+                { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
             |> Sql.selectAll
 
     // ------------------------------------------------------------ overtakes

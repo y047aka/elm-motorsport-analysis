@@ -30,6 +30,7 @@ type EventType
 type CarEventType
     = OvertakeForLead
     | LeaderInPit
+    | DriverChange
     | Retired
     | Finished
 
@@ -80,6 +81,9 @@ carEventTypeDecoder event =
 
         "leaderInPit" ->
             Decode.succeed LeaderInPit
+
+        "driverChange" ->
+            Decode.succeed DriverChange
 
         "retired" ->
             Decode.succeed Retired
