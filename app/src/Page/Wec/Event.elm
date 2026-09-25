@@ -10,7 +10,7 @@ module Page.Wec.Event exposing (Model, Msg, init, subscriptions, update, view)
 import Browser.Events
 import Dict exposing (Dict)
 import Effect exposing (Effect)
-import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
+import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
@@ -463,9 +463,7 @@ timelinePanel cell timeline replay =
         [ Card.card []
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
-                    [ table [ Attributes.class "w-full border-collapse text-xs" ]
-                        [ Html.Lazy.lazy3 eventRows replay.race.cars timeline occurredCount ]
-                    ]
+                    [ Html.Lazy.lazy3 eventRows replay.race.cars timeline occurredCount ]
                 ]
             ]
         ]
@@ -492,10 +490,16 @@ eventRows cars timeline occurredCount =
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
         |> List.map (eventRow carsByNumber)
-        |> tbody []
+        |> div [ Attributes.class "grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-xs" ]
 
 
-{-| One row per event: its car's class, what it was, whose it was, when.
+{-| One row per event: its car's class, what it was, whose it was, when, and for a
+driver change the two drivers on a line of their own below, as wide as the row
+less the class.
+
+A row is two lines whatever it holds, the first as tall as the badge: the
+`1.375rem` is `CarNumberBadge.viewRow`'s height, and moves with it.
+
 -}
 eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
 eventRow carsByNumber event =
@@ -507,26 +511,36 @@ eventRow carsByNumber event =
 
                 RaceStart ->
                     Nothing
+
+        cell classes children =
+            div [ Attributes.class classes ] children
+
+        firstLine rows =
+            [ cell "row-span-2 h-full" [ car |> Maybe.map (.metadata >> classBar) |> Maybe.withDefault (text "") ]
+            , cell rows [ text (describe event.eventType) ]
+            , cell rows [ carBadge car event.eventType ]
+            , cell ("whitespace-nowrap text-right tabular-nums text-muted-foreground " ++ rows)
+                [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
+            ]
     in
-    tr []
-        [ td [ Attributes.class "w-px py-0.5 pr-2" ]
-            [ car |> Maybe.map (.metadata >> classBar) |> Maybe.withDefault (text "") ]
-        , td [ Attributes.class "py-0.5 pr-2" ]
-            [ text (describe car event) ]
-        , td [ Attributes.class "w-px py-0.5 pr-2" ]
-            [ carBadge car event.eventType ]
-        , td [ Attributes.class "whitespace-nowrap py-0.5 text-right tabular-nums text-muted-foreground" ]
-            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
-        ]
+    div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-1 items-center py-0.5" ]
+        (case handOver car event of
+            Just ( handedOver, tookOver ) ->
+                firstLine ""
+                    ++ [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text (handedOver ++ " → " ++ tookOver) ] ]
+
+            Nothing ->
+                firstLine "row-span-2"
+        )
 
 
 {-| The class of the car the event was, in the colour the standings' class headings
-carry, since a lead is its class's.
+carry, since a lead is its class's, and as tall as the row.
 -}
 classBar : Metadata -> Html Msg
 classBar metadata =
     div
-        [ Attributes.class "flex before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        [ Attributes.class "flex h-full before:block before:content-[''] before:w-[0.2em] before:h-full before:rounded-[2px] before:[background-color:var(--class-color)]"
         , attribute "style" ("--class-color: " ++ Class.toColor metadata.class ++ ";")
         ]
         []
@@ -549,14 +563,9 @@ carBadge car eventType =
             text ""
 
 
-{-| A driver change is the two drivers and nothing else, the badge beside it saying
-whose car: the one of the lap the event completes, and the one of the lap in
-progress from it, which is the lap the car's `currentDriver` is read off from then
-on.
--}
-describe : Maybe Car -> TimelineEvent -> String
-describe car event =
-    case event.eventType of
+describe : EventType -> String
+describe eventType =
+    case eventType of
         RaceStart ->
             "Race Start"
 
@@ -567,24 +576,33 @@ describe car event =
             "Leader In Pit"
 
         CarEvent _ DriverChange ->
-            let
-                driverOf find =
-                    car
-                        |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
-                        |> Maybe.map (.driver >> Driver.toInitialAndSurname)
-            in
-            case ( driverOf Lap.findLastLapAt, driverOf Lap.findCurrentLap ) of
-                ( Just handedOver, Just tookOver ) ->
-                    handedOver ++ " → " ++ tookOver
-
-                _ ->
-                    "Driver Change"
+            "Driver Change"
 
         CarEvent _ Retired ->
             "Retired"
 
         CarEvent _ Finished ->
             "Finished"
+
+
+{-| Who handed a car to whom at a driver change: the driver of the lap the event
+completes, and the one of the lap in progress from it, which is the lap the car's
+`currentDriver` is read off from then on.
+-}
+handOver : Maybe Car -> TimelineEvent -> Maybe ( String, String )
+handOver car event =
+    let
+        driverOf find =
+            car
+                |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
+                |> Maybe.map (.driver >> Driver.toInitialAndSurname)
+    in
+    case event.eventType of
+        CarEvent _ DriverChange ->
+            Maybe.map2 Tuple.pair (driverOf Lap.findLastLapAt) (driverOf Lap.findCurrentLap)
+
+        _ ->
+            Nothing
 
 
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
