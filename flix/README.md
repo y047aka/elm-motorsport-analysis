@@ -201,8 +201,8 @@ before either window. The class is the car's entry's, joined through `cars`; the
 top class's lead is the field's in every round loaded, so the field's is not
 counted beside it. A driver change is a third `LAG`, over each car's laps, timed
 at the crossing before the new driver's first lap, and a class's fastest lap is
-`Round.Index`'s running minimum partitioned by class -- with lap 1 left out, whose
-time is the race's elapsed time and at three circuits beats every lap after it. An overtake for the lead and a leader in the pits are then read
+`Round.Index`'s running minimum partitioned by class -- lap 1 left out of both,
+its time and its S1 being over a shorter stretch than any later lap's. An overtake for the lead and a leader in the pits are then read
 apart and about two different cars: an overtake is about whoever crossed the next
 lap first, a leader in the pits about the car that led and turned down the pit
 lane. `Db.Laps.pitLap` names either half of a stop -- the in-lap, marked

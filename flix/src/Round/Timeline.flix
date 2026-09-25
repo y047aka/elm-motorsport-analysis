@@ -71,10 +71,8 @@ mod Round.Timeline {
     /// the laps were completed and with the file's order breaking a tie on the
     /// clock, as `Round.Index` walks the field's.
     ///
-    /// Not lap 1: its time is the race's elapsed time at its crossing, and at Fuji,
-    /// Spa and Bahrain the leader's reads faster than any lap run after it.
-    /// `Round.Index` still counts it. A lap the feed did not time is written
-    /// `0.000` and is no lap at all.
+    /// Not lap 1, for the reason `Round.Index` leaves it out of the fastest lap. A
+    /// lap the feed did not time is written `0.000` and is no lap at all.
     def fastestLaps(entry: Entry): List[Timeline.FastestLap] \ DbRead =
         Sql.rows(Sql.raw("timed"))
             |> Sql.using(Sql.frags(

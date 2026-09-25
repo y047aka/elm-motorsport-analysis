@@ -73,13 +73,13 @@ mod Round.TestIndex {
     @Test
     def onlyAnImprovementChangesTheRecord(): Unit \ {Assert, IO} =
         let laps =
-            lap("7", "Driver A", 1, "60.000", "20.000", "20.000", "20.000", "60.000") ::
-            lap("8", "Driver B", 1, "61.000", "21.000", "20.000", "20.000", "61.000") ::
-            lap("8", "Driver B", 2, "58.000", "19.000", "19.500", "19.500", "1:59.000") ::
+            lap("7", "Driver A", 2, "60.000", "20.000", "20.000", "20.000", "60.000") ::
+            lap("8", "Driver B", 2, "61.000", "21.000", "20.000", "20.000", "61.000") ::
+            lap("8", "Driver B", 3, "58.000", "19.000", "19.500", "19.500", "1:59.000") ::
             Nil;
         Assert.assertTrue(
             held(changesOf(Record.FastestLap, laps))
-                == ("1:00.000", "7", 1) :: ("58.000", "8", 2) :: Nil
+                == ("1:00.000", "7", 2) :: ("58.000", "8", 3) :: Nil
         )
 
     /// A sector record is the sector's own time, not the time of the lap that
@@ -87,24 +87,40 @@ mod Round.TestIndex {
     @Test
     def aSectorRecordIsItsOwnTime(): Unit \ {Assert, IO} =
         let laps =
-            lap("7", "Driver A", 1, "60.000", "20.000", "20.000", "20.000", "60.000") ::
-            lap("8", "Driver B", 1, "61.000", "19.000", "21.000", "21.000", "61.000") ::
+            lap("7", "Driver A", 2, "60.000", "20.000", "20.000", "20.000", "60.000") ::
+            lap("8", "Driver B", 2, "61.000", "19.000", "21.000", "21.000", "61.000") ::
             Nil;
         Assert.assertTrue(
             held(changesOf(Record.FastestSector(Sector.S1), laps))
-                == ("20.000", "7", 1) :: ("19.000", "8", 1) :: Nil
+                == ("20.000", "7", 2) :: ("19.000", "8", 2) :: Nil
         );
-        Assert.assertTrue(held(changesOf(Record.FastestSector(Sector.S2), laps)) == ("20.000", "7", 1) :: Nil)
+        Assert.assertTrue(held(changesOf(Record.FastestSector(Sector.S2), laps)) == ("20.000", "7", 2) :: Nil)
 
     /// The feed writes a lap it did not record as `0.000`. That is not a lap
     /// of the circuit, so it takes no record however fast it reads.
     @Test
     def anUnrecordedLapTimeTakesNoRecord(): Unit \ {Assert, IO} =
         let laps =
-            lap("7", "Driver A", 1, "0.000", "20.000", "20.000", "20.000", "60.000") ::
-            lap("8", "Driver B", 1, "61.000", "21.000", "20.000", "20.000", "61.000") ::
+            lap("7", "Driver A", 2, "0.000", "20.000", "20.000", "20.000", "60.000") ::
+            lap("8", "Driver B", 2, "61.000", "21.000", "20.000", "20.000", "61.000") ::
             Nil;
-        Assert.assertTrue(held(changesOf(Record.FastestLap, laps)) == ("1:01.000", "8", 1) :: Nil)
+        Assert.assertTrue(held(changesOf(Record.FastestLap, laps)) == ("1:01.000", "8", 2) :: Nil)
+
+    /// Lap 1's time and S1 are over a shorter stretch than a lap's, so however fast
+    /// they read they take neither record; its S2 and S3 are a lap's, and take theirs.
+    @Test
+    def lapOneTakesNeitherTheLapNorS1(): Unit \ {Assert, IO} =
+        let laps =
+            lap("7", "Driver A", 1, "55.000", "15.000", "20.000", "20.000", "55.000") ::
+            lap("7", "Driver A", 2, "60.000", "20.000", "20.500", "19.500", "1:55.000") ::
+            Nil;
+        Assert.assertTrue(held(changesOf(Record.FastestLap, laps)) == ("1:00.000", "7", 2) :: Nil);
+        Assert.assertTrue(held(changesOf(Record.FastestSector(Sector.S1), laps)) == ("20.000", "7", 2) :: Nil);
+        Assert.assertTrue(held(changesOf(Record.FastestSector(Sector.S2), laps)) == ("20.000", "7", 1) :: Nil);
+        Assert.assertTrue(
+            held(changesOf(Record.FastestSector(Sector.S3), laps))
+                == ("20.000", "7", 1) :: ("19.500", "7", 2) :: Nil
+        )
 
     /// Nor are the mini-sectors of such a lap, which the feed records all the
     /// same.
