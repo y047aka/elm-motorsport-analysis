@@ -292,6 +292,19 @@ mod Round.TestTimeline {
             ("5:30.000", "overtakeForLead", "8") ::
             Nil)
 
+    /// A leader that stopped for good was overtaken by nobody: the car behind leads
+    /// the next lap without an event, and the leader's own is its retirement.
+    @Test
+    def aLeadTheLeaderLeftByRetiringIsNoOvertake(): Unit \ {Assert, IO} =
+        let events = timelineOf("3:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "62.000") ::
+            lap("8", 2, "2:03.000") ::
+            lap("8", 3, "3:04.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == Nil);
+        Assert.assertTrue(named("retired", events) == ("1:00.000", "retired", "7") :: Nil)
+
     /// A stop by a car that was never in the lead is not a leader's stop: it led
     /// neither the lap before its out-lap nor the lap before that.
     @Test
@@ -497,15 +510,17 @@ mod Round.TestTimeline {
     ///
     /// The laps run past the hour so that the limit a load derives falls inside
     /// them -- `Motorsport.Metadata` reads it as the whole hours the round's
-    /// longest run covered -- which is what puts the flag on one car and a
-    /// retirement on the other.
+    /// longest run covered -- which is what puts the flag on two cars and a
+    /// retirement on the third.
     def loadedAndCounted(): (List[Event], List[Event]) \ IO =
         let laps =
             lap("7", 1, "30:00.000") ::
             lap("8", 1, "31:00.000") ::
+            lap("9", 1, "32:00.000") ::
             lap("8", 2, "50:00.000") ::
             pitLap("7", 2, "1:00:00.000", "1:10.000") ::
             lap("7", 3, "1:30:00.000") ::
+            lap("8", 3, "1:31:00.000") ::
             Nil;
         TestSupport.onRound(entry(), laps, () -> (
             Timeline.read(entry()),
@@ -545,8 +560,9 @@ mod Round.TestTimeline {
                     ("1:00:00.000", "leaderInPit", "7") :: Nil);
                 Assert.assertTrue(named("overtakeForLead", readBack) ==
                     ("1:30:00.000", "overtakeForLead", "7") :: Nil);
-                Assert.assertTrue(named("finished", readBack) == ("1:30:00.000", "finished", "7") :: Nil);
-                Assert.assertTrue(named("retired", readBack) == ("50:00.000", "retired", "8") :: Nil)
+                Assert.assertTrue(named("finished", readBack) ==
+                    ("1:30:00.000", "finished", "7") :: ("1:31:00.000", "finished", "8") :: Nil);
+                Assert.assertTrue(named("retired", readBack) == ("32:00.000", "retired", "9") :: Nil)
         }
 
 }

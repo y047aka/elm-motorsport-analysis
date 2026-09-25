@@ -155,13 +155,15 @@ mod Round.Timeline {
     /// before either of them: the leaders are picked out in `l`, and only then
     /// is each one asked who led the lap before.
     ///
-    /// A boundary the car that lost the lead crossed as either half of a stop is no
-    /// overtake: the stop is `leadersInPit`'s event.
+    /// The car that lost the lead has to have crossed that boundary on the track. One
+    /// that crossed it as either half of a stop was not overtaken -- the stop is
+    /// `leadersInPit`'s event -- and nor was one that never crossed it, having
+    /// retired.
     def overtakes(entry: Entry): List[Timeline.Overtake] \ DbRead =
         Sql.rows(Sql.raw("(" + handedOver() + ") AS led"))
             |> Sql.using(stopCrossings(entry))
             |> Sql.filter(_ -> Sql.column("held IS NOT NULL AND held <> car_number"))
-            |> Sql.filter(_ -> Sql.column("NOT " + crossedInPits("led.held", "led.lap_number")))
+            |> Sql.filter(_ -> Sql.column(crossedOnTrack("led.held", "led.lap_number")))
             |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
             |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms")))
             |> Sql.reading(match (carNumber, elapsed) ->
@@ -231,16 +233,16 @@ mod Round.Timeline {
             + " LAG(car_number) OVER (PARTITION BY car_class ORDER BY lap_number) AS held"
             + " FROM l WHERE rn = 1"
 
-    /// Whether the car named crossed the lap named as one half of a stop.
+    /// Whether the car named crossed the lap named, and not as one half of a stop.
     ///
     /// That lap alone, and not the one before it: a leader that came back out in
     /// front has its out-lap there, and an overtake on the lap after is still one.
     ///
     /// The car and lap are text because the readings correlate on rows neither
     /// declares columns for, and so are `cameInAt`'s.
-    def crossedInPits(car: String, lap: String): String =
+    def crossedOnTrack(car: String, lap: String): String =
         "EXISTS (SELECT 1 FROM l WHERE l.car_number = ${car}"
-            + " AND l.lap_number = ${lap} AND l.pitted)"
+            + " AND l.lap_number = ${lap} AND NOT l.pitted)"
 
     /// Where the car named came in, for the out-lap named: of that lap and the one
     /// before it, the earlier of the crossings that are one half of a stop, which is
