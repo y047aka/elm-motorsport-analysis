@@ -524,7 +524,7 @@ eventRow carsByNumber event =
                     []
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-1 items-center py-0.5" ]
-        ([ cell "row-span-2 h-full" [ car |> Maybe.map (.metadata >> classBar) |> Maybe.withDefault (text "") ]
+        ([ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
          , cell "" [ text (describe event.eventType) ]
          , cell "" [ carBadge car event.eventType ]
          , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
@@ -535,13 +535,13 @@ eventRow carsByNumber event =
 
 
 {-| The class of the car the event was, in the colour the standings' class headings
-carry, since a lead is its class's, and as tall as the row.
+carry, since a lead is its class's.
 -}
-classBar : Metadata -> Html Msg
-classBar metadata =
+classMark : Metadata -> Html Msg
+classMark metadata =
     div
-        [ Attributes.class "flex h-full before:block before:content-[''] before:w-[0.2em] before:h-full before:rounded-[2px] before:[background-color:var(--class-color)]"
-        , attribute "style" ("--class-color: " ++ Class.toColor metadata.class ++ ";")
+        [ Attributes.class "size-2 rounded-[2px]"
+        , attribute "style" ("background-color: " ++ Class.toColor metadata.class ++ ";")
         ]
         []
 
