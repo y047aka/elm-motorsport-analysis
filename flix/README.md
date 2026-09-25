@@ -201,8 +201,9 @@ either window. A pass for the lead and a stop by the leader are then read apart 
 about two different cars: a pass is about whoever crossed the next lap first, a stop
 about the car that led and turned down the pit lane. `Db.Laps.pitLap` names either
 half of a stop -- the in-lap, marked `crossing_finish_line_in_pit`, and the out-lap
-whose `pit_time` carries the stop -- and `Db.Laps.pitOutLap` names the half a stop is
-counted at, which is the one `Cli.Load.Validation` skips a pit lap over too.
+whose `pit_time` carries the stop -- and is what `Cli.Load.Validation` skips a pit
+lap over too. `Db.Laps.pitOutLap` names the out-lap alone, which is the half a stop
+is counted at; the event is timed at the in-lap, as below.
 
 The stop is anchored on its out-lap because that is the crossing the feed has to
 write: the two are sometimes both marked as pit crossings and the in-lap sometimes

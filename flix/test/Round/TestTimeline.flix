@@ -137,8 +137,8 @@ mod Round.TestTimeline {
             ("3:00.000", "tookLeadOnTrack", "7") :: Nil)
 
     /// A change the leader's stop settled is about the leader and not about who
-    /// went in front, and is timed where the stop is: the out-lap carries how long
-    /// the stop took, which is as close to where it came in as the feed says.
+    /// went in front. With no in-lap written, it is timed at the out-lap, the one
+    /// crossing of the stop there is.
     @Test
     def aLeadTheLeaderGaveUpInThePits(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
