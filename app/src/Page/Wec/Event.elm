@@ -492,17 +492,17 @@ eventRows cars timeline occurredCount =
         |> tbody []
 
 
-{-| One row per event: time, whose it was, what it was.
+{-| One row per event: whose it was, what it was, when.
 -}
 eventRow : Dict CarNumber Metadata -> TimelineEvent -> Html Msg
 eventRow metadataByNumber event =
     tr []
-        [ td [ Attributes.class "whitespace-nowrap py-0.5 pr-2 tabular-nums text-muted-foreground" ]
-            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
-        , td [ Attributes.class "w-px py-0.5 pr-2" ]
+        [ td [ Attributes.class "w-px py-0.5 pr-2" ]
             [ carBadge metadataByNumber event.eventType ]
-        , td [ Attributes.class "py-0.5 text-right" ]
+        , td [ Attributes.class "py-0.5 pr-2" ]
             [ text (eventTypeToString event.eventType) ]
+        , td [ Attributes.class "whitespace-nowrap py-0.5 text-right tabular-nums text-muted-foreground" ]
+            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
 
 
