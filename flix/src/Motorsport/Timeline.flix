@@ -3,22 +3,22 @@
 /// The mirror of `Motorsport.Race.TimelineEvent` on the Elm side, which reads
 /// these back a line at a time. What is decided here is what the rows do not
 /// say -- whether a car's last lap was the flag or a retirement, which changes of
-/// the lead were passes, and which stops were the leader's -- and the counting that
-/// finds each event is `Round.Timeline`'s.
+/// the lead were overtakes, and which cars went into the pits leading -- and the
+/// counting that finds each event is `Round.Timeline`'s.
 mod Motorsport.Timeline {
 
     use Util.Duration.Duration
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt}
 
-    /// What one car did. `TookLeadOnTrack` is about the car that came in front of
-    /// the field; `LeaderPitted` is about the car that led and turned into the pit
+    /// What one car did. `OvertakeForLead` is about the car that came in front of
+    /// the field; `LeaderInPit` is about the car that led and turned into the pit
     /// lane, and says nothing about who took the lead in its place.
     pub enum CarEvent with Eq {
-        case TookLeadOnTrack
-        case LeaderPitted
-        case Retirement
-        case Checkered
+        case OvertakeForLead
+        case LeaderInPit
+        case Retired
+        case Finished
     }
 
     pub enum EventType with Eq {
@@ -31,35 +31,35 @@ mod Motorsport.Timeline {
         eventType = EventType
     }
 
-    /// A car that took the lead by passing the field, and the crossing that did it.
-    /// Not every change of the lead is one: `Stop` is the reading of the laps that
+    /// A car that took the lead by overtaking on track, and the crossing that did it.
+    /// Not every change of the lead is one: `InPit` is the reading of the laps that
     /// says who was in the pits.
-    pub type alias Pass = {
+    pub type alias Overtake = {
         carNumber = String,
         elapsed   = Duration
     }
 
     /// The leader's crossing into the pit lane, and whose it was. Whether the lead
     /// changed hands over the stop is neither asked nor said.
-    pub type alias Stop = {
+    pub type alias InPit = {
         carNumber = String,
         elapsed   = Duration
     }
 
     /// What the events of one round are gathered from: each car's last moment, every
-    /// pass for the lead, and every stop the leader made.
+    /// overtake for the lead, and every time the leader went into the pits.
     ///
     /// A change of the lead the leader's stop settled is in neither: the stop is, and
     /// the car that stayed out in front is in no event at all.
     pub type alias Readings = {
         timeLimit = Duration,
         cars      = List[(String, Duration)],
-        passes    = List[Pass],
-        stops     = List[Stop]
+        overtakes = List[Overtake],
+        inPits    = List[InPit]
     }
 
-    /// The race start, one terminal event per car, one per pass for the lead, and one
-    /// per stop the leader made, in time order.
+    /// The race start, one terminal event per car, one per overtake for the lead, and
+    /// one per time the leader went into the pits, in time order.
     ///
     /// Not who took the green flag: every car that turned a lap took it, all at
     /// nought, and who was ahead of whom is `Motorsport.Metadata`'s starting grid.
@@ -71,8 +71,8 @@ mod Motorsport.Timeline {
     pub def fromReadings(readings: Readings): List[Event] =
         List.flatten(
             (raceStart() :: Nil) ::
-            tookTheLead(readings#passes) ::
-            leaderPitStops(readings#stops) ::
+            overtakesForLead(readings#overtakes) ::
+            leadersInPit(readings#inPits) ::
             terminals(readings#timeLimit, readings#cars) ::
             Nil
         )
@@ -83,21 +83,21 @@ mod Motorsport.Timeline {
     def raceStart(): Event =
         { elapsed = Util.Duration.zero(), eventType = EventType.RaceStart }
 
-    /// One event per pass for the lead, about the car that took it.
-    def tookTheLead(passes: List[Pass]): List[Event] =
-        passes |> List.map(pass ->
+    /// One event per overtake for the lead, about the car that took it.
+    def overtakesForLead(overtakes: List[Overtake]): List[Event] =
+        overtakes |> List.map(overtake ->
             {
-                elapsed = pass#elapsed,
-                eventType = EventType.Of(pass#carNumber, CarEvent.TookLeadOnTrack)
+                elapsed = overtake#elapsed,
+                eventType = EventType.Of(overtake#carNumber, CarEvent.OvertakeForLead)
             })
 
-    /// One event per stop the leader made, about the leader and not about the field
-    /// behind it, which may not have moved at all.
-    def leaderPitStops(stops: List[Stop]): List[Event] =
-        stops |> List.map(stop ->
+    /// One event per time the leader went into the pits, about the leader and not
+    /// about the field behind it, which may not have moved at all.
+    def leadersInPit(inPits: List[InPit]): List[Event] =
+        inPits |> List.map(inPit ->
             {
-                elapsed = stop#elapsed,
-                eventType = EventType.Of(stop#carNumber, CarEvent.LeaderPitted)
+                elapsed = inPit#elapsed,
+                eventType = EventType.Of(inPit#carNumber, CarEvent.LeaderInPit)
             })
 
     /// A car still running when the race was scheduled to end took the flag;
@@ -106,7 +106,7 @@ mod Motorsport.Timeline {
     /// than anything the feed states.
     def terminals(timeLimit: Duration, cars: List[(String, Duration)]): List[Event] =
         cars |> List.map(match (carNumber, last) ->
-            let ended = if (last < timeLimit) CarEvent.Retirement else CarEvent.Checkered;
+            let ended = if (last < timeLimit) CarEvent.Retired else CarEvent.Finished;
             { elapsed = last, eventType = EventType.Of(carNumber, ended) })
 
     /// What an event is made of, in the words the file spells it in. The line
@@ -122,10 +122,10 @@ mod Motorsport.Timeline {
     /// checked against.
     pub def names(): List[String] =
         "raceStart" ::
-        "tookLeadOnTrack" ::
-        "leaderPitted" ::
-        "retirement" ::
-        "checkered" ::
+        "overtakeForLead" ::
+        "leaderInPit" ::
+        "retired" ::
+        "finished" ::
         Nil
 
     pub def parts(eventType: EventType): Parts =
@@ -137,10 +137,10 @@ mod Motorsport.Timeline {
 
     def carParts(carEvent: CarEvent): Parts =
         match carEvent {
-            case CarEvent.TookLeadOnTrack => named("tookLeadOnTrack")
-            case CarEvent.LeaderPitted    => named("leaderPitted")
-            case CarEvent.Retirement      => named("retirement")
-            case CarEvent.Checkered       => named("checkered")
+            case CarEvent.OvertakeForLead => named("overtakeForLead")
+            case CarEvent.LeaderInPit     => named("leaderInPit")
+            case CarEvent.Retired         => named("retired")
+            case CarEvent.Finished        => named("finished")
         }
 
     def named(event: String): Parts =
@@ -157,10 +157,10 @@ mod Motorsport.Timeline {
 
     def carEventOf(event: String): Option[CarEvent] =
         match event {
-            case "tookLeadOnTrack" => Some(CarEvent.TookLeadOnTrack)
-            case "leaderPitted"    => Some(CarEvent.LeaderPitted)
-            case "retirement"      => Some(CarEvent.Retirement)
-            case "checkered"       => Some(CarEvent.Checkered)
+            case "overtakeForLead" => Some(CarEvent.OvertakeForLead)
+            case "leaderInPit"     => Some(CarEvent.LeaderInPit)
+            case "retired"         => Some(CarEvent.Retired)
+            case "finished"        => Some(CarEvent.Finished)
             case _                 => None
         }
 

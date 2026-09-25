@@ -1,7 +1,7 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// three readings of the laps -- each car's last moment, each pass for the lead,
-/// each stop the leader came in on -- and what they add up to is
+/// three readings of the laps -- each car's last moment, each overtake for the
+/// lead, each time the leader went into the pits -- and what they add up to is
 /// `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
@@ -40,8 +40,8 @@ mod Round.Timeline {
         Timeline.fromReadings({
             timeLimit = timeLimit,
             cars      = cars(entry),
-            passes    = passes(entry),
-            stops     = leaderStops(entry)
+            overtakes = overtakes(entry),
+            inPits    = leadersInPit(entry)
         })
 
     // ------------------------------------------------------------------ cars
@@ -60,7 +60,7 @@ mod Round.Timeline {
             |> Sql.reading(match (carNumber, last) -> (carNumber, Util.Duration.fromMillis(last)))
             |> Sql.selectAll
 
-    // -------------------------------------------------------------- passes
+    // ------------------------------------------------------------ overtakes
 
     /// Where the lead changed hands on the track: the car that took it and the
     /// crossing that took it.
@@ -75,10 +75,10 @@ mod Round.Timeline {
     /// is each one asked who led the lap before.
     ///
     /// A boundary the car that lost the lead crossed in the pit lane, turning into it
-    /// or coming back out of it, is not a pass and is not here: whoever stayed out is
-    /// in front without having passed anyone, and the stop that did it is
-    /// `leaderStops`' event.
-    def passes(entry: Entry): List[Timeline.Pass] \ DbRead =
+    /// or coming back out of it, is not an overtake and is not here: whoever stayed
+    /// out is in front without having overtaken anyone, and the stop that did it is
+    /// `leadersInPit`' event.
+    def overtakes(entry: Entry): List[Timeline.Overtake] \ DbRead =
         Sql.rows(Sql.raw("(" + handedOver() + ") AS led"))
             |> Sql.using(stopCrossings(entry))
             |> Sql.filter(_ -> Sql.column("held IS NOT NULL AND held <> car_number"))
@@ -89,11 +89,11 @@ mod Round.Timeline {
                 { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
             |> Sql.selectAll
 
-    // ----------------------------------------------------------------- stops
+    // ---------------------------------------------------------------- in pit
 
-    /// Every stop the car in the lead came in on, whether the lead changed hands over
-    /// it or not: the crossing at which it turned down the pit lane, made by a car
-    /// that led that lap or the lap before it.
+    /// Every time the car in the lead went into the pits, whether the lead changed
+    /// hands over the stop or not: the crossing at which it turned down the pit lane,
+    /// made by a car that led that lap or the lap before it.
     ///
     /// Asking the lead first is what loses these: a leader with air behind it comes
     /// out in front again and no lap boundary changes hands at all, which is seven of
@@ -104,7 +104,7 @@ mod Round.Timeline {
     /// and the in-lap is sometimes missing, so counting crossings counts some stops
     /// twice and some not at all. `pit_time` is written once per stop, and the event
     /// is timed a lap back where the in-lap crossing is.
-    def leaderStops(entry: Entry): List[Timeline.Stop] \ DbRead =
+    def leadersInPit(entry: Entry): List[Timeline.InPit] \ DbRead =
         Sql.rows(Sql.raw("l AS stop"))
             |> Sql.using(Sql.frags(stopCrossings(entry) :: ledEachLap() :: Nil))
             |> Sql.filter(_ -> Sql.column(stoppedWhileLeading()))
@@ -153,7 +153,7 @@ mod Round.Timeline {
     /// Whether the car named crossed the lap named as one half of a stop.
     ///
     /// That lap alone, and not the one before it: a leader that came back out in
-    /// front has its out-lap there, and a pass on the lap after is still a pass.
+    /// front has its out-lap there, and an overtake on the lap after is still one.
     ///
     /// The car and lap are given as text because the two readings correlate on rows
     /// neither of them declares columns for, and so are `cameInAt`'s.

@@ -197,13 +197,14 @@ corrected in SQL and then is the list that moment used to be in.
 Each car's last crossing is one `GROUP BY`, and the lead is
 `ROW_NUMBER` picking each lap's first crossing with `LAG` asking who held the one
 before -- two queries rather than one, since SQLite settles a `WHERE` before
-either window. A pass for the lead and a stop by the leader are then read apart and
-about two different cars: a pass is about whoever crossed the next lap first, a stop
-about the car that led and turned down the pit lane. `Db.Laps.pitLap` names either
-half of a stop -- the in-lap, marked `crossing_finish_line_in_pit`, and the out-lap
-whose `pit_time` carries the stop -- and is what `Cli.Load.Validation` skips a pit
-lap over too. `Db.Laps.pitOutLap` names the out-lap alone, which is the half a stop
-is counted at; the event is timed at the in-lap, as below.
+either window. An overtake for the lead and a leader in the pits are then read
+apart and about two different cars: an overtake is about whoever crossed the next
+lap first, a leader in the pits about the car that led and turned down the pit
+lane. `Db.Laps.pitLap` names either half of a stop -- the in-lap, marked
+`crossing_finish_line_in_pit`, and the out-lap whose `pit_time` carries the stop --
+and is what `Cli.Load.Validation` skips a pit lap over too. `Db.Laps.pitOutLap`
+names the out-lap alone, which is the half a stop is counted at; the event is timed
+at the in-lap, as below.
 
 The stop is anchored on its out-lap because that is the crossing the feed has to
 write: the two are sometimes both marked as pit crossings and the in-lap sometimes
@@ -212,11 +213,11 @@ led one of the two laps before that out-lap -- leading the lap it came in on, or
 losing the lead at the crossing it turned into the lane from -- and the event is
 timed at the earlier crossing, where it came in. Reading stops off the lead is what
 loses a leader that came back out in front of the field: seven of Le Mans's leader
-stops are that, no lap boundary changing hands at any of them. The pass query asks
+stops are that, no lap boundary changing hands at any of them. The overtake query asks
 whether the car that lost the lead crossed that boundary as either half of a stop,
 so a boundary the leader's stop settled is no event -- whoever stayed out is in
-front without having passed anyone. It asks of that crossing alone: the lap before
-it may be a leader's out-lap, and a pass on the lap after one is still a pass. The
+front without having overtaken anyone. It asks of that crossing alone: the lap before
+it may be a leader's out-lap, and an overtake on the lap after one is still one. The
 app counts a car's stops off the laps for itself, in `Motorsport.Race.Stint`; the
 event says the leader made one, not how many it has made.
 

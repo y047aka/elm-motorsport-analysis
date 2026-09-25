@@ -15,10 +15,10 @@ mod Db.TestTimelineEvents {
     /// One of each, which is what the row has to carry between them.
     def oneOfEach(): List[Event] =
         at(0, EventType.RaceStart) ::
-        at(1000, EventType.Of("7", CarEvent.TookLeadOnTrack)) ::
-        at(1200, EventType.Of("8", CarEvent.LeaderPitted)) ::
-        at(4000, EventType.Of("8", CarEvent.Retirement)) ::
-        at(5000, EventType.Of("7", CarEvent.Checkered)) ::
+        at(1000, EventType.Of("7", CarEvent.OvertakeForLead)) ::
+        at(1200, EventType.Of("8", CarEvent.LeaderInPit)) ::
+        at(4000, EventType.Of("8", CarEvent.Retired)) ::
+        at(5000, EventType.Of("7", CarEvent.Finished)) ::
         Nil
 
     def line(event: Event): String =

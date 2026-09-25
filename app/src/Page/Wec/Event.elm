@@ -527,19 +527,19 @@ eventTypeToString : EventType -> String
 eventTypeToString eventType =
     case eventType of
         RaceStart ->
-            "Race Started"
+            "Race Start"
 
-        CarEvent _ TookLeadOnTrack ->
-            "Took the Lead"
+        CarEvent _ OvertakeForLead ->
+            "Overtake for Lead"
 
-        CarEvent _ LeaderPitted ->
-            "Leader Pitted"
+        CarEvent _ LeaderInPit ->
+            "Leader In Pit"
 
-        CarEvent _ Retirement ->
-            "Retirement"
+        CarEvent _ Retired ->
+            "Retired"
 
-        CarEvent _ Checkered ->
-            "Checkered Flag"
+        CarEvent _ Finished ->
+            "Finished"
 
 
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg

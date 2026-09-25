@@ -16,17 +16,17 @@ suite =
                     |> Expect.equal (Ok ( Instant.raceStart, RaceStart ))
         , test "every other event names the car it was" <|
             \_ ->
-                decoded """{ "elapsed": "0.000", "event": "tookLeadOnTrack", "carNumber": "7" }"""
-                    |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" TookLeadOnTrack ))
+                decoded """{ "elapsed": "0.000", "event": "overtakeForLead", "carNumber": "7" }"""
+                    |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" OvertakeForLead ))
         , test "each of the kinds reads back as itself" <|
             \_ ->
-                [ "tookLeadOnTrack", "leaderPitted", "retirement", "checkered" ]
+                [ "overtakeForLead", "leaderInPit", "retired", "finished" ]
                     |> List.map (written >> Result.map Tuple.second)
                     |> Expect.equal
-                        [ Ok (CarEvent "7" TookLeadOnTrack)
-                        , Ok (CarEvent "7" LeaderPitted)
-                        , Ok (CarEvent "7" Retirement)
-                        , Ok (CarEvent "7" Checkered)
+                        [ Ok (CarEvent "7" OvertakeForLead)
+                        , Ok (CarEvent "7" LeaderInPit)
+                        , Ok (CarEvent "7" Retired)
+                        , Ok (CarEvent "7" Finished)
                         ]
         , test "a kind this app has no case for fails the round" <|
             \_ ->
@@ -35,9 +35,9 @@ suite =
                     |> Expect.err
         , test "a name this timeline no longer writes fails the round" <|
             \_ ->
-                [ "start", "tookLead" ]
+                [ "start", "tookLead", "retirement", "checkered" ]
                     |> List.map (written >> Result.toMaybe)
-                    |> Expect.equal [ Nothing, Nothing ]
+                    |> Expect.equal [ Nothing, Nothing, Nothing, Nothing ]
         ]
 
 

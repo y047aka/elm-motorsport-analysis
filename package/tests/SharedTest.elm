@@ -106,7 +106,7 @@ which is a long way short of the six hours the round was scheduled for.
 timelineJsonl : String
 timelineJsonl =
     """{ "elapsed": "0.000", "event": "raceStart" }
-{ "elapsed": "1:53.000", "event": "retirement", "carNumber": "7" }
+{ "elapsed": "1:53.000", "event": "retired", "carNumber": "7" }
 """
 
 

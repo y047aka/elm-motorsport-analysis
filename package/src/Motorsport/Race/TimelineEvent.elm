@@ -28,10 +28,10 @@ type EventType
 
 
 type CarEventType
-    = TookLeadOnTrack
-    | LeaderPitted
-    | Retirement
-    | Checkered
+    = OvertakeForLead
+    | LeaderInPit
+    | Retired
+    | Finished
 
 
 
@@ -75,17 +75,17 @@ that never stopped.
 carEventTypeDecoder : String -> Decoder CarEventType
 carEventTypeDecoder event =
     case event of
-        "tookLeadOnTrack" ->
-            Decode.succeed TookLeadOnTrack
+        "overtakeForLead" ->
+            Decode.succeed OvertakeForLead
 
-        "leaderPitted" ->
-            Decode.succeed LeaderPitted
+        "leaderInPit" ->
+            Decode.succeed LeaderInPit
 
-        "retirement" ->
-            Decode.succeed Retirement
+        "retired" ->
+            Decode.succeed Retired
 
-        "checkered" ->
-            Decode.succeed Checkered
+        "finished" ->
+            Decode.succeed Finished
 
         _ ->
             Decode.fail ("Unknown timeline event: " ++ event)
