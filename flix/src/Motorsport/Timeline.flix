@@ -11,9 +11,10 @@ mod Motorsport.Timeline {
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt}
 
-    /// What one car did. `OvertakeForLead` is about the car that came in front of
-    /// the field; `LeaderInPit` is about the car that led and turned into the pit
-    /// lane, and says nothing about who took the lead in its place.
+    /// What one car did. The lead is the car's class's, and the top class's is the
+    /// field's. `OvertakeForLead` is about the car that came in front of its class;
+    /// `LeaderInPit` is about the car that led it and turned into the pit lane, and
+    /// says nothing about who took the lead in its place.
     pub enum CarEvent with Eq {
         case OvertakeForLead
         case LeaderInPit

@@ -69,6 +69,16 @@ mod Round.TestTimeline {
     def lap(num: String, lapNumber: Int32, elapsed: String): RawLap =
         crossing(num, lapNumber, elapsed, "", "")
 
+    /// A lap of an LMGT3 car, the class every other helper's car is not in.
+    def gtLap(num: String, lapNumber: Int32, elapsed: String): RawLap =
+        crossingOf("LMGT3;", num, lapNumber, elapsed, "", "")
+
+    def gtPitLap(num: String, lapNumber: Int32, elapsed: String, pit: String): RawLap =
+        crossingOf("LMGT3;", num, lapNumber, elapsed, "", pit)
+
+    def gtBoxLap(num: String, lapNumber: Int32, elapsed: String): RawLap =
+        crossingOf("LMGT3;", num, lapNumber, elapsed, "B", "")
+
     /// The lap a car came back out on, which is the one the stop's length is
     /// written on.
     def pitLap(num: String, lapNumber: Int32, elapsed: String, pit: String): RawLap =
@@ -86,9 +96,20 @@ mod Round.TestTimeline {
         box: String,
         pit: String
     ): RawLap =
+        crossingOf("HYPERCAR;H", num, lapNumber, elapsed, box, pit)
+
+    /// `classAndGroup` is the file's `CLASS;GROUP`, two fields in one.
+    def crossingOf(
+        classAndGroup: String,
+        num: String,
+        lapNumber: Int32,
+        elapsed: String,
+        box: String,
+        pit: String
+    ): RawLap =
         decodeOne(header() + "\n"
             + "${num};1;${lapNumber};60.000;0;${box};20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
-            + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};HYPERCAR;H;Team;Maker;GF;20.000;20.000;20.000;")
+            + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};${classAndGroup};Team;Maker;GF;20.000;20.000;20.000;")
 
     // ------------------------------------------------------------ race start
 
@@ -220,6 +241,43 @@ mod Round.TestTimeline {
             pitLap("8", 3, "3:20.000", "45.000") ::
             Nil);
         Assert.assertTrue(leadChanges(events) == Nil)
+
+    /// Each class is led on its own: a GT car overtaking for its class lead is an
+    /// event however far behind the Hypercars it crosses, and the Hypercar that
+    /// leads the field leads only its own class.
+    @Test
+    def eachClassIsLedOnItsOwn(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "62.000") ::
+            gtLap("90", 1, "70.000") ::
+            gtLap("91", 1, "72.000") ::
+            lap("7", 2, "2:00.000") ::
+            lap("8", 2, "2:03.000") ::
+            gtLap("91", 2, "2:20.000") ::
+            gtLap("90", 2, "2:25.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == ("2:20.000", "overtakeForLead", "91") :: Nil)
+
+    /// A class leader going into the pits is its class's event, though a car of
+    /// another class led the field at every crossing of it.
+    @Test
+    def aClassLeaderInThePitsIsAnEvent(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            gtLap("90", 1, "70.000") ::
+            gtLap("91", 1, "75.000") ::
+            lap("7", 2, "2:00.000") ::
+            gtLap("90", 2, "2:20.000") ::
+            gtLap("91", 2, "2:25.000") ::
+            lap("7", 3, "3:00.000") ::
+            gtBoxLap("90", 3, "3:30.000") ::
+            gtLap("91", 3, "3:35.000") ::
+            lap("7", 4, "4:00.000") ::
+            gtLap("91", 4, "4:30.000") ::
+            gtPitLap("90", 4, "4:40.000", "45.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == ("3:30.000", "leaderInPit", "90") :: Nil)
 
     /// Whoever led the opening lap took it from nobody.
     @Test

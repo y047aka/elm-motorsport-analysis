@@ -27,6 +27,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Class as Class
 import Route
 import Shared
 import Shared.Msg
@@ -506,9 +507,10 @@ eventRow metadataByNumber event =
         ]
 
 
-{-| Whose event this was, badged like the standings badge it sits beside. A race
-start belongs to nobody, and a number no car of the field answers to keeps its
-bare digits rather than vanishing.
+{-| Whose event this was, badged like the standings badge it sits beside and
+marked with its class's colour, since a lead is its class's. A race start belongs
+to nobody, and a number no car of the field answers to keeps its bare digits
+rather than vanishing.
 -}
 carBadge : Dict CarNumber Metadata -> EventType -> Html Msg
 carBadge metadataByNumber eventType =
@@ -516,11 +518,20 @@ carBadge metadataByNumber eventType =
         CarEvent carNumber _ ->
             metadataByNumber
                 |> Dict.get carNumber
-                |> Maybe.map CarNumberBadge.viewRow
+                |> Maybe.map classMarked
                 |> Maybe.withDefault (span [] [ text carNumber ])
 
         RaceStart ->
             text ""
+
+
+classMarked : Metadata -> Html Msg
+classMarked metadata =
+    div
+        [ Attributes.class "flex items-center gap-x-1 before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        , attribute "style" ("--class-color: " ++ Class.toColor metadata.class ++ ";")
+        ]
+        [ CarNumberBadge.viewRow metadata ]
 
 
 eventTypeToString : EventType -> String

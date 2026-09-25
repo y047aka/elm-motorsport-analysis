@@ -1,10 +1,12 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// three readings of the laps -- each car's last moment, each overtake for the
-/// lead, each time the leader went into the pits -- and what they add up to is
-/// `Motorsport.Timeline`'s.
+/// three readings of the laps -- each car's last moment, each overtake for a
+/// class's lead, each time a class's leader went into the pits -- and what they
+/// add up to is `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
+    use Db.Cars
+    use Db.Entries
     use Db.Laps
     use Db.Schema
     use Db.TimelineEvents
@@ -62,13 +64,14 @@ mod Round.Timeline {
 
     // ------------------------------------------------------------ overtakes
 
-    /// Where the lead changed hands on the track: the car that took it and the
-    /// crossing that took it.
+    /// Where a class's lead changed hands on the track: the car that took it and
+    /// the crossing that took it.
     ///
-    /// The lead is the field's order at a lap boundary, which is what
-    /// `Round.Laps.placeInField` counts, so it is read the same way: the first
-    /// of the round's rows carrying a lap number. Whoever led the opening lap
-    /// took it from nobody, which is what `LAG` answering null is.
+    /// The lead is a class's order at a lap boundary, read the way
+    /// `Round.Laps.placeInField` reads the field's: the first of the class's rows
+    /// carrying a lap number. The top class's lead is the field's in every round
+    /// loaded, so no lead is counted over the whole field beside it. Whoever led
+    /// the opening lap took it from nobody, which is what `LAG` answering null is.
     ///
     /// The two windows are a query each because SQLite settles a `WHERE`
     /// before either of them: the leaders are picked out in `l`, and only then
@@ -83,7 +86,7 @@ mod Round.Timeline {
             |> Sql.using(stopCrossings(entry))
             |> Sql.filter(_ -> Sql.column("held IS NOT NULL AND held <> car_number"))
             |> Sql.filter(_ -> Sql.column("NOT " + crossedInPits("led.held", "led.lap_number")))
-            |> Sql.orderBy(Sql.raw("lap_number") :: Nil)
+            |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
             |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms")))
             |> Sql.reading(match (carNumber, elapsed) ->
                 { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
@@ -91,9 +94,9 @@ mod Round.Timeline {
 
     // ---------------------------------------------------------------- in pit
 
-    /// Every time the car in the lead went into the pits, whether the lead changed
-    /// hands over the stop or not: the crossing at which it turned down the pit lane,
-    /// made by a car that led that lap or the lap before it.
+    /// Every time the car leading its class went into the pits, whether the lead
+    /// changed hands over the stop or not: the crossing at which it turned down the
+    /// pit lane, made by a car that led its class on that lap or the lap before it.
     ///
     /// Asking the lead first is what loses these: a leader with air behind it comes
     /// out in front again and no lap boundary changes hands at all, which is seven of
@@ -119,19 +122,32 @@ mod Round.Timeline {
 
     /// The crossings both readings of a stop are made of: every crossing of the
     /// round's, saying whether it is one half of a stop, whether it is the half a stop
-    /// is timed at, and who crossed its lap first. Named `l` because both readings
-    /// correlate on it by name.
+    /// is timed at, the car's class, and who of the class crossed its lap first.
+    /// Named `l` because both readings correlate on it by name.
     def stopCrossings(entry: Entry): Sql.Frag =
         Sql.frags(
-            Sql.raw("l AS (SELECT car_number, lap_number, elapsed_ms,"
-                + " ${Laps.pitLap()} AS pitted, ${Laps.pitOutLap()} AS stopped, "
-                + firstAcross() + " FROM " + Laps.table() + " WHERE") ::
+            Sql.raw("l AS (SELECT ${Laps.table()}.car_number, lap_number, elapsed_ms,"
+                + " ${Laps.pitLap()} AS pitted, ${Laps.pitOutLap()} AS stopped,"
+                + " ${Entries.table()}.class AS car_class, "
+                + firstAcross() + " FROM " + classed() + " WHERE") ::
             Sql.term(Laps.inRound(entry)) ::
             Sql.raw(")") :: Nil
         )
 
-    /// Who led each lap, for a query asking who was in the lead around a stop. The
-    /// `rn = 1` rows of the crossings, which is the same window `handedOver` reads.
+    /// The laps, each beside the class of the car that ran it. A lap with no row in
+    /// `cars` has no class and is dropped; the load writes the cars first.
+    def classed(): String =
+        let laps = Laps.table();
+        let cars = Cars.table();
+        let entries = Entries.table();
+        "${laps} JOIN ${cars} ON ${cars}.round_id = ${laps}.round_id"
+            + " AND ${cars}.car_number = ${laps}.car_number"
+            + " JOIN ${entries} ON ${entries}.entry_id = ${cars}.entry_id"
+
+    /// Who led their class on each lap, for a query asking who was in the lead around
+    /// a stop. The `rn = 1` rows of the crossings, which is the same window
+    /// `handedOver` reads. A car only ever leads its own class, so a stop is matched
+    /// to its car's leads by the car alone.
     def ledEachLap(): Sql.Frag =
         Sql.raw(", led AS (SELECT car_number, lap_number FROM l WHERE rn = 1)")
 
@@ -143,11 +159,12 @@ mod Round.Timeline {
             + " AND led.lap_number IN (stop.lap_number - 2, stop.lap_number - 1))"
 
     def firstAcross(): String =
-        "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) AS rn"
+        "ROW_NUMBER() OVER (PARTITION BY ${Entries.table()}.class, lap_number"
+            + " ORDER BY elapsed_ms, source_row) AS rn"
 
     def handedOver(): String =
         "SELECT car_number, lap_number, elapsed_ms,"
-            + " LAG(car_number) OVER (ORDER BY lap_number) AS held"
+            + " LAG(car_number) OVER (PARTITION BY car_class ORDER BY lap_number) AS held"
             + " FROM l WHERE rn = 1"
 
     /// Whether the car named crossed the lap named as one half of a stop.

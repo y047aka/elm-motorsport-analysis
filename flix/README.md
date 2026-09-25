@@ -194,10 +194,12 @@ round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
 rather than read in their key's order, which is the same list until a row is
 corrected in SQL and then is the list that moment used to be in.
 
-Each car's last crossing is one `GROUP BY`, and the lead is
-`ROW_NUMBER` picking each lap's first crossing with `LAG` asking who held the one
-before -- two queries rather than one, since SQLite settles a `WHERE` before
-either window. An overtake for the lead and a leader in the pits are then read
+Each car's last crossing is one `GROUP BY`, and a class's lead is
+`ROW_NUMBER` picking the class's first crossing of each lap with `LAG` asking who
+held the one before -- two queries rather than one, since SQLite settles a `WHERE`
+before either window. The class is the car's entry's, joined through `cars`; the
+top class's lead is the field's in every round loaded, so the field's is not
+counted beside it. An overtake for the lead and a leader in the pits are then read
 apart and about two different cars: an overtake is about whoever crossed the next
 lap first, a leader in the pits about the car that led and turned down the pit
 lane. `Db.Laps.pitLap` names either half of a stop -- the in-lap, marked
