@@ -493,24 +493,49 @@ eventRows cars timeline occurredCount =
         |> tbody []
 
 
-{-| One row per event: whose it was, what it was, when.
+{-| One row per event: its car's class, what it was, whose it was, when.
 -}
 eventRow : Dict CarNumber Metadata -> TimelineEvent -> Html Msg
 eventRow metadataByNumber event =
     tr []
         [ td [ Attributes.class "w-px py-0.5 pr-2" ]
-            [ carBadge metadataByNumber event.eventType ]
+            [ classBar metadataByNumber event.eventType ]
         , td [ Attributes.class "py-0.5 pr-2" ]
             [ text (eventTypeToString event.eventType) ]
+        , td [ Attributes.class "w-px py-0.5 pr-2" ]
+            [ carBadge metadataByNumber event.eventType ]
         , td [ Attributes.class "whitespace-nowrap py-0.5 text-right tabular-nums text-muted-foreground" ]
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
 
 
-{-| Whose event this was, badged like the standings badge it sits beside and
-marked with its class's colour, since a lead is its class's. A race start belongs
-to nobody, and a number no car of the field answers to keeps its bare digits
-rather than vanishing.
+{-| The class of the car the event was, in the colour the standings' class headings
+carry, since a lead is its class's. A race start and a number no car of the field
+answers to have none.
+-}
+classBar : Dict CarNumber Metadata -> EventType -> Html Msg
+classBar metadataByNumber eventType =
+    case eventType of
+        CarEvent carNumber _ ->
+            metadataByNumber
+                |> Dict.get carNumber
+                |> Maybe.map
+                    (\metadata ->
+                        div
+                            [ Attributes.class "flex before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+                            , attribute "style" ("--class-color: " ++ Class.toColor metadata.class ++ ";")
+                            ]
+                            []
+                    )
+                |> Maybe.withDefault (text "")
+
+        RaceStart ->
+            text ""
+
+
+{-| Whose event this was, badged like the standings badge it sits beside. A race
+start belongs to nobody, and a number no car of the field answers to keeps its
+bare digits rather than vanishing.
 -}
 carBadge : Dict CarNumber Metadata -> EventType -> Html Msg
 carBadge metadataByNumber eventType =
@@ -518,20 +543,11 @@ carBadge metadataByNumber eventType =
         CarEvent carNumber _ ->
             metadataByNumber
                 |> Dict.get carNumber
-                |> Maybe.map classMarked
+                |> Maybe.map CarNumberBadge.viewRow
                 |> Maybe.withDefault (span [] [ text carNumber ])
 
         RaceStart ->
             text ""
-
-
-classMarked : Metadata -> Html Msg
-classMarked metadata =
-    div
-        [ Attributes.class "flex items-center gap-x-1 before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-        , attribute "style" ("--class-color: " ++ Class.toColor metadata.class ++ ";")
-        ]
-        [ CarNumberBadge.viewRow metadata ]
 
 
 eventTypeToString : EventType -> String
