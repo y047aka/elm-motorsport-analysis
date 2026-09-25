@@ -495,6 +495,7 @@ eventRows cars timeline occurredCount =
 
 {-| One row per event: its car's class, what it was, whose it was, when, and the
 event's `detail` on a line of their own below, as wide as the row less the class.
+An event with none leaves that line empty.
 
 A row is two lines whatever it holds, the first as tall as the badge: the
 `1.375rem` is `CarNumberBadge.viewRow`'s height, and moves with it.
@@ -514,22 +515,22 @@ eventRow carsByNumber event =
         cell classes children =
             div [ Attributes.class classes ] children
 
-        firstLine rows =
-            [ cell "row-span-2 h-full" [ car |> Maybe.map (.metadata >> classBar) |> Maybe.withDefault (text "") ]
-            , cell rows [ text (describe event.eventType) ]
-            , cell rows [ carBadge car event.eventType ]
-            , cell ("whitespace-nowrap text-right tabular-nums text-muted-foreground " ++ rows)
-                [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
-            ]
+        secondLine =
+            case detail car event of
+                Just line ->
+                    [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text line ] ]
+
+                Nothing ->
+                    []
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-1 items-center py-0.5" ]
-        (case detail car event of
-            Just line ->
-                firstLine ""
-                    ++ [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text line ] ]
-
-            Nothing ->
-                firstLine "row-span-2"
+        ([ cell "row-span-2 h-full" [ car |> Maybe.map (.metadata >> classBar) |> Maybe.withDefault (text "") ]
+         , cell "" [ text (describe event.eventType) ]
+         , cell "" [ carBadge car event.eventType ]
+         , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
+            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
+         ]
+            ++ secondLine
         )
 
 
