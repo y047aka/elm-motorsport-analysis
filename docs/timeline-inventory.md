@@ -17,7 +17,8 @@
   248行)。§3 のドライバー交代を全車分 `driverChange` として足した(+611、859行)。
   §3 のベストタイム更新はクラスごとのファステストラップを `fastestLap` として足した(+30、889行)。
   §5-1 の caution を、旗の切り替わりとして足した(+24、913行)。
-  下の節は削除・分割・改名・クラス別化の前の実測で、旧名のまま書いてある。
+  §1〜§4 は削除・分割・改名・クラス別化の前の実測で、旧名のまま書いてある。今の状態と
+  残っている課題は §6 にまとめた。
 
 ## 1. 出力されているもの
 
@@ -35,12 +36,14 @@
 ## 2. 画面での表示
 
 `app/src/Page/Wec/Event.elm` の `timelinePanel`(唯一の消費者。`Shared` が持つだけ)が、
-再生時刻までの件数を `Timeline.countUpTo` で二分検索し、**直近100件を新しい順に
-「カーバッジ / 英語ラベル文字列 / 時刻」の3列**で並べる(棚卸し時は「時刻 / カーバッジ /
-英語ラベル」の順で、ラベルが右寄せだった)。
+再生時刻までの件数を `Timeline.countUpTo` で二分検索し、**直近100件を新しい順に**並べる。
 
-色分け・アイコン・分類・フィルタは無く、行そのものは読み取り専用で、
-クリックは全順位ポップオーバーを開くボタンになっている。
+棚卸し時は「時刻 / カーバッジ / 英語ラベル」の3列の表で、ラベルが右寄せ、色分け・アイコン・
+分類・フィルタは無かった。今は4列のグリッド(各行が親の列を `subgrid` で共有)で、
+**「クラスの四角形 / イベント名 / カーバッジ / 時刻」**。各行は2段で、ドライバー交代と
+ファステストラップだけが2段目(交代前 → 交代後、周回タイム · ドライバー)を持ち、
+車番・時刻の下まで使う。旗の行はクラスの四角形とカーバッジを持たない。フィルタは今も無い。
+行そのものは読み取り専用で、クリックは全順位ポップオーバーを開くボタンになっている。
 
 ## 3. 「観戦・展開の把握に役立つか」での判定
 
@@ -90,7 +93,7 @@
   **適用済み**: 全車の交代を `driverChange` として出す(Le Mans 2025 で611回、全ラウンドで
   交代はすべてピット明けの周回)。時刻は新ドライバーの最初の周の直前の通過で、アプリが
   `currentDriver` を切り替える瞬間と同じ。交代先の名前はファイルに持たせず、アプリがその車の
-  周回から引く。パネルの100件は、180周目(最新 11:02:00)の時点で 8:17:20 まで遡る。
+  周回から引く。パネルで遡れる時間への影響は §6 を参照。
 
 ### caution が「展開」である決定的な根拠
 
@@ -139,10 +142,10 @@
 2. **`tookLead` にクラスを持たせる**(LMP2/LMGT3 の展開が出る。+72行程度)。
    **適用済み**: 首位をクラスごとに数え、総合首位は別に数えない。読み込んだ14ラウンドすべてで、
    ハイパーカーの首位と総合首位の行が一致したため。ファイルの形は変えず、クラスはアプリが
-   車の情報から引き、パネルはカーバッジの左にクラス色の縦線を出す。
+   車の情報から引き、パネルは各行の1段目の左端にクラス色の小さな四角形を出す。
    見積もりの +72 行は交代を数えた場合で、実際は +112 行(LMP2 1 + 55、LMGT3 4 + 52)。
    下位クラスの首位交代はほとんどがピットの周期で起きるため、増えた行の大半は `leaderInPit`。
-   パネルの100件は、180周目(最新 10:58:55)の時点で 36:56 まで遡る。
+   パネルで遡れる時間への影響は §6 を参照。
 3. **首位交代を2種に割る** — 先頭がピットに来ての交代と、コース上で抜き合った交代。
    `laps` は1回のストップを2つの横断に書いて持つ(ピットレーンに切れ込んだ横断と、
    ピットタイム付きの復帰横断)ので判別できる。SC明けかどうかの区別はしない ——
@@ -159,6 +162,36 @@
 `package/src/Motorsport/Race/TimelineEvent.elm`(デコーダ)を同時に触る変更で、Elm 側は未知の
 event 名で**ラウンド読み込みごと失敗する**仕様(`carEventTypeDecoder` が fail)、かつ行は
 `timeline_events` に載るので反映は `.#cli-load` → `.#cli-export` が必要。
+
+## 6. 今の状態と残っている課題
+
+§5 の4項目と §3 のドライバー交代・ベストタイム更新は適用済み。Le Mans 2025 のタイムラインは
+913行で、内訳は `driverChange` 611・`leaderInPit` 175・`finished` 49・`fastestLap` 30・
+`retired` 13・`greenFlag` 12・`fullCourseYellow` 11・`overtakeForLead` 10・`raceStart` 1・
+`safetyCar` 1。
+
+### パネルで遡れる時間
+
+直近100件で遡れるのは、180周目(11:02)で 8:19 まで(2.7時間)、18時間目で 2.9時間、
+ゴールで 3.1時間。913行の 67% が `driverChange` で、行の大半を占める。クラスやイベントの
+種類で絞り込む手段は無い。
+
+### 未対応
+
+1. **開幕時の首位が出ない(§4-1)。** `Round.Timeline.overtakes` の filter が `held IS NOT NULL`
+   のまま。首位をクラスごとにしたので、出ない開幕時の首位は3クラス分になった。
+2. **リタイアとフィニッシュの二重導出(§4-2)。** タイムラインと `Race.statusAt` が同じ規則で
+   別々に判定している。今は一致している。
+3. **リタイアの判定規則(§4-4)。** 24:00 より前に最後の周を終えた車はすべてリタイア扱い。
+4. **車ごとの自己ベスト。** アプリ側で周回から計算していて、1周目を含めたまま(§3 参照)。
+5. **ピットインの時系列。** 出しているのはクラス首位車の分(`leaderInPit`)だけ。
+6. **フィードの旗の型の名前。** Flix の `Motorsport.Wec.Flag` は SF を `SlowZone` と呼んだまま。
+   タイムラインではセーフティカーとして扱っている(`Motorsport.Flag.fromFeed`)。
+
+### 見た目の案
+
+- パネルをクラスやイベントの種類で絞り込めるようにする(遡れる時間の短さへの対策)。
+- 旗の行のクラスの四角形の欄に、旗の色(黄・赤・緑)の四角形を置く。
 
 ## 付録 — 数値の再測方法
 
@@ -204,19 +237,22 @@ tl=[json.loads(l) for l in old.splitlines() if 'tookLead' in l]
 n=[sum(1 for u in pit if sec(e['elapsed'])-180<u<=sec(e['elapsed'])) for e in tl]
 print('pits in the 3 min before a lead change: median',statistics.median(n),'>=4:',sum(1 for k in n if k>=4),'of',len(n))"
 
-# overtakeForLead と leaderInPit(`Round.Timeline` と同じ式)。交代から数えると 61 になり、
-# 首位のままピットアウトした7件が落ちる
+# overtakeForLead と leaderInPit(`Round.Timeline` と同じ式、クラスごと)。10 と 175 になる。
+# 総合で数えると 5 と 68(ハイパーカーの分と同じ)。交代から数えると首位車のピットインは
+# 61 になり、首位のままピットアウトした7件が落ちる
 sqlite3 flix/.db/motorsport.sqlite "
-WITH l AS (SELECT car_number, lap_number, elapsed_ms, source_row,
+WITH l AS (SELECT laps.car_number, lap_number, elapsed_ms, source_row, entries.class AS car_class,
    (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL) AS pitted,
    (pit_time_ms IS NOT NULL) AS stopped,
-   ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) AS rn
-   FROM laps WHERE round_id =
+   ROW_NUMBER() OVER (PARTITION BY entries.class, lap_number ORDER BY elapsed_ms, source_row) AS rn
+   FROM laps JOIN cars ON cars.round_id = laps.round_id AND cars.car_number = laps.car_number
+   JOIN entries ON entries.entry_id = cars.entry_id
+   WHERE laps.round_id =
      (SELECT round_id FROM rounds WHERE season = 2025 AND round_key = 'le_mans_24h')),
 led AS (SELECT car_number, lap_number FROM l WHERE rn = 1)
 SELECT (SELECT count(*) FROM (
           SELECT 1 FROM (SELECT car_number, lap_number, elapsed_ms,
-                          LAG(car_number) OVER (ORDER BY lap_number) AS held
+                          LAG(car_number) OVER (PARTITION BY car_class ORDER BY lap_number) AS held
                          FROM l WHERE rn = 1) AS chg
           WHERE held IS NOT NULL AND held <> car_number
             AND NOT EXISTS (SELECT 1 FROM l x WHERE x.car_number = chg.held
