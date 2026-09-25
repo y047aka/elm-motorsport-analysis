@@ -305,6 +305,24 @@ mod Round.TestTimeline {
         Assert.assertTrue(leadChanges(events) == Nil);
         Assert.assertTrue(named("retired", events) == ("1:00.000", "retired", "7") :: Nil)
 
+    /// A second stop straight after one is the leader's only if the car still led
+    /// when it came back out of the first: this one lost the lead on its out-lap, so
+    /// the stop after is nobody's event.
+    @Test
+    def aStopStraightAfterTheLeadWasLostIsNoEvent(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "70.000") ::
+            boxLap("7", 2, "2:00.000") ::
+            lap("8", 2, "2:10.000") ::
+            lap("8", 3, "3:10.000") ::
+            pitLap("7", 3, "3:30.000", "45.000") ::
+            lap("8", 4, "4:10.000") ::
+            pitLap("7", 4, "4:40.000", "40.000") ::
+            lap("8", 5, "5:10.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == ("2:00.000", "leaderInPit", "7") :: Nil)
+
     /// A stop by a car that was never in the lead is not a leader's stop: it led
     /// neither the lap before its out-lap nor the lap before that.
     @Test

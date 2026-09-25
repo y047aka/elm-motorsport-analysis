@@ -219,10 +219,15 @@ mod Round.Timeline {
 
     /// A stop the car in the lead made: it led the lap before its out-lap, or the lap
     /// before that -- the leader that lost the lead at the crossing it turned down the
-    /// lane from, coming back out one lap later.
+    /// lane from, coming back out one lap later. Not the lap before that when the lap
+    /// between was an out-lap of its own: that is a second stop straight after one,
+    /// and the lead two laps back was lost at the first.
     def stoppedWhileLeading(): String =
         "stopped AND EXISTS (SELECT 1 FROM led WHERE led.car_number = stop.car_number"
-            + " AND led.lap_number IN (stop.lap_number - 2, stop.lap_number - 1))"
+            + " AND (led.lap_number = stop.lap_number - 1"
+            + " OR (led.lap_number = stop.lap_number - 2"
+            + " AND NOT EXISTS (SELECT 1 FROM l AS between_ WHERE between_.car_number = stop.car_number"
+            + " AND between_.lap_number = stop.lap_number - 1 AND between_.stopped))))"
 
     def firstAcross(): String =
         "ROW_NUMBER() OVER (PARTITION BY ${Entries.table()}.class, lap_number"
