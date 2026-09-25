@@ -90,17 +90,8 @@ mod Round.Timeline {
             |> Sql.selectAll
             |> List.filterMap(match (flag, elapsed) ->
                 Wec.flagFromString(flag)
-                    |> Option.flatMap(raceFlag)
+                    |> Option.flatMap(Motorsport.Flag.fromFeed)
                     |> Option.map(shown -> { flag = shown, elapsed = Util.Duration.fromMillis(elapsed) }))
-
-    def raceFlag(flag: Wec.Flag): Option[Timeline.RaceFlag] =
-        match flag {
-            case Wec.Flag.Green            => Some(Timeline.RaceFlag.GreenFlag)
-            case Wec.Flag.SlowZone         => Some(Timeline.RaceFlag.SafetyCar)
-            case Wec.Flag.FullCourseYellow => Some(Timeline.RaceFlag.FullCourseYellow)
-            case Wec.Flag.Red              => Some(Timeline.RaceFlag.RedFlag)
-            case Wec.Flag.Finish           => None
-        }
 
     // ----------------------------------------------------------- fastest laps
 

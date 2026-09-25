@@ -19,6 +19,7 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
+import Motorsport.Flag as Flag
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
@@ -27,7 +28,7 @@ import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), RaceFlag(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Class as Class
 import Route
@@ -569,17 +570,8 @@ describe eventType =
         RaceStart ->
             "Race Start"
 
-        Flag FullCourseYellow ->
-            "Full Course Yellow"
-
-        Flag SafetyCar ->
-            "Safety Car"
-
-        Flag RedFlag ->
-            "Red Flag"
-
-        Flag GreenFlag ->
-            "Green Flag"
+        Flag flag ->
+            Flag.toString flag
 
         CarEvent _ OvertakeForLead ->
             "Overtake for Lead"

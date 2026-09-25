@@ -9,7 +9,7 @@ mod Round.TestTimeline {
     use Motorsport.Timeline.CarEvent
     use Motorsport.Timeline.Event
     use Motorsport.Timeline.EventType
-    use Motorsport.Timeline.RaceFlag
+    use Motorsport.Flag.Flag
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
@@ -37,12 +37,12 @@ mod Round.TestTimeline {
             case EventType.Of(carNumber, carEvent) => (when, name(carEvent), carNumber)
         }
 
-    def flagName(flag: RaceFlag): String =
+    def flagName(flag: Flag): String =
         match flag {
-            case RaceFlag.FullCourseYellow => "fullCourseYellow"
-            case RaceFlag.SafetyCar        => "safetyCar"
-            case RaceFlag.RedFlag          => "redFlag"
-            case RaceFlag.GreenFlag        => "greenFlag"
+            case Flag.FullCourseYellow => "fullCourseYellow"
+            case Flag.SafetyCar        => "safetyCar"
+            case Flag.RedFlag          => "redFlag"
+            case Flag.GreenFlag        => "greenFlag"
         }
 
     def name(carEvent: CarEvent): String =

@@ -1,5 +1,5 @@
 module Motorsport.Race.TimelineEvent exposing
-    ( TimelineEvent, EventType(..), RaceFlag(..), CarEventType(..)
+    ( TimelineEvent, EventType(..), CarEventType(..)
     , fromJsonl, decoder
     )
 
@@ -7,13 +7,14 @@ module Motorsport.Race.TimelineEvent exposing
 
 Read out of the round's timeline file, which `Round.Timeline` writes.
 
-@docs TimelineEvent, EventType, RaceFlag, CarEventType
+@docs TimelineEvent, EventType, CarEventType
 @docs fromJsonl, decoder
 
 -}
 
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
+import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car exposing (CarNumber)
 
@@ -24,18 +25,8 @@ type alias TimelineEvent =
 
 type EventType
     = RaceStart
-    | Flag RaceFlag
+    | Flag Flag
     | CarEvent CarNumber CarEventType
-
-
-{-| A flag the whole field is shown, as the line first reads it. `SafetyCar` is
-the feed's `SF`; `GreenFlag` is racing resumed after any of the others.
--}
-type RaceFlag
-    = FullCourseYellow
-    | SafetyCar
-    | RedFlag
-    | GreenFlag
 
 
 type CarEventType
@@ -71,7 +62,7 @@ decoder =
 
 eventTypeDecoder : String -> Decoder EventType
 eventTypeDecoder event =
-    case ( event, raceFlagOf event ) of
+    case ( event, Flag.fromString event ) of
         ( "raceStart", _ ) ->
             Decode.succeed RaceStart
 
@@ -82,25 +73,6 @@ eventTypeDecoder event =
             Decode.map2 CarEvent
                 (field "carNumber" string)
                 (carEventTypeDecoder event)
-
-
-raceFlagOf : String -> Maybe RaceFlag
-raceFlagOf event =
-    case event of
-        "fullCourseYellow" ->
-            Just FullCourseYellow
-
-        "safetyCar" ->
-            Just SafetyCar
-
-        "redFlag" ->
-            Just RedFlag
-
-        "greenFlag" ->
-            Just GreenFlag
-
-        _ ->
-            Nothing
 
 
 {-| A name the CLI writes that this app has none of fails the round, as an

@@ -7,7 +7,7 @@ mod Db.TestTimelineEvents {
     use Motorsport.Timeline.CarEvent
     use Motorsport.Timeline.Event
     use Motorsport.Timeline.EventType
-    use Motorsport.Timeline.RaceFlag
+    use Motorsport.Flag.Flag
     use Util.Json.Encode.Extra
 
     def at(ms: Int32, eventType: EventType): Event =
@@ -16,10 +16,10 @@ mod Db.TestTimelineEvents {
     /// One of each, which is what the row has to carry between them.
     def oneOfEach(): List[Event] =
         at(0, EventType.RaceStart) ::
-        at(600, EventType.Flag(RaceFlag.FullCourseYellow)) ::
-        at(800, EventType.Flag(RaceFlag.SafetyCar)) ::
-        at(850, EventType.Flag(RaceFlag.RedFlag)) ::
-        at(900, EventType.Flag(RaceFlag.GreenFlag)) ::
+        at(600, EventType.Flag(Flag.FullCourseYellow)) ::
+        at(800, EventType.Flag(Flag.SafetyCar)) ::
+        at(850, EventType.Flag(Flag.RedFlag)) ::
+        at(900, EventType.Flag(Flag.GreenFlag)) ::
         at(1000, EventType.Of("7", CarEvent.OvertakeForLead)) ::
         at(1200, EventType.Of("8", CarEvent.LeaderInPit)) ::
         at(1200, EventType.Of("8", CarEvent.FastestLap)) ::

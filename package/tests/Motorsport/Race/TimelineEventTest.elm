@@ -2,8 +2,9 @@ module Motorsport.Race.TimelineEventTest exposing (suite)
 
 import Expect
 import Json.Decode as Decode
+import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), RaceFlag(..))
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..))
 import Test exposing (Test, describe, test)
 
 
