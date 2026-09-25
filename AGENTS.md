@@ -356,9 +356,7 @@ does, so `Race.fromCars` is given a `Race.Index` rather than building one.
 list of what happened, which the round's report is drawn from — though it
 arrives in a file of its own rather than in the summary. Nothing a `Race` holds is counted
 off it: a car's status is its own laps read against the time limit, so a round
-draws without it and `Shared` does not wait for it. What that file actually
-holds — measured, with what it leaves out of the race's story — is
-`docs/timeline-inventory.md`.
+draws without it and `Shared` does not wait for it.
 
 ### Reading the race at a moment
 
