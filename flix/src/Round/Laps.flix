@@ -42,9 +42,9 @@ mod Round.Laps {
     /// to, so the field is this round's and not the table's. Ties on the clock
     /// are broken by the file's order, which no two rows share.
     ///
-    /// `Round.Timeline.leads` counts the same thing again to find who led each
-    /// lap: a place on the lap rides beside it, and the lead is a change
-    /// between laps, so neither reading is the other's to hand over.
+    /// `Round.Timeline` counts the same order again, within each class, to find
+    /// who led each lap: a place on the lap rides beside it, and the lead is a
+    /// change between laps, so neither reading is the other's to hand over.
     def placeInField(): String =
         "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) - 1"
 

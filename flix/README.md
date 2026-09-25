@@ -194,18 +194,29 @@ round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
 rather than read in their key's order, which is the same list until a row is
 corrected in SQL and then is the list that moment used to be in.
 
-Each car's first and last crossing is one `GROUP BY`, and the lead is
-`ROW_NUMBER` picking each lap's first crossing with `LAG` asking who held the one
-before -- two queries rather than one, since SQLite settles a `WHERE` before
-either window. The stops are not counted at all: both halves of one are read off
-`pit_time`, which the laps carry, so the app reads them there. What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's
-last crossing against the time limit, which is `Metadata`'s estimate and the one
-reading here the laps do not carry, so `Round.Summary.particulars` is read first
-and hands it over -- the whole of what the load wants a summary for. It also
-fixes the order events sharing an instant come back in: `List.sortBy` is not
-stable, and a report the load counted has to read back in the order it was
-written, which is why the gathering order rides in the sort key and lands in
-`seq`.
+Each car's last crossing is one `GROUP BY`, and a class's lead is
+`ROW_NUMBER` picking the class's first crossing of each lap with `LAG` asking who
+held the one before -- two queries rather than one, since SQLite settles a `WHERE`
+before either window. The class is the car's entry's, joined through `cars`; the
+top class's lead is the field's in every round loaded, so the field's is not
+counted beside it. A change of flag and a driver change are a `LAG` each, and a
+class's fastest lap is `Round.Index`'s running minimum partitioned by class.
+
+The lead is read twice, about two different cars: an overtake is about whoever
+crossed the next lap first, a leader in the pits about the car that led and turned
+down the pit lane. A boundary the leader's stop settled is no overtake. The stop is
+counted at its out-lap and timed at its in-lap, `Db.Laps.pitOutLap` saying why; the
+field's stops are not events, since the app counts them off the laps itself in
+`Motorsport.Race.Stint`. `Db.Laps.pitLap` is either half of a stop, and is what
+`Cli.Load.Validation` skips a pit lap over too.
+
+What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's last
+crossing against the time limit, which is `Metadata`'s estimate and the one reading
+here the laps do not carry, so `Round.Summary.particulars` is read first and hands
+it over -- the whole of what the load wants a summary for. It also fixes the order
+events sharing an instant come back in: `List.sortBy` is not stable, and a report
+the load counted has to read back in the order it was written, which is why the
+gathering order rides in the sort key and lands in `seq`.
 
 `Motorsport.Timeline.parts` is where the line written out and the row meet, so
 the JSON, the column's `check` and the reading back cannot disagree about what

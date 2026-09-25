@@ -3,6 +3,7 @@
     "Internal.Statistics",
     "Motorsport.Driver",
     "Motorsport.Duration",
+    "Motorsport.Flag",
     "Motorsport.Gap",
     "Motorsport.Instant",
     "Motorsport.Lap",

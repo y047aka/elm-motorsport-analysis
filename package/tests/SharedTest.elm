@@ -106,8 +106,7 @@ which is a long way short of the six hours the round was scheduled for.
 timelineJsonl : String
 timelineJsonl =
     """{ "elapsed": "0.000", "event": "raceStart" }
-{ "elapsed": "0.000", "event": "start", "carNumber": "7" }
-{ "elapsed": "1:53.000", "event": "retirement", "carNumber": "7" }
+{ "elapsed": "1:53.000", "event": "retired", "carNumber": "7" }
 """
 
 
@@ -288,7 +287,7 @@ suite =
         [ test "the fixtures decode" <|
             \_ ->
                 ( summary /= Nothing, List.length laps, List.length timeline )
-                    |> Expect.equal ( True, 1, 3 )
+                    |> Expect.equal ( True, 1, 2 )
         , test "puts on a car the livery it carried at the round being read" <|
             \_ ->
                 ( liveryAt "spa_6h", liveryAt "le_mans_24h" )
@@ -355,7 +354,7 @@ suite =
                     , loadingSpa |> deliverSummary spa |> deliverLaps spa |> deliverTimeline spa
                     ]
                         |> List.map eventCount
-                        |> Expect.equalLists [ 0, 3, 3 ]
+                        |> Expect.equalLists [ 0, 2, 2 ]
             , test "a timeline that never arrives leaves the round rather than taking it away" <|
                 \_ ->
                     loadingSpa

@@ -7,6 +7,7 @@ mod Db.TestTimelineEvents {
     use Motorsport.Timeline.CarEvent
     use Motorsport.Timeline.Event
     use Motorsport.Timeline.EventType
+    use Motorsport.Flag.Flag
     use Util.Json.Encode.Extra
 
     def at(ms: Int32, eventType: EventType): Event =
@@ -15,10 +16,16 @@ mod Db.TestTimelineEvents {
     /// One of each, which is what the row has to carry between them.
     def oneOfEach(): List[Event] =
         at(0, EventType.RaceStart) ::
-        at(0, EventType.Of("7", CarEvent.Start)) ::
-        at(1000, EventType.Of("7", CarEvent.TookLead)) ::
-        at(4000, EventType.Of("8", CarEvent.Retirement)) ::
-        at(5000, EventType.Of("7", CarEvent.Checkered)) ::
+        at(600, EventType.Flag(Flag.FullCourseYellow)) ::
+        at(800, EventType.Flag(Flag.SafetyCar)) ::
+        at(850, EventType.Flag(Flag.RedFlag)) ::
+        at(900, EventType.Flag(Flag.GreenFlag)) ::
+        at(1000, EventType.Of("7", CarEvent.OvertakeForLead)) ::
+        at(1200, EventType.Of("8", CarEvent.LeaderInPit)) ::
+        at(1200, EventType.Of("8", CarEvent.FastestLap)) ::
+        at(1200, EventType.Of("8", CarEvent.DriverChange)) ::
+        at(4000, EventType.Of("8", CarEvent.Retired)) ::
+        at(5000, EventType.Of("7", CarEvent.Finished)) ::
         Nil
 
     def line(event: Event): String =
@@ -29,7 +36,7 @@ mod Db.TestTimelineEvents {
     @Test
     def theEventsAreNumberedFromNoughtInOrder(): Unit \ Assert =
         let rows = TimelineEvents.fromEvents(3, oneOfEach());
-        Assert.assertTrue(rows |> List.map(r -> r#seq) == List.range(0, 5));
+        Assert.assertTrue(rows |> List.map(r -> r#seq) == List.range(0, 11));
         Assert.assertTrue(rows |> List.forAll(r -> r#roundId == 3))
 
     /// Compared as the line the event is written out as, which is the other
@@ -46,21 +53,22 @@ mod Db.TestTimelineEvents {
         }
 
     @Test
-    def onlyTheRaceStartCarriesNoCar(): Unit \ Assert =
+    def onlyTheRaceStartAndTheFlagsCarryNoCar(): Unit \ Assert =
         let rows = TimelineEvents.fromEvents(1, oneOfEach());
         Assert.assertTrue(rows |> List.filter(r -> Option.isEmpty(r#carNumber))
-            |> List.map(r -> r#event) == "raceStart" :: Nil)
+            |> List.map(r -> r#event) ==
+                "raceStart" :: "fullCourseYellow" :: "safetyCar" :: "redFlag" :: "greenFlag" :: Nil)
 
     /// What a row would read as had it got past the column's check, which is
     /// `Motorsport.Timeline.names`.
     @Test
     def aNameNoEventAnswersToSpellsNone(): Unit \ Assert =
         let row = {
-            roundId = 1, seq = 0, elapsedMs = 0, event = "safetyCar",
+            roundId = 1, seq = 0, elapsedMs = 0, event = "slowZone",
             carNumber = Some("7")
         };
         Assert.assertTrue(Option.isEmpty(TimelineEvents.toEvent(row)));
-        Assert.assertTrue(not List.memberOf("safetyCar", Timeline.names()))
+        Assert.assertTrue(not List.memberOf("slowZone", Timeline.names()))
 
     // --------------------------------------------------------------- schema
 

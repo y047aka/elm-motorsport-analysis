@@ -42,15 +42,22 @@ mod Round.Index {
 
     // ----------------------------------------------------------- best times
 
-    /// What each record is drawn from. Every one of them is won by the
-    /// smallest reading, which is what lets `standing` find them all in one
-    /// running minimum.
-    def sources(): List[(Record, String)] =
-        (Record.FastestLap, "NULLIF(lap_time_ms, 0)") ::
-        (Record.FastestSector(Sector.S1), "s1_ms") ::
-        (Record.FastestSector(Sector.S2), "s2_ms") ::
-        (Record.FastestSector(Sector.S3), "s3_ms") ::
+    /// What each record is drawn from, and which laps. Every one of them is won
+    /// by the smallest reading, which is what lets `standing` find them all in
+    /// one running minimum.
+    ///
+    /// Lap 1's S1, and so its time, is over a shorter stretch than any later lap's:
+    /// at Fuji, Spa and Bahrain the leader's beats every later S1 by 0.6 to 1.7
+    /// seconds. Its S2, its S3 and its mini-sectors are a lap's like any other.
+    def sources(): List[(Record, String, List[Sql.Expr[Bool]])] =
+        (Record.FastestLap, "NULLIF(lap_time_ms, 0)", notLapOne() :: Nil) ::
+        (Record.FastestSector(Sector.S1), "s1_ms", notLapOne() :: Nil) ::
+        (Record.FastestSector(Sector.S2), "s2_ms", Nil) ::
+        (Record.FastestSector(Sector.S3), "s3_ms", Nil) ::
         Nil
+
+    def notLapOne(): Sql.Expr[Bool] =
+        Sql.ne(Schema.expr(Laps.columns()#lapNumber), Sql.i32(1))
 
     def bestTimes(entry: Entry, seats: Round.Drivers.Seats): List[(Record, Change)] \ DbRead =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
@@ -84,8 +91,8 @@ mod Round.Index {
         changes |> List.filterMap(match (r, change) -> if (r == record) Some(change) else None)
 
     def branches(entry: Entry): List[Sql.Branch[Record]] =
-        let scalar = sources() |> List.map(match (record, expression) ->
-            Sql.Branch.One(record, reading(entry, expression)));
+        let scalar = sources() |> List.map(match (record, expression, predicates) ->
+            Sql.Branch.One(record, reading(entry, expression, predicates)));
         List.append(scalar, miniSectorBranch(entry) :: Nil)
 
     /// The fifteen mini-sectors are one arm, `json_each` numbering them from
@@ -109,12 +116,12 @@ mod Round.Index {
             + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
             + " FROM v WHERE t IS NOT NULL"
 
-    def reading(entry: Entry, expression: String): Sql.Frag =
+    def reading(entry: Entry, expression: String, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
         Sql.frags(
             Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number,"
                 + " ${expression} AS t"
                 + " FROM " + Laps.table() + " WHERE") ::
-            where_(entry, Nil) :: Nil
+            where_(entry, predicates) :: Nil
         )
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors

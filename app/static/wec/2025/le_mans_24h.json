@@ -1361,13 +1361,6 @@
     "bestTimeChanges": {
       "fastestLapTime": [
         {
-          "elapsed": "3:43.009",
-          "time": "3:43.009",
-          "carNumber": "5",
-          "lap": 1,
-          "driver": "Julien ANDLAUER"
-        },
-        {
           "elapsed": "7:11.321",
           "time": "3:28.312",
           "carNumber": "5",
@@ -1482,20 +1475,6 @@
       ],
       "sectors": {
         "s1": [
-          {
-            "elapsed": "3:43.009",
-            "time": "46.288",
-            "carNumber": "5",
-            "lap": 1,
-            "driver": "Julien ANDLAUER"
-          },
-          {
-            "elapsed": "3:45.123",
-            "time": "45.926",
-            "carNumber": "12",
-            "lap": 1,
-            "driver": "Will STEVENS"
-          },
           {
             "elapsed": "7:11.321",
             "time": "32.944",

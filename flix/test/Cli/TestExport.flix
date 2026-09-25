@@ -38,9 +38,11 @@ mod Cli.TestExport {
                 Assert.assertTrue(rendered#lapCount == 3);
                 Assert.assertTrue(String.contains({substr = "\"6 Hours of Fuji\""}, rendered#metadataJson));
                 Assert.assertTrue(List.length(lines(rendered#lapsJsonl)) == 3);
-                // The start, two cars taking it, two flags, and the lead car
-                // 12 took on lap 2.
-                Assert.assertTrue(List.length(lines(rendered#timelineJsonl)) == 6)
+                // The race's own start, two finishes, the class's first fastest lap
+                // car 12 set on lap 2, car 12 handed from its first driver to its
+                // second, and the safety car car 12's lap 1 crossed under with the
+                // green its lap 2 did.
+                Assert.assertTrue(List.length(lines(rendered#timelineJsonl)) == 7)
             case Err(_) => Assert.assertTrue(false)
         }
 

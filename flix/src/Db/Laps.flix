@@ -175,6 +175,23 @@ mod Db.Laps {
     pub def inRound(entry: Entry): Sql.Expr[Bool] =
         scope(columns(), entry)
 
+    /// A lap of one car that took it into the pit lane, either half of a stop:
+    /// the in-lap, which turned down the pit lane at its end and is marked
+    /// `crossing_finish_line_in_pit`, and the out-lap after it, which carries the
+    /// stop's `pit_time`. Text rather than an `Sql.Expr`, since it is written into
+    /// a common table expression's column list, which is text.
+    pub def pitLap(): String =
+        "(${Schema.name(columns()#crossingFinishLineInPit)} = 1"
+            + " OR ${Schema.name(columns()#pitTimeMs)} IS NOT NULL)"
+
+    /// The out-lap alone, which carries `pit_time` and is the half a query counting
+    /// stops counts. The in-lap can be absent -- a car starting from the pit lane
+    /// has an out-lap on lap 1 and nothing before it -- and the out-lap is
+    /// sometimes marked as a pit crossing too, so counting `pitLap` counts some
+    /// stops twice and some not at all. Text, as `pitLap` is.
+    pub def pitOutLap(): String =
+        "(${Schema.name(columns()#pitTimeMs)} IS NOT NULL)"
+
     /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them. Named for
     /// the table, since a join's other side has a `round_id` too.

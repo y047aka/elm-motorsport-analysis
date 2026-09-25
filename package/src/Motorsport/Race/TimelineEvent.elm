@@ -14,6 +14,7 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
+import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car exposing (CarNumber)
 
@@ -24,14 +25,17 @@ type alias TimelineEvent =
 
 type EventType
     = RaceStart
+    | Flag Flag
     | CarEvent CarNumber CarEventType
 
 
 type CarEventType
-    = Start
-    | TookLead
-    | Retirement
-    | Checkered
+    = OvertakeForLead
+    | LeaderInPit
+    | FastestLap
+    | DriverChange
+    | Retired
+    | Finished
 
 
 
@@ -58,13 +62,17 @@ decoder =
 
 eventTypeDecoder : String -> Decoder EventType
 eventTypeDecoder event =
-    if event == "raceStart" then
-        Decode.succeed RaceStart
+    case ( event, Flag.fromString event ) of
+        ( "raceStart", _ ) ->
+            Decode.succeed RaceStart
 
-    else
-        Decode.map2 CarEvent
-            (field "carNumber" string)
-            (carEventTypeDecoder event)
+        ( _, Just flag ) ->
+            Decode.succeed (Flag flag)
+
+        ( _, Nothing ) ->
+            Decode.map2 CarEvent
+                (field "carNumber" string)
+                (carEventTypeDecoder event)
 
 
 {-| A name the CLI writes that this app has none of fails the round, as an
@@ -75,17 +83,23 @@ that never stopped.
 carEventTypeDecoder : String -> Decoder CarEventType
 carEventTypeDecoder event =
     case event of
-        "start" ->
-            Decode.succeed Start
+        "overtakeForLead" ->
+            Decode.succeed OvertakeForLead
 
-        "tookLead" ->
-            Decode.succeed TookLead
+        "leaderInPit" ->
+            Decode.succeed LeaderInPit
 
-        "retirement" ->
-            Decode.succeed Retirement
+        "fastestLap" ->
+            Decode.succeed FastestLap
 
-        "checkered" ->
-            Decode.succeed Checkered
+        "driverChange" ->
+            Decode.succeed DriverChange
+
+        "retired" ->
+            Decode.succeed Retired
+
+        "finished" ->
+            Decode.succeed Finished
 
         _ ->
             Decode.fail ("Unknown timeline event: " ++ event)

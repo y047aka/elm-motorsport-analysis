@@ -10,16 +10,19 @@ module Page.Wec.Event exposing (Model, Msg, init, subscriptions, update, view)
 import Browser.Events
 import Dict exposing (Dict)
 import Effect exposing (Effect)
-import Html exposing (Html, a, button, div, main_, nav, span, table, tbody, td, text, tr)
+import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
+import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
+import Motorsport.Flag as Flag
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
+import Motorsport.Lap as Lap
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
@@ -27,6 +30,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Class as Class
 import Route
 import Shared
 import Shared.Msg
@@ -460,9 +464,7 @@ timelinePanel cell timeline replay =
         [ Card.card []
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
-                    [ table [ Attributes.class "w-full border-collapse text-xs" ]
-                        [ Html.Lazy.lazy3 eventRows replay.race.cars timeline occurredCount ]
-                    ]
+                    [ Html.Lazy.lazy3 eventRows replay.race.cars timeline occurredCount ]
                 ]
             ]
         ]
@@ -482,64 +484,138 @@ number. Anything frame-made passed instead -- a snapshot, or the cut list itself
 eventRows : List Car -> Timeline -> Int -> Html Msg
 eventRows cars timeline occurredCount =
     let
-        metadataByNumber =
+        carsByNumber =
             cars
-                |> List.map (\car -> ( car.metadata.carNumber, car.metadata ))
+                |> List.map (\car -> ( car.metadata.carNumber, car ))
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
-        |> List.map (eventRow metadataByNumber)
-        |> tbody []
+        |> List.map (eventRow carsByNumber)
+        |> div [ Attributes.class "grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-xs" ]
 
 
-{-| One row per event: time, whose it was, what it was.
+{-| A row is two lines whatever it holds, the first as tall as the badge: the
+`1.375rem` is `CarNumberBadge.viewRow`'s height, and moves with it.
 -}
-eventRow : Dict CarNumber Metadata -> TimelineEvent -> Html Msg
-eventRow metadataByNumber event =
-    tr []
-        [ td [ Attributes.class "whitespace-nowrap py-0.5 pr-2 tabular-nums text-muted-foreground" ]
+eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
+eventRow carsByNumber event =
+    let
+        car =
+            case event.eventType of
+                CarEvent carNumber _ ->
+                    Dict.get carNumber carsByNumber
+
+                _ ->
+                    Nothing
+
+        cell classes children =
+            div [ Attributes.class classes ] children
+
+        secondLine =
+            case detail car event of
+                Just line ->
+                    [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text line ] ]
+
+                Nothing ->
+                    []
+    in
+    div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-1 items-center py-0.5" ]
+        ([ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
+         , cell "" [ text (describe event.eventType) ]
+         , cell "" [ carBadge car event.eventType ]
+         , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
-        , td [ Attributes.class "w-px py-0.5 pr-2" ]
-            [ carBadge metadataByNumber event.eventType ]
-        , td [ Attributes.class "py-0.5 text-right" ]
-            [ text (eventTypeToString event.eventType) ]
+         ]
+            ++ secondLine
+        )
+
+
+classMark : Metadata -> Html Msg
+classMark metadata =
+    div
+        [ Attributes.class "size-2 rounded-[2px]"
+        , attribute "style" ("background-color: " ++ Class.toColor metadata.class ++ ";")
         ]
+        []
 
 
-{-| Whose event this was, badged like the standings badge it sits beside. A race
-start belongs to nobody, and a number no car of the field answers to keeps its
-bare digits rather than vanishing.
+{-| An event of the whole field's has no badge, and a number no car of the field
+answers to keeps its bare digits rather than vanishing.
 -}
-carBadge : Dict CarNumber Metadata -> EventType -> Html Msg
-carBadge metadataByNumber eventType =
-    case eventType of
-        CarEvent carNumber _ ->
-            metadataByNumber
-                |> Dict.get carNumber
-                |> Maybe.map CarNumberBadge.viewRow
-                |> Maybe.withDefault (span [] [ text carNumber ])
+carBadge : Maybe Car -> EventType -> Html Msg
+carBadge car eventType =
+    case ( car, eventType ) of
+        ( Just { metadata }, _ ) ->
+            CarNumberBadge.viewRow metadata
 
-        RaceStart ->
+        ( Nothing, CarEvent carNumber _ ) ->
+            span [] [ text carNumber ]
+
+        ( Nothing, _ ) ->
             text ""
 
 
-eventTypeToString : EventType -> String
-eventTypeToString eventType =
+describe : EventType -> String
+describe eventType =
     case eventType of
         RaceStart ->
-            "Race Started"
+            "Race Start"
 
-        CarEvent _ Start ->
-            "Start"
+        Flag flag ->
+            Flag.toString flag
 
-        CarEvent _ TookLead ->
-            "Took the Lead"
+        CarEvent _ OvertakeForLead ->
+            "Overtake for Lead"
 
-        CarEvent _ Retirement ->
-            "Retirement"
+        CarEvent _ LeaderInPit ->
+            "Leader In Pit"
 
-        CarEvent _ Checkered ->
-            "Checkered Flag"
+        CarEvent _ FastestLap ->
+            "Fastest Lap"
+
+        CarEvent _ DriverChange ->
+            "Driver Change"
+
+        CarEvent _ Retired ->
+            "Retired"
+
+        CarEvent _ Finished ->
+            "Finished"
+
+
+{-| The second line an event has, read off the car's laps at the event.
+
+A fastest lap is the lap the event completes, its time and its driver. A driver
+change is who handed the car to whom: the driver of the lap the event completes,
+and the one of the lap in progress from it, which is the lap the car's
+`currentDriver` is read off from then on.
+
+-}
+detail : Maybe Car -> TimelineEvent -> Maybe String
+detail car event =
+    let
+        lapOf find =
+            car |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
+
+        driverOf find =
+            lapOf find |> Maybe.map (.driver >> Driver.toInitialAndSurname)
+    in
+    case event.eventType of
+        CarEvent _ FastestLap ->
+            lapOf Lap.findLastLapAt
+                |> Maybe.andThen
+                    (\lap ->
+                        lap.time
+                            |> Maybe.map (\time -> Duration.toString time ++ " · " ++ Driver.toInitialAndSurname lap.driver)
+                    )
+
+        CarEvent _ DriverChange ->
+            Maybe.map2 (\handedOver tookOver -> handedOver ++ " → " ++ tookOver)
+                (driverOf Lap.findLastLapAt)
+                (driverOf Lap.findCurrentLap)
+
+        _ ->
+            Nothing
 
 
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
