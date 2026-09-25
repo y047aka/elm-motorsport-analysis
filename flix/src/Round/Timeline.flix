@@ -1,8 +1,6 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// six readings of the laps -- each car's last moment, each change of flag, each
-/// overtake for a class's lead, each time a class's leader went into the pits,
-/// each class's fastest lap, each driver change -- and what they add up to is
+/// a reading of the laps per kind of event, and what they add up to is
 /// `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
@@ -123,10 +121,8 @@ mod Round.Timeline {
 
     /// Every lap whose driver is not the one of the car's lap before it, timed at
     /// that lap before's crossing: the lap in progress from there on is the new
-    /// driver's, which is when the app reads the car as theirs.
-    ///
-    /// Every change in the rounds loaded falls on an out-lap, but nothing here asks
-    /// for one: a change the feed writes elsewhere is still a change.
+    /// driver's, which is when the app reads the car as theirs. Not only out-laps,
+    /// though every change in the rounds loaded falls on one.
     def driverChanges(entry: Entry): List[Timeline.DriverChange] \ DbRead =
         Sql.rows(Sql.raw("seated"))
             |> Sql.using(Sql.frags(
@@ -159,10 +155,8 @@ mod Round.Timeline {
     /// before either of them: the leaders are picked out in `l`, and only then
     /// is each one asked who led the lap before.
     ///
-    /// A boundary the car that lost the lead crossed in the pit lane, turning into it
-    /// or coming back out of it, is not an overtake and is not here: whoever stayed
-    /// out is in front without having overtaken anyone, and the stop that did it is
-    /// `leadersInPit`' event.
+    /// A boundary the car that lost the lead crossed as either half of a stop is no
+    /// overtake: the stop is `leadersInPit`'s event.
     def overtakes(entry: Entry): List[Timeline.Overtake] \ DbRead =
         Sql.rows(Sql.raw("(" + handedOver() + ") AS led"))
             |> Sql.using(stopCrossings(entry))
@@ -179,16 +173,8 @@ mod Round.Timeline {
     /// Every time the car leading its class went into the pits, whether the lead
     /// changed hands over the stop or not: the crossing at which it turned down the
     /// pit lane, made by a car that led its class on that lap or the lap before it.
-    ///
-    /// Asking the lead first is what loses these: a leader with air behind it comes
-    /// out in front again and no lap boundary changes hands at all, which is seven of
-    /// Le Mans's leader stops -- #51's once it had gone clear in the last four hours.
-    ///
-    /// The stop is anchored on its out-lap, since that is the one crossing the feed
-    /// has to write: a stop's two crossings are sometimes both marked as pit crossings
-    /// and the in-lap is sometimes missing, so counting crossings counts some stops
-    /// twice and some not at all. `pit_time` is written once per stop, and the event
-    /// is timed a lap back where the in-lap crossing is.
+    /// A stop is counted at its out-lap, for `Db.Laps.pitOutLap`'s reason, and timed
+    /// at its in-lap.
     def leadersInPit(entry: Entry): List[Timeline.InPit] \ DbRead =
         Sql.rows(Sql.raw("l AS stop"))
             |> Sql.using(Sql.frags(stopCrossings(entry) :: ledEachLap() :: Nil))
@@ -202,10 +188,8 @@ mod Round.Timeline {
                 { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
             |> Sql.selectAll
 
-    /// The crossings both readings of a stop are made of: every crossing of the
-    /// round's, saying whether it is one half of a stop, whether it is the half a stop
-    /// is timed at, the car's class, and who of the class crossed its lap first.
-    /// Named `l` because both readings correlate on it by name.
+    /// Every crossing of the round's, with its class and its place in its class's
+    /// lap. Named `l` because the subqueries below correlate on it by name.
     def stopCrossings(entry: Entry): Sql.Frag =
         Sql.frags(
             Sql.raw("l AS (SELECT ${Laps.table()}.car_number, lap_number, elapsed_ms,"
@@ -226,10 +210,8 @@ mod Round.Timeline {
             + " AND ${cars}.car_number = ${laps}.car_number"
             + " JOIN ${entries} ON ${entries}.entry_id = ${cars}.entry_id"
 
-    /// Who led their class on each lap, for a query asking who was in the lead around
-    /// a stop. The `rn = 1` rows of the crossings, which is the same window
-    /// `handedOver` reads. A car only ever leads its own class, so a stop is matched
-    /// to its car's leads by the car alone.
+    /// Who led their class on each lap. A car only ever leads its own class, so a
+    /// stop is matched to its car's leads by the car alone.
     def ledEachLap(): Sql.Frag =
         Sql.raw(", led AS (SELECT car_number, lap_number FROM l WHERE rn = 1)")
 
@@ -254,8 +236,8 @@ mod Round.Timeline {
     /// That lap alone, and not the one before it: a leader that came back out in
     /// front has its out-lap there, and an overtake on the lap after is still one.
     ///
-    /// The car and lap are given as text because the two readings correlate on rows
-    /// neither of them declares columns for, and so are `cameInAt`'s.
+    /// The car and lap are text because the readings correlate on rows neither
+    /// declares columns for, and so are `cameInAt`'s.
     def crossedInPits(car: String, lap: String): String =
         "EXISTS (SELECT 1 FROM l WHERE l.car_number = ${car}"
             + " AND l.lap_number = ${lap} AND l.pitted)"

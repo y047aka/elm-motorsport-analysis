@@ -199,35 +199,16 @@ Each car's last crossing is one `GROUP BY`, and a class's lead is
 held the one before -- two queries rather than one, since SQLite settles a `WHERE`
 before either window. The class is the car's entry's, joined through `cars`; the
 top class's lead is the field's in every round loaded, so the field's is not
-counted beside it. A change of flag is a `LAG` over the whole field's crossings
-in the order the line saw them, the race starting green and the finish's own
-flag being no change; `SF` is written a safety car, which every car crosses
-under at a crawl. A driver change is a third `LAG`, over each car's laps, timed
-at the crossing before the new driver's first lap, and a class's fastest lap is
-`Round.Index`'s running minimum partitioned by class -- lap 1 left out of both,
-its time and its S1 being over a shorter stretch than any later lap's. An overtake for the lead and a leader in the pits are then read
-apart and about two different cars: an overtake is about whoever crossed the next
-lap first, a leader in the pits about the car that led and turned down the pit
-lane. `Db.Laps.pitLap` names either half of a stop -- the in-lap, marked
-`crossing_finish_line_in_pit`, and the out-lap whose `pit_time` carries the stop --
-and is what `Cli.Load.Validation` skips a pit lap over too. `Db.Laps.pitOutLap`
-names the out-lap alone, which is the half a stop is counted at; the event is timed
-at the in-lap, as below.
+counted beside it. A change of flag and a driver change are a `LAG` each, and a
+class's fastest lap is `Round.Index`'s running minimum partitioned by class.
 
-The stop is anchored on its out-lap because that is the crossing the feed has to
-write: the two are sometimes both marked as pit crossings and the in-lap sometimes
-absent, so counting crossings counts some stops twice and some not at all. The car
-led one of the two laps before that out-lap -- leading the lap it came in on, or
-losing the lead at the crossing it turned into the lane from -- and the event is
-timed at the earlier crossing, where it came in. Reading stops off the lead is what
-loses a leader that came back out in front of the field: seven of Le Mans's leader
-stops are that, no lap boundary changing hands at any of them. The overtake query asks
-whether the car that lost the lead crossed that boundary as either half of a stop,
-so a boundary the leader's stop settled is no event -- whoever stayed out is in
-front without having overtaken anyone. It asks of that crossing alone: the lap before
-it may be a leader's out-lap, and an overtake on the lap after one is still one. The
-app counts a car's stops off the laps for itself, in `Motorsport.Race.Stint`; the
-event says the leader made one, not how many it has made.
+The lead is read twice, about two different cars: an overtake is about whoever
+crossed the next lap first, a leader in the pits about the car that led and turned
+down the pit lane. A boundary the leader's stop settled is no overtake. The stop is
+counted at its out-lap and timed at its in-lap, `Db.Laps.pitOutLap` saying why; the
+field's stops are not events, since the app counts them off the laps itself in
+`Motorsport.Race.Stint`. `Db.Laps.pitLap` is either half of a stop, and is what
+`Cli.Load.Validation` skips a pit lap over too.
 
 What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's last
 crossing against the time limit, which is `Metadata`'s estimate and the one reading

@@ -255,8 +255,7 @@ mod Round.TestTimeline {
 
     /// The case the lead says nothing about: the leader came in and came back out in
     /// front of the field, so no lap boundary changed hands and there is no overtake
-    /// to hang the stop on. Seven of Le Mans's leader stops are this, and the event is
-    /// timed at where the car turned down the lane.
+    /// to hang the stop on. The event is timed at where the car turned down the lane.
     @Test
     def aLeaderThatCameInAndStayedLeaderIsAnEvent(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",

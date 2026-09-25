@@ -2,10 +2,8 @@
 ///
 /// The mirror of `Motorsport.Race.TimelineEvent` on the Elm side, which reads
 /// these back a line at a time. What is decided here is what the rows do not
-/// say -- whether a car's last lap was the flag or a retirement, which changes of
-/// the lead were overtakes, and which cars went into the pits leading -- and the
-/// counting that finds each event is `Round.Timeline`'s. A driver change is the
-/// laps' own saying and is only carried through, and so is a class's fastest lap.
+/// say -- whether a car's last lap was the flag or a retirement -- and the
+/// counting that finds each event is `Round.Timeline`'s.
 mod Motorsport.Timeline {
 
     use Motorsport.Flag.Flag
@@ -13,11 +11,11 @@ mod Motorsport.Timeline {
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt}
 
-    /// What one car did. The lead is the car's class's, and the top class's is the
-    /// field's. `OvertakeForLead` is about the car that came in front of its class;
-    /// `LeaderInPit` is about the car that led it and turned into the pit lane, and
-    /// says nothing about who took the lead in its place. `DriverChange` says the
-    /// car's driver changed and not to whom: that is the car's own laps' to say.
+    /// What one car did. The lead is the car's class's. `OvertakeForLead` is about
+    /// the car that came in front of its class; `LeaderInPit` is about the car that
+    /// led it, and says nothing about who took the lead in its place. `DriverChange`
+    /// says the car's driver changed and not to whom: that is the car's own laps' to
+    /// say.
     pub enum CarEvent with Eq {
         case OvertakeForLead
         case LeaderInPit
@@ -39,22 +37,19 @@ mod Motorsport.Timeline {
     }
 
     /// A car that took the lead by overtaking on track, and the crossing that did it.
-    /// Not every change of the lead is one: `InPit` is the reading of the laps that
-    /// says who was in the pits.
     pub type alias Overtake = {
         carNumber = String,
         elapsed   = Duration
     }
 
-    /// The leader's crossing into the pit lane, and whose it was. Whether the lead
-    /// changed hands over the stop is neither asked nor said.
+    /// The leader's crossing into the pit lane, and whose it was.
     pub type alias InPit = {
         carNumber = String,
         elapsed   = Duration
     }
 
     /// A car handed to another driver, and the crossing that did it: the last one
-    /// the driver before made, where the car turned into the pit lane.
+    /// the driver before made.
     pub type alias DriverChange = {
         carNumber = String,
         elapsed   = Duration
@@ -73,12 +68,9 @@ mod Motorsport.Timeline {
         elapsed = Duration
     }
 
-    /// What the events of one round are gathered from: each car's last moment, every
-    /// change of flag, every overtake for the lead, every time the leader went into
-    /// the pits, every fastest lap, and every driver change.
-    ///
-    /// A change of the lead the leader's stop settled is in neither: the stop is, and
-    /// the car that stayed out in front is in no event at all.
+    /// What the events of one round are gathered from, `cars` being each car's last
+    /// crossing. A change of the lead the leader's stop settled is no overtake: the
+    /// stop is the event, and the car that stayed out in front is in none.
     pub type alias Readings = {
         timeLimit     = Duration,
         cars          = List[(String, Duration)],
@@ -89,12 +81,7 @@ mod Motorsport.Timeline {
         driverChanges = List[DriverChange]
     }
 
-    /// The race start, one per change of flag, one terminal event per car, one per
-    /// overtake for the lead, one per time the leader went into the pits, one per
-    /// fastest lap, and one per driver change, in time order.
-    ///
-    /// Not who took the green flag: every car that turned a lap took it, all at
-    /// nought, and who was ahead of whom is `Motorsport.Metadata`'s starting grid.
+    /// Every event the readings make, in time order.
     ///
     /// Events sharing an instant keep the order the phases are gathered in.
     /// `List.sortBy` is not stable, so that order is carried in the key rather
@@ -118,7 +105,6 @@ mod Motorsport.Timeline {
     def raceStart(): Event =
         { elapsed = Util.Duration.zero(), eventType = EventType.RaceStart }
 
-    /// One event per overtake for the lead, about the car that took it.
     def overtakesForLead(overtakes: List[Overtake]): List[Event] =
         overtakes |> List.map(overtake ->
             {
@@ -126,8 +112,6 @@ mod Motorsport.Timeline {
                 eventType = EventType.Of(overtake#carNumber, CarEvent.OvertakeForLead)
             })
 
-    /// One event per time the leader went into the pits, about the leader and not
-    /// about the field behind it, which may not have moved at all.
     def leadersInPit(inPits: List[InPit]): List[Event] =
         inPits |> List.map(inPit ->
             {

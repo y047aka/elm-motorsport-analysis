@@ -17,7 +17,7 @@ type Flag
     | GreenFlag
 
 
-{-| The flag a timeline file names, in `Round.Timeline`'s spelling.
+{-| The flag a timeline file names, spelled as the Flix `Motorsport.Flag` writes it.
 
     fromString "safetyCar"
     --> Just SafetyCar

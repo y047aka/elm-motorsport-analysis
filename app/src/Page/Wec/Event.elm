@@ -494,13 +494,8 @@ eventRows cars timeline occurredCount =
         |> div [ Attributes.class "grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-xs" ]
 
 
-{-| One row per event: its car's class, what it was, whose it was, when, and the
-event's `detail` on a line of their own below, as wide as the row less the class.
-An event with none leaves that line empty.
-
-A row is two lines whatever it holds, the first as tall as the badge: the
+{-| A row is two lines whatever it holds, the first as tall as the badge: the
 `1.375rem` is `CarNumberBadge.viewRow`'s height, and moves with it.
-
 -}
 eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
 eventRow carsByNumber event =
@@ -535,9 +530,6 @@ eventRow carsByNumber event =
         )
 
 
-{-| The class of the car the event was, in the colour the standings' class headings
-carry, since a lead is its class's.
--}
 classMark : Metadata -> Html Msg
 classMark metadata =
     div
@@ -547,9 +539,8 @@ classMark metadata =
         []
 
 
-{-| Whose event this was, badged like the standings badge it sits beside. A race
-start belongs to nobody, and a number no car of the field answers to keeps its
-bare digits rather than vanishing.
+{-| An event of the whole field's has no badge, and a number no car of the field
+answers to keeps its bare digits rather than vanishing.
 -}
 carBadge : Maybe Car -> EventType -> Html Msg
 carBadge car eventType =

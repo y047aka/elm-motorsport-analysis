@@ -46,12 +46,9 @@ mod Round.Index {
     /// by the smallest reading, which is what lets `standing` find them all in
     /// one running minimum.
     ///
-    /// Lap 1's time and its S1 are over a shorter stretch than any later lap's:
-    /// at Fuji, Spa and Bahrain the leader's lap-1 S1 beats every later one by
-    /// 0.6 to 1.7 seconds, and up to ten cars' beat their own, while no car's
-    /// lap-1 S2 beats a later one in any round. Its S2 and S3 are a lap's like any
-    /// other. The mini-sectors keep lap 1: only Le Mans has them, and there no
-    /// lap-1 mini-sector beats a later one.
+    /// Lap 1's S1, and so its time, is over a shorter stretch than any later lap's:
+    /// at Fuji, Spa and Bahrain the leader's beats every later S1 by 0.6 to 1.7
+    /// seconds. Its S2, its S3 and its mini-sectors are a lap's like any other.
     def sources(): List[(Record, String, List[Sql.Expr[Bool]])] =
         (Record.FastestLap, "NULLIF(lap_time_ms, 0)", notLapOne() :: Nil) ::
         (Record.FastestSector(Sector.S1), "s1_ms", notLapOne() :: Nil) ::
