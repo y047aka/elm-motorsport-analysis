@@ -1,4 +1,13 @@
 { "elapsed": "0.000", "event": "raceStart" }
+{ "elapsed": "7:11.321", "event": "fastestLap", "carNumber": "5" }
+{ "elapsed": "7:34.597", "event": "fastestLap", "carNumber": "29" }
+{ "elapsed": "8:21.187", "event": "fastestLap", "carNumber": "27" }
+{ "elapsed": "8:24.592", "event": "fastestLap", "carNumber": "61" }
+{ "elapsed": "8:25.441", "event": "fastestLap", "carNumber": "78" }
+{ "elapsed": "10:39.476", "event": "fastestLap", "carNumber": "5" }
+{ "elapsed": "10:42.152", "event": "fastestLap", "carNumber": "12" }
+{ "elapsed": "11:11.556", "event": "fastestLap", "carNumber": "29" }
+{ "elapsed": "18:25.809", "event": "fastestLap", "carNumber": "29" }
 { "elapsed": "29:38.026", "event": "driverChange", "carNumber": "23" }
 { "elapsed": "32:44.071", "event": "driverChange", "carNumber": "63" }
 { "elapsed": "33:03.156", "event": "leaderInPit", "carNumber": "29" }
@@ -6,6 +15,7 @@
 { "elapsed": "33:12.486", "event": "driverChange", "carNumber": "199" }
 { "elapsed": "33:17.852", "event": "driverChange", "carNumber": "22" }
 { "elapsed": "33:40.932", "event": "driverChange", "carNumber": "24" }
+{ "elapsed": "35:22.272", "event": "fastestLap", "carNumber": "6" }
 { "elapsed": "36:10.356", "event": "leaderInPit", "carNumber": "27" }
 { "elapsed": "36:10.356", "event": "driverChange", "carNumber": "27" }
 { "elapsed": "36:56.631", "event": "leaderInPit", "carNumber": "43" }
@@ -41,6 +51,7 @@
 { "elapsed": "1:33:15.496", "event": "leaderInPit", "carNumber": "83" }
 { "elapsed": "1:33:34.401", "event": "driverChange", "carNumber": "94" }
 { "elapsed": "1:42:57.804", "event": "overtakeForLead", "carNumber": "10" }
+{ "elapsed": "1:45:04.854", "event": "fastestLap", "carNumber": "15" }
 { "elapsed": "1:45:50.665", "event": "driverChange", "carNumber": "93" }
 { "elapsed": "1:46:29.295", "event": "driverChange", "carNumber": "18" }
 { "elapsed": "1:53:33.146", "event": "driverChange", "carNumber": "48" }
@@ -84,6 +95,7 @@
 { "elapsed": "2:16:40.316", "event": "leaderInPit", "carNumber": "83" }
 { "elapsed": "2:16:40.316", "event": "driverChange", "carNumber": "83" }
 { "elapsed": "2:21:04.627", "event": "leaderInPit", "carNumber": "94" }
+{ "elapsed": "2:21:25.265", "event": "fastestLap", "carNumber": "21" }
 { "elapsed": "2:29:27.988", "event": "driverChange", "carNumber": "007" }
 { "elapsed": "2:35:11.302", "event": "overtakeForLead", "carNumber": "50" }
 { "elapsed": "2:39:09.011", "event": "leaderInPit", "carNumber": "16" }
@@ -150,6 +162,7 @@
 { "elapsed": "4:21:04.116", "event": "driverChange", "carNumber": "95" }
 { "elapsed": "4:24:30.311", "event": "driverChange", "carNumber": "85" }
 { "elapsed": "4:24:55.082", "event": "driverChange", "carNumber": "51" }
+{ "elapsed": "4:25:04.348", "event": "fastestLap", "carNumber": "92" }
 { "elapsed": "4:25:15.530", "event": "driverChange", "carNumber": "20" }
 { "elapsed": "4:25:41.055", "event": "driverChange", "carNumber": "7" }
 { "elapsed": "4:26:09.851", "event": "driverChange", "carNumber": "33" }
@@ -307,6 +320,7 @@
 { "elapsed": "8:35:05.893", "event": "leaderInPit", "carNumber": "6" }
 { "elapsed": "8:40:38.660", "event": "driverChange", "carNumber": "33" }
 { "elapsed": "8:41:30.306", "event": "driverChange", "carNumber": "21" }
+{ "elapsed": "8:41:51.666", "event": "fastestLap", "carNumber": "38" }
 { "elapsed": "8:44:17.244", "event": "driverChange", "carNumber": "63" }
 { "elapsed": "8:44:49.835", "event": "leaderInPit", "carNumber": "46" }
 { "elapsed": "8:49:34.989", "event": "driverChange", "carNumber": "7" }
@@ -386,6 +400,7 @@
 { "elapsed": "10:41:50.543", "event": "driverChange", "carNumber": "77" }
 { "elapsed": "10:49:59.837", "event": "driverChange", "carNumber": "4" }
 { "elapsed": "10:50:12.363", "event": "driverChange", "carNumber": "12" }
+{ "elapsed": "10:56:10.342", "event": "fastestLap", "carNumber": "87" }
 { "elapsed": "10:58:55.171", "event": "leaderInPit", "carNumber": "21" }
 { "elapsed": "10:58:55.171", "event": "driverChange", "carNumber": "21" }
 { "elapsed": "11:02:00.640", "event": "driverChange", "carNumber": "7" }
@@ -467,6 +482,7 @@
 { "elapsed": "13:24:05.476", "event": "driverChange", "carNumber": "27" }
 { "elapsed": "13:30:26.200", "event": "driverChange", "carNumber": "28" }
 { "elapsed": "13:30:29.526", "event": "driverChange", "carNumber": "93" }
+{ "elapsed": "13:32:59.442", "event": "fastestLap", "carNumber": "7" }
 { "elapsed": "13:34:04.840", "event": "leaderInPit", "carNumber": "199" }
 { "elapsed": "13:34:04.840", "event": "driverChange", "carNumber": "199" }
 { "elapsed": "13:34:12.511", "event": "retired", "carNumber": "18" }
@@ -494,9 +510,12 @@
 { "elapsed": "13:57:46.959", "event": "overtakeForLead", "carNumber": "21" }
 { "elapsed": "14:00:26.800", "event": "leaderInPit", "carNumber": "6" }
 { "elapsed": "14:00:26.800", "event": "driverChange", "carNumber": "6" }
+{ "elapsed": "14:01:14.262", "event": "fastestLap", "carNumber": "50" }
+{ "elapsed": "14:04:41.431", "event": "fastestLap", "carNumber": "50" }
 { "elapsed": "14:04:56.647", "event": "retired", "carNumber": "54" }
 { "elapsed": "14:08:28.533", "event": "driverChange", "carNumber": "85" }
 { "elapsed": "14:09:26.606", "event": "driverChange", "carNumber": "37" }
+{ "elapsed": "14:22:07.128", "event": "fastestLap", "carNumber": "50" }
 { "elapsed": "14:22:10.885", "event": "driverChange", "carNumber": "59" }
 { "elapsed": "14:22:27.223", "event": "leaderInPit", "carNumber": "48" }
 { "elapsed": "14:22:51.943", "event": "driverChange", "carNumber": "11" }
@@ -508,6 +527,7 @@
 { "elapsed": "14:28:26.433", "event": "leaderInPit", "carNumber": "83" }
 { "elapsed": "14:29:14.707", "event": "driverChange", "carNumber": "36" }
 { "elapsed": "14:29:23.762", "event": "driverChange", "carNumber": "33" }
+{ "elapsed": "14:29:47.361", "event": "fastestLap", "carNumber": "12" }
 { "elapsed": "14:29:50.764", "event": "driverChange", "carNumber": "61" }
 { "elapsed": "14:30:05.274", "event": "driverChange", "carNumber": "63" }
 { "elapsed": "14:30:21.587", "event": "driverChange", "carNumber": "16" }
@@ -519,6 +539,7 @@
 { "elapsed": "14:46:19.814", "event": "overtakeForLead", "carNumber": "51" }
 { "elapsed": "14:52:08.462", "event": "driverChange", "carNumber": "20" }
 { "elapsed": "14:55:02.654", "event": "driverChange", "carNumber": "37" }
+{ "elapsed": "14:59:20.681", "event": "fastestLap", "carNumber": "43" }
 { "elapsed": "14:59:27.720", "event": "driverChange", "carNumber": "10" }
 { "elapsed": "15:06:32.828", "event": "leaderInPit", "carNumber": "48" }
 { "elapsed": "15:06:32.828", "event": "driverChange", "carNumber": "48" }
@@ -527,6 +548,7 @@
 { "elapsed": "15:10:20.057", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "15:10:52.738", "event": "driverChange", "carNumber": "45" }
 { "elapsed": "15:11:15.979", "event": "driverChange", "carNumber": "93" }
+{ "elapsed": "15:11:19.946", "event": "fastestLap", "carNumber": "16" }
 { "elapsed": "15:11:54.810", "event": "driverChange", "carNumber": "9" }
 { "elapsed": "15:12:32.766", "event": "driverChange", "carNumber": "78" }
 { "elapsed": "15:12:42.418", "event": "driverChange", "carNumber": "77" }
@@ -542,6 +564,7 @@
 { "elapsed": "15:36:37.114", "event": "driverChange", "carNumber": "4" }
 { "elapsed": "15:41:23.576", "event": "driverChange", "carNumber": "28" }
 { "elapsed": "15:47:55.377", "event": "driverChange", "carNumber": "199" }
+{ "elapsed": "15:49:38.911", "event": "fastestLap", "carNumber": "38" }
 { "elapsed": "15:51:38.027", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "15:51:38.027", "event": "driverChange", "carNumber": "43" }
 { "elapsed": "15:52:22.169", "event": "driverChange", "carNumber": "25" }
@@ -566,12 +589,15 @@
 { "elapsed": "16:12:58.913", "event": "driverChange", "carNumber": "94" }
 { "elapsed": "16:16:21.696", "event": "leaderInPit", "carNumber": "92" }
 { "elapsed": "16:19:29.511", "event": "driverChange", "carNumber": "37" }
+{ "elapsed": "16:22:26.520", "event": "fastestLap", "carNumber": "15" }
+{ "elapsed": "16:23:39.934", "event": "fastestLap", "carNumber": "78" }
 { "elapsed": "16:27:06.179", "event": "driverChange", "carNumber": "48" }
 { "elapsed": "16:33:12.109", "event": "driverChange", "carNumber": "99" }
 { "elapsed": "16:33:58.100", "event": "driverChange", "carNumber": "81" }
 { "elapsed": "16:34:18.302", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "16:34:41.872", "event": "driverChange", "carNumber": "22" }
 { "elapsed": "16:35:05.589", "event": "driverChange", "carNumber": "11" }
+{ "elapsed": "16:35:40.572", "event": "fastestLap", "carNumber": "50" }
 { "elapsed": "16:36:29.707", "event": "driverChange", "carNumber": "90" }
 { "elapsed": "16:37:20.955", "event": "driverChange", "carNumber": "85" }
 { "elapsed": "16:37:37.519", "event": "driverChange", "carNumber": "13" }
@@ -579,6 +605,7 @@
 { "elapsed": "16:39:09.496", "event": "driverChange", "carNumber": "16" }
 { "elapsed": "16:40:28.421", "event": "leaderInPit", "carNumber": "92" }
 { "elapsed": "16:41:23.817", "event": "driverChange", "carNumber": "21" }
+{ "elapsed": "16:41:41.645", "event": "fastestLap", "carNumber": "83" }
 { "elapsed": "16:42:25.021", "event": "driverChange", "carNumber": "63" }
 { "elapsed": "16:42:46.422", "event": "driverChange", "carNumber": "009" }
 { "elapsed": "16:43:40.060", "event": "driverChange", "carNumber": "36" }
@@ -598,6 +625,7 @@
 { "elapsed": "17:21:30.738", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "17:24:29.227", "event": "driverChange", "carNumber": "9" }
 { "elapsed": "17:26:07.509", "event": "driverChange", "carNumber": "150" }
+{ "elapsed": "17:27:40.326", "event": "fastestLap", "carNumber": "29" }
 { "elapsed": "17:30:28.435", "event": "leaderInPit", "carNumber": "92" }
 { "elapsed": "17:30:28.435", "event": "driverChange", "carNumber": "92" }
 { "elapsed": "17:33:48.505", "event": "driverChange", "carNumber": "87" }
@@ -615,6 +643,7 @@
 { "elapsed": "18:02:58.339", "event": "leaderInPit", "carNumber": "43" }
 { "elapsed": "18:05:10.100", "event": "driverChange", "carNumber": "25" }
 { "elapsed": "18:06:02.293", "event": "driverChange", "carNumber": "85" }
+{ "elapsed": "18:06:33.206", "event": "fastestLap", "carNumber": "27" }
 { "elapsed": "18:07:37.471", "event": "driverChange", "carNumber": "35" }
 { "elapsed": "18:09:44.384", "event": "driverChange", "carNumber": "23" }
 { "elapsed": "18:10:39.854", "event": "driverChange", "carNumber": "78" }
@@ -662,6 +691,7 @@
 { "elapsed": "19:19:06.026", "event": "driverChange", "carNumber": "16" }
 { "elapsed": "19:20:44.534", "event": "driverChange", "carNumber": "28" }
 { "elapsed": "19:20:45.930", "event": "driverChange", "carNumber": "193" }
+{ "elapsed": "19:24:38.440", "event": "fastestLap", "carNumber": "38" }
 { "elapsed": "19:25:28.897", "event": "driverChange", "carNumber": "9" }
 { "elapsed": "19:26:26.277", "event": "driverChange", "carNumber": "94" }
 { "elapsed": "19:28:48.635", "event": "leaderInPit", "carNumber": "43" }

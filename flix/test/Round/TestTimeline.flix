@@ -38,6 +38,7 @@ mod Round.TestTimeline {
         match carEvent {
             case CarEvent.OvertakeForLead => "overtakeForLead"
             case CarEvent.LeaderInPit     => "leaderInPit"
+            case CarEvent.FastestLap      => "fastestLap"
             case CarEvent.DriverChange    => "driverChange"
             case CarEvent.Retired         => "retired"
             case CarEvent.Finished        => "finished"
@@ -80,6 +81,13 @@ mod Round.TestTimeline {
     def gtBoxLap(num: String, lapNumber: Int32, elapsed: String): RawLap =
         crossingOf("LMGT3;", num, "1", lapNumber, elapsed, "B", "")
 
+    /// A Hypercar's lap of the time given, which the other helpers fix at a minute.
+    def timedLap(num: String, lapNumber: Int32, elapsed: String, lapTime: String): RawLap =
+        timedCrossingOf("HYPERCAR;H", num, "1", lapNumber, elapsed, lapTime, "", "")
+
+    def gtTimedLap(num: String, lapNumber: Int32, elapsed: String, lapTime: String): RawLap =
+        timedCrossingOf("LMGT3;", num, "1", lapNumber, elapsed, lapTime, "", "")
+
     /// A car's out-lap under the driver the car was handed to.
     def handedPitLap(num: String, driver: String, lapNumber: Int32, elapsed: String, pit: String): RawLap =
         crossingOf("HYPERCAR;H", num, driver, lapNumber, elapsed, "", pit)
@@ -117,8 +125,20 @@ mod Round.TestTimeline {
         box: String,
         pit: String
     ): RawLap =
+        timedCrossingOf(classAndGroup, num, driver, lapNumber, elapsed, "60.000", box, pit)
+
+    def timedCrossingOf(
+        classAndGroup: String,
+        num: String,
+        driver: String,
+        lapNumber: Int32,
+        elapsed: String,
+        lapTime: String,
+        box: String,
+        pit: String
+    ): RawLap =
         decodeOne(header() + "\n"
-            + "${num};${driver};${lapNumber};60.000;0;${box};20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
+            + "${num};${driver};${lapNumber};${lapTime};0;${box};20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
             + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};${classAndGroup};Team;Maker;GF;20.000;20.000;20.000;")
 
     // ------------------------------------------------------------ race start
@@ -308,6 +328,39 @@ mod Round.TestTimeline {
             lap("8", 2, "2:02.000") ::
             Nil);
         Assert.assertTrue(leadChanges(events) == Nil)
+
+    // ----------------------------------------------------------- fastest laps
+
+    /// Each class's fastest lap as it fell, and no event for a lap only as fast
+    /// as the one standing: the GT's 2:10 is a record of its class though a
+    /// Hypercar had run a 2:00.
+    @Test
+    def eachClassHasItsOwnFastestLap(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            timedLap("7", 1, "2:00.000", "2:00.000") ::
+            gtTimedLap("90", 1, "2:10.000", "2:10.000") ::
+            timedLap("7", 2, "4:02.000", "2:02.000") ::
+            gtTimedLap("90", 2, "4:20.000", "2:10.000") ::
+            timedLap("7", 3, "6:02.000", "2:00.000") ::
+            gtTimedLap("90", 3, "6:28.000", "2:08.000") ::
+            timedLap("7", 4, "8:02.000", "2:00.000") ::
+            Nil);
+        Assert.assertTrue(named("fastestLap", events) ==
+            ("4:02.000", "fastestLap", "7") ::
+            ("4:20.000", "fastestLap", "90") ::
+            ("6:02.000", "fastestLap", "7") ::
+            ("6:28.000", "fastestLap", "90") :: Nil)
+
+    /// Lap 1 sets nothing, however fast it reads, and a lap the feed wrote no
+    /// time for is not a lap of no time.
+    @Test
+    def neitherTheFirstLapNorAnUntimedOneIsARecord(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            timedLap("7", 1, "1:50.000", "1:50.000") ::
+            timedLap("7", 2, "3:52.000", "0.000") ::
+            timedLap("7", 3, "5:54.000", "2:02.000") ::
+            Nil);
+        Assert.assertTrue(named("fastestLap", events) == ("5:54.000", "fastestLap", "7") :: Nil)
 
     // -------------------------------------------------------- driver changes
 

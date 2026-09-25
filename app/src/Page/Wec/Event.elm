@@ -493,9 +493,8 @@ eventRows cars timeline occurredCount =
         |> div [ Attributes.class "grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-xs" ]
 
 
-{-| One row per event: its car's class, what it was, whose it was, when, and for a
-driver change the two drivers on a line of their own below, as wide as the row
-less the class.
+{-| One row per event: its car's class, what it was, whose it was, when, and the
+event's `detail` on a line of their own below, as wide as the row less the class.
 
 A row is two lines whatever it holds, the first as tall as the badge: the
 `1.375rem` is `CarNumberBadge.viewRow`'s height, and moves with it.
@@ -524,10 +523,10 @@ eventRow carsByNumber event =
             ]
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-1 items-center py-0.5" ]
-        (case handOver car event of
-            Just ( handedOver, tookOver ) ->
+        (case detail car event of
+            Just line ->
                 firstLine ""
-                    ++ [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text (handedOver ++ " → " ++ tookOver) ] ]
+                    ++ [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text line ] ]
 
             Nothing ->
                 firstLine "row-span-2"
@@ -575,6 +574,9 @@ describe eventType =
         CarEvent _ LeaderInPit ->
             "Leader In Pit"
 
+        CarEvent _ FastestLap ->
+            "Fastest Lap"
+
         CarEvent _ DriverChange ->
             "Driver Change"
 
@@ -585,21 +587,36 @@ describe eventType =
             "Finished"
 
 
-{-| Who handed a car to whom at a driver change: the driver of the lap the event
-completes, and the one of the lap in progress from it, which is the lap the car's
+{-| The second line an event has, read off the car's laps at the event.
+
+A fastest lap is the lap the event completes, its time and its driver. A driver
+change is who handed the car to whom: the driver of the lap the event completes,
+and the one of the lap in progress from it, which is the lap the car's
 `currentDriver` is read off from then on.
+
 -}
-handOver : Maybe Car -> TimelineEvent -> Maybe ( String, String )
-handOver car event =
+detail : Maybe Car -> TimelineEvent -> Maybe String
+detail car event =
     let
+        lapOf find =
+            car |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
+
         driverOf find =
-            car
-                |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
-                |> Maybe.map (.driver >> Driver.toInitialAndSurname)
+            lapOf find |> Maybe.map (.driver >> Driver.toInitialAndSurname)
     in
     case event.eventType of
+        CarEvent _ FastestLap ->
+            lapOf Lap.findLastLapAt
+                |> Maybe.andThen
+                    (\lap ->
+                        lap.time
+                            |> Maybe.map (\time -> Duration.toString time ++ " · " ++ Driver.toInitialAndSurname lap.driver)
+                    )
+
         CarEvent _ DriverChange ->
-            Maybe.map2 Tuple.pair (driverOf Lap.findLastLapAt) (driverOf Lap.findCurrentLap)
+            Maybe.map2 (\handedOver tookOver -> handedOver ++ " → " ++ tookOver)
+                (driverOf Lap.findLastLapAt)
+                (driverOf Lap.findCurrentLap)
 
         _ ->
             Nothing

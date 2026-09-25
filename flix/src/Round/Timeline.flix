@@ -1,8 +1,9 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// four readings of the laps -- each car's last moment, each overtake for a
-/// class's lead, each time a class's leader went into the pits, each driver
-/// change -- and what they add up to is `Motorsport.Timeline`'s.
+/// five readings of the laps -- each car's last moment, each overtake for a
+/// class's lead, each time a class's leader went into the pits, each class's
+/// fastest lap, each driver change -- and what they add up to is
+/// `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
     use Db.Cars
@@ -44,6 +45,7 @@ mod Round.Timeline {
             cars      = cars(entry),
             overtakes     = overtakes(entry),
             inPits        = leadersInPit(entry),
+            fastestLaps   = fastestLaps(entry),
             driverChanges = driverChanges(entry)
         })
 
@@ -61,6 +63,34 @@ mod Round.Timeline {
             |> Sql.orderBy(Sql.raw("MIN(source_row)") :: Nil)
             |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)")))
             |> Sql.reading(match (carNumber, last) -> (carNumber, Util.Duration.fromMillis(last)))
+            |> Sql.selectAll
+
+    // ----------------------------------------------------------- fastest laps
+
+    /// Every lap faster than any its class had completed before it, in the order
+    /// the laps were completed and with the file's order breaking a tie on the
+    /// clock, as `Round.Index` walks the field's.
+    ///
+    /// Not lap 1: its time is the race's elapsed time at its crossing, and at Fuji,
+    /// Spa and Bahrain the leader's reads faster than any lap run after it.
+    /// `Round.Index` still counts it. A lap the feed did not time is written
+    /// `0.000` and is no lap at all.
+    def fastestLaps(entry: Entry): List[Timeline.FastestLap] \ DbRead =
+        Sql.rows(Sql.raw("timed"))
+            |> Sql.using(Sql.frags(
+                Sql.raw("timed AS (SELECT ${Laps.table()}.car_number, elapsed_ms, lap_time_ms,"
+                    + " MIN(lap_time_ms) OVER (PARTITION BY ${Entries.table()}.class"
+                    + " ORDER BY elapsed_ms, source_row"
+                    + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS standing"
+                    + " FROM " + classed() + " WHERE lap_number > 1 AND lap_time_ms <> 0 AND") ::
+                Sql.term(Laps.inRound(entry)) ::
+                Sql.raw(")") :: Nil
+            ))
+            |> Sql.filter(_ -> Sql.column("standing IS NULL OR lap_time_ms < standing"))
+            |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
+            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms")))
+            |> Sql.reading(match (carNumber, elapsed) ->
+                { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
             |> Sql.selectAll
 
     // --------------------------------------------------------- driver changes

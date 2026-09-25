@@ -5,7 +5,7 @@
 /// say -- whether a car's last lap was the flag or a retirement, which changes of
 /// the lead were overtakes, and which cars went into the pits leading -- and the
 /// counting that finds each event is `Round.Timeline`'s. A driver change is the
-/// laps' own saying and is only carried through.
+/// laps' own saying and is only carried through, and so is a class's fastest lap.
 mod Motorsport.Timeline {
 
     use Util.Duration.Duration
@@ -20,6 +20,7 @@ mod Motorsport.Timeline {
     pub enum CarEvent with Eq {
         case OvertakeForLead
         case LeaderInPit
+        case FastestLap
         case DriverChange
         case Retired
         case Finished
@@ -57,9 +58,16 @@ mod Motorsport.Timeline {
         elapsed   = Duration
     }
 
+    /// A lap faster than any its class had run before it, and the crossing that
+    /// completed it.
+    pub type alias FastestLap = {
+        carNumber = String,
+        elapsed   = Duration
+    }
+
     /// What the events of one round are gathered from: each car's last moment, every
-    /// overtake for the lead, every time the leader went into the pits, and every
-    /// driver change.
+    /// overtake for the lead, every time the leader went into the pits, every
+    /// fastest lap, and every driver change.
     ///
     /// A change of the lead the leader's stop settled is in neither: the stop is, and
     /// the car that stayed out in front is in no event at all.
@@ -68,12 +76,13 @@ mod Motorsport.Timeline {
         cars      = List[(String, Duration)],
         overtakes     = List[Overtake],
         inPits        = List[InPit],
+        fastestLaps   = List[FastestLap],
         driverChanges = List[DriverChange]
     }
 
     /// The race start, one terminal event per car, one per overtake for the lead, one
-    /// per time the leader went into the pits, and one per driver change, in time
-    /// order.
+    /// per time the leader went into the pits, one per fastest lap, and one per
+    /// driver change, in time order.
     ///
     /// Not who took the green flag: every car that turned a lap took it, all at
     /// nought, and who was ahead of whom is `Motorsport.Metadata`'s starting grid.
@@ -87,6 +96,7 @@ mod Motorsport.Timeline {
             (raceStart() :: Nil) ::
             overtakesForLead(readings#overtakes) ::
             leadersInPit(readings#inPits) ::
+            fastestLaps(readings#fastestLaps) ::
             driverChanges(readings#driverChanges) ::
             terminals(readings#timeLimit, readings#cars) ::
             Nil
@@ -113,6 +123,13 @@ mod Motorsport.Timeline {
             {
                 elapsed = inPit#elapsed,
                 eventType = EventType.Of(inPit#carNumber, CarEvent.LeaderInPit)
+            })
+
+    def fastestLaps(laps: List[FastestLap]): List[Event] =
+        laps |> List.map(lap ->
+            {
+                elapsed = lap#elapsed,
+                eventType = EventType.Of(lap#carNumber, CarEvent.FastestLap)
             })
 
     def driverChanges(changes: List[DriverChange]): List[Event] =
@@ -146,6 +163,7 @@ mod Motorsport.Timeline {
         "raceStart" ::
         "overtakeForLead" ::
         "leaderInPit" ::
+        "fastestLap" ::
         "driverChange" ::
         "retired" ::
         "finished" ::
@@ -162,6 +180,7 @@ mod Motorsport.Timeline {
         match carEvent {
             case CarEvent.OvertakeForLead => named("overtakeForLead")
             case CarEvent.LeaderInPit     => named("leaderInPit")
+            case CarEvent.FastestLap      => named("fastestLap")
             case CarEvent.DriverChange    => named("driverChange")
             case CarEvent.Retired         => named("retired")
             case CarEvent.Finished        => named("finished")
@@ -183,6 +202,7 @@ mod Motorsport.Timeline {
         match event {
             case "overtakeForLead" => Some(CarEvent.OvertakeForLead)
             case "leaderInPit"     => Some(CarEvent.LeaderInPit)
+            case "fastestLap"      => Some(CarEvent.FastestLap)
             case "driverChange"    => Some(CarEvent.DriverChange)
             case "retired"         => Some(CarEvent.Retired)
             case "finished"        => Some(CarEvent.Finished)

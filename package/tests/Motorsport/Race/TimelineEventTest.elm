@@ -20,11 +20,12 @@ suite =
                     |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" OvertakeForLead ))
         , test "each of the kinds reads back as itself" <|
             \_ ->
-                [ "overtakeForLead", "leaderInPit", "driverChange", "retired", "finished" ]
+                [ "overtakeForLead", "leaderInPit", "fastestLap", "driverChange", "retired", "finished" ]
                     |> List.map (written >> Result.map Tuple.second)
                     |> Expect.equal
                         [ Ok (CarEvent "7" OvertakeForLead)
                         , Ok (CarEvent "7" LeaderInPit)
+                        , Ok (CarEvent "7" FastestLap)
                         , Ok (CarEvent "7" DriverChange)
                         , Ok (CarEvent "7" Retired)
                         , Ok (CarEvent "7" Finished)
