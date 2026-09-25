@@ -185,6 +185,28 @@ mod Round.TestTimeline {
             Nil);
         Assert.assertTrue(leadChanges(events) == ("3:00.000", "leaderPitted", "7") :: Nil)
 
+    /// A leader that came back out in front and was passed on the lap after its
+    /// out-lap lost the lead on the track: its crossing of that lap is not in the
+    /// pit lane, whatever the lap before it was.
+    @Test
+    def aLeaderPassedTheLapAfterItsOutLapLostItOnTrack(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "70.000") ::
+            lap("7", 2, "2:00.000") ::
+            lap("8", 2, "2:20.000") ::
+            boxLap("7", 3, "3:00.000") ::
+            lap("8", 3, "3:30.000") ::
+            pitLap("7", 4, "4:10.000", "45.000") ::
+            lap("8", 4, "4:40.000") ::
+            lap("8", 5, "5:30.000") ::
+            lap("7", 5, "5:35.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) ==
+            ("3:00.000", "leaderPitted", "7") ::
+            ("5:30.000", "tookLeadOnTrack", "8") ::
+            Nil)
+
     /// A stop by a car that was never in the lead is not a leader's stop: it led
     /// neither the lap before its out-lap nor the lap before that.
     @Test

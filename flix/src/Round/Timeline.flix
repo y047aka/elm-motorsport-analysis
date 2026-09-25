@@ -74,14 +74,15 @@ mod Round.Timeline {
     /// before either of them: the leaders are picked out in `l`, and only then
     /// is each one asked who led the lap before.
     ///
-    /// A boundary where the car that lost the lead came into the pits is not a pass
-    /// and is not here: whoever stayed out is in front without having passed anyone,
-    /// and the stop that did it is `leaderStops`' event.
+    /// A boundary the car that lost the lead crossed in the pit lane, turning into it
+    /// or coming back out of it, is not a pass and is not here: whoever stayed out is
+    /// in front without having passed anyone, and the stop that did it is
+    /// `leaderStops`' event.
     def passes(entry: Entry): List[Timeline.Pass] \ DbRead =
         Sql.rows(Sql.raw("(" + handedOver() + ") AS led"))
             |> Sql.using(stopCrossings(entry))
             |> Sql.filter(_ -> Sql.column("held IS NOT NULL AND held <> car_number"))
-            |> Sql.filter(_ -> Sql.column(cameInAt("led.held", "led.lap_number") + " IS NULL"))
+            |> Sql.filter(_ -> Sql.column("NOT " + crossedInPits("led.held", "led.lap_number")))
             |> Sql.orderBy(Sql.raw("lap_number") :: Nil)
             |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms")))
             |> Sql.reading(match (carNumber, elapsed) ->
@@ -149,13 +150,20 @@ mod Round.Timeline {
             + " LAG(car_number) OVER (ORDER BY lap_number) AS held"
             + " FROM l WHERE rn = 1"
 
-    /// Where the car named came in: of the lap named and the one before it, the
-    /// earlier of the crossings that are one half of a stop, which is the in-lap when
-    /// the feed wrote it. Null when that car crossed neither as a stop -- which is
-    /// how a pass is told from a boundary a stop settled.
+    /// Whether the car named crossed the lap named as one half of a stop.
+    ///
+    /// That lap alone, and not the one before it: a leader that came back out in
+    /// front has its out-lap there, and a pass on the lap after is still a pass.
     ///
     /// The car and lap are given as text because the two readings correlate on rows
-    /// neither of them declares columns for.
+    /// neither of them declares columns for, and so are `cameInAt`'s.
+    def crossedInPits(car: String, lap: String): String =
+        "EXISTS (SELECT 1 FROM l WHERE l.car_number = ${car}"
+            + " AND l.lap_number = ${lap} AND l.pitted)"
+
+    /// Where the car named came in, for the out-lap named: of that lap and the one
+    /// before it, the earlier of the crossings that are one half of a stop, which is
+    /// the in-lap when the feed wrote it.
     def cameInAt(car: String, lap: String): String =
         "(SELECT l.elapsed_ms FROM l WHERE l.car_number = ${car}"
             + " AND l.lap_number BETWEEN ${lap} - 1 AND ${lap}"

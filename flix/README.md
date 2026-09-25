@@ -213,10 +213,12 @@ losing the lead at the crossing it turned into the lane from -- and the event is
 timed at the earlier crossing, where it came in. Reading stops off the lead is what
 loses a leader that came back out in front of the field: seven of Le Mans's leader
 stops are that, no lap boundary changing hands at any of them. The pass query asks
-the same subquery for null, so a boundary the leader's stop settled is no event --
-whoever stayed out is in front without having passed anyone. The app counts a car's
-stops off the laps for itself, in `Motorsport.Race.Stint`; the event says the leader
-made one, not how many it has made.
+whether the car that lost the lead crossed that boundary as either half of a stop,
+so a boundary the leader's stop settled is no event -- whoever stayed out is in
+front without having passed anyone. It asks of that crossing alone: the lap before
+it may be a leader's out-lap, and a pass on the lap after one is still a pass. The
+app counts a car's stops off the laps for itself, in `Motorsport.Race.Stint`; the
+event says the leader made one, not how many it has made.
 
 What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's last
 crossing against the time limit, which is `Metadata`'s estimate and the one reading
