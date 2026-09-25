@@ -197,8 +197,13 @@ corrected in SQL and then is the list that moment used to be in.
 Each car's last crossing is one `GROUP BY`, and the lead is
 `ROW_NUMBER` picking each lap's first crossing with `LAG` asking who held the one
 before -- two queries rather than one, since SQLite settles a `WHERE` before
-either window. The stops are not counted at all: both halves of one are read off
-`pit_time`, which the laps carry, so the app reads them there. What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's
+either window. The same `l` is asked one thing more, with an `EXISTS`, whether the
+car that lost the lead crossed that lap as one half of its stop: the field coming
+in hands the lead to whoever stayed out, and the crossing saying which of the two
+it was is already in `l`, so it costs no third reading of the laps.
+`Db.Laps.pitLap` names those two crossings, and `Cli.Load.Validation` compares
+against it too. Stops are still no events of their own: both halves of one are in
+the laps, which is where the app reads them. What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's
 last crossing against the time limit, which is `Metadata`'s estimate and the one
 reading here the laps do not carry, so `Round.Summary.particulars` is read first
 and hands it over -- the whole of what the load wants a summary for. It also

@@ -83,9 +83,9 @@ reversed =
 events : List TimelineEvent
 events =
     [ eventAt 1000 TimelineEvent.RaceStart
-    , eventAt 170000 (TimelineEvent.CarEvent "1" TimelineEvent.TookLead)
-    , eventAt 200000 (TimelineEvent.CarEvent "2" TimelineEvent.TookLead)
-    , eventAt 300000 (TimelineEvent.CarEvent "2" TimelineEvent.TookLead)
+    , eventAt 170000 (TimelineEvent.CarEvent "1" TimelineEvent.TookLeadOnTrack)
+    , eventAt 200000 (TimelineEvent.CarEvent "2" TimelineEvent.TookLeadInPits)
+    , eventAt 300000 (TimelineEvent.CarEvent "2" TimelineEvent.TookLeadOnTrack)
     , eventAt 400000 (TimelineEvent.CarEvent "1" TimelineEvent.Retirement)
     , eventAt 400000 (TimelineEvent.CarEvent "2" TimelineEvent.Checkered)
     ]

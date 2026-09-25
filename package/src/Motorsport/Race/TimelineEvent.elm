@@ -28,7 +28,8 @@ type EventType
 
 
 type CarEventType
-    = TookLead
+    = TookLeadOnTrack
+    | TookLeadInPits
     | Retirement
     | Checkered
 
@@ -74,8 +75,11 @@ that never stopped.
 carEventTypeDecoder : String -> Decoder CarEventType
 carEventTypeDecoder event =
     case event of
-        "tookLead" ->
-            Decode.succeed TookLead
+        "tookLeadOnTrack" ->
+            Decode.succeed TookLeadOnTrack
+
+        "tookLeadInPits" ->
+            Decode.succeed TookLeadInPits
 
         "retirement" ->
             Decode.succeed Retirement

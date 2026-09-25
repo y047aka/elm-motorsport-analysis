@@ -175,6 +175,15 @@ mod Db.Laps {
     pub def inRound(entry: Entry): Sql.Expr[Bool] =
         scope(columns(), entry)
 
+    /// A lap of one car that took it into the pit lane, either half of a stop:
+    /// the crossing that turned down the pit lane at the end of one lap, and the
+    /// crossing back out at the end of the next which is where the stop itself is
+    /// timed. A clause rather than a predicate for the same reason as `inRound`:
+    /// a common table expression's source is text and declares no columns.
+    pub def pitLap(): String =
+        "(${Schema.name(columns()#crossingFinishLineInPit)} = 1"
+            + " OR ${Schema.name(columns()#pitTimeMs)} IS NOT NULL)"
+
     /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them. Named for
     /// the table, since a join's other side has a `round_id` too.

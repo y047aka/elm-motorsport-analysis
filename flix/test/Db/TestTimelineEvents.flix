@@ -15,7 +15,8 @@ mod Db.TestTimelineEvents {
     /// One of each, which is what the row has to carry between them.
     def oneOfEach(): List[Event] =
         at(0, EventType.RaceStart) ::
-        at(1000, EventType.Of("7", CarEvent.TookLead)) ::
+        at(1000, EventType.Of("7", CarEvent.TookLeadOnTrack)) ::
+        at(1200, EventType.Of("8", CarEvent.TookLeadInPits)) ::
         at(4000, EventType.Of("8", CarEvent.Retirement)) ::
         at(5000, EventType.Of("7", CarEvent.Checkered)) ::
         Nil
@@ -28,7 +29,7 @@ mod Db.TestTimelineEvents {
     @Test
     def theEventsAreNumberedFromNoughtInOrder(): Unit \ Assert =
         let rows = TimelineEvents.fromEvents(3, oneOfEach());
-        Assert.assertTrue(rows |> List.map(r -> r#seq) == List.range(0, 4));
+        Assert.assertTrue(rows |> List.map(r -> r#seq) == List.range(0, 5));
         Assert.assertTrue(rows |> List.forAll(r -> r#roundId == 3))
 
     /// Compared as the line the event is written out as, which is the other

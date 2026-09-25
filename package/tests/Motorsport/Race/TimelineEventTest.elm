@@ -16,18 +16,15 @@ suite =
                     |> Expect.equal (Ok ( Instant.raceStart, RaceStart ))
         , test "every other event names the car it was" <|
             \_ ->
-                decoded """{ "elapsed": "0.000", "event": "tookLead", "carNumber": "7" }"""
-                    |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" TookLead ))
-        , test "each of the remaining kinds reads back as itself" <|
+                decoded """{ "elapsed": "0.000", "event": "tookLeadOnTrack", "carNumber": "7" }"""
+                    |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" TookLeadOnTrack ))
+        , test "each of the kinds reads back as itself" <|
             \_ ->
-                [ "tookLead", "retirement", "checkered" ]
-                    |> List.map
-                        (\event ->
-                            decoded ("{ \"elapsed\": \"0.000\", \"event\": \"" ++ event ++ "\", \"carNumber\": \"7\" }")
-                                |> Result.map Tuple.second
-                        )
+                [ "tookLeadOnTrack", "tookLeadInPits", "retirement", "checkered" ]
+                    |> List.map (written >> Result.map Tuple.second)
                     |> Expect.equal
-                        [ Ok (CarEvent "7" TookLead)
+                        [ Ok (CarEvent "7" TookLeadOnTrack)
+                        , Ok (CarEvent "7" TookLeadInPits)
                         , Ok (CarEvent "7" Retirement)
                         , Ok (CarEvent "7" Checkered)
                         ]
@@ -36,11 +33,20 @@ suite =
                 -- Carried on from, it would read as a car that never stopped.
                 decoded """{ "elapsed": "0.000", "event": "safetyCar" }"""
                     |> Expect.err
-        , test "who took the green flag is not an event" <|
+        , test "a name this timeline no longer writes fails the round" <|
             \_ ->
-                decoded """{ "elapsed": "0.000", "event": "start", "carNumber": "7" }"""
-                    |> Expect.err
+                [ "start", "tookLead" ]
+                    |> List.map (written >> Result.toMaybe)
+                    |> Expect.equal [ Nothing, Nothing ]
         ]
+
+
+{-| An event of one name, of car 7, at nought.
+-}
+written : String -> Result Decode.Error ( Instant, EventType )
+written name =
+    decoded ("{ \"elapsed\": \"0.000\", \"event\": \"" ++ name ++ "\", \"carNumber\": \"7\" }")
+
 
 
 {-| `(when, what)`, which is the whole of an event.

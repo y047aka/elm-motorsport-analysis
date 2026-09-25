@@ -36,13 +36,24 @@ mod Round.TestTimeline {
 
     def name(carEvent: CarEvent): String =
         match carEvent {
-            case CarEvent.TookLead   => "tookLead"
-            case CarEvent.Retirement => "retirement"
-            case CarEvent.Checkered  => "checkered"
+            case CarEvent.TookLeadOnTrack => "tookLeadOnTrack"
+            case CarEvent.TookLeadInPits  => "tookLeadInPits"
+            case CarEvent.Retirement      => "retirement"
+            case CarEvent.Checkered       => "checkered"
         }
 
     def named(what: String, events: List[Event]): List[(String, String, String)] =
         events |> List.map(shape) |> List.filter(match (_, kind, _) -> kind == what)
+
+    /// Either kind of change of the lead, which is what a test asking whether the
+    /// lead changed hands at all is asking about.
+    def leadChanges(events: List[Event]): List[(String, String, String)] =
+        events |> List.map(shape)
+            |> List.filter(match (_, kind, _) ->
+                List.memberOf(kind, leadNames()))
+
+    def leadNames(): List[String] =
+        "tookLeadOnTrack" :: "tookLeadInPits" :: Nil
 
     // ---------------------------------------------------------------- laps
 
@@ -56,12 +67,27 @@ mod Round.TestTimeline {
         }
 
     def lap(num: String, lapNumber: Int32, elapsed: String): RawLap =
-        pitLap(num, lapNumber, elapsed, "")
+        crossing(num, lapNumber, elapsed, "", "")
 
-    /// The same lap, with the time the car spent in the pits on it.
+    /// The lap a car came back out on, which is the one the stop's length is
+    /// written on.
     def pitLap(num: String, lapNumber: Int32, elapsed: String, pit: String): RawLap =
+        crossing(num, lapNumber, elapsed, "", pit)
+
+    /// The lap a car turned down the pit lane at the end of, which the feed marks
+    /// with the box and writes no time on.
+    def boxLap(num: String, lapNumber: Int32, elapsed: String): RawLap =
+        crossing(num, lapNumber, elapsed, "B", "")
+
+    def crossing(
+        num: String,
+        lapNumber: Int32,
+        elapsed: String,
+        box: String,
+        pit: String
+    ): RawLap =
         decodeOne(header() + "\n"
-            + "${num};1;${lapNumber};60.000;0;;20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
+            + "${num};1;${lapNumber};60.000;0;${box};20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;"
             + "0:20.000;0:20.000;0:20.000;200;Driver;${pit};HYPERCAR;H;Team;Maker;GF;20.000;20.000;20.000;")
 
     // ------------------------------------------------------------ race start
@@ -94,7 +120,8 @@ mod Round.TestTimeline {
     // ---------------------------------------------------------------- leads
 
     /// The lead is who crossed the line first on a lap, and an event each time
-    /// that changes hands.
+    /// that changes hands. Nobody of this field stopped, so each change was taken
+    /// on track.
     @Test
     def oneEventPerChangeOfTheLead(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
@@ -105,9 +132,35 @@ mod Round.TestTimeline {
             lap("7", 3, "3:00.000") ::
             lap("8", 3, "3:05.000") ::
             Nil);
-        Assert.assertTrue(named("tookLead", events) ==
-            ("2:03.000", "tookLead", "8") ::
-            ("3:00.000", "tookLead", "7") :: Nil)
+        Assert.assertTrue(leadChanges(events) ==
+            ("2:03.000", "tookLeadOnTrack", "8") ::
+            ("3:00.000", "tookLeadOnTrack", "7") :: Nil)
+
+    /// The car holding the lead stopped on the lap the change is counted on, and
+    /// its crossing carries how long the stop took, so the lead went to whoever
+    /// stayed out rather than to whoever passed it.
+    @Test
+    def aLeadTheLeaderGaveUpInThePits(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "62.000") ::
+            lap("8", 2, "2:00.000") ::
+            pitLap("7", 2, "2:40.000", "40.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == ("2:00.000", "tookLeadInPits", "8") :: Nil)
+
+    /// The other half of a stop settles a change too: the leader crossed the line
+    /// and turned down the pit lane on the crossing that lost it the lead, with no
+    /// time written on that crossing at all.
+    @Test
+    def aLeadTheLeaderLostByTurningIntoThePits(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "62.000") ::
+            lap("8", 2, "2:00.000") ::
+            boxLap("7", 2, "2:01.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) == ("2:00.000", "tookLeadInPits", "8") :: Nil)
 
     /// Whoever led the opening lap took it from nobody.
     @Test
@@ -116,7 +169,7 @@ mod Round.TestTimeline {
             lap("7", 1, "60.000") ::
             lap("8", 1, "62.000") ::
             Nil);
-        Assert.assertTrue(named("tookLead", events) == Nil)
+        Assert.assertTrue(leadChanges(events) == Nil)
 
     /// A field that never changes leader produces none at all.
     @Test
@@ -127,7 +180,7 @@ mod Round.TestTimeline {
             lap("7", 2, "2:00.000") ::
             lap("8", 2, "2:02.000") ::
             Nil);
-        Assert.assertTrue(named("tookLead", events) == Nil)
+        Assert.assertTrue(leadChanges(events) == Nil)
 
     // ---------------------------------------------------------------- order
 
@@ -193,9 +246,10 @@ mod Round.TestTimeline {
         match loadedAndCounted() {
             case (readBack, _) =>
                 Assert.assertTrue(named("raceStart", readBack) == ("0.000", "raceStart", "") :: Nil);
-                Assert.assertTrue(named("tookLead", readBack) ==
-                    ("50:00.000", "tookLead", "8") ::
-                    ("1:30:00.000", "tookLead", "7") :: Nil);
+                Assert.assertTrue(named("tookLeadInPits", readBack) ==
+                    ("50:00.000", "tookLeadInPits", "8") :: Nil);
+                Assert.assertTrue(named("tookLeadOnTrack", readBack) ==
+                    ("1:30:00.000", "tookLeadOnTrack", "7") :: Nil);
                 Assert.assertTrue(named("checkered", readBack) == ("1:30:00.000", "checkered", "7") :: Nil);
                 Assert.assertTrue(named("retirement", readBack) == ("50:00.000", "retirement", "8") :: Nil)
         }

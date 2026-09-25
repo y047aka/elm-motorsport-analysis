@@ -7,7 +7,8 @@
 - 対象: `app/static/wec/2025/le_mans_24h_timeline.jsonl`(191行 / 12,737バイト)
 - 日付: 2026-09-25(`d406766`)
 - 数値の再測方法は末尾の付録に。`.#cli-load` → `.#cli-export` でファイルは再生成される。
-- 適用済み: §5-4 のとおり `start` を削除した(191行 → 129行)。下の節は削除前の実測のまま。
+- 適用済み: §5-4 の `start` を削除(191 → 129行)、§5-3 のとおり首位交代を2種に分割
+  (`tookLead` 66 → `tookLeadOnTrack` 5 + `tookLeadInPits` 61)。下の節は削除・分割前の実測。
 
 ## 1. 出力されているもの
 
@@ -87,7 +88,7 @@
    timeLimit を共有するので現状は一致している(食い違えば表示がねじれる)。
 3. **`tookLead` のラベルが実態と合わない。** 66回の交代のうち**中央値で直前3分に5台が
    ピットイン**(4台以上が39/66)、つまり大半はスティント・ローテーションなのに "Took the Lead"。
-   lap も flag も無いので「SC明けの入れ替わり」かも判別不能。
+   どこで交代したか(コース上かピットで来たのか)を示す欄が無い。
 4. **`retirement` は「24:00より前に最終周回を切った」**なので、境界直前で走って切れた車は
    retirement に寄る。このレースでは最も遅い retirement が 22:52 で誤検出はなかった。
 
@@ -96,8 +97,10 @@
 1. **caution エピソード(`slowZone` / `fullCourseYellow` の開始・終了)を追加** —
    表示上の最大の空白、+12行程度、`laps.flag_at_fl` から集計できる。
 2. **`tookLead` にクラスを持たせる**(LMP2/LMGT3 の展開が出る。+72行程度)。
-3. **`tookLead` に lap と flag を添える**、または交代の種別(ローテーション /
-   オントラック / SC明け)でラベルを変える。
+3. **首位交代を2種に割る** — 先頭がピットに来ての交代と、コース上で抜き合った交代。
+   `laps` は1回のストップを2つの横断に書いて持つ(ピットレーンに切れ込んだ横断と、
+   ピットタイム付きの復帰横断)ので、「首位を失った車がこの周回をどちらかで横切ったか」
+   で判別できる。SC明けかどうかの区別はしない —— 目的は交代の2種を分けること。
 4. **`start` を削るか `raceStart` に寄せる**(62行・32%が情報ゼロ)。
 
 いずれも `Round.Timeline`(集計)+ `Motorsport.Timeline`(語彙と JSON 形)+
@@ -143,7 +146,22 @@ print('non-green crossings',len(ng),collections.Counter(f for _,f in ng))
 for a,b,f in eps:
     if f!='FF': print(f,fmt(a),'->',fmt(b))
 pit=sorted(sec(r[' ELAPSED']) for r in rows if r['PIT_TIME'].strip())
-tl=[json.loads(l) for l in open('app/static/wec/2025/le_mans_24h_timeline.jsonl') if '\"tookLead\"' in l]
+tl=[json.loads(l) for l in open('app/static/wec/2025/le_mans_24h_timeline.jsonl') if 'tookLead' in l]
 n=[sum(1 for u in pit if sec(e['elapsed'])-180<u<=sec(e['elapsed'])) for e in tl]
 print('pits in the 3 min before a lead change: median',statistics.median(n),'>=4:',sum(1 for k in n if k>=4),'of',len(n))"
+
+# 首位交代がコース上か、先頭がピットに来たためのものか(読み込み済みの行から)
+sqlite3 flix/.db/motorsport.sqlite "
+WITH l AS (SELECT car_number, lap_number, elapsed_ms,
+   (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL) AS pitted,
+   ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) AS rn
+   FROM laps WHERE round_id =
+     (SELECT round_id FROM rounds WHERE season = 2025 AND round_key = 'le_mans_24h'))
+SELECT sum(came_in) AS in_pits, count(*) - sum(came_in) AS on_track, count(*) AS changes
+FROM (SELECT EXISTS (SELECT 1 FROM l WHERE l.lap_number = led.lap_number
+                      AND l.car_number = led.held AND l.pitted) AS came_in
+      FROM (SELECT car_number, lap_number, elapsed_ms,
+                   LAG(car_number) OVER (ORDER BY lap_number) AS held
+            FROM l WHERE rn = 1) AS led
+      WHERE held IS NOT NULL AND held <> car_number);"
 ```

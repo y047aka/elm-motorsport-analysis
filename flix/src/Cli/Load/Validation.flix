@@ -165,7 +165,7 @@ mod Cli.Load.Validation {
                 where_(entry, Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorTimeMs)) :: Nil) ::
                 Sql.raw(")") :: Nil
             ))
-            |> Sql.filter(_ -> Sql.column("NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"))
+            |> Sql.filter(_ -> Sql.column("NOT ${Laps.pitLap()}"))
             |> Sql.filter(_ -> Sql.ne(Sql.column("sum_ms"), Sql.column("lap_time_ms")))
             |> Sql.filter(_ -> Sql.every(trackLimitsExclusions()))
             |> Sql.orderBy(Sql.raw("source_row") :: Nil)
