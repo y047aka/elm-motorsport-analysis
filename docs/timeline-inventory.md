@@ -32,7 +32,8 @@
 
 `app/src/Page/Wec/Event.elm` の `timelinePanel`(唯一の消費者。`Shared` が持つだけ)が、
 再生時刻までの件数を `Timeline.countUpTo` で二分検索し、**直近100件を新しい順に
-「時刻 / カーバッジ / 英語ラベル文字列」の3列**で並べる。
+「カーバッジ / 英語ラベル文字列 / 時刻」の3列**で並べる(棚卸し時は「時刻 / カーバッジ /
+英語ラベル」の順で、ラベルが右寄せだった)。
 
 色分け・アイコン・分類・フィルタは無く、行そのものは読み取り専用で、
 クリックは全順位ポップオーバーを開くボタンになっている。
@@ -62,9 +63,10 @@
   耐久で最大の展開要因なのに。
 - **クラス別の首位交代。** 総合しか見ていないのでハイパーカー8台の話になり、
   LMP2 の35回・LMGT3 の37回のリーダー交代が丸ごと無い(`leads()` にクラスの軸を足すだけ)。
-- **ピット。** `Motorsport.Timeline` のコメント通り意図的除外だが、車ごとの詳細パネルにしかなく、
-  「いまピットした組」をフィールド全体で読む場所が無い。caution 直後のピットラップは
-  それ自体が展開。
+- **ピット。** `Motorsport.Timeline` のコメント通り意図的除外で、「いつ誰が入ったか」を
+  時系列で読む場所が無い。caution 直後のピットラップはそれ自体が展開。
+  (訂正: 「いまピット中の車」は棚卸し時点でも順位表の各行に「P」印で出ていた。無いのは時系列の方。
+  首位車の分は `leaderInPit` で埋まった。)
 - **ベストタイム更新。** summary の `index.bestTimeChanges` には出ていて timeline には無い。
   同じ時系列情報が2ファイルに分かれている。
 - **ドライバー交代。** laps は `driverNumber` / driver name を持つ(車ごと表示のみ)。
@@ -84,9 +86,11 @@
 1. **オープニングリーダーは出力されない(コメントと挙動が食い違う)。**
    `Round.Timeline.leads` の doc comment は
    「先頭ラップのリーダーは誰からも奪っていない = `LAG` が null」と読めるが、直後の
-   filter が `held IS NOT NULL`(`flix/src/Round/Timeline.flix:81`)でその行を落とす。
+   filter が `held IS NOT NULL` でその行を落とす。
    実測: lap 1 の首位 #5(3:43.009)は行が無く、ファイル最初の tookLead は #4 の 45:55。
    #5 が開幕から3時間以上リードした区間がパネルに出ない。
+   **未修正**: 同じ条件が今は `Round.Timeline.overtakes` の filter にある。#5 は 42:11 の
+   `leaderInPit` で初めて現れるが、開幕から首位だったことはどこにも書かれない。
 2. **`retirement` / `checkered` は二重導出。** `Race.statusAt`
    (`package/src/Motorsport/Race.elm`)が同じ laps + timeLimit で同じ判定を再生毎にやり直し、
    Standings が動かしているのはこちら。timeline 側は表示上レポート風の後乗りで、
@@ -122,7 +126,7 @@ event 名で**ラウンド読み込みごと失敗する**仕様(`carEventTypeDe
 ## 付録 — 数値の再測方法
 
 ```sh
-# イベント種別の行数とフィールド
+# イベント種別の行数(今のファイル。棚卸し時点の数は `git show d406766:<path>` を読む)
 python3 -c "import json,collections;rows=[json.loads(l) for l in open('app/static/wec/2025/le_mans_24h_timeline.jsonl')];print(collections.Counter(r['event'] for r in rows))"
 
 # 首位経験と交代回数(総合 / クラス別)。先頭ラップのリーダーを含めた数
@@ -140,9 +144,10 @@ for cls in ['HYPERCAR','LMP2','LMGT3']:
     print(cls,len(laps),'laps',len(ch),'lead changes incl opener',dict(collections.Counter(ch)))"
 
 # caution 期間(非緑の通過を4分以内の間隔で連結。FF はゴールなので期間に数えない)
-# と、tookLead の直前3分にピットした台数
+# と、tookLead の直前3分にピットした台数。tookLead は今のファイルに無いので、
+# 棚卸し時点(d406766)のファイルを読む
 python3 -c "
-import csv,json,statistics,collections
+import csv,json,statistics,collections,subprocess
 rd=csv.DictReader(open('app/static/wec/2025/le_mans_24h.csv',encoding='utf-8-sig'),delimiter=';')
 ms=lambda s:[float(x) for x in s.split(':')]
 sec=lambda s:(lambda p:3600*p[0]+60*p[1]+p[2])(([0]*(3-len(ms(s))))+ms(s))
@@ -157,11 +162,12 @@ print('non-green crossings',len(ng),collections.Counter(f for _,f in ng))
 for a,b,f in eps:
     if f!='FF': print(f,fmt(a),'->',fmt(b))
 pit=sorted(sec(r[' ELAPSED']) for r in rows if r['PIT_TIME'].strip())
-tl=[json.loads(l) for l in open('app/static/wec/2025/le_mans_24h_timeline.jsonl') if 'tookLead' in l]
+old=subprocess.check_output(['git','show','d406766:app/static/wec/2025/le_mans_24h_timeline.jsonl'],text=True)
+tl=[json.loads(l) for l in old.splitlines() if 'tookLead' in l]
 n=[sum(1 for u in pit if sec(e['elapsed'])-180<u<=sec(e['elapsed'])) for e in tl]
 print('pits in the 3 min before a lead change: median',statistics.median(n),'>=4:',sum(1 for k in n if k>=4),'of',len(n))"
 
-# パッシングと首位車のストップ(納品した SQL と同じ式)。交代から数えると 61 になり、
+# overtakeForLead と leaderInPit(`Round.Timeline` と同じ式)。交代から数えると 61 になり、
 # 首位のままピットアウトした7件が落ちる
 sqlite3 flix/.db/motorsport.sqlite "
 WITH l AS (SELECT car_number, lap_number, elapsed_ms, source_row,
@@ -176,10 +182,9 @@ SELECT (SELECT count(*) FROM (
                           LAG(car_number) OVER (ORDER BY lap_number) AS held
                          FROM l WHERE rn = 1) AS chg
           WHERE held IS NOT NULL AND held <> car_number
-            AND (SELECT x.elapsed_ms FROM l x WHERE x.car_number = chg.held
-                   AND x.lap_number BETWEEN chg.lap_number - 1 AND chg.lap_number
-                   AND x.pitted ORDER BY x.lap_number ASC LIMIT 1) IS NULL)) AS took_lead_on_track,
+            AND NOT EXISTS (SELECT 1 FROM l x WHERE x.car_number = chg.held
+                   AND x.lap_number = chg.lap_number AND x.pitted))) AS overtake_for_lead,
        (SELECT count(*) FROM l AS stop WHERE stop.stopped
           AND EXISTS (SELECT 1 FROM led WHERE led.car_number = stop.car_number
-                       AND led.lap_number IN (stop.lap_number - 2, stop.lap_number - 1))) AS leader_pitted;"
+                       AND led.lap_number IN (stop.lap_number - 2, stop.lap_number - 1))) AS leader_in_pit;"
 ```
