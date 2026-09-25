@@ -1,7 +1,7 @@
 /// The round's timeline, both halves of it: counted out of the laps for the
 /// load to write down, and read back out of the rows it wrote. The counting is
-/// two readings of the laps -- each car's last moment, and each change of the
-/// lead -- and what they add up to is `Motorsport.Timeline`'s.
+/// two readings of the laps -- each car's last moment, and each lap boundary where
+/// the lead changed hands -- and what they add up to is `Motorsport.Timeline`'s.
 mod Round.Timeline {
 
     use Db.Laps
@@ -60,7 +60,8 @@ mod Round.Timeline {
 
     // ----------------------------------------------------------------- leads
 
-    /// Each change of the lead: who took it, when, and which way it went.
+    /// Where the lead changed hands: the car that took it and when it crossed, each
+    /// boundary once, and as a `Handover` saying which car the boundary is about.
     ///
     /// The lead is the field's order at a lap boundary, which is what
     /// `Round.Laps.placeInField` counts, so it is read the same way: the first
@@ -71,11 +72,12 @@ mod Round.Timeline {
     /// before either of them: the leaders are picked out in `l`, and only then
     /// is each one asked who led the lap before.
     ///
-    /// `l` is asked once more, for the lap the change is counted on, whether the
-    /// car that lost the lead crossed it as half of a stop. It has that crossing
-    /// already -- one row per car per lap, the leaders being the `rn = 1` ones --
-    /// so which way the lead went costs no third reading of the laps.
-    def leads(entry: Entry): List[(String, Duration, Timeline.Handover)] \ DbRead =
+    /// `l` is asked once more per boundary for the crossing at which the car that
+    /// lost the lead came into the pits, which decides which of the two kinds of
+    /// boundary it is. It has that crossing already -- one row per car per lap, the
+    /// leaders being the `rn = 1` ones -- so the two kinds cost no third reading of
+    /// the laps.
+    def leads(entry: Entry): List[Timeline.Handover] \ DbRead =
         Sql.rows(Sql.raw("(" + handedOver() + ") AS led"))
             |> Sql.using(Sql.frags(
                 Sql.raw("l AS (SELECT car_number, lap_number, elapsed_ms,"
@@ -86,9 +88,20 @@ mod Round.Timeline {
             ))
             |> Sql.filter(_ -> Sql.column("held IS NOT NULL AND held <> car_number"))
             |> Sql.orderBy(Sql.raw("lap_number") :: Nil)
-            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms"), Sql.bool(cameIn())))
-            |> Sql.reading(match (carNumber, elapsed, cameInPits) ->
-                (carNumber, Util.Duration.fromMillis(elapsed), handover(cameInPits)))
+            |> Sql.map(_ -> (
+                Sql.text("car_number"),
+                Sql.int("elapsed_ms"),
+                Sql.text("held"),
+                Sql.optionalInt(cameInAt())
+            ))
+            |> Sql.reading(match (carNumber, elapsed, held, crossing) ->
+                match crossing {
+                    case Some(cameIn) =>
+                        Timeline.Handover.LeaderStopped(held, Util.Duration.fromMillis(cameIn))
+
+                    case None =>
+                        Timeline.Handover.Passed(carNumber, Util.Duration.fromMillis(elapsed))
+                })
             |> Sql.selectAll
 
     def firstAcross(): String =
@@ -99,15 +112,18 @@ mod Round.Timeline {
             + " LAG(car_number) OVER (ORDER BY lap_number) AS held"
             + " FROM l WHERE rn = 1"
 
-    /// Whether the lead went through the pits: the car holding it came in on the
-    /// lap this change is counted on, so whoever stayed out is in front without
-    /// having passed anyone.
-    def cameIn(): String =
-        "EXISTS (SELECT 1 FROM l"
-            + " WHERE l.lap_number = led.lap_number"
-            + " AND l.car_number = led.held AND l.pitted)"
-
-    def handover(cameInPits: Bool): Timeline.Handover =
-        if (cameInPits) Timeline.Handover.InPits else Timeline.Handover.OnTrack
+    /// When the car that lost the lead came into the pits, or null when it lost the
+    /// lead on the track: its in-lap, the crossing at which it turned down the lane.
+    ///
+    /// A stop is written over two crossings a lap apart -- the in-lap and the
+    /// out-lap, whose time carries the stop -- and the lead can change hands on
+    /// either of them, so both laps are asked about and the earlier crossing is the
+    /// one where the car came in.
+    def cameInAt(): String =
+        "(SELECT l.elapsed_ms FROM l"
+            + " WHERE l.car_number = led.held"
+            + " AND l.lap_number BETWEEN led.lap_number - 1 AND led.lap_number"
+            + " AND l.pitted"
+            + " ORDER BY l.lap_number ASC LIMIT 1)"
 
 }

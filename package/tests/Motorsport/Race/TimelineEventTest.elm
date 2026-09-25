@@ -20,17 +20,17 @@ suite =
                     |> Expect.equal (Ok ( Instant.raceStart, CarEvent "7" TookLeadOnTrack ))
         , test "each of the kinds reads back as itself" <|
             \_ ->
-                [ "tookLeadOnTrack", "tookLeadInPits", "retirement", "checkered" ]
+                [ "tookLeadOnTrack", "leaderPitted", "retirement", "checkered" ]
                     |> List.map (written >> Result.map Tuple.second)
                     |> Expect.equal
                         [ Ok (CarEvent "7" TookLeadOnTrack)
-                        , Ok (CarEvent "7" TookLeadInPits)
+                        , Ok (CarEvent "7" LeaderPitted)
                         , Ok (CarEvent "7" Retirement)
                         , Ok (CarEvent "7" Checkered)
                         ]
         , test "a kind this app has no case for fails the round" <|
             \_ ->
-                -- Carried on from, it would read as a car that never stopped.
+                -- A caution episode would read as a car that never stopped running.
                 decoded """{ "elapsed": "0.000", "event": "safetyCar" }"""
                     |> Expect.err
         , test "a name this timeline no longer writes fails the round" <|

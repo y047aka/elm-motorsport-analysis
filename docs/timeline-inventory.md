@@ -8,7 +8,9 @@
 - 日付: 2026-09-25(`d406766`)
 - 数値の再測方法は末尾の付録に。`.#cli-load` → `.#cli-export` でファイルは再生成される。
 - 適用済み: §5-4 の `start` を削除(191 → 129行)、§5-3 のとおり首位交代を2種に分割
-  (`tookLead` 66 → `tookLeadOnTrack` 5 + `tookLeadInPits` 61)。下の節は削除・分割前の実測。
+  (`tookLead` 66 → `tookLeadOnTrack` 5 + `leaderPitted` 61)。後者は交代のイベントではなく
+  「首位がピットインした」イベントで、首位だった車の in-lap の横断に生える。
+  下の節は削除・分割前の実測。
 
 ## 1. 出力されているもの
 
@@ -101,7 +103,11 @@
    `laps` は1回のストップを2つの横断に書いて持つ(ピットレーンに切れ込んだ横断と、
    ピットタイム付きの復帰横断)ので、「首位を失った車がこの周回をどちらかで横切ったか」
    で判別できる。SC明けかどうかの区別はしない —— 目的は交代の2種を分けること。
-4. **`start` を削るか `raceStart` に寄せる**(62行・32%が情報ゼロ)。
+   **適用した形**: 判別は交代周回とその前周の両方にまたがる(ストップの2横断が1周離れて
+   書かれるため)。当たりつきのイベントは交代としてではなく **`leaderPitted`** ——首位が
+   ピットインした——として、首位だった車の in-lap の横断時刻に生やす。誰が首位に立ったかは
+   表現しない。
+4. **`start` を削るか `raceStart` に寄せる**(62行・32%が情報ゼロ)。 **適用済み**: 削った。
 
 いずれも `Round.Timeline`(集計)+ `Motorsport.Timeline`(語彙と JSON 形)+
 `package/src/Motorsport/Race/TimelineEvent.elm`(デコーダ)を同時に触る変更で、Elm 側は未知の
@@ -151,15 +157,20 @@ n=[sum(1 for u in pit if sec(e['elapsed'])-180<u<=sec(e['elapsed'])) for e in tl
 print('pits in the 3 min before a lead change: median',statistics.median(n),'>=4:',sum(1 for k in n if k>=4),'of',len(n))"
 
 # 首位交代がコース上か、先頭がピットに来たためのものか(読み込み済みの行から)
+# 2種に割る判別と同じ式:首位を失った車が in-lap か out-lap をこの周回か前周に横切ったか
 sqlite3 flix/.db/motorsport.sqlite "
 WITH l AS (SELECT car_number, lap_number, elapsed_ms,
    (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL) AS pitted,
    ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) AS rn
    FROM laps WHERE round_id =
      (SELECT round_id FROM rounds WHERE season = 2025 AND round_key = 'le_mans_24h'))
-SELECT sum(came_in) AS in_pits, count(*) - sum(came_in) AS on_track, count(*) AS changes
-FROM (SELECT EXISTS (SELECT 1 FROM l WHERE l.lap_number = led.lap_number
-                      AND l.car_number = led.held AND l.pitted) AS came_in
+SELECT sum(came_in IS NOT NULL) AS leader_pitted,
+       sum(came_in IS NULL) AS took_lead_on_track, count(*) AS changes
+FROM (SELECT (SELECT l.elapsed_ms FROM l
+               WHERE l.car_number = led.held
+                 AND l.lap_number BETWEEN led.lap_number - 1 AND led.lap_number
+                 AND l.pitted
+               ORDER BY l.lap_number ASC LIMIT 1) AS came_in
       FROM (SELECT car_number, lap_number, elapsed_ms,
                    LAG(car_number) OVER (ORDER BY lap_number) AS held
             FROM l WHERE rn = 1) AS led

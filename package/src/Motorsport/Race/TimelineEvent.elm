@@ -29,7 +29,7 @@ type EventType
 
 type CarEventType
     = TookLeadOnTrack
-    | TookLeadInPits
+    | LeaderPitted
     | Retirement
     | Checkered
 
@@ -78,8 +78,8 @@ carEventTypeDecoder event =
         "tookLeadOnTrack" ->
             Decode.succeed TookLeadOnTrack
 
-        "tookLeadInPits" ->
-            Decode.succeed TookLeadInPits
+        "leaderPitted" ->
+            Decode.succeed LeaderPitted
 
         "retirement" ->
             Decode.succeed Retirement

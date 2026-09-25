@@ -3,17 +3,20 @@
 /// The mirror of `Motorsport.Race.TimelineEvent` on the Elm side, which reads
 /// these back a line at a time. What is decided here is what the rows do not
 /// say -- whether a car's last lap was the flag or a retirement, and whether a
-/// lead changed hands on track or in the pits -- and the counting that finds
-/// each event is `Round.Timeline`'s.
+/// change of the lead was a pass or the leader coming into the pits -- and the
+/// counting that finds each event is `Round.Timeline`'s.
 mod Motorsport.Timeline {
 
     use Util.Duration.Duration
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt}
 
+    /// What one car did. `TookLeadOnTrack` is about the car that came in front of
+    /// the field; `LeaderPitted` is about the car that led and turned into the pit
+    /// lane, and says nothing about who took the lead in its place.
     pub enum CarEvent with Eq {
         case TookLeadOnTrack
-        case TookLeadInPits
+        case LeaderPitted
         case Retirement
         case Checkered
     }
@@ -28,29 +31,30 @@ mod Motorsport.Timeline {
         eventType = EventType
     }
 
-    /// Which way a lead changed hands. The laps say who crossed first on each of
-    /// them and which crossings were one half of a stop; between those two
-    /// readings is whether a car went in front by passing the field or by staying
-    /// out while the field came in.
+    /// What a lap boundary where the lead changed hands is worth to the timeline,
+    /// and about which car. Each case carries the car and crossing its own kind is
+    /// about, so the two cannot be handed to the wrong event at a call site -- the
+    /// stop is not about the car that went in front, and writing it as one tuple
+    /// where a flag says which is how that mix-up happens.
     pub enum Handover with Eq {
-        case OnTrack
-        case InPits
+        case Passed(String, Duration)
+        case LeaderStopped(String, Duration)
     }
 
-    /// What the events of one round are gathered from: each car's last moment,
-    /// and every change of the lead and which way it went.
+    /// What the events of one round are gathered from: each car's last moment, and
+    /// every lap boundary where the lead changed hands.
     ///
     /// Not the stops themselves: both halves of one are counted off `pit_time`,
-    /// which the laps carry, so the app reads them there. A stop is read here
-    /// only to say what a change of the lead came to.
+    /// which the laps carry, so the app reads them there. A stop is read here only
+    /// where it is what the lead changed hands over.
     pub type alias Readings = {
         timeLimit = Duration,
         cars      = List[(String, Duration)],
-        leads     = List[(String, Duration, Handover)]
+        leads     = List[Handover]
     }
 
-    /// The race start, one terminal event per car, and one per change of the
-    /// lead saying which way it went, in time order.
+    /// The race start, one terminal event per car, and one per lap boundary where
+    /// the lead changed hands -- the pass, or the leader's stop -- in time order.
     ///
     /// Not who took the green flag: every car that turned a lap took it, all at
     /// nought, and who was ahead of whom is `Motorsport.Metadata`'s starting grid.
@@ -73,16 +77,23 @@ mod Motorsport.Timeline {
     def raceStart(): Event =
         { elapsed = Util.Duration.zero(), eventType = EventType.RaceStart }
 
-    def leads(changes: List[(String, Duration, Handover)]): List[Event] =
-        changes |> List.map(match (carNumber, elapsed, handover) ->
-            { elapsed = elapsed,
-              eventType = EventType.Of(carNumber, tookLead(handover)) })
+    /// One event per lap boundary where the lead changed hands: the pass about the
+    /// car that took the lead, the stop about the leader that came in.
+    def leads(handovers: List[Handover]): List[Event] =
+        handovers |> List.map(handover ->
+            match handover {
+                case Handover.Passed(carNumber, elapsed) =>
+                    {
+                        elapsed = elapsed,
+                        eventType = EventType.Of(carNumber, CarEvent.TookLeadOnTrack)
+                    }
 
-    def tookLead(handover: Handover): CarEvent =
-        match handover {
-            case Handover.OnTrack => CarEvent.TookLeadOnTrack
-            case Handover.InPits  => CarEvent.TookLeadInPits
-        }
+                case Handover.LeaderStopped(carNumber, elapsed) =>
+                    {
+                        elapsed = elapsed,
+                        eventType = EventType.Of(carNumber, CarEvent.LeaderPitted)
+                    }
+            })
 
     /// A car still running when the race was scheduled to end took the flag;
     /// one whose last lap fell short of it retired. The rows say when each car
@@ -107,7 +118,7 @@ mod Motorsport.Timeline {
     pub def names(): List[String] =
         "raceStart" ::
         "tookLeadOnTrack" ::
-        "tookLeadInPits" ::
+        "leaderPitted" ::
         "retirement" ::
         "checkered" ::
         Nil
@@ -122,7 +133,7 @@ mod Motorsport.Timeline {
     def carParts(carEvent: CarEvent): Parts =
         match carEvent {
             case CarEvent.TookLeadOnTrack => named("tookLeadOnTrack")
-            case CarEvent.TookLeadInPits  => named("tookLeadInPits")
+            case CarEvent.LeaderPitted    => named("leaderPitted")
             case CarEvent.Retirement      => named("retirement")
             case CarEvent.Checkered       => named("checkered")
         }
@@ -142,7 +153,7 @@ mod Motorsport.Timeline {
     def carEventOf(event: String): Option[CarEvent] =
         match event {
             case "tookLeadOnTrack" => Some(CarEvent.TookLeadOnTrack)
-            case "tookLeadInPits"  => Some(CarEvent.TookLeadInPits)
+            case "leaderPitted"    => Some(CarEvent.LeaderPitted)
             case "retirement"      => Some(CarEvent.Retirement)
             case "checkered"       => Some(CarEvent.Checkered)
             case _                 => None

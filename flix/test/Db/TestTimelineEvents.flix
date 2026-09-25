@@ -16,7 +16,7 @@ mod Db.TestTimelineEvents {
     def oneOfEach(): List[Event] =
         at(0, EventType.RaceStart) ::
         at(1000, EventType.Of("7", CarEvent.TookLeadOnTrack)) ::
-        at(1200, EventType.Of("8", CarEvent.TookLeadInPits)) ::
+        at(1200, EventType.Of("8", CarEvent.LeaderPitted)) ::
         at(4000, EventType.Of("8", CarEvent.Retirement)) ::
         at(5000, EventType.Of("7", CarEvent.Checkered)) ::
         Nil

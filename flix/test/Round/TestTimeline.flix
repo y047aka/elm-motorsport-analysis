@@ -37,7 +37,7 @@ mod Round.TestTimeline {
     def name(carEvent: CarEvent): String =
         match carEvent {
             case CarEvent.TookLeadOnTrack => "tookLeadOnTrack"
-            case CarEvent.TookLeadInPits  => "tookLeadInPits"
+            case CarEvent.LeaderPitted    => "leaderPitted"
             case CarEvent.Retirement      => "retirement"
             case CarEvent.Checkered       => "checkered"
         }
@@ -45,15 +45,15 @@ mod Round.TestTimeline {
     def named(what: String, events: List[Event]): List[(String, String, String)] =
         events |> List.map(shape) |> List.filter(match (_, kind, _) -> kind == what)
 
-    /// Either kind of change of the lead, which is what a test asking whether the
-    /// lead changed hands at all is asking about.
+    /// Either of the two events a change of the lead is worth, which is what a test
+    /// asking whether the lead changed hands at all is asking about.
     def leadChanges(events: List[Event]): List[(String, String, String)] =
         events |> List.map(shape)
             |> List.filter(match (_, kind, _) ->
                 List.memberOf(kind, leadNames()))
 
     def leadNames(): List[String] =
-        "tookLeadOnTrack" :: "tookLeadInPits" :: Nil
+        "tookLeadOnTrack" :: "leaderPitted" :: Nil
 
     // ---------------------------------------------------------------- laps
 
@@ -136,9 +136,9 @@ mod Round.TestTimeline {
             ("2:03.000", "tookLeadOnTrack", "8") ::
             ("3:00.000", "tookLeadOnTrack", "7") :: Nil)
 
-    /// The car holding the lead stopped on the lap the change is counted on, and
-    /// its crossing carries how long the stop took, so the lead went to whoever
-    /// stayed out rather than to whoever passed it.
+    /// A change the leader's stop settled is about the leader and not about who
+    /// went in front, and is timed where the stop is: the out-lap carries how long
+    /// the stop took, which is as close to where it came in as the feed says.
     @Test
     def aLeadTheLeaderGaveUpInThePits(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
@@ -147,11 +147,12 @@ mod Round.TestTimeline {
             lap("8", 2, "2:00.000") ::
             pitLap("7", 2, "2:40.000", "40.000") ::
             Nil);
-        Assert.assertTrue(leadChanges(events) == ("2:00.000", "tookLeadInPits", "8") :: Nil)
+        Assert.assertTrue(leadChanges(events) == ("2:40.000", "leaderPitted", "7") :: Nil)
 
     /// The other half of a stop settles a change too: the leader crossed the line
     /// and turned down the pit lane on the crossing that lost it the lead, with no
-    /// time written on that crossing at all.
+    /// time written on that crossing at all. The event is timed there, where it came
+    /// in, and not at the crossing that went in front.
     @Test
     def aLeadTheLeaderLostByTurningIntoThePits(): Unit \ {Assert, IO} =
         let events = timelineOf("1:00:00.000",
@@ -160,7 +161,28 @@ mod Round.TestTimeline {
             lap("8", 2, "2:00.000") ::
             boxLap("7", 2, "2:01.000") ::
             Nil);
-        Assert.assertTrue(leadChanges(events) == ("2:00.000", "tookLeadInPits", "8") :: Nil)
+        Assert.assertTrue(leadChanges(events) == ("2:01.000", "leaderPitted", "7") :: Nil)
+
+    /// A stop is written over two crossings a lap apart and the lead may change
+    /// hands on either of them, so a change counted on the out-lap is timed at the
+    /// in-lap. Taking the lead back a lap later is a pass: neither car stopped on
+    /// either of those two laps.
+    @Test
+    def aLeadGivenUpTheLapAfterComingInIsTimedAtTheInLap(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            lap("7", 1, "60.000") ::
+            lap("8", 1, "62.000") ::
+            boxLap("7", 2, "2:00.000") ::
+            lap("8", 2, "2:10.000") ::
+            lap("8", 3, "2:30.000") ::
+            pitLap("7", 3, "2:50.000", "45.000") ::
+            lap("7", 4, "3:20.000") ::
+            lap("8", 4, "3:40.000") ::
+            Nil);
+        Assert.assertTrue(leadChanges(events) ==
+            ("2:00.000", "leaderPitted", "7") ::
+            ("3:20.000", "tookLeadOnTrack", "7") ::
+            Nil)
 
     /// Whoever led the opening lap took it from nobody.
     @Test
@@ -246,8 +268,8 @@ mod Round.TestTimeline {
         match loadedAndCounted() {
             case (readBack, _) =>
                 Assert.assertTrue(named("raceStart", readBack) == ("0.000", "raceStart", "") :: Nil);
-                Assert.assertTrue(named("tookLeadInPits", readBack) ==
-                    ("50:00.000", "tookLeadInPits", "8") :: Nil);
+                Assert.assertTrue(named("leaderPitted", readBack) ==
+                    ("1:00:00.000", "leaderPitted", "7") :: Nil);
                 Assert.assertTrue(named("tookLeadOnTrack", readBack) ==
                     ("1:30:00.000", "tookLeadOnTrack", "7") :: Nil);
                 Assert.assertTrue(named("checkered", readBack) == ("1:30:00.000", "checkered", "7") :: Nil);

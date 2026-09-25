@@ -532,8 +532,8 @@ eventTypeToString eventType =
         CarEvent _ TookLeadOnTrack ->
             "Took the Lead"
 
-        CarEvent _ TookLeadInPits ->
-            "Took the Lead in the Pits"
+        CarEvent _ LeaderPitted ->
+            "Leader Pitted"
 
         CarEvent _ Retirement ->
             "Retirement"
