@@ -334,10 +334,22 @@ application's assets. Neither holds any of it itself — each decodes the table
 that does, and what reaches `Car.Metadata` is the resolved colour, badge and
 photograph rather than the tables.
 
+Le Mans is also drawn to its own shape rather than as a ring.
+`Circuit/LeMans/Geometry` is the lap and the pit lane out of OpenStreetMap
+(ODbL, © OpenStreetMap contributors), written by
+`node app/scripts/le-mans-geometry.mjs` and never by hand. `Circuit/LeMans/Layout`
+holds where each season's timing lines stand, copied from the "Approximate
+Distances" on Al Kamel's circuit map for that race; the maps themselves are not
+to be redistributed, so they are not in the repository. A line a map gives no
+distance for is placed by the time between the lines either side of it
+(`Tracker.Config.lapScale`). The summary does not say which circuit a round was
+run on, so `Shared` picks the layout by the calendar's round id.
+
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
-in three places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
-`Circuit/LeMans`'s type, and `Leaderboard` carries `*_Wec` and `*_LeMans24h`
-columns beside the generic ones. Reversing that arrow is its own change.
+in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
+`Circuit/LeMans`'s type, `Leaderboard` carries `*_Wec` and `*_LeMans24h`
+columns beside the generic ones, and `Chart/Tracker` draws
+`Circuit/LeMans/Layout`. Reversing that arrow is its own change.
 
 There is no view-model layer between the two. `Race.Snapshot` is the whole
 per-frame derivation — sampling the cars at the clock, ordering the field,

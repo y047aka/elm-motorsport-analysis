@@ -1,6 +1,7 @@
 {
   "tests": [
     "Internal.Statistics",
+    "Motorsport.Circuit.Shape",
     "Motorsport.Driver",
     "Motorsport.Duration",
     "Motorsport.Flag",
