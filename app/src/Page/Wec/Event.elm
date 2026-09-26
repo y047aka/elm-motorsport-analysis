@@ -444,13 +444,8 @@ columnStrip cell m replay snapshot shown =
         several =
             List.length shown > 1
 
-        offsets =
-            case m.carried of
-                Just carry ->
-                    List.map Just (carryOffsets carry (List.map (.metadata >> .carNumber) shown))
-
-                Nothing ->
-                    List.map (always Nothing) shown
+        placements =
+            columnPlacements m.carried (List.map (.metadata >> .carNumber) shown)
     in
     case shown of
         [] ->
@@ -466,43 +461,18 @@ columnStrip cell m replay snapshot shown =
                 , Attributes.style "column-gap" (px columnGap)
                 ]
                 (List.map2
-                    (\car offset ->
-                        let
-                            carNumber =
-                                car.metadata.carNumber
-
-                            held =
-                                Maybe.map .carNumber m.carried == Just carNumber
-                        in
-                        ( carNumber
+                    (\car placement ->
+                        ( car.metadata.carNumber
                         , div
-                            (Attributes.class
-                                ("shrink-0 grid"
-                                    ++ (case ( offset, held ) of
-                                            ( Nothing, _ ) ->
-                                                ""
-
-                                            ( Just _, True ) ->
-                                                " relative z-10 rounded-xl bg-background shadow-2xl"
-
-                                            ( Just _, False ) ->
-                                                " transition-transform"
-                                       )
-                                )
+                            (Attributes.class "shrink-0 grid"
                                 :: Attributes.style "width" (px columnWidth)
-                                :: (case offset of
-                                        Just dx ->
-                                            [ Attributes.style "transform" ("translateX(" ++ px dx ++ ")") ]
-
-                                        Nothing ->
-                                            []
-                                   )
+                                :: placementAttributes placement
                             )
-                            [ Html.Lazy.lazy6 columnCard several held m.comparison replay.race.cars snapshot car ]
+                            [ Html.Lazy.lazy6 columnCard several (isCarried placement) m.comparison replay.race.cars snapshot car ]
                         )
                     )
                     shown
-                    offsets
+                    placements
                 )
 
 
@@ -531,51 +501,88 @@ px n =
     String.fromFloat n ++ "px"
 
 
+travel : Carry -> Float
+travel carry =
+    carry.at - carry.from
+
+
 columnsCarried : Carry -> Int
 columnsCarried carry =
-    round ((carry.at - carry.from) / columnPitch)
+    round (travel carry / columnPitch)
 
 
-{-| Where each column is drawn while one is carried: that one under the
-pointer, held to the strip, and each it has passed a column back the other way.
+{-| Where a column is drawn, and whether it is the one being carried.
+-}
+type Placement
+    = Resting
+    | Carried Float
+    | Shifted Float
+
+
+{-| While one is carried: that one under the pointer, held to the strip, and
+each it has passed a column back the other way.
 
 Nothing moves in the DOM until it is let go of. The grip holds the pointer only
 while it stays in the document, and the keyed strip moves a column by taking
 it out.
 
 -}
-carryOffsets : Carry -> List CarNumber -> List Float
-carryOffsets carry carNumbers =
-    case List.Extra.elemIndex carry.carNumber carNumbers of
-        Just from ->
+columnPlacements : Maybe Carry -> List CarNumber -> List Placement
+columnPlacements carried carNumbers =
+    case carried |> Maybe.andThen (\carry -> List.Extra.elemIndex carry.carNumber carNumbers |> Maybe.map (Tuple.pair carry)) of
+        Just ( carry, from ) ->
             let
                 last =
                     List.length carNumbers - 1
 
-                dx =
-                    clamp (toFloat -from * columnPitch) (toFloat (last - from) * columnPitch) (carry.at - carry.from)
-
                 to =
-                    from + round (dx / columnPitch)
+                    from + clamp -from (last - from) (columnsCarried carry)
             in
             List.indexedMap
                 (\index _ ->
                     if index == from then
-                        dx
+                        Carried (clamp (toFloat -from * columnPitch) (toFloat (last - from) * columnPitch) (travel carry))
 
                     else if from < index && index <= to then
-                        -columnPitch
+                        Shifted -columnPitch
 
                     else if to <= index && index < from then
-                        columnPitch
+                        Shifted columnPitch
 
                     else
-                        0
+                        Shifted 0
                 )
                 carNumbers
 
         Nothing ->
-            List.map (always 0) carNumbers
+            List.map (always Resting) carNumbers
+
+
+isCarried : Placement -> Bool
+isCarried placement =
+    case placement of
+        Carried _ ->
+            True
+
+        _ ->
+            False
+
+
+placementAttributes : Placement -> List (Html.Attribute msg)
+placementAttributes placement =
+    case placement of
+        Resting ->
+            []
+
+        Carried dx ->
+            [ Attributes.class "relative z-10 rounded-xl bg-background shadow-2xl"
+            , Attributes.style "transform" ("translateX(" ++ px dx ++ ")")
+            ]
+
+        Shifted dx ->
+            [ Attributes.class "transition-transform"
+            , Attributes.style "transform" ("translateX(" ++ px dx ++ ")")
+            ]
 
 
 columnGrip : Bool -> CarNumber -> Html Msg
