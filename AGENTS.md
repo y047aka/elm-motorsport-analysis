@@ -136,7 +136,9 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` — one module per page, plain TEA
-- `Data/` (feed decoding), `UI/` (Notice, and `Shadcn/` for the wrappers)
+- `Data/` (feed decoding), `UI/` (Notice, DragHandle, and `Shadcn/` for the
+  wrappers), and `elements/` for the one custom element that is not shadcn's:
+  `<drag-handle>`, which does the one thing Elm cannot, `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
   the car cards, the live standings, and the badge those share
 
@@ -226,7 +228,7 @@ running it rather than by building it:
   it on macOS and only fails on Linux CI. The React sources are laid out as
   the registry expects, so `src/shadcn/` and `src/shadcn/ui/` are both taken:
   the Elm side is `UI.Shadcn.*`, and no top-level Elm module may be named
-  `Shadcn` or `Ui`.
+  `Shadcn` or `Ui`. `src/elements/` takes `Elements` the same way.
 
 Two of the elements mount React: the slider and the toggle-group, which are
 the two that borrow behaviour — a drag, and a row that answers the arrow keys.
