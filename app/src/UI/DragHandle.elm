@@ -1,9 +1,9 @@
-module UI.DragHandle exposing (view)
+module UI.DragHandle exposing (Pointer, view)
 
 {-| A grip that carries something sideways: by the pointer, or a step at a time
 by the arrow keys once it has the focus.
 
-@docs view
+@docs Pointer, view
 
 -}
 
@@ -13,13 +13,19 @@ import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-| Every position is the pointer's `clientX`.
+{-| Which pointer, and its `clientX`. Two fingers can hold two grips at once, and
+each reports its own release.
+-}
+type alias Pointer =
+    { id : Int
+    , x : Float
+    }
 
-`held` is the caller's, and says whether this grip is the one being carried.
-Moves are only listened for while it is: a grip that is merely hovered over
-would otherwise report every move the pointer makes across it. The release is
-listened for always, and says where it happened: a carry let go of before the
-next frame has reported no moves at all.
+
+{-| `held` is the caller's, and says whether this grip is the one being carried.
+Moves are only reported while it is. The release is reported always, and says
+where it happened: a carry let go of before the next frame has reported no
+moves at all.
 
 `onCancel` is the carry ending without being let go of: the browser taking the
 pointer for itself, or the grip leaving the document. It also follows every
@@ -30,10 +36,10 @@ view :
     { id : String
     , label : String
     , held : Bool
-    , onGrab : Float -> msg
-    , onMove : Float -> msg
-    , onDrop : Float -> msg
-    , onCancel : msg
+    , onGrab : Pointer -> msg
+    , onMove : Pointer -> msg
+    , onDrop : Pointer -> msg
+    , onCancel : Int -> msg
     , onStep : Int -> msg
     }
     -> Html msg
@@ -53,14 +59,14 @@ view config =
                         " cursor-grab text-muted-foreground"
                    )
             )
-         , on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab clientX))
-         , on "pointerup" (Decode.map config.onDrop clientX)
-         , on "pointercancel" (Decode.succeed config.onCancel)
-         , on "lostpointercapture" (Decode.succeed config.onCancel)
+         , on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab pointer))
+         , on "pointerup" (Decode.map config.onDrop pointer)
+         , on "pointercancel" (Decode.map config.onCancel pointerId)
+         , on "lostpointercapture" (Decode.map config.onCancel pointerId)
          , preventDefaultOn "keydown" (Decode.map (\step -> ( config.onStep step, True )) arrowStep)
          ]
             ++ (if config.held then
-                    [ on "pointermove" (Decode.map config.onMove clientX) ]
+                    [ on "pointermove" (Decode.map config.onMove pointer) ]
 
                 else
                     []
@@ -69,9 +75,14 @@ view config =
         [ text "⠿" ]
 
 
-clientX : Decoder Float
-clientX =
-    Decode.field "clientX" Decode.float
+pointer : Decoder Pointer
+pointer =
+    Decode.map2 Pointer pointerId (Decode.field "clientX" Decode.float)
+
+
+pointerId : Decoder Int
+pointerId =
+    Decode.field "pointerId" Decode.int
 
 
 primaryButton : Decoder ()

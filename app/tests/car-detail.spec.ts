@@ -329,6 +329,26 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, [...STAND_INS, '83']);
   });
 
+  test('should keep a carry to the pointer that picked it up', async ({ page }) => {
+    // Two fingers, one on each of two grips. Dispatched rather than driven: the
+    // mouse Playwright drives is one pointer.
+    const touch = (index: number, type: string, pointerId: number, x: number) =>
+      grip(page, index).evaluate(
+        (el, init) => el.dispatchEvent(new PointerEvent(init.type, { ...init, bubbles: true, button: 0, pointerType: 'touch' })),
+        { type, pointerId, clientX: x },
+      );
+    await touch(0, 'pointerdown', 2, 100);
+    await expect(grip(page, 0)).toHaveClass(/cursor-grabbing/);
+    // The second finger's press and release are its own, and move nothing.
+    await touch(1, 'pointerdown', 3, 100);
+    await touch(1, 'pointerup', 3, 100 + 370 * 2);
+    await touch(1, 'lostpointercapture', 3, 100 + 370 * 2);
+    await expectColumns(page, STAND_INS);
+    await expect(grip(page, 0)).toHaveClass(/cursor-grabbing/);
+    await touch(0, 'pointerup', 2, 100 + 370);
+    await expectColumns(page, ['48', '6', '92']);
+  });
+
   test('should move a column a place at a time by the arrow keys, and keep its grip focused', async ({ page }) => {
     await grip(page, 0).focus();
     await page.keyboard.press('ArrowRight');

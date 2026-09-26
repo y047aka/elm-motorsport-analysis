@@ -78,11 +78,12 @@ type CarColumns
     | Picked CarNumber (List CarNumber)
 
 
-{-| A column being carried along the strip by its grip, from where the pointer
-went down to where it is now.
+{-| A column being carried along the strip by one pointer, from where it went
+down to where it is now.
 -}
 type alias Carry =
     { carNumber : CarNumber
+    , pointerId : Int
     , from : Float
     , at : Float
     }
@@ -119,10 +120,10 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | OpenColumn CarNumber
     | CloseColumn CarNumber
-    | GrabColumn CarNumber Float
-    | CarryColumn Float
-    | DropColumn Float
-    | CancelCarry
+    | GrabColumn CarNumber DragHandle.Pointer
+    | CarryColumn DragHandle.Pointer
+    | DropColumn DragHandle.Pointer
+    | CancelCarry Int
     | StepColumn CarNumber Int
     | GripFocused
     | CarDetailMsg CarDetail.Msg
@@ -157,22 +158,32 @@ update shared msg m =
         CloseColumn carNumber ->
             ( { m | columns = rearrange shared (closeColumn carNumber) m.columns }, Effect.none )
 
-        GrabColumn carNumber x ->
-            ( { m
-                | columns = rearrange shared settleColumns m.columns
-                , carried = Just { carNumber = carNumber, from = x, at = x }
-              }
-            , Effect.none
-            )
-
-        CarryColumn x ->
-            ( { m | carried = Maybe.map (\carry -> { carry | at = x }) m.carried }, Effect.none )
-
-        DropColumn x ->
+        GrabColumn carNumber pointer ->
             case m.carried of
+                Just _ ->
+                    ( m, Effect.none )
+
+                Nothing ->
+                    ( { m
+                        | columns = rearrange shared settleColumns m.columns
+                        , carried = Just { carNumber = carNumber, pointerId = pointer.id, from = pointer.x, at = pointer.x }
+                      }
+                    , Effect.none
+                    )
+
+        CarryColumn pointer ->
+            case heldBy pointer.id m.carried of
+                Just carry ->
+                    ( { m | carried = Just { carry | at = pointer.x } }, Effect.none )
+
+                Nothing ->
+                    ( m, Effect.none )
+
+        DropColumn pointer ->
+            case heldBy pointer.id m.carried of
                 Just carry ->
                     ( { m
-                        | columns = rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = x })) m.columns
+                        | columns = rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = pointer.x })) m.columns
                         , carried = Nothing
                       }
                     , Effect.none
@@ -181,8 +192,13 @@ update shared msg m =
                 Nothing ->
                     ( m, Effect.none )
 
-        CancelCarry ->
-            ( { m | carried = Nothing }, Effect.none )
+        CancelCarry pointerId ->
+            case heldBy pointerId m.carried of
+                Just _ ->
+                    ( { m | carried = Nothing }, Effect.none )
+
+                Nothing ->
+                    ( m, Effect.none )
 
         StepColumn carNumber steps ->
             ( { m | columns = rearrange shared (moveColumn carNumber steps) m.columns }
@@ -198,6 +214,18 @@ update shared msg m =
 
         CarDetailMsg detailMsg ->
             ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
+
+
+heldBy : Int -> Maybe Carry -> Maybe Carry
+heldBy pointerId =
+    Maybe.andThen
+        (\carry ->
+            if carry.pointerId == pointerId then
+                Just carry
+
+            else
+                Nothing
+        )
 
 
 rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
