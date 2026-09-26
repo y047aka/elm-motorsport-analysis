@@ -438,11 +438,6 @@ leaderOfEachClass snapshot =
         |> List.filterMap (Tuple.second >> List.head)
 
 
-{-| A column is 360px, not a share of the cell. The widest thing in the panel is
-the comparison's tab row, which wants 302px of the 328 a column of this width
-hands it. The floor is 335, so the 26px over is what is left for a font that is
-not the one this was measured in.
--}
 columnStrip : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
 columnStrip cell m replay snapshot shown =
     let
@@ -467,7 +462,9 @@ columnStrip cell m replay snapshot shown =
             -- how far the reader had scrolled it to whichever car moved up into
             -- its place when the one before it was closed.
             Html.Keyed.node "div"
-                [ Attributes.class (cell ++ " flex gap-2.5 overflow-x-auto") ]
+                [ Attributes.class (cell ++ " flex overflow-x-auto")
+                , Attributes.style "column-gap" (px columnGap)
+                ]
                 (List.map2
                     (\car offset ->
                         let
@@ -480,7 +477,7 @@ columnStrip cell m replay snapshot shown =
                         ( carNumber
                         , div
                             (Attributes.class
-                                ("shrink-0 w-[360px] grid"
+                                ("shrink-0 grid"
                                     ++ (case ( offset, held ) of
                                             ( Nothing, _ ) ->
                                                 ""
@@ -492,9 +489,10 @@ columnStrip cell m replay snapshot shown =
                                                 " transition-transform"
                                        )
                                 )
+                                :: Attributes.style "width" (px columnWidth)
                                 :: (case offset of
-                                        Just px ->
-                                            [ Attributes.style "transform" ("translateX(" ++ String.fromFloat px ++ "px)") ]
+                                        Just dx ->
+                                            [ Attributes.style "transform" ("translateX(" ++ px dx ++ ")") ]
 
                                         Nothing ->
                                             []
@@ -508,12 +506,29 @@ columnStrip cell m replay snapshot shown =
                 )
 
 
-{-| `w-[360px]` and the strip's `gap-2.5` between them. Tailwind reads those as
-written, so neither can be made from this.
+{-| A column is 360px, not a share of the cell. The widest thing in the panel is
+the comparison's tab row, which wants 302px of the 328 a column of this width
+hands it. The floor is 335, so the 26px over is what is left for a font that is
+not the one this was measured in.
 -}
+columnWidth : Float
+columnWidth =
+    360
+
+
+columnGap : Float
+columnGap =
+    10
+
+
 columnPitch : Float
 columnPitch =
-    370
+    columnWidth + columnGap
+
+
+px : Float -> String
+px n =
+    String.fromFloat n ++ "px"
 
 
 columnsCarried : Carry -> Int
