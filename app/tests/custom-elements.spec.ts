@@ -177,7 +177,7 @@ test('the slider reports a whole number', async ({ page }) => {
       () => slider.querySelector('input[type="range"]') as HTMLInputElement | null
     );
     // The range input is React's, so the value goes in through the prototype's
-    // setter, the way the VRT helper drives the lap slider.
+    // setter, the way the VRT helper drives the time slider.
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
     setter.call(input, '42');
     input.dispatchEvent(new Event('input', { bubbles: true }));

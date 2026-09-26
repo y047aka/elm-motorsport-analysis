@@ -1,10 +1,12 @@
-/// The race's indices: the moments the lap counter went up, and the moments
-/// each of the nineteen records changed hands.
+/// The race's indices: the moments the lap counter went up, the moments each
+/// of the nineteen records changed hands, and the moments the field's flag
+/// changed.
 ///
 /// The mirror of `Motorsport.Race.Index` on the Elm side, which reads these
 /// back out of the summary.
 mod Motorsport.Index {
 
+    use Motorsport.Flag.FlagShown
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Sector
@@ -41,15 +43,17 @@ mod Motorsport.Index {
             MiniSector.all() |> List.map(m -> Record.FastestMiniSector(m))
         )
 
-    /// When the lap counter went up and to what, and every change of hands,
-    /// each record with its own list in the order they were set.
+    /// When the lap counter went up and to what, every change of hands, each
+    /// record with its own list in the order they were set, and every flag the
+    /// field was shown in the order the line read them.
     pub type alias Index = {
         lapCompletions = List[(Int32, Duration)],
-        bestTimes      = List[(Record, List[Change])]
+        bestTimes      = List[(Record, List[Change])],
+        flags          = List[FlagShown]
     }
 
     pub def empty(): Index =
-        { lapCompletions = Nil, bestTimes = Nil }
+        { lapCompletions = Nil, bestTimes = Nil, flags = Nil }
 
     pub def changesOf(record: Record, index: Index): List[Change] =
         index#bestTimes
@@ -60,6 +64,14 @@ mod Motorsport.Index {
         JsonObject(
             ("lapCompletions",  JsonArray(index#lapCompletions |> List.map(completionToJson))) ::
             ("bestTimeChanges", bestTimesToJson(index)) ::
+            ("flagChanges",     JsonArray(index#flags |> List.map(flagToJson))) ::
+            Nil
+        )
+
+    def flagToJson(shown: FlagShown): Encode.JsonValue =
+        JsonObject(
+            ("elapsed", JsonString(Util.Duration.format(shown#elapsed))) ::
+            ("flag",    JsonString(Motorsport.Flag.toString(shown#flag))) ::
             Nil
         )
 

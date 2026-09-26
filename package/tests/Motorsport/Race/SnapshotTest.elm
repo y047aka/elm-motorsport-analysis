@@ -350,6 +350,7 @@ fieldIndex =
             }
         , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
         }
+    , flagChanges = ChangePoints.empty
     }
 
 
@@ -372,6 +373,7 @@ leMansIndex =
             }
         , fastestMiniSectors = LeMans.initialize (\_ -> setBy "7" 15000 1000)
         }
+    , flagChanges = ChangePoints.empty
     }
 
 
@@ -394,6 +396,7 @@ untimedSectorsIndex untimed =
                 )
         , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
         }
+    , flagChanges = ChangePoints.empty
     }
 
 

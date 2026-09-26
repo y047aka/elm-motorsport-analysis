@@ -2,7 +2,8 @@ module Motorsport.Race exposing
     ( Race
     , Index, emptyIndex, indexDecoder
     , empty, fromCars
-    , lapCountAt, elapsedAtLapCount, timeToFlagAt
+    , lapCountAt, timeToFlagAt
+    , FlagPeriod, flagAt, flagPeriods
     , statusAt, pitStopsAt
     )
 
@@ -17,7 +18,8 @@ moment is derived from the two, in
 @docs Race
 @docs Index, emptyIndex, indexDecoder
 @docs empty, fromCars
-@docs lapCountAt, elapsedAtLapCount, timeToFlagAt
+@docs lapCountAt, timeToFlagAt
+@docs FlagPeriod, flagAt, flagPeriods
 @docs statusAt, pitStopsAt
 
 -}
@@ -27,17 +29,18 @@ import Json.Decode as Decode exposing (Decoder, field)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Flag as Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Stint as Stint
 import Motorsport.Status as Status exposing (Status)
 
 
-{-| The three indices read the same race at an instant, and are all
+{-| The four indices read the same race at an instant, and are all
 [`ChangePoints`](Internal-ChangePoints) underneath.
 
-`lapCompletions` and `bestTimeChanges` come with the round's summary;
-`pitStops` is counted here, off the cars.
+`lapCompletions`, `bestTimeChanges` and `flagChanges` come with the round's
+summary; `pitStops` is counted here, off the cars.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
@@ -53,17 +56,20 @@ type alias Race =
     , timeLimit : Instant
     , lapCompletions : ChangePoints Int
     , bestTimeChanges : BestTimes.Changes
+    , flagChanges : ChangePoints Flag
     , pitStops : Stint.Index
     }
 
 
-{-| The two indices a round is read with rather than counted out of: when the
-lap counter went up, and when each of the nineteen records changed hands. Both
-arrive with the round's summary, from `Round.Index`.
+{-| The three indices a round is read with rather than counted out of: when the
+lap counter went up, when each of the nineteen records changed hands, and when
+the field's flag changed. All three arrive with the round's summary, from
+`Round.Index`.
 -}
 type alias Index =
     { lapCompletions : ChangePoints Int
     , bestTimeChanges : BestTimes.Changes
+    , flagChanges : ChangePoints Flag
     }
 
 
@@ -73,6 +79,7 @@ emptyIndex : Index
 emptyIndex =
     { lapCompletions = ChangePoints.empty
     , bestTimeChanges = BestTimes.empty
+    , flagChanges = ChangePoints.empty
     }
 
 
@@ -80,9 +87,10 @@ emptyIndex =
 -}
 indexDecoder : Decoder Index
 indexDecoder =
-    Decode.map2 Index
+    Decode.map3 Index
         (field "lapCompletions" lapCompletionsDecoder)
         (field "bestTimeChanges" BestTimes.changesDecoder)
+        (field "flagChanges" flagChangesDecoder)
 
 
 lapCompletionsDecoder : Decoder (ChangePoints Int)
@@ -91,6 +99,29 @@ lapCompletionsDecoder =
         (Decode.map2 (\lap elapsed -> ( elapsed, lap ))
             (field "lap" Decode.int)
             (field "elapsed" Instant.decoder)
+        )
+        |> Decode.map ChangePoints.fromList
+
+
+{-| A flag this app has no name for fails the round, as an unknown timeline
+event does: a flag dropped in silence would read as racing under green.
+-}
+flagChangesDecoder : Decoder (ChangePoints Flag)
+flagChangesDecoder =
+    Decode.list
+        (Decode.map2 Tuple.pair
+            (field "elapsed" Instant.decoder)
+            (field "flag" Decode.string
+                |> Decode.andThen
+                    (\name ->
+                        case Flag.fromString name of
+                            Just flag ->
+                                Decode.succeed flag
+
+                            Nothing ->
+                                Decode.fail ("Unknown flag: " ++ name)
+                    )
+            )
         )
         |> Decode.map ChangePoints.fromList
 
@@ -104,6 +135,7 @@ empty =
     , timeLimit = Instant.raceStart
     , lapCompletions = emptyIndex.lapCompletions
     , bestTimeChanges = emptyIndex.bestTimeChanges
+    , flagChanges = emptyIndex.flagChanges
     , pitStops = Stint.emptyIndex
     }
 
@@ -117,6 +149,7 @@ fromCars { timeLimit, index } cars =
     , timeLimit = timeLimit
     , lapCompletions = index.lapCompletions
     , bestTimeChanges = index.bestTimeChanges
+    , flagChanges = index.flagChanges
     , pitStops = Stint.indexOf cars
     }
 
@@ -129,26 +162,35 @@ lapCountAt clock race =
         |> Maybe.withDefault 0
 
 
-{-| Where to put the clock so the lap counter reads `lapCount`: the last instant
-it still reads that.
-
-Asked for the final lap, where there is no next one, it gives the moment that
-lap was completed instead; asked for a count the race never reached, the start.
-
+{-| A flag from the moment it was shown until the next one replaced it.
+`until` is `Nothing` for a flag nothing replaced before the race ran out.
 -}
-elapsedAtLapCount : Int -> Race -> Instant
-elapsedAtLapCount lapCount race =
-    if lapCount < 0 then
-        Instant.raceStart
+type alias FlagPeriod =
+    { flag : Flag, from : Instant, until : Maybe Instant }
 
-    else
-        case ChangePoints.timeOfNth lapCount race.lapCompletions of
-            Just nextCompletion ->
-                Instant.subtract 1 nextCompletion
 
-            Nothing ->
-                ChangePoints.timeOfNth (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
-                    |> Maybe.withDefault Instant.raceStart
+{-| The flag the field is under at a moment of the race. The race starts under
+green, so it is green until race control has shown any.
+-}
+flagAt : { elapsed : Instant } -> Race -> Flag
+flagAt clock race =
+    ChangePoints.valueAt clock.elapsed race.flagChanges
+        |> Maybe.withDefault GreenFlag
+
+
+{-| Every flag race control showed, in the order it showed them. A flag that
+follows another without a green between them ends it, so a full course yellow
+turned into a safety car is two periods, not one inside the other.
+-}
+flagPeriods : Race -> List FlagPeriod
+flagPeriods race =
+    let
+        changes =
+            ChangePoints.toList race.flagChanges
+    in
+    List.map2 (\( from, flag ) until -> { flag = flag, from = from, until = until })
+        changes
+        (List.map (Tuple.first >> Just) (List.drop 1 changes) ++ [ Nothing ])
 
 
 {-| How long the race has left to run at a moment of it, and nought once the

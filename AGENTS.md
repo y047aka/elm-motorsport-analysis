@@ -351,7 +351,8 @@ subdirectory — `BestTimes` is held by `Race` and read back by `Race.Snapshot`,
 and `Lap.Performance` rates a lap for either side, so neither owns them.
 Neither walks a lap of the race. Which lap took which record is counted in
 `Round.Index` and arrives with the round's summary, as `Race.lapCompletions`
-does, so `Race.fromCars` is given a `Race.Index` rather than building one.
+and the field's flags do, so `Race.fromCars` is given a `Race.Index` rather
+than building one.
 `Race.TimelineEvent` is read the same way, off `Round.Timeline` — the race as a
 list of what happened, which the round's report is drawn from — though it
 arrives in a file of its own rather than in the summary. Nothing a `Race` holds is counted

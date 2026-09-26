@@ -1,7 +1,6 @@
 module Motorsport.Replay exposing
     ( Model, fromCars
     , Msg(..), update
-    , lapCount
     )
 
 {-| A race, and where playback has got to in it.
@@ -11,7 +10,6 @@ Nothing derived is kept here.
 
 @docs Model, fromCars
 @docs Msg, update
-@docs lapCount
 
 -}
 
@@ -43,13 +41,6 @@ fromCars { timeLimit, finishedAt, index } cars =
     }
 
 
-{-| The lap counter as it reads now.
--}
-lapCount : Model -> Int
-lapCount m =
-    Race.lapCountAt { elapsed = Clock.getElapsed m.playback } m.race
-
-
 
 -- UPDATE
 
@@ -60,7 +51,7 @@ type Msg
     | Tick Posix
     | SkipTime Duration
     | BackTime Duration
-    | SetCount Int
+    | SetElapsed Instant
     | SetPlaybackSpeed Clock.PlaybackSpeed
 
 
@@ -87,19 +78,10 @@ update msg m =
             -- And `subtract` clamps the other way, at the start of the race.
             moveTo (Instant.subtract duration (Clock.getElapsed m.playback)) m
 
-        SetCount wanted ->
-            if wanted >= 0 && wanted <= m.race.lapTotal then
-                moveToLap wanted m
-
-            else
-                m
+        SetElapsed elapsed ->
+            moveTo elapsed m
 
 
 moveTo : Instant -> Model -> Model
 moveTo elapsed m =
     { m | playback = Clock.setElapsed elapsed m.playback }
-
-
-moveToLap : Int -> Model -> Model
-moveToLap wanted m =
-    moveTo (Race.elapsedAtLapCount wanted m.race) m

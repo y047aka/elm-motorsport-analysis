@@ -102,17 +102,6 @@ suite =
                         |> elapsedOf
                         |> Expect.equal 7300000
             ]
-        , describe "SetCount"
-            [ test "moving the lap counter forward carries the status with it" <|
-                \_ ->
-                    -- The counter reads 1 until the instant car "1" completes
-                    -- lap 2, by which point the stop that lap began with is
-                    -- long over and the car is finishing the out lap.
-                    initialModel
-                        |> Replay.update (Replay.SetCount 1)
-                        |> statusOf "1"
-                        |> Expect.equal (Just Status.OutLap)
-            ]
         ]
 
 
@@ -145,6 +134,7 @@ index =
             , ( Instant.fromDuration 300000, 3 )
             ]
     , bestTimeChanges = BestTimes.empty
+    , flagChanges = ChangePoints.empty
     }
 
 

@@ -7,6 +7,7 @@
 mod Motorsport.Timeline {
 
     use Motorsport.Flag.Flag
+    use Motorsport.Flag.FlagShown
     use Util.Duration.Duration
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt}
@@ -60,12 +61,6 @@ mod Motorsport.Timeline {
     pub type alias FastestLap = {
         carNumber = String,
         elapsed   = Duration
-    }
-
-    /// A flag the line read for the first time since a different one.
-    pub type alias FlagShown = {
-        flag    = Flag,
-        elapsed = Duration
     }
 
     /// What the events of one round are gathered from, `cars` being each car's last

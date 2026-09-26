@@ -136,6 +136,7 @@ noIndex : Race.Index
 noIndex =
     { lapCompletions = ChangePoints.empty
     , bestTimeChanges = BestTimes.empty
+    , flagChanges = ChangePoints.empty
     }
 
 

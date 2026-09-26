@@ -48,20 +48,18 @@ suite =
                         |> List.map (\elapsed -> ChangePoints.countUpTo (instant elapsed) index)
                         |> Expect.equal [ 0, 0, 1, 1, 2, 4, 4, 4 ]
             ]
-        , describe "timeOfNth"
-            [ test "gives the moment of the nth change, and nothing past the end" <|
-                \_ ->
-                    [ ChangePoints.timeOfNth 0 index
-                    , ChangePoints.timeOfNth 3 index
-                    , ChangePoints.timeOfNth 4 index
-                    ]
-                        |> Expect.equal [ Just (instant 1000), Just (instant 6000), Nothing ]
-            ]
         , describe "length"
             [ test "counts every change" <|
                 \_ ->
                     ChangePoints.length index
                         |> Expect.equal 4
+            ]
+        , describe "toList"
+            [ test "gives every change in time order, whatever order it was given in" <|
+                \_ ->
+                    ChangePoints.fromList [ ( instant 3000, "b" ), ( instant 1000, "a" ) ]
+                        |> ChangePoints.toList
+                        |> Expect.equal [ ( instant 1000, "a" ), ( instant 3000, "b" ) ]
             ]
         , describe "the binary search"
             -- Two hundred changes sampled every half-interval, so every boundary

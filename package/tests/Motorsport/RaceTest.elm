@@ -3,7 +3,9 @@ module Motorsport.RaceTest exposing (suite)
 import Expect
 import Internal.ChangePoints as ChangePoints
 import Motorsport.BestTimes as BestTimes
+import Json.Decode as Decode
 import Motorsport.Driver as Driver
+import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
@@ -41,30 +43,6 @@ suite =
                     Race.lapCountAt { elapsed = instant 500000 } Race.empty
                         |> Expect.equal 0
             ]
-        , describe "elapsedAtLapCount"
-            [ test "lands on the last instant the counter still reads that lap" <|
-                \_ ->
-                    [ 0, 1, 2 ]
-                        |> List.map (\lapCount -> Race.elapsedAtLapCount lapCount race)
-                        |> Expect.equal [ instant 89999, instant 199999, instant 299999 ]
-            , test "round-trips through lapCountAt" <|
-                \_ ->
-                    [ 0, 1, 2, 3 ]
-                        |> List.map (\lapCount -> Race.lapCountAt { elapsed = Race.elapsedAtLapCount lapCount race } race)
-                        |> Expect.equal [ 0, 1, 2, 3 ]
-            , test "the final lap has no next lap to stop before, so it lands on its completion" <|
-                \_ ->
-                    -- Car 1 completes lap 3 at 300.000, and nobody goes further.
-                    Race.elapsedAtLapCount 3 race
-                        |> Expect.equal (instant 300000)
-            , test "a count the race never reached lands at the start" <|
-                \_ ->
-                    -- Total on its own: no caller has to have range-checked first.
-                    [ Race.elapsedAtLapCount (-1) race
-                    , Race.elapsedAtLapCount 0 Race.empty
-                    ]
-                        |> Expect.equal [ Instant.raceStart, Instant.raceStart ]
-            ]
         , describe "lapTotal"
             [ test "is the ceiling lapCountAt can actually reach" <|
                 \_ ->
@@ -86,6 +64,45 @@ suite =
                     [ 7200000, 99999999 ]
                         |> List.map (\elapsed -> Race.timeToFlagAt { elapsed = instant elapsed } race)
                         |> Expect.equal [ 0, 0 ]
+            ]
+        , describe "flagPeriods"
+            [ test "each flag lasts until the next one, and the last one is open" <|
+                \_ ->
+                    Race.flagPeriods flagged
+                        |> List.map (\p -> ( p.flag, Instant.toDuration p.from, Maybe.map Instant.toDuration p.until ))
+                        |> Expect.equal
+                            [ ( FullCourseYellow, 100000, Just 150000 )
+                            , ( SafetyCar, 150000, Just 250000 )
+                            , ( GreenFlag, 250000, Just 350000 )
+                            , ( RedFlag, 350000, Nothing )
+                            ]
+            , test "a race no flag was shown in has no periods" <|
+                \_ ->
+                    Race.flagPeriods race
+                        |> Expect.equal []
+            ]
+        , describe "flagAt"
+            [ test "green before any flag has been shown" <|
+                \_ ->
+                    Race.flagAt { elapsed = instant 99999 } flagged
+                        |> Expect.equal GreenFlag
+            , test "a flag holds from the instant it is shown" <|
+                \_ ->
+                    [ 100000, 149999, 150000, 250000, 350000, 9999999 ]
+                        |> List.map (\elapsed -> Race.flagAt { elapsed = instant elapsed } flagged)
+                        |> Expect.equal [ FullCourseYellow, FullCourseYellow, SafetyCar, GreenFlag, RedFlag, RedFlag ]
+            ]
+        , describe "indexDecoder"
+            [ test "reads the flag changes the summary spells" <|
+                \_ ->
+                    Decode.decodeString Race.indexDecoder (indexJson "safetyCar")
+                        |> Result.map (.flagChanges >> ChangePoints.toList >> List.map (Tuple.mapFirst Instant.toDuration))
+                        |> Expect.equal (Ok [ ( 60000, SafetyCar ) ])
+            , test "a flag it has no name for fails the index rather than reading as green" <|
+                \_ ->
+                    Decode.decodeString Race.indexDecoder (indexJson "SF")
+                        |> Result.toMaybe
+                        |> Expect.equal Nothing
             ]
         , describe "pitStopsAt"
             [ test "counts the stops off the cars the race was built from" <|
@@ -163,6 +180,33 @@ carTwo =
         ]
 
 
+{-| A yellow turned into a safety car with no green between them, then a red
+that is never lifted.
+-}
+flagged : Race
+flagged =
+    Race.fromCars
+        { timeLimit = instant 7200000
+        , index =
+            { index
+                | flagChanges =
+                    ChangePoints.fromList
+                        [ ( instant 100000, FullCourseYellow )
+                        , ( instant 150000, SafetyCar )
+                        , ( instant 250000, GreenFlag )
+                        , ( instant 350000, RedFlag )
+                        ]
+            }
+        }
+        []
+
+
+indexJson : String -> String
+indexJson flag =
+    """{ "lapCompletions": [], "bestTimeChanges": { "fastestLapTime": [], "sectors": { "s1": [], "s2": [], "s3": [] }, "miniSectors": { "scl2": [], "z4": [], "ip1": [], "z12": [], "sclc": [], "a7_1": [], "ip2": [], "a8_1": [], "sclb": [], "porin": [], "porout": [], "pitref": [], "scl1": [], "fordout": [], "fl": [] } }, "flagChanges": [ { "elapsed": "1:00.000", "flag": """
+        ++ ("\"" ++ flag ++ "\" } ] }")
+
+
 {-| The indices the round is read with, as `Round.Index` counts them out of the
 rows.
 -}
@@ -175,6 +219,7 @@ index =
             , ( instant 300000, 3 )
             ]
     , bestTimeChanges = BestTimes.empty
+    , flagChanges = ChangePoints.empty
     }
 
 

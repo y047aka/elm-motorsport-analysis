@@ -3018,6 +3018,32 @@
           }
         ]
       }
-    }
+    },
+    "flagChanges": [
+      { "elapsed": "3:26:48.965", "flag": "fullCourseYellow" },
+      { "elapsed": "3:31:00.929", "flag": "greenFlag" },
+      { "elapsed": "5:40:32.077", "flag": "fullCourseYellow" },
+      { "elapsed": "5:42:03.324", "flag": "greenFlag" },
+      { "elapsed": "10:45:10.811", "flag": "fullCourseYellow" },
+      { "elapsed": "10:47:09.774", "flag": "greenFlag" },
+      { "elapsed": "11:11:48.962", "flag": "safetyCar" },
+      { "elapsed": "11:51:36.497", "flag": "greenFlag" },
+      { "elapsed": "14:38:00.338", "flag": "fullCourseYellow" },
+      { "elapsed": "14:42:05.651", "flag": "greenFlag" },
+      { "elapsed": "16:52:37.977", "flag": "fullCourseYellow" },
+      { "elapsed": "16:58:50.757", "flag": "greenFlag" },
+      { "elapsed": "17:15:30.898", "flag": "fullCourseYellow" },
+      { "elapsed": "17:17:37.116", "flag": "greenFlag" },
+      { "elapsed": "18:41:38.729", "flag": "fullCourseYellow" },
+      { "elapsed": "18:43:02.228", "flag": "greenFlag" },
+      { "elapsed": "19:03:48.744", "flag": "fullCourseYellow" },
+      { "elapsed": "19:06:01.697", "flag": "greenFlag" },
+      { "elapsed": "20:30:17.945", "flag": "fullCourseYellow" },
+      { "elapsed": "20:31:31.462", "flag": "greenFlag" },
+      { "elapsed": "21:39:06.525", "flag": "fullCourseYellow" },
+      { "elapsed": "21:40:31.706", "flag": "greenFlag" },
+      { "elapsed": "22:58:37.876", "flag": "fullCourseYellow" },
+      { "elapsed": "23:02:05.110", "flag": "greenFlag" }
+    ]
   }
 }

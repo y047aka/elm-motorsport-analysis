@@ -8,11 +8,13 @@ mod Round.Index {
     use Db.Laps
     use Db.Schema
     use Motorsport.Calendar.Entry
+    use Motorsport.Flag.FlagShown
     use Motorsport.Index
     use Motorsport.Index.Change
     use Motorsport.Index.Record
     use Motorsport.MiniSector
     use Motorsport.Sector.Sector
+    use Motorsport.Wec
     use Util.Duration.Duration
 
     pub def read(entry: Entry, seats: Round.Drivers.Seats): Index.Index \ DbRead =
@@ -20,7 +22,8 @@ mod Round.Index {
         let changes = bestTimes(entry, seats);
         {
             lapCompletions = completions,
-            bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
+            bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes))),
+            flags          = flags(entry)
         }
 
     /// The round's rows as a fragment, for the arms that read them from
@@ -39,6 +42,35 @@ mod Round.Index {
             |> Sql.map(c -> (c#lapNumber, Sql.int("MIN(elapsed_ms)")))
             |> Sql.reading(match (lap, elapsed) -> (lap, Util.Duration.fromMillis(elapsed)))
             |> Sql.selectAll
+
+    // ------------------------------------------------------------------ flags
+
+    /// Every crossing whose flag is not the one the crossing before it read, over
+    /// the whole field in the order the line saw them. The race starts green, so a
+    /// start behind the safety car is a change at the first crossing. The finish's
+    /// own flag is no change: each car's is its `Finished`.
+    ///
+    /// Counted here for the summary, and handed to `Round.Timeline` for the
+    /// flag events it writes at the load.
+    pub def flags(entry: Entry): List[FlagShown] \ DbRead =
+        let green = Wec.flagToString(Wec.Flag.Green);
+        let finish = Wec.flagToString(Wec.Flag.Finish);
+        Sql.rows(Sql.raw("shown"))
+            |> Sql.using(Sql.frags(
+                Sql.raw("shown AS (SELECT elapsed_ms, flag_at_fl,"
+                    + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
+                    + " FROM " + Laps.table() + " WHERE flag_at_fl <> '${finish}' AND") ::
+                Sql.term(Laps.inRound(entry)) ::
+                Sql.raw(")") :: Nil
+            ))
+            |> Sql.filter(_ -> Sql.column("flag_at_fl <> prior"))
+            |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
+            |> Sql.map(_ -> (Sql.text("flag_at_fl"), Sql.int("elapsed_ms")))
+            |> Sql.selectAll
+            |> List.filterMap(match (flag, elapsed) ->
+                Wec.flagFromString(flag)
+                    |> Option.flatMap(Motorsport.Flag.fromFeed)
+                    |> Option.map(shown -> { flag = shown, elapsed = Util.Duration.fromMillis(elapsed) }))
 
     // ----------------------------------------------------------- best times
 

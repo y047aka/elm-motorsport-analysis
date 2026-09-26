@@ -89,6 +89,7 @@ summaryJson =
                 , "porout": [], "pitref": [], "scl1": [], "fordout": [], "fl": []
                 }
             }
+        , "flagChanges": [ { "elapsed": "1:00.000", "flag": "safetyCar" } ]
         }
     }
     """

@@ -5,6 +5,7 @@ mod Round.TestIndex {
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Motorsport.Calendar.Entry
+    use Motorsport.Flag.Flag
     use Motorsport.Index.Change
     use Motorsport.Index.Record
     use Motorsport.MiniSector.MiniSectorId
@@ -50,6 +51,11 @@ mod Round.TestIndex {
         decodeOne(miniHeader() + "\n"
             + "${num};1;${lapNumber};${lapTime};0;;20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;0:20.000;0:20.000;0:20.000;200;Driver;;HYPERCAR;H;Team;Maker;GF;20.000;20.000;20.000;${scl2};${scl2}")
 
+    /// A lap run under the flag given, as the file spells it in `FLAG_AT_FL`.
+    def flaggedLap(num: String, lapNumber: Int32, elapsed: String, flag: String): RawLap =
+        decodeOne(header() + "\n"
+            + "${num};1;${lapNumber};60.000;0;;20.000;0;20.000;0;20.000;0;100;${elapsed};11:00:00.000;0:20.000;0:20.000;0:20.000;200;Driver;;HYPERCAR;H;Team;Maker;${flag};20.000;20.000;20.000;")
+
     // ------------------------------------------------------ lap completions
 
     /// The counter goes up when the first car of the field crosses the line,
@@ -65,6 +71,23 @@ mod Round.TestIndex {
         let completions = indexOf(laps)#lapCompletions
             |> List.map(match (n, elapsed) -> (n, Util.Duration.format(elapsed)));
         Assert.assertTrue(completions == (1, "1:00.000") :: (2, "2:03.000") :: Nil)
+
+    // ---------------------------------------------------------------- flags
+
+    /// The summary carries the field's flag as the line read it, whichever car
+    /// crossed under it: a change at the first crossing to read a new flag, and
+    /// none at a crossing reading the one before it again.
+    @Test
+    def theFlagChangesAtTheFirstCrossingToReadIt(): Unit \ {Assert, IO} =
+        let laps =
+            flaggedLap("7", 1, "60.000", "GF") ::
+            flaggedLap("8", 1, "1:02.000", "FCY") ::
+            flaggedLap("7", 2, "2:00.000", "FCY") ::
+            flaggedLap("8", 2, "2:02.000", "GF") ::
+            Nil;
+        let flags = indexOf(laps)#flags
+            |> List.map(shown -> (shown#flag, Util.Duration.format(shown#elapsed)));
+        Assert.assertTrue(flags == (Flag.FullCourseYellow, "1:02.000") :: (Flag.GreenFlag, "2:02.000") :: Nil)
 
     // ---------------------------------------------------------- best times
 

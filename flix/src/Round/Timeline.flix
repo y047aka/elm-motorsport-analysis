@@ -8,7 +8,6 @@ mod Round.Timeline {
     use Db.Entries
     use Db.Laps
     use Db.Schema
-    use Motorsport.Wec
     use Db.TimelineEvents
     use Db.TimelineEvents.EventRow
     use Motorsport.Calendar.Entry
@@ -42,7 +41,7 @@ mod Round.Timeline {
         Timeline.fromReadings({
             timeLimit     = timeLimit,
             cars          = cars(entry),
-            flags         = flags(entry),
+            flags         = Round.Index.flags(entry),
             overtakes     = overtakes(entry),
             inPits        = leadersInPit(entry),
             fastestLaps   = fastestLaps(entry),
@@ -64,32 +63,6 @@ mod Round.Timeline {
             |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)")))
             |> Sql.reading(match (carNumber, last) -> (carNumber, Util.Duration.fromMillis(last)))
             |> Sql.selectAll
-
-    // ------------------------------------------------------------------ flags
-
-    /// Every crossing whose flag is not the one the crossing before it read, over
-    /// the whole field in the order the line saw them. The race starts green, so a
-    /// start behind the safety car is a change at the first crossing. The finish's
-    /// own flag is no change: each car's is its `Finished`.
-    def flags(entry: Entry): List[Timeline.FlagShown] \ DbRead =
-        let green = Wec.flagToString(Wec.Flag.Green);
-        let finish = Wec.flagToString(Wec.Flag.Finish);
-        Sql.rows(Sql.raw("shown"))
-            |> Sql.using(Sql.frags(
-                Sql.raw("shown AS (SELECT elapsed_ms, flag_at_fl,"
-                    + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
-                    + " FROM " + Laps.table() + " WHERE flag_at_fl <> '${finish}' AND") ::
-                Sql.term(Laps.inRound(entry)) ::
-                Sql.raw(")") :: Nil
-            ))
-            |> Sql.filter(_ -> Sql.column("flag_at_fl <> prior"))
-            |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
-            |> Sql.map(_ -> (Sql.text("flag_at_fl"), Sql.int("elapsed_ms")))
-            |> Sql.selectAll
-            |> List.filterMap(match (flag, elapsed) ->
-                Wec.flagFromString(flag)
-                    |> Option.flatMap(Motorsport.Flag.fromFeed)
-                    |> Option.map(shown -> { flag = shown, elapsed = Util.Duration.fromMillis(elapsed) }))
 
     // ----------------------------------------------------------- fastest laps
 

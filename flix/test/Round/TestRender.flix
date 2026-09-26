@@ -71,7 +71,8 @@ mod Round.TestRender {
         Assert.assertTrue(String.contains({substr = "\"fastestLapTime\""}, json));
         Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json))
 
-    /// The timeline is a file of its own, and none of it is in the summary.
+    /// The timeline's events are a file of their own, and none of them is in the
+    /// summary.
     @Test
     def testTheTimelineIsNotInTheSummary(): Unit \ {Assert, IO} =
         Assert.assertTrue(not String.contains({substr = "\"event\""}, summaryOf(sampleRawLaps())))

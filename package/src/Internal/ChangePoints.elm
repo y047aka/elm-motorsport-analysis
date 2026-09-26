@@ -1,7 +1,7 @@
 module Internal.ChangePoints exposing
     ( ChangePoints
     , empty, fromList
-    , valueAt, countUpTo, timeOfNth, length
+    , valueAt, countUpTo, length, toList
     )
 
 {-| A value that changes at known moments of the race, indexed so it can be read
@@ -15,7 +15,7 @@ scrubbed backwards lands on the same value as one that played through.
 
 @docs ChangePoints
 @docs empty, fromList
-@docs valueAt, countUpTo, timeOfNth, length
+@docs valueAt, countUpTo, length, toList
 
 -}
 
@@ -62,19 +62,18 @@ countUpTo elapsed (ChangePoints points) =
     search elapsed points 0 (Array.length points)
 
 
-{-| When the `n`th change happened, counting from zero.
--}
-timeOfNth : Int -> ChangePoints a -> Maybe Instant
-timeOfNth n (ChangePoints points) =
-    Array.get n points
-        |> Maybe.map Tuple.first
-
-
 {-| How many changes there are in all.
 -}
 length : ChangePoints a -> Int
 length (ChangePoints points) =
     Array.length points
+
+
+{-| Every change, in time order.
+-}
+toList : ChangePoints a -> List ( Instant, a )
+toList (ChangePoints points) =
+    Array.toList points
 
 
 {-| Invariant: every change below `low` is at or before `elapsed`, and every

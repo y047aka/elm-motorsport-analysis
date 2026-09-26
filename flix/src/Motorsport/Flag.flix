@@ -3,6 +3,7 @@
 mod Motorsport.Flag {
 
     use Motorsport.Wec
+    use Util.Duration.Duration
 
     /// `GreenFlag` is racing resumed after any of the others.
     pub enum Flag with Eq {
@@ -12,10 +13,16 @@ mod Motorsport.Flag {
         case GreenFlag
     }
 
+    /// A flag the line read for the first time since a different one.
+    pub type alias FlagShown = {
+        flag    = Flag,
+        elapsed = Duration
+    }
+
     pub def all(): List[Flag] =
         Flag.FullCourseYellow :: Flag.SafetyCar :: Flag.RedFlag :: Flag.GreenFlag :: Nil
 
-    /// The name a timeline file gives a flag.
+    /// The name a timeline file and a summary give a flag.
     pub def toString(flag: Flag): String =
         match flag {
             case Flag.FullCourseYellow => "fullCourseYellow"

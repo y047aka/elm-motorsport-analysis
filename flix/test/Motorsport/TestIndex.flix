@@ -1,5 +1,6 @@
 mod Motorsport.TestIndex {
 
+    use Motorsport.Flag.Flag
     use Motorsport.Index
     use Motorsport.Index.Change
     use Motorsport.Index.Record
@@ -20,7 +21,8 @@ mod Motorsport.TestIndex {
     def sample(): Index.Index =
         {
             lapCompletions = (1, Util.Duration.fromMillis(223009)) :: Nil,
-            bestTimes      = (Record.FastestSector(Sector.S2), change() :: Nil) :: Nil
+            bestTimes      = (Record.FastestSector(Sector.S2), change() :: Nil) :: Nil,
+            flags          = { flag = Flag.SafetyCar, elapsed = Util.Duration.fromMillis(40308962) } :: Nil
         }
 
     /// Every record is enumerated in one place and written from that
@@ -59,12 +61,22 @@ mod Motorsport.TestIndex {
             Extra.render(Index.toJson(sample()))
         ))
 
+    /// A flag change is the flag and the moment the line first read it, spelled
+    /// as the timeline spells it.
+    @Test
+    def aFlagChangeIsAFlagAndAMoment(): Unit \ Assert =
+        Assert.assertTrue(String.contains(
+            {substr = "{ \"elapsed\": \"11:11:48.962\", \"flag\": \"safetyCar\" }"},
+            Extra.render(Index.toJson(sample()))
+        ))
+
     /// A record nothing was read for is written as an empty list rather than
     /// left out, so a reader takes the same shape from every round.
     @Test
     def aRecordNoLapTookIsEmptyRatherThanMissing(): Unit \ Assert =
         let json = Extra.render(Index.toJson(Index.empty()));
         Assert.assertTrue(String.contains({substr = "\"lapCompletions\": []"}, json));
-        Assert.assertTrue(String.contains({substr = "\"fastestLapTime\": []"}, json))
+        Assert.assertTrue(String.contains({substr = "\"fastestLapTime\": []"}, json));
+        Assert.assertTrue(String.contains({substr = "\"flagChanges\": []"}, json))
 
 }
