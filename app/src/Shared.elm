@@ -27,6 +27,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Msg(..))
 
@@ -370,7 +371,7 @@ withSummary : Wec.Event -> RoundId -> Partial -> Round
 withSummary summary id partial =
     case partial.files of
         GotLaps rawLaps ->
-            Loaded id (roundFrom summary rawLaps (eventsOf partial))
+            Loaded id (roundFrom id summary rawLaps (eventsOf partial))
 
         _ ->
             Loading id { partial | files = GotSummary summary }
@@ -380,7 +381,7 @@ withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
 withLaps rawLaps id partial =
     case partial.files of
         GotSummary summary ->
-            Loaded id (roundFrom summary rawLaps (eventsOf partial))
+            Loaded id (roundFrom id summary rawLaps (eventsOf partial))
 
         _ ->
             Loading id { partial | files = GotLaps rawLaps }
@@ -425,8 +426,8 @@ didNotArrive key error round =
         round
 
 
-roundFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> LoadedRound
-roundFrom summary rawLaps timelineEvents =
+roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> LoadedRound
+roundFrom id summary rawLaps timelineEvents =
     let
         replay =
             summary.startingGrid.entries
@@ -440,9 +441,21 @@ roundFrom summary rawLaps timelineEvents =
     in
     { replay = replay
     , snapshot = snapshotOf replay
-    , track = Tracker.fromConfig summary.track
+    , track = trackOf id summary.track
     , timeline = Timeline.fromList timelineEvents
     }
+
+
+{-| `le_mans_24h` is the calendar's id for the round, as `Data.Wec.CarImage`
+keys it too. The summary does not say which circuit it was run on.
+-}
+trackOf : RoundId -> Wec.Track -> Tracker.Track
+trackOf id track =
+    if id.id == "le_mans_24h" then
+        Tracker.onCircuit (LeMansLayout.layout id.season) track
+
+    else
+        Tracker.fromConfig track
 
 
 mapLoaded : (LoadedRound -> LoadedRound) -> Round -> Round

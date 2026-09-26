@@ -2,6 +2,7 @@ module Motorsport.Chart.Tracker.Config exposing
     ( TrackConfig, Share
     , MiniSectorShares(..)
     , computeProgress, calcSectorBoundaries
+    , LapScale, lapScale, toMetres
     )
 
 {-| The track's proportions: how much of the lap each stretch of it takes, and
@@ -16,12 +17,14 @@ shares are held per sector and per mini-sector, so reading one is
 @docs TrackConfig, Share
 @docs MiniSectorShares
 @docs computeProgress, calcSectorBoundaries
+@docs LapScale, lapScale, toMetres
 
 -}
 
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
+import Motorsport.Wec.Circuit.LeMans.Layout exposing (TimingLines)
 
 
 {-| The whole lap, divided. Both grains cover the same lap, so a car can be
@@ -126,3 +129,74 @@ calcSectorBoundaries config =
                     Just (start + share)
             )
         |> List.filter (\boundary -> boundary > 0 && boundary < 1)
+
+
+{-| How far round the lap, in metres, a track progress puts a car. See
+[`lapScale`](#lapScale).
+-}
+type LapScale
+    = LapScale (List Knot)
+
+
+type alias Knot =
+    { progress : Float
+    , metres : Float
+    }
+
+
+{-| A progress is a share of the time a lap takes, and the stretches of a lap
+are not driven at one speed, so the two only agree at the lines the lap is
+timed at. The scale is pinned to the lines whose distance is known and runs
+straight between them: a car between two of those is placed by the share of
+the time between them it has run, and so is a line with no distance given.
+
+A stretch no lap has set a time for is not a place to pin the scale to.
+
+-}
+lapScale : TimingLines -> TrackConfig -> LapScale
+lapScale lines config =
+    let
+        knot { start, share } metres =
+            if share > 0 then
+                Maybe.map (\m -> { progress = start + share, metres = m }) metres
+
+            else
+                Nothing
+
+        ends =
+            case config.miniSectors of
+                MiniSectorShares shares ->
+                    LeMans.values (LeMans.map2 knot shares lines.miniSectors)
+
+                NoMiniSectors ->
+                    Sector.values (Sector.map2 (\share metres -> knot share (Just metres)) config.sectors lines.sectors)
+    in
+    LapScale ({ progress = 0, metres = 0 } :: List.filterMap identity ends)
+
+
+{-| Past the last line the scale is pinned to, it runs on as it ran into it.
+-}
+toMetres : LapScale -> Float -> Float
+toMetres (LapScale knots) progress =
+    interpolate knots progress
+
+
+interpolate : List Knot -> Float -> Float
+interpolate knots progress =
+    case knots of
+        a :: b :: rest ->
+            if progress <= b.progress || List.isEmpty rest then
+                if b.progress > a.progress then
+                    a.metres + (progress - a.progress) / (b.progress - a.progress) * (b.metres - a.metres)
+
+                else
+                    a.metres
+
+            else
+                interpolate (b :: rest) progress
+
+        [ a ] ->
+            a.metres
+
+        [] ->
+            progress

@@ -1,20 +1,22 @@
-module Motorsport.Chart.Tracker exposing (Detail(..), Track, fromConfig, view)
+module Motorsport.Chart.Tracker exposing (Detail(..), Track, fromConfig, onCircuit, view)
 
 {-| The field drawn going round the circuit.
 
-@docs Detail, Track, fromConfig, view
+@docs Detail, Track, fromConfig, onCircuit, view
 
 -}
 
-import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
+import Motorsport.Chart.Tracker.Config as Config exposing (LapScale, TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
+import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.LeMans as LeMans
+import Motorsport.Wec.Circuit.LeMans.Layout exposing (Layout)
 import Motorsport.Wec.Class as Class
 import Scale exposing (ContinuousScale)
-import Svg exposing (Svg, circle, g, line, svg, text, text_)
-import Svg.Attributes exposing (class, dominantBaseline, fill, stroke, style, textAnchor)
+import Svg exposing (Svg, circle, g, line, polygon, polyline, svg, text, text_)
+import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, strokeLinejoin, style, textAnchor)
 import Svg.Keyed as Keyed
 import Svg.Lazy as Lazy
 import TypedSvg.Attributes as Attributes exposing (fontSize, strokeWidth, viewBox, x1, x2, y1, y2)
@@ -132,14 +134,34 @@ progressToAngleScale direction =
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-{-| The circuit, drawn to the proportions the race ended up with. See
-[`fromConfig`](#fromConfig).
+{-| The circuit, drawn as a circle to the proportions the race ended up with,
+or to its own shape. See [`fromConfig`](#fromConfig) and
+[`onCircuit`](#onCircuit).
 -}
 type Track
-    = Track
+    = Ring
         { direction : Direction
         , config : TrackConfig
         }
+    | OnCircuit Circuit
+
+
+type alias Circuit =
+    { direction : Direction
+    , config : TrackConfig
+    , shape : Shape
+    , pitLane : List Point
+    , scale : LapScale
+    , bounds : Bounds
+    }
+
+
+type alias Bounds =
+    { minX : Float
+    , minY : Float
+    , maxX : Float
+    , maxY : Float
+    }
 
 
 {-| The track as the summary describes it. Hold on to the result and hand it to
@@ -147,12 +169,55 @@ type Track
 -}
 fromConfig : { direction : Direction, config : TrackConfig } -> Track
 fromConfig =
-    Track
+    Ring
+
+
+{-| The track drawn to the circuit's own shape, with the cars placed by the
+lines it is timed at. The pit lane is drawn and no car is placed on it.
+-}
+onCircuit : Layout -> { direction : Direction, config : TrackConfig } -> Track
+onCircuit layout { direction, config } =
+    OnCircuit
+        { direction = direction
+        , config = config
+        , shape = layout.shape
+        , pitLane = layout.pitLane
+        , scale = Config.lapScale layout.timingLines config
+        , bounds =
+            boundsOf
+                (List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks layout.shape)
+                    ++ layout.pitLane
+                )
+        }
+
+
+boundsOf : List Point -> Bounds
+boundsOf corners =
+    case corners of
+        [] ->
+            { minX = 0, minY = 0, maxX = 0, maxY = 0 }
+
+        first :: rest ->
+            List.foldl
+                (\p b ->
+                    { minX = min b.minX p.x
+                    , minY = min b.minY p.y
+                    , maxX = max b.maxX p.x
+                    , maxY = max b.maxY p.y
+                    }
+                )
+                { minX = first.x, minY = first.y, maxX = first.x, maxY = first.y }
+                rest
 
 
 view : Detail -> Track -> Snapshot -> Svg msg
-view detail (Track { direction, config }) standings =
-    viewWithConfig detail direction config standings
+view detail shown standings =
+    case shown of
+        Ring { direction, config } ->
+            viewWithConfig detail direction config standings
+
+        OnCircuit circuit ->
+            viewOnCircuit detail circuit standings
 
 
 viewWithConfig : Detail -> Direction -> TrackConfig -> Snapshot -> Svg msg
@@ -425,3 +490,311 @@ carLabel labelFontSize positionInClass { x, y } { carNumber } =
         , fill "oklch(1 0 0 / 0.7)"
         ]
         [ text carNumber ]
+
+
+
+-- ON THE CIRCUIT'S SHAPE
+
+
+{-| The ring's lengths again, in metres on the ground: each is the ring's own,
+times the metres one unit of its drawing comes to when the circuit is drawn in
+the same box. The radii of `Labels` are read as distances from the line,
+outwards, and a negative one inwards.
+-}
+type alias CircuitConstants =
+    { margin : Float
+    , trackWidth : Float
+    , pitLaneWidth : Float
+    , startFinishLineExtension : Float
+    , startFinishLineStrokeWidth : Float
+    , sectorBoundaryOffset : Float
+    , sectorBoundaryStrokeWidth : Float
+    , carSize : Float
+    , labels : Labels
+    }
+
+
+circuitConstants : Detail -> CircuitConstants
+circuitConstants detail =
+    case detail of
+        Compact ->
+            { margin = 150
+            , trackWidth = 22
+            , pitLaneWidth = 14
+            , startFinishLineExtension = 130
+            , startFinishLineStrokeWidth = 32
+            , sectorBoundaryOffset = 105
+            , sectorBoundaryStrokeWidth = 42
+            , carSize = 105
+            , labels = NoLabels
+            }
+
+        Full ->
+            { margin = 700
+            , trackWidth = 16
+            , pitLaneWidth = 10
+            , startFinishLineExtension = 160
+            , startFinishLineStrokeWidth = 22
+            , sectorBoundaryOffset = 108
+            , sectorBoundaryStrokeWidth = 32
+            , carSize = 97
+            , labels =
+                Labels
+                    { sectorRadius = 380
+                    , sectorFontSize = 170
+                    , miniSectorRadius = -170
+                    , miniSectorFontSize = 120
+                    , carRadius = 190
+                    , carFontSize = 140
+                    }
+            }
+
+
+viewOnCircuit : Detail -> Circuit -> Snapshot -> Svg msg
+viewOnCircuit detail circuit standings =
+    let
+        { margin } =
+            circuitConstants detail
+
+        { minX, minY, maxX, maxY } =
+            circuit.bounds
+    in
+    svg
+        [ viewBox (minX - margin) (minY - margin) (maxX - minX + 2 * margin) (maxY - minY + 2 * margin)
+        , class "max-w-full max-h-full"
+        ]
+        [ Lazy.lazy2 circuitTrack detail circuit
+        , renderCarsOnCircuit detail circuit standings
+        ]
+
+
+circuitTrack : Detail -> Circuit -> Svg msg
+circuitTrack detail circuit =
+    let
+        c =
+            circuitConstants detail
+
+        pitLane =
+            polyline
+                [ points (pointsAttribute circuit.pitLane)
+                , fill "none"
+                , stroke "oklch(1 0 0 / 0.1)"
+                , strokeWidth (px c.pitLaneWidth)
+                , strokeLinejoin "round"
+                ]
+                []
+
+        lap =
+            polygon
+                [ points (pointsAttribute (List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks circuit.shape)))
+                , fill "none"
+                , stroke "oklch(1 0 0 / 0.2)"
+                , strokeWidth (px c.trackWidth)
+                , strokeLinejoin "round"
+                ]
+                []
+
+        startFinishLine =
+            across circuit
+                { metres = 0
+                , halfLength = c.startFinishLineExtension
+                , color = "#fff"
+                , width = c.startFinishLineStrokeWidth
+                }
+
+        boundaries =
+            Config.calcSectorBoundaries circuit.config
+                |> List.map
+                    (\progress ->
+                        across circuit
+                            { metres = Config.toMetres circuit.scale progress
+                            , halfLength = c.sectorBoundaryOffset
+                            , color = "oklch(0.23 0 0)"
+                            , width = c.sectorBoundaryStrokeWidth
+                            }
+                    )
+    in
+    g [] (pitLane :: lap :: boundaries ++ startFinishLine :: circuitLabels c.labels circuit)
+
+
+pointsAttribute : List Point -> String
+pointsAttribute =
+    List.map (\p -> String.fromFloat p.x ++ "," ++ String.fromFloat p.y)
+        >> String.join " "
+
+
+across : Circuit -> { metres : Float, halfLength : Float, color : String, width : Float } -> Svg msg
+across circuit { metres, halfLength, color, width } =
+    let
+        position =
+            Shape.at metres circuit.shape
+
+        out =
+            outward circuit.direction position.heading
+    in
+    line
+        [ x1 (px (position.x - out.x * halfLength))
+        , y1 (px (position.y - out.y * halfLength))
+        , x2 (px (position.x + out.x * halfLength))
+        , y2 (px (position.y + out.y * halfLength))
+        , stroke color
+        , strokeWidth (px width)
+        ]
+        []
+
+
+{-| The side of the line away from the infield, one metre long. `y` runs down
+the drawing, so a lap driven clockwise has its infield to the right of the way
+it runs.
+-}
+outward : Direction -> Point -> Point
+outward direction heading =
+    case direction of
+        Clockwise ->
+            { x = heading.y, y = negate heading.x }
+
+        CounterClockwise ->
+            { x = negate heading.y, y = heading.x }
+
+
+circuitLabels : Labels -> Circuit -> List (Svg msg)
+circuitLabels labels circuit =
+    case labels of
+        NoLabels ->
+            []
+
+        Labels { sectorRadius, sectorFontSize, miniSectorRadius, miniSectorFontSize } ->
+            let
+                sectorLabels =
+                    circuit.config.sectors
+                        |> Sector.toList
+                        |> List.map
+                            (\( sector, { start, share } ) ->
+                                labelOnCircuit circuit
+                                    { metres = Config.toMetres circuit.scale (start + share / 2)
+                                    , offset = sectorRadius
+                                    , fontSize = sectorFontSize
+                                    , color = "oklch(1 0 0 / 0.5)"
+                                    , label = Sector.toString sector
+                                    }
+                            )
+
+                miniSectorLabels =
+                    case circuit.config.miniSectors of
+                        Config.NoMiniSectors ->
+                            []
+
+                        Config.MiniSectorShares shares ->
+                            shares
+                                |> LeMans.toList
+                                |> List.filter (\( _, { share } ) -> share > 0)
+                                |> List.map
+                                    (\( mini, { start, share } ) ->
+                                        labelOnCircuit circuit
+                                            { metres = Config.toMetres circuit.scale (start + share)
+                                            , offset = miniSectorRadius
+                                            , fontSize = miniSectorFontSize
+                                            , color = "oklch(0.5 0 0)"
+                                            , label = LeMans.toString mini
+                                            }
+                                    )
+            in
+            sectorLabels ++ miniSectorLabels
+
+
+labelOnCircuit :
+    Circuit
+    ->
+        { metres : Float
+        , offset : Float
+        , fontSize : Float
+        , color : String
+        , label : String
+        }
+    -> Svg msg
+labelOnCircuit circuit { metres, offset, fontSize, color, label } =
+    let
+        position =
+            Shape.at metres circuit.shape
+
+        out =
+            outward circuit.direction position.heading
+    in
+    text_
+        [ Attributes.x (px (position.x + out.x * offset))
+        , Attributes.y (px (position.y + out.y * offset))
+        , Attributes.fontSize (px fontSize)
+        , textAnchor
+            (anchorAway
+                (if offset < 0 then
+                    negate out.x
+
+                 else
+                    out.x
+                )
+            )
+        , dominantBaseline "central"
+        , fill color
+        ]
+        [ text label ]
+
+
+{-| A label set off to the side of the line reads away from it; one set off
+above or below it is centred on it.
+-}
+anchorAway : Float -> String
+anchorAway sideways =
+    if sideways > 0.35 then
+        "start"
+
+    else if sideways < -0.35 then
+        "end"
+
+    else
+        "middle"
+
+
+renderCarsOnCircuit : Detail -> Circuit -> Snapshot -> Svg msg
+renderCarsOnCircuit detail circuit standings =
+    Keyed.node "g"
+        []
+        (Snapshot.toList standings
+            |> List.reverse
+            |> List.map
+                (\car ->
+                    ( car.metadata.carNumber
+                    , Lazy.lazy3 renderCarOnCircuit detail circuit car
+                    )
+                )
+        )
+
+
+renderCarOnCircuit : Detail -> Circuit -> CarAt -> Svg msg
+renderCarOnCircuit detail circuit car =
+    let
+        c =
+            circuitConstants detail
+
+        position =
+            Shape.at (Config.toMetres circuit.scale (Config.computeProgress circuit.config car)) circuit.shape
+
+        marker =
+            g [ Attributes.transform [ Translate position.x position.y ] ]
+                [ Lazy.lazy3 carMarker c.carSize car.standing.positionInClass (Class.toColor car.metadata.class) ]
+    in
+    case c.labels of
+        NoLabels ->
+            marker
+
+        Labels { carRadius, carFontSize } ->
+            let
+                out =
+                    outward circuit.direction position.heading
+            in
+            g []
+                [ marker
+                , carLabel carFontSize
+                    car.standing.positionInClass
+                    { x = position.x + out.x * carRadius, y = position.y + out.y * carRadius }
+                    { carNumber = car.metadata.carNumber }
+                ]
