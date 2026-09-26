@@ -7,6 +7,7 @@ module Page.Wec.Event exposing (Model, Msg, init, subscriptions, update, view)
 
 -}
 
+import Browser.Dom
 import Browser.Events
 import Dict exposing (Dict)
 import Effect exposing (Effect)
@@ -15,6 +16,7 @@ import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
+import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -36,6 +38,7 @@ import Shared
 import Shared.Msg
 import Task
 import Time
+import UI.DragHandle as DragHandle
 import UI.Notice as Notice
 import UI.Shadcn.Card as Card
 import UI.Shadcn.ToggleGroup as ToggleGroup
@@ -56,6 +59,7 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , columns : CarColumns
+    , carried : Maybe Carry
     , comparison : CarDetail.Comparison
     }
 
@@ -66,12 +70,22 @@ type Mode
 
 
 {-| `ClassLeaders` is the car at the front of each class, re-read from the
-snapshot as the race runs. `Picked` is fixed, in the order the reader asked for
-them, and any open or close settles the stand-ins into one.
+snapshot as the race runs. `Picked` is fixed, in the order the reader left
+them in, and any open, close or move settles the stand-ins into one.
 -}
 type CarColumns
     = ClassLeaders
     | Picked CarNumber (List CarNumber)
+
+
+{-| A column being carried along the strip by its grip, from where the pointer
+went down to where it is now.
+-}
+type alias Carry =
+    { carNumber : CarNumber
+    , from : Float
+    , at : Float
+    }
 
 
 type StandingsTab
@@ -85,6 +99,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , columns = ClassLeaders
+      , carried = Nothing
       , comparison = CarDetail.initialComparison
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -104,6 +119,12 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | OpenColumn CarNumber
     | CloseColumn CarNumber
+    | GrabColumn CarNumber Float
+    | CarryColumn Float
+    | DropColumn Float
+    | CancelCarry
+    | StepColumn CarNumber Int
+    | GripFocused
     | CarDetailMsg CarDetail.Msg
 
 
@@ -135,6 +156,45 @@ update shared msg m =
 
         CloseColumn carNumber ->
             ( { m | columns = rearrange shared (closeColumn carNumber) m.columns }, Effect.none )
+
+        GrabColumn carNumber x ->
+            ( { m
+                | columns = rearrange shared settleColumns m.columns
+                , carried = Just { carNumber = carNumber, from = x, at = x }
+              }
+            , Effect.none
+            )
+
+        CarryColumn x ->
+            ( { m | carried = Maybe.map (\carry -> { carry | at = x }) m.carried }, Effect.none )
+
+        DropColumn x ->
+            case m.carried of
+                Just carry ->
+                    ( { m
+                        | columns = rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = x })) m.columns
+                        , carried = Nothing
+                      }
+                    , Effect.none
+                    )
+
+                Nothing ->
+                    ( m, Effect.none )
+
+        CancelCarry ->
+            ( { m | carried = Nothing }, Effect.none )
+
+        StepColumn carNumber steps ->
+            ( { m | columns = rearrange shared (moveColumn carNumber steps) m.columns }
+              -- The keyed strip may move the column by taking it out of the
+              -- document, which takes the focus with it.
+            , Browser.Dom.focus (gripId carNumber)
+                |> Task.attempt (\_ -> GripFocused)
+                |> Effect.sendCmd
+            )
+
+        GripFocused ->
+            ( m, Effect.none )
 
         CarDetailMsg detailMsg ->
             ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
@@ -171,6 +231,37 @@ closeColumn carNumber snapshot columns =
     columnCarNumbers snapshot columns
         |> List.filter ((/=) carNumber)
         |> pickedOr columns
+
+
+{-| Whole columns, and never past either end.
+-}
+moveColumn : CarNumber -> Int -> Snapshot -> CarColumns -> CarColumns
+moveColumn carNumber steps snapshot columns =
+    let
+        current =
+            columnCarNumbers snapshot columns
+
+        others =
+            List.filter ((/=) carNumber) current
+    in
+    case List.Extra.elemIndex carNumber current of
+        Just index ->
+            let
+                to =
+                    clamp 0 (List.length others) (index + steps)
+            in
+            pickedOr columns (List.take to others ++ carNumber :: List.drop to others)
+
+        Nothing ->
+            columns
+
+
+{-| The stand-ins are re-read every frame, so a column being carried among them
+could change places under the pointer.
+-}
+settleColumns : Snapshot -> CarColumns -> CarColumns
+settleColumns snapshot columns =
+    pickedOr columns (columnCarNumbers snapshot columns)
 
 
 pickedOr : CarColumns -> List CarNumber -> CarColumns
@@ -355,8 +446,16 @@ not the one this was measured in.
 columnStrip : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
 columnStrip cell m replay snapshot shown =
     let
-        card =
-            columnCard { closable = List.length shown > 1 } m replay snapshot
+        several =
+            List.length shown > 1
+
+        offsets =
+            case m.carried of
+                Just carry ->
+                    List.map Just (carryOffsets carry (List.map (.metadata >> .carNumber) shown))
+
+                Nothing ->
+                    List.map (always Nothing) shown
     in
     case shown of
         [] ->
@@ -369,18 +468,126 @@ columnStrip cell m replay snapshot shown =
             -- its place when the one before it was closed.
             Html.Keyed.node "div"
                 [ Attributes.class (cell ++ " flex gap-2.5 overflow-x-auto") ]
-                (List.map
-                    (\car ->
-                        ( car.metadata.carNumber
-                        , div [ Attributes.class "shrink-0 w-[360px] grid" ] [ card car ]
+                (List.map2
+                    (\car offset ->
+                        let
+                            carNumber =
+                                car.metadata.carNumber
+
+                            held =
+                                Maybe.map .carNumber m.carried == Just carNumber
+                        in
+                        ( carNumber
+                        , div
+                            (Attributes.class
+                                ("shrink-0 w-[360px] grid"
+                                    ++ (case ( offset, held ) of
+                                            ( Nothing, _ ) ->
+                                                ""
+
+                                            ( Just _, True ) ->
+                                                " relative z-10 rounded-xl bg-background shadow-2xl"
+
+                                            ( Just _, False ) ->
+                                                " transition-transform"
+                                       )
+                                )
+                                :: (case offset of
+                                        Just px ->
+                                            [ Attributes.style "transform" ("translateX(" ++ String.fromFloat px ++ "px)") ]
+
+                                        Nothing ->
+                                            []
+                                   )
+                            )
+                            [ Html.Lazy.lazy6 columnCard several held m.comparison replay.race.cars snapshot car ]
                         )
                     )
                     shown
+                    offsets
                 )
 
 
-columnCard : { closable : Bool } -> Model -> Replay.Model -> Snapshot -> CarAt -> Html Msg
-columnCard column m replay snapshot car =
+{-| `w-[360px]` and the strip's `gap-2.5` between them. Tailwind reads those as
+written, so neither can be made from this.
+-}
+columnPitch : Float
+columnPitch =
+    370
+
+
+columnsCarried : Carry -> Int
+columnsCarried carry =
+    round ((carry.at - carry.from) / columnPitch)
+
+
+{-| Where each column is drawn while one is carried: that one under the
+pointer, held to the strip, and each it has passed a column back the other way.
+
+Nothing moves in the DOM until it is let go of. The grip holds the pointer only
+while it stays in the document, and the keyed strip moves a column by taking
+it out.
+
+-}
+carryOffsets : Carry -> List CarNumber -> List Float
+carryOffsets carry carNumbers =
+    case List.Extra.elemIndex carry.carNumber carNumbers of
+        Just from ->
+            let
+                last =
+                    List.length carNumbers - 1
+
+                dx =
+                    clamp (toFloat -from * columnPitch) (toFloat (last - from) * columnPitch) (carry.at - carry.from)
+
+                to =
+                    from + round (dx / columnPitch)
+            in
+            List.indexedMap
+                (\index _ ->
+                    if index == from then
+                        dx
+
+                    else if from < index && index <= to then
+                        -columnPitch
+
+                    else if to <= index && index < from then
+                        columnPitch
+
+                    else
+                        0
+                )
+                carNumbers
+
+        Nothing ->
+            List.map (always 0) carNumbers
+
+
+columnGrip : Bool -> CarNumber -> Html Msg
+columnGrip held carNumber =
+    DragHandle.view
+        { id = gripId carNumber
+        , label = "Move this column"
+        , held = held
+        , onGrab = GrabColumn carNumber
+        , onMove = CarryColumn
+        , onDrop = DropColumn
+        , onCancel = CancelCarry
+        , onStep = StepColumn carNumber
+        }
+
+
+gripId : CarNumber -> String
+gripId carNumber =
+    "column-grip-" ++ carNumber
+
+
+{-| Drawn lazily, since a carry redraws the strip on every frame the pointer
+moves, paused or not. Each argument is compared by reference, so a record built
+at the call site would redraw every panel on every one of those frames.
+-}
+columnCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
+columnCard several held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
@@ -393,14 +600,20 @@ columnCard column m replay snapshot car =
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
                     , onClose =
-                        if column.closable then
+                        if several then
                             Just (CloseColumn carNumber)
 
                         else
                             Nothing
-                    , comparison = m.comparison
+                    , grip =
+                        if several then
+                            Just (columnGrip held carNumber)
+
+                        else
+                            Nothing
+                    , comparison = comparison
                     }
-                    replay.race.cars
+                    cars
                     snapshot
                     car
                 ]

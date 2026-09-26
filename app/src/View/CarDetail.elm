@@ -97,6 +97,7 @@ update msg (Comparison comparison) =
 view :
     { toMsg : Msg -> msg
     , onClose : Maybe msg
+    , grip : Maybe (Html msg)
     , comparison : Comparison
     }
     -> List Car
@@ -116,6 +117,7 @@ view config cars snapshot focused =
             { startPosition = startPositionOf cars focused
             , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
             , onClose = config.onClose
+            , grip = config.grip
             }
             focused
         , Html.map config.toMsg (panel config.comparison cars snapshot rivals focused)

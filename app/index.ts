@@ -1,3 +1,4 @@
+import "./src/elements/drag-handle";
 import "./src/shadcn/badge-element";
 import "./src/shadcn/button-element";
 import "./src/shadcn/card-elements";
