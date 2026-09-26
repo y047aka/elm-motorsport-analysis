@@ -40,6 +40,7 @@ mod Motorsport.Calendar {
                 { id = "spa_6h",       date = "2026-05-09" } ::
                 { id = "le_mans_24h",  date = "2026-06-13" } ::
                 { id = "sao_paulo_6h", date = "2026-07-12" } ::
+                { id = "cota_6h", date = "2026-09-06" } ::
                 Nil
         } ::
         {

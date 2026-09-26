@@ -619,14 +619,18 @@
           }
         },
         "17": {
-          "default": "2026-wec-17-genesis-droite-69ef599d04050660947957.webp",
+          "default": "2026-wec-17-genesis-droite-v2-6aaa4019663e9618460298.webp",
           "rounds": {
+            "imola_6h": "2026-wec-17-genesis-droite-69de5803224cd492117236.webp",
+            "spa_6h": "2026-wec-17-genesis-droite-69fdfbcd6e49a827392077.webp",
             "le_mans_24h": "2026-lm-17-genesis-droite-6a23f42ab7564435785600.webp"
           }
         },
         "19": {
-          "default": "2026-wec-19-genesis-droite-69ef599ec447c282142727.webp",
+          "default": "2026-wec-19-genesis-droite-v2-6aaa401a12f42063652494.webp",
           "rounds": {
+            "imola_6h": "2026-wec-19-genesis-droite-69de5803a672d727147132.webp",
+            "spa_6h": "2026-wec-19-genesis-droite-69ef591db13c4447623192.webp",
             "le_mans_24h": "2026-lm-19-genesis-droite-6a23f42ae5ffc933140298.webp"
           }
         },
@@ -662,10 +666,10 @@
         "29": "2026-lm-29-oreca-07-droite-6a23f42e3ff3a528500634.webp",
         "30": "2026-lm-30-oreca-07-droite-6a26773446d80649591098.webp",
         "32": {
-          "default": "2026-wec-32-bmw-m4-gt3-droit-v2-6a8d9df92d318176106502.webp",
+          "default": "2026-wec-32-bmw-m4-gt3-droit-v2-6aaa401a5d9ca502826207.webp",
           "rounds": {
             "le_mans_24h": "2026-lm-32-bmw-m4-gt3-droite-6a23f4306836a616386880.webp",
-            "sao_paulo_6h": "2026-wec-32-bmw-m4-gt3-droit-6a42595a9199c326529475.webp"
+            "sao_paulo_6h": "2026-wec-32-bmw-m4-gt3-sao-paulo-droite-6aa7b58d90a37397528238.webp"
           }
         },
         "33": {
@@ -739,7 +743,9 @@
           "default": "2026-wec-69-bmw-m4-gt3-spa-droit-69fa57b6bd0b9675746254.webp",
           "rounds": {
             "imola_6h": "2026-wec-69-bmw-m4-gt3-imola-droite-69de8a50dd147687949933.webp",
-            "le_mans_24h": "2026-lm-69-bmw-m4-gt3-droite-6a23f4321cc92396438838.webp"
+            "le_mans_24h": "2026-lm-69-bmw-m4-gt3-droite-6a23f4321cc92396438838.webp",
+            "sao_paulo_6h": "2026-wec-69-bmw-m4-gt3-sao-paolo-droite-6aa7b58d61e70575163728.webp",
+            "cota_6h": "2026-wec-69-bmw-m4-gt3-cota-droite-6a8d9f1306ea9131211008.webp"
           }
         },
         "74": "2026-lm-74-ferrari-296-droite-6a23f4324c257979740144.webp",
@@ -762,7 +768,8 @@
           "default": "2026-wec-79-mercedes-spa-droite-69fdfd001bbad047429673.webp",
           "rounds": {
             "imola_6h": "2026-wec-79-mercedes-droit-69de580f61096494073058.webp",
-            "le_mans_24h": "2026-lm-79-mercedes-droite-6a26fd96381b3880699968.webp"
+            "le_mans_24h": "2026-lm-79-mercedes-droite-6a26fd96381b3880699968.webp",
+            "cota_6h": "2026-wec-79-mercedes-droit-6a8d9f13b53da398375115.webp"
           }
         },
         "83": {
