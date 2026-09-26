@@ -16,6 +16,7 @@ import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
+import Json.Decode as Decode
 import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
@@ -78,8 +79,9 @@ type CarColumns
     | Picked CarNumber (List CarNumber)
 
 
-{-| A column being carried along the strip by one pointer, from where it went
-down to where it is now.
+{-| A column being carried along the strip by one pointer. How far it has gone
+is the pointer's travel and the strip's together, since the strip can be
+scrolled under a pointer that holds still.
 
 `before` is the columns as they stood when it was picked up, which a carry that
 lands where it began leaves them as.
@@ -91,6 +93,8 @@ type alias Carry =
     , before : CarColumns
     , from : Float
     , at : Float
+    , scrolledFrom : Float
+    , scrolledTo : Float
     }
 
 
@@ -129,8 +133,10 @@ type Msg
     | CarryColumn DragHandle.Pointer
     | DropColumn DragHandle.Pointer
     | CancelCarry Int
+    | StripScrolledFrom Float
+    | StripScrolled Float
     | StepColumn CarNumber Int
-    | GripFocused
+    | Settled
     | CarDetailMsg CarDetail.Msg
 
 
@@ -178,9 +184,13 @@ update shared msg m =
                                 , before = m.columns
                                 , from = pointer.x
                                 , at = pointer.x
+                                , scrolledFrom = 0
+                                , scrolledTo = 0
                                 }
                       }
-                    , Effect.none
+                    , Browser.Dom.getViewportOf stripId
+                        |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
+                        |> Effect.sendCmd
                     )
 
         CarryColumn pointer ->
@@ -202,10 +212,18 @@ update shared msg m =
                 Nothing ->
                     ( m, Effect.none )
 
+        StripScrolledFrom left ->
+            ( { m | carried = Maybe.map (\carry -> { carry | scrolledFrom = left, scrolledTo = left }) m.carried }
+            , Effect.none
+            )
+
+        StripScrolled left ->
+            ( { m | carried = Maybe.map (\carry -> { carry | scrolledTo = left }) m.carried }, Effect.none )
+
         StepColumn carNumber steps ->
             stepColumn shared carNumber steps m
 
-        GripFocused ->
+        Settled ->
             ( m, Effect.none )
 
         CarDetailMsg detailMsg ->
@@ -255,7 +273,7 @@ stepColumn shared carNumber steps m =
           -- The keyed strip may move the column by taking it out of the
           -- document, which takes the focus with it.
         , Browser.Dom.focus (gripId carNumber)
-            |> Task.attempt (\_ -> GripFocused)
+            |> Task.attempt (\_ -> Settled)
             |> Effect.sendCmd
         )
 
@@ -534,9 +552,18 @@ columnStrip cell m replay snapshot shown =
             -- how far the reader had scrolled it to whichever car moved up into
             -- its place when the one before it was closed.
             Html.Keyed.node "div"
-                [ Attributes.class (cell ++ " flex overflow-x-auto")
-                , Attributes.style "column-gap" (px columnGap)
-                ]
+                ([ Attributes.id stripId
+                 , Attributes.class (cell ++ " flex overflow-x-auto")
+                 , Attributes.style "column-gap" (px columnGap)
+                 ]
+                    ++ (case m.carried of
+                            Just _ ->
+                                [ Html.Events.on "scroll" (Decode.map StripScrolled (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
+
+                            Nothing ->
+                                []
+                       )
+                )
                 (List.map2
                     (\car placement ->
                         ( car.metadata.carNumber
@@ -551,6 +578,11 @@ columnStrip cell m replay snapshot shown =
                     shown
                     placements
                 )
+
+
+stripId : String
+stripId =
+    "column-strip"
 
 
 {-| A column is 360px, not a share of the cell. The widest thing in the panel is
@@ -580,7 +612,7 @@ px n =
 
 travel : Carry -> Float
 travel carry =
-    carry.at - carry.from
+    carry.at - carry.from + carry.scrolledTo - carry.scrolledFrom
 
 
 columnsCarried : Carry -> Int

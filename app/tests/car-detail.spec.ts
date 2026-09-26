@@ -322,6 +322,22 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['48', '6', '92']);
   });
 
+  test('should count the strip scrolled under a carried column as carrying it', async ({ page }) => {
+    for (const carNumber of ['83', '12', '8']) {
+      await selectCar(page, carNumber);
+    }
+    await carry(page, 0, 0);
+    // The strip is read where the carry began a frame after the grip is held.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await column(page, 0).locator('xpath=..').evaluate((strip) => {
+      strip.scrollLeft += 370 * 2;
+    });
+    // Still under the pointer, which has not moved.
+    await expect(column(page, 0)).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 740, 0)');
+    await page.mouse.up();
+    await expectColumns(page, ['48', '92', '6', '83', '12', '8']);
+  });
+
   test('should go on following the class leaders when a column is put back where it was', async ({ page }) => {
     // A press on the grip, or a carry that lands where it began, moves
     // nothing and settles nothing: at the start the classes are led by other
