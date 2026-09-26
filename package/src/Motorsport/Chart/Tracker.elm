@@ -550,6 +550,10 @@ circuitConstants detail =
             }
 
 
+{-| Square, as the ring is, however long the circuit runs one way: the box it
+is drawn in settles its height only through its width, so a drawing taller than
+it is wide is scaled to the width and overflows it.
+-}
 viewOnCircuit : Detail -> Circuit -> Snapshot -> Svg msg
 viewOnCircuit detail circuit standings =
     let
@@ -558,9 +562,12 @@ viewOnCircuit detail circuit standings =
 
         { minX, minY, maxX, maxY } =
             circuit.bounds
+
+        side =
+            max (maxX - minX) (maxY - minY) + 2 * margin
     in
     svg
-        [ viewBox (minX - margin) (minY - margin) (maxX - minX + 2 * margin) (maxY - minY + 2 * margin)
+        [ viewBox ((minX + maxX - side) / 2) ((minY + maxY - side) / 2) side side
         , class "max-w-full max-h-full"
         ]
         [ Lazy.lazy2 circuitTrack detail circuit
