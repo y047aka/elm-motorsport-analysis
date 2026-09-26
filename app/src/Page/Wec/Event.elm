@@ -201,13 +201,19 @@ update shared msg m =
                     ( m, Effect.none )
 
         StepColumn carNumber steps ->
-            ( { m | columns = rearrange shared (moveColumn carNumber steps) m.columns }
-              -- The keyed strip may move the column by taking it out of the
-              -- document, which takes the focus with it.
-            , Browser.Dom.focus (gripId carNumber)
-                |> Task.attempt (\_ -> GripFocused)
-                |> Effect.sendCmd
-            )
+            if m.carried /= Nothing then
+                -- A step would move the strip under the carried column, and
+                -- could take the grip holding the pointer out of the document.
+                ( m, Effect.none )
+
+            else
+                ( { m | columns = rearrange shared (moveColumn carNumber steps) m.columns }
+                  -- The keyed strip may move the column by taking it out of the
+                  -- document, which takes the focus with it.
+                , Browser.Dom.focus (gripId carNumber)
+                    |> Task.attempt (\_ -> GripFocused)
+                    |> Effect.sendCmd
+                )
 
         GripFocused ->
             ( m, Effect.none )

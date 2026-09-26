@@ -329,6 +329,18 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, [...STAND_INS, '83']);
   });
 
+  test('should not step a column by the keys while one is being carried', async ({ page }) => {
+    // The press has focused the grip, so the keys reach it.
+    await carry(page, 0, 370);
+    await expect(grip(page, 0)).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expectColumns(page, STAND_INS);
+    await expect(grip(page, 0)).toHaveClass(/cursor-grabbing/);
+    await page.mouse.up();
+    await expectColumns(page, ['48', '6', '92']);
+  });
+
   test('should keep a carry to the pointer that picked it up', async ({ page }) => {
     // Two fingers, one on each of two grips. Dispatched rather than driven: the
     // mouse Playwright drives is one pointer.
