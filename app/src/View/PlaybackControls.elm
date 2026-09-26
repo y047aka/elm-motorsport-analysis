@@ -193,7 +193,7 @@ viewProgressBar toReplayMsg { playback, race } =
                 ]
                 [ Html.Lazy.lazy2 flagBands finishedAt race
                 , div
-                    [ Attributes.class "absolute inset-y-0 right-0 bg-background/60"
+                    [ Attributes.class "absolute inset-y-0 right-0 bg-muted"
                     , attribute "style" ("left: " ++ progress ++ "%")
                     ]
                     []
