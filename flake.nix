@@ -50,10 +50,10 @@
           };
 
         flix = pkgs.flix.overrideAttrs (old: rec {
-          version = "0.76.0";
+          version = "0.76.2";
           src = pkgs.fetchurl {
             url = "https://github.com/flix/flix/releases/download/v${version}/flix.jar";
-            hash = "sha256-2Nmjhw4ZnAPtY2TqlDD1b2e/04wzLEEWKKany4iysLQ=";
+            hash = "sha256-vgbYwMw6/fZ2mB9I10M1QVHHBg9v6OaJcgImaCqAyK4=";
           };
         });
 

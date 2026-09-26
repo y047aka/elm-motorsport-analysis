@@ -2,7 +2,7 @@
 name        = "flix"
 description = "test"
 version     = "0.1.0"
-flix        = "0.76.0"
+flix        = "0.76.2"
 authors     = ["John Doe <john@example.com>"]
 
 [mvn-dependencies]
