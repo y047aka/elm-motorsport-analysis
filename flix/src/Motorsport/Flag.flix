@@ -1,6 +1,6 @@
 /// A flag the whole field is shown, as the line first reads it -- the mirror of
 /// `Motorsport.Flag` on the Elm side, which reads back the names written here.
-mod Motorsport.Flag {
+pub mod Motorsport.Flag {
 
     use Motorsport.Wec
     use Util.Duration.Duration

@@ -3,7 +3,7 @@
 /// Which column measures a record, and which way round a time has to be to beat
 /// the standing one, is settled here beside the query that counts it. What a
 /// record is stays in `Motorsport.Index`.
-mod Round.Index {
+pub mod Round.Index {
 
     use Db.Laps
     use Db.Schema

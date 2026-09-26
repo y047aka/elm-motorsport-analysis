@@ -1,4 +1,4 @@
-mod Cli.FileTask {
+pub mod Cli.FileTask {
 
     use Motorsport.Calendar
     use Motorsport.Calendar.Entry

@@ -1,4 +1,4 @@
-mod Util.Duration {
+pub mod Util.Duration {
 
     pub enum Duration with Eq, Order {
         case Duration(Int32)

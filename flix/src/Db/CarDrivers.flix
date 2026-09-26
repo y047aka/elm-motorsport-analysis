@@ -5,7 +5,7 @@
 /// archive. `(round_id, car_number, driver_number)` names a seat and the name
 /// is the same on every lap of it, in all 1,674 seats the archive has, so the
 /// name is here and the lap carries the seat alone.
-mod Db.CarDrivers {
+pub mod Db.CarDrivers {
 
     use Db.Drivers
     use Db.Drivers.Numbering

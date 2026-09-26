@@ -17,7 +17,7 @@ allowed-tools:
 
 # Flix in this repository
 
-Flix 0.75.1, via the flake. `flix/README.md` says what the code under `/flix`
+Flix 0.76.2, via the flake. `flix/README.md` says what the code under `/flix`
 *is*; this says what the compiler does when you change it.
 
 ## Checking

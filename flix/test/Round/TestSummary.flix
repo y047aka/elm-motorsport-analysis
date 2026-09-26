@@ -1,4 +1,4 @@
-mod Round.TestSummary {
+pub mod Round.TestSummary {
 
     use Round.TestSupport
     use Round.Summary

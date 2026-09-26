@@ -1,4 +1,4 @@
-mod Db.Jdbc {
+pub mod Db.Jdbc {
 
     import java.sql.Connection
     import java.sql.DriverManager

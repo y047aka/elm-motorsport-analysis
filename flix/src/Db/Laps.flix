@@ -3,7 +3,7 @@
 /// it, and nothing else about either: `Db.Cars` holds the class, group, team
 /// and manufacturer, and `Db.CarDrivers` the seat's driver, none of which a
 /// round in the archive varies within a car.
-mod Db.Laps {
+pub mod Db.Laps {
 
     use Db.LapRow.LapRow
     use Db.Rounds

@@ -1,4 +1,4 @@
-mod Sql.TestExpr {
+pub mod Sql.TestExpr {
 
     use Db.Cars
     use Db.Laps

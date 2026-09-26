@@ -5,7 +5,7 @@
 /// is in the feed, and a database that is down must not stop the app being
 /// used -- so this table is that calendar written down rather than a second
 /// one. What it adds is an id.
-mod Db.Rounds {
+pub mod Db.Rounds {
 
     use Db.Schema
     use Db.Schema.Bound

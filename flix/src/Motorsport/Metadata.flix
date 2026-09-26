@@ -1,4 +1,4 @@
-mod Motorsport.Metadata {
+pub mod Motorsport.Metadata {
 
     use Util.Duration.Duration
     use Util.HourClock

@@ -1,4 +1,4 @@
-mod Cli.TestExport {
+pub mod Cli.TestExport {
 
     use Db.TestLapRow
     use Cli.Errors.CliError

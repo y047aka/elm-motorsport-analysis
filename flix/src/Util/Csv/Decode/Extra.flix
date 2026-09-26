@@ -2,7 +2,7 @@
 /// BrianHicks/elm-csv `Csv.Decode` API. Kept in a separate module so
 /// the core stays a faithful port; reach for these only when the
 /// vanilla combinators don't compose cleanly.
-mod Util.Csv.Decode.Extra {
+pub mod Util.Csv.Decode.Extra {
 
     use Util.Csv.Decode.Decoder
 

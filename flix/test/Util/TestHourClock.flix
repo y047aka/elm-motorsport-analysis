@@ -1,4 +1,4 @@
-mod Util.TestHourClock {
+pub mod Util.TestHourClock {
 
     use Util.HourClock
     use Util.HourClock.Hour

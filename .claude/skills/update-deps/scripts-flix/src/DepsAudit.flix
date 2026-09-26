@@ -1,1 +1,1 @@
-mod DepsAudit { }
+pub mod DepsAudit { }

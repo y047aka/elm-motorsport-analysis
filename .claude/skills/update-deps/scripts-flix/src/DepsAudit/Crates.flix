@@ -6,7 +6,7 @@
 /// is the one real handler (`runWithIO`). Tests can answer from a table
 /// instead, the same way `FileIO` is served from memory.
 ///
-mod DepsAudit.Crates {
+pub mod DepsAudit.Crates {
 
     use DepsAudit.RustMajor
 

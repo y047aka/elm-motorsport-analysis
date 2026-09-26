@@ -21,7 +21,7 @@ cat "$(nix eval --raw .#apps.aarch64-darwin.flix-build.program)"
 
 rm -rf flix/build && mkdir -p flix/build
 nix shell nixpkgs#jdk21_headless --command bash -c \
-  'cd flix && java -Xss704k -jar /nix/store/<flix-0.75.1>/share/java/flix/flix.jar build'
+  'cd flix && java -Xss704k -jar /nix/store/<flix-0.76.2>/share/java/flix/flix.jar build'
 ```
 
 704k is where the tree as it stands builds and 672k where it does not, so a
@@ -37,7 +37,7 @@ Two things that waste time here:
   compiler — and running `build` with it prints an error from *this application*
   (`Error: no database ...`), which reads like a broken checkout. The compiler
   is the one the flake app puts on `PATH`: read the wrapper the command above
-  prints, take the `flix-0.75.1` store path out of it, and the jar is at
+  prints, take the `flix-0.76.2` store path out of it, and the jar is at
   `share/java/flix/flix.jar` under it.
 
 ## What CI runs

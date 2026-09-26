@@ -5,7 +5,7 @@
 /// Declaration order mirrors the original `Csv.Decode` Elm module
 /// (BASIC DECODERS / LOCATIONS / RUN DECODERS / MAPPING / FANCY
 /// DECODING) so the two implementations can be reviewed side by side.
-mod Util.Csv.Decode {
+pub mod Util.Csv.Decode {
 
     use Util.Csv.Parser
 

@@ -1,4 +1,4 @@
-mod Server.TestApi {
+pub mod Server.TestApi {
 
     use Server.Api
     use Server.Api.Response

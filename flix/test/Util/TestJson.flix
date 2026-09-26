@@ -1,4 +1,4 @@
-mod Util.TestJson {
+pub mod Util.TestJson {
 
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonNull, JsonBool, JsonInt, JsonFloat, JsonString, JsonArray, JsonObject}

@@ -1,4 +1,4 @@
-mod Sql.TestStatement {
+pub mod Sql.TestStatement {
 
     use Db.Value
     use Sql.Key

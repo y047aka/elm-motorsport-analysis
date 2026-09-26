@@ -3,7 +3,7 @@
 /// Invariant: 0 <= ms < DAY_MS. `Util.Duration.fromString` accepts `H:MM:SS`,
 /// `M:SS`, and `SS` interchangeably; Hour, in contrast, only accepts strict
 /// time-of-day values with two colons and a result below 24h.
-mod Util.HourClock {
+pub mod Util.HourClock {
 
     use Util.Duration
 

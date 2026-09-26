@@ -3,7 +3,7 @@
 /// `laps` carries the car's number and the seat that ran it, and this is who
 /// that was. Read once for the round by whichever caller asked for it and
 /// handed to the readers, rather than fetched again by each of them.
-mod Round.Drivers {
+pub mod Round.Drivers {
 
     use Db.CarDrivers
     use Db.Drivers

@@ -1,4 +1,4 @@
-mod Sql.TestSel {
+pub mod Sql.TestSel {
 
     use Db.Value
     use Sql.Sel

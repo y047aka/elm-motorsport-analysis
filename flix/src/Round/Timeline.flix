@@ -2,7 +2,7 @@
 /// load to write down, and read back out of the rows it wrote. The counting is
 /// a reading of the laps per kind of event, and what they add up to is
 /// `Motorsport.Timeline`'s.
-mod Round.Timeline {
+pub mod Round.Timeline {
 
     use Db.Cars
     use Db.Entries

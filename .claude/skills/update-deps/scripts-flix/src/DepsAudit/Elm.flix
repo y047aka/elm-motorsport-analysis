@@ -1,7 +1,7 @@
 ///
 /// elm-versions-report: report pinned versions from the elm.json files.
 ///
-mod DepsAudit.Elm {
+pub mod DepsAudit.Elm {
 
     use Util.Json.Json
     use Util.Json.Json.{JObject, JString}

@@ -2,7 +2,7 @@
 /// What is decided here is only what the feed does not say outright -- the
 /// grid order, the time limit, the shape of the circuit -- and each of those
 /// decisions stays in `Motorsport`: this reads, and hands over.
-mod Round.Summary {
+pub mod Round.Summary {
 
     use Db.CarRow.CarRow
     use Db.Cars

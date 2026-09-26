@@ -1,5 +1,5 @@
 /// The round's laps, read back out of the rows it was loaded into.
-mod Round.Laps {
+pub mod Round.Laps {
 
     use Db.LapRow
     use Db.LapRow.LapRow

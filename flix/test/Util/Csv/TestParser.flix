@@ -1,4 +1,4 @@
-mod Util.Csv.TestParser {
+pub mod Util.Csv.TestParser {
 
     use Util.Csv.Parser
     use Util.Csv.Parser.Problem

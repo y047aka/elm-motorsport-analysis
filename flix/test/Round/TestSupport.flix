@@ -3,7 +3,7 @@
 ///
 /// What it sends is what `Cli.Load` sends, the timeline included, so a reader
 /// tested here is tested against the rows a run makes.
-mod Round.TestSupport {
+pub mod Round.TestSupport {
 
     use Db.CarDrivers
     use Db.Cars

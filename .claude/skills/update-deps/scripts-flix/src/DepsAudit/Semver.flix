@@ -9,7 +9,7 @@
 /// Trailing zero components are normalized away at parse time, which is
 /// what makes the derived `Eq` agree with `Order` ("1.2" == "1.2.0").
 ///
-mod DepsAudit.Semver {
+pub mod DepsAudit.Semver {
 
     /// A parsed version: its numeric components, without trailing zeros.
     /// Only `parse` constructs one, so the normalization is an invariant.

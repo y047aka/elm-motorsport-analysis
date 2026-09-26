@@ -1,4 +1,4 @@
-mod Cli.TestFileTask {
+pub mod Cli.TestFileTask {
 
     use Cli.FileTask
     use Cli.FileTask.Rounds

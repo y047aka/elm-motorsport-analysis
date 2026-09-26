@@ -1,4 +1,4 @@
-mod Round.TestLaps {
+pub mod Round.TestLaps {
 
     use Db.TestLapRow
     use Round.Laps

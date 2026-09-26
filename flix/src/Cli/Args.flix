@@ -1,4 +1,4 @@
-mod Cli.Args {
+pub mod Cli.Args {
 
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr

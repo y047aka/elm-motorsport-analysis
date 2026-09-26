@@ -5,7 +5,7 @@
 /// them ran which round. A car number is an entry within its season and a
 /// different one across seasons -- number 12 was three teams' over the three
 /// the archive holds -- so the season is half of what names one.
-mod Db.Entries {
+pub mod Db.Entries {
 
     use Db.Schema
     use Db.Schema.Bound

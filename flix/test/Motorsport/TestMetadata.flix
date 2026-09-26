@@ -1,7 +1,7 @@
 /// The grid order itself, read off cars given directly. What a round's cars
 /// are is `Round.Summary`'s to count and `Round.TestSummary`'s to check;
 /// the decisions made once they are counted are these.
-mod Motorsport.TestMetadata {
+pub mod Motorsport.TestMetadata {
 
     use Motorsport.Car.Car
     use Motorsport.Metadata

@@ -1,7 +1,7 @@
 /// CSV parser modelled after BrianHicks/elm-csv's `Csv.Parser`.
 /// Function names and call structure mirror the elm-csv 4.0.1
 /// source so the two implementations can be reviewed side by side.
-mod Util.Csv.Parser {
+pub mod Util.Csv.Parser {
 
     /// Something went wrong during parsing! What was it?
     ///

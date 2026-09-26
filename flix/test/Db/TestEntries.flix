@@ -1,4 +1,4 @@
-mod Db.TestEntries {
+pub mod Db.TestEntries {
 
     use Db.CarRow
     use Db.Entries

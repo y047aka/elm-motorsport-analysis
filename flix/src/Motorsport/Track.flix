@@ -6,7 +6,7 @@
 /// off the whole file, so these are the records as the race left them and not
 /// as they stood at any moment of it -- a stretch's share is how quick it was
 /// at its quickest, and mid-race that answer is still moving.
-mod Motorsport.Track {
+pub mod Motorsport.Track {
 
     use Util.Duration.Duration
     use Util.Json.Encode

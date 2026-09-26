@@ -1,4 +1,4 @@
-mod Db.TestCarDrivers {
+pub mod Db.TestCarDrivers {
 
     use Db.CarDrivers
     use Db.Drivers

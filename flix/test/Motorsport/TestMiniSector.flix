@@ -1,4 +1,4 @@
-mod Motorsport.TestMiniSector {
+pub mod Motorsport.TestMiniSector {
 
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId

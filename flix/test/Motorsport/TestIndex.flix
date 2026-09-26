@@ -1,4 +1,4 @@
-mod Motorsport.TestIndex {
+pub mod Motorsport.TestIndex {
 
     use Motorsport.Flag.Flag
     use Motorsport.Index

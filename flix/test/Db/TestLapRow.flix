@@ -1,4 +1,4 @@
-mod Db.TestLapRow {
+pub mod Db.TestLapRow {
 
     use Db.LapRow
     use Db.Laps

@@ -3,7 +3,7 @@
 /// blank lines, with an empty section rendered as `none` rather than left
 /// blank. Delivery to the terminal is `DepsAudit.Cli`.
 ///
-mod DepsAudit.Report {
+pub mod DepsAudit.Report {
 
     /// Render a list as newline-joined lines, or "none" when empty.
     pub def linesOrNone(lines: List[String]): String =

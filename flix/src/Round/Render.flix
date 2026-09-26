@@ -1,4 +1,4 @@
-mod Round.Render {
+pub mod Round.Render {
 
     use Util.Json.Encode.Extra
     use Util.Json.Encode.JsonValue

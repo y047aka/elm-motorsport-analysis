@@ -3,7 +3,7 @@
 /// http://howardhinnant.github.io/date_algorithms.html verbatim — the magic
 /// constants are that algorithm's and are meaningless on their own.
 ///
-mod DepsAudit.Date {
+pub mod DepsAudit.Date {
 
     /// Convert days since the Unix epoch to (year, month, day).
     pub def daysToYmd(days: Int64): (Int64, Int64, Int64) =

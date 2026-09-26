@@ -1,4 +1,4 @@
-mod Motorsport.Calendar {
+pub mod Motorsport.Calendar {
 
     pub type alias Round = {
         id   = String,
