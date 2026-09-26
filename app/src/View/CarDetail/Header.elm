@@ -27,19 +27,21 @@ off the opening lap rather than reading off a grid sheet.
 carries the gap to the field's leader and this line reports the car's class --
 which for an LMGT3 car is several laps and another race away.
 
-`onClose` closes the column, and is `Nothing` for the only column on show.
+`onClose` closes the column and `grip` carries it along the strip, both
+`Nothing` for the only column on show.
 
 -}
 view :
     { startPosition : Maybe Position
     , toLeader : Gap
     , onClose : Maybe msg
+    , grip : Maybe (Html msg)
     }
     -> CarAt
     -> Html msg
-view { startPosition, toLeader, onClose } item =
+view { startPosition, toLeader, onClose, grip } item =
     div [ class "grid gap-y-2" ]
-        [ nameplate { startPosition = startPosition, onClose = onClose } item
+        [ nameplate { startPosition = startPosition, onClose = onClose, grip = grip } item
         , standing toLeader item
         ]
 
@@ -64,14 +66,14 @@ portrait carImageUrl item =
 
 {-| Two rows: where the car stands, and who it is.
 -}
-nameplate : { startPosition : Maybe Position, onClose : Maybe msg } -> CarAt -> Html msg
-nameplate { startPosition, onClose } item =
+nameplate : { startPosition : Maybe Position, onClose : Maybe msg, grip : Maybe (Html msg) } -> CarAt -> Html msg
+nameplate { startPosition, onClose, grip } item =
     div [ class "grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 gap-y-1.5" ]
         [ div [ class "col-start-1 col-span-2 row-start-1 flex items-center gap-x-2 min-w-0" ]
             [ fieldPosition startPosition item
             , classBadge item
             ]
-        , div [ class "col-start-4 row-start-1" ] [ corner onClose item.status ]
+        , div [ class "col-start-4 row-start-1" ] [ corner { onClose = onClose, grip = grip } item.status ]
 
         -- Centred rather than hung from the top: the three are different
         -- heights, and the tallest would otherwise set where the others begin.
@@ -84,23 +86,25 @@ nameplate { startPosition, onClose } item =
         ]
 
 
-corner : Maybe msg -> Status -> Html msg
-corner onClose status =
-    case onClose of
-        Nothing ->
+corner : { onClose : Maybe msg, grip : Maybe (Html msg) } -> Status -> Html msg
+corner { onClose, grip } status =
+    case List.filterMap identity [ grip, Maybe.map closeButton onClose ] of
+        [] ->
             statusBadge status
 
-        Just msg ->
-            div [ class "flex items-start gap-x-1" ]
-                [ statusBadge status
-                , button
-                    [ onClick msg
-                    , attribute "aria-label" "Close this column"
-                    , title "Close this column"
-                    , class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
-                    ]
-                    [ text "✕" ]
-                ]
+        controls ->
+            div [ class "flex items-start gap-x-1" ] (statusBadge status :: controls)
+
+
+closeButton : msg -> Html msg
+closeButton msg =
+    button
+        [ onClick msg
+        , attribute "aria-label" "Close this column"
+        , title "Close this column"
+        , class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
+        ]
+        [ text "✕" ]
 
 
 {-| The field's place and not the class's, which the strip below reports.

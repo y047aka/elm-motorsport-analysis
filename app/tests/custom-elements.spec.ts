@@ -214,3 +214,45 @@ test('the card parts carry the slot their own classes match on', async ({ page }
     footerRule: true,
   });
 });
+
+test('the drag handle keeps the pointer once pressed, wherever the pointer goes', async ({ page }) => {
+  await page.evaluate(() => {
+    const el = document.createElement('drag-handle');
+    el.id = 'handle';
+    el.style.cssText = 'position:fixed;left:0;top:0;width:20px;height:20px;display:block;z-index:9999';
+    el.addEventListener('pointermove', () => el.dataset.moves = String(Number(el.dataset.moves ?? 0) + 1));
+    document.body.appendChild(el);
+  });
+  const handle = page.locator('#handle');
+  await page.mouse.move(10, 10);
+  await page.mouse.down();
+  await handle.evaluate((el) => (el.dataset.moves = '0'));
+  await page.mouse.move(400, 300, { steps: 5 });
+  const moves = await handle.evaluate((el) => Number(el.dataset.moves));
+  await page.mouse.up();
+  // Not five: Chromium coalesces the moves that land in one frame.
+  expect(moves).toBeGreaterThan(0);
+});
+
+test('the drag handle reports a pointer it held as cancelled when it leaves the document', async ({ page }) => {
+  await page.evaluate(() => {
+    const el = document.createElement('drag-handle');
+    el.id = 'handle';
+    el.style.cssText = 'position:fixed;left:0;top:0;width:20px;height:20px;display:block;z-index:9999';
+    el.addEventListener('pointerdown', (e) => (el.dataset.pressed = String(e.pointerId)));
+    el.addEventListener('pointercancel', (e) => (el.dataset.cancelled = String(e.pointerId)));
+    document.body.appendChild(el);
+  });
+  const handle = page.locator('#handle');
+  await page.mouse.move(10, 10);
+  await page.mouse.down();
+  // The document is told the capture was lost, and the element is not.
+  const { pressed, cancelled } = await handle.evaluate(async (el) => {
+    el.remove();
+    await new Promise((r) => setTimeout(r));
+    return { pressed: el.dataset.pressed, cancelled: el.dataset.cancelled };
+  });
+  await page.mouse.up();
+  expect(pressed).toBeDefined();
+  expect(cancelled).toBe(pressed);
+});
