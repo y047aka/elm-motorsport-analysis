@@ -62,6 +62,7 @@ type alias Model =
     , columns : CarColumns
     , carried : Maybe Carry
     , columnScrolls : Dict CarNumber Float
+    , announcement : String
     , comparison : CarDetail.Comparison
     }
 
@@ -112,6 +113,7 @@ init params =
       , columns = ClassLeaders
       , carried = Nothing
       , columnScrolls = Dict.empty
+      , announcement = ""
       , comparison = CarDetail.initialComparison
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -255,7 +257,7 @@ dropColumn shared pointer m =
                 ( { m | columns = carry.before, carried = Nothing }, Effect.none )
 
             else
-                reorder { moved = carry.carNumber, refocus = False } moved { m | carried = Nothing }
+                reorder shared { moved = carry.carNumber, refocus = False } moved { m | carried = Nothing }
 
         Nothing ->
             ( m, Effect.none )
@@ -276,7 +278,7 @@ stepColumn shared carNumber steps m =
         ( m, Effect.none )
 
     else
-        reorder { moved = carNumber, refocus = True } moved m
+        reorder shared { moved = carNumber, refocus = True } moved m
 
 
 heldBy : Int -> Maybe Carry -> Maybe Carry
@@ -296,8 +298,8 @@ loses how far down it was scrolled and the focus of anything in it. Both are
 put back once it has been drawn in its new place, the focus first: focusing
 scrolls the grip, at the top of its column, into view.
 -}
-reorder : { moved : CarNumber, refocus : Bool } -> CarColumns -> Model -> ( Model, Effect Msg )
-reorder { moved, refocus } columns m =
+reorder : Shared.Model -> { moved : CarNumber, refocus : Bool } -> CarColumns -> Model -> ( Model, Effect Msg )
+reorder shared { moved, refocus } columns m =
     let
         focus : Task.Task Never ()
         focus =
@@ -307,7 +309,7 @@ reorder { moved, refocus } columns m =
             else
                 Task.succeed ()
     in
-    ( { m | columns = columns }
+    ( { m | columns = columns, announcement = announceMove shared moved columns }
     , focus
         |> Task.andThen (\_ -> restoreScrolls m.columnScrolls)
         |> Task.perform (\_ -> Settled)
@@ -325,6 +327,25 @@ restoreScrolls scrolls =
             )
         |> Task.sequence
         |> Task.map (\_ -> ())
+
+
+announceMove : Shared.Model -> CarNumber -> CarColumns -> String
+announceMove shared carNumber columns =
+    case Shared.loadedRound shared of
+        Just round ->
+            let
+                current =
+                    columnCarNumbers round.snapshot columns
+            in
+            case List.Extra.elemIndex carNumber current of
+                Just index ->
+                    "Car #" ++ carNumber ++ " moved to column " ++ String.fromInt (index + 1) ++ " of " ++ String.fromInt (List.length current)
+
+                Nothing ->
+                    ""
+
+        Nothing ->
+            ""
 
 
 rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
@@ -543,6 +564,7 @@ trackerView track timeline snapshot replay m =
             ]
         , standingsPanel m.standingsTab m replay snapshot
         , standingsPopover
+        , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.announcement ]
         ]
 
 

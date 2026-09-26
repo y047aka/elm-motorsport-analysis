@@ -434,10 +434,13 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should move a column a place at a time by the arrow keys, and keep its grip focused', async ({ page }) => {
+    await expect(grip(page, 0)).toHaveAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight');
     await grip(page, 0).focus();
     await page.keyboard.press('ArrowRight');
     await expectColumns(page, ['48', '6', '92']);
     await expect(grip(page, 1)).toBeFocused();
+    // Said, for a reader who cannot see where it went.
+    await expect(page.locator('[aria-live="polite"]')).toHaveText('Car #6 moved to column 2 of 3');
     await page.keyboard.press('ArrowRight');
     // Past the end, where there is nowhere further to go.
     await page.keyboard.press('ArrowRight');

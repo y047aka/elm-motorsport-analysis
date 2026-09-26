@@ -47,9 +47,11 @@ view config =
     Html.node "drag-handle"
         ([ id config.id
          , attribute "role" "button"
+         , attribute "aria-roledescription" "drag handle"
+         , attribute "aria-keyshortcuts" "ArrowLeft ArrowRight"
          , attribute "tabindex" "0"
          , attribute "aria-label" config.label
-         , title config.label
+         , title (config.label ++ ": drag it, or press ← →")
          , class
             ("grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
                 ++ (if config.held then
