@@ -80,10 +80,15 @@ type CarColumns
 
 {-| A column being carried along the strip by one pointer, from where it went
 down to where it is now.
+
+`before` is the columns as they stood when it was picked up, which a carry that
+lands where it began leaves them as.
+
 -}
 type alias Carry =
     { carNumber : CarNumber
     , pointerId : Int
+    , before : CarColumns
     , from : Float
     , at : Float
     }
@@ -166,7 +171,14 @@ update shared msg m =
                 Nothing ->
                     ( { m
                         | columns = rearrange shared settleColumns m.columns
-                        , carried = Just { carNumber = carNumber, pointerId = pointer.id, from = pointer.x, at = pointer.x }
+                        , carried =
+                            Just
+                                { carNumber = carNumber
+                                , pointerId = pointer.id
+                                , before = m.columns
+                                , from = pointer.x
+                                , at = pointer.x
+                                }
                       }
                     , Effect.none
                     )
@@ -180,46 +192,72 @@ update shared msg m =
                     ( m, Effect.none )
 
         DropColumn pointer ->
-            case heldBy pointer.id m.carried of
-                Just carry ->
-                    ( { m
-                        | columns = rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = pointer.x })) m.columns
-                        , carried = Nothing
-                      }
-                    , Effect.none
-                    )
-
-                Nothing ->
-                    ( m, Effect.none )
+            dropColumn shared pointer m
 
         CancelCarry pointerId ->
             case heldBy pointerId m.carried of
-                Just _ ->
-                    ( { m | carried = Nothing }, Effect.none )
+                Just carry ->
+                    ( { m | columns = carry.before, carried = Nothing }, Effect.none )
 
                 Nothing ->
                     ( m, Effect.none )
 
         StepColumn carNumber steps ->
-            if m.carried /= Nothing then
-                -- A step would move the strip under the carried column, and
-                -- could take the grip holding the pointer out of the document.
-                ( m, Effect.none )
-
-            else
-                ( { m | columns = rearrange shared (moveColumn carNumber steps) m.columns }
-                  -- The keyed strip may move the column by taking it out of the
-                  -- document, which takes the focus with it.
-                , Browser.Dom.focus (gripId carNumber)
-                    |> Task.attempt (\_ -> GripFocused)
-                    |> Effect.sendCmd
-                )
+            stepColumn shared carNumber steps m
 
         GripFocused ->
             ( m, Effect.none )
 
         CarDetailMsg detailMsg ->
             ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
+
+
+dropColumn : Shared.Model -> DragHandle.Pointer -> Model -> ( Model, Effect Msg )
+dropColumn shared pointer m =
+    case heldBy pointer.id m.carried of
+        Just carry ->
+            let
+                moved =
+                    rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = pointer.x })) m.columns
+            in
+            ( { m
+                | columns =
+                    if moved == m.columns then
+                        carry.before
+
+                    else
+                        moved
+                , carried = Nothing
+              }
+            , Effect.none
+            )
+
+        Nothing ->
+            ( m, Effect.none )
+
+
+stepColumn : Shared.Model -> CarNumber -> Int -> Model -> ( Model, Effect Msg )
+stepColumn shared carNumber steps m =
+    let
+        moved =
+            rearrange shared (moveColumn carNumber steps) m.columns
+    in
+    if m.carried /= Nothing then
+        -- A step would move the strip under the carried column, and
+        -- could take the grip holding the pointer out of the document.
+        ( m, Effect.none )
+
+    else if moved == m.columns then
+        ( m, Effect.none )
+
+    else
+        ( { m | columns = moved }
+          -- The keyed strip may move the column by taking it out of the
+          -- document, which takes the focus with it.
+        , Browser.Dom.focus (gripId carNumber)
+            |> Task.attempt (\_ -> GripFocused)
+            |> Effect.sendCmd
+        )
 
 
 heldBy : Int -> Maybe Carry -> Maybe Carry
@@ -267,7 +305,8 @@ closeColumn carNumber snapshot columns =
         |> pickedOr columns
 
 
-{-| Whole columns, and never past either end.
+{-| Whole columns, and never past either end. A column with nowhere to go
+leaves the columns as they were, stand-ins and all.
 -}
 moveColumn : CarNumber -> Int -> Snapshot -> CarColumns -> CarColumns
 moveColumn carNumber steps snapshot columns =
@@ -284,7 +323,11 @@ moveColumn carNumber steps snapshot columns =
                 to =
                     clamp 0 (List.length others) (index + steps)
             in
-            pickedOr columns (List.take to others ++ carNumber :: List.drop to others)
+            if to == index then
+                columns
+
+            else
+                pickedOr columns (List.take to others ++ carNumber :: List.drop to others)
 
         Nothing ->
             columns

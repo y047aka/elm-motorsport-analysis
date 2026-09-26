@@ -28,6 +28,9 @@ async function selectCar(page: Page, carNumber: string) {
 /** The stand-in columns the page opens on, before anything has been picked. */
 const STAND_INS = ['6', '48', '92'];
 
+/** The stand-ins before the first lap is done, when other cars lead the classes. */
+const CLASS_LEADERS_AT_START = ['5', '29', '27'];
+
 /**
  * A column for this car and no other. A pick joins the columns already up, so
  * the three the page stands in with have to be closed to be rid of them.
@@ -319,14 +322,30 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['48', '6', '92']);
   });
 
-  test('should keep the stand-ins that were carried among as they were', async ({ page }) => {
-    // Carried and put back where it was: the page has stopped choosing, as it
-    // does once one is closed.
+  test('should go on following the class leaders when a column is put back where it was', async ({ page }) => {
+    // A press on the grip, or a carry that lands where it began, moves
+    // nothing and settles nothing: at the start the classes are led by other
+    // cars, and the columns say so.
     await carry(page, 0, 10);
     await page.mouse.up();
     await expectColumns(page, STAND_INS);
-    await selectCar(page, '83');
-    await expectColumns(page, [...STAND_INS, '83']);
+    await setLapCount(page, 0);
+    await expectColumns(page, CLASS_LEADERS_AT_START);
+  });
+
+  test('should go on following the class leaders when a step has nowhere to go', async ({ page }) => {
+    await grip(page, 0).focus();
+    await page.keyboard.press('ArrowLeft');
+    await setLapCount(page, 0);
+    await expectColumns(page, CLASS_LEADERS_AT_START);
+  });
+
+  test('should stop following the class leaders once a column has been moved', async ({ page }) => {
+    await carry(page, 0, 370);
+    await page.mouse.up();
+    await expectColumns(page, ['48', '6', '92']);
+    await setLapCount(page, 0);
+    await expectColumns(page, ['48', '6', '92']);
   });
 
   test('should not step a column by the keys while one is being carried', async ({ page }) => {
