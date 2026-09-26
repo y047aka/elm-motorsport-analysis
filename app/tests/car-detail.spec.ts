@@ -322,6 +322,43 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['48', '6', '92']);
   });
 
+  /** How far down each column is scrolled, left to right. */
+  function columnScrolls(page: Page) {
+    return page
+      .locator(DETAIL)
+      .evaluateAll((els) => els.map((el) => el.closest('.overflow-y-auto')!.scrollTop));
+  }
+
+  /** Scroll each column down by its own amount, so that none reads as another. */
+  async function scrollColumns(page: Page, tops: number[]) {
+    await page.locator(DETAIL).evaluateAll(
+      (els, tops) => els.forEach((el, i) => (el.closest('.overflow-y-auto')!.scrollTop = tops[i])),
+      tops,
+    );
+    await expect.poll(() => columnScrolls(page)).toEqual(tops);
+  }
+
+  test('should keep how far down each column was scrolled when one is carried past another', async ({ page }) => {
+    // Short enough that every panel scrolls.
+    await page.setViewportSize({ width: 1440, height: 600 });
+    // The first column's grip stays in sight to be pressed.
+    await scrollColumns(page, [0, 40, 80]);
+    await carry(page, 0, 370);
+    await page.mouse.up();
+    await expectColumns(page, ['48', '6', '92']);
+    await expect.poll(() => columnScrolls(page)).toEqual([40, 0, 80]);
+  });
+
+  test('should keep how far down each column was scrolled when one is stepped past another', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 600 });
+    await grip(page, 0).focus();
+    await scrollColumns(page, [20, 40, 80]);
+    await page.keyboard.press('ArrowRight');
+    await expectColumns(page, ['48', '6', '92']);
+    await expect(grip(page, 1)).toBeFocused();
+    await expect.poll(() => columnScrolls(page)).toEqual([40, 20, 80]);
+  });
+
   test('should count the strip scrolled under a carried column as carrying it', async ({ page }) => {
     for (const carNumber of ['83', '12', '8']) {
       await selectCar(page, carNumber);

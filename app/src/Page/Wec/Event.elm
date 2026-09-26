@@ -61,6 +61,7 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , columns : CarColumns
     , carried : Maybe Carry
+    , columnScrolls : Dict CarNumber Float
     , comparison : CarDetail.Comparison
     }
 
@@ -110,6 +111,7 @@ init params =
       , leaderboardState = Leaderboard.init
       , columns = ClassLeaders
       , carried = Nothing
+      , columnScrolls = Dict.empty
       , comparison = CarDetail.initialComparison
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -136,6 +138,7 @@ type Msg
     | StripScrolledFrom Float
     | StripScrolled Float
     | StepColumn CarNumber Int
+    | ColumnScrolled CarNumber Float
     | Settled
     | CarDetailMsg CarDetail.Msg
 
@@ -150,7 +153,9 @@ update shared msg m =
             ( m, Task.perform (Replay.Pause >> ReplayMsg) Time.now |> Effect.sendCmd )
 
         ModeChange mode ->
-            ( { m | mode = mode }, Effect.none )
+            -- The tracker's mode draws no strip, and one drawn again starts at
+            -- the top.
+            ( { m | mode = mode, columnScrolls = Dict.empty }, Effect.none )
 
         StandingsTabChange tab ->
             ( { m | standingsTab = tab }, Effect.none )
@@ -167,7 +172,12 @@ update shared msg m =
             ( { m | columns = rearrange shared (openColumn carNumber) m.columns }, Effect.none )
 
         CloseColumn carNumber ->
-            ( { m | columns = rearrange shared (closeColumn carNumber) m.columns }, Effect.none )
+            ( { m
+                | columns = rearrange shared (closeColumn carNumber) m.columns
+                , columnScrolls = Dict.remove carNumber m.columnScrolls
+              }
+            , Effect.none
+            )
 
         GrabColumn carNumber pointer ->
             case m.carried of
@@ -223,6 +233,9 @@ update shared msg m =
         StepColumn carNumber steps ->
             stepColumn shared carNumber steps m
 
+        ColumnScrolled carNumber top ->
+            ( { m | columnScrolls = Dict.insert carNumber top m.columnScrolls }, Effect.none )
+
         Settled ->
             ( m, Effect.none )
 
@@ -238,17 +251,11 @@ dropColumn shared pointer m =
                 moved =
                     rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = pointer.x })) m.columns
             in
-            ( { m
-                | columns =
-                    if moved == m.columns then
-                        carry.before
+            if moved == m.columns then
+                ( { m | columns = carry.before, carried = Nothing }, Effect.none )
 
-                    else
-                        moved
-                , carried = Nothing
-              }
-            , Effect.none
-            )
+            else
+                reorder { moved = carry.carNumber, refocus = False } moved { m | carried = Nothing }
 
         Nothing ->
             ( m, Effect.none )
@@ -269,13 +276,7 @@ stepColumn shared carNumber steps m =
         ( m, Effect.none )
 
     else
-        ( { m | columns = moved }
-          -- The keyed strip may move the column by taking it out of the
-          -- document, which takes the focus with it.
-        , Browser.Dom.focus (gripId carNumber)
-            |> Task.attempt (\_ -> Settled)
-            |> Effect.sendCmd
-        )
+        reorder { moved = carNumber, refocus = True } moved m
 
 
 heldBy : Int -> Maybe Carry -> Maybe Carry
@@ -288,6 +289,42 @@ heldBy pointerId =
             else
                 Nothing
         )
+
+
+{-| The keyed strip moves a column by taking it out of the document, which
+loses how far down it was scrolled and the focus of anything in it. Both are
+put back once it has been drawn in its new place, the focus first: focusing
+scrolls the grip, at the top of its column, into view.
+-}
+reorder : { moved : CarNumber, refocus : Bool } -> CarColumns -> Model -> ( Model, Effect Msg )
+reorder { moved, refocus } columns m =
+    let
+        focus : Task.Task Never ()
+        focus =
+            if refocus then
+                Browser.Dom.focus (gripId moved) |> Task.onError (\_ -> Task.succeed ())
+
+            else
+                Task.succeed ()
+    in
+    ( { m | columns = columns }
+    , focus
+        |> Task.andThen (\_ -> restoreScrolls m.columnScrolls)
+        |> Task.perform (\_ -> Settled)
+        |> Effect.sendCmd
+    )
+
+
+restoreScrolls : Dict CarNumber Float -> Task.Task Never ()
+restoreScrolls scrolls =
+    Dict.toList scrolls
+        |> List.map
+            (\( carNumber, top ) ->
+                Browser.Dom.setViewportOf (columnScrollId carNumber) 0 top
+                    |> Task.onError (\_ -> Task.succeed ())
+            )
+        |> Task.sequence
+        |> Task.map (\_ -> ())
 
 
 rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
@@ -713,6 +750,11 @@ gripId carNumber =
     "column-grip-" ++ carNumber
 
 
+columnScrollId : CarNumber -> String
+columnScrollId carNumber =
+    "column-scroll-" ++ carNumber
+
+
 {-| Drawn lazily, since a carry redraws the strip on every frame the pointer
 moves, paused or not. Each argument is compared by reference, so a record built
 at the call site would redraw every panel on every one of those frames.
@@ -726,7 +768,11 @@ columnCard several held comparison cars snapshot car =
     Card.card []
         -- A card's content does not shrink below what it holds, so the box that
         -- scrolls has to be a flex child of the card.
-        [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+        [ div
+            [ Attributes.id (columnScrollId carNumber)
+            , Attributes.class "flex-1 min-h-0 overflow-y-auto"
+            , Html.Events.on "scroll" (Decode.map (ColumnScrolled carNumber) (Decode.at [ "target", "scrollTop" ] Decode.float))
+            ]
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
