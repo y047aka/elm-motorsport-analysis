@@ -1,6 +1,6 @@
 /// Rendering that departs from `Util.Json.Encode.render`, which puts every
 /// value on a line of its own.
-mod Util.Json.Encode.Extra {
+pub mod Util.Json.Encode.Extra {
 
     use Util.Json.Encode.JsonValue
 

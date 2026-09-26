@@ -12,7 +12,7 @@
 /// Errors are reported as "<path>: <error>", so the path a subcommand was
 /// given appears in the message whichever operation failed.
 ///
-mod DepsAudit.Io {
+pub mod DepsAudit.Io {
 
     ///
     /// A file operation a subcommand may perform. Operation names and

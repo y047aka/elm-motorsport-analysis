@@ -4,7 +4,7 @@
 /// these back a line at a time. What is decided here is what the rows do not
 /// say -- whether a car's last lap was the flag or a retirement -- and the
 /// counting that finds each event is `Round.Timeline`'s.
-mod Motorsport.Timeline {
+pub mod Motorsport.Timeline {
 
     use Motorsport.Flag.Flag
     use Motorsport.Flag.FlagShown

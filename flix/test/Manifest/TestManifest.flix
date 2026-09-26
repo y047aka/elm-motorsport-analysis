@@ -1,4 +1,4 @@
-mod Manifest.TestManifest {
+pub mod Manifest.TestManifest {
 
     use Util.Json.Encode
         use Motorsport.Calendar

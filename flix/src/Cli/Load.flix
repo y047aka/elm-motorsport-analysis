@@ -1,4 +1,4 @@
-mod Cli.Load {
+pub mod Cli.Load {
 
     use Db.CarDrivers
     use Db.Cars

@@ -1,4 +1,4 @@
-mod Cli.Load.CsvDecode {
+pub mod Cli.Load.CsvDecode {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames

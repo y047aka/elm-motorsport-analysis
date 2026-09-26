@@ -5,7 +5,7 @@
 /// non-objects; the audits want the quieter "absent" (`None`) for any
 /// shape mismatch, so these are defined once here instead of per module.
 ///
-mod DepsAudit.JsonUtil {
+pub mod DepsAudit.JsonUtil {
 
     use Util.Json.Json
     use Util.Json.Json.{JObject, JString}

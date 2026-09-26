@@ -1,4 +1,4 @@
-mod Round.TestTimeline {
+pub mod Round.TestTimeline {
 
     use Round.TestSupport
     use Round.Timeline

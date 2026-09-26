@@ -1,4 +1,4 @@
-mod Motorsport.Events {
+pub mod Motorsport.Events {
 
     use Motorsport.Circuit.Direction.Direction
 

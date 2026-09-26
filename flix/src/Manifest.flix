@@ -1,7 +1,7 @@
 /// The file the app reads before it has asked for a round -- rendered the
 /// same way whether the rounds are exported or served, since only the root a
 /// path is built under differs between them.
-mod Manifest {
+pub mod Manifest {
 
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}

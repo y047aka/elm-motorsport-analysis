@@ -1,4 +1,4 @@
-mod Db.CarRow {
+pub mod Db.CarRow {
 
     use Db.Entries
     use Db.Entries.Numbering

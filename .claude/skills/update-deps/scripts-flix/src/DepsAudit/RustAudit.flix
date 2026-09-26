@@ -2,7 +2,7 @@
 /// rust-minor-audit: classify `cargo update --dry-run` output into minor
 /// and patch updates.
 ///
-mod DepsAudit.RustAudit {
+pub mod DepsAudit.RustAudit {
 
     use DepsAudit.Report
     use DepsAudit.Semver

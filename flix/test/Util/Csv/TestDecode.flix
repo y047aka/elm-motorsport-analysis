@@ -1,4 +1,4 @@
-mod Util.Csv.TestDecode {
+pub mod Util.Csv.TestDecode {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.{Decoder, FieldNames, Error, DecodingError, Column, Problem}

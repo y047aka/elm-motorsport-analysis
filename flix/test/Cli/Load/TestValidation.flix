@@ -1,4 +1,4 @@
-mod Cli.Load.TestValidation {
+pub mod Cli.Load.TestValidation {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames

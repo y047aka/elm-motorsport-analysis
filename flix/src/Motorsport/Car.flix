@@ -1,4 +1,4 @@
-mod Motorsport.Car {
+pub mod Motorsport.Car {
 
     pub type alias Car = {
         carNumber    = String,

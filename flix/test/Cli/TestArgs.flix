@@ -1,4 +1,4 @@
-mod Cli.TestArgs {
+pub mod Cli.TestArgs {
 
     use Cli.Args
     use Cli.Args.Command

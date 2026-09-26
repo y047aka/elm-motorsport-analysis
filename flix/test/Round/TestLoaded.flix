@@ -1,4 +1,4 @@
-mod Round.TestLoaded {
+pub mod Round.TestLoaded {
 
     use Db.TestLapRow
     use Motorsport.Calendar.Entry

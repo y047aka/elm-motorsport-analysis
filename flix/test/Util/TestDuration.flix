@@ -1,4 +1,4 @@
-mod Util.TestDuration {
+pub mod Util.TestDuration {
 
     use Util.Duration
 

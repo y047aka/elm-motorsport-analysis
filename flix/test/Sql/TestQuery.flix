@@ -1,4 +1,4 @@
-mod Sql.TestQuery {
+pub mod Sql.TestQuery {
 
     use Db.Laps
     use Db.Schema

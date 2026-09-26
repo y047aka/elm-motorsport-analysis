@@ -1,6 +1,6 @@
 /// How the lap divides, given the records it divides on. Which lap set those
 /// records is `Round.Summary`'s to find and `Round.TestTrack`'s to check.
-mod Motorsport.TestTrack {
+pub mod Motorsport.TestTrack {
 
     use Motorsport.Circuit.Direction.Direction
     use Motorsport.MiniSector

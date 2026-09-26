@@ -1,7 +1,7 @@
 ///
 /// nix-channel-audit and nix-flakelock-audit.
 ///
-mod DepsAudit.Nix {
+pub mod DepsAudit.Nix {
 
     use Util.Json.Json
     use Util.Json.Json.{JObject, JNumber}

@@ -1,4 +1,4 @@
-mod Round.TestTrack {
+pub mod Round.TestTrack {
 
     use Round.TestSupport
     use Round.Summary

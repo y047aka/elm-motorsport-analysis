@@ -1,4 +1,4 @@
-mod Db.TestCarRow {
+pub mod Db.TestCarRow {
 
     use Db.CarRow
     use Db.Cars

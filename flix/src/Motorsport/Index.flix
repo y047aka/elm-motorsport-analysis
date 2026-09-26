@@ -4,7 +4,7 @@
 ///
 /// The mirror of `Motorsport.Race.Index` on the Elm side, which reads these
 /// back out of the summary.
-mod Motorsport.Index {
+pub mod Motorsport.Index {
 
     use Motorsport.Flag.FlagShown
     use Motorsport.MiniSector

@@ -7,7 +7,7 @@
 /// The type a column takes is the constructor's rather than a field of its
 /// own: a `Bool` is stored as the 1 or 0 the driver binds it as, and a column
 /// taking an `Option` is the nullable one.
-mod Db.Schema {
+pub mod Db.Schema {
 
     use Db.Value
     use Sql.Sel

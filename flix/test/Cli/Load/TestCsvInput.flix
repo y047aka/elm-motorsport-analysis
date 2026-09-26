@@ -1,4 +1,4 @@
-mod Cli.Load.TestCsvInput {
+pub mod Cli.Load.TestCsvInput {
 
     use Cli.Errors.CliError
     use Cli.Load.CsvInput

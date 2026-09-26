@@ -1,4 +1,4 @@
-mod Util.Json.TestEncodeExtra {
+pub mod Util.Json.TestEncodeExtra {
 
     use Util.Json.Encode
     use Util.Json.Encode.Extra

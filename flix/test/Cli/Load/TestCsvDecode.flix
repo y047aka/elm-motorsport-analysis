@@ -1,4 +1,4 @@
-mod Cli.Load.TestCsvDecode {
+pub mod Cli.Load.TestCsvDecode {
 
     use Cli.Load.CsvDecode
     use Cli.Errors.CliError

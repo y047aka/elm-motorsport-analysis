@@ -1,5 +1,5 @@
 /// The round's cars, read back out of the rows it was loaded into.
-mod Round.Cars {
+pub mod Round.Cars {
 
     use Db.Cars
     use Db.Entries

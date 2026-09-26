@@ -1,7 +1,7 @@
 /// The `cars` table: the cars a round was run by, one row each, and which of
 /// the season's entries each was. What the feed says about a car is
 /// `Db.Entries`; this is the rounds it ran.
-mod Db.Cars {
+pub mod Db.Cars {
 
     use Db.CarRow.CarRow
     use Db.Rounds

@@ -1,4 +1,4 @@
-mod Db.TestDb {
+pub mod Db.TestDb {
 
     use Db.Laps
     use Db.Statement

@@ -1,1 +1,1 @@
-mod Cli {}
+pub mod Cli {}

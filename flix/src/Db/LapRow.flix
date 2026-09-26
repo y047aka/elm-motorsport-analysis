@@ -1,4 +1,4 @@
-mod Db.LapRow {
+pub mod Db.LapRow {
 
     use Motorsport.Wec
     use Motorsport.Wec.RawCar

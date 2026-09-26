@@ -1,4 +1,4 @@
-mod Cli.Load.TestUnlisted {
+pub mod Cli.Load.TestUnlisted {
 
     use Cli.FileTask
     use Cli.Load.Unlisted

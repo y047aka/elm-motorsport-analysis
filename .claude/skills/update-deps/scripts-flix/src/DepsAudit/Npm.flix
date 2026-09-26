@@ -5,7 +5,7 @@
 /// appear in the document: the report is diffed between runs more often
 /// than it is read top to bottom.
 ///
-mod DepsAudit.Npm {
+pub mod DepsAudit.Npm {
 
     use Util.Json.Json
     use Util.Json.Json.{JObject, JArray, JString, JBool}

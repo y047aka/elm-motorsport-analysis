@@ -1,4 +1,4 @@
-mod Round.TestIndex {
+pub mod Round.TestIndex {
 
     use Round.Index
     use Round.TestSupport

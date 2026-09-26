@@ -1,4 +1,4 @@
-mod Db.TestJdbc {
+pub mod Db.TestJdbc {
 
     use Db.Laps
 

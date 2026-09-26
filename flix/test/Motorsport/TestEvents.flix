@@ -1,4 +1,4 @@
-mod Motorsport.TestEvents {
+pub mod Motorsport.TestEvents {
 
     use Motorsport.Calendar
     use Motorsport.Events

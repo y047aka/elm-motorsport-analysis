@@ -1,7 +1,7 @@
 /// The three sectors every WEC circuit is timed to -- the counterpart of
 /// `Motorsport.MiniSector` at the coarser grain, and the mirror of
 /// `Motorsport.Sector` on the Elm side.
-mod Motorsport.Sector {
+pub mod Motorsport.Sector {
 
     pub enum Sector with Eq {
         case S1

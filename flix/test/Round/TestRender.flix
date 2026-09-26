@@ -1,4 +1,4 @@
-mod Round.TestRender {
+pub mod Round.TestRender {
 
     use Round.Index
     use Round.Laps

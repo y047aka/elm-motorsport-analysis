@@ -1,4 +1,4 @@
-mod Sql.TestTagged {
+pub mod Sql.TestTagged {
 
     use Sql.Branch
 

@@ -1,4 +1,4 @@
-mod Db.TestTimelineEvents {
+pub mod Db.TestTimelineEvents {
 
     use Db.Schema
     use Db.TimelineEvents

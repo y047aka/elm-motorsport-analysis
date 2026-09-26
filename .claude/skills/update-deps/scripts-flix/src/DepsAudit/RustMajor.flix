@@ -2,7 +2,7 @@
 /// rust-major-audit: compare Cargo.toml version constraints against the
 /// latest crates.io releases.
 ///
-mod DepsAudit.RustMajor {
+pub mod DepsAudit.RustMajor {
 
     use DepsAudit.Report
     use DepsAudit.Semver

@@ -1,6 +1,6 @@
 /// The rounds, served rather than exported. An endpoint answers with what
 /// `Cli.Export` writes to a file, byte for byte.
-mod Server.Api {
+pub mod Server.Api {
 
     use Round.Index
     use Round.Laps

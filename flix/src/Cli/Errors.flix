@@ -1,4 +1,4 @@
-mod Cli.Errors {
+pub mod Cli.Errors {
 
     use Util.Files.FileError
 

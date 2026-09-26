@@ -9,7 +9,7 @@
 /// `seq` orders the events sharing an instant, which nothing else in the row
 /// does: a stop ending as the flag falls has to leave the car classified rather
 /// than in the pits.
-mod Db.TimelineEvents {
+pub mod Db.TimelineEvents {
 
     use Db.Rounds
     use Db.Schema

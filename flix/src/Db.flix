@@ -39,7 +39,7 @@ pub type alias DbRead = {SqlRead, DbErr}
 pub type alias DbWrite = {SqlWrite, DbErr}
 pub type alias Db = {SqlRead, SqlWrite, DbErr}
 
-mod Db {
+pub mod Db {
 
     /// What did not happen, rather than the sentence saying so, which is
     /// `ToString`'s.

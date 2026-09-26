@@ -1,4 +1,4 @@
-mod Motorsport.TestWec {
+pub mod Motorsport.TestWec {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.{FieldNames, Error}

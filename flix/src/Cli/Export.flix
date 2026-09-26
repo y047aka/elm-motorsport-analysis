@@ -1,5 +1,5 @@
 /// The rounds written out as files, read back out of the rows a run sent.
-mod Cli.Export {
+pub mod Cli.Export {
 
     use Sys.Console
     use Util.Files

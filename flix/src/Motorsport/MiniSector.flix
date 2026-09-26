@@ -4,7 +4,7 @@
 /// truth for the IDs, their CSV column prefixes, and their JSON object
 /// keys, mirroring `Motorsport.Wec.Circuit.LeMans.all` on the Elm
 /// side.
-mod Motorsport.MiniSector {
+pub mod Motorsport.MiniSector {
 
     use Motorsport.Sector.Sector
 

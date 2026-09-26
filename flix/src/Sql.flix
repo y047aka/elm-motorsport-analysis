@@ -13,7 +13,7 @@
 /// A reading stops at the first cell it cannot read: it consumes the cells
 /// before it, so past a failure there is no longer a position to report the
 /// next problem at.
-mod Sql {
+pub mod Sql {
 
     use Db.Error
     use Db.Value

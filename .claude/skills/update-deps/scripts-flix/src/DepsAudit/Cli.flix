@@ -8,7 +8,7 @@
 /// `Output` is opaque: it can only be built through the constructors below,
 /// so an exit code never disagrees with the streams it came with.
 ///
-mod DepsAudit.Cli {
+pub mod DepsAudit.Cli {
 
     use Sys.Console
 
