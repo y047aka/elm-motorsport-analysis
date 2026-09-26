@@ -18,32 +18,33 @@ def main(): Unit \ {Env, IO, Exit, Console} =
         case Ok(Command.Serve(serve)) =>
             runServer(serve#port, serve#database)
         case Ok(Command.Convert(convert)) =>
-            onRoot(convert#root, convert#database, root -> loadAndExport(root, convert#exported))
+            onDirectories(convert#csv :: convert#out :: Nil, convert#database, () ->
+                loadAndExport(convert#csv, convert#out, convert#exported))
         case Ok(Command.Load(load)) =>
-            onRoot(load#root, load#database, Load.runAll)
+            onDirectories(load#csv :: Nil, load#database, () -> Load.runAll(load#csv))
         case Ok(Command.Export(export)) =>
-            onRoot(export#root, export#database, root -> Export.runAll(root, export#exported))
+            onDirectories(export#out :: Nil, export#database, () -> Export.runAll(export#out, export#exported))
     };
     Exit.exit(code)
 
 /// A round that failed to load has no rows, so the export fails it too and
 /// leaves the files it would have replaced alone. The rounds beside it are
 /// written either way.
-def loadAndExport(root: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, SqlWrite} =
-    let loaded = Load.runAll(root);
-    let exported = Export.runAll(root, rounds);
+def loadAndExport(csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, SqlWrite} =
+    let loaded = Load.runAll(csv);
+    let exported = Export.runAll(out, rounds);
     if (loaded == 0 and exported == 0) 0 else 1
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onRoot(root: String, database: Option[String], stage: String -> Int32 \ ef): Int32 \ (ef - {SqlRead, SqlWrite, DbErr}) + Env + IO + Console =
-    match checkRoot(root) {
+def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> Int32 \ ef): Int32 \ (ef - {SqlRead, SqlWrite, DbErr}) + Env + IO + Console =
+    match Result.traverseX(checkDirectory, dirs) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");
             1
         case Ok(()) =>
             withDatabase(database, url ->
-                match Db.runWithError(() -> Jdbc.withConnection(url, () -> stage(root))) {
+                match Db.runWithError(() -> Jdbc.withConnection(url, stage)) {
                     case Ok(code) => code
                     case Err(e)   =>
                         Console.eprintln("Error: ${e}");
@@ -80,12 +81,14 @@ def databaseUrl(database: Option[String]): Option[String] \ Env =
         case None      => Env.getVar("DATABASE_URL")
     }
 
-/// Checked once here rather than once per round, so a mistyped root reads as one
-/// mistake instead of as every race being missing.
-def checkRoot(root: String): Result[CliError, Unit] \ IO =
+/// Checked once here rather than once per round, so a mistyped directory reads
+/// as one mistake instead of as every race being missing. `--out` is checked as
+/// `--csv` is, though the season directories under it are made as they are
+/// needed: a mistyped one would otherwise be made too.
+def checkDirectory(dir: String): Result[CliError, Unit] \ IO =
     forM(
-        exists <- Files.exists(root) |> Result.mapErr(CliError.File);
-        _      <- if (exists) Ok(()) else Err(CliError.InputPathNotFound(root));
-        isDir  <- Files.isDirectory(root) |> Result.mapErr(CliError.File);
-        _      <- if (isDir) Ok(()) else Err(CliError.RootNotADirectory(root))
+        exists <- Files.exists(dir) |> Result.mapErr(CliError.File);
+        _      <- if (exists) Ok(()) else Err(CliError.InputPathNotFound(dir));
+        isDir  <- Files.isDirectory(dir) |> Result.mapErr(CliError.File);
+        _      <- if (isDir) Ok(()) else Err(CliError.RootNotADirectory(dir))
     ) yield ()

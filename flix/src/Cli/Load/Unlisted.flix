@@ -7,7 +7,7 @@ mod Cli.Load.Unlisted {
     /// Kept apart from the walk that finds them because this is the half that
     /// can be wrong unnoticed: the run still writes exactly what it should, and
     /// only the warnings are junk.
-    pub def detect(tasks: List[FileTask.FileTask], found: List[String]): List[String] =
+    pub def detect(tasks: List[FileTask.Input], found: List[String]): List[String] =
         let listed = tasks |> List.map(task -> roundKey(task#inputPath));
         found |> List.filter(path -> not List.memberOf(roundKey(path), listed))
 

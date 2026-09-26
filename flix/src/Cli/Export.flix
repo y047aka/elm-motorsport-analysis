@@ -31,13 +31,13 @@ mod Cli.Export {
     /// Where the app reads the exported files from, as `/api/wec` is where it
     /// reads the served rounds from.
     ///
-    /// Not where the files are written to. That is the run's argument, and
+    /// Not where the files are written to. That is the run's `--out`, and
     /// `../app/static/wec` and `/static/wec` are the same place reached two
     /// different ways.
     pub def urlRoot(): String = "/static/wec"
 
     pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, SqlRead} =
-        let tasks = FileTask.selected(root, rounds);
+        let tasks = FileTask.outputs(root, rounds);
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
                 case Ok(rendered) =>
@@ -58,7 +58,7 @@ mod Cli.Export {
         Console.println("Export completed: ${summary#exported} exported, ${errors} errors");
         if (errors == 0) 0 else 1
 
-    def exportRound(task: FileTask.FileTask): Result[CliError, Rendered] \ {IO, SqlRead} =
+    def exportRound(task: FileTask.Output): Result[CliError, Rendered] \ {IO, SqlRead} =
         match Db.runWithError(() -> read(task)) {
             case Err(cause)  => Err(CliError.Database(cause))
             case Ok(outcome) => outcome |> Result.flatMap(rendered ->
@@ -72,7 +72,7 @@ mod Cli.Export {
     ///
     /// `pub` reaches no further than `Cli.TestExport`, which drives it without
     /// a directory to write into.
-    pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ DbRead =
+    pub def read(task: FileTask.Output): Result[CliError, Rendered] \ DbRead =
         if (not Round.loaded(task#entry))
             Err(CliError.RoundNotLoaded)
         else
@@ -98,8 +98,9 @@ mod Cli.Export {
             timelineJsonl = Render.renderTimelineJsonl(timeline)
         }
 
-    def writeRound(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
+    def writeRound(task: FileTask.Output, rendered: Rendered): Result[CliError, Unit] \ IO =
         forM(
+            _ <- Files.mkDirs(task#directory) |> Result.mapErr(CliError.File);
             _ <- Files.write(task#outputPath, rendered#metadataJson) |> Result.mapErr(CliError.File);
             _ <- Files.write(task#lapsPath, rendered#lapsJsonl) |> Result.mapErr(CliError.File);
             _ <- Files.write(task#timelinePath, rendered#timelineJsonl) |> Result.mapErr(CliError.File)

@@ -6,25 +6,30 @@ mod Cli.Args {
     use Motorsport.Calendar
 
     pub enum ArgsError with ToString {
-        case MissingRoot
+        case MissingDirectory(String)
         case UnexpectedArguments(List[String])
         case ParseErrors(List[String])
     }
 
     /// Converting is the two stages one after the other: the CSV goes into the
     /// rows, and the files are written out of them. `Load` and `Export` are the
-    /// same two taken singly. All three take the directory holding the season
-    /// directories, and what to convert comes from `Motorsport.Calendar`, so
+    /// same two taken singly, so each takes the one directory it reaches --
+    /// `csv` holding the season directories of CSV, `out` the ones the files
+    /// are written into. What to convert comes from `Motorsport.Calendar`, so
     /// there is no per-file input and nothing to redirect a single file's
     /// output to. Serving reads the rounds a run has already loaded, so it
     /// takes a database and no directory.
     ///
+    /// A stage handed the other stage's directory as well ignores it, as a
+    /// load ignores `--export-only`: the flake names both to every converting
+    /// run, and a stage flag forwarded to one arrives beside them.
+    ///
     /// `exported` narrows the writing stage alone: a round left out of it is
     /// loaded like any other, and `/api` answers for it.
     pub enum Command {
-        case Convert({ root = String, database = Option[String], exported = Rounds })
-        case Load({ root = String, database = Option[String] })
-        case Export({ root = String, database = Option[String], exported = Rounds })
+        case Convert({ csv = String, out = String, database = Option[String], exported = Rounds })
+        case Load({ csv = String, database = Option[String] })
+        case Export({ out = String, database = Option[String], exported = Rounds })
         case Serve({ port = Int32, database = Option[String] })
     }
 
@@ -32,6 +37,8 @@ mod Cli.Args {
 
     enum Setting {
         case Database(String)
+        case Csv(String)
+        case Out(String)
         case Load
         case Export
         case Serve
@@ -45,6 +52,18 @@ mod Cli.Args {
             optionNames   = "database" :: Nil,
             argDescriptor = ArgDescr.ReqArg(url -> Some(Setting.Database(url)), "URL"),
             explanation   = "JDBC URL to compute the run in\n(defaults to DATABASE_URL)"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "csv" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(dir -> Some(Setting.Csv(dir)), "DIR"),
+            explanation   = "the directory holding the season directories\nof CSV"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "out" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(dir -> Some(Setting.Out(dir)), "DIR"),
+            explanation   = "the directory the season directories of\nfiles are written into"
         } ::
         {
             optionIds     = Nil,
@@ -97,17 +116,26 @@ mod Cli.Args {
                 }
         else if (List.exists(isPort, settings))
             Err(ArgsError.ParseErrors("--port is only for --serve" :: Nil))
+        else if (not List.isEmpty(nonOptions))
+            Err(ArgsError.UnexpectedArguments(nonOptions))
         else
-            forM(
-                root     <- extractRoot(nonOptions);
-                exported <- exportedRounds(settings)
-            ) yield
-                // Naming both stages is naming the run they make up.
-                match (loading(settings), exporting(settings)) {
-                    case (true, false) => Command.Load({ root = root, database = database })
-                    case (false, true) => Command.Export({ root = root, database = database, exported = exported })
-                    case _             => Command.Convert({ root = root, database = database, exported = exported })
-                }
+            // Naming both stages is naming the run they make up.
+            match (loading(settings), exporting(settings)) {
+                case (true, false) =>
+                    required("csv", csvDir(settings))
+                        |> Result.map(csv -> Command.Load({ csv = csv, database = database }))
+                case (false, true) =>
+                    forM(
+                        out      <- required("out", outDir(settings));
+                        exported <- exportedRounds(settings)
+                    ) yield Command.Export({ out = out, database = database, exported = exported })
+                case _ =>
+                    forM(
+                        csv      <- required("csv", csvDir(settings));
+                        out      <- required("out", outDir(settings));
+                        exported <- exportedRounds(settings)
+                    ) yield Command.Convert({ csv = csv, out = out, database = database, exported = exported })
+            }
 
     /// `Every` unless a run named rounds: an option nobody passed is not a
     /// selection of nothing.
@@ -138,12 +166,20 @@ mod Cli.Args {
             case Validation.Success(result) => Ok(result)
         }
 
-    def extractRoot(nonOptions: List[String]): Result[ArgsError, String] =
-        match nonOptions {
-            case root :: Nil => Ok(root)
-            case Nil         => Err(ArgsError.MissingRoot)
-            case extras      => Err(ArgsError.UnexpectedArguments(extras))
-        }
+    def required(name: String, dir: Option[String]): Result[ArgsError, String] =
+        Option.toOk(ArgsError.MissingDirectory("--${name}"), dir)
+
+    def csvDir(settings: List[Setting]): Option[String] =
+        settings |> List.foldLeft((acc, setting) -> match setting {
+            case Setting.Csv(dir) => Some(dir)
+            case _                => acc
+        }, None)
+
+    def outDir(settings: List[Setting]): Option[String] =
+        settings |> List.foldLeft((acc, setting) -> match setting {
+            case Setting.Out(dir) => Some(dir)
+            case _                => acc
+        }, None)
 
     def isPort(setting: Setting): Bool =
         match setting {
@@ -189,6 +225,6 @@ mod Cli.Args {
         }, defaultPort())
 
     pub def usage(): String =
-        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>, or serve-api", optionDescrs())
+        Util.GetOpt.usageInfo("Usage: cli-run --csv <dir> --out <dir>, or serve-api", optionDescrs())
 
 }

@@ -13,6 +13,9 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `/api` out of the same rows. `flix/README.md` describes it — the server,
   the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
   effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`.
+- **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
+  and nothing else does. It sits outside `/app` because the build copies all of
+  `app/static` into the bundle.
 
 There is no manifest at the repository root; the flake is what ties the three
 together.
@@ -47,11 +50,11 @@ prefixes, and which one says what is being run rather than what is being built:
 `flix-*` builds and tests the project, `cli-*` moves the data through it, and
 `serve-api` is the server. All of them come out of the same jar.
 
-`.#cli-run` takes the directory holding the season directories and converts
-every round `Motorsport.Calendar` lists, in two stages: the CSV goes into the
-tables, and a round's summary `.json`, its laps `.jsonl` one lap per line, its
-timeline `.jsonl` one event per line, and `index.json` beside them are written
-back out of the rows.
+`.#cli-run` converts every round `Motorsport.Calendar` lists, in two stages: the
+CSV under `--csv` (`data/wec`) goes into the tables, and a round's summary
+`.json`, its laps `.jsonl` one lap per line, its timeline `.jsonl` one event per
+line, and `index.json` beside them are written back out of the rows under
+`--out` (`app/static/wec`), in the same season directories.
 **A new round is added to `Motorsport.Calendar` first** — the run converts
 nothing the calendar does not list, reports any CSV no round names, and fails
 any round whose CSV is missing.

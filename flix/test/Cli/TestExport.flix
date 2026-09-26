@@ -13,8 +13,8 @@ mod Cli.TestExport {
     def imola(): Entry = { season = 2025, id = "imola_6h", date = "2025-04-20" }
 
     /// The paths are never reached: `read` decides before anything is written.
-    def task(entry: Entry): FileTask.FileTask =
-        { inputPath = "", outputPath = "", lapsPath = "", timelinePath = "", entry = entry }
+    def task(entry: Entry): FileTask.Output =
+        { directory = "", outputPath = "", lapsPath = "", timelinePath = "", entry = entry }
 
     def readBack(loaded: Entry, wanted: Entry): Result[CliError, Rendered] \ IO =
         TestSupport.onRound(loaded, TestLapRow.sampleLaps(), () -> Export.read(task(wanted)))

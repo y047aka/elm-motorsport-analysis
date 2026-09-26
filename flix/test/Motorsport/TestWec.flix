@@ -193,7 +193,7 @@ mod Motorsport.TestWec {
             case Err(e)     => Err(e)
         }
 
-    /// Real first-lap row from app/static/wec/2025/le_mans_24h.csv (car 007 lap 1).
+    /// Real first-lap row from data/wec/2025/le_mans_24h.csv (car 007 lap 1).
     def realLeMansLapRow(): String =
         "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395;" +
         "20.708;20.708;13.826;34.534;17.374;51.908;" +

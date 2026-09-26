@@ -124,25 +124,29 @@
         # server. Passed before "$@", so a run can name another round as well.
         exportedRound = "--export-only 2025/le_mans_24h";
 
+        # Relative to `flix`, which every command below changes to.
+        csvDir = "--csv ../data/wec";
+        outDir = "--out ../app/static/wec";
+
         # What `.#tauri-build` runs first, and the one place every round is
         # written: a bundle answers out of the files beside it, so a round left
         # unwritten is a round it cannot open. Converts rather than exports,
         # since a checkout has the CSV and an empty database.
         exportEveryRound = ''
           ${dbEnv}
-          (cd flix && flix run -- ../app/static/wec)
+          (cd flix && flix run -- ${csvDir} ${outDir})
         '';
 
-        # The CLI's one argument is the directory holding the season directories,
-        # and it converts the rounds `Motorsport.Calendar` lists. Anything else
-        # given to `nix run` is forwarded, which is how `--database <url>` is
-        # reached.
-        cliRunCmd = "flix run -- ${exportedRound} ../app/static/wec \"$@\"";
+        # The CLI converts the rounds `Motorsport.Calendar` lists, reading each
+        # season directory under one directory and writing into the same one
+        # under the other. Anything else given to `nix run` is forwarded, which
+        # is how `--database <url>` is reached.
+        cliRunCmd = "flix run -- ${exportedRound} ${csvDir} ${outDir} \"$@\"";
 
         # The two stages of that run, taken singly: `--load` stops at the rows,
         # and `--export` writes the files out of rows already there.
-        cliLoadCmd   = "flix run -- --load ../app/static/wec \"$@\"";
-        cliExportCmd = "flix run -- --export ${exportedRound} ../app/static/wec \"$@\"";
+        cliLoadCmd   = "flix run -- --load ${csvDir} \"$@\"";
+        cliExportCmd = "flix run -- --export ${exportedRound} ${outDir} \"$@\"";
 
         # The fetcher encodes what it downloads, so it needs libwebp beside Node.
         # Kept apart from `mkNodeApp`: every other Node command would carry the

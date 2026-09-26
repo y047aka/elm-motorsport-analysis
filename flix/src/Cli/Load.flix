@@ -84,7 +84,7 @@ mod Cli.Load {
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
     def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, SqlRead, SqlWrite} =
-        let tasks = FileTask.fromCalendar(root);
+        let tasks = FileTask.inputs(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(rounds, acc#numbered, task) {
                 case (Ok(loaded), numbered) =>
@@ -108,7 +108,7 @@ mod Cli.Load {
     /// Not an error: the run converted everything it was asked for, and this is
     /// about what it was not asked for. Saying it is what keeps a forgotten line
     /// in `Motorsport.Calendar` from passing for a clean run.
-    def reportUnlistedCsvFiles(root: String, tasks: List[FileTask.FileTask]): Unit \ {IO, Console} =
+    def reportUnlistedCsvFiles(root: String, tasks: List[FileTask.Input]): Unit \ {IO, Console} =
         match Files.walkCsvFiles(root) {
             case Err(e) => Console.eprintln("Calendar: could not check for unlisted CSV files (${e})")
             case Ok(found) =>
@@ -128,7 +128,7 @@ mod Cli.Load {
     def processFile(
         rounds: List[RoundRow],
         numbering: Numbered,
-        task: FileTask.FileTask
+        task: FileTask.Input
     ): (Result[CliError, Loaded], Numbered) \ {IO, Console, SqlRead, SqlWrite} =
         match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
             case Err(e) => (Err(e), numbering)
@@ -147,7 +147,7 @@ mod Cli.Load {
                 (outcome, if (Result.isOk(outcome)) numbered else numbering)
         }
 
-    def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
+    def decode(task: FileTask.Input): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
     /// `Db.CarRow` and `Db.CarDrivers` each keep a first mention and the
@@ -155,7 +155,7 @@ mod Cli.Load {
     /// one seat -- two ways is said here or nowhere. It is a reading of the
     /// file rather than of the rows, which is why it comes before the stage
     /// that sends them.
-    def reportDisagreements(task: FileTask.FileTask, rawLaps: List[RawLap]): Unit \ Console =
+    def reportDisagreements(task: FileTask.Input, rawLaps: List[RawLap]): Unit \ Console =
         CarRow.disagreements(rawLaps)
             |> List.forEach(d -> Console.eprintln(
                 "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
@@ -177,7 +177,7 @@ mod Cli.Load {
         newDrivers: List[Drivers.DriverRow],
         newEntries: List[Entries.EntryRow],
         seats: List[CarDrivers.Seat],
-        task: FileTask.FileTask,
+        task: FileTask.Input,
         rawLaps: List[RawLap]
     ): Loaded \ Db =
         match Rounds.idIn(rounds, task#entry) {
@@ -215,14 +215,14 @@ mod Cli.Load {
     /// within one round: the first round to name an entry describes it, and a
     /// later round describing it otherwise reaches no column.
     def reportEntryDisagreements(
-        task: FileTask.FileTask,
+        task: FileTask.Input,
         differing: List[Entries.Disagreement]
     ): Unit \ Console =
         differing |> List.forEach(d -> Console.eprintln(
             "${task#entry#id}: [car ${d#carNumber}] season-${d#season} entry: "
                 + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""))
 
-    def reportViolations(task: FileTask.FileTask, loaded: Loaded): Loaded \ {Console, DbRead} =
+    def reportViolations(task: FileTask.Input, loaded: Loaded): Loaded \ {Console, DbRead} =
         Validation.validate(task#entry) |> List.forEach(Console.eprintln);
         loaded
 

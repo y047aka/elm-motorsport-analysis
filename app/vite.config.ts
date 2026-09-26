@@ -23,7 +23,6 @@ const mimeTypes: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".svg": "image/svg+xml",
-  ".csv": "text/csv",
 };
 
 function sendFile(res: ServerResponse, filePath: string): boolean {

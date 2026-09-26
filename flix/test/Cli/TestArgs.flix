@@ -4,56 +4,90 @@ mod Cli.TestArgs {
     use Cli.Args.Command
     use Cli.FileTask.Rounds
 
+    def csv(): List[String] = "--csv" :: "../data/wec" :: Nil
+
+    def out(): List[String] = "--out" :: "../app/static/wec" :: Nil
+
+    def both(): List[String] = csv() ::: out()
+
     @Test
     def testParseNoArgs(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse(Nil)))
 
     /// Neither stage named is both of them.
     @Test
-    def testParseRoot(): Unit \ Assert =
-        match Args.parse("../app/static/wec" :: Nil) {
-            case Ok(Command.Convert(convert)) => Assert.assertTrue(convert#root == "../app/static/wec")
-            case _                            => Assert.assertTrue(false)
+    def testParseConvert(): Unit \ Assert =
+        match Args.parse(both()) {
+            case Ok(Command.Convert(convert)) =>
+                Assert.assertTrue(convert#csv == "../data/wec");
+                Assert.assertTrue(convert#out == "../app/static/wec")
+            case _ => Assert.assertTrue(false)
         }
+
+    /// Converting reads one directory and writes the other, so it takes both.
+    @Test
+    def testConvertingTakesBothDirectories(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse(csv())));
+        Assert.assertTrue(Result.isErr(Args.parse(out())))
 
     @Test
     def testParseLoad(): Unit \ Assert =
-        match Args.parse("--load" :: "../app/static/wec" :: Nil) {
-            case Ok(Command.Load(load)) => Assert.assertTrue(load#root == "../app/static/wec")
+        match Args.parse("--load" :: csv()) {
+            case Ok(Command.Load(load)) => Assert.assertTrue(load#csv == "../data/wec")
             case _                      => Assert.assertTrue(false)
         }
 
     /// Naming both stages is naming the run they make up.
     @Test
     def testParseLoadAndExport(): Unit \ Assert =
-        match Args.parse("--load" :: "--export" :: "../app/static/wec" :: Nil) {
+        match Args.parse("--load" :: "--export" :: both()) {
             case Ok(Command.Convert(_)) => Assert.assertTrue(true)
             case _                      => Assert.assertTrue(false)
         }
 
+    /// The directories are named, so nothing is left to be positional.
     @Test
     def testParseUnexpectedArgument(): Unit \ Assert =
-        Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "extra" :: Nil)))
+        Assert.assertTrue(Result.isErr(Args.parse(both() ::: "extra" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse("../data/wec" :: Nil)))
 
     /// The calendar decides what is converted, so there is no single file to
     /// redirect.
     @Test
     def testOutputIsNoLongerAnOption(): Unit \ Assert =
-        Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--output" :: "out.json" :: Nil)))
+        Assert.assertTrue(Result.isErr(Args.parse(both() ::: "--output" :: "out.json" :: Nil)))
 
     @Test
     def testParseExport(): Unit \ Assert =
-        match Args.parse("--export" :: "../app/static/wec" :: Nil) {
-            case Ok(Command.Export(export)) => Assert.assertTrue(export#root == "../app/static/wec")
+        match Args.parse("--export" :: out()) {
+            case Ok(Command.Export(export)) => Assert.assertTrue(export#out == "../app/static/wec")
             case _                          => Assert.assertTrue(false)
         }
 
-    /// Every stage is given the same root, whether it reads the season
-    /// directories or writes them.
+    /// Each stage takes the directory it reaches: a load reads the CSV and
+    /// writes no files, an export writes the files and reads no CSV.
     @Test
-    def testEveryStageTakesARoot(): Unit \ Assert =
-        Assert.assertTrue(Result.isErr(Args.parse("--export" :: Nil)));
-        Assert.assertTrue(Result.isErr(Args.parse("--load" :: Nil)))
+    def testEachStageTakesItsOwnDirectory(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--load" :: out())));
+        Assert.assertTrue(Result.isErr(Args.parse("--export" :: csv())))
+
+    /// The flake names both directories to every converting run, so a stage
+    /// flag forwarded to one arrives beside them.
+    @Test
+    def testAStageIgnoresTheOtherStagesDirectory(): Unit \ Assert =
+        match (Args.parse("--load" :: both()), Args.parse("--export" :: both())) {
+            case (Ok(Command.Load(load)), Ok(Command.Export(export))) =>
+                Assert.assertTrue(load#csv == "../data/wec");
+                Assert.assertTrue(export#out == "../app/static/wec")
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testTheLastDirectoryNamedWins(): Unit \ Assert =
+        match Args.parse("--load" :: csv() ::: "--csv" :: "elsewhere" :: Nil) {
+            case Ok(Command.Load(load)) => Assert.assertTrue(load#csv == "elsewhere")
+            case _                      => Assert.assertTrue(false)
+        }
 
     @Test
     def testServeIsNotAStage(): Unit \ Assert =
@@ -77,12 +111,12 @@ mod Cli.TestArgs {
     /// A converting run has nothing to serve on.
     @Test
     def testPortWithoutServe(): Unit \ Assert =
-        Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--port" :: "9000" :: Nil)))
+        Assert.assertTrue(Result.isErr(Args.parse(both() ::: "--port" :: "9000" :: Nil)))
 
     /// A run nobody narrowed writes every round out.
     @Test
     def testExportedRoundsDefaultToEvery(): Unit \ Assert =
-        match Args.parse("--export" :: "../app/static/wec" :: Nil) {
+        match Args.parse("--export" :: out()) {
             case Ok(Command.Export(export)) => Assert.assertTrue(export#exported == Rounds.Every)
             case _                          => Assert.assertTrue(false)
         }
@@ -92,7 +126,7 @@ mod Cli.TestArgs {
     @Test
     def testParseExportOnly(): Unit \ Assert =
         let args = "--export" :: "--export-only" :: "2025/le_mans_24h"
-            :: "--export-only" :: "2024/fuji_6h" :: "../app/static/wec" :: Nil;
+            :: "--export-only" :: "2024/fuji_6h" :: out();
         match Args.parse(args) {
             case Ok(Command.Export(export)) =>
                 Assert.assertTrue(export#exported == Rounds.Only((2025, "le_mans_24h") :: (2024, "fuji_6h") :: Nil))
@@ -103,7 +137,7 @@ mod Cli.TestArgs {
     /// to, which is what leaves `/api` answering for the rest.
     @Test
     def testAConvertingRunTakesExportOnly(): Unit \ Assert =
-        match Args.parse("--export-only" :: "2025/le_mans_24h" :: "../app/static/wec" :: Nil) {
+        match Args.parse("--export-only" :: "2025/le_mans_24h" :: both()) {
             case Ok(Command.Convert(convert)) =>
                 Assert.assertTrue(convert#exported == Rounds.Only((2025, "le_mans_24h") :: Nil))
             case _ => Assert.assertTrue(false)
@@ -114,7 +148,7 @@ mod Cli.TestArgs {
     @Test
     def testExportOnlyNeedsARoundTheCalendarLists(): Unit \ Assert =
         let rejected = name ->
-            Result.isErr(Args.parse("--export-only" :: name :: "../app/static/wec" :: Nil));
+            Result.isErr(Args.parse("--export-only" :: name :: both()));
         Assert.assertTrue(rejected("le_mans_24h"));
         Assert.assertTrue(rejected("2025/"));
         Assert.assertTrue(rejected("latest/le_mans_24h"));
@@ -133,14 +167,14 @@ mod Cli.TestArgs {
     /// the pair is redundant rather than wrong.
     @Test
     def testALoadTakesExportOnlyAndWritesNothingAnyway(): Unit \ Assert =
-        match Args.parse("--export-only" :: "2025/le_mans_24h" :: "--load" :: "../app/static/wec" :: Nil) {
-            case Ok(Command.Load(load)) => Assert.assertTrue(load#root == "../app/static/wec")
+        match Args.parse("--export-only" :: "2025/le_mans_24h" :: "--load" :: csv()) {
+            case Ok(Command.Load(load)) => Assert.assertTrue(load#csv == "../data/wec")
             case _                      => Assert.assertTrue(false)
         }
 
     /// Serving reads what a run loaded, so there is no directory to give it.
     @Test
-    def testServeTakesNoRoot(): Unit \ Assert =
+    def testServeTakesNoDirectory(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("--serve" :: "../app/static/wec" :: Nil)))
 
 }

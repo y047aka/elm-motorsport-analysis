@@ -30,6 +30,10 @@ mod Util.Files {
             )
         ) |> Result.mapErr(e -> FileError.WriteError(path, "${e}"))
 
+    pub def mkDirs(path: String): Result[FileError, Unit] \ IO =
+        Fs.FileWrite.runWithIO(() -> Fs.FileWrite.mkDirs(path))
+            |> Result.mapErr(e -> FileError.WriteError(path, "${e}"))
+
     pub def exists(path: String): Result[FileError, Bool] \ IO =
         Fs.FileStat.runWithIO(() -> Fs.FileStat.exists(path))
             |> Result.mapErr(e -> FileError.AccessError("${e}"))
