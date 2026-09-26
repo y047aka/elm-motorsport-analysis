@@ -329,12 +329,16 @@ test.describe('Car Detail Columns', () => {
       .evaluateAll((els) => els.map((el) => el.closest('.overflow-y-auto')!.scrollTop));
   }
 
-  /** Scroll each column down by its own amount, so that none reads as another. */
+  /**
+   * Scroll each column down by its own amount, so that none reads as another.
+   * Elm hears of a scroll by its event, which the next frame delivers: a key
+   * pressed before then reorders columns it has not heard were scrolled.
+   */
   async function scrollColumns(page: Page, tops: number[]) {
-    await page.locator(DETAIL).evaluateAll(
-      (els, tops) => els.forEach((el, i) => (el.closest('.overflow-y-auto')!.scrollTop = tops[i])),
-      tops,
-    );
+    await page.locator(DETAIL).evaluateAll(async (els, tops) => {
+      els.forEach((el, i) => (el.closest('.overflow-y-auto')!.scrollTop = tops[i]));
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    }, tops);
     await expect.poll(() => columnScrolls(page)).toEqual(tops);
   }
 
