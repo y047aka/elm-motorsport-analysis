@@ -433,6 +433,34 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['48', '6', '92']);
   });
 
+  test('should end a carry whose column is closed under it, and leave it closed', async ({ page }) => {
+    await carry(page, 0, 0);
+    // The grip has the focus, and the close button is the next thing along.
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await expectColumns(page, ['48', '92']);
+    // Let go of over the grip that has taken the closed one's place.
+    await page.mouse.up();
+    await expectColumns(page, ['48', '92']);
+    await grip(page, 0).focus();
+    await page.keyboard.press('ArrowRight');
+    await expectColumns(page, ['92', '48']);
+  });
+
+  test('should end a carry whose grip goes when the other columns are closed', async ({ page }) => {
+    await page.locator(DETAIL).nth(2).getByRole('button', { name: 'Close this column' }).click();
+    await carry(page, 0, 370);
+    // A second finger, closing the other column: the mouse is held by the grip.
+    await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Close this column' }).evaluate((el) => (el as HTMLElement).click());
+    await expectColumns(page, ['6']);
+    await expect(column(page, 0)).toHaveCSS('transform', 'none');
+    await page.mouse.up();
+    await selectCar(page, '83');
+    await carry(page, 0, 370);
+    await page.mouse.up();
+    await expectColumns(page, ['83', '6']);
+  });
+
   test('should move a column a place at a time by the arrow keys, and keep its grip focused', async ({ page }) => {
     await expect(grip(page, 0)).toHaveAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight');
     await grip(page, 0).focus();

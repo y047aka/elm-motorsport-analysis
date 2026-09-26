@@ -8,10 +8,17 @@
  * must not be moved while it is held.
  */
 export class DragHandle extends HTMLElement {
+  #held = new Set<number>();
+
   constructor() {
     super();
     this.addEventListener("pointerdown", (e) => {
-      if (e.button === 0) this.setPointerCapture(e.pointerId);
+      if (e.button !== 0) return;
+      this.setPointerCapture(e.pointerId);
+      this.#held.add(e.pointerId);
+    });
+    this.addEventListener("lostpointercapture", (e) => {
+      this.#held.delete(e.pointerId);
     });
   }
 
@@ -21,6 +28,21 @@ export class DragHandle extends HTMLElement {
     //
     // A finger on the grip would otherwise scroll the page instead.
     this.style.touchAction = "none";
+  }
+
+  disconnectedCallback() {
+    // The capture lost by leaving the document is reported to the document
+    // rather than to this element, so nothing listening here would hear the
+    // carry end. It is reported here instead, and a microtask later: this runs
+    // while Elm is patching the DOM, and a message sent mid-patch is not drawn
+    // until the one after it.
+    const held = [...this.#held];
+    this.#held.clear();
+    queueMicrotask(() => {
+      for (const pointerId of held) {
+        this.dispatchEvent(new PointerEvent("pointercancel", { pointerId }));
+      }
+    });
   }
 }
 

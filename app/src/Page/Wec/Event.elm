@@ -85,14 +85,16 @@ type CarColumns
 is the pointer's travel and the strip's together, since the strip can be
 scrolled under a pointer that holds still.
 
-`before` is the columns as they stood when it was picked up, which a carry that
-lands where it began leaves them as.
+`before` is the columns as they stood when it was picked up, and `settled` what
+picking it up made of them. A carry that lands where it began puts `before`
+back, unless something else has changed the columns since.
 
 -}
 type alias Carry =
     { carNumber : CarNumber
     , pointerId : Int
     , before : CarColumns
+    , settled : CarColumns
     , from : Float
     , at : Float
     , scrolledFrom : Float
@@ -187,13 +189,18 @@ update shared msg m =
                     ( m, Effect.none )
 
                 Nothing ->
+                    let
+                        settled =
+                            rearrange shared settleColumns m.columns
+                    in
                     ( { m
-                        | columns = rearrange shared settleColumns m.columns
+                        | columns = settled
                         , carried =
                             Just
                                 { carNumber = carNumber
                                 , pointerId = pointer.id
                                 , before = m.columns
+                                , settled = settled
                                 , from = pointer.x
                                 , at = pointer.x
                                 , scrolledFrom = 0
@@ -219,7 +226,7 @@ update shared msg m =
         CancelCarry pointerId ->
             case heldBy pointerId m.carried of
                 Just carry ->
-                    ( { m | columns = carry.before, carried = Nothing }, Effect.none )
+                    ( { m | columns = putBack carry m.columns, carried = Nothing }, Effect.none )
 
                 Nothing ->
                     ( m, Effect.none )
@@ -254,13 +261,22 @@ dropColumn shared pointer m =
                     rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = pointer.x })) m.columns
             in
             if moved == m.columns then
-                ( { m | columns = carry.before, carried = Nothing }, Effect.none )
+                ( { m | columns = putBack carry m.columns, carried = Nothing }, Effect.none )
 
             else
                 reorder shared { moved = carry.carNumber, refocus = False } moved { m | carried = Nothing }
 
         Nothing ->
             ( m, Effect.none )
+
+
+putBack : Carry -> CarColumns -> CarColumns
+putBack carry columns =
+    if columns == carry.settled then
+        carry.before
+
+    else
+        columns
 
 
 stepColumn : Shared.Model -> CarNumber -> Int -> Model -> ( Model, Effect Msg )
