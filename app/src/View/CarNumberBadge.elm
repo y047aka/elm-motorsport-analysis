@@ -36,17 +36,14 @@ viewRow metadata =
         metadata
 
 
-{-| The maker's own mark: their logo on their colour, and nothing of the car
-on it -- for a list that names its cars in words and wants the maker
-recognisable without a plate on every line.
+{-| The maker's own mark: the logo alone, on a width every badge shares so
+that a column of them lines up whatever shape the artwork's own is. It wears
+no colour; a row that says whose car it is takes the colour from the car.
 -}
 manufacturerBadge : Manufacturer -> Html msg
 manufacturerBadge manufacturer =
-    div
-        [ class "p-0.5 rounded-[3px]"
-        , style "background-color" manufacturer.color
-        ]
-        [ manufacturerLogo "h-[14px] object-contain" manufacturer ]
+    div [ class "w-5 grid place-items-center" ]
+        [ manufacturerLogo "h-[14px] max-w-full object-contain" manufacturer ]
 
 
 badge : String -> List (Html msg) -> Car.Metadata -> Html msg
