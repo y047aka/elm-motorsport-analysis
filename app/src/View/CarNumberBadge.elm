@@ -24,16 +24,21 @@ view metadata =
         metadata
 
 
-{-| Horizontal badge: logo on the left, car number on the right.
+{-| Horizontal badge: the maker's logo on their colour, and the car number
+beside it as plain text on nothing. Its `1.375rem` height is what the
+timeline builds its lines on.
 -}
 viewRow : Car.Metadata -> Html msg
 viewRow metadata =
-    badge "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
-        [ manufacturerLogo "h-[14px] object-contain" metadata.manufacturer
-        , div [ class "text-center leading-none text-xs font-bold" ]
+    div [ class "h-[1.375rem] flex items-center gap-1" ]
+        [ div
+            [ class "w-5 grid place-items-center p-0.5 rounded-[3px]"
+            , style "background-color" metadata.manufacturer.color
+            ]
+            [ manufacturerLogo "h-[14px] max-w-full object-contain" metadata.manufacturer ]
+        , div [ class "w-[25px] text-center leading-none text-xs font-bold" ]
             [ text metadata.carNumber ]
         ]
-        metadata
 
 
 {-| The maker's own mark: the logo alone, on a width every badge shares so
