@@ -41,6 +41,7 @@ import Task
 import Time
 import UI.DragHandle as DragHandle
 import UI.Notice as Notice
+import UI.Shadcn.Button as Button
 import UI.Shadcn.Card as Card
 import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
@@ -57,6 +58,7 @@ import View.PlaybackControls as PlaybackControls
 
 type alias Model =
     { mode : Mode
+    , pane : Pane
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , columns : CarColumns
@@ -70,6 +72,15 @@ type alias Model =
 type Mode
     = Columns
     | Tracker
+
+
+{-| The tracker and the timeline are one pane: hiding the tracker's full view
+falls back to the columns, since the strip and the pane compete for the same
+room.
+-}
+type Pane
+    = Shown
+    | Hidden
 
 
 {-| `ClassLeaders` is the car at the front of each class, re-read from the
@@ -110,6 +121,7 @@ type StandingsTab
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { mode = Columns
+      , pane = Shown
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , columns = ClassLeaders
@@ -130,6 +142,7 @@ type Msg
     = StartRace
     | PauseRace
     | ModeChange Mode
+    | TogglePane
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
@@ -160,6 +173,9 @@ update shared msg m =
             -- The tracker's mode draws no strip, and one drawn again starts at
             -- the top.
             ( { m | mode = mode, columnScrolls = Dict.empty }, Effect.none )
+
+        TogglePane ->
+            ( { m | pane = togglePane m.pane, mode = Columns }, Effect.none )
 
         StandingsTabChange tab ->
             ( { m | standingsTab = tab }, Effect.none )
@@ -433,6 +449,16 @@ settleColumns snapshot columns =
     pickedOr columns (columnCarNumbers snapshot columns)
 
 
+togglePane : Pane -> Pane
+togglePane pane =
+    case pane of
+        Shown ->
+            Hidden
+
+        Hidden ->
+            Shown
+
+
 pickedOr : CarColumns -> List CarNumber -> CarColumns
 pickedOr fallback carNumbers =
     case carNumbers of
@@ -471,7 +497,7 @@ view shared m =
         [ main_
             [ Attributes.class "dark h-full grid grid-rows-[auto_1fr]"
             ]
-            [ navigation (headerTitle shared) maybeRound
+            [ navigation m.pane (headerTitle shared) maybeRound
             , case maybeRound of
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
@@ -523,6 +549,18 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
+{-| Which cell holds the tracker and which the columns, and how much of the
+tracker is drawn.
+-}
+type alias Layout =
+    { tracker : String
+    , trackerDetail : TrackerChart.Detail
+    , onTracker : Msg
+    , detail : String
+    , shown : List CarAt
+    }
+
+
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
@@ -548,11 +586,8 @@ trackerView track timeline snapshot replay m =
                     , detail = "col-start-2 row-start-1 row-span-2"
                     , shown = carsWithColumns
                     }
-    in
-    div
-        [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
-        [ div
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
+
+        gridCells =
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
@@ -562,9 +597,43 @@ trackerView track timeline snapshot replay m =
                     snapshot
                 ]
             , columnStrip layout.detail m replay snapshot layout.shown
-            , div
-                -- The cell is the only box in the chain whose height is settled,
-                -- so a square SVG measured against the width overflows the card.
+            ]
+                ++ paneCells m.pane layout track snapshot timeline replay
+    in
+    div
+        [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
+        [ div
+            [ Attributes.class
+                ("shrink-0 h-full grid "
+                    ++ (case m.pane of
+                            Shown ->
+                                "grid-cols-[218px_1fr_300px]"
+
+                            Hidden ->
+                                "grid-cols-[218px_1fr]"
+                       )
+                    ++ " grid-rows-[300px_minmax(0,1fr)] gap-2.5"
+                )
+            ]
+            gridCells
+        , standingsPanel m.standingsTab m replay snapshot
+        , standingsPopover
+        , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.announcement ]
+        ]
+
+
+{-| The tracker and the timeline, or nothing once the pane is hidden. The cell
+is the only box in the chain whose height is settled, so a square SVG measured
+against the width overflows the card.
+-}
+paneCells : Pane -> Layout -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
+paneCells pane layout track snapshot timeline replay =
+    case pane of
+        Hidden ->
+            []
+
+        Shown ->
+            [ div
                 [ Attributes.class (layout.tracker ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
                 , onClick layout.onTracker
                 ]
@@ -578,10 +647,6 @@ trackerView track timeline snapshot replay m =
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
             ]
-        , standingsPanel m.standingsTab m replay snapshot
-        , standingsPopover
-        , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.announcement ]
-        ]
 
 
 columnCarNumbers : Snapshot -> CarColumns -> List CarNumber
@@ -1118,10 +1183,10 @@ standingsPopover =
         ]
 
 
-navigation : String -> Maybe Shared.LoadedRound -> Html Msg
-navigation title maybeRound =
+navigation : Pane -> String -> Maybe Shared.LoadedRound -> Html Msg
+navigation pane title maybeRound =
     nav
-        [ Attributes.class "p-3 grid grid-cols-[auto_1fr] items-center gap-x-10" ]
+        [ Attributes.class "p-3 grid grid-cols-[auto_1fr_auto] items-center gap-x-10" ]
         [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
@@ -1137,6 +1202,41 @@ navigation title maybeRound =
                     , onPause = PauseRace
                     , toReplayMsg = ReplayMsg
                     }
+        , paneToggle pane
+        ]
+
+
+{-| The arrows point at the edge the pane lives on.
+-}
+paneToggle : Pane -> Html Msg
+paneToggle pane =
+    let
+        verb =
+            case pane of
+                Shown ->
+                    "Hide"
+
+                Hidden ->
+                    "Show"
+
+        glyph =
+            case pane of
+                Shown ->
+                    "»"
+
+                Hidden ->
+                    "«"
+    in
+    Button.view
+        { label = glyph
+        , variant = Button.Ghost
+        , size = Button.Icon
+        , shape = Button.Circle
+        , disabled = False
+        , onPress = TogglePane
+        }
+        [ attribute "aria-label" (verb ++ " the tracker and timeline")
+        , Attributes.title (verb ++ " the tracker and timeline")
         ]
 
 
