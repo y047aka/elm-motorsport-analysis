@@ -607,7 +607,7 @@ trackerView track timeline snapshot replay m =
                 ("shrink-0 h-full grid "
                     ++ (case m.pane of
                             Shown ->
-                                "grid-cols-[218px_1fr_300px]"
+                                "grid-cols-[218px_1fr_285px]"
 
                             Hidden ->
                                 "grid-cols-[218px_1fr]"
