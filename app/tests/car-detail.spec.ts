@@ -322,11 +322,18 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['48', '6', '92']);
   });
 
-  /** How far down each column is scrolled, left to right. */
+  /**
+   * How far down each column is scrolled, left to right. The box a column
+   * scrolls in holds everything but the header, so it sits inside the detail
+   * element rather than around it, and is named by the car number the detail
+   * element carries.
+   */
   function columnScrolls(page: Page) {
     return page
       .locator(DETAIL)
-      .evaluateAll((els) => els.map((el) => el.closest('.overflow-y-auto')!.scrollTop));
+      .evaluateAll((els) =>
+        els.map((el) => document.getElementById(`column-scroll-${el.getAttribute('data-car-detail')}`)!.scrollTop),
+      );
   }
 
   /**
@@ -336,7 +343,9 @@ test.describe('Car Detail Columns', () => {
    */
   async function scrollColumns(page: Page, tops: number[]) {
     await page.locator(DETAIL).evaluateAll(async (els, tops) => {
-      els.forEach((el, i) => (el.closest('.overflow-y-auto')!.scrollTop = tops[i]));
+      els.forEach((el, i) => {
+        document.getElementById(`column-scroll-${el.getAttribute('data-car-detail')}`)!.scrollTop = tops[i];
+      });
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     }, tops);
     await expect.poll(() => columnScrolls(page)).toEqual(tops);

@@ -866,12 +866,13 @@ columnCard several held comparison cars snapshot car =
             car.metadata.carNumber
     in
     Card.card []
-        -- A card's content does not shrink below what it holds, so the box that
-        -- scrolls has to be a flex child of the card.
+        -- A card's content does not shrink below what it holds, so the card
+        -- settles the height here and the panel scrolls within it, under the
+        -- header. The row is `minmax(0,1fr)` rather than `auto`: an `auto` row
+        -- takes the content's height and overflows the card rather than
+        -- cropping it.
         [ div
-            [ Attributes.id (columnScrollId carNumber)
-            , Attributes.class "flex-1 min-h-0 overflow-y-auto"
-            , Html.Events.on "scroll" (Decode.map (ColumnScrolled carNumber) (Decode.at [ "target", "scrollTop" ] Decode.float))
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
             ]
             [ Card.content []
                 [ CarDetail.view
@@ -889,6 +890,8 @@ columnCard several held comparison cars snapshot car =
                         else
                             Nothing
                     , comparison = comparison
+                    , scrollId = columnScrollId carNumber
+                    , onScroll = ColumnScrolled carNumber
                     }
                     cars
                     snapshot

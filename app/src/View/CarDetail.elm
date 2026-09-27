@@ -22,6 +22,8 @@ is the `details` element's own, and lasts as long as the column's DOM does.
 
 import Html exposing (Html, details, div, h3, summary, text)
 import Html.Attributes exposing (attribute, class)
+import Html.Events
+import Json.Decode as Decode
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
@@ -93,12 +95,17 @@ update msg (Comparison comparison) =
 
 
 {-| The panel carries `data-car-detail`, which the visual tests locate it by.
+
+`scrollId` and `onScroll` belong to the box the panel scrolls in: the header
+holds its place at the top while everything under it scrolls.
 -}
 view :
     { toMsg : Msg -> msg
     , onClose : Maybe msg
     , grip : Maybe (Html msg)
     , comparison : Comparison
+    , scrollId : String
+    , onScroll : Float -> msg
     }
     -> List Car
     -> Snapshot
@@ -111,21 +118,24 @@ view config cars snapshot focused =
     in
     div
         [ attribute "data-car-detail" focused.metadata.carNumber
-        , class "grid gap-y-3"
+        , class "h-full grid grid-rows-[auto_minmax(0,1fr)] gap-y-3"
         ]
-        -- Sticks to the top of the column's scroll box. The padding the
-        -- negative margin cancels gives the background room to cover the
-        -- grid's gap, which scrolled content would otherwise streak through.
-        [ div [ class "sticky top-0 z-10 -mb-3 bg-background pb-3" ]
-            [ Header.view
-                { startPosition = startPositionOf cars focused
-                , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
-                , onClose = config.onClose
-                , grip = config.grip
-                }
-                focused
+        [ Header.view
+            { startPosition = startPositionOf cars focused
+            , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
+            , onClose = config.onClose
+            , grip = config.grip
+            }
+            focused
+        -- The header holds its place and the panel scrolls under it. The id
+        -- is the caller's: keyed reordering moves this box out of the
+        -- document, and the scroll is restored back into it once it is back.
+        , div
+            [ attribute "id" config.scrollId
+            , class "min-h-0 overflow-y-auto"
+            , Html.Events.on "scroll" (Decode.map config.onScroll (Decode.at [ "target", "scrollTop" ] Decode.float))
             ]
-        , Html.map config.toMsg (panel config.comparison cars snapshot rivals focused)
+            [ Html.map config.toMsg (panel config.comparison cars snapshot rivals focused) ]
         ]
 
 
