@@ -8,7 +8,7 @@ the cars the middle of it is given over to.
 -}
 
 import Html exposing (Html, button, div, li, text)
-import Html.Attributes exposing (attribute, class)
+import Html.Attributes exposing (attribute, class, style)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
@@ -93,7 +93,11 @@ carRow onSelect metadata position driverSurname isInPit hasColumn =
              , class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
              ]
                 ++ (if hasColumn then
-                        [ class "bg-accent text-accent-foreground" ]
+                        -- The car's own colour, thinned enough to write on --
+                        -- the same reading the rivals legend gives its row.
+                        [ style "background-color"
+                            ("color-mix(in oklch, " ++ metadata.manufacturer.color ++ " 25%, transparent)")
+                        ]
 
                     else
                         [ onClick (onSelect metadata.carNumber)
