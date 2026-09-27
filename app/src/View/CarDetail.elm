@@ -113,13 +113,18 @@ view config cars snapshot focused =
         [ attribute "data-car-detail" focused.metadata.carNumber
         , class "grid gap-y-3"
         ]
-        [ Header.view
-            { startPosition = startPositionOf cars focused
-            , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
-            , onClose = config.onClose
-            , grip = config.grip
-            }
-            focused
+        -- Sticks to the top of the column's scroll box. The padding the
+        -- negative margin cancels gives the background room to cover the
+        -- grid's gap, which scrolled content would otherwise streak through.
+        [ div [ class "sticky top-0 z-10 -mb-3 bg-card pb-3" ]
+            [ Header.view
+                { startPosition = startPositionOf cars focused
+                , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
+                , onClose = config.onClose
+                , grip = config.grip
+                }
+                focused
+            ]
         , Html.map config.toMsg (panel config.comparison cars snapshot rivals focused)
         ]
 
