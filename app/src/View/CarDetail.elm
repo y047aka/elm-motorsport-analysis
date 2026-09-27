@@ -122,7 +122,6 @@ view config cars snapshot focused =
         ]
         [ Header.view
             { startPosition = startPositionOf cars focused
-            , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
             , onClose = config.onClose
             , grip = config.grip
             }
@@ -177,7 +176,10 @@ panel comparison cars snapshot rivals focused =
     -- No gap: the sections carry their own padding, and the rule between two of
     -- them wants to sit in the middle of that rather than have space of its own.
     div [ class "grid" ]
-        [ container "Rivals" (legend snapshot rivals)
+        [ standing
+            (gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused)
+            focused
+        , container "Rivals" (legend snapshot rivals)
         , container "Lap times"
             (LapTimes.view { bestTimes = Snapshot.bestTimes snapshot } laps focused)
         , charts comparison snapshot rivals
@@ -302,6 +304,33 @@ rivalsOf snapshot focused =
 startPositionOf : List Car -> CarAt -> Maybe Position
 startPositionOf cars focused =
     carOf cars focused |> Maybe.map .startPosition
+
+
+{-| Where the car stands in its class, its laps, and the gap its class leader
+is answering: the strip a timing sheet prints its row in, leading the part of
+the panel that scrolls under the header.
+
+`toLeader` is the caller's rather than read off the car, because a `CarAt`
+carries the gap to the field's leader and this line reports the car's class --
+which for an LMGT3 car is several laps and another race away.
+
+-}
+standing : Gap -> CarAt -> Html msg
+standing toLeader item =
+    div [ class "border border-border rounded-lg grid grid-cols-3" ]
+        [ statCell "Class" (text (Position.toOrdinal item.standing.positionInClass))
+        , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
+        , statCell "Class leader" (text (Gap.toString toLeader))
+        ]
+
+
+statCell : String -> Html msg -> Html msg
+statCell label value =
+    div
+        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
+        [ div [ class "text-[8px] uppercase tracking-[0.03em] text-muted-foreground" ] [ text label ]
+        , div [ class "text-[12px] tabular-nums" ] [ value ]
+        ]
 
 
 {-| The car's laps as the race holds them, which is the same list from one frame

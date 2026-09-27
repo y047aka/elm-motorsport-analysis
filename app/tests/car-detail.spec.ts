@@ -96,8 +96,8 @@ test.describe('Car Detail Visual Tests', () => {
     await history.locator('summary', { hasText: 'Lap history' }).click();
     await expect(history).toHaveAttribute('open', '');
     // Last, so that four hundred rows push nothing a reader came for off the
-    // bottom of the panel. The rivals lead, being where the header's standing
-    // line stops.
+    // bottom of the panel. The rivals lead the ruled sections, and the
+    // standing strip above them is not one of them -- it carries no heading.
     const sections = await page.locator(DETAIL).locator('h3, summary').allTextContents();
     expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
       .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history']);
