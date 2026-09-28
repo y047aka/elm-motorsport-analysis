@@ -21,7 +21,7 @@ is the `details` element's own, and lasts as long as the column's DOM does.
 -}
 
 import Html exposing (Html, details, div, h3, summary, text)
-import Html.Attributes exposing (attribute, class)
+import Html.Attributes exposing (attribute, class, style)
 import Html.Events
 import Json.Decode as Decode
 import List.Extra
@@ -257,12 +257,13 @@ legendEntry snapshot focused inFront item =
     div
         [ attribute "data-rival" item.metadata.carNumber
         , class "grid grid-cols-[1.75rem_auto_1fr_auto] items-center gap-x-2 py-0.5 px-1 rounded"
-        , class
+        , style "background-color"
             (if isFocused then
-                "bg-accent/40"
+                -- The car's own colour, thinned enough to write on.
+                "color-mix(in oklch, " ++ item.metadata.manufacturer.color ++ " 25%, transparent)"
 
              else
-                ""
+                "transparent"
             )
         ]
         [ div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]

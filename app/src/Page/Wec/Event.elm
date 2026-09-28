@@ -542,7 +542,7 @@ eventRows cars timeline occurredCount =
 
 
 {-| A row is two lines whatever it holds, the first as tall as the badge: the
-`1.375rem` is `CarNumberBadge.viewRowPlain`'s height, and moves with it.
+`1.375rem` is `CarNumberBadge.viewRow`'s height, and moves with it.
 -}
 eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
 eventRow carsByNumber event =
@@ -596,7 +596,7 @@ carBadge : Maybe Car -> EventType -> Html Msg
 carBadge car eventType =
     case ( car, eventType ) of
         ( Just { metadata }, _ ) ->
-            CarNumberBadge.viewRowPlain metadata
+            CarNumberBadge.viewRow metadata
 
         ( Nothing, CarEvent carNumber _ ) ->
             span [] [ text carNumber ]
