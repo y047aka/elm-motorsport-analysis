@@ -28,7 +28,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | --- | --- |
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
-| `nix run .#test` | elm-verify-examples + elm-test |
+| `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
 | `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
