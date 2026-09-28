@@ -210,9 +210,9 @@ boundsOf corners =
                 rest
 
 
-{-| The chart fills the box it is given -- both drawings keep their own
-proportions inside whatever box that is -- and settling that box is the
-caller's work: a card's content has no height to give a percentage of.
+{-| The chart fills whatever box it is given, proportions and all -- so a box
+whose height is sized by its content is sized by this drawing, not the other
+way round. Settling the box first is the caller's work.
 -}
 view : Detail -> Track -> Snapshot -> Svg msg
 view detail shown standings =

@@ -311,7 +311,7 @@ The tracker's box is settled the way the tracker column settles its own --
 row, grow, row -- because the card's content has no height of its own to
 give a drawing a percentage of: a drawing sized only by its viewBox's aspect,
 and a tall circuit's is very tall, runs past the card's border instead of
-inside it. With the box settled, the svg keeps its proportions and fits.
+inside it.
 -}
 paneCells : Pane -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
 paneCells pane track snapshot timeline replay =

@@ -10,10 +10,7 @@ module Page.Wec.Columns exposing
 carrying, and where each is drawn while that goes on.
 
 A column belongs either to a car or to the tracker; `StripKey` is that
-choice, and the order -- `Columns` -- is a list of them. `Model` holds one
-order, the one carried column, and how far down each panel was scrolled.
-Every edit is total: nothing fails, and stand-ins that have settled stay
-settled.
+choice, and the order -- `Columns` -- is a list of them. Every edit is total.
 
 -}
 
@@ -65,16 +62,13 @@ carOfKey key =
 `Live` is the car at the front of each class, re-read from the snapshot as
 the race runs, with the tracker's column behind them where its flag says.
 `Picked` is fixed, in the order the reader left them in, and any open, close
-or move settles the stand-ins into one -- the tracker's column, once settled
-with them, holds its place among the cars in that order too.
+or move settles the stand-ins into one.
 -}
 type Columns
     = Live { tracker : Bool }
     | Picked StripKey (List StripKey)
 
 
-{-| The order the strip stands in.
--}
 keysOf : Snapshot -> Columns -> List StripKey
 keysOf snapshot columns =
     case columns of
@@ -123,8 +117,8 @@ leaderOfEachClass snapshot =
 
 
 {-| There is no ceiling on how many, and each column draws its own charts on
-every frame of playback. Opening and closing name the car, and join the cars
-at the back of them -- before the tracker when its column stands among them.
+every frame of playback. A car opened joins the back, and never jumps over
+the tracker's column.
 -}
 open : CarNumber -> Snapshot -> Columns -> Columns
 open carNumber snapshot columns =
@@ -426,8 +420,7 @@ type Msg
     | Settled
 
 
-{-| The field is given per call and held by nobody: the stand-ins are read
-off it the moment an edit needs them, and the panels' scroll positions are
+{-| The field is given per call, not kept: the panels' scroll positions are
 put back once the moved column has been drawn in its new place -- the grip's
 focus first, since focusing scrolls the grip into view and that scrolls the
 panel too.
