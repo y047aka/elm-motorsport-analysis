@@ -265,7 +265,7 @@ legendEntry snapshot focused inFront item =
         ]
         [ div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
             [ text (Position.toOrdinal item.standing.positionInClass) ]
-        , CarNumberBadge.viewLegend item.metadata
+        , CarNumberBadge.viewRow item.metadata
         , div [ class "text-[11px] truncate" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , div [ class "text-[12px] tabular-nums whitespace-nowrap" ]
