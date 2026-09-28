@@ -1,22 +1,9 @@
 module Page.Wec.Columns exposing
-    ( Model
-    , Msg(..)
-    , StripKey(..)
-    , carsIn
-    , gap
-    , gripId
-    , init
-    , isCarried
-    , keyName
-    , keysOf
-    , placementAttributes
-    , placements
-    , px
-    , resolve
-    , scrollId
-    , stripId
-    , update
-    , width
+    ( Model, init, update, Msg(..)
+    , StripKey(..), keyName
+    , keysOf, resolve, carsIn
+    , placements, isCarried, placementAttributes
+    , gripId, stripId, scrollId, width, gap, px
     )
 
 {-| The strip of columns: what order they stand in, which one a pointer is
@@ -24,6 +11,20 @@ carrying, and where each is drawn while that goes on.
 
 A column belongs either to a car or to the tracker; `StripKey` is that
 choice, and the order -- `Columns` -- is a list of them. Every edit is total.
+
+The names sort into five shelves:
+
+- `Model`, `init`, `update`, `Msg` -- the strip's state and what moves it.
+- `StripKey`, `keyName` -- who a column is, and the `Html.Keyed` name of one.
+- `keysOf`, `resolve`, `carsIn` -- what order they stand in.
+- `placements`, `isCarried`, `placementAttributes` -- where each one is drawn,
+  and whether it is the one under the pointer.
+- `gripId` ... `px` -- the names the page builds DOM out of, and the measures
+  the carry arithmetic is done in.
+
+@docs Model, init, update, Msg, StripKey, keyName, keysOf, resolve, carsIn,
+placements, isCarried, placementAttributes, gripId, stripId, scrollId, width,
+gap, px
 
 -}
 
