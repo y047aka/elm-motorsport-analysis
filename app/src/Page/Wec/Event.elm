@@ -845,13 +845,11 @@ stripId =
     "column-strip"
 
 
-{-| A column is 335px, not a share of the cell. The widest thing in the panel
-is the comparison's tab row, which wants 302px of the 303 a column of this
-width hands it; 335 is where it stops scrolling within itself.
+{-| A column is 330px, not a share of the cell.
 -}
 columnWidth : Float
 columnWidth =
-    335
+    330
 
 
 columnGap : Float
