@@ -1,8 +1,8 @@
-module View.CarNumberBadge exposing (manufacturerBadge, view, viewRow, viewRowPlain)
+module View.CarNumberBadge exposing (view, viewRow, viewRowPlain)
 
 {-| Car number badge on a manufacturer-coloured background.
 
-@docs manufacturerBadge, view, viewRow, viewRowPlain
+@docs view, viewRow, viewRowPlain
 
 -}
 
@@ -58,16 +58,6 @@ row coloured metadata =
         , div [ class "w-[25px] text-center leading-none text-xs font-bold" ]
             [ text metadata.carNumber ]
         ]
-
-
-{-| The maker's own mark: the logo alone, on a width every badge shares so
-that a column of them lines up whatever shape the artwork's own is. It wears
-no colour; a row that says whose car it is takes the colour from the car.
--}
-manufacturerBadge : Manufacturer -> Html msg
-manufacturerBadge manufacturer =
-    div [ class "w-5 grid place-items-center" ]
-        [ manufacturerLogo "h-[14px] max-w-full object-contain" manufacturer ]
 
 
 badge : String -> List (Html msg) -> Car.Metadata -> Html msg

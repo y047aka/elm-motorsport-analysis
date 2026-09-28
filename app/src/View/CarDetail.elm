@@ -21,7 +21,7 @@ is the `details` element's own, and lasts as long as the column's DOM does.
 -}
 
 import Html exposing (Html, details, div, h3, summary, text)
-import Html.Attributes exposing (attribute, class, style)
+import Html.Attributes exposing (attribute, class)
 import Html.Events
 import Json.Decode as Decode
 import List.Extra
@@ -256,22 +256,18 @@ legendEntry snapshot focused inFront item =
     -- column and the badges start where one another do.
     div
         [ attribute "data-rival" item.metadata.carNumber
-        , class "grid grid-cols-[1.75rem_auto_1.5rem_1fr_auto] items-center gap-x-2 py-0.5 px-1 rounded"
-        , style "background-color"
+        , class "grid grid-cols-[1.75rem_auto_1fr_auto] items-center gap-x-2 py-0.5 px-1 rounded"
+        , class
             (if isFocused then
-                -- The car's own colour, thinned enough to write on; grey
-                -- would hide which car it marks.
-                "color-mix(in oklch, " ++ item.metadata.manufacturer.color ++ " 25%, transparent)"
+                "bg-accent/40"
 
              else
-                "transparent"
+                ""
             )
         ]
         [ div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
             [ text (Position.toOrdinal item.standing.positionInClass) ]
-        , CarNumberBadge.manufacturerBadge item.metadata.manufacturer
-        , div [ class "text-center leading-none text-xs" ]
-            [ text item.metadata.carNumber ]
+        , CarNumberBadge.viewRow item.metadata
         , div [ class "text-[11px] truncate" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , div [ class "text-[12px] tabular-nums whitespace-nowrap" ]
