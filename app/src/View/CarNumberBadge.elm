@@ -1,8 +1,8 @@
-module View.CarNumberBadge exposing (manufacturerBadge, view, viewRow)
+module View.CarNumberBadge exposing (manufacturerBadge, view, viewRow, viewRowPlain)
 
 {-| Car number badge on a manufacturer-coloured background.
 
-@docs manufacturerBadge, view, viewRow
+@docs manufacturerBadge, view, viewRow, viewRowPlain
 
 -}
 
@@ -24,17 +24,38 @@ view metadata =
         metadata
 
 
+{-| `viewRow` with nothing behind the logo -- for a list whose colour lives
+elsewhere and a plate would only paint over it. Same cells, same height, so
+the two lists still draw their rows to one measure.
+-}
+viewRowPlain : Car.Metadata -> Html msg
+viewRowPlain metadata =
+    row False metadata
+
+
 {-| Horizontal badge: the maker's logo on their colour, and the car number
 beside it as plain text on nothing. Its `1.375rem` height is what the
 timeline builds its lines on.
 -}
 viewRow : Car.Metadata -> Html msg
 viewRow metadata =
+    row True metadata
+
+
+row : Bool -> Car.Metadata -> Html msg
+row coloured metadata =
     div [ class "h-[1.375rem] flex items-center gap-1" ]
         [ div
-            [ class "w-5 grid place-items-center p-0.5 rounded-[3px]"
-            , style "background-color" metadata.manufacturer.color
-            ]
+            (([ class "w-5 grid place-items-center p-0.5 rounded-[3px]" ]
+                ++
+                (if coloured then
+                    [ style "background-color" metadata.manufacturer.color ]
+
+                 else
+                    []
+                )
+             )
+            )
             [ manufacturerLogo "h-[14px] max-w-full object-contain" metadata.manufacturer ]
         , div [ class "w-[25px] text-center leading-none text-xs font-bold" ]
             [ text metadata.carNumber ]

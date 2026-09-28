@@ -986,7 +986,7 @@ eventRows cars timeline occurredCount =
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
         |> List.map (eventRow carsByNumber)
-        |> div [ Attributes.class "grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-xs" ]
+        |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
 
 
 {-| A row is two lines whatever it holds, the first as tall as the badge: the
@@ -1014,10 +1014,10 @@ eventRow carsByNumber event =
                 Nothing ->
                     []
     in
-    div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-1 items-center py-0.5" ]
+    div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-0.5 items-center py-0.5" ]
         ([ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
-         , cell "" [ text (describe event.eventType) ]
          , cell "" [ carBadge car event.eventType ]
+         , cell "" [ text (describe event.eventType) ]
          , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
          ]
@@ -1025,10 +1025,13 @@ eventRow carsByNumber event =
         )
 
 
+{-| The same bar the LiveStandings class headers stand their names on --
+`0.2em x 1.2em` of the class colour at their 10px, which is 2px x 12px.
+-}
 classMark : Metadata -> Html Msg
 classMark metadata =
     div
-        [ Attributes.class "size-2 rounded-[2px]"
+        [ Attributes.class "w-[2px] h-[12px] rounded-[2px]"
         , attribute "style" ("background-color: " ++ Class.toColor metadata.class ++ ";")
         ]
         []
@@ -1041,7 +1044,7 @@ carBadge : Maybe Car -> EventType -> Html Msg
 carBadge car eventType =
     case ( car, eventType ) of
         ( Just { metadata }, _ ) ->
-            CarNumberBadge.viewRow metadata
+            CarNumberBadge.viewRowPlain metadata
 
         ( Nothing, CarEvent carNumber _ ) ->
             span [] [ text carNumber ]
