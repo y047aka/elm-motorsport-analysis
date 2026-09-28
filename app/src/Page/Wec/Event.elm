@@ -58,8 +58,8 @@ import View.PlaybackControls as PlaybackControls
 
 
 type alias Model =
-    { mode : Mode
-    , pane : Pane
+    { pane : Pane
+    , tracker : Bool
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , columns : CarColumns
@@ -70,14 +70,8 @@ type alias Model =
     }
 
 
-type Mode
-    = Columns
-    | Tracker
-
-
-{-| The tracker and the timeline are one pane: hiding the tracker's full view
-falls back to the columns, since the strip and the pane compete for the same
-room.
+{-| The page's right-hand pane: the tracker the reader adds a column of, and
+the timeline.
 -}
 type Pane
     = Shown
@@ -121,8 +115,8 @@ type StandingsTab
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
-    ( { mode = Columns
-      , pane = Shown
+    ( { pane = Shown
+      , tracker = False
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , columns = ClassLeaders
@@ -142,7 +136,7 @@ init params =
 type Msg
     = StartRace
     | PauseRace
-    | ModeChange Mode
+    | ShowTracker Bool
     | TogglePane
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
@@ -170,11 +164,11 @@ update shared msg m =
         PauseRace ->
             ( m, Task.perform (Replay.Pause >> ReplayMsg) Time.now |> Effect.sendCmd )
 
-        ModeChange mode ->
-            ( { m | mode = mode }, Effect.none )
+        ShowTracker shown ->
+            ( { m | tracker = shown }, Effect.none )
 
         TogglePane ->
-            ( { m | pane = togglePane m.pane, mode = Columns }, Effect.none )
+            ( { m | pane = togglePane m.pane }, Effect.none )
 
         StandingsTabChange tab ->
             ( { m | standingsTab = tab }, Effect.none )
@@ -548,34 +542,33 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-{-| The tracker as a column: what Tracker mode adds to the end of the strip.
-Its ✕ is the one thing that takes it away again, as it is for a car's
-column; the body answers to no click.
+{-| The tracker as a column at the end of the strip, once the reader has
+asked for it. Its ✕ is the one thing that takes it away again, as it is for
+a car's column; the body answers to no click.
 -}
-trackerColumn : Mode -> TrackerChart.Track -> Snapshot -> List ( String, Html Msg )
-trackerColumn mode track snapshot =
-    case mode of
-        Tracker ->
-            [ ( "tracker"
-              , div
-                    [ Attributes.class "shrink-0 grid"
-                    , Attributes.style "width" (px columnWidth)
-                    ]
-                    [ Card.card []
-                        [ Card.content []
-                            [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
-                                [ TrackerChart.view TrackerChart.Full track snapshot
-                                , div [ Attributes.class "absolute top-0 right-0" ]
-                                    [ Header.closeButton (ModeChange Columns) ]
-                                ]
+trackerColumn : Bool -> TrackerChart.Track -> Snapshot -> List ( String, Html Msg )
+trackerColumn tracker track snapshot =
+    if tracker then
+        [ ( "tracker"
+          , div
+                [ Attributes.class "shrink-0 grid"
+                , Attributes.style "width" (px columnWidth)
+                ]
+                [ Card.card []
+                    [ Card.content []
+                        [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
+                            [ TrackerChart.view TrackerChart.Full track snapshot
+                            , div [ Attributes.class "absolute top-0 right-0" ]
+                                [ Header.closeButton (ShowTracker False) ]
                             ]
                         ]
                     ]
-              )
-            ]
+                ]
+          )
+        ]
 
-        Columns ->
-            []
+    else
+        []
 
 
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
@@ -594,7 +587,7 @@ trackerView track timeline snapshot replay m =
                     snapshot
                 ]
             , columnStrip "col-start-2 row-start-1 row-span-2"
-                (trackerColumn m.mode track snapshot)
+                (trackerColumn m.tracker track snapshot)
                 m
                 replay
                 snapshot
@@ -637,7 +630,7 @@ paneCells pane track snapshot timeline replay =
         Shown ->
             [ div
                 [ Attributes.class "col-start-3 row-start-1 grid place-self-center h-full max-w-full aspect-square cursor-pointer"
-                , onClick (ModeChange Tracker)
+                , onClick (ShowTracker True)
                 ]
                 [ Card.card []
                     [ Card.content []
