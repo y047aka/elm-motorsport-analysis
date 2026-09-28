@@ -47,6 +47,7 @@ import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
 import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
+import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
@@ -170,9 +171,7 @@ update shared msg m =
             ( m, Task.perform (Replay.Pause >> ReplayMsg) Time.now |> Effect.sendCmd )
 
         ModeChange mode ->
-            -- The tracker's mode draws no strip, and one drawn again starts at
-            -- the top.
-            ( { m | mode = mode, columnScrolls = Dict.empty }, Effect.none )
+            ( { m | mode = mode }, Effect.none )
 
         TogglePane ->
             ( { m | pane = togglePane m.pane, mode = Columns }, Effect.none )
@@ -549,43 +548,41 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-{-| Which cell holds the tracker and which the columns, and how much of the
-tracker is drawn.
+{-| The tracker as a column: what Tracker mode adds to the end of the strip.
+Its ✕ is the one thing that takes it away again, as it is for a car's
+column; the body answers to no click.
 -}
-type alias Layout =
-    { tracker : String
-    , trackerDetail : TrackerChart.Detail
-    , onTracker : Msg
-    , detail : String
-    , shown : List CarAt
-    }
+trackerColumn : Mode -> TrackerChart.Track -> Snapshot -> List ( String, Html Msg )
+trackerColumn mode track snapshot =
+    case mode of
+        Tracker ->
+            [ ( "tracker"
+              , div
+                    [ Attributes.class "shrink-0 grid"
+                    , Attributes.style "width" (px columnWidth)
+                    ]
+                    [ Card.card []
+                        [ Card.content []
+                            [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
+                                [ TrackerChart.view TrackerChart.Full track snapshot
+                                , div [ Attributes.class "absolute top-0 right-0" ]
+                                    [ Header.closeButton (ModeChange Columns) ]
+                                ]
+                            ]
+                        ]
+                    ]
+              )
+            ]
+
+        Columns ->
+            []
 
 
 trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
 trackerView track timeline snapshot replay m =
     let
-        -- The standings are marked from this and not from `layout.shown`,
-        -- which the tracker empties.
         carsWithColumns =
             shownCars snapshot m.columns
-
-        layout =
-            case m.mode of
-                Tracker ->
-                    { tracker = "col-start-2 row-start-1 row-span-2"
-                    , trackerDetail = TrackerChart.Full
-                    , onTracker = ModeChange Columns
-                    , detail = "col-start-3 row-start-1"
-                    , shown = []
-                    }
-
-                Columns ->
-                    { tracker = "col-start-3 row-start-1"
-                    , trackerDetail = TrackerChart.Compact
-                    , onTracker = ModeChange Tracker
-                    , detail = "col-start-2 row-start-1 row-span-2"
-                    , shown = carsWithColumns
-                    }
 
         gridCells =
             [ div
@@ -596,9 +593,14 @@ trackerView track timeline snapshot replay m =
                     }
                     snapshot
                 ]
-            , columnStrip layout.detail m replay snapshot layout.shown
+            , columnStrip "col-start-2 row-start-1 row-span-2"
+                (trackerColumn m.mode track snapshot)
+                m
+                replay
+                snapshot
+                carsWithColumns
             ]
-                ++ paneCells m.pane layout track snapshot timeline replay
+                ++ paneCells m.pane track snapshot timeline replay
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
@@ -626,22 +628,22 @@ trackerView track timeline snapshot replay m =
 is the only box in the chain whose height is settled, so a square SVG measured
 against the width overflows the card.
 -}
-paneCells : Pane -> Layout -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
-paneCells pane layout track snapshot timeline replay =
+paneCells : Pane -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
+paneCells pane track snapshot timeline replay =
     case pane of
         Hidden ->
             []
 
         Shown ->
             [ div
-                [ Attributes.class (layout.tracker ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
-                , onClick layout.onTracker
+                [ Attributes.class "col-start-3 row-start-1 grid place-self-center h-full max-w-full aspect-square cursor-pointer"
+                , onClick (ModeChange Tracker)
                 ]
                 [ Card.card []
                     [ Card.content []
                         [ div
                             [ Attributes.class "h-full grid place-items-center" ]
-                            [ TrackerChart.view layout.trackerDetail track snapshot ]
+                            [ TrackerChart.view TrackerChart.Compact track snapshot ]
                         ]
                     ]
                 ]
@@ -673,8 +675,8 @@ leaderOfEachClass snapshot =
         |> List.filterMap (Tuple.second >> List.head)
 
 
-columnStrip : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
-columnStrip cell m replay snapshot shown =
+columnStrip : String -> List ( String, Html Msg ) -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
+columnStrip cell trailing m replay snapshot shown =
     let
         several =
             List.length shown > 1
@@ -684,8 +686,9 @@ columnStrip cell m replay snapshot shown =
     in
     case shown of
         [] ->
-            -- The tracker has the room, and before any car has turned a lap.
-            div [ Attributes.class (cell ++ " grid") ] [ Card.card [] [] ]
+            -- Before any car has turned a lap.
+            div [ Attributes.class (cell ++ " flex") ]
+                (Card.card [] [] :: List.map Tuple.second trailing)
 
         _ ->
             -- Keyed on the car: a column matched by position instead would hand
@@ -717,6 +720,7 @@ columnStrip cell m replay snapshot shown =
                     )
                     shown
                     placements
+                    ++ trailing
                 )
 
 
