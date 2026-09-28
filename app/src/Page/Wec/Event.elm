@@ -17,7 +17,6 @@ import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
 import Json.Decode as Decode
-import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -34,6 +33,7 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Class as Class
+import Page.Wec.Columns as Columns
 import Route
 import Shared
 import Shared.Msg
@@ -41,11 +41,13 @@ import Task
 import Time
 import UI.DragHandle as DragHandle
 import UI.Notice as Notice
+import UI.Shadcn.Button as Button
 import UI.Shadcn.Card as Card
 import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
 import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
+import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
@@ -56,50 +58,30 @@ import View.PlaybackControls as PlaybackControls
 
 
 type alias Model =
-    { mode : Mode
+    { pane : Pane
+    , strip : Columns.Model
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , columns : CarColumns
-    , carried : Maybe Carry
-    , columnScrolls : Dict CarNumber Float
-    , announcement : String
     , comparison : CarDetail.Comparison
     }
 
 
-type Mode
-    = Columns
-    | Tracker
-
-
-{-| `ClassLeaders` is the car at the front of each class, re-read from the
-snapshot as the race runs. `Picked` is fixed, in the order the reader left
-them in, and any open, close or move settles the stand-ins into one.
+{-| The page's right-hand pane: the tracker the reader adds a column of, and
+the timeline.
 -}
-type CarColumns
-    = ClassLeaders
-    | Picked CarNumber (List CarNumber)
+type Pane
+    = Shown
+    | Hidden
 
 
-{-| A column being carried along the strip by one pointer. How far it has gone
-is the pointer's travel and the strip's together, since the strip can be
-scrolled under a pointer that holds still.
+togglePane : Pane -> Pane
+togglePane pane =
+    case pane of
+        Shown ->
+            Hidden
 
-`before` is the columns as they stood when it was picked up, and `settled` what
-picking it up made of them. A carry that lands where it began puts `before`
-back, unless something else has changed the columns since.
-
--}
-type alias Carry =
-    { carNumber : CarNumber
-    , pointerId : Int
-    , before : CarColumns
-    , settled : CarColumns
-    , from : Float
-    , at : Float
-    , scrolledFrom : Float
-    , scrolledTo : Float
-    }
+        Hidden ->
+            Shown
 
 
 type StandingsTab
@@ -109,13 +91,10 @@ type StandingsTab
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
-    ( { mode = Columns
+    ( { pane = Shown
+      , strip = Columns.init
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , columns = ClassLeaders
-      , carried = Nothing
-      , columnScrolls = Dict.empty
-      , announcement = ""
       , comparison = CarDetail.initialComparison
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -129,21 +108,11 @@ init params =
 type Msg
     = StartRace
     | PauseRace
-    | ModeChange Mode
+    | TogglePane
+    | ColumnsMsg Columns.Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | OpenColumn CarNumber
-    | CloseColumn CarNumber
-    | GrabColumn CarNumber DragHandle.Pointer
-    | CarryColumn DragHandle.Pointer
-    | DropColumn DragHandle.Pointer
-    | CancelCarry Int
-    | StripScrolledFrom Float
-    | StripScrolled Float
-    | StepColumn CarNumber Int
-    | ColumnScrolled CarNumber Float
-    | Settled
     | CarDetailMsg CarDetail.Msg
 
 
@@ -156,10 +125,15 @@ update shared msg m =
         PauseRace ->
             ( m, Task.perform (Replay.Pause >> ReplayMsg) Time.now |> Effect.sendCmd )
 
-        ModeChange mode ->
-            -- The tracker's mode draws no strip, and one drawn again starts at
-            -- the top.
-            ( { m | mode = mode, columnScrolls = Dict.empty }, Effect.none )
+        ColumnsMsg sub ->
+            let
+                ( strip, cmd ) =
+                    Columns.update (field shared) sub m.strip
+            in
+            ( { m | strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
+
+        TogglePane ->
+            ( { m | pane = togglePane m.pane }, Effect.none )
 
         StandingsTabChange tab ->
             ( { m | standingsTab = tab }, Effect.none )
@@ -172,276 +146,16 @@ update shared msg m =
             , Effect.none
             )
 
-        OpenColumn carNumber ->
-            ( { m | columns = rearrange shared (openColumn carNumber) m.columns }, Effect.none )
-
-        CloseColumn carNumber ->
-            ( { m
-                | columns = rearrange shared (closeColumn carNumber) m.columns
-                , columnScrolls = Dict.remove carNumber m.columnScrolls
-              }
-            , Effect.none
-            )
-
-        GrabColumn carNumber pointer ->
-            case m.carried of
-                Just _ ->
-                    ( m, Effect.none )
-
-                Nothing ->
-                    let
-                        settled =
-                            rearrange shared settleColumns m.columns
-                    in
-                    ( { m
-                        | columns = settled
-                        , carried =
-                            Just
-                                { carNumber = carNumber
-                                , pointerId = pointer.id
-                                , before = m.columns
-                                , settled = settled
-                                , from = pointer.x
-                                , at = pointer.x
-                                , scrolledFrom = 0
-                                , scrolledTo = 0
-                                }
-                      }
-                    , Browser.Dom.getViewportOf stripId
-                        |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
-                        |> Effect.sendCmd
-                    )
-
-        CarryColumn pointer ->
-            case heldBy pointer.id m.carried of
-                Just carry ->
-                    ( { m | carried = Just { carry | at = pointer.x } }, Effect.none )
-
-                Nothing ->
-                    ( m, Effect.none )
-
-        DropColumn pointer ->
-            dropColumn shared pointer m
-
-        CancelCarry pointerId ->
-            case heldBy pointerId m.carried of
-                Just carry ->
-                    ( { m | columns = putBack carry m.columns, carried = Nothing }, Effect.none )
-
-                Nothing ->
-                    ( m, Effect.none )
-
-        StripScrolledFrom left ->
-            ( { m | carried = Maybe.map (\carry -> { carry | scrolledFrom = left, scrolledTo = left }) m.carried }
-            , Effect.none
-            )
-
-        StripScrolled left ->
-            ( { m | carried = Maybe.map (\carry -> { carry | scrolledTo = left }) m.carried }, Effect.none )
-
-        StepColumn carNumber steps ->
-            stepColumn shared carNumber steps m
-
-        ColumnScrolled carNumber top ->
-            ( { m | columnScrolls = Dict.insert carNumber top m.columnScrolls }, Effect.none )
-
-        Settled ->
-            ( m, Effect.none )
-
         CarDetailMsg detailMsg ->
             ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
 
 
-dropColumn : Shared.Model -> DragHandle.Pointer -> Model -> ( Model, Effect Msg )
-dropColumn shared pointer m =
-    case heldBy pointer.id m.carried of
-        Just carry ->
-            let
-                moved =
-                    rearrange shared (moveColumn carry.carNumber (columnsCarried { carry | at = pointer.x })) m.columns
-            in
-            if moved == m.columns then
-                ( { m | columns = putBack carry m.columns, carried = Nothing }, Effect.none )
-
-            else
-                reorder shared { moved = carry.carNumber, refocus = False } moved { m | carried = Nothing }
-
-        Nothing ->
-            ( m, Effect.none )
-
-
-putBack : Carry -> CarColumns -> CarColumns
-putBack carry columns =
-    if columns == carry.settled then
-        carry.before
-
-    else
-        columns
-
-
-stepColumn : Shared.Model -> CarNumber -> Int -> Model -> ( Model, Effect Msg )
-stepColumn shared carNumber steps m =
-    let
-        moved =
-            rearrange shared (moveColumn carNumber steps) m.columns
-    in
-    if m.carried /= Nothing then
-        -- A step would move the strip under the carried column, and
-        -- could take the grip holding the pointer out of the document.
-        ( m, Effect.none )
-
-    else if moved == m.columns then
-        ( m, Effect.none )
-
-    else
-        reorder shared { moved = carNumber, refocus = True } moved m
-
-
-heldBy : Int -> Maybe Carry -> Maybe Carry
-heldBy pointerId =
-    Maybe.andThen
-        (\carry ->
-            if carry.pointerId == pointerId then
-                Just carry
-
-            else
-                Nothing
-        )
-
-
-{-| The keyed strip moves a column by taking it out of the document, which
-loses how far down it was scrolled and the focus of anything in it. Both are
-put back once it has been drawn in its new place, the focus first: focusing
-scrolls the grip, at the top of its column, into view.
+{-| The field is read at the moment of the message, never kept: the strip's
+update takes it as an argument and the stand-ins are off it.
 -}
-reorder : Shared.Model -> { moved : CarNumber, refocus : Bool } -> CarColumns -> Model -> ( Model, Effect Msg )
-reorder shared { moved, refocus } columns m =
-    let
-        focus : Task.Task Never ()
-        focus =
-            if refocus then
-                Browser.Dom.focus (gripId moved) |> Task.onError (\_ -> Task.succeed ())
-
-            else
-                Task.succeed ()
-    in
-    ( { m | columns = columns, announcement = announceMove shared moved columns }
-    , focus
-        |> Task.andThen (\_ -> restoreScrolls m.columnScrolls)
-        |> Task.perform (\_ -> Settled)
-        |> Effect.sendCmd
-    )
-
-
-restoreScrolls : Dict CarNumber Float -> Task.Task Never ()
-restoreScrolls scrolls =
-    Dict.toList scrolls
-        |> List.map
-            (\( carNumber, top ) ->
-                Browser.Dom.setViewportOf (columnScrollId carNumber) 0 top
-                    |> Task.onError (\_ -> Task.succeed ())
-            )
-        |> Task.sequence
-        |> Task.map (\_ -> ())
-
-
-announceMove : Shared.Model -> CarNumber -> CarColumns -> String
-announceMove shared carNumber columns =
-    case Shared.loadedRound shared of
-        Just round ->
-            let
-                current =
-                    columnCarNumbers round.snapshot columns
-            in
-            case List.Extra.elemIndex carNumber current of
-                Just index ->
-                    "Car #" ++ carNumber ++ " moved to column " ++ String.fromInt (index + 1) ++ " of " ++ String.fromInt (List.length current)
-
-                Nothing ->
-                    ""
-
-        Nothing ->
-            ""
-
-
-rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
-rearrange shared f columns =
-    case Shared.loadedRound shared of
-        Just round ->
-            f round.snapshot columns
-
-        Nothing ->
-            columns
-
-
-{-| There is no ceiling on how many, and each column draws its own charts on
-every frame of playback.
--}
-openColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
-openColumn carNumber snapshot columns =
-    let
-        current =
-            columnCarNumbers snapshot columns
-    in
-    if List.member carNumber current then
-        columns
-
-    else
-        pickedOr columns (current ++ [ carNumber ])
-
-
-closeColumn : CarNumber -> Snapshot -> CarColumns -> CarColumns
-closeColumn carNumber snapshot columns =
-    columnCarNumbers snapshot columns
-        |> List.filter ((/=) carNumber)
-        |> pickedOr columns
-
-
-{-| Whole columns, and never past either end. A column with nowhere to go
-leaves the columns as they were, stand-ins and all.
--}
-moveColumn : CarNumber -> Int -> Snapshot -> CarColumns -> CarColumns
-moveColumn carNumber steps snapshot columns =
-    let
-        current =
-            columnCarNumbers snapshot columns
-
-        others =
-            List.filter ((/=) carNumber) current
-    in
-    case List.Extra.elemIndex carNumber current of
-        Just index ->
-            let
-                to =
-                    clamp 0 (List.length others) (index + steps)
-            in
-            if to == index then
-                columns
-
-            else
-                pickedOr columns (List.take to others ++ carNumber :: List.drop to others)
-
-        Nothing ->
-            columns
-
-
-{-| The stand-ins are re-read every frame, so a column being carried among them
-could change places under the pointer.
--}
-settleColumns : Snapshot -> CarColumns -> CarColumns
-settleColumns snapshot columns =
-    pickedOr columns (columnCarNumbers snapshot columns)
-
-
-pickedOr : CarColumns -> List CarNumber -> CarColumns
-pickedOr fallback carNumbers =
-    case carNumbers of
-        [] ->
-            fallback
-
-        first :: rest ->
-            Picked first rest
-
+field : Shared.Model -> Maybe Snapshot
+field shared =
+    Shared.loadedRound shared |> Maybe.map .snapshot
 
 
 -- SUBSCRIPTIONS
@@ -471,7 +185,7 @@ view shared m =
         [ main_
             [ Attributes.class "dark h-full grid grid-rows-[auto_1fr]"
             ]
-            [ navigation (headerTitle shared) maybeRound
+            [ navigation m.pane (headerTitle shared) maybeRound
             , case maybeRound of
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
@@ -479,7 +193,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just round ->
-                    trackerView round.track
+                    mainGrid round.track
                         round.timeline
                         round.snapshot
                         round.replay
@@ -523,282 +237,183 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
-trackerView track timeline snapshot replay m =
+{-| The tracker's column, carried among the cars as any other is. Its ✕ is
+the one thing that takes it away; the body answers to no click.
+-}
+trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
+trackerCard several held track snapshot =
+    Card.card []
+        [ div
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
+            ]
+            [ Card.content []
+                [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
+                    [ TrackerChart.view TrackerChart.Full track snapshot
+                    , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
+                        ((if several then
+                            [ columnGrip held Columns.Tracker ]
+
+                          else
+                            []
+                         )
+                            ++ [ Header.closeButton (ColumnsMsg (Columns.ShowTracker False)) ]
+                        )
+                    ]
+                ]
+            ]
+        ]
+
+
+mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
+mainGrid track timeline snapshot replay m =
     let
-        -- The standings are marked from this and not from `layout.shown`,
-        -- which the tracker empties.
-        carsWithColumns =
-            shownCars snapshot m.columns
+        keys =
+            Columns.resolve snapshot (Columns.keysOf snapshot m.strip.order)
 
-        layout =
-            case m.mode of
-                Tracker ->
-                    { tracker = "col-start-2 row-start-1 row-span-2"
-                    , trackerDetail = TrackerChart.Full
-                    , onTracker = ModeChange Columns
-                    , detail = "col-start-3 row-start-1"
-                    , shown = []
+        gridCells =
+            [ div
+                [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
+                [ LiveStandings.view
+                    { onSelect = Columns.Open >> ColumnsMsg
+                    , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
                     }
-
-                Columns ->
-                    { tracker = "col-start-3 row-start-1"
-                    , trackerDetail = TrackerChart.Compact
-                    , onTracker = ModeChange Tracker
-                    , detail = "col-start-2 row-start-1 row-span-2"
-                    , shown = carsWithColumns
-                    }
+                    snapshot
+                ]
+            , columnStrip "col-start-2 row-start-1 row-span-2" track keys m replay snapshot
+            ]
+                ++ paneCells m.pane track snapshot timeline replay
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
         [ div
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[218px_1fr_300px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
+            [ Attributes.class
+                ("shrink-0 h-full grid "
+                    ++ (case m.pane of
+                            Shown ->
+                                "grid-cols-[218px_1fr_270px]"
+
+                            Hidden ->
+                                "grid-cols-[218px_1fr]"
+                       )
+                    ++ " grid-rows-[300px_minmax(0,1fr)] gap-2.5"
+                )
+            ]
+            gridCells
+        , standingsPanel m.standingsTab m replay snapshot
+        , standingsPopover
+        , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
+        ]
+
+
+{-| The tracker and the timeline, or nothing once the pane is hidden.
+
+The tracker's box is settled the way the tracker column settles its own --
+row, grow, row -- because the card's content has no height of its own to
+give a drawing a percentage of: a drawing sized only by its viewBox's aspect,
+and a tall circuit's is very tall, runs past the card's border instead of
+inside it.
+-}
+paneCells : Pane -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
+paneCells pane track snapshot timeline replay =
+    case pane of
+        Hidden ->
+            []
+
+        Shown ->
             [ div
-                [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
-                [ LiveStandings.view
-                    { onSelect = OpenColumn
-                    , withColumns = List.map (.metadata >> .carNumber) carsWithColumns
-                    }
-                    snapshot
-                ]
-            , columnStrip layout.detail m replay snapshot layout.shown
-            , div
-                -- The cell is the only box in the chain whose height is settled,
-                -- so a square SVG measured against the width overflows the card.
-                [ Attributes.class (layout.tracker ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
-                , onClick layout.onTracker
+                [ Attributes.class "col-start-3 row-start-1 h-full grid grid-rows-[minmax(0,1fr)] cursor-pointer"
+                , onClick (ColumnsMsg (Columns.ShowTracker True))
                 ]
                 [ Card.card []
-                    [ Card.content []
-                        [ div
-                            [ Attributes.class "h-full grid place-items-center" ]
-                            [ TrackerChart.view layout.trackerDetail track snapshot ]
+                    [ div
+                        [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
+                        [ Card.content []
+                            [ div
+                                [ Attributes.class "relative h-full w-full grid place-items-center" ]
+                                [ TrackerChart.view TrackerChart.Compact track snapshot ]
+                            ]
                         ]
                     ]
                 ]
             , timelinePanel "col-start-3 row-start-2" timeline replay
             ]
-        , standingsPanel m.standingsTab m replay snapshot
-        , standingsPopover
-        , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.announcement ]
-        ]
 
 
-columnCarNumbers : Snapshot -> CarColumns -> List CarNumber
-columnCarNumbers snapshot columns =
-    case columns of
-        ClassLeaders ->
-            leaderOfEachClass snapshot |> List.map (.metadata >> .carNumber)
-
-        Picked first rest ->
-            first :: rest
-
-
-shownCars : Snapshot -> CarColumns -> List CarAt
-shownCars snapshot columns =
-    columnCarNumbers snapshot columns
-        |> List.filterMap (\carNumber -> Snapshot.get carNumber snapshot)
-
-
-{-| The classes come in the order their leaders run in.
--}
-leaderOfEachClass : Snapshot -> List CarAt
-leaderOfEachClass snapshot =
-    Snapshot.toClassList snapshot
-        |> List.filterMap (Tuple.second >> List.head)
-
-
-columnStrip : String -> Model -> Replay.Model -> Snapshot -> List CarAt -> Html Msg
-columnStrip cell m replay snapshot shown =
+columnStrip : String -> TrackerChart.Track -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track keys m replay snapshot =
     let
         several =
-            List.length shown > 1
+            List.length keys > 1
 
         placements =
-            columnPlacements m.carried (List.map (.metadata >> .carNumber) shown)
+            Columns.placements m.strip.carried keys
     in
-    case shown of
+    case keys of
         [] ->
-            -- The tracker has the room, and before any car has turned a lap.
-            div [ Attributes.class (cell ++ " grid") ] [ Card.card [] [] ]
+            -- Before any car has turned a lap.
+            div [ Attributes.class (cell ++ " flex") ] [ Card.card [] [] ]
 
         _ ->
-            -- Keyed on the car: a column matched by position instead would hand
-            -- how far the reader had scrolled it to whichever car moved up into
-            -- its place when the one before it was closed.
+            -- Keyed on the column: a column matched by position instead would
+            -- hand how far the reader had scrolled it to whichever column moved
+            -- up into its place when the one before it was closed.
             Html.Keyed.node "div"
-                ([ Attributes.id stripId
+                ([ Attributes.id Columns.stripId
                  , Attributes.class (cell ++ " flex overflow-x-auto")
-                 , Attributes.style "column-gap" (px columnGap)
+                 , Attributes.style "column-gap" (Columns.px Columns.gap)
                  ]
-                    ++ (case m.carried of
+                    ++ (case m.strip.carried of
                             Just _ ->
-                                [ Html.Events.on "scroll" (Decode.map StripScrolled (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
+                                [ Html.Events.on "scroll" (Decode.map (Columns.StripScrolled >> ColumnsMsg) (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
 
                             Nothing ->
                                 []
                        )
                 )
                 (List.map2
-                    (\car placement ->
-                        ( car.metadata.carNumber
+                    (\key placement ->
+                        ( Columns.keyName key
                         , div
                             (Attributes.class "shrink-0 grid"
-                                :: Attributes.style "width" (px columnWidth)
-                                :: placementAttributes placement
+                                :: Attributes.style "width" (Columns.px Columns.width)
+                                :: Columns.placementAttributes placement
                             )
-                            [ Html.Lazy.lazy6 columnCard several (isCarried placement) m.comparison replay.race.cars snapshot car ]
+                            [ case key of
+                                Columns.Car carNumber ->
+                                    Maybe.withDefault (text "")
+                                        (Snapshot.get carNumber snapshot
+                                            |> Maybe.map
+                                                (\car ->
+                                                    Html.Lazy.lazy5 (carCard several) (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
+                                                )
+                                        )
+
+                                Columns.Tracker ->
+                                    trackerCard several (Columns.isCarried placement) track snapshot
+                            ]
                         )
                     )
-                    shown
+                    keys
                     placements
                 )
 
 
-stripId : String
-stripId =
-    "column-strip"
-
-
-{-| A column is 360px, not a share of the cell. The widest thing in the panel is
-the comparison's tab row, which wants 302px of the 328 a column of this width
-hands it. The floor is 335, so the 26px over is what is left for a font that is
-not the one this was measured in.
--}
-columnWidth : Float
-columnWidth =
-    360
-
-
-columnGap : Float
-columnGap =
-    10
-
-
-columnPitch : Float
-columnPitch =
-    columnWidth + columnGap
-
-
-px : Float -> String
-px n =
-    String.fromFloat n ++ "px"
-
-
-travel : Carry -> Float
-travel carry =
-    carry.at - carry.from + carry.scrolledTo - carry.scrolledFrom
-
-
-columnsCarried : Carry -> Int
-columnsCarried carry =
-    round (travel carry / columnPitch)
-
-
-{-| Where a column is drawn, and whether it is the one being carried.
--}
-type Placement
-    = Resting
-    | Carried Float
-    | Shifted Float
-
-
-{-| While one is carried: that one under the pointer, held to the strip, and
-each it has passed a column back the other way.
-
-Nothing moves in the DOM until it is let go of. The grip holds the pointer only
-while it stays in the document, and the keyed strip moves a column by taking
-it out.
-
--}
-columnPlacements : Maybe Carry -> List CarNumber -> List Placement
-columnPlacements carried carNumbers =
-    case carried |> Maybe.andThen (\carry -> List.Extra.elemIndex carry.carNumber carNumbers |> Maybe.map (Tuple.pair carry)) of
-        Just ( carry, from ) ->
-            let
-                last =
-                    List.length carNumbers - 1
-
-                to =
-                    from + clamp -from (last - from) (columnsCarried carry)
-            in
-            List.indexedMap
-                (\index _ ->
-                    if index == from then
-                        Carried (clamp (toFloat -from * columnPitch) (toFloat (last - from) * columnPitch) (travel carry))
-
-                    else if from < index && index <= to then
-                        Shifted -columnPitch
-
-                    else if to <= index && index < from then
-                        Shifted columnPitch
-
-                    else
-                        Shifted 0
-                )
-                carNumbers
-
-        Nothing ->
-            List.map (always Resting) carNumbers
-
-
-isCarried : Placement -> Bool
-isCarried placement =
-    case placement of
-        Carried _ ->
-            True
-
-        _ ->
-            False
-
-
-placementAttributes : Placement -> List (Html.Attribute msg)
-placementAttributes placement =
-    case placement of
-        Resting ->
-            []
-
-        Carried dx ->
-            [ Attributes.class "relative z-10 rounded-xl bg-background shadow-2xl"
-            , Attributes.style "transform" ("translateX(" ++ px dx ++ ")")
-            ]
-
-        Shifted dx ->
-            [ Attributes.class "transition-transform"
-            , Attributes.style "transform" ("translateX(" ++ px dx ++ ")")
-            ]
-
-
-columnGrip : Bool -> CarNumber -> Html Msg
-columnGrip held carNumber =
+columnGrip : Bool -> Columns.StripKey -> Html Msg
+columnGrip held key =
     DragHandle.view
-        { id = gripId carNumber
+        { id = Columns.gripId key
         , label = "Move this column"
         , held = held
-        , onGrab = GrabColumn carNumber
-        , onMove = CarryColumn
-        , onDrop = DropColumn
-        , onCancel = CancelCarry
-        , onStep = StepColumn carNumber
+        , onGrab = Columns.Grab key >> ColumnsMsg
+        , onMove = Columns.Carrying >> ColumnsMsg
+        , onDrop = Columns.Release >> ColumnsMsg
+        , onCancel = Columns.Cancel >> ColumnsMsg
+        , onStep = Columns.Step key >> ColumnsMsg
         }
 
 
-gripId : CarNumber -> String
-gripId carNumber =
-    "column-grip-" ++ carNumber
-
-
-columnScrollId : CarNumber -> String
-columnScrollId carNumber =
-    "column-scroll-" ++ carNumber
-
-
-{-| Drawn lazily, since a carry redraws the strip on every frame the pointer
-moves, paused or not. Each argument is compared by reference, so a record built
-at the call site would redraw every panel on every one of those frames.
--}
-columnCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
-columnCard several held comparison cars snapshot car =
+carCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
+carCard several held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
@@ -807,22 +422,22 @@ columnCard several held comparison cars snapshot car =
         -- A card's content does not shrink below what it holds, so the box that
         -- scrolls has to be a flex child of the card.
         [ div
-            [ Attributes.id (columnScrollId carNumber)
+            [ Attributes.id (Columns.scrollId carNumber)
             , Attributes.class "flex-1 min-h-0 overflow-y-auto"
-            , Html.Events.on "scroll" (Decode.map (ColumnScrolled carNumber) (Decode.at [ "target", "scrollTop" ] Decode.float))
+            , Html.Events.on "scroll" (Decode.map (Columns.PanelScrolled carNumber >> ColumnsMsg) (Decode.at [ "target", "scrollTop" ] Decode.float))
             ]
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
                     , onClose =
                         if several then
-                            Just (CloseColumn carNumber)
+                            Just (ColumnsMsg (Columns.Close carNumber))
 
                         else
                             Nothing
                     , grip =
                         if several then
-                            Just (columnGrip held carNumber)
+                            Just (columnGrip held (Columns.Car carNumber))
 
                         else
                             Nothing
@@ -1118,10 +733,10 @@ standingsPopover =
         ]
 
 
-navigation : String -> Maybe Shared.LoadedRound -> Html Msg
-navigation title maybeRound =
+navigation : Pane -> String -> Maybe Shared.LoadedRound -> Html Msg
+navigation pane title maybeRound =
     nav
-        [ Attributes.class "p-3 grid grid-cols-[auto_1fr] items-center gap-x-10" ]
+        [ Attributes.class "p-3 grid grid-cols-[auto_1fr_auto] items-center gap-x-10" ]
         [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
@@ -1137,6 +752,41 @@ navigation title maybeRound =
                     , onPause = PauseRace
                     , toReplayMsg = ReplayMsg
                     }
+        , paneToggle pane
+        ]
+
+
+{-| The arrows point at the edge the pane lives on.
+-}
+paneToggle : Pane -> Html Msg
+paneToggle pane =
+    let
+        verb =
+            case pane of
+                Shown ->
+                    "Hide"
+
+                Hidden ->
+                    "Show"
+
+        glyph =
+            case pane of
+                Shown ->
+                    "»"
+
+                Hidden ->
+                    "«"
+    in
+    Button.view
+        { label = glyph
+        , variant = Button.Ghost
+        , size = Button.Icon
+        , shape = Button.Circle
+        , disabled = False
+        , onPress = TogglePane
+        }
+        [ attribute "aria-label" (verb ++ " the tracker and timeline")
+        , Attributes.title (verb ++ " the tracker and timeline")
         ]
 
 

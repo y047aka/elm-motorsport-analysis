@@ -210,6 +210,10 @@ boundsOf corners =
                 rest
 
 
+{-| The chart fills whatever box it is given, proportions and all -- so a box
+whose height is sized by its content is sized by this drawing, not the other
+way round. Settling the box first is the caller's work.
+-}
 view : Detail -> Track -> Snapshot -> Svg msg
 view detail shown standings =
     case shown of
@@ -228,7 +232,7 @@ viewWithConfig detail direction config standings =
     in
     svg
         [ viewBox 0 0 w h
-        , class "max-w-full max-h-full"
+        , class "h-full w-full"
         ]
         [ Lazy.lazy3 track detail direction config
         , renderCars detail direction config standings
@@ -550,9 +554,11 @@ circuitConstants detail =
             }
 
 
-{-| Square, as the ring is, however long the circuit runs one way: the box it
-is drawn in settles its height only through its width, so a drawing taller than
-it is wide is scaled to the width and overflows it.
+{-| The circuit's own box, plus the margin the labels stand off in: the square
+ring's viewBox would scale a tall circuit by its width alone, and such a
+track would read much smaller than the card it is drawn in. The svg keeps
+this box's proportions inside whatever card it stands in, so a portrait
+circuit fills a portrait column's width and a wide one fills its height.
 -}
 viewOnCircuit : Detail -> Circuit -> Snapshot -> Svg msg
 viewOnCircuit detail circuit standings =
@@ -562,13 +568,10 @@ viewOnCircuit detail circuit standings =
 
         { minX, minY, maxX, maxY } =
             circuit.bounds
-
-        side =
-            max (maxX - minX) (maxY - minY) + 2 * margin
     in
     svg
-        [ viewBox ((minX + maxX - side) / 2) ((minY + maxY - side) / 2) side side
-        , class "max-w-full max-h-full"
+        [ viewBox (minX - margin) (minY - margin) (maxX - minX + 2 * margin) (maxY - minY + 2 * margin)
+        , class "h-full w-full"
         ]
         [ Lazy.lazy2 circuitTrack detail circuit
         , renderCarsOnCircuit detail circuit standings

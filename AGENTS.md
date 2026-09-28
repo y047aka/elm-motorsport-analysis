@@ -28,7 +28,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | --- | --- |
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
-| `nix run .#test` | elm-verify-examples + elm-test |
+| `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
 | `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
@@ -186,6 +186,19 @@ Both tables are read where the cars decode rather than where they are drawn:
 round, and `Car.Metadata` comes out of it carrying the colour, the badge and the
 photograph. Nothing downstream asks a second time, so a widget handed a car has
 everything it draws.
+
+### The car column strip
+
+`Page/Wec/Columns.elm` is the strip's own model, messages and update: the
+order, the tracker's column, the one column a pointer carries, and how far
+down each car's panel was scrolled. The page holds one `Columns.Model`,
+forwards through `ColumnsMsg`, and hands the field in per call.
+
+A column is keyed by `StripKey` -- a car's or the tracker's. **The tracker's
+index means where it stood when the stand-ins settled**: while the stand-ins
+are live the tracker trails them however the running order moves, and
+picking, closing or moving a column fixes it among the cars where it stood
+at that moment.
 
 ### The shadcn components
 
@@ -445,7 +458,12 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 ## Testing
 
 - **Elm** — `elm-test` for unit tests, `elm-verify-examples` for docstring
-  examples. Benchmarks live in `/package/benchmark/`.
+  examples. Benchmarks live in `/package/benchmark/`. Tests of app modules run
+  from `app/tests/` and of the library's from `package/tests/`; `.#test` runs
+  both. `elm-explorations/test` sits in the app's `dependencies` for this --
+  hand-written `test-dependencies` read fine to elm-test but make every
+  `elm make` fail with "dependencies edited by hand", which is a build break
+  the test runner does not see.
 - **TypeScript** — `tsc --noEmit`, over `index.ts`, `vite.config.ts` and
   `src/`. `/app/tests/` is outside the TS project on purpose: Playwright comes
   from the flake rather than from `node_modules`, so `@playwright/test` does

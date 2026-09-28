@@ -194,7 +194,7 @@
         apps = {
           dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "cd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
           build                = { type = "app"; program = "${mkNodeApp "build"                "cd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
-          test                 = { type = "app"; program = "${mkNodeApp "test"                 "cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
+          test                 = { type = "app"; program = "${mkNodeApp "test"                 "cd app && elm-test && cd ../package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (elm-verify-examples + elm-test)"; };
           test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt"             "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
           update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
