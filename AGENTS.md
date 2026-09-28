@@ -187,6 +187,28 @@ round, and `Car.Metadata` comes out of it carrying the colour, the badge and the
 photograph. Nothing downstream asks a second time, so a widget handed a car has
 everything it draws.
 
+### The car column strip
+
+`Page/Wec/Columns.elm` is the strip's own model, messages and update: the
+order, the tracker's column, the one column a pointer carries, and how far
+down each car's panel was scrolled. The page holds one `Columns.Model` and
+forwards through `ColumnsMsg`; the field is handed in per call and never kept
+by the strip, so stand-ins are read off the snapshot the moment an edit needs
+them.
+
+A column is keyed by `StripKey` -- a car's or the tracker's -- and the order is
+one list of them. **The tracker's index means where it stood when the
+stand-ins settled**: while the stand-ins are live the tracker trails them,
+however the running order moves, and picking, closing or moving a column fixes
+the tracker among the cars where it stood at that moment. A car opened goes
+before the tracker, never after it. The order never empties: closing the last
+car falls back to the class leaders, and `putBack` restores what picking up a
+column settled only while nothing else has touched the order since.
+
+The carry arithmetic, the placements and the strip's DOM ids are Columns'; the
+page draws the cards -- `View.CarDetail` for a car, the tracker chart for the
+tracker -- and hands back the ✕ that closes a column.
+
 ### The shadcn components
 
 `app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base

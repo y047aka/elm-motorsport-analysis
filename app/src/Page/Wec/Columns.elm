@@ -439,65 +439,20 @@ answered to, and settles nothing that cannot be settled.
 
 -}
 update : Maybe Snapshot -> Msg -> Model -> ( Model, Cmd Msg )
-update maybeSnapshot msg m =
+update field msg m =
     case msg of
         Open carNumber ->
-            edit maybeSnapshot m (open m.tracker carNumber)
+            edit field m (open m.tracker carNumber)
 
         Close carNumber ->
-            edit maybeSnapshot m (close m.tracker carNumber)
+            edit field m (close m.tracker carNumber)
                 |> Tuple.mapFirst (\after -> { after | scrolls = Dict.remove carNumber m.scrolls })
 
         ShowTracker shown ->
-            case maybeSnapshot of
-                Just round ->
-                    ( { m
-                        | tracker = shown
-                        , order =
-                            if shown then
-                                showTracker round m.order
-
-                            else
-                                hideTracker round m.order
-                      }
-                    , Cmd.none
-                    )
-
-                Nothing ->
-                    ( m, Cmd.none )
+            shownColumn field shown m
 
         Grab key pointer ->
-            case m.carried of
-                Just _ ->
-                    ( m, Cmd.none )
-
-                Nothing ->
-                    let
-                        settled =
-                            case maybeSnapshot of
-                                Just round ->
-                                    settle m.tracker round m.order
-
-                                Nothing ->
-                                    m.order
-                    in
-                    ( { m
-                        | order = settled
-                        , carried =
-                            Just
-                                { key = key
-                                , pointerId = pointer.id
-                                , before = m.order
-                                , settled = settled
-                                , from = pointer.x
-                                , at = pointer.x
-                                , scrolledFrom = 0
-                                , scrolledTo = 0
-                                }
-                      }
-                    , Browser.Dom.getViewportOf stripId
-                        |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
-                    )
+            grab field key pointer m
 
         Carrying pointer ->
             case heldBy pointer.id m.carried of
@@ -508,30 +463,12 @@ update maybeSnapshot msg m =
                     ( m, Cmd.none )
 
         Release pointer ->
-            case heldBy pointer.id m.carried of
-                Just carry ->
-                    case maybeSnapshot of
-                        Just round ->
-                            let
-                                moved =
-                                    move m.tracker carry.key (columnsCarried { carry | at = pointer.x }) round m.order
-                            in
-                            if moved == m.order then
-                                ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
-
-                            else
-                                reorder round { moved = carry.key, refocus = False } { m | carried = Nothing } moved
-
-                        Nothing ->
-                            ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
-
-                Nothing ->
-                    ( m, Cmd.none )
+            release field pointer m
 
         Cancel pointerId ->
             case heldBy pointerId m.carried of
                 Just carry ->
-                    ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
+                    letGo m carry
 
                 Nothing ->
                     ( m, Cmd.none )
@@ -543,26 +480,7 @@ update maybeSnapshot msg m =
             ( { m | carried = Maybe.map (\carry -> { carry | scrolledTo = left }) m.carried }, Cmd.none )
 
         Step key steps ->
-            if m.carried /= Nothing then
-                -- A step would move the strip under the carried column, and
-                -- could take the grip holding the pointer out of the document.
-                ( m, Cmd.none )
-
-            else
-                case maybeSnapshot of
-                    Just round ->
-                        let
-                            moved =
-                                move m.tracker key steps round m.order
-                        in
-                        if moved == m.order then
-                            ( m, Cmd.none )
-
-                        else
-                            reorder round { moved = key, refocus = True } m moved
-
-                    Nothing ->
-                        ( m, Cmd.none )
+            stepBy field key steps m
 
         PanelScrolled carNumber top ->
             ( { m | scrolls = Dict.insert carNumber top m.scrolls }, Cmd.none )
@@ -571,9 +489,116 @@ update maybeSnapshot msg m =
             ( m, Cmd.none )
 
 
+shownColumn : Maybe Snapshot -> Bool -> Model -> ( Model, Cmd Msg )
+shownColumn field shown m =
+    case field of
+        Just round ->
+            ( { m
+                | tracker = shown
+                , order =
+                    if shown then
+                        showTracker round m.order
+
+                    else
+                        hideTracker round m.order
+              }
+            , Cmd.none
+            )
+
+        Nothing ->
+            ( m, Cmd.none )
+
+
+grab : Maybe Snapshot -> StripKey -> Pointer -> Model -> ( Model, Cmd Msg )
+grab field key pointer m =
+    case m.carried of
+        Just _ ->
+            ( m, Cmd.none )
+
+        Nothing ->
+            let
+                settled =
+                    case field of
+                        Just round ->
+                            settle m.tracker round m.order
+
+                        Nothing ->
+                            m.order
+            in
+            ( { m
+                | order = settled
+                , carried =
+                    Just
+                        { key = key
+                        , pointerId = pointer.id
+                        , before = m.order
+                        , settled = settled
+                        , from = pointer.x
+                        , at = pointer.x
+                        , scrolledFrom = 0
+                        , scrolledTo = 0
+                        }
+              }
+            , Browser.Dom.getViewportOf stripId
+                |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
+            )
+
+
+release : Maybe Snapshot -> Pointer -> Model -> ( Model, Cmd Msg )
+release field pointer m =
+    case heldBy pointer.id m.carried of
+        Just carry ->
+            case field of
+                Just round ->
+                    let
+                        moved =
+                            move m.tracker carry.key (columnsCarried { carry | at = pointer.x }) round m.order
+                    in
+                    if moved == m.order then
+                        letGo m carry
+
+                    else
+                        reorder round { moved = carry.key, refocus = False } { m | carried = Nothing } moved
+
+                Nothing ->
+                    letGo m carry
+
+        Nothing ->
+            ( m, Cmd.none )
+
+
+stepBy : Maybe Snapshot -> StripKey -> Int -> Model -> ( Model, Cmd Msg )
+stepBy field key steps m =
+    if m.carried /= Nothing then
+        -- A step would move the strip under the carried column, and
+        -- could take the grip holding the pointer out of the document.
+        ( m, Cmd.none )
+
+    else
+        case field of
+            Just round ->
+                let
+                    moved =
+                        move m.tracker key steps round m.order
+                in
+                if moved == m.order then
+                    ( m, Cmd.none )
+
+                else
+                    reorder round { moved = key, refocus = True } m moved
+
+            Nothing ->
+                ( m, Cmd.none )
+
+
+letGo : Model -> Carry -> ( Model, Cmd Msg )
+letGo m carry =
+    ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
+
+
 edit : Maybe Snapshot -> Model -> (Snapshot -> Columns -> Columns) -> ( Model, Cmd Msg )
-edit maybeSnapshot m f =
-    case maybeSnapshot of
+edit field m f =
+    case field of
         Just round ->
             ( { m | order = f round m.order }, Cmd.none )
 
@@ -616,10 +641,10 @@ restoreScrolls scrolls =
         |> Task.map (\_ -> ())
 
 
-{-| A column is 360px, not a share of the cell. The widest thing in the panel is
-the comparison's tab row, which wants 302px of the 328 a column of this width
-hands it. The floor is 335, so the 26px over is what is left for a font that is
-not the one this was measured in.
+{-| A column is a fixed width, not a share of the strip: the carry arithmetic
+measures one `pitch` as exactly one column, and the strip scrolls sideways
+rather than resizing its columns. The width is what the panel's own content
+wants; a change to it is a change to `pitch`, and so to every carry distance.
 -}
 width : Float
 width =
