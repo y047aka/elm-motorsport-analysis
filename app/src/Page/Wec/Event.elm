@@ -62,7 +62,7 @@ type alias Model =
     , tracker : Bool
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , columns : CarColumns
+    , columns : Columns
     , carried : Maybe Carry
     , columnScrolls : Dict CarNumber Float
     , announcement : String
@@ -115,7 +115,7 @@ them in, and any open, close or move settles the stand-ins into one -- the
 tracker's column, once asked for, holds its place among the cars in that
 order too.
 -}
-type CarColumns
+type Columns
     = ClassLeaders
     | Picked StripKey (List StripKey)
 
@@ -132,8 +132,8 @@ back, unless something else has changed the columns since.
 type alias Carry =
     { key : StripKey
     , pointerId : Int
-    , before : CarColumns
-    , settled : CarColumns
+    , before : Columns
+    , settled : Columns
     , from : Float
     , at : Float
     , scrolledFrom : Float
@@ -203,10 +203,10 @@ update shared msg m =
                 , columns =
                     rearrange shared
                         (if shown then
-                            showKey
+                            showTracker
 
                          else
-                            hideKey
+                            hideTracker
                         )
                         m.columns
               }
@@ -314,9 +314,9 @@ dropColumn shared pointer m =
             let
                 moved =
                     rearrange shared
-                        (moveColumn carry.key
+                        (moveColumn m.tracker
+                            carry.key
                             (columnsCarried { carry | at = pointer.x })
-                            m.tracker
                         )
                         m.columns
             in
@@ -330,7 +330,7 @@ dropColumn shared pointer m =
             ( m, Effect.none )
 
 
-putBack : Carry -> CarColumns -> CarColumns
+putBack : Carry -> Columns -> Columns
 putBack carry columns =
     if columns == carry.settled then
         carry.before
@@ -343,7 +343,7 @@ stepColumn : Shared.Model -> StripKey -> Int -> Model -> ( Model, Effect Msg )
 stepColumn shared key steps m =
     let
         moved =
-            rearrange shared (moveColumn key steps m.tracker) m.columns
+            rearrange shared (moveColumn m.tracker key steps) m.columns
     in
     if m.carried /= Nothing then
         -- A step would move the strip under the carried column, and
@@ -374,7 +374,7 @@ loses how far down it was scrolled and the focus of anything in it. Both are
 put back once it has been drawn in its new place, the focus first: focusing
 scrolls the grip, at the top of its column, into view.
 -}
-reorder : Shared.Model -> { moved : StripKey, refocus : Bool } -> CarColumns -> Model -> ( Model, Effect Msg )
+reorder : Shared.Model -> { moved : StripKey, refocus : Bool } -> Columns -> Model -> ( Model, Effect Msg )
 reorder shared { moved, refocus } columns m =
     let
         focus : Task.Task Never ()
@@ -405,7 +405,7 @@ restoreScrolls scrolls =
         |> Task.map (\_ -> ())
 
 
-announceMove : Shared.Model -> Bool -> StripKey -> CarColumns -> String
+announceMove : Shared.Model -> Bool -> StripKey -> Columns -> String
 announceMove shared tracker key columns =
     case Shared.loadedRound shared of
         Just round ->
@@ -432,7 +432,7 @@ announceMove shared tracker key columns =
             ""
 
 
-rearrange : Shared.Model -> (Snapshot -> CarColumns -> CarColumns) -> CarColumns -> CarColumns
+rearrange : Shared.Model -> (Snapshot -> Columns -> Columns) -> Columns -> Columns
 rearrange shared f columns =
     case Shared.loadedRound shared of
         Just round ->
@@ -445,7 +445,7 @@ rearrange shared f columns =
 {-| There is no ceiling on how many, and each column draws its own charts on
 every frame of playback.
 -}
-openColumn : Bool -> CarNumber -> Snapshot -> CarColumns -> CarColumns
+openColumn : Bool -> CarNumber -> Snapshot -> Columns -> Columns
 openColumn tracker carNumber snapshot columns =
     let
         current =
@@ -467,7 +467,7 @@ openColumn tracker carNumber snapshot columns =
         pickedOr columns (List.take at current ++ [ car ] ++ List.drop at current)
 
 
-closeColumn : Bool -> CarNumber -> Snapshot -> CarColumns -> CarColumns
+closeColumn : Bool -> CarNumber -> Snapshot -> Columns -> Columns
 closeColumn tracker carNumber snapshot columns =
     stripKeysOf tracker snapshot columns
         |> List.filter ((/=) (Car carNumber))
@@ -478,8 +478,8 @@ closeColumn tracker carNumber snapshot columns =
 stand-ins are live the tracker follows them as the flag says, and its place
 is only fixed by a settle of the cars' own.
 -}
-showKey : Snapshot -> CarColumns -> CarColumns
-showKey snapshot columns =
+showTracker : Snapshot -> Columns -> Columns
+showTracker snapshot columns =
     case columns of
         ClassLeaders ->
             columns
@@ -492,8 +492,8 @@ showKey snapshot columns =
                 Picked first (rest ++ [ Tracker ])
 
 
-hideKey : Snapshot -> CarColumns -> CarColumns
-hideKey snapshot columns =
+hideTracker : Snapshot -> Columns -> Columns
+hideTracker snapshot columns =
     case columns of
         ClassLeaders ->
             columns
@@ -506,8 +506,8 @@ hideKey snapshot columns =
 {-| Whole columns, and never past either end. A column with nowhere to go
 leaves the columns as they were, stand-ins and all.
 -}
-moveColumn : StripKey -> Int -> Bool -> Snapshot -> CarColumns -> CarColumns
-moveColumn key steps tracker snapshot columns =
+moveColumn : Bool -> StripKey -> Int -> Snapshot -> Columns -> Columns
+moveColumn tracker key steps snapshot columns =
     let
         current =
             stripKeysOf tracker snapshot columns
@@ -534,7 +534,7 @@ moveColumn key steps tracker snapshot columns =
 {-| The stand-ins are re-read every frame, so a column being carried among them
 could change places under the pointer.
 -}
-settleColumns : Bool -> Snapshot -> CarColumns -> CarColumns
+settleColumns : Bool -> Snapshot -> Columns -> Columns
 settleColumns tracker snapshot columns =
     pickedOr columns (stripKeysOf tracker snapshot columns)
 
@@ -549,7 +549,7 @@ togglePane pane =
             Shown
 
 
-pickedOr : CarColumns -> List StripKey -> CarColumns
+pickedOr : Columns -> List StripKey -> Columns
 pickedOr fallback keys =
     case keys of
         [] ->
@@ -595,7 +595,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just round ->
-                    trackerView round.track
+                    mainGrid round.track
                         round.timeline
                         round.snapshot
                         round.replay
@@ -666,8 +666,8 @@ trackerCard several held track snapshot =
         ]
 
 
-trackerView : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
-trackerView track timeline snapshot replay m =
+mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
+mainGrid track timeline snapshot replay m =
     let
         keys =
             resolveKeys snapshot (stripKeysOf m.tracker snapshot m.columns)
@@ -734,7 +734,7 @@ paneCells pane track snapshot timeline replay =
             ]
 
 
-stripKeysOf : Bool -> Snapshot -> CarColumns -> List StripKey
+stripKeysOf : Bool -> Snapshot -> Columns -> List StripKey
 stripKeysOf tracker snapshot columns =
     case columns of
         ClassLeaders ->
@@ -826,7 +826,7 @@ columnStrip cell track keys m replay snapshot =
                                         (Snapshot.get carNumber snapshot
                                             |> Maybe.map
                                                 (\car ->
-                                                    Html.Lazy.lazy5 (columnCard several) (isCarried placement) m.comparison replay.race.cars snapshot car
+                                                    Html.Lazy.lazy5 (carCard several) (isCarried placement) m.comparison replay.race.cars snapshot car
                                                 )
                                         )
 
@@ -978,12 +978,14 @@ columnScrollId carNumber =
     "column-scroll-" ++ carNumber
 
 
-{-| Drawn lazily, since a carry redraws the strip on every frame the pointer
+{-| One of the strip's two cards: a car's, the other being `trackerCard`.
+
+Drawn lazily, since a carry redraws the strip on every frame the pointer
 moves, paused or not. Each argument is compared by reference, so a record built
 at the call site would redraw every panel on every one of those frames.
 -}
-columnCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
-columnCard several held comparison cars snapshot car =
+carCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
+carCard several held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
