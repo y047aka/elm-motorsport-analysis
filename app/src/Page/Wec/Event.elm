@@ -268,7 +268,7 @@ mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -
 mainGrid track timeline snapshot replay m =
     let
         keys =
-            Columns.resolve snapshot (Columns.keysOf m.strip.tracker snapshot m.strip.order)
+            Columns.resolve snapshot (Columns.keysOf snapshot m.strip.order)
 
         gridCells =
             [ div

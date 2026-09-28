@@ -60,24 +60,25 @@ carOfKey key =
             Nothing
 
 
-{-| `ClassLeaders` is the car at the front of each class, re-read from the
-snapshot as the race runs. `Picked` is fixed, in the order the reader left
-them in, and any open, close or move settles the stand-ins into one -- the
-tracker's column, once asked for, holds its place among the cars in that
-order too.
+{-| The order of the strip.
+
+`Live` is the car at the front of each class, re-read from the snapshot as
+the race runs, with the tracker's column behind them where its flag says.
+`Picked` is fixed, in the order the reader left them in, and any open, close
+or move settles the stand-ins into one -- the tracker's column, once settled
+with them, holds its place among the cars in that order too.
 -}
 type Columns
-    = ClassLeaders
+    = Live { tracker : Bool }
     | Picked StripKey (List StripKey)
 
 
-{-| The order the strip stands in: the cars' own, and the tracker behind the
-stand-ins until a settle fixes it among them.
+{-| The order the strip stands in.
 -}
-keysOf : Bool -> Snapshot -> Columns -> List StripKey
-keysOf tracker snapshot columns =
+keysOf : Snapshot -> Columns -> List StripKey
+keysOf snapshot columns =
     case columns of
-        ClassLeaders ->
+        Live { tracker } ->
             List.map (.metadata >> .carNumber >> Car) (leaderOfEachClass snapshot)
                 ++ (if tracker then
                         [ Tracker ]
@@ -125,11 +126,11 @@ leaderOfEachClass snapshot =
 every frame of playback. Opening and closing name the car, and join the cars
 at the back of them -- before the tracker when its column stands among them.
 -}
-open : Bool -> CarNumber -> Snapshot -> Columns -> Columns
-open tracker carNumber snapshot columns =
+open : CarNumber -> Snapshot -> Columns -> Columns
+open carNumber snapshot columns =
     let
         current =
-            keysOf tracker snapshot columns
+            keysOf snapshot columns
 
         car =
             Car carNumber
@@ -145,20 +146,20 @@ open tracker carNumber snapshot columns =
         pickedOr columns (List.take at current ++ [ car ] ++ List.drop at current)
 
 
-close : Bool -> CarNumber -> Snapshot -> Columns -> Columns
-close tracker carNumber snapshot columns =
-    keysOf tracker snapshot columns
+close : CarNumber -> Snapshot -> Columns -> Columns
+close carNumber snapshot columns =
+    keysOf snapshot columns
         |> List.filter ((/=) (Car carNumber))
         |> pickedOr columns
 
 
 {-| Moving takes a key -- a car's or the tracker's -- and steps it along.
 -}
-move : Bool -> StripKey -> Int -> Snapshot -> Columns -> Columns
-move tracker key steps snapshot columns =
+move : StripKey -> Int -> Snapshot -> Columns -> Columns
+move key steps snapshot columns =
     let
         current =
-            keysOf tracker snapshot columns
+            keysOf snapshot columns
 
         others =
             List.filter ((/=) key) current
@@ -186,8 +187,8 @@ is only fixed by a settle of the cars' own.
 showTracker : Snapshot -> Columns -> Columns
 showTracker snapshot columns =
     case columns of
-        ClassLeaders ->
-            columns
+        Live _ ->
+            Live { tracker = True }
 
         Picked first rest ->
             if List.member Tracker (first :: rest) then
@@ -200,20 +201,20 @@ showTracker snapshot columns =
 hideTracker : Snapshot -> Columns -> Columns
 hideTracker snapshot columns =
     case columns of
-        ClassLeaders ->
-            columns
+        Live _ ->
+            Live { tracker = False }
 
         Picked first rest ->
             List.filter ((/=) Tracker) (first :: rest)
-                |> pickedOr ClassLeaders
+                |> pickedOr (Live { tracker = False })
 
 
 {-| The stand-ins are re-read every frame, so a column being carried among
 them could change places under the pointer.
 -}
-settle : Bool -> Snapshot -> Columns -> Columns
-settle tracker snapshot columns =
-    pickedOr columns (keysOf tracker snapshot columns)
+settle : Snapshot -> Columns -> Columns
+settle snapshot columns =
+    pickedOr columns (keysOf snapshot columns)
 
 
 pickedOr : Columns -> List StripKey -> Columns
@@ -390,13 +391,11 @@ scrollId carNumber =
     "column-scroll-" ++ carNumber
 
 
-{-| The strip's state: the order, the tracker's column flag, the one pointer
-carrying, how far down each car's panel was scrolled, and what to say when a
-column moved.
+{-| The strip's state: the order, the one pointer carrying, how far down each
+car's panel was scrolled, and what to say when a column moved.
 -}
 type alias Model =
     { order : Columns
-    , tracker : Bool
     , carried : Maybe Carry
     , scrolls : Dict CarNumber Float
     , announcement : String
@@ -405,8 +404,7 @@ type alias Model =
 
 init : Model
 init =
-    { order = ClassLeaders
-    , tracker = False
+    { order = Live { tracker = False }
     , carried = Nothing
     , scrolls = Dict.empty
     , announcement = ""
@@ -442,10 +440,10 @@ update : Maybe Snapshot -> Msg -> Model -> ( Model, Cmd Msg )
 update field msg m =
     case msg of
         Open carNumber ->
-            edit field m (open m.tracker carNumber)
+            edit field m (open carNumber)
 
         Close carNumber ->
-            edit field m (close m.tracker carNumber)
+            edit field m (close carNumber)
                 |> Tuple.mapFirst (\after -> { after | scrolls = Dict.remove carNumber m.scrolls })
 
         ShowTracker shown ->
@@ -494,8 +492,7 @@ shownColumn field shown m =
     case field of
         Just round ->
             ( { m
-                | tracker = shown
-                , order =
+                | order =
                     if shown then
                         showTracker round m.order
 
@@ -520,7 +517,7 @@ grab field key pointer m =
                 settled =
                     case field of
                         Just round ->
-                            settle m.tracker round m.order
+                            settle round m.order
 
                         Nothing ->
                             m.order
@@ -552,7 +549,7 @@ release field pointer m =
                 Just round ->
                     let
                         moved =
-                            move m.tracker carry.key (columnsCarried { carry | at = pointer.x }) round m.order
+                            move carry.key (columnsCarried { carry | at = pointer.x }) round m.order
                     in
                     if moved == m.order then
                         letGo m carry
@@ -579,7 +576,7 @@ stepBy field key steps m =
             Just round ->
                 let
                     moved =
-                        move m.tracker key steps round m.order
+                        move key steps round m.order
                 in
                 if moved == m.order then
                     ( m, Cmd.none )
@@ -622,7 +619,7 @@ reorder round { moved, refocus } m order =
             else
                 Task.succeed ()
     in
-    ( { m | order = order, announcement = announcement moved (keysOf m.tracker round order) }
+    ( { m | order = order, announcement = announcement moved (keysOf round order) }
     , focus
         |> Task.andThen (\_ -> restoreScrolls m.scrolls)
         |> Task.perform (\_ -> Settled)

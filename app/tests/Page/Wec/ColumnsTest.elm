@@ -44,12 +44,17 @@ suite =
                         |> Expect.equal (leaders ++ [ Tracker ])
             , test "a carry let go of where it began puts back what picking it up settled" <|
                 \_ ->
-                    Columns.init
-                        |> step (ShowTracker True)
+                    -- `before` is the order as the tracker's column stood it,
+                    -- not the strip's starting one.
+                    let
+                        shown =
+                            step (ShowTracker True) Columns.init
+                    in
+                    shown
                         |> step (Grab (Car "1") (pointer 1 0))
                         |> step (Release (pointer 1 0))
                         |> .order
-                        |> Expect.equal Columns.init.order
+                        |> Expect.equal shown.order
             , test "a carry that lands among the cars fixes the tracker there" <|
                 \_ ->
                     -- The first leader is carried one column right; the
@@ -206,14 +211,14 @@ keys model =
 
 keysOf : Columns.Model -> List StripKey
 keysOf model =
-    Columns.keysOf model.tracker field model.order
+    Columns.keysOf field model.order
 
 
 {-| The class leaders the strip starts with, in the order it starts with them.
 -}
 leaders : List StripKey
 leaders =
-    Columns.keysOf False field Columns.init.order
+    Columns.keysOf field Columns.init.order
 
 
 carNumberOf : StripKey -> String
