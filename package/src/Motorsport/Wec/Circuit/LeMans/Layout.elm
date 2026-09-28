@@ -38,14 +38,21 @@ here is read as that one.
 layout : Int -> Layout
 layout season =
     { shape = shape
-    , pitLane = Geometry.pitLane
+    , pitLane = pitLane
     , timingLines = timingLines season
     }
 
 
 shape : Shape
 shape =
-    Shape.fromMarks Geometry.centreline
+    Geometry.centreline
+        |> List.map (\point -> { x = point.x, y = point.y, metres = point.metres })
+        |> Shape.fromMarks
+
+
+pitLane : List Point
+pitLane =
+    List.map (\point -> { x = point.x, y = point.y }) Geometry.pitLane
 
 
 {-| The "Approximate Distances" of Al Kamel's circuit map for each race, which

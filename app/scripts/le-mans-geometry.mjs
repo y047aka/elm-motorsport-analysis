@@ -7,6 +7,13 @@
 //     node scripts/le-mans-geometry.mjs [overpass.json]
 //
 // Given a file, reads the Overpass answer out of it rather than asking.
+//
+// Every point is written twice over: as surveyed, in WGS84 degrees, and in the
+// drawing's metres. The two are tied by the `Motorsport.Circuit.Geodesy.Frame`
+// written beside them, which is how a GPS log of a car gets joined to the lap --
+// so a second circuit's script has to write the same frame, out of the same three
+// numbers its own projection uses: the parallel it scales east-west at, and the
+// least x and least y it shifts its points by.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -41,9 +48,11 @@ async function main() {
   const lap = [...rotate(track.slice(0, -1), start), start];
   const pit = chain(rel.members.filter((m) => m.role === "pit_lane").map((m) => ways.get(m.ref)), null);
 
-  const project = projection([...lap, ...pit].map((id) => nodes.get(id)));
-  const lapPoints = lap.map((id) => project(nodes.get(id)));
-  const pitPoints = pit.map((id) => project(nodes.get(id)));
+  const lapNodes = lap.map((id) => nodes.get(id));
+  const pitNodes = pit.map((id) => nodes.get(id));
+  const { project, parallel } = projection([...lapNodes, ...pitNodes]);
+  const lapPoints = lapNodes.map(project);
+  const pitPoints = pitNodes.map(project);
 
   const surveyed = cumulative(lapPoints);
   const stretch = lapLength / surveyed[surveyed.length - 1];
@@ -59,15 +68,22 @@ async function main() {
   const all = [...lapPoints, ...pitPoints];
   const minX = Math.min(...all.map((p) => p.x));
   const minY = Math.min(...all.map((p) => p.y));
-  const at = (p) => ({ x: round(p.x - minX), y: round(p.y - minY) });
+  const frame = frameOf([...lapNodes, ...pitNodes], project, parallel, minX, minY);
 
-  const centreline = kept.map((i) => ({ ...at(lapPoints[i]), metres: round(metres[i]) }));
-  const pitLane = keptPit.map((i) => at(pitPoints[i]));
+  const place = (node, p) => ({
+    x: round(p.x - minX),
+    y: round(p.y - minY),
+    lat: node.lat,
+    lon: node.lon,
+  });
+  const centreline = kept.map((i) => ({ ...place(lapNodes[i], lapPoints[i]), metres: round(metres[i]) }));
+  const pitLane = keptPit.map((i) => place(pitNodes[i], pitPoints[i]));
 
-  await writeFile(modulePath, elmModule(centreline, pitLane, osm.osm3s?.timestamp_osm_base));
+  await writeFile(modulePath, elmModule(centreline, pitLane, frame, osm.osm3s?.timestamp_osm_base));
   console.log(
     `centreline: ${centreline.length} points of ${lapPoints.length}, surveyed ${surveyed[surveyed.length - 1].toFixed(1)} m; ` +
-      `pit lane: ${pitLane.length} points of ${pitPoints.length}`,
+      `pit lane: ${pitLane.length} points of ${pitPoints.length}; ` +
+      `frame: origin ${frame.origin.lat}, ${frame.origin.lon} parallel ${frame.parallel}`,
   );
 }
 
@@ -122,11 +138,30 @@ function rotate(ids, start) {
 // does, so north is up.
 function projection(points) {
   const radius = 6371008.8;
-  const lat0 = (points.reduce((sum, p) => sum + p.lat, 0) / points.length) * (Math.PI / 180);
-  return ({ lat, lon }) => ({
-    x: lon * (Math.PI / 180) * radius * Math.cos(lat0),
+  const parallel = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+  const east = Math.cos(parallel * (Math.PI / 180));
+  const project = ({ lat, lon }) => ({
+    x: lon * (Math.PI / 180) * radius * east,
     y: -lat * (Math.PI / 180) * radius,
   });
+  return { project, parallel };
+}
+
+// The frame the drawing's metres are measured in, as Elm reads them: `project`
+// above shifts nothing and the drawing shifts by the least x and least y, so the
+// frame's origin is the north-west corner of what was surveyed. That shift is
+// the one place the two readings of a point are tied together, which is why a GPS
+// sample read through the frame lands beside the drawn point rather than near it.
+function frameOf(points, project, parallel, minX, minY) {
+  const origin = {
+    lat: Math.max(...points.map((p) => p.lat)),
+    lon: Math.min(...points.map((p) => p.lon)),
+  };
+  const zero = project(origin);
+  if (Math.abs(zero.x - minX) > 1e-9 || Math.abs(zero.y - minY) > 1e-9) {
+    throw new Error("the frame's origin does not fall where the drawing's zero is");
+  }
+  return { origin, parallel };
 }
 
 function cumulative(points) {
@@ -164,40 +199,77 @@ function round(n) {
   return Math.round(n * 10) / 10;
 }
 
-function elmModule(centreline, pitLane, surveyedAt) {
-  const marks = centreline.map((p) => `{ x = ${p.x}, y = ${p.y}, metres = ${p.metres} }`);
-  const points = pitLane.map((p) => `{ x = ${p.x}, y = ${p.y} }`);
+function elmModule(centreline, pitLane, frame, surveyedAt) {
+  const lap = centreline.map((p) => `{ x = ${p.x}, y = ${p.y}, metres = ${p.metres}, lat = ${p.lat}, lon = ${p.lon} }`);
+  const pit = pitLane.map((p) => `{ x = ${p.x}, y = ${p.y}, lat = ${p.lat}, lon = ${p.lon} }`);
   const list = (items) => `    [ ${items.join("\n    , ")}\n    ]`;
-  return `module Motorsport.Wec.Circuit.LeMans.Geometry exposing (centreline, pitLane)
+  return `module Motorsport.Wec.Circuit.LeMans.Geometry exposing (LapPoint, PitPoint, centreline, frame, pitLane)
 
-{-| The Circuit de la Sarthe as OpenStreetMap surveys it${surveyedAt ? ` (${surveyedAt})` : ""}, in
-metres, with north up and \`y\` running south. Written by
-\`app/scripts/le-mans-geometry.mjs\`; edit that rather than this.
+{-| The Circuit de la Sarthe as OpenStreetMap surveys it${surveyedAt ? ` (${surveyedAt})` : ""},
+in WGS84 degrees and in the metres the circuit is drawn in, north up and \`y\`
+running south. Written by \`app/scripts/le-mans-geometry.mjs\`; edit that rather
+than this.
 
 Map data © OpenStreetMap contributors, under the Open Database License.
 
-@docs centreline, pitLane
+@docs LapPoint, PitPoint, centreline, frame, pitLane
 
 -}
 
-import Motorsport.Circuit.Shape exposing (Mark, Point)
+import Motorsport.Circuit.Geodesy as Geodesy exposing (Frame)
+
+
+{-| A point of the lap: where it stands on the earth, the same place in the
+drawing's metres, and how far round the lap it is.
+-}
+type alias LapPoint =
+    { x : Float
+    , y : Float
+    , metres : Float
+    , lat : Float
+    , lon : Float
+    }
+
+
+{-| Where the pit lane stands, on the earth and in the drawing's metres.
+-}
+type alias PitPoint =
+    { x : Float
+    , y : Float
+    , lat : Float
+    , lon : Float
+    }
+
+
+{-| The metres below measured on the earth. A GPS sample read through
+[\`Geodesy.project\`](Motorsport-Circuit-Geodesy#project) lands among the points,
+and [\`Shape.nearest\`](Motorsport-Circuit-Shape#nearest) says how far round the
+lap it was.
+-}
+frame : Frame
+frame =
+    Geodesy.frame
+        { origin = { lat = ${frame.origin.lat}, lon = ${frame.origin.lon} }
+        , parallel = ${frame.parallel}
+        }
 
 
 {-| The racing lap from the finish line, clockwise, back to the finish line.
 \`metres\` is how far round the lap a point is, stretched to the 13,625.7 m of
-Al Kamel's circuit maps.
+Al Kamel's circuit maps. A sample read back off the line is stretched with it,
+which is the scale the timing feed counts lap distances in.
 -}
-centreline : List Mark
+centreline : List LapPoint
 centreline =
-${list(marks)}
+${list(lap)}
 
 
 {-| From where it leaves the track before the Ford chicane to where it rejoins
 it in the Dunlop curve, in the direction it is driven.
 -}
-pitLane : List Point
+pitLane : List PitPoint
 pitLane =
-${list(points)}
+${list(pit)}
 `;
 }
 
