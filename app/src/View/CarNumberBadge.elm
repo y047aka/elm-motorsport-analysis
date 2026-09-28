@@ -25,8 +25,9 @@ view metadata =
 
 
 {-| `viewRow` with nothing behind the logo -- for a list whose colour lives
-elsewhere and a plate would only paint over it. Same cells, same height, so
-the two lists still draw their rows to one measure.
+elsewhere and a plate would only paint over it. Its `1.375rem` height is what
+the timeline builds its lines on; the two lists still draw their rows to one
+measure.
 -}
 viewRowPlain : Car.Metadata -> Html msg
 viewRowPlain metadata =
@@ -34,8 +35,7 @@ viewRowPlain metadata =
 
 
 {-| Horizontal badge: the maker's logo on their colour, and the car number
-beside it as plain text on nothing. Its `1.375rem` height is what the
-timeline builds its lines on.
+beside it as plain text on nothing.
 -}
 viewRow : Car.Metadata -> Html msg
 viewRow metadata =

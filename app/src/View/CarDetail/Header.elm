@@ -1,7 +1,7 @@
 module View.CarDetail.Header exposing (closeButton, view)
 
-{-| Who the car is and where it stands: the line a classification prints, with
-the two cars it is actually racing on either side of it.
+{-| The line a classification prints for one car, and the ✕ that closes a
+column when the reader has several open.
 
 @docs closeButton, view
 
