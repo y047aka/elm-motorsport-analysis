@@ -305,9 +305,13 @@ mainGrid track timeline snapshot replay m =
         ]
 
 
-{-| The tracker and the timeline, or nothing once the pane is hidden. The cell
-is the only box in the chain whose height is settled, so a square SVG measured
-against the width overflows the card.
+{-| The tracker and the timeline, or nothing once the pane is hidden.
+
+The tracker's box is settled the way the tracker column settles its own --
+row, grow, row -- because the card's content has no height of its own to
+give a drawing a percentage of: a drawing sized only by its viewBox's aspect,
+and a tall circuit's is very tall, runs past the card's border instead of
+inside it. With the box settled, the svg keeps its proportions and fits.
 -}
 paneCells : Pane -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
 paneCells pane track snapshot timeline replay =
@@ -317,14 +321,17 @@ paneCells pane track snapshot timeline replay =
 
         Shown ->
             [ div
-                [ Attributes.class "col-start-3 row-start-1 grid place-self-center h-full max-w-full aspect-square cursor-pointer"
+                [ Attributes.class "col-start-3 row-start-1 h-full grid grid-rows-[minmax(0,1fr)] cursor-pointer"
                 , onClick (ColumnsMsg (Columns.ShowTracker True))
                 ]
                 [ Card.card []
-                    [ Card.content []
-                        [ div
-                            [ Attributes.class "h-full grid place-items-center" ]
-                            [ TrackerChart.view TrackerChart.Compact track snapshot ]
+                    [ div
+                        [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
+                        [ Card.content []
+                            [ div
+                                [ Attributes.class "relative h-full w-full grid place-items-center" ]
+                                [ TrackerChart.view TrackerChart.Compact track snapshot ]
+                            ]
                         ]
                     ]
                 ]
