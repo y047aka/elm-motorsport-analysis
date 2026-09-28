@@ -845,11 +845,14 @@ stripId =
     "column-strip"
 
 
-{-| A column is 330px, not a share of the cell.
+{-| A column is 360px, not a share of the cell. The widest thing in the panel is
+the comparison's tab row, which wants 302px of the 328 a column of this width
+hands it. The floor is 335, so the 26px over is what is left for a font that is
+not the one this was measured in.
 -}
 columnWidth : Float
 columnWidth =
-    330
+    360
 
 
 columnGap : Float

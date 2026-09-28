@@ -100,9 +100,6 @@ row lap =
         )
 
 
-{-| The durations are left out: the 330px column has no room for the lap table
-and the pit times together.
--}
 pitCell : Lap -> String
 pitCell lap =
     case lap.pit of
@@ -112,11 +109,11 @@ pitCell lap =
         Lap.InLap ->
             "in"
 
-        Lap.OutLap _ ->
-            "Out"
+        Lap.OutLap duration ->
+            Duration.toString duration
 
-        Lap.OutAndIn _ ->
-            "Out in"
+        Lap.OutAndIn duration ->
+            Duration.toString duration ++ " in"
 
 
 againstOwnBest : { time : Maybe Duration, personalBest : Maybe Duration } -> Maybe RatedTime
