@@ -1,8 +1,8 @@
-module View.CarNumberBadge exposing (manufacturerBadge, view, viewRow)
+module View.CarNumberBadge exposing (view, viewLegend, viewRow)
 
 {-| Car number badge on a manufacturer-coloured background.
 
-@docs manufacturerBadge, view, viewRow
+@docs view, viewLegend, viewRow
 
 -}
 
@@ -36,17 +36,21 @@ viewRow metadata =
         metadata
 
 
-{-| The maker's own mark: their logo on their colour, and nothing of the car
-on it -- for a list that names its cars in words and wants the maker
-recognisable without a plate on every line.
+{-| The quiet form, for a list that wants the cars named rather than drawn:
+the manufacturer's colour sits behind the logo alone and the number is plain
+text. The footprint is the row's, so a column of these sits in one line.
 -}
-manufacturerBadge : Manufacturer -> Html msg
-manufacturerBadge manufacturer =
-    div
-        [ class "p-0.5 rounded-[3px]"
-        , style "background-color" manufacturer.color
+viewLegend : Car.Metadata -> Html msg
+viewLegend metadata =
+    div [ class "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center" ]
+        [ div
+            [ class "p-0.5 rounded-[3px]"
+            , style "background-color" metadata.manufacturer.color
+            ]
+            [ manufacturerLogo "h-[14px] object-contain" metadata.manufacturer ]
+        , div [ class "text-center leading-none text-xs" ]
+            [ text metadata.carNumber ]
         ]
-        [ manufacturerLogo "h-[14px] object-contain" manufacturer ]
 
 
 badge : String -> List (Html msg) -> Car.Metadata -> Html msg
