@@ -467,7 +467,12 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 ## Testing
 
 - **Elm** — `elm-test` for unit tests, `elm-verify-examples` for docstring
-  examples. Benchmarks live in `/package/benchmark/`.
+  examples. Benchmarks live in `/package/benchmark/`. Tests of app modules run
+  from `app/tests/` and of the library's from `package/tests/`; `.#test` runs
+  both. `elm-explorations/test` sits in the app's `dependencies` for this --
+  hand-written `test-dependencies` read fine to elm-test but make every
+  `elm make` fail with "dependencies edited by hand", which is a build break
+  the test runner does not see.
 - **TypeScript** — `tsc --noEmit`, over `index.ts`, `vite.config.ts` and
   `src/`. `/app/tests/` is outside the TS project on purpose: Playwright comes
   from the flake rather than from `node_modules`, so `@playwright/test` does
