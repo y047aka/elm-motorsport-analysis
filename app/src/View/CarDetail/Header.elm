@@ -1,7 +1,7 @@
 module View.CarDetail.Header exposing (closeButton, view)
 
-{-| Who the car is and where it stands: the line a classification prints, with
-the two cars it is actually racing on either side of it.
+{-| The line a classification prints for one car, and the ✕ that closes a
+column when the reader has several open.
 
 @docs closeButton, view
 
@@ -11,7 +11,6 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, title)
 import Html.Events exposing (onClick)
 import Motorsport.Driver as Driver
-import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Leaderboard exposing (viewPositionChangeInline)
 import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Snapshot exposing (CarAt)
@@ -20,12 +19,10 @@ import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
 
 
-{-| `startPosition` is where the car began, which the round's summary estimates
-off the opening lap rather than reading off a grid sheet.
+{-| Who the car is: the line a classification prints.
 
-`toLeader` is the caller's rather than read off the car, because a `CarAt`
-carries the gap to the field's leader and this line reports the car's class --
-which for an LMGT3 car is several laps and another race away.
+`startPosition` is where the car began, which the round's summary estimates
+off the opening lap rather than reading off a grid sheet.
 
 `onClose` closes the column and `grip` carries it along the strip, both
 `Nothing` for the only column on show.
@@ -33,17 +30,13 @@ which for an LMGT3 car is several laps and another race away.
 -}
 view :
     { startPosition : Maybe Position
-    , toLeader : Gap
     , onClose : Maybe msg
     , grip : Maybe (Html msg)
     }
     -> CarAt
     -> Html msg
-view { startPosition, toLeader, onClose, grip } item =
-    div [ class "grid gap-y-2" ]
-        [ nameplate { startPosition = startPosition, onClose = onClose, grip = grip } item
-        , standing toLeader item
-        ]
+view { startPosition, onClose, grip } item =
+    nameplate { startPosition = startPosition, onClose = onClose, grip = grip } item
 
 
 portrait : Maybe String -> CarAt -> Html msg
@@ -133,24 +126,6 @@ currentDriver : CarAt -> Html msg
 currentDriver item =
     div [ class "text-[11px] truncate" ]
         [ text (Driver.toInitialAndSurname item.currentDriver) ]
-
-
-standing : Gap -> CarAt -> Html msg
-standing toLeader item =
-    div [ class "border border-border rounded-lg grid grid-cols-3" ]
-        [ statCell "Class" (text (Position.toOrdinal item.standing.positionInClass))
-        , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
-        , statCell "Class leader" (text (Gap.toString toLeader))
-        ]
-
-
-statCell : String -> Html msg -> Html msg
-statCell label value =
-    div
-        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
-        [ div [ class "text-[8px] uppercase tracking-[0.03em] text-muted-foreground" ] [ text label ]
-        , div [ class "text-[12px] tabular-nums" ] [ value ]
-        ]
 
 
 statusBadge : Status -> Html msg
