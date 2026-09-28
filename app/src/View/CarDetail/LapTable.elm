@@ -113,10 +113,10 @@ pitCell lap =
             "in"
 
         Lap.OutLap _ ->
-            "Out"
+            "out"
 
         Lap.OutAndIn _ ->
-            "Out in"
+            "out in"
 
 
 againstOwnBest : { time : Maybe Duration, personalBest : Maybe Duration } -> Maybe RatedTime
