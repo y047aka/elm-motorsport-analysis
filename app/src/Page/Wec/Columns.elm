@@ -1,9 +1,22 @@
 module Page.Wec.Columns exposing
-    ( Model, init, update, Msg(..)
-    , StripKey(..), keyName
-    , keysOf, resolve, carsIn
-    , placements, isCarried, placementAttributes
-    , gripId, stripId, scrollId, width, gap, px
+    ( Model
+    , Msg(..)
+    , StripKey(..)
+    , carsIn
+    , gap
+    , gripId
+    , init
+    , isCarried
+    , keyName
+    , keysOf
+    , placementAttributes
+    , placements
+    , px
+    , resolve
+    , scrollId
+    , stripId
+    , update
+    , width
     )
 
 {-| The strip of columns: what order they stand in, which one a pointer is
@@ -63,6 +76,7 @@ carOfKey key =
 the race runs, with the tracker's column behind them where its flag says.
 `Picked` is fixed, in the order the reader left them in, and any open, close
 or move settles the stand-ins into one.
+
 -}
 type Columns
     = Live { tracker : Bool }
@@ -635,10 +649,15 @@ restoreScrolls scrolls =
 measures one `pitch` as exactly one column, and the strip scrolls sideways
 rather than resizing its columns. The width is what the panel's own content
 wants; a change to it is a change to `pitch`, and so to every carry distance.
+
+335 is the panel's floor: the widest thing in it is the comparison's tab row,
+which wants 302px of the 303 a column of this width hands it; 335 is where the
+row stops scrolling within itself.
+
 -}
 width : Float
 width =
-    360
+    335
 
 
 gap : Float

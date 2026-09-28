@@ -158,6 +158,7 @@ field shared =
     Shared.loadedRound shared |> Maybe.map .snapshot
 
 
+
 -- SUBSCRIPTIONS
 
 
@@ -312,6 +313,7 @@ row, grow, row -- because the card's content has no height of its own to
 give a drawing a percentage of: a drawing sized only by its viewBox's aspect,
 and a tall circuit's is very tall, runs past the card's border instead of
 inside it.
+
 -}
 paneCells : Pane -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
 paneCells pane track snapshot timeline replay =
@@ -419,13 +421,13 @@ carCard several held comparison cars snapshot car =
             car.metadata.carNumber
     in
     Card.card []
-        -- A card's content does not shrink below what it holds, so the box that
-        -- scrolls has to be a flex child of the card.
+        -- A card's content does not shrink below what it holds, so the card
+        -- settles the height here and the panel scrolls within it, under the
+        -- header. The row is `minmax(0,1fr)` rather than `auto`: an `auto` row
+        -- takes the content's height and overflows the card rather than
+        -- cropping it.
         [ div
-            [ Attributes.id (Columns.scrollId carNumber)
-            , Attributes.class "flex-1 min-h-0 overflow-y-auto"
-            , Html.Events.on "scroll" (Decode.map (Columns.PanelScrolled carNumber >> ColumnsMsg) (Decode.at [ "target", "scrollTop" ] Decode.float))
-            ]
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
@@ -442,6 +444,8 @@ carCard several held comparison cars snapshot car =
                         else
                             Nothing
                     , comparison = comparison
+                    , scrollId = Columns.scrollId carNumber
+                    , onScroll = Columns.PanelScrolled carNumber >> ColumnsMsg
                     }
                     cars
                     snapshot
@@ -534,7 +538,7 @@ eventRows cars timeline occurredCount =
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
         |> List.map (eventRow carsByNumber)
-        |> div [ Attributes.class "grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-xs" ]
+        |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
 
 
 {-| A row is two lines whatever it holds, the first as tall as the badge: the
@@ -562,10 +566,10 @@ eventRow carsByNumber event =
                 Nothing ->
                     []
     in
-    div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-1 items-center py-0.5" ]
+    div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-0.5 items-center py-0.5" ]
         ([ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
-         , cell "" [ text (describe event.eventType) ]
          , cell "" [ carBadge car event.eventType ]
+         , cell "" [ text (describe event.eventType) ]
          , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
          ]
@@ -573,10 +577,13 @@ eventRow carsByNumber event =
         )
 
 
+{-| The same bar the LiveStandings class headers stand their names on --
+`0.2em x 1.2em` of the class colour at their 10px, which is 2px x 12px.
+-}
 classMark : Metadata -> Html Msg
 classMark metadata =
     div
-        [ Attributes.class "size-2 rounded-[2px]"
+        [ Attributes.class "w-[2px] h-[12px] rounded-[2px]"
         , attribute "style" ("background-color: " ++ Class.toColor metadata.class ++ ";")
         ]
         []
@@ -589,7 +596,7 @@ carBadge : Maybe Car -> EventType -> Html Msg
 carBadge car eventType =
     case ( car, eventType ) of
         ( Just { metadata }, _ ) ->
-            CarNumberBadge.viewRow metadata
+            CarNumberBadge.viewRowPlain metadata
 
         ( Nothing, CarEvent carNumber _ ) ->
             span [] [ text carNumber ]

@@ -21,7 +21,9 @@ is the `details` element's own, and lasts as long as the column's DOM does.
 -}
 
 import Html exposing (Html, details, div, h3, summary, text)
-import Html.Attributes exposing (attribute, class)
+import Html.Attributes exposing (attribute, class, style)
+import Html.Events
+import Json.Decode as Decode
 import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
@@ -93,12 +95,18 @@ update msg (Comparison comparison) =
 
 
 {-| The panel carries `data-car-detail`, which the visual tests locate it by.
+
+`scrollId` and `onScroll` belong to the box the panel scrolls in: the header
+holds its place at the top while everything under it scrolls.
+
 -}
 view :
     { toMsg : Msg -> msg
     , onClose : Maybe msg
     , grip : Maybe (Html msg)
     , comparison : Comparison
+    , scrollId : String
+    , onScroll : Float -> msg
     }
     -> List Car
     -> Snapshot
@@ -111,16 +119,24 @@ view config cars snapshot focused =
     in
     div
         [ attribute "data-car-detail" focused.metadata.carNumber
-        , class "grid gap-y-3"
+        , class "h-full grid grid-rows-[auto_minmax(0,1fr)] gap-y-3"
         ]
         [ Header.view
             { startPosition = startPositionOf cars focused
-            , toLeader = gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused
             , onClose = config.onClose
             , grip = config.grip
             }
             focused
-        , Html.map config.toMsg (panel config.comparison cars snapshot rivals focused)
+
+        -- The header holds its place and the panel scrolls under it. The id
+        -- is the caller's: keyed reordering moves this box out of the
+        -- document, and the scroll is restored back into it once it is back.
+        , div
+            [ attribute "id" config.scrollId
+            , class "min-h-0 overflow-y-auto"
+            , Html.Events.on "scroll" (Decode.map config.onScroll (Decode.at [ "target", "scrollTop" ] Decode.float))
+            ]
+            [ Html.map config.toMsg (panel config.comparison cars snapshot rivals focused) ]
         ]
 
 
@@ -162,7 +178,10 @@ panel comparison cars snapshot rivals focused =
     -- No gap: the sections carry their own padding, and the rule between two of
     -- them wants to sit in the middle of that rather than have space of its own.
     div [ class "grid" ]
-        [ container "Rivals" (legend snapshot rivals)
+        [ standing
+            (gapOf snapshot (Snapshot.classLeader focused.metadata.class snapshot) focused)
+            focused
+        , container "Rivals" (legend snapshot rivals)
         , container "Lap times"
             (LapTimes.view { bestTimes = Snapshot.bestTimes snapshot } laps focused)
         , charts comparison snapshot rivals
@@ -237,18 +256,22 @@ legendEntry snapshot focused inFront item =
     -- column and the badges start where one another do.
     div
         [ attribute "data-rival" item.metadata.carNumber
-        , class "grid grid-cols-[1.75rem_auto_1fr_auto] items-center gap-x-2 py-0.5 px-1 rounded"
-        , class
+        , class "grid grid-cols-[1.75rem_auto_1.5rem_1fr_auto] items-center gap-x-2 py-0.5 px-1 rounded"
+        , style "background-color"
             (if isFocused then
-                "bg-accent/40"
+                -- The car's own colour, thinned enough to write on; grey
+                -- would hide which car it marks.
+                "color-mix(in oklch, " ++ item.metadata.manufacturer.color ++ " 25%, transparent)"
 
              else
-                ""
+                "transparent"
             )
         ]
         [ div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ]
             [ text (Position.toOrdinal item.standing.positionInClass) ]
-        , CarNumberBadge.viewRow item.metadata
+        , CarNumberBadge.manufacturerBadge item.metadata.manufacturer
+        , div [ class "text-center leading-none text-xs" ]
+            [ text item.metadata.carNumber ]
         , div [ class "text-[11px] truncate" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , div [ class "text-[12px] tabular-nums whitespace-nowrap" ]
@@ -287,6 +310,33 @@ rivalsOf snapshot focused =
 startPositionOf : List Car -> CarAt -> Maybe Position
 startPositionOf cars focused =
     carOf cars focused |> Maybe.map .startPosition
+
+
+{-| Where the car stands in its class, its laps, and the gap its class leader
+is answering: the strip a timing sheet prints its row in, leading the part of
+the panel that scrolls under the header.
+
+`toLeader` is the caller's rather than read off the car, because a `CarAt`
+carries the gap to the field's leader and this line reports the car's class --
+which for an LMGT3 car is several laps and another race away.
+
+-}
+standing : Gap -> CarAt -> Html msg
+standing toLeader item =
+    div [ class "border border-border rounded-lg grid grid-cols-3" ]
+        [ statCell "Class" (text (Position.toOrdinal item.standing.positionInClass))
+        , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
+        , statCell "Class leader" (text (Gap.toString toLeader))
+        ]
+
+
+statCell : String -> Html msg -> Html msg
+statCell label value =
+    div
+        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
+        [ div [ class "text-[8px] uppercase tracking-[0.03em] text-muted-foreground" ] [ text label ]
+        , div [ class "text-[12px] tabular-nums" ] [ value ]
+        ]
 
 
 {-| The car's laps as the race holds them, which is the same list from one frame
