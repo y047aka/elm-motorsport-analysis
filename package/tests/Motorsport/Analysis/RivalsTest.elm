@@ -36,14 +36,14 @@ suite =
                         |> Expect.equal (Just [ "99" ])
             ]
         , describe "at the edges of the class"
-            [ test "the car at the front of it takes two from behind" <|
+            [ test "the car at the front of it has only the one behind" <|
                 \_ ->
                     fightAround "1"
-                        |> Expect.equal (Just [ "1", "2", "3" ])
-            , test "and the car at the back two from ahead" <|
+                        |> Expect.equal (Just [ "1", "2" ])
+            , test "and the car at the back only the one ahead" <|
                 \_ ->
                     fightAround "4"
-                        |> Expect.equal (Just [ "2", "3", "4" ])
+                        |> Expect.equal (Just [ "3", "4" ])
             ]
         , describe "how far out a reader asks"
             [ test "a wider ring comes out in running order, the car among them" <|

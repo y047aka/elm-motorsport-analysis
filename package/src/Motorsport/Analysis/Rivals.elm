@@ -76,28 +76,11 @@ class (Rivals r) =
 
 
 {-| The car and the rival either side of it: the cars a view compares, and the
-ones a legend beside it names. Three wherever the class runs that deep -- at
-an edge of the class the side that has no rival gives its place to the other,
-so the class leader is drawn against the two behind it rather than one.
+ones a legend beside it names.
 -}
 fight : Rivals -> List CarAt
-fight (Rivals r) =
-    let
-        ahead =
-            if List.isEmpty r.behind then
-                List.take 2 r.ahead
-
-            else
-                List.take 1 r.ahead
-
-        behind =
-            if List.isEmpty r.ahead then
-                List.take 2 r.behind
-
-            else
-                List.take 1 r.behind
-    in
-    List.reverse ahead ++ r.car :: behind
+fight =
+    nearest 1
 
 
 {-| The car and up to `count` rivals either side of it, in running order. Fewer
