@@ -59,13 +59,9 @@ import View.PlaybackControls as PlaybackControls
 
 type alias Model =
     { pane : Pane
-    , tracker : Bool
+    , strip : Columns.Model
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
-    , columns : Columns.Columns
-    , carried : Maybe Columns.Carry
-    , columnScrolls : Dict CarNumber Float
-    , announcement : String
     , comparison : CarDetail.Comparison
     }
 
@@ -96,13 +92,9 @@ type StandingsTab
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { pane = Shown
-      , tracker = False
+      , strip = Columns.init
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
-      , columns = Columns.ClassLeaders
-      , carried = Nothing
-      , columnScrolls = Dict.empty
-      , announcement = ""
       , comparison = CarDetail.initialComparison
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -116,22 +108,11 @@ init params =
 type Msg
     = StartRace
     | PauseRace
-    | ShowTracker Bool
     | TogglePane
+    | ColumnsMsg Columns.Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | OpenColumn CarNumber
-    | CloseColumn CarNumber
-    | GrabColumn Columns.StripKey DragHandle.Pointer
-    | CarryColumn DragHandle.Pointer
-    | DropColumn DragHandle.Pointer
-    | CancelCarry Int
-    | StripScrolledFrom Float
-    | StripScrolled Float
-    | StepColumn Columns.StripKey Int
-    | ColumnScrolled CarNumber Float
-    | Settled
     | CarDetailMsg CarDetail.Msg
 
 
@@ -144,21 +125,12 @@ update shared msg m =
         PauseRace ->
             ( m, Task.perform (Replay.Pause >> ReplayMsg) Time.now |> Effect.sendCmd )
 
-        ShowTracker shown ->
-            ( { m
-                | tracker = shown
-                , columns =
-                    rearrange shared
-                        (if shown then
-                            Columns.showTracker
-
-                         else
-                            Columns.hideTracker
-                        )
-                        m.columns
-              }
-            , Effect.none
-            )
+        ColumnsMsg sub ->
+            let
+                ( strip, cmd ) =
+                    Columns.update (field shared) sub m.strip
+            in
+            ( { m | strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
 
         TogglePane ->
             ( { m | pane = togglePane m.pane }, Effect.none )
@@ -174,181 +146,16 @@ update shared msg m =
             , Effect.none
             )
 
-        OpenColumn carNumber ->
-            ( { m | columns = rearrange shared (Columns.open m.tracker carNumber) m.columns }, Effect.none )
-
-        CloseColumn carNumber ->
-            ( { m
-                | columns = rearrange shared (Columns.close m.tracker carNumber) m.columns
-                , columnScrolls = Dict.remove carNumber m.columnScrolls
-              }
-            , Effect.none
-            )
-
-        GrabColumn key pointer ->
-            case m.carried of
-                Just _ ->
-                    ( m, Effect.none )
-
-                Nothing ->
-                    let
-                        settled =
-                            rearrange shared (Columns.settle m.tracker) m.columns
-                    in
-                    ( { m
-                        | columns = settled
-                        , carried =
-                            Just
-                                { key = key
-                                , pointerId = pointer.id
-                                , before = m.columns
-                                , settled = settled
-                                , from = pointer.x
-                                , at = pointer.x
-                                , scrolledFrom = 0
-                                , scrolledTo = 0
-                                }
-                      }
-                    , Browser.Dom.getViewportOf stripId
-                        |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
-                        |> Effect.sendCmd
-                    )
-
-        CarryColumn pointer ->
-            case Columns.heldBy pointer.id m.carried of
-                Just carry ->
-                    ( { m | carried = Just { carry | at = pointer.x } }, Effect.none )
-
-                Nothing ->
-                    ( m, Effect.none )
-
-        DropColumn pointer ->
-            dropColumn shared pointer m
-
-        CancelCarry pointerId ->
-            case Columns.heldBy pointerId m.carried of
-                Just carry ->
-                    ( { m | columns = Columns.putBack carry m.columns, carried = Nothing }, Effect.none )
-
-                Nothing ->
-                    ( m, Effect.none )
-
-        StripScrolledFrom left ->
-            ( { m | carried = Maybe.map (\carry -> { carry | scrolledFrom = left, scrolledTo = left }) m.carried }
-            , Effect.none
-            )
-
-        StripScrolled left ->
-            ( { m | carried = Maybe.map (\carry -> { carry | scrolledTo = left }) m.carried }, Effect.none )
-
-        StepColumn key steps ->
-            stepColumn shared key steps m
-
-        ColumnScrolled carNumber top ->
-            ( { m | columnScrolls = Dict.insert carNumber top m.columnScrolls }, Effect.none )
-
-        Settled ->
-            ( m, Effect.none )
-
         CarDetailMsg detailMsg ->
             ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
 
 
-dropColumn : Shared.Model -> DragHandle.Pointer -> Model -> ( Model, Effect Msg )
-dropColumn shared pointer m =
-    case Columns.heldBy pointer.id m.carried of
-        Just carry ->
-            let
-                moved =
-                    rearrange shared
-                        (Columns.move m.tracker
-                            carry.key
-                            (Columns.columnsCarried { carry | at = pointer.x })
-                        )
-                        m.columns
-            in
-            if moved == m.columns then
-                ( { m | columns = Columns.putBack carry m.columns, carried = Nothing }, Effect.none )
-
-            else
-                reorder shared { moved = carry.key, refocus = False } moved { m | carried = Nothing }
-
-        Nothing ->
-            ( m, Effect.none )
-
-
-stepColumn : Shared.Model -> Columns.StripKey -> Int -> Model -> ( Model, Effect Msg )
-stepColumn shared key steps m =
-    let
-        moved =
-            rearrange shared (Columns.move m.tracker key steps) m.columns
-    in
-    if m.carried /= Nothing then
-        -- A step would move the strip under the carried column, and
-        -- could take the grip holding the pointer out of the document.
-        ( m, Effect.none )
-
-    else if moved == m.columns then
-        ( m, Effect.none )
-
-    else
-        reorder shared { moved = key, refocus = True } moved m
-
-
-{-| The keyed strip moves a column by taking it out of the document, which
-loses how far down it was scrolled and the focus of anything in it. Both are
-put back once it has been drawn in its new place, the focus first: focusing
-scrolls the grip, at the top of its column, into view.
+{-| The field is read at the moment of the message, never kept: the strip's
+update takes it as an argument and the stand-ins are off it.
 -}
-reorder : Shared.Model -> { moved : Columns.StripKey, refocus : Bool } -> Columns.Columns -> Model -> ( Model, Effect Msg )
-reorder shared { moved, refocus } columns m =
-    let
-        focus : Task.Task Never ()
-        focus =
-            if refocus then
-                Browser.Dom.focus (Columns.gripId moved) |> Task.onError (\_ -> Task.succeed ())
-
-            else
-                Task.succeed ()
-    in
-    ( { m | columns = columns, announcement = announceMove shared m.tracker moved columns }
-    , focus
-        |> Task.andThen (\_ -> restoreScrolls m.columnScrolls)
-        |> Task.perform (\_ -> Settled)
-        |> Effect.sendCmd
-    )
-
-
-restoreScrolls : Dict CarNumber Float -> Task.Task Never ()
-restoreScrolls scrolls =
-    Dict.toList scrolls
-        |> List.map
-            (\( carNumber, top ) ->
-                Browser.Dom.setViewportOf (columnScrollId carNumber) 0 top
-                    |> Task.onError (\_ -> Task.succeed ())
-            )
-        |> Task.sequence
-        |> Task.map (\_ -> ())
-
-
-announceMove : Shared.Model -> Bool -> Columns.StripKey -> Columns.Columns -> String
-announceMove shared tracker key columns =
-    case Shared.loadedRound shared of
-        Just round ->
-            Columns.announcement key (Columns.keysOf tracker round.snapshot columns)
-
-        Nothing ->
-            ""
-
-
-rearrange : Shared.Model -> (Snapshot -> Columns.Columns -> Columns.Columns) -> Columns.Columns -> Columns.Columns
-rearrange shared f columns =
-    case Shared.loadedRound shared of
-        Just round ->
-            f round.snapshot columns
-
-        Nothing ->
-            columns
+field : Shared.Model -> Maybe Snapshot
+field shared =
+    Shared.loadedRound shared |> Maybe.map .snapshot
 
 
 -- SUBSCRIPTIONS
@@ -449,7 +256,7 @@ trackerCard several held track snapshot =
                           else
                             []
                          )
-                            ++ [ Header.closeButton (ShowTracker False) ]
+                            ++ [ Header.closeButton (ColumnsMsg (Columns.ShowTracker False)) ]
                         )
                     ]
                 ]
@@ -461,13 +268,13 @@ mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -
 mainGrid track timeline snapshot replay m =
     let
         keys =
-            Columns.resolve snapshot (Columns.keysOf m.tracker snapshot m.columns)
+            Columns.resolve snapshot (Columns.keysOf m.strip.tracker snapshot m.strip.order)
 
         gridCells =
             [ div
                 [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
                 [ LiveStandings.view
-                    { onSelect = OpenColumn
+                    { onSelect = Columns.Open >> ColumnsMsg
                     , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
                     }
                     snapshot
@@ -494,7 +301,7 @@ mainGrid track timeline snapshot replay m =
             gridCells
         , standingsPanel m.standingsTab m replay snapshot
         , standingsPopover
-        , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.announcement ]
+        , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
 
 
@@ -511,7 +318,7 @@ paneCells pane track snapshot timeline replay =
         Shown ->
             [ div
                 [ Attributes.class "col-start-3 row-start-1 grid place-self-center h-full max-w-full aspect-square cursor-pointer"
-                , onClick (ShowTracker True)
+                , onClick (ColumnsMsg (Columns.ShowTracker True))
                 ]
                 [ Card.card []
                     [ Card.content []
@@ -532,7 +339,7 @@ columnStrip cell track keys m replay snapshot =
             List.length keys > 1
 
         placements =
-            Columns.placements m.carried keys
+            Columns.placements m.strip.carried keys
     in
     case keys of
         [] ->
@@ -544,13 +351,13 @@ columnStrip cell track keys m replay snapshot =
             -- hand how far the reader had scrolled it to whichever column moved
             -- up into its place when the one before it was closed.
             Html.Keyed.node "div"
-                ([ Attributes.id stripId
+                ([ Attributes.id Columns.stripId
                  , Attributes.class (cell ++ " flex overflow-x-auto")
                  , Attributes.style "column-gap" (Columns.px Columns.gap)
                  ]
-                    ++ (case m.carried of
+                    ++ (case m.strip.carried of
                             Just _ ->
-                                [ Html.Events.on "scroll" (Decode.map StripScrolled (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
+                                [ Html.Events.on "scroll" (Decode.map (Columns.StripScrolled >> ColumnsMsg) (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
 
                             Nothing ->
                                 []
@@ -584,28 +391,18 @@ columnStrip cell track keys m replay snapshot =
                 )
 
 
-stripId : String
-stripId =
-    "column-strip"
-
-
 columnGrip : Bool -> Columns.StripKey -> Html Msg
 columnGrip held key =
     DragHandle.view
         { id = Columns.gripId key
         , label = "Move this column"
         , held = held
-        , onGrab = GrabColumn key
-        , onMove = CarryColumn
-        , onDrop = DropColumn
-        , onCancel = CancelCarry
-        , onStep = StepColumn key
+        , onGrab = Columns.Grab key >> ColumnsMsg
+        , onMove = Columns.Carrying >> ColumnsMsg
+        , onDrop = Columns.Release >> ColumnsMsg
+        , onCancel = Columns.Cancel >> ColumnsMsg
+        , onStep = Columns.Step key >> ColumnsMsg
         }
-
-
-columnScrollId : CarNumber -> String
-columnScrollId carNumber =
-    "column-scroll-" ++ carNumber
 
 
 carCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
@@ -618,16 +415,16 @@ carCard several held comparison cars snapshot car =
         -- A card's content does not shrink below what it holds, so the box that
         -- scrolls has to be a flex child of the card.
         [ div
-            [ Attributes.id (columnScrollId carNumber)
+            [ Attributes.id (Columns.scrollId carNumber)
             , Attributes.class "flex-1 min-h-0 overflow-y-auto"
-            , Html.Events.on "scroll" (Decode.map (ColumnScrolled carNumber) (Decode.at [ "target", "scrollTop" ] Decode.float))
+            , Html.Events.on "scroll" (Decode.map (Columns.PanelScrolled carNumber >> ColumnsMsg) (Decode.at [ "target", "scrollTop" ] Decode.float))
             ]
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
                     , onClose =
                         if several then
-                            Just (CloseColumn carNumber)
+                            Just (ColumnsMsg (Columns.Close carNumber))
 
                         else
                             Nothing

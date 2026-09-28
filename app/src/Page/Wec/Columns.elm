@@ -1,28 +1,31 @@
 module Page.Wec.Columns exposing
-    ( Columns(..), StripKey(..), keyName, carOfKey
+    ( Model, init, update, Msg(..)
+    , StripKey(..), keyName
     , keysOf, resolve, carsIn
-    , open, close, move, settle, showTracker, hideTracker
-    , Carry, heldBy, putBack, columnsCarried
-    , Placement(..), placements, isCarried, placementAttributes
-    , announcement
-    , gripId, width, gap, px
+    , placements, isCarried, placementAttributes
+    , gripId, stripId, scrollId, width, gap, px
     )
 
 {-| The strip of columns: what order they stand in, which one a pointer is
 carrying, and where each is drawn while that goes on.
 
 A column belongs either to a car or to the tracker; `StripKey` is that
-choice, and the order -- `Columns` -- is a list of them. The page keeps one
-of these and its one `Carry`, and every edit here is total: nothing fails,
-and stand-ins that have settled stay settled.
+choice, and the order -- `Columns` -- is a list of them. `Model` holds one
+order, the one carried column, and how far down each panel was scrolled.
+Every edit is total: nothing fails, and stand-ins that have settled stay
+settled.
 
 -}
 
+import Browser.Dom
+import Dict exposing (Dict)
 import Html
 import Html.Attributes as Attributes
 import List.Extra
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Task
+import UI.DragHandle exposing (Pointer)
 
 
 {-| A column of the strip: a car's, or the tracker's.
@@ -373,6 +376,244 @@ placementAttributes placement =
 gripId : StripKey -> String
 gripId key =
     "column-grip-" ++ keyName key
+
+
+stripId : String
+stripId =
+    "column-strip"
+
+
+{-| The box a car's panel scrolls in. The tracker's column scrolls nothing.
+-}
+scrollId : CarNumber -> String
+scrollId carNumber =
+    "column-scroll-" ++ carNumber
+
+
+{-| The strip's state: the order, the tracker's column flag, the one pointer
+carrying, how far down each car's panel was scrolled, and what to say when a
+column moved.
+-}
+type alias Model =
+    { order : Columns
+    , tracker : Bool
+    , carried : Maybe Carry
+    , scrolls : Dict CarNumber Float
+    , announcement : String
+    }
+
+
+init : Model
+init =
+    { order = ClassLeaders
+    , tracker = False
+    , carried = Nothing
+    , scrolls = Dict.empty
+    , announcement = ""
+    }
+
+
+type Msg
+    = Open CarNumber
+    | Close CarNumber
+    | ShowTracker Bool
+    | Grab StripKey Pointer
+    | Carrying Pointer
+    | Release Pointer
+    | Cancel Int
+    | StripScrolledFrom Float
+    | StripScrolled Float
+    | Step StripKey Int
+    | PanelScrolled CarNumber Float
+    | Settled
+
+
+{-| The field is given per call and held by nobody: the stand-ins are read
+off it the moment an edit needs them, and the panels' scroll positions are
+put back once the moved column has been drawn in its new place -- the grip's
+focus first, since focusing scrolls the grip into view and that scrolls the
+panel too.
+
+A frame with no round leaves the order where it was; the pointer is still
+answered to, and settles nothing that cannot be settled.
+
+-}
+update : Maybe Snapshot -> Msg -> Model -> ( Model, Cmd Msg )
+update maybeSnapshot msg m =
+    case msg of
+        Open carNumber ->
+            edit maybeSnapshot m (open m.tracker carNumber)
+
+        Close carNumber ->
+            edit maybeSnapshot m (close m.tracker carNumber)
+                |> Tuple.mapFirst (\after -> { after | scrolls = Dict.remove carNumber m.scrolls })
+
+        ShowTracker shown ->
+            case maybeSnapshot of
+                Just round ->
+                    ( { m
+                        | tracker = shown
+                        , order =
+                            if shown then
+                                showTracker round m.order
+
+                            else
+                                hideTracker round m.order
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( m, Cmd.none )
+
+        Grab key pointer ->
+            case m.carried of
+                Just _ ->
+                    ( m, Cmd.none )
+
+                Nothing ->
+                    let
+                        settled =
+                            case maybeSnapshot of
+                                Just round ->
+                                    settle m.tracker round m.order
+
+                                Nothing ->
+                                    m.order
+                    in
+                    ( { m
+                        | order = settled
+                        , carried =
+                            Just
+                                { key = key
+                                , pointerId = pointer.id
+                                , before = m.order
+                                , settled = settled
+                                , from = pointer.x
+                                , at = pointer.x
+                                , scrolledFrom = 0
+                                , scrolledTo = 0
+                                }
+                      }
+                    , Browser.Dom.getViewportOf stripId
+                        |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
+                    )
+
+        Carrying pointer ->
+            case heldBy pointer.id m.carried of
+                Just carry ->
+                    ( { m | carried = Just { carry | at = pointer.x } }, Cmd.none )
+
+                Nothing ->
+                    ( m, Cmd.none )
+
+        Release pointer ->
+            case heldBy pointer.id m.carried of
+                Just carry ->
+                    case maybeSnapshot of
+                        Just round ->
+                            let
+                                moved =
+                                    move m.tracker carry.key (columnsCarried { carry | at = pointer.x }) round m.order
+                            in
+                            if moved == m.order then
+                                ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
+
+                            else
+                                reorder round { moved = carry.key, refocus = False } { m | carried = Nothing } moved
+
+                        Nothing ->
+                            ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
+
+                Nothing ->
+                    ( m, Cmd.none )
+
+        Cancel pointerId ->
+            case heldBy pointerId m.carried of
+                Just carry ->
+                    ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
+
+                Nothing ->
+                    ( m, Cmd.none )
+
+        StripScrolledFrom left ->
+            ( { m | carried = Maybe.map (\carry -> { carry | scrolledFrom = left, scrolledTo = left }) m.carried }, Cmd.none )
+
+        StripScrolled left ->
+            ( { m | carried = Maybe.map (\carry -> { carry | scrolledTo = left }) m.carried }, Cmd.none )
+
+        Step key steps ->
+            if m.carried /= Nothing then
+                -- A step would move the strip under the carried column, and
+                -- could take the grip holding the pointer out of the document.
+                ( m, Cmd.none )
+
+            else
+                case maybeSnapshot of
+                    Just round ->
+                        let
+                            moved =
+                                move m.tracker key steps round m.order
+                        in
+                        if moved == m.order then
+                            ( m, Cmd.none )
+
+                        else
+                            reorder round { moved = key, refocus = True } m moved
+
+                    Nothing ->
+                        ( m, Cmd.none )
+
+        PanelScrolled carNumber top ->
+            ( { m | scrolls = Dict.insert carNumber top m.scrolls }, Cmd.none )
+
+        Settled ->
+            ( m, Cmd.none )
+
+
+edit : Maybe Snapshot -> Model -> (Snapshot -> Columns -> Columns) -> ( Model, Cmd Msg )
+edit maybeSnapshot m f =
+    case maybeSnapshot of
+        Just round ->
+            ( { m | order = f round m.order }, Cmd.none )
+
+        Nothing ->
+            ( m, Cmd.none )
+
+
+{-| The keyed strip moves a column by taking it out of the document, which
+loses how far down it was scrolled and the focus of anything in it. Both are
+put back once it has been drawn in its new place, the focus first: focusing
+scrolls the grip, at the top of its column, into view.
+-}
+reorder : Snapshot -> { moved : StripKey, refocus : Bool } -> Model -> Columns -> ( Model, Cmd Msg )
+reorder round { moved, refocus } m order =
+    let
+        focus : Task.Task Never ()
+        focus =
+            if refocus then
+                Browser.Dom.focus (gripId moved) |> Task.onError (\_ -> Task.succeed ())
+
+            else
+                Task.succeed ()
+    in
+    ( { m | order = order, announcement = announcement moved (keysOf m.tracker round order) }
+    , focus
+        |> Task.andThen (\_ -> restoreScrolls m.scrolls)
+        |> Task.perform (\_ -> Settled)
+    )
+
+
+restoreScrolls : Dict CarNumber Float -> Task.Task Never ()
+restoreScrolls scrolls =
+    Dict.toList scrolls
+        |> List.map
+            (\( carNumber, top ) ->
+                Browser.Dom.setViewportOf (scrollId carNumber) 0 top
+                    |> Task.onError (\_ -> Task.succeed ())
+            )
+        |> Task.sequence
+        |> Task.map (\_ -> ())
 
 
 {-| A column is 360px, not a share of the cell. The widest thing in the panel is
