@@ -55,10 +55,8 @@ describe eventType =
 
 {-| The second line an event has, read off the car's laps at the event.
 
-A fastest lap is the lap the event completes, its time and its driver. A driver
-change is who handed the car to whom: the driver of the lap the event completes,
-and the one of the lap in progress from it, which is the lap the car's
-`currentDriver` is read off from then on.
+A fastest lap is the lap the event completes, its time and its driver. No other
+event carries one.
 
 -}
 detail : Maybe Car -> TimelineEvent -> Maybe String
@@ -66,9 +64,6 @@ detail car event =
     let
         lapOf find =
             car |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
-
-        driverOf find =
-            lapOf find |> Maybe.map (.driver >> Driver.toInitialAndSurname)
     in
     case event.eventType of
         CarEvent _ FastestLap ->
@@ -78,11 +73,6 @@ detail car event =
                         lap.time
                             |> Maybe.map (\time -> Duration.toString time ++ " · " ++ Driver.toInitialAndSurname lap.driver)
                     )
-
-        CarEvent _ DriverChange ->
-            Maybe.map2 (\handedOver tookOver -> handedOver ++ " → " ++ tookOver)
-                (driverOf Lap.findLastLapAt)
-                (driverOf Lap.findCurrentLap)
 
         _ ->
             Nothing
