@@ -32,6 +32,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
 import Page.Wec.Columns as Columns
 import Route
@@ -241,17 +242,26 @@ headerTitle shared =
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away; the body answers to no click.
 
+The drawing holds the head of the card at its natural square size, and the
+cars standing in their boxes at this moment fill the space left below it.
+
 It carries `data-tracker-column`, which the visual tests locate it by.
 
 -}
 trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
 trackerCard several held track snapshot =
+    let
+        inPit : List CarAt
+        inPit =
+            Snapshot.toList snapshot
+                |> List.filter (\car -> car.status == Status.InPit)
+    in
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
-            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[auto_minmax(0,1fr)]"
             ]
             [ Card.content []
-                [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
+                [ div [ Attributes.class "relative w-full aspect-square" ]
                     [ TrackerChart.view TrackerChart.Full track snapshot
                     , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
                         ((if several then
@@ -264,8 +274,36 @@ trackerCard several held track snapshot =
                         )
                     ]
                 ]
+            , Card.content []
+                [ div [ Attributes.class "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)] gap-y-1" ]
+                    [ div [ Attributes.class "text-[10px] font-bold uppercase tracking-wide text-muted-foreground" ]
+                        [ text ("In the pits · " ++ String.fromInt (List.length inPit)) ]
+                    , if List.isEmpty inPit then
+                        div [ Attributes.class "text-xs text-muted-foreground" ]
+                            [ text "No car is in the pit lane." ]
+
+                      else
+                        Html.Keyed.node "div"
+                            [ Attributes.class "min-h-0 overflow-y-auto grid grid-rows-[repeat(auto-fill,minmax(0,1.375rem))] content-start gap-y-0.5" ]
+                            (List.map pitLaneRow inPit)
+                    ]
+                ]
             ]
         ]
+
+
+{-| A car standing in its box: where it runs, its number, and who is sitting in
+the car right now.
+-}
+pitLaneRow : CarAt -> ( String, Html Msg )
+pitLaneRow car =
+    ( car.metadata.carNumber
+    , div [ Attributes.class "grid grid-cols-[20px_auto_1fr] items-center gap-2 rounded py-0.5" ]
+        [ div [ Attributes.class "text-center text-xs" ] [ text (String.fromInt car.standing.position) ]
+        , CarNumberBadge.viewRow car.metadata
+        , div [ Attributes.class "text-xs truncate" ] [ text (Driver.toSurname car.currentDriver) ]
+        ]
+    )
 
 
 mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
