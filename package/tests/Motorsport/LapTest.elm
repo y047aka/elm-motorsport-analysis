@@ -107,21 +107,6 @@ tests =
                     [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 63000 ]
                         |> List.map (\pit -> Lap.laneTimeOf { empty | pit = pit })
                         |> Expect.equal [ Nothing, Nothing, Just 63000, Just 63000 ]
-            , test "both halves of the split name the same crossing as the entry" <|
-                \_ ->
-                    let
-                        cameIn =
-                            { lap | pit = Lap.InLap }
-
-                        cameOut =
-                            { lap | lap = 2, elapsed = instant 16000, pit = Lap.OutLap 63000 }
-                    in
-                    Expect.equal (Lap.pitEntryAt cameOut) (Lap.pitEntryAt cameIn)
-            , test "the lap carrying the lane time enters at its own head" <|
-                \_ ->
-                    [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 63000 ]
-                        |> List.map (\pit -> Lap.pitEntryAt { lap | pit = pit })
-                        |> Expect.equal [ Nothing, Just (instant 10000), Just (instant 4000), Just (instant 4000) ]
             , test "the lane time runs from the entry crossing to back on the road" <|
                 \_ ->
                     Lap.pitExitAt { lap | pit = Lap.OutLap 46857 }

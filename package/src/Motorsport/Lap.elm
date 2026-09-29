@@ -3,7 +3,7 @@ module Motorsport.Lap exposing
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorTime
     , recorded
-    , Pit(..), isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt
+    , Pit(..), isInLap, isRacingLap, laneTimeOf, pitExitAt
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -18,7 +18,7 @@ module Motorsport.Lap exposing
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorTime
 @docs recorded
-@docs Pit, isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt
+@docs Pit, isInLap, isRacingLap, laneTimeOf, pitExitAt
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -185,38 +185,8 @@ isRacingLap lap =
     lap.pit == NoPit
 
 
-{-| When the car crossed the finish line in the pit lane, on its way into the
-lane.
-
-The feed splits a stop across two laps, and this is the crossing both halves of
-the split name: the end of the lap that finished in the lane, and the start of
-the lap that carries the lane's time. On an `OutAndIn` lap the entry is its own
-stop's at the head; the crossing that ends the lap is the next stop's entry,
-which that lap carries.
-
-The car leaves the road some seconds before this and is timed back on it some
-seconds after: the crossing is the lane timing the stop at its own end, the
-earliest instant a stop has.
-
--}
-pitEntryAt : Lap -> Maybe Instant
-pitEntryAt lap =
-    case lap.pit of
-        InLap ->
-            Just lap.elapsed
-
-        OutLap _ ->
-            Just (lapStart lap)
-
-        OutAndIn _ ->
-            Just (lapStart lap)
-
-        NoPit ->
-            Nothing
-
-
-{-| How long the car spent in the pit lane: from [`pitEntryAt`](#pitEntryAt) to
-[`pitExitAt`](#pitExitAt).
+{-| How long the car spent in the pit lane: from crossing the finish line in
+the lane to driving back out of it -- [`pitExitAt`](#pitExitAt).
 
 The feed's `pit_time` is this lane time and not the time stood still in a box:
 a car is timed crossing the two ends of the lane and nothing times the box, so
