@@ -2,23 +2,17 @@ module Motorsport.Wec.Circuit.LeMans.GeometryTest exposing (tests)
 
 import Expect
 import Motorsport.Circuit.Geodesy exposing (Coordinate, project)
-import Motorsport.Circuit.Shape as Shape exposing (Nearest, Point, Shape)
+import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Wec.Circuit.LeMans.Geometry as Geometry
 import Motorsport.Wec.Circuit.LeMans.Layout exposing (layout)
 import Test exposing (Test, describe, test)
 
 
-{-| 2025's Le Mans: the round a checkout keeps, and the shape every view draws,
-so every reading here is of what is on the screen.
+{-| 2025's Le Mans: the round a checkout keeps, and the shape every view draws.
 -}
 lap : Shape
 lap =
     (layout 2025).shape
-
-
-lapLength : Float
-lapLength =
-    Shape.length lap
 
 
 {-| The lap and the pit lane as the drawing holds them.
@@ -70,30 +64,6 @@ tests =
                         |> List.filter (\point -> point.lat < 47.9 || point.lat > 48 || point.lon < 0.1 || point.lon > 0.3)
                         |> Expect.equal []
             ]
-        , describe "a GPS log read against the lap"
-            [ test "a sample at a surveyed point reads as that point of the lap" <|
-                \_ ->
-                    Geometry.centreline
-                        |> List.map (\point -> apart point.metres (read (onEarth point)))
-                        |> List.maximum
-                        |> Maybe.withDefault 1.0e9
-                        |> Expect.atMost 1
-            , test "a receiver some metres off still reads as the same place round the lap" <|
-                \_ ->
-                    Geometry.centreline
-                        |> List.indexedMap (\i point -> apart point.metres (read (drift i (onEarth point))))
-                        |> List.maximum
-                        |> Maybe.withDefault 1.0e9
-                        |> Expect.atMost 15
-            , test "a car in the pit lane is placed on the lap it runs beside, and read as off the line" <|
-                \_ ->
-                    Geometry.pitLane
-                        |> List.map reading
-                        |> Expect.all
-                            [ List.map .distance >> List.maximum >> Maybe.withDefault 1.0e9 >> Expect.atMost 50
-                            , List.map .metres >> List.filter farFromTheStartStraight >> Expect.equal []
-                            ]
-            ]
         ]
 
 
@@ -104,28 +74,6 @@ and this are the same shape.
 onEarth : Geometry.LapPoint -> Coordinate
 onEarth point =
     { lat = point.lat, lon = point.lon }
-
-
-read : Coordinate -> Float
-read coordinates =
-    (reading coordinates).metres
-
-
-reading : Coordinate -> Nearest
-reading coordinates =
-    Shape.nearest (project Geometry.frame coordinates) lap
-
-
-{-| How far round the lap two readings are, the short way: the lap ends where it
-starts, so a reading just past the line and one just short of it are neighbours.
--}
-apart : Float -> Float -> Float
-apart a b =
-    let
-        difference =
-            abs (a - b)
-    in
-    min difference (lapLength - difference)
 
 
 {-| `Layout`'s rounding: the survey's own resolution, a tenth of a metre.
@@ -161,34 +109,3 @@ tightest place of this survey stands 113 micrometres clear.
 tenthTolerance : Float
 tenthTolerance =
     1.0e-6
-
-
-{-| Readings that are nowhere near the start straight the pit lane runs beside.
--}
-farFromTheStartStraight : Float -> Bool
-farFromTheStartStraight metres =
-    metres >= 700 && metres <= 12900
-
-
-{-| About ten metres off, the way a GPS receiver is wrong: 0.00009 degrees of
-latitude, or 0.00013 of longitude at this latitude. Successive samples drift in
-different directions, as a log's do.
--}
-drift : Int -> Coordinate -> Coordinate
-drift i coordinates =
-    let
-        error =
-            List.drop (modBy (List.length offsets) i) offsets
-                |> List.head
-                |> Maybe.withDefault { lat = 0, lon = 0 }
-    in
-    { lat = coordinates.lat + error.lat, lon = coordinates.lon + error.lon }
-
-
-offsets : List Coordinate
-offsets =
-    [ { lat = 0.00009, lon = 0 }
-    , { lat = 0, lon = -0.00013 }
-    , { lat = -0.00006, lon = 0.00008 }
-    , { lat = 0.00004, lon = 0.00004 }
-    ]

@@ -33,10 +33,8 @@ type alias PitPoint =
     }
 
 
-{-| The drawing's metres, and a GPS log's, measured on the earth. A sample read
-through [`Geodesy.project`](Motorsport-Circuit-Geodesy#project) lands among the
-points, and [`Shape.nearest`](Motorsport-Circuit-Shape#nearest) says how far round
-the lap it was.
+{-| The drawing's metres measured on the earth: every point below is where
+[`Geodesy.project`](Motorsport-Circuit-Geodesy#project) puts it in this frame.
 -}
 frame : Frame
 frame =

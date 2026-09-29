@@ -11,10 +11,9 @@
 // Every point is written as it was surveyed, in WGS84 degrees, with how far round
 // the lap it stands. The drawing's metres are not written: Elm projects the
 // degrees through the `Motorsport.Circuit.Geodesy.Frame` written beside them, to
-// the tenth of a metre the survey is kept to, and the same frame joins a GPS log
-// of a car to the lap. So a second circuit's script has to write the same frame,
-// out of the two numbers its own projection uses: the parallel it scales
-// east-west at, and the north-west corner of what it surveyed.
+// the tenth of a metre the survey is kept to. So a second circuit's script has
+// to write the same frame, out of the two numbers its own projection uses: the
+// parallel it scales east-west at, and the north-west corner of what it surveyed.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -235,10 +234,8 @@ type alias PitPoint =
     }
 
 
-{-| The drawing's metres, and a GPS log's, measured on the earth. A sample read
-through [\`Geodesy.project\`](Motorsport-Circuit-Geodesy#project) lands among the
-points, and [\`Shape.nearest\`](Motorsport-Circuit-Shape#nearest) says how far round
-the lap it was.
+{-| The drawing's metres measured on the earth: every point below is where
+[`Geodesy.project`](Motorsport-Circuit-Geodesy#project) puts it in this frame.
 -}
 frame : Frame
 frame =

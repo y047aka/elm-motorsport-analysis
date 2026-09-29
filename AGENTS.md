@@ -362,9 +362,8 @@ Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
 round the lap it stands, and `Layout` projects those degrees into the drawing
 through the `Circuit.Geodesy.Frame` the generator writes beside them — to the tenth
 of a metre the survey is kept to, which is the tenth every VRT baseline was
-rendered at. That is the door a GPS log of a car comes in through, `Geodesy.project`
-and then `Shape.nearest` saying how far round the lap a sample was. The frame's
-origin is the north-west corner of the survey, so the drawing never falls below
+rendered at. The frame's origin is the north-west corner of the survey, so the
+drawing never falls below
 its own zero, and a test holds every projected place clear of the half-tenth its
 rounding turns on — measured on the projection before the rounding, since a
 rounded place is clear of every boundary by construction. The tightest stands 113
