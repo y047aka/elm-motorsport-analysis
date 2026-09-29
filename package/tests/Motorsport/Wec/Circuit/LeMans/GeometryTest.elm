@@ -15,56 +15,24 @@ lap =
     (layout 2025).shape
 
 
-{-| The lap and the pit lane as the drawing holds them.
+{-| One surveyed place, three ways it is read: the degrees OpenStreetMap gives
+it, the frame's metres before `Layout` rounds them, and the drawing's metres
+after. A rounded place stands half a tenth clear of every boundary whatever the
+survey said, so the clearance a rounding turns on is worth measuring only on the
+reading before it.
 -}
-drawn : List Point
-drawn =
+type alias Place =
+    { degrees : Coordinate
+    , raw : Point
+    , drawn : Point
+    }
+
+
+places : List Place
+places =
     List.append
-        (Shape.marks lap
-            |> List.map (\mark -> { x = mark.x, y = mark.y })
-        )
-        (layout 2025).pitLane
-
-
-{-| Where every place the lap and the pit lane were surveyed falls in the
-frame's metres, before `Layout` rounds it to a tenth. A drawn point has been
-rounded already, and so stands half a tenth clear of every boundary whatever
-the survey said; only here does a rounding have a clearance worth measuring.
--}
-survey : List Point
-survey =
-    List.append
-        (List.map (onEarth >> project Geometry.frame) Geometry.centreline)
-        (List.map (project Geometry.frame) Geometry.pitLane)
-
-
-tests : Test
-tests =
-    describe "Motorsport.Wec.Circuit.LeMans.Geometry"
-        [ describe "the frame the points are drawn in"
-            [ test "the drawing is the survey, kept to a tenth of a metre" <|
-                \_ ->
-                    List.map tenthOf survey
-                        |> Expect.equal drawn
-            , test "no surveyed place stands where another rounding could put it" <|
-                \_ ->
-                    survey
-                        |> List.concatMap (\place -> [ fromAHalfTenth place.x, fromAHalfTenth place.y ])
-                        |> List.minimum
-                        |> Maybe.withDefault 0
-                        |> Expect.atLeast tenthTolerance
-            , test "no surveyed place falls below the frame's zero" <|
-                \_ ->
-                    survey
-                        |> List.filter (\place -> place.x < 0 || place.y < 0)
-                        |> Expect.equal []
-            , test "the survey stands at Le Mans, and not at swapped degrees" <|
-                \_ ->
-                    Geometry.centreline
-                        |> List.filter (\point -> point.lat < 47.9 || point.lat > 48 || point.lon < 0.1 || point.lon > 0.3)
-                        |> Expect.equal []
-            ]
-        ]
+        (paired (List.map onEarth Geometry.centreline) (Shape.marks lap))
+        (paired Geometry.pitLane (layout 2025).pitLane)
 
 
 {-| A place on the earth, without the distance round the lap that rides along
@@ -74,6 +42,66 @@ and this are the same shape.
 onEarth : Geometry.LapPoint -> Coordinate
 onEarth point =
     { lat = point.lat, lon = point.lon }
+
+
+{-| Pair each surveyed place with the drawing's place for it, in the order both
+lists give them.
+-}
+paired : List Coordinate -> List { r | x : Float, y : Float } -> List Place
+paired surveyed drawnOver =
+    List.map2
+        (\degrees drawing ->
+            { degrees = degrees
+            , raw = project Geometry.frame degrees
+            , drawn = { x = drawing.x, y = drawing.y }
+            }
+        )
+        surveyed
+        drawnOver
+
+
+tests : Test
+tests =
+    describe "Motorsport.Wec.Circuit.LeMans.Geometry"
+        [ describe "the frame the points are drawn in"
+            [ test "every surveyed place has a drawn one, and no more have one" <|
+                \_ ->
+                    [ Tuple.pair (List.length Geometry.centreline) (List.length (Shape.marks lap))
+                    , Tuple.pair (List.length Geometry.pitLane) (List.length (layout 2025).pitLane)
+                    ]
+                        |> List.filter (\( surveyed, drawnOver ) -> surveyed /= drawnOver)
+                        |> Expect.equal []
+            , test "the drawing is the survey, kept to a tenth of a metre" <|
+                \_ ->
+                    mistakes (\place -> tenthOf place.raw == place.drawn)
+                        |> Expect.equal []
+            , test "no surveyed place stands where another rounding could put it" <|
+                \_ ->
+                    places
+                        |> List.concatMap (\place -> [ fromAHalfTenth place.raw.x, fromAHalfTenth place.raw.y ])
+                        |> List.minimum
+                        |> Maybe.withDefault 0
+                        |> Expect.atLeast tenthTolerance
+            , test "no surveyed place falls below the frame's zero" <|
+                \_ ->
+                    mistakes (\place -> place.raw.x >= 0 && place.raw.y >= 0)
+                        |> Expect.equal []
+            , test "the survey stands at Le Mans, and not at swapped degrees" <|
+                \_ ->
+                    mistakes (\place -> place.degrees.lat >= 47.9 && place.degrees.lat <= 48 && place.degrees.lon >= 0.1 && place.degrees.lon <= 0.3)
+                        |> Expect.equal []
+            ]
+        ]
+
+
+{-| The places where a reading of every place fails, as their positions in the
+survey: which places moved is the reading a failure has to leave behind.
+-}
+mistakes : (Place -> Bool) -> List Int
+mistakes holds =
+    places
+        |> List.indexedMap (\i place -> if holds place then Nothing else Just i)
+        |> List.filterMap identity
 
 
 {-| `Layout`'s rounding: the survey's own resolution, a tenth of a metre.
