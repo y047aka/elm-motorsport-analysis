@@ -7,7 +7,8 @@ it, and where round the lap the lines it is timed at stand.
 
 -}
 
-import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
+import Motorsport.Circuit.Geodesy as Geodesy
+import Motorsport.Circuit.Shape as Shape exposing (Mark, Point, Shape)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector(..))
 import Motorsport.Wec.Circuit.LeMans.Geometry as Geometry
@@ -45,14 +46,54 @@ layout season =
 
 shape : Shape
 shape =
-    Geometry.centreline
-        |> List.map (\point -> { x = point.x, y = point.y, metres = point.metres })
+    List.map mark Geometry.centreline
         |> Shape.fromMarks
 
 
 pitLane : List Point
 pitLane =
-    List.map (\point -> { x = point.x, y = point.y }) Geometry.pitLane
+    List.map drawn Geometry.pitLane
+
+
+{-| A point of the lap: where it lands in the drawing, and how far round the lap it
+stands.
+-}
+mark : Geometry.LapPoint -> Mark
+mark point =
+    let
+        place =
+            drawn point
+    in
+    { x = place.x
+    , y = place.y
+    , metres = point.metres
+    }
+
+
+{-| Where a surveyed place lands in the drawing, which is measured from the frame's
+origin -- the north-west corner of the survey.
+-}
+drawn : { a | lat : Float, lon : Float } -> Point
+drawn place =
+    let
+        metres =
+            Geodesy.project Geometry.frame { lat = place.lat, lon = place.lon }
+    in
+    { x = tenth metres.x
+    , y = tenth metres.y
+    }
+
+
+{-| The survey's own resolution: a tenth of a metre.
+
+Where a mini-sector's name is written turns on which way the line goes at its
+point, and that reading has a threshold in it, so a drawing carried to the last
+digit of a projection can move a name by its own width.
+
+-}
+tenth : Float -> Float
+tenth value =
+    toFloat (round (value * 10)) / 10
 
 
 {-| The "Approximate Distances" of Al Kamel's circuit map for each race, which
