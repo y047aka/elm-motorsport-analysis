@@ -148,6 +148,13 @@
         cliLoadCmd   = "flix run -- --load ${csvDir} \"$@\"";
         cliExportCmd = "flix run -- --export ${exportedRound} ${outDir} \"$@\"";
 
+        # What follows `nix run` reaches Playwright, so one shot can be run on its
+        # own with `-g <shot>`. `--update-snapshots` with nothing narrowing it
+        # rewrites every baseline to this machine's rasteriser, which CI rejects.
+        # A file named after the flag is read as its mode, so name the shot.
+        vrtTestCmd = "cd app && playwright test \"$@\"";
+        vrtUpdateCmd = "cd app && playwright test --update-snapshots \"$@\"";
+
         # The fetcher encodes what it downloads, so it needs libwebp beside Node.
         # Kept apart from `mkNodeApp`: every other Node command would carry the
         # encoder for nothing.
@@ -195,8 +202,8 @@
           dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "cd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
           build                = { type = "app"; program = "${mkNodeApp "build"                "cd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
           test                 = { type = "app"; program = "${mkNodeApp "test"                 "cd app && elm-test && cd ../package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (elm-verify-examples + elm-test)"; };
-          test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt"             "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
-          update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
+          test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt" vrtTestCmd}/bin/test-vrt";                     meta.description = "Run Playwright VRT tests"; };
+          update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" vrtUpdateCmd}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
           benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "cd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
           typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                       meta.description = "Type-check the app's TypeScript (tsc --noEmit)"; };
