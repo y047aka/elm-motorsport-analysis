@@ -503,18 +503,23 @@ it to see what a change did, never to land a baseline.
 What separates the two platforms is the rasteriser (CoreText against
 FreeType), which no Chromium flag touches. `tests/screenshot.css` narrows it
 by asking for greyscale antialiasing and the tolerance absorbs the rest, but
-barely. The tolerance is a ratio, so a smaller snapshot gets a smaller budget
-while the gap does not shrink with it. The tightest is `position-tab`, the
-Comparison section alone at 328x162: it differs by 55 pixels where 0.001 would
-allow it 53, which is why it alone is given 0.0015. Next is
-`selected-car-with-rivals`, the one shot of a panel whole, at 221 against 246;
-`lap-180` has 738 against 1,296. Eight runs gave the same counts but once, when
-`lap-180` fell to 102, so a count that moves is worth a second run before it is
-taken for a rendering that moved. What no tolerance can absorb is a change
-smaller than itself — a digit redrawn is tens of pixels — so a local pass is
-not a promise, and a local failure on `position-tab` or
-`selected-car-with-rivals` is worth measuring before it is believed. CI stays
-strict for both reasons.
+barely. The tolerance is a ratio, so a smaller snapshot gets a smaller
+budget while the gap does not shrink with it. The tightest is
+`position-tab`, the Comparison section alone at 328x162: it differs by 55
+pixels where 0.001 would allow it 53, which is why it alone is given 0.0015.
+Next is `selected-car-with-rivals`, the one shot of a panel whole, at 221
+against 246; `lap-180` has 738 against 1,296. The tracker's two shots answer
+with 14 pixels and with none: a circuit is strokes, and the pane's shot
+holds no text at all, so CoreText and FreeType have nothing there to
+disagree about. Eight runs gave the same counts but once, when `lap-180`
+fell to 102, so a count that moves is worth a second run before it is taken
+for a rendering that moved. Those two counts are from a run with one worker,
+as CI has: with several workers both tracker shots come out a level or two
+off across a percent of the frame, which is more than the pane's whole
+budget. What no tolerance can absorb is a change smaller than itself — a
+digit redrawn is tens of pixels — so a local pass is not a promise, and a
+local failure on `position-tab` or `selected-car-with-rivals` is worth
+measuring before it is believed. CI stays strict for both reasons.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.
