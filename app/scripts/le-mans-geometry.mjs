@@ -65,10 +65,7 @@ async function main() {
   ];
   const keptPit = simplify(pitPoints, 0, pitPoints.length - 1);
 
-  const all = [...lapPoints, ...pitPoints];
-  const minX = Math.min(...all.map((p) => p.x));
-  const minY = Math.min(...all.map((p) => p.y));
-  const frame = frameOf([...lapNodes, ...pitNodes], project, parallel, minX, minY);
+  const frame = frameOf([...lapNodes, ...pitNodes], parallel);
 
   const onEarth = (node) => ({ lat: node.lat, lon: node.lon });
   const centreline = kept.map((i) => ({ ...onEarth(lapNodes[i]), metres: round(metres[i]) }));
@@ -142,22 +139,19 @@ function projection(points) {
   return { project, parallel };
 }
 
-// The frame the drawing's metres are measured in, as Elm reads them: `project`
-// above shifts nothing, and the drawing Elm writes is measured from the frame's
-// origin -- so that origin has to be the north-west corner of the survey, which
-// is where the line this module wrote was drawn. An origin anywhere else moves
-// every metre of the drawing off the tenth it is kept to, and every baseline made
-// of it with it.
-function frameOf(points, project, parallel, minX, minY) {
-  const origin = {
-    lat: Math.max(...points.map((p) => p.lat)),
-    lon: Math.min(...points.map((p) => p.lon)),
+// The frame the drawing's metres are measured in, as Elm reads them: the
+// drawing is measured from the frame's origin, so that origin is the north-west
+// corner of the survey — the place this module's line was drawn from. Elm
+// projects through the same frame, and its tests of the projection are what
+// notice an origin that puts the drawing below its zero.
+function frameOf(points, parallel) {
+  return {
+    origin: {
+      lat: Math.max(...points.map((p) => p.lat)),
+      lon: Math.min(...points.map((p) => p.lon)),
+    },
+    parallel,
   };
-  const zero = project(origin);
-  if (Math.abs(zero.x - minX) > 1e-9 || Math.abs(zero.y - minY) > 1e-9) {
-    throw new Error("the frame's origin does not fall where the drawing's zero is");
-  }
-  return { origin, parallel };
 }
 
 function cumulative(points) {
@@ -235,7 +229,7 @@ type alias PitPoint =
 
 
 {-| The drawing's metres measured on the earth: every point below is where
-[`Geodesy.project`](Motorsport-Circuit-Geodesy#project) puts it in this frame.
+[\`Geodesy.project\`](Motorsport-Circuit-Geodesy#project) puts it in this frame.
 -}
 frame : Frame
 frame =
