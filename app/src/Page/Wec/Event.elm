@@ -261,6 +261,11 @@ trackerCard several held track cars snapshot =
             Snapshot.toList snapshot
                 |> List.filter (\car -> car.status == Status.InPit || car.status == Status.OutLap)
                 |> List.map (pitEntry clock cars)
+                |> sortPitEntries
+
+        working : Int
+        working =
+            List.length (List.filter (\entry -> entry.car.status == Status.InPit) inPit)
     in
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
@@ -283,7 +288,7 @@ trackerCard several held track cars snapshot =
             , Card.content []
                 [ div [ Attributes.class "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)] gap-y-1" ]
                     [ div [ Attributes.class "text-[10px] font-bold uppercase tracking-wide text-muted-foreground" ]
-                        [ text ("In the pits · " ++ String.fromInt (List.length inPit)) ]
+                        [ text ("In the pits · " ++ String.fromInt working) ]
                     , if List.isEmpty inPit then
                         div [ Attributes.class "text-xs text-muted-foreground" ]
                             [ text "No car is in the pit lane." ]
@@ -299,11 +304,13 @@ trackerCard several held track cars snapshot =
 
 
 {-| A car of the pit lane list, with what its own two laps under way say at
-this moment.
+this moment, and the two crossings of the lane that say when.
 -}
 type alias PitEntry =
     { car : CarAt
     , handover : Maybe String
+    , enteredAt : Maybe Instant.Instant
+    , exitedAt : Maybe Instant.Instant
     }
 
 
@@ -324,7 +331,55 @@ pitEntry clock cars car =
     , handover =
         Maybe.map2 handover (Lap.findLastLapAt clock laps) currentLap
             |> Maybe.withDefault Nothing
+    , enteredAt =
+        currentLap |> Maybe.andThen Lap.pitEntryAt
+    , exitedAt =
+        currentLap |> Maybe.andThen Lap.pitExitAt
     }
+
+
+{-| Cars still being served head the list, each new arrival above the cars it
+arrived behind; cars already driving away follow, the one that left the lane
+last above the ones that left before it.
+-}
+sortPitEntries : List PitEntry -> List PitEntry
+sortPitEntries =
+    List.sortWith comparePitEntries
+
+
+comparePitEntries : PitEntry -> PitEntry -> Order
+comparePitEntries a b =
+    case ( a.car.status == Status.InPit, b.car.status == Status.InPit ) of
+        ( True, True ) ->
+            newestFirst a.enteredAt b.enteredAt
+
+        ( True, False ) ->
+            LT
+
+        ( False, True ) ->
+            GT
+
+        ( False, False ) ->
+            newestFirst a.exitedAt b.exitedAt
+
+
+{-| The newer crossing first; a crossing the feed times on neither side of the
+stop sits at the foot.
+-}
+newestFirst : Maybe Instant.Instant -> Maybe Instant.Instant -> Order
+newestFirst a b =
+    case ( a, b ) of
+        ( Just x, Just y ) ->
+            Instant.compare y x
+
+        ( Just _, Nothing ) ->
+            LT
+
+        ( Nothing, Just _ ) ->
+            GT
+
+        ( Nothing, Nothing ) ->
+            EQ
 
 
 {-| The handover the lap the car came in on and the one it goes out on disagree
