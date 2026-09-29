@@ -21,8 +21,7 @@ lapLength =
     Shape.length lap
 
 
-{-| The lap and the pit lane as the drawing holds them, which is what the degrees
-they were surveyed at are measured against.
+{-| The lap and the pit lane as the drawing holds them.
 -}
 drawn : List Point
 drawn =
@@ -33,32 +32,36 @@ drawn =
         (layout 2025).pitLane
 
 
+{-| Where every place the lap and the pit lane were surveyed falls in the
+frame's metres, before `Layout` rounds it to a tenth. A drawn point has been
+rounded already, and so stands half a tenth clear of every boundary whatever
+the survey said; only here does a rounding have a clearance worth measuring.
+-}
+survey : List Point
+survey =
+    List.map (project Geometry.frame) (List.append (List.map .coordinates samples) pitway)
+
+
 tests : Test
 tests =
     describe "Motorsport.Wec.Circuit.LeMans.Geometry"
         [ describe "the frame the points are drawn in"
             [ test "the drawing is the survey, kept to a tenth of a metre" <|
                 \_ ->
-                    drawn
-                        |> List.filter (\place -> not (onATenth place.x && onATenth place.y))
-                        |> Expect.equal []
-            , test "no drawn tenth stands where another rounding could put it elsewhere" <|
+                    List.map tenthOf survey
+                        |> Expect.equal drawn
+            , test "no surveyed place stands where another rounding could put it" <|
                 \_ ->
-                    drawn
+                    survey
                         |> List.concatMap (\place -> [ fromAHalfTenth place.x, fromAHalfTenth place.y ])
                         |> List.minimum
                         |> Maybe.withDefault 0
                         |> Expect.atLeast tenthTolerance
-            , test "the drawing stands on its own zero, and never below it" <|
+            , test "no surveyed place falls below the frame's zero" <|
                 \_ ->
-                    drawn
-                        |> Expect.all
-                            [ List.concatMap (\place -> [ place.x, place.y ])
-                                >> List.minimum
-                                >> Maybe.withDefault 1
-                                >> Expect.equal 0
-                            , List.filter (\place -> place.x < 0 || place.y < 0) >> Expect.equal []
-                            ]
+                    survey
+                        |> List.filter (\place -> place.x < 0 || place.y < 0)
+                        |> Expect.equal []
             , test "the survey stands at Le Mans, and not at swapped degrees" <|
                 \_ ->
                     samples
@@ -146,16 +149,16 @@ apart a b =
     min difference (lapLength - difference)
 
 
-{-| Whether a value stands where the drawing stands: on a tenth of a metre, and not
-on some digit further down the projection.
+{-| `Layout`'s rounding: the survey's own resolution, a tenth of a metre.
 -}
-onATenth : Float -> Bool
-onATenth value =
-    let
-        tenths =
-            value * 10
-    in
-    abs (tenths - toFloat (round tenths)) < 1.0e-9
+tenthOf : Point -> Point
+tenthOf place =
+    { x = tenth place.x, y = tenth place.y }
+
+
+tenth : Float -> Float
+tenth value =
+    toFloat (round (value * 10)) / 10
 
 
 {-| How far a value is from the half-tenth a rounding turns on, in metres.
@@ -169,11 +172,12 @@ fromAHalfTenth value =
     abs (tenths - toFloat (round tenths)) / 10
 
 
-{-| How far clear of a half-tenth a drawn value has to stand for the drawing not to
-depend on how the arithmetic came out. The last digit a value this size holds is a
-fraction of a nanometre, and a projection is a handful of those digits wide, so a
-micrometre of room is five orders more than a rounding needs. The tightest place of
-this survey stands at 113 micrometres.
+{-| How far clear of a half-tenth a projected value has to stand for the drawing
+not to depend on how the arithmetic came out. The last digit a value this size
+holds is a fraction of a nanometre, and a projection is a handful of those digits
+wide — two languages' roundings of the same degrees may disagree in the last of
+them — so a micrometre of room is five orders more than a rounding needs. The
+tightest place of this survey stands 113 micrometres clear.
 -}
 tenthTolerance : Float
 tenthTolerance =
