@@ -256,11 +256,11 @@ trackerCard several held track cars snapshot =
         clock =
             { elapsed = Snapshot.elapsed snapshot }
 
-        inPit : List ( CarAt, Maybe Duration.Duration )
+        inPit : List PitEntry
         inPit =
             Snapshot.toList snapshot
                 |> List.filter (\car -> car.status == Status.InPit || car.status == Status.OutLap)
-                |> List.map (\car -> ( car, stoppedFor clock cars car ))
+                |> List.map (pitEntry clock cars)
     in
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
@@ -298,33 +298,73 @@ trackerCard several held track cars snapshot =
         ]
 
 
-{-| How long the car stood in its box. The feed times a stop only once the car
-is back out, so a car still standing there has nothing to show yet.
+{-| A car of the pit lane list, with what its own two laps under way say at
+this moment.
 -}
-stoppedFor : { elapsed : Instant.Instant } -> List Car -> CarAt -> Maybe Duration.Duration
-stoppedFor clock cars car =
-    if car.status == Status.OutLap then
-        cars
-            |> List.filter (\raceCar -> raceCar.metadata.carNumber == car.metadata.carNumber)
-            |> List.head
-            |> Maybe.andThen (.laps >> Lap.findCurrentLap clock)
-            |> Maybe.andThen Lap.stopOf
+type alias PitEntry =
+    { car : CarAt
+    , stopped : Maybe Duration.Duration
+    , handover : Maybe String
+    }
 
-    else
+
+{-| The feed times a stop only once the car is back out, so a car still
+standing in its box has nothing to show yet.
+-}
+pitEntry : { elapsed : Instant.Instant } -> List Car -> CarAt -> PitEntry
+pitEntry clock cars car =
+    let
+        laps =
+            cars
+                |> List.filter (\raceCar -> raceCar.metadata.carNumber == car.metadata.carNumber)
+                |> List.head
+                |> Maybe.map .laps
+                |> Maybe.withDefault []
+
+        currentLap =
+            Lap.findCurrentLap clock laps
+    in
+    { car = car
+    , stopped =
+        if car.status == Status.OutLap then
+            currentLap |> Maybe.andThen Lap.stopOf
+
+        else
+            Nothing
+    , handover =
+        Maybe.map2 handover (Lap.findLastLapAt clock laps) currentLap
+            |> Maybe.withDefault Nothing
+    }
+
+
+{-| The handover the lap the car came in on and the one it goes out on disagree
+about, spelled as the timeline spells a driver change.
+-}
+handover : Lap.Lap -> Lap.Lap -> Maybe String
+handover cameIn goesOut =
+    if Driver.isSame cameIn.driver goesOut.driver then
         Nothing
 
+    else
+        Just (Driver.toInitialAndSurname cameIn.driver ++ " → " ++ Driver.toInitialAndSurname goesOut.driver)
 
-{-| A car in the pit lane: where it runs, its number, who is sitting in the car
-right now, and how far through its stop it is.
+
+{-| A car in the pit lane: where it runs, its number, who is in the car -- or
+the change of driver just made in the box -- and how far through its stop it is.
 -}
-pitLaneRow : ( CarAt, Maybe Duration.Duration ) -> ( String, Html Msg )
-pitLaneRow ( car, stopped ) =
+pitLaneRow : PitEntry -> ( String, Html Msg )
+pitLaneRow entry =
+    let
+        car =
+            entry.car
+    in
     ( car.metadata.carNumber
     , div [ Attributes.class "grid grid-cols-[20px_auto_1fr_auto] items-center gap-2 rounded py-0.5" ]
         [ div [ Attributes.class "text-center text-xs" ] [ text (String.fromInt car.standing.position) ]
         , CarNumberBadge.viewRow car.metadata
-        , div [ Attributes.class "text-xs truncate" ] [ text (Driver.toSurname car.currentDriver) ]
-        , case ( car.status, stopped ) of
+        , div [ Attributes.class "text-xs truncate" ]
+            [ text (Maybe.withDefault (Driver.toSurname car.currentDriver) entry.handover) ]
+        , case ( car.status, entry.stopped ) of
             ( Status.OutLap, Just duration ) ->
                 span [ Attributes.class "flex items-center gap-1" ]
                     [ statusChip "bg-amber-500/20 text-amber-400 border-amber-500/40" "OUT"
