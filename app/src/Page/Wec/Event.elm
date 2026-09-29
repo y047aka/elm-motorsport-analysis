@@ -21,7 +21,6 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
-import Motorsport.Flag as Flag
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
@@ -30,7 +29,7 @@ import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent exposing (EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
@@ -50,6 +49,7 @@ import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
+import View.EventLog as EventLog
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
 
@@ -447,7 +447,7 @@ mainGrid track timeline snapshot replay m =
                     }
                     snapshot
                 ]
-            , columnStrip "col-start-2 row-start-1 row-span-2" track keys m replay snapshot
+            , columnStrip "col-start-2 row-start-1 row-span-2" track timeline keys m replay snapshot
             ]
                 ++ paneCells m.pane track snapshot timeline replay
     in
@@ -509,8 +509,8 @@ paneCells pane track snapshot timeline replay =
             ]
 
 
-columnStrip : String -> TrackerChart.Track -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
-columnStrip cell track keys m replay snapshot =
+columnStrip : String -> TrackerChart.Track -> Timeline -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track timeline keys m replay snapshot =
     let
         several =
             List.length keys > 1
@@ -554,7 +554,7 @@ columnStrip cell track keys m replay snapshot =
                                         (Snapshot.get carNumber snapshot
                                             |> Maybe.map
                                                 (\car ->
-                                                    Html.Lazy.lazy5 (carCard several) (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
+                                                    Html.Lazy.lazy6 (carCard several) timeline (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
                                                 )
                                         )
 
@@ -582,8 +582,8 @@ columnGrip held key =
         }
 
 
-carCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
-carCard several held comparison cars snapshot car =
+carCard : Bool -> Timeline -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
+carCard several timeline held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
@@ -614,6 +614,7 @@ carCard several held comparison cars snapshot car =
                     , comparison = comparison
                     , scrollId = Columns.scrollId carNumber
                     , onScroll = Columns.PanelScrolled carNumber >> ColumnsMsg
+                    , timeline = timeline
                     }
                     cars
                     snapshot
@@ -727,7 +728,7 @@ eventRow carsByNumber event =
             div [ Attributes.class classes ] children
 
         secondLine =
-            case detail car event of
+            case EventLog.detail car event of
                 Just line ->
                     [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text line ] ]
 
@@ -737,7 +738,7 @@ eventRow carsByNumber event =
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-0.5 items-center py-0.5" ]
         ([ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
          , cell "" [ carBadge car event.eventType ]
-         , cell "" [ text (describe event.eventType) ]
+         , cell "" [ text (EventLog.describe event.eventType) ]
          , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
          ]
@@ -771,69 +772,6 @@ carBadge car eventType =
 
         ( Nothing, _ ) ->
             text ""
-
-
-describe : EventType -> String
-describe eventType =
-    case eventType of
-        RaceStart ->
-            "Race Start"
-
-        Flag flag ->
-            Flag.toString flag
-
-        CarEvent _ OvertakeForLead ->
-            "Overtake for Lead"
-
-        CarEvent _ LeaderInPit ->
-            "Leader In Pit"
-
-        CarEvent _ FastestLap ->
-            "Fastest Lap"
-
-        CarEvent _ DriverChange ->
-            "Driver Change"
-
-        CarEvent _ Retired ->
-            "Retired"
-
-        CarEvent _ Finished ->
-            "Finished"
-
-
-{-| The second line an event has, read off the car's laps at the event.
-
-A fastest lap is the lap the event completes, its time and its driver. A driver
-change is who handed the car to whom: the driver of the lap the event completes,
-and the one of the lap in progress from it, which is the lap the car's
-`currentDriver` is read off from then on.
-
--}
-detail : Maybe Car -> TimelineEvent -> Maybe String
-detail car event =
-    let
-        lapOf find =
-            car |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
-
-        driverOf find =
-            lapOf find |> Maybe.map (.driver >> Driver.toInitialAndSurname)
-    in
-    case event.eventType of
-        CarEvent _ FastestLap ->
-            lapOf Lap.findLastLapAt
-                |> Maybe.andThen
-                    (\lap ->
-                        lap.time
-                            |> Maybe.map (\time -> Duration.toString time ++ " · " ++ Driver.toInitialAndSurname lap.driver)
-                    )
-
-        CarEvent _ DriverChange ->
-            Maybe.map2 (\handedOver tookOver -> handedOver ++ " → " ++ tookOver)
-                (driverOf Lap.findLastLapAt)
-                (driverOf Lap.findCurrentLap)
-
-        _ ->
-            Nothing
 
 
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
