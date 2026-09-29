@@ -242,9 +242,9 @@ headerTitle shared =
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away; the body answers to no click.
 
-The card divides evenly: the drawing fills the top half, and the cars in the
-pit lane -- standing in their boxes or already driving away -- fill the
-bottom one.
+The card splits two-to-one: the drawing fills the top two thirds, and the
+cars in the pit lane -- standing in their boxes or already driving away --
+fill the bottom third, scrolling once they outnumber it.
 
 It carries `data-tracker-column`, which the visual tests locate it by.
 
@@ -264,7 +264,7 @@ trackerCard several held track cars snapshot =
     in
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
-            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)_minmax(0,1fr)]"
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)]"
             ]
             [ Card.content []
                 [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
@@ -290,7 +290,7 @@ trackerCard several held track cars snapshot =
 
                       else
                         Html.Keyed.node "div"
-                            [ Attributes.class "min-h-0 overflow-y-auto grid grid-rows-[repeat(auto-fill,minmax(0,1.375rem))] content-start gap-y-0.5" ]
+                            [ Attributes.class "min-h-0 overflow-y-auto grid auto-rows-[1.375rem] content-start gap-y-0.5" ]
                             (List.map pitLaneRow inPit)
                     ]
                 ]
