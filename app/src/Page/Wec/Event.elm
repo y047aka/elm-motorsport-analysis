@@ -242,26 +242,32 @@ headerTitle shared =
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away; the body answers to no click.
 
-The drawing holds the head of the card at its natural square size, and the
-cars standing in their boxes at this moment fill the space left below it.
+The card divides evenly: the drawing fills the top half, and the cars in the
+pit lane -- standing in their boxes or already driving away -- fill the
+bottom one.
 
 It carries `data-tracker-column`, which the visual tests locate it by.
 
 -}
-trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
-trackerCard several held track snapshot =
+trackerCard : Bool -> Bool -> TrackerChart.Track -> List Car -> Snapshot -> Html Msg
+trackerCard several held track cars snapshot =
     let
-        inPit : List CarAt
+        clock : { elapsed : Instant.Instant }
+        clock =
+            { elapsed = Snapshot.elapsed snapshot }
+
+        inPit : List ( CarAt, Maybe Duration.Duration )
         inPit =
             Snapshot.toList snapshot
-                |> List.filter (\car -> car.status == Status.InPit)
+                |> List.filter (\car -> car.status == Status.InPit || car.status == Status.OutLap)
+                |> List.map (\car -> ( car, stoppedFor clock cars car ))
     in
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
-            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[auto_minmax(0,1fr)]"
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)_minmax(0,1fr)]"
             ]
             [ Card.content []
-                [ div [ Attributes.class "relative w-full aspect-square" ]
+                [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
                     [ TrackerChart.view TrackerChart.Full track snapshot
                     , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
                         ((if several then
@@ -292,18 +298,53 @@ trackerCard several held track snapshot =
         ]
 
 
-{-| A car standing in its box: where it runs, its number, and who is sitting in
-the car right now.
+{-| How long the car stood in its box. The feed times a stop only once the car
+is back out, so a car still standing there has nothing to show yet.
 -}
-pitLaneRow : CarAt -> ( String, Html Msg )
-pitLaneRow car =
+stoppedFor : { elapsed : Instant.Instant } -> List Car -> CarAt -> Maybe Duration.Duration
+stoppedFor clock cars car =
+    if car.status == Status.OutLap then
+        cars
+            |> List.filter (\raceCar -> raceCar.metadata.carNumber == car.metadata.carNumber)
+            |> List.head
+            |> Maybe.andThen (.laps >> Lap.findCurrentLap clock)
+            |> Maybe.andThen Lap.stopOf
+
+    else
+        Nothing
+
+
+{-| A car in the pit lane: where it runs, its number, who is sitting in the car
+right now, and how far through its stop it is.
+-}
+pitLaneRow : ( CarAt, Maybe Duration.Duration ) -> ( String, Html Msg )
+pitLaneRow ( car, stopped ) =
     ( car.metadata.carNumber
-    , div [ Attributes.class "grid grid-cols-[20px_auto_1fr] items-center gap-2 rounded py-0.5" ]
+    , div [ Attributes.class "grid grid-cols-[20px_auto_1fr_auto] items-center gap-2 rounded py-0.5" ]
         [ div [ Attributes.class "text-center text-xs" ] [ text (String.fromInt car.standing.position) ]
         , CarNumberBadge.viewRow car.metadata
         , div [ Attributes.class "text-xs truncate" ] [ text (Driver.toSurname car.currentDriver) ]
+        , case ( car.status, stopped ) of
+            ( Status.OutLap, Just duration ) ->
+                span [ Attributes.class "flex items-center gap-1" ]
+                    [ statusChip "bg-amber-500/20 text-amber-400 border-amber-500/40" "OUT"
+                    , span [ Attributes.class "text-[10px] tabular-nums text-muted-foreground" ]
+                        [ text (Duration.toString duration) ]
+                    ]
+
+            ( Status.OutLap, Nothing ) ->
+                statusChip "bg-amber-500/20 text-amber-400 border-amber-500/40" "OUT"
+
+            _ ->
+                statusChip "bg-card border-border" "PIT"
         ]
     )
+
+
+statusChip : String -> String -> Html Msg
+statusChip classes label =
+    span [ Attributes.class ("inline-flex items-center justify-center rounded-full border px-1.5 text-[9px] font-bold leading-4 " ++ classes) ]
+        [ text label ]
 
 
 mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
@@ -433,7 +474,7 @@ columnStrip cell track keys m replay snapshot =
                                         )
 
                                 Columns.Tracker ->
-                                    trackerCard several (Columns.isCarried placement) track snapshot
+                                    trackerCard several (Columns.isCarried placement) track replay.race.cars snapshot
                             ]
                         )
                     )
