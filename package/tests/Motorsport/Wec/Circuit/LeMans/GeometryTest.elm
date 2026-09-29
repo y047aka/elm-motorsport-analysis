@@ -39,7 +39,9 @@ the survey said; only here does a rounding have a clearance worth measuring.
 -}
 survey : List Point
 survey =
-    List.map (project Geometry.frame) (List.append (List.map .coordinates samples) pitway)
+    List.append
+        (List.map (onEarth >> project Geometry.frame) Geometry.centreline)
+        (List.map (project Geometry.frame) Geometry.pitLane)
 
 
 tests : Test
@@ -64,29 +66,28 @@ tests =
                         |> Expect.equal []
             , test "the survey stands at Le Mans, and not at swapped degrees" <|
                 \_ ->
-                    samples
-                        |> List.map .coordinates
-                        |> List.filter (\coordinate -> coordinate.lat < 47.9 || coordinate.lat > 48 || coordinate.lon < 0.1 || coordinate.lon > 0.3)
+                    Geometry.centreline
+                        |> List.filter (\point -> point.lat < 47.9 || point.lat > 48 || point.lon < 0.1 || point.lon > 0.3)
                         |> Expect.equal []
             ]
         , describe "a GPS log read against the lap"
             [ test "a sample at a surveyed point reads as that point of the lap" <|
                 \_ ->
-                    samples
-                        |> List.map (\sample -> apart sample.metres (read sample.coordinates))
+                    Geometry.centreline
+                        |> List.map (\point -> apart point.metres (read (onEarth point)))
                         |> List.maximum
                         |> Maybe.withDefault 1.0e9
                         |> Expect.atMost 1
             , test "a receiver some metres off still reads as the same place round the lap" <|
                 \_ ->
-                    samples
-                        |> List.indexedMap (\i sample -> apart sample.metres (read (drift i sample.coordinates)))
+                    Geometry.centreline
+                        |> List.indexedMap (\i point -> apart point.metres (read (drift i (onEarth point))))
                         |> List.maximum
                         |> Maybe.withDefault 1.0e9
                         |> Expect.atMost 15
             , test "a car in the pit lane is placed on the lap it runs beside, and read as off the line" <|
                 \_ ->
-                    pitway
+                    Geometry.pitLane
                         |> List.map reading
                         |> Expect.all
                             [ List.map .distance >> List.maximum >> Maybe.withDefault 1.0e9 >> Expect.atMost 50
@@ -96,35 +97,13 @@ tests =
         ]
 
 
-{-| A place the lap was surveyed at, and how far round the lap it stands.
+{-| A place on the earth, without the distance round the lap that rides along
+with it in the survey. The pit lane's points need no such cutting: `PitPoint`
+and this are the same shape.
 -}
-type alias Sample =
-    { metres : Float
-    , coordinates : Coordinate
-    }
-
-
-samples : List Sample
-samples =
-    List.map
-        (\point ->
-            { metres = point.metres
-            , coordinates = { lat = point.lat, lon = point.lon }
-            }
-        )
-        Geometry.centreline
-
-
-{-| Where the pit lane was surveyed. It is a line of its own, with no distance
-round the lap marked on it.
--}
-pitway : List Coordinate
-pitway =
-    List.map
-        (\point ->
-            { lat = point.lat, lon = point.lon }
-        )
-        Geometry.pitLane
+onEarth : Geometry.LapPoint -> Coordinate
+onEarth point =
+    { lat = point.lat, lon = point.lon }
 
 
 read : Coordinate -> Float
