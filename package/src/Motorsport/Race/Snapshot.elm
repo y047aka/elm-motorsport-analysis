@@ -435,8 +435,8 @@ sampleCar clock race car =
 Where its race began and ended is [`Race.statusAt`](Motorsport-Race#statusAt)'s.
 Where it is within one still being run is the lap in progress: a stop falls at
 the head of the lap the car came back out on, so that is the lap carrying it, and
-the clock against [`Lap.stopEndedAt`](Motorsport-Lap#stopEndedAt) separates a car
-standing in its box from one already rejoining.
+the clock against [`Lap.pitExitAt`](Motorsport-Lap#pitExitAt) separates a car
+still in the pit lane from one already back on the road.
 
 -}
 statusOf : { elapsed : Instant } -> Race -> Car -> Lap -> Status
@@ -451,9 +451,9 @@ statusOf clock race car currentLap =
 
 pitPhaseOf : { elapsed : Instant } -> Lap -> Status
 pitPhaseOf clock currentLap =
-    case Lap.stopEndedAt currentLap of
-        Just droveAway ->
-            if Instant.compare clock.elapsed droveAway == LT then
+    case Lap.pitExitAt currentLap of
+        Just backOut ->
+            if Instant.compare clock.elapsed backOut == LT then
                 Status.InPit
 
             else

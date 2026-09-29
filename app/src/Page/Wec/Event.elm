@@ -303,13 +303,13 @@ this moment.
 -}
 type alias PitEntry =
     { car : CarAt
-    , stopped : Maybe Duration.Duration
+    , laneTime : Maybe Duration.Duration
     , handover : Maybe String
     }
 
 
-{-| The feed times a stop only once the car is back out, so a car still
-standing in its box has nothing to show yet.
+{-| The feed times the lane only once the car is back out, so a car still in
+it has nothing to show yet.
 -}
 pitEntry : { elapsed : Instant.Instant } -> List Car -> CarAt -> PitEntry
 pitEntry clock cars car =
@@ -325,9 +325,9 @@ pitEntry clock cars car =
             Lap.findCurrentLap clock laps
     in
     { car = car
-    , stopped =
+    , laneTime =
         if car.status == Status.OutLap then
-            currentLap |> Maybe.andThen Lap.stopOf
+            currentLap |> Maybe.andThen Lap.laneTimeOf
 
         else
             Nothing
@@ -350,7 +350,7 @@ handover cameIn goesOut =
 
 
 {-| A car in the pit lane: its number, who is in the car -- or the change of
-driver just made in the box -- and how far through its stop it is.
+driver just made in the box -- and how long its pit lane took.
 -}
 pitLaneRow : PitEntry -> ( String, Html Msg )
 pitLaneRow entry =
@@ -363,7 +363,7 @@ pitLaneRow entry =
         [ CarNumberBadge.viewRow car.metadata
         , div [ Attributes.class "text-xs truncate" ]
             [ text (Maybe.withDefault (Driver.toSurname car.currentDriver) entry.handover) ]
-        , case ( car.status, entry.stopped ) of
+        , case ( car.status, entry.laneTime ) of
             ( Status.OutLap, Just duration ) ->
                 span [ Attributes.class "flex items-center gap-1" ]
                     [ statusChip "bg-amber-500/20 text-amber-400 border-amber-500/40" "OUT"

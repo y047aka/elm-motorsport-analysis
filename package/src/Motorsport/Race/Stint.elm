@@ -106,7 +106,7 @@ fromLaps laps =
 
 stopEnding : Lap -> Maybe Pit
 stopEnding outLap =
-    Lap.stopOf outLap
+    Lap.laneTimeOf outLap
         |> Maybe.map (\duration -> { lapNumber = outLap.lap, duration = duration })
 
 
@@ -212,7 +212,7 @@ indexOf cars =
 stopsOf : List Lap -> ChangePoints Pit
 stopsOf laps =
     laps
-        |> List.filterMap (\lap -> Maybe.map2 Tuple.pair (Lap.stopEndedAt lap) (stopEnding lap))
+        |> List.filterMap (\lap -> Maybe.map2 Tuple.pair (Lap.pitExitAt lap) (stopEnding lap))
         |> ChangePoints.fromList
 
 

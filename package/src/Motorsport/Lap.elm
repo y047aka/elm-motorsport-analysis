@@ -3,7 +3,7 @@ module Motorsport.Lap exposing
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorTime
     , recorded
-    , Pit(..), isInLap, isRacingLap, stopOf, stopEndedAt
+    , Pit(..), isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -18,7 +18,7 @@ module Motorsport.Lap exposing
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorTime
 @docs recorded
-@docs Pit, isInLap, isRacingLap, stopOf, stopEndedAt
+@docs Pit, isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -185,14 +185,49 @@ isRacingLap lap =
     lap.pit == NoPit
 
 
-{-| How long the stop that this lap began with took.
+{-| When the car crossed the finish line in the pit lane, on its way into the
+lane.
 
-`Nothing` on the lap the car came in on: the stop is not timed until the car is
+The feed splits a stop across two laps, and this is the crossing both halves of
+the split name: the end of the lap that finished in the lane, and the start of
+the lap that carries the lane's time. On an `OutAndIn` lap the entry is its own
+stop's at the head; the crossing that ends the lap is the next stop's entry,
+which that lap carries.
+
+The car leaves the road some seconds before this and is timed back on it some
+seconds after: the crossing is the lane timing the stop at its own end, the
+earliest instant a stop has.
+
+-}
+pitEntryAt : Lap -> Maybe Instant
+pitEntryAt lap =
+    case lap.pit of
+        InLap ->
+            Just lap.elapsed
+
+        OutLap _ ->
+            Just (lapStart lap)
+
+        OutAndIn _ ->
+            Just (lapStart lap)
+
+        NoPit ->
+            Nothing
+
+
+{-| How long the car spent in the pit lane: from [`pitEntryAt`](#pitEntryAt) to
+[`pitExitAt`](#pitExitAt).
+
+The feed's `pit_time` is this lane time and not the time stood still in a box:
+a car is timed crossing the two ends of the lane and nothing times the box, so
+the stationary span sits inside this one and cannot be read out of it.
+
+`Nothing` on the lap the car came in on: the lane is not timed until the car is
 back out.
 
 -}
-stopOf : Lap -> Maybe Duration
-stopOf lap =
+laneTimeOf : Lap -> Maybe Duration
+laneTimeOf lap =
     case lap.pit of
         OutLap duration ->
             Just duration
@@ -207,15 +242,16 @@ stopOf lap =
             Nothing
 
 
-{-| When the car drove away from that stop.
+{-| When the car's lane time ended: back on the road and away down it.
 
-That is when it has made one, rather than when the lap it drove away on was
-completed: the rest of that lap is a lap out on the road.
+Not when it drove away from its box -- the lane was still ahead of it there.
+That is when the lap it drove away on has begun, rather than when that lap was
+completed: the rest of it is a lap out on the road.
 
 -}
-stopEndedAt : Lap -> Maybe Instant
-stopEndedAt lap =
-    stopOf lap |> Maybe.map (\duration -> Instant.add duration (lapStart lap))
+pitExitAt : Lap -> Maybe Instant
+pitExitAt lap =
+    laneTimeOf lap |> Maybe.map (\duration -> Instant.add duration (lapStart lap))
 
 
 type alias Clock =
