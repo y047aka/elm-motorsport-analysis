@@ -139,11 +139,8 @@ function projection(points) {
   return { project, parallel };
 }
 
-// The frame the drawing's metres are measured in, as Elm reads them: the
-// drawing is measured from the frame's origin, so that origin is the north-west
-// corner of the survey — the place this module's line was drawn from. Elm
-// projects through the same frame, and its tests of the projection are what
-// notice an origin that puts the drawing below its zero.
+// The drawing's metres are measured from the frame's origin: the north-west
+// corner of the survey, the place this module's line was drawn from.
 function frameOf(points, parallel) {
   return {
     origin: {

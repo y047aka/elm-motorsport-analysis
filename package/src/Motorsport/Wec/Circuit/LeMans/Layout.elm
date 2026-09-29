@@ -55,9 +55,6 @@ pitLane =
     List.map drawn Geometry.pitLane
 
 
-{-| A point of the lap: where it lands in the drawing, and how far round the lap it
-stands.
--}
 mark : Geometry.LapPoint -> Mark
 mark point =
     let
@@ -70,9 +67,6 @@ mark point =
     }
 
 
-{-| Where a surveyed place lands in the drawing, which is measured from the frame's
-origin -- the north-west corner of the survey.
--}
 drawn : { a | lat : Float, lon : Float } -> Point
 drawn place =
     let

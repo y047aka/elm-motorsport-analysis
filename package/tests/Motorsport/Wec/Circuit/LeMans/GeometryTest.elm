@@ -35,18 +35,11 @@ places =
         (paired Geometry.pitLane (layout 2025).pitLane)
 
 
-{-| A place on the earth, without the distance round the lap that rides along
-with it in the survey. The pit lane's points need no such cutting: `PitPoint`
-and this are the same shape.
--}
 onEarth : Geometry.LapPoint -> Coordinate
 onEarth point =
     { lat = point.lat, lon = point.lon }
 
 
-{-| Pair each surveyed place with the drawing's place for it, in the order both
-lists give them.
--}
 paired : List Coordinate -> List { r | x : Float, y : Float } -> List Place
 paired surveyed drawnOver =
     List.map2
@@ -94,8 +87,8 @@ tests =
         ]
 
 
-{-| The places where a reading of every place fails, as their positions in the
-survey: which places moved is the reading a failure has to leave behind.
+{-| The positions in the survey of the places where a reading of every place
+fails.
 -}
 mistakes : (Place -> Bool) -> List Int
 mistakes holds =

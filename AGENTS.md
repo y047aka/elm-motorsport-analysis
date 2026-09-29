@@ -363,14 +363,13 @@ round the lap it stands, and `Layout` projects those degrees into the drawing
 through the `Circuit.Geodesy.Frame` the generator writes beside them — to the tenth
 of a metre the survey is kept to, which is the tenth every VRT baseline was
 rendered at. The frame's origin is the north-west corner of the survey, so the
-drawing never falls below
-its own zero, and a test holds every projected place clear of the half-tenth its
-rounding turns on — measured on the projection before the rounding, since a
-rounded place is clear of every boundary by construction. The tightest stands 113
-micrometres clear, which is what lets the metres be projected rather than written
-down. A second circuit's generator writes the same frame, out of the parallel it
-scales east-west at and the north-west corner of what it surveyed, and adds
-nothing to `Circuit/`.
+drawing never falls below its own zero, and a test holds every projected place
+clear of the half-tenth its rounding turns on — measured before the rounding,
+since a rounded place is clear of every boundary by construction. The tightest
+stands 113 micrometres, which is what lets the metres be projected rather than
+written down. A second circuit's generator writes the same frame, out of the
+parallel it scales east-west at and the north-west corner of what it surveyed,
+and adds nothing to `Circuit/`.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
