@@ -2,172 +2,131 @@ module Motorsport.Wec.Circuit.LeMans.GeometryTest exposing (tests)
 
 import Expect
 import Motorsport.Circuit.Geodesy exposing (Coordinate, project)
-import Motorsport.Circuit.Shape as Shape exposing (Nearest, Point, Shape)
+import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Wec.Circuit.LeMans.Geometry as Geometry
 import Motorsport.Wec.Circuit.LeMans.Layout exposing (layout)
 import Test exposing (Test, describe, test)
 
 
-{-| 2025's Le Mans: the round a checkout keeps, and the shape every view draws,
-so every reading here is of what is on the screen.
+{-| 2025's Le Mans: the round a checkout keeps, and the shape every view draws.
 -}
 lap : Shape
 lap =
     (layout 2025).shape
 
 
-lapLength : Float
-lapLength =
-    Shape.length lap
+{-| One surveyed place, three ways it is read: the degrees OpenStreetMap gives
+it, the frame's metres before `Layout` rounds them, and the drawing's metres
+after. A rounded place stands half a tenth clear of every boundary whatever the
+survey said, so the clearance a rounding turns on is worth measuring only on the
+reading before it.
+-}
+type alias Place =
+    { degrees : Coordinate
+    , raw : Point
+    , drawn : Point
+    }
+
+
+places : List Place
+places =
+    List.append
+        (paired (List.map onEarth Geometry.centreline) (Shape.marks lap))
+        (paired Geometry.pitLane (layout 2025).pitLane)
+
+
+onEarth : Geometry.LapPoint -> Coordinate
+onEarth point =
+    { lat = point.lat, lon = point.lon }
+
+
+paired : List Coordinate -> List { r | x : Float, y : Float } -> List Place
+paired surveyed drawnOver =
+    List.map2
+        (\degrees drawing ->
+            { degrees = degrees
+            , raw = project Geometry.frame degrees
+            , drawn = { x = drawing.x, y = drawing.y }
+            }
+        )
+        surveyed
+        drawnOver
 
 
 tests : Test
 tests =
     describe "Motorsport.Wec.Circuit.LeMans.Geometry"
         [ describe "the frame the points are drawn in"
-            [ test "the lap is drawn where its own coordinates say it is" <|
+            [ test "every surveyed place has a drawn one, and no more have one" <|
                 \_ ->
-                    centreline
-                        |> List.map (\sample -> between sample.drawn (project Geometry.frame sample.coordinates))
-                        |> List.maximum
-                        |> Maybe.withDefault 1.0e9
-                        |> Expect.atMost 0.1
-            , test "so is the pit lane" <|
+                    [ Tuple.pair (List.length Geometry.centreline) (List.length (Shape.marks lap))
+                    , Tuple.pair (List.length Geometry.pitLane) (List.length (layout 2025).pitLane)
+                    ]
+                        |> List.filter (\( surveyed, drawnOver ) -> surveyed /= drawnOver)
+                        |> Expect.equal []
+            , test "the drawing is the survey, kept to a tenth of a metre" <|
                 \_ ->
-                    pitLane
-                        |> List.map (\place -> between place.drawn (project Geometry.frame place.coordinates))
-                        |> List.maximum
-                        |> Maybe.withDefault 1.0e9
-                        |> Expect.atMost 0.1
+                    mistakes (\place -> tenthOf place.raw == place.drawn)
+                        |> Expect.equal []
+            , test "no surveyed place stands where another rounding could put it" <|
+                \_ ->
+                    places
+                        |> List.concatMap (\place -> [ fromAHalfTenth place.raw.x, fromAHalfTenth place.raw.y ])
+                        |> List.minimum
+                        |> Maybe.withDefault 0
+                        |> Expect.atLeast tenthTolerance
+            , test "no surveyed place falls below the frame's zero" <|
+                \_ ->
+                    mistakes (\place -> place.raw.x >= 0 && place.raw.y >= 0)
+                        |> Expect.equal []
             , test "the survey stands at Le Mans, and not at swapped degrees" <|
                 \_ ->
-                    centreline
-                        |> List.map .coordinates
-                        |> List.filter (\coordinate -> coordinate.lat < 47.9 || coordinate.lat > 48 || coordinate.lon < 0.1 || coordinate.lon > 0.3)
+                    mistakes (\place -> place.degrees.lat >= 47.9 && place.degrees.lat <= 48 && place.degrees.lon >= 0.1 && place.degrees.lon <= 0.3)
                         |> Expect.equal []
-            ]
-        , describe "a GPS log read against the lap"
-            [ test "a sample at a surveyed point reads as that point of the lap" <|
-                \_ ->
-                    centreline
-                        |> List.map (\sample -> apart sample.metres (read sample.coordinates))
-                        |> List.maximum
-                        |> Maybe.withDefault 1.0e9
-                        |> Expect.atMost 1
-            , test "a receiver some metres off still reads as the same place round the lap" <|
-                \_ ->
-                    centreline
-                        |> List.indexedMap (\i sample -> apart sample.metres (read (drift i sample.coordinates)))
-                        |> List.maximum
-                        |> Maybe.withDefault 1.0e9
-                        |> Expect.atMost 15
-            , test "a car in the pit lane is placed on the lap it runs beside, and read as off the line" <|
-                \_ ->
-                    List.map (reading << .coordinates) pitLane
-                        |> Expect.all
-                            [ List.map .distance >> List.maximum >> Maybe.withDefault 1.0e9 >> Expect.atMost 50
-                            , List.map .metres >> List.filter farFromTheStartStraight >> Expect.equal []
-                            ]
             ]
         ]
 
 
-{-| A surveyed point of the lap, as the earth gives it and as the drawing holds it.
+{-| The positions in the survey of the places where a reading of every place
+fails.
 -}
-type alias Sample =
-    { metres : Float
-    , coordinates : Coordinate
-    , drawn : Point
-    }
+mistakes : (Place -> Bool) -> List Int
+mistakes holds =
+    places
+        |> List.indexedMap (\i place -> if holds place then Nothing else Just i)
+        |> List.filterMap identity
 
 
-centreline : List Sample
-centreline =
-    List.map
-        (\point ->
-            { metres = point.metres
-            , coordinates = { lat = point.lat, lon = point.lon }
-            , drawn = { x = point.x, y = point.y }
-            }
-        )
-        Geometry.centreline
-
-
-{-| Where the pit lane was surveyed. It is a line of its own, with no distance
-round the lap marked on it.
+{-| `Layout`'s rounding: the survey's own resolution, a tenth of a metre.
 -}
-type alias Place =
-    { coordinates : Coordinate
-    , drawn : Point
-    }
+tenthOf : Point -> Point
+tenthOf place =
+    { x = tenth place.x, y = tenth place.y }
 
 
-pitLane : List Place
-pitLane =
-    List.map
-        (\point ->
-            { coordinates = { lat = point.lat, lon = point.lon }
-            , drawn = { x = point.x, y = point.y }
-            }
-        )
-        Geometry.pitLane
+tenth : Float -> Float
+tenth value =
+    toFloat (round (value * 10)) / 10
 
 
-read : Coordinate -> Float
-read coordinates =
-    (reading coordinates).metres
-
-
-reading : Coordinate -> Nearest
-reading coordinates =
-    Shape.nearest (project Geometry.frame coordinates) lap
-
-
-{-| How far the drawing is from where the earth says a point is.
+{-| How far a value is from the half-tenth a rounding turns on, in metres.
 -}
-between : Point -> Point -> Float
-between a b =
-    sqrt ((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2)
-
-
-{-| How far round the lap two readings are, the short way: the lap ends where it
-starts, so a reading just past the line and one just short of it are neighbours.
--}
-apart : Float -> Float -> Float
-apart a b =
+fromAHalfTenth : Float -> Float
+fromAHalfTenth value =
     let
-        difference =
-            abs (a - b)
+        tenths =
+            value * 10 - 0.5
     in
-    min difference (lapLength - difference)
+    abs (tenths - toFloat (round tenths)) / 10
 
 
-{-| Readings that are nowhere near the start straight the pit lane runs beside.
+{-| How far clear of a half-tenth a projected value has to stand for the drawing
+not to depend on how the arithmetic came out. The last digit a value this size
+holds is a fraction of a nanometre, and a projection is a handful of those digits
+wide — two languages' roundings of the same degrees may disagree in the last of
+them — so a micrometre of room is five orders more than a rounding needs. The
+tightest place of this survey stands 113 micrometres clear.
 -}
-farFromTheStartStraight : Float -> Bool
-farFromTheStartStraight metres =
-    metres >= 700 && metres <= 12900
-
-
-{-| About ten metres off, the way a GPS receiver is wrong: 0.00009 degrees of
-latitude, or 0.00013 of longitude at this latitude. Successive samples drift in
-different directions, as a log's do.
--}
-drift : Int -> Coordinate -> Coordinate
-drift i coordinates =
-    let
-        error =
-            List.drop (modBy (List.length offsets) i) offsets
-                |> List.head
-                |> Maybe.withDefault { lat = 0, lon = 0 }
-    in
-    { lat = coordinates.lat + error.lat, lon = coordinates.lon + error.lon }
-
-
-offsets : List Coordinate
-offsets =
-    [ { lat = 0.00009, lon = 0 }
-    , { lat = 0, lon = -0.00013 }
-    , { lat = -0.00006, lon = 0.00008 }
-    , { lat = 0.00004, lon = 0.00004 }
-    ]
+tenthTolerance : Float
+tenthTolerance =
+    1.0e-6

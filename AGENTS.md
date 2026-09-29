@@ -358,14 +358,18 @@ distance for is placed by the time between the lines either side of it
 (`Tracker.Config.lapScale`). The summary does not say which circuit a round was
 run on, so `Shared` picks the layout by the calendar's round id.
 
-Every surveyed point is held twice over, in the degrees OpenStreetMap gives and
-the metres the drawing is in, with a `Circuit.Geodesy.Frame` written beside them:
-that is the door a GPS log of a car comes in through, `Geodesy.project` and then
-`Shape.nearest` saying how far round the lap a sample was. The frame is emitted
-rather than derived in Elm so the drawn metres stay the survey's own — what the
-VRT baselines are made of — and a test holds the two readings of a point to the
-tenth of a metre the drawing rounds to. A second circuit's generator writes the
-same frame, and adds nothing to `Circuit/`.
+Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
+round the lap it stands, and `Layout` projects those degrees into the drawing
+through the `Circuit.Geodesy.Frame` the generator writes beside them — to the tenth
+of a metre the survey is kept to, which is the tenth every VRT baseline was
+rendered at. The frame's origin is the north-west corner of the survey, so the
+drawing never falls below its own zero, and a test holds every projected place
+clear of the half-tenth its rounding turns on — measured before the rounding,
+since a rounded place is clear of every boundary by construction. The tightest
+stands 113 micrometres, which is what lets the metres be projected rather than
+written down. A second circuit's generator writes the same frame, out of the
+parallel it scales east-west at and the north-west corner of what it surveyed,
+and adds nothing to `Circuit/`.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to

@@ -1,11 +1,9 @@
 module Motorsport.Circuit.Geodesy exposing (Coordinate, Frame, frame, project)
 
-{-| A circuit is surveyed in degrees on the earth and drawn in metres on a plane.
-A GPS log of a car is in degrees, so joining one to a race is a turn from one to
-the other: [`project`](#project) a sample into the circuit's own `Frame` and it
-lands among the metres
-[`Motorsport.Circuit.Shape.nearest`](Motorsport-Circuit-Shape#nearest) reads --
-the metres round the lap the timing feed counts in.
+{-| A circuit is surveyed in degrees on the earth and drawn in metres on a plane:
+[`project`](#project) is the turn from one to the other, through the circuit's
+own `Frame`. The metres it comes out in are the drawing's -- the same metres
+round the lap that the timing feed counts in.
 
 The turn is equirectangular about one parallel of a sphere, which across the few
 kilometres a circuit covers is wrong by far less than the metre a surveyed line is
@@ -18,8 +16,8 @@ simplified to. Degrees are WGS84, the datum GPS records are written in.
 import Motorsport.Circuit.Shape exposing (Point)
 
 
-{-| A place on the earth, as a GPS record gives it: WGS84 degrees, north and east
-of Greenwich being positive.
+{-| A place on the earth: WGS84 degrees, north and east of Greenwich being
+positive.
 -}
 type alias Coordinate =
     { lat : Float
@@ -56,10 +54,8 @@ frame { origin, parallel } =
         }
 
 
-{-| Where a place on the earth falls in a circuit's metres: east along `x`, south
-along `y`. A GPS sample is placed by this and then by
-[`Shape.nearest`](Motorsport-Circuit-Shape#nearest), which is what says how far
-round the lap it was.
+{-| Where a place on the earth falls in a circuit's metres: east along `x`,
+south along `y`.
 
     leMans : Frame
     leMans =

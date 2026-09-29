@@ -27,8 +27,8 @@ tests =
             \_ ->
                 ( List.head Geometry.centreline, List.head (List.reverse Geometry.centreline) )
                     |> Expect.all
-                        [ \( first, last ) -> Maybe.map .x first |> Expect.equal (Maybe.map .x last)
-                        , \( first, last ) -> Maybe.map .y first |> Expect.equal (Maybe.map .y last)
+                        [ \( first, last ) -> Maybe.map .lat first |> Expect.equal (Maybe.map .lat last)
+                        , \( first, last ) -> Maybe.map .lon first |> Expect.equal (Maybe.map .lon last)
                         ]
         , test "every season's lines stand in the order a car reaches them" <|
             \_ ->
