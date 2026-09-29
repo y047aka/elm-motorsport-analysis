@@ -404,10 +404,19 @@ pitLaneRow entry =
             entry.car
     in
     ( car.metadata.carNumber
-    , div [ Attributes.class "grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded py-0.5" ]
-        [ CarNumberBadge.viewRow car.metadata
-        , div [ Attributes.class "text-xs truncate" ]
-            [ text (Maybe.withDefault (Driver.toSurname car.currentDriver) entry.handover) ]
+    , div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] items-center gap-2 rounded py-0.5" ]
+        [ classMark car.metadata
+        , CarNumberBadge.viewRow car.metadata
+        , div
+            [ Attributes.class
+                (if car.status == Status.OutLap then
+                    "text-xs truncate text-muted-foreground"
+
+                 else
+                    "text-xs truncate"
+                )
+            ]
+            [ text (Maybe.withDefault (Driver.toInitialAndSurname car.currentDriver) entry.handover) ]
         , if car.status == Status.OutLap then
             statusChip "bg-card border-border text-muted-foreground" "OUT"
 
