@@ -240,10 +240,13 @@ headerTitle shared =
 
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away; the body answers to no click.
+
+It carries `data-tracker-column`, which the visual tests locate it by.
+
 -}
 trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
 trackerCard several held track snapshot =
-    Card.card []
+    Card.card [ attribute "data-tracker-column" "" ]
         [ div
             [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
             ]
@@ -324,6 +327,7 @@ paneCells pane track snapshot timeline replay =
         Shown ->
             [ div
                 [ Attributes.class "col-start-3 row-start-1 h-full grid grid-rows-[minmax(0,1fr)] cursor-pointer"
+                , attribute "data-tracker-pane" ""
                 , onClick (ColumnsMsg (Columns.ShowTracker True))
                 ]
                 [ Card.card []
