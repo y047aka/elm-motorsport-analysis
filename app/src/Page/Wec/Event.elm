@@ -349,8 +349,8 @@ handover cameIn goesOut =
         Just (Driver.toInitialAndSurname cameIn.driver ++ " → " ++ Driver.toInitialAndSurname goesOut.driver)
 
 
-{-| A car in the pit lane: where it runs, its number, who is in the car -- or
-the change of driver just made in the box -- and how far through its stop it is.
+{-| A car in the pit lane: its number, who is in the car -- or the change of
+driver just made in the box -- and how far through its stop it is.
 -}
 pitLaneRow : PitEntry -> ( String, Html Msg )
 pitLaneRow entry =
@@ -359,9 +359,8 @@ pitLaneRow entry =
             entry.car
     in
     ( car.metadata.carNumber
-    , div [ Attributes.class "grid grid-cols-[20px_auto_1fr_auto] items-center gap-2 rounded py-0.5" ]
-        [ div [ Attributes.class "text-center text-xs" ] [ text (String.fromInt car.standing.position) ]
-        , CarNumberBadge.viewRow car.metadata
+    , div [ Attributes.class "grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded py-0.5" ]
+        [ CarNumberBadge.viewRow car.metadata
         , div [ Attributes.class "text-xs truncate" ]
             [ text (Maybe.withDefault (Driver.toSurname car.currentDriver) entry.handover) ]
         , case ( car.status, entry.stopped ) of
