@@ -1,11 +1,12 @@
-module View.EventLog exposing (describe, detail, rows)
+module View.EventLog exposing (describe, rows)
 
-{-| What the timeline says, spelled in one place for the two panels that say it:
-the field's own, which draws every event of the race, and the Log section of a
-car detail panel, which draws one car's. The wording is shared so the two can
-never disagree about what happened.
+{-| What the timeline says about one car, which is the Log section of a car
+detail panel. The event names come from `describe`, which the field's own
+timeline panel also reads, so the two never disagree about what an event is
+called; the second line is the Log's own, and it says more than the field's
+panel does.
 
-@docs describe, detail, rows
+@docs describe, rows
 
 -}
 
@@ -55,8 +56,10 @@ describe eventType =
 
 {-| The second line an event has, read off the car's laps at the event.
 
-A fastest lap is the lap the event completes, its time and its driver. No other
-event carries one.
+A fastest lap is the lap the event completes, its time and its driver. A driver
+change is who handed the car to whom: the driver of the lap the event completes,
+and the one of the lap in progress from it, which is the lap the car's
+`currentDriver` is read off from then on.
 
 -}
 detail : Maybe Car -> TimelineEvent -> Maybe String
@@ -64,6 +67,9 @@ detail car event =
     let
         lapOf find =
             car |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
+
+        driverOf find =
+            lapOf find |> Maybe.map (.driver >> Driver.toInitialAndSurname)
     in
     case event.eventType of
         CarEvent _ FastestLap ->
@@ -73,6 +79,11 @@ detail car event =
                         lap.time
                             |> Maybe.map (\time -> Duration.toString time ++ " · " ++ Driver.toInitialAndSurname lap.driver)
                     )
+
+        CarEvent _ DriverChange ->
+            Maybe.map2 (\handedOver tookOver -> handedOver ++ " → " ++ tookOver)
+                (driverOf Lap.findLastLapAt)
+                (driverOf Lap.findCurrentLap)
 
         _ ->
             Nothing
@@ -84,6 +95,7 @@ detail car event =
 `upTo` is a count of the race's events rather than a moment, the number
 `Timeline.countUpTo` hands out, so a caller can hold it for as long as no event
 has arrived -- which is what lets the rows be built behind a lazy thunk.
+
 -}
 eventsOf : CarNumber -> { upTo : Int, limit : Int } -> Timeline -> List TimelineEvent
 eventsOf carNumber { upTo, limit } timeline =

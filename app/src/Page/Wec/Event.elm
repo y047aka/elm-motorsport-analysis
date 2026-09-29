@@ -29,7 +29,7 @@ import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent exposing (EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
@@ -728,7 +728,7 @@ eventRow carsByNumber event =
             div [ Attributes.class classes ] children
 
         secondLine =
-            case EventLog.detail car event of
+            case detail car event of
                 Just line ->
                     [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text line ] ]
 
@@ -772,6 +772,30 @@ carBadge car eventType =
 
         ( Nothing, _ ) ->
             text ""
+
+
+{-| The second line an event of this panel has, read off the car's laps at the
+event: a fastest lap is the lap the event completes, its time and its driver.
+No other event of this panel carries one.
+
+-}
+detail : Maybe Car -> TimelineEvent -> Maybe String
+detail car event =
+    let
+        lapOf find =
+            car |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
+    in
+    case event.eventType of
+        CarEvent _ FastestLap ->
+            lapOf Lap.findLastLapAt
+                |> Maybe.andThen
+                    (\lap ->
+                        lap.time
+                            |> Maybe.map (\time -> Duration.toString time ++ " · " ++ Driver.toInitialAndSurname lap.driver)
+                    )
+
+        _ ->
+            Nothing
 
 
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
