@@ -303,14 +303,10 @@ this moment.
 -}
 type alias PitEntry =
     { car : CarAt
-    , laneTime : Maybe Duration.Duration
     , handover : Maybe String
     }
 
 
-{-| The feed times the lane only once the car is back out, so a car still in
-it has nothing to show yet.
--}
 pitEntry : { elapsed : Instant.Instant } -> List Car -> CarAt -> PitEntry
 pitEntry clock cars car =
     let
@@ -325,12 +321,6 @@ pitEntry clock cars car =
             Lap.findCurrentLap clock laps
     in
     { car = car
-    , laneTime =
-        if car.status == Status.OutLap then
-            currentLap |> Maybe.andThen Lap.laneTimeOf
-
-        else
-            Nothing
     , handover =
         Maybe.map2 handover (Lap.findLastLapAt clock laps) currentLap
             |> Maybe.withDefault Nothing
@@ -349,8 +339,8 @@ handover cameIn goesOut =
         Just (Driver.toInitialAndSurname cameIn.driver ++ " → " ++ Driver.toInitialAndSurname goesOut.driver)
 
 
-{-| A car in the pit lane: its number, who is in the car -- or the change of
-driver just made in the box -- and how long its pit lane took.
+{-| A car in the pit lane: its number, and who is in the car -- or the change
+of driver just made in the box.
 -}
 pitLaneRow : PitEntry -> ( String, Html Msg )
 pitLaneRow entry =
@@ -363,19 +353,11 @@ pitLaneRow entry =
         [ CarNumberBadge.viewRow car.metadata
         , div [ Attributes.class "text-xs truncate" ]
             [ text (Maybe.withDefault (Driver.toSurname car.currentDriver) entry.handover) ]
-        , case ( car.status, entry.laneTime ) of
-            ( Status.OutLap, Just duration ) ->
-                span [ Attributes.class "flex items-center gap-1" ]
-                    [ statusChip "bg-amber-500/20 text-amber-400 border-amber-500/40" "OUT"
-                    , span [ Attributes.class "text-[10px] tabular-nums text-muted-foreground" ]
-                        [ text (Duration.toString duration) ]
-                    ]
+        , if car.status == Status.OutLap then
+            statusChip "bg-card border-border text-muted-foreground" "OUT"
 
-            ( Status.OutLap, Nothing ) ->
-                statusChip "bg-amber-500/20 text-amber-400 border-amber-500/40" "OUT"
-
-            _ ->
-                statusChip "bg-card border-border" "PIT"
+          else
+            statusChip "bg-card border-border" "PIT"
         ]
     )
 
