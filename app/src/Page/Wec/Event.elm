@@ -743,7 +743,7 @@ eventRow carsByNumber event =
         name =
             case fastestLapTime car event of
                 Just time ->
-                    EventLog.describe event.eventType ++ " (" ++ Duration.toString time ++ ")"
+                    Duration.toString time ++ " (Fastest)"
 
                 Nothing ->
                     EventLog.describe event.eventType
