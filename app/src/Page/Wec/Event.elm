@@ -192,11 +192,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just round ->
-                    mainGrid round.track
-                        round.timeline
-                        round.snapshot
-                        round.replay
-                        m
+                    mainGrid round m
             ]
         ]
     }
@@ -271,9 +267,15 @@ trackerCard several held track snapshot =
         ]
 
 
-mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
-mainGrid track timeline snapshot replay m =
+mainGrid : Shared.LoadedRound -> Model -> Html Msg
+mainGrid round m =
     let
+        snapshot =
+            round.snapshot
+
+        replay =
+            round.replay
+
         keys =
             Columns.resolve snapshot (Columns.keysOf snapshot m.strip.order)
 
@@ -286,9 +288,9 @@ mainGrid track timeline snapshot replay m =
                     }
                     snapshot
                 ]
-            , columnStrip "col-start-2 row-start-1 row-span-2" track timeline keys m replay snapshot
+            , columnStrip "col-start-2 row-start-1 row-span-2" round.track round.timeline keys m replay snapshot
             ]
-                ++ paneCells m.pane track snapshot timeline replay
+                ++ paneCells m.pane round.track snapshot round.fieldEvents replay
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
@@ -322,7 +324,7 @@ inside it.
 
 -}
 paneCells : Pane -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
-paneCells pane track snapshot timeline replay =
+paneCells pane track snapshot fieldEvents replay =
     case pane of
         Hidden ->
             []
@@ -344,7 +346,7 @@ paneCells pane track snapshot timeline replay =
                         ]
                     ]
                 ]
-            , timelinePanel "col-start-3 row-start-2" timeline replay
+            , timelinePanel "col-start-3 row-start-2" fieldEvents replay
             ]
 
 
@@ -502,14 +504,17 @@ standingsTabs current =
         []
 
 
-{-| The most recent timeline events that have occurred, newest first: when each
-happened, whose it was, and what kind of thing it was.
+{-| The most recent events the field draws, newest first: when each happened,
+whose it was, and what kind of thing it was.
+
+`recentEventLimit` counts the rows here, not the round's events.
+
 -}
 timelinePanel : String -> Timeline -> Replay.Model -> Html Msg
-timelinePanel cell timeline replay =
+timelinePanel cell fieldEvents replay =
     let
         occurredCount =
-            Timeline.countUpTo (Clock.getElapsed replay.playback) timeline
+            Timeline.countUpTo (Clock.getElapsed replay.playback) fieldEvents
     in
     button
         [ attribute "popovertarget" standingsPopoverId
@@ -519,7 +524,7 @@ timelinePanel cell timeline replay =
         [ Card.card []
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
-                    [ Html.Lazy.lazy3 eventRows replay.race.cars timeline occurredCount ]
+                    [ Html.Lazy.lazy3 eventRows replay.race.cars fieldEvents occurredCount ]
                 ]
             ]
         ]
@@ -545,7 +550,6 @@ eventRows cars timeline occurredCount =
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
-        |> List.filter (TimelineEvent.forField << .eventType)
         |> List.map (eventRow carsByNumber)
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
 

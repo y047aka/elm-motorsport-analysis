@@ -93,11 +93,17 @@ describe eventType =
     forField (CarEvent "51" DriverChange)
     --> False
 
+    forField (CarEvent "83" LeaderInPit)
+    --> False
+
 -}
 forField : EventType -> Bool
 forField eventType =
     case eventType of
         CarEvent _ DriverChange ->
+            False
+
+        CarEvent _ LeaderInPit ->
             False
 
         _ ->
