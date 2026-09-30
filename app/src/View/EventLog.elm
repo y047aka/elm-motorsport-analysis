@@ -58,7 +58,7 @@ lineRow : CarLog.Line -> Html msg
 lineRow line =
     div [ class "grid grid-cols-[2rem_1fr_auto] gap-x-2 items-baseline py-0.5" ]
         [ div [ class "text-right tabular-nums text-muted-foreground" ]
-            [ text (String.fromInt line.lap) ]
+            [ text (Maybe.map String.fromInt line.lap |> Maybe.withDefault "-") ]
         , div [ class "truncate", style "color" (Performance.textColorOf line.level) ]
             [ text line.label
             , case line.by of

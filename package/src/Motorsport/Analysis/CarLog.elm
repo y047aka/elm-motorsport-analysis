@@ -27,17 +27,18 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 
 
-{-| One line of the Log: the moment, the lap number it falls on, what to say about
+{-| One line of the Log: the moment, the lap the line is about, what to say about
 it, the driver its time belongs to, and the rating that colours it.
 
-`lap` is the lap running when the moment came round -- `0` where the car had
-turned none, which is where the race's own start stands -- except on a fastest
-lap's line, which is told by the lap it completed.
+`lap` is the lap the line is about: the one the moment fell on for a stop and for
+an announcement, and the one that ran to the time for a best or a record.
+`Nothing` where the car had turned no lap yet, which is where the race's own start
+stands.
 
 -}
 type alias Line =
     { at : Instant
-    , lap : Int
+    , lap : Maybe Int
     , label : String
     , by : Maybe String
     , level : PerformanceLevel
@@ -147,7 +148,7 @@ eventLine car event =
             case lap.time of
                 Just time ->
                     { at = event.elapsed
-                    , lap = lap.lap
+                    , lap = Just lap.lap
                     , label = Duration.toString time
                     , by = Just (Driver.toInitialAndSurname lap.driver)
                     , level = Performance.Fastest
@@ -160,13 +161,12 @@ eventLine car event =
             plainLine car event
 
 
-{-| The lap running when the event arrived: the last one already completed.
+{-| The lap the line is about: the one the event arrived on.
 -}
-lapNumber : Car -> TimelineEvent -> Int
+lapNumber : Car -> TimelineEvent -> Maybe Int
 lapNumber car event =
     TimelineEvent.runningLap car event
         |> Maybe.map .lap
-        |> Maybe.withDefault 0
 
 
 plainLine : Car -> TimelineEvent -> Line
@@ -192,7 +192,7 @@ stopLine allLaps lap =
         ( Just crossedIn, Just _ ) ->
             Just
                 { at = crossedIn
-                , lap = enteredOn allLaps lap crossedIn
+                , lap = Just (enteredOn allLaps lap crossedIn)
                 , label = "Pit"
                 , by = Nothing
                 , level = Performance.Standard
@@ -231,7 +231,7 @@ personalBestLine records lap =
             if time == best then
                 Just
                     { at = lap.elapsed
-                    , lap = lap.lap
+                    , lap = Just lap.lap
                     , label = Duration.toString time
                     , by = Just (Driver.toInitialAndSurname lap.driver)
                     , level =
