@@ -11,6 +11,7 @@
     "Motorsport.Lap",
     "Motorsport.Lap.Performance",
     "Motorsport.Position",
+    "Motorsport.Race.TimelineEvent",
     "Motorsport.Sector",
     "Motorsport.Status",
     "Motorsport.Wec.Circuit.LeMans",

@@ -29,7 +29,7 @@ import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
@@ -49,7 +49,6 @@ import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
-import View.EventLog as EventLog
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
 
@@ -391,7 +390,7 @@ handover cameIn goesOut =
         Nothing
 
     else
-        Just (Driver.toInitialAndSurname cameIn.driver ++ " → " ++ Driver.toInitialAndSurname goesOut.driver)
+        Driver.toHandover cameIn.driver goesOut.driver
 
 
 {-| A car in the pit lane: its number, and who is in the car -- or the change
@@ -706,21 +705,9 @@ eventRows cars timeline occurredCount =
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
-        |> List.filter (not << isDriverChange)
+        |> List.filter (TimelineEvent.forField << .eventType)
         |> List.map (eventRow carsByNumber)
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
-
-
-{-| The one event this panel does not draw; the car's own Log keeps it.
--}
-isDriverChange : TimelineEvent -> Bool
-isDriverChange event =
-    case event.eventType of
-        CarEvent _ DriverChange ->
-            True
-
-        _ ->
-            False
 
 
 {-| A row is one line as tall as the badge: the `1.375rem` is
@@ -741,12 +728,12 @@ eventRow carsByNumber event =
             div [ Attributes.class classes ] children
 
         name =
-            case fastestLapTime car event of
-                Just time ->
+            case ( event.eventType, car |> TimelineEvent.runningLap event |> Maybe.andThen .time ) of
+                ( CarEvent _ FastestLap, Just time ) ->
                     Duration.toString time ++ " (Fastest)"
 
-                Nothing ->
-                    EventLog.describe event.eventType
+                _ ->
+                    TimelineEvent.describe event.eventType
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
         [ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
@@ -755,21 +742,6 @@ eventRow carsByNumber event =
         , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
-
-
-{-| The lap a fastest-lap event completes, its time; nothing for any other
-kind of event, and nothing for a lap the feed left without one.
--}
-fastestLapTime : Maybe Car -> TimelineEvent -> Maybe Duration
-fastestLapTime car event =
-    case event.eventType of
-        CarEvent _ FastestLap ->
-            car
-                |> Maybe.andThen (\c -> Lap.findLastLapAt { elapsed = event.elapsed } c.laps)
-                |> Maybe.andThen .time
-
-        _ ->
-            Nothing
 
 
 {-| The same bar the LiveStandings class headers stand their names on --

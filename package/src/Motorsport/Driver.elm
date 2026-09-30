@@ -2,6 +2,7 @@ module Motorsport.Driver exposing
     ( Driver, fromName, unknown
     , isSame
     , toFullName, toInitialAndSurname, toSurname
+    , toHandover
     )
 
 {-|
@@ -9,6 +10,7 @@ module Motorsport.Driver exposing
 @docs Driver, fromName, unknown
 @docs isSame
 @docs toFullName, toInitialAndSurname, toSurname
+@docs toHandover
 
 -}
 
@@ -171,3 +173,15 @@ surnameOf parts =
     parts.family
         |> List.map String.toUpper
         |> String.join " "
+
+
+{-| A driver change, spelled the way a timing sheet prints one: who handed the
+car over, and who took it on.
+
+    toHandover (fromName "Sebastian BUEMI") (fromName "Kamui Kobayashi")
+    --> "S.BUEMI → K.KOBAYASHI"
+
+-}
+toHandover : Driver -> Driver -> String
+toHandover handedOver tookOver =
+    toInitialAndSurname handedOver ++ " → " ++ toInitialAndSurname tookOver

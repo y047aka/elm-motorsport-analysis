@@ -32,7 +32,6 @@ import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Chart.PositionProgression as PositionProgression
 import Motorsport.Driver as Driver
-import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant
 import Motorsport.Lap exposing (Lap)
@@ -42,6 +41,7 @@ import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
+import UI.EmptyState as EmptyState
 import View.CarDetail.ChartTabs as ChartTabs
 import View.CarDetail.Header as Header
 import View.CarDetail.LapTable as LapTable
@@ -176,14 +176,7 @@ gapOf snapshot maybeInFront chasing =
             Gap.none
 
 
-{-| How much of the race the Log and its neighbours may speak of: how many
-events the field has had, and how far the clock has run.
--}
-type alias Occurred =
-    { count : Int, elapsed : Duration }
-
-
-panel : Comparison -> Timeline -> Occurred -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
+panel : Comparison -> Timeline -> EventLog.Occurred -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
 panel comparison timeline occurred cars snapshot rivals focused =
     let
         lapHistory =
@@ -209,7 +202,7 @@ panel comparison timeline occurred cars snapshot rivals focused =
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
         , disclosure "Lap history" (LapTable.view laps focused.standing.lapsCompleted)
-        , container "Log" (EventLog.rows cars timeline occurred.count occurred.elapsed focused.metadata.carNumber)
+        , container "Log" (EventLog.rows cars timeline occurred focused.metadata.carNumber)
         ]
 
 
@@ -304,7 +297,7 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
     let
         orEmptyState : Maybe (Html Msg) -> Html Msg
         orEmptyState =
-            Maybe.withDefault (emptyState "No laps to compare yet")
+            Maybe.withDefault (EmptyState.view "No laps to compare yet")
     in
     ChartTabs.chartTabs SelectedChart
         chart
@@ -396,10 +389,3 @@ sectionClass =
 headingClass : String
 headingClass =
     "text-[10px] font-medium uppercase tracking-[0.03em] text-muted-foreground"
-
-
-emptyState : String -> Html msg
-emptyState message =
-    div
-        [ class "p-5 text-center italic text-muted-foreground" ]
-        [ text message ]
