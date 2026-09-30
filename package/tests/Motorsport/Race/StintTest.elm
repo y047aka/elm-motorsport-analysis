@@ -33,8 +33,8 @@ suite =
                         |> Stint.fromLaps
                         |> List.map .end
                         |> Expect.equal
-                            [ Ended { lapNumber = 3, duration = 63000 }
-                            , Ended { lapNumber = 5, duration = 71000 }
+                            [ Ended { lapNumber = 3, laneTime = 63000 }
+                            , Ended { lapNumber = 5, laneTime = 71000 }
                             , Running
                             ]
             , test "a car sitting in the pits has ended a run with no stop to show for it yet" <|
@@ -49,8 +49,8 @@ suite =
                         |> Stint.fromLaps
                         |> List.map (\stint -> ( stint.lapCount, stint.end ))
                         |> Expect.equal
-                            [ ( 2, Ended { lapNumber = 3, duration = 46857 } )
-                            , ( 1, Ended { lapNumber = 4, duration = 69107 } )
+                            [ ( 2, Ended { lapNumber = 3, laneTime = 46857 } )
+                            , ( 1, Ended { lapNumber = 4, laneTime = 69107 } )
                             , ( 1, Running )
                             ]
             , test "the laps that touched the pit lane are left out of the run's times" <|

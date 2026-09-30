@@ -58,7 +58,7 @@ type alias Stint =
 {-| How a run finished.
 
 `InPit` is a run that is over as much as `Ended` is: `lastLap` is the lap the
-car came in on either way. What separates them is where the stop's length is
+car came in on either way. What separates them is where the lane's time is
 recorded -- on the lap the car came back out on -- so a run reads as `InPit`
 until that lap is complete. That is the whole of the out lap as well as the
 stop, and longer than the car is anywhere near the pit lane; where it actually
@@ -72,10 +72,15 @@ type End
 
 
 {-| A stop, as the lap the car came back out on records it.
+
+`laneTime` is what the feed times, between the two crossings of the lane. The
+span the car stood still in a box sits inside it and is in no field here: nothing
+times the box.
+
 -}
 type alias Pit =
     { lapNumber : Int
-    , duration : Duration
+    , laneTime : Duration
     }
 
 
@@ -107,7 +112,7 @@ fromLaps laps =
 stopEnding : Lap -> Maybe Pit
 stopEnding outLap =
     Lap.laneTimeOf outLap
-        |> Maybe.map (\duration -> { lapNumber = outLap.lap, duration = duration })
+        |> Maybe.map (\laneTime -> { lapNumber = outLap.lap, laneTime = laneTime })
 
 
 toStint : Int -> ( List Lap, Maybe Pit ) -> Maybe Stint
