@@ -29,7 +29,7 @@ import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent exposing (EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
@@ -706,8 +706,21 @@ eventRows cars timeline occurredCount =
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
+        |> List.filter (not << isDriverChange)
         |> List.map (eventRow carsByNumber)
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
+
+
+{-| The one event this panel does not draw; the car's own Log keeps it.
+-}
+isDriverChange : TimelineEvent -> Bool
+isDriverChange event =
+    case event.eventType of
+        CarEvent _ DriverChange ->
+            True
+
+        _ ->
+            False
 
 
 {-| A row is one line as tall as the badge: the `1.375rem` is
