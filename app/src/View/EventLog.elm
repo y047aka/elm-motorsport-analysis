@@ -116,7 +116,7 @@ rows cars timeline occurredCount elapsed carNumber =
         lines =
             List.sortWith laterFirst
                 (List.map (timelineLine car) (eventsOf carNumber { upTo = occurredCount, limit = recentLimit } timeline)
-                    ++ List.filterMap pitLine laps
+                    ++ List.filterMap (pitLine laps) laps
                     ++ List.filterMap personalBestLine laps
                 )
                 |> List.filter (\line -> Instant.toDuration line.at <= elapsed)
@@ -153,6 +153,9 @@ eventsOf carNumber { upTo, limit } timeline =
 belongsTo : CarNumber -> EventType -> Bool
 belongsTo carNumber eventType =
     case eventType of
+        CarEvent number LeaderInPit ->
+            False
+
         CarEvent number _ ->
             number == carNumber
 
@@ -167,27 +170,49 @@ recentLimit =
 
 timelineLine : Maybe Car -> TimelineEvent -> Line
 timelineLine car event =
-    { at = event.elapsed
-    , label = describe event.eventType
-    , detail = detail car event
-    }
+    case ( event.eventType, detail car event ) of
+        ( CarEvent _ DriverChange, Just handover ) ->
+            { at = event.elapsed, label = handover, detail = Nothing }
+
+        _ ->
+            { at = event.elapsed
+            , label = describe event.eventType
+            , detail = detail car event
+            }
 
 
-{-| The stop whose out-lap the lap carried: when the car crossed into the lane,
-and how long the lane took.
+{-| The stop whose out-lap the lap carried: said as the lap the car entered
+the lane on.
 
 A stop the car never came out of has no lane time to say, and is the
 `Retired` event's to tell.
 
 -}
-pitLine : Lap -> Maybe Line
-pitLine lap =
+pitLine : List Lap -> Lap -> Maybe Line
+pitLine allLaps lap =
     case ( Lap.pitEntryAt lap, Lap.laneTimeOf lap ) of
-        ( Just crossedIn, Just lane ) ->
-            Just { at = crossedIn, label = Duration.toString lane ++ " (Pit)", detail = Nothing }
+        ( Just crossedIn, Just _ ) ->
+            Just
+                { at = crossedIn
+                , label = "Pit (Lap " ++ String.fromInt (enteredOn allLaps lap crossedIn) ++ ")"
+                , detail = Nothing
+                }
 
         _ ->
             Nothing
+
+
+{-| The lap that ended where the lane was entered: the crossing into the lane
+is the previous lap's finish line, so the lap number the entry falls on is
+that lap's. Where no lap names the crossing, the lap number the stop sits
+behind is the best the laps can say.
+-}
+enteredOn : List Lap -> Lap -> Instant -> Int
+enteredOn allLaps pitLap crossedIn =
+    allLaps
+        |> List.Extra.find (\lap -> Instant.compare lap.elapsed crossedIn == EQ)
+        |> Maybe.map .lap
+        |> Maybe.withDefault (pitLap.lap - 1)
 
 
 {-| The laps that improved the car's own best. The feed carries the best
