@@ -2,6 +2,7 @@ module Motorsport.BestTimes exposing
     ( Changes, empty, changesDecoder
     , Snapshot, Holder
     , at, timeOf
+    , Record(..), Taking, takenBy
     )
 
 {-| When each of the race's best times was set, what they stand at, and who set
@@ -17,6 +18,7 @@ arrives with the round's summary.
 @docs Changes, empty, changesDecoder
 @docs Snapshot, Holder
 @docs at, timeOf
+@docs Record, Taking, takenBy
 
 -}
 
@@ -154,3 +156,49 @@ it.
 timeOf : Maybe Holder -> Maybe Duration
 timeOf =
     Maybe.map .time
+
+
+{-| Which of the records a lap can take: the lap time outright, or one of the
+sectors and mini-sectors a lap runs through.
+-}
+type Record
+    = FastestLap
+    | SectorRecord Sector.Sector
+    | MiniSectorRecord LeMans.LeMans2025MiniSector
+
+
+{-| One record one lap took: when, which, and the lap and time that stand as
+its holder from then on.
+-}
+type alias Taking =
+    { at : Instant
+    , record : Record
+    , holder : Holder
+    }
+
+
+{-| Every record this car's laps took, in the order they were taken.
+
+A record a later lap takes away is not this car's to show again, and holds
+nothing here. A lap taking the lap time and the sectors it ran through takes
+every one of them on the same instant.
+
+-}
+takenBy : String -> Changes -> List Taking
+takenBy carNumber changes =
+    enumerated changes
+        |> List.concatMap
+            (\( record, points ) ->
+                points
+                    |> ChangePoints.toList
+                    |> List.filter (\( _, holder ) -> holder.carNumber == carNumber)
+                    |> List.map (\( when, holder ) -> { at = when, record = record, holder = holder })
+            )
+        |> List.sortBy (.at >> Instant.toDuration)
+
+
+enumerated : Changes -> List ( Record, ChangePoints Holder )
+enumerated changes =
+    ( FastestLap, changes.fastestLapTime )
+        :: List.map (\sector -> ( SectorRecord sector, Sector.get sector changes.fastestSectors )) Sector.all
+        ++ List.map (\mini -> ( MiniSectorRecord mini, LeMans.get mini changes.fastestMiniSectors )) LeMans.all

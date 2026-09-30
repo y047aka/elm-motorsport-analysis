@@ -5,6 +5,7 @@ module Motorsport.Race exposing
     , lapCountAt, timeToFlagAt
     , FlagPeriod, flagAt, flagPeriods
     , statusAt, pitStopsAt
+    , bestTimeChanges
     )
 
 {-| A race, as it is once the data has loaded: cars, their laps, and the
@@ -21,6 +22,7 @@ moment is derived from the two, in
 @docs lapCountAt, timeToFlagAt
 @docs FlagPeriod, flagAt, flagPeriods
 @docs statusAt, pitStopsAt
+@docs bestTimeChanges
 
 -}
 
@@ -237,3 +239,11 @@ statusAt clock car race =
 pitStopsAt : { elapsed : Instant } -> CarNumber -> Race -> Int
 pitStopsAt clock carNumber race =
     Stint.stopsAt clock carNumber race.pitStops
+
+
+{-| The records and every moment one changed hands -- the baseline a lap was
+rated against as it ran, whole rather than as it stood at one moment.
+-}
+bestTimeChanges : Race -> BestTimes.Changes
+bestTimeChanges race =
+    race.bestTimeChanges
