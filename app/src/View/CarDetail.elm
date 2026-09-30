@@ -28,7 +28,6 @@ import List.Extra
 import Motorsport.Analysis.LapWindow as LapWindow exposing (LapWindow)
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Analysis.Stint as AnalysisStint
-import Motorsport.BestTimes as BestTimes
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Chart.PositionProgression as PositionProgression
@@ -113,7 +112,6 @@ view :
     , scrollId : String
     , onScroll : Float -> msg
     , timeline : Timeline
-    , recordChanges : BestTimes.Changes
     }
     -> List Car
     -> Snapshot
@@ -148,7 +146,7 @@ view config cars snapshot focused =
             , class "min-h-0 overflow-y-auto"
             , Html.Events.on "scroll" (Decode.map config.onScroll (Decode.at [ "target", "scrollTop" ] Decode.float))
             ]
-            [ Html.map config.toMsg (panel config.comparison config.recordChanges config.timeline occurred cars snapshot rivals focused) ]
+            [ Html.map config.toMsg (panel config.comparison config.timeline occurred cars snapshot rivals focused) ]
         ]
 
 
@@ -185,8 +183,8 @@ type alias Occurred =
     { count : Int, elapsed : Duration }
 
 
-panel : Comparison -> BestTimes.Changes -> Timeline -> Occurred -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
-panel comparison recordChanges timeline occurred cars snapshot rivals focused =
+panel : Comparison -> Timeline -> Occurred -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
+panel comparison timeline occurred cars snapshot rivals focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -211,7 +209,7 @@ panel comparison recordChanges timeline occurred cars snapshot rivals focused =
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
         , disclosure "Lap history" (LapTable.view laps focused.standing.lapsCompleted)
-        , container "Log" (EventLog.rows cars timeline occurred.count occurred.elapsed focused.metadata.carNumber recordChanges)
+        , container "Log" (EventLog.rows cars timeline occurred.count occurred.elapsed focused.metadata.carNumber)
         ]
 
 

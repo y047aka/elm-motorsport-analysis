@@ -14,7 +14,6 @@ import Dict exposing (Dict)
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class)
 import List.Extra
-import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Flag as Flag
@@ -23,8 +22,6 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
-import Motorsport.Sector as Sector
-import Motorsport.Wec.Circuit.LeMans as LeMans
 
 
 {-| What happened, in the words both panels print.
@@ -104,11 +101,11 @@ type alias Line =
 
 
 {-| Everything that has happened to one car by `elapsed`, newest first, at most
-`recentLimit` lines: the timeline's events, its stops, the laps that improved
-its own best, and the race records its laps took.
+`recentLimit` lines: the timeline's events, its stops, and the laps that
+improved its own best.
 -}
-rows : List Car -> Timeline -> Int -> Duration -> CarNumber -> BestTimes.Changes -> Html msg
-rows cars timeline occurredCount elapsed carNumber changes =
+rows : List Car -> Timeline -> Int -> Duration -> CarNumber -> Html msg
+rows cars timeline occurredCount elapsed carNumber =
     let
         car =
             List.Extra.find (\item -> item.metadata.carNumber == carNumber) cars
@@ -121,7 +118,6 @@ rows cars timeline occurredCount elapsed carNumber changes =
                 (List.map (timelineLine car) (eventsOf carNumber { upTo = occurredCount, limit = recentLimit } timeline)
                     ++ List.filterMap pitLine laps
                     ++ List.filterMap personalBestLine laps
-                    ++ List.filterMap recordLine (BestTimes.takenBy carNumber changes)
                 )
                 |> List.filter (\line -> Instant.toDuration line.at <= elapsed)
                 |> List.take recentLimit
@@ -210,38 +206,6 @@ personalBestLine lap =
 
         _ ->
             Nothing
-
-
-{-| The race records this car's laps took. The lap-time record is the timeline's
-to announce -- it has a `Fastest Lap` event of its own for each taking -- and
-only the sector and mini-sector records, which no event announces, are the
-Log's to say.
--}
-recordLine : BestTimes.Taking -> Maybe Line
-recordLine taking =
-    case taking.record of
-        BestTimes.FastestLap ->
-            Nothing
-
-        _ ->
-            Just
-                { at = taking.at
-                , label = Duration.toString taking.holder.time ++ " (" ++ recordName taking.record ++ ")"
-                , detail = Just (Driver.toInitialAndSurname taking.holder.driver)
-                }
-
-
-recordName : BestTimes.Record -> String
-recordName record =
-    case record of
-        BestTimes.FastestLap ->
-            "Fastest lap record"
-
-        BestTimes.SectorRecord sector ->
-            Sector.toString sector ++ " record"
-
-        BestTimes.MiniSectorRecord mini ->
-            LeMans.toString mini ++ " record"
 
 
 lineRow : Line -> Html msg
