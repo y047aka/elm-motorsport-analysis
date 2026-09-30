@@ -52,12 +52,34 @@ the events go in ahead of the stops and the bests.
 -}
 lines : { elapsed : Instant } -> Car -> Timeline -> List Line
 lines clock car timeline =
+    let
+        bests =
+            List.filterMap personalBestLine car.laps
+    in
     List.sortWith laterFirst
-        (List.map (eventLine car) (eventsOf clock.elapsed car.metadata.carNumber timeline)
+        (List.map (eventLine car) (List.filter (toldByOwnBest bests >> not) (eventsOf clock.elapsed car.metadata.carNumber timeline))
             ++ List.filterMap (stopLine car.laps) car.laps
-            ++ List.filterMap personalBestLine car.laps
+            ++ bests
         )
         |> List.filter (\line -> Instant.compare line.at clock.elapsed /= GT)
+
+
+{-| Whether the car's own laps tell the event: the lap that took the race's record
+improved the car's best as well, so the feed's event and that lap's line name one
+instant and one time, and the lap's line is the one kept.
+
+An event the car's own laps cannot answer -- one the feed announces for a lap this
+car never improved -- keeps its line.
+
+-}
+toldByOwnBest : List Line -> TimelineEvent -> Bool
+toldByOwnBest bests event =
+    case event.eventType of
+        CarEvent _ FastestLap ->
+            List.any (\best -> Instant.compare best.at event.elapsed == EQ) bests
+
+        _ ->
+            False
 
 
 laterFirst : Line -> Line -> Order
@@ -169,8 +191,9 @@ enteredOn allLaps pitLap crossedIn =
 to and including each lap, so a lap whose time is its `best` is one that improved
 it.
 
-A lap that took the race's record makes a line here as well as the event's line:
-these two readings are the laps and the feed, and neither sees the other.
+A lap that took the race's record makes a line here and no event's line: it
+improved the car's best on the way to taking the record, and the record is left to
+this line.
 
 -}
 personalBestLine : Lap -> Maybe Line

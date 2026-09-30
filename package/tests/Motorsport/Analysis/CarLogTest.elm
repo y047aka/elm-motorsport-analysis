@@ -45,16 +45,28 @@ suite =
                         |> CarLog.lines (clock 200000) (carWith [])
                         |> List.map (\line -> ( line.lap, line.label ))
                         |> Expect.equal [ ( 0, "Retired" ) ]
-            , test "a fastest lap is told as the lap it completed" <|
+            , test "the race's record is left to the lap that set it" <|
                 \_ ->
+                    -- The record's event and the lap's own line name 60000 and
+                    -- 1:00.000 both, so one of them is kept: the lap's.
                     Timeline.fromList [ event 60000 (CarEvent "7" FastestLap) ]
                         |> CarLog.lines (clock 100000) (carWith [ improved 1 60000 60000 ])
                         |> Expect.all
-                            [ List.map .lap >> Expect.equal [ 1, 1 ]
-                            , List.map .label >> Expect.equal [ "1:00.000", "1:00.000" ]
-                            , List.map .by >> Expect.equal [ Just "K.KOBAYASHI", Just "K.KOBAYASHI" ]
-                            , List.map .level >> Expect.equal [ Performance.Fastest, Performance.PersonalBest ]
+                            [ List.map .lap >> Expect.equal [ 1 ]
+                            , List.map .label >> Expect.equal [ "1:00.000" ]
+                            , List.map .by >> Expect.equal [ Just "K.KOBAYASHI" ]
+                            , List.map .level >> Expect.equal [ Performance.PersonalBest ]
                             ]
+            , test "a record the car's laps did not improve is the feed's to tell" <|
+                \_ ->
+                    -- No lap of this car crossed the line at 60000 having improved
+                    -- its best, so nothing of the car's tells the record.
+                    Timeline.fromList [ event 60000 (CarEvent "7" FastestLap) ]
+                        |> CarLog.lines
+                            (clock 100000)
+                            (carWith [ lapAt 1 60000 |> timed 61000 |> bestSoFar 60000 ])
+                        |> List.map (\line -> ( line.lap, line.label, line.level ))
+                        |> Expect.equal [ ( 1, "1:01.000", Performance.Fastest ) ]
             , test "a driver change names the two drivers and the lap it fell on" <|
                 \_ ->
                     Timeline.fromList [ event 60000 (CarEvent "7" DriverChange) ]
