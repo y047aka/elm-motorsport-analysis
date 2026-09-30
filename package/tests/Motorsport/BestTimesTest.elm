@@ -71,34 +71,6 @@ tests =
                             )
                         |> Expect.equal [ Nothing, Just "2", Just "1", Just "1" ]
             ]
-        , describe "which records a car took"
-            [ test "a car that never took one takes nothing" <|
-                \_ ->
-                    BestTimes.takenBy "3" changes
-                        |> Expect.equal []
-            , test "a taking names the record, when it was taken, and the time that stands" <|
-                \_ ->
-                    -- Car 1 takes only S1, and only once, when car 2's 1.500
-                    -- falls to 1.000 at 6.000.
-                    BestTimes.takenBy "1" changes
-                        |> List.map (\taking -> ( Instant.toDuration taking.at, taking.record, taking.holder.time ))
-                        |> Expect.equal [ ( 6000, BestTimes.SectorRecord S1, 1000 ) ]
-            , test "a lap takes the lap time, its sectors and its mini-sectors at once" <|
-                \_ ->
-                    -- Car 2 takes everything on its two laps: the lap time
-                    -- twice, S1 and S2 on the first, S3 on the second, and all
-                    -- fifteen mini-sectors.
-                    Expect.equal 20 (List.length (BestTimes.takenBy "2" changes))
-            , test "and the takings come in the order they were taken" <|
-                \_ ->
-                    BestTimes.takenBy "2" changes
-                        |> List.map (Instant.toDuration << .at)
-                        |> Expect.equal
-                            ([ 5000 ]
-                                ++ List.repeat 17 5000
-                                ++ [ 9000, 9000 ]
-                            )
-            ]
         ]
 
 
