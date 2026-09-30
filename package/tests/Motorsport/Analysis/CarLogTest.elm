@@ -55,8 +55,22 @@ suite =
                             [ List.map .lap >> Expect.equal [ 1 ]
                             , List.map .label >> Expect.equal [ "1:00.000" ]
                             , List.map .by >> Expect.equal [ Just "K.KOBAYASHI" ]
-                            , List.map .level >> Expect.equal [ Performance.PersonalBest ]
+                            , List.map .level >> Expect.equal [ Performance.Fastest ]
                             ]
+            , test "each record keeps the rating it took, whichever lap broke it next" <|
+                \_ ->
+                    -- Lap 2 is the record at 120000 and lap 1 was the record at
+                    -- 60000, so both lines are rated as records although only one
+                    -- of them is the record the clock stands on.
+                    Timeline.fromList
+                        [ event 60000 (CarEvent "7" FastestLap)
+                        , event 120000 (CarEvent "7" FastestLap)
+                        ]
+                        |> CarLog.lines
+                            (clock 200000)
+                            (carWith [ improved 1 60000 60000, improved 2 55000 120000 ])
+                        |> List.map (\line -> ( line.lap, line.level ))
+                        |> Expect.equal [ ( 2, Performance.Fastest ), ( 1, Performance.Fastest ) ]
             , test "a record the car's laps did not improve is the feed's to tell" <|
                 \_ ->
                     -- No lap of this car crossed the line at 60000 having improved

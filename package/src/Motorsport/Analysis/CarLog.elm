@@ -53,15 +53,43 @@ the events go in ahead of the stops and the bests.
 lines : { elapsed : Instant } -> Car -> Timeline -> List Line
 lines clock car timeline =
     let
+        events =
+            eventsOf clock.elapsed car.metadata.carNumber timeline
+
+        records =
+            recordTimes events
+
         bests =
-            List.filterMap personalBestLine car.laps
+            List.filterMap (personalBestLine records) car.laps
     in
     List.sortWith laterFirst
-        (List.map (eventLine car) (List.filter (toldByOwnBest bests >> not) (eventsOf clock.elapsed car.metadata.carNumber timeline))
+        (List.map (eventLine car) (List.filter (toldByOwnBest bests >> not) events)
             ++ List.filterMap (stopLine car.laps) car.laps
             ++ bests
         )
         |> List.filter (\line -> Instant.compare line.at clock.elapsed /= GT)
+
+
+{-| The moments the feed announced one of the car's laps as the race's record.
+
+A lap is rated as a record at the moment it took one, not at the moment the clock
+stands on: a line about lap 14 reads as the record lap 14 took, whether or not a
+later lap beat it.
+
+-}
+recordTimes : List TimelineEvent -> List Instant
+recordTimes events =
+    events
+        |> List.filter
+            (\event ->
+                case event.eventType of
+                    CarEvent _ FastestLap ->
+                        True
+
+                    _ ->
+                        False
+            )
+        |> List.map .elapsed
 
 
 {-| Whether the car's own laps tell the event: the lap that took the race's record
@@ -193,11 +221,11 @@ it.
 
 A lap that took the race's record makes a line here and no event's line: it
 improved the car's best on the way to taking the record, and the record is left to
-this line.
+this line, rated as the record.
 
 -}
-personalBestLine : Lap -> Maybe Line
-personalBestLine lap =
+personalBestLine : List Instant -> Lap -> Maybe Line
+personalBestLine records lap =
     case ( lap.time, lap.best ) of
         ( Just time, Just best ) ->
             if time == best then
@@ -206,7 +234,12 @@ personalBestLine lap =
                     , lap = lap.lap
                     , label = Duration.toString time
                     , by = Just (Driver.toInitialAndSurname lap.driver)
-                    , level = Performance.PersonalBest
+                    , level =
+                        if List.any (\record -> Instant.compare record lap.elapsed == EQ) records then
+                            Performance.Fastest
+
+                        else
+                            Performance.PersonalBest
                     }
 
             else
