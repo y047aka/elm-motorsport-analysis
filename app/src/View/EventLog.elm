@@ -91,11 +91,13 @@ detail car event =
             Nothing
 
 
-{-| One line of the Log: the moment, what to say about it, what the
-car's name or handover appends, and the performance rating that colours it.
+{-| One line of the Log: the moment, the lap number it falls on, what to say
+about it, what the car's name or handover appends, and the performance rating
+that colours it.
 -}
 type alias Line =
     { at : Instant
+    , lap : Int
     , label : String
     , detail : Maybe String
     , level : Performance.PerformanceLevel
@@ -176,13 +178,14 @@ timelineLine car event =
         ( CarEvent _ DriverChange, _ ) ->
             case detail car event of
                 Just handover ->
-                    { at = event.elapsed, label = handover, detail = Nothing, level = Performance.Standard }
+                    { at = event.elapsed, lap = lapNumber car event, label = handover, detail = Nothing, level = Performance.Standard }
 
                 Nothing ->
                     plainLine car event
 
         ( CarEvent _ FastestLap, Just lap ) ->
             { at = event.elapsed
+            , lap = lap.lap
             , label = Duration.toString lap.time
             , detail = Just (Driver.toInitialAndSurname lap.driver)
             , level = Performance.Fastest
@@ -192,23 +195,34 @@ timelineLine car event =
             plainLine car event
 
 
-{-| The lap a fastest-lap event completes -- its time and its driver, which is
-what the event's own name and its colour then carry.
+{-| The lap running when the event arrived: the last one already completed.
 -}
-timedLap : Maybe Car -> TimelineEvent -> Maybe { time : Duration, driver : Driver.Driver }
+lapNumber : Maybe Car -> TimelineEvent -> Int
+lapNumber car event =
+    car
+        |> Maybe.andThen (\item -> Lap.findLastLapAt { elapsed = event.elapsed } item.laps)
+        |> Maybe.map .lap
+        |> Maybe.withDefault 0
+
+
+{-| The lap a fastest-lap event completes -- its number, its time and its
+driver, which are what the event's own name and its colour then carry.
+-}
+timedLap : Maybe Car -> TimelineEvent -> Maybe { lap : Int, time : Duration, driver : Driver.Driver }
 timedLap car event =
     car
         |> Maybe.andThen (\item -> Lap.findLastLapAt { elapsed = event.elapsed } item.laps)
         |> Maybe.andThen
             (\lap ->
                 lap.time
-                    |> Maybe.map (\time -> { time = time, driver = lap.driver })
+                    |> Maybe.map (\time -> { lap = lap.lap, time = time, driver = lap.driver })
             )
 
 
 plainLine : Maybe Car -> TimelineEvent -> Line
 plainLine car event =
     { at = event.elapsed
+    , lap = lapNumber car event
     , label = describe event.eventType
     , detail = detail car event
     , level = Performance.Standard
@@ -226,9 +240,14 @@ pitLine : List Lap -> Lap -> Maybe Line
 pitLine allLaps lap =
     case ( Lap.pitEntryAt lap, Lap.laneTimeOf lap ) of
         ( Just crossedIn, Just _ ) ->
+            let
+                entered =
+                    enteredOn allLaps lap crossedIn
+            in
             Just
                 { at = crossedIn
-                , label = "Pit (Lap " ++ String.fromInt (enteredOn allLaps lap crossedIn) ++ ")"
+                , lap = entered
+                , label = "Pit"
                 , detail = Nothing
                 , level = Performance.Standard
                 }
@@ -261,6 +280,7 @@ personalBestLine lap =
             if time == best then
                 Just
                     { at = lap.elapsed
+                    , lap = lap.lap
                     , label = Duration.toString time
                     , detail = Just (Driver.toInitialAndSurname lap.driver)
                     , level = Performance.PersonalBest
@@ -275,8 +295,10 @@ personalBestLine lap =
 
 lineRow : Line -> Html msg
 lineRow line =
-    div [ class "grid grid-cols-[1fr_auto] gap-x-2 items-baseline py-0.5" ]
-        [ div [ class "truncate", style "color" (Performance.textColorOf line.level) ]
+    div [ class "grid grid-cols-[2rem_1fr_auto] gap-x-2 items-baseline py-0.5" ]
+        [ div [ class "text-right tabular-nums text-muted-foreground" ]
+            [ text (String.fromInt line.lap) ]
+        , div [ class "truncate", style "color" (Performance.textColorOf line.level) ]
             [ text line.label
             , case line.detail of
                 Just second ->
