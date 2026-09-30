@@ -12,13 +12,14 @@ panel does.
 
 import Dict exposing (Dict)
 import Html exposing (Html, div, span, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, style)
 import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Flag as Flag
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap.Performance as Performance
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
@@ -90,13 +91,14 @@ detail car event =
             Nothing
 
 
-{-| One line of the Log: the moment, what to say about it, and what the
-car's name or handover appends.
+{-| One line of the Log: the moment, what to say about it, what the
+car's name or handover appends, and the performance rating that colours it.
 -}
 type alias Line =
     { at : Instant
     , label : String
     , detail : Maybe String
+    , level : Performance.PerformanceLevel
     }
 
 
@@ -170,15 +172,47 @@ recentLimit =
 
 timelineLine : Maybe Car -> TimelineEvent -> Line
 timelineLine car event =
-    case ( event.eventType, detail car event ) of
-        ( CarEvent _ DriverChange, Just handover ) ->
-            { at = event.elapsed, label = handover, detail = Nothing }
+    case ( event.eventType, timedLap car event ) of
+        ( CarEvent _ DriverChange, _ ) ->
+            case detail car event of
+                Just handover ->
+                    { at = event.elapsed, label = handover, detail = Nothing, level = Performance.Standard }
+
+                Nothing ->
+                    plainLine car event
+
+        ( CarEvent _ FastestLap, Just lap ) ->
+            { at = event.elapsed
+            , label = Duration.toString lap.time
+            , detail = Just (Driver.toInitialAndSurname lap.driver)
+            , level = Performance.Fastest
+            }
 
         _ ->
-            { at = event.elapsed
-            , label = describe event.eventType
-            , detail = detail car event
-            }
+            plainLine car event
+
+
+{-| The lap a fastest-lap event completes -- its time and its driver, which is
+what the event's own name and its colour then carry.
+-}
+timedLap : Maybe Car -> TimelineEvent -> Maybe { time : Duration, driver : Driver.Driver }
+timedLap car event =
+    car
+        |> Maybe.andThen (\item -> Lap.findLastLapAt { elapsed = event.elapsed } item.laps)
+        |> Maybe.andThen
+            (\lap ->
+                lap.time
+                    |> Maybe.map (\time -> { time = time, driver = lap.driver })
+            )
+
+
+plainLine : Maybe Car -> TimelineEvent -> Line
+plainLine car event =
+    { at = event.elapsed
+    , label = describe event.eventType
+    , detail = detail car event
+    , level = Performance.Standard
+    }
 
 
 {-| The stop whose out-lap the lap carried: said as the lap the car entered
@@ -196,6 +230,7 @@ pitLine allLaps lap =
                 { at = crossedIn
                 , label = "Pit (Lap " ++ String.fromInt (enteredOn allLaps lap crossedIn) ++ ")"
                 , detail = Nothing
+                , level = Performance.Standard
                 }
 
         _ ->
@@ -215,16 +250,21 @@ enteredOn allLaps pitLap crossedIn =
         |> Maybe.withDefault (pitLap.lap - 1)
 
 
-{-| The laps that improved the car's own best. The feed carries the best
-running to and including each lap, so a lap whose time is its `best` is one
-that improved it.
+{-| The laps that improved the car's own best, in the colour a personal best
+paints a time. The feed carries the best running to and including each lap, so
+a lap whose time is its `best` is one that improved it.
 -}
 personalBestLine : Lap -> Maybe Line
 personalBestLine lap =
     case ( lap.time, lap.best ) of
         ( Just time, Just best ) ->
             if time == best then
-                Just { at = lap.elapsed, label = Duration.toString time ++ " (Personal best)", detail = Just (Driver.toInitialAndSurname lap.driver) }
+                Just
+                    { at = lap.elapsed
+                    , label = Duration.toString time
+                    , detail = Just (Driver.toInitialAndSurname lap.driver)
+                    , level = Performance.PersonalBest
+                    }
 
             else
                 Nothing
@@ -236,7 +276,7 @@ personalBestLine lap =
 lineRow : Line -> Html msg
 lineRow line =
     div [ class "grid grid-cols-[1fr_auto] gap-x-2 items-baseline py-0.5" ]
-        [ div [ class "truncate" ]
+        [ div [ class "truncate", style "color" (Performance.textColorOf line.level) ]
             [ text line.label
             , case line.detail of
                 Just second ->
