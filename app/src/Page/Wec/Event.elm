@@ -20,7 +20,7 @@ import Json.Decode as Decode
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
-import Motorsport.Duration as Duration
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
@@ -739,14 +739,37 @@ eventRow carsByNumber event =
 
         cell classes children =
             div [ Attributes.class classes ] children
+
+        name =
+            case fastestLapTime car event of
+                Just time ->
+                    EventLog.describe event.eventType ++ " (" ++ Duration.toString time ++ ")"
+
+                Nothing ->
+                    EventLog.describe event.eventType
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
         [ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
         , cell "" [ carBadge car event.eventType ]
-        , cell "" [ text (EventLog.describe event.eventType) ]
+        , cell "" [ text name ]
         , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
+
+
+{-| The lap a fastest-lap event completes, its time; nothing for any other
+kind of event, and nothing for a lap the feed left without one.
+-}
+fastestLapTime : Maybe Car -> TimelineEvent -> Maybe Duration
+fastestLapTime car event =
+    case event.eventType of
+        CarEvent _ FastestLap ->
+            car
+                |> Maybe.andThen (\c -> Lap.findLastLapAt { elapsed = event.elapsed } c.laps)
+                |> Maybe.andThen .time
+
+        _ ->
+            Nothing
 
 
 {-| The same bar the LiveStandings class headers stand their names on --
