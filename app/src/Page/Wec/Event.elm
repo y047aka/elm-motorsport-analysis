@@ -246,8 +246,8 @@ fill the bottom third, scrolling once they outnumber it.
 It carries `data-tracker-column`, which the visual tests locate it by.
 
 -}
-trackerCard : Bool -> Bool -> TrackerChart.Track -> List Car -> Snapshot -> Html Msg
-trackerCard several held track cars snapshot =
+trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
+trackerCard several held track snapshot =
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
             [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)]"
@@ -266,7 +266,7 @@ trackerCard several held track cars snapshot =
                         )
                     ]
                 ]
-            , Card.content [] [ PitLane.view cars snapshot ]
+            , Card.content [] [ PitLane.view snapshot ]
             ]
         ]
 
@@ -398,7 +398,7 @@ columnStrip cell track timeline keys m replay snapshot =
                                         )
 
                                 Columns.Tracker ->
-                                    trackerCard several (Columns.isCarried placement) track replay.race.cars snapshot
+                                    trackerCard several (Columns.isCarried placement) track snapshot
                             ]
                         )
                     )
