@@ -11,7 +11,7 @@ panel does.
 -}
 
 import Dict exposing (Dict)
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
@@ -57,7 +57,8 @@ describe eventType =
             "Finished"
 
 
-{-| The second line a timeline event has, read off the car's laps at the event.
+{-| What a timeline event's row appends after its name, read off the car's
+laps at the event.
 
 A fastest lap is the lap the event completes, its time and its driver. A driver
 change is who handed the car to whom: the driver of the lap the event completes,
@@ -92,8 +93,8 @@ detail car event =
             Nothing
 
 
-{-| One line of the Log: the moment, what to say about it, and the second line
-a fastest lap or a handover carries.
+{-| One line of the Log: the moment, what to say about it, and what the
+car's name or handover appends.
 -}
 type alias Line =
     { at : Instant
@@ -246,11 +247,11 @@ recordName record =
 lineRow : Line -> Html msg
 lineRow line =
     div [ class "grid grid-cols-[1fr_auto] gap-x-2 items-baseline py-0.5" ]
-        [ div []
+        [ div [ class "truncate" ]
             [ text line.label
             , case line.detail of
                 Just second ->
-                    div [ class "text-[10px] text-muted-foreground whitespace-nowrap" ] [ text second ]
+                    span [ class "text-muted-foreground" ] [ text (" · " ++ second) ]
 
                 Nothing ->
                     text ""
