@@ -121,11 +121,6 @@ view config cars snapshot focused =
     let
         rivals =
             rivalsOf snapshot focused
-
-        occurred =
-            { count = Timeline.countUpTo (Snapshot.elapsed snapshot) config.timeline
-            , elapsed = Snapshot.elapsed snapshot |> Instant.toDuration
-            }
     in
     div
         [ attribute "data-car-detail" focused.metadata.carNumber
@@ -146,7 +141,7 @@ view config cars snapshot focused =
             , class "min-h-0 overflow-y-auto"
             , Html.Events.on "scroll" (Decode.map config.onScroll (Decode.at [ "target", "scrollTop" ] Decode.float))
             ]
-            [ Html.map config.toMsg (panel config.comparison config.timeline occurred cars snapshot rivals focused) ]
+            [ Html.map config.toMsg (panel config.comparison config.timeline cars snapshot rivals focused) ]
         ]
 
 
@@ -176,8 +171,8 @@ gapOf snapshot maybeInFront chasing =
             Gap.none
 
 
-panel : Comparison -> Timeline -> EventLog.Occurred -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
-panel comparison timeline occurred cars snapshot rivals focused =
+panel : Comparison -> Timeline -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
+panel comparison timeline cars snapshot rivals focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -202,7 +197,7 @@ panel comparison timeline occurred cars snapshot rivals focused =
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
         , disclosure "Lap history" (LapTable.view laps focused.standing.lapsCompleted)
-        , container "Log" (EventLog.rows cars timeline occurred focused.metadata.carNumber)
+        , container "Log" (EventLog.rows cars timeline snapshot focused.metadata.carNumber)
         ]
 
 

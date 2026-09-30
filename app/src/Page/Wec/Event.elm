@@ -568,7 +568,7 @@ eventRow carsByNumber event =
             div [ Attributes.class classes ] children
 
         name =
-            case ( event.eventType, car |> TimelineEvent.runningLap event |> Maybe.andThen .time ) of
+            case ( event.eventType, car |> Maybe.andThen (\item -> TimelineEvent.runningLap item event) |> Maybe.andThen .time ) of
                 ( CarEvent _ FastestLap, Just time ) ->
                     Duration.toString time ++ " (Fastest)"
 

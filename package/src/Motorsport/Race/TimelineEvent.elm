@@ -138,16 +138,14 @@ forCar carNumber eventType =
 
 {-| The lap running when the event arrived: the last one the car had completed.
 
-`Nothing` for an event before the car's first lap, and for an event whose car
-the field has no laps of. Read off the car's laps whole rather than the ones
-playback has reached, so a past event reads the same however far the clock has
-run.
+`Nothing` for an event before the car's first lap. Read off the car's laps whole
+rather than the ones playback has reached, so a past event reads the same however
+far the clock has run.
 
 -}
-runningLap : Maybe Car -> TimelineEvent -> Maybe Lap
+runningLap : Car -> TimelineEvent -> Maybe Lap
 runningLap car event =
-    car
-        |> Maybe.andThen (\item -> Lap.findLastLapAt { elapsed = event.elapsed } item.laps)
+    Lap.findLastLapAt { elapsed = event.elapsed } car.laps
 
 
 {-| The two drivers a handover moved the car between, from the lap it came in on
@@ -158,11 +156,11 @@ more than that: where the feed announces a change the laps do not show, the two
 name the same driver.
 
 -}
-handover : Maybe Car -> TimelineEvent -> Maybe ( Driver, Driver )
+handover : Car -> TimelineEvent -> Maybe ( Driver, Driver )
 handover car event =
     Maybe.map2 Tuple.pair
         (runningLap car event)
-        (car |> Maybe.andThen (\item -> Lap.findCurrentLap { elapsed = event.elapsed } item.laps))
+        (Lap.findCurrentLap { elapsed = event.elapsed } car.laps)
         |> Maybe.map (\( handedOver, tookOver ) -> ( handedOver.driver, tookOver.driver ))
 
 
