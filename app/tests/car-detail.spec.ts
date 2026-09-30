@@ -90,17 +90,18 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(section(page, 'Comparison')).toHaveScreenshot('distribution-tab.png');
   });
 
-  test('should open the car\'s own laps at the end of the panel', async ({ page }) => {
+  test('should open the car\'s own laps from their own heading', async ({ page }) => {
     const history = page.locator(DETAIL).locator('details');
     await expect(history).not.toHaveAttribute('open');
     await history.locator('summary', { hasText: 'Lap history' }).click();
     await expect(history).toHaveAttribute('open', '');
-    // Last, so that four hundred rows push nothing a reader came for off the
-    // bottom of the panel. The rivals lead the ruled sections, and the
-    // standing strip above them is not one of them -- it carries no heading.
+    // The lap table is the last thing in the panel, so that its four hundred
+    // rows push nothing a reader came for off the bottom. The rivals lead the
+    // ruled sections, the Log closes them, and the standing strip above them is
+    // not one of them -- it carries no heading.
     const sections = await page.locator(DETAIL).locator('h3, summary').allTextContents();
     expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
-      .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history']);
+      .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history', 'Log']);
     await expect(history).toHaveScreenshot('lap-history.png');
   });
 

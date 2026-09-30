@@ -157,7 +157,7 @@ eventsOf carNumber { upTo, limit } timeline =
 belongsTo : CarNumber -> EventType -> Bool
 belongsTo carNumber eventType =
     case eventType of
-        CarEvent number LeaderInPit ->
+        CarEvent _ LeaderInPit ->
             False
 
         CarEvent number _ ->
