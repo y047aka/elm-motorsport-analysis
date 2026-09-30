@@ -17,6 +17,7 @@ import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
 import Json.Decode as Decode
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -26,6 +27,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
+import Motorsport.Race as Race
 import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
@@ -515,6 +517,9 @@ columnStrip cell track timeline keys m replay snapshot =
         several =
             List.length keys > 1
 
+        recordChanges =
+            Race.bestTimeChanges replay.race
+
         placements =
             Columns.placements m.strip.carried keys
     in
@@ -554,7 +559,7 @@ columnStrip cell track timeline keys m replay snapshot =
                                         (Snapshot.get carNumber snapshot
                                             |> Maybe.map
                                                 (\car ->
-                                                    Html.Lazy.lazy6 (carCard several) timeline (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
+                                                    Html.Lazy.lazy7 (carCard several) timeline recordChanges (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
                                                 )
                                         )
 
@@ -582,8 +587,8 @@ columnGrip held key =
         }
 
 
-carCard : Bool -> Timeline -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
-carCard several timeline held comparison cars snapshot car =
+carCard : Bool -> Timeline -> BestTimes.Changes -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
+carCard several timeline recordChanges held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
@@ -615,6 +620,7 @@ carCard several timeline held comparison cars snapshot car =
                     , scrollId = Columns.scrollId carNumber
                     , onScroll = Columns.PanelScrolled carNumber >> ColumnsMsg
                     , timeline = timeline
+                    , recordChanges = recordChanges
                     }
                     cars
                     snapshot
