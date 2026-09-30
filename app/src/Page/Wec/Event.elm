@@ -19,20 +19,16 @@ import Html.Lazy
 import Json.Decode as Decode
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
-import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
-import Motorsport.Lap as Lap
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
-import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Status as Status
-import Motorsport.Wec.Class as Class
 import Page.Wec.Columns as Columns
 import Route
 import Shared
@@ -49,7 +45,9 @@ import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
+import View.ClassMark as ClassMark
 import View.LiveStandings as LiveStandings
+import View.PitLane as PitLane
 import View.PlaybackControls as PlaybackControls
 
 
@@ -250,22 +248,6 @@ It carries `data-tracker-column`, which the visual tests locate it by.
 -}
 trackerCard : Bool -> Bool -> TrackerChart.Track -> List Car -> Snapshot -> Html Msg
 trackerCard several held track cars snapshot =
-    let
-        clock : { elapsed : Instant.Instant }
-        clock =
-            { elapsed = Snapshot.elapsed snapshot }
-
-        inPit : List PitEntry
-        inPit =
-            Snapshot.toList snapshot
-                |> List.filter (\car -> car.status == Status.InPit || car.status == Status.OutLap)
-                |> List.map (pitEntry clock cars)
-                |> sortPitEntries
-
-        working : Int
-        working =
-            List.length (List.filter (\entry -> entry.car.status == Status.InPit) inPit)
-    in
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
             [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)]"
@@ -284,151 +266,9 @@ trackerCard several held track cars snapshot =
                         )
                     ]
                 ]
-            , Card.content []
-                [ div [ Attributes.class "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)] gap-y-1" ]
-                    [ div [ Attributes.class "text-[10px] font-bold uppercase tracking-wide text-muted-foreground" ]
-                        [ text ("In the pits · " ++ String.fromInt working) ]
-                    , if List.isEmpty inPit then
-                        div [ Attributes.class "text-xs text-muted-foreground" ]
-                            [ text "No car is in the pit lane." ]
-
-                      else
-                        Html.Keyed.node "div"
-                            [ Attributes.class "min-h-0 overflow-y-auto grid auto-rows-[1.375rem] content-start gap-y-0.5" ]
-                            (List.map pitLaneRow inPit)
-                    ]
-                ]
+            , Card.content [] [ PitLane.view cars snapshot ]
             ]
         ]
-
-
-{-| A car of the pit lane list, with what its own two laps under way say at
-this moment, and the two crossings of the lane that say when.
--}
-type alias PitEntry =
-    { car : CarAt
-    , handover : Maybe String
-    , enteredAt : Maybe Instant.Instant
-    , exitedAt : Maybe Instant.Instant
-    }
-
-
-pitEntry : { elapsed : Instant.Instant } -> List Car -> CarAt -> PitEntry
-pitEntry clock cars car =
-    let
-        laps =
-            cars
-                |> List.filter (\raceCar -> raceCar.metadata.carNumber == car.metadata.carNumber)
-                |> List.head
-                |> Maybe.map .laps
-                |> Maybe.withDefault []
-
-        currentLap =
-            Lap.findCurrentLap clock laps
-    in
-    { car = car
-    , handover =
-        Maybe.map2 handover (Lap.findLastLapAt clock laps) currentLap
-            |> Maybe.withDefault Nothing
-    , enteredAt =
-        currentLap |> Maybe.andThen Lap.pitEntryAt
-    , exitedAt =
-        currentLap |> Maybe.andThen Lap.pitExitAt
-    }
-
-
-{-| Cars still being served head the list, each new arrival above the cars it
-arrived behind; cars already driving away follow, the one that left the lane
-last above the ones that left before it.
--}
-sortPitEntries : List PitEntry -> List PitEntry
-sortPitEntries =
-    List.sortWith comparePitEntries
-
-
-comparePitEntries : PitEntry -> PitEntry -> Order
-comparePitEntries a b =
-    case ( a.car.status == Status.InPit, b.car.status == Status.InPit ) of
-        ( True, True ) ->
-            newestFirst a.enteredAt b.enteredAt
-
-        ( True, False ) ->
-            LT
-
-        ( False, True ) ->
-            GT
-
-        ( False, False ) ->
-            newestFirst a.exitedAt b.exitedAt
-
-
-{-| The newer crossing first; a crossing the feed times on neither side of the
-stop sits at the foot.
--}
-newestFirst : Maybe Instant.Instant -> Maybe Instant.Instant -> Order
-newestFirst a b =
-    case ( a, b ) of
-        ( Just x, Just y ) ->
-            Instant.compare y x
-
-        ( Just _, Nothing ) ->
-            LT
-
-        ( Nothing, Just _ ) ->
-            GT
-
-        ( Nothing, Nothing ) ->
-            EQ
-
-
-{-| The handover the lap the car came in on and the one it goes out on disagree
-about, spelled as the timeline spells a driver change.
--}
-handover : Lap.Lap -> Lap.Lap -> Maybe String
-handover cameIn goesOut =
-    if Driver.isSame cameIn.driver goesOut.driver then
-        Nothing
-
-    else
-        Driver.toHandover cameIn.driver goesOut.driver
-
-
-{-| A car in the pit lane: its number, and who is in the car -- or the change
-of driver just made in the box.
--}
-pitLaneRow : PitEntry -> ( String, Html Msg )
-pitLaneRow entry =
-    let
-        car =
-            entry.car
-    in
-    ( car.metadata.carNumber
-    , div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] items-center gap-2 rounded py-0.5" ]
-        [ classMark car.metadata
-        , CarNumberBadge.viewRow car.metadata
-        , div
-            [ Attributes.class
-                (if car.status == Status.OutLap then
-                    "text-xs truncate text-muted-foreground"
-
-                 else
-                    "text-xs truncate"
-                )
-            ]
-            [ text (Maybe.withDefault (Driver.toInitialAndSurname car.currentDriver) entry.handover) ]
-        , if car.status == Status.OutLap then
-            statusChip "bg-card border-border text-muted-foreground" "OUT"
-
-          else
-            statusChip "bg-card border-border" "PIT"
-        ]
-    )
-
-
-statusChip : String -> String -> Html Msg
-statusChip classes label =
-    span [ Attributes.class ("inline-flex items-center justify-center rounded-full border px-1.5 text-[9px] font-bold leading-4 " ++ classes) ]
-        [ text label ]
 
 
 mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
@@ -736,24 +576,12 @@ eventRow carsByNumber event =
                     TimelineEvent.describe event.eventType
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
-        [ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
+        [ cell "" [ car |> Maybe.map (.metadata >> ClassMark.view) |> Maybe.withDefault (text "") ]
         , cell "" [ carBadge car event.eventType ]
         , cell "" [ text name ]
         , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
-
-
-{-| The same bar the LiveStandings class headers stand their names on --
-`0.2em x 1.2em` of the class colour at their 10px, which is 2px x 12px.
--}
-classMark : Metadata -> Html Msg
-classMark metadata =
-    div
-        [ Attributes.class "w-[2px] h-[12px] rounded-[2px]"
-        , attribute "style" ("background-color: " ++ Class.toColor metadata.class ++ ";")
-        ]
-        []
 
 
 {-| An event of the whole field's has no badge, and a number no car of the field
