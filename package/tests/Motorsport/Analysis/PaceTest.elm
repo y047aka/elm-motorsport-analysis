@@ -15,7 +15,7 @@ suite =
                 \_ ->
                     Pace.racingTimes { first = 1, last = 3 } safetyCarLate
                         |> Expect.equal [ 100000, 100000, 100000 ]
-            , test "a lap that began in the pit lane is not a reading of the pace" <|
+            , test "a lap that ended in the pit lane is not a reading of the pace" <|
                 \_ ->
                     -- The stop's 130.000 would be the slowest thing reported.
                     Pace.racingTimes { first = 1, last = 3 } withAStop
@@ -55,7 +55,7 @@ safetyCarLate =
         ++ List.map (lapAt 200000) (List.range 17 20)
 
 
-{-| Three laps, the middle one begun in the pit lane.
+{-| Three laps, the middle one ended in the pit lane.
 -}
 withAStop : List Lap
 withAStop =
@@ -76,7 +76,7 @@ lapAt time lapNumber =
 
 pitLapAt : Duration -> Int -> Lap
 pitLapAt time lapNumber =
-    { emptyLap | lap = lapNumber, time = Just time, pit = Lap.InLap }
+    { emptyLap | lap = lapNumber, time = Just time, crossing = Lap.EntryAtEnd }
 
 
 untimedLapAt : Int -> Lap

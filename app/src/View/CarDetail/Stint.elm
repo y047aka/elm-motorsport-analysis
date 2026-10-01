@@ -167,10 +167,10 @@ stintTitle stint =
     , "avg " ++ durationOr "-" stint.averageLapTime
     , case stint.end of
         RaceStint.Ended pit ->
-            "pit " ++ Duration.toStringToTenths pit.duration
+            "pit " ++ Duration.toStringToTenths pit.laneTime
 
         RaceStint.InPit ->
-            -- The length is on a lap the car has not finished.
+            -- The lane is not timed until the car is back out.
             "pit -"
 
         RaceStint.Running ->

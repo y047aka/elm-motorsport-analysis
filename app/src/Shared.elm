@@ -126,12 +126,16 @@ nothingYet =
 [`Motorsport.Race`](Motorsport-Race).
 
 `track` never moves once the data has loaded. `snapshot` is `replay` read at the
-clock, cached because every view of a frame shares it, and the one of the four
-that is rebuilt as playback runs.
+clock, cached because every view of a frame shares it, and the one of them
+rebuilt as playback runs.
 
 `timeline` is the events themselves, kept for the events table to read the clock
-against, and the only one of the four a round can go without: nothing playback
-reads is counted off them.
+against, and the only one of them a round can go without: nothing playback reads
+is counted off them.
+
+`fieldEvents` is those of them the field's panel draws, held apart rather than read
+off `timeline` on the way: the panel's rows are built behind a `Html.Lazy` thunk,
+and a timeline made afresh on a frame is a new reference on every one.
 
 -}
 type alias LoadedRound =
@@ -139,6 +143,7 @@ type alias LoadedRound =
     , snapshot : Snapshot
     , track : Tracker.Track
     , timeline : Timeline
+    , fieldEvents : Timeline
     }
 
 
@@ -407,7 +412,7 @@ timelineArrived key events round =
 
         Loaded id loaded ->
             if keyOf id == key then
-                Loaded id { loaded | timeline = Timeline.fromList events }
+                Loaded id { loaded | timeline = Timeline.fromList events, fieldEvents = fieldEventsOf events }
 
             else
                 round
@@ -424,6 +429,13 @@ didNotArrive key error round =
     forRound key
         (\id _ -> Unavailable { season = String.fromInt id.season, event = id.id } (LoadFailed error))
         round
+
+
+fieldEventsOf : List TimelineEvent -> Timeline
+fieldEventsOf events =
+    events
+        |> List.filter (\event -> TimelineEvent.forField event.eventType)
+        |> Timeline.fromList
 
 
 roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> LoadedRound
@@ -443,6 +455,7 @@ roundFrom id summary rawLaps timelineEvents =
     , snapshot = snapshotOf replay
     , track = trackOf id summary.track
     , timeline = Timeline.fromList timelineEvents
+    , fieldEvents = fieldEventsOf timelineEvents
     }
 
 

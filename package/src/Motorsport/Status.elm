@@ -1,4 +1,4 @@
-module Motorsport.Status exposing (Status(..), hasRetired, hasStopped)
+module Motorsport.Status exposing (Status(..), hasRetired, hasStopped, inPitLane)
 
 {-| Where a car stands in the race: away, in the pits, out of it, done.
 
@@ -10,7 +10,7 @@ A car's actual status is [`Race.Snapshot`](Motorsport-Race-Snapshot)'s. Its laps
 say all of it, but in two readings -- where its race began and ended, and where
 in a stop it is -- and only the snapshot has both.
 
-@docs Status, hasRetired, hasStopped
+@docs Status, hasRetired, hasStopped, inPitLane
 
 -}
 
@@ -50,6 +50,32 @@ hasStopped status =
             True
 
         Checkered ->
+            True
+
+        _ ->
+            False
+
+
+{-| Whether the car is anywhere in the pit lane: standing in its box, or back on
+the road and still timed through the lane.
+
+    inPitLane InPit
+    --> True
+
+    inPitLane OutLap
+    --> True
+
+    inPitLane Racing
+    --> False
+
+-}
+inPitLane : Status -> Bool
+inPitLane status =
+    case status of
+        InPit ->
+            True
+
+        OutLap ->
             True
 
         _ ->

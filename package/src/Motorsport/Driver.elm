@@ -1,14 +1,16 @@
 module Motorsport.Driver exposing
     ( Driver, fromName, unknown
-    , isSame
+    , isSame, changeBetween
     , toFullName, toInitialAndSurname, toSurname
+    , toHandover
     )
 
 {-|
 
 @docs Driver, fromName, unknown
-@docs isSame
+@docs isSame, changeBetween
 @docs toFullName, toInitialAndSurname, toSurname
+@docs toHandover
 
 -}
 
@@ -102,6 +104,25 @@ isSame a b =
     a == b
 
 
+{-| The handover of a car between two named drivers: the pair, when the two are
+two different people.
+
+    changeBetween (fromName "Sebastian BUEMI") (fromName "Sebastian BUEMI")
+    --> Nothing
+
+    changeBetween (fromName "Sebastian BUEMI") (fromName "Kamui KOBAYASHI")
+    --> Just ( fromName "Sebastian BUEMI", fromName "Kamui KOBAYASHI" )
+
+-}
+changeBetween : Driver -> Driver -> Maybe ( Driver, Driver )
+changeBetween handedOver tookOver =
+    if isSame handedOver tookOver then
+        Nothing
+
+    else
+        Just ( handedOver, tookOver )
+
+
 
 -- DISPLAY
 --
@@ -171,3 +192,15 @@ surnameOf parts =
     parts.family
         |> List.map String.toUpper
         |> String.join " "
+
+
+{-| A driver change, spelled the way a timing sheet prints one: who handed the
+car over, and who took it on.
+
+    toHandover (fromName "Sebastian BUEMI") (fromName "Kamui Kobayashi")
+    --> "S.BUEMI → K.KOBAYASHI"
+
+-}
+toHandover : Driver -> Driver -> String
+toHandover handedOver tookOver =
+    toInitialAndSurname handedOver ++ " → " ++ toInitialAndSurname tookOver

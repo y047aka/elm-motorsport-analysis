@@ -278,7 +278,7 @@ accumulate raw ( bests, acc ) =
                     raw.sectors
                     newBests.sectors
             , elapsed = raw.elapsed
-            , pit = pitOf raw
+            , crossing = crossingOf raw
             , miniSectors =
                 raw.miniSectors
                     |> Maybe.map
@@ -298,17 +298,17 @@ accumulate raw ( bests, acc ) =
     ( newBests, lap :: acc )
 
 
-pitOf : RawLap -> Lap.Pit
-pitOf raw =
+crossingOf : RawLap -> Lap.Crossing
+crossingOf raw =
     case ( raw.crossingFinishLineInPit, raw.pitTime ) of
         ( False, Nothing ) ->
-            Lap.NoPit
+            Lap.NoCrossing
 
         ( True, Nothing ) ->
-            Lap.InLap
+            Lap.EntryAtEnd
 
         ( False, Just stop ) ->
-            Lap.OutLap stop
+            Lap.ExitAtStart stop
 
         ( True, Just stop ) ->
-            Lap.OutAndIn stop
+            Lap.ExitAndEntry stop

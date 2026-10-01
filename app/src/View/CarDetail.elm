@@ -33,18 +33,21 @@ import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Chart.PositionProgression as PositionProgression
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Instant as Instant
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import View.CarDetail.ChartTabs as ChartTabs
 import View.CarDetail.Header as Header
 import View.CarDetail.LapTable as LapTable
 import View.CarDetail.LapTimes as LapTimes
 import View.CarDetail.Stint as Stint
 import View.CarNumberBadge as CarNumberBadge
+import View.EventLog as EventLog
 
 
 {-| Which chart the rivals are drawn in, and how much of the race it covers.
@@ -107,6 +110,7 @@ view :
     , comparison : Comparison
     , scrollId : String
     , onScroll : Float -> msg
+    , timeline : Timeline
     }
     -> List Car
     -> Snapshot
@@ -136,7 +140,7 @@ view config cars snapshot focused =
             , class "min-h-0 overflow-y-auto"
             , Html.Events.on "scroll" (Decode.map config.onScroll (Decode.at [ "target", "scrollTop" ] Decode.float))
             ]
-            [ Html.map config.toMsg (panel config.comparison cars snapshot rivals focused) ]
+            [ Html.map config.toMsg (panel config.comparison config.timeline cars snapshot rivals focused) ]
         ]
 
 
@@ -166,8 +170,8 @@ gapOf snapshot maybeInFront chasing =
             Gap.none
 
 
-panel : Comparison -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
-panel comparison cars snapshot rivals focused =
+panel : Comparison -> Timeline -> List Car -> Snapshot -> Rivals -> CarAt -> Html Msg
+panel comparison timeline cars snapshot rivals focused =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -192,6 +196,7 @@ panel comparison cars snapshot rivals focused =
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
         , disclosure "Lap history" (LapTable.view laps focused.standing.lapsCompleted)
+        , container "Log" (EventLog.rows cars timeline snapshot focused.metadata.carNumber)
         ]
 
 
@@ -286,7 +291,10 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
     let
         orEmptyState : Maybe (Html Msg) -> Html Msg
         orEmptyState =
-            Maybe.withDefault (emptyState "No laps to compare yet")
+            Maybe.withDefault
+                (div [ class "p-5 text-center italic text-muted-foreground" ]
+                    [ text "No laps to compare yet" ]
+                )
     in
     ChartTabs.chartTabs SelectedChart
         chart
@@ -378,10 +386,3 @@ sectionClass =
 headingClass : String
 headingClass =
     "text-[10px] font-medium uppercase tracking-[0.03em] text-muted-foreground"
-
-
-emptyState : String -> Html msg
-emptyState message =
-    div
-        [ class "p-5 text-center italic text-muted-foreground" ]
-        [ text message ]

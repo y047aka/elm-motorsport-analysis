@@ -1,5 +1,5 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..)
+    ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..), Lane
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
     , toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
@@ -11,7 +11,7 @@ module Motorsport.Race.Snapshot exposing
 
 Built once per frame and shared by every view that reads it.
 
-@docs Snapshot, CarAt, Standing, CurrentLap, LastLap
+@docs Snapshot, CarAt, Standing, CurrentLap, LastLap, Lane
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
 @docs toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
@@ -23,12 +23,13 @@ Built once per frame and shared by every view that reads it.
 import Dict
 import List.Extra
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
+import Motorsport.PitStop exposing (PitStop)
 import Motorsport.Position exposing (Position)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
@@ -61,6 +62,10 @@ Readings only, and no laps: the laps up to this moment are
 reads at the one before the one it is making. See
 [`Race.pitStopsAt`](Motorsport-Race#pitStopsAt).
 
+`inLane` is the lane the car is standing in, and answers to
+[`Status.inPitLane`](Motorsport-Status#inPitLane): a car outside the lane, and a
+car whose race is over, have no lane to read.
+
 Every rating here is measured against the records as they stood at this moment,
 not as the race leaves them -- the race's, held by [`bestTimes`](#bestTimes),
 and the car's own, which is `bestLap`. See
@@ -73,6 +78,7 @@ type alias CarAt =
     , currentDriver : Driver
     , standing : Standing
     , pitStops : Int
+    , inLane : Maybe Lane
     , currentLap : CurrentLap
     , lastLap : LastLap
     , bestLap : Maybe RatedTime
@@ -93,6 +99,19 @@ type alias Standing =
     , lapsCompleted : Int
     , gapToLeader : Gap
     , intervalToAhead : Gap
+    }
+
+
+{-| Where the car is in the pit lane: the stop its current lap times, and the
+change of driver the two laps it has under way disagree about.
+
+The stop carries both crossings the feed has timed, so a car standing in its box
+has the whole lane timed ahead of it and one already driving away has it behind.
+
+-}
+type alias Lane =
+    { stop : PitStop
+    , handover : Maybe ( Driver, Driver )
     }
 
 
@@ -408,6 +427,7 @@ type alias SampledCar =
         , status : Status
         , currentDriver : Driver
         , pitStops : Int
+        , inLane : Maybe Lane
         }
 
 
@@ -419,14 +439,57 @@ sampleCar clock race car =
     Lap.findCurrentLap clock car.laps
         |> Maybe.map
             (\lap ->
+                let
+                    lastLap =
+                        Lap.findLastLapAt clock car.laps
+
+                    status =
+                        statusOf clock race car lap
+                in
                 { metadata = car.metadata
                 , laps = car.laps
                 , currentLap = lap
-                , lastLap = Lap.findLastLapAt clock car.laps
-                , status = statusOf clock race car lap
+                , lastLap = lastLap
+                , status = status
                 , currentDriver = lap.driver
+                , inLane = inLaneOf status lap lastLap
                 , pitStops = Race.pitStopsAt clock car.metadata.carNumber race
                 }
+            )
+
+
+{-| The lane the car is standing in, which is the lane its current lap times.
+
+`Nothing` for a car the feed times through no lane: one that has not stopped, one
+still on the lap it crossed into the lane on -- the feed has no lane time for that
+lap yet, so the car reads as `Racing` -- and one whose race is over, which is out
+of the lane however the lap reads.
+
+-}
+inLaneOf : Status -> Lap -> Maybe Lap -> Maybe Lane
+inLaneOf status currentLap lastLap =
+    if Status.inPitLane status then
+        Lap.pitStopOf currentLap
+            |> Maybe.map
+                (\stop ->
+                    { stop = stop
+                    , handover = changedOver currentLap lastLap
+                    }
+                )
+
+    else
+        Nothing
+
+
+{-| The change of driver made in the box: the lap the car came in on and the one
+it goes out on naming different drivers.
+-}
+changedOver : Lap -> Maybe Lap -> Maybe ( Driver, Driver )
+changedOver currentLap lastLap =
+    lastLap
+        |> Maybe.andThen
+            (\cameIn ->
+                Driver.changeBetween cameIn.driver currentLap.driver
             )
 
 
@@ -435,8 +498,8 @@ sampleCar clock race car =
 Where its race began and ended is [`Race.statusAt`](Motorsport-Race#statusAt)'s.
 Where it is within one still being run is the lap in progress: a stop falls at
 the head of the lap the car came back out on, so that is the lap carrying it, and
-the clock against [`Lap.stopEndedAt`](Motorsport-Lap#stopEndedAt) separates a car
-standing in its box from one already rejoining.
+the clock against [`Lap.pitExitAt`](Motorsport-Lap#pitExitAt) separates a car
+still in the pit lane from one already back on the road.
 
 -}
 statusOf : { elapsed : Instant } -> Race -> Car -> Lap -> Status
@@ -451,9 +514,9 @@ statusOf clock race car currentLap =
 
 pitPhaseOf : { elapsed : Instant } -> Lap -> Status
 pitPhaseOf clock currentLap =
-    case Lap.stopEndedAt currentLap of
-        Just droveAway ->
-            if Instant.compare clock.elapsed droveAway == LT then
+    case Lap.pitExitAt currentLap of
+        Just backOut ->
+            if Instant.compare clock.elapsed backOut == LT then
                 Status.InPit
 
             else
@@ -652,6 +715,7 @@ readCarAt frame placed =
         , intervalToAhead = timing.intervalToAhead
         }
     , pitStops = car.pitStops
+    , inLane = car.inLane
     , currentLap =
         readCurrentLap
             { clock = { elapsed = frame.raceElapsed }

@@ -105,17 +105,17 @@ the pit times together.
 -}
 pitCell : Lap -> String
 pitCell lap =
-    case lap.pit of
-        Lap.NoPit ->
+    case lap.crossing of
+        Lap.NoCrossing ->
             ""
 
-        Lap.InLap ->
+        Lap.EntryAtEnd ->
             "in"
 
-        Lap.OutLap _ ->
+        Lap.ExitAtStart _ ->
             "out"
 
-        Lap.OutAndIn _ ->
+        Lap.ExitAndEntry _ ->
             "out in"
 
 

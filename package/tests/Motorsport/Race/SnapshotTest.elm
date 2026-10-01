@@ -13,7 +13,7 @@ import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..),
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Lane, Snapshot)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
@@ -314,6 +314,39 @@ suite =
                         |> List.map (statusOf "8" retiringOnAnOutLap)
                         |> Expect.equal
                             [ Just Status.OutLap, Just Status.Retired, Just Status.Retired ]
+            ]
+        , describe "the lane a car is standing in"
+            [ test "the two crossings the lane times come with the car" <|
+                \_ ->
+                    -- Car 9 crosses into the lane at 10.000, which is the end of
+                    -- lap 1, and the lane times it over 3.000 to 13.000. Both are
+                    -- known before the car is back on the road.
+                    [ 9999, 10000, 12999, 13000, 19999, 20000 ]
+                        |> List.map (laneOf "9" stopping >> Maybe.map crossings)
+                        |> Expect.equal
+                            [ Nothing
+                            , Just ( 10000, 13000 )
+                            , Just ( 10000, 13000 )
+                            , Just ( 10000, 13000 )
+                            , Just ( 10000, 13000 )
+                            , Nothing
+                            ]
+            , test "the handover made in the box is the two laps disagreeing" <|
+                \_ ->
+                    laneOf "9" handingOver 13000
+                        |> Maybe.map .handover
+                        |> Expect.equal (Just (Just ( Driver.fromName "Driver 9", Driver.fromName "Mike CONWAY" )))
+            , test "two laps naming the same driver made no handover" <|
+                \_ ->
+                    laneOf "9" stopping 13000
+                        |> Maybe.map .handover
+                        |> Expect.equal (Just Nothing)
+            , test "a race that is over leaves the car out of the lane" <|
+                \_ ->
+                    [ 19999, 20000, 99999 ]
+                        |> List.map (laneOf "8" retiringOnAnOutLap >> Maybe.map (.stop >> .enteredAt))
+                        |> Expect.equal
+                            [ Just (Instant.fromDuration 10000), Nothing, Nothing ]
             ]
         ]
 
@@ -761,15 +794,45 @@ statusOf carNumber car elapsed =
         |> Maybe.map .status
 
 
+{-| The lane the car is standing in, which the snapshot reads off the same laps
+the status is read off.
+-}
+laneOf : String -> Car -> Duration -> Maybe Lane
+laneOf carNumber car elapsed =
+    Race.fromCars { timeLimit = Instant.fromDuration 60000, index = fieldIndex } [ car ]
+        |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
+        |> carAt carNumber
+        |> Maybe.andThen .inLane
+
+
+{-| The two crossings of the lane, spelled as the clock spells them.
+-}
+crossings : Lane -> ( Duration, Duration )
+crossings lane =
+    ( Instant.toDuration lane.stop.enteredAt, Instant.toDuration lane.stop.exitedAt )
+
+
 {-| One stop: in at the end of lap 1, away 3.000 into lap 2, and out on the road
 again from lap 3.
 -}
 stopping : Car
 stopping =
     stopperWith "9"
-        [ pitLapOf "9" 1 10000 10000 Lap.InLap
-        , pitLapOf "9" 2 10000 20000 (Lap.OutLap 3000)
-        , pitLapOf "9" 3 10000 30000 Lap.NoPit
+        [ pitLapOf "9" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "9" 2 10000 20000 (Lap.ExitAtStart 3000)
+        , pitLapOf "9" 3 10000 30000 Lap.NoCrossing
+        ]
+
+
+{-| The same stop, taken out by a second driver: the lap it came in on names the
+first, the one it went out on the second.
+-}
+handingOver : Car
+handingOver =
+    stopperWith "9"
+        [ pitLapOf "9" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "9" 2 10000 20000 (Lap.ExitAtStart 3000) |> drivenBy "Mike CONWAY"
+        , pitLapOf "9" 3 10000 30000 Lap.NoCrossing
         ]
 
 
@@ -779,9 +842,9 @@ another lap that begins with a stop.
 stoppingTwice : Car
 stoppingTwice =
     stopperWith "12"
-        [ pitLapOf "12" 1 10000 10000 Lap.InLap
-        , pitLapOf "12" 2 10000 20000 (Lap.OutAndIn 3000)
-        , pitLapOf "12" 3 10000 30000 (Lap.OutLap 4000)
+        [ pitLapOf "12" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "12" 2 10000 20000 (Lap.ExitAndEntry 3000)
+        , pitLapOf "12" 3 10000 30000 (Lap.ExitAtStart 4000)
         ]
 
 
@@ -790,8 +853,8 @@ stoppingTwice =
 retiringOnAnOutLap : Car
 retiringOnAnOutLap =
     stopperWith "8"
-        [ pitLapOf "8" 1 10000 10000 Lap.InLap
-        , pitLapOf "8" 2 10000 20000 (Lap.OutLap 3000)
+        [ pitLapOf "8" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "8" 2 10000 20000 (Lap.ExitAtStart 3000)
         ]
 
 
@@ -803,10 +866,15 @@ stopperWith carNumber laps =
     }
 
 
-pitLapOf : String -> Int -> Duration -> Duration -> Lap.Pit -> Lap
+pitLapOf : String -> Int -> Duration -> Duration -> Lap.Crossing -> Lap
 pitLapOf carNumber lapNumber time elapsed pit =
     let
         base =
             lapOf carNumber lapNumber time elapsed { s1 = 1000, s2 = 2000, s3 = 3000 }
     in
-    { base | pit = pit }
+    { base | crossing = pit }
+
+
+drivenBy : String -> Lap -> Lap
+drivenBy name lap =
+    { lap | driver = Driver.fromName name }

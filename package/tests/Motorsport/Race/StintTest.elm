@@ -29,12 +29,15 @@ suite =
                         |> Expect.equal [ ( 1, 2 ), ( 3, 3 ) ]
             , test "a run that ended carries the stop that ended it, read off the lap after it" <|
                 \_ ->
-                    [ lap 1 95000, inLap 2 101000, outLap 3 165000 63000, inLap 4 101000, outLap 5 173000 71000 ]
+                    -- Each out lap says when its stop was entered: lap 3 at
+                    -- 196.000, away 63.000 later, and lap 5 at 361.000, away
+                    -- 71.000 later.
+                    [ lap 1 95000, inLap 2 101000, outLapAt 3 361000 165000 63000, inLap 4 101000, outLapAt 5 534000 173000 71000 ]
                         |> Stint.fromLaps
                         |> List.map .end
                         |> Expect.equal
-                            [ Ended { lapNumber = 3, duration = 63000 }
-                            , Ended { lapNumber = 5, duration = 71000 }
+                            [ Ended { enteredAt = instant 196000, exitedAt = instant 259000, laneTime = 63000 }
+                            , Ended { enteredAt = instant 361000, exitedAt = instant 432000, laneTime = 71000 }
                             , Running
                             ]
             , test "a car sitting in the pits has ended a run with no stop to show for it yet" <|
@@ -45,12 +48,15 @@ suite =
                         |> Expect.equal [ InPit ]
             , test "a car that came out and went straight back in has run one lap" <|
                 \_ ->
-                    [ lap 1 95000, inLap 2 101000, outAndIn 3 166000 46857, outLap 4 173000 69107 ]
+                    -- Each out lap says when its stop was entered and away:
+                    -- lap 3 at 196.000, away at 242.857, ending in the lane
+                    -- again; lap 4 at 362.000, away at 431.107.
+                    [ lap 1 95000, inLap 2 101000, outAndInAt 3 362000 166000 46857, outLapAt 4 535000 173000 69107 ]
                         |> Stint.fromLaps
                         |> List.map (\stint -> ( stint.lapCount, stint.end ))
                         |> Expect.equal
-                            [ ( 2, Ended { lapNumber = 3, duration = 46857 } )
-                            , ( 1, Ended { lapNumber = 4, duration = 69107 } )
+                            [ ( 2, Ended { enteredAt = instant 196000, exitedAt = instant 242857, laneTime = 46857 } )
+                            , ( 1, Ended { enteredAt = instant 362000, exitedAt = instant 431107, laneTime = 69107 } )
                             , ( 1, Running )
                             ]
             , test "the laps that touched the pit lane are left out of the run's times" <|
@@ -136,19 +142,14 @@ lap lapNumber time =
 -}
 inLap : Int -> Int -> Lap
 inLap lapNumber time =
-    { empty | lap = lapNumber, time = Just time, pit = Lap.InLap }
+    { empty | lap = lapNumber, time = Just time, crossing = Lap.EntryAtEnd }
 
 
 {-| The lap the car came back out on, which is where the feed times the stop.
 -}
 outLap : Int -> Int -> Int -> Lap
 outLap lapNumber time stop =
-    { empty | lap = lapNumber, time = Just time, pit = Lap.OutLap stop }
-
-
-outAndIn : Int -> Int -> Int -> Lap
-outAndIn lapNumber time stop =
-    { empty | lap = lapNumber, time = Just time, pit = Lap.OutAndIn stop }
+    { empty | lap = lapNumber, time = Just time, crossing = Lap.ExitAtStart stop }
 
 
 empty : Lap
@@ -173,7 +174,12 @@ began with at the head of it.
 -}
 outLapAt : Int -> Int -> Int -> Int -> Lap
 outLapAt lapNumber elapsed time stop =
-    { empty | lap = lapNumber, elapsed = instant elapsed, time = Just time, pit = Lap.OutLap stop }
+    { empty | lap = lapNumber, elapsed = instant elapsed, time = Just time, crossing = Lap.ExitAtStart stop }
+
+
+outAndInAt : Int -> Int -> Int -> Int -> Lap
+outAndInAt lapNumber elapsed time stop =
+    { empty | lap = lapNumber, elapsed = instant elapsed, time = Just time, crossing = Lap.ExitAndEntry stop }
 
 
 instant : Int -> Instant

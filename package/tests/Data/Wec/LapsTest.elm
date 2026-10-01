@@ -2,7 +2,6 @@ module Data.Wec.LapsTest exposing (suite)
 
 import Data.Wec.Laps as Laps exposing (RawLap)
 import Expect
-import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
@@ -10,6 +9,7 @@ import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
 
@@ -22,12 +22,12 @@ suite =
                     case Laps.fromJsonl aStop of
                         Ok rawLaps ->
                             let
-                                pits =
+                                crossings =
                                     Laps.attach rawLaps (placeholderCars [ "1" ])
                                         |> List.concatMap .laps
-                                        |> List.map .pit
+                                        |> List.map .crossing
                             in
-                            Expect.equal [ Lap.NoPit, Lap.InLap, Lap.OutLap 69953 ] pits
+                            Expect.equal [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 69953 ] crossings
 
                         Err err ->
                             Expect.fail err
@@ -36,12 +36,12 @@ suite =
                     case Laps.fromJsonl aDoubleStop of
                         Ok rawLaps ->
                             let
-                                pits =
+                                crossings =
                                     Laps.attach rawLaps (placeholderCars [ "1" ])
                                         |> List.concatMap .laps
-                                        |> List.map .pit
+                                        |> List.map .crossing
                             in
-                            Expect.equal [ Lap.InLap, Lap.OutAndIn 46857, Lap.OutLap 69107 ] pits
+                            Expect.equal [ Lap.EntryAtEnd, Lap.ExitAndEntry 46857, Lap.ExitAtStart 69107 ] crossings
 
                         Err err ->
                             Expect.fail err
@@ -64,7 +64,8 @@ suite =
                         |> Expect.equal (Err "line 1: ")
             , test "names the line a bad lap is on" <|
                 \_ ->
-                    (twoLaps ++ """{"carNumber":"1"}\n""")
+                    (twoLaps ++ """{"carNumber":"1"}
+""")
                         |> Laps.fromJsonl
                         |> Result.mapError (String.left 8)
                         |> Expect.equal (Err "line 3: ")

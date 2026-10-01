@@ -75,12 +75,12 @@ lap lapNumber time =
 
 inLap : Int -> Int -> Lap
 inLap lapNumber time =
-    { empty | lap = lapNumber, time = Just time, pit = Lap.InLap }
+    { empty | lap = lapNumber, time = Just time, crossing = Lap.EntryAtEnd }
 
 
 outLap : Int -> Int -> Int -> Lap
 outLap lapNumber time stop =
-    { empty | lap = lapNumber, time = Just time, pit = Lap.OutLap stop }
+    { empty | lap = lapNumber, time = Just time, crossing = Lap.ExitAtStart stop }
 
 
 drivenBy : String -> Lap -> Lap

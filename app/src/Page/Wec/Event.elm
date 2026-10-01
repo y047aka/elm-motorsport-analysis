@@ -19,20 +19,16 @@ import Html.Lazy
 import Json.Decode as Decode
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
-import Motorsport.Driver as Driver
-import Motorsport.Duration as Duration
-import Motorsport.Flag as Flag
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
-import Motorsport.Lap as Lap
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
-import Motorsport.Race.Car exposing (Car, CarNumber, Metadata)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Wec.Class as Class
 import Page.Wec.Columns as Columns
 import Route
 import Shared
@@ -49,7 +45,9 @@ import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
+import View.ClassMark as ClassMark
 import View.LiveStandings as LiveStandings
+import View.PitLane as PitLane
 import View.PlaybackControls as PlaybackControls
 
 
@@ -194,11 +192,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just round ->
-                    mainGrid round.track
-                        round.timeline
-                        round.snapshot
-                        round.replay
-                        m
+                    mainGrid round m
             ]
         ]
     }
@@ -241,6 +235,10 @@ headerTitle shared =
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away; the body answers to no click.
 
+The card splits two-to-one: the drawing fills the top two thirds, and the
+cars in the pit lane -- standing in their boxes or already driving away --
+fill the bottom third, scrolling once they outnumber it.
+
 It carries `data-tracker-column`, which the visual tests locate it by.
 
 -}
@@ -248,7 +246,7 @@ trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
 trackerCard several held track snapshot =
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
-            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)]"
             ]
             [ Card.content []
                 [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
@@ -264,13 +262,20 @@ trackerCard several held track snapshot =
                         )
                     ]
                 ]
+            , Card.content [] [ PitLane.view snapshot ]
             ]
         ]
 
 
-mainGrid : TrackerChart.Track -> Timeline -> Snapshot -> Replay.Model -> Model -> Html Msg
-mainGrid track timeline snapshot replay m =
+mainGrid : Shared.LoadedRound -> Model -> Html Msg
+mainGrid round m =
     let
+        snapshot =
+            round.snapshot
+
+        replay =
+            round.replay
+
         keys =
             Columns.resolve snapshot (Columns.keysOf snapshot m.strip.order)
 
@@ -283,9 +288,9 @@ mainGrid track timeline snapshot replay m =
                     }
                     snapshot
                 ]
-            , columnStrip "col-start-2 row-start-1 row-span-2" track keys m replay snapshot
+            , columnStrip "col-start-2 row-start-1 row-span-2" round.track round.timeline keys m replay snapshot
             ]
-                ++ paneCells m.pane track snapshot timeline replay
+                ++ paneCells m.pane round.track snapshot round.fieldEvents replay
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
@@ -319,7 +324,7 @@ inside it.
 
 -}
 paneCells : Pane -> TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
-paneCells pane track snapshot timeline replay =
+paneCells pane track snapshot fieldEvents replay =
     case pane of
         Hidden ->
             []
@@ -341,12 +346,12 @@ paneCells pane track snapshot timeline replay =
                         ]
                     ]
                 ]
-            , timelinePanel "col-start-3 row-start-2" timeline replay
+            , timelinePanel "col-start-3 row-start-2" fieldEvents replay
             ]
 
 
-columnStrip : String -> TrackerChart.Track -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
-columnStrip cell track keys m replay snapshot =
+columnStrip : String -> TrackerChart.Track -> Timeline -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track timeline keys m replay snapshot =
     let
         several =
             List.length keys > 1
@@ -390,7 +395,7 @@ columnStrip cell track keys m replay snapshot =
                                         (Snapshot.get carNumber snapshot
                                             |> Maybe.map
                                                 (\car ->
-                                                    Html.Lazy.lazy5 (carCard several) (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
+                                                    Html.Lazy.lazy6 (carCard several) timeline (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
                                                 )
                                         )
 
@@ -418,8 +423,8 @@ columnGrip held key =
         }
 
 
-carCard : Bool -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
-carCard several held comparison cars snapshot car =
+carCard : Bool -> Timeline -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
+carCard several timeline held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
@@ -450,6 +455,7 @@ carCard several held comparison cars snapshot car =
                     , comparison = comparison
                     , scrollId = Columns.scrollId carNumber
                     , onScroll = Columns.PanelScrolled carNumber >> ColumnsMsg
+                    , timeline = timeline
                     }
                     cars
                     snapshot
@@ -498,14 +504,17 @@ standingsTabs current =
         []
 
 
-{-| The most recent timeline events that have occurred, newest first: when each
-happened, whose it was, and what kind of thing it was.
+{-| The most recent events the field draws, newest first: when each happened,
+whose it was, and what kind of thing it was.
+
+`recentEventLimit` counts the rows here, not the round's events.
+
 -}
 timelinePanel : String -> Timeline -> Replay.Model -> Html Msg
-timelinePanel cell timeline replay =
+timelinePanel cell fieldEvents replay =
     let
         occurredCount =
-            Timeline.countUpTo (Clock.getElapsed replay.playback) timeline
+            Timeline.countUpTo (Clock.getElapsed replay.playback) fieldEvents
     in
     button
         [ attribute "popovertarget" standingsPopoverId
@@ -515,7 +524,7 @@ timelinePanel cell timeline replay =
         [ Card.card []
             [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                 [ Card.content []
-                    [ Html.Lazy.lazy3 eventRows replay.race.cars timeline occurredCount ]
+                    [ Html.Lazy.lazy3 eventRows replay.race.cars fieldEvents occurredCount ]
                 ]
             ]
         ]
@@ -545,8 +554,8 @@ eventRows cars timeline occurredCount =
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
 
 
-{-| A row is two lines whatever it holds, the first as tall as the badge: the
-`1.375rem` is `CarNumberBadge.viewRow`'s height, and moves with it.
+{-| A row is one line as tall as the badge: the `1.375rem` is
+`CarNumberBadge.viewRow`'s height, and moves with it.
 -}
 eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
 eventRow carsByNumber event =
@@ -562,35 +571,21 @@ eventRow carsByNumber event =
         cell classes children =
             div [ Attributes.class classes ] children
 
-        secondLine =
-            case detail car event of
-                Just line ->
-                    [ cell "col-start-2 col-span-3 whitespace-nowrap text-[10px] text-muted-foreground" [ text line ] ]
+        name =
+            case ( event.eventType, car |> Maybe.andThen (\item -> TimelineEvent.runningLap item event) |> Maybe.andThen .time ) of
+                ( CarEvent _ FastestLap, Just time ) ->
+                    Duration.toString time ++ " (Fastest)"
 
-                Nothing ->
-                    []
+                _ ->
+                    TimelineEvent.describe event.eventType
     in
-    div [ Attributes.class "col-span-4 grid grid-cols-subgrid grid-rows-[1.375rem_1rem] gap-y-0.5 items-center py-0.5" ]
-        ([ cell "" [ car |> Maybe.map (.metadata >> classMark) |> Maybe.withDefault (text "") ]
-         , cell "" [ carBadge car event.eventType ]
-         , cell "" [ text (describe event.eventType) ]
-         , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
+    div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
+        [ cell "" [ car |> Maybe.map (.metadata >> ClassMark.view) |> Maybe.withDefault (text "") ]
+        , cell "" [ carBadge car event.eventType ]
+        , cell "" [ text name ]
+        , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
             [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
-         ]
-            ++ secondLine
-        )
-
-
-{-| The same bar the LiveStandings class headers stand their names on --
-`0.2em x 1.2em` of the class colour at their 10px, which is 2px x 12px.
--}
-classMark : Metadata -> Html Msg
-classMark metadata =
-    div
-        [ Attributes.class "w-[2px] h-[12px] rounded-[2px]"
-        , attribute "style" ("background-color: " ++ Class.toColor metadata.class ++ ";")
         ]
-        []
 
 
 {-| An event of the whole field's has no badge, and a number no car of the field
@@ -607,69 +602,6 @@ carBadge car eventType =
 
         ( Nothing, _ ) ->
             text ""
-
-
-describe : EventType -> String
-describe eventType =
-    case eventType of
-        RaceStart ->
-            "Race Start"
-
-        Flag flag ->
-            Flag.toString flag
-
-        CarEvent _ OvertakeForLead ->
-            "Overtake for Lead"
-
-        CarEvent _ LeaderInPit ->
-            "Leader In Pit"
-
-        CarEvent _ FastestLap ->
-            "Fastest Lap"
-
-        CarEvent _ DriverChange ->
-            "Driver Change"
-
-        CarEvent _ Retired ->
-            "Retired"
-
-        CarEvent _ Finished ->
-            "Finished"
-
-
-{-| The second line an event has, read off the car's laps at the event.
-
-A fastest lap is the lap the event completes, its time and its driver. A driver
-change is who handed the car to whom: the driver of the lap the event completes,
-and the one of the lap in progress from it, which is the lap the car's
-`currentDriver` is read off from then on.
-
--}
-detail : Maybe Car -> TimelineEvent -> Maybe String
-detail car event =
-    let
-        lapOf find =
-            car |> Maybe.andThen (.laps >> find { elapsed = event.elapsed })
-
-        driverOf find =
-            lapOf find |> Maybe.map (.driver >> Driver.toInitialAndSurname)
-    in
-    case event.eventType of
-        CarEvent _ FastestLap ->
-            lapOf Lap.findLastLapAt
-                |> Maybe.andThen
-                    (\lap ->
-                        lap.time
-                            |> Maybe.map (\time -> Duration.toString time ++ " · " ++ Driver.toInitialAndSurname lap.driver)
-                    )
-
-        CarEvent _ DriverChange ->
-            Maybe.map2 (\handedOver tookOver -> handedOver ++ " → " ++ tookOver)
-                (driverOf Lap.findLastLapAt)
-                (driverOf Lap.findCurrentLap)
-
-        _ ->
-            Nothing
 
 
 leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg

@@ -111,7 +111,7 @@ crossing lapNumber elapsed =
 -}
 stopping : Int -> Duration -> Lap
 stopping lapNumber elapsed =
-    { emptyLap | lap = lapNumber, elapsed = Instant.fromDuration elapsed, pit = Lap.InLap }
+    { emptyLap | lap = lapNumber, elapsed = Instant.fromDuration elapsed, crossing = Lap.EntryAtEnd }
 
 
 emptyLap : Lap

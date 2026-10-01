@@ -94,19 +94,48 @@ tests =
         [ describe "the pit lane"
             [ test "a lap that touched it at either end is not a lap the car drove" <|
                 \_ ->
-                    [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 63000 ]
-                        |> List.map (\pit -> Lap.isRacingLap { empty | pit = pit })
+                    [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 63000, Lap.ExitAndEntry 63000 ]
+                        |> List.map (\crossing -> Lap.isRacingLap { empty | crossing = crossing })
                         |> Expect.equal [ True, False, False, False ]
             , test "a run ends on the lap the car came in on, whichever way it got there" <|
                 \_ ->
-                    [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 63000 ]
-                        |> List.map (\pit -> Lap.isInLap { empty | pit = pit })
+                    [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 63000, Lap.ExitAndEntry 63000 ]
+                        |> List.map (\crossing -> Lap.isInLap { empty | crossing = crossing })
                         |> Expect.equal [ False, True, False, True ]
-            , test "the stop is timed on the lap the car came back out on, never the one it came in on" <|
+            , test "the lane is timed on the lap the car came back out on, never the one it came in on" <|
                 \_ ->
-                    [ Lap.NoPit, Lap.InLap, Lap.OutLap 63000, Lap.OutAndIn 46857 ]
-                        |> List.map (\pit -> Lap.stopOf { empty | pit = pit })
-                        |> Expect.equal [ Nothing, Nothing, Just 63000, Just 46857 ]
+                    [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 63000, Lap.ExitAndEntry 63000 ]
+                        |> List.map (\crossing -> Lap.laneTimeOf { empty | crossing = crossing })
+                        |> Expect.equal [ Nothing, Nothing, Just 63000, Just 63000 ]
+            , test "both halves of the split name the same crossing as the entry" <|
+                \_ ->
+                    let
+                        cameIn =
+                            { lap | crossing = Lap.EntryAtEnd }
+
+                        cameOut =
+                            { lap | lap = 2, elapsed = instant 16000, crossing = Lap.ExitAtStart 63000 }
+                    in
+                    Expect.equal (Lap.pitEntryAt cameOut) (Lap.pitEntryAt cameIn)
+            , test "the lap carrying the lane time enters at its own head" <|
+                \_ ->
+                    [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 63000, Lap.ExitAndEntry 63000 ]
+                        |> List.map (\crossing -> Lap.pitEntryAt { lap | crossing = crossing })
+                        |> Expect.equal [ Nothing, Just (instant 10000), Just (instant 4000), Just (instant 4000) ]
+            , test "the lane time runs from the entry crossing to back on the road" <|
+                \_ ->
+                    Lap.pitExitAt { lap | crossing = Lap.ExitAtStart 46857 }
+                        |> Expect.equal (Just (instant 50857))
+            , test "the stop is the two crossings of the lane read together" <|
+                \_ ->
+                    Lap.pitStopOf { lap | crossing = Lap.ExitAndEntry 46857 }
+                        |> Expect.equal
+                            (Just
+                                { enteredAt = instant 4000
+                                , exitedAt = instant 50857
+                                , laneTime = 46857
+                                }
+                            )
             ]
         , describe "segments"
             [ test "starts each sector where the one before it ended" <|
