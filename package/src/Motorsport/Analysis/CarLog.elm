@@ -28,12 +28,14 @@ import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..)
 
 
 {-| One line of the Log: the moment, the lap the line is about, what to say about
-it, the driver its time belongs to, and the rating that colours it.
+it, whose lap that time was, and the rating that colours it.
 
 `lap` is the lap the line is about: the one the moment fell on for a stop and for
 an announcement, and the one that ran to the time for a best or a record.
 `Nothing` where the car had turned no lap yet, which is where the race's own start
 stands.
+
+`by` is the driver whose lap the label's time was, which is only a lap time has.
 
 -}
 type alias Line =

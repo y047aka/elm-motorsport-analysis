@@ -11,7 +11,7 @@ two cannot disagree about what happened.
 
 -}
 
-import Html exposing (Html, div, span, text)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style)
 import List.Extra
 import Motorsport.Analysis.CarLog as CarLog
@@ -56,18 +56,15 @@ recentLimit =
 
 lineRow : CarLog.Line -> Html msg
 lineRow line =
+    let
+        attached =
+            Maybe.map (\second -> " · " ++ second) line.by |> Maybe.withDefault ""
+    in
     div [ class "grid grid-cols-[2rem_1fr_auto] gap-x-2 items-baseline py-0.5" ]
         [ div [ class "text-right tabular-nums text-muted-foreground" ]
             [ text (Maybe.map String.fromInt line.lap |> Maybe.withDefault "-") ]
         , div [ class "truncate", style "color" (Performance.textColorOf line.level) ]
-            [ text line.label
-            , case line.by of
-                Just second ->
-                    span [ class "text-muted-foreground" ] [ text (" · " ++ second) ]
-
-                Nothing ->
-                    text ""
-            ]
+            [ text (line.label ++ attached) ]
         , div [ class "tabular-nums text-muted-foreground" ]
             [ text (line.at |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
