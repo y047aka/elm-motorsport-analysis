@@ -256,7 +256,7 @@ completed: the rest of it is a lap out on the road.
 -}
 pitExitAt : Lap -> Maybe Instant
 pitExitAt lap =
-    laneTimeOf lap |> Maybe.map (\duration -> Instant.add duration (lapStart lap))
+    pitStopOf lap |> Maybe.map .exitedAt
 
 
 {-| The stop this lap timed: the two crossings of the lane, and the lane's time

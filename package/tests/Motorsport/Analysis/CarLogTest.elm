@@ -100,6 +100,17 @@ suite =
                         |> announcedBy 400000
                         |> List.map (\line -> ( line.lap, line.label ))
                         |> Expect.equal [ ( Just 2, "Pit" ) ]
+            , test "a stop whose in-lap the laps do not hold names the last one completed before the crossing" <|
+                \_ ->
+                    -- The crossing into the lane is at 243.000, where lap 2
+                    -- would have ended but does not exist; the laps can only
+                    -- say the car was on lap 1 when it arrived.
+                    [ lapAt 1 100000
+                    , lapAt 3 313000 |> timed 70000 |> outOfLane 70000
+                    ]
+                        |> announcedBy 400000
+                        |> List.map (\line -> ( line.lap, line.label ))
+                        |> Expect.equal [ ( Just 1, "Pit" ) ]
             , test "a stop the car never came out of has no lane time to tell" <|
                 \_ ->
                     [ lapAt 1 60000, lapAt 2 300000 |> timed 55000 |> intoLane ]

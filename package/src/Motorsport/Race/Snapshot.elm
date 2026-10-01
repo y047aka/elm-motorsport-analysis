@@ -105,9 +105,8 @@ type alias Standing =
 {-| Where the car is in the pit lane: the stop its current lap times, and the
 change of driver the two laps it has under way disagree about.
 
-The stop's `enteredAt` is the earlier crossing and `exitedAt` the later one the
-feed has both for, so a car standing in its box has the whole lane timed ahead
-of it and one already driving away has it behind.
+The stop carries both crossings the feed has timed, so a car standing in its box
+has the whole lane timed ahead of it and one already driving away has it behind.
 
 -}
 type alias Lane =

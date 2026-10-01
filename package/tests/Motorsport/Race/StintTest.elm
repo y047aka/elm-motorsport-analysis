@@ -29,11 +29,9 @@ suite =
                         |> Expect.equal [ ( 1, 2 ), ( 3, 3 ) ]
             , test "a run that ended carries the stop that ended it, read off the lap after it" <|
                 \_ ->
-                    -- Lap 1 ends at 95.000 and lap 2 -- the one the car came in
-                    -- on -- at 196.000, which is where lap 3 began and its stop
-                    -- was entered; away 63.000 later, the car drove that lap on
-                    -- to 361.000. Lap 4 ends where lap 5 began, and its stop at
-                    -- 71.000 more.
+                    -- Each out lap says when its stop was entered: lap 3 at
+                    -- 196.000, away 63.000 later, and lap 5 at 361.000, away
+                    -- 71.000 later.
                     [ lap 1 95000, inLap 2 101000, outLapAt 3 361000 165000 63000, inLap 4 101000, outLapAt 5 534000 173000 71000 ]
                         |> Stint.fromLaps
                         |> List.map .end
@@ -50,9 +48,9 @@ suite =
                         |> Expect.equal [ InPit ]
             , test "a car that came out and went straight back in has run one lap" <|
                 \_ ->
-                    -- Lap 3 begins the 196.000 lap 2 ended on, carries a stop
-                    -- away at 242.857, and ends in the lane again; lap 4 begins
-                    -- at 362.000 and its stop is away at 431.107.
+                    -- Each out lap says when its stop was entered and away:
+                    -- lap 3 at 196.000, away at 242.857, ending in the lane
+                    -- again; lap 4 at 362.000, away at 431.107.
                     [ lap 1 95000, inLap 2 101000, outAndInAt 3 362000 166000 46857, outLapAt 4 535000 173000 69107 ]
                         |> Stint.fromLaps
                         |> List.map (\stint -> ( stint.lapCount, stint.end ))
