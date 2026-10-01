@@ -5,8 +5,8 @@ served, and the ones already driving away down the lane.
 
 The lane is the tracker's own, and answers to no click: it says who is in the lane
 at all rather than who the reader picked. Everything a row shows is a reading of
-the snapshot -- [`CarAt.inLane`](Motorsport-Race-Snapshot#inLane) is where the two
-crossings and the handover come from -- so the list asks nothing of the cars' laps.
+the snapshot -- [`CarAt.inLane`](Motorsport-Race-Snapshot#inLane) is where the
+stop and the handover come from -- so the list asks nothing of the cars' laps.
 
 @docs view
 
@@ -60,7 +60,7 @@ servedFirst : ( CarAt, Lane ) -> ( CarAt, Lane ) -> Order
 servedFirst ( a, aLane ) ( b, bLane ) =
     case ( isBeingServed a, isBeingServed b ) of
         ( True, True ) ->
-            Instant.compare bLane.enteredAt aLane.enteredAt
+            Instant.compare bLane.stop.enteredAt aLane.stop.enteredAt
 
         ( True, False ) ->
             LT
@@ -69,7 +69,7 @@ servedFirst ( a, aLane ) ( b, bLane ) =
             GT
 
         ( False, False ) ->
-            Instant.compare bLane.exitedAt aLane.exitedAt
+            Instant.compare bLane.stop.exitedAt aLane.stop.exitedAt
 
 
 isBeingServed : CarAt -> Bool

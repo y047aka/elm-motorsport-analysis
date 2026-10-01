@@ -16,7 +16,6 @@ against the records. How any of that is drawn belongs to the panel reading it.
 
 -}
 
-import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Instant as Instant exposing (Instant)
@@ -186,29 +185,26 @@ event's to tell.
 -}
 stopLine : List Lap -> Lap -> Maybe Line
 stopLine allLaps lap =
-    case ( Lap.pitEntryAt lap, Lap.laneTimeOf lap ) of
-        ( Just crossedIn, Just _ ) ->
-            Just
-                { at = crossedIn
-                , lap = Just (enteredOn allLaps lap crossedIn)
+    Lap.pitStopOf lap
+        |> Maybe.map
+            (\stop ->
+                { at = stop.enteredAt
+                , lap = Just (enteredOn allLaps lap stop.enteredAt)
                 , label = "Pit"
                 , by = Nothing
                 , level = Performance.Standard
                 }
-
-        _ ->
-            Nothing
+            )
 
 
 {-| The lap that ended where the lane was entered: the crossing into the lane is
-the previous lap's finish line, so the lap number the entry falls on is that
-lap's. Where no lap names the crossing, the lap number the stop sits behind is
-the best the laps can say.
+the previous lap's finish line, which is the lap the crossing itself completes.
+Where no lap had been completed yet, the lap number the stop sits behind is the
+best the laps can say.
 -}
 enteredOn : List Lap -> Lap -> Instant -> Int
 enteredOn allLaps pitLap crossedIn =
-    allLaps
-        |> List.Extra.find (\lap -> Instant.compare lap.elapsed crossedIn == EQ)
+    Lap.findLastLapAt { elapsed = crossedIn } allLaps
         |> Maybe.map .lap
         |> Maybe.withDefault (pitLap.lap - 1)
 

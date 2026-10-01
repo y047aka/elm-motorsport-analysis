@@ -344,7 +344,7 @@ suite =
             , test "a race that is over leaves the car out of the lane" <|
                 \_ ->
                     [ 19999, 20000, 99999 ]
-                        |> List.map (laneOf "8" retiringOnAnOutLap >> Maybe.map .enteredAt)
+                        |> List.map (laneOf "8" retiringOnAnOutLap >> Maybe.map (.stop >> .enteredAt))
                         |> Expect.equal
                             [ Just (Instant.fromDuration 10000), Nothing, Nothing ]
             ]
@@ -809,7 +809,7 @@ laneOf carNumber car elapsed =
 -}
 crossings : Lane -> ( Duration, Duration )
 crossings lane =
-    ( Instant.toDuration lane.enteredAt, Instant.toDuration lane.exitedAt )
+    ( Instant.toDuration lane.stop.enteredAt, Instant.toDuration lane.stop.exitedAt )
 
 
 {-| One stop: in at the end of lap 1, away 3.000 into lap 2, and out on the road
@@ -818,9 +818,9 @@ again from lap 3.
 stopping : Car
 stopping =
     stopperWith "9"
-        [ pitLapOf "9" 1 10000 10000 Lap.InLap
-        , pitLapOf "9" 2 10000 20000 (Lap.OutLap 3000)
-        , pitLapOf "9" 3 10000 30000 Lap.NoPit
+        [ pitLapOf "9" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "9" 2 10000 20000 (Lap.ExitAtStart 3000)
+        , pitLapOf "9" 3 10000 30000 Lap.NoCrossing
         ]
 
 
@@ -830,9 +830,9 @@ first, the one it went out on the second.
 handingOver : Car
 handingOver =
     stopperWith "9"
-        [ pitLapOf "9" 1 10000 10000 Lap.InLap
-        , pitLapOf "9" 2 10000 20000 (Lap.OutLap 3000) |> drivenBy "Mike CONWAY"
-        , pitLapOf "9" 3 10000 30000 Lap.NoPit
+        [ pitLapOf "9" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "9" 2 10000 20000 (Lap.ExitAtStart 3000) |> drivenBy "Mike CONWAY"
+        , pitLapOf "9" 3 10000 30000 Lap.NoCrossing
         ]
 
 
@@ -842,9 +842,9 @@ another lap that begins with a stop.
 stoppingTwice : Car
 stoppingTwice =
     stopperWith "12"
-        [ pitLapOf "12" 1 10000 10000 Lap.InLap
-        , pitLapOf "12" 2 10000 20000 (Lap.OutAndIn 3000)
-        , pitLapOf "12" 3 10000 30000 (Lap.OutLap 4000)
+        [ pitLapOf "12" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "12" 2 10000 20000 (Lap.ExitAndEntry 3000)
+        , pitLapOf "12" 3 10000 30000 (Lap.ExitAtStart 4000)
         ]
 
 
@@ -853,8 +853,8 @@ stoppingTwice =
 retiringOnAnOutLap : Car
 retiringOnAnOutLap =
     stopperWith "8"
-        [ pitLapOf "8" 1 10000 10000 Lap.InLap
-        , pitLapOf "8" 2 10000 20000 (Lap.OutLap 3000)
+        [ pitLapOf "8" 1 10000 10000 Lap.EntryAtEnd
+        , pitLapOf "8" 2 10000 20000 (Lap.ExitAtStart 3000)
         ]
 
 
@@ -866,13 +866,13 @@ stopperWith carNumber laps =
     }
 
 
-pitLapOf : String -> Int -> Duration -> Duration -> Lap.Pit -> Lap
+pitLapOf : String -> Int -> Duration -> Duration -> Lap.Crossing -> Lap
 pitLapOf carNumber lapNumber time elapsed pit =
     let
         base =
             lapOf carNumber lapNumber time elapsed { s1 = 1000, s2 = 2000, s3 = 3000 }
     in
-    { base | pit = pit }
+    { base | crossing = pit }
 
 
 drivenBy : String -> Lap -> Lap

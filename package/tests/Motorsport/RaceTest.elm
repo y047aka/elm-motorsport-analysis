@@ -268,4 +268,4 @@ pitAt carNumber lapNumber elapsed time pitTime =
         base =
             lapAt carNumber lapNumber elapsed
     in
-    { base | time = Just time, pit = Lap.OutLap pitTime }
+    { base | time = Just time, crossing = Lap.ExitAtStart pitTime }

@@ -282,11 +282,11 @@ accumulate raw ( bests, acc ) =
                     raw.sectors
                     newBests.sectors
             , elapsed = raw.elapsed
-            , pit =
+            , crossing =
                 -- The decoder this was frozen from never read the lap that
                 -- ended in the pit lane, so an in lap reads here as a lap the
                 -- car drove.
-                raw.pitTime |> Maybe.map Lap.OutLap |> Maybe.withDefault Lap.NoPit
+                raw.pitTime |> Maybe.map Lap.ExitAtStart |> Maybe.withDefault Lap.NoCrossing
             , miniSectors =
                 raw.miniSectors
                     |> Maybe.map

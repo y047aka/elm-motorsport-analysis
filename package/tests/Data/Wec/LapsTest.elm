@@ -25,9 +25,9 @@ suite =
                                 pits =
                                     Laps.attach rawLaps (placeholderCars [ "1" ])
                                         |> List.concatMap .laps
-                                        |> List.map .pit
+                                        |> List.map .crossing
                             in
-                            Expect.equal [ Lap.NoPit, Lap.InLap, Lap.OutLap 69953 ] pits
+                            Expect.equal [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 69953 ] pits
 
                         Err err ->
                             Expect.fail err
@@ -39,9 +39,9 @@ suite =
                                 pits =
                                     Laps.attach rawLaps (placeholderCars [ "1" ])
                                         |> List.concatMap .laps
-                                        |> List.map .pit
+                                        |> List.map .crossing
                             in
-                            Expect.equal [ Lap.InLap, Lap.OutAndIn 46857, Lap.OutLap 69107 ] pits
+                            Expect.equal [ Lap.EntryAtEnd, Lap.ExitAndEntry 46857, Lap.ExitAtStart 69107 ] pits
 
                         Err err ->
                             Expect.fail err

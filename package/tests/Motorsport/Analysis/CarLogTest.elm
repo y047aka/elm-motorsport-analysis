@@ -199,12 +199,12 @@ improved lapNumber time elapsed =
 
 intoLane : Lap -> Lap
 intoLane lap =
-    { lap | pit = Lap.InLap }
+    { lap | crossing = Lap.EntryAtEnd }
 
 
 outOfLane : Int -> Lap -> Lap
 outOfLane laneTime lap =
-    { lap | pit = Lap.OutLap laneTime }
+    { lap | crossing = Lap.ExitAtStart laneTime }
 
 
 drivenBy : Driver -> Lap -> Lap

@@ -159,7 +159,9 @@ and the one it went out on.
 
 These are the two laps the feed gives a driver change to, and the pair says no
 more than that: where the feed announces a change the laps do not show, the two
-name the same driver.
+name the same driver. The pit lane believes only the laps, through
+[`Driver.changeBetween`](Motorsport-Driver#changeBetween); this believes the
+feed's announcement.
 
 -}
 handover : Car -> TimelineEvent -> Maybe ( Driver, Driver )

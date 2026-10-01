@@ -233,11 +233,11 @@ lapAt carNumber lapNumber time elapsed =
 -}
 cameIn : Lap -> Lap
 cameIn lap =
-    { lap | pit = Lap.InLap }
+    { lap | crossing = Lap.EntryAtEnd }
 
 
 {-| The lap it came back out on, which carries how long the stop took.
 -}
 cameOutAfter : Int -> Lap -> Lap
 cameOutAfter duration lap =
-    { lap | pit = Lap.OutLap duration }
+    { lap | crossing = Lap.ExitAtStart duration }

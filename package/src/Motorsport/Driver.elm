@@ -1,6 +1,6 @@
 module Motorsport.Driver exposing
     ( Driver, fromName, unknown
-    , isSame
+    , isSame, changeBetween
     , toFullName, toInitialAndSurname, toSurname
     , toHandover
     )
@@ -8,7 +8,7 @@ module Motorsport.Driver exposing
 {-|
 
 @docs Driver, fromName, unknown
-@docs isSame
+@docs isSame, changeBetween
 @docs toFullName, toInitialAndSurname, toSurname
 @docs toHandover
 
@@ -102,6 +102,25 @@ so namesakes are indistinguishable.
 isSame : Driver -> Driver -> Bool
 isSame a b =
     a == b
+
+
+{-| The handover of a car between two named drivers: the pair, when the two are
+two different people.
+
+    changeBetween (fromName "Sebastian BUEMI") (fromName "Sebastian BUEMI")
+    --> Nothing
+
+    changeBetween (fromName "Sebastian BUEMI") (fromName "Kamui KOBAYASHI")
+    --> Just ( fromName "Sebastian BUEMI", fromName "Kamui KOBAYASHI" )
+
+-}
+changeBetween : Driver -> Driver -> Maybe ( Driver, Driver )
+changeBetween handedOver tookOver =
+    if isSame handedOver tookOver then
+        Nothing
+
+    else
+        Just ( handedOver, tookOver )
 
 
 

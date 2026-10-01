@@ -29,6 +29,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
+import Motorsport.PitStop exposing (PitStop)
 import Motorsport.Position exposing (Position)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
@@ -101,17 +102,16 @@ type alias Standing =
     }
 
 
-{-| Where the car is in the pit lane: the two crossings of the lane its current
-lap times, and the change of driver the two laps it has under way disagree about.
+{-| Where the car is in the pit lane: the stop its current lap times, and the
+change of driver the two laps it has under way disagree about.
 
-`enteredAt` is the earlier crossing and `exitedAt` the later one the feed has
-both for, so a car standing in its box has the whole lane timed ahead of it and
-one already driving away has it behind.
+The stop's `enteredAt` is the earlier crossing and `exitedAt` the later one the
+feed has both for, so a car standing in its box has the whole lane timed ahead
+of it and one already driving away has it behind.
 
 -}
 type alias Lane =
-    { enteredAt : Instant
-    , exitedAt : Instant
+    { stop : PitStop
     , handover : Maybe ( Driver, Driver )
     }
 
@@ -470,15 +470,13 @@ of the lane however the lap reads.
 inLaneOf : Status -> Lap -> Maybe Lap -> Maybe Lane
 inLaneOf status currentLap lastLap =
     if Status.inPitLane status then
-        Maybe.map2
-            (\enteredAt exitedAt ->
-                { enteredAt = enteredAt
-                , exitedAt = exitedAt
-                , handover = changedOver currentLap lastLap
-                }
-            )
-            (Lap.pitEntryAt currentLap)
-            (Lap.pitExitAt currentLap)
+        Lap.pitStopOf currentLap
+            |> Maybe.map
+                (\stop ->
+                    { stop = stop
+                    , handover = changedOver currentLap lastLap
+                    }
+                )
 
     else
         Nothing
@@ -492,11 +490,7 @@ changedOver currentLap lastLap =
     lastLap
         |> Maybe.andThen
             (\cameIn ->
-                if Driver.isSame cameIn.driver currentLap.driver then
-                    Nothing
-
-                else
-                    Just ( cameIn.driver, currentLap.driver )
+                Driver.changeBetween cameIn.driver currentLap.driver
             )
 
 

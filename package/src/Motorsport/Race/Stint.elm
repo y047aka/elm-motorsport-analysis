@@ -1,5 +1,5 @@
 module Motorsport.Race.Stint exposing
-    ( Stint, End(..), Pit
+    ( Stint, End(..)
     , fromLaps
     , Index, emptyIndex, indexOf, stopsAt
     )
@@ -17,7 +17,7 @@ as they stood at that moment. Whether the car will resume the run it is on is
 still the caller's to settle: a car that has retired leaves the same trace as
 one out on the road. See [`Status`](Motorsport-Status).
 
-@docs Stint, End, Pit
+@docs Stint, End
 @docs fromLaps
 
 
@@ -34,6 +34,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.PitStop exposing (PitStop)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 
 
@@ -68,20 +69,7 @@ is at a moment is [`Status`](Motorsport-Status)'s.
 type End
     = Running
     | InPit
-    | Ended Pit
-
-
-{-| A stop, as the lap the car came back out on records it.
-
-`laneTime` is what the feed times, between the two crossings of the lane. The
-span the car stood still in a box sits inside it and is in no field here: nothing
-times the box.
-
--}
-type alias Pit =
-    { lapNumber : Int
-    , laneTime : Duration
-    }
+    | Ended PitStop
 
 
 {-| Read a car's laps as the runs it made between stops.
@@ -102,21 +90,15 @@ fromLaps laps =
            after it, which is the lap the car came back out on.
         -}
         ends =
-            (List.drop 1 runs |> List.map (List.head >> Maybe.andThen stopEnding)) ++ [ Nothing ]
+            (List.drop 1 runs |> List.map (List.head >> Maybe.andThen Lap.pitStopOf)) ++ [ Nothing ]
     in
     List.map2 Tuple.pair runs ends
         |> List.indexedMap toStint
         |> List.filterMap identity
 
 
-stopEnding : Lap -> Maybe Pit
-stopEnding outLap =
-    Lap.laneTimeOf outLap
-        |> Maybe.map (\laneTime -> { lapNumber = outLap.lap, laneTime = laneTime })
-
-
-toStint : Int -> ( List Lap, Maybe Pit ) -> Maybe Stint
-toStint index ( laps, stop ) =
+toStint : Int -> ( List Lap, Maybe PitStop ) -> Maybe Stint
+toStint index ( laps, endedBy ) =
     case ( List.head laps, List.Extra.last laps ) of
         ( Just first, Just last ) ->
             let
@@ -134,15 +116,15 @@ toStint index ( laps, stop ) =
                 , averageLapTime = average racingTimes
                 , bestLapTime = List.minimum racingTimes
                 , end =
-                    case ( Lap.isInLap last, stop ) of
+                    case ( Lap.isInLap last, endedBy ) of
                         ( False, _ ) ->
                             Running
 
                         ( True, Nothing ) ->
                             InPit
 
-                        ( True, Just pit ) ->
-                            Ended pit
+                        ( True, Just stop ) ->
+                            Ended stop
                 }
 
         _ ->
@@ -194,7 +176,7 @@ occasionally has -- come to a single entry, as they do in
 
 -}
 type Index
-    = Index (Dict CarNumber (ChangePoints Pit))
+    = Index (Dict CarNumber (ChangePoints PitStop))
 
 
 {-| An index over no race at all. Every car reads back as having stopped never.
@@ -214,10 +196,11 @@ indexOf cars =
         |> Index
 
 
-stopsOf : List Lap -> ChangePoints Pit
+stopsOf : List Lap -> ChangePoints PitStop
 stopsOf laps =
     laps
-        |> List.filterMap (\lap -> Maybe.map2 Tuple.pair (Lap.pitExitAt lap) (stopEnding lap))
+        |> List.filterMap Lap.pitStopOf
+        |> List.map (\stop -> ( stop.exitedAt, stop ))
         |> ChangePoints.fromList
 
 
