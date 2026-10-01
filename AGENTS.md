@@ -139,7 +139,7 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` — one module per page, plain TEA
-- `Data/` (feed decoding), `UI/` (Notice, EmptyState, DragHandle, and `Shadcn/`
+- `Data/` (feed decoding), `UI/` (Notice, DragHandle, and `Shadcn/`
   for the wrappers), and `elements/` for the one custom element that is not
   shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
   `setPointerCapture`

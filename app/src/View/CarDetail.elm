@@ -41,7 +41,6 @@ import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import UI.EmptyState as EmptyState
 import View.CarDetail.ChartTabs as ChartTabs
 import View.CarDetail.Header as Header
 import View.CarDetail.LapTable as LapTable
@@ -292,7 +291,10 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
     let
         orEmptyState : Maybe (Html Msg) -> Html Msg
         orEmptyState =
-            Maybe.withDefault (EmptyState.view "No laps to compare yet")
+            Maybe.withDefault
+                (div [ class "p-5 text-center italic text-muted-foreground" ]
+                    [ text "No laps to compare yet" ]
+                )
     in
     ChartTabs.chartTabs SelectedChart
         chart

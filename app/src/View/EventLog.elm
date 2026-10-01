@@ -19,7 +19,6 @@ import Motorsport.Lap.Performance as Performance
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Race.Timeline exposing (Timeline)
-import UI.EmptyState as EmptyState
 
 
 {-| One car's lines by the panel's clock, newest first, at most `recentLimit`
@@ -36,7 +35,8 @@ rows cars timeline snapshot carNumber =
                 |> List.take recentLimit
     in
     if List.isEmpty lines then
-        EmptyState.view "Nothing has happened to this car yet"
+        div [ class "p-5 text-center italic text-muted-foreground" ]
+            [ text "Nothing has happened to this car yet" ]
 
     else
         div [ class "grid gap-y-px text-xs" ]
