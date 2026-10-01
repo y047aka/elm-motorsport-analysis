@@ -3,9 +3,7 @@ module View.EventLog exposing (rows)
 {-| The Log section of a car detail panel: one car's lines, newest first.
 
 What the lines are is [`CarLog`](Motorsport-Analysis-CarLog)'s, read off the
-timeline and the car's own laps; this module is only how they are ruled. The
-field's own timeline panel reads the same event names and the same laps, so the
-two cannot disagree about what happened.
+timeline and the car's own laps; this module is only how they are ruled.
 
 @docs rows
 
@@ -26,10 +24,6 @@ import UI.EmptyState as EmptyState
 
 {-| One car's lines by the panel's clock, newest first, at most `recentLimit`
 of them.
-
-The clock is the snapshot's, so the lines wait for playback the way the events
-do: nothing from a lap not yet run is drawn.
-
 -}
 rows : List Car -> Timeline -> Snapshot -> CarNumber -> Html msg
 rows cars timeline snapshot carNumber =

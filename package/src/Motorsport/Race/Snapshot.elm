@@ -462,9 +462,9 @@ sampleCar clock race car =
 {-| The lane the car is standing in, which is the lane its current lap times.
 
 `Nothing` for a car the feed times through no lane: one that has not stopped, one
-still on the lap it crossed into the lane on -- whose lane time the feed has not
-got yet, so which reads as `Racing` -- and one whose race is over, which is out of
-the lane however the lap reads.
+still on the lap it crossed into the lane on -- the feed has no lane time for that
+lap yet, so the car reads as `Racing` -- and one whose race is over, which is out
+of the lane however the lap reads.
 
 -}
 inLaneOf : Status -> Lap -> Maybe Lap -> Maybe Lane

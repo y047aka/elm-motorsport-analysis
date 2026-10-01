@@ -139,11 +139,13 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` — one module per page, plain TEA
-- `Data/` (feed decoding), `UI/` (Notice, DragHandle, and `Shadcn/` for the
-  wrappers), and `elements/` for the one custom element that is not shadcn's:
-  `<drag-handle>`, which does the one thing Elm cannot, `setPointerCapture`
+- `Data/` (feed decoding), `UI/` (Notice, EmptyState, DragHandle, and `Shadcn/`
+  for the wrappers), and `elements/` for the one custom element that is not
+  shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
+  `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
-  the car cards, the live standings, and the badge those share
+  the car cards, the live standings, the tracker's pit lane list, and the badge
+  and class mark those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
 `/api/wec/index.json`. It is the app's only source for which rounds exist, what
@@ -317,7 +319,9 @@ cannot disagree about how wide it is; the wider rings stay the reader's.
 
 **What it comes to.** `ClassPositions`, `RelativeGap`, `Pace` and `Stint`
 derive from a `Race.Snapshot` and the primitives, and are given an answer of
-the first kind to say how much of it to read.
+the first kind to say how much of it to read. `CarLog` is read off the field's
+events instead: `Line`s of its own, since what happened to a car is a telling and
+not a value the race holds.
 
 A reading of the laps is handed them whole, with a `LapRange` beside them, and
 does its own cutting. Cut laps and whole ones are both `List Lap` at a call

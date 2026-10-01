@@ -95,10 +95,8 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(history).not.toHaveAttribute('open');
     await history.locator('summary', { hasText: 'Lap history' }).click();
     await expect(history).toHaveAttribute('open', '');
-    // The lap table is the last thing in the panel, so that its four hundred
-    // rows push nothing a reader came for off the bottom. The rivals lead the
-    // ruled sections, the Log closes them, and the standing strip above them is
-    // not one of them -- it carries no heading.
+    // Last, so that its four hundred rows push nothing a reader came for off the
+    // bottom. The strip above these headings carries no heading of its own.
     const sections = await page.locator(DETAIL).locator('h3, summary').allTextContents();
     expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
       .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history', 'Log']);

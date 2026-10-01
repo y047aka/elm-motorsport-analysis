@@ -79,9 +79,6 @@ isBeingServed car =
 
 {-| A car in the lane: its number, and who is in the car -- or the change of driver
 just made in the box.
-
-The row is keyed by the car's number, which is why it comes back as a pair.
-
 -}
 row : ( CarAt, Lane ) -> ( String, Html msg )
 row ( car, lane ) =

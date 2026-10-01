@@ -98,10 +98,6 @@ recordTimes events =
 {-| Whether the car's own laps tell the event: the lap that took the race's record
 improved the car's best as well, so the feed's event and that lap's line name one
 instant and one time, and the lap's line is the one kept.
-
-An event the car's own laps cannot answer -- one the feed announces for a lap this
-car never improved -- keeps its line.
-
 -}
 toldByOwnBest : List Line -> TimelineEvent -> Bool
 toldByOwnBest bests event =

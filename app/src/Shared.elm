@@ -126,17 +126,16 @@ nothingYet =
 [`Motorsport.Race`](Motorsport-Race).
 
 `track` never moves once the data has loaded. `snapshot` is `replay` read at the
-clock, cached because every view of a frame shares it, and the one of the four
-that is rebuilt as playback runs.
+clock, cached because every view of a frame shares it, and the one of them
+rebuilt as playback runs.
 
 `timeline` is the events themselves, kept for the events table to read the clock
-against, and the only one of the four a round can go without: nothing playback
-reads is counted off them.
+against, and the only one of them a round can go without: nothing playback reads
+is counted off them.
 
-`fieldEvents` is those of them the field's own panel draws, indexed apart, so the
-window the panel counts is a window of rows it has. It is held rather than read off
-`timeline` on the way: the panel's rows are built behind a `Html.Lazy` thunk, and a
-timeline made afresh on a frame is a new reference on every one.
+`fieldEvents` is those of them the field's panel draws, held apart rather than read
+off `timeline` on the way: the panel's rows are built behind a `Html.Lazy` thunk,
+and a timeline made afresh on a frame is a new reference on every one.
 
 -}
 type alias LoadedRound =
@@ -432,9 +431,6 @@ didNotArrive key error round =
         round
 
 
-{-| The events the field's panel draws, indexed. The ruling is
-[`forField`](Motorsport-Race-TimelineEvent#forField)'s, read here once for the round.
--}
 fieldEventsOf : List TimelineEvent -> Timeline
 fieldEventsOf events =
     events
