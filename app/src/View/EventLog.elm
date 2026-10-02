@@ -147,15 +147,20 @@ stintBlock isMostRecent ( stint, lines ) =
           else
             class ""
         ]
-        [ summary [ class "grid grid-cols-[1fr_auto] items-baseline gap-x-2 py-0.5 cursor-pointer list-none select-none" ]
-            [ div [ class "flex items-baseline gap-x-1.5 min-w-0" ]
-                [ span [ class "text-[9px] leading-none text-muted-foreground transition-transform duration-150 group-open:rotate-90" ]
-                    [ text "▸" ]
-                , div [ class "text-[10px] uppercase tracking-[0.03em] text-muted-foreground truncate" ]
-                    [ text ("Stint " ++ String.fromInt stint.number ++ " · " ++ Driver.toInitialAndSurname stint.driver) ]
+        [ summary [ class "flex items-baseline gap-x-1.5 py-1 cursor-pointer list-none select-none" ]
+            [ span [ class "text-[9px] leading-none text-muted-foreground transition-transform duration-150 group-open:rotate-90 shrink-0" ]
+                [ text "▸" ]
+            , div [ class "grid gap-y-px flex-grow min-w-0" ]
+                [ div [ class "flex items-baseline gap-x-2" ]
+                    [ div [ class "text-[10px] uppercase tracking-[0.03em] text-muted-foreground shrink-0" ]
+                        [ text ("Stint " ++ String.fromInt stint.number) ]
+                    , div [ class "text-[10px] text-foreground/90 truncate" ]
+                        [ text (Driver.toInitialAndSurname stint.driver) ]
+                    , placeTally stint
+                    ]
+                , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
+                    [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime) ]
                 ]
-            , div [ class "text-[10px] tabular-nums text-muted-foreground whitespace-nowrap" ]
-                [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime ++ placeTally stint) ]
             ]
         , if List.isEmpty lines then
             div [ class bodyClass ]
@@ -169,28 +174,39 @@ stintBlock isMostRecent ( stint, lines ) =
 
 
 {-| Where the run leaves the car, and what it did to the place: the timing
-screen's own arrow, shown only when the run moved. The places are the run's
-two crossings, so a stop's own cost is the drop to the next head's place, at
-the boundary where the Pit line sits. The feed's lap place is the field's,
-whatever class the car runs in.
+screen's own arrow, held to the Leaderboard's colouring — green up, red
+back, the number grey — and shown only when the run moved. The places are
+the run's two crossings, so a stop's own cost is the drop to the next head's
+place, at the boundary where the Pit line sits. The feed's lap place is the
+field's, whatever class the car runs in.
 -}
-placeTally : Stint -> String
+placeTally : Stint -> Html msg
 placeTally stint =
     case ( stint.firstPlace, stint.lastPlace ) of
         ( Just first, Just last ) ->
-            case Position.movement { from = first, to = last } of
-                Position.Held ->
-                    " · P" ++ String.fromInt last
+            let
+                movement =
+                    Position.movement { from = first, to = last }
 
-                moved ->
-                    let
-                        { arrow, places } =
-                            Position.toArrow moved
-                    in
-                    " · P" ++ String.fromInt last ++ " " ++ arrow ++ places
+                printed =
+                    Position.toArrow movement
+            in
+            div [ class "ms-auto shrink-0 flex items-baseline gap-x-0.5 tabular-nums" ]
+                [ text ("P" ++ String.fromInt last)
+                , case movement of
+                    Position.Gained _ ->
+                        span [ class "text-green-500" ] [ text printed.arrow ]
+
+                    Position.Lost _ ->
+                        span [ class "text-red-500" ] [ text printed.arrow ]
+
+                    Position.Held ->
+                        text ""
+                , text printed.places
+                ]
 
         _ ->
-            ""
+            text ""
 
 
 bestOrDash : Maybe Duration -> String
