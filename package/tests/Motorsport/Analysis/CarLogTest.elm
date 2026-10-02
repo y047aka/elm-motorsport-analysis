@@ -54,7 +54,6 @@ suite =
                         |> Expect.all
                             [ List.map .lap >> Expect.equal [ Just 1 ]
                             , List.map .label >> Expect.equal [ "1:00.000" ]
-                            , List.map .by >> Expect.equal [ Just "K.KOBAYASHI" ]
                             , List.map .level >> Expect.equal [ Performance.Fastest ]
                             ]
             , test "each record keeps the rating it took, whichever lap broke it next" <|

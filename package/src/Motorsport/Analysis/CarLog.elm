@@ -16,7 +16,6 @@ against the records. How any of that is drawn belongs to the panel reading it.
 
 -}
 
-import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -26,22 +25,19 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 
 
-{-| One line of the Log: the moment, the lap the line is about, what to say about
-it, whose lap that time was, and the rating that colours it.
+{-| One line of the Log: the moment, the lap the line is about, what to say
+about it, and the rating that colours it.
 
 `lap` is the lap the line is about: the one the moment fell on for a stop and for
 an announcement, and the one that ran to the time for a best or a record.
 `Nothing` where the car had turned no lap yet, which is where the race's own start
 stands.
 
-`by` is the driver whose lap the label's time was, which is only a lap time has.
-
 -}
 type alias Line =
     { at : Instant
     , lap : Maybe Int
     , label : String
-    , by : Maybe String
     , level : PerformanceLevel
     }
 
@@ -160,7 +156,6 @@ eventLine car event =
                     { at = event.elapsed
                     , lap = Just lap.lap
                     , label = Duration.toString time
-                    , by = Just (Driver.toInitialAndSurname lap.driver)
                     , level = Performance.Fastest
                     }
 
@@ -184,7 +179,6 @@ plainLine car event =
     { at = event.elapsed
     , lap = lapNumber car event
     , label = TimelineEvent.describe event.eventType
-    , by = Nothing
     , level = Performance.Standard
     }
 
@@ -204,8 +198,7 @@ stopLine allLaps lap =
                 { at = stop.enteredAt
                 , lap = Just (enteredOn allLaps lap stop.enteredAt)
                 , label = "Pit"
-                , by = Nothing
-                , level = Performance.Standard
+                            , level = Performance.Standard
                 }
             )
 
@@ -240,7 +233,6 @@ personalBestLine records lap =
                     { at = lap.elapsed
                     , lap = Just lap.lap
                     , label = Duration.toString time
-                    , by = Just (Driver.toInitialAndSurname lap.driver)
                     , level =
                         if List.any (\record -> Instant.compare record lap.elapsed == EQ) records then
                             Performance.Fastest

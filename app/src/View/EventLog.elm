@@ -5,14 +5,14 @@ module View.EventLog exposing (rows)
 What a line is is [`CarLog`](Motorsport-Analysis-CarLog)'s, read off the
 timeline and the car's own laps; what a run is, and where the runs cut the laps,
 is [`Race.Stint`](Motorsport-Race-Stint)'s. This module is only how the two are
-ruled together: the newest run first, its lines oldest first under it, and a
-run with no lines still named.
+ruled together: the runs oldest first, their lines oldest first under them, and
+a run with no lines still named.
 
 @docs rows
 
 -}
 
-import Html exposing (Html, div, span, text)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style)
 import List.Extra
 import Motorsport.Analysis.CarLog as CarLog
@@ -27,12 +27,12 @@ import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Race.Timeline exposing (Timeline)
 
 
-{-| One car's lines by the panel's clock, the runs newest first and the lines
+{-| One car's lines by the panel's clock, the runs oldest first and the lines
 within a run oldest first, at most `recentLimit` of them in all.
 
 The laps are cut at the same clock as the lines before the runs are cut from
 them, so no run appears that the clock has not reached, and the run in progress
-is the newest one on top.
+is the last one, at the bottom.
 -}
 rows : List Car -> Timeline -> Snapshot -> CarNumber -> Html msg
 rows cars timeline snapshot carNumber =
@@ -61,7 +61,6 @@ rows cars timeline snapshot carNumber =
                 _ ->
                     stints
                         |> List.map (\stint -> ( stint, linesOf stints stint lines ))
-                        |> List.reverse
                         |> List.map stintBlock
                         |> div [ class "grid gap-y-3" ]
 
@@ -187,17 +186,7 @@ lineRow line =
         [ div [ class "text-right tabular-nums text-muted-foreground" ]
             [ text (Maybe.map String.fromInt line.lap |> Maybe.withDefault "-") ]
         , div [ class "truncate", style "color" (Performance.textColorOf line.level) ]
-            [ text line.label
-
-            -- The colour the row carries is the rating, which rates the lap time and
-            -- not the driver beside it.
-            , case line.by of
-                Just second ->
-                    span [ class "text-foreground" ] [ text (" · " ++ second) ]
-
-                Nothing ->
-                    text ""
-            ]
+            [ text line.label ]
         , div [ class "tabular-nums text-muted-foreground" ]
             [ text (line.at |> Instant.toDuration |> Duration.toStringToSeconds) ]
         ]
