@@ -19,9 +19,9 @@ import Motorsport.Analysis.CarLog as CarLog
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant
-import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap as Lap
 import Motorsport.Lap.Performance as Performance
-import Motorsport.Position as Position exposing (Position)
+import Motorsport.Position as Position
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
@@ -63,7 +63,7 @@ rows cars timeline snapshot carNumber =
                 _ ->
                     stints
                         |> List.map (\stint -> ( stint, linesOf stints stint lines ))
-                        |> List.map (stintBlock laps)
+                        |> List.map stintBlock
                         |> div [ class "grid gap-y-3" ]
 
 
@@ -123,10 +123,10 @@ uncoveredFallsTo stints stint lap =
     Maybe.map .number edge == Just stint.number
 
 
-stintBlock : List Lap -> ( Stint, List CarLog.Line ) -> Html msg
-stintBlock allLaps ( stint, lines ) =
+stintBlock : ( Stint, List CarLog.Line ) -> Html msg
+stintBlock ( stint, lines ) =
     div [ class "grid gap-y-px" ]
-        [ stintHead allLaps stint
+        [ stintHead stint
         , if List.isEmpty lines then
             div [ class bodyClass ]
                 [ text "Nothing logged" ]
@@ -143,33 +143,26 @@ how many laps it has come to, its fastest one, and where the run leaves the
 car among the field. A run in progress counts what it has run so far; its
 best is a dash until a racing lap has been timed.
 -}
-stintHead : List Lap -> Stint -> Html msg
-stintHead allLaps stint =
+stintHead : Stint -> Html msg
+stintHead stint =
     div [ class "grid grid-cols-[1fr_auto] items-baseline gap-x-2 py-0.5" ]
         [ div [ class "text-[10px] uppercase tracking-[0.03em] text-muted-foreground truncate" ]
             [ text ("Stint " ++ String.fromInt stint.number ++ " · " ++ Driver.toInitialAndSurname stint.driver) ]
         , div [ class "text-[10px] tabular-nums text-muted-foreground whitespace-nowrap" ]
-            [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime ++ placeTally allLaps stint) ]
+            [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime ++ placeTally stint) ]
         ]
 
 
 {-| Where the run leaves the car, and what it did to the place: the timing
-screen's own arrow, shown only when the run moved. The feed's lap position is
-the field's, whatever class the car runs in.
-
-The places are read at the ends of the run — the crossing out of the lane and
-the crossing back into it, whose places are the standings at those lines. The
-laps that touched the lane are therefore the measure, not the noise: a stop's
-own cost is the drop printed between one head's place and the next, and a run
-in the pits has no first place yet to read.
+screen's own arrow, shown only when the run moved. The places are the run's
+two crossings, so a stop's own cost is the drop to the next head's place, at
+the boundary where the Pit line sits. The feed's lap place is the field's,
+whatever class the car runs in.
 -}
-placeTally : List Lap -> Stint -> String
-placeTally allLaps stint =
-    case positionSpan allLaps stint of
-        Nothing ->
-            ""
-
-        Just ( first, last ) ->
+placeTally : Stint -> String
+placeTally stint =
+    case ( stint.firstPlace, stint.lastPlace ) of
+        ( Just first, Just last ) ->
             case Position.movement { from = first, to = last } of
                 Position.Held ->
                     " · P" ++ String.fromInt last
@@ -181,19 +174,8 @@ placeTally allLaps stint =
                     in
                     " · P" ++ String.fromInt last ++ " " ++ arrow ++ places
 
-
-{-| The standings the run began and ended at, each the nearest the feed ranked
-where one of its crossings arrived unranked.
--}
-positionSpan : List Lap -> Stint -> Maybe ( Position, Position )
-positionSpan allLaps stint =
-    allLaps
-        |> List.filter (\lap -> lap.lap >= stint.firstLap && lap.lap <= stint.lastLap)
-        |> List.sortBy .lap
-        |> List.filterMap .position
-        |> (\places ->
-                Maybe.map2 Tuple.pair (List.head places) (List.Extra.last places)
-           )
+        _ ->
+            ""
 
 
 bestOrDash : Maybe Duration -> String

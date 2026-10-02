@@ -35,6 +35,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.PitStop exposing (PitStop)
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 
 
@@ -42,6 +43,13 @@ import Motorsport.Race.Car exposing (Car, CarNumber)
 
 `averageLapTime` and `bestLapTime` leave out the laps that touched the pit lane
 -- the one the run begins on and the one it ends on -- whose times carry it.
+
+`firstPlace` and `lastPlace` are read the other way round: the crossings out
+of and back into the lane are exactly where a place is worth reading, and
+those laps' places stand as the standings at those lines. The stop's own cost
+is the drop from one run's `lastPlace` to the next run's `firstPlace`. A
+crossing the feed left unranked is no place, and each end then reads the
+nearest place the run knows.
 
 -}
 type alias Stint =
@@ -52,6 +60,8 @@ type alias Stint =
     , lapCount : Int
     , averageLapTime : Maybe Duration
     , bestLapTime : Maybe Duration
+    , firstPlace : Maybe Position
+    , lastPlace : Maybe Position
     , end : End
     }
 
@@ -106,6 +116,9 @@ toStint index ( laps, endedBy ) =
                     laps
                         |> List.filter Lap.isRacingLap
                         |> List.filterMap .time
+
+                places =
+                    List.filterMap .position laps
             in
             Just
                 { number = index + 1
@@ -115,6 +128,8 @@ toStint index ( laps, endedBy ) =
                 , lapCount = List.length laps
                 , averageLapTime = average racingTimes
                 , bestLapTime = List.minimum racingTimes
+                , firstPlace = List.head places
+                , lastPlace = List.Extra.last places
                 , end =
                     case ( Lap.isInLap last, endedBy ) of
                         ( False, _ ) ->
