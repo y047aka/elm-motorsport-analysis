@@ -17,7 +17,7 @@ import Html.Attributes exposing (class, style)
 import List.Extra
 import Motorsport.Analysis.CarLog as CarLog
 import Motorsport.Driver as Driver
-import Motorsport.Duration as Duration
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
 import Motorsport.Lap.Performance as Performance
@@ -137,31 +137,33 @@ stintBlock ( stint, lines ) =
 
 
 {-| The run the lines under it were set on: which of the car's drivers took it,
-and the laps it covers. The open right edge of a run still going matches the
-panel's own Stints section.
+how many laps it has come to, and its fastest one. A run in progress counts
+what it has run so far; its best is a dash until a racing lap has been timed.
 -}
 stintHead : Stint -> Html msg
 stintHead stint =
     div [ class "grid grid-cols-[1fr_auto] items-baseline gap-x-2 py-0.5" ]
         [ div [ class "text-[10px] uppercase tracking-[0.03em] text-muted-foreground truncate" ]
             [ text ("Stint " ++ String.fromInt stint.number ++ " · " ++ Driver.toInitialAndSurname stint.driver) ]
-        , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
-            [ text (lapSpan stint) ]
+        , div [ class "text-[10px] tabular-nums text-muted-foreground whitespace-nowrap" ]
+            [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime) ]
         ]
 
 
-lapSpan : Stint -> String
-lapSpan stint =
-    let
-        last =
-            case stint.end of
-                RaceStint.Running ->
-                    ""
+bestOrDash : Maybe Duration -> String
+bestOrDash =
+    Maybe.map Duration.toString >> Maybe.withDefault "-"
 
-                _ ->
-                    String.fromInt stint.lastLap
-    in
-    "L" ++ String.fromInt stint.firstLap ++ "-" ++ last
+
+inLaps : Int -> String
+inLaps count =
+    String.fromInt count
+        ++ (if count == 1 then
+                " lap"
+
+            else
+                " laps"
+           )
 
 
 bodyClass : String
