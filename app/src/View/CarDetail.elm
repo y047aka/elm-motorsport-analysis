@@ -11,8 +11,7 @@ field around it, so the panel follows the race without the car it is for
 changing.
 
 The chart and the stretch of the race it covers are the page's, so that columns
-beside one another are showing the same thing. Whether the lap history is open
-is the `details` element's own, and lasts as long as the column's DOM does.
+beside one another are showing the same thing.
 
 @docs Comparison, initialComparison
 @docs Msg, update
@@ -20,7 +19,7 @@ is the `details` element's own, and lasts as long as the column's DOM does.
 
 -}
 
-import Html exposing (Html, details, div, h3, summary, text)
+import Html exposing (Html, div, h3, text)
 import Html.Attributes exposing (attribute, class, style)
 import Html.Events
 import Json.Decode as Decode
@@ -43,7 +42,6 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import View.CarDetail.ChartTabs as ChartTabs
 import View.CarDetail.Header as Header
-import View.CarDetail.LapTable as LapTable
 import View.CarDetail.LapTimes as LapTimes
 import View.CarDetail.Stint as Stint
 import View.CarNumberBadge as CarNumberBadge
@@ -195,7 +193,6 @@ panel comparison timeline cars snapshot rivals focused =
                 focused.metadata
                 (LapHistory.get focused.metadata.carNumber lapHistory |> AnalysisStint.summarize)
             )
-        , disclosure "Lap history" (LapTable.view laps focused.standing.lapsCompleted)
         , container "Log" (EventLog.rows cars timeline snapshot focused.metadata.carNumber)
         ]
 
@@ -355,18 +352,6 @@ lapsOf cars focused =
 carOf : List Car -> CarAt -> Maybe Car
 carOf cars focused =
     List.Extra.find (\car -> car.metadata.carNumber == focused.metadata.carNumber) cars
-
-
-{-| Open or shut is the element's and not the model's, so the content is built
-whether it is showing or not: hand it something lazy.
--}
-disclosure : String -> Html msg -> Html msg
-disclosure title content =
-    details [ class sectionClass ]
-        [ summary [ class ("cursor-pointer transition-colors hover:text-foreground " ++ headingClass) ]
-            [ text title ]
-        , div [ class "mt-2" ] [ content ]
-        ]
 
 
 container : String -> Html msg -> Html msg

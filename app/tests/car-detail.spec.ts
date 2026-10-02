@@ -90,17 +90,10 @@ test.describe('Car Detail Visual Tests', () => {
     await expect(section(page, 'Comparison')).toHaveScreenshot('distribution-tab.png');
   });
 
-  test('should open the car\'s own laps from their own heading', async ({ page }) => {
-    const history = page.locator(DETAIL).locator('details');
-    await expect(history).not.toHaveAttribute('open');
-    await history.locator('summary', { hasText: 'Lap history' }).click();
-    await expect(history).toHaveAttribute('open', '');
-    // Last, so that its four hundred rows push nothing a reader came for off the
-    // bottom. The strip above these headings carries no heading of its own.
-    const sections = await page.locator(DETAIL).locator('h3, summary').allTextContents();
+  test('should hold the panel sections in their order', async ({ page }) => {
+    const sections = await page.locator(DETAIL).locator('h3').allTextContents();
     expect(sections.map((s) => s.replace(/[^A-Za-z ]/g, '').trim()))
-      .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Lap history', 'Log']);
-    await expect(history).toHaveScreenshot('lap-history.png');
+      .toEqual(['Rivals', 'Lap times', 'Comparison', 'Stints', 'Log']);
   });
 
   test('should keep the car it was given when its own row is clicked again', async ({ page }) => {
