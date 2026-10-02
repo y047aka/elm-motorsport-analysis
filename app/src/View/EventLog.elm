@@ -5,7 +5,7 @@ module View.EventLog exposing (rows)
 What a line is is [`CarLog`](Motorsport-Analysis-CarLog)'s, read off the
 timeline and the car's own laps; what a run is, and where the runs cut the laps,
 is [`Race.Stint`](Motorsport-Race-Stint)'s. This module is only how the two are
-ruled together: the newest run first, its lines newest first under it, and a
+ruled together: the newest run first, its lines oldest first under it, and a
 run with no lines still named.
 
 @docs rows
@@ -27,8 +27,8 @@ import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Race.Timeline exposing (Timeline)
 
 
-{-| One car's lines by the panel's clock, newest first, grouped under the run
-each was set on, at most `recentLimit` of them in all.
+{-| One car's lines by the panel's clock, the runs newest first and the lines
+within a run oldest first, at most `recentLimit` of them in all.
 
 The laps are cut at the same clock as the lines before the runs are cut from
 them, so no run appears that the clock has not reached, and the run in progress
@@ -131,7 +131,9 @@ stintBlock ( stint, lines ) =
                 [ text "Nothing logged" ]
 
           else
-            div [ class bodyClass ] (List.map lineRow lines)
+            -- CarLog hands its lines over newest first; a run is told here in
+            -- the order it happened, so the crossing into the lane closes it.
+            div [ class bodyClass ] (List.map lineRow (List.reverse lines))
         ]
 
 
