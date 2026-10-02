@@ -41,8 +41,8 @@ import Motorsport.Race.Car exposing (Car, CarNumber)
 
 {-| One run between stops, numbered from the start of the race.
 
-`averageLapTime` and `bestLapTime` leave out the laps that touched the pit lane
--- the one the run begins on and the one it ends on -- whose times carry it.
+`bestLapTime` leaves out the laps that touched the pit lane -- the one the
+run begins on and the one it ends on -- whose times carry it.
 
 `firstPlace` and `lastPlace` are read the other way round: the crossings out
 of and back into the lane are exactly where a place is worth reading, and
@@ -58,7 +58,6 @@ type alias Stint =
     , firstLap : Int
     , lastLap : Int
     , lapCount : Int
-    , averageLapTime : Maybe Duration
     , bestLapTime : Maybe Duration
     , firstPlace : Maybe Position
     , lastPlace : Maybe Position
@@ -126,7 +125,6 @@ toStint index ( laps, endedBy ) =
                 , firstLap = first.lap
                 , lastLap = last.lap
                 , lapCount = List.length laps
-                , averageLapTime = average racingTimes
                 , bestLapTime = List.minimum racingTimes
                 , firstPlace = List.head places
                 , lastPlace = List.Extra.last places
@@ -165,16 +163,6 @@ splitAfter isBoundary =
                         [ [ item ] ]
         )
         []
-
-
-average : List Duration -> Maybe Duration
-average durations =
-    case durations of
-        [] ->
-            Nothing
-
-        _ ->
-            Just (List.sum durations // List.length durations)
 
 
 

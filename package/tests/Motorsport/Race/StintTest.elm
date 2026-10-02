@@ -59,12 +59,12 @@ suite =
                             , ( 1, Ended { enteredAt = instant 362000, exitedAt = instant 431107, laneTime = 69107 } )
                             , ( 1, Running )
                             ]
-            , test "the laps that touched the pit lane are left out of the run's times" <|
+            , test "the laps that touched the pit lane are left out of the run's best" <|
                 \_ ->
                     [ outLap 1 160000 63000, lap 2 95000, lap 3 97000, inLap 4 150000 ]
                         |> Stint.fromLaps
-                        |> List.map (\stint -> ( stint.averageLapTime, stint.bestLapTime ))
-                        |> Expect.equal [ ( Just 96000, Just 95000 ) ]
+                        |> List.map .bestLapTime
+                        |> Expect.equal [ Just 95000 ]
             , test "places are read at the run's own crossings, nearest where one arrived unranked" <|
                 \_ ->
                     [ outLap 1 160000 63000 |> atPlace 14
