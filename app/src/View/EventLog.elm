@@ -29,11 +29,12 @@ import Motorsport.Race.Timeline exposing (Timeline)
 
 
 {-| One car's lines by the panel's clock, the runs oldest first and the lines
-within a run oldest first, at most `recentLimit` of them in all.
+within a run oldest first.
 
 The laps are cut at the same clock as the lines before the runs are cut from
 them, so no run appears that the clock has not reached, and the run in progress
 is the last one, at the bottom.
+
 -}
 rows : List Car -> Timeline -> Snapshot -> CarNumber -> Html msg
 rows cars timeline snapshot carNumber =
@@ -54,11 +55,17 @@ rows cars timeline snapshot carNumber =
 
                 lines =
                     CarLog.lines { elapsed = elapsed } car timeline
-                        |> List.take recentLimit
             in
             case stints of
                 [] ->
-                    nothingYet
+                    -- An announcement can arrive before the first crossing does,
+                    -- and there is no run yet to tell it by.
+                    if List.isEmpty lines then
+                        nothingYet
+
+                    else
+                        div [ class "grid gap-y-px text-[11px]" ]
+                            (List.map lineRow (List.reverse lines))
 
                 _ ->
                     let
@@ -68,7 +75,7 @@ rows cars timeline snapshot carNumber =
                     stints
                         |> List.map
                             (\stint ->
-                                stintBlock (stint.number == last) ( stint, linesOf stints stint lines )
+                                stintBlock (stint.number == last) ( stint, linesOf stint lines )
                             )
                         |> div [ class "grid gap-y-1" ]
 
@@ -79,54 +86,31 @@ A line belongs to the run whose laps cover its lap — the run it was recorded
 in. A stop belongs to the run it ended, not the one whose out-lap times the
 lane: the crossing into the lane is where a run ends, and that is where the
 reader stands when the car comes in; where the feed parks the lane's time is
-the feed's bookkeeping. A line whose lap no run covers yet — the one the car
-is mid-way through at the clock — falls to the last run, and a line naming no
-lap to the first.
+the feed's bookkeeping.
+
+The runs cut the completed laps with no gap and no overlap, so one reading of
+the run alone places a line: a lap holds to at most one run, and a lap behind
+the first run's own — lap 0, where the car crossed into the lane before it had
+completed a lap — or no lap at all belongs to the first.
 
 -}
-linesOf : List Stint -> Stint -> List CarLog.Line -> List CarLog.Line
-linesOf stints stint lines =
-    List.filter (recordedBy stints stint) lines
+linesOf : Stint -> List CarLog.Line -> List CarLog.Line
+linesOf stint =
+    List.filter (recordedBy stint)
 
 
-recordedBy : List Stint -> Stint -> CarLog.Line -> Bool
-recordedBy stints stint line =
+recordedBy : Stint -> CarLog.Line -> Bool
+recordedBy stint line =
     case line.lap of
         Nothing ->
             stint.number == 1
 
         Just lap ->
-            if covered stints lap then
-                covers stint lap
+            if lap < stint.firstLap then
+                stint.number == 1
 
             else
-                uncoveredFallsTo stints stint lap
-
-
-{-| The run whose laps hold the lap. Cuts are disjoint, so at most one run
-holds any lap.
--}
-covers : Stint -> Int -> Bool
-covers stint lap =
-    lap >= stint.firstLap && lap <= stint.lastLap
-
-
-covered : List Stint -> Int -> Bool
-covered stints lap =
-    List.any (\stint -> covers stint lap) stints
-
-
-uncoveredFallsTo : List Stint -> Stint -> Int -> Bool
-uncoveredFallsTo stints stint lap =
-    let
-        edge =
-            if List.any (\s -> lap < s.firstLap) stints then
-                List.head stints
-
-            else
-                List.Extra.last stints
-    in
-    Maybe.map .number edge == Just stint.number
+                lap <= stint.lastLap
 
 
 {-| One run: its head, and under it the lines it took, shut behind the head
@@ -136,6 +120,7 @@ Open or shut is the element's own; the model remembers nothing. The newest
 run arrives open, where playback's news lands, and the render that sees the
 next run begin takes this one's opening back — the closing belongs to the
 run ending, not to the reader having read it.
+
 -}
 stintBlock : Bool -> ( Stint, List CarLog.Line ) -> Html msg
 stintBlock isMostRecent ( stint, lines ) =
@@ -234,11 +219,6 @@ nothingYet : Html msg
 nothingYet =
     div [ class "p-5 text-center italic text-muted-foreground" ]
         [ text "Nothing has happened to this car yet" ]
-
-
-recentLimit : Int
-recentLimit =
-    100
 
 
 lineRow : CarLog.Line -> Html msg
