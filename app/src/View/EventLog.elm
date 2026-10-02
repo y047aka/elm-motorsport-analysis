@@ -154,11 +154,14 @@ stintHead allLaps stint =
 
 
 {-| Where the run leaves the car, and what it did to the place: the timing
-screen's own arrow, shown only when the run moved. The places are read from
-the run's racing laps, the ones that touched the lane left out as they are
-from the run's average and best — a lap crawling down the pit lane stands
-last wherever the standings say. The feed's lap position is the field's,
-whatever class the car runs in.
+screen's own arrow, shown only when the run moved. The feed's lap position is
+the field's, whatever class the car runs in.
+
+The places are read at the ends of the run — the crossing out of the lane and
+the crossing back into it, whose places are the standings at those lines. The
+laps that touched the lane are therefore the measure, not the noise: a stop's
+own cost is the drop printed between one head's place and the next, and a run
+in the pits has no first place yet to read.
 -}
 placeTally : List Lap -> Stint -> String
 placeTally allLaps stint =
@@ -179,10 +182,13 @@ placeTally allLaps stint =
                     " · P" ++ String.fromInt last ++ " " ++ arrow ++ places
 
 
+{-| The standings the run began and ended at, each the nearest the feed ranked
+where one of its crossings arrived unranked.
+-}
 positionSpan : List Lap -> Stint -> Maybe ( Position, Position )
 positionSpan allLaps stint =
     allLaps
-        |> List.filter (\lap -> Lap.isRacingLap lap && lap.lap >= stint.firstLap && lap.lap <= stint.lastLap)
+        |> List.filter (\lap -> lap.lap >= stint.firstLap && lap.lap <= stint.lastLap)
         |> List.sortBy .lap
         |> List.filterMap .position
         |> (\places ->
