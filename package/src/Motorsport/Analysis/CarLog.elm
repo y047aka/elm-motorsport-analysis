@@ -48,6 +48,10 @@ type alias Line =
 
 {-| What has happened to the car by the clock, newest first.
 
+A driver change announces no line: the runs the car made name their own
+drivers, through [`Race.Stint`](Motorsport-Race-Stint), and a panel grouping
+lines by run shows the driver of each.
+
 Where two lines share a moment the event is told first: the sort is stable, and
 the events go in ahead of the stops and the bests.
 
@@ -63,9 +67,13 @@ lines clock car timeline =
 
         bests =
             List.filterMap (personalBestLine records) car.laps
+
+        told =
+            List.filter (toldByOwnBest bests >> not) events
+                |> List.filter (announcesDriverChange >> not)
     in
     List.sortWith laterFirst
-        (List.map (eventLine car) (List.filter (toldByOwnBest bests >> not) events)
+        (List.map (eventLine car) told
             ++ List.filterMap (stopLine car.laps) car.laps
             ++ bests
         )
@@ -108,6 +116,23 @@ toldByOwnBest bests event =
             False
 
 
+{-| The feed's announcement of a driver change.
+
+`TimelineEvent.handover` says no more than which two laps the feed gives the
+change to, and where the laps show no change those two name one driver. The
+runs are the surer telling, and the one a stint-grouped panel already shows.
+
+-}
+announcesDriverChange : TimelineEvent -> Bool
+announcesDriverChange event =
+    case event.eventType of
+        CarEvent _ DriverChange ->
+            True
+
+        _ ->
+            False
+
+
 laterFirst : Line -> Line -> Order
 laterFirst a b =
     Instant.compare b.at a.at
@@ -128,19 +153,6 @@ eventsOf elapsed carNumber timeline =
 eventLine : Car -> TimelineEvent -> Line
 eventLine car event =
     case ( event.eventType, TimelineEvent.runningLap car event ) of
-        ( CarEvent _ DriverChange, _ ) ->
-            case TimelineEvent.handover car event of
-                Just ( handedOver, tookOver ) ->
-                    { at = event.elapsed
-                    , lap = lapNumber car event
-                    , label = Driver.toHandover handedOver tookOver
-                    , by = Nothing
-                    , level = Performance.Standard
-                    }
-
-                Nothing ->
-                    plainLine car event
-
         ( CarEvent _ FastestLap, Just lap ) ->
             case lap.time of
                 Just time ->
