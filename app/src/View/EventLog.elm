@@ -12,8 +12,8 @@ a run with no lines still named.
 
 -}
 
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (class, style)
+import Html exposing (Html, details, div, span, summary, text)
+import Html.Attributes exposing (attribute, class, style)
 import List.Extra
 import Motorsport.Analysis.CarLog as CarLog
 import Motorsport.Driver as Driver
@@ -61,9 +61,15 @@ rows cars timeline snapshot carNumber =
                     nothingYet
 
                 _ ->
+                    let
+                        last =
+                            List.length stints
+                    in
                     stints
-                        |> List.map (\stint -> ( stint, linesOf stints stint lines ))
-                        |> List.map stintBlock
+                        |> List.map
+                            (\stint ->
+                                stintBlock (stint.number == last) ( stint, linesOf stints stint lines )
+                            )
                         |> div [ class "grid gap-y-3" ]
 
 
@@ -123,10 +129,34 @@ uncoveredFallsTo stints stint lap =
     Maybe.map .number edge == Just stint.number
 
 
-stintBlock : ( Stint, List CarLog.Line ) -> Html msg
-stintBlock ( stint, lines ) =
-    div [ class "grid gap-y-px" ]
-        [ stintHead stint
+{-| One run: its head, and under it the lines it took, shut behind the head
+until the reader opens them.
+
+Open or shut is the element's own; the model remembers nothing. The newest
+run arrives open, where playback's news lands, and the render that sees the
+next run begin takes this one's opening back — the closing belongs to the
+run ending, not to the reader having read it.
+-}
+stintBlock : Bool -> ( Stint, List CarLog.Line ) -> Html msg
+stintBlock isMostRecent ( stint, lines ) =
+    details
+        [ class "group grid gap-y-px"
+        , if isMostRecent then
+            attribute "open" ""
+
+          else
+            class ""
+        ]
+        [ summary [ class "grid grid-cols-[1fr_auto] items-baseline gap-x-2 py-0.5 cursor-pointer list-none select-none" ]
+            [ div [ class "flex items-baseline gap-x-1.5 min-w-0" ]
+                [ span [ class "text-[9px] leading-none text-muted-foreground transition-transform duration-150 group-open:rotate-90" ]
+                    [ text "▸" ]
+                , div [ class "text-[10px] uppercase tracking-[0.03em] text-muted-foreground truncate" ]
+                    [ text ("Stint " ++ String.fromInt stint.number ++ " · " ++ Driver.toInitialAndSurname stint.driver) ]
+                ]
+            , div [ class "text-[10px] tabular-nums text-muted-foreground whitespace-nowrap" ]
+                [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime ++ placeTally stint) ]
+            ]
         , if List.isEmpty lines then
             div [ class bodyClass ]
                 [ text "Nothing logged" ]
@@ -135,21 +165,6 @@ stintBlock ( stint, lines ) =
             -- CarLog hands its lines over newest first; a run is told here in
             -- the order it happened, so the crossing into the lane closes it.
             div [ class bodyClass ] (List.map lineRow (List.reverse lines))
-        ]
-
-
-{-| The run the lines under it were set on: which of the car's drivers took it,
-how many laps it has come to, its fastest one, and where the run leaves the
-car among the field. A run in progress counts what it has run so far; its
-best is a dash until a racing lap has been timed.
--}
-stintHead : Stint -> Html msg
-stintHead stint =
-    div [ class "grid grid-cols-[1fr_auto] items-baseline gap-x-2 py-0.5" ]
-        [ div [ class "text-[10px] uppercase tracking-[0.03em] text-muted-foreground truncate" ]
-            [ text ("Stint " ++ String.fromInt stint.number ++ " · " ++ Driver.toInitialAndSurname stint.driver) ]
-        , div [ class "text-[10px] tabular-nums text-muted-foreground whitespace-nowrap" ]
-            [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime ++ placeTally stint) ]
         ]
 
 
