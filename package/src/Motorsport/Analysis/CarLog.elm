@@ -118,9 +118,10 @@ toldByOwnBest bests event =
 
 {-| The feed's announcement of a driver change.
 
-`TimelineEvent.handover` says no more than which two laps the feed gives the
-change to, and where the laps show no change those two name one driver. The
-runs are the surer telling, and the one a stint-grouped panel already shows.
+The announcement names two laps and nothing else, and where the laps show no
+change the two names are one driver. The runs take their drivers from the
+laps themselves, which a panel grouped by run already shows; the announcement
+would be the weaker telling twice.
 
 -}
 announcesDriverChange : TimelineEvent -> Bool

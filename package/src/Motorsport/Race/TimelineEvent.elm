@@ -2,7 +2,7 @@ module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
     , fromJsonl, decoder
     , describe, forField, forCar
-    , runningLap, handover
+    , runningLap
     )
 
 {-| The race as a list of things that happened, in the order they happened.
@@ -12,13 +12,12 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 @docs TimelineEvent, EventType, CarEventType
 @docs fromJsonl, decoder
 @docs describe, forField, forCar
-@docs runningLap, handover
+@docs runningLap
 
 -}
 
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
-import Motorsport.Driver exposing (Driver)
 import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -152,24 +151,6 @@ far the clock has run.
 runningLap : Car -> TimelineEvent -> Maybe Lap
 runningLap car event =
     Lap.findLastLapAt { elapsed = event.elapsed } car.laps
-
-
-{-| The two drivers a handover moved the car between, from the lap it came in on
-and the one it went out on.
-
-These are the two laps the feed gives a driver change to, and the pair says no
-more than that: where the feed announces a change the laps do not show, the two
-name the same driver. The pit lane believes only the laps, through
-[`Driver.changeBetween`](Motorsport-Driver#changeBetween); this believes the
-feed's announcement.
-
--}
-handover : Car -> TimelineEvent -> Maybe ( Driver, Driver )
-handover car event =
-    Maybe.map2 Tuple.pair
-        (runningLap car event)
-        (Lap.findCurrentLap { elapsed = event.elapsed } car.laps)
-        |> Maybe.map (\( handedOver, tookOver ) -> ( handedOver.driver, tookOver.driver ))
 
 
 
