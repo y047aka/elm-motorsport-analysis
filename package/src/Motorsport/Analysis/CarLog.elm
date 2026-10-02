@@ -198,7 +198,7 @@ stopLine allLaps lap =
                 { at = stop.enteredAt
                 , lap = Just (enteredOn allLaps lap stop.enteredAt)
                 , label = "Pit"
-                            , level = Performance.Standard
+                , level = Performance.Standard
                 }
             )
 
