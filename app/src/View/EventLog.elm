@@ -152,13 +152,13 @@ stintBlock isMostRecent ( stint, lines ) =
                 [ text "▸" ]
             , div [ class "grid gap-y-px flex-grow min-w-0" ]
                 [ div [ class "flex items-baseline gap-x-2" ]
-                    [ div [ class "text-[10px] uppercase tracking-[0.03em] text-muted-foreground shrink-0" ]
+                    [ div [ class "text-[11px] uppercase tracking-[0.03em] text-muted-foreground shrink-0" ]
                         [ text ("Stint " ++ String.fromInt stint.number) ]
-                    , div [ class "text-[10px] text-foreground/90 truncate" ]
+                    , div [ class "text-[11px] text-foreground/90 truncate" ]
                         [ text (Driver.toInitialAndSurname stint.driver) ]
                     , placeTally stint
                     ]
-                , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
+                , div [ class "text-[11px] tabular-nums text-muted-foreground" ]
                     [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime) ]
                 ]
             ]
@@ -191,7 +191,7 @@ placeTally stint =
                 printed =
                     Position.toArrow movement
             in
-            div [ class "ms-auto shrink-0 flex items-baseline gap-x-0.5 tabular-nums" ]
+            div [ class "ms-auto shrink-0 flex items-baseline gap-x-0.5 text-[13px] tabular-nums" ]
                 [ text ("P" ++ String.fromInt last)
                 , case movement of
                     Position.Gained _ ->
