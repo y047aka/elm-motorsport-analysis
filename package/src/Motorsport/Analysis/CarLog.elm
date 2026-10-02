@@ -1,4 +1,4 @@
-module Motorsport.Analysis.CarLog exposing (Line, lines)
+module Motorsport.Analysis.CarLog exposing (Line, Kind(..), lines)
 
 {-| One car's race, as the list of what has happened to it: the events the field
 announced, the stops it made, and the laps that improved its own best.
@@ -12,7 +12,7 @@ laps.
 A line says what happened, which lap it fell on, and how the time it names rates
 against the records. How any of that is drawn belongs to the panel reading it.
 
-@docs Line, lines
+@docs Line, Kind(..), lines
 
 -}
 
@@ -36,6 +36,9 @@ stands.
 
 `by` is the driver whose lap the label's time was, which is only a lap time has.
 
+`kind` is which of the car's own doings the line is told from: a stop it made,
+a lap that improved its best, or an announcement the field made about it.
+
 -}
 type alias Line =
     { at : Instant
@@ -43,7 +46,21 @@ type alias Line =
     , label : String
     , by : Maybe String
     , level : PerformanceLevel
+    , kind : Kind
     }
+
+
+{-| Which of the car's own doings a line is told from.
+
+A stop is told from the lap the car crossed into the lane on, but recorded on
+the lap it came back out on — where its lane time sits. The two laps are a
+stint apart.
+
+-}
+type Kind
+    = Stop
+    | Best
+    | Announcement
 
 
 {-| What has happened to the car by the clock, newest first.
@@ -136,6 +153,7 @@ eventLine car event =
                     , label = Driver.toHandover handedOver tookOver
                     , by = Nothing
                     , level = Performance.Standard
+                    , kind = Announcement
                     }
 
                 Nothing ->
@@ -149,6 +167,7 @@ eventLine car event =
                     , label = Duration.toString time
                     , by = Just (Driver.toInitialAndSurname lap.driver)
                     , level = Performance.Fastest
+                    , kind = Announcement
                     }
 
                 Nothing ->
@@ -173,6 +192,7 @@ plainLine car event =
     , label = TimelineEvent.describe event.eventType
     , by = Nothing
     , level = Performance.Standard
+    , kind = Announcement
     }
 
 
@@ -193,6 +213,7 @@ stopLine allLaps lap =
                 , label = "Pit"
                 , by = Nothing
                 , level = Performance.Standard
+                , kind = Stop
                 }
             )
 
@@ -234,6 +255,7 @@ personalBestLine records lap =
 
                         else
                             Performance.PersonalBest
+                    , kind = Best
                     }
 
             else

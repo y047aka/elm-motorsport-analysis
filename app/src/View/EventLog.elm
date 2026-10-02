@@ -28,7 +28,7 @@ import Motorsport.Race.Timeline exposing (Timeline)
 
 
 {-| One car's lines by the panel's clock, newest first, grouped under the run
-each was set on, at most `recentLimit` of them in all.
+each was recorded in, at most `recentLimit` of them in all.
 
 The laps are cut at the same clock as the lines before the runs are cut from
 them, so no run appears that the clock has not reached, and the run in progress
@@ -66,32 +66,78 @@ rows cars timeline snapshot carNumber =
                         |> div [ class "grid gap-y-3" ]
 
 
-{-| The lines a run took.
+{-| The lines recorded in a run.
 
-A line belongs to the last run that had reached its lap, so the stop that ended
-a run is told under that run — `CarLog` already dates a stop to the lap the car
-entered the lane on, which is the run's last lap. A line about a lap no run
-covers, or about no lap at all, falls to the first run or the last rather than
-being dropped.
+A line belongs to the run whose laps cover its lap — the run it was recorded
+in. A stop is the exception and belongs to the run that began with it: the
+feed records the stop on the out-lap, which is that run's first lap, while the
+line itself names the in-lap of the run before. A line whose lap no run
+covers yet — the one the car is mid-way through at the clock, or a stop the
+car has not yet come out of — falls to the last run, and a line naming no lap
+to the first.
 
 -}
 linesOf : List Stint -> Stint -> List CarLog.Line -> List CarLog.Line
 linesOf stints stint lines =
-    List.filter (holderOf stints >> (==) stint.number) lines
+    List.filter (recordedBy stints stint) lines
 
 
-holderOf : List Stint -> CarLog.Line -> Int
-holderOf stints line =
-    case line.lap of
-        Nothing ->
-            1
+recordedBy : List Stint -> Stint -> CarLog.Line -> Bool
+recordedBy stints stint line =
+    case ( line.kind, line.lap ) of
+        ( CarLog.Stop, Just entered ) ->
+            case outLapStint stints entered of
+                Just begun ->
+                    begun.number == stint.number
 
-        Just lap ->
-            stints
-                |> List.filter (.firstLap >> (<=) lap)
-                |> List.Extra.last
-                |> Maybe.map .number
-                |> Maybe.withDefault 1
+                Nothing ->
+                    isLast stints stint
+
+        ( _, Just lap ) ->
+            if covered stints lap then
+                covers stint lap
+
+            else
+                uncoveredFallsTo stints stint lap
+
+        ( _, Nothing ) ->
+            stint.number == 1
+
+
+{-| The run whose laps hold the lap. Cuts are disjoint, so at most one run
+holds any lap.
+-}
+covers : Stint -> Int -> Bool
+covers stint lap =
+    lap >= stint.firstLap && lap <= stint.lastLap
+
+
+outLapStint : List Stint -> Int -> Maybe Stint
+outLapStint stints inLap =
+    List.Extra.find (\s -> s.firstLap == inLap + 1) stints
+
+
+covered : List Stint -> Int -> Bool
+covered stints lap =
+    List.any (\stint -> covers stint lap) stints
+
+
+uncoveredFallsTo : List Stint -> Stint -> Int -> Bool
+uncoveredFallsTo stints stint lap =
+    let
+        edge =
+            if List.any (\s -> lap < s.firstLap) stints then
+                List.head stints
+
+            else
+                List.Extra.last stints
+    in
+    Maybe.map .number edge == Just stint.number
+
+
+isLast : List Stint -> Stint -> Bool
+isLast stints stint =
+    Maybe.map .number (List.Extra.last stints) == Just stint.number
 
 
 stintBlock : ( Stint, List CarLog.Line ) -> Html msg
