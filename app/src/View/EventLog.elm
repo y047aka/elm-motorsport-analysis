@@ -70,7 +70,7 @@ rows cars timeline snapshot carNumber =
                             (\stint ->
                                 stintBlock (stint.number == last) ( stint, linesOf stints stint lines )
                             )
-                        |> div [ class "grid gap-y-3" ]
+                        |> div [ class "grid gap-y-1" ]
 
 
 {-| The lines a run took.
@@ -150,7 +150,7 @@ stintBlock isMostRecent ( stint, lines ) =
         [ summary [ class "flex items-baseline gap-x-1.5 py-1 cursor-pointer list-none select-none" ]
             [ span [ class "text-[9px] leading-none text-muted-foreground transition-transform duration-150 group-open:rotate-90 shrink-0" ]
                 [ text "▸" ]
-            , div [ class "grid gap-y-px flex-grow min-w-0" ]
+            , div [ class "grid gap-y-0.5 flex-grow min-w-0" ]
                 [ div [ class "flex items-baseline gap-x-2" ]
                     [ div [ class "text-[11px] uppercase tracking-[0.03em] text-muted-foreground shrink-0" ]
                         [ text ("Stint " ++ String.fromInt stint.number) ]
@@ -163,7 +163,7 @@ stintBlock isMostRecent ( stint, lines ) =
                 ]
             ]
         , if List.isEmpty lines then
-            div [ class bodyClass ]
+            div [ class (bodyClass ++ " italic text-muted-foreground") ]
                 [ text "Nothing logged" ]
 
           else
@@ -191,7 +191,7 @@ placeTally stint =
                 printed =
                     Position.toArrow movement
             in
-            div [ class "ms-auto shrink-0 flex items-baseline gap-x-0.5 text-[13px] tabular-nums" ]
+            div [ class "ms-auto shrink-0 flex items-baseline gap-x-1 text-[13px] text-muted-foreground tabular-nums" ]
                 [ text ("P" ++ String.fromInt last)
                 , case movement of
                     Position.Gained _ ->
@@ -227,7 +227,7 @@ inLaps count =
 
 bodyClass : String
 bodyClass =
-    "ml-[3px] border-l border-border pl-2 grid gap-y-px"
+    "ml-[3px] border-l border-border pl-2 grid gap-y-px text-[11px]"
 
 
 nothingYet : Html msg
