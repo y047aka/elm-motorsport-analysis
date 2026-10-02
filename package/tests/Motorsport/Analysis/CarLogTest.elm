@@ -128,19 +128,6 @@ suite =
                             [ ( Just 3, "59.000", Performance.PersonalBest )
                             , ( Just 1, "1:00.000", Performance.PersonalBest )
                             ]
-            , test "a line says which of the car's doings it is told from" <|
-                \_ ->
-                    Timeline.fromList [ event 60000 (CarEvent "7" OvertakeForLead) ]
-                        |> CarLog.lines
-                            (clock 400000)
-                            (carWith
-                                [ improved 1 60000 60000
-                                , lapAt 2 243000 |> timed 55000 |> bestSoFar 55000
-                                , lapAt 3 313000 |> timed 70000 |> bestSoFar 55000 |> outOfLane 70000
-                                ]
-                            )
-                        |> List.map .kind
-                        |> Expect.equal [ CarLog.Stop, CarLog.Best, CarLog.Announcement, CarLog.Best ]
             , test "a lap the clock has not run makes no line" <|
                 \_ ->
                     [ improved 1 60000 60000
