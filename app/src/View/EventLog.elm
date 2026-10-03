@@ -16,6 +16,7 @@ import Html exposing (Html, details, div, span, summary, text)
 import Html.Attributes exposing (attribute, class, style)
 import List.Extra
 import Motorsport.Analysis.CarLog as CarLog
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant
@@ -55,6 +56,15 @@ rows cars timeline snapshot carNumber =
 
                 lines =
                     CarLog.lines { elapsed = elapsed } car timeline
+
+                baselines =
+                    { personalBest = List.filterMap .best laps |> List.minimum
+                    , fastest =
+                        snapshot
+                            |> Snapshot.bestTimes
+                            |> .fastestLapTime
+                            |> BestTimes.timeOf
+                    }
             in
             case stints of
                 [] ->
@@ -75,7 +85,7 @@ rows cars timeline snapshot carNumber =
                     stints
                         |> List.map
                             (\stint ->
-                                stintBlock (stint.number == last) ( stint, linesOf stint lines )
+                                stintBlock baselines (stint.number == last) ( stint, linesOf stint lines )
                             )
                         |> div [ class "grid gap-y-1" ]
 
@@ -122,8 +132,8 @@ next run begin takes this one's opening back — the closing belongs to the
 run ending, not to the reader having read it.
 
 -}
-stintBlock : Bool -> ( Stint, List CarLog.Line ) -> Html msg
-stintBlock isMostRecent ( stint, lines ) =
+stintBlock : { personalBest : Maybe Duration, fastest : Maybe Duration } -> Bool -> ( Stint, List CarLog.Line ) -> Html msg
+stintBlock baselines isMostRecent ( stint, lines ) =
     details
         [ class "group grid gap-y-px"
         , if isMostRecent then
@@ -144,7 +154,9 @@ stintBlock isMostRecent ( stint, lines ) =
                     , placeTally stint
                     ]
                 , div [ class "text-[11px] tabular-nums text-muted-foreground" ]
-                    [ text (inLaps stint.lapCount ++ " · best " ++ bestOrDash stint.bestLapTime) ]
+                    [ text (inLaps stint.lapCount ++ " · best ")
+                    , bestCell baselines stint.bestLapTime
+                    ]
                 ]
             ]
         , if List.isEmpty lines then
@@ -192,6 +204,22 @@ placeTally stint =
 
         _ ->
             text ""
+
+
+{-| The run's best, rated as every lap time in the panel is rated — against
+the car's own best and the race's record as the clock stands on them, not as
+they stood when the run ended. So one run at most wears the car's mark, and
+it is the run holding the car's best lap so far.
+-}
+bestCell : { personalBest : Maybe Duration, fastest : Maybe Duration } -> Maybe Duration -> Html msg
+bestCell baselines best =
+    span
+        [ Performance.rateTime baselines.fastest { time = best, personalBest = baselines.personalBest }
+            |> Maybe.map (.performance >> Performance.toColorVariable)
+            |> Maybe.withDefault "inherit"
+            |> style "color"
+        ]
+        [ text (bestOrDash best) ]
 
 
 bestOrDash : Maybe Duration -> String
