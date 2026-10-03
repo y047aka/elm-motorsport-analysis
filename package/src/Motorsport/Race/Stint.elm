@@ -44,12 +44,11 @@ import Motorsport.Race.Car exposing (Car, CarNumber)
 `bestLapTime` leaves out the laps that touched the pit lane -- the one the
 run begins on and the one it ends on -- whose times carry it.
 
-`firstPlace` and `lastPlace` are read the other way round: the crossings out
-of and back into the lane are exactly where a place is worth reading, and
-those laps' places stand as the standings at those lines. The stop's own cost
-is the drop from one run's `lastPlace` to the next run's `firstPlace`. A
-crossing the feed left unranked is no place, and each end then reads the
-nearest place the run knows.
+`firstPlace` and `lastPlace` are read the other way round: the place the
+crossing-out and crossing-in laps carry, which is the standing at those
+lines. The stop's own cost is the drop from one run's `lastPlace` to the
+next run's `firstPlace`. A crossing the feed left unranked is no place, and
+each end then reads the nearest place the run knows.
 
 -}
 type alias Stint =

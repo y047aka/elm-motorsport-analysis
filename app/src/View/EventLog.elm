@@ -94,9 +94,7 @@ rows cars timeline snapshot carNumber =
 
 A line belongs to the run whose laps cover its lap — the run it was recorded
 in. A stop belongs to the run it ended, not the one whose out-lap times the
-lane: the crossing into the lane is where a run ends, and that is where the
-reader stands when the car comes in; where the feed parks the lane's time is
-the feed's bookkeeping.
+lane — where the feed parks the lane's time is the feed's bookkeeping.
 
 The runs cut the completed laps with no gap and no overlap, so one reading of
 the run alone places a line: a lap holds to at most one run, and a lap behind
@@ -128,8 +126,7 @@ until the reader opens them.
 
 Open or shut is the element's own; the model remembers nothing. The newest
 run arrives open, where playback's news lands, and the render that sees the
-next run begin takes this one's opening back — the closing belongs to the
-run ending, not to the reader having read it.
+next run begin takes this one's opening back.
 
 -}
 stintBlock : { personalBest : Maybe Duration, fastest : Maybe Duration } -> Bool -> ( Stint, List CarLog.Line ) -> Html msg
@@ -164,18 +161,17 @@ stintBlock baselines isMostRecent ( stint, lines ) =
                 [ text "Nothing logged" ]
 
           else
-            -- CarLog hands its lines over newest first; a run is told here in
-            -- the order it happened, so the crossing into the lane closes it.
+            -- CarLog hands its lines over newest first; a run is told in
+            -- the order it happened.
             div [ class bodyClass ] (List.map lineRow (List.reverse lines))
         ]
 
 
-{-| Where the run leaves the car, and what it did to the place: the timing
-screen's own arrow, held to the Leaderboard's colouring — green up, red
-back, the number grey — and shown only when the run moved. The places are
-the run's two crossings, so a stop's own cost is the drop to the next head's
-place, at the boundary where the Pit line sits. The feed's lap place is the
-field's, whatever class the car runs in.
+{-| Where the run leaves the car, and what it did to the place, in the
+Leaderboard's arrow colouring. The places are the run's two crossings, so a
+stop's own cost is the drop to the next head's place, at the boundary where
+the Pit line sits. The feed's lap place is the field's, whatever class the
+car runs in.
 -}
 placeTally : Stint -> Html msg
 placeTally stint =

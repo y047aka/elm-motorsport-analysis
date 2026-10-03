@@ -44,9 +44,8 @@ type alias Line =
 
 {-| What has happened to the car by the clock, newest first.
 
-A driver change announces no line: the runs the car made name their own
-drivers, through [`Race.Stint`](Motorsport-Race-Stint), and a panel grouping
-lines by run shows the driver of each.
+A driver change tells no line: the runs name their own drivers, through
+[`Race.Stint`](Motorsport-Race-Stint).
 
 Where two lines share a moment the event is told first: the sort is stable, and
 the events go in ahead of the stops and the bests.
@@ -115,9 +114,7 @@ toldByOwnBest bests event =
 {-| The feed's announcement of a driver change.
 
 The announcement names two laps and nothing else, and where the laps show no
-change the two names are one driver. The runs take their drivers from the
-laps themselves, which a panel grouped by run already shows; the announcement
-would be the weaker telling twice.
+change the two names are one driver.
 
 -}
 announcesDriverChange : TimelineEvent -> Bool
