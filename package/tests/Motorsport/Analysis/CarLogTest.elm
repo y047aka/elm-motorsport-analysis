@@ -54,7 +54,6 @@ suite =
                         |> Expect.all
                             [ List.map .lap >> Expect.equal [ Just 1 ]
                             , List.map .label >> Expect.equal [ "1:00.000" ]
-                            , List.map .by >> Expect.equal [ Just "K.KOBAYASHI" ]
                             , List.map .level >> Expect.equal [ Performance.Fastest ]
                             ]
             , test "each record keeps the rating it took, whichever lap broke it next" <|
@@ -81,14 +80,13 @@ suite =
                             (carWith [ lapAt 1 60000 |> timed 61000 |> bestSoFar 60000 ])
                         |> List.map (\line -> ( line.lap, line.label, line.level ))
                         |> Expect.equal [ ( Just 1, "1:01.000", Performance.Fastest ) ]
-            , test "a driver change names the two drivers and the lap it fell on" <|
+            , test "a driver change is told by the runs, not the log" <|
                 \_ ->
                     Timeline.fromList [ event 60000 (CarEvent "7" DriverChange) ]
                         |> CarLog.lines
                             (clock 200000)
                             (carWith [ lapAt 1 60000, lapAt 2 120000 |> drivenBy conway ])
-                        |> List.map (\line -> ( line.lap, line.label, line.by ))
-                        |> Expect.equal [ ( Just 1, "K.KOBAYASHI → M.CONWAY", Nothing ) ]
+                        |> Expect.equal []
             ]
         , describe "the laps"
             [ test "a stop is told as the lap the car crossed into the lane on" <|

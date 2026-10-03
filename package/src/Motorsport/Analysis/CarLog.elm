@@ -16,7 +16,6 @@ against the records. How any of that is drawn belongs to the panel reading it.
 
 -}
 
-import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -26,27 +25,27 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 
 
-{-| One line of the Log: the moment, the lap the line is about, what to say about
-it, whose lap that time was, and the rating that colours it.
+{-| One line of the Log: the moment, the lap the line is about, what to say
+about it, and the rating that colours it.
 
 `lap` is the lap the line is about: the one the moment fell on for a stop and for
 an announcement, and the one that ran to the time for a best or a record.
 `Nothing` where the car had turned no lap yet, which is where the race's own start
 stands.
 
-`by` is the driver whose lap the label's time was, which is only a lap time has.
-
 -}
 type alias Line =
     { at : Instant
     , lap : Maybe Int
     , label : String
-    , by : Maybe String
     , level : PerformanceLevel
     }
 
 
 {-| What has happened to the car by the clock, newest first.
+
+A driver change tells no line: the runs name their own drivers, through
+[`Race.Stint`](Motorsport-Race-Stint).
 
 Where two lines share a moment the event is told first: the sort is stable, and
 the events go in ahead of the stops and the bests.
@@ -63,9 +62,13 @@ lines clock car timeline =
 
         bests =
             List.filterMap (personalBestLine records) car.laps
+
+        told =
+            List.filter (toldByOwnBest bests >> not) events
+                |> List.filter (announcesDriverChange >> not)
     in
     List.sortWith laterFirst
-        (List.map (eventLine car) (List.filter (toldByOwnBest bests >> not) events)
+        (List.map (eventLine car) told
             ++ List.filterMap (stopLine car.laps) car.laps
             ++ bests
         )
@@ -108,6 +111,22 @@ toldByOwnBest bests event =
             False
 
 
+{-| The feed's announcement of a driver change.
+
+The announcement names two laps and nothing else, and where the laps show no
+change the two names are one driver.
+
+-}
+announcesDriverChange : TimelineEvent -> Bool
+announcesDriverChange event =
+    case event.eventType of
+        CarEvent _ DriverChange ->
+            True
+
+        _ ->
+            False
+
+
 laterFirst : Line -> Line -> Order
 laterFirst a b =
     Instant.compare b.at a.at
@@ -128,26 +147,12 @@ eventsOf elapsed carNumber timeline =
 eventLine : Car -> TimelineEvent -> Line
 eventLine car event =
     case ( event.eventType, TimelineEvent.runningLap car event ) of
-        ( CarEvent _ DriverChange, _ ) ->
-            case TimelineEvent.handover car event of
-                Just ( handedOver, tookOver ) ->
-                    { at = event.elapsed
-                    , lap = lapNumber car event
-                    , label = Driver.toHandover handedOver tookOver
-                    , by = Nothing
-                    , level = Performance.Standard
-                    }
-
-                Nothing ->
-                    plainLine car event
-
         ( CarEvent _ FastestLap, Just lap ) ->
             case lap.time of
                 Just time ->
                     { at = event.elapsed
                     , lap = Just lap.lap
                     , label = Duration.toString time
-                    , by = Just (Driver.toInitialAndSurname lap.driver)
                     , level = Performance.Fastest
                     }
 
@@ -171,7 +176,6 @@ plainLine car event =
     { at = event.elapsed
     , lap = lapNumber car event
     , label = TimelineEvent.describe event.eventType
-    , by = Nothing
     , level = Performance.Standard
     }
 
@@ -191,7 +195,6 @@ stopLine allLaps lap =
                 { at = stop.enteredAt
                 , lap = Just (enteredOn allLaps lap stop.enteredAt)
                 , label = "Pit"
-                , by = Nothing
                 , level = Performance.Standard
                 }
             )
@@ -227,7 +230,6 @@ personalBestLine records lap =
                     { at = lap.elapsed
                     , lap = Just lap.lap
                     , label = Duration.toString time
-                    , by = Just (Driver.toInitialAndSurname lap.driver)
                     , level =
                         if List.any (\record -> Instant.compare record lap.elapsed == EQ) records then
                             Performance.Fastest

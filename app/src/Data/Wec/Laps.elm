@@ -265,7 +265,14 @@ accumulate raw ( bests, acc ) =
             { carNumber = raw.carNumber
             , driver = Driver.fromName raw.driverName
             , lap = raw.lapNumber
-            , position = Just raw.position
+            , position =
+                -- A crossing the feed could not rank arrives as `0`, like the
+                -- unrecorded lap time's `0.000` just under.
+                if raw.position == 0 then
+                    Nothing
+
+                else
+                    Just raw.position
 
             -- The zero stops here: the CLI writes an unrecorded lap time out as
             -- `0.000` either way, where a blank sector cell stays blank and has

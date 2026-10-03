@@ -12,7 +12,7 @@ import Html.Attributes exposing (class, style, title)
 import List.Extra
 import Motorsport.Analysis.Stint as AnalysisStint exposing (Summary)
 import Motorsport.Driver as Driver exposing (Driver)
-import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Duration as Duration
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
@@ -164,7 +164,6 @@ stintTitle stint =
     , "L" ++ String.fromInt stint.firstLap ++ "-L" ++ String.fromInt stint.lastLap
     , inLaps stint.lapCount
     , Driver.toFullName stint.driver
-    , "avg " ++ durationOr "-" stint.averageLapTime
     , case stint.end of
         RaceStint.Ended pit ->
             "pit " ++ Duration.toStringToTenths pit.laneTime
@@ -268,8 +267,6 @@ stintLine { isRunning } stint trailing =
                     ++ inLaps stint.lapCount
                 )
             ]
-        , div [ class "text-muted-foreground" ]
-            [ text ("avg " ++ durationOr "-" stint.averageLapTime) ]
         , div [ class "text-muted-foreground" ] [ text trailing ]
         ]
 
@@ -311,8 +308,3 @@ rowLabel : String -> Html msg
 rowLabel label =
     div [ class "text-[9px] uppercase tracking-[0.03em] text-muted-foreground" ]
         [ text label ]
-
-
-durationOr : String -> Maybe Duration -> String
-durationOr fallback =
-    Maybe.map Duration.toString >> Maybe.withDefault fallback

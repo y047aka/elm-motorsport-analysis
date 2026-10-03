@@ -176,7 +176,7 @@ suite =
                                 |> List.map .best
                     in
                     Expect.equal [ Just 100000, Just 95000, Just 95000 ] bests
-            , test "carries the place in the field each lap arrives with" <|
+            , test "carries the place in the field each lap arrives with, and turns the feed's unranked zero into no place" <|
                 \_ ->
                     let
                         rawLaps =
@@ -192,7 +192,7 @@ suite =
                     in
                     Expect.equal
                         [ ( "1", [ Just 1, Just 1 ] )
-                        , ( "2", [ Just 0, Just 0 ] )
+                        , ( "2", [ Nothing, Nothing ] )
                         ]
                         positionsByCar
             , test "leaves cars without matching laps untouched" <|

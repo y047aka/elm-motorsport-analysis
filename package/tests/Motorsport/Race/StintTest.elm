@@ -59,12 +59,21 @@ suite =
                             , ( 1, Ended { enteredAt = instant 362000, exitedAt = instant 431107, laneTime = 69107 } )
                             , ( 1, Running )
                             ]
-            , test "the laps that touched the pit lane are left out of the run's times" <|
+            , test "the laps that touched the pit lane are left out of the run's best" <|
                 \_ ->
                     [ outLap 1 160000 63000, lap 2 95000, lap 3 97000, inLap 4 150000 ]
                         |> Stint.fromLaps
-                        |> List.map (\stint -> ( stint.averageLapTime, stint.bestLapTime ))
-                        |> Expect.equal [ ( Just 96000, Just 95000 ) ]
+                        |> List.map .bestLapTime
+                        |> Expect.equal [ Just 95000 ]
+            , test "places are read at the run's own crossings, nearest where one arrived unranked" <|
+                \_ ->
+                    [ outLap 1 160000 63000 |> atPlace 14
+                    , lap 2 95000 |> atPlace 9
+                    , inLap 3 150000
+                    ]
+                        |> Stint.fromLaps
+                        |> List.map (\stint -> ( stint.firstPlace, stint.lastPlace ))
+                        |> Expect.equal [ ( Just 14, Just 9 ) ]
             , test "laps read in any order are cut in race order" <|
                 \_ ->
                     [ outLap 3 165000 63000, lap 1 95000, inLap 2 101000 ]
@@ -136,6 +145,11 @@ suite =
 lap : Int -> Int -> Lap
 lap lapNumber time =
     { empty | lap = lapNumber, time = Just time }
+
+
+atPlace : Int -> Lap -> Lap
+atPlace place each =
+    { each | position = Just place }
 
 
 {-| The lap the car came in on, which carries no stop of its own.
