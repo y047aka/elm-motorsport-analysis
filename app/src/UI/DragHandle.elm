@@ -1,9 +1,9 @@
-module UI.DragHandle exposing (Pointer, view)
+module UI.DragHandle exposing (Pointer, resize, view)
 
 {-| A grip that carries something sideways: by the pointer, or a step at a time
 by the arrow keys once it has the focus.
 
-@docs Pointer, view
+@docs Pointer, resize, view
 
 -}
 
@@ -44,6 +44,61 @@ view :
     }
     -> Html msg
 view config =
+    grip
+        config
+        "grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+        (if config.held then
+            "cursor-grabbing"
+
+         else
+            "cursor-grab"
+        )
+        "⠿"
+
+
+{-| The same grip lying along an edge to resize what it bounds: the pointer's
+travel is the width's, and the arrow keys step it.
+-}
+resize :
+    { id : String
+    , label : String
+    , held : Bool
+    , onGrab : Pointer -> msg
+    , onMove : Pointer -> msg
+    , onDrop : Pointer -> msg
+    , onCancel : Int -> msg
+    , onStep : Int -> msg
+    }
+    -> Html msg
+resize config =
+    grip
+        config
+        "grid place-items-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+        (if config.held then
+            "cursor-grabbing"
+
+         else
+            "cursor-col-resize"
+        )
+        "⋮"
+
+
+grip :
+    { c
+        | id : String
+        , label : String
+        , held : Bool
+        , onGrab : Pointer -> msg
+        , onMove : Pointer -> msg
+        , onDrop : Pointer -> msg
+        , onCancel : Int -> msg
+        , onStep : Int -> msg
+    }
+    -> String
+    -> String
+    -> String
+    -> Html msg
+grip config classes cursor glyph =
     Html.node "drag-handle"
         ([ id config.id
          , attribute "role" "button"
@@ -53,12 +108,14 @@ view config =
          , attribute "aria-label" config.label
          , title (config.label ++ ": drag it, or press ← →")
          , class
-            ("grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+            (classes
+                ++ " "
+                ++ cursor
                 ++ (if config.held then
-                        " cursor-grabbing bg-accent text-accent-foreground"
+                        " bg-accent text-accent-foreground"
 
                     else
-                        " cursor-grab text-muted-foreground"
+                        " text-muted-foreground"
                    )
             )
          , on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab pointer))
@@ -74,7 +131,7 @@ view config =
                     []
                )
         )
-        [ text "⠿" ]
+        [ text glyph ]
 
 
 pointer : Decoder Pointer

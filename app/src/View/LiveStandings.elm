@@ -1,12 +1,13 @@
-module View.LiveStandings exposing (view, width, narrowWidth)
+module View.LiveStandings exposing (view, width, minWidth, maxWidth)
 
 {-| The field by class, in running order, and the page's one place for picking
 the cars the middle of it is given over to.
 
-It is not a column of the strip: never carried, stepped or closed. It gives
-the page its width back while the surnames hide.
+It is not a column of the strip: never carried, stepped or closed. The page
+gives it its width, which the reader drags between `minWidth` and `maxWidth`;
+surnames are drawn once the panel stands wide enough for them to fit.
 
-@docs view, width, narrowWidth
+@docs view, width, minWidth, maxWidth
 
 -}
 
@@ -39,51 +40,63 @@ compares unequal and draws every one of them again.
 view :
     { onSelect : CarNumber -> msg
     , withColumns : List CarNumber
-    , showNames : Bool
-    , onToggleNames : msg
+    , width : Float
     }
     -> Snapshot
     -> Html msg
 view config snapshot =
     let
-        panelWidth =
-            if config.showNames then
-                width
-
-            else
-                narrowWidth
+        showNames =
+            config.width >= namesWidth
     in
     Card.card
         -- Which the visual tests locate the standings by.
         [ attribute "data-live-standings" ""
-        , style "width" (px panelWidth)
+        , style "width" (px config.width)
         ]
         [ Card.header []
-            [ Card.title [] [ text "Standings" ]
-            , Card.action [] [ namesToggle config ]
-            ]
+            [ Card.title [] [ text "Standings" ] ]
         , div [ class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ Card.content []
                 [ div [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-3" ]
                     (Snapshot.toClassList snapshot
-                        |> List.map (classSection config.onSelect config.withColumns config.showNames)
+                        |> List.map (classSection config.onSelect config.withColumns showNames)
                     )
                 ]
             ]
         ]
 
 
-{-| The panel's two widths. `narrowWidth` is the widest thing a nameless row
-still draws -- its position and its badge -- plus the card's padding.
+{-| The width the panel arrives at: the row with its surname, the badge and
+the position, plus the card's padding.
 -}
 width : Float
 width =
     218
 
 
-narrowWidth : Float
-narrowWidth =
+{-| The narrowest it can be dragged to: the widest thing a nameless row
+still draws -- its position and its badge -- plus the card's padding.
+-}
+minWidth : Float
+minWidth =
     130
+
+
+{-| The widest it can be dragged to. Past this the panel would crowd the
+strip out of the page before the reader could drag it back.
+-}
+maxWidth : Float
+maxWidth =
+    420
+
+
+{-| The width a surname starts to fit at: `minWidth` plus room for the
+name itself.
+-}
+namesWidth : Float
+namesWidth =
+    170
 
 
 px : Float -> String
@@ -128,28 +141,6 @@ classSection onSelect withColumns showNames ( class_, cars ) =
                     )
             )
         ]
-
-
-{-| Which way the names go: `><` squeezes the surnames away, `<>` lets them
-back.
--}
-namesToggle : { config | showNames : Bool, onToggleNames : msg } -> Html msg
-namesToggle config =
-    let
-        ( glyph, verb ) =
-            if config.showNames then
-                ( "><", "Hide" )
-
-            else
-                ( "<>", "Show" )
-    in
-    button
-        [ onClick config.onToggleNames
-        , attribute "aria-label" (verb ++ " the driver names")
-        , title (verb ++ " the driver names")
-        , class "grid place-items-center w-7 h-7 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
-        ]
-        [ text glyph ]
 
 
 {-| Takes the row's pieces rather than the `CarAt` they are read off. A thunk's
