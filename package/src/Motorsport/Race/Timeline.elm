@@ -1,7 +1,7 @@
 module Motorsport.Race.Timeline exposing
     ( Timeline
     , empty, fromList
-    , countUpTo, latest
+    , countUpTo, latest, toList
     )
 
 {-| The race as a list of things that happened, indexed so the clock can be read
@@ -12,7 +12,7 @@ time is a binary search, and the most recent of them are the tail of that count.
 
 @docs Timeline
 @docs empty, fromList
-@docs countUpTo, latest
+@docs countUpTo, latest, toList
 
 -}
 
@@ -69,6 +69,14 @@ latest { upTo, limit } (Timeline events) =
     Array.slice start end events
         |> Array.toList
         |> List.reverse
+
+
+{-| Every event of the race, oldest first — the whole of it, where `latest`
+keeps the tail a moment has reached. The event table is its reader.
+-}
+toList : Timeline -> List TimelineEvent
+toList (Timeline events) =
+    Array.toList events
 
 
 {-| Invariant: every event below `low` is at or before `elapsed`, and every event

@@ -295,7 +295,9 @@ file scans `/package` too.
 
 **`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport
 has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
-are built on; and `Jsonl`, which decodes a file a line at a time.
+are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`,
+the sortable, filterable, paginated table the app's Events tab configures
+directly, with the `Table` it draws its rows with.
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
