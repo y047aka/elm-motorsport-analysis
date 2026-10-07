@@ -11,7 +11,7 @@ import Browser.Dom
 import Browser.Events
 import Dict exposing (Dict)
 import Drag
-import Drag.Handle as Handle exposing (Pointer)
+import Drag.Handle as Handle
 import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
@@ -33,6 +33,7 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Page.Wec.Columns as Columns
+import Page.Wec.Resize as Resize
 import Route
 import Shared
 import Shared.Msg
@@ -63,21 +64,19 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , comparison : CarDetail.Comparison
-    , standingsWidth : Float
-    , standingsResize : Drag.State Float
+    , standings : Resize.Model
     }
 
 
-{-| How far the arrow keys take the standings column.
+{-| The widths the standings may be dragged between, and how far the arrow
+keys take one press.
 -}
-standingsStep : Float
-standingsStep =
-    20
-
-
-resizeStandingsTo : Float -> Model -> Model
-resizeStandingsTo width m =
-    { m | standingsWidth = clamp LiveStandings.minWidth LiveStandings.maxWidth width }
+standingsFence : Resize.Fence
+standingsFence =
+    { min = LiveStandings.minWidth
+    , max = LiveStandings.maxWidth
+    , step = 20
+    }
 
 
 {-| The page's right-hand pane: the tracker the reader adds a column of, and
@@ -110,8 +109,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , comparison = CarDetail.initialComparison
-      , standingsWidth = LiveStandings.width
-      , standingsResize = Drag.init
+      , standings = Resize.init LiveStandings.width
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -125,13 +123,9 @@ type Msg
     = StartRace
     | PauseRace
     | TogglePane
-    | StandingsGrab Pointer
-    | StandingsCarrying Pointer
-    | StandingsRelease Pointer
-    | StandingsCancel Int
-    | StandingsStep Int
     | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
+    | ResizeMsg Resize.Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
@@ -157,50 +151,8 @@ update shared msg m =
         TogglePane ->
             ( { m | pane = togglePane m.pane }, Effect.none )
 
-        StandingsGrab pointer ->
-            let
-                ( standingsResize, _ ) =
-                    Drag.update (Drag.Pick m.standingsWidth pointer) m.standingsResize
-            in
-            ( { m | standingsResize = standingsResize }, Effect.none )
-
-        StandingsCarrying pointer ->
-            let
-                ( standingsResize, _ ) =
-                    Drag.update (Drag.Move pointer) m.standingsResize
-
-                after =
-                    { m | standingsResize = standingsResize }
-            in
-            ( case Drag.carrying standingsResize of
-                Just carry ->
-                    -- The width follows the pointer's travel from the width
-                    -- the grip picked it up at.
-                    resizeStandingsTo (carry.location + Drag.travel carry) after
-
-                Nothing ->
-                    after
-            , Effect.none
-            )
-
-        StandingsRelease pointer ->
-            let
-                ( standingsResize, _ ) =
-                    Drag.update (Drag.Drop pointer) m.standingsResize
-            in
-            ( { m | standingsResize = standingsResize }, Effect.none )
-
-        StandingsCancel pointerId ->
-            let
-                ( standingsResize, _ ) =
-                    Drag.update (Drag.Cancel pointerId) m.standingsResize
-            in
-            ( { m | standingsResize = standingsResize }, Effect.none )
-
-        StandingsStep steps ->
-            ( resizeStandingsTo (m.standingsWidth + toFloat steps * standingsStep) m
-            , Effect.none
-            )
+        ResizeMsg sub ->
+            ( { m | standings = Resize.update standingsFence sub m.standings }, Effect.none )
 
         FocusColumn key ->
             let
@@ -432,31 +384,12 @@ standingsCell keys m snapshot =
         [ LiveStandings.view
             { onSelect = Columns.Open >> ColumnsMsg
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
-            , width = m.standingsWidth
+            , width = m.standings.width
             }
             snapshot
         , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]
-            [ standingsGrip m ]
+            [ Html.map ResizeMsg (Resize.grip m.standings) ]
         ]
-
-
-standingsGrip : Model -> Html Msg
-standingsGrip m =
-    Handle.resize
-        { id = standingsGripId
-        , label = "Resize the standings column"
-        , held = Drag.isCarrying m.standingsResize
-        , onGrab = StandingsGrab
-        , onMove = StandingsCarrying
-        , onDrop = StandingsRelease
-        , onCancel = StandingsCancel
-        , onStep = StandingsStep
-        }
-
-
-standingsGripId : String
-standingsGripId =
-    "standings-resize-grip"
 
 
 {-| One keyed child of the strip: a grid of the width the column stands at,
