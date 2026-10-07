@@ -71,8 +71,8 @@ latest { upTo, limit } (Timeline events) =
         |> List.reverse
 
 
-{-| Every event of the race, oldest first — the whole of it, where `latest`
-keeps the tail a moment has reached. The event table is its reader.
+{-| Every event of the race, oldest first; `latest` keeps only the tail the
+clock has reached.
 -}
 toList : Timeline -> List TimelineEvent
 toList (Timeline events) =

@@ -94,9 +94,6 @@ togglePane pane =
             Shown
 
 
-{-| What the bottom panel stands on: the cars as cards, or the race's events
-as a table.
--}
 type StandingsTab
     = CardsTab
     | EventsTab
@@ -378,8 +375,6 @@ gains and loses the width as the drag goes on.
 standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html Msg
 standingsCell keys m snapshot cars =
     let
-        -- The grid places the moved column counts from, worked out once
-        -- rather than per row: the panel is redrawn on every frame.
         startPositions =
             -- foldr, so that where the source data has two cars under one
             -- number the one running ahead wins, as in `Snapshot.get`.
@@ -600,10 +595,6 @@ standingsTabs current =
         []
 
 
-{-| The reader sorts and filters this table — which is what it is for, the
-whole race being longer than any panel — but has no use for selecting rows
-of it, and it is paginated for the same length.
--}
 timelineTableOptions : Options
 timelineTableOptions =
     { sorting = Sorting
@@ -613,11 +604,10 @@ timelineTableOptions =
     }
 
 
-{-| The events table, configured directly on the DataView rather than through
-the `Leaderboard`: these are events, not the field, and the table's own parts
-— sort state, filter boxes, page turn — are what an event log wants. The
-car badge reuses the right-hand timeline's `carBadge`, so a number reads the
-same on both halves of the page.
+{-| The events table, configured on the DataView directly rather than through
+the `Leaderboard`: these are events, not the field, and what the `Leaderboard`
+draws belongs to a lap. The car column is the right-hand timeline's own
+`carBadge`, so a number reads the same on both halves of the page.
 -}
 timelineTableConfig : List Car -> DataView.Config TimelineEvent Msg
 timelineTableConfig cars =

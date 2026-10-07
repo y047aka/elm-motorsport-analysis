@@ -6,15 +6,10 @@ the cars the middle of it is given over to.
 It is not a column of the strip: never carried, stepped or closed. The page
 gives it its width, which the reader drags between `minWidth` and `maxWidth`.
 
-What a row shows is held in one table, `columns`, which is the single place
-the width a column arrives at, the track it takes and the word over it are
-written. The rows and the header above them both draw from it.
-
-The two modules split the work by who decides it: `Motorsport.Leaderboard`
-draws a reading — the rated time, the moved arrow, the sector strip — and
-this panel decides which readings it carries, in what order, at what width.
-A row that wants a lap time drawn asks that module, and the module never
-hears about widths.
+The width a column arrives at, the track it takes and the word over it are
+written in one table, `columns`; the rows and the header above them both draw
+from it. How a reading looks is the `Leaderboard`'s, which never hears about
+widths; which readings this panel carries, and at what width, is here.
 
 @docs view, width, minWidth, maxWidth
 
@@ -118,12 +113,8 @@ maxWidth =
 
 
 {-| A data column of the row, in the order they stand after the position and
-the badge — which are not columns and are always drawn.
-
-Each column says once what the whole panel then says about it: `at`, the
-width of panel it fits in, `track`, the grid track it takes, `label`, the word
-over it, and `align`, which both the label and the cells line up by.
-
+the badge — which are not columns and are always drawn. `align` is read by
+both the label and the cells, which is what keeps them lined up.
 -}
 type Column
     = Driver
@@ -193,8 +184,8 @@ is what keeps a label over its column.
 
 The tracks go on as a style attribute rather than as a `grid-cols-[...]`
 class: Tailwind extracts class names from source text only, so a class
-assembled from the table above ships no rule at all — which is exactly how
-this panel once rendered with one track per child.
+assembled from the table above ships no rule at all, and the row falls back
+to one track per child.
 
 -}
 gridTracks : Float -> String
@@ -276,8 +267,8 @@ classSection config ( class_, cars ) =
         ]
 
 
-{-| Every reading of the car, read off the `CarAt` once per frame; `cell`
-picks which of them the row's width shows.
+{-| Every reading of the car, whatever the row's width ends up showing;
+`cell` picks.
 -}
 type alias Row =
     { width : Float
@@ -403,9 +394,7 @@ carRow onSelect r =
         ]
 
 
-{-| One visible column's cell. The tracks and the cells both walk
-`visible width`, so which cell stands in which track is held by construction,
-and each cell lines itself up by the same `align` its label does.
+{-| One visible column's cell, aligned as its label is.
 -}
 cell : Row -> Column -> Html msg
 cell r column =

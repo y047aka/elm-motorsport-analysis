@@ -11,11 +11,9 @@ lap time in the colour of its rating, the places moved since the grid as an
 arrow, the running lap with the sectors it has reached and the last one under
 it.
 
-These are what a timing tower is built out of — the app's live standings is
-one arrangement of them, at widths the reader drags. Which readings a tower
-carries, in what order and on what track, is the tower's own; how each
-reading is drawn is held here, so that every drawing of the race says the
-same number the same way.
+Which readings a drawing carries, in what order and at what width, is the
+drawing's own; how each reading is drawn is held here, so every drawing of
+the race says the same number the same way.
 
 @docs ratedTime
 @docs viewPositionChange, viewPositionChangeInline
@@ -43,8 +41,8 @@ import Motorsport.Wec.Class exposing (Class)
 rating, and a `-` in the reader's own colour where nothing is rated — no lap
 finished, or one the source data never timed.
 
-Every reading of a rated time goes through this, the standings' rows and the
-drawings of a lap alike, so the dash and the colours cannot drift apart.
+Everything that prints a rated time goes through this, so the dash and the
+colours cannot drift apart.
 
     ratedTime Nothing
     --> { color = "", text = "-" }
@@ -62,7 +60,7 @@ ratedTime rated =
             { text = "-", color = "" }
 
 
-{-| A time and colour set centred on the screen's own line.
+{-| A time and colour set centred.
 -}
 colouredTime : { text : String, color : String } -> Html msg
 colouredTime time =
@@ -189,8 +187,7 @@ arrow movement =
 
 
 {-| The lap running: the clock in the colour of how it is going, and under it
-the sectors as reached. A retired car reads Retired, where a screen would
-print nothing but a fact.
+the sectors as reached. A retired car reads Retired.
 -}
 viewCurrentLap_Wec :
     { a

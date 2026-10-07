@@ -285,13 +285,12 @@ reading (a rated time, a moved arrow, a lap with its sector strip), and
 `Lap/SegmentStrip` for a lap drawn the way this sport prints it.
 
 What is drawn here is a reading of the race in a form the sport is read in: a
-lap as the segments the circuit times it in, the charts, the field's own
-timing tower at `/app/src/View/LiveStandings.elm` drawn out of the
+lap as the segments the circuit times it in, the charts. The field as a
+timing tower is the app's `View/LiveStandings.elm`, arranged out of the
 `Leaderboard`'s readings. How a page is laid out of those -- which panels, in
 which boxes, what the reader has picked and what they have open -- is
-`/app/src/View/`'s. Both
-sides are written in the Tailwind `app/style.css` defines, which is why that
-file scans `/package` too.
+`/app/src/View/`'s. Both sides are written in the Tailwind `app/style.css`
+defines, which is why that file scans `/package` too.
 
 **`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport
 has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
