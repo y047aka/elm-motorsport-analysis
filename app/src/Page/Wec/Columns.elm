@@ -355,8 +355,7 @@ placements widthOf underPointer keys =
             List.map (always Resting) keys
 
 
-{-| The column under the pointer and how far it has gone, or nothing when
-every column stands where it stands.
+{-| The column under the pointer and how far it has gone.
 -}
 carrying : Model -> Maybe ( StripKey, Float )
 carrying m =

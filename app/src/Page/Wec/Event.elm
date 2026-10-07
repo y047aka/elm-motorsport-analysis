@@ -68,9 +68,6 @@ type alias Model =
     }
 
 
-{-| The widths the standings may be dragged between, and how far the arrow
-keys take one press.
--}
 standingsFence : Resize.Fence
 standingsFence =
     { min = LiveStandings.minWidth

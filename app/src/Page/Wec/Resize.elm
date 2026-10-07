@@ -13,8 +13,8 @@ import Drag.Handle as Handle exposing (Pointer)
 import Html exposing (Html)
 
 
-{-| The width as it stands, and the carry that moves it. `Drag` keeps the
-width it was picked up at; the width follows the pointer's travel from there.
+{-| The width the column stands at, and the carry that moves it: the width
+follows the pointer's travel from the width `Drag` was picked up with.
 -}
 type alias Model =
     { width : Float
@@ -22,9 +22,6 @@ type alias Model =
     }
 
 
-{-| What the grip cannot pass: the widths it is clamped between, and how far
-the arrow keys take one press.
--}
 type alias Fence =
     { min : Float
     , max : Float
@@ -32,8 +29,6 @@ type alias Fence =
     }
 
 
-{-| The width the column arrives at, with no carry in progress.
--}
 init : Float -> Model
 init width =
     { width = width
@@ -85,7 +80,7 @@ clampTo fence =
     clamp fence.min fence.max
 
 
-{-| The grip along the column's edge, speaking this module's `Msg`.
+{-| The grip along the column's edge.
 -}
 grip : Model -> Html Msg
 grip m =

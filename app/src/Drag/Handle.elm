@@ -53,8 +53,7 @@ type alias Config msg =
     }
 
 
-{-| The grip for carrying a thing along: a dot-grid glyph, grabbable
-anywhere on its box.
+{-| The grip for carrying a thing along.
 -}
 view : Config msg -> Html msg
 view config =

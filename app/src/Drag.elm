@@ -31,8 +31,8 @@ type Msg location
     | Cancel Int
 
 
-{-| A carry in progress: where the pointer came down, where it stands, and
-the thing being carried as the pick handed it over.
+{-| A carry in progress: the two ends of the pointer's path so far, and the
+thing being carried as the pick handed it over.
 -}
 type alias Carry location =
     { location : location
@@ -59,8 +59,6 @@ type State location
     | Dragging (Carry location)
 
 
-{-| Nothing is being carried.
--}
 init : State location
 init =
     Idle
@@ -148,7 +146,7 @@ travel carry =
     carry.at - carry.from
 
 
-{-| Whether a carry is in progress, whatever it is carrying.
+{-| Whether a carry is in progress.
 -}
 isCarrying : State location -> Bool
 isCarrying state =
