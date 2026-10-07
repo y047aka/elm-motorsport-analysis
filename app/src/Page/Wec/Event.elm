@@ -332,7 +332,7 @@ mainGrid round keys m =
             round.replay
 
         gridCells =
-            standingsCell keys m snapshot
+            standingsCell keys m snapshot replay.race.cars
                 :: columnStrip "col-start-2 row-start-1 row-span-2" round.track round.timeline keys m replay snapshot
                 :: paneCells m.pane round.track snapshot round.fieldEvents replay
     in
@@ -374,14 +374,24 @@ narrower. The grip is drawn over the card's edge -- the card's own `class`
 is the custom element's -- and the column track is `auto`, so the strip
 gains and loses the width as the drag goes on.
 -}
-standingsCell : List Columns.StripKey -> Model -> Snapshot -> Html Msg
-standingsCell keys m snapshot =
+standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html Msg
+standingsCell keys m snapshot cars =
+    let
+        -- The grid places the moved column counts from, worked out once
+        -- rather than per row: the panel is redrawn on every frame.
+        startPositions =
+            -- foldr, so that where the source data has two cars under one
+            -- number the one running ahead wins, as in `Snapshot.get`.
+            cars
+                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
+    in
     div
         [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid relative" ]
         [ LiveStandings.view
             { onSelect = Columns.Open >> ColumnsMsg
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
             , width = m.standings.width
+            , startPosition = \number -> Dict.get number startPositions
             }
             snapshot
         , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]

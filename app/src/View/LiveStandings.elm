@@ -6,8 +6,10 @@ the cars the middle of it is given over to.
 It is not a column of the strip: never carried, stepped or closed. The page
 gives it its width, which the reader drags between `minWidth` and `maxWidth`;
 the row gains information as the panel widens — surnames, then the interval to
-the car ahead, then the last lap, then the lap running, the same readings the
-`Leaderboard` prints in its own columns.
+the car ahead, then the last lap, the lap running, the car's best, the laps
+completed and the places moved, the same readings the `Leaderboard` prints in
+its own columns. Once the numbers arrive a header row above the classes names
+each column.
 
 @docs view, width, minWidth, maxWidth
 
@@ -22,12 +24,27 @@ import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap.Performance as Performance
+import Motorsport.Leaderboard as Leaderboard
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
+
+
+{-| What the panel is given: the tag for picking a car, the cars that already
+have a column of their own, the width the page stands it at, and where each
+car started — the grid place the moved column counts from, which a `CarAt`
+does not hold and only the round's entries know.
+-}
+type alias Config msg =
+    { onSelect : CarNumber -> msg
+    , withColumns : List CarNumber
+    , width : Float
+    , startPosition : CarNumber -> Maybe Position
+    }
 
 
 {-| One card around the whole panel; the classes are sections of it, not
@@ -42,17 +59,17 @@ rows are thunked, and a lambda or a composition built afresh on each render
 compares unequal and draws every one of them again.
 
 -}
-view :
-    { onSelect : CarNumber -> msg
-    , withColumns : List CarNumber
-    , width : Float
-    }
-    -> Snapshot
-    -> Html msg
+view : Config msg -> Snapshot -> Html msg
 view config snapshot =
     let
         stage =
             stageFor config.width
+
+        sections =
+            div [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-3" ]
+                (Snapshot.toClassList snapshot
+                    |> List.map (classSection config stage)
+                )
     in
     Card.card
         -- Which the visual tests locate the standings by.
@@ -63,10 +80,12 @@ view config snapshot =
             [ Card.title [] [ text "Standings" ] ]
         , div [ class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ Card.content []
-                [ div [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-3" ]
-                    (Snapshot.toClassList snapshot
-                        |> List.map (classSection config.onSelect config.withColumns stage)
-                    )
+                [ if shows Intervals stage then
+                    div [ class "h-full grid grid-rows-[auto_minmax(0,1fr)] gap-y-1" ]
+                        [ headerRow stage, sections ]
+
+                  else
+                    sections
                 ]
             ]
         ]
@@ -93,11 +112,11 @@ strip out of the page before the reader could drag it back.
 -}
 maxWidth : Float
 maxWidth =
-    420
+    620
 
 
 {-| How much a row shows at a given panel width. Each stage shows what came
-before it; which width each arrives at is the four constants below.
+before it; which width each arrives at is the constants below.
 -}
 type Stage
     = Numbers
@@ -105,6 +124,45 @@ type Stage
     | Intervals
     | LastLaps
     | Running
+    | Bests
+    | Laps
+    | Moves
+
+
+rank : Stage -> Int
+rank stage =
+    case stage of
+        Numbers ->
+            0
+
+        Names ->
+            1
+
+        Intervals ->
+            2
+
+        LastLaps ->
+            3
+
+        Running ->
+            4
+
+        Bests ->
+            5
+
+        Laps ->
+            6
+
+        Moves ->
+            7
+
+
+{-| `shows column stage` — does this stage carry that column's header and
+text? A stage carries every column of every stage before it.
+-}
+shows : Stage -> Stage -> Bool
+shows column stage =
+    rank stage >= rank column
 
 
 {-| The width a surname starts to fit at: `minWidth` plus room for the
@@ -136,9 +194,39 @@ runningWidth =
     395
 
 
+{-| The width the car's best lap starts to fit at.
+-}
+bestWidth : Float
+bestWidth =
+    475
+
+
+{-| The width the laps completed start to fit at.
+-}
+lapsWidth : Float
+lapsWidth =
+    525
+
+
+{-| The width the places moved start to fit at.
+-}
+movesWidth : Float
+movesWidth =
+    570
+
+
 stageFor : Float -> Stage
 stageFor panelWidth =
-    if panelWidth >= runningWidth then
+    if panelWidth >= movesWidth then
+        Moves
+
+    else if panelWidth >= lapsWidth then
+        Laps
+
+    else if panelWidth >= bestWidth then
+        Bests
+
+    else if panelWidth >= runningWidth then
         Running
 
     else if panelWidth >= lastLapWidth then
@@ -154,29 +242,70 @@ stageFor panelWidth =
         Numbers
 
 
-showsNames : Stage -> Bool
-showsNames stage =
-    stage /= Numbers
-
-
-showsInterval : Stage -> Bool
-showsInterval stage =
-    stage == Intervals || stage == LastLaps || stage == Running
-
-
-showsLastLap : Stage -> Bool
-showsLastLap stage =
-    stage == LastLaps || stage == Running
-
-
-showsRunning : Stage -> Bool
-showsRunning stage =
-    stage == Running
-
-
 px : Float -> String
 px n =
     String.fromFloat n ++ "px"
+
+
+{-| What each column is, above the classes. The container keeps the text size
+the rows carry — `text-sm` — because the track widths are in `em` and would
+otherwise measure against the labels' own 10px font and land each column
+beside its text. The labels are the same words the `Leaderboard` prints over
+its own columns, cut short for the narrow tracks: the interval to the car
+ahead is AHEAD, the running clock is CURRENT.
+
+The header appears with the first column a reader cannot read off the panel
+itself, at `intervalWidth`.
+
+-}
+headerRow : Stage -> Html msg
+headerRow stage =
+    div
+        [ class ("grid " ++ gridCols stage ++ " items-center gap-2 px-0.5 pb-1") ]
+        [ label "text-center" "Pos"
+        , label "text-center" "#"
+        , if shows Names stage then
+            label "" "Driver"
+
+          else
+            text ""
+        , if shows Intervals stage then
+            label "text-right" "Ahead"
+
+          else
+            text ""
+        , if shows LastLaps stage then
+            label "text-right" "Last"
+
+          else
+            text ""
+        , if shows Running stage then
+            label "text-right" "Current"
+
+          else
+            text ""
+        , if shows Bests stage then
+            label "text-right" "Best"
+
+          else
+            text ""
+        , if shows Laps stage then
+            label "text-right" "Laps"
+
+          else
+            text ""
+        , if shows Moves stage then
+            label "text-right" "Move"
+
+          else
+            text ""
+        ]
+
+
+label : String -> String -> Html msg
+label align word =
+    div [ class ("text-[10px] font-bold uppercase text-muted-foreground " ++ align) ]
+        [ text word ]
 
 
 {-| The class's two lines: where its name stands, and the cars under it.
@@ -186,12 +315,11 @@ cars within it, so every class is always on show at once.
 
 -}
 classSection :
-    (CarNumber -> msg)
-    -> List CarNumber
+    Config msg
     -> Stage
     -> ( Class, List CarAt )
     -> Html msg
-classSection onSelect withColumns stage ( class_, cars ) =
+classSection config stage ( class_, cars ) =
     div [ class "grid grid-rows-[auto_minmax(0,1fr)] min-h-0" ]
         [ div
             [ class "flex items-center gap-x-[0.5em] pb-1 text-[10px] font-bold before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
@@ -204,7 +332,7 @@ classSection onSelect withColumns stage ( class_, cars ) =
                 |> List.map
                     (\item ->
                         ( item.metadata.carNumber
-                        , Lazy.lazy (carRow onSelect) (row stage withColumns item)
+                        , Lazy.lazy (carRow config.onSelect) (row stage config.withColumns config.startPosition item)
                         )
                     )
             )
@@ -227,11 +355,18 @@ type alias Row =
     , lastLapColor : String
     , running : String
     , runningColor : String
+    , best : String
+    , bestColor : String
+    , laps : String
+    , movement : { startPosition : Maybe Position, position : Position }
     }
 
 
-row : Stage -> List CarNumber -> CarAt -> Row
-row stage withColumns item =
+{-| A car that has not finished a lap yet, or has not set a best, prints the
+same `-` the `Leaderboard` prints in the same case.
+-}
+row : Stage -> List CarNumber -> (CarNumber -> Maybe Position) -> CarAt -> Row
+row stage withColumns startPosition item =
     let
         ( lastLap, lastLapColor ) =
             case item.lastLap of
@@ -252,6 +387,14 @@ row stage withColumns item =
 
             else
                 ( Duration.toStringToTenths item.currentLap.elapsed, Performance.textColorOf item.currentLap.performance )
+
+        ( best, bestColor ) =
+            case item.bestLap of
+                Just rated_ ->
+                    ( Duration.toString rated_.time, Performance.textColorOf rated_.performance )
+
+                Nothing ->
+                    ( "-", "" )
     in
     { stage = stage
     , metadata = item.metadata
@@ -260,35 +403,59 @@ row stage withColumns item =
     , isInPit = item.status == Status.InPit
     , hasColumn = List.member item.metadata.carNumber withColumns
     , interval =
-        if showsInterval stage then
+        if shows Intervals stage then
             Gap.toString item.standing.intervalToAhead
 
         else
             ""
     , lastLap =
-        if showsLastLap stage then
+        if shows LastLaps stage then
             lastLap
 
         else
             ""
     , lastLapColor =
-        if showsLastLap stage then
+        if shows LastLaps stage then
             lastLapColor
 
         else
             ""
     , running =
-        if showsRunning stage then
+        if shows Running stage then
             running
 
         else
             ""
     , runningColor =
-        if showsRunning stage then
+        if shows Running stage then
             runningColor
 
         else
             ""
+    , best =
+        if shows Bests stage then
+            best
+
+        else
+            ""
+    , bestColor =
+        if shows Bests stage then
+            bestColor
+
+        else
+            ""
+    , laps =
+        if shows Laps stage then
+            String.fromInt item.standing.lapsCompleted
+
+        else
+            ""
+    , movement =
+        -- The grid place arrives by car number rather than from the `CarAt`,
+        -- which does not hold one; unknown reads as a place held.
+        { startPosition = startPosition item.metadata.carNumber
+        , position = item.standing.position
+        }
     }
 
 
@@ -320,7 +487,7 @@ carRow onSelect r =
                     ++ " items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
                 )
              ]
-                ++ (if r.isInPit && showsInterval r.stage then
+                ++ (if r.isInPit && shows Intervals r.stage then
                         -- The pit mark floats at the row's right edge, where
                         -- a time column now ends; the room is its own.
                         [ class "pr-6" ]
@@ -342,23 +509,38 @@ carRow onSelect r =
             )
             [ div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
             , CarNumberBadge.viewRow r.metadata
-            , if showsNames r.stage then
+            , if shows Names r.stage then
                 div [ class "text-xs" ] [ text r.surname ]
 
               else
                 text ""
-            , if showsInterval r.stage then
+            , if shows Intervals r.stage then
                 div [ class "text-xs text-right tabular-nums text-muted-foreground" ] [ text r.interval ]
 
               else
                 text ""
-            , if showsLastLap r.stage then
+            , if shows LastLaps r.stage then
                 div [ class "text-xs text-right tabular-nums", style "color" r.lastLapColor ] [ text r.lastLap ]
 
               else
                 text ""
-            , if showsRunning r.stage then
+            , if shows Running r.stage then
                 div [ class "text-xs text-right tabular-nums", style "color" r.runningColor ] [ text r.running ]
+
+              else
+                text ""
+            , if shows Bests r.stage then
+                div [ class "text-xs text-right tabular-nums", style "color" r.bestColor ] [ text r.best ]
+
+              else
+                text ""
+            , if shows Laps r.stage then
+                div [ class "text-xs text-right tabular-nums" ] [ text r.laps ]
+
+              else
+                text ""
+            , if shows Moves r.stage then
+                div [ class "text-xs text-center tabular-nums" ] [ Leaderboard.viewPositionChangeInline r.movement ]
 
               else
                 text ""
@@ -401,3 +583,12 @@ gridCols stage =
 
         Running ->
             "grid-cols-[20px_auto_1fr_4.5em_5em_5em]"
+
+        Bests ->
+            "grid-cols-[20px_auto_1fr_4.5em_5em_5em_5em]"
+
+        Laps ->
+            "grid-cols-[20px_auto_1fr_4.5em_5em_5em_5em_3em]"
+
+        Moves ->
+            "grid-cols-[20px_auto_1fr_4.5em_5em_5em_5em_3em_2.5em]"
