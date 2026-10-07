@@ -4,12 +4,11 @@ module View.LiveStandings exposing (view, width, minWidth, maxWidth)
 the cars the middle of it is given over to.
 
 It is not a column of the strip: never carried, stepped or closed. The page
-gives it its width, which the reader drags between `minWidth` and `maxWidth`;
-the row gains information as the panel widens — surnames, then the interval to
-the car ahead, then the last lap, the lap running, the car's best, the laps
-completed and the places moved, the same readings the `Leaderboard` prints in
-its own columns. Once the numbers arrive a header row above the classes names
-each column.
+gives it its width, which the reader drags between `minWidth` and `maxWidth`.
+
+What a row shows is held in one table, `columns`, which is the single place
+the width a column arrives at, the track it takes and the word over it are
+written. The rows and the header above them both draw from it.
 
 @docs view, width, minWidth, maxWidth
 
@@ -62,13 +61,10 @@ compares unequal and draws every one of them again.
 view : Config msg -> Snapshot -> Html msg
 view config snapshot =
     let
-        stage =
-            stageFor config.width
-
         sections =
             div [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-3" ]
                 (Snapshot.toClassList snapshot
-                    |> List.map (classSection config stage)
+                    |> List.map (classSection config)
                 )
     in
     Card.card
@@ -80,9 +76,9 @@ view config snapshot =
             [ Card.title [] [ text "Standings" ] ]
         , div [ class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ Card.content []
-                [ if shows Intervals stage then
+                [ if fits config.width Ahead then
                     div [ class "h-full grid grid-rows-[auto_minmax(0,1fr)] gap-y-1" ]
-                        [ headerRow stage, sections ]
+                        [ headerRow config.width, sections ]
 
                   else
                     sections
@@ -115,131 +111,90 @@ maxWidth =
     620
 
 
-{-| How much a row shows at a given panel width. Each stage shows what came
-before it; which width each arrives at is the constants below.
+{-| A data column of the row, in the order they stand after the position and
+the badge — which are not columns and are always drawn.
+
+Each column says once what the whole panel then says about it: `at`, the
+width of panel it fits in, `track`, the grid track it takes, `label`, the word
+over it, and `align`, which both the label and the cells line up by.
+
 -}
-type Stage
-    = Numbers
-    | Names
-    | Intervals
-    | LastLaps
-    | Running
-    | Bests
+type Column
+    = Driver
+    | Ahead
+    | Last
+    | Current
+    | Best
     | Laps
-    | Moves
+    | Move
 
 
-rank : Stage -> Int
-rank stage =
-    case stage of
-        Numbers ->
-            0
+type alias Spec =
+    { label : String
+    , at : Float
+    , track : String
+    , align : String
+    }
 
-        Names ->
-            1
 
-        Intervals ->
-            2
+columnSpec : Column -> Spec
+columnSpec column =
+    case column of
+        Driver ->
+            { label = "Driver", at = 170, track = "1fr", align = "" }
 
-        LastLaps ->
-            3
+        Ahead ->
+            { label = "Ahead", at = 230, track = "4.5em", align = "text-right" }
 
-        Running ->
-            4
+        Last ->
+            { label = "Last", at = 315, track = "5em", align = "text-right" }
 
-        Bests ->
-            5
+        Current ->
+            { label = "Current", at = 395, track = "5em", align = "text-right" }
+
+        Best ->
+            { label = "Best", at = 475, track = "5em", align = "text-right" }
 
         Laps ->
-            6
+            { label = "Laps", at = 525, track = "3em", align = "text-right" }
 
-        Moves ->
-            7
+        Move ->
+            { label = "Move", at = 570, track = "2.5em", align = "text-center" }
 
 
-{-| `shows column stage` — does this stage carry that column's header and
-text? A stage carries every column of every stage before it.
+{-| Every column, in row order.
 -}
-shows : Stage -> Stage -> Bool
-shows column stage =
-    rank stage >= rank column
+columns : List Column
+columns =
+    [ Driver, Ahead, Last, Current, Best, Laps, Move ]
 
 
-{-| The width a surname starts to fit at: `minWidth` plus room for the
-name itself.
+{-| Does this column fit a panel of this width?
 -}
-namesWidth : Float
-namesWidth =
-    170
+fits : Float -> Column -> Bool
+fits panelWidth column =
+    panelWidth >= (columnSpec column).at
 
 
-{-| The width the interval to the car ahead starts to fit at.
+visible : Float -> List Column
+visible panelWidth =
+    List.filter (fits panelWidth) columns
+
+
+{-| The row's tracks as a `grid-template-columns` value: the position and the
+badge, then one per visible column. The header stands on the same value, which
+is what keeps a label over its column.
+
+The tracks go on as a style attribute rather than as a `grid-cols-[...]`
+class: Tailwind extracts class names from source text only, so a class
+assembled from the table above ships no rule at all — which is exactly how
+this panel once rendered with one track per child.
+
 -}
-intervalWidth : Float
-intervalWidth =
-    230
-
-
-{-| The width the last lap starts to fit at.
--}
-lastLapWidth : Float
-lastLapWidth =
-    315
-
-
-{-| The width the running lap starts to fit at.
--}
-runningWidth : Float
-runningWidth =
-    395
-
-
-{-| The width the car's best lap starts to fit at.
--}
-bestWidth : Float
-bestWidth =
-    475
-
-
-{-| The width the laps completed start to fit at.
--}
-lapsWidth : Float
-lapsWidth =
-    525
-
-
-{-| The width the places moved start to fit at.
--}
-movesWidth : Float
-movesWidth =
-    570
-
-
-stageFor : Float -> Stage
-stageFor panelWidth =
-    if panelWidth >= movesWidth then
-        Moves
-
-    else if panelWidth >= lapsWidth then
-        Laps
-
-    else if panelWidth >= bestWidth then
-        Bests
-
-    else if panelWidth >= runningWidth then
-        Running
-
-    else if panelWidth >= lastLapWidth then
-        LastLaps
-
-    else if panelWidth >= intervalWidth then
-        Intervals
-
-    else if panelWidth >= namesWidth then
-        Names
-
-    else
-        Numbers
+gridTracks : Float -> String
+gridTracks panelWidth =
+    "20px auto"
+        ++ String.concat (List.map (\column -> " " ++ (columnSpec column).track) (visible panelWidth))
 
 
 px : Float -> String
@@ -247,59 +202,36 @@ px n =
     String.fromFloat n ++ "px"
 
 
-{-| What each column is, above the classes. The container keeps the text size
-the rows carry — `text-sm` — because the track widths are in `em` and would
-otherwise measure against the labels' own 10px font and land each column
-beside its text. The labels are the same words the `Leaderboard` prints over
-its own columns, cut short for the narrow tracks: the interval to the car
-ahead is AHEAD, the running clock is CURRENT.
+{-| What each column is, above the classes. It appears with the first column
+of measured time, `Ahead`; a panel of position and badge and name needs no
+label.
 
-The header appears with the first column a reader cannot read off the panel
-itself, at `intervalWidth`.
+The container keeps the text size the rows carry — `text-sm` — because the
+tracks are in `em` and would otherwise measure against the labels' own 10px
+font and land each column beside its text. The labels are the `Leaderboard`'s
+own words, cut short for the narrow tracks: the interval to the car ahead is
+Ahead, the running clock is Current.
 
 -}
-headerRow : Stage -> Html msg
-headerRow stage =
+headerRow : Float -> Html msg
+headerRow panelWidth =
     div
-        [ class ("grid " ++ gridCols stage ++ " items-center gap-2 px-0.5 pb-1") ]
-        [ label "text-center" "Pos"
-        , label "text-center" "#"
-        , if shows Names stage then
-            label "" "Driver"
-
-          else
-            text ""
-        , if shows Intervals stage then
-            label "text-right" "Ahead"
-
-          else
-            text ""
-        , if shows LastLaps stage then
-            label "text-right" "Last"
-
-          else
-            text ""
-        , if shows Running stage then
-            label "text-right" "Current"
-
-          else
-            text ""
-        , if shows Bests stage then
-            label "text-right" "Best"
-
-          else
-            text ""
-        , if shows Laps stage then
-            label "text-right" "Laps"
-
-          else
-            text ""
-        , if shows Moves stage then
-            label "text-right" "Move"
-
-          else
-            text ""
+        [ class "grid items-center gap-2 px-0.5 pb-1"
+        , style "grid-template-columns" (gridTracks panelWidth)
         ]
+        ([ label "text-center" "Pos"
+         , label "text-center" "#"
+         ]
+            ++ List.map
+                (\column ->
+                    let
+                        spec =
+                            columnSpec column
+                    in
+                    label spec.align spec.label
+                )
+                (visible panelWidth)
+        )
 
 
 label : String -> String -> Html msg
@@ -316,10 +248,9 @@ cars within it, so every class is always on show at once.
 -}
 classSection :
     Config msg
-    -> Stage
     -> ( Class, List CarAt )
     -> Html msg
-classSection config stage ( class_, cars ) =
+classSection config ( class_, cars ) =
     div [ class "grid grid-rows-[auto_minmax(0,1fr)] min-h-0" ]
         [ div
             [ class "flex items-center gap-x-[0.5em] pb-1 text-[10px] font-bold before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
@@ -332,39 +263,42 @@ classSection config stage ( class_, cars ) =
                 |> List.map
                     (\item ->
                         ( item.metadata.carNumber
-                        , Lazy.lazy (carRow config.onSelect) (row stage config.withColumns config.startPosition item)
+                        , Lazy.lazy (carRow config.onSelect) (row config item)
                         )
                     )
             )
         ]
 
 
-{-| What a row holds, cut to the stage: a column the stage does not show
-carries no text for it, so a row whose hidden columns are moving still
+{-| What a row holds, cut to the width it is drawn at: a column the width does
+not fit carries no text for it, so a row whose hidden columns are moving still
 compares equal and is not drawn again.
 -}
 type alias Row =
-    { stage : Stage
+    { width : Float
     , metadata : Metadata
     , position : Int
-    , surname : String
     , isInPit : Bool
     , hasColumn : Bool
-    , interval : String
-    , lastLap : String
-    , lastLapColor : String
-    , running : String
-    , runningColor : String
+    , driver : String
+    , ahead : String
+    , last : String
+    , lastColor : String
+    , current : String
+    , currentColor : String
     , best : String
     , bestColor : String
     , laps : String
-    , movement : { startPosition : Maybe Position, position : Position }
+    , move : { startPosition : Maybe Position, position : Position }
     }
 
 
-row : Stage -> List CarNumber -> (CarNumber -> Maybe Position) -> CarAt -> Row
-row stage withColumns startPosition item =
+row : Config msg -> CarAt -> Row
+row config item =
     let
+        panelWidth =
+            config.width
+
         lastLapTime =
             case item.lastLap of
                 Snapshot.Completed { rated } ->
@@ -373,74 +307,79 @@ row stage withColumns startPosition item =
                 Snapshot.NoLapYet ->
                     Leaderboard.ratedTime Nothing
 
-        ( running, runningColor ) =
+        bestTime =
+            Leaderboard.ratedTime item.bestLap
+
+        ( current, currentColor ) =
             if Status.hasRetired item.status then
                 ( "-", "" )
 
             else
                 ( Duration.toStringToTenths item.currentLap.elapsed, Performance.textColorOf item.currentLap.performance )
-
-        bestTime =
-            Leaderboard.ratedTime item.bestLap
     in
-    { stage = stage
+    { width = panelWidth
     , metadata = item.metadata
     , position = item.standing.position
-    , surname = Driver.toSurname item.currentDriver
     , isInPit = item.status == Status.InPit
-    , hasColumn = List.member item.metadata.carNumber withColumns
-    , interval =
-        if shows Intervals stage then
+    , hasColumn = List.member item.metadata.carNumber config.withColumns
+    , driver =
+        if fits panelWidth Driver then
+            Driver.toSurname item.currentDriver
+
+        else
+            ""
+    , ahead =
+        if fits panelWidth Ahead then
             Gap.toString item.standing.intervalToAhead
 
         else
             ""
-    , lastLap =
-        if shows LastLaps stage then
+    , last =
+        if fits panelWidth Last then
             lastLapTime.text
 
         else
             ""
-    , lastLapColor =
-        if shows LastLaps stage then
+    , lastColor =
+        if fits panelWidth Last then
             lastLapTime.color
 
         else
             ""
-    , running =
-        if shows Running stage then
-            running
+    , current =
+        if fits panelWidth Current then
+            current
 
         else
             ""
-    , runningColor =
-        if shows Running stage then
-            runningColor
+    , currentColor =
+        if fits panelWidth Current then
+            currentColor
 
         else
             ""
     , best =
-        if shows Bests stage then
+        if fits panelWidth Best then
             bestTime.text
 
         else
             ""
     , bestColor =
-        if shows Bests stage then
+        if fits panelWidth Best then
             bestTime.color
 
         else
             ""
     , laps =
-        if shows Laps stage then
+        if fits panelWidth Laps then
             String.fromInt item.standing.lapsCompleted
 
         else
             ""
-    , movement =
+    , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
-        { startPosition = startPosition item.metadata.carNumber
+        { startPosition = config.startPosition item.metadata.carNumber
         , position = item.standing.position
         }
     }
@@ -468,13 +407,10 @@ carRow onSelect r =
                  else
                     "false"
                 )
-             , class
-                ("relative w-full p-0.5 grid "
-                    ++ gridCols r.stage
-                    ++ " items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
-                )
+             , class "relative w-full p-0.5 grid items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
+             , style "grid-template-columns" (gridTracks r.width)
              ]
-                ++ (if r.isInPit && shows Intervals r.stage then
+                ++ (if r.isInPit && fits r.width Ahead then
                         -- The pit mark floats at the row's right edge, where
                         -- a time column now ends; the room is its own.
                         [ class "pr-6" ]
@@ -494,88 +430,45 @@ carRow onSelect r =
                         ]
                    )
             )
-            [ div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
-            , CarNumberBadge.viewRow r.metadata
-            , if shows Names r.stage then
-                div [ class "text-xs" ] [ text r.surname ]
+            ([ div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
+             , CarNumberBadge.viewRow r.metadata
+             ]
+                ++ List.map (cell r) (visible r.width)
+                ++ [ if r.isInPit then
+                        div
+                            [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
+                            [ text "P" ]
 
-              else
-                text ""
-            , if shows Intervals r.stage then
-                div [ class "text-xs text-right tabular-nums text-muted-foreground" ] [ text r.interval ]
-
-              else
-                text ""
-            , if shows LastLaps r.stage then
-                div [ class "text-xs text-right tabular-nums", style "color" r.lastLapColor ] [ text r.lastLap ]
-
-              else
-                text ""
-            , if shows Running r.stage then
-                div [ class "text-xs text-right tabular-nums", style "color" r.runningColor ] [ text r.running ]
-
-              else
-                text ""
-            , if shows Bests r.stage then
-                div [ class "text-xs text-right tabular-nums", style "color" r.bestColor ] [ text r.best ]
-
-              else
-                text ""
-            , if shows Laps r.stage then
-                div [ class "text-xs text-right tabular-nums" ] [ text r.laps ]
-
-              else
-                text ""
-            , if shows Moves r.stage then
-                div [ class "text-xs text-center tabular-nums" ] [ Leaderboard.viewPositionChangeInline r.movement ]
-
-              else
-                text ""
-            , if r.isInPit then
-                div
-                    [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
-                    [ text "P" ]
-
-              else
-                text ""
-            ]
+                     else
+                        text ""
+                   ]
+            )
         ]
 
 
-{-| The row's tracks: position and badge always, then one per column the
-stage shows. The widths are the widest each column's text prints at —
-`Gap.toString` never longer than '+ 9 Laps', a lap time never longer than
-'9:99:99.999'.
-
-Each track list is written out whole rather than assembled from the stage:
-Tailwind extracts class names from source text, so a `grid-cols-[...]` that
-only exists at runtime is never in the stylesheet and the row falls back to
-one track per child.
-
+{-| One visible column's cell. The tracks and the cells both walk
+`visible width`, so which cell stands in which track is held by construction.
 -}
-gridCols : Stage -> String
-gridCols stage =
-    case stage of
-        Numbers ->
-            "grid-cols-[20px_auto]"
+cell : Row -> Column -> Html msg
+cell r column =
+    case column of
+        Driver ->
+            div [ class "text-xs" ] [ text r.driver ]
 
-        Names ->
-            "grid-cols-[20px_auto_1fr]"
+        Ahead ->
+            div [ class "text-xs text-right tabular-nums text-muted-foreground" ] [ text r.ahead ]
 
-        Intervals ->
-            "grid-cols-[20px_auto_1fr_4.5em]"
+        Last ->
+            div [ class "text-xs text-right tabular-nums", style "color" r.lastColor ] [ text r.last ]
 
-        LastLaps ->
-            "grid-cols-[20px_auto_1fr_4.5em_5em]"
+        Current ->
+            div [ class "text-xs text-right tabular-nums", style "color" r.currentColor ] [ text r.current ]
 
-        Running ->
-            "grid-cols-[20px_auto_1fr_4.5em_5em_5em]"
-
-        Bests ->
-            "grid-cols-[20px_auto_1fr_4.5em_5em_5em_5em]"
+        Best ->
+            div [ class "text-xs text-right tabular-nums", style "color" r.bestColor ] [ text r.best ]
 
         Laps ->
-            "grid-cols-[20px_auto_1fr_4.5em_5em_5em_5em_3em]"
+            div [ class "text-xs text-right tabular-nums" ] [ text r.laps ]
 
-        Moves ->
-            "grid-cols-[20px_auto_1fr_4.5em_5em_5em_5em_3em_2.5em]"
+        Move ->
+            div [ class "text-xs text-center tabular-nums" ] [ Leaderboard.viewPositionChangeInline r.move ]
