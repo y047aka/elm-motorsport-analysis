@@ -140,7 +140,7 @@ suite =
             , test "a release of a pointer holding nothing does nothing" <|
                 \_ ->
                     Columns.update (Just field) (Release (pointer 7 100)) Columns.init
-                        |> Expect.equal (Columns.init, Cmd.none)
+                        |> Expect.equal ( Columns.init, Cmd.none )
             , test "closing the carried car is not undone by letting go" <|
                 \_ ->
                     -- The carry settles the stand-ins; closing a car then
@@ -203,7 +203,7 @@ suite =
                                         |> step (Carrying (pointer 1 (-2 * Columns.pitch)))
 
                                 placed =
-                                    Columns.placements narrow carrying.carried (keysOf carrying)
+                                    Columns.placements narrow (Columns.carrying carrying) (keysOf carrying)
                             in
                             Expect.all
                                 [ \_ ->

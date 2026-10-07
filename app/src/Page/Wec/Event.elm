@@ -10,6 +10,7 @@ module Page.Wec.Event exposing (Model, Msg, init, subscriptions, update, view)
 import Browser.Dom
 import Browser.Events
 import Dict exposing (Dict)
+import Drag
 import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
@@ -63,17 +64,7 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , comparison : CarDetail.Comparison
     , standingsWidth : Float
-    , standingsResize : Maybe StandingsResize
-    }
-
-
-{-| The pointer resizing the standings column, and the width it found the
-column at. The width follows the pointer's travel from that width.
--}
-type alias StandingsResize =
-    { pointerId : Int
-    , from : Float
-    , startWidth : Float
+    , standingsResize : Drag.State Float
     }
 
 
@@ -82,18 +73,6 @@ type alias StandingsResize =
 standingsStep : Float
 standingsStep =
     20
-
-
-heldResize : Int -> Maybe StandingsResize -> Maybe StandingsResize
-heldResize pointerId =
-    Maybe.andThen
-        (\resize ->
-            if resize.pointerId == pointerId then
-                Just resize
-
-            else
-                Nothing
-        )
 
 
 resizeStandingsTo : Float -> Model -> Model
@@ -132,7 +111,7 @@ init params =
       , leaderboardState = Leaderboard.init
       , comparison = CarDetail.initialComparison
       , standingsWidth = LiveStandings.width
-      , standingsResize = Nothing
+      , standingsResize = Drag.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -179,40 +158,44 @@ update shared msg m =
             ( { m | pane = togglePane m.pane }, Effect.none )
 
         StandingsGrab pointer ->
-            case m.standingsResize of
-                Just _ ->
-                    ( m, Effect.none )
-
-                Nothing ->
-                    ( { m | standingsResize = Just { pointerId = pointer.id, from = pointer.x, startWidth = m.standingsWidth } }
-                    , Effect.none
-                    )
+            let
+                ( standingsResize, _ ) =
+                    Drag.update (Drag.Pick m.standingsWidth pointer) m.standingsResize
+            in
+            ( { m | standingsResize = standingsResize }, Effect.none )
 
         StandingsCarrying pointer ->
-            case heldResize pointer.id m.standingsResize of
-                Just resize ->
-                    ( resizeStandingsTo (resize.startWidth + pointer.x - resize.from) m
-                    , Effect.none
-                    )
+            let
+                ( standingsResize, _ ) =
+                    Drag.update (Drag.Move pointer) m.standingsResize
+
+                after =
+                    { m | standingsResize = standingsResize }
+            in
+            ( case Drag.carrying standingsResize of
+                Just carry ->
+                    -- The width follows the pointer's travel from the width
+                    -- the grip picked it up at.
+                    resizeStandingsTo (carry.location + Drag.travel carry) after
 
                 Nothing ->
-                    ( m, Effect.none )
+                    after
+            , Effect.none
+            )
 
         StandingsRelease pointer ->
-            case heldResize pointer.id m.standingsResize of
-                Just _ ->
-                    ( { m | standingsResize = Nothing }, Effect.none )
-
-                Nothing ->
-                    ( m, Effect.none )
+            let
+                ( standingsResize, _ ) =
+                    Drag.update (Drag.Drop pointer) m.standingsResize
+            in
+            ( { m | standingsResize = standingsResize }, Effect.none )
 
         StandingsCancel pointerId ->
-            case heldResize pointerId m.standingsResize of
-                Just _ ->
-                    ( { m | standingsResize = Nothing }, Effect.none )
-
-                Nothing ->
-                    ( m, Effect.none )
+            let
+                ( standingsResize, _ ) =
+                    Drag.update (Drag.Cancel pointerId) m.standingsResize
+            in
+            ( { m | standingsResize = standingsResize }, Effect.none )
 
         StandingsStep steps ->
             ( resizeStandingsTo (m.standingsWidth + toFloat steps * standingsStep) m
@@ -462,7 +445,7 @@ standingsGrip m =
     DragHandle.resize
         { id = standingsGripId
         , label = "Resize the standings column"
-        , held = m.standingsResize /= Nothing
+        , held = Drag.isCarrying m.standingsResize
         , onGrab = StandingsGrab
         , onMove = StandingsCarrying
         , onDrop = StandingsRelease
@@ -535,7 +518,7 @@ columnStrip cell track timeline keys m replay snapshot =
             List.length keys > 1
 
         placements =
-            Columns.placements (always Columns.width) m.strip.carried keys
+            Columns.placements (always Columns.width) (Columns.carrying m.strip) keys
 
         columnCell key placement =
             case key of
@@ -571,12 +554,11 @@ columnStrip cell track timeline keys m replay snapshot =
                  , Attributes.class (cell ++ " flex overflow-x-auto")
                  , Attributes.style "column-gap" (Columns.px Columns.gap)
                  ]
-                    ++ (case m.strip.carried of
-                            Just _ ->
-                                [ Html.Events.on "scroll" (Decode.map (Columns.StripScrolled >> ColumnsMsg) (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
+                    ++ (if Drag.isCarrying m.strip.carried then
+                            [ Html.Events.on "scroll" (Decode.map (Columns.StripScrolled >> ColumnsMsg) (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
 
-                            Nothing ->
-                                []
+                        else
+                            []
                        )
                 )
                 (List.map2 columnCell keys placements)

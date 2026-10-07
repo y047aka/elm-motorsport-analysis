@@ -1,7 +1,7 @@
 module Page.Wec.Columns exposing
     ( Model, init, update, Msg(..), StripKey(..), keyName, keysOf, resolve, carsIn
-    , Placement(..), placements, isCarried, placementAttributes, gripId, stripId, scrollId, width
-    , gap, pitch, slot, xOf, px
+    , Placement(..), placements, carrying, isCarried, placementAttributes, gripId, stripId
+    , scrollId, width, gap, pitch, slot, xOf, px
     )
 
 {-| The strip of columns: what order they stand in, which one a pointer is
@@ -15,19 +15,20 @@ The names sort into five shelves:
   - `Model`, `init`, `update`, `Msg` -- the strip's state and what moves it.
   - `StripKey`, `keyName` -- who a column is, and the `Html.Keyed` name of one.
   - `keysOf`, `resolve`, `carsIn` -- what order they stand in.
-  - `placements`, `isCarried`, `placementAttributes` -- where each one is drawn,
-    and whether it is the one under the pointer.
+  - `placements`, `carrying`, `isCarried`, `placementAttributes` -- where each
+    one is drawn, and whether it is the one under the pointer.
   - `gripId` ... `px` -- the names the page builds DOM out of, and the measures
     the carry arithmetic is done in.
 
 @docs Model, init, update, Msg, StripKey, keyName, keysOf, resolve, carsIn
-@docs Placement, placements, isCarried, placementAttributes, gripId, stripId, scrollId, width
-@docs gap, pitch, slot, xOf, px
+@docs Placement, placements, carrying, isCarried, placementAttributes, gripId, stripId
+@docs scrollId, width, gap, pitch, slot, xOf, px
 
 -}
 
 import Browser.Dom
 import Dict exposing (Dict)
+import Drag
 import Html
 import Html.Attributes as Attributes
 import List.Extra
@@ -255,37 +256,16 @@ announcement key order =
             ""
 
 
-{-| A column being carried along the strip by one pointer. How far it has gone
-is the pointer's travel and the strip's together, since the strip can be
-scrolled under a pointer that holds still.
-
-`before` is the columns as they stood when it was picked up, and `settled` what
-picking it up made of them. A carry that lands where it began puts `before`
-back, unless something else has changed the columns since.
-
+{-| The column under the pointer, and the orders a carry answers to: `before`
+stands as it did when the column was picked up, `settled` is what picking it
+up made of them. A carry that lands where it began puts `before` back, unless
+something else has changed the columns since.
 -}
 type alias Carry =
     { key : StripKey
-    , pointerId : Int
     , before : Columns
     , settled : Columns
-    , from : Float
-    , at : Float
-    , scrolledFrom : Float
-    , scrolledTo : Float
     }
-
-
-heldBy : Int -> Maybe Carry -> Maybe Carry
-heldBy pointerId =
-    Maybe.andThen
-        (\carry ->
-            if carry.pointerId == pointerId then
-                Just carry
-
-            else
-                Nothing
-        )
 
 
 putBack : Carry -> Columns -> Columns
@@ -297,17 +277,20 @@ putBack carry columns =
         columns
 
 
-travel : Carry -> Float
-travel carry =
-    carry.at - carry.from + carry.scrolledTo - carry.scrolledFrom
+{-| How far a carry has gone: the pointer's travel and the strip's together,
+since the strip can be scrolled under a pointer that holds still.
+-}
+withScroll : Model -> Float -> Float
+withScroll m distance =
+    distance + m.stripScroll.to - m.stripScroll.from
 
 
-columnsCarried : Carry -> Int
-columnsCarried carry =
+columnsCarried : Float -> Int
+columnsCarried distance =
     -- Counted in the canonical `pitch`, not the carried column's own
     -- width: widths decide where a place is drawn, not what a carry turns
     -- over.
-    round (travel carry / pitch)
+    round (distance / pitch)
 
 
 {-| Where a column is drawn, and whether it is the one being carried.
@@ -329,8 +312,8 @@ while it stays in the document, and the keyed strip moves a column by taking
 it out.
 
 -}
-placements : (StripKey -> Float) -> Maybe Carry -> List StripKey -> List Placement
-placements widthOf carried keys =
+placements : (StripKey -> Float) -> Maybe ( StripKey, Float ) -> List StripKey -> List Placement
+placements widthOf underPointer keys =
     let
         slots =
             List.map (widthOf >> slot) keys
@@ -343,19 +326,19 @@ placements widthOf carried keys =
             List.Extra.getAt index slots
                 |> Maybe.withDefault pitch
     in
-    case carried |> Maybe.andThen (\carry -> List.Extra.elemIndex carry.key keys |> Maybe.map (Tuple.pair carry)) of
-        Just ( carry, from ) ->
+    case underPointer |> Maybe.andThen (\( key, distance ) -> List.Extra.elemIndex key keys |> Maybe.map (\from -> ( from, distance ))) of
+        Just ( from, distance ) ->
             let
                 last =
                     List.length keys - 1
 
                 to =
-                    from + clamp -from (last - from) (columnsCarried carry)
+                    from + clamp -from (last - from) (columnsCarried distance)
             in
             List.indexedMap
                 (\index _ ->
                     if index == from then
-                        Carried (clamp (negate (leftEdge from)) (List.drop (from + 1) slots |> List.sum) (travel carry))
+                        Carried (clamp (negate (leftEdge from)) (List.drop (from + 1) slots |> List.sum) distance)
 
                     else if from < index && index <= to then
                         Shifted (negate (slotAt (index - 1)))
@@ -370,6 +353,15 @@ placements widthOf carried keys =
 
         Nothing ->
             List.map (always Resting) keys
+
+
+{-| The column under the pointer and how far it has gone, or nothing when
+every column stands where it stands.
+-}
+carrying : Model -> Maybe ( StripKey, Float )
+carrying m =
+    Drag.carrying m.carried
+        |> Maybe.map (\carry -> ( carry.location.key, withScroll m (Drag.travel carry) ))
 
 
 isCarried : Placement -> Bool
@@ -420,10 +412,16 @@ scrollId carNumber =
 
 {-| The strip's state: the order, the one pointer carrying, how far down each
 car's panel was scrolled, and what to say when a column moved.
+
+`stripScroll` is how far the strip had scrolled under the pointer, and what a
+carry measures its travel against. It keeps the last carry's reading between
+carries; only a carry is ever measured with it.
+
 -}
 type alias Model =
     { order : Columns
-    , carried : Maybe Carry
+    , carried : Drag.State Carry
+    , stripScroll : { from : Float, to : Float }
     , scrolls : Dict CarNumber Float
     , announcement : String
     }
@@ -432,7 +430,8 @@ type alias Model =
 init : Model
 init =
     { order = Live { tracker = False }
-    , carried = Nothing
+    , carried = Drag.init
+    , stripScroll = { from = 0, to = 0 }
     , scrolls = Dict.empty
     , announcement = ""
     }
@@ -479,29 +478,28 @@ update field msg m =
             grab field key pointer m
 
         Carrying pointer ->
-            case heldBy pointer.id m.carried of
-                Just carry ->
-                    ( { m | carried = Just { carry | at = pointer.x } }, Cmd.none )
-
-                Nothing ->
-                    ( m, Cmd.none )
+            let
+                ( carried, _ ) =
+                    Drag.update (Drag.Move pointer) m.carried
+            in
+            ( { m | carried = carried }, Cmd.none )
 
         Release pointer ->
             release field pointer m
 
         Cancel pointerId ->
-            case heldBy pointerId m.carried of
-                Just carry ->
-                    letGo m carry
+            case Drag.update (Drag.Cancel pointerId) m.carried of
+                ( carried, Just done ) ->
+                    letGo { m | carried = carried } done.location
 
-                Nothing ->
-                    ( m, Cmd.none )
+                ( carried, Nothing ) ->
+                    ( { m | carried = carried }, Cmd.none )
 
         StripScrolledFrom left ->
-            ( { m | carried = Maybe.map (\carry -> { carry | scrolledFrom = left, scrolledTo = left }) m.carried }, Cmd.none )
+            ( { m | stripScroll = { from = left, to = left } }, Cmd.none )
 
         StripScrolled left ->
-            ( { m | carried = Maybe.map (\carry -> { carry | scrolledTo = left }) m.carried }, Cmd.none )
+            ( { m | stripScroll = { from = m.stripScroll.from, to = left } }, Cmd.none )
 
         Step key steps ->
             stepBy field key steps m
@@ -534,65 +532,58 @@ shownColumn field shown m =
 
 grab : Maybe Snapshot -> StripKey -> Pointer -> Model -> ( Model, Cmd Msg )
 grab field key pointer m =
-    case m.carried of
-        Just _ ->
-            ( m, Cmd.none )
+    if Drag.isCarrying m.carried then
+        ( m, Cmd.none )
 
-        Nothing ->
-            let
-                settled =
-                    case field of
-                        Just round ->
-                            settle round m.order
+    else
+        let
+            settled =
+                case field of
+                    Just round ->
+                        settle round m.order
 
-                        Nothing ->
-                            m.order
-            in
-            ( { m
-                | order = settled
-                , carried =
-                    Just
-                        { key = key
-                        , pointerId = pointer.id
-                        , before = m.order
-                        , settled = settled
-                        , from = pointer.x
-                        , at = pointer.x
-                        , scrolledFrom = 0
-                        , scrolledTo = 0
-                        }
-              }
-            , Browser.Dom.getViewportOf stripId
-                |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
-            )
+                    Nothing ->
+                        m.order
+
+            ( carried, _ ) =
+                Drag.update (Drag.Pick { key = key, before = m.order, settled = settled } pointer) m.carried
+        in
+        ( { m | order = settled, carried = carried, stripScroll = { from = 0, to = 0 } }
+        , Browser.Dom.getViewportOf stripId
+            |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
+        )
 
 
 release : Maybe Snapshot -> Pointer -> Model -> ( Model, Cmd Msg )
 release field pointer m =
-    case heldBy pointer.id m.carried of
-        Just carry ->
+    case Drag.update (Drag.Drop pointer) m.carried of
+        ( carried, Just done ) ->
+            let
+                after =
+                    { m | carried = carried }
+            in
             case field of
                 Just round ->
                     let
                         moved =
-                            move carry.key (columnsCarried { carry | at = pointer.x }) round m.order
+                            move done.location.key (columnsCarried (withScroll after done.travel)) round m.order
                     in
                     if moved == m.order then
-                        letGo m carry
+                        letGo after done.location
 
                     else
-                        reorder round { moved = carry.key, refocus = False } { m | carried = Nothing } moved
+                        reorder round { moved = done.location.key, refocus = False } after moved
 
                 Nothing ->
-                    letGo m carry
+                    letGo after done.location
 
-        Nothing ->
-            ( m, Cmd.none )
+        ( carried, Nothing ) ->
+            ( { m | carried = carried }, Cmd.none )
 
 
 stepBy : Maybe Snapshot -> StripKey -> Int -> Model -> ( Model, Cmd Msg )
 stepBy field key steps m =
-    if m.carried /= Nothing then
+    if Drag.isCarrying m.carried then
         -- A step would move the strip under the carried column, and
         -- could take the grip holding the pointer out of the document.
         ( m, Cmd.none )
@@ -616,7 +607,7 @@ stepBy field key steps m =
 
 letGo : Model -> Carry -> ( Model, Cmd Msg )
 letGo m carry =
-    ( { m | order = putBack carry m.order, carried = Nothing }, Cmd.none )
+    ( { m | order = putBack carry m.order }, Cmd.none )
 
 
 edit : Maybe Snapshot -> Model -> (Snapshot -> Columns -> Columns) -> ( Model, Cmd Msg )
