@@ -270,9 +270,8 @@ classSection config ( class_, cars ) =
         ]
 
 
-{-| What a row holds, cut to the width it is drawn at: a column the width does
-not fit carries no text for it, so a row whose hidden columns are moving still
-compares equal and is not drawn again.
+{-| Every reading of the car, read off the `CarAt` once per frame; `cell`
+picks which of them the row's width shows.
 -}
 type alias Row =
     { width : Float
@@ -296,9 +295,6 @@ type alias Row =
 row : Config msg -> CarAt -> Row
 row config item =
     let
-        panelWidth =
-            config.width
-
         lastLapTime =
             case item.lastLap of
                 Snapshot.Completed { rated } ->
@@ -317,65 +313,20 @@ row config item =
             else
                 ( Duration.toStringToTenths item.currentLap.elapsed, Performance.textColorOf item.currentLap.performance )
     in
-    { width = panelWidth
+    { width = config.width
     , metadata = item.metadata
     , position = item.standing.position
     , isInPit = item.status == Status.InPit
     , hasColumn = List.member item.metadata.carNumber config.withColumns
-    , driver =
-        if fits panelWidth Driver then
-            Driver.toSurname item.currentDriver
-
-        else
-            ""
-    , ahead =
-        if fits panelWidth Ahead then
-            Gap.toString item.standing.intervalToAhead
-
-        else
-            ""
-    , last =
-        if fits panelWidth Last then
-            lastLapTime.text
-
-        else
-            ""
-    , lastColor =
-        if fits panelWidth Last then
-            lastLapTime.color
-
-        else
-            ""
-    , current =
-        if fits panelWidth Current then
-            current
-
-        else
-            ""
-    , currentColor =
-        if fits panelWidth Current then
-            currentColor
-
-        else
-            ""
-    , best =
-        if fits panelWidth Best then
-            bestTime.text
-
-        else
-            ""
-    , bestColor =
-        if fits panelWidth Best then
-            bestTime.color
-
-        else
-            ""
-    , laps =
-        if fits panelWidth Laps then
-            String.fromInt item.standing.lapsCompleted
-
-        else
-            ""
+    , driver = Driver.toSurname item.currentDriver
+    , ahead = Gap.toString item.standing.intervalToAhead
+    , last = lastLapTime.text
+    , lastColor = lastLapTime.color
+    , current = current
+    , currentColor = currentColor
+    , best = bestTime.text
+    , bestColor = bestTime.color
+    , laps = String.fromInt item.standing.lapsCompleted
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
