@@ -377,32 +377,27 @@ carRow onSelect r =
 stage shows. The widths are the widest each column's text prints at —
 `Gap.toString` never longer than '+ 9 Laps', a lap time never longer than
 '9:99:99.999'.
+
+Each track list is written out whole rather than assembled from the stage:
+Tailwind extracts class names from source text, so a `grid-cols-[...]` that
+only exists at runtime is never in the stylesheet and the row falls back to
+one track per child.
+
 -}
 gridCols : Stage -> String
 gridCols stage =
-    "grid-cols-[20px_auto"
-        ++ (if showsNames stage then
-                " 1fr"
+    case stage of
+        Numbers ->
+            "grid-cols-[20px_auto]"
 
-            else
-                ""
-           )
-        ++ (if showsInterval stage then
-                " 4.5em"
+        Names ->
+            "grid-cols-[20px_auto_1fr]"
 
-            else
-                ""
-           )
-        ++ (if showsLastLap stage then
-                " 5em"
+        Intervals ->
+            "grid-cols-[20px_auto_1fr_4.5em]"
 
-            else
-                ""
-           )
-        ++ (if showsRunning stage then
-                " 5em"
+        LastLaps ->
+            "grid-cols-[20px_auto_1fr_4.5em_5em]"
 
-            else
-                ""
-           )
-        ++ "]"
+        Running ->
+            "grid-cols-[20px_auto_1fr_4.5em_5em_5em]"
