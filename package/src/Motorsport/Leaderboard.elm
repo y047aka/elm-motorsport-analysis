@@ -5,6 +5,7 @@ module Motorsport.Leaderboard exposing
     , customColumn, veryCustomColumn
     , sectorTimeColumn, bestTimeColumn
     , performanceColumn
+    , ratedTime
     , carNumberColumn_Wec
     , driverAndTeamColumn_Wec
     , positionChangeColumn
@@ -42,6 +43,7 @@ printed in. Which of them, in what order, is the caller's.
 
 @docs sectorTimeColumn, bestTimeColumn
 @docs performanceColumn
+@docs ratedTime
 @docs carNumberColumn_Wec
 @docs driverAndTeamColumn_Wec
 @docs positionChangeColumn
@@ -206,11 +208,42 @@ sectorTimeColumn { label, getter } =
     }
 
 
+{-| A rated time as a timing screen prints it: the time in the colour of its
+rating, and a `-` in the reader's own colour where nothing is rated — no lap
+finished, or one the source data never timed.
+
+Every reading of a rated time goes through this, the table's columns and the
+live standings' rows alike, so the dash and the colours cannot drift apart.
+
+    ratedTime Nothing
+    --> { color = "", text = "-" }
+
+-}
+ratedTime : Maybe RatedTime -> { text : String, color : String }
+ratedTime rated =
+    case rated of
+        Just { time, performance } ->
+            { text = Duration.toString time
+            , color = Performance.textColorOf performance
+            }
+
+        Nothing ->
+            { text = "-", color = "" }
+
+
+{-| A time and colour set in the table's own cell: centred, coloured by the
+rating.
+-}
+colouredTime : { text : String, color : String } -> Html msg
+colouredTime time =
+    div [ class "text-center", style "color" time.color ] [ text time.text ]
+
+
 bestTimeColumn : { getter : data -> Maybe RatedTime } -> Column data msg
 bestTimeColumn { getter } =
     DataView.customColumn
         { label = "Best"
-        , getter = getter >> Maybe.map (.time >> Duration.toString) >> Maybe.withDefault "-"
+        , getter = getter >> ratedTime >> .text
         , sorter = noSorter
         }
 
@@ -506,18 +539,12 @@ lastLapColumn_Wec { getter } =
 
 viewLastLapColumn_Wec : Snapshot.LastLap -> Html msg
 viewLastLapColumn_Wec lastLap =
-    let
-        lapTimeView { time, performance } =
-            div
-                [ class "text-center", style "color" (Performance.textColorOf performance) ]
-                [ text (Duration.toString time) ]
-    in
     case lastLap of
         Snapshot.Completed { rated, sectors } ->
             case rated of
-                Just lapTime ->
+                Just _ ->
                     div [ class "flex flex-col gap-y-[5px]" ]
-                        [ lapTimeView lapTime
+                        [ colouredTime (ratedTime rated)
                         , SegmentStrip.sectorsRated sectors
                         ]
 
@@ -542,18 +569,12 @@ lastLapColumn_LeMans24h { getter } =
 
 viewLastLapColumn_LeMans24h : Snapshot.LastLap -> Html msg
 viewLastLapColumn_LeMans24h lastLap =
-    let
-        lapTimeView { time, performance } =
-            div
-                [ class "text-center", style "color" (Performance.textColorOf performance) ]
-                [ text (Duration.toString time) ]
-    in
     case lastLap of
         Snapshot.Completed { rated, miniSectors } ->
             case rated of
-                Just lapTime ->
+                Just _ ->
                     div [ class "flex flex-col gap-y-[5px]" ]
-                        [ lapTimeView lapTime
+                        [ colouredTime (ratedTime rated)
                         , miniSectors
                             |> Maybe.map SegmentStrip.miniSectorsRated
                             |> Maybe.withDefault (text "-")

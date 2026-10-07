@@ -362,24 +362,16 @@ type alias Row =
     }
 
 
-{-| A car that has not finished a lap yet, or has not set a best, prints the
-same `-` the `Leaderboard` prints in the same case.
--}
 row : Stage -> List CarNumber -> (CarNumber -> Maybe Position) -> CarAt -> Row
 row stage withColumns startPosition item =
     let
-        ( lastLap, lastLapColor ) =
+        lastLapTime =
             case item.lastLap of
                 Snapshot.Completed { rated } ->
-                    case rated of
-                        Just rated_ ->
-                            ( Duration.toString rated_.time, Performance.textColorOf rated_.performance )
-
-                        Nothing ->
-                            ( "-", "" )
+                    Leaderboard.ratedTime rated
 
                 Snapshot.NoLapYet ->
-                    ( "-", "" )
+                    Leaderboard.ratedTime Nothing
 
         ( running, runningColor ) =
             if Status.hasRetired item.status then
@@ -388,13 +380,8 @@ row stage withColumns startPosition item =
             else
                 ( Duration.toStringToTenths item.currentLap.elapsed, Performance.textColorOf item.currentLap.performance )
 
-        ( best, bestColor ) =
-            case item.bestLap of
-                Just rated_ ->
-                    ( Duration.toString rated_.time, Performance.textColorOf rated_.performance )
-
-                Nothing ->
-                    ( "-", "" )
+        bestTime =
+            Leaderboard.ratedTime item.bestLap
     in
     { stage = stage
     , metadata = item.metadata
@@ -410,13 +397,13 @@ row stage withColumns startPosition item =
             ""
     , lastLap =
         if shows LastLaps stage then
-            lastLap
+            lastLapTime.text
 
         else
             ""
     , lastLapColor =
         if shows LastLaps stage then
-            lastLapColor
+            lastLapTime.color
 
         else
             ""
@@ -434,13 +421,13 @@ row stage withColumns startPosition item =
             ""
     , best =
         if shows Bests stage then
-            best
+            bestTime.text
 
         else
             ""
     , bestColor =
         if shows Bests stage then
-            bestColor
+            bestTime.color
 
         else
             ""
