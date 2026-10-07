@@ -14,14 +14,15 @@ const GAP = Number(/gap =\n\s+(\d+)/.exec(columnsSource)?.[1]);
 const PITCH = COLUMN_WIDTH + GAP;
 
 /** The standings' width and its two bounds, decided by LiveStandings.elm,
- * and the width one arrow key step is worth, decided by Event.elm -- read
- * out of the sources that decide them rather than repeated here. */
+ * and the width one arrow key step is worth, decided by the Fence Event.elm
+ * hands the resize -- read out of the sources that decide them rather than
+ * repeated here. */
 const standingsSource = readFileSync(new URL('../src/View/LiveStandings.elm', import.meta.url), 'utf8');
 const STANDINGS_WIDTH = Number(/\nwidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
 const STANDINGS_MIN = Number(/\nminWidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
 const STANDINGS_MAX = Number(/\nmaxWidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
 const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
-const RESIZE_STEP = Number(/\nstandingsStep =\n\s+(\d+)/.exec(eventSource)?.[1]);
+const RESIZE_STEP = Number(/standingsFence =\n\s*\{[\s\S]*?step = (\d+)/.exec(eventSource)?.[1]);
 
 /** The car's row in the live standings, which is where a car is picked. */
 function standingsRow(page: Page, carNumber: string) {
