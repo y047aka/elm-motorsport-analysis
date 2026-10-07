@@ -139,9 +139,10 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` — one module per page, plain TEA
-- `Data/` (feed decoding), `UI/` (Notice, DragHandle, and `Shadcn/`
-  for the wrappers), and `elements/` for the one custom element that is not
-  shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
+- `Data/` (feed decoding), `UI/` (Notice and `Shadcn/` for the wrappers),
+  `Drag`/`Drag.Handle` for carrying a thing by a pointer (the state machine
+  and the grip that reports it), and `elements/` for the one custom element
+  that is not shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
   `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
   the car cards, the live standings, the tracker's pit lane list, and the badge

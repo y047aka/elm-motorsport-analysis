@@ -1,6 +1,7 @@
 module Page.Wec.ColumnsTest exposing (suite)
 
 import Dict
+import Drag.Handle exposing (Pointer)
 import Expect
 import Internal.ChangePoints as ChangePoints
 import List.Extra
@@ -17,7 +18,6 @@ import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
 import Page.Wec.Columns as Columns exposing (Msg(..), Placement(..), StripKey(..))
 import Test exposing (Test, describe, test)
-import UI.DragHandle exposing (Pointer)
 
 
 suite : Test

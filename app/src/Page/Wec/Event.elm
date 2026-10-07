@@ -11,6 +11,7 @@ import Browser.Dom
 import Browser.Events
 import Dict exposing (Dict)
 import Drag
+import Drag.Handle as Handle exposing (Pointer)
 import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
@@ -37,7 +38,6 @@ import Shared
 import Shared.Msg
 import Task
 import Time
-import UI.DragHandle as DragHandle exposing (Pointer)
 import UI.Notice as Notice
 import UI.Shadcn.Button as Button
 import UI.Shadcn.Card as Card
@@ -442,7 +442,7 @@ standingsCell keys m snapshot =
 
 standingsGrip : Model -> Html Msg
 standingsGrip m =
-    DragHandle.resize
+    Handle.resize
         { id = standingsGripId
         , label = "Resize the standings column"
         , held = Drag.isCarrying m.standingsResize
@@ -566,7 +566,7 @@ columnStrip cell track timeline keys m replay snapshot =
 
 columnGrip : Bool -> Columns.StripKey -> Html Msg
 columnGrip held key =
-    DragHandle.view
+    Handle.view
         { id = Columns.gripId key
         , label = "Move this column"
         , held = held

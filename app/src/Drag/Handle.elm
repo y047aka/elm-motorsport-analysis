@@ -1,9 +1,15 @@
-module UI.DragHandle exposing (Pointer, resize, view)
+module Drag.Handle exposing (Pointer, Config, resize, view)
 
-{-| A grip that carries something sideways: by the pointer, or a step at a time
-by the arrow keys once it has the focus.
+{-| A grip that carries something sideways: by the pointer, or a step at a
+time by the arrow keys once it has the focus.
 
-@docs Pointer, resize, view
+The grip holds no state of its own -- `held` is the caller's, and the carry
+behind it is `Drag`'s business. What the grip adds is the pointer's path:
+the `drag-handle` custom element calls `setPointerCapture`, which Elm
+cannot, so every move and the release come back to the grip even once the
+pointer has left it.
+
+@docs Pointer, Config, resize, view
 
 -}
 
@@ -13,8 +19,8 @@ import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-| Which pointer, and its `clientX`. Two fingers can hold two grips at once, and
-each reports its own release.
+{-| Which pointer, and its `clientX`. Two fingers can hold two grips at once,
+and each reports its own release.
 -}
 type alias Pointer =
     { id : Int
@@ -22,17 +28,20 @@ type alias Pointer =
     }
 
 
-{-| `held` is the caller's, and says whether this grip is the one being carried.
-Moves are only reported while it is. The release is reported always, and says
-where it happened: a carry let go of before the next frame has reported no
-moves at all.
+{-| A grip's own state is the caller's: `held` says whether this grip is the
+one being carried, and moves are only reported while it is. The release is
+reported always, and says where it happened: a carry let go of before the
+next frame has reported no moves at all.
 
-`onCancel` is the carry ending without being let go of: the browser taking the
-pointer for itself, or the grip leaving the document. It also follows every
-`onDrop`, and both arrive whether or not anything is held.
+`onCancel` is the carry ending without being let go of: the browser taking
+the pointer for itself, or the grip leaving the document. It also follows
+every `onDrop`, and both arrive whether or not anything is held.
+
+`onStep` is for the arrow keys once the grip has the focus, and arrives for
+every other key as nothing.
 
 -}
-view :
+type alias Config msg =
     { id : String
     , label : String
     , held : Bool
@@ -42,7 +51,12 @@ view :
     , onCancel : Int -> msg
     , onStep : Int -> msg
     }
-    -> Html msg
+
+
+{-| The grip for carrying a thing along: a dot-grid glyph, grabbable
+anywhere on its box.
+-}
+view : Config msg -> Html msg
 view config =
     grip
         config
@@ -59,17 +73,7 @@ view config =
 {-| The same grip lying along an edge to resize what it bounds: the pointer's
 travel is the width's, and the arrow keys step it.
 -}
-resize :
-    { id : String
-    , label : String
-    , held : Bool
-    , onGrab : Pointer -> msg
-    , onMove : Pointer -> msg
-    , onDrop : Pointer -> msg
-    , onCancel : Int -> msg
-    , onStep : Int -> msg
-    }
-    -> Html msg
+resize : Config msg -> Html msg
 resize config =
     grip
         config
@@ -83,21 +87,7 @@ resize config =
         "⋮"
 
 
-grip :
-    { c
-        | id : String
-        , label : String
-        , held : Bool
-        , onGrab : Pointer -> msg
-        , onMove : Pointer -> msg
-        , onDrop : Pointer -> msg
-        , onCancel : Int -> msg
-        , onStep : Int -> msg
-    }
-    -> String
-    -> String
-    -> String
-    -> Html msg
+grip : Config msg -> String -> String -> String -> Html msg
 grip config classes cursor glyph =
     Html.node "drag-handle"
         ([ id config.id

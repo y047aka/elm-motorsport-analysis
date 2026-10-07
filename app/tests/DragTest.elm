@@ -1,9 +1,9 @@
 module DragTest exposing (suite)
 
 import Drag exposing (Msg(..))
+import Drag.Handle exposing (Pointer)
 import Expect
 import Test exposing (Test, describe, test)
-import UI.DragHandle exposing (Pointer)
 
 
 suite : Test

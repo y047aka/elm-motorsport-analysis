@@ -5,7 +5,7 @@ let go of, or taken away by the browser. The thing carried is whatever the
 caller names -- a column, the width a grip found -- and rides along untouched,
 coming back with the pointer's travel when the carry ends.
 
-`UI.DragHandle` is the event source this is read from: the grip reports a
+`Drag.Handle` is the event source this is read from: the grip reports a
 `Pick`, moves only while it is held, a `Drop` wherever the pointer lets go,
 and a `Cancel` after every `Drop` and whenever the browser takes the pointer.
 `update` is total over that, so a page can wire a grip's messages straight in
@@ -15,7 +15,7 @@ and check nothing first.
 
 -}
 
-import UI.DragHandle exposing (Pointer)
+import Drag.Handle exposing (Pointer)
 
 
 {-| What a grip reports. `Pick` takes the pointer up with something; `Move`

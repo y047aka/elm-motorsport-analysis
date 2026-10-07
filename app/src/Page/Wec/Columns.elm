@@ -29,13 +29,13 @@ The names sort into five shelves:
 import Browser.Dom
 import Dict exposing (Dict)
 import Drag
+import Drag.Handle exposing (Pointer)
 import Html
 import Html.Attributes as Attributes
 import List.Extra
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Task
-import UI.DragHandle exposing (Pointer)
 
 
 {-| A column of the strip: a car's, or the tracker's.
