@@ -1,9 +1,7 @@
 module Page.Wec.Columns exposing
-    ( Model, init, update, Msg(..)
-    , StripKey(..), keyName
-    , keysOf, resolve, carsIn
-    , placements, isCarried, placementAttributes
-    , gripId, stripId, scrollId, width, gap, px
+    ( Model, init, update, Msg(..), StripKey(..), keyName, keysOf, resolve, carsIn
+    , Placement(..), placements, isCarried, placementAttributes, gripId, stripId, scrollId, width
+    , gap, pitch, slot, xOf, px
     )
 
 {-| The strip of columns: what order they stand in, which one a pointer is
@@ -14,17 +12,17 @@ choice, and the order -- `Columns` -- is a list of them. Every edit is total.
 
 The names sort into five shelves:
 
-- `Model`, `init`, `update`, `Msg` -- the strip's state and what moves it.
-- `StripKey`, `keyName` -- who a column is, and the `Html.Keyed` name of one.
-- `keysOf`, `resolve`, `carsIn` -- what order they stand in.
-- `placements`, `isCarried`, `placementAttributes` -- where each one is drawn,
-  and whether it is the one under the pointer.
-- `gripId` ... `px` -- the names the page builds DOM out of, and the measures
-  the carry arithmetic is done in.
+  - `Model`, `init`, `update`, `Msg` -- the strip's state and what moves it.
+  - `StripKey`, `keyName` -- who a column is, and the `Html.Keyed` name of one.
+  - `keysOf`, `resolve`, `carsIn` -- what order they stand in.
+  - `placements`, `isCarried`, `placementAttributes` -- where each one is drawn,
+    and whether it is the one under the pointer.
+  - `gripId` ... `px` -- the names the page builds DOM out of, and the measures
+    the carry arithmetic is done in.
 
-@docs Model, init, update, Msg, StripKey, keyName, keysOf, resolve, carsIn,
-placements, isCarried, placementAttributes, gripId, stripId, scrollId, width,
-gap, px
+@docs Model, init, update, Msg, StripKey, keyName, keysOf, resolve, carsIn
+@docs Placement, placements, isCarried, placementAttributes, gripId, stripId, scrollId, width
+@docs gap, pitch, slot, xOf, px
 
 -}
 
@@ -306,6 +304,9 @@ travel carry =
 
 columnsCarried : Carry -> Int
 columnsCarried carry =
+    -- Counted in the canonical `pitch`, not the carried column's own
+    -- width: widths decide where a place is drawn, not what a carry turns
+    -- over.
     round (travel carry / pitch)
 
 
@@ -320,13 +321,28 @@ type Placement
 {-| While one is carried: that one under the pointer, held to the strip, and
 each it has passed a column back the other way.
 
+The carried one is clamped to what actually stands on either side of it;
+each displaced one moves by the slot its neighbour vacated.
+
 Nothing moves in the DOM until it is let go of. The grip holds the pointer only
 while it stays in the document, and the keyed strip moves a column by taking
 it out.
 
 -}
-placements : Maybe Carry -> List StripKey -> List Placement
-placements carried keys =
+placements : (StripKey -> Float) -> Maybe Carry -> List StripKey -> List Placement
+placements widthOf carried keys =
+    let
+        slots =
+            List.map (widthOf >> slot) keys
+
+        leftEdge index =
+            List.take index slots
+                |> List.sum
+
+        slotAt index =
+            List.Extra.getAt index slots
+                |> Maybe.withDefault pitch
+    in
     case carried |> Maybe.andThen (\carry -> List.Extra.elemIndex carry.key keys |> Maybe.map (Tuple.pair carry)) of
         Just ( carry, from ) ->
             let
@@ -339,13 +355,13 @@ placements carried keys =
             List.indexedMap
                 (\index _ ->
                     if index == from then
-                        Carried (clamp (toFloat -from * pitch) (toFloat (last - from) * pitch) (travel carry))
+                        Carried (clamp (negate (leftEdge from)) (List.drop (from + 1) slots |> List.sum) (travel carry))
 
                     else if from < index && index <= to then
-                        Shifted -pitch
+                        Shifted (negate (slotAt (index - 1)))
 
                     else if to <= index && index < from then
-                        Shifted pitch
+                        Shifted (slotAt index)
 
                     else
                         Shifted 0
@@ -373,7 +389,9 @@ placementAttributes placement =
             []
 
         Carried dx ->
-            [ Attributes.class "relative z-10 rounded-xl bg-background shadow-2xl"
+            -- Above the resting columns, which the carry passes: a drag is
+            -- drawn over what it goes under.
+            [ Attributes.class "relative z-30 rounded-xl bg-background shadow-2xl"
             , Attributes.style "transform" ("translateX(" ++ px dx ++ ")")
             ]
 
@@ -646,24 +664,45 @@ restoreScrolls scrolls =
         |> Task.map (\_ -> ())
 
 
-{-| A column is a fixed width, not a share of the strip: the carry arithmetic
-measures one `pitch` as exactly one column, and the strip scrolls sideways
-rather than resizing its columns. The width is what the panel's own content
-wants; a change to it is a change to `pitch`, and so to every carry distance.
+{-| A column is a fixed width, not a share of the strip, and the strip
+scrolls sideways rather than resizing its columns. The width is what the
+panel's own content wants; a change to it is a change to `pitch`, and so to
+every carry distance.
 
-335 is the panel's floor: the widest thing in it is the comparison's tab row,
-which wants 302px of the 303 a column of this width hands it; 335 is where the
+318 is the panel's floor: the widest thing in it is the comparison's tab row,
+which wants 286px -- the three chart labels and the three stretch labels, one
+`shrink-0` button apiece. 318 is that row plus the card's padding, where the
 row stops scrolling within itself.
 
 -}
 width : Float
 width =
-    335
+    318
 
 
 gap : Float
 gap =
     10
+
+
+{-| From one column's left edge to the next one's when that column is
+`wide`: its own width, and the gap it is followed by. `pitch` is this at
+`width`.
+-}
+slot : Float -> Float
+slot wide =
+    wide + gap
+
+
+{-| Where the column at this index of this strip begins, measured from the
+strip's own left edge: the slots of every column before it.
+-}
+xOf : (StripKey -> Float) -> List StripKey -> Int -> Float
+xOf widthOf keys index =
+    keys
+        |> List.take index
+        |> List.map (widthOf >> slot)
+        |> List.sum
 
 
 pitch : Float

@@ -300,7 +300,7 @@ chartTabs (Comparison { chart, window }) range snapshot rivals =
         -- chart labels its own baseline.
         [ ( GapChart, "Gap", \() -> orEmptyState (GapChart.gapChartView range snapshot rivals) )
         , ( PositionChart, "Positions", \() -> orEmptyState (PositionProgression.view range snapshot rivals) )
-        , ( DistributionChart, "Distribution", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
+        , ( DistributionChart, "Lap time", \() -> orEmptyState (LapTimeDistribution.view range snapshot rivals) )
         ]
 
 

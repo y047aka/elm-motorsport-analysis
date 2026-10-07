@@ -3,6 +3,7 @@ module Page.Wec.ColumnsTest exposing (suite)
 import Dict
 import Expect
 import Internal.ChangePoints as ChangePoints
+import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
@@ -14,7 +15,7 @@ import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
-import Page.Wec.Columns as Columns exposing (Msg(..), StripKey(..))
+import Page.Wec.Columns as Columns exposing (Msg(..), Placement(..), StripKey(..))
 import Test exposing (Test, describe, test)
 import UI.DragHandle exposing (Pointer)
 
@@ -57,8 +58,8 @@ suite =
                         |> Expect.equal shown.order
             , test "a carry that lands among the cars fixes the tracker there" <|
                 \_ ->
-                    -- The first leader is carried one column right; the
-                    -- tracker stays behind cars that have settled.
+                    -- The first car is carried one column right; the tracker
+                    -- stays behind cars that have settled.
                     case leaders of
                         headKey :: nextKey :: _ ->
                             Columns.init
@@ -177,6 +178,44 @@ suite =
                                 |> step (Step (Car (carNumberOf nextKey)) -1)
                                 |> .announcement
                                 |> Expect.equal ("Car #" ++ carNumberOf nextKey ++ " moved to column 1 of " ++ String.fromInt (List.length leaders + 1))
+
+                        _ ->
+                            Expect.fail "the fixture fields fewer than two class leaders"
+            , test "a carry is clamped by the widths that stand, not the pitch that counts" <|
+                \_ ->
+                    -- The first stand-in stands a narrow slot wide; the
+                    -- second car carried past it is held at its right edge,
+                    -- and it steps aside by its own slot rather than a full
+                    -- pitch.
+                    case leaders of
+                        firstKey :: secondKey :: _ ->
+                            let
+                                narrow key =
+                                    if key == firstKey then
+                                        130
+
+                                    else
+                                        Columns.width
+
+                                carrying =
+                                    Columns.init
+                                        |> step (Grab secondKey (pointer 1 0))
+                                        |> step (Carrying (pointer 1 (-2 * Columns.pitch)))
+
+                                placed =
+                                    Columns.placements narrow carrying.carried (keysOf carrying)
+                            in
+                            Expect.all
+                                [ \_ ->
+                                    placed
+                                        |> List.Extra.getAt 0
+                                        |> Expect.equal (Just (Shifted 140))
+                                , \_ ->
+                                    placed
+                                        |> List.Extra.getAt 1
+                                        |> Expect.equal (Just (Carried -140))
+                                ]
+                                ()
 
                         _ ->
                             Expect.fail "the fixture fields fewer than two class leaders"

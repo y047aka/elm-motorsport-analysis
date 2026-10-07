@@ -17,6 +17,7 @@ import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
 import Json.Decode as Decode
+import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
@@ -61,7 +62,25 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , comparison : CarDetail.Comparison
+    , driverNames : DriverNames
     }
+
+
+{-| Whether the live standings draw each car's driver surname.
+-}
+type DriverNames
+    = NamesShown
+    | NamesHidden
+
+
+toggleDriverNames : DriverNames -> DriverNames
+toggleDriverNames names =
+    case names of
+        NamesShown ->
+            NamesHidden
+
+        NamesHidden ->
+            NamesShown
 
 
 {-| The page's right-hand pane: the tracker the reader adds a column of, and
@@ -94,6 +113,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , comparison = CarDetail.initialComparison
+      , driverNames = NamesShown
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -107,6 +127,8 @@ type Msg
     = StartRace
     | PauseRace
     | TogglePane
+    | ToggleDriverNames
+    | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
@@ -132,6 +154,28 @@ update shared msg m =
 
         TogglePane ->
             ( { m | pane = togglePane m.pane }, Effect.none )
+
+        ToggleDriverNames ->
+            ( { m | driverNames = toggleDriverNames m.driverNames }, Effect.none )
+
+        FocusColumn key ->
+            let
+                keys =
+                    columnKeys shared m
+            in
+            case List.Extra.elemIndex key keys of
+                Just index ->
+                    -- Where the column stands, as it stands -- plus the gap's
+                    -- slack, so the column before it stays a sliver in sight.
+                    ( m
+                    , Browser.Dom.setViewportOf Columns.stripId (Columns.gap + Columns.xOf (always Columns.width) keys index) 0
+                        |> Task.onError (\_ -> Task.succeed ())
+                        |> Task.perform (\_ -> ColumnsMsg Columns.Settled)
+                        |> Effect.sendCmd
+                    )
+
+                Nothing ->
+                    ( m, Effect.none )
 
         StandingsTabChange tab ->
             ( { m | standingsTab = tab }, Effect.none )
@@ -178,13 +222,16 @@ view shared m =
     let
         maybeRound =
             Shared.loadedRound shared
+
+        keys =
+            columnKeys shared m
     in
     { title = "Wec"
     , body =
         [ main_
             [ Attributes.class "dark h-full grid grid-rows-[auto_1fr]"
             ]
-            [ navigation m.pane (headerTitle shared) maybeRound
+            [ navigation m.pane keys (headerTitle shared) maybeRound
             , case maybeRound of
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
@@ -192,7 +239,7 @@ view shared m =
                     div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just round ->
-                    mainGrid round m
+                    mainGrid round keys m
             ]
         ]
     }
@@ -223,6 +270,21 @@ unavailable shared =
                 { headline = "The round could not be loaded."
                 , detail = Notice.httpError error
                 }
+
+
+{-| The strip's columns, in order, at the moment of the render or the
+message. Read once per render and handed to everything that draws or names
+a column: playback re-reads the order every frame, and each reading costs
+the field walk the stand-ins are resolved against.
+-}
+columnKeys : Shared.Model -> Model -> List Columns.StripKey
+columnKeys shared m =
+    Shared.loadedRound shared
+        |> Maybe.map
+            (\round ->
+                Columns.resolve round.snapshot (Columns.keysOf round.snapshot m.strip.order)
+            )
+        |> Maybe.withDefault []
 
 
 headerTitle : Shared.Model -> String
@@ -267,8 +329,8 @@ trackerCard several held track snapshot =
         ]
 
 
-mainGrid : Shared.LoadedRound -> Model -> Html Msg
-mainGrid round m =
+mainGrid : Shared.LoadedRound -> List Columns.StripKey -> Model -> Html Msg
+mainGrid round keys m =
     let
         snapshot =
             round.snapshot
@@ -276,42 +338,76 @@ mainGrid round m =
         replay =
             round.replay
 
-        keys =
-            Columns.resolve snapshot (Columns.keysOf snapshot m.strip.order)
-
         gridCells =
-            [ div
-                [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
-                [ LiveStandings.view
-                    { onSelect = Columns.Open >> ColumnsMsg
-                    , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
-                    }
-                    snapshot
-                ]
-            , columnStrip "col-start-2 row-start-1 row-span-2" round.track round.timeline keys m replay snapshot
-            ]
-                ++ paneCells m.pane round.track snapshot round.fieldEvents replay
+            standingsCell keys m snapshot
+                :: columnStrip "col-start-2 row-start-1 row-span-2" round.track round.timeline keys m replay snapshot
+                :: paneCells m.pane round.track snapshot round.fieldEvents replay
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
         [ div
             [ Attributes.class
-                ("shrink-0 h-full grid "
-                    ++ (case m.pane of
-                            Shown ->
-                                "grid-cols-[218px_1fr_270px]"
-
-                            Hidden ->
-                                "grid-cols-[218px_1fr]"
-                       )
-                    ++ " grid-rows-[300px_minmax(0,1fr)] gap-2.5"
-                )
+                ("shrink-0 h-full grid " ++ gridColumns m.pane ++ " grid-rows-[300px_minmax(0,1fr)] gap-2.5")
             ]
             gridCells
         , standingsPanel m.standingsTab m replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
+
+
+{-| Three tracks: the standings, the strip, and the tracker pane once it is
+shown.
+
+Each spelling is written whole: Tailwind generates a class only from a string
+it finds intact in the source, so one assembled from fragments — a width here,
+a suffix there — silently ships no `grid-template-columns` at all, and every
+track sizes to its content.
+
+-}
+gridColumns : Pane -> String
+gridColumns pane =
+    case pane of
+        Shown ->
+            "grid-cols-[auto_1fr_270px]"
+
+        Hidden ->
+            "grid-cols-[auto_1fr]"
+
+
+{-| The live standings, standing to the left of the strip rather than as one
+of its columns. The width they stand at is their own -- see
+`LiveStandings.width`.
+-}
+standingsCell : List Columns.StripKey -> Model -> Snapshot -> Html Msg
+standingsCell keys m snapshot =
+    div
+        [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid"
+        ]
+        [ LiveStandings.view
+            { onSelect = Columns.Open >> ColumnsMsg
+            , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
+            , showNames = m.driverNames == NamesShown
+            , onToggleNames = ToggleDriverNames
+            }
+            snapshot
+        ]
+
+
+{-| One keyed child of the strip: a grid of the width the column stands at,
+whatever is drawn in it, standing as its placement says -- flush for a
+resting one, an offset and a shadow for a carried one.
+-}
+stripColumn : String -> Float -> Columns.Placement -> Html Msg -> ( String, Html Msg )
+stripColumn key width placement content =
+    ( key
+    , div
+        (Attributes.class "shrink-0 grid"
+            :: Attributes.style "width" (Columns.px width)
+            :: Columns.placementAttributes placement
+        )
+        [ content ]
+    )
 
 
 {-| The tracker and the timeline, or nothing once the pane is hidden.
@@ -357,7 +453,27 @@ columnStrip cell track timeline keys m replay snapshot =
             List.length keys > 1
 
         placements =
-            Columns.placements m.strip.carried keys
+            Columns.placements (always Columns.width) m.strip.carried keys
+
+        columnCell key placement =
+            case key of
+                Columns.Car carNumber ->
+                    stripColumn (Columns.keyName key)
+                        Columns.width
+                        placement
+                        (Snapshot.get carNumber snapshot
+                            |> Maybe.map
+                                (\car ->
+                                    Html.Lazy.lazy6 (carCard several) timeline (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
+                                )
+                            |> Maybe.withDefault (text "")
+                        )
+
+                Columns.Tracker ->
+                    stripColumn (Columns.keyName key)
+                        Columns.width
+                        placement
+                        (trackerCard several (Columns.isCarried placement) track snapshot)
     in
     case keys of
         [] ->
@@ -381,32 +497,7 @@ columnStrip cell track timeline keys m replay snapshot =
                                 []
                        )
                 )
-                (List.map2
-                    (\key placement ->
-                        ( Columns.keyName key
-                        , div
-                            (Attributes.class "shrink-0 grid"
-                                :: Attributes.style "width" (Columns.px Columns.width)
-                                :: Columns.placementAttributes placement
-                            )
-                            [ case key of
-                                Columns.Car carNumber ->
-                                    Maybe.withDefault (text "")
-                                        (Snapshot.get carNumber snapshot
-                                            |> Maybe.map
-                                                (\car ->
-                                                    Html.Lazy.lazy6 (carCard several) timeline (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
-                                                )
-                                        )
-
-                                Columns.Tracker ->
-                                    trackerCard several (Columns.isCarried placement) track snapshot
-                            ]
-                        )
-                    )
-                    keys
-                    placements
-                )
+                (List.map2 columnCell keys placements)
 
 
 columnGrip : Bool -> Columns.StripKey -> Html Msg
@@ -676,11 +767,11 @@ standingsPopover =
         ]
 
 
-navigation : Pane -> String -> Maybe Shared.LoadedRound -> Html Msg
-navigation pane title maybeRound =
+navigation : Pane -> List Columns.StripKey -> String -> Maybe Shared.LoadedRound -> Html Msg
+navigation pane keys title maybeRound =
     nav
-        [ Attributes.class "p-3 grid grid-cols-[auto_1fr_auto] items-center gap-x-10" ]
-        [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
+        [ Attributes.class "p-3 grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-10" ]
+        [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap min-w-0" ]
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
             ]
@@ -695,8 +786,63 @@ navigation pane title maybeRound =
                     , onPause = PauseRace
                     , toReplayMsg = ReplayMsg
                     }
+        , columnList maybeRound keys
         , paneToggle pane
         ]
+
+
+{-| The open columns, in strip order, to the right of the playback controls.
+Clicking one scrolls the strip along to that column; taking a column away
+stays the column's own ✕'s work.
+
+The list is capped and scrolls within itself so a long field of open columns
+cannot crowd the controls out of the middle of the header.
+
+-}
+columnList : Maybe Shared.LoadedRound -> List Columns.StripKey -> Html Msg
+columnList maybeRound keys =
+    div
+        [ Attributes.class "flex items-center gap-x-1 min-w-0 max-w-[40vw] overflow-x-auto"
+        , attribute "data-header-columns" ""
+        ]
+        (List.map (headerColumn (Maybe.map .snapshot maybeRound)) keys)
+
+
+headerColumn : Maybe Snapshot -> Columns.StripKey -> Html Msg
+headerColumn maybeSnapshot key =
+    let
+        badge =
+            case ( key, maybeSnapshot ) of
+                ( Columns.Car carNumber, Just snapshot ) ->
+                    Snapshot.get carNumber snapshot
+                        |> Maybe.map (\car -> CarNumberBadge.view car.metadata)
+                        |> Maybe.withDefault (text "")
+
+                ( Columns.Car carNumber, Nothing ) ->
+                    span [ Attributes.class "w-[35px] text-center text-xs font-bold" ] [ text carNumber ]
+
+                ( Columns.Tracker, _ ) ->
+                    mark "TRACK"
+
+        mark label =
+            div [ Attributes.class "w-[35px] p-1 rounded flex flex-col items-center justify-center border border-border leading-none text-[9px] font-bold" ]
+                [ text label ]
+
+        labelText =
+            case key of
+                Columns.Car carNumber ->
+                    "Scroll to car #" ++ carNumber
+
+                Columns.Tracker ->
+                    "Scroll to the tracker"
+    in
+    button
+        [ Attributes.class "shrink-0 flex items-center p-0.5 rounded cursor-pointer transition-colors hover:bg-accent/40"
+        , onClick (FocusColumn key)
+        , attribute "aria-label" labelText
+        , Attributes.title labelText
+        ]
+        [ badge ]
 
 
 {-| The arrows point at the edge the pane lives on.

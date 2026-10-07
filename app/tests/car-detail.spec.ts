@@ -1,7 +1,23 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Locator, Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { waitForPageReady, setLapCount } from './helpers';
 
 const DETAIL = '[data-car-detail]';
+
+/**
+ * One column's width, and the pitch one column moves by -- read out of
+ * Columns.elm, which decides both, rather than repeated here.
+ */
+const columnsSource = readFileSync(new URL('../src/Page/Wec/Columns.elm', import.meta.url), 'utf8');
+const COLUMN_WIDTH = Number(/\nwidth =\n\s+(\d+)/.exec(columnsSource)?.[1]);
+const GAP = Number(/gap =\n\s+(\d+)/.exec(columnsSource)?.[1]);
+const PITCH = COLUMN_WIDTH + GAP;
+
+/** The standings' two widths, decided by LiveStandings.elm: what the panel
+ * stands at, and what it gives the strip back while the surnames hide. */
+const standingsSource = readFileSync(new URL('../src/View/LiveStandings.elm', import.meta.url), 'utf8');
+const STANDINGS_WIDTH = Number(/\nwidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
+const STANDINGS_NARROW = Number(/narrowWidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
 
 /** The car's row in the live standings, which is where a car is picked. */
 function standingsRow(page: Page, carNumber: string) {
@@ -86,7 +102,7 @@ test.describe('Car Detail Visual Tests', () => {
   });
 
   test('should draw the car\'s own curve over its rivals\' in the distribution', async ({ page }) => {
-    await page.locator(DETAIL).getByRole('button', { name: 'Distribution' }).click();
+    await page.locator(DETAIL).getByRole('button', { name: 'Lap time' }).click();
     await expect(section(page, 'Comparison')).toHaveScreenshot('distribution-tab.png');
   });
 
@@ -130,9 +146,18 @@ test.describe('Car Detail Visual Tests', () => {
  * car it holds.
  */
 test.describe('Car Detail Columns', () => {
+  /**
+   * The strip cell a column's content is drawn in -- the only ancestors
+   * that hold a column's width and placement. One reading of what a cell
+   * is, so a change to how the strip draws one lands in a single place.
+   */
+  function cellOf(content: Locator) {
+    return content.locator('xpath=ancestor::*[contains(@class, "shrink-0")][1]');
+  }
+
   /** The column a panel is drawn in, which is what carries its width. */
   function column(page: Page, index: number) {
-    return page.locator(DETAIL).nth(index).locator('xpath=ancestor::*[contains(@class, "shrink-0")][1]');
+    return cellOf(page.locator(DETAIL).nth(index));
   }
 
   /** The grip a column is carried by. */
@@ -154,6 +179,29 @@ test.describe('Car Detail Columns', () => {
     await page.mouse.down();
     await expect(handle).toHaveClass(/cursor-grabbing/);
     await page.mouse.move(x + by, y, { steps: 10 });
+  }
+
+  /**
+   * Wait for the strip to stop gliding. A click scrolls its button into
+   * view, and on macOS that scroll is smooth: a grip measured while the
+   * strip still moves is pressed where it was, not where it is.
+   */
+  function settleStrip(page: Page) {
+    return page.locator('#column-strip').evaluate(
+      (el) =>
+        new Promise<void>((resolve) => {
+          let last = el.scrollLeft;
+          const tick = () => {
+            if (el.scrollLeft === last) {
+              resolve();
+            } else {
+              last = el.scrollLeft;
+              requestAnimationFrame(tick);
+            }
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
   }
 
   test.beforeEach(async ({ page }) => {
@@ -223,13 +271,26 @@ test.describe('Car Detail Columns', () => {
   test('should hold every column to a width its panel stays readable at', async ({ page }) => {
     // Before a car has been picked at all: the class leaders stand in, each in
     // a column rather than handed the cell.
-    await expect(column(page, 0)).toHaveCSS('width', '335px');
+    await expect(column(page, 0)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
     await selectOnlyCar(page, '83');
-    await expect(column(page, 0)).toHaveCSS('width', '335px');
+    await expect(column(page, 0)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
     await selectCar(page, '12');
     for (let i = 0; i < 2; i++) {
-      await expect(column(page, i)).toHaveCSS('width', '335px');
+      await expect(column(page, i)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
     }
+  });
+
+  /** The standings' own card, which carries its width itself. */
+  function standingsCell(page: Page) {
+    return page.locator('[data-live-standings]');
+  }
+
+  test('should give the strip back the standings\' width while the surnames hide', async ({ page }) => {
+    await expect(standingsCell(page)).toHaveCSS('width', `${STANDINGS_WIDTH}px`);
+    await page.getByRole('button', { name: 'Hide the driver names' }).click();
+    await expect(standingsCell(page)).toHaveCSS('width', `${STANDINGS_NARROW}px`);
+    await page.getByRole('button', { name: 'Show the driver names' }).click();
+    await expect(standingsCell(page)).toHaveCSS('width', `${STANDINGS_WIDTH}px`);
   });
 
   test('should leave the third column off the edge, reachable by scrolling', async ({ page }) => {
@@ -253,7 +314,7 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['83', '12']);
     // The strip the columns sit in, so that what is recorded is the pair
     // together -- their width, the gap, and where the close button lands in a
-    // header 335px wide -- rather than one panel on its own.
+    // column-wide header -- rather than one panel on its own.
     await expect(column(page, 0).locator('xpath=..')).toHaveScreenshot('columns-side-by-side.png');
   });
 
@@ -287,18 +348,18 @@ test.describe('Car Detail Columns', () => {
 
   test('should move a column to the place nearest where it is let go of', async ({ page }) => {
     // Most of the way past two columns, which rounds to two.
-    await carry(page, 0, 345 * 1.6);
+    await carry(page, 0, PITCH * 1.6);
     await page.mouse.up();
     await expectColumns(page, ['48', '92', '6']);
   });
 
   test('should draw a carried column under the pointer and leave the rest in place until it is let go of', async ({ page }) => {
-    await carry(page, 0, 345);
+    await carry(page, 0, PITCH);
     // Nothing is reordered while the grip holds the pointer: the column it
     // has passed is drawn a place back instead.
     await expectColumns(page, STAND_INS);
-    await expect(column(page, 0)).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 345, 0)');
-    await expect(column(page, 1)).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -345, 0)');
+    await expect(column(page, 0)).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${PITCH}, 0)`);
+    await expect(column(page, 1)).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${-PITCH}, 0)`);
     await expect(column(page, 2)).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);
@@ -308,8 +369,10 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should hold a carried column to the strip', async ({ page }) => {
-    await carry(page, 1, -345 * 3);
-    await expect(column(page, 1)).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -345, 0)');
+    await carry(page, 1, -PITCH * 3);
+    // Three places left is past the strip's head: the carry is held one
+    // pitch back, to the strip's own left edge.
+    await expect(column(page, 1)).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${-PITCH}, 0)`);
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);
   });
@@ -348,7 +411,7 @@ test.describe('Car Detail Columns', () => {
     await page.setViewportSize({ width: 1440, height: 600 });
     // The first column's grip stays in sight to be pressed.
     await scrollColumns(page, [0, 40, 80]);
-    await carry(page, 0, 345);
+    await carry(page, 0, PITCH);
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);
     await expect.poll(() => columnScrolls(page)).toEqual([40, 0, 80]);
@@ -371,11 +434,14 @@ test.describe('Car Detail Columns', () => {
     await carry(page, 0, 0);
     // The strip is read where the carry began a frame after the grip is held.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
-    await column(page, 0).locator('xpath=..').evaluate((strip) => {
-      strip.scrollLeft += 345 * 2;
-    });
+    await column(page, 0).locator('xpath=..').evaluate(
+      (strip, pitch) => {
+        strip.scrollLeft += pitch * 2;
+      },
+      PITCH,
+    );
     // Still under the pointer, which has not moved.
-    await expect(column(page, 0)).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 690, 0)');
+    await expect(column(page, 0)).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${PITCH * 2}, 0)`);
     await page.mouse.up();
     await expectColumns(page, ['48', '92', '6', '83', '12', '8']);
   });
@@ -392,6 +458,8 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should go on following the class leaders when a step has nowhere to go', async ({ page }) => {
+    // The first column has nowhere to the left to go: a step there moves
+    // nothing and settles nothing.
     await grip(page, 0).focus();
     await page.keyboard.press('ArrowLeft');
     await setLapCount(page, 0);
@@ -399,7 +467,7 @@ test.describe('Car Detail Columns', () => {
   });
 
   test('should stop following the class leaders once a column has been moved', async ({ page }) => {
-    await carry(page, 0, 345);
+    await carry(page, 0, PITCH);
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);
     await setLapCount(page, 0);
@@ -408,7 +476,7 @@ test.describe('Car Detail Columns', () => {
 
   test('should not step a column by the keys while one is being carried', async ({ page }) => {
     // The press has focused the grip, so the keys reach it.
-    await carry(page, 0, 345);
+    await carry(page, 0, PITCH);
     await expect(grip(page, 0)).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
@@ -430,11 +498,11 @@ test.describe('Car Detail Columns', () => {
     await expect(grip(page, 0)).toHaveClass(/cursor-grabbing/);
     // The second finger's press and release are its own, and move nothing.
     await touch(1, 'pointerdown', 3, 100);
-    await touch(1, 'pointerup', 3, 100 + 345 * 2);
-    await touch(1, 'lostpointercapture', 3, 100 + 345 * 2);
+    await touch(1, 'pointerup', 3, 100 + PITCH * 2);
+    await touch(1, 'lostpointercapture', 3, 100 + PITCH * 2);
     await expectColumns(page, STAND_INS);
     await expect(grip(page, 0)).toHaveClass(/cursor-grabbing/);
-    await touch(0, 'pointerup', 2, 100 + 345);
+    await touch(0, 'pointerup', 2, 100 + PITCH);
     await expectColumns(page, ['48', '6', '92']);
   });
 
@@ -454,14 +522,19 @@ test.describe('Car Detail Columns', () => {
 
   test('should end a carry whose grip goes when the other columns are closed', async ({ page }) => {
     await page.locator(DETAIL).nth(2).getByRole('button', { name: 'Close this column' }).click();
-    await carry(page, 0, 345);
+    // The close was the strip's own scroll: the grips are gliding until it
+    // stops, and the carry below presses at measured coordinates.
+    await settleStrip(page);
+    await carry(page, 0, PITCH);
     // A second finger, closing the other column: the mouse is held by the grip.
     await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Close this column' }).evaluate((el) => (el as HTMLElement).click());
     await expectColumns(page, ['6']);
+    // The last column closed its grip with it, and letting go of what is
+    // left puts the strip back as it stood.
     await expect(column(page, 0)).toHaveCSS('transform', 'none');
     await page.mouse.up();
     await selectCar(page, '83');
-    await carry(page, 0, 345);
+    await carry(page, 0, PITCH);
     await page.mouse.up();
     await expectColumns(page, ['83', '6']);
   });
