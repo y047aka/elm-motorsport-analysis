@@ -16,7 +16,21 @@ suite : Test
 suite =
     describe "Page.Wec.Resize"
         [ describe "the width following the pointer"
-            [ test "a carry moves the width from where it was picked up" <|
+            [ test "a second pointer's grab is refused while one is carried" <|
+                \_ ->
+                    let
+                        refused =
+                            startAt 300 |> step (Grab (pointer 2 100))
+                    in
+                    Expect.all
+                        [ \m -> Expect.equal (startAt 300) m
+                        , \m ->
+                            step (Carrying (pointer 1 340)) m
+                                |> .width
+                                |> Expect.equal 340
+                        ]
+                        refused
+            , test "a carry moves the width from where it was picked up" <|
                 \_ ->
                     startAt 300
                         |> step (Carrying (pointer 1 340))
