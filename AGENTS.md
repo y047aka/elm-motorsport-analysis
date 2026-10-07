@@ -491,6 +491,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   page directly, and reads the values Elm can send out of the wrapper sources
   rather than repeating them, so a constructor added without a matching
   variant in the vendored component fails here instead of shipping unstyled.
+- **Spec constants** (`/app/tests/car-detail.spec.ts`) — widths, pitches and
+  steps are likewise read out of the Elm sources that decide them. A constant
+  that moves modules must take its pattern with it; `readConstant` fails the
+  spec load by name when a pattern misses, rather than letting the constant
+  become `NaN` and every assertion expect `NaNpx`.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

@@ -5,24 +5,34 @@ import { waitForPageReady, setLapCount } from './helpers';
 const DETAIL = '[data-car-detail]';
 
 /**
- * One column's width, and the pitch one column moves by -- read out of
- * Columns.elm, which decides both, rather than repeated here.
+ * Reads a constant out of the source that decides it, rather than repeating
+ * it here. A pattern that misses throws while the spec loads, taking every
+ * test down with a named error -- a constant that moved modules without its
+ * pattern would otherwise become `NaN`, and surface as an expectation of
+ * `NaNpx` three hundred lines later.
  */
+function readConstant(name: string, source: string, pattern: RegExp): number {
+  const value = Number(pattern.exec(source)?.[1]);
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} not found in its source -- did it move?`);
+  }
+  return value;
+}
+
+/** One column's width, and the pitch one column moves by. */
 const columnsSource = readFileSync(new URL('../src/Page/Wec/Columns.elm', import.meta.url), 'utf8');
-const COLUMN_WIDTH = Number(/\nwidth =\n\s+(\d+)/.exec(columnsSource)?.[1]);
-const GAP = Number(/gap =\n\s+(\d+)/.exec(columnsSource)?.[1]);
+const COLUMN_WIDTH = readConstant('Columns.width', columnsSource, /\nwidth =\n\s+(\d+)/);
+const GAP = readConstant('Columns.gap', columnsSource, /gap =\n\s+(\d+)/);
 const PITCH = COLUMN_WIDTH + GAP;
 
-/** The standings' width and its two bounds, decided by LiveStandings.elm,
- * and the width one arrow key step is worth, decided by the Fence Event.elm
- * hands the resize -- read out of the sources that decide them rather than
- * repeated here. */
+/** The standings' width and its two bounds, and the width one arrow key
+ * step is worth. */
 const standingsSource = readFileSync(new URL('../src/View/LiveStandings.elm', import.meta.url), 'utf8');
-const STANDINGS_WIDTH = Number(/\nwidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
-const STANDINGS_MIN = Number(/\nminWidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
-const STANDINGS_MAX = Number(/\nmaxWidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
+const STANDINGS_WIDTH = readConstant('LiveStandings.width', standingsSource, /\nwidth =\n\s+(\d+)/);
+const STANDINGS_MIN = readConstant('LiveStandings.minWidth', standingsSource, /\nminWidth =\n\s+(\d+)/);
+const STANDINGS_MAX = readConstant('LiveStandings.maxWidth', standingsSource, /\nmaxWidth =\n\s+(\d+)/);
 const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
-const RESIZE_STEP = Number(/standingsFence =\n\s*\{[\s\S]*?step = (\d+)/.exec(eventSource)?.[1]);
+const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsFence =\n\s*\{[\s\S]*?step = (\d+)/);
 
 /** The car's row in the live standings, which is where a car is picked. */
 function standingsRow(page: Page, carNumber: string) {
