@@ -398,28 +398,39 @@ carRow onSelect r =
 
 
 {-| One visible column's cell. The tracks and the cells both walk
-`visible width`, so which cell stands in which track is held by construction.
+`visible width`, so which cell stands in which track is held by construction,
+and each cell lines itself up by the same `align` its label does.
 -}
 cell : Row -> Column -> Html msg
 cell r column =
+    let
+        spec =
+            columnSpec column
+
+        numeral =
+            "text-xs tabular-nums " ++ spec.align
+
+        timed time color =
+            div [ class numeral, style "color" color ] [ text time ]
+    in
     case column of
         Driver ->
             div [ class "text-xs" ] [ text r.driver ]
 
         Ahead ->
-            div [ class "text-xs text-right tabular-nums text-muted-foreground" ] [ text r.ahead ]
+            div [ class (numeral ++ " text-muted-foreground") ] [ text r.ahead ]
 
         Last ->
-            div [ class "text-xs text-right tabular-nums", style "color" r.lastColor ] [ text r.last ]
+            timed r.last r.lastColor
 
         Current ->
-            div [ class "text-xs text-right tabular-nums", style "color" r.currentColor ] [ text r.current ]
+            timed r.current r.currentColor
 
         Best ->
-            div [ class "text-xs text-right tabular-nums", style "color" r.bestColor ] [ text r.best ]
+            timed r.best r.bestColor
 
         Laps ->
-            div [ class "text-xs text-right tabular-nums" ] [ text r.laps ]
+            div [ class numeral ] [ text r.laps ]
 
         Move ->
-            div [ class "text-xs text-center tabular-nums" ] [ Leaderboard.viewPositionChangeInline r.move ]
+            div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]
