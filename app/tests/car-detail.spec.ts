@@ -5,19 +5,34 @@ import { waitForPageReady, setLapCount } from './helpers';
 const DETAIL = '[data-car-detail]';
 
 /**
- * One column's width, and the pitch one column moves by -- read out of
- * Columns.elm, which decides both, rather than repeated here.
+ * Reads a constant out of the source that decides it, rather than repeating
+ * it here. A pattern that misses throws while the spec loads, taking every
+ * test down with a named error -- a constant that moved modules without its
+ * pattern would otherwise become `NaN`, and surface as an expectation of
+ * `NaNpx` three hundred lines later.
  */
+function readConstant(name: string, source: string, pattern: RegExp): number {
+  const value = Number(pattern.exec(source)?.[1]);
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} not found in its source -- did it move?`);
+  }
+  return value;
+}
+
+/** One column's width, and the pitch one column moves by. */
 const columnsSource = readFileSync(new URL('../src/Page/Wec/Columns.elm', import.meta.url), 'utf8');
-const COLUMN_WIDTH = Number(/\nwidth =\n\s+(\d+)/.exec(columnsSource)?.[1]);
-const GAP = Number(/gap =\n\s+(\d+)/.exec(columnsSource)?.[1]);
+const COLUMN_WIDTH = readConstant('Columns.width', columnsSource, /\nwidth =\n\s+(\d+)/);
+const GAP = readConstant('Columns.gap', columnsSource, /gap =\n\s+(\d+)/);
 const PITCH = COLUMN_WIDTH + GAP;
 
-/** The standings' two widths, decided by LiveStandings.elm: what the panel
- * stands at, and what it gives the strip back while the surnames hide. */
+/** The standings' width and its two bounds, and the width one arrow key
+ * step is worth. */
 const standingsSource = readFileSync(new URL('../src/View/LiveStandings.elm', import.meta.url), 'utf8');
-const STANDINGS_WIDTH = Number(/\nwidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
-const STANDINGS_NARROW = Number(/narrowWidth =\n\s+(\d+)/.exec(standingsSource)?.[1]);
+const STANDINGS_WIDTH = readConstant('LiveStandings.width', standingsSource, /\nwidth =\n\s+(\d+)/);
+const STANDINGS_MIN = readConstant('LiveStandings.minWidth', standingsSource, /\nminWidth =\n\s+(\d+)/);
+const STANDINGS_MAX = readConstant('LiveStandings.maxWidth', standingsSource, /\nmaxWidth =\n\s+(\d+)/);
+const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
+const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsFence =\n\s*\{[\s\S]*?step = (\d+)/);
 
 /** The car's row in the live standings, which is where a car is picked. */
 function standingsRow(page: Page, carNumber: string) {
@@ -285,12 +300,52 @@ test.describe('Car Detail Columns', () => {
     return page.locator('[data-live-standings]');
   }
 
-  test('should give the strip back the standings\' width while the surnames hide', async ({ page }) => {
-    await expect(standingsCell(page)).toHaveCSS('width', `${STANDINGS_WIDTH}px`);
-    await page.getByRole('button', { name: 'Hide the driver names' }).click();
-    await expect(standingsCell(page)).toHaveCSS('width', `${STANDINGS_NARROW}px`);
-    await page.getByRole('button', { name: 'Show the driver names' }).click();
-    await expect(standingsCell(page)).toHaveCSS('width', `${STANDINGS_WIDTH}px`);
+  /** The grip along the standings' right edge that resizes them. */
+  function standingsGrip(page: Page) {
+    return page.getByRole('button', { name: 'Resize the standings column' });
+  }
+
+  /**
+   * Press the standings' resize grip and carry it `by` pixels sideways,
+   * without letting go -- the same wait as a column carry: the grip only
+   * listens for moves once Elm has drawn it held.
+   */
+  async function resizeStandings(page: Page, by: number) {
+    const handle = standingsGrip(page);
+    const box = (await handle.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await expect(handle).toHaveClass(/cursor-grabbing/);
+    await page.mouse.move(x + by, y, { steps: 10 });
+  }
+
+  test('should resize the standings by its grip, held to its bounds', async ({ page }) => {
+    const standings = standingsCell(page);
+    await expect(standings).toHaveCSS('width', `${STANDINGS_WIDTH}px`);
+    await resizeStandings(page, -(STANDINGS_WIDTH - STANDINGS_MIN) / 2);
+    await expect(standings).toHaveCSS('width', `${(STANDINGS_WIDTH + STANDINGS_MIN) / 2}px`);
+    // Past the narrowest there is: the width stops where `minWidth` says.
+    await page.mouse.move(-200, 300, { steps: 5 });
+    await expect(standings).toHaveCSS('width', `${STANDINGS_MIN}px`);
+    await page.mouse.up();
+    await expect(standings).toHaveCSS('width', `${STANDINGS_MIN}px`);
+    // And back: the drag starts from the width the grip found.
+    await resizeStandings(page, STANDINGS_MAX - STANDINGS_MIN);
+    await expect(standings).toHaveCSS('width', `${STANDINGS_MAX}px`);
+    await page.mouse.up();
+    await expect(standings).toHaveCSS('width', `${STANDINGS_MAX}px`);
+  });
+
+  test('should step the standings width by the arrow keys', async ({ page }) => {
+    const standings = standingsCell(page);
+    await standingsGrip(page).focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(standings).toHaveCSS('width', `${STANDINGS_WIDTH - RESIZE_STEP}px`);
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(standings).toHaveCSS('width', `${STANDINGS_WIDTH + RESIZE_STEP}px`);
   });
 
   test('should leave the third column off the edge, reachable by scrolling', async ({ page }) => {

@@ -10,6 +10,8 @@ module Page.Wec.Event exposing (Model, Msg, init, subscriptions, update, view)
 import Browser.Dom
 import Browser.Events
 import Dict exposing (Dict)
+import Drag
+import Drag.Handle as Handle
 import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
@@ -31,12 +33,12 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Page.Wec.Columns as Columns
+import Page.Wec.Resize as Resize
 import Route
 import Shared
 import Shared.Msg
 import Task
 import Time
-import UI.DragHandle as DragHandle
 import UI.Notice as Notice
 import UI.Shadcn.Button as Button
 import UI.Shadcn.Card as Card
@@ -62,25 +64,16 @@ type alias Model =
     , standingsTab : StandingsTab
     , leaderboardState : Leaderboard.Model
     , comparison : CarDetail.Comparison
-    , driverNames : DriverNames
+    , standings : Resize.Model
     }
 
 
-{-| Whether the live standings draw each car's driver surname.
--}
-type DriverNames
-    = NamesShown
-    | NamesHidden
-
-
-toggleDriverNames : DriverNames -> DriverNames
-toggleDriverNames names =
-    case names of
-        NamesShown ->
-            NamesHidden
-
-        NamesHidden ->
-            NamesShown
+standingsFence : Resize.Fence
+standingsFence =
+    { min = LiveStandings.minWidth
+    , max = LiveStandings.maxWidth
+    , step = 20
+    }
 
 
 {-| The page's right-hand pane: the tracker the reader adds a column of, and
@@ -113,7 +106,7 @@ init params =
       , standingsTab = LeaderboardTab
       , leaderboardState = Leaderboard.init
       , comparison = CarDetail.initialComparison
-      , driverNames = NamesShown
+      , standings = Resize.init LiveStandings.width
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -127,9 +120,9 @@ type Msg
     = StartRace
     | PauseRace
     | TogglePane
-    | ToggleDriverNames
     | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
+    | ResizeMsg Resize.Msg
     | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
@@ -155,8 +148,8 @@ update shared msg m =
         TogglePane ->
             ( { m | pane = togglePane m.pane }, Effect.none )
 
-        ToggleDriverNames ->
-            ( { m | driverNames = toggleDriverNames m.driverNames }, Effect.none )
+        ResizeMsg sub ->
+            ( { m | standings = Resize.update standingsFence sub m.standings }, Effect.none )
 
         FocusColumn key ->
             let
@@ -376,21 +369,23 @@ gridColumns pane =
 
 
 {-| The live standings, standing to the left of the strip rather than as one
-of its columns. The width they stand at is their own -- see
-`LiveStandings.width`.
+of its columns, and a grip along their right edge to drag them wider or
+narrower. The grip is drawn over the card's edge -- the card's own `class`
+is the custom element's -- and the column track is `auto`, so the strip
+gains and loses the width as the drag goes on.
 -}
 standingsCell : List Columns.StripKey -> Model -> Snapshot -> Html Msg
 standingsCell keys m snapshot =
     div
-        [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid"
-        ]
+        [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid relative" ]
         [ LiveStandings.view
             { onSelect = Columns.Open >> ColumnsMsg
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
-            , showNames = m.driverNames == NamesShown
-            , onToggleNames = ToggleDriverNames
+            , width = m.standings.width
             }
             snapshot
+        , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]
+            [ Html.map ResizeMsg (Resize.grip m.standings) ]
         ]
 
 
@@ -453,7 +448,7 @@ columnStrip cell track timeline keys m replay snapshot =
             List.length keys > 1
 
         placements =
-            Columns.placements (always Columns.width) m.strip.carried keys
+            Columns.placements (always Columns.width) (Columns.carrying m.strip) keys
 
         columnCell key placement =
             case key of
@@ -489,12 +484,11 @@ columnStrip cell track timeline keys m replay snapshot =
                  , Attributes.class (cell ++ " flex overflow-x-auto")
                  , Attributes.style "column-gap" (Columns.px Columns.gap)
                  ]
-                    ++ (case m.strip.carried of
-                            Just _ ->
-                                [ Html.Events.on "scroll" (Decode.map (Columns.StripScrolled >> ColumnsMsg) (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
+                    ++ (if Drag.isCarrying m.strip.carried then
+                            [ Html.Events.on "scroll" (Decode.map (Columns.StripScrolled >> ColumnsMsg) (Decode.at [ "target", "scrollLeft" ] Decode.float)) ]
 
-                            Nothing ->
-                                []
+                        else
+                            []
                        )
                 )
                 (List.map2 columnCell keys placements)
@@ -502,7 +496,7 @@ columnStrip cell track timeline keys m replay snapshot =
 
 columnGrip : Bool -> Columns.StripKey -> Html Msg
 columnGrip held key =
-    DragHandle.view
+    Handle.view
         { id = Columns.gripId key
         , label = "Move this column"
         , held = held

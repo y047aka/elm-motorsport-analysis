@@ -139,9 +139,10 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` — one module per page, plain TEA
-- `Data/` (feed decoding), `UI/` (Notice, DragHandle, and `Shadcn/`
-  for the wrappers), and `elements/` for the one custom element that is not
-  shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
+- `Data/` (feed decoding), `UI/` (Notice and `Shadcn/` for the wrappers),
+  `Drag`/`Drag.Handle` for carrying a thing by a pointer (the state machine
+  and the grip that reports it), and `elements/` for the one custom element
+  that is not shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
   `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
   the car cards, the live standings, the tracker's pit lane list, and the badge
@@ -490,6 +491,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   page directly, and reads the values Elm can send out of the wrapper sources
   rather than repeating them, so a constructor added without a matching
   variant in the vendored component fails here instead of shipping unstyled.
+- **Spec constants** (`/app/tests/car-detail.spec.ts`) — widths, pitches and
+  steps are likewise read out of the Elm sources that decide them. A constant
+  that moves modules must take its pattern with it; `readConstant` fails the
+  spec load by name when a pattern misses, rather than letting the constant
+  become `NaN` and every assertion expect `NaNpx`.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

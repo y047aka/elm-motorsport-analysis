@@ -1,9 +1,15 @@
-module UI.DragHandle exposing (Pointer, view)
+module Drag.Handle exposing (Pointer, Config, resize, view)
 
-{-| A grip that carries something sideways: by the pointer, or a step at a time
-by the arrow keys once it has the focus.
+{-| A grip that carries something sideways: by the pointer, or a step at a
+time by the arrow keys once it has the focus.
 
-@docs Pointer, view
+The grip holds no state of its own -- `held` is the caller's, and the carry
+behind it is `Drag`'s business. What the grip adds is the pointer's path:
+the `drag-handle` custom element calls `setPointerCapture`, which Elm
+cannot, so every move and the release come back to the grip even once the
+pointer has left it.
+
+@docs Pointer, Config, resize, view
 
 -}
 
@@ -13,8 +19,8 @@ import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-| Which pointer, and its `clientX`. Two fingers can hold two grips at once, and
-each reports its own release.
+{-| Which pointer, and its `clientX`. Two fingers can hold two grips at once,
+and each reports its own release.
 -}
 type alias Pointer =
     { id : Int
@@ -22,17 +28,20 @@ type alias Pointer =
     }
 
 
-{-| `held` is the caller's, and says whether this grip is the one being carried.
-Moves are only reported while it is. The release is reported always, and says
-where it happened: a carry let go of before the next frame has reported no
-moves at all.
+{-| A grip's own state is the caller's: `held` says whether this grip is the
+one being carried, and moves are only reported while it is. The release is
+reported always, and says where it happened: a carry let go of before the
+next frame has reported no moves at all.
 
-`onCancel` is the carry ending without being let go of: the browser taking the
-pointer for itself, or the grip leaving the document. It also follows every
-`onDrop`, and both arrive whether or not anything is held.
+`onCancel` is the carry ending without being let go of: the browser taking
+the pointer for itself, or the grip leaving the document. It also follows
+every `onDrop`, and both arrive whether or not anything is held.
+
+`onStep` is for the arrow keys once the grip has the focus, and arrives for
+every other key as nothing.
 
 -}
-view :
+type alias Config msg =
     { id : String
     , label : String
     , held : Bool
@@ -42,8 +51,43 @@ view :
     , onCancel : Int -> msg
     , onStep : Int -> msg
     }
-    -> Html msg
+
+
+{-| The grip for carrying a thing along.
+-}
+view : Config msg -> Html msg
 view config =
+    grip
+        config
+        "grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+        (if config.held then
+            "cursor-grabbing"
+
+         else
+            "cursor-grab"
+        )
+        "⠿"
+
+
+{-| The same grip lying along an edge to resize what it bounds: the pointer's
+travel is the width's, and the arrow keys step it.
+-}
+resize : Config msg -> Html msg
+resize config =
+    grip
+        config
+        "grid place-items-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+        (if config.held then
+            "cursor-grabbing"
+
+         else
+            "cursor-col-resize"
+        )
+        "⋮"
+
+
+grip : Config msg -> String -> String -> String -> Html msg
+grip config classes cursor glyph =
     Html.node "drag-handle"
         ([ id config.id
          , attribute "role" "button"
@@ -53,12 +97,14 @@ view config =
          , attribute "aria-label" config.label
          , title (config.label ++ ": drag it, or press ← →")
          , class
-            ("grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+            (classes
+                ++ " "
+                ++ cursor
                 ++ (if config.held then
-                        " cursor-grabbing bg-accent text-accent-foreground"
+                        " bg-accent text-accent-foreground"
 
                     else
-                        " cursor-grab text-muted-foreground"
+                        " text-muted-foreground"
                    )
             )
          , on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab pointer))
@@ -74,7 +120,7 @@ view config =
                     []
                )
         )
-        [ text "⠿" ]
+        [ text glyph ]
 
 
 pointer : Decoder Pointer
