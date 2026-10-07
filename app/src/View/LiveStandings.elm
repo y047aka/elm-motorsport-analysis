@@ -10,6 +10,12 @@ What a row shows is held in one table, `columns`, which is the single place
 the width a column arrives at, the track it takes and the word over it are
 written. The rows and the header above them both draw from it.
 
+The two modules split the work by who decides it: `Motorsport.Leaderboard`
+draws a reading — the rated time, the moved arrow, the sector strip — and
+this panel decides which readings it carries, in what order, at what width.
+A row that wants a lap time drawn asks that module, and the module never
+hears about widths.
+
 @docs view, width, minWidth, maxWidth
 
 -}

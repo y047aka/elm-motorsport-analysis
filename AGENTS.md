@@ -280,21 +280,22 @@ what an object-valued setter compares with.
 `Race/` for the loaded race, its indices, and readings of it at a moment
 (`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those
 (`Rivals`, `Pace`), `Chart/` for the charts drawn off them (`GapChart`,
-`LapTimeDistribution`), `Leaderboard` and `Lap/SegmentStrip` for the field and a
-lap drawn the way this sport prints them.
+`LapTimeDistribution`), `Leaderboard` for how a timing screen draws a single
+reading (a rated time, a moved arrow, a lap with its sector strip), and
+`Lap/SegmentStrip` for a lap drawn the way this sport prints it.
 
-What is drawn here is a reading of the race in a form the sport is read in: the
-field as a timing table, a lap as the segments the circuit times it in, the
-charts. How a page is laid out of those -- which panels, in which boxes, what
-the reader has picked and what they have open -- is `/app/src/View/`'s. Both
+What is drawn here is a reading of the race in a form the sport is read in: a
+lap as the segments the circuit times it in, the charts, the field's own
+timing tower at `/app/src/View/LiveStandings.elm` drawn out of the
+`Leaderboard`'s readings. How a page is laid out of those -- which panels, in
+which boxes, what the reader has picked and what they have open -- is
+`/app/src/View/`'s. Both
 sides are written in the Tailwind `app/style.css` defines, which is why that
 file scans `/package` too.
 
 **`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport
 has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
-are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`,
-the sortable, filterable table `Leaderboard` is a configuration of, with the
-`Table` it draws its rows with.
+are built on; and `Jsonl`, which decodes a file a line at a time.
 
 Directly under `Motorsport/` are the primitives the rest is written in.
 `Analysis/` is what a view asks of a snapshot rather than what a race is made
@@ -379,7 +380,7 @@ and adds nothing to `Circuit/`.
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
 `Circuit/LeMans`'s type, `Leaderboard` carries `*_Wec` and `*_LeMans24h`
-columns beside the generic ones, and `Chart/Tracker` draws
+views beside the generic ones, and `Chart/Tracker` draws
 `Circuit/LeMans/Layout`. Reversing that arrow is its own change.
 
 There is no view-model layer between the two. `Race.Snapshot` is the whole

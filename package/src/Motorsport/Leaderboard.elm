@@ -1,219 +1,50 @@
 module Motorsport.Leaderboard exposing
-    ( stringColumn, intColumn, floatColumn
-    , Model, init
-    , Msg, update
-    , customColumn, veryCustomColumn
-    , sectorTimeColumn, bestTimeColumn
-    , performanceColumn
-    , ratedTime
-    , carNumberColumn_Wec
-    , driverAndTeamColumn_Wec
-    , positionChangeColumn
-    , currentLapColumn_Wec, currentLapColumn_LeMans24h
-    , lastLapColumn_Wec, lastLapColumn_LeMans24h
+    ( ratedTime
     , viewPositionChange, viewPositionChangeInline
-    , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
-    , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
-    , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
-    , Config, view
+    , viewCarNumber_Wec, viewDriverAndTeam_Wec
+    , viewCurrentLap_Wec, viewCurrentLap_LeMans24h
+    , viewLastLap_Wec, viewLastLap_LeMans24h
     )
 
-{-| The field as a timing table, drawn from the columns a classification is
-printed in. Which of them, in what order, is the caller's.
+{-| The readings of a classification as a timing screen prints them: a rated
+lap time in the colour of its rating, the places moved since the grid as an
+arrow, the running lap with the sectors it has reached and the last one under
+it.
 
+These are what a timing tower is built out of — the app's live standings is
+one arrangement of them, at widths the reader drags. Which readings a tower
+carries, in what order and on what track, is the tower's own; how each
+reading is drawn is held here, so that every drawing of the race says the
+same number the same way.
 
-# Configuration
-
-@docs stringColumn, intColumn, floatColumn
-
-
-# Model
-
-@docs Model, init
-
-
-# Update
-
-@docs Msg, update
-
-
-## Custom Columns
-
-@docs Column, customColumn, veryCustomColumn
-
-@docs sectorTimeColumn, bestTimeColumn
-@docs performanceColumn
 @docs ratedTime
-@docs carNumberColumn_Wec
-@docs driverAndTeamColumn_Wec
-@docs positionChangeColumn
-@docs currentLapColumn_Wec, currentLapColumn_LeMans24h
-@docs lastLapColumn_Wec, lastLapColumn_LeMans24h
-
 @docs viewPositionChange, viewPositionChangeInline
-@docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
-@docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
-@docs viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
+@docs viewCarNumber_Wec, viewDriverAndTeam_Wec
+@docs viewCurrentLap_Wec, viewCurrentLap_LeMans24h
+@docs viewLastLap_Wec, viewLastLap_LeMans24h
 
 -}
 
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
-import Html.Lazy as Lazy
-import Internal.DataView as DataView
-import Internal.DataView.Options as Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
-import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Position as Position exposing (Movement(..), Position)
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
+import Motorsport.Race.Snapshot as Snapshot exposing (CurrentSectorStates)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
-
-
-
--- MODEL
-
-
-type alias Model =
-    DataView.Model
-
-
-init : Model
-init =
-    DataView.init "" options
-
-
-options : Options
-options =
-    Options.defaultOptions
-        |> (\options_ ->
-                { options_
-                    | sorting = NoSorting
-                    , selecting = NoSelecting
-                    , pagination = NoPagination
-                }
-           )
-
-
-{-| The `sorter` every column carries. Sorting is off in `options`, so this is
-never consulted; it only fills the field `DataView.Column` requires.
--}
-noSorter : data -> data -> Order
-noSorter _ _ =
-    EQ
-
-
-
--- UPDATE
-
-
-type alias Msg =
-    DataView.Msg
-
-
-update : Msg -> Model -> Model
-update =
-    DataView.update
-
-
-type alias Config data msg =
-    DataView.Config data msg
-
-
-
--- COLUMNS
-
-
-type alias Column data msg =
-    DataView.Column data msg
-
-
-stringColumn : { label : String, getter : data -> String } -> Column data msg
-stringColumn =
-    DataView.stringColumn
-
-
-intColumn : { label : String, getter : data -> Int } -> Column data msg
-intColumn =
-    DataView.intColumn
-
-
-floatColumn : { label : String, getter : data -> Float } -> Column data msg
-floatColumn =
-    DataView.floatColumn
-
-
-customColumn :
-    { label : String
-    , getter : data -> String
-    }
-    -> Column data msg
-customColumn { label, getter } =
-    DataView.customColumn { label = label, getter = getter, sorter = noSorter }
-
-
-veryCustomColumn :
-    { label : String
-    , getter : data -> Html msg
-    }
-    -> Column data msg
-veryCustomColumn { label, getter } =
-    DataView.veryCustomColumn { label = label, getter = getter, sorter = noSorter }
-
-
-{-| A full-height block for one sector of a lap, coloured by how that sector
-went.
-
-`Nothing` is a car with no sector to report at all, and draws nothing. A sector
-the car has not finished is white; one it has is painted by its rating -- which
-is the same reading [`Lap.SegmentStrip`](Motorsport-Lap-SegmentStrip) draws the
-thin strip from, told apart the same way.
-
--}
-sectorTimeColumn :
-    { label : String
-    , getter : data -> Maybe SegmentState
-    }
-    -> Column data msg
-sectorTimeColumn { label, getter } =
-    { name = label
-    , view =
-        getter
-            >> Maybe.map
-                (\state ->
-                    div
-                        [ class "h-[18px] rounded-[1px]"
-                        , style "background-color"
-                            (case state of
-                                Performance.Completed rated ->
-                                    SegmentStrip.colorOfRated rated
-
-                                Performance.InProgress _ ->
-                                    "oklch(1 0 0 / 0.9)"
-
-                                Performance.NotEntered ->
-                                    "oklch(1 0 0 / 0.9)"
-                            )
-                        ]
-                        []
-                )
-            >> Maybe.withDefault (text "")
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
 
 
 {-| A rated time as a timing screen prints it: the time in the colour of its
 rating, and a `-` in the reader's own colour where nothing is rated — no lap
 finished, or one the source data never timed.
 
-Every reading of a rated time goes through this, the table's columns and the
-live standings' rows alike, so the dash and the colours cannot drift apart.
+Every reading of a rated time goes through this, the standings' rows and the
+drawings of a lap alike, so the dash and the colours cannot drift apart.
 
     ratedTime Nothing
     --> { color = "", text = "-" }
@@ -231,47 +62,18 @@ ratedTime rated =
             { text = "-", color = "" }
 
 
-{-| A time and colour set in the table's own cell: centred, coloured by the
-rating.
+{-| A time and colour set centred on the screen's own line.
 -}
 colouredTime : { text : String, color : String } -> Html msg
 colouredTime time =
     div [ class "text-center", style "color" time.color ] [ text time.text ]
 
 
-bestTimeColumn : { getter : data -> Maybe RatedTime } -> Column data msg
-bestTimeColumn { getter } =
-    DataView.customColumn
-        { label = "Best"
-        , getter = getter >> ratedTime >> .text
-        , sorter = noSorter
-        }
-
-
-performanceColumn :
-    { getter : data -> List Lap
-    , bestTimes : { a | fastestLapTime : Maybe Holder }
-    }
-    -> Column data msg
-performanceColumn { getter, bestTimes } =
-    { name = "Performance"
-    , view = getter >> performanceHistory bestTimes
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-carNumberColumn_Wec : { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } } -> Column data msg
-carNumberColumn_Wec { getter } =
-    { name = "#"
-    , view = getter >> Lazy.lazy viewCarNumberColumn_Wec
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-viewCarNumberColumn_Wec : { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
-viewCarNumberColumn_Wec { carNumber, manufacturer } =
+{-| The car's number on a tile of its manufacturer's colour, the logo above
+it where there is one.
+-}
+viewCarNumber_Wec : { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
+viewCarNumber_Wec { carNumber, manufacturer } =
     div
         [ class "w-[2.5em] p-1 flex flex-col gap-1 place-items-center text-center text-[12px] font-bold rounded-[5px] leading-none"
         , style "background-color" manufacturer.color
@@ -292,17 +94,11 @@ viewCarNumberColumn_Wec { carNumber, manufacturer } =
         )
 
 
-driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Driver } } -> Column data msg
-driverAndTeamColumn_Wec { getter } =
-    { name = "Team / Driver"
-    , view = getter >> Lazy.lazy viewDriverAndTeamColumn_Wec
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-viewDriverAndTeamColumn_Wec : { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Driver } -> Html msg
-viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
+{-| The team, and under it the driving lineup with the current driver in
+full weight and the others muted.
+-}
+viewDriverAndTeam_Wec : { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Driver } -> Html msg
+viewDriverAndTeam_Wec { metadata, currentDriver } =
     let
         isCurrentDriver driver =
             Driver.isSame driver currentDriver
@@ -329,24 +125,14 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
         ]
 
 
-{-| How far the car has moved from where it started, and no more than that.
+{-| How far the car has moved from where it started, as a timing screen sets
+it in its own cell: `↑2`, the arrow green for a gain and red for a loss and
+the number always grey, and a grey `-` for a car that has held its place or
+whose grid place is not known.
 
-`startPosition` is held by a `Car` and not a `CarAt`, so the caller looks it up
-by car number.
+`startPosition` is held by a `Car` and not a `CarAt`, so the caller looks it
+up by car number.
 
--}
-positionChangeColumn : { getter : data -> { startPosition : Maybe Position, position : Position } } -> Column data msg
-positionChangeColumn { getter } =
-    { name = "Pos"
-    , view = getter >> Lazy.lazy viewPositionChange
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-{-| The places gained or lost since the start: `↑2`, the arrow green for a gain
-and red for a loss and the number always grey, and a grey `-` for a car that has
-held its place or whose grid place is not known.
 -}
 viewPositionChange : { startPosition : Maybe Position, position : Position } -> Html msg
 viewPositionChange change =
@@ -402,30 +188,11 @@ arrow movement =
     [ span [ class color ] [ text printed.arrow ], text printed.places ]
 
 
-currentLapColumn_Wec :
-    { getter :
-        data
-        ->
-            { a
-                | status : Status
-                , currentLap :
-                    { b
-                        | elapsed : Duration
-                        , performance : Performance.PerformanceLevel
-                        , sectorStates : CurrentSectorStates
-                    }
-            }
-    }
-    -> Column data msg
-currentLapColumn_Wec { getter } =
-    { name = "Current Lap"
-    , view = getter >> Lazy.lazy viewCurrentLapColumn_Wec
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-viewCurrentLapColumn_Wec :
+{-| The lap running: the clock in the colour of how it is going, and under it
+the sectors as reached. A retired car reads Retired, where a screen would
+print nothing but a fact.
+-}
+viewCurrentLap_Wec :
     { a
         | status : Status
         , currentLap :
@@ -436,7 +203,7 @@ viewCurrentLapColumn_Wec :
             }
     }
     -> Html msg
-viewCurrentLapColumn_Wec { status, currentLap } =
+viewCurrentLap_Wec { status, currentLap } =
     let
         lapTime { time, performance } =
             div
@@ -453,31 +220,11 @@ viewCurrentLapColumn_Wec { status, currentLap } =
             ]
 
 
-currentLapColumn_LeMans24h :
-    { getter :
-        data
-        ->
-            { a
-                | status : Status
-                , bestLap : Maybe RatedTime
-                , currentLap :
-                    { c
-                        | elapsed : Duration
-                        , miniSectors : Snapshot.MiniSectorReading
-                    }
-            }
-    , bestTimes : { b | fastestLapTime : Maybe Holder }
-    }
-    -> Column data msg
-currentLapColumn_LeMans24h { getter, bestTimes } =
-    { name = "Current Lap"
-    , view = getter >> Lazy.lazy2 viewCurrentLapColumn_LeMans24h bestTimes
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-viewCurrentLapColumn_LeMans24h :
+{-| The running lap on a circuit timed to the mini-sector — Le Mans's grain.
+The clock is rated against the race's record and the car's own best, which is
+why the lap being run needs both beside it.
+-}
+viewCurrentLap_LeMans24h :
     { b | fastestLapTime : Maybe Holder }
     ->
         { a
@@ -490,7 +237,7 @@ viewCurrentLapColumn_LeMans24h :
                 }
         }
     -> Html msg
-viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
+viewCurrentLap_LeMans24h bestTimes { status, bestLap, currentLap } =
     let
         lapTime { time, personalBest } =
             let
@@ -525,20 +272,11 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
             |> Maybe.withDefault (text "-")
 
 
-lastLapColumn_Wec :
-    { getter : data -> Snapshot.LastLap
-    }
-    -> Column data msg
-lastLapColumn_Wec { getter } =
-    { name = "Last Lap"
-    , view = getter >> Lazy.lazy viewLastLapColumn_Wec
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-viewLastLapColumn_Wec : Snapshot.LastLap -> Html msg
-viewLastLapColumn_Wec lastLap =
+{-| The last lap finished: the time in the colour of its rating, and under it
+the segments the circuit timed it in.
+-}
+viewLastLap_Wec : Snapshot.LastLap -> Html msg
+viewLastLap_Wec lastLap =
     case lastLap of
         Snapshot.Completed { rated, sectors } ->
             case rated of
@@ -555,20 +293,11 @@ viewLastLapColumn_Wec lastLap =
             text "-"
 
 
-lastLapColumn_LeMans24h :
-    { getter : data -> Snapshot.LastLap
-    }
-    -> Column data msg
-lastLapColumn_LeMans24h { getter } =
-    { name = "Last Lap"
-    , view = getter >> Lazy.lazy viewLastLapColumn_LeMans24h
-    , sorter = noSorter
-    , filter = DataView.noFiltering
-    }
-
-
-viewLastLapColumn_LeMans24h : Snapshot.LastLap -> Html msg
-viewLastLapColumn_LeMans24h lastLap =
+{-| The last lap at Le Mans's grain: the time, and under it the mini-sectors
+it ran through.
+-}
+viewLastLap_LeMans24h : Snapshot.LastLap -> Html msg
+viewLastLap_LeMans24h lastLap =
     case lastLap of
         Snapshot.Completed { rated, miniSectors } ->
             case rated of
@@ -585,51 +314,3 @@ viewLastLapColumn_LeMans24h lastLap =
 
         Snapshot.NoLapYet ->
             text "-"
-
-
-
--- VIEW
-
-
-view : Config CarAt msg -> Model -> Snapshot -> Html msg
-view config state standings =
-    DataView.view config state (Snapshot.toList standings)
-
-
-performanceHistory : { a | fastestLapTime : Maybe Holder } -> List Lap -> Html msg
-performanceHistory bestTimes laps =
-    div
-        [ class "grid grid-cols-[repeat(7,auto)]" ]
-        [ Lazy.lazy2 performanceHistory_ bestTimes laps ]
-
-
-performanceHistory_ : { a | fastestLapTime : Maybe Holder } -> List Lap -> Html msg
-performanceHistory_ bestTimes laps =
-    let
-        fastestLapTime =
-            BestTimes.timeOf bestTimes.fastestLapTime
-
-        toCssColor lap =
-            lap.time
-                |> Maybe.map
-                    (\time ->
-                        performanceLevel
-                            { time = time
-                            , personalBest = lap.best
-                            , fastest = fastestLapTime
-                            }
-                    )
-                |> Performance.colorOf
-    in
-    div
-        [ class "px-[0.3vw] grid grid-flow-col auto-cols-[max(5px,0.3vw)] grid-rows-[repeat(5,max(5px,0.3vw))] gap-[1.5px] first:ps-0 last:pe-0 [&:nth-child(n+2)]:[border-left:1px_solid_hsl(0_0%_0%)]" ]
-        (List.map (\lap -> coloredCell (toCssColor lap)) laps)
-
-
-coloredCell : String -> Html msg
-coloredCell backgroundColor_ =
-    div
-        [ class "w-full h-full rounded-[10%]"
-        , style "background-color" backgroundColor_
-        ]
-        []
