@@ -23,10 +23,7 @@ import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
-import Motorsport.Leaderboard as Leaderboard
-import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
@@ -42,7 +39,6 @@ import Time
 import UI.Notice as Notice
 import UI.Shadcn.Button as Button
 import UI.Shadcn.Card as Card
-import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
 import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
@@ -61,8 +57,6 @@ import View.PlaybackControls as PlaybackControls
 type alias Model =
     { pane : Pane
     , strip : Columns.Model
-    , standingsTab : StandingsTab
-    , leaderboardState : Leaderboard.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
     }
@@ -94,17 +88,10 @@ togglePane pane =
             Shown
 
 
-type StandingsTab
-    = LeaderboardTab
-    | CardsTab
-
-
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { pane = Shown
       , strip = Columns.init
-      , standingsTab = LeaderboardTab
-      , leaderboardState = Leaderboard.init
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
       }
@@ -123,9 +110,7 @@ type Msg
     | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
-    | StandingsTabChange StandingsTab
     | ReplayMsg Replay.Msg
-    | LeaderboardMsg Leaderboard.Msg
     | CarDetailMsg CarDetail.Msg
 
 
@@ -170,16 +155,8 @@ update shared msg m =
                 Nothing ->
                     ( m, Effect.none )
 
-        StandingsTabChange tab ->
-            ( { m | standingsTab = tab }, Effect.none )
-
         ReplayMsg replayMsg ->
             ( m, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
-
-        LeaderboardMsg leaderboardMsg ->
-            ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
-            , Effect.none
-            )
 
         CarDetailMsg detailMsg ->
             ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
@@ -343,7 +320,7 @@ mainGrid round keys m =
                 ("shrink-0 h-full grid " ++ gridColumns m.pane ++ " grid-rows-[300px_minmax(0,1fr)] gap-2.5")
             ]
             gridCells
-        , standingsPanel m.standingsTab m replay snapshot
+        , standingsPanel snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -560,43 +537,12 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg
-standingsPanel tab m replay snapshot =
-    let
-        body =
-            case tab of
-                LeaderboardTab ->
-                    Leaderboard.view (leaderboardConfig replay.race.cars) m.leaderboardState snapshot
-
-                CardsTab ->
-                    CarCardList.view snapshot
-    in
+standingsPanel : Snapshot -> Html Msg
+standingsPanel snapshot =
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
-            [ Card.header []
-                [ Card.action [] [ standingsTabs tab ] ]
-            , Card.content [] [ body ]
-            ]
+            [ Card.content [] [ CarCardList.view snapshot ] ]
         ]
-
-
-standingsTabs : StandingsTab -> Html Msg
-standingsTabs current =
-    let
-        tabItem label tab =
-            { label = label
-            , active = current == tab
-            , disabled = False
-            , onSelect = StandingsTabChange tab
-            }
-    in
-    ToggleGroup.view
-        { items =
-            [ tabItem "Table" LeaderboardTab
-            , tabItem "Cards" CardsTab
-            ]
-        }
-        []
 
 
 {-| The most recent events the field draws, newest first: when each happened,
@@ -697,47 +643,6 @@ carBadge car eventType =
 
         ( Nothing, _ ) ->
             text ""
-
-
-leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
-leaderboardConfig cars =
-    let
-        -- Worked out once rather than per row: the table is rebuilt on every
-        -- frame of playback.
-        startPositions : Dict CarNumber Position
-        startPositions =
-            -- foldr, so that where the source data has two cars under one
-            -- number the one running ahead wins, as in `Snapshot.get`.
-            cars
-                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
-
-        startPositionOf : CarAt -> Maybe Position
-        startPositionOf item =
-            Dict.get item.metadata.carNumber startPositions
-    in
-    { toId = .metadata >> .carNumber
-    , toMsg = LeaderboardMsg
-    , columns =
-        [ Leaderboard.carNumberColumn_Wec { getter = .metadata }
-        , Leaderboard.driverAndTeamColumn_Wec
-            { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , Leaderboard.positionChangeColumn
-            { getter = \item -> { startPosition = startPositionOf item, position = item.standing.position } }
-        , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
-        , Leaderboard.customColumn
-            { label = "Gap"
-            , getter = .standing >> .gapToLeader >> Gap.toString
-            }
-        , Leaderboard.customColumn
-            { label = "Interval"
-            , getter = .standing >> .intervalToAhead >> Gap.toString
-            }
-        , Leaderboard.currentLapColumn_Wec { getter = identity }
-        , Leaderboard.lastLapColumn_Wec { getter = .lastLap }
-        , Leaderboard.bestTimeColumn { getter = .bestLap }
-        , Leaderboard.intColumn { label = "Stops", getter = .pitStops }
-        ]
-    }
 
 
 standingsPopoverId : String
