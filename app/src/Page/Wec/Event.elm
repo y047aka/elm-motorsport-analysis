@@ -19,7 +19,7 @@ import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
 import Internal.DataView as DataView
-import Internal.DataView.Options as Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
+import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
