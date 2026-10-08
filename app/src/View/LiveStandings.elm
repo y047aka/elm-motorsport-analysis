@@ -178,9 +178,12 @@ visible panelWidth =
     List.filter (fits panelWidth) columns
 
 
-{-| The row's tracks as a `grid-template-columns` value: the position and the
-badge, then one per visible column. The header stands on the same value, which
-is what keeps a label over its column.
+{-| The row's tracks as a `grid-template-columns` value: the position, the
+badge, one per visible column, and — once the time columns arrive — a gutter
+at the end for the pit mark, which floats there over the row's right edge.
+The header stands on the same value, which is what keeps a label over its
+column and keeps every row's columns lined up whether or not its car is in
+the pit.
 
 The tracks go on as a style attribute rather than as a `grid-cols-[...]`
 class: Tailwind extracts class names from source text only, so a class
@@ -192,6 +195,13 @@ gridTracks : Float -> String
 gridTracks panelWidth =
     "20px auto"
         ++ String.concat (List.map (\column -> " " ++ (columnSpec column).track) (visible panelWidth))
+        ++ (if fits panelWidth Ahead then
+                -- w-4 plus right-1, in px: the mark it reserves room for is measured in px.
+                " 24px"
+
+            else
+                ""
+           )
 
 
 px : Float -> String
@@ -213,7 +223,7 @@ Ahead, the running clock is Current.
 headerRow : Float -> Html msg
 headerRow panelWidth =
     div
-        [ class "grid items-center gap-2 px-0.5 pb-1"
+        [ class "grid items-center gap-2 px-0.5 pb-1 text-sm"
         , style "grid-template-columns" (gridTracks panelWidth)
         ]
         ([ label "text-center" "Pos"
@@ -358,14 +368,6 @@ carRow onSelect r =
              , class "relative w-full p-0.5 grid items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
              , style "grid-template-columns" (gridTracks r.width)
              ]
-                ++ (if r.isInPit && fits r.width Ahead then
-                        -- The pit mark floats at the row's right edge, where
-                        -- a time column now ends; the room is its own.
-                        [ class "pr-6" ]
-
-                    else
-                        []
-                   )
                 ++ (if r.hasColumn then
                         -- The car's own colour, thinned enough to write on.
                         [ style "background-color"
