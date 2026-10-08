@@ -565,7 +565,7 @@ bottomPanel tab table cars timeline snapshot =
                     CarCardList.view snapshot
 
                 EventsTab ->
-                    DataView.view (timelineTableConfig cars) table (Timeline.toList timeline)
+                    DataView.view (timelineTableConfig cars) table (List.indexedMap Tuple.pair (Timeline.toList timeline))
     in
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
@@ -608,46 +608,56 @@ timelineTableOptions =
 the `Leaderboard`: these are events, not the field, and what the `Leaderboard`
 draws belongs to a lap. The car column is the right-hand timeline's own
 `carBadge`, so a number reads the same on both halves of the page.
+
+Rows are keyed by their place in the timeline — a number no two events share,
+where a moment's milliseconds and its words are the same for any two events
+of one kind at one instant, which the file can hold.
+
 -}
-timelineTableConfig : List Car -> DataView.Config TimelineEvent Msg
+timelineTableConfig : List Car -> DataView.Config ( Int, TimelineEvent ) Msg
 timelineTableConfig cars =
     let
         carsByNumber =
             List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
 
-        carOf : TimelineEvent -> Maybe Car
-        carOf event =
-            case event.eventType of
+        eventOf : ( Int, TimelineEvent ) -> TimelineEvent
+        eventOf =
+            Tuple.second
+
+        carOf : ( Int, TimelineEvent ) -> Maybe Car
+        carOf row =
+            case (eventOf row).eventType of
                 CarEvent carNumber _ ->
                     Dict.get carNumber carsByNumber
 
                 _ ->
                     Nothing
 
-        classOf : TimelineEvent -> Maybe String
-        classOf event =
-            carOf event
+        classOf : ( Int, TimelineEvent ) -> Maybe String
+        classOf row =
+            carOf row
                 |> Maybe.map (.metadata >> .class >> Class.toString)
 
-        number : TimelineEvent -> Maybe String
-        number event =
-            carOf event
+        number : ( Int, TimelineEvent ) -> Maybe String
+        number row =
+            carOf row
                 |> Maybe.map (.metadata >> .carNumber)
+
+        elapsed : ( Int, TimelineEvent ) -> Duration
+        elapsed row =
+            Instant.toDuration (eventOf row).elapsed
     in
-    { toId =
-        \event ->
-            String.fromInt (Instant.toDuration event.elapsed)
-                ++ TimelineEvent.describe event.eventType
+    { toId = Tuple.first >> String.fromInt
     , toMsg = TimelineTableMsg
     , columns =
         [ DataView.customColumn
             { label = "Time"
-            , getter = .elapsed >> Instant.toDuration >> Duration.toStringToSeconds
-            , sorter = \a b -> compare (Instant.toDuration a.elapsed) (Instant.toDuration b.elapsed)
+            , getter = elapsed >> Duration.toStringToSeconds
+            , sorter = \a b -> compare (elapsed a) (elapsed b)
             }
         , DataView.veryCustomColumn
             { label = "Car"
-            , getter = \event -> carBadge (carOf event) event.eventType
+            , getter = \row -> carBadge (carOf row) (eventOf row).eventType
             , sorter = \a b -> compare (Maybe.withDefault "" (number a)) (Maybe.withDefault "" (number b))
             }
         , DataView.customColumn
@@ -657,8 +667,8 @@ timelineTableConfig cars =
             }
         , DataView.customColumn
             { label = "Event"
-            , getter = .eventType >> TimelineEvent.describe
-            , sorter = \a b -> compare (TimelineEvent.describe a.eventType) (TimelineEvent.describe b.eventType)
+            , getter = eventOf >> .eventType >> TimelineEvent.describe
+            , sorter = \a b -> compare (TimelineEvent.describe (eventOf a).eventType) (TimelineEvent.describe (eventOf b).eventType)
             }
         ]
     }
