@@ -61,7 +61,7 @@ import View.PlaybackControls as PlaybackControls
 type alias Model =
     { pane : Pane
     , strip : Columns.Model
-    , standingsTab : StandingsTab
+    , bottomTab : BottomTab
     , timelineTable : DataView.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
@@ -94,7 +94,7 @@ togglePane pane =
             Shown
 
 
-type StandingsTab
+type BottomTab
     = CardsTab
     | EventsTab
 
@@ -103,7 +103,7 @@ init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { pane = Shown
       , strip = Columns.init
-      , standingsTab = CardsTab
+      , bottomTab = CardsTab
       , timelineTable = DataView.init "timeline-events" timelineTableOptions
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
@@ -123,7 +123,7 @@ type Msg
     | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
-    | StandingsTabChange StandingsTab
+    | BottomTabChange BottomTab
     | TimelineTableMsg DataView.Msg
     | ReplayMsg Replay.Msg
     | CarDetailMsg CarDetail.Msg
@@ -170,8 +170,8 @@ update shared msg m =
                 Nothing ->
                     ( m, Effect.none )
 
-        StandingsTabChange tab ->
-            ( { m | standingsTab = tab }, Effect.none )
+        BottomTabChange tab ->
+            ( { m | bottomTab = tab }, Effect.none )
 
         TimelineTableMsg timelineMsg ->
             ( { m | timelineTable = DataView.update timelineMsg m.timelineTable }, Effect.none )
@@ -341,7 +341,7 @@ mainGrid round keys m =
                 ("shrink-0 h-full grid " ++ gridColumns m.pane ++ " grid-rows-[300px_minmax(0,1fr)] gap-2.5")
             ]
             gridCells
-        , standingsPanel m.standingsTab m.timelineTable round.replay.race.cars round.timeline snapshot
+        , bottomPanel m.bottomTab m.timelineTable round.replay.race.cars round.timeline snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -556,8 +556,8 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-standingsPanel : StandingsTab -> DataView.Model -> List Car -> Timeline -> Snapshot -> Html Msg
-standingsPanel tab table cars timeline snapshot =
+bottomPanel : BottomTab -> DataView.Model -> List Car -> Timeline -> Snapshot -> Html Msg
+bottomPanel tab table cars timeline snapshot =
     let
         body =
             case tab of
@@ -570,20 +570,20 @@ standingsPanel tab table cars timeline snapshot =
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
             [ Card.header []
-                [ Card.action [] [ standingsTabs tab ] ]
+                [ Card.action [] [ bottomTabs tab ] ]
             , Card.content [] [ body ]
             ]
         ]
 
 
-standingsTabs : StandingsTab -> Html Msg
-standingsTabs current =
+bottomTabs : BottomTab -> Html Msg
+bottomTabs current =
     let
         tabItem label tab =
             { label = label
             , active = current == tab
             , disabled = False
-            , onSelect = StandingsTabChange tab
+            , onSelect = BottomTabChange tab
             }
     in
     ToggleGroup.view
