@@ -31,7 +31,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Wec.Class as Class
+import Motorsport.Wec.Class as Class exposing (Class)
 import Page.Wec.Columns as Columns
 import Page.Wec.Resize as Resize
 import Route
@@ -48,6 +48,7 @@ import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
+import View.ClassColumn as ClassColumn
 import View.ClassMark as ClassMark
 import View.LiveStandings as LiveStandings
 import View.PitLane as PitLane
@@ -161,7 +162,7 @@ update shared msg m =
                     -- Where the column stands, as it stands -- plus the gap's
                     -- slack, so the column before it stays a sliver in sight.
                     ( m
-                    , Browser.Dom.setViewportOf Columns.stripId (Columns.gap + Columns.xOf (always Columns.width) keys index) 0
+                    , Browser.Dom.setViewportOf Columns.stripId (Columns.gap + Columns.xOf Columns.widthOf keys index) 0
                         |> Task.onError (\_ -> Task.succeed ())
                         |> Task.perform (\_ -> ColumnsMsg Columns.Settled)
                         |> Effect.sendCmd
@@ -384,8 +385,9 @@ standingsCell keys m snapshot cars =
     div
         [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid relative" ]
         [ LiveStandings.view
-            { onSelect = Columns.Open >> ColumnsMsg
+            { onSelect = pickCar
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
+            , openColumn = openColumn keys
             , width = m.standings.width
             , startPosition = \number -> Dict.get number startPositions
             }
@@ -393,6 +395,44 @@ standingsCell keys m snapshot cars =
         , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]
             [ Html.map ResizeMsg (Resize.grip m.standings) ]
         ]
+
+
+{-| A car picked -- from the standings, or from the class's column it is running
+in. Whole and top-level, because both panels thunk their rows and compare this by
+reference: a composition built per render redraws every row on every frame.
+
+The strip scrolls to the column it opened, which is `Columns`'s to do.
+
+-}
+pickCar : CarNumber -> Msg
+pickCar carNumber =
+    ColumnsMsg (Columns.Open (Columns.Car carNumber))
+
+
+{-| A car picked that has a column already: the strip goes to that column rather
+than opening a second one.
+-}
+revealCar : CarNumber -> Msg
+revealCar carNumber =
+    FocusColumn (Columns.Car carNumber)
+
+
+{-| The standings' message for a class: nothing where the class's column is
+standing, and the column called for where the reader has closed it. The class's
+name in the standings is where a closed column is asked for again, since it is
+where the class's cars are listed already.
+-}
+openColumn : List Columns.StripKey -> Class -> Maybe Msg
+openColumn keys class_ =
+    let
+        key =
+            Columns.ClassColumn class_
+    in
+    if List.member key keys then
+        Nothing
+
+    else
+        Just (ColumnsMsg (Columns.Open key))
 
 
 {-| One keyed child of the strip: a grid of the width the column stands at,
@@ -454,13 +494,16 @@ columnStrip cell track timeline keys m replay snapshot =
             List.length keys > 1
 
         placements =
-            Columns.placements (always Columns.width) (Columns.carrying m.strip) keys
+            Columns.placements Columns.widthOf (Columns.carrying m.strip) keys
+
+        standing =
+            List.map (\car -> car.metadata.carNumber) (Columns.carsIn snapshot keys)
 
         columnCell key placement =
             case key of
                 Columns.Car carNumber ->
                     stripColumn (Columns.keyName key)
-                        Columns.width
+                        (Columns.widthOf key)
                         placement
                         (Snapshot.get carNumber snapshot
                             |> Maybe.map
@@ -470,9 +513,15 @@ columnStrip cell track timeline keys m replay snapshot =
                             |> Maybe.withDefault (text "")
                         )
 
+                Columns.ClassColumn class_ ->
+                    stripColumn (Columns.keyName key)
+                        (Columns.widthOf key)
+                        placement
+                        (classColumn several standing (Columns.isCarried placement) snapshot class_)
+
                 Columns.Tracker ->
                     stripColumn (Columns.keyName key)
-                        Columns.width
+                        (Columns.widthOf key)
                         placement
                         (trackerCard several (Columns.isCarried placement) track snapshot)
     in
@@ -514,6 +563,37 @@ columnGrip held key =
         }
 
 
+{-| One class of the field, which is what the strip opens with: the class's cars
+in running order, each against the class-mate ahead of it.
+
+A row picks the car it names, and that car's own column opens beside the class's.
+A row whose car is up already is drawn marked, and the strip goes to that column
+instead of opening a second one.
+
+-}
+classColumn : Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
+classColumn several standing held snapshot class_ =
+    ClassColumn.view
+        { onSelect = pickCar
+        , onReveal = revealCar
+        , withColumns = standing
+        , onClose =
+            if several then
+                Just (ColumnsMsg (Columns.Close (Columns.ClassColumn class_)))
+
+            else
+                Nothing
+        , grip =
+            if several then
+                Just (columnGrip held (Columns.ClassColumn class_))
+
+            else
+                Nothing
+        }
+        snapshot
+        class_
+
+
 carCard : Bool -> Timeline -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
 carCard several timeline held comparison cars snapshot car =
     let
@@ -533,7 +613,7 @@ carCard several timeline held comparison cars snapshot car =
                     { toMsg = CarDetailMsg
                     , onClose =
                         if several then
-                            Just (ColumnsMsg (Columns.Close carNumber))
+                            Just (ColumnsMsg (Columns.Close (Columns.Car carNumber)))
 
                         else
                             Nothing
@@ -859,6 +939,9 @@ headerColumn maybeSnapshot key =
                 ( Columns.Car carNumber, Nothing ) ->
                     span [ Attributes.class "w-[35px] text-center text-xs font-bold" ] [ text carNumber ]
 
+                ( Columns.ClassColumn class_, _ ) ->
+                    classMark class_
+
                 ( Columns.Tracker, _ ) ->
                     mark "TRACK"
 
@@ -871,6 +954,9 @@ headerColumn maybeSnapshot key =
                 Columns.Car carNumber ->
                     "Scroll to car #" ++ carNumber
 
+                Columns.ClassColumn class_ ->
+                    "Scroll to the " ++ Class.toString class_ ++ " column"
+
                 Columns.Tracker ->
                     "Scroll to the tracker"
     in
@@ -881,6 +967,25 @@ headerColumn maybeSnapshot key =
         , Attributes.title labelText
         ]
         [ badge ]
+
+
+{-| A class in the header's list of columns: its name on the bar of its own
+colour, which is the width the name wants rather than the car number's tile, since
+no class is called by a number.
+
+Its tile stands as tall as the car's stacked badge's does, so that opening or
+closing a car's column cannot move the page under the reader. The class
+mark in the standings and in a column's head is the same bar at its own height;
+this one is drawn in a tile beside tiles.
+
+-}
+classMark : Class -> Html Msg
+classMark class_ =
+    div
+        [ Attributes.class "min-h-[42px] p-1 rounded flex items-center gap-x-1 border border-border leading-none text-[9px] font-bold whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        , attribute "style" ("--class-color: " ++ Class.toColor class_ ++ ";")
+        ]
+        [ text (Class.toString class_) ]
 
 
 {-| The arrows point at the edge the pane lives on.

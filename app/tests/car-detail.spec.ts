@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { waitForPageReady, setLapCount } from './helpers';
 
 const DETAIL = '[data-car-detail]';
+const CLASS_COLUMN = '[data-class-column]';
 
 /**
  * Reads a constant out of the source that decides it, rather than repeating
@@ -22,6 +23,7 @@ function readConstant(name: string, source: string, pattern: RegExp): number {
 /** One column's width, and the pitch one column moves by. */
 const columnsSource = readFileSync(new URL('../src/Page/Wec/Columns.elm', import.meta.url), 'utf8');
 const COLUMN_WIDTH = readConstant('Columns.width', columnsSource, /\nwidth =\n\s+(\d+)/);
+const CLASS_WIDTH = readConstant('Columns.classWidth', columnsSource, /\nclassWidth =\n\s+(\d+)/);
 const GAP = readConstant('Columns.gap', columnsSource, /gap =\n\s+(\d+)/);
 const PITCH = COLUMN_WIDTH + GAP;
 
@@ -36,7 +38,8 @@ const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsF
 
 /** The car's row in the live standings, which is where a car is picked. */
 function standingsRow(page: Page, carNumber: string) {
-  // Exact, or `Car #5` is also the row of `Car #50`.
+  // Exact, or `Car #5` is also the row of `Car #50`. Exactness is also what
+  // keeps this off the rows of a class's column, which name the class.
   return page.getByRole('button', { name: `Car #${carNumber}`, exact: true });
 }
 
@@ -54,25 +57,170 @@ async function openEvent(page: Page) {
 async function selectCar(page: Page, carNumber: string) {
   await standingsRow(page, carNumber).click();
   await expect(standingsRow(page, carNumber)).toHaveAttribute('aria-pressed', 'true');
+  await settleStrip(page);
 }
 
-/** The stand-in columns the page opens on, before anything has been picked. */
-const STAND_INS = ['6', '48', '92'];
-
-/** The stand-ins before the first lap is done, when other cars lead the classes. */
-const CLASS_LEADERS_AT_START = ['5', '29', '27'];
+/** The same, in this order, which is the order the columns come up in. */
+async function selectCars(page: Page, carNumbers: string[]) {
+  for (const carNumber of carNumbers) {
+    await selectCar(page, carNumber);
+  }
+}
 
 /**
- * A column for this car and no other. A pick joins the columns already up, so
- * the three the page stands in with have to be closed to be rid of them.
+ * Wait for the strip to stop gliding. A click scrolls its button into view, and
+ * on macOS that scroll is smooth: a grip measured while the strip still moves is
+ * pressed where it was, not where it is. Opening a column scrolls the strip to
+ * it, so this is waited on after every pick.
+ */
+function settleStrip(page: Page) {
+  return page.locator('#column-strip').evaluate(
+    (el) =>
+      new Promise<void>((resolve) => {
+        let last = el.scrollLeft;
+        const tick = () => {
+          if (el.scrollLeft === last) {
+            resolve();
+          } else {
+            last = el.scrollLeft;
+            requestAnimationFrame(tick);
+          }
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+}
+
+/**
+ * The classes the round fields, in the order the running order puts them, with
+ * the cars each has out and the car each is led by at lap 180 -- the moment the
+ * suite drives -- and at the start, before a class has settled.
+ */
+const CLASSES = [
+  { name: 'HYPERCAR', cars: 21, leader: '6', atStart: '5' },
+  { name: 'LMP2', cars: 17, leader: '48', atStart: '29' },
+  { name: 'LMGT3', cars: 24, leader: '92', atStart: '27' },
+];
+
+/** The three cars the columns below are stood up from: one from each class. */
+const THREE_CARS = CLASSES.map((c) => c.leader);
+
+/** A class's own column, which is what the strip opens with. */
+function classColumn(page: Page, className: string) {
+  return page.locator(`[data-class-column="${className}"]`);
+}
+
+/** The rows of a class's column, leader first. */
+function classRows(page: Page, className: string) {
+  return classColumn(page, className).locator('button[aria-pressed]');
+}
+
+/** A car's row in a class's own column, which names the class it is drawn in. */
+function classRow(page: Page, carNumber: string, className: string) {
+  return page.getByRole('button', { name: `Car #${carNumber} in ${className}` });
+}
+
+/** Every column of the strip, left to right: a class's named, a car's numbered,
+ * the tracker's as `TRACKER`. A class's column carries its class on the card it
+ * is; a car's panel carries its number deeper in, and the tracker's column
+ * carries neither. */
+function stripOrder(page: Page) {
+  return page.locator('#column-strip > div').evaluateAll((cells) =>
+    cells.map(
+      (cell) =>
+        cell.querySelector('[data-class-column]')?.getAttribute('data-class-column') ??
+        cell.querySelector('[data-car-detail]')?.getAttribute('data-car-detail') ??
+        'TRACKER',
+    ),
+  );
+}
+
+/** The strip, holding what a test says it holds. */
+async function expectStrip(page: Page, columns: string[]) {
+  await expect.poll(() => stripOrder(page)).toEqual(columns);
+}
+
+/** What each row reports as the interval to the class-mate ahead of it. The
+ * reading is drawn after the lap the car is driving, and the car at the head of
+ * its class is ahead of nobody, so reports nothing. */
+function intervals(rows: Locator) {
+  return rows.evaluateAll((els) =>
+    els.map(
+      (el) =>
+        el.innerText
+          .split('\n')
+          .find((line) => line.startsWith('+') || line === '-') ?? '',
+    ),
+  );
+}
+
+/** Whether a column stands whole inside the strip's own box. */
+async function inView(page: Page, column: Locator) {
+  const strip = (await page.locator('#column-strip').boundingBox())!;
+  const box = (await column.boundingBox())!;
+  return box.x >= strip.x - 1 && box.x + box.width <= strip.x + strip.width + 1;
+}
+
+/** Take the class columns out of the strip, and wait for it to stop gliding. */
+async function closeClassColumns(page: Page) {
+  for (const class_ of CLASSES) {
+    const standing = await page.locator(CLASS_COLUMN).count();
+    if (standing === 0) break;
+    await page
+      .locator(CLASS_COLUMN)
+      .first()
+      .getByRole('button', { name: 'Close this column' })
+      .click();
+    await expect(page.locator(CLASS_COLUMN)).toHaveCount(standing - 1);
+  }
+  await settleStrip(page);
+}
+
+/**
+ * Stand three cars up in columns of their own, then take the class columns out
+ * of the strip: what the tests below drive is a strip of car columns, and with
+ * the class's columns closed the places a test counts are the places the strip
+ * holds.
+ */
+async function standCars(page: Page) {
+  await selectCars(page, THREE_CARS);
+  await closeClassColumns(page);
+  await expectStrip(page, THREE_CARS);
+  await stripToHead(page);
+}
+
+/**
+ * A column for this car and no other, the class's columns included: a panel is
+ * drawn with a close button of its own only once the strip holds more than the
+ * column it stands in, and the baseline was rendered with one column there.
  */
 async function selectOnlyCar(page: Page, carNumber: string) {
   await selectCar(page, carNumber);
+  await closeClassColumns(page);
   const others = () => page.locator(`${DETAIL}:not([data-car-detail="${carNumber}"])`);
   for (let left = await others().count(); left > 0; left -= 1) {
     await others().first().getByRole('button', { name: 'Close this column' }).click();
     await expect(others()).toHaveCount(left - 1);
   }
+}
+
+/** Take the strip back to its own head, and wait for it to stop gliding: opening
+ * a column scrolls the strip to it, and a press at the coordinates of a column
+ * scrolled off the edge lands on whatever is drawn there. */
+async function stripToHead(page: Page) {
+  await page.locator('#column-strip').evaluate((el) => {
+    el.scrollLeft = 0;
+  });
+  await settleStrip(page);
+}
+
+/** The grip of whichever column stands at `index` in the strip, class's, car's or
+ * the tracker's. */
+function stripGrip(page: Page, index: number) {
+  return page
+    .locator('#column-strip > div')
+    .nth(index)
+    .getByRole('button', { name: 'Move this column' });
 }
 
 /** One section of a panel, found by its heading. */
@@ -157,6 +305,218 @@ test.describe('Car Detail Visual Tests', () => {
 });
 
 /**
+ * The class's own column: what the strip opens with, one per class, which is how
+ * a field of several classes reads while the race is still sorting itself out --
+ * every car of a class at once, each against the class-mate ahead of it.
+ */
+test.describe('Class columns', () => {
+  test.beforeEach(async ({ page }) => {
+    await openEvent(page);
+  });
+
+  test('should open the strip with a column for each class the field runs', async ({ page }) => {
+    // A race is several races, and the front of each is a fight rather than a
+    // car, so the page follows the classes until the reader says otherwise -- in
+    // the order the running order puts the classes in.
+    await expectStrip(page, CLASSES.map((c) => c.name));
+    // A column as any other is: named in the header's list of them, and the
+    // reader's to close.
+    for (const class_ of CLASSES) {
+      await expect(
+        page.getByRole('button', { name: `Scroll to the ${class_.name} column` }),
+      ).toBeVisible();
+    }
+    await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(
+      CLASSES.length,
+    );
+    // Nothing has been picked, so no car is marked anywhere.
+    await expect(page.locator('[data-live-standings] [aria-pressed="true"]')).toHaveCount(0);
+  });
+
+  test('should list every car the class has out, leader first', async ({ page }) => {
+    // The whole class in one column, which is the one thing a column per car
+    // cannot do: a class running its stops early is visible here at once.
+    for (const class_ of CLASSES) {
+      await expect(classRows(page, class_.name)).toHaveCount(class_.cars);
+      await expect(classColumn(page, class_.name)).toContainText(`${class_.cars} cars`);
+    }
+    // The class place leads the row, ahead of the number and the surname: a car
+    // is 1st here and 22nd on the standings beside it, and both are true.
+    const rows = await classRows(page, 'HYPERCAR').evaluateAll((els) =>
+      els.slice(0, 6).map((el) => el.innerText.split('\n').slice(0, 3).join(' ')),
+    );
+    expect(rows).toEqual([
+      '1 6 VANTHOOR',
+      '2 83 KUBICA',
+      '3 8 HARTLEY',
+      '4 51 GIOVINAZZI',
+      '5 50 FUOCO',
+      '6 15 MARCIELLO',
+    ]);
+  });
+
+  test('should read every car against the class-mate ahead of it', async ({ page }) => {
+    // The intervals down the whole of Hypercar, leader first. The Hypercar on a
+    // lap with an LMP2 car is timed with it, and this chain is not that reading:
+    // each row is measured to the row above it, and to nothing else.
+    expect(await intervals(classRows(page, 'HYPERCAR'))).toEqual([
+      '',
+      '+ 14.766',
+      '+ 58.731',
+      '+ 49.971',
+      '+ 20.176',
+      '+ 1.550',
+      '+ 28.370',
+      '+ 11.515',
+      '+ 11.979',
+      '+ 3.539',
+      '-',
+      '+ 46.909',
+      '+ 41.044',
+      '+ 0.881',
+      '+ 5.511',
+      '+ 1:22.626',
+      '+ 8.000',
+      '+ 1:15.711',
+      '+ 1:56.717',
+      '+ 3 Laps',
+      '+ 1:43.682',
+    ]);
+    // The head of the class is ahead of nobody, and a car in the pit lane has no
+    // interval to be had: row 1 is drawn without a reading and #7 with a dash.
+    // A car a lap down its class-mate reads in laps, not in seconds.
+  });
+
+  test('should hold each class to a reference of its own', async ({ page }) => {
+    // The fastest lap the class has run and the number of the car that ran it --
+    // not the race's fastest, which a faster class ran: an LMGT3 car nobody
+    // would call quick is race leader among its own.
+    await expect(classColumn(page, 'HYPERCAR')).toContainText('3:27.534');
+    await expect(classColumn(page, 'HYPERCAR')).toContainText('#38');
+    await expect(classColumn(page, 'LMGT3')).toContainText('3:56.169');
+    await expect(classColumn(page, 'LMGT3')).toContainText('#87');
+    // The two references are the classes' own, and so are two different laps.
+    expect(await classColumn(page, 'HYPERCAR').innerText()).not.toContain('3:56.169');
+  });
+
+  test('should go on following the class as the race runs', async ({ page }) => {
+    // Nothing picked, nothing moved: the column is the class's running order,
+    // which is the race's to change. Before the first lap is done the classes are
+    // led by other cars, and no class has finished a timed lap to be a reference.
+    await setLapCount(page, 0);
+    for (const class_ of CLASSES) {
+      await expect(classRows(page, class_.name).first()).toContainText(class_.atStart);
+      await expect(classColumn(page, class_.name)).toContainText('no timed lap');
+    }
+    await setLapCount(page, 180);
+    for (const class_ of CLASSES) {
+      await expect(classRows(page, class_.name).first()).toContainText(class_.leader);
+      await expect(classColumn(page, class_.name)).not.toContainText('no timed lap');
+    }
+  });
+
+  test('should open a car of the class in a column of its own', async ({ page }) => {
+    await classRow(page, '83', 'HYPERCAR').click();
+    // The class is followed still, and one of its cars is followed in detail
+    // beside it.
+    await expectColumns(page, ['83']);
+    await expectStrip(page, [...CLASSES.map((c) => c.name), '83']);
+    await expect(standingsRow(page, '83')).toHaveAttribute('aria-pressed', 'true');
+    // The new column stood off the strip's own right edge, and the strip went to
+    // it: a press whose result the reader cannot see reads as a press that did
+    // nothing.
+    await expect.poll(() => inView(page, page.locator(DETAIL))).toBe(true);
+    // Its row is drawn marked, and pressing a marked row goes to the column that
+    // is standing rather than opening a second one of the same car.
+    await expect(classRow(page, '83', 'HYPERCAR')).toHaveAttribute('aria-pressed', 'true');
+    await classRow(page, '83', 'HYPERCAR').click();
+    await expectColumns(page, ['83']);
+    await expect.poll(() => inView(page, page.locator(DETAIL))).toBe(true);
+    // An unmarked row is a pick, and marks itself.
+    await classRow(page, '8', 'HYPERCAR').click();
+    await expectColumns(page, ['83', '8']);
+    await expect(classRow(page, '8', 'HYPERCAR')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('should keep the rest of the class columns when one is closed', async ({ page }) => {
+    await classColumn(page, 'HYPERCAR')
+      .getByRole('button', { name: 'Close this column' })
+      .click();
+    await expectStrip(page, ['LMP2', 'LMGT3']);
+    // The page stops choosing for the reader: still following, it would have
+    // filled Hypercar's place back in from the class it leads on the next render.
+    await selectCar(page, '83');
+    await expectStrip(page, ['LMP2', 'LMGT3', '83']);
+  });
+
+  test('should call a closed class column back by its name', async ({ page }) => {
+    await classColumn(page, 'HYPERCAR')
+      .getByRole('button', { name: 'Close this column' })
+      .click();
+    await expectStrip(page, ['LMP2', 'LMGT3']);
+    // The class's name in the standings is where its column is asked for again,
+    // which is where the class's cars are listed already.
+    await page.getByRole('button', { name: 'Open the HYPERCAR column' }).click();
+    await expectStrip(page, ['LMP2', 'LMGT3', 'HYPERCAR']);
+    await expect(page.getByRole('button', { name: 'Open the HYPERCAR column' })).toHaveCount(0);
+    // A class with a column is drawn as a name, not as a thing to open.
+    await expect(classColumn(page, 'HYPERCAR')).toBeVisible();
+  });
+
+  test('should say which cars are in the pit lane', async ({ page }) => {
+    const pits = await classRows(page, 'HYPERCAR').evaluateAll((els) =>
+      els
+        .filter((el) => /\bPIT\b|\bOUT\b/.test(el.innerText))
+        .map((el) => el.getAttribute('aria-label')),
+    );
+    expect(pits).toEqual([
+      'Car #50 in HYPERCAR',
+      'Car #7 in HYPERCAR',
+      'Car #38 in HYPERCAR',
+      'Car #35 in HYPERCAR',
+      'Car #311 in HYPERCAR',
+    ]);
+  });
+
+  test('should hold a class column to a width its rows stay readable at', async ({ page }) => {
+    await expect(page.locator('#column-strip > div').nth(0)).toHaveCSS('width', `${CLASS_WIDTH}px`);
+    await expect(page.locator('#column-strip > div').nth(2)).toHaveCSS('width', `${CLASS_WIDTH}px`);
+    // A narrower column than a car's panel is drawn in, and the two stand in one
+    // strip, so a car picked out of a class column moves the strip by its own
+    // pitch and not by the class's.
+    await selectCar(page, '83');
+    await expect(page.locator('#column-strip > div').nth(CLASSES.length)).toHaveCSS(
+      'width',
+      `${COLUMN_WIDTH}px`,
+    );
+    await settleStrip(page);
+    expect(await page.locator('#column-strip').evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+  });
+
+  test('should move a class column by the keys, and say which class moved', async ({ page }) => {
+    // The class is what the strip opens with, and a class is moved as a car is.
+    await stripGrip(page, 0).focus();
+    await page.keyboard.press('ArrowRight');
+    await expectStrip(page, ['LMP2', 'HYPERCAR', 'LMGT3']);
+    await expect(stripGrip(page, 1)).toBeFocused();
+    await expect(page.locator('[aria-live="polite"]')).toHaveText(
+      'HYPERCAR column moved to column 2 of 3',
+    );
+  });
+
+  test('should not move the page when a car of the class is picked', async ({ page }) => {
+    // The class's tile in the header's list stands as tall as the car badge's
+    // does: were it a slimmer thing, the first pick of a race -- which is what
+    // this page is opened for -- would push the whole page down.
+    const height = () =>
+      page.locator('#column-strip').evaluate((el) => el.getBoundingClientRect().height);
+    const before = await height();
+    await selectCar(page, '83');
+    await expect.poll(() => height()).toBe(before);
+  });
+});
+
+/**
  * As many columns as the reader asks for, each drawn against the rivals of the
  * car it holds.
  */
@@ -180,6 +540,14 @@ test.describe('Car Detail Columns', () => {
     return page.locator(DETAIL).nth(index).getByRole('button', { name: 'Move this column' });
   }
 
+  /** The grip of whichever column stands at `index` in the strip. */
+  function stripGrip(page: Page, index: number) {
+    return page
+      .locator('#column-strip > div')
+      .nth(index)
+      .getByRole('button', { name: 'Move this column' });
+  }
+
   /**
    * Press on a column's grip and carry it `by` pixels sideways, without letting
    * go. The moves wait for the grip to say it is held: until Elm has drawn it
@@ -196,81 +564,17 @@ test.describe('Car Detail Columns', () => {
     await page.mouse.move(x + by, y, { steps: 10 });
   }
 
-  /**
-   * Wait for the strip to stop gliding. A click scrolls its button into
-   * view, and on macOS that scroll is smooth: a grip measured while the
-   * strip still moves is pressed where it was, not where it is.
-   */
-  function settleStrip(page: Page) {
-    return page.locator('#column-strip').evaluate(
-      (el) =>
-        new Promise<void>((resolve) => {
-          let last = el.scrollLeft;
-          const tick = () => {
-            if (el.scrollLeft === last) {
-              resolve();
-            } else {
-              last = el.scrollLeft;
-              requestAnimationFrame(tick);
-            }
-          };
-          requestAnimationFrame(tick);
-        }),
-    );
-  }
-
   test.beforeEach(async ({ page }) => {
     await openEvent(page);
+    await standCars(page);
   });
 
-  test('should show the leader of each class when no car has been picked', async ({ page }) => {
-    // Each class's own leader, in the order the running order puts the classes
-    // in -- which is the order their leaders are in. The race is several races,
-    // and the car leading the field is leading one of them.
-    await expectColumns(page, ['6', '48', '92']);
-    // Drawn as any column is: a mark on the row says the car has one, which is
-    // as true of a stand-in as of a pick, and each is the reader's to close.
-    await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(3);
-    const marked = await page
-      .locator('[data-live-standings] [aria-pressed="true"]')
-      .evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
-    expect(marked).toEqual(['Car #6', 'Car #48', 'Car #92']);
-    // Each of the three leads the class its panel reports, and a car does not
-    // lead itself by nought: the reading against the class leader is no
-    // reading at all.
-    const toLeader = await page.locator(DETAIL).evaluateAll((panels) =>
-      panels.map((panel) => {
-        const label = [...panel.querySelectorAll('div')].find(
-          (el) => el.textContent === 'Class leader',
-        );
-        return label?.nextElementSibling?.textContent?.trim() ?? null;
-      }),
-    );
-    expect(toLeader).toEqual(['-', '-', '-']);
-  });
-
-  test('should not press a row whose car is already standing in', async ({ page }) => {
-    // #6 is already drawn, standing in for Hypercar, so its row is marked
-    // and carries no handler -- the same as any car with a column.
-    await standingsRow(page, '6').click({ force: true });
-    await expectColumns(page, ['6', '48', '92']);
-  });
-
-  test('should keep the rest of the stand-ins when one of them is closed', async ({ page }) => {
-    // The page stops choosing once one is gone. Still following, it would
-    // have filled #48's place back in from the class it leads on the next
-    // render.
-    await page.locator(DETAIL).nth(1).getByRole('button', { name: 'Close this column' }).click();
-    await expectColumns(page, ['6', '92']);
-    await expect(standingsRow(page, '48')).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  test('should let a pick join the stand-ins rather than replace them', async ({ page }) => {
+  test('should let a pick join the columns of the strip rather than replace them', async ({ page }) => {
     // A press that unmarked their rows would be the one press on the
     // standings that takes columns away.
     await selectCar(page, '83');
-    await expectColumns(page, [...STAND_INS, '83']);
-    for (const carNumber of STAND_INS) {
+    await expectColumns(page, [...THREE_CARS, '83']);
+    for (const carNumber of THREE_CARS) {
       await expect(standingsRow(page, carNumber)).toHaveAttribute('aria-pressed', 'true');
     }
   });
@@ -280,19 +584,17 @@ test.describe('Car Detail Columns', () => {
     // not have produced.
     await selectCar(page, '12');
     await selectCar(page, '83');
-    await expectColumns(page, [...STAND_INS, '12', '83']);
+    await expectColumns(page, [...THREE_CARS, '12', '83']);
   });
 
   test('should hold every column to a width its panel stays readable at', async ({ page }) => {
-    // Before a car has been picked at all: the class leaders stand in, each in
-    // a column rather than handed the cell.
-    await expect(column(page, 0)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
-    await selectOnlyCar(page, '83');
-    await expect(column(page, 0)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
-    await selectCar(page, '12');
-    for (let i = 0; i < 2; i++) {
+    // Every car's column is as wide as its panel needs, however many are up. The
+    // class's column is narrower, which is the class's own test.
+    for (let i = 0; i < THREE_CARS.length; i++) {
       await expect(column(page, i)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
     }
+    await selectCar(page, '83');
+    await expect(column(page, THREE_CARS.length)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
   });
 
   /** The standings' own card, which carries its width itself. */
@@ -348,8 +650,8 @@ test.describe('Car Detail Columns', () => {
     await expect(standings).toHaveCSS('width', `${STANDINGS_WIDTH + RESIZE_STEP}px`);
   });
 
-  test('should leave the third column off the edge, reachable by scrolling', async ({ page }) => {
-    // Three stood in with and three picked, which is past what the cell holds
+  test('should leave the last column off the edge, reachable by scrolling', async ({ page }) => {
+    // Three stood up and three picked, which is past what the cell holds
     // at any viewport the suite runs at.
     for (const carNumber of ['83', '12', '8']) {
       await selectCar(page, carNumber);
@@ -412,7 +714,7 @@ test.describe('Car Detail Columns', () => {
     await carry(page, 0, PITCH);
     // Nothing is reordered while the grip holds the pointer: the column it
     // has passed is drawn a place back instead.
-    await expectColumns(page, STAND_INS);
+    await expectColumns(page, THREE_CARS);
     await expect(column(page, 0)).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${PITCH}, 0)`);
     await expect(column(page, 1)).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${-PITCH}, 0)`);
     await expect(column(page, 2)).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
@@ -486,6 +788,7 @@ test.describe('Car Detail Columns', () => {
     for (const carNumber of ['83', '12', '8']) {
       await selectCar(page, carNumber);
     }
+    await stripToHead(page);
     await carry(page, 0, 0);
     // The strip is read where the carry began a frame after the grip is held.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
@@ -501,27 +804,7 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['48', '92', '6', '83', '12', '8']);
   });
 
-  test('should go on following the class leaders when a column is put back where it was', async ({ page }) => {
-    // A press on the grip, or a carry that lands where it began, moves
-    // nothing and settles nothing: at the start the classes are led by other
-    // cars, and the columns say so.
-    await carry(page, 0, 10);
-    await page.mouse.up();
-    await expectColumns(page, STAND_INS);
-    await setLapCount(page, 0);
-    await expectColumns(page, CLASS_LEADERS_AT_START);
-  });
-
-  test('should go on following the class leaders when a step has nowhere to go', async ({ page }) => {
-    // The first column has nowhere to the left to go: a step there moves
-    // nothing and settles nothing.
-    await grip(page, 0).focus();
-    await page.keyboard.press('ArrowLeft');
-    await setLapCount(page, 0);
-    await expectColumns(page, CLASS_LEADERS_AT_START);
-  });
-
-  test('should stop following the class leaders once a column has been moved', async ({ page }) => {
+  test('should stop following the running order once a column has been moved', async ({ page }) => {
     await carry(page, 0, PITCH);
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);
@@ -535,7 +818,7 @@ test.describe('Car Detail Columns', () => {
     await expect(grip(page, 0)).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
-    await expectColumns(page, STAND_INS);
+    await expectColumns(page, THREE_CARS);
     await expect(grip(page, 0)).toHaveClass(/cursor-grabbing/);
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);
@@ -555,7 +838,7 @@ test.describe('Car Detail Columns', () => {
     await touch(1, 'pointerdown', 3, 100);
     await touch(1, 'pointerup', 3, 100 + PITCH * 2);
     await touch(1, 'lostpointercapture', 3, 100 + PITCH * 2);
-    await expectColumns(page, STAND_INS);
+    await expectColumns(page, THREE_CARS);
     await expect(grip(page, 0)).toHaveClass(/cursor-grabbing/);
     await touch(0, 'pointerup', 2, 100 + PITCH);
     await expectColumns(page, ['48', '6', '92']);
@@ -618,7 +901,7 @@ test.describe('Car Detail Columns', () => {
     for (const carNumber of asked) {
       await selectCar(page, carNumber);
     }
-    await expectColumns(page, [...STAND_INS, ...asked]);
+    await expectColumns(page, [...THREE_CARS, ...asked]);
     await expect(standingsRow(page, '35')).toHaveAttribute('aria-pressed', 'true');
   });
 });

@@ -15,7 +15,7 @@ widths; which readings this panel carries, and at what width, is here.
 
 -}
 
-import Html exposing (Html, button, div, li, text)
+import Html exposing (Html, button, div, li, span, text)
 import Html.Attributes exposing (attribute, class, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
@@ -32,16 +32,23 @@ import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
+import View.ClassMark as ClassMark
 
 
 {-| What the panel is given: the tag for picking a car, the cars that already
 have a column of their own, the width the page stands it at, and where each
 car started — the grid place the moved column counts from, which a `CarAt`
 does not hold and only the round's entries know.
+
+`openColumn` is asked of every class: a message for the class's own column where
+the strip has none, and nothing where the column is standing. See
+[`View.ClassColumn`](View-ClassColumn).
+
 -}
 type alias Config msg =
     { onSelect : CarNumber -> msg
     , withColumns : List CarNumber
+    , openColumn : Class -> Maybe msg
     , width : Float
     , startPosition : CarNumber -> Maybe Position
     }
@@ -259,11 +266,7 @@ classSection :
     -> Html msg
 classSection config ( class_, cars ) =
     div [ class "grid grid-rows-[auto_minmax(0,1fr)] min-h-0" ]
-        [ div
-            [ class "flex items-center gap-x-[0.5em] pb-1 text-[10px] font-bold before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-            , attribute "style" ("--class-color: " ++ Class.toColor class_ ++ ";")
-            ]
-            [ text (Class.toString class_) ]
+        [ classLine config class_
         , Keyed.node "ul"
             [ class "flex flex-col text-sm overflow-y-auto" ]
             (cars
@@ -275,6 +278,38 @@ classSection config ( class_, cars ) =
                     )
             )
         ]
+
+
+{-| Where the class's name stands at the head of its section of the standings.
+
+A class with a column of its own is a heading and nothing else, so the standings
+read the same however the strip is standing. A class whose column the reader took
+away is the press that puts it back, which belongs where the class's cars are
+listed already.
+
+-}
+classLine : Config msg -> Class -> Html msg
+classLine config class_ =
+    case config.openColumn class_ of
+        Nothing ->
+            div [ class "pb-1" ] [ ClassMark.name class_ ]
+
+        Just msg ->
+            button
+                [ attribute "aria-label" ("Open the " ++ Class.toString class_ ++ " column")
+                , title ("Open the " ++ Class.toString class_ ++ " column")
+                , onClick msg
+                , class "flex items-center gap-x-1 w-full cursor-pointer rounded-[3px] px-0.5 py-0.5 text-left transition-colors hover:bg-accent/40"
+                ]
+                [ ClassMark.name class_, plus ]
+
+
+{-| The mark that a class's column is away and one press puts it back on the
+strip.
+-}
+plus : Html msg
+plus =
+    span [ class "ms-auto text-[11px] leading-none text-muted-foreground" ] [ text "+" ]
 
 
 {-| Every reading of the car, whatever the row's width ends up showing;
