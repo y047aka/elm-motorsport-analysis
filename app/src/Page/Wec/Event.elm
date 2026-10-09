@@ -18,20 +18,20 @@ import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
+import Internal.DataView as DataView
+import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
-import Motorsport.Leaderboard as Leaderboard
-import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Class as Class
 import Page.Wec.Columns as Columns
 import Page.Wec.Resize as Resize
 import Route
@@ -61,8 +61,8 @@ import View.PlaybackControls as PlaybackControls
 type alias Model =
     { pane : Pane
     , strip : Columns.Model
-    , standingsTab : StandingsTab
-    , leaderboardState : Leaderboard.Model
+    , bottomTab : BottomTab
+    , timelineTable : DataView.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
     }
@@ -94,17 +94,17 @@ togglePane pane =
             Shown
 
 
-type StandingsTab
-    = LeaderboardTab
-    | CardsTab
+type BottomTab
+    = CardsTab
+    | EventsTab
 
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { pane = Shown
       , strip = Columns.init
-      , standingsTab = LeaderboardTab
-      , leaderboardState = Leaderboard.init
+      , bottomTab = CardsTab
+      , timelineTable = DataView.init "timeline-events" timelineTableOptions
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
       }
@@ -123,9 +123,9 @@ type Msg
     | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
-    | StandingsTabChange StandingsTab
+    | BottomTabChange BottomTab
+    | TimelineTableMsg DataView.Msg
     | ReplayMsg Replay.Msg
-    | LeaderboardMsg Leaderboard.Msg
     | CarDetailMsg CarDetail.Msg
 
 
@@ -170,16 +170,14 @@ update shared msg m =
                 Nothing ->
                     ( m, Effect.none )
 
-        StandingsTabChange tab ->
-            ( { m | standingsTab = tab }, Effect.none )
+        BottomTabChange tab ->
+            ( { m | bottomTab = tab }, Effect.none )
+
+        TimelineTableMsg timelineMsg ->
+            ( { m | timelineTable = DataView.update timelineMsg m.timelineTable }, Effect.none )
 
         ReplayMsg replayMsg ->
             ( m, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
-
-        LeaderboardMsg leaderboardMsg ->
-            ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
-            , Effect.none
-            )
 
         CarDetailMsg detailMsg ->
             ( { m | comparison = CarDetail.update detailMsg m.comparison }, Effect.none )
@@ -332,7 +330,7 @@ mainGrid round keys m =
             round.replay
 
         gridCells =
-            standingsCell keys m snapshot
+            standingsCell keys m snapshot replay.race.cars
                 :: columnStrip "col-start-2 row-start-1 row-span-2" round.track round.timeline keys m replay snapshot
                 :: paneCells m.pane round.track snapshot round.fieldEvents replay
     in
@@ -343,7 +341,7 @@ mainGrid round keys m =
                 ("shrink-0 h-full grid " ++ gridColumns m.pane ++ " grid-rows-[300px_minmax(0,1fr)] gap-2.5")
             ]
             gridCells
-        , standingsPanel m.standingsTab m replay snapshot
+        , bottomPanel m.bottomTab m.timelineTable round.replay.race.cars round.timeline snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -374,14 +372,22 @@ narrower. The grip is drawn over the card's edge -- the card's own `class`
 is the custom element's -- and the column track is `auto`, so the strip
 gains and loses the width as the drag goes on.
 -}
-standingsCell : List Columns.StripKey -> Model -> Snapshot -> Html Msg
-standingsCell keys m snapshot =
+standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html Msg
+standingsCell keys m snapshot cars =
+    let
+        startPositions =
+            -- foldr, so that where the source data has two cars under one
+            -- number the one running ahead wins, as in `Snapshot.get`.
+            cars
+                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
+    in
     div
         [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid relative" ]
         [ LiveStandings.view
             { onSelect = Columns.Open >> ColumnsMsg
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
             , width = m.standings.width
+            , startPosition = \number -> Dict.get number startPositions
             }
             snapshot
         , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]
@@ -550,43 +556,122 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-standingsPanel : StandingsTab -> Model -> Replay.Model -> Snapshot -> Html Msg
-standingsPanel tab m replay snapshot =
+bottomPanel : BottomTab -> DataView.Model -> List Car -> Timeline -> Snapshot -> Html Msg
+bottomPanel tab table cars timeline snapshot =
     let
         body =
             case tab of
-                LeaderboardTab ->
-                    Leaderboard.view (leaderboardConfig replay.race.cars) m.leaderboardState snapshot
-
                 CardsTab ->
                     CarCardList.view snapshot
+
+                EventsTab ->
+                    DataView.view (timelineTableConfig cars) table (List.indexedMap Tuple.pair (Timeline.toList timeline))
     in
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
             [ Card.header []
-                [ Card.action [] [ standingsTabs tab ] ]
+                [ Card.action [] [ bottomTabs tab ] ]
             , Card.content [] [ body ]
             ]
         ]
 
 
-standingsTabs : StandingsTab -> Html Msg
-standingsTabs current =
+bottomTabs : BottomTab -> Html Msg
+bottomTabs current =
     let
         tabItem label tab =
             { label = label
             , active = current == tab
             , disabled = False
-            , onSelect = StandingsTabChange tab
+            , onSelect = BottomTabChange tab
             }
     in
     ToggleGroup.view
         { items =
-            [ tabItem "Table" LeaderboardTab
-            , tabItem "Cards" CardsTab
+            [ tabItem "Cards" CardsTab
+            , tabItem "Events" EventsTab
             ]
         }
         []
+
+
+timelineTableOptions : Options
+timelineTableOptions =
+    { sorting = Sorting
+    , filtering = Filtering
+    , selecting = NoSelecting
+    , pagination = Pagination 15
+    }
+
+
+{-| The events table, configured on the DataView directly rather than through
+the `Leaderboard`: these are events, not the field, and what the `Leaderboard`
+draws belongs to a lap. The car column is the right-hand timeline's own
+`carBadge`, so a number reads the same on both halves of the page.
+
+Rows are keyed by their place in the timeline — a number no two events share,
+where a moment's milliseconds and its words are the same for any two events
+of one kind at one instant, which the file can hold.
+
+-}
+timelineTableConfig : List Car -> DataView.Config ( Int, TimelineEvent ) Msg
+timelineTableConfig cars =
+    let
+        carsByNumber =
+            List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
+
+        eventOf : ( Int, TimelineEvent ) -> TimelineEvent
+        eventOf =
+            Tuple.second
+
+        carOf : ( Int, TimelineEvent ) -> Maybe Car
+        carOf row =
+            case (eventOf row).eventType of
+                CarEvent carNumber _ ->
+                    Dict.get carNumber carsByNumber
+
+                _ ->
+                    Nothing
+
+        classOf : ( Int, TimelineEvent ) -> Maybe String
+        classOf row =
+            carOf row
+                |> Maybe.map (.metadata >> .class >> Class.toString)
+
+        number : ( Int, TimelineEvent ) -> Maybe String
+        number row =
+            carOf row
+                |> Maybe.map (.metadata >> .carNumber)
+
+        elapsed : ( Int, TimelineEvent ) -> Duration
+        elapsed row =
+            Instant.toDuration (eventOf row).elapsed
+    in
+    { toId = Tuple.first >> String.fromInt
+    , toMsg = TimelineTableMsg
+    , columns =
+        [ DataView.customColumn
+            { label = "Time"
+            , getter = elapsed >> Duration.toStringToSeconds
+            , sorter = \a b -> compare (elapsed a) (elapsed b)
+            }
+        , DataView.veryCustomColumn
+            { label = "Car"
+            , getter = \row -> carBadge (carOf row) (eventOf row).eventType
+            , sorter = \a b -> compare (Maybe.withDefault "" (number a)) (Maybe.withDefault "" (number b))
+            }
+        , DataView.customColumn
+            { label = "Class"
+            , getter = classOf >> Maybe.withDefault ""
+            , sorter = \a b -> compare (Maybe.withDefault "" (classOf a)) (Maybe.withDefault "" (classOf b))
+            }
+        , DataView.customColumn
+            { label = "Event"
+            , getter = eventOf >> .eventType >> TimelineEvent.describe
+            , sorter = \a b -> compare (TimelineEvent.describe (eventOf a).eventType) (TimelineEvent.describe (eventOf b).eventType)
+            }
+        ]
+    }
 
 
 {-| The most recent events the field draws, newest first: when each happened,
@@ -687,47 +772,6 @@ carBadge car eventType =
 
         ( Nothing, _ ) ->
             text ""
-
-
-leaderboardConfig : List Car -> Leaderboard.Config CarAt Msg
-leaderboardConfig cars =
-    let
-        -- Worked out once rather than per row: the table is rebuilt on every
-        -- frame of playback.
-        startPositions : Dict CarNumber Position
-        startPositions =
-            -- foldr, so that where the source data has two cars under one
-            -- number the one running ahead wins, as in `Snapshot.get`.
-            cars
-                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
-
-        startPositionOf : CarAt -> Maybe Position
-        startPositionOf item =
-            Dict.get item.metadata.carNumber startPositions
-    in
-    { toId = .metadata >> .carNumber
-    , toMsg = LeaderboardMsg
-    , columns =
-        [ Leaderboard.carNumberColumn_Wec { getter = .metadata }
-        , Leaderboard.driverAndTeamColumn_Wec
-            { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , Leaderboard.positionChangeColumn
-            { getter = \item -> { startPosition = startPositionOf item, position = item.standing.position } }
-        , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
-        , Leaderboard.customColumn
-            { label = "Gap"
-            , getter = .standing >> .gapToLeader >> Gap.toString
-            }
-        , Leaderboard.customColumn
-            { label = "Interval"
-            , getter = .standing >> .intervalToAhead >> Gap.toString
-            }
-        , Leaderboard.currentLapColumn_Wec { getter = identity }
-        , Leaderboard.lastLapColumn_Wec { getter = .lastLap }
-        , Leaderboard.bestTimeColumn { getter = .bestLap }
-        , Leaderboard.intColumn { label = "Stops", getter = .pitStops }
-        ]
-    }
 
 
 standingsPopoverId : String

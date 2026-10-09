@@ -4,8 +4,12 @@ module View.LiveStandings exposing (view, width, minWidth, maxWidth)
 the cars the middle of it is given over to.
 
 It is not a column of the strip: never carried, stepped or closed. The page
-gives it its width, which the reader drags between `minWidth` and `maxWidth`;
-surnames are drawn once the panel stands wide enough for them to fit.
+gives it its width, which the reader drags between `minWidth` and `maxWidth`.
+
+The width a column arrives at, the track it takes and the word over it are
+written in one table, `columns`; the rows and the header above them both draw
+from it. How a reading looks is the `Leaderboard`'s, which never hears about
+widths; which readings this panel carries, and at what width, is here.
 
 @docs view, width, minWidth, maxWidth
 
@@ -17,12 +21,30 @@ import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
 import Motorsport.Driver as Driver
+import Motorsport.Duration as Duration
+import Motorsport.Gap as Gap
+import Motorsport.Lap.Performance as Performance
+import Motorsport.Leaderboard as Leaderboard
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
+
+
+{-| What the panel is given: the tag for picking a car, the cars that already
+have a column of their own, the width the page stands it at, and where each
+car started — the grid place the moved column counts from, which a `CarAt`
+does not hold and only the round's entries know.
+-}
+type alias Config msg =
+    { onSelect : CarNumber -> msg
+    , withColumns : List CarNumber
+    , width : Float
+    , startPosition : CarNumber -> Maybe Position
+    }
 
 
 {-| One card around the whole panel; the classes are sections of it, not
@@ -37,17 +59,14 @@ rows are thunked, and a lambda or a composition built afresh on each render
 compares unequal and draws every one of them again.
 
 -}
-view :
-    { onSelect : CarNumber -> msg
-    , withColumns : List CarNumber
-    , width : Float
-    }
-    -> Snapshot
-    -> Html msg
+view : Config msg -> Snapshot -> Html msg
 view config snapshot =
     let
-        showNames =
-            config.width >= namesWidth
+        sections =
+            div [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-3" ]
+                (Snapshot.toClassList snapshot
+                    |> List.map (classSection config)
+                )
     in
     Card.card
         -- Which the visual tests locate the standings by.
@@ -58,10 +77,12 @@ view config snapshot =
             [ Card.title [] [ text "Standings" ] ]
         , div [ class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ Card.content []
-                [ div [ class "h-full grid auto-rows-[minmax(0,1fr)] gap-y-3" ]
-                    (Snapshot.toClassList snapshot
-                        |> List.map (classSection config.onSelect config.withColumns showNames)
-                    )
+                [ if fits config.width Ahead then
+                    div [ class "h-full grid grid-rows-[auto_minmax(0,1fr)] gap-y-1" ]
+                        [ headerRow config.width, sections ]
+
+                  else
+                    sections
                 ]
             ]
         ]
@@ -88,20 +109,142 @@ strip out of the page before the reader could drag it back.
 -}
 maxWidth : Float
 maxWidth =
-    420
+    620
 
 
-{-| The width a surname starts to fit at: `minWidth` plus room for the
-name itself.
+{-| A data column of the row, in the order they stand after the position and
+the badge — which are not columns and are always drawn. `align` is read by
+both the label and the cells, which is what keeps them lined up.
 -}
-namesWidth : Float
-namesWidth =
-    170
+type Column
+    = Driver
+    | Ahead
+    | Last
+    | Current
+    | Best
+    | Laps
+    | Move
+
+
+type alias Spec =
+    { label : String
+    , at : Float
+    , track : String
+    , align : String
+    }
+
+
+columnSpec : Column -> Spec
+columnSpec column =
+    case column of
+        Driver ->
+            { label = "Driver", at = 170, track = "1fr", align = "" }
+
+        Ahead ->
+            { label = "Ahead", at = 230, track = "4.5em", align = "text-right" }
+
+        Last ->
+            { label = "Last", at = 315, track = "5em", align = "text-right" }
+
+        Current ->
+            { label = "Current", at = 395, track = "5em", align = "text-right" }
+
+        Best ->
+            { label = "Best", at = 475, track = "5em", align = "text-right" }
+
+        Laps ->
+            { label = "Laps", at = 525, track = "3em", align = "text-right" }
+
+        Move ->
+            { label = "Move", at = 570, track = "2.5em", align = "text-center" }
+
+
+{-| Every column, in row order.
+-}
+columns : List Column
+columns =
+    [ Driver, Ahead, Last, Current, Best, Laps, Move ]
+
+
+{-| Does this column fit a panel of this width?
+-}
+fits : Float -> Column -> Bool
+fits panelWidth column =
+    panelWidth >= (columnSpec column).at
+
+
+visible : Float -> List Column
+visible panelWidth =
+    List.filter (fits panelWidth) columns
+
+
+{-| The row's tracks as a `grid-template-columns` value: the position, the
+badge, one per visible column, and — once the time columns arrive — a gutter
+at the end for the pit mark, which floats there over the row's right edge.
+The header stands on the same value, which is what keeps a label over its
+column and keeps every row's columns lined up whether or not its car is in
+the pit.
+
+The tracks go on as a style attribute rather than as a `grid-cols-[...]`
+class: Tailwind extracts class names from source text only, so a class
+assembled from the table above ships no rule at all, and the row falls back
+to one track per child.
+
+-}
+gridTracks : Float -> String
+gridTracks panelWidth =
+    "20px auto"
+        ++ String.concat (List.map (\column -> " " ++ (columnSpec column).track) (visible panelWidth))
+        ++ (if fits panelWidth Ahead then
+                -- w-4 plus right-1, in px: the mark it reserves room for is measured in px.
+                " 24px"
+
+            else
+                ""
+           )
 
 
 px : Float -> String
 px n =
     String.fromFloat n ++ "px"
+
+
+{-| What each column is, above the classes. It appears with the first column
+of measured time, `Ahead`; a panel of position and badge and name needs no
+label.
+
+The container keeps the text size the rows carry — `text-sm` — because the
+tracks are in `em` and would otherwise measure against the labels' own 10px
+font and land each column beside its text. The labels are the `Leaderboard`'s
+own words, cut short for the narrow tracks: the interval to the car ahead is
+Ahead, the running clock is Current.
+
+-}
+headerRow : Float -> Html msg
+headerRow panelWidth =
+    div
+        [ class "grid items-center gap-2 px-0.5 pb-1 text-sm"
+        , style "grid-template-columns" (gridTracks panelWidth)
+        ]
+        ([ label "text-center" "Pos"
+         , label "text-center" "#"
+         ]
+            ++ List.map
+                (\column ->
+                    let
+                        spec =
+                            columnSpec column
+                    in
+                    label spec.align spec.label
+                )
+                (visible panelWidth)
+        )
+
+
+label : String -> String -> Html msg
+label align word =
+    div [ class ("text-[10px] font-bold uppercase text-muted-foreground " ++ align) ]
+        [ text word ]
 
 
 {-| The class's two lines: where its name stands, and the cars under it.
@@ -111,12 +254,10 @@ cars within it, so every class is always on show at once.
 
 -}
 classSection :
-    (CarNumber -> msg)
-    -> List CarNumber
-    -> Bool
+    Config msg
     -> ( Class, List CarAt )
     -> Html msg
-classSection onSelect withColumns showNames ( class_, cars ) =
+classSection config ( class_, cars ) =
     div [ class "grid grid-rows-[auto_minmax(0,1fr)] min-h-0" ]
         [ div
             [ class "flex items-center gap-x-[0.5em] pb-1 text-[10px] font-bold before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
@@ -129,78 +270,164 @@ classSection onSelect withColumns showNames ( class_, cars ) =
                 |> List.map
                     (\item ->
                         ( item.metadata.carNumber
-                        , Lazy.lazy7 carRow
-                            onSelect
-                            item.metadata
-                            item.standing.position
-                            (Driver.toSurname item.currentDriver)
-                            (item.status == Status.InPit)
-                            (List.member item.metadata.carNumber withColumns)
-                            showNames
+                        , Lazy.lazy (carRow config.onSelect) (row config item)
                         )
                     )
             )
         ]
 
 
-{-| Takes the row's pieces rather than the `CarAt` they are read off. A thunk's
-arguments are compared by `===`, and a `CarAt` is built afresh at every clock;
-the metadata is the car's own, which the race holds still, and the rest are
-primitives. `onSelect` is the caller's own tag, which is held still too.
+{-| Every reading of the car, whatever the row's width ends up showing;
+`cell` picks.
+-}
+type alias Row =
+    { width : Float
+    , metadata : Metadata
+    , position : Int
+    , isInPit : Bool
+    , hasColumn : Bool
+    , driver : String
+    , ahead : String
+    , last : String
+    , lastColor : String
+    , current : String
+    , currentColor : String
+    , best : String
+    , bestColor : String
+    , laps : String
+    , move : { startPosition : Maybe Position, position : Position }
+    }
 
-The row reads as the number of the car it picks rather than as its three
-columns, which are the position and driver the reader already has in front of
-them.
+
+row : Config msg -> CarAt -> Row
+row config item =
+    let
+        lastLapTime =
+            case item.lastLap of
+                Snapshot.Completed { rated } ->
+                    Leaderboard.ratedTime rated
+
+                Snapshot.NoLapYet ->
+                    Leaderboard.ratedTime Nothing
+
+        bestTime =
+            Leaderboard.ratedTime item.bestLap
+
+        ( current, currentColor ) =
+            if Status.hasRetired item.status then
+                ( "-", "" )
+
+            else
+                ( Duration.toStringToTenths item.currentLap.elapsed, Performance.textColorOf item.currentLap.performance )
+    in
+    { width = config.width
+    , metadata = item.metadata
+    , position = item.standing.position
+    , isInPit = item.status == Status.InPit
+    , hasColumn = List.member item.metadata.carNumber config.withColumns
+    , driver = Driver.toSurname item.currentDriver
+    , ahead = Gap.toString item.standing.intervalToAhead
+    , last = lastLapTime.text
+    , lastColor = lastLapTime.color
+    , current = current
+    , currentColor = currentColor
+    , best = bestTime.text
+    , bestColor = bestTime.color
+    , laps = String.fromInt item.standing.lapsCompleted
+    , move =
+        -- The grid place arrives by car number rather than from the `CarAt`,
+        -- which does not hold one; unknown reads as a place held.
+        { startPosition = config.startPosition item.metadata.carNumber
+        , position = item.standing.position
+        }
+    }
+
+
+{-| The row's pieces, read off the `CarAt` by `row` rather than passed to this
+alongside it. A thunk's arguments are compared by `===`, and a `CarAt` is
+built afresh at every clock; the metadata is the car's own, which the race
+holds still, and the rest are strings and flags compared by value. `onSelect`
+is the caller's own tag, which is held still too.
+
+The row reads as the number of the car it picks rather than as its columns,
+which are the position and driver the reader already has in front of them.
 
 -}
-carRow : (CarNumber -> msg) -> Metadata -> Int -> String -> Bool -> Bool -> Bool -> Html msg
-carRow onSelect metadata position driverSurname isInPit hasColumn showNames =
+carRow : (CarNumber -> msg) -> Row -> Html msg
+carRow onSelect r =
     li []
         [ button
-            ([ attribute "aria-label" ("Car #" ++ metadata.carNumber)
+            ([ attribute "aria-label" ("Car #" ++ r.metadata.carNumber)
              , attribute "aria-pressed"
-                (if hasColumn then
+                (if r.hasColumn then
                     "true"
 
                  else
                     "false"
                 )
-             , class
-                ("relative w-full p-0.5 grid "
-                    ++ (if showNames then
-                            "grid-cols-[20px_auto_1fr]"
-
-                        else
-                            "grid-cols-[20px_auto]"
-                       )
-                    ++ " items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
-                )
+             , class "relative w-full p-0.5 grid items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
+             , style "grid-template-columns" (gridTracks r.width)
              ]
-                ++ (if hasColumn then
+                ++ (if r.hasColumn then
                         -- The car's own colour, thinned enough to write on.
                         [ style "background-color"
-                            ("color-mix(in oklch, " ++ metadata.manufacturer.color ++ " 25%, transparent)")
+                            ("color-mix(in oklch, " ++ r.metadata.manufacturer.color ++ " 25%, transparent)")
                         ]
 
                     else
-                        [ onClick (onSelect metadata.carNumber)
+                        [ onClick (onSelect r.metadata.carNumber)
                         , class "cursor-pointer hover:bg-accent/40"
                         ]
                    )
             )
-            [ div [ class "text-center text-xs" ] [ text (String.fromInt position) ]
-            , CarNumberBadge.viewRow metadata
-            , if showNames then
-                div [ class "text-xs" ] [ text driverSurname ]
+            ([ div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
+             , CarNumberBadge.viewRow r.metadata
+             ]
+                ++ List.map (cell r) (visible r.width)
+                ++ [ if r.isInPit then
+                        div
+                            [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
+                            [ text "P" ]
 
-              else
-                text ""
-            , if isInPit then
-                div
-                    [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
-                    [ text "P" ]
-
-              else
-                text ""
-            ]
+                     else
+                        text ""
+                   ]
+            )
         ]
+
+
+{-| One visible column's cell, aligned as its label is.
+-}
+cell : Row -> Column -> Html msg
+cell r column =
+    let
+        spec =
+            columnSpec column
+
+        numeral =
+            "text-xs tabular-nums " ++ spec.align
+
+        timed time color =
+            div [ class numeral, style "color" color ] [ text time ]
+    in
+    case column of
+        Driver ->
+            div [ class "text-xs" ] [ text r.driver ]
+
+        Ahead ->
+            div [ class (numeral ++ " text-muted-foreground") ] [ text r.ahead ]
+
+        Last ->
+            timed r.last r.lastColor
+
+        Current ->
+            timed r.current r.currentColor
+
+        Best ->
+            timed r.best r.bestColor
+
+        Laps ->
+            div [ class numeral ] [ text r.laps ]
+
+        Move ->
+            div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]
