@@ -162,7 +162,7 @@ update shared msg m =
                     -- Where the column stands, as it stands -- plus the gap's
                     -- slack, so the column before it stays a sliver in sight.
                     ( m
-                    , Browser.Dom.setViewportOf Columns.stripId (Columns.gap + Columns.xOf Columns.widthOf keys index) 0
+                    , Browser.Dom.setViewportOf Columns.stripId (Columns.gap + Columns.xOf (always Columns.width) keys index) 0
                         |> Task.onError (\_ -> Task.succeed ())
                         |> Task.perform (\_ -> ColumnsMsg Columns.Settled)
                         |> Effect.sendCmd
@@ -494,7 +494,7 @@ columnStrip cell track timeline keys m replay snapshot =
             List.length keys > 1
 
         placements =
-            Columns.placements Columns.widthOf (Columns.carrying m.strip) keys
+            Columns.placements (always Columns.width) (Columns.carrying m.strip) keys
 
         standing =
             List.map (\car -> car.metadata.carNumber) (Columns.carsIn snapshot keys)
@@ -503,7 +503,7 @@ columnStrip cell track timeline keys m replay snapshot =
             case key of
                 Columns.Car carNumber ->
                     stripColumn (Columns.keyName key)
-                        (Columns.widthOf key)
+                        Columns.width
                         placement
                         (Snapshot.get carNumber snapshot
                             |> Maybe.map
@@ -515,13 +515,13 @@ columnStrip cell track timeline keys m replay snapshot =
 
                 Columns.ClassColumn class_ ->
                     stripColumn (Columns.keyName key)
-                        (Columns.widthOf key)
+                        Columns.width
                         placement
                         (classColumn several standing (Columns.isCarried placement) snapshot class_)
 
                 Columns.Tracker ->
                     stripColumn (Columns.keyName key)
-                        (Columns.widthOf key)
+                        Columns.width
                         placement
                         (trackerCard several (Columns.isCarried placement) track snapshot)
     in

@@ -23,7 +23,6 @@ function readConstant(name: string, source: string, pattern: RegExp): number {
 /** One column's width, and the pitch one column moves by. */
 const columnsSource = readFileSync(new URL('../src/Page/Wec/Columns.elm', import.meta.url), 'utf8');
 const COLUMN_WIDTH = readConstant('Columns.width', columnsSource, /\nwidth =\n\s+(\d+)/);
-const CLASS_WIDTH = readConstant('Columns.classWidth', columnsSource, /\nclassWidth =\n\s+(\d+)/);
 const GAP = readConstant('Columns.gap', columnsSource, /gap =\n\s+(\d+)/);
 const PITCH = COLUMN_WIDTH + GAP;
 
@@ -141,8 +140,8 @@ async function expectStrip(page: Page, columns: string[]) {
 }
 
 /** What each row reports as the interval to the class-mate ahead of it. The
- * reading is drawn after the lap the car is driving, and the car at the head of
- * its class is ahead of nobody, so reports nothing. */
+ * reading is drawn after the interval, and the car at the head of its class is
+ * ahead of nobody, so reports nothing. */
 function intervals(rows: Locator) {
   return rows.evaluateAll((els) =>
     els.map(
@@ -150,6 +149,17 @@ function intervals(rows: Locator) {
         el.innerText
           .split('\n')
           .find((line) => line.startsWith('+') || line === '-') ?? '',
+    ),
+  );
+}
+
+/** Where a class's column rules itself into groups, in the words the rules are
+ * labelled with. The rules are the list's only children that are not rows, and
+ * the words are read as Elm wrote them rather than as CSS spells them. */
+function divisions(page: Page, className: string) {
+  return classColumn(page, className).evaluate((column) =>
+    [...column.querySelectorAll('.overflow-y-auto > div')].map(
+      (rule) => rule.textContent?.trim() ?? '',
     ),
   );
 }
@@ -478,12 +488,51 @@ test.describe('Class columns', () => {
     ]);
   });
 
-  test('should hold a class column to a width its rows stay readable at', async ({ page }) => {
-    await expect(page.locator('#column-strip > div').nth(0)).toHaveCSS('width', `${CLASS_WIDTH}px`);
-    await expect(page.locator('#column-strip > div').nth(2)).toHaveCSS('width', `${CLASS_WIDTH}px`);
-    // A narrower column than a car's panel is drawn in, and the two stand in one
-    // strip, so a car picked out of a class column moves the strip by its own
-    // pitch and not by the class's.
+  test('should rule the class where it splits, and name the cars that stopped', async ({ page }) => {
+    // A class is not one field. The cars on the leader's lap are racing it, the
+    // ones below are a lap further back, and the ones that stopped are classified
+    // rather than distanced -- which is what the rules between the rows say, in
+    // the words a gap of laps is read in.
+    expect(await divisions(page, 'HYPERCAR')).toEqual([
+      '1 Lap down',
+      '2 Laps down',
+      '5 Laps down',
+      '6 Laps down',
+    ]);
+    expect(await divisions(page, 'LMGT3')).toEqual([
+      '1 Lap down',
+      '2 Laps down',
+      '3 Laps down',
+      '4 Laps down',
+      'Retired',
+    ]);
+    // Nothing is measured between a car that stopped and one that did not, so the
+    // three rows below the last rule report no interval at all: the rule carries
+    // that, and says so once.
+    expect((await intervals(classRows(page, 'LMGT3'))).slice(-3)).toEqual(['', '', '']);
+  });
+
+  test('should read a class column whole at the width a car is drawn at', async ({ page }) => {
+    // One line to a car, in the cell a car's panel is drawn in: the readings are
+    // all there, so the name is the only thing that could give -- and none of
+    // them do, for any car of any class.
+    const cut = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-class-column] button[aria-pressed]')]
+        .map((row) => {
+          const name = [...row.querySelectorAll('div')].find((cell) =>
+            (cell as HTMLElement).className.includes('truncate'),
+          ) as HTMLElement;
+          return name && name.scrollWidth > name.clientWidth
+            ? `${row.getAttribute('aria-label')}: ${name.textContent}`
+            : null;
+        })
+        .filter(Boolean),
+    );
+    expect(cut).toEqual([]);
+    // The same cell as a car's column, so one pitch moves the strip whichever
+    // kind of column stands in it.
+    await expect(page.locator('#column-strip > div').nth(0)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
+    await expect(page.locator('#column-strip > div').nth(2)).toHaveCSS('width', `${COLUMN_WIDTH}px`);
     await selectCar(page, '83');
     await expect(page.locator('#column-strip > div').nth(CLASSES.length)).toHaveCSS(
       'width',

@@ -68,9 +68,29 @@ view config snapshot class_ =
             Snapshot.inClass class_ snapshot
 
         -- Each car with the class-mate ahead of it, which is the car its gap is
-        -- measured to. The head of the class is ahead of nobody.
+        -- measured to. The head of the class is ahead of nobody, and until the class
+        -- has completed a lap nobody is measured against anybody: the column is the
+        -- starting grid, and a reading down it would be one the timing has not taken.
         field =
-            List.map2 Tuple.pair (Nothing :: List.map Just cars) cars
+            let
+                ahead =
+                    if lead > 0 then
+                        List.map Just cars
+
+                    else
+                        List.repeat (List.length cars) Nothing
+            in
+            List.map2 Tuple.pair (Nothing :: ahead) cars
+
+        -- What the class leader has completed, which is the lap every other car
+        -- of the class is measured against.
+        lead =
+            case cars of
+                first :: _ ->
+                    first.standing.lapsCompleted
+
+                _ ->
+                    0
     in
     Card.card
         [ attribute "data-class-column" (Class.toString class_) ]
@@ -80,7 +100,7 @@ view config snapshot class_ =
                     [ head config class_ cars
                     , Keyed.node "div"
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px" ]
-                        (List.map (row config snapshot) field)
+                        (rows config snapshot lead field)
                     ]
                 ]
             ]
@@ -163,12 +183,14 @@ corner config =
 -- ROWS
 
 
-{-| One car of the class: where it stands, who is driving, what the class-mate
-ahead is by, and the lap it is driving now.
+{-| One car of the class on one line: where it stands, who is driving, what the
+class-mate ahead is by, and what the car is doing right now.
 
-Two lines to a car, so the whole class stands in one column instead of a table
-the page has no room for. The readings that place the car are the top line; the
-one beneath says what the car is doing about it.
+The readings sit in tracks of their own -- place, number, name, gap, now -- so
+each is a column down the class rather than a string of words, and only the name
+is allowed to give way. The interval is drawn before the lap being driven because
+the strip's edge takes the rightmost reading, and the interval is what a class
+column is for.
 
 The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
@@ -194,7 +216,7 @@ row config snapshot ( ahead, item ) =
                 "false"
             )
          , class rowClass
-         , title (metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver)
+         , title (metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver ++ lane item)
          ]
             ++ (if picked then
                     -- The car's own colour, thinned enough to write on: the same
@@ -212,26 +234,102 @@ row config snapshot ( ahead, item ) =
         )
         [ ordinal item
         , CarNumberBadge.viewRow metadata
-        , div [ class "text-xs truncate" ] [ text (Driver.toSurname item.currentDriver) ]
-        , pace snapshot ahead item
+        , div [ class "min-w-0 truncate text-[11px] font-semibold leading-[18px]" ] [ text (Driver.toSurname item.currentDriver) ]
+        , gapAhead snapshot ahead item
+        , now item
         ]
     )
 
 
-{-| The row's own tracks: the class place, the number, and the name the rest of
-the row is measured against. The second line hangs under the number rather than
-under the place, which is the row's own and answers to nothing beside it.
+{-| The class down the column, a rule wherever the classification moves to another
+group. The first division a class makes is not visible in a gap read in seconds:
+the cars above the rule are fighting the race and the ones below are finishing
+their own.
+
+Keyed by the car a rule starts at, which no other row can claim.
+
+-}
+rows : Config msg -> Snapshot -> Int -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot lead field =
+    let
+        add (( _, item ) as pair) ( behind, acc ) =
+            let
+                back =
+                    group lead item
+
+                lines =
+                    row config snapshot pair :: acc
+            in
+            if back == behind then
+                ( behind, lines )
+
+            else
+                ( back, ( "splits-" ++ item.metadata.carNumber, division back ) :: lines )
+    in
+    List.foldl add ( Just 0, [] ) field
+        |> Tuple.second
+        |> List.reverse
+
+
+{-| How far back a car sits: the laps between it and the class leader while it is
+running, and nothing at all for a car that has stopped -- which is not lapped so
+much as out, and is classified among the others rather than distanced by them.
+-}
+group : Int -> CarAt -> Maybe Int
+group lead item =
+    if Status.hasRetired item.status then
+        Nothing
+
+    else
+        Just (lead - item.standing.lapsCompleted)
+
+
+{-| The rule between two groups of a class, naming what separates them: how many
+laps back the cars below are, or that the cars below are the ones that stopped.
+The class is drawn in classification order, so a group comes in one block and
+there is one rule per group.
+-}
+division : Maybe Int -> Html msg
+division back =
+    let
+        words =
+            case back of
+                Nothing ->
+                    "Retired"
+
+                Just laps ->
+                    lapsText laps ++ " down"
+    in
+    div
+        [ class "flex items-center gap-x-1.5 pt-1 text-[9px] leading-none uppercase tracking-[0.08em] whitespace-nowrap text-muted-foreground" ]
+        [ div [ class "h-px flex-1 bg-border" ] []
+        , div [ class "tabular-nums" ] [ text words ]
+        , div [ class "h-px flex-1 bg-border" ] []
+        ]
+
+
+{-| How many laps, in the words the rest of the app uses for a gap of laps.
+-}
+lapsText : Int -> String
+lapsText laps =
+    Gap.toString (Gap.laps laps)
+        |> String.dropLeft 2
+
+
+{-| The row's own tracks: the class place, the number, the name which is what
+gives when there is no room, and two readings of their own width so the numbers
+line up down the class.
 -}
 rowClass : String
 rowClass =
-    "w-full grid grid-cols-[1.5rem_auto_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5 px-0.5 py-0.5 rounded text-left transition-colors cursor-pointer"
+    "w-full grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-center gap-x-[3px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
 
 
 ordinal : CarAt -> Html msg
 ordinal item =
     div
         [ class
-            ("text-[10px] tabular-nums whitespace-nowrap "
+            ("text-[10px] tabular-nums whitespace-nowrap text-right "
                 ++ (if item.standing.positionInClass == 1 then
                         ""
 
@@ -243,64 +341,62 @@ ordinal item =
         [ text (String.fromInt item.standing.positionInClass) ]
 
 
-{-| The pace line: the lap the car is driving, where the car is if it is not on
-the road, and what the class-mate ahead is by.
--}
-pace : Snapshot -> Maybe CarAt -> CarAt -> Html msg
-pace snapshot ahead item =
-    div [ class "col-start-2 col-end-4 row-start-2 flex min-w-0 items-center gap-x-1.5" ]
-        [ running item
-        , pitMark item.status
-        , gapAhead snapshot ahead item
-        ]
+{-| What the car is doing right now: standing in its box, driving out of the lane,
+stopped for good, or on the road driving a lap -- in the colour of how that lap
+reads against the records as they stood at this moment, which is what says who is
+pushing right now.
 
-
-{-| The lap the car is driving, still running, in the colour of how it reads
-against the records as they stood at this moment -- which is what says who is
-pushing right now, the one thing the finished laps of a young race cannot tell.
+The lane and the running lap share a track because they answer one question, and
+the lane wins where both could be said: a car in its box is not being scored
+against the field, and its lap is held in the row's title. The stops a class has
+made is the first thing a race splits on, and the mark is the lane's own grey, as
+it is in the standings and on the tracker.
 
 A retired car has no lap running, and the elapsed time the snapshot leaves on it
 belongs to a lap it finished before it stopped.
 
 -}
-running : CarAt -> Html msg
-running item =
+now : CarAt -> Html msg
+now item =
     case item.status of
-        Status.Retired ->
-            div [ class "text-[11px] text-muted-foreground" ] [ text "Retired" ]
-
-        _ ->
-            div
-                [ class "text-[11px] tabular-nums"
-                , style "color" (Performance.textColorOf item.currentLap.performance)
-                ]
-                [ text (Duration.toStringToTenths item.currentLap.elapsed) ]
-
-
-{-| The mark of a car standing in its box or driving out of the lane, and of one
-that has stopped already.
-
-The stops a class has made is the first thing a race splits on, and the mark is
-the lane's own grey, as it is in the standings and on the tracker.
-
--}
-pitMark : Status -> Html msg
-pitMark status =
-    case status of
         Status.InPit ->
             chip "PIT"
 
         Status.OutLap ->
             chip "OUT"
 
+        Status.Retired ->
+            div [ class "justify-self-end text-[10px] whitespace-nowrap text-muted-foreground" ]
+                [ text "Retired" ]
+
         _ ->
-            text ""
+            div
+                [ class "justify-self-end text-[10px] tabular-nums whitespace-nowrap"
+                , style "color" (Performance.textColorOf item.currentLap.performance)
+                ]
+                [ text (Duration.toStringToTenths item.currentLap.elapsed) ]
+
+
+{-| The lap a car is still driving while the lane has it, which the row's title
+holds because the lane's mark takes the track.
+-}
+lane : CarAt -> String
+lane item =
+    case item.status of
+        Status.InPit ->
+            " · in the pit lane, driving " ++ Duration.toStringToTenths item.currentLap.elapsed
+
+        Status.OutLap ->
+            " · out of the pit lane, driving " ++ Duration.toStringToTenths item.currentLap.elapsed
+
+        _ ->
+            ""
 
 
 chip : String -> Html msg
 chip word =
     div
-        [ class "inline-flex items-center justify-center rounded-full border border-border bg-card px-1.5 text-[9px] font-bold leading-4 text-muted-foreground" ]
+        [ class "justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground" ]
         [ text word ]
 
 
@@ -320,8 +416,14 @@ gapAhead snapshot ahead chasing =
             text ""
 
         Just inFront ->
-            div [ class "ms-auto text-[11px] tabular-nums whitespace-nowrap text-muted-foreground" ]
-                [ text (Gap.toString (gapTo inFront chasing snapshot)) ]
+            -- Nothing is measured between two cars that are not both on the road;
+            -- the rule above the ones that stopped is what says as much.
+            if Status.hasRetired chasing.status || Status.hasRetired inFront.status then
+                text ""
+
+            else
+                div [ class "justify-self-end text-[10px] tabular-nums whitespace-nowrap text-muted-foreground" ]
+                    [ text (Gap.toString (gapTo inFront chasing snapshot)) ]
 
 
 {-| The interval between two cars of a class: the road between them added up, or,

@@ -1,7 +1,7 @@
 module Page.Wec.Columns exposing
     ( Model, init, update, Msg(..), StripKey(..), keyName, keysOf, resolve, carsIn
     , Placement(..), placements, carrying, isCarried, placementAttributes, gripId, stripId
-    , scrollId, width, classWidth, widthOf, gap, pitch, slot, xOf, px
+    , scrollId, width, gap, pitch, slot, xOf, px
     )
 
 {-| The strip of columns: what order they stand in, which one a pointer is
@@ -22,7 +22,7 @@ The names sort into five shelves:
 
 @docs Model, init, update, Msg, StripKey, keyName, keysOf, resolve, carsIn
 @docs Placement, placements, carrying, isCarried, placementAttributes, gripId, stripId
-@docs scrollId, width, classWidth, widthOf, gap, pitch, slot, xOf, px
+@docs scrollId, width, gap, pitch, slot, xOf, px
 
 -}
 
@@ -572,13 +572,13 @@ reveal keys index =
         Nothing ->
             Cmd.none
 
-        Just key ->
+        Just _ ->
             let
                 left =
-                    xOf widthOf keys index
+                    xOf (always width) keys index
 
                 right =
-                    left + slot (widthOf key)
+                    left + slot width
             in
             Browser.Dom.getViewportOf stripId
                 |> Task.andThen
@@ -751,33 +751,6 @@ width =
 gap : Float
 gap =
     10
-
-
-{-| How wide a class's column is -- three quarters of a car's, since it carries a
-class place, a number, a name and a pace line rather than a panel of charts.
-
-240 is what the row wants: the class place, the number's badge, the surname, the
-running lap and the margin to the class-mate ahead, plus the card's padding.
-Narrower and the surname is the first thing to go.
-
--}
-classWidth : Float
-classWidth =
-    240
-
-
-{-| The width the column at this key is drawn at. Everything that measures the
-strip -- where a column stands, how far a carry moves one, where a click scrolls
-to -- goes through here, since the strip holds columns of two widths.
--}
-widthOf : StripKey -> Float
-widthOf key =
-    case key of
-        ClassColumn _ ->
-            classWidth
-
-        _ ->
-            width
 
 
 {-| From one column's left edge to the next one's when that column is

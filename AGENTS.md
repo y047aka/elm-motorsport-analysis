@@ -213,11 +213,23 @@ class's column; a row whose car is up already is marked and scrolls the strip to
 that column rather than opening a second. Where a class's column has been closed,
 its name in the standings is the press that calls it back.
 
-The strip therefore holds columns of two widths -- `classWidth` 240 and `width`
-318 -- and everything that measures it goes through `Columns.widthOf`: where a
-column stands, how far a carry moves one, how far a press scrolls. A carry is
-still counted in the canonical `pitch`, so a place is a place whichever column is
-held.
+One line to a car, in tracks of their own -- class place, number, name, interval,
+what the car is doing now -- so each reading is a column down the class and only
+the name gives way. Three class columns do not fit a 1440 viewport, so the
+rightmost reading is what the strip's edge takes, and the readings are ordered for
+that: the interval outlives the lap being driven. A car in the lane, driving out
+of it or stopped shares that last track with its running lap and wins it, since a
+car in its box is not being scored against the field; its lap is in the row's
+title.
+
+The class is drawn in classification order, so it comes in blocks: a rule between
+the rows says how many laps back the cars below are, and the cars that stopped get
+a rule naming them rather than a distance -- nothing is measured between a car
+that stopped and one that did not.
+
+Every column is drawn `Columns.width` wide, and everything that measures the
+strip -- where a column stands, how far a carry moves one, how far a press
+scrolls -- is done in that one width and `pitch`.
 
 **The tracker's index means where it stood when the strip settled**: while the
 class columns are live the tracker trails them however the running order moves,

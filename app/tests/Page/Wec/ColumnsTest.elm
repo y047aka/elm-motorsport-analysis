@@ -72,8 +72,8 @@ suite =
                             Columns.init
                                 |> step (ShowTracker True)
                                 |> step (Grab headKey (pointer 1 0))
-                                |> step (Carrying (pointer 1 (Columns.widthOf headKey)))
-                                |> step (Release (pointer 1 (Columns.widthOf headKey)))
+                                |> step (Carrying (pointer 1 Columns.width))
+                                |> step (Release (pointer 1 Columns.width))
                                 |> keys
                                 |> Expect.equal
                                     ([ nextKey, headKey ] ++ List.drop 2 standIns ++ [ Tracker ])
@@ -214,14 +214,6 @@ suite =
                         |> step (Step (classColumnOf "LMGT3") -1)
                         |> .announcement
                         |> Expect.equal "LMGT3 column moved to column 1 of 2"
-            , test "a column is as wide as what it is a column of" <|
-                \_ ->
-                    Expect.all
-                        [\() -> Columns.widthOf (classColumnOf "HYPERCAR") |> Expect.equal Columns.classWidth
-                        , \() -> Columns.widthOf (Car "1") |> Expect.equal Columns.width
-                        , \() -> Columns.widthOf Tracker |> Expect.equal Columns.width
-                        ]
-                        ()
             , test "a carry is clamped by the widths that stand, not the pitch that counts" <|
                 \_ ->
                     -- The first stand-in stands a narrow slot wide; the second
