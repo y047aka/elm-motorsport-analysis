@@ -33,7 +33,6 @@ import Internal.Statistics as Statistics
 import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Analysis.Stint as Stint
-import Motorsport.Chart.PositionSparkline as PositionSparkline
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -633,8 +632,8 @@ soonestLaps =
     3
 
 
-{-| How many laps back a stop row's place line reaches -- the same stretch a
-car card is a thumbnail of.
+{-| How many laps back the stops board measures a move over -- the same stretch
+a car card is a thumbnail of.
 -}
 placeWindow : Int
 placeWindow =
@@ -673,10 +672,10 @@ stops history class_ snapshot counted cars =
 
                     dues ->
                         let
-                            places =
-                                placeLines counted class_ snapshot
+                            moves =
+                                placeMoves counted class_ snapshot
                         in
-                        List.indexedMap (stopRow places) dues
+                        List.indexedMap (stopRow moves) dues
                )
         )
 
@@ -722,28 +721,41 @@ dueOf car history =
         summary.medianStintLength
 
 
-{-| The class's places of the last laps, per car, for the rows' lines.
+{-| The class's places of twenty laps ago, per car -- what each row's arrow is
+measured from: the place the oldest classified lap in the window carries, for
+the car and not for the class. A car the window holds no classified lap for
+gives nothing and draws no arrow.
 -}
-placeLines : Count -> Class -> Snapshot -> Dict CarNumber (List ClassPositions.Point)
-placeLines counted class_ snapshot =
+placeMoves : Count -> Class -> Snapshot -> Dict CarNumber Position
+placeMoves counted class_ snapshot =
     if counted.lead < 1 then
         Dict.empty
 
     else
         ClassPositions.byCar { first = max 1 (counted.lead - placeWindow + 1), last = counted.lead } class_ snapshot
-            |> List.map (\( car, points ) -> ( car.metadata.carNumber, points ))
+            |> List.filterMap
+                (\( car, points ) ->
+                    List.head points |> Maybe.map (\first -> ( car.metadata.carNumber, first.position ))
+                )
             |> Dict.fromList
 
 
-{-| One car of the board: its place line over the last laps, and how many laps
-the call has left. The nearest stop carries its own number, the rest their
-laps to it -- the same shape the pace board gives its readings, the few here
-being read against each other.
+{-| One car of the board: how far its place in the race has moved over the last
+laps -- the standings' own arrow, measured against twenty laps ago rather than
+the grid, and among the whole field rather than in its class, because it is
+the race place the window holds -- and how many laps the call has left. The
+nearest stop carries its own number, the rest their laps to it.
+
+The move is the whole of what a line through these places could say, and the
+arrow is its honest telling: over twenty laps a class swaps places every lap
+as its cars pit, and a line drawn through that swings the height of a row on
+other cars' stops, saying *fighting* for a car that netted nothing.
+
 -}
-stopRow : Dict CarNumber (List ClassPositions.Point) -> Int -> Due -> Html msg
-stopRow places index item =
+stopRow : Dict CarNumber Position -> Int -> Due -> Html msg
+stopRow moves index item =
     div
-        [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.25rem_2.75rem] items-center gap-x-[3px] px-0.5"
+        [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_2.25rem_2.75rem] items-center gap-x-[3px] px-0.5"
         , title (Driver.toInitialAndSurname item.car.currentDriver ++ " · lap " ++ String.fromInt item.stint ++ " of a median " ++ String.fromInt item.median)
         ]
         [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]
@@ -751,8 +763,8 @@ stopRow places index item =
         , CarNumberBadge.viewRow item.car.metadata
         , div [ class "min-w-0 truncate text-[11px] leading-[18px] text-muted-foreground" ]
             [ text (Driver.toSurname item.car.currentDriver) ]
-        , div [ class "justify-self-end" ]
-            [ PositionSparkline.sparkline { width = 52, height = 16 } item.car.metadata.manufacturer.color (Dict.get item.car.metadata.carNumber places |> Maybe.withDefault []) ]
+        , div [ class "justify-self-end leading-[18px]" ]
+            [ Leaderboard.viewPositionChangeInline { startPosition = Dict.get item.car.metadata.carNumber moves, position = item.car.standing.position } ]
         , div
             [ class
                 ("justify-self-end text-[10px] tabular-nums whitespace-nowrap "
