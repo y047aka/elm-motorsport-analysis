@@ -90,8 +90,8 @@ spread low high =
         ( low, high )
 
 
-{-| Kept to a tenth of a pixel, which is finer than a dot and keeps the
-`points` of a frame from being a different string every frame.
+{-| Kept to a tenth of a pixel, which is finer than a dot and shorter than the
+whole float would write.
 -}
 spot : Float -> String
 spot =

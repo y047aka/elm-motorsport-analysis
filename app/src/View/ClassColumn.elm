@@ -490,7 +490,7 @@ footer history class_ snapshot counted cars =
     in
     div [ class "grid gap-y-1.5" ]
         [ pace history counted cars
-        , stops history class_ snapshot counted dues
+        , stops class_ snapshot counted dues
         , lapStrip history counted dues
         ]
 
@@ -670,8 +670,8 @@ running two strategies at once still reads: the board says which of them will
 have to blink first, not which is furthest from some class-wide number.
 
 -}
-stops : LapHistory -> Class -> Snapshot -> Count -> List Due -> Html msg
-stops history class_ snapshot counted dues =
+stops : Class -> Snapshot -> Count -> List Due -> Html msg
+stops class_ snapshot counted dues =
     div [ class "border-t border-border pt-1 grid gap-y-px" ]
         (note "Stops" "laps to its own median stint"
             :: (if List.isEmpty dues then
@@ -685,7 +685,10 @@ stops history class_ snapshot counted dues =
 
 {-| Each running car's own median read against the run it is on. A car in the
 lane, or on a first run with no finished one behind it, has no habit to be due
-against and is off the board until it has one; a retired car has no next stop.
+against and is off the board until it has one. A car done for the day -- one
+way or the other -- has no next stop either, and the feed gives a stopped car
+no end to its last run: the checkered flag cuts no stint, so the fence is the
+car's status and not its runs.
 
 The nearest few are kept, and when nobody is near the single nearest is: a
 board of a class nobody will call for four laps says nothing, but which car
@@ -697,7 +700,7 @@ dueBoard history cars =
     let
         dues =
             cars
-                |> List.filter (\car -> not (Status.hasRetired car.status))
+                |> List.filter (\car -> not (Status.hasStopped car.status))
                 |> List.filterMap (\car -> dueOf car history)
                 |> List.sortBy .laps
 
@@ -759,6 +762,7 @@ stopRow : Dict CarNumber Position -> Int -> Due -> Html msg
 stopRow moves index item =
     div
         [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_2.25rem_2.75rem] items-center gap-x-[3px] px-0.5"
+        , attribute "data-stop-row" item.car.metadata.carNumber
         , title (Driver.toInitialAndSurname item.car.currentDriver ++ " · lap " ++ String.fromInt item.stint ++ " of a median " ++ String.fromInt item.median)
         ]
         [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]
@@ -876,6 +880,7 @@ stripRow : LapStrip.Scale -> Int -> ( Due, List Lap ) -> Html msg
 stripRow scale index ( due, laps ) =
     div
         [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_auto] items-center gap-x-[3px] px-0.5"
+        , attribute "data-lap-row" due.car.metadata.carNumber
         , title (Driver.toInitialAndSurname due.car.currentDriver ++ " · " ++ spanText laps)
         ]
         [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]

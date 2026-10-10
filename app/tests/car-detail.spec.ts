@@ -436,6 +436,29 @@ test.describe('Class columns', () => {
     }
   });
 
+  test('should hold the laps strip to the cars the stops board names', async ({ page }) => {
+    // The strip draws the laps of the very cars whose stops are near, not of a
+    // few cars of its own choosing: two readings of one few, read one under the
+    // other. The lists are read off the attributes the rows carry their car on.
+    const boards = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-class-column]')].map((column) => ({
+        stops: [...column.querySelectorAll('[data-stop-row]')].map((row) =>
+          row.getAttribute('data-stop-row'),
+        ),
+        laps: [...column.querySelectorAll('[data-lap-row]')].map((row) =>
+          row.getAttribute('data-lap-row'),
+        ),
+      })),
+    );
+    expect(boards).toHaveLength(CLASSES.length);
+    for (const { stops, laps } of boards) {
+      // At lap 180 every class has cars running runs longer than their own
+      // medians' habit, so the board has names to hold the strip to.
+      expect(stops.length).toBeGreaterThan(0);
+      expect(laps).toEqual(stops);
+    }
+  });
+
   test('should open a car of the class in a column of its own', async ({ page }) => {
     await classRow(page, '83', 'HYPERCAR').click();
     // The class is followed still, and one of its cars is followed in detail

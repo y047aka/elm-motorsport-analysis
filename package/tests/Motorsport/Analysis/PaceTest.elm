@@ -39,6 +39,26 @@ suite =
                         |> List.length
                         |> Expect.equal 20
             ]
+        , describe "the laps whole, for a drawing that wants more than the time"
+            [ test "the lap numbers come out with the laps" <|
+                \_ ->
+                    -- The reason racingLaps exists beside racingTimes: a drawing
+                    -- puts each dot on its lap, and the times alone cannot say
+                    -- which lap was which -- or which laps are missing.
+                    Pace.racingLaps { first = 1, last = 3 } withAStop
+                        |> List.map .lap
+                        |> Expect.equal [ 1, 3 ]
+            , test "the same fence, the same dropped laps" <| -- racingTimes and racingLaps must never disagree about which laps count
+                \_ ->
+                    Pace.racingLaps { first = 15, last = 20 } safetyCarLate
+                        |> List.map .time
+                        |> Expect.equal [ Just 100000, Just 100000 ]
+            , test "a dropped lap leaves its gap in the laps, not a stand-in" <| -- what the strip draws as an empty place on the lap scale
+                \_ ->
+                    Pace.racingLaps { first = 1, last = 3 } withNoTimeForLapTwo
+                        |> List.map .lap
+                        |> Expect.equal [ 1, 3 ]
+            ]
         ]
 
 
