@@ -214,13 +214,15 @@ that column rather than opening a second. Where a class's column has been closed
 its name in the standings is the press that calls it back.
 
 One line to a car, in tracks of their own -- class place, number, name, interval,
-what the car is doing now -- so each reading is a column down the class and only
-the name gives way. Three class columns do not fit a 1440 viewport, so the
-rightmost reading is what the strip's edge takes, and the readings are ordered for
-that: the interval outlives the lap being driven. A car in the lane, driving out
-of it or stopped shares that last track with its running lap and wins it, since a
-car in its box is not being scored against the field; its lap is in the row's
-title.
+move -- so each reading is a column down the class and only the name gives way.
+Three class columns do not fit a 1440 viewport, so the rightmost reading is what
+the strip's edge takes, and the readings are ordered for that: the interval
+outlives the move. The move is counted in the class, against the class's own grid:
+the LMGT3 car sixth in class and leading it now has gained five places of LMGT3,
+which is not the move the standings' Move column reports for the field. A car in
+the lane, driving out of it or stopped takes that track from its move, since a car
+in its box is not being scored against the field. Before the class has completed a
+lap nothing is counted at all, and the column reads as the starting grid it is.
 
 The class is drawn in classification order, so it comes in blocks: a rule between
 the rows says how many laps back the cars below are, and the cars that stopped get

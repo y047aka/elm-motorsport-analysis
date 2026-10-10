@@ -164,6 +164,17 @@ function divisions(page: Page, className: string) {
   );
 }
 
+/** What each row's last track reports: the places a car has gained or lost in its
+ * own class, the lane's mark, or that the car stopped. The track is drawn whether
+ * or not it has a reading, so it is read as the row's last element rather than as
+ * its fifth child: a row whose car heads its class, or stopped, draws no interval
+ * before it. */
+function moves(page: Page, className: string) {
+  return classColumn(page, className)
+    .locator('button[aria-pressed]')
+    .evaluateAll((rows) => rows.map((row) => (row.lastElementChild?.textContent ?? '').trim()));
+}
+
 /** Whether a column stands whole inside the strip's own box. */
 async function inView(page: Page, column: Locator) {
   const strip = (await page.locator('#column-strip').boundingBox())!;
@@ -510,6 +521,52 @@ test.describe('Class columns', () => {
     // three rows below the last rule report no interval at all: the rule carries
     // that, and says so once.
     expect((await intervals(classRows(page, 'LMGT3'))).slice(-3)).toEqual(['', '', '']);
+  });
+
+  test('should say how many places of its own class a car has moved', async ({ page }) => {
+    // The grid the move is measured against is the class's own: #92 started sixth
+    // among the LMGT3 cars and leads them now, which is five places of LMGT3
+    // whatever it did to the 62 cars on the standings beside it. The chain is the
+    // round's own starting grid, read back out of the column.
+    expect(await moves(page, 'LMGT3')).toEqual([
+      '↑5',
+      '↑14',
+      'OUT',
+      '↑3',
+      '↓4',
+      '↓1',
+      '↑15',
+      '↑4',
+      '↑8',
+      '↑9',
+      '↑7',
+      '↑2',
+      '↑10',
+      '↓3',
+      '↓2',
+      'OUT',
+      '↓7',
+      '↑2',
+      '↓17',
+      '↑4',
+      'OUT',
+      'Retired',
+      'Retired',
+      'Retired',
+    ]);
+    // The lane's mark takes the track from the move, as a car standing in its box
+    // is not being scored against the field.
+    expect((await moves(page, 'HYPERCAR')).filter((m) => m === 'PIT' || m === 'OUT')).toEqual([
+      'OUT',
+      'PIT',
+      'OUT',
+      'OUT',
+      'PIT',
+    ]);
+    // And before the race has moved anybody the track is blank for every car of
+    // the class: a move is not a reading the timing has taken.
+    await setLapCount(page, 0);
+    expect(await moves(page, 'LMGT3')).toEqual(new Array(24).fill(''));
   });
 
   test('should read a class column whole at the width a car is drawn at', async ({ page }) => {

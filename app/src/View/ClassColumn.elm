@@ -7,8 +7,9 @@ The standings to the left of the strip count the whole field; this counts one
 class. Every reading is taken down the class rather than down the field, which is
 what the field hides while a race is still sorting itself out: the interval is to
 the class-mate ahead rather than to whoever is ahead, the reference lap is the
-class's own fastest rather than the race's, and the cars are all the cars the
-class has, leader first.
+class's own fastest rather than the race's, a move is counted in the class rather
+than among the 62 cars on the standings beside it, and the cars are all the cars
+the class has, leader first.
 
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
@@ -17,6 +18,7 @@ can be followed from its order here and from a car's detail at the same time.
 
 -}
 
+import Dict exposing (Dict)
 import Html exposing (Html, button, div, text)
 import Html.Attributes exposing (attribute, class, style, title)
 import Html.Events exposing (onClick)
@@ -24,7 +26,8 @@ import Html.Keyed as Keyed
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap.Performance as Performance
+import Motorsport.Leaderboard as Leaderboard
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status exposing (Status)
@@ -37,7 +40,8 @@ import View.ClassMark as ClassMark
 
 {-| What the column is given: the two ways a row answers a press -- the car has
 no column and so is picked, or has one already and so the strip goes to it --
-which cars have columns, and the corner controls every column carries.
+which cars have columns, where the class's cars started on the grid, and the corner
+controls every column carries.
 
 `onSelect` and `onReveal` are held as they are handed over, so pass message
 constructors: the rows are rebuilt on every frame of playback, and a lambda built
@@ -50,6 +54,42 @@ type alias Config msg =
     , withColumns : List CarNumber
     , onClose : Maybe msg
     , grip : Maybe (Html msg)
+    , startPosition : CarNumber -> Maybe Position
+    }
+
+
+{-| What the column counts off the class as a whole, once a frame: the laps the
+class leader has completed, which is what every car's distance is measured
+against, and where each car started among its own class-mates, which is what its
+move is measured against.
+-}
+type alias Count =
+    { lead : Int
+    , grid : Dict CarNumber Position
+    }
+
+
+{-| The class ranked within itself. A car the grid has no place for is drawn as
+having moved nowhere.
+-}
+count : (CarNumber -> Maybe Position) -> List CarAt -> Count
+count startPosition cars =
+    { lead =
+        case cars of
+            first :: _ ->
+                first.standing.lapsCompleted
+
+            _ ->
+                0
+    , grid =
+        cars
+            |> List.filterMap
+                (\car ->
+                    Maybe.map (\start -> ( car.metadata.carNumber, start )) (startPosition car.metadata.carNumber)
+                )
+            |> List.sortBy Tuple.second
+            |> List.indexedMap (\index ( number, _ ) -> ( number, index + 1 ))
+            |> Dict.fromList
     }
 
 
@@ -74,7 +114,7 @@ view config snapshot class_ =
         field =
             let
                 ahead =
-                    if lead > 0 then
+                    if counted.lead > 0 then
                         List.map Just cars
 
                     else
@@ -82,15 +122,8 @@ view config snapshot class_ =
             in
             List.map2 Tuple.pair (Nothing :: ahead) cars
 
-        -- What the class leader has completed, which is the lap every other car
-        -- of the class is measured against.
-        lead =
-            case cars of
-                first :: _ ->
-                    first.standing.lapsCompleted
-
-                _ ->
-                    0
+        counted =
+            count config.startPosition cars
     in
     Card.card
         [ attribute "data-class-column" (Class.toString class_) ]
@@ -100,7 +133,7 @@ view config snapshot class_ =
                     [ head config class_ cars
                     , Keyed.node "div"
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px" ]
-                        (rows config snapshot lead field)
+                        (rows config snapshot counted field)
                     ]
                 ]
             ]
@@ -183,21 +216,22 @@ corner config =
 -- ROWS
 
 
-{-| One car of the class on one line: where it stands, who is driving, what the
-class-mate ahead is by, and what the car is doing right now.
+{-| One car of the class on one line: where it stands in the class, who is driving,
+what the class-mate ahead is by, and how many places of the class it has moved
+since the grid.
 
-The readings sit in tracks of their own -- place, number, name, gap, now -- so
-each is a column down the class rather than a string of words, and only the name
-is allowed to give way. The interval is drawn before the lap being driven because
-the strip's edge takes the rightmost reading, and the interval is what a class
-column is for.
+The readings sit in tracks of their own -- place, number, name, interval, move --
+so each is a column down the class rather than a string of words, and only the name
+is allowed to give way. Three class columns do not fit a 1440 viewport, so the
+tracks are ordered by what is worth losing at the strip's edge: the interval before
+the move.
 
 The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot ( ahead, item ) =
+row : Config msg -> Snapshot -> Count -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot counted ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -216,7 +250,7 @@ row config snapshot ( ahead, item ) =
                 "false"
             )
          , class rowClass
-         , title (metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver ++ lane item)
+         , title (metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver)
          ]
             ++ (if picked then
                     -- The car's own colour, thinned enough to write on: the same
@@ -236,7 +270,7 @@ row config snapshot ( ahead, item ) =
         , CarNumberBadge.viewRow metadata
         , div [ class "min-w-0 truncate text-[11px] font-semibold leading-[18px]" ] [ text (Driver.toSurname item.currentDriver) ]
         , gapAhead snapshot ahead item
-        , now item
+        , now counted item
         ]
     )
 
@@ -249,16 +283,16 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Int -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot lead field =
+rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
                 back =
-                    group lead item
+                    group counted.lead item
 
                 lines =
-                    row config snapshot pair :: acc
+                    row config snapshot counted pair :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -341,23 +375,19 @@ ordinal item =
         [ text (String.fromInt item.standing.positionInClass) ]
 
 
-{-| What the car is doing right now: standing in its box, driving out of the lane,
-stopped for good, or on the road driving a lap -- in the colour of how that lap
-reads against the records as they stood at this moment, which is what says who is
-pushing right now.
+{-| What the car is doing: standing in its box, driving out of the lane, stopped
+for good -- and on the road, how many places of its own class it has gained or lost
+since the grid, in the arrows the standings' own Move column uses.
 
-The lane and the running lap share a track because they answer one question, and
-the lane wins where both could be said: a car in its box is not being scored
-against the field, and its lap is held in the row's title. The stops a class has
-made is the first thing a race splits on, and the mark is the lane's own grey, as
-it is in the standings and on the tracker.
-
-A retired car has no lap running, and the elapsed time the snapshot leaves on it
-belongs to a lap it finished before it stopped.
+The lane wins the track where both could be said, since a car in its box is not
+being scored against the field. A car moved nowhere in its class draws nothing at
+all, which is how every car of the class reads until the race has moved it: the
+classification is not the grid, so a place gained before the class has completed a
+lap would be a claim the timing has not made.
 
 -}
-now : CarAt -> Html msg
-now item =
+now : Count -> CarAt -> Html msg
+now counted item =
     case item.status of
         Status.InPit ->
             chip "PIT"
@@ -370,27 +400,16 @@ now item =
                 [ text "Retired" ]
 
         _ ->
-            div
-                [ class "justify-self-end text-[10px] tabular-nums whitespace-nowrap"
-                , style "color" (Performance.textColorOf item.currentLap.performance)
+            div [ class "justify-self-end leading-[18px]" ]
+                [ if counted.lead > 0 then
+                    Leaderboard.viewPositionChangeInline
+                        { startPosition = Dict.get item.metadata.carNumber counted.grid
+                        , position = item.standing.positionInClass
+                        }
+
+                  else
+                    text ""
                 ]
-                [ text (Duration.toStringToTenths item.currentLap.elapsed) ]
-
-
-{-| The lap a car is still driving while the lane has it, which the row's title
-holds because the lane's mark takes the track.
--}
-lane : CarAt -> String
-lane item =
-    case item.status of
-        Status.InPit ->
-            " · in the pit lane, driving " ++ Duration.toStringToTenths item.currentLap.elapsed
-
-        Status.OutLap ->
-            " · out of the pit lane, driving " ++ Duration.toStringToTenths item.currentLap.elapsed
-
-        _ ->
-            ""
 
 
 chip : String -> Html msg

@@ -26,6 +26,7 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
@@ -367,6 +368,18 @@ gridColumns pane =
             "grid-cols-[auto_1fr]"
 
 
+{-| Where each car started, by number: the grid the standings and a class's own
+column measure a move against.
+
+Foldr, so that where the source data has two cars under one number the one
+running ahead wins, as in `Snapshot.get`.
+
+-}
+gridOf : List Car -> Dict CarNumber Position
+gridOf cars =
+    List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty cars
+
+
 {-| The live standings, standing to the left of the strip rather than as one
 of its columns, and a grip along their right edge to drag them wider or
 narrower. The grip is drawn over the card's edge -- the card's own `class`
@@ -377,10 +390,7 @@ standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html M
 standingsCell keys m snapshot cars =
     let
         startPositions =
-            -- foldr, so that where the source data has two cars under one
-            -- number the one running ahead wins, as in `Snapshot.get`.
-            cars
-                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
+            gridOf cars
     in
     div
         [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid relative" ]
@@ -499,6 +509,9 @@ columnStrip cell track timeline keys m replay snapshot =
         standing =
             List.map (\car -> car.metadata.carNumber) (Columns.carsIn snapshot keys)
 
+        grid =
+            gridOf replay.race.cars
+
         columnCell key placement =
             case key of
                 Columns.Car carNumber ->
@@ -517,7 +530,7 @@ columnStrip cell track timeline keys m replay snapshot =
                     stripColumn (Columns.keyName key)
                         Columns.width
                         placement
-                        (classColumn several standing (Columns.isCarried placement) snapshot class_)
+                        (classColumn grid several standing (Columns.isCarried placement) snapshot class_)
 
                 Columns.Tracker ->
                     stripColumn (Columns.keyName key)
@@ -571,12 +584,13 @@ A row whose car is up already is drawn marked, and the strip goes to that column
 instead of opening a second one.
 
 -}
-classColumn : Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
-classColumn several standing held snapshot class_ =
+classColumn : Dict CarNumber Position -> Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
+classColumn grid several standing held snapshot class_ =
     ClassColumn.view
         { onSelect = pickCar
         , onReveal = revealCar
         , withColumns = standing
+        , startPosition = \number -> Dict.get number grid
         , onClose =
             if several then
                 Just (ColumnsMsg (Columns.Close (Columns.ClassColumn class_)))
