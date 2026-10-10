@@ -16,9 +16,9 @@ can be followed from its order here and from a car's detail at the same time.
 
 The foot of the column does not follow the running order: the cars ranked there
 are ranked by the pace of the last laps and by how near their next stop they
-are -- readings the standings cannot show, a car that lost a lap in the pits
-running the quickest race of its class and standing fifteenth in it at the same
-time.
+are, and the laps that made both are drawn as dots -- readings the standings
+cannot show, a car that lost a lap in the pits running the quickest race of
+its class and standing fifteenth in it at the same time.
 
 @docs view
 
@@ -33,9 +33,11 @@ import Internal.Statistics as Statistics
 import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Analysis.Stint as Stint
+import Motorsport.Chart.LapStrip as LapStrip
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber)
@@ -476,14 +478,20 @@ gapTo inFront chasing snapshot =
 -- PACE
 
 
-{-| The whole foot: what the class is quickest at now, and which of them will
-have to do something about it first.
+{-| The whole foot: what the class is quickest at now, which of them will have
+to do something about it first, and what those few have been doing about it
+lap by lap.
 -}
 footer : LapHistory -> Class -> Snapshot -> Count -> List CarAt -> Html msg
 footer history class_ snapshot counted cars =
+    let
+        dues =
+            dueBoard history cars
+    in
     div [ class "grid gap-y-1.5" ]
         [ pace history counted cars
-        , stops history class_ snapshot counted cars
+        , stops history class_ snapshot counted dues
+        , lapStrip history counted dues
         ]
 
 
@@ -662,20 +670,15 @@ running two strategies at once still reads: the board says which of them will
 have to blink first, not which is furthest from some class-wide number.
 
 -}
-stops : LapHistory -> Class -> Snapshot -> Count -> List CarAt -> Html msg
-stops history class_ snapshot counted cars =
+stops : LapHistory -> Class -> Snapshot -> Count -> List Due -> Html msg
+stops history class_ snapshot counted dues =
     div [ class "border-t border-border pt-1 grid gap-y-px" ]
         (note "Stops" "laps to its own median stint"
-            :: (case dueBoard history cars of
-                    [] ->
-                        [ div [ class "text-[10px] text-muted-foreground" ] [ text "no finished stint yet" ] ]
+            :: (if List.isEmpty dues then
+                    [ div [ class "text-[10px] text-muted-foreground" ] [ text "no finished stint yet" ] ]
 
-                    dues ->
-                        let
-                            moves =
-                                placeMoves counted class_ snapshot
-                        in
-                        List.indexedMap (stopRow moves) dues
+                else
+                    List.indexedMap (stopRow (placeMoves counted class_ snapshot)) dues
                )
         )
 
@@ -749,7 +752,7 @@ nearest stop carries its own number, the rest their laps to it.
 The move is the whole of what a line through these places could say, and the
 arrow is its honest telling: over twenty laps a class swaps places every lap
 as its cars pit, and a line drawn through that swings the height of a row on
-other cars' stops, saying *fighting* for a car that netted nothing.
+other cars' stops, saying _fighting_ for a car that netted nothing.
 
 -}
 stopRow : Dict CarNumber Position -> Int -> Due -> Html msg
@@ -793,3 +796,106 @@ dueText laps =
 
     else
         "in " ++ String.fromInt laps
+
+
+
+-- LAPS
+
+
+{-| How many laps a strip reaches back over. Long enough for the shape of a run
+to be visible -- a few tenths shaved off in a row, a second lost every lap --
+and short enough that the dots stay dots.
+-}
+stripLaps : Int
+stripLaps =
+    20
+
+
+{-| Wide enough that twenty dots stay separate at the room the move arrow's
+track leaves in the row.
+-}
+stripWidth : Float
+stripWidth =
+    96
+
+
+{-| The same few cars the stops board names, their racing laps as dots. The
+board says when each will be called; this says what they have been doing about
+it -- dots held high on the scale are a car on a push, dots walking down it a
+car saving, and the gap where a car's pit lap was is the stop that moved its
+call forward.
+
+The scale is the shown cars' together, never each car's own: a strip scaled to
+its own quickest and slowest lap draws a car saving fuel with the same steep
+shape as a car on a push, which is the opposite news. What the few shown span
+is what the dots are read against, and a car joining them with a lap none of
+them ran sits on the top or bottom of the strip on purpose.
+
+-}
+lapStrip : LapHistory -> Count -> List Due -> Html msg
+lapStrip history counted dues =
+    let
+        range =
+            { first = max 1 (counted.lead - stripLaps + 1), last = counted.lead }
+
+        strips =
+            dues
+                |> List.map
+                    (\due ->
+                        ( due, Pace.racingLaps range (LapHistory.get due.car.metadata.carNumber history) )
+                    )
+
+        scale =
+            case
+                strips
+                    |> List.concatMap (Tuple.second >> List.filterMap .time)
+                    |> (\times -> ( List.minimum times, List.maximum times ))
+            of
+                ( Just quickest, Just slowest ) ->
+                    Just { laps = range, quickest = quickest, slowest = slowest }
+
+                _ ->
+                    Nothing
+    in
+    div [ class "border-t border-border pt-1 grid gap-y-px" ]
+        (note "Laps" ("last " ++ String.fromInt stripLaps ++ " racing laps, one scale")
+            :: (case scale of
+                    Nothing ->
+                        [ div [ class "text-[10px] text-muted-foreground" ] [ text "no racing laps" ] ]
+
+                    Just shared ->
+                        List.indexedMap (stripRow shared) strips
+               )
+        )
+
+
+{-| One car of the board, its dots, and nothing else -- the median lap and the
+pace behind the quickest are the board above's readings.
+-}
+stripRow : LapStrip.Scale -> Int -> ( Due, List Lap ) -> Html msg
+stripRow scale index ( due, laps ) =
+    div
+        [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_auto] items-center gap-x-[3px] px-0.5"
+        , title (Driver.toInitialAndSurname due.car.currentDriver ++ " · " ++ spanText laps)
+        ]
+        [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]
+            [ text (String.fromInt (index + 1)) ]
+        , CarNumberBadge.viewRow due.car.metadata
+        , div [ class "min-w-0 truncate text-[11px] leading-[18px] text-muted-foreground" ]
+            [ text (Driver.toSurname due.car.currentDriver) ]
+        , div [ class "justify-self-end" ]
+            [ LapStrip.strip { width = stripWidth, height = 16 } scale due.car.metadata.manufacturer.color laps ]
+        ]
+
+
+{-| The car's own quickest and slowest of the strip, which is what its dots are
+in fact worth -- the strip itself is drawn against the few shown together.
+-}
+spanText : List Lap -> String
+spanText laps =
+    case ( List.filterMap .time laps |> List.minimum, List.filterMap .time laps |> List.maximum ) of
+        ( Just quickest, Just slowest ) ->
+            Duration.toString quickest ++ " – " ++ Duration.toString slowest
+
+        _ ->
+            "no racing laps"
