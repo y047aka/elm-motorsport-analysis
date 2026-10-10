@@ -164,15 +164,14 @@ function divisions(page: Page, className: string) {
   );
 }
 
-/** What each row's last track reports: the places a car has gained or lost in its
- * own class, the lane's mark, or that the car stopped. The track is drawn whether
- * or not it has a reading, so it is read as the row's last element rather than as
- * its fifth child: a row whose car heads its class, or stopped, draws no interval
- * before it. */
+/** What each row's move track reports: the places a car has gained or lost in its
+ * own class, the lane's mark, or that the car stopped. The track is read off the
+ * attribute it carries itself: the front rows of the class hold it on their first
+ * line, with a team and a photograph under it. */
 function moves(page: Page, className: string) {
   return classColumn(page, className)
     .locator('button[aria-pressed]')
-    .evaluateAll((rows) => rows.map((row) => (row.lastElementChild?.textContent ?? '').trim()));
+    .evaluateAll((rows) => rows.map((row) => (row.querySelector('[data-move]')?.textContent ?? '').trim()));
 }
 
 /** Whether a column stands whole inside the strip's own box. */
@@ -598,14 +597,12 @@ test.describe('Class columns', () => {
     // them do, for any car of any class.
     const cut = await page.evaluate(() =>
       [...document.querySelectorAll('[data-class-column] button[aria-pressed]')]
-        .map((row) => {
-          const name = [...row.querySelectorAll('div')].find((cell) =>
-            (cell as HTMLElement).className.includes('truncate'),
-          ) as HTMLElement;
-          return name && name.scrollWidth > name.clientWidth
-            ? `${row.getAttribute('aria-label')}: ${name.textContent}`
-            : null;
-        })
+        .flatMap((row) =>
+          [...row.querySelectorAll('div')]
+            .filter((cell) => (cell as HTMLElement).className.includes('truncate'))
+            .filter((cell) => cell.scrollWidth > cell.clientWidth)
+            .map((cell) => `${row.getAttribute('aria-label')}: ${cell.textContent}`),
+        )
         .filter(Boolean),
     );
     expect(cut).toEqual([]);

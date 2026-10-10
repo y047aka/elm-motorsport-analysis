@@ -25,8 +25,8 @@ its class and standing fifteenth in it at the same time.
 -}
 
 import Dict exposing (Dict)
-import Html exposing (Html, button, div, text)
-import Html.Attributes exposing (attribute, class, style, title)
+import Html exposing (Html, button, div, img, text)
+import Html.Attributes exposing (alt, attribute, class, src, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Internal.Statistics as Statistics
@@ -258,31 +258,7 @@ row config snapshot counted ( ahead, item ) =
     in
     ( metadata.carNumber
     , button
-        ([ attribute "aria-label" ("Car #" ++ metadata.carNumber ++ " in " ++ Class.toString metadata.class)
-         , attribute "aria-pressed"
-            (if picked then
-                "true"
-
-             else
-                "false"
-            )
-         , class rowClass
-         , title (metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver)
-         ]
-            ++ (if picked then
-                    -- The car's own colour, thinned enough to write on: the same
-                    -- mark a row of the standings wears once its car is up.
-                    [ style "background-color"
-                        ("color-mix(in oklch, " ++ metadata.manufacturer.color ++ " 25%, transparent)")
-                    , onClick (config.onReveal metadata.carNumber)
-                    ]
-
-                else
-                    [ onClick (config.onSelect metadata.carNumber)
-                    , class "hover:bg-accent/40"
-                    ]
-               )
-        )
+        (rowButton config item picked ++ [ class rowClass ])
         [ ordinal item
         , CarNumberBadge.viewRow metadata
         , div [ class "min-w-0 truncate text-[11px] font-semibold leading-[18px]" ] [ text (Driver.toSurname item.currentDriver) ]
@@ -290,6 +266,98 @@ row config snapshot counted ( ahead, item ) =
         , now counted item
         ]
     )
+
+
+{-| How many of a class are drawn with their team and their photograph, the
+readings a car's own column opens with. The front of a class is the fight the
+column is followed for; the readings that tell its cars apart at a glance --
+which factory, which car -- are the ones a row of the rest is too narrow for.
+-}
+frontOf : Int
+frontOf =
+    3
+
+
+{-| One of the front few, on two lines: the row's own tracks whole, and under
+them the team the car runs for and the car itself side on. The tracks hold
+what the narrow row holds -- the interval and the move are not traded for the
+picture -- so the front of the class reads richer, never poorer.
+-}
+featuredRow : Config msg -> Snapshot -> Count -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+featuredRow config snapshot counted ( ahead, item ) =
+    let
+        metadata =
+            item.metadata
+
+        picked =
+            List.member metadata.carNumber config.withColumns
+    in
+    ( metadata.carNumber
+    , button
+        (rowButton config item picked ++ [ class "w-full text-left grid gap-y-px px-0.5 py-[2px] rounded transition-colors cursor-pointer" ])
+        [ div [ class frontClass ]
+            [ ordinal item
+            , CarNumberBadge.viewRow metadata
+            , div [ class "min-w-0 truncate text-[11px] font-semibold leading-[18px]" ] [ text (Driver.toSurname item.currentDriver) ]
+            , gapAhead snapshot ahead item
+            , now counted item
+            ]
+        , div [ class frontFootClass ]
+            [ div [ class "min-w-0 truncate text-[9px] leading-[10px] text-muted-foreground" ] [ text metadata.team ]
+            , frontPortrait item
+            ]
+        ]
+    )
+
+
+{-| The car side on, as the car's own panel and the car cards draw it -- and
+nothing where the round has no photograph for it, which is a missing row of
+`car-images.json`, not a car off the field.
+-}
+frontPortrait : CarAt -> Html msg
+frontPortrait item =
+    case item.metadata.imageUrl of
+        Just url ->
+            img
+                [ src url
+                , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
+                , class "justify-self-end h-6 w-[5.25rem] object-contain"
+                ]
+                []
+
+        Nothing ->
+            text ""
+
+
+{-| What every row of the class answers a press with and carries for the
+reader who cannot see it: its name, its pressed state, and where the press
+goes -- a car with a column already is revealed, not opened twice.
+-}
+rowButton : Config msg -> CarAt -> Bool -> List (Html.Attribute msg)
+rowButton config item picked =
+    [ attribute "aria-label" ("Car #" ++ item.metadata.carNumber ++ " in " ++ Class.toString item.metadata.class)
+    , attribute "aria-pressed"
+        (if picked then
+            "true"
+
+         else
+            "false"
+        )
+    , title (item.metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver)
+    ]
+        ++ (if picked then
+                -- The car's own colour, thinned enough to write on: the same
+                -- mark a row of the standings wears once its car is up.
+                [ style "background-color"
+                    ("color-mix(in oklch, " ++ item.metadata.manufacturer.color ++ " 25%, transparent)")
+                , onClick (config.onReveal item.metadata.carNumber)
+                ]
+
+            else
+                [ onClick (config.onSelect item.metadata.carNumber)
+                , class "hover:bg-accent/40"
+                ]
+           )
 
 
 {-| The class down the column, a rule wherever the classification moves to another
@@ -303,13 +371,23 @@ Keyed by the car a rule starts at, which no other row can claim.
 rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
 rows config snapshot counted field =
     let
-        add (( _, item ) as pair) ( behind, acc ) =
+        add index (( _, item ) as pair) ( behind, acc ) =
             let
                 back =
                     group counted.lead item
 
                 lines =
-                    row config snapshot counted pair :: acc
+                    (if index < frontOf then
+                        featuredRow
+
+                     else
+                        row
+                    )
+                        config
+                        snapshot
+                        counted
+                        pair
+                        :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -317,7 +395,8 @@ rows config snapshot counted field =
             else
                 ( back, ( "splits-" ++ item.metadata.carNumber, division back ) :: lines )
     in
-    List.foldl add ( Just 0, [] ) field
+    List.indexedMap Tuple.pair field
+        |> List.foldl (\( index, pair ) -> add index pair) ( Just 0, [] )
         |> Tuple.second
         |> List.reverse
 
@@ -376,6 +455,22 @@ rowClass =
     "w-full grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-center gap-x-[3px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
 
 
+{-| The front rows' own tracks, the same widths as a narrow row's so the two
+sort into one column down the class; only the row's chrome moves to the two
+lines together.
+-}
+frontClass : String
+frontClass =
+    "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-center gap-x-[3px]"
+
+
+{-| The team under the name, the photograph at the move track's edge.
+-}
+frontFootClass : String
+frontFootClass =
+    "grid grid-cols-[minmax(0,1fr)_5.25rem] items-center gap-x-1"
+
+
 ordinal : CarAt -> Html msg
 ordinal item =
     div
@@ -413,11 +508,11 @@ now counted item =
             chip "OUT"
 
         Status.Retired ->
-            div [ class "justify-self-end text-[10px] whitespace-nowrap text-muted-foreground" ]
+            div [ class "justify-self-end text-[10px] whitespace-nowrap text-muted-foreground", attribute "data-move" "" ]
                 [ text "Retired" ]
 
         _ ->
-            div [ class "justify-self-end leading-[18px]" ]
+            div [ class "justify-self-end leading-[18px]", attribute "data-move" "" ]
                 [ if counted.lead > 0 then
                     Leaderboard.viewPositionChangeInline
                         { startPosition = Dict.get item.metadata.carNumber counted.grid
@@ -432,7 +527,9 @@ now counted item =
 chip : String -> Html msg
 chip word =
     div
-        [ class "justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground" ]
+        [ class "justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
+        , attribute "data-move" ""
+        ]
         [ text word ]
 
 
