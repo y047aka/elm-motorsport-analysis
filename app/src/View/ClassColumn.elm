@@ -7,9 +7,8 @@ The standings to the left of the strip count the whole field; this counts one
 class. Every reading is taken down the class rather than down the field, which is
 what the field hides while a race is still sorting itself out: the interval is to
 the class-mate ahead rather than to whoever is ahead, the reference lap is the
-class's own fastest rather than the race's, a move is counted in the class rather
-than among the 62 cars on the standings beside it, and the cars are all the cars
-the class has, leader first.
+class's own fastest rather than the race's, and the cars are all the cars the
+class has, leader first.
 
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
@@ -18,7 +17,6 @@ can be followed from its order here and from a car's detail at the same time.
 
 -}
 
-import Dict exposing (Dict)
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, style, title)
 import Html.Events exposing (onClick)
@@ -26,8 +24,6 @@ import Html.Keyed as Keyed
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Leaderboard as Leaderboard
-import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status exposing (Status)
@@ -40,8 +36,7 @@ import View.ClassMark as ClassMark
 
 {-| What the column is given: the two ways a row answers a press -- the car has
 no column and so is picked, or has one already and so the strip goes to it --
-which cars have columns, where the class's cars started on the grid, and the corner
-controls every column carries.
+which cars have columns, and the corner controls every column carries.
 
 `onSelect` and `onReveal` are held as they are handed over, so pass message
 constructors: the rows are rebuilt on every frame of playback, and a lambda built
@@ -54,26 +49,22 @@ type alias Config msg =
     , withColumns : List CarNumber
     , onClose : Maybe msg
     , grip : Maybe (Html msg)
-    , startPosition : CarNumber -> Maybe Position
     }
 
 
 {-| What the column counts off the class as a whole, once a frame: the laps the
 class leader has completed, which is what every car's distance is measured
-against, and where each car started among its own class-mates, which is what its
-move is measured against.
+against.
 -}
 type alias Count =
-    { lead : Int
-    , grid : Dict CarNumber Position
-    }
+    { lead : Int }
 
 
-{-| The class ranked within itself. A car the grid has no place for is drawn as
-having moved nowhere.
+{-| The laps the class leader has completed. A class that has completed none
+has nobody to be measured against yet.
 -}
-count : (CarNumber -> Maybe Position) -> List CarAt -> Count
-count startPosition cars =
+count : List CarAt -> Count
+count cars =
     { lead =
         case cars of
             first :: _ ->
@@ -81,15 +72,6 @@ count startPosition cars =
 
             _ ->
                 0
-    , grid =
-        cars
-            |> List.filterMap
-                (\car ->
-                    Maybe.map (\start -> ( car.metadata.carNumber, start )) (startPosition car.metadata.carNumber)
-                )
-            |> List.sortBy Tuple.second
-            |> List.indexedMap (\index ( number, _ ) -> ( number, index + 1 ))
-            |> Dict.fromList
     }
 
 
@@ -123,7 +105,7 @@ view config snapshot class_ =
             List.map2 Tuple.pair (Nothing :: ahead) cars
 
         counted =
-            count config.startPosition cars
+            count cars
     in
     Card.card
         [ attribute "data-class-column" (Class.toString class_) ]
@@ -216,21 +198,22 @@ corner config =
 -- ROWS
 
 
-{-| One car of the class, drawn on the car's own nameplate: the stacked number
+{-| One car of the class, drawn on the car's own nameplate: a compact number
 badge at the left, the driver over the team beside it, and the car itself side
-on under the two readings of the row.
+on down the whole right edge of the row.
 
-The readings -- class place, interval, move -- keep the tracks they had when
-the row was one line, so each is still a column down the class. Three class
-columns do not fit a 1440 viewport, so the tracks are ordered by what is worth
-losing at the strip's edge: the interval before the move.
+The readings -- class place and interval -- keep the tracks they had when the
+row was one line, so each is still a column down the class. Three class columns
+do not fit a 1440 viewport, so the track at the strip's edge is the one reading
+worth losing, and it is not this one: the row holds no move at all, the space
+where it stood spent on the photograph instead.
 
 The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> Count -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot counted ( ahead, item ) =
+row : Config msg -> Snapshot -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -242,25 +225,22 @@ row config snapshot counted ( ahead, item ) =
     , button
         (rowButton config item picked ++ [ class rowClass ])
         [ ordinal item
-        , div [ class "col-start-2 row-span-2 self-center" ] [ CarNumberBadge.view metadata ]
-        , div [ class "col-start-3 min-w-0 truncate text-[12px] font-semibold leading-[18px]" ]
+        , div [ class "col-start-2 row-span-2 self-center" ] [ CarNumberBadge.viewCompact metadata ]
+        , div [ class "col-start-3 min-w-0 truncate text-[11px] font-semibold leading-[18px]" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , gapAhead snapshot ahead item
-        , now counted item
-        , div
-            [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[12px] leading-[18px] text-muted-foreground"
-            , attribute "data-team" ""
-            ]
+        , now item
+        , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[11px] leading-[18px] text-muted-foreground", attribute "data-team" "" ]
             [ text metadata.team ]
         , portrait item
         ]
     )
 
 
-{-| The car side on, as the car's own panel and the car cards draw it, spanning
-the interval and move tracks the way the nameplate's portrait does -- and
-nothing where the round has no photograph for it, which is a missing row of
-`car-images.json`, not a car off the field.
+{-| The car side on, as the car's own panel and the car cards draw it, as tall
+as the two lines together and against the right edge -- and nothing where the
+round has no photograph for it, which is a missing row of `car-images.json`,
+not a car off the field.
 -}
 portrait : CarAt -> Html msg
 portrait item =
@@ -269,7 +249,7 @@ portrait item =
             img
                 [ src url
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
-                , class "col-start-4 row-start-2 self-center justify-self-end h-6 w-[5.75rem] object-contain"
+                , class "col-start-5 row-span-2 self-center justify-self-end h-7 w-[5.25rem] object-contain"
                 ]
                 []
 
@@ -325,7 +305,7 @@ rows config snapshot counted field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot counted pair :: acc
+                    row config snapshot pair :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -383,14 +363,14 @@ lapsText laps =
         |> String.dropLeft 2
 
 
-{-| The row's tracks: the class place and the stacked badge, each held two
-lines; the name, which is what gives when there is no room; and two readings
-of their own width so the numbers line up down the class. The team and the
-photograph fill the second line under the name and the readings.
+{-| The row's tracks: the class place and the compact badge, each held two
+lines; the name, which is what gives when there is no room; the interval; and
+the photograph against the edge. The team and the lane's marks fill the second
+line under the name and the reading.
 -}
 rowClass : String
 rowClass =
-    "w-full grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-start gap-x-[3px] gap-y-[2px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
+    "w-full grid grid-cols-[0.875rem_1.625rem_minmax(0,1fr)_3.375rem_5.25rem] items-start gap-x-[2px] gap-y-[2px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
 
 
 ordinal : CarAt -> Html msg
@@ -409,19 +389,21 @@ ordinal item =
         [ text (String.fromInt item.standing.positionInClass) ]
 
 
-{-| What the car is doing: standing in its box, driving out of the lane, stopped
-for good -- and on the road, how many places of its own class it has gained or lost
-since the grid, in the arrows the standings' own Move column uses.
+{-| What the car is doing rather than where it stands: standing in its box,
+driving out of the lane, stopped for good -- marked under the interval, where a
+move arrow would have stood.
 
-The lane wins the track where both could be said, since a car in its box is not
-being scored against the field. A car moved nowhere in its class draws nothing at
-all, which is how every car of the class reads until the race has moved it: the
-classification is not the grid, so a place gained before the class has completed a
-lap would be a claim the timing has not made.
+The row draws no move at all. What a car has gained or lost since the grid is
+the reading the standings beside the strip make for the field; measured in the
+class it would be a second ranking of cars this column already ranks by the
+timing, and the track it cost is the photograph's now. A car on the road is
+marked nowhere, and the track is drawn even then: the row's tracks name their
+columns rather than being auto-placed, and a track that sometimes is not there
+at all would shift its neighbours.
 
 -}
-now : Count -> CarAt -> Html msg
-now counted item =
+now : CarAt -> Html msg
+now item =
     case item.status of
         Status.InPit ->
             chip "PIT"
@@ -430,27 +412,18 @@ now counted item =
             chip "OUT"
 
         Status.Retired ->
-            div [ class "col-start-5 justify-self-end text-[10px] leading-[18px] whitespace-nowrap text-muted-foreground", attribute "data-move" "" ]
+            div [ class "col-start-4 row-start-2 justify-self-end text-[10px] leading-[18px] whitespace-nowrap text-muted-foreground", attribute "data-lane" "" ]
                 [ text "Retired" ]
 
         _ ->
-            div [ class "col-start-5 justify-self-end leading-[18px]", attribute "data-move" "" ]
-                [ if counted.lead > 0 then
-                    Leaderboard.viewPositionChangeInline
-                        { startPosition = Dict.get item.metadata.carNumber counted.grid
-                        , position = item.standing.positionInClass
-                        }
-
-                  else
-                    text ""
-                ]
+            div [ class "col-start-4 row-start-2", attribute "data-lane" "" ] []
 
 
 chip : String -> Html msg
 chip word =
     div
-        [ class "col-start-5 justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
-        , attribute "data-move" ""
+        [ class "col-start-4 row-start-2 justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
+        , attribute "data-lane" ""
         ]
         [ text word ]
 

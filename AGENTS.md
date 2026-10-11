@@ -213,18 +213,17 @@ class's column; a row whose car is up already is marked and scrolls the strip to
 that column rather than opening a second. Where a class's column has been closed,
 its name in the standings is the press that calls it back.
 
-Two lines to a car: its readings in tracks of their own -- class place, number,
-name, interval, move -- so each reading is a column down the class, and under
+Two lines to a car: its readings in tracks of their own -- class place, number
+badge, name, interval -- so each reading is a column down the class, and under
 them the team the car runs for and its photograph, the team the one line that
 elides when a name outgrows the column.
-Three class columns do not fit a 1440 viewport, so the rightmost reading is what
-the strip's edge takes, and the readings are ordered for that: the interval
-outlives the move. The move is counted in the class, against the class's own grid:
-the LMGT3 car sixth in class and leading it now has gained five places of LMGT3,
-which is not the move the standings' Move column reports for the field. A car in
-the lane, driving out of it or stopped takes that track from its move, since a car
-in its box is not being scored against the field. Before the class has completed a
-lap nothing is counted at all, and the column reads as the starting grid it is.
+Three class columns do not fit a 1440 viewport, so the one reading the strip's
+edge takes is the interval. The row draws no move at all: what a car has gained
+or lost since the grid is the reading the standings beside the strip make for
+the field, and the track it would have cost holds the car's photograph. The
+lane marks its cars where the move would have stood -- PIT, OUT, Retired, under
+the interval and left of the photograph -- and before the class has completed a
+lap there is no interval either, and the column is the starting grid it is.
 
 The class is drawn in classification order, so it comes in blocks: a rule between
 the rows says how many laps back the cars below are, and the cars that stopped get

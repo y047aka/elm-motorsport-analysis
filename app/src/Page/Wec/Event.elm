@@ -509,9 +509,6 @@ columnStrip cell track timeline keys m replay snapshot =
         standing =
             List.map (\car -> car.metadata.carNumber) (Columns.carsIn snapshot keys)
 
-        grid =
-            gridOf replay.race.cars
-
         columnCell key placement =
             case key of
                 Columns.Car carNumber ->
@@ -530,7 +527,7 @@ columnStrip cell track timeline keys m replay snapshot =
                     stripColumn (Columns.keyName key)
                         Columns.width
                         placement
-                        (classColumn grid several standing (Columns.isCarried placement) snapshot class_)
+                        (classColumn several standing (Columns.isCarried placement) snapshot class_)
 
                 Columns.Tracker ->
                     stripColumn (Columns.keyName key)
@@ -584,13 +581,12 @@ A row whose car is up already is drawn marked, and the strip goes to that column
 instead of opening a second one.
 
 -}
-classColumn : Dict CarNumber Position -> Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
-classColumn grid several standing held snapshot class_ =
+classColumn : Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
+classColumn several standing held snapshot class_ =
     ClassColumn.view
         { onSelect = pickCar
         , onReveal = revealCar
         , withColumns = standing
-        , startPosition = \number -> Dict.get number grid
         , onClose =
             if several then
                 Just (ColumnsMsg (Columns.Close (Columns.ClassColumn class_)))

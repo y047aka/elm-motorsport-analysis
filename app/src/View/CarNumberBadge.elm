@@ -1,8 +1,8 @@
-module View.CarNumberBadge exposing (view, viewRow)
+module View.CarNumberBadge exposing (view, viewCompact, viewRow)
 
 {-| Car number badge on a manufacturer-coloured background.
 
-@docs view, viewRow
+@docs view, viewCompact, viewRow
 
 -}
 
@@ -22,6 +22,24 @@ view metadata =
             [ text metadata.carNumber ]
         ]
         metadata
+
+
+{-| The stacked badge of a dense list: the maker's logo over the number, at a
+third less bulk and on a wash of their colour rather than the block of it. A
+nameplate can afford the flat colour -- a class column is read down sixty-two
+of these at once, where the colour would shout past the names it introduces.
+-}
+viewCompact : Car.Metadata -> Html msg
+viewCompact metadata =
+    div
+        [ class "flex flex-col items-center justify-center gap-[2px] p-[3px] rounded-[3px] w-[26px]"
+        , style "background-color"
+            ("color-mix(in oklch, " ++ metadata.manufacturer.color ++ " 30%, transparent)")
+        ]
+        [ manufacturerLogo "max-w-[18px] h-[11px] object-contain" metadata.manufacturer
+        , div [ class "text-[10px] font-bold leading-none" ]
+            [ text metadata.carNumber ]
+        ]
 
 
 {-| Horizontal badge: the maker's logo on their colour, and the car number

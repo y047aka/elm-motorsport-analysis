@@ -164,14 +164,14 @@ function divisions(page: Page, className: string) {
   );
 }
 
-/** What each row's move track reports: the places a car has gained or lost in its
- * own class, the lane's mark, or that the car stopped. The track is read off the
- * attribute it carries itself: the front rows of the class hold it on their first
- * line, with a team and a photograph under it. */
-function moves(page: Page, className: string) {
+/** What each row's lane track reports: the lane's mark, or that the car
+ * stopped. The row holds no move -- the standings beside the column report what
+ * a car has gained and lost for the field -- so what stands in the track is
+ * PIT, OUT or Retired, and nothing at all for a car on the road. */
+function laneMarks(page: Page, className: string) {
   return classColumn(page, className)
     .locator('button[aria-pressed]')
-    .evaluateAll((rows) => rows.map((row) => (row.querySelector('[data-move]')?.textContent ?? '').trim()));
+    .evaluateAll((rows) => rows.map((row) => (row.querySelector('[data-lane]')?.textContent ?? '').trim()));
 }
 
 /** Whether a column stands whole inside the strip's own box. */
@@ -522,40 +522,41 @@ test.describe('Class columns', () => {
     expect((await intervals(classRows(page, 'LMGT3'))).slice(-3)).toEqual(['', '', '']);
   });
 
-  test('should say how many places of its own class a car has moved', async ({ page }) => {
-    // The grid the move is measured against is the class's own: #92 started sixth
-    // among the LMGT3 cars and leads them now, which is five places of LMGT3
-    // whatever it did to the 62 cars on the standings beside it. The chain is the
-    // round's own starting grid, read back out of the column.
-    expect(await moves(page, 'LMGT3')).toEqual([
-      '↑5',
-      '↑14',
+  test('should mark the lane and the flag where a move would have stood', async ({ page }) => {
+    // The row draws no move: what a car has gained or lost since the grid is the
+    // standings' reading for the field, and the column spends the track it cost
+    // on the car's photograph. What survives in the track is what no reading
+    // down the class makes -- the lane's mark, and the flag.
+    expect(await laneMarks(page, 'LMGT3')).toEqual([
+      '',
+      '',
       'OUT',
-      '↑3',
-      '↓4',
-      '↓1',
-      '↑15',
-      '↑4',
-      '↑8',
-      '↑9',
-      '↑7',
-      '↑2',
-      '↑10',
-      '↓3',
-      '↓2',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
       'OUT',
-      '↓7',
-      '↑2',
-      '↓17',
-      '↑4',
+      '',
+      '',
+      '',
+      '',
       'OUT',
       'Retired',
       'Retired',
       'Retired',
     ]);
-    // The lane's mark takes the track from the move, as a car standing in its box
-    // is not being scored against the field.
-    expect((await moves(page, 'HYPERCAR')).filter((m) => m === 'PIT' || m === 'OUT')).toEqual([
+    // The lane's mark stands whatever the field's standings say about the car
+    // inside it, as a car standing in its box is not being scored against the
+    // field.
+    expect((await laneMarks(page, 'HYPERCAR')).filter((m) => m === 'PIT' || m === 'OUT')).toEqual([
       'OUT',
       'PIT',
       'OUT',
@@ -563,9 +564,9 @@ test.describe('Class columns', () => {
       'PIT',
     ]);
     // And before the race has moved anybody the track is blank for every car of
-    // the class: a move is not a reading the timing has taken.
+    // the class: nobody is in the lane yet.
     await setLapCount(page, 0);
-    expect(await moves(page, 'LMGT3')).toEqual(new Array(24).fill(''));
+    expect(await laneMarks(page, 'LMGT3')).toEqual(new Array(24).fill(''));
   });
 
   test('should read a class column whole at the width a car is drawn at', async ({ page }) => {
