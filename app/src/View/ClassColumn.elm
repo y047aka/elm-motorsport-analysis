@@ -233,17 +233,14 @@ corner config =
 -- ROWS
 
 
-{-| One car of the class on two lines: where it stands in the class, who is
-driving, what the class-mate ahead is by, and how many places of the class it has
-moved since the grid -- and under them the team the car runs for and the car
-itself side on, the readings that tell its cars apart at a glance: which
-factory, which car.
+{-| One car of the class, drawn on the car's own nameplate: the stacked number
+badge at the left, the driver over the team beside it, and the car itself side
+on under the two readings of the row.
 
-The readings sit in tracks of their own -- place, number, name, interval, move --
-so each is a column down the class rather than a string of words, and only the name
-is allowed to give way. Three class columns do not fit a 1440 viewport, so the
-tracks are ordered by what is worth losing at the strip's edge: the interval before
-the move.
+The readings -- class place, interval, move -- keep the tracks they had when
+the row was one line, so each is still a column down the class. Three class
+columns do not fit a 1440 viewport, so the tracks are ordered by what is worth
+losing at the strip's edge: the interval before the move.
 
 The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
@@ -261,22 +258,21 @@ row config snapshot counted ( ahead, item ) =
     ( metadata.carNumber
     , button
         (rowButton config item picked ++ [ class rowClass ])
-        [ div [ class rowTracksClass ]
-            [ ordinal item
-            , CarNumberBadge.viewRow metadata
-            , div [ class "min-w-0 truncate text-[11px] font-semibold leading-[18px]" ] [ text (Driver.toSurname item.currentDriver) ]
-            , gapAhead snapshot ahead item
-            , now counted item
-            ]
-        , div [ class rowFootClass ]
-            [ div [ class "min-w-0 truncate text-[9px] leading-[10px] text-muted-foreground" ] [ text metadata.team ]
-            , portrait item
-            ]
+        [ ordinal item
+        , div [ class "col-start-2 row-span-2 self-center" ] [ CarNumberBadge.view metadata ]
+        , div [ class "col-start-3 min-w-0 truncate text-[12px] font-semibold leading-[18px]" ]
+            [ text (Driver.toInitialAndSurname item.currentDriver) ]
+        , gapAhead snapshot ahead item
+        , now counted item
+        , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[12px] leading-[18px] text-muted-foreground" ]
+            [ text metadata.team ]
+        , portrait item
         ]
     )
 
 
-{-| The car side on, as the car's own panel and the car cards draw it -- and
+{-| The car side on, as the car's own panel and the car cards draw it, spanning
+the interval and move tracks the way the nameplate's portrait does -- and
 nothing where the round has no photograph for it, which is a missing row of
 `car-images.json`, not a car off the field.
 -}
@@ -287,7 +283,7 @@ portrait item =
             img
                 [ src url
                 , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
-                , class "justify-self-end h-6 w-[5.25rem] object-contain"
+                , class "col-start-4 row-start-2 self-center justify-self-end h-6 w-[5.75rem] object-contain"
                 ]
                 []
 
@@ -401,34 +397,21 @@ lapsText laps =
         |> String.dropLeft 2
 
 
-{-| The row's chrome, which holds the two lines together.
+{-| The row's tracks: the class place and the stacked badge, each held two
+lines; the name, which is what gives when there is no room; and two readings
+of their own width so the numbers line up down the class. The team and the
+photograph fill the second line under the name and the readings.
 -}
 rowClass : String
 rowClass =
-    "w-full text-left grid gap-y-px px-0.5 py-[2px] rounded transition-colors cursor-pointer"
-
-
-{-| The row's tracks: the class place, the number, the name which is what gives
-when there is no room, and two readings of their own width so the numbers line up
-down the class.
--}
-rowTracksClass : String
-rowTracksClass =
-    "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-center gap-x-[3px]"
-
-
-{-| The team under the name, the photograph at the move track's edge.
--}
-rowFootClass : String
-rowFootClass =
-    "grid grid-cols-[minmax(0,1fr)_5.25rem] items-center gap-x-1"
+    "w-full grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-start gap-x-[3px] gap-y-[2px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
 
 
 ordinal : CarAt -> Html msg
 ordinal item =
     div
         [ class
-            ("text-[10px] tabular-nums whitespace-nowrap text-right "
+            ("col-start-1 row-span-2 self-center text-[10px] tabular-nums whitespace-nowrap text-right "
                 ++ (if item.standing.positionInClass == 1 then
                         ""
 
@@ -461,11 +444,11 @@ now counted item =
             chip "OUT"
 
         Status.Retired ->
-            div [ class "justify-self-end text-[10px] whitespace-nowrap text-muted-foreground", attribute "data-move" "" ]
+            div [ class "col-start-5 justify-self-end text-[10px] leading-[18px] whitespace-nowrap text-muted-foreground", attribute "data-move" "" ]
                 [ text "Retired" ]
 
         _ ->
-            div [ class "justify-self-end leading-[18px]", attribute "data-move" "" ]
+            div [ class "col-start-5 justify-self-end leading-[18px]", attribute "data-move" "" ]
                 [ if counted.lead > 0 then
                     Leaderboard.viewPositionChangeInline
                         { startPosition = Dict.get item.metadata.carNumber counted.grid
@@ -480,7 +463,7 @@ now counted item =
 chip : String -> Html msg
 chip word =
     div
-        [ class "justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
+        [ class "col-start-5 justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
         , attribute "data-move" ""
         ]
         [ text word ]
@@ -497,19 +480,23 @@ which is what a classification leaves the head of a class.
 -}
 gapAhead : Snapshot -> Maybe CarAt -> CarAt -> Html msg
 gapAhead snapshot ahead chasing =
-    case ahead of
-        Nothing ->
-            text ""
-
-        Just inFront ->
-            -- Nothing is measured between two cars that are not both on the road;
-            -- the rule above the ones that stopped is what says as much.
-            if Status.hasRetired chasing.status || Status.hasRetired inFront.status then
+    -- The track is always drawn, empty where there is no reading: the row's
+    -- other tracks name their columns rather than being auto-placed, and a
+    -- track that sometimes is not there at all would shift its neighbours.
+    div [ class "col-start-4 justify-self-end text-[10px] leading-[18px] tabular-nums whitespace-nowrap text-muted-foreground" ]
+        [ case ahead of
+            Nothing ->
                 text ""
 
-            else
-                div [ class "justify-self-end text-[10px] tabular-nums whitespace-nowrap text-muted-foreground" ]
-                    [ text (Gap.toString (gapTo inFront chasing snapshot)) ]
+            Just inFront ->
+                -- Nothing is measured between two cars that are not both on the road;
+                -- the rule above the ones that stopped is what says as much.
+                if Status.hasRetired chasing.status || Status.hasRetired inFront.status then
+                    text ""
+
+                else
+                    text (Gap.toString (gapTo inFront chasing snapshot))
+        ]
 
 
 {-| The interval between two cars of a class: the road between them added up, or,
