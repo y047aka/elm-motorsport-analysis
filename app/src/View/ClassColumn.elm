@@ -233,9 +233,11 @@ corner config =
 -- ROWS
 
 
-{-| One car of the class on one line: where it stands in the class, who is driving,
-what the class-mate ahead is by, and how many places of the class it has moved
-since the grid.
+{-| One car of the class on two lines: where it stands in the class, who is
+driving, what the class-mate ahead is by, and how many places of the class it has
+moved since the grid -- and under them the team the car runs for and the car
+itself side on, the readings that tell its cars apart at a glance: which
+factory, which car.
 
 The readings sit in tracks of their own -- place, number, name, interval, move --
 so each is a column down the class rather than a string of words, and only the name
@@ -259,52 +261,16 @@ row config snapshot counted ( ahead, item ) =
     ( metadata.carNumber
     , button
         (rowButton config item picked ++ [ class rowClass ])
-        [ ordinal item
-        , CarNumberBadge.viewRow metadata
-        , div [ class "min-w-0 truncate text-[11px] font-semibold leading-[18px]" ] [ text (Driver.toSurname item.currentDriver) ]
-        , gapAhead snapshot ahead item
-        , now counted item
-        ]
-    )
-
-
-{-| How many of a class are drawn with their team and their photograph, the
-readings a car's own column opens with. The front of a class is the fight the
-column is followed for; the readings that tell its cars apart at a glance --
-which factory, which car -- are the ones a row of the rest is too narrow for.
--}
-frontOf : Int
-frontOf =
-    3
-
-
-{-| One of the front few, on two lines: the row's own tracks whole, and under
-them the team the car runs for and the car itself side on. The tracks hold
-what the narrow row holds -- the interval and the move are not traded for the
-picture -- so the front of the class reads richer, never poorer.
--}
-featuredRow : Config msg -> Snapshot -> Count -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-featuredRow config snapshot counted ( ahead, item ) =
-    let
-        metadata =
-            item.metadata
-
-        picked =
-            List.member metadata.carNumber config.withColumns
-    in
-    ( metadata.carNumber
-    , button
-        (rowButton config item picked ++ [ class "w-full text-left grid gap-y-px px-0.5 py-[2px] rounded transition-colors cursor-pointer" ])
-        [ div [ class frontClass ]
+        [ div [ class rowTracksClass ]
             [ ordinal item
             , CarNumberBadge.viewRow metadata
             , div [ class "min-w-0 truncate text-[11px] font-semibold leading-[18px]" ] [ text (Driver.toSurname item.currentDriver) ]
             , gapAhead snapshot ahead item
             , now counted item
             ]
-        , div [ class frontFootClass ]
+        , div [ class rowFootClass ]
             [ div [ class "min-w-0 truncate text-[9px] leading-[10px] text-muted-foreground" ] [ text metadata.team ]
-            , frontPortrait item
+            , portrait item
             ]
         ]
     )
@@ -314,8 +280,8 @@ featuredRow config snapshot counted ( ahead, item ) =
 nothing where the round has no photograph for it, which is a missing row of
 `car-images.json`, not a car off the field.
 -}
-frontPortrait : CarAt -> Html msg
-frontPortrait item =
+portrait : CarAt -> Html msg
+portrait item =
     case item.metadata.imageUrl of
         Just url ->
             img
@@ -371,23 +337,13 @@ Keyed by the car a rule starts at, which no other row can claim.
 rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
 rows config snapshot counted field =
     let
-        add index (( _, item ) as pair) ( behind, acc ) =
+        add (( _, item ) as pair) ( behind, acc ) =
             let
                 back =
                     group counted.lead item
 
                 lines =
-                    (if index < frontOf then
-                        featuredRow
-
-                     else
-                        row
-                    )
-                        config
-                        snapshot
-                        counted
-                        pair
-                        :: acc
+                    row config snapshot counted pair :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -395,8 +351,7 @@ rows config snapshot counted field =
             else
                 ( back, ( "splits-" ++ item.metadata.carNumber, division back ) :: lines )
     in
-    List.indexedMap Tuple.pair field
-        |> List.foldl (\( index, pair ) -> add index pair) ( Just 0, [] )
+    List.foldl add ( Just 0, [] ) field
         |> Tuple.second
         |> List.reverse
 
@@ -446,28 +401,26 @@ lapsText laps =
         |> String.dropLeft 2
 
 
-{-| The row's own tracks: the class place, the number, the name which is what
-gives when there is no room, and two readings of their own width so the numbers
-line up down the class.
+{-| The row's chrome, which holds the two lines together.
 -}
 rowClass : String
 rowClass =
-    "w-full grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-center gap-x-[3px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
+    "w-full text-left grid gap-y-px px-0.5 py-[2px] rounded transition-colors cursor-pointer"
 
 
-{-| The front rows' own tracks, the same widths as a narrow row's so the two
-sort into one column down the class; only the row's chrome moves to the two
-lines together.
+{-| The row's tracks: the class place, the number, the name which is what gives
+when there is no room, and two readings of their own width so the numbers line up
+down the class.
 -}
-frontClass : String
-frontClass =
+rowTracksClass : String
+rowTracksClass =
     "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-center gap-x-[3px]"
 
 
 {-| The team under the name, the photograph at the move track's edge.
 -}
-frontFootClass : String
-frontFootClass =
+rowFootClass : String
+rowFootClass =
     "grid grid-cols-[minmax(0,1fr)_5.25rem] items-center gap-x-1"
 
 
