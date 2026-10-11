@@ -214,8 +214,9 @@ that column rather than opening a second. Where a class's column has been closed
 its name in the standings is the press that calls it back.
 
 Two lines to a car: its readings in tracks of their own -- class place, number,
-name, interval, move -- so each reading is a column down the class and only the
-name gives way, and under them the team the car runs for and its photograph.
+name, interval, move -- so each reading is a column down the class, and under
+them the team the car runs for and its photograph, the team the one line that
+elides when a name outgrows the column.
 Three class columns do not fit a 1440 viewport, so the rightmost reading is what
 the strip's edge takes, and the readings are ordered for that: the interval
 outlives the move. The move is counted in the class, against the class's own grid:
