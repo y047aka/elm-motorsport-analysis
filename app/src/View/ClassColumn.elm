@@ -14,11 +14,6 @@ the class has, leader first.
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
-The foot of the column does not follow the running order: the cars ranked there
-are ranked by the pace of the last laps -- a reading the standings cannot show,
-a car that lost a lap in the pits running the quickest race of its class and
-standing fifteenth in it at the same time.
-
 @docs view
 
 -}
@@ -28,15 +23,12 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
-import Internal.Statistics as Statistics
-import Motorsport.Analysis.Pace as Pace
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber)
-import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class as Class exposing (Class)
@@ -115,9 +107,6 @@ view config snapshot class_ =
         cars =
             Snapshot.inClass class_ snapshot
 
-        history =
-            Snapshot.lapHistory snapshot
-
         -- Each car with the class-mate ahead of it, which is the car its gap is
         -- measured to. The head of the class is ahead of nobody, and until the class
         -- has completed a lap nobody is measured against anybody: the column is the
@@ -140,12 +129,11 @@ view config snapshot class_ =
         [ attribute "data-class-column" (Class.toString class_) ]
         [ div [ class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ Card.content []
-                [ div [ class "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)_auto] gap-y-1.5" ]
+                [ div [ class "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)] gap-y-1.5" ]
                     [ head config class_ cars
                     , Keyed.node "div"
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px" ]
                         (rows config snapshot counted field)
-                    , footer history counted cars
                     ]
                 ]
             ]
@@ -507,146 +495,3 @@ gapTo inFront chasing snapshot =
     Snapshot.gapBetween inFront chasing snapshot
         |> Maybe.map Gap.seconds
         |> Maybe.withDefault (Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted))
-
-
-
--- PACE
-
-
-{-| The whole foot: what the class is quickest at now.
--}
-footer : LapHistory -> Count -> List CarAt -> Html msg
-footer history counted cars =
-    pace history counted cars
-
-
-{-| How many of the class leader's completed laps pace is read over. Short
-enough that a stop is still the story three laps later, long enough that one
-push lap is not.
--}
-windowLaps : Int
-windowLaps =
-    5
-
-
-{-| How many cars the board keeps. Who is quickest just now is a reading of the
-quickest few, not of the class.
--}
-boardPlaces : Int
-boardPlaces =
-    5
-
-
-{-| A car and the pace that put it on the board.
--}
-type alias Pace =
-    { car : CarAt
-    , lap : Duration
-    }
-
-
-{-| The foot of the column: the class ranked by the pace of the last laps
-instead of by where the timing stands it. The standings above answer who is
-ahead; this answers who is quickest, and the two come apart every time a car
-loses time in the lane rather than to the class-mates -- the board is where a
-car running the quickest race of its class from fifteenth is visible.
-
-The board is a display, not a second way to pick a car: every car on it is
-already a row of the standings above.
-
--}
-pace : LapHistory -> Count -> List CarAt -> Html msg
-pace history counted cars =
-    div [ class "border-t border-border pt-1 grid gap-y-px" ]
-        (note "Pace" ("median of the last " ++ String.fromInt windowLaps ++ " laps")
-            :: (case board history counted cars of
-                    [] ->
-                        [ div [ class "text-[10px] text-muted-foreground" ] [ text "no racing laps" ] ]
-
-                    quickest :: rest ->
-                        List.indexedMap (entry quickest.lap) (quickest :: rest)
-               )
-        )
-
-
-{-| A board's own heading: the word it is called and the small print saying
-what its numbers are measured against.
--}
-note : String -> String -> Html msg
-note word reading =
-    div [ class "flex items-baseline justify-between" ]
-        [ label word
-        , div [ class "text-[9px] text-muted-foreground" ] [ text reading ]
-        ]
-
-
-{-| Each car's median racing lap over the window, quickest first. A retired
-car and a car that ran no racing lap in the window are off the board; the rest
-keep company whoever they are, since pace is not standing.
-
-The median is the pace: a lone push lap is a qualifying effort and a lap stuck
-behind a slower car is traffic, and neither is how fast the car is going round
-right now. The laps themselves are the car's own outlier fence cut -- see
-[`Pace.racingTimes`](Motorsport-Analysis-Pace).
-
--}
-board : LapHistory -> Count -> List CarAt -> List Pace
-board history counted cars =
-    if counted.lead < 1 then
-        []
-
-    else
-        let
-            range =
-                { first = max 1 (counted.lead - windowLaps + 1), last = counted.lead }
-        in
-        cars
-            |> List.filter (\car -> not (Status.hasRetired car.status))
-            |> List.filterMap
-                (\car ->
-                    Statistics.median (Pace.racingTimes range (LapHistory.get car.metadata.carNumber history))
-                        |> Maybe.map (\lap -> { car = car, lap = lap })
-                )
-            |> List.sortBy .lap
-            |> List.take boardPlaces
-
-
-{-| One car of the board. The quickest of them carries its own pace, because a
-pace without a number is a claim; the rest are gaps to it, which is what a pit
-wall reads and what gives way at the strip's edge.
--}
-entry : Duration -> Int -> Pace -> Html msg
-entry best index item =
-    div
-        [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_auto] items-center gap-x-[3px] px-0.5"
-        , title
-            (Driver.toInitialAndSurname item.car.currentDriver
-                ++ " · "
-                ++ Duration.toString item.lap
-            )
-        ]
-        [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]
-            [ text (String.fromInt (index + 1)) ]
-        , CarNumberBadge.viewRow item.car.metadata
-        , div [ class "min-w-0 truncate text-[11px] leading-[18px] text-muted-foreground" ]
-            [ text (Driver.toSurname item.car.currentDriver) ]
-        , div
-            [ class
-                ("justify-self-end text-[10px] tabular-nums whitespace-nowrap "
-                    ++ (if index == 0 then
-                            ""
-
-                        else
-                            "text-muted-foreground"
-                       )
-                )
-            ]
-            [ text
-                (if index == 0 then
-                    Duration.toString item.lap
-
-                 else
-                    "+" ++ Duration.toString (item.lap - best)
-                )
-            ]
-        ]
