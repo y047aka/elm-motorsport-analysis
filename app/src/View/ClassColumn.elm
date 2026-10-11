@@ -1,0 +1,652 @@
+module View.ClassColumn exposing (view)
+
+{-| One class of the field as a column of the strip: its cars in running order,
+each measured against the class-mate ahead of it.
+
+The standings to the left of the strip count the whole field; this counts one
+class. Every reading is taken down the class rather than down the field, which is
+what the field hides while a race is still sorting itself out: the interval is to
+the class-mate ahead rather than to whoever is ahead, the reference lap is the
+class's own fastest rather than the race's, a move is counted in the class rather
+than among the 62 cars on the standings beside it, and the cars are all the cars
+the class has, leader first.
+
+A row picks the car it names, whose own column opens beside this one, so a class
+can be followed from its order here and from a car's detail at the same time.
+
+The foot of the column does not follow the running order: the cars ranked there
+are ranked by the pace of the last laps -- a reading the standings cannot show,
+a car that lost a lap in the pits running the quickest race of its class and
+standing fifteenth in it at the same time.
+
+@docs view
+
+-}
+
+import Dict exposing (Dict)
+import Html exposing (Html, button, div, img, text)
+import Html.Attributes exposing (alt, attribute, class, src, style, title)
+import Html.Events exposing (onClick)
+import Html.Keyed as Keyed
+import Internal.Statistics as Statistics
+import Motorsport.Analysis.Pace as Pace
+import Motorsport.Driver as Driver
+import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Leaderboard as Leaderboard
+import Motorsport.Position exposing (Position)
+import Motorsport.Race.Car exposing (CarNumber)
+import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Status as Status exposing (Status)
+import Motorsport.Wec.Class as Class exposing (Class)
+import UI.Shadcn.Card as Card
+import View.CarDetail.Header as Header
+import View.CarNumberBadge as CarNumberBadge
+import View.ClassMark as ClassMark
+
+
+{-| What the column is given: the two ways a row answers a press -- the car has
+no column and so is picked, or has one already and so the strip goes to it --
+which cars have columns, where the class's cars started on the grid, and the corner
+controls every column carries.
+
+`onSelect` and `onReveal` are held as they are handed over, so pass message
+constructors: the rows are rebuilt on every frame of playback, and a lambda built
+afresh per render rewrites every row of every class on every frame.
+
+-}
+type alias Config msg =
+    { onSelect : CarNumber -> msg
+    , onReveal : CarNumber -> msg
+    , withColumns : List CarNumber
+    , onClose : Maybe msg
+    , grip : Maybe (Html msg)
+    , startPosition : CarNumber -> Maybe Position
+    }
+
+
+{-| What the column counts off the class as a whole, once a frame: the laps the
+class leader has completed, which is what every car's distance is measured
+against, and where each car started among its own class-mates, which is what its
+move is measured against.
+-}
+type alias Count =
+    { lead : Int
+    , grid : Dict CarNumber Position
+    }
+
+
+{-| The class ranked within itself. A car the grid has no place for is drawn as
+having moved nowhere.
+-}
+count : (CarNumber -> Maybe Position) -> List CarAt -> Count
+count startPosition cars =
+    { lead =
+        case cars of
+            first :: _ ->
+                first.standing.lapsCompleted
+
+            _ ->
+                0
+    , grid =
+        cars
+            |> List.filterMap
+                (\car ->
+                    Maybe.map (\start -> ( car.metadata.carNumber, start )) (startPosition car.metadata.carNumber)
+                )
+            |> List.sortBy Tuple.second
+            |> List.indexedMap (\index ( number, _ ) -> ( number, index + 1 ))
+            |> Dict.fromList
+    }
+
+
+{-| The column. The class's name and its own fastest lap hold the head of the
+card and the cars scroll under them, the way a car's panel scrolls under its
+nameplate.
+
+The visual tests locate the column by `data-class-column`, which carries the
+class's name.
+
+-}
+view : Config msg -> Snapshot -> Class -> Html msg
+view config snapshot class_ =
+    let
+        cars =
+            Snapshot.inClass class_ snapshot
+
+        history =
+            Snapshot.lapHistory snapshot
+
+        -- Each car with the class-mate ahead of it, which is the car its gap is
+        -- measured to. The head of the class is ahead of nobody, and until the class
+        -- has completed a lap nobody is measured against anybody: the column is the
+        -- starting grid, and a reading down it would be one the timing has not taken.
+        field =
+            let
+                ahead =
+                    if counted.lead > 0 then
+                        List.map Just cars
+
+                    else
+                        List.repeat (List.length cars) Nothing
+            in
+            List.map2 Tuple.pair (Nothing :: ahead) cars
+
+        counted =
+            count config.startPosition cars
+    in
+    Card.card
+        [ attribute "data-class-column" (Class.toString class_) ]
+        [ div [ class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
+            [ Card.content []
+                [ div [ class "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)_auto] gap-y-1.5" ]
+                    [ head config class_ cars
+                    , Keyed.node "div"
+                        [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px" ]
+                        (rows config snapshot counted field)
+                    , footer history counted cars
+                    ]
+                ]
+            ]
+        ]
+
+
+{-| The class, how many cars it has out, and the fastest lap the class has run.
+
+The reference lap is the class's and not the race's: an LMGT3 car is race leader
+nobody would call quick, and the lap every car of a class is chasing is one run
+by one of them.
+
+-}
+head : Config msg -> Class -> List CarAt -> Html msg
+head config class_ cars =
+    div [ class "grid gap-y-1" ]
+        [ div [ class "flex items-center gap-x-2" ]
+            [ ClassMark.name class_
+            , div [ class "ms-auto text-[10px] text-muted-foreground tabular-nums whitespace-nowrap" ]
+                [ text (carCount cars) ]
+            , div [ class "flex items-start gap-x-1" ] (corner config)
+            ]
+        , reference cars
+        ]
+
+
+carCount : List CarAt -> String
+carCount cars =
+    String.fromInt (List.length cars)
+        ++ (if List.length cars == 1 then
+                " car"
+
+            else
+                " cars"
+           )
+
+
+{-| The fastest lap the class has run so far and the number of the car that ran
+it -- nothing where the class has finished no timed lap yet, which is every class
+for the first minutes of a race.
+-}
+reference : List CarAt -> Html msg
+reference cars =
+    div [ class "flex items-baseline gap-x-1.5 text-[10px] leading-none" ]
+        ([ label "Fastest" ]
+            ++ (case fastest cars of
+                    Just ( time, holder ) ->
+                        [ div [ class "tabular-nums" ] [ text (Duration.toString time) ]
+                        , div [ class "text-muted-foreground" ] [ text ("#" ++ holder) ]
+                        ]
+
+                    Nothing ->
+                        [ div [ class "text-muted-foreground" ] [ text "no timed lap" ] ]
+               )
+        )
+
+
+fastest : List CarAt -> Maybe ( Duration, CarNumber )
+fastest cars =
+    cars
+        |> List.filterMap (\car -> Maybe.map (\rated -> ( rated.time, car.metadata.carNumber )) car.bestLap)
+        |> List.sortBy Tuple.first
+        |> List.head
+
+
+label : String -> Html msg
+label word =
+    div [ class "text-[9px] uppercase tracking-[0.03em] text-muted-foreground" ] [ text word ]
+
+
+{-| The grip and the ✕, which the page supplies. A column standing alone has
+neither, as elsewhere on the strip.
+-}
+corner : Config msg -> List (Html msg)
+corner config =
+    List.filterMap identity [ config.grip, Maybe.map Header.closeButton config.onClose ]
+
+
+
+-- ROWS
+
+
+{-| One car of the class, drawn on the car's own nameplate: the stacked number
+badge at the left, the driver over the team beside it, and the car itself side
+on under the two readings of the row.
+
+The readings -- class place, interval, move -- keep the tracks they had when
+the row was one line, so each is still a column down the class. Three class
+columns do not fit a 1440 viewport, so the tracks are ordered by what is worth
+losing at the strip's edge: the interval before the move.
+
+The ordinal is the class's, which is what this column is for: a car is 1st here
+and 41st on the standings beside it, and both are true.
+
+-}
+row : Config msg -> Snapshot -> Count -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot counted ( ahead, item ) =
+    let
+        metadata =
+            item.metadata
+
+        picked =
+            List.member metadata.carNumber config.withColumns
+    in
+    ( metadata.carNumber
+    , button
+        (rowButton config item picked ++ [ class rowClass ])
+        [ ordinal item
+        , div [ class "col-start-2 row-span-2 self-center" ] [ CarNumberBadge.view metadata ]
+        , div [ class "col-start-3 min-w-0 truncate text-[12px] font-semibold leading-[18px]" ]
+            [ text (Driver.toInitialAndSurname item.currentDriver) ]
+        , gapAhead snapshot ahead item
+        , now counted item
+        , div
+            [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[12px] leading-[18px] text-muted-foreground"
+            , attribute "data-team" ""
+            ]
+            [ text metadata.team ]
+        , portrait item
+        ]
+    )
+
+
+{-| The car side on, as the car's own panel and the car cards draw it, spanning
+the interval and move tracks the way the nameplate's portrait does -- and
+nothing where the round has no photograph for it, which is a missing row of
+`car-images.json`, not a car off the field.
+-}
+portrait : CarAt -> Html msg
+portrait item =
+    case item.metadata.imageUrl of
+        Just url ->
+            img
+                [ src url
+                , alt (item.metadata.carNumber ++ " " ++ item.metadata.team)
+                , class "col-start-4 row-start-2 self-center justify-self-end h-6 w-[5.75rem] object-contain"
+                ]
+                []
+
+        Nothing ->
+            text ""
+
+
+{-| What every row of the class answers a press with and carries for the
+reader who cannot see it: its name, its pressed state, and where the press
+goes -- a car with a column already is revealed, not opened twice.
+-}
+rowButton : Config msg -> CarAt -> Bool -> List (Html.Attribute msg)
+rowButton config item picked =
+    [ attribute "aria-label" ("Car #" ++ item.metadata.carNumber ++ " in " ++ Class.toString item.metadata.class)
+    , attribute "aria-pressed"
+        (if picked then
+            "true"
+
+         else
+            "false"
+        )
+    , title (item.metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver)
+    ]
+        ++ (if picked then
+                -- The car's own colour, thinned enough to write on: the same
+                -- mark a row of the standings wears once its car is up.
+                [ style "background-color"
+                    ("color-mix(in oklch, " ++ item.metadata.manufacturer.color ++ " 25%, transparent)")
+                , onClick (config.onReveal item.metadata.carNumber)
+                ]
+
+            else
+                [ onClick (config.onSelect item.metadata.carNumber)
+                , class "hover:bg-accent/40"
+                ]
+           )
+
+
+{-| The class down the column, a rule wherever the classification moves to another
+group. The first division a class makes is not visible in a gap read in seconds:
+the cars above the rule are fighting the race and the ones below are finishing
+their own.
+
+Keyed by the car a rule starts at, which no other row can claim.
+
+-}
+rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted field =
+    let
+        add (( _, item ) as pair) ( behind, acc ) =
+            let
+                back =
+                    group counted.lead item
+
+                lines =
+                    row config snapshot counted pair :: acc
+            in
+            if back == behind then
+                ( behind, lines )
+
+            else
+                ( back, ( "splits-" ++ item.metadata.carNumber, division back ) :: lines )
+    in
+    List.foldl add ( Just 0, [] ) field
+        |> Tuple.second
+        |> List.reverse
+
+
+{-| How far back a car sits: the laps between it and the class leader while it is
+running, and nothing at all for a car that has stopped -- which is not lapped so
+much as out, and is classified among the others rather than distanced by them.
+-}
+group : Int -> CarAt -> Maybe Int
+group lead item =
+    if Status.hasRetired item.status then
+        Nothing
+
+    else
+        Just (lead - item.standing.lapsCompleted)
+
+
+{-| The rule between two groups of a class, naming what separates them: how many
+laps back the cars below are, or that the cars below are the ones that stopped.
+The class is drawn in classification order, so a group comes in one block and
+there is one rule per group.
+-}
+division : Maybe Int -> Html msg
+division back =
+    let
+        words =
+            case back of
+                Nothing ->
+                    "Retired"
+
+                Just laps ->
+                    lapsText laps ++ " down"
+    in
+    div
+        [ class "flex items-center gap-x-1.5 pt-1 text-[9px] leading-none uppercase tracking-[0.08em] whitespace-nowrap text-muted-foreground" ]
+        [ div [ class "h-px flex-1 bg-border" ] []
+        , div [ class "tabular-nums" ] [ text words ]
+        , div [ class "h-px flex-1 bg-border" ] []
+        ]
+
+
+{-| How many laps, in the words the rest of the app uses for a gap of laps.
+-}
+lapsText : Int -> String
+lapsText laps =
+    Gap.toString (Gap.laps laps)
+        |> String.dropLeft 2
+
+
+{-| The row's tracks: the class place and the stacked badge, each held two
+lines; the name, which is what gives when there is no room; and two readings
+of their own width so the numbers line up down the class. The team and the
+photograph fill the second line under the name and the readings.
+-}
+rowClass : String
+rowClass =
+    "w-full grid grid-cols-[0.875rem_auto_minmax(0,1fr)_3.5rem_2.25rem] items-start gap-x-[3px] gap-y-[2px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
+
+
+ordinal : CarAt -> Html msg
+ordinal item =
+    div
+        [ class
+            ("col-start-1 row-span-2 self-center text-[10px] tabular-nums whitespace-nowrap text-right "
+                ++ (if item.standing.positionInClass == 1 then
+                        ""
+
+                    else
+                        "text-muted-foreground"
+                   )
+            )
+        ]
+        [ text (String.fromInt item.standing.positionInClass) ]
+
+
+{-| What the car is doing: standing in its box, driving out of the lane, stopped
+for good -- and on the road, how many places of its own class it has gained or lost
+since the grid, in the arrows the standings' own Move column uses.
+
+The lane wins the track where both could be said, since a car in its box is not
+being scored against the field. A car moved nowhere in its class draws nothing at
+all, which is how every car of the class reads until the race has moved it: the
+classification is not the grid, so a place gained before the class has completed a
+lap would be a claim the timing has not made.
+
+-}
+now : Count -> CarAt -> Html msg
+now counted item =
+    case item.status of
+        Status.InPit ->
+            chip "PIT"
+
+        Status.OutLap ->
+            chip "OUT"
+
+        Status.Retired ->
+            div [ class "col-start-5 justify-self-end text-[10px] leading-[18px] whitespace-nowrap text-muted-foreground", attribute "data-move" "" ]
+                [ text "Retired" ]
+
+        _ ->
+            div [ class "col-start-5 justify-self-end leading-[18px]", attribute "data-move" "" ]
+                [ if counted.lead > 0 then
+                    Leaderboard.viewPositionChangeInline
+                        { startPosition = Dict.get item.metadata.carNumber counted.grid
+                        , position = item.standing.positionInClass
+                        }
+
+                  else
+                    text ""
+                ]
+
+
+chip : String -> Html msg
+chip word =
+    div
+        [ class "col-start-5 justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
+        , attribute "data-move" ""
+        ]
+        [ text word ]
+
+
+{-| What the class-mate ahead is by, which is not what whoever is ahead is by: a
+Hypercar standing between two LMP2 cars is on the road between them and is timed
+with them, and `Snapshot.gapBetween` adds the intervals along that road rather
+than counting the cars on it.
+
+The head of a class is ahead of nobody in its class and draws no reading at all,
+which is what a classification leaves the head of a class.
+
+-}
+gapAhead : Snapshot -> Maybe CarAt -> CarAt -> Html msg
+gapAhead snapshot ahead chasing =
+    -- The track is always drawn, empty where there is no reading: the row's
+    -- other tracks name their columns rather than being auto-placed, and a
+    -- track that sometimes is not there at all would shift its neighbours.
+    div [ class "col-start-4 justify-self-end text-[10px] leading-[18px] tabular-nums whitespace-nowrap text-muted-foreground" ]
+        [ case ahead of
+            Nothing ->
+                text ""
+
+            Just inFront ->
+                -- Nothing is measured between two cars that are not both on the road;
+                -- the rule above the ones that stopped is what says as much.
+                if Status.hasRetired chasing.status || Status.hasRetired inFront.status then
+                    text ""
+
+                else
+                    text (Gap.toString (gapTo inFront chasing snapshot))
+        ]
+
+
+{-| The interval between two cars of a class: the road between them added up, or,
+where it cannot be added up -- a car in the pit lane is timed at no line -- the
+laps between them. Two cars on the same lap give neither reading, which is the
+dash a timing tower leaves a car standing in the lane.
+-}
+gapTo : CarAt -> CarAt -> Snapshot -> Gap
+gapTo inFront chasing snapshot =
+    Snapshot.gapBetween inFront chasing snapshot
+        |> Maybe.map Gap.seconds
+        |> Maybe.withDefault (Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted))
+
+
+
+-- PACE
+
+
+{-| The whole foot: what the class is quickest at now.
+-}
+footer : LapHistory -> Count -> List CarAt -> Html msg
+footer history counted cars =
+    pace history counted cars
+
+
+{-| How many of the class leader's completed laps pace is read over. Short
+enough that a stop is still the story three laps later, long enough that one
+push lap is not.
+-}
+windowLaps : Int
+windowLaps =
+    5
+
+
+{-| How many cars the board keeps. Who is quickest just now is a reading of the
+quickest few, not of the class.
+-}
+boardPlaces : Int
+boardPlaces =
+    5
+
+
+{-| A car and the pace that put it on the board.
+-}
+type alias Pace =
+    { car : CarAt
+    , lap : Duration
+    }
+
+
+{-| The foot of the column: the class ranked by the pace of the last laps
+instead of by where the timing stands it. The standings above answer who is
+ahead; this answers who is quickest, and the two come apart every time a car
+loses time in the lane rather than to the class-mates -- the board is where a
+car running the quickest race of its class from fifteenth is visible.
+
+The board is a display, not a second way to pick a car: every car on it is
+already a row of the standings above.
+
+-}
+pace : LapHistory -> Count -> List CarAt -> Html msg
+pace history counted cars =
+    div [ class "border-t border-border pt-1 grid gap-y-px" ]
+        (note "Pace" ("median of the last " ++ String.fromInt windowLaps ++ " laps")
+            :: (case board history counted cars of
+                    [] ->
+                        [ div [ class "text-[10px] text-muted-foreground" ] [ text "no racing laps" ] ]
+
+                    quickest :: rest ->
+                        List.indexedMap (entry quickest.lap) (quickest :: rest)
+               )
+        )
+
+
+{-| A board's own heading: the word it is called and the small print saying
+what its numbers are measured against.
+-}
+note : String -> String -> Html msg
+note word reading =
+    div [ class "flex items-baseline justify-between" ]
+        [ label word
+        , div [ class "text-[9px] text-muted-foreground" ] [ text reading ]
+        ]
+
+
+{-| Each car's median racing lap over the window, quickest first. A retired
+car and a car that ran no racing lap in the window are off the board; the rest
+keep company whoever they are, since pace is not standing.
+
+The median is the pace: a lone push lap is a qualifying effort and a lap stuck
+behind a slower car is traffic, and neither is how fast the car is going round
+right now. The laps themselves are the car's own outlier fence cut -- see
+[`Pace.racingTimes`](Motorsport-Analysis-Pace).
+
+-}
+board : LapHistory -> Count -> List CarAt -> List Pace
+board history counted cars =
+    if counted.lead < 1 then
+        []
+
+    else
+        let
+            range =
+                { first = max 1 (counted.lead - windowLaps + 1), last = counted.lead }
+        in
+        cars
+            |> List.filter (\car -> not (Status.hasRetired car.status))
+            |> List.filterMap
+                (\car ->
+                    Statistics.median (Pace.racingTimes range (LapHistory.get car.metadata.carNumber history))
+                        |> Maybe.map (\lap -> { car = car, lap = lap })
+                )
+            |> List.sortBy .lap
+            |> List.take boardPlaces
+
+
+{-| One car of the board. The quickest of them carries its own pace, because a
+pace without a number is a claim; the rest are gaps to it, which is what a pit
+wall reads and what gives way at the strip's edge.
+-}
+entry : Duration -> Int -> Pace -> Html msg
+entry best index item =
+    div
+        [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_auto] items-center gap-x-[3px] px-0.5"
+        , title
+            (Driver.toInitialAndSurname item.car.currentDriver
+                ++ " · "
+                ++ Duration.toString item.lap
+            )
+        ]
+        [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]
+            [ text (String.fromInt (index + 1)) ]
+        , CarNumberBadge.viewRow item.car.metadata
+        , div [ class "min-w-0 truncate text-[11px] leading-[18px] text-muted-foreground" ]
+            [ text (Driver.toSurname item.car.currentDriver) ]
+        , div
+            [ class
+                ("justify-self-end text-[10px] tabular-nums whitespace-nowrap "
+                    ++ (if index == 0 then
+                            ""
+
+                        else
+                            "text-muted-foreground"
+                       )
+                )
+            ]
+            [ text
+                (if index == 0 then
+                    Duration.toString item.lap
+
+                 else
+                    "+" ++ Duration.toString (item.lap - best)
+                )
+            ]
+        ]

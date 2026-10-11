@@ -23,17 +23,24 @@ import Test exposing (Test, describe, test)
 suite : Test
 suite =
     describe "Page.Wec.Columns"
-        [ describe "while the stand-ins are live"
-            [ test "the tracker trails the class leaders" <|
+        [ describe "the opening strip"
+            [ test "one column per class, in the order the field puts the classes" <|
                 \_ ->
-                    step (ShowTracker True) Columns.init
-                        |> keys
-                        |> Expect.equal (leaders ++ [ Tracker ])
-            , test "the leaders are re-read, not frozen" <|
-                \_ ->
-                    step (ShowTracker True) Columns.init
+                    Columns.init
                         |> keysOf
-                        |> Expect.equal (leaders ++ [ Tracker ])
+                        |> Expect.equal [ classColumnOf "HYPERCAR", classColumnOf "LMGT3" ]
+            , test "the tracker trails the class columns" <|
+                \_ ->
+                    Columns.init
+                        |> step (ShowTracker True)
+                        |> keys
+                        |> Expect.equal (standIns ++ [ Tracker ])
+            , test "the class columns are re-read, not frozen" <|
+                \_ ->
+                    Columns.init
+                        |> step (ShowTracker True)
+                        |> keysOf
+                        |> Expect.equal (standIns ++ [ Tracker ])
             ]
         , describe "settling"
             [ test "picking a column up settles the stand-ins" <|
@@ -42,7 +49,7 @@ suite =
                         |> step (ShowTracker True)
                         |> step (Grab (Car "1") (pointer 1 0))
                         |> keys
-                        |> Expect.equal (leaders ++ [ Tracker ])
+                        |> Expect.equal (standIns ++ [ Tracker ])
             , test "a carry let go of where it began puts back what picking it up settled" <|
                 \_ ->
                     -- `before` is the order as the tracker's column stood it,
@@ -58,9 +65,9 @@ suite =
                         |> Expect.equal shown.order
             , test "a carry that lands among the cars fixes the tracker there" <|
                 \_ ->
-                    -- The first car is carried one column right; the tracker
-                    -- stays behind cars that have settled.
-                    case leaders of
+                    -- The first class's column is carried one column right; the
+                    -- tracker stays behind columns that have settled.
+                    case standIns of
                         headKey :: nextKey :: _ ->
                             Columns.init
                                 |> step (ShowTracker True)
@@ -69,40 +76,61 @@ suite =
                                 |> step (Release (pointer 1 Columns.width))
                                 |> keys
                                 |> Expect.equal
-                                    ([ nextKey, headKey ] ++ List.drop 2 leaders ++ [ Tracker ])
+                                    ([ nextKey, headKey ] ++ List.drop 2 standIns ++ [ Tracker ])
 
                         _ ->
-                            Expect.fail "the fixture fields fewer than two class leaders"
+                            Expect.fail "the fixture fields fewer than two classes"
             ]
         , describe "opening and closing"
-            [ test "a car opened goes before the tracker" <|
+            [ test "a car opened goes behind the class columns and before the tracker" <|
                 \_ ->
                     Columns.init
                         |> step (ShowTracker True)
-                        |> step (Open "9")
+                        |> step (Open (Car "9"))
                         |> keysOf
-                        |> List.drop (List.length leaders)
-                        |> Expect.equal [ Car "9", Tracker ]
-            , test "opening a car the strip already holds changes nothing" <|
+                        |> Expect.equal (standIns ++ [ Car "9", Tracker ])
+            , test "a class's column opened again joins the back and not its old place" <|
                 \_ ->
-                    case leaders of
+                    Columns.init
+                        |> step (Close (classColumnOf "HYPERCAR"))
+                        |> step (Open (classColumnOf "HYPERCAR"))
+                        |> keysOf
+                        |> Expect.equal [ classColumnOf "LMGT3", classColumnOf "HYPERCAR" ]
+            , test "opening a column the strip holds already changes nothing" <|
+                \_ ->
+                    case standIns of
                         headKey :: _ ->
-                            step (Open (carNumberOf headKey)) Columns.init
+                            step (Open headKey) Columns.init
                                 |> .order
                                 |> Expect.equal Columns.init.order
 
                         [] ->
-                            Expect.fail "the fixture fields no class leaders"
-            , test "closing the last car leaves an order that is not empty" <|
+                            Expect.fail "the fixture fields no class columns"
+            , test "the last column standing cannot be closed" <|
                 \_ ->
                     Columns.init
-                        |> step (Open "9")
-                        |> step (Close "1")
-                        |> step (Close "3")
-                        |> step (Close "2")
-                        |> step (Close "9")
+                        |> step (Open (Car "9"))
+                        |> step (Close (classColumnOf "LMGT3"))
+                        |> step (Close (classColumnOf "HYPERCAR"))
+                        |> step (Close (Car "9"))
                         |> keysOf
                         |> Expect.equal [ Car "9" ]
+            , test "closing a car forgets how far its panel was scrolled" <|
+                \_ ->
+                    Columns.init
+                        |> step (PanelScrolled "1" 42)
+                        |> step (Close (Car "1"))
+                        |> .scrolls
+                        |> Dict.get "1"
+                        |> Expect.equal Nothing
+            , test "closing a class's column leaves the panels' scrolls alone" <|
+                \_ ->
+                    Columns.init
+                        |> step (PanelScrolled "1" 42)
+                        |> step (Close (classColumnOf "HYPERCAR"))
+                        |> .scrolls
+                        |> Dict.get "1"
+                        |> Expect.equal (Just 42)
             ]
         , describe "the tracker's column"
             [ test "asking for it twice fields one tracker" <|
@@ -114,7 +142,7 @@ suite =
                         |> List.filter ((==) Tracker)
                         |> List.length
                         |> Expect.equal 1
-            , test "stepping the tracker fixes it among the cars" <|
+            , test "stepping the tracker fixes it among the columns" <|
                 \_ ->
                     -- One step left: the tracker takes the second-to-last
                     -- place of the settled stand-ins.
@@ -123,7 +151,7 @@ suite =
                         |> step (Step Tracker -1)
                         |> keys
                         |> Expect.equal
-                            (List.take (List.length leaders - 1) leaders ++ [ Tracker ] ++ List.drop (List.length leaders - 1) leaders)
+                            (List.take (List.length standIns - 1) standIns ++ [ Tracker ] ++ List.drop (List.length standIns - 1) standIns)
             ]
         , describe "carries"
             [ test "a step is ignored while a column is carried" <|
@@ -131,7 +159,7 @@ suite =
                     let
                         grabbed =
                             Columns.init
-                                |> step (Open "9")
+                                |> step (Open (Car "9"))
                                 |> step (Grab (Car "9") (pointer 1 0))
                     in
                     step (Step (Car "9") -1) grabbed
@@ -141,53 +169,57 @@ suite =
                 \_ ->
                     Columns.update (Just field) (Release (pointer 7 100)) Columns.init
                         |> Expect.equal ( Columns.init, Cmd.none )
-            , test "closing the carried car is not undone by letting go" <|
+            , test "closing the carried column is not undone by letting go" <|
                 \_ ->
-                    -- The carry settles the stand-ins; closing a car then
-                    -- changes the order, and a no-travel release must not
-                    -- put back what would reopen it.
-                    case leaders of
+                    -- The carry settles the stand-ins; closing a column then
+                    -- changes the order, and a no-travel release must not put
+                    -- back what would reopen it.
+                    case standIns of
                         headKey :: _ ->
                             Columns.init
                                 |> step (Grab headKey (pointer 1 0))
-                                |> step (Close (carNumberOf headKey))
+                                |> step (Close headKey)
                                 |> step (Release (pointer 1 0))
                                 |> keys
                                 |> List.member headKey
                                 |> Expect.equal False
 
                         [] ->
-                            Expect.fail "the fixture fields no class leaders"
+                            Expect.fail "the fixture fields no class columns"
             ]
         , describe "reading the strip"
             [ test "resolve drops cars the field no longer holds and keeps the tracker" <|
                 \_ ->
                     Columns.resolve field [ Car "1", Car "9", Tracker ]
                         |> Expect.equal [ Car "1", Tracker ]
-            , test "carsIn answers with the field's own cars, in order" <|
+            , test "resolve keeps a class the field has cars in and drops one it has none of" <|
                 \_ ->
-                    Columns.carsIn field [ Car "9", Car "3", Tracker, Car "1" ]
+                    Columns.resolve field [ classColumnOf "LMP2", classColumnOf "HYPERCAR" ]
+                        |> Expect.equal [ classColumnOf "HYPERCAR" ]
+            , test "carsIn answers with the field's own cars, in order, and no class cars" <|
+                \_ ->
+                    Columns.carsIn field [ Car "9", Car "3", Tracker, Car "1", classColumnOf "HYPERCAR" ]
                         |> List.map (.metadata >> .carNumber)
                         |> Expect.equal [ "3", "1" ]
             , test "a moved column is announced by name and place" <|
                 \_ ->
-                    case leaders of
-                        _ :: nextKey :: _ ->
-                            Columns.init
-                                |> step (Open "9")
-                                |> step (Step (Car (carNumberOf nextKey)) -1)
-                                |> .announcement
-                                |> Expect.equal ("Car #" ++ carNumberOf nextKey ++ " moved to column 1 of " ++ String.fromInt (List.length leaders + 1))
-
-                        _ ->
-                            Expect.fail "the fixture fields fewer than two class leaders"
+                    Columns.init
+                        |> step (Open (Car "9"))
+                        |> step (Step (Car "9") -1)
+                        |> .announcement
+                        |> Expect.equal ("Car #9 moved to column 2 of " ++ String.fromInt (List.length standIns + 1))
+            , test "a moved class column is announced by its class" <|
+                \_ ->
+                    Columns.init
+                        |> step (Step (classColumnOf "LMGT3") -1)
+                        |> .announcement
+                        |> Expect.equal "LMGT3 column moved to column 1 of 2"
             , test "a carry is clamped by the widths that stand, not the pitch that counts" <|
                 \_ ->
-                    -- The first stand-in stands a narrow slot wide; the
-                    -- second car carried past it is held at its right edge,
-                    -- and it steps aside by its own slot rather than a full
-                    -- pitch.
-                    case leaders of
+                    -- The first stand-in stands a narrow slot wide; the second
+                    -- column carried past it is held at its right edge, and it
+                    -- steps aside by its own slot rather than a full pitch.
+                    case standIns of
                         firstKey :: secondKey :: _ ->
                             let
                                 narrow key =
@@ -218,17 +250,7 @@ suite =
                                 ()
 
                         _ ->
-                            Expect.fail "the fixture fields fewer than two class leaders"
-            ]
-        , describe "the panels' scrolls"
-            [ test "a closed panel's scroll is forgotten" <|
-                \_ ->
-                    Columns.init
-                        |> step (PanelScrolled "1" 42)
-                        |> step (Close "1")
-                        |> .scrolls
-                        |> Dict.get "1"
-                        |> Expect.equal Nothing
+                            Expect.fail "the fixture fields fewer than two stand-ins"
             ]
         ]
 
@@ -253,21 +275,17 @@ keysOf model =
     Columns.keysOf field model.order
 
 
-{-| The class leaders the strip starts with, in the order it starts with them.
+{-| The columns the strip opens with: one for each class the fixture's field has
+cars out in, in the order its running order puts the classes.
 -}
-leaders : List StripKey
-leaders =
+standIns : List StripKey
+standIns =
     Columns.keysOf field Columns.init.order
 
 
-carNumberOf : StripKey -> String
-carNumberOf key =
-    case key of
-        Car carNumber ->
-            carNumber
-
-        Tracker ->
-            "tracker"
+classColumnOf : String -> StripKey
+classColumnOf name =
+    ClassColumn (classOf name)
 
 
 pointer : Int -> Float -> Pointer
@@ -278,9 +296,10 @@ pointer id x =
 
 -- FIXTURE
 --
--- Two Hypercars and a GT3 car, every lap of theirs finished by the moment
--- the field is read, so each class has a leader to stand in. Car 9 is in no
--- race here, which is what a car the field lost reads as.
+-- Two Hypercars and a GT3 car, every lap of theirs finished by the moment the
+-- field is read, so the field has two classes to open a column for. Car 9 is in
+-- no race here, which is what a car the field lost reads as. There is no LMP2
+-- car, which is what a class with nothing out in it reads as.
 
 
 field : Snapshot

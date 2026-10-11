@@ -145,8 +145,8 @@ fetched at runtime via `Http`.
   that is not shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
   `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
-  the car cards, the live standings, the tracker's pit lane list, and the badge
-  and class mark those share
+  the car cards, the live standings, a class's own column, the tracker's pit lane
+  list, and the badge and class mark those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
 `/api/wec/index.json`. It is the app's only source for which rounds exist, what
@@ -197,11 +197,47 @@ order, the tracker's column, the one column a pointer carries, and how far
 down each car's panel was scrolled. The page holds one `Columns.Model`,
 forwards through `ColumnsMsg`, and hands the field in per call.
 
-A column is keyed by `StripKey` -- a car's or the tracker's. **The tracker's
-index means where it stood when the stand-ins settled**: while the stand-ins
-are live the tracker trails them however the running order moves, and
-picking, closing or moving a column fixes it among the cars where it stood
-at that moment.
+A column is keyed by `StripKey` -- a class's, a car's or the tracker's. The strip
+opens **live**: one column per class the field has cars out in, re-read from every
+frame so that each class's order is its own, and a car's column joins behind them
+when the reader picks one. Any open, close or move settles the strip into the
+order the reader left it in.
+
+A class's column (`View/ClassColumn.elm`) is how a race is followed while it is
+still sorting itself out, and is the standings read down one class instead of the
+field: every car the class has, class place first, the interval to the class-mate
+ahead rather than to whoever is ahead, and the class's own fastest lap as the
+reference rather than the race's -- an LMGT3 car leading its class is race leader
+nobody would call quick. A row picks that car, whose panel opens beside the
+class's column; a row whose car is up already is marked and scrolls the strip to
+that column rather than opening a second. Where a class's column has been closed,
+its name in the standings is the press that calls it back.
+
+Two lines to a car: its readings in tracks of their own -- class place, number,
+name, interval, move -- so each reading is a column down the class and only the
+name gives way, and under them the team the car runs for and its photograph.
+Three class columns do not fit a 1440 viewport, so the rightmost reading is what
+the strip's edge takes, and the readings are ordered for that: the interval
+outlives the move. The move is counted in the class, against the class's own grid:
+the LMGT3 car sixth in class and leading it now has gained five places of LMGT3,
+which is not the move the standings' Move column reports for the field. A car in
+the lane, driving out of it or stopped takes that track from its move, since a car
+in its box is not being scored against the field. Before the class has completed a
+lap nothing is counted at all, and the column reads as the starting grid it is.
+
+The class is drawn in classification order, so it comes in blocks: a rule between
+the rows says how many laps back the cars below are, and the cars that stopped get
+a rule naming them rather than a distance -- nothing is measured between a car
+that stopped and one that did not.
+
+Every column is drawn `Columns.width` wide, and everything that measures the
+strip -- where a column stands, how far a carry moves one, how far a press
+scrolls -- is done in that one width and `pitch`.
+
+**The tracker's index means where it stood when the strip settled**: while the
+class columns are live the tracker trails them however the running order moves,
+and picking, closing or moving a column fixes it among the cars where it stood at
+that moment.
 
 ### The shadcn components
 

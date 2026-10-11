@@ -13,7 +13,6 @@ import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
-import Motorsport.Gap as Gap
 import Motorsport.Position as Position
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
@@ -40,7 +39,6 @@ view lapHistory allCars item =
                 [ class "grid gap-y-2 p-3" ]
                 [ cardHeader item
                 , portrait item.metadata.imageUrl item
-                , summaryStats item
                 , SectorAndLaps.view item
                 , rivalGapSparkline lapHistory allCars item
                 , LapTimeDistribution.sparkline { first = 1, last = item.standing.lapsCompleted } lapHistory item
@@ -83,32 +81,6 @@ cardHeader item =
                 [ class "text-[11px] truncate" ]
                 [ text (Driver.toFullName item.currentDriver) ]
             ]
-        ]
-
-
-summaryStats : CarAt -> Html msg
-summaryStats item =
-    div
-        [ class "border border-border rounded-lg grid grid-cols-3" ]
-        [ statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
-        , statCell "Gap" (text (Gap.toString item.standing.gapToLeader))
-        , statCell "Int" (text (Gap.toString item.standing.intervalToAhead))
-        ]
-
-
-{-| Small cell for packing a value into a single strip. Cells are separated by
-a left divider (the first cell has none).
--}
-statCell : String -> Html msg -> Html msg
-statCell label valueHtml =
-    div
-        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
-        [ div
-            [ class "text-[8px] uppercase tracking-[0.03em] text-muted-foreground" ]
-            [ text label ]
-        , div
-            [ class "text-[12px] tabular-nums" ]
-            [ valueHtml ]
         ]
 
 

@@ -7,7 +7,7 @@ module Page.Wec.Columns exposing
 {-| The strip of columns: what order they stand in, which one a pointer is
 carrying, and where each is drawn while that goes on.
 
-A column belongs either to a car or to the tracker; `StripKey` is that
+A column belongs to a class, to a car or to the tracker; `StripKey` is that
 choice, and the order -- `Columns` -- is a list of them. Every edit is total.
 
 The names sort into five shelves:
@@ -35,10 +35,11 @@ import Html.Attributes as Attributes
 import List.Extra
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Wec.Class as Class exposing (Class)
 import Task
 
 
-{-| A column of the strip: a car's, or the tracker's.
+{-| A column of the strip: a class's, a car's, or the tracker's.
 
 The tracker's place in the order means where it stood when the stand-ins
 settled: while the stand-ins are live the tracker stands behind them,
@@ -47,6 +48,7 @@ whatever their running order becomes.
 -}
 type StripKey
     = Car CarNumber
+    | ClassColumn Class
     | Tracker
 
 
@@ -56,8 +58,27 @@ keyName key =
         Car carNumber ->
             carNumber
 
+        ClassColumn class_ ->
+            "class-" ++ Class.toString class_
+
         Tracker ->
             "tracker"
+
+
+{-| What a column is called when one is spoken about, which is what a reader who
+moved a column by the keys is told.
+-}
+name : StripKey -> String
+name key =
+    case key of
+        Car carNumber ->
+            "Car #" ++ carNumber
+
+        ClassColumn class_ ->
+            Class.toString class_ ++ " column"
+
+        Tracker ->
+            "Tracker"
 
 
 carOfKey : StripKey -> Maybe CarNumber
@@ -66,16 +87,17 @@ carOfKey key =
         Car carNumber ->
             Just carNumber
 
-        Tracker ->
+        _ ->
             Nothing
 
 
 {-| The order of the strip.
 
-`Live` is the car at the front of each class, re-read from the snapshot as
-the race runs, with the tracker's column behind them where its flag says.
-`Picked` is fixed, in the order the reader left them in, and any open, close
-or move settles the stand-ins into one.
+`Live` is one column for each class the field has cars out in, re-read from the
+snapshot as the race runs so that each class's order is its own, with the
+tracker's column behind them where its flag says. `Picked` is fixed, in the
+order the reader left them in, and any open, close or move settles the stand-ins
+into one.
 
 -}
 type Columns
@@ -87,7 +109,7 @@ keysOf : Snapshot -> Columns -> List StripKey
 keysOf snapshot columns =
     case columns of
         Live { tracker } ->
-            List.map (.metadata >> .carNumber >> Car) (leaderOfEachClass snapshot)
+            List.map ClassColumn (classesOf snapshot)
                 ++ (if tracker then
                         [ Tracker ]
 
@@ -111,6 +133,9 @@ resolve snapshot =
                 Car carNumber ->
                     Snapshot.get carNumber snapshot /= Nothing
 
+                ClassColumn class_ ->
+                    Snapshot.inClass class_ snapshot /= []
+
                 Tracker ->
                     True
         )
@@ -124,44 +149,42 @@ carsIn snapshot keys =
 
 {-| The classes come in the order their leaders run in.
 -}
-leaderOfEachClass : Snapshot -> List CarAt
-leaderOfEachClass snapshot =
+classesOf : Snapshot -> List Class
+classesOf snapshot =
     Snapshot.toClassList snapshot
-        |> List.filterMap (Tuple.second >> List.head)
+        |> List.map Tuple.first
 
 
 {-| There is no ceiling on how many, and each column draws its own charts on
-every frame of playback. A car opened joins the back, and never jumps over
+every frame of playback. A column opened joins the back, and never jumps over
 the tracker's column.
 -}
-open : CarNumber -> Snapshot -> Columns -> Columns
-open carNumber snapshot columns =
+open : StripKey -> Snapshot -> Columns -> Columns
+open key snapshot columns =
     let
         current =
             keysOf snapshot columns
-
-        car =
-            Car carNumber
 
         at =
             List.Extra.elemIndex Tracker current
                 |> Maybe.withDefault (List.length current)
     in
-    if List.member car current then
+    if List.member key current then
         columns
 
     else
-        pickedOr columns (List.take at current ++ [ car ] ++ List.drop at current)
+        pickedOr columns (List.take at current ++ [ key ] ++ List.drop at current)
 
 
-close : CarNumber -> Snapshot -> Columns -> Columns
-close carNumber snapshot columns =
+close : StripKey -> Snapshot -> Columns -> Columns
+close key snapshot columns =
     keysOf snapshot columns
-        |> List.filter ((/=) (Car carNumber))
+        |> List.filter ((/=) key)
         |> pickedOr columns
 
 
-{-| Moving takes a key -- a car's or the tracker's -- and steps it along.
+{-| Moving takes a key -- a class's, a car's or the tracker's -- and steps it
+along.
 -}
 move : StripKey -> Int -> Snapshot -> Columns -> Columns
 move key steps snapshot columns =
@@ -239,18 +262,9 @@ pickedOr fallback keys =
 -}
 announcement : StripKey -> List StripKey -> String
 announcement key order =
-    let
-        name =
-            case key of
-                Car carNumber ->
-                    "Car #" ++ carNumber
-
-                Tracker ->
-                    "Tracker"
-    in
     case List.Extra.elemIndex key order of
         Just index ->
-            name ++ " moved to column " ++ String.fromInt (index + 1) ++ " of " ++ String.fromInt (List.length order)
+            name key ++ " moved to column " ++ String.fromInt (index + 1) ++ " of " ++ String.fromInt (List.length order)
 
         Nothing ->
             ""
@@ -313,10 +327,10 @@ it out.
 
 -}
 placements : (StripKey -> Float) -> Maybe ( StripKey, Float ) -> List StripKey -> List Placement
-placements widthOf underPointer keys =
+placements measure underPointer keys =
     let
         slots =
-            List.map (widthOf >> slot) keys
+            List.map (measure >> slot) keys
 
         leftEdge index =
             List.take index slots
@@ -437,8 +451,8 @@ init =
 
 
 type Msg
-    = Open CarNumber
-    | Close CarNumber
+    = Open StripKey
+    | Close StripKey
     | ShowTracker Bool
     | Grab StripKey Pointer
     | Carrying Pointer
@@ -463,12 +477,20 @@ answered to, and settles nothing that cannot be settled.
 update : Maybe Snapshot -> Msg -> Model -> ( Model, Cmd Msg )
 update field msg m =
     case msg of
-        Open carNumber ->
-            edit field m (open carNumber)
+        Open key ->
+            openColumn key field m
 
-        Close carNumber ->
-            edit field m (close carNumber)
-                |> Tuple.mapFirst (\after -> { after | scrolls = Dict.remove carNumber m.scrolls })
+        Close key ->
+            edit field m (close key)
+                |> Tuple.mapFirst
+                    (\after ->
+                        { after
+                            | scrolls =
+                                carOfKey key
+                                    |> Maybe.map (\carNumber -> Dict.remove carNumber m.scrolls)
+                                    |> Maybe.withDefault m.scrolls
+                        }
+                    )
 
         ShowTracker shown ->
             shownColumn field shown m
@@ -508,6 +530,62 @@ update field msg m =
 
         Settled ->
             ( m, Cmd.none )
+
+
+{-| A column the reader called for, and the strip scrolled as far as it takes to
+show it.
+
+Columns join the strip at its end, which is past what the page gives the strip to
+show: a press that opened a column off the right edge would read as a press that
+did nothing.
+
+-}
+openColumn : StripKey -> Maybe Snapshot -> Model -> ( Model, Cmd Msg )
+openColumn key field m =
+    case field of
+        Nothing ->
+            ( m, Cmd.none )
+
+        Just round ->
+            let
+                order =
+                    open key round m.order
+
+                keys =
+                    keysOf round order
+            in
+            case List.Extra.elemIndex key keys of
+                Just index ->
+                    ( { m | order = order }, reveal keys index )
+
+                Nothing ->
+                    ( { m | order = order }, Cmd.none )
+
+
+{-| Scroll the strip to the column at this index, and no further than it takes:
+what the reader had in sight stays in sight, and `left` is the most that is worth
+scrolling -- past it the column's own edge leaves the page.
+-}
+reveal : List StripKey -> Int -> Cmd Msg
+reveal keys index =
+    case List.Extra.getAt index keys of
+        Nothing ->
+            Cmd.none
+
+        Just _ ->
+            let
+                left =
+                    xOf (always width) keys index
+
+                right =
+                    left + slot width
+            in
+            Browser.Dom.getViewportOf stripId
+                |> Task.andThen
+                    (\{ viewport } ->
+                        Browser.Dom.setViewportOf stripId (clamp 0 left (max viewport.x (right - viewport.width))) 0
+                    )
+                |> Task.attempt (\_ -> Settled)
 
 
 shownColumn : Maybe Snapshot -> Bool -> Model -> ( Model, Cmd Msg )
@@ -688,10 +766,10 @@ slot wide =
 strip's own left edge: the slots of every column before it.
 -}
 xOf : (StripKey -> Float) -> List StripKey -> Int -> Float
-xOf widthOf keys index =
+xOf measure keys index =
     keys
         |> List.take index
-        |> List.map (widthOf >> slot)
+        |> List.map (measure >> slot)
         |> List.sum
 
 
