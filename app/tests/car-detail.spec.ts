@@ -360,18 +360,18 @@ test.describe('Class columns', () => {
       await expect(classRows(page, class_.name)).toHaveCount(class_.cars);
       await expect(classColumn(page, class_.name)).toContainText(`${class_.cars} cars`);
     }
-    // The class place leads the row, ahead of the number and the surname: a car
+    // The class place leads the row, ahead of the number and the name: a car
     // is 1st here and 22nd on the standings beside it, and both are true.
     const rows = await classRows(page, 'HYPERCAR').evaluateAll((els) =>
       els.slice(0, 6).map((el) => el.innerText.split('\n').slice(0, 3).join(' ')),
     );
     expect(rows).toEqual([
-      '1 6 VANTHOOR',
-      '2 83 KUBICA',
-      '3 8 HARTLEY',
-      '4 51 GIOVINAZZI',
-      '5 50 FUOCO',
-      '6 15 MARCIELLO',
+      '1 6 L.VANTHOOR',
+      '2 83 R.KUBICA',
+      '3 8 B.HARTLEY',
+      '4 51 A.GIOVINAZZI',
+      '5 50 A.FUOCO',
+      '6 15 R.MARCIELLO',
     ]);
   });
 
@@ -569,15 +569,17 @@ test.describe('Class columns', () => {
   });
 
   test('should read a class column whole at the width a car is drawn at', async ({ page }) => {
-    // One line to a car, in the cell a car's panel is drawn in: the readings are
-    // all there, so the name is the only thing that could give -- and none of
-    // them do, for any car of any class.
+    // The readings of a two-line row, in the cell a car's panel is drawn in:
+    // the driver's name and every reading are whole, for any car of any class.
+    // The team is the one line that gives way -- ellipsed at this width, and
+    // told whole by the row's tooltip.
     const cut = await page.evaluate(() =>
       [...document.querySelectorAll('[data-class-column] button[aria-pressed]')]
         .flatMap((row) =>
           [...row.querySelectorAll('div')]
             .filter((cell) => (cell as HTMLElement).className.includes('truncate'))
             .filter((cell) => cell.scrollWidth > cell.clientWidth)
+            .filter((cell) => !cell.matches('[data-team]'))
             .map((cell) => `${row.getAttribute('aria-label')}: ${cell.textContent}`),
         )
         .filter(Boolean),

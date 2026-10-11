@@ -259,7 +259,10 @@ row config snapshot counted ( ahead, item ) =
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , gapAhead snapshot ahead item
         , now counted item
-        , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[12px] leading-[18px] text-muted-foreground" ]
+        , div
+            [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[12px] leading-[18px] text-muted-foreground"
+            , attribute "data-team" ""
+            ]
             [ text metadata.team ]
         , portrait item
         ]
