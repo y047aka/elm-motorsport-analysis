@@ -571,16 +571,18 @@ test.describe('Class columns', () => {
 
   test('should read a class column whole at the width a car is drawn at', async ({ page }) => {
     // The readings of a two-line row, in the cell a car's panel is drawn in:
-    // the driver's name and every reading are whole, for any car of any class.
-    // The team is the one line that gives way -- ellipsed at this width, and
-    // told whole by the row's tooltip.
+    // every reading and the photograph's tracks are whole, for any car of any
+    // class. The driver's name and the team are the lines that give way --
+    // ellipsed when one outgrows the column, and told whole by the row's
+    // tooltip -- so the cells that carry them are marked data-gives-way and
+    // left out of the check.
     const cut = await page.evaluate(() =>
       [...document.querySelectorAll('[data-class-column] button[aria-pressed]')]
         .flatMap((row) =>
           [...row.querySelectorAll('div')]
             .filter((cell) => (cell as HTMLElement).className.includes('truncate'))
             .filter((cell) => cell.scrollWidth > cell.clientWidth)
-            .filter((cell) => !cell.matches('[data-team]'))
+            .filter((cell) => !cell.matches('[data-gives-way]'))
             .map((cell) => `${row.getAttribute('aria-label')}: ${cell.textContent}`),
         )
         .filter(Boolean),

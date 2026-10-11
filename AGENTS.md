@@ -215,8 +215,9 @@ its name in the standings is the press that calls it back.
 
 Two lines to a car: its readings in tracks of their own -- class place, number
 badge, name, interval -- so each reading is a column down the class, and under
-them the team the car runs for and its photograph, the team the one line that
-elides when a name outgrows the column.
+them the team the car runs for and its photograph; the driver's name and the
+team are the two lines that elide when one outgrows the column, and the row's
+tooltip tells each whole.
 Three class columns do not fit a 1440 viewport, so the one reading the strip's
 edge takes is the interval. The row draws no move at all: what a car has gained
 or lost since the grid is the reading the standings beside the strip make for

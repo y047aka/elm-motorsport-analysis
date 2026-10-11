@@ -226,11 +226,11 @@ row config snapshot ( ahead, item ) =
         (rowButton config item picked ++ [ class rowClass ])
         [ ordinal item
         , div [ class "col-start-2 row-span-2 self-center" ] [ CarNumberBadge.viewCompact metadata ]
-        , div [ class "col-start-3 min-w-0 truncate text-[11px] font-semibold leading-[18px]" ]
+        , div [ class "col-start-3 min-w-0 truncate text-[11px] font-semibold leading-[18px] tracking-tight", attribute "data-gives-way" "" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , gapAhead snapshot ahead item
         , now item
-        , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[11px] leading-[18px] text-muted-foreground", attribute "data-team" "" ]
+        , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
         ]
@@ -364,9 +364,9 @@ lapsText laps =
 
 
 {-| The row's tracks: the class place and the compact badge, each held two
-lines; the name, which is what gives when there is no room; the interval; and
-the photograph against the edge. The team and the lane's marks fill the second
-line under the name and the reading.
+lines; the two names, which are what give when there is no room; the interval;
+and the photograph against the edge. The team and the lane's marks fill the
+second line under the name and the reading.
 -}
 rowClass : String
 rowClass =
