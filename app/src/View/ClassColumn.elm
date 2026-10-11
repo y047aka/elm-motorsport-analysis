@@ -15,10 +15,9 @@ A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
 The foot of the column does not follow the running order: the cars ranked there
-are ranked by the pace of the last laps and by how near their next stop they
-are, and the laps that made both are drawn as dots -- readings the standings
-cannot show, a car that lost a lap in the pits running the quickest race of
-its class and standing fifteenth in it at the same time.
+are ranked by the pace of the last laps -- a reading the standings cannot show,
+a car that lost a lap in the pits running the quickest race of its class and
+standing fifteenth in it at the same time.
 
 @docs view
 
@@ -30,14 +29,10 @@ import Html.Attributes exposing (alt, attribute, class, src, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Internal.Statistics as Statistics
-import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.Analysis.Pace as Pace
-import Motorsport.Analysis.Stint as Stint
-import Motorsport.Chart.LapStrip as LapStrip
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap exposing (Lap)
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber)
@@ -150,7 +145,7 @@ view config snapshot class_ =
                     , Keyed.node "div"
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px" ]
                         (rows config snapshot counted field)
-                    , footer history class_ snapshot counted cars
+                    , footer history counted cars
                     ]
                 ]
             ]
@@ -515,21 +510,11 @@ gapTo inFront chasing snapshot =
 -- PACE
 
 
-{-| The whole foot: what the class is quickest at now, which of them will have
-to do something about it first, and what those few have been doing about it
-lap by lap.
+{-| The whole foot: what the class is quickest at now.
 -}
-footer : LapHistory -> Class -> Snapshot -> Count -> List CarAt -> Html msg
-footer history class_ snapshot counted cars =
-    let
-        dues =
-            dueBoard history cars
-    in
-    div [ class "grid gap-y-1.5" ]
-        [ pace history counted cars
-        , stops class_ snapshot counted dues
-        , lapStrip history counted dues
-        ]
+footer : LapHistory -> Count -> List CarAt -> Html msg
+footer history counted cars =
+    pace history counted cars
 
 
 {-| How many of the class leader's completed laps pace is read over. Short
@@ -662,282 +647,3 @@ entry best index item =
                 )
             ]
         ]
-
-
-
--- STOPS
-
-
-{-| How many laps ahead of its own median a stop still counts as coming up.
-About a quarter of a stint: inside it the call is being made now, not on the
-next saving of fuel.
--}
-soonestLaps : Int
-soonestLaps =
-    3
-
-
-{-| How many laps back the stops board measures a move over -- the same stretch
-a car card is a thumbnail of.
--}
-placeWindow : Int
-placeWindow =
-    20
-
-
-{-| A car and how near its next stop it is: `laps` counts the ones between the
-run it is on and the length the runs behind it took, so it is negative once
-the run has gone on past the car's own habit.
--}
-type alias Due =
-    { car : CarAt
-    , laps : Int
-    , stint : Int
-    , median : Int
-    }
-
-
-{-| The foot's second board: the class ranked by how soon each car will be
-called, nearest stop first.
-
-The standings answer who is ahead and the pace board who is quickest; neither
-answers when, which is what a race between pit windows is decided by. The
-window is each car's own habit -- the median of its finished runs -- so a class
-running two strategies at once still reads: the board says which of them will
-have to blink first, not which is furthest from some class-wide number.
-
--}
-stops : Class -> Snapshot -> Count -> List Due -> Html msg
-stops class_ snapshot counted dues =
-    div [ class "border-t border-border pt-1 grid gap-y-px" ]
-        (note "Stops" "laps to its own median stint"
-            :: (if List.isEmpty dues then
-                    [ div [ class "text-[10px] text-muted-foreground" ] [ text "no finished stint yet" ] ]
-
-                else
-                    List.indexedMap (stopRow (placeMoves counted class_ snapshot)) dues
-               )
-        )
-
-
-{-| Each running car's own median read against the run it is on. A car in the
-lane, or on a first run with no finished one behind it, has no habit to be due
-against and is off the board until it has one. A car done for the day -- one
-way or the other -- has no next stop either, and the feed gives a stopped car
-no end to its last run: the checkered flag cuts no stint, so the fence is the
-car's status and not its runs.
-
-The nearest few are kept, and when nobody is near the single nearest is: a
-board of a class nobody will call for four laps says nothing, but which car
-they will call first still says something.
-
--}
-dueBoard : LapHistory -> List CarAt -> List Due
-dueBoard history cars =
-    let
-        dues =
-            cars
-                |> List.filter (\car -> not (Status.hasStopped car.status))
-                |> List.filterMap (\car -> dueOf car history)
-                |> List.sortBy .laps
-
-        soon =
-            List.filter (\due -> due.laps <= soonestLaps) dues
-    in
-    List.take boardPlaces
-        (if List.isEmpty soon then
-            List.take 1 dues
-
-         else
-            soon
-        )
-
-
-dueOf : CarAt -> LapHistory -> Maybe Due
-dueOf car history =
-    let
-        summary =
-            Stint.summarize (LapHistory.get car.metadata.carNumber history)
-    in
-    Maybe.map2 (\current median -> { car = car, laps = median - current.lapCount, stint = current.lapCount, median = median })
-        summary.current
-        summary.medianStintLength
-
-
-{-| The class's places of twenty laps ago, per car -- what each row's arrow is
-measured from: the place the oldest classified lap in the window carries, for
-the car and not for the class. A car the window holds no classified lap for
-gives nothing and draws no arrow.
--}
-placeMoves : Count -> Class -> Snapshot -> Dict CarNumber Position
-placeMoves counted class_ snapshot =
-    if counted.lead < 1 then
-        Dict.empty
-
-    else
-        ClassPositions.byCar { first = max 1 (counted.lead - placeWindow + 1), last = counted.lead } class_ snapshot
-            |> List.filterMap
-                (\( car, points ) ->
-                    List.head points |> Maybe.map (\first -> ( car.metadata.carNumber, first.position ))
-                )
-            |> Dict.fromList
-
-
-{-| One car of the board: how far its place in the race has moved over the last
-laps -- the standings' own arrow, measured against twenty laps ago rather than
-the grid, and among the whole field rather than in its class, because it is
-the race place the window holds -- and how many laps the call has left. The
-nearest stop carries its own number, the rest their laps to it.
-
-The move is the whole of what a line through these places could say, and the
-arrow is its honest telling: over twenty laps a class swaps places every lap
-as its cars pit, and a line drawn through that swings the height of a row on
-other cars' stops, saying _fighting_ for a car that netted nothing.
-
--}
-stopRow : Dict CarNumber Position -> Int -> Due -> Html msg
-stopRow moves index item =
-    div
-        [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_2.25rem_2.75rem] items-center gap-x-[3px] px-0.5"
-        , attribute "data-stop-row" item.car.metadata.carNumber
-        , title (Driver.toInitialAndSurname item.car.currentDriver ++ " · lap " ++ String.fromInt item.stint ++ " of a median " ++ String.fromInt item.median)
-        ]
-        [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]
-            [ text (String.fromInt (index + 1)) ]
-        , CarNumberBadge.viewRow item.car.metadata
-        , div [ class "min-w-0 truncate text-[11px] leading-[18px] text-muted-foreground" ]
-            [ text (Driver.toSurname item.car.currentDriver) ]
-        , div [ class "justify-self-end leading-[18px]" ]
-            [ Leaderboard.viewPositionChangeInline { startPosition = Dict.get item.car.metadata.carNumber moves, position = item.car.standing.position } ]
-        , div
-            [ class
-                ("justify-self-end text-[10px] tabular-nums whitespace-nowrap "
-                    ++ (if index == 0 then
-                            ""
-
-                        else
-                            "text-muted-foreground"
-                       )
-                )
-            ]
-            [ text (dueText item.laps) ]
-        ]
-
-
-{-| The call in the words a pit wall says it: the laps it has left, the call
-due this lap, and how far the run has run on once its habit is behind it.
--}
-dueText : Int -> String
-dueText laps =
-    if laps < 0 then
-        "over " ++ String.fromInt (negate laps)
-
-    else if laps == 0 then
-        "now"
-
-    else
-        "in " ++ String.fromInt laps
-
-
-
--- LAPS
-
-
-{-| How many laps a strip reaches back over. Long enough for the shape of a run
-to be visible -- a few tenths shaved off in a row, a second lost every lap --
-and short enough that the dots stay dots.
--}
-stripLaps : Int
-stripLaps =
-    20
-
-
-{-| Wide enough that twenty dots stay separate at the room the move arrow's
-track leaves in the row.
--}
-stripWidth : Float
-stripWidth =
-    96
-
-
-{-| The same few cars the stops board names, their racing laps as dots. The
-board says when each will be called; this says what they have been doing about
-it -- dots held high on the scale are a car on a push, dots walking down it a
-car saving, and the gap where a car's pit lap was is the stop that moved its
-call forward.
-
-The scale is the shown cars' together, never each car's own: a strip scaled to
-its own quickest and slowest lap draws a car saving fuel with the same steep
-shape as a car on a push, which is the opposite news. What the few shown span
-is what the dots are read against, and a car joining them with a lap none of
-them ran sits on the top or bottom of the strip on purpose.
-
--}
-lapStrip : LapHistory -> Count -> List Due -> Html msg
-lapStrip history counted dues =
-    let
-        range =
-            { first = max 1 (counted.lead - stripLaps + 1), last = counted.lead }
-
-        strips =
-            dues
-                |> List.map
-                    (\due ->
-                        ( due, Pace.racingLaps range (LapHistory.get due.car.metadata.carNumber history) )
-                    )
-
-        scale =
-            case
-                strips
-                    |> List.concatMap (Tuple.second >> List.filterMap .time)
-                    |> (\times -> ( List.minimum times, List.maximum times ))
-            of
-                ( Just quickest, Just slowest ) ->
-                    Just { laps = range, quickest = quickest, slowest = slowest }
-
-                _ ->
-                    Nothing
-    in
-    div [ class "border-t border-border pt-1 grid gap-y-px" ]
-        (note "Laps" ("last " ++ String.fromInt stripLaps ++ " racing laps, one scale")
-            :: (case scale of
-                    Nothing ->
-                        [ div [ class "text-[10px] text-muted-foreground" ] [ text "no racing laps" ] ]
-
-                    Just shared ->
-                        List.indexedMap (stripRow shared) strips
-               )
-        )
-
-
-{-| One car of the board, its dots, and nothing else -- the median lap and the
-pace behind the quickest are the board above's readings.
--}
-stripRow : LapStrip.Scale -> Int -> ( Due, List Lap ) -> Html msg
-stripRow scale index ( due, laps ) =
-    div
-        [ class "grid grid-cols-[0.875rem_auto_minmax(0,1fr)_auto] items-center gap-x-[3px] px-0.5"
-        , attribute "data-lap-row" due.car.metadata.carNumber
-        , title (Driver.toInitialAndSurname due.car.currentDriver ++ " · " ++ spanText laps)
-        ]
-        [ div [ class "text-[10px] tabular-nums whitespace-nowrap text-right text-muted-foreground" ]
-            [ text (String.fromInt (index + 1)) ]
-        , CarNumberBadge.viewRow due.car.metadata
-        , div [ class "min-w-0 truncate text-[11px] leading-[18px] text-muted-foreground" ]
-            [ text (Driver.toSurname due.car.currentDriver) ]
-        , div [ class "justify-self-end" ]
-            [ LapStrip.strip { width = stripWidth, height = 16 } scale due.car.metadata.manufacturer.color laps ]
-        ]
-
-
-{-| The car's own quickest and slowest of the strip, which is what its dots are
-in fact worth -- the strip itself is drawn against the few shown together.
--}
-spanText : List Lap -> String
-spanText laps =
-    case ( List.filterMap .time laps |> List.minimum, List.filterMap .time laps |> List.maximum ) of
-        ( Just quickest, Just slowest ) ->
-            Duration.toString quickest ++ " – " ++ Duration.toString slowest
-
-        _ ->
-            "no racing laps"
