@@ -1,8 +1,8 @@
-module View.CarNumberBadge exposing (view, viewRow)
+module View.CarNumberBadge exposing (view, viewCompact, viewRow)
 
 {-| Car number badge on a manufacturer-coloured background.
 
-@docs view, viewRow
+@docs view, viewCompact, viewRow
 
 -}
 
@@ -19,6 +19,21 @@ view metadata =
     badge "flex flex-col items-center justify-center gap-1.5 p-1 rounded w-[35px]"
         [ manufacturerLogo "max-w-[28px] h-4 object-contain opacity-90" metadata.manufacturer
         , div [ class "text-xs font-bold leading-none" ]
+            [ text metadata.carNumber ]
+        ]
+        metadata
+
+
+{-| The stacked badge of a dense list: the maker's logo over the number on
+their colour, at a third less bulk than the nameplate's. The colour is the
+maker's own -- what keeps a sixty-two-row list from shouting is the size,
+not a thinner wash of it.
+-}
+viewCompact : Car.Metadata -> Html msg
+viewCompact metadata =
+    badge "flex flex-col items-center justify-center gap-[2px] p-[3px] rounded-[3px] w-[26px]"
+        [ manufacturerLogo "max-w-[18px] h-[11px] object-contain" metadata.manufacturer
+        , div [ class "text-[10px] font-bold leading-none" ]
             [ text metadata.carNumber ]
         ]
         metadata

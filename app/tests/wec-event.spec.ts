@@ -20,7 +20,7 @@ test.describe('Le Mans 2025 Visual Tests', () => {
   });
 
   // Mid-race state: the standings and their gaps, the cars on the tracker, and
-  // the columns the page opens on, one for each class's leader. The rendering
+  // the columns the page opens on, one for each class the field runs. The rendering
   // at lap 180 is determined solely by the lap data.
   test('should render a mid-race state correctly', async ({ page }) => {
     await setLapCount(page, 180);

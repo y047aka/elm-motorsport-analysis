@@ -1,8 +1,8 @@
-module Motorsport.Analysis.Pace exposing (racingTimes, bestSectors)
+module Motorsport.Analysis.Pace exposing (racingLaps, racingTimes, bestSectors)
 
 {-| How quickly a car went round, over a stretch of the race.
 
-@docs racingTimes, bestSectors
+@docs racingLaps, racingTimes, bestSectors
 
 -}
 
@@ -14,7 +14,8 @@ import Motorsport.Sector as Sector exposing (BySector)
 
 
 {-| The car's laps on the road inside the range, with the outliers among them
-dropped.
+dropped -- the whole laps, for a drawing that wants more off a lap than its
+time.
 
 The fence comes off the whole race the car has run rather than off the range,
 because what counts as an outlier is a fact about the car's pace and not about
@@ -24,8 +25,8 @@ puts the third quartile up among those laps, and a fence drawn from there lets
 every one of them through.
 
 -}
-racingTimes : LapRange -> List Lap -> List Duration
-racingTimes range history =
+racingLaps : LapRange -> List Lap -> List Lap
+racingLaps range history =
     let
         -- filterMap, not map: a lap the source data has no time for is not a
         -- lap run in no time, and has no place in a reading of the pace.
@@ -41,8 +42,14 @@ racingTimes range history =
     in
     history
         |> LapRange.within range
-        |> List.filterMap timeOf
-        |> List.filter (\t -> t <= fence)
+        |> List.filter (\lap -> Maybe.map (\t -> t <= fence) (timeOf lap) |> Maybe.withDefault False)
+
+
+{-| The times of those laps, fastest-first or slowest-first left to the caller.
+-}
+racingTimes : LapRange -> List Lap -> List Duration
+racingTimes range history =
+    racingLaps range history |> List.filterMap .time
 
 
 {-| The best each sector of the lap has been driven in, over the laps inside the
@@ -55,12 +62,12 @@ see [`Lap.isRacingLap`](Motorsport-Lap#isRacingLap).
 bestSectors : LapRange -> List Lap -> BySector (Maybe Duration)
 bestSectors range laps =
     let
-        racingLaps =
+        racing =
             laps |> LapRange.within range |> List.filter Lap.isRacingLap
     in
     Sector.initialize
         (\sector ->
-            racingLaps
+            racing
                 |> List.filterMap (\lap -> (Sector.get sector lap.sectors).time)
                 |> List.minimum
         )

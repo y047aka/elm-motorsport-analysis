@@ -26,12 +26,13 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant
+import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Wec.Class as Class
+import Motorsport.Wec.Class as Class exposing (Class)
 import Page.Wec.Columns as Columns
 import Page.Wec.Resize as Resize
 import Route
@@ -48,6 +49,7 @@ import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
+import View.ClassColumn as ClassColumn
 import View.ClassMark as ClassMark
 import View.LiveStandings as LiveStandings
 import View.PitLane as PitLane
@@ -184,7 +186,7 @@ update shared msg m =
 
 
 {-| The field is read at the moment of the message, never kept: the strip's
-update takes it as an argument and the stand-ins are off it.
+update takes it as an argument and the class columns are read off it.
 -}
 field : Shared.Model -> Maybe Snapshot
 field shared =
@@ -266,7 +268,7 @@ unavailable shared =
 {-| The strip's columns, in order, at the moment of the render or the
 message. Read once per render and handed to everything that draws or names
 a column: playback re-reads the order every frame, and each reading costs
-the field walk the stand-ins are resolved against.
+the field walk the columns are resolved against.
 -}
 columnKeys : Shared.Model -> Model -> List Columns.StripKey
 columnKeys shared m =
@@ -366,6 +368,18 @@ gridColumns pane =
             "grid-cols-[auto_1fr]"
 
 
+{-| Where each car started, by number: the grid the standings and a class's own
+column measure a move against.
+
+Foldr, so that where the source data has two cars under one number the one
+running ahead wins, as in `Snapshot.get`.
+
+-}
+gridOf : List Car -> Dict CarNumber Position
+gridOf cars =
+    List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty cars
+
+
 {-| The live standings, standing to the left of the strip rather than as one
 of its columns, and a grip along their right edge to drag them wider or
 narrower. The grip is drawn over the card's edge -- the card's own `class`
@@ -376,16 +390,14 @@ standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html M
 standingsCell keys m snapshot cars =
     let
         startPositions =
-            -- foldr, so that where the source data has two cars under one
-            -- number the one running ahead wins, as in `Snapshot.get`.
-            cars
-                |> List.foldr (\car -> Dict.insert car.metadata.carNumber car.startPosition) Dict.empty
+            gridOf cars
     in
     div
         [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid relative" ]
         [ LiveStandings.view
-            { onSelect = Columns.Open >> ColumnsMsg
+            { onSelect = pickCar
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
+            , openColumn = openColumn keys
             , width = m.standings.width
             , startPosition = \number -> Dict.get number startPositions
             }
@@ -393,6 +405,43 @@ standingsCell keys m snapshot cars =
         , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]
             [ Html.map ResizeMsg (Resize.grip m.standings) ]
         ]
+
+
+{-| A car picked -- from the standings, or from the class's column it is running
+in. Kept whole and top-level, because both panels' rows compare what they are
+handed by reference; see `ClassColumn.Config`.
+
+The strip scrolls to the column it opened, which is `Columns`'s to do.
+
+-}
+pickCar : CarNumber -> Msg
+pickCar carNumber =
+    ColumnsMsg (Columns.Open (Columns.Car carNumber))
+
+
+{-| A car picked that has a column already: the strip goes to that column rather
+than opening a second one.
+-}
+revealCar : CarNumber -> Msg
+revealCar carNumber =
+    FocusColumn (Columns.Car carNumber)
+
+
+{-| The standings' message for a class: nothing where the class's column is
+standing, and the column called for where the reader has closed it -- a class's
+name in the standings is where a closed column is asked for again.
+-}
+openColumn : List Columns.StripKey -> Class -> Maybe Msg
+openColumn keys class_ =
+    let
+        key =
+            Columns.ClassColumn class_
+    in
+    if List.member key keys then
+        Nothing
+
+    else
+        Just (ColumnsMsg (Columns.Open key))
 
 
 {-| One keyed child of the strip: a grid of the width the column stands at,
@@ -456,6 +505,9 @@ columnStrip cell track timeline keys m replay snapshot =
         placements =
             Columns.placements (always Columns.width) (Columns.carrying m.strip) keys
 
+        standing =
+            List.map (\car -> car.metadata.carNumber) (Columns.carsIn snapshot keys)
+
         columnCell key placement =
             case key of
                 Columns.Car carNumber ->
@@ -469,6 +521,12 @@ columnStrip cell track timeline keys m replay snapshot =
                                 )
                             |> Maybe.withDefault (text "")
                         )
+
+                Columns.ClassColumn class_ ->
+                    stripColumn (Columns.keyName key)
+                        Columns.width
+                        placement
+                        (classColumn several standing (Columns.isCarried placement) snapshot class_)
 
                 Columns.Tracker ->
                     stripColumn (Columns.keyName key)
@@ -514,6 +572,32 @@ columnGrip held key =
         }
 
 
+{-| One class of the field, which is what the strip opens with: `View.ClassColumn`
+draws its cars each against the class-mate ahead of it.
+-}
+classColumn : Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
+classColumn several standing held snapshot class_ =
+    ClassColumn.view
+        { onSelect = pickCar
+        , onReveal = revealCar
+        , withColumns = standing
+        , onClose =
+            if several then
+                Just (ColumnsMsg (Columns.Close (Columns.ClassColumn class_)))
+
+            else
+                Nothing
+        , grip =
+            if several then
+                Just (columnGrip held (Columns.ClassColumn class_))
+
+            else
+                Nothing
+        }
+        snapshot
+        class_
+
+
 carCard : Bool -> Timeline -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
 carCard several timeline held comparison cars snapshot car =
     let
@@ -533,7 +617,7 @@ carCard several timeline held comparison cars snapshot car =
                     { toMsg = CarDetailMsg
                     , onClose =
                         if several then
-                            Just (ColumnsMsg (Columns.Close carNumber))
+                            Just (ColumnsMsg (Columns.Close (Columns.Car carNumber)))
 
                         else
                             Nothing
@@ -565,7 +649,9 @@ bottomPanel tab table cars timeline snapshot =
                     CarCardList.view snapshot
 
                 EventsTab ->
-                    DataView.view (timelineTableConfig cars) table (List.indexedMap Tuple.pair (Timeline.toList timeline))
+                    DataView.view (timelineTableConfig cars)
+                        table
+                        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
     in
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
@@ -611,7 +697,8 @@ draws belongs to a lap. The car column is the right-hand timeline's own
 
 Rows are keyed by their place in the timeline — a number no two events share,
 where a moment's milliseconds and its words are the same for any two events
-of one kind at one instant, which the file can hold.
+of one kind at one instant, which the file can hold. The fastest-lap events
+are not among the rows; see `isFastestLap`.
 
 -}
 timelineTableConfig : List Car -> DataView.Config ( Int, TimelineEvent ) Msg
@@ -720,8 +807,24 @@ eventRows cars timeline occurredCount =
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
+        |> List.filter (not << isFastestLap)
         |> List.map (eventRow carsByNumber)
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
+
+
+{-| Fastest-lap events are kept out of both event lists -- the teaser beside
+the tracker, and the Events table in its own tab; their news is the reference
+lap at the head of a class's column and the records on a car's panel. The
+teaser's limit counts the events read, so it can hold fewer lines than it.
+-}
+isFastestLap : TimelineEvent -> Bool
+isFastestLap event =
+    case event.eventType of
+        CarEvent _ FastestLap ->
+            True
+
+        _ ->
+            False
 
 
 {-| A row is one line as tall as the badge: the `1.375rem` is
@@ -742,12 +845,7 @@ eventRow carsByNumber event =
             div [ Attributes.class classes ] children
 
         name =
-            case ( event.eventType, car |> Maybe.andThen (\item -> TimelineEvent.runningLap item event) |> Maybe.andThen .time ) of
-                ( CarEvent _ FastestLap, Just time ) ->
-                    Duration.toString time ++ " (Fastest)"
-
-                _ ->
-                    TimelineEvent.describe event.eventType
+            TimelineEvent.describe event.eventType
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
         [ cell "" [ car |> Maybe.map (.metadata >> ClassMark.view) |> Maybe.withDefault (text "") ]
@@ -859,6 +957,9 @@ headerColumn maybeSnapshot key =
                 ( Columns.Car carNumber, Nothing ) ->
                     span [ Attributes.class "w-[35px] text-center text-xs font-bold" ] [ text carNumber ]
 
+                ( Columns.ClassColumn class_, _ ) ->
+                    classMark class_
+
                 ( Columns.Tracker, _ ) ->
                     mark "TRACK"
 
@@ -871,6 +972,9 @@ headerColumn maybeSnapshot key =
                 Columns.Car carNumber ->
                     "Scroll to car #" ++ carNumber
 
+                Columns.ClassColumn class_ ->
+                    "Scroll to the " ++ Class.toString class_ ++ " column"
+
                 Columns.Tracker ->
                     "Scroll to the tracker"
     in
@@ -881,6 +985,24 @@ headerColumn maybeSnapshot key =
         , Attributes.title labelText
         ]
         [ badge ]
+
+
+{-| A class in the header's list of columns: its name on the bar of its own
+colour, at the width the name wants -- no class is called by a number.
+
+Its tile stands as tall as the car's stacked badge's does, so that opening or
+closing a car's column cannot move the page under the reader. The class
+mark in the standings and in a column's head is the same bar at its own height;
+this one is drawn in a tile beside tiles.
+
+-}
+classMark : Class -> Html Msg
+classMark class_ =
+    div
+        [ Attributes.class "min-h-[42px] p-1 rounded flex items-center gap-x-1 border border-border leading-none text-[9px] font-bold whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        , attribute "style" ("--class-color: " ++ Class.toColor class_ ++ ";")
+        ]
+        [ text (Class.toString class_) ]
 
 
 {-| The arrows point at the edge the pane lives on.

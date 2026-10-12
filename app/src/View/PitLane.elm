@@ -1,14 +1,17 @@
-module View.PitLane exposing (view)
+module View.PitLane exposing (board, view)
 
 {-| The cars in the pit lane at the moment the page is showing: the ones being
 served, and the ones already driving away down the lane.
 
-The lane is the tracker's own, and answers to no click: it says who is in the lane
-at all rather than who the reader picked. Everything a row shows is a reading of
-the snapshot -- [`CarAt.inLane`](Motorsport-Race-Snapshot#inLane) is where the
-stop and the handover come from -- so the list asks nothing of the cars' laps.
+The lane answers to no click: it says who is in the lane at all rather than who
+the reader picked. Everything a row shows is a reading of the snapshot --
+[`CarAt.inLane`](Motorsport-Race-Snapshot#inLane) is where the stop and the
+handover come from -- so the list asks nothing of the cars' laps.
 
-@docs view
+The board is ruled once and scoped by its caller: the tracker gives it the
+whole field, and a class column gives it the cars of its own class.
+
+@docs board, view
 
 -}
 
@@ -23,14 +26,22 @@ import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 
 
-{-| The list, headed by the count of the cars being served.
+{-| The lane of the whole field, headed by the count of the cars being served.
 -}
 view : Snapshot -> Html msg
 view snapshot =
+    board (Snapshot.toList snapshot)
+
+
+{-| The lane of the cars given: who is being served and who is driving away,
+the ones being served first.
+-}
+board : List CarAt -> Html msg
+board cars =
     let
         inLane : List ( CarAt, Lane )
         inLane =
-            Snapshot.toList snapshot
+            cars
                 |> List.filterMap (\car -> Maybe.map (Tuple.pair car) car.inLane)
                 |> List.sortWith servedFirst
 
