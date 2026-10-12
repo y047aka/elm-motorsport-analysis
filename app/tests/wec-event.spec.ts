@@ -1,7 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { waitForPageReady, setLapCount } from './helpers';
 
-const TRACKER_PANE = '[data-tracker-pane]';
 const TRACKER_COLUMN = '[data-tracker-column]';
 
 /**
@@ -36,13 +35,5 @@ test.describe('Le Mans 2025 Visual Tests', () => {
     await setLapCount(page, 180);
     await waitForTrackerColumn(page);
     await expect(page.locator(TRACKER_COLUMN)).toHaveScreenshot('tracker-column-lap-180.png');
-  });
-
-  // The tracker's pane: the same circuit at the detail the page opens with, which
-  // is drawn at a scale where a tenth of a metre of the survey is a larger part of
-  // the shot than of any other.
-  test('should render the tracker in its pane', async ({ page }) => {
-    await setLapCount(page, 180);
-    await expect(page.locator(TRACKER_PANE)).toHaveScreenshot('tracker-pane-lap-180.png');
   });
 });

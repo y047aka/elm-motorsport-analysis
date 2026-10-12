@@ -145,7 +145,7 @@ fetched at runtime via `Http`.
   that is not shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
   `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
-  the car cards, the live standings, a class's own column, the tracker's pit lane
+  the car cards, the live standings, a class's own column with its pit lane
   list, and the badge and class mark those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from

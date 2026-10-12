@@ -1,4 +1,4 @@
-module View.PitLane exposing (board, view)
+module View.PitLane exposing (board)
 
 {-| The cars in the pit lane at the moment the page is showing: the ones being
 served, and the ones already driving away down the lane.
@@ -8,10 +8,10 @@ the reader picked. Everything a row shows is a reading of the snapshot --
 [`CarAt.inLane`](Motorsport-Race-Snapshot#inLane) is where the stop and the
 handover come from -- so the list asks nothing of the cars' laps.
 
-The board is ruled once and scoped by its caller: the tracker gives it the
-whole field, and a class column gives it the cars of its own class.
+The board is ruled once and scoped by its caller: a class column gives it the
+cars of its own class.
 
-@docs board, view
+@docs board
 
 -}
 
@@ -20,17 +20,10 @@ import Html.Attributes exposing (class)
 import Html.Keyed
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Lane, Snapshot)
+import Motorsport.Race.Snapshot exposing (CarAt, Lane)
 import Motorsport.Status as Status
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
-
-
-{-| The lane of the whole field, headed by the count of the cars being served.
--}
-view : Snapshot -> Html msg
-view snapshot =
-    board (Snapshot.toList snapshot)
 
 
 {-| The lane of the cars given: who is being served and who is driving away,

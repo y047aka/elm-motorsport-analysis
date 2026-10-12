@@ -51,7 +51,6 @@ import View.CarNumberBadge as CarNumberBadge
 import View.ClassColumn as ClassColumn
 import View.ClassMark as ClassMark
 import View.LiveStandings as LiveStandings
-import View.PitLane as PitLane
 import View.PlaybackControls as PlaybackControls
 
 
@@ -263,17 +262,21 @@ headerTitle shared =
 
 
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
-the one thing that takes it away; the body answers to no click.
+the one thing that takes it away.
 
 The card splits two-to-one: the drawing fills the top two thirds, and the
-cars in the pit lane -- standing in their boxes or already driving away --
-fill the bottom third, scrolling once they outnumber it.
+most recent events of the round fill the bottom third, scrolling once they
+outnumber it; a press on them opens a popover.
 
 It carries `data-tracker-column`, which the visual tests locate it by.
 
 -}
-trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
-trackerCard several held track snapshot =
+trackerCard : Bool -> Bool -> TrackerChart.Track -> Replay.Model -> Timeline -> Snapshot -> Html Msg
+trackerCard several held track replay fieldEvents snapshot =
+    let
+        occurredCount =
+            Timeline.countUpTo (Clock.getElapsed replay.playback) fieldEvents
+    in
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
             [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)]"
@@ -292,7 +295,16 @@ trackerCard several held track snapshot =
                         )
                     ]
                 ]
-            , Card.content [] [ PitLane.view snapshot ]
+            , button
+                [ attribute "popovertarget" standingsPopoverId
+                , attribute "popovertargetaction" "show"
+                , Attributes.class "min-h-0 grid cursor-pointer text-left"
+                ]
+                [ div [ Attributes.class "min-h-0 overflow-y-auto" ]
+                    [ Card.content []
+                        [ Html.Lazy.lazy3 eventRows replay.race.cars fieldEvents occurredCount ]
+                    ]
+                ]
             ]
         ]
 
@@ -305,11 +317,6 @@ mainGrid round keys m =
 
         replay =
             round.replay
-
-        gridCells =
-            standingsCell keys m snapshot replay.race.cars
-                :: columnStrip "col-start-2 row-start-1 row-span-2" round.track round.timeline keys m replay snapshot
-                :: paneCells round.track snapshot round.fieldEvents replay
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
@@ -319,8 +326,10 @@ mainGrid round keys m =
             -- assembled from fragments silently ships no
             -- `grid-template-columns` at all, and every track sizes to its
             -- content.
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[auto_1fr_270px] grid-rows-[300px_minmax(0,1fr)] gap-2.5" ]
-            gridCells
+            [ Attributes.class "shrink-0 h-full grid grid-cols-[auto_1fr] gap-2.5" ]
+            [ standingsCell keys m snapshot replay.race.cars
+            , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
+            ]
         , bottomPanel m.bottomTab m.timelineTable round.replay.race.cars round.timeline snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
@@ -352,7 +361,7 @@ standingsCell keys m snapshot cars =
             gridOf cars
     in
     div
-        [ Attributes.class "col-start-1 row-start-1 row-span-2 min-h-0 grid relative" ]
+        [ Attributes.class "col-start-1 min-h-0 grid relative" ]
         [ LiveStandings.view
             { onSelect = pickCar
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
@@ -419,39 +428,8 @@ stripColumn key width placement content =
     )
 
 
-{-| The tracker's pane and the timeline, in the grid's third track.
-
-The tracker's box is settled the way the tracker column settles its own --
-row, grow, row -- because the card's content has no height of its own to
-give a drawing a percentage of: a drawing sized only by its viewBox's aspect,
-and a tall circuit's is very tall, runs past the card's border instead of
-inside it.
-
--}
-paneCells : TrackerChart.Track -> Snapshot -> Timeline -> Replay.Model -> List (Html Msg)
-paneCells track snapshot fieldEvents replay =
-    [ div
-        [ Attributes.class "col-start-3 row-start-1 h-full grid grid-rows-[minmax(0,1fr)] cursor-pointer"
-        , attribute "data-tracker-pane" ""
-        , onClick (ColumnsMsg (Columns.ShowTracker True))
-        ]
-        [ Card.card []
-            [ div
-                [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
-                [ Card.content []
-                    [ div
-                        [ Attributes.class "relative h-full w-full grid place-items-center" ]
-                        [ TrackerChart.view TrackerChart.Compact track snapshot ]
-                    ]
-                ]
-            ]
-        ]
-    , timelinePanel "col-start-3 row-start-2" fieldEvents replay
-    ]
-
-
-columnStrip : String -> TrackerChart.Track -> Timeline -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
-columnStrip cell track timeline keys m replay snapshot =
+columnStrip : String -> TrackerChart.Track -> Timeline -> Timeline -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track timeline fieldEvents keys m replay snapshot =
     let
         several =
             List.length keys > 1
@@ -486,7 +464,7 @@ columnStrip cell track timeline keys m replay snapshot =
                     stripColumn (Columns.keyName key)
                         Columns.width
                         placement
-                        (trackerCard several (Columns.isCarried placement) track snapshot)
+                        (trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot)
     in
     case keys of
         [] ->
@@ -646,8 +624,8 @@ timelineTableOptions =
 
 {-| The events table, configured on the DataView directly rather than through
 the `Leaderboard`: these are events, not the field, and what the `Leaderboard`
-draws belongs to a lap. The car column is the right-hand timeline's own
-`carBadge`, so a number reads the same on both halves of the page.
+draws belongs to a lap. The car column is the tracker column's own
+`carBadge`, so a number reads the same in both event lists.
 
 Rows are keyed by their place in the timeline — a number no two events share,
 where a moment's milliseconds and its words are the same for any two events
@@ -720,37 +698,12 @@ whose it was, and what kind of thing it was.
 
 `recentEventLimit` counts the rows here, not the round's events.
 
--}
-timelinePanel : String -> Timeline -> Replay.Model -> Html Msg
-timelinePanel cell fieldEvents replay =
-    let
-        occurredCount =
-            Timeline.countUpTo (Clock.getElapsed replay.playback) fieldEvents
-    in
-    button
-        [ attribute "popovertarget" standingsPopoverId
-        , attribute "popovertargetaction" "show"
-        , Attributes.class (cell ++ " grid min-h-0 cursor-pointer text-left")
-        ]
-        [ Card.card []
-            [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
-                [ Card.content []
-                    [ Html.Lazy.lazy3 eventRows replay.race.cars fieldEvents occurredCount ]
-                ]
-            ]
-        ]
-
-
-recentEventLimit : Int
-recentEventLimit =
-    100
-
-
-{-| The panel's rows, rebuilt only when an event arrives. A thunk's arguments are
+The rows are rebuilt only when an event arrives. A thunk's arguments are
 compared by `===`, so every one of these is held to something that survives a
 frame: the cars and the timeline never move under playback, and the count is a
 number. Anything frame-made passed instead -- a snapshot, or the cut list itself
 -- is a fresh reference on every frame and misses.
+
 -}
 eventRows : List Car -> Timeline -> Int -> Html Msg
 eventRows cars timeline occurredCount =
@@ -766,10 +719,16 @@ eventRows cars timeline occurredCount =
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
 
 
-{-| Fastest-lap events are kept out of both event lists -- the teaser beside
-the tracker, and the Events table in its own tab; their news is the reference
-lap at the head of a class's column and the records on a car's panel. The
-teaser's limit counts the events read, so it can hold fewer lines than it.
+recentEventLimit : Int
+recentEventLimit =
+    100
+
+
+{-| Fastest-lap events are kept out of both event lists -- the one in the
+tracker's column, and the Events table in its own tab; their news is the
+reference lap at the head of a class's column and the records on a car's panel.
+The tracker column's limit counts the events read, so it can hold fewer lines
+than it.
 -}
 isFastestLap : TimelineEvent -> Bool
 isFastestLap event =
