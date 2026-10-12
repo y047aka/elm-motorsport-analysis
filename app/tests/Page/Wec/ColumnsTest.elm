@@ -34,22 +34,22 @@ suite =
                     Columns.init
                         |> step (ShowTracker True)
                         |> keys
-                        |> Expect.equal (standIns ++ [ Tracker ])
+                        |> Expect.equal (classColumns ++ [ Tracker ])
             , test "the class columns are re-read, not frozen" <|
                 \_ ->
                     Columns.init
                         |> step (ShowTracker True)
                         |> keysOf
-                        |> Expect.equal (standIns ++ [ Tracker ])
+                        |> Expect.equal (classColumns ++ [ Tracker ])
             ]
         , describe "settling"
-            [ test "picking a column up settles the stand-ins" <|
+            [ test "picking a column up settles the strip" <|
                 \_ ->
                     Columns.init
                         |> step (ShowTracker True)
                         |> step (Grab (Car "1") (pointer 1 0))
                         |> keys
-                        |> Expect.equal (standIns ++ [ Tracker ])
+                        |> Expect.equal (classColumns ++ [ Tracker ])
             , test "a carry let go of where it began puts back what picking it up settled" <|
                 \_ ->
                     -- `before` is the order as the tracker's column stood it,
@@ -67,7 +67,7 @@ suite =
                 \_ ->
                     -- The first class's column is carried one column right; the
                     -- tracker stays behind columns that have settled.
-                    case standIns of
+                    case classColumns of
                         headKey :: nextKey :: _ ->
                             Columns.init
                                 |> step (ShowTracker True)
@@ -76,7 +76,7 @@ suite =
                                 |> step (Release (pointer 1 Columns.width))
                                 |> keys
                                 |> Expect.equal
-                                    ([ nextKey, headKey ] ++ List.drop 2 standIns ++ [ Tracker ])
+                                    ([ nextKey, headKey ] ++ List.drop 2 classColumns ++ [ Tracker ])
 
                         _ ->
                             Expect.fail "the fixture fields fewer than two classes"
@@ -88,7 +88,7 @@ suite =
                         |> step (ShowTracker True)
                         |> step (Open (Car "9"))
                         |> keysOf
-                        |> Expect.equal (standIns ++ [ Car "9", Tracker ])
+                        |> Expect.equal (classColumns ++ [ Car "9", Tracker ])
             , test "a class's column opened again joins the back and not its old place" <|
                 \_ ->
                     Columns.init
@@ -98,7 +98,7 @@ suite =
                         |> Expect.equal [ classColumnOf "LMGT3", classColumnOf "HYPERCAR" ]
             , test "opening a column the strip holds already changes nothing" <|
                 \_ ->
-                    case standIns of
+                    case classColumns of
                         headKey :: _ ->
                             step (Open headKey) Columns.init
                                 |> .order
@@ -145,13 +145,13 @@ suite =
             , test "stepping the tracker fixes it among the columns" <|
                 \_ ->
                     -- One step left: the tracker takes the second-to-last
-                    -- place of the settled stand-ins.
+                    -- place of the settled strip.
                     Columns.init
                         |> step (ShowTracker True)
                         |> step (Step Tracker -1)
                         |> keys
                         |> Expect.equal
-                            (List.take (List.length standIns - 1) standIns ++ [ Tracker ] ++ List.drop (List.length standIns - 1) standIns)
+                            (List.take (List.length classColumns - 1) classColumns ++ [ Tracker ] ++ List.drop (List.length classColumns - 1) classColumns)
             ]
         , describe "carries"
             [ test "a step is ignored while a column is carried" <|
@@ -171,10 +171,10 @@ suite =
                         |> Expect.equal ( Columns.init, Cmd.none )
             , test "closing the carried column is not undone by letting go" <|
                 \_ ->
-                    -- The carry settles the stand-ins; closing a column then
+                    -- The carry settles the strip; closing a column then
                     -- changes the order, and a no-travel release must not put
                     -- back what would reopen it.
-                    case standIns of
+                    case classColumns of
                         headKey :: _ ->
                             Columns.init
                                 |> step (Grab headKey (pointer 1 0))
@@ -207,7 +207,7 @@ suite =
                         |> step (Open (Car "9"))
                         |> step (Step (Car "9") -1)
                         |> .announcement
-                        |> Expect.equal ("Car #9 moved to column 2 of " ++ String.fromInt (List.length standIns + 1))
+                        |> Expect.equal ("Car #9 moved to column 2 of " ++ String.fromInt (List.length classColumns + 1))
             , test "a moved class column is announced by its class" <|
                 \_ ->
                     Columns.init
@@ -216,10 +216,10 @@ suite =
                         |> Expect.equal "LMGT3 column moved to column 1 of 2"
             , test "a carry is clamped by the widths that stand, not the pitch that counts" <|
                 \_ ->
-                    -- The first stand-in stands a narrow slot wide; the second
+                    -- The first class column stands a narrow slot wide; the second
                     -- column carried past it is held at its right edge, and it
                     -- steps aside by its own slot rather than a full pitch.
-                    case standIns of
+                    case classColumns of
                         firstKey :: secondKey :: _ ->
                             let
                                 narrow key =
@@ -250,7 +250,7 @@ suite =
                                 ()
 
                         _ ->
-                            Expect.fail "the fixture fields fewer than two stand-ins"
+                            Expect.fail "the fixture fields fewer than two class columns"
             ]
         ]
 
@@ -278,8 +278,8 @@ keysOf model =
 {-| The columns the strip opens with: one for each class the fixture's field has
 cars out in, in the order its running order puts the classes.
 -}
-standIns : List StripKey
-standIns =
+classColumns : List StripKey
+classColumns =
     Columns.keysOf field Columns.init.order
 
 

@@ -34,8 +34,7 @@ view snapshot =
 
 
 {-| The lane of the cars given: who is being served and who is driving away,
-the ones being served first. The caller scopes the board -- the tracker gives
-it the field, a class column gives it the cars of its class.
+the ones being served first.
 -}
 board : List CarAt -> Html msg
 board cars =

@@ -207,29 +207,13 @@ A class's column (`View/ClassColumn.elm`) is how a race is followed while it is
 still sorting itself out, and is the standings read down one class instead of the
 field: every car the class has, class place first, the interval to the class-mate
 ahead rather than to whoever is ahead, and the class's own fastest lap as the
-reference rather than the race's -- an LMGT3 car leading its class is race leader
-nobody would call quick. A row picks that car, whose panel opens beside the
-class's column; a row whose car is up already is marked and scrolls the strip to
-that column rather than opening a second. Where a class's column has been closed,
-its name in the standings is the press that calls it back.
-
-Two lines to a car: its readings in tracks of their own -- class place, number
-badge, name, interval -- so each reading is a column down the class, and under
-them the team the car runs for and its photograph; the driver's name and the
-team are the two lines that elide when one outgrows the column, and the row's
-tooltip tells each whole.
-Three class columns do not fit a 1440 viewport, so the one reading the strip's
-edge takes is the interval. The row draws no move at all: what a car has gained
-or lost since the grid is the reading the standings beside the strip make for
-the field, and the track it would have cost holds the car's photograph. The
-lane marks its cars where the move would have stood -- PIT, OUT, Retired, under
-the interval and left of the photograph -- and before the class has completed a
-lap there is no interval either, and the column is the starting grid it is.
-
-The class is drawn in classification order, so it comes in blocks: a rule between
-the rows says how many laps back the cars below are, and the cars that stopped get
-a rule naming them rather than a distance -- nothing is measured between a car
-that stopped and one that did not.
+reference rather than the race's. A row picks that car, whose panel opens beside
+the class's column; a row whose car is up already is marked and scrolls the
+strip to that column rather than opening a second. Where a class's column has
+been closed, its name in the standings is the press that calls it back. The
+class is drawn in classification order, so a column comes in blocks with a rule
+between them -- nothing is measured between a car that stopped and one that
+did not.
 
 Every column is drawn `Columns.width` wide, and everything that measures the
 strip -- where a column stands, how far a carry moves one, how far a press

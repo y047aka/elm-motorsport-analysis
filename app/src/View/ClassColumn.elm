@@ -57,17 +57,13 @@ type alias Config msg =
     }
 
 
-{-| What the column counts off the class as a whole, once a frame: the laps the
-class leader has completed, which is what every car's distance is measured
-against.
+{-| The laps the class leader has completed, which is what every car's distance
+is measured against.
 -}
 type alias Count =
     { lead : Int }
 
 
-{-| The laps the class leader has completed. A class that has completed none
-has nobody to be measured against yet.
--}
 count : List CarAt -> Count
 count cars =
     { lead =
@@ -95,9 +91,9 @@ view config snapshot class_ =
             Snapshot.inClass class_ snapshot
 
         -- Each car with the class-mate ahead of it, which is the car its gap is
-        -- measured to. The head of the class is ahead of nobody, and until the class
-        -- has completed a lap nobody is measured against anybody: the column is the
-        -- starting grid, and a reading down it would be one the timing has not taken.
+        -- measured to. The head of the class is ahead of nobody, and until the
+        -- class has completed a lap nobody is measured against anybody: the
+        -- column is the starting grid.
         field =
             let
                 ahead =
@@ -112,9 +108,6 @@ view config snapshot class_ =
         counted =
             count cars
 
-        -- The class's cars in the lane, in the board's own order. An empty lane
-        -- takes no third line at all: an auto track with nothing but a rule
-        -- across it would cost the standings a line that says nothing.
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
 
@@ -144,11 +137,7 @@ view config snapshot class_ =
         ]
 
 
-{-| The class's own pit board: the tracker's board ruled with just this class's
--- which of its cars is being served and which is driving away, and who is in
-the car, the driver change the box just made among them. The lane's readings
-stand apart from the standings above: a car in its box has no interval and no
-place to report, and its row here says who climbed in instead.
+{-| The class's own pit board: the tracker's board ruled with just this class's.
 -}
 pitBoard : List CarAt -> Html msg
 pitBoard lane =
@@ -248,11 +237,12 @@ corner config =
 badge at the left, the driver over the team beside it, and the car itself side
 on down the whole right edge of the row.
 
-The readings -- class place and interval -- keep the tracks they had when the
-row was one line, so each is still a column down the class. Three class columns
-do not fit a 1440 viewport, so the track at the strip's edge is the one reading
-worth losing, and it is not this one: the row holds no move at all, the space
-where it stood spent on the photograph instead.
+The readings -- class place and interval -- each hold a track of their own, so
+each is a column down the class. The row draws no move at all: what a car has
+gained or lost since the grid is the reading the standings beside the strip
+make for the field, and measured in the class it would be a second ranking of
+cars this column already ranks by the timing. The track a move would have cost
+holds the car's photograph.
 
 The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
@@ -320,8 +310,7 @@ rowButton config item picked =
     , title (item.metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver)
     ]
         ++ (if picked then
-                -- The car's own colour, thinned enough to write on: the same
-                -- mark a row of the standings wears once its car is up.
+                -- The same mark a row of the standings wears once its car is up.
                 [ style "background-color"
                     ("color-mix(in oklch, " ++ item.metadata.manufacturer.color ++ " 25%, transparent)")
                 , onClick (config.onReveal item.metadata.carNumber)
@@ -377,10 +366,7 @@ group lead item =
         Just (lead - item.standing.lapsCompleted)
 
 
-{-| The rule between two groups of a class, naming what separates them: how many
-laps back the cars below are, or that the cars below are the ones that stopped.
-The class is drawn in classification order, so a group comes in one block and
-there is one rule per group.
+{-| The rule between two groups of a class, naming what separates them.
 -}
 division : Maybe Int -> Html msg
 division back =
@@ -413,6 +399,11 @@ lapsText laps =
 lines; the two names, which are what give when there is no room; the interval;
 and the photograph against the edge. The team and the lane's marks fill the
 second line under the name and the reading.
+
+Three class columns do not fit a 1440 viewport: this is the width budget the
+tracks are drawn to, and why the row spends its edge on the photograph rather
+than on another reading.
+
 -}
 rowClass : String
 rowClass =
@@ -437,16 +428,8 @@ ordinal item =
 
 {-| What the car is doing rather than where it stands: standing in its box,
 driving out of the lane, stopped for good -- marked under the interval, where a
-move arrow would have stood.
-
-The row draws no move at all. What a car has gained or lost since the grid is
-the reading the standings beside the strip make for the field; measured in the
-class it would be a second ranking of cars this column already ranks by the
-timing, and the track it cost is the photograph's now. A car on the road is
-marked nowhere, and the track is drawn even then: the row's tracks name their
-columns rather than being auto-placed, and a track that sometimes is not there
-at all would shift its neighbours.
-
+move arrow would have stood. A car on the road is marked nowhere, and its
+track is drawn even then.
 -}
 now : CarAt -> Html msg
 now item =
@@ -479,8 +462,7 @@ Hypercar standing between two LMP2 cars is on the road between them and is timed
 with them, and `Snapshot.gapBetween` adds the intervals along that road rather
 than counting the cars on it.
 
-The head of a class is ahead of nobody in its class and draws no reading at all,
-which is what a classification leaves the head of a class.
+The head of a class is ahead of nobody in its class and draws no reading at all.
 
 -}
 gapAhead : Snapshot -> Maybe CarAt -> CarAt -> Html msg

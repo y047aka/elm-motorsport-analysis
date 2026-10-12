@@ -186,7 +186,7 @@ update shared msg m =
 
 
 {-| The field is read at the moment of the message, never kept: the strip's
-update takes it as an argument and the stand-ins are off it.
+update takes it as an argument and the class columns are read off it.
 -}
 field : Shared.Model -> Maybe Snapshot
 field shared =
@@ -268,7 +268,7 @@ unavailable shared =
 {-| The strip's columns, in order, at the moment of the render or the
 message. Read once per render and handed to everything that draws or names
 a column: playback re-reads the order every frame, and each reading costs
-the field walk the stand-ins are resolved against.
+the field walk the columns are resolved against.
 -}
 columnKeys : Shared.Model -> Model -> List Columns.StripKey
 columnKeys shared m =
@@ -408,8 +408,8 @@ standingsCell keys m snapshot cars =
 
 
 {-| A car picked -- from the standings, or from the class's column it is running
-in. Whole and top-level, because both panels thunk their rows and compare this by
-reference: a composition built per render redraws every row on every frame.
+in. Kept whole and top-level, because both panels' rows compare what they are
+handed by reference; see `ClassColumn.Config`.
 
 The strip scrolls to the column it opened, which is `Columns`'s to do.
 
@@ -428,9 +428,8 @@ revealCar carNumber =
 
 
 {-| The standings' message for a class: nothing where the class's column is
-standing, and the column called for where the reader has closed it. The class's
-name in the standings is where a closed column is asked for again, since it is
-where the class's cars are listed already.
+standing, and the column called for where the reader has closed it -- a class's
+name in the standings is where a closed column is asked for again.
 -}
 openColumn : List Columns.StripKey -> Class -> Maybe Msg
 openColumn keys class_ =
@@ -573,13 +572,8 @@ columnGrip held key =
         }
 
 
-{-| One class of the field, which is what the strip opens with: the class's cars
-in running order, each against the class-mate ahead of it.
-
-A row picks the car it names, and that car's own column opens beside the class's.
-A row whose car is up already is drawn marked, and the strip goes to that column
-instead of opening a second one.
-
+{-| One class of the field, which is what the strip opens with: `View.ClassColumn`
+draws its cars each against the class-mate ahead of it.
 -}
 classColumn : Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
 classColumn several standing held snapshot class_ =
@@ -655,7 +649,8 @@ bottomPanel tab table cars timeline snapshot =
                     CarCardList.view snapshot
 
                 EventsTab ->
-                    DataView.view (timelineTableConfig cars) table
+                    DataView.view (timelineTableConfig cars)
+                        table
                         (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
     in
     div [ Attributes.class "shrink-0 grid" ]
@@ -703,8 +698,7 @@ draws belongs to a lap. The car column is the right-hand timeline's own
 Rows are keyed by their place in the timeline — a number no two events share,
 where a moment's milliseconds and its words are the same for any two events
 of one kind at one instant, which the file can hold. The fastest-lap events
-are not among the rows, as they are not in the teaser beside the tracker
-either -- see `isFastestLap`.
+are not among the rows; see `isFastestLap`.
 
 -}
 timelineTableConfig : List Car -> DataView.Config ( Int, TimelineEvent ) Msg
@@ -819,11 +813,9 @@ eventRows cars timeline occurredCount =
 
 
 {-| Fastest-lap events are kept out of both event lists -- the teaser beside
-the tracker, and the Events table in its own tab. The fastest a class has run
-is the reference at the head of that class's own column, and the race's stands
-with the records on the car's panel; a line for every one of these only
-repeats news the strip is already showing. The teaser's limit counts the
-events read, so it can hold fewer lines than it.
+the tracker, and the Events table in its own tab; their news is the reference
+lap at the head of a class's column and the records on a car's panel. The
+teaser's limit counts the events read, so it can hold fewer lines than it.
 -}
 isFastestLap : TimelineEvent -> Bool
 isFastestLap event =
@@ -996,8 +988,7 @@ headerColumn maybeSnapshot key =
 
 
 {-| A class in the header's list of columns: its name on the bar of its own
-colour, which is the width the name wants rather than the car number's tile, since
-no class is called by a number.
+colour, at the width the name wants -- no class is called by a number.
 
 Its tile stands as tall as the car's stacked badge's does, so that opening or
 closing a car's column cannot move the page under the reader. The class

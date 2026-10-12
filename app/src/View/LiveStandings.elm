@@ -282,10 +282,9 @@ classSection config ( class_, cars ) =
 
 {-| Where the class's name stands at the head of its section of the standings.
 
-A class with a column of its own is a heading and nothing else, so the standings
-read the same however the strip is standing. A class whose column the reader took
-away is the press that puts it back, which belongs where the class's cars are
-listed already.
+A class with a column of its own is a heading and nothing else, so the
+standings read the same however the strip is standing. A class whose column
+the reader took away is the press that puts it back.
 
 -}
 classLine : Config msg -> Class -> Html msg

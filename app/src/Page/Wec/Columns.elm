@@ -40,11 +40,6 @@ import Task
 
 
 {-| A column of the strip: a class's, a car's, or the tracker's.
-
-The tracker's place in the order means where it stood when the stand-ins
-settled: while the stand-ins are live the tracker stands behind them,
-whatever their running order becomes.
-
 -}
 type StripKey
     = Car CarNumber
@@ -65,8 +60,8 @@ keyName key =
             "tracker"
 
 
-{-| What a column is called when one is spoken about, which is what a reader who
-moved a column by the keys is told.
+{-| What a column is called when one is spoken about, which is what the reader
+is told when a column moves.
 -}
 name : StripKey -> String
 name key =
@@ -95,9 +90,10 @@ carOfKey key =
 
 `Live` is one column for each class the field has cars out in, re-read from the
 snapshot as the race runs so that each class's order is its own, with the
-tracker's column behind them where its flag says. `Picked` is fixed, in the
-order the reader left them in, and any open, close or move settles the stand-ins
-into one.
+tracker's column behind them where its flag says. While live, the tracker
+trails the class columns however their running order moves. `Picked` is fixed,
+in the order the reader left them in, and any open, close or move settles the
+strip into one -- the tracker's index then means where it stood at that settle.
 
 -}
 type Columns
@@ -211,9 +207,9 @@ move key steps snapshot columns =
             columns
 
 
-{-| Adding and taking away the tracker's column. Nothing settles: while the
-stand-ins are live the tracker follows them as the flag says, and its place
-is only fixed by a settle of the cars' own.
+{-| Adding and taking away the tracker's column settles nothing: a live strip
+stays live and the tracker trails it as the flag says, and a settled one gains
+the tracker's column at its end or loses that column alone.
 -}
 showTracker : Snapshot -> Columns -> Columns
 showTracker snapshot columns =
@@ -240,7 +236,7 @@ hideTracker snapshot columns =
                 |> pickedOr (Live { tracker = False })
 
 
-{-| The stand-ins are re-read every frame, so a column being carried among
+{-| The class columns are re-read every frame, so a column being carried among
 them could change places under the pointer.
 -}
 settle : Snapshot -> Columns -> Columns
@@ -533,12 +529,7 @@ update field msg m =
 
 
 {-| A column the reader called for, and the strip scrolled as far as it takes to
-show it.
-
-Columns join the strip at its end, which is past what the page gives the strip to
-show: a press that opened a column off the right edge would read as a press that
-did nothing.
-
+show it -- a column joins at the strip's end, which may be past the right edge.
 -}
 openColumn : StripKey -> Maybe Snapshot -> Model -> ( Model, Cmd Msg )
 openColumn key field m =
