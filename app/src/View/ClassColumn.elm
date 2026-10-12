@@ -226,11 +226,11 @@ row config snapshot ( ahead, item ) =
         (rowButton config item picked ++ [ class rowClass ])
         [ ordinal item
         , div [ class "col-start-2 row-span-2 self-center" ] [ CarNumberBadge.viewCompact metadata ]
-        , div [ class "col-start-3 min-w-0 truncate text-[11px] font-semibold leading-[18px] tracking-tight", attribute "data-gives-way" "" ]
+        , div [ class "col-start-3 min-w-0 truncate ps-1.5 text-[11px] font-semibold leading-[18px] tracking-tight", attribute "data-gives-way" "" ]
             [ text (Driver.toInitialAndSurname item.currentDriver) ]
         , gapAhead snapshot ahead item
         , now item
-        , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
+        , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
         ]
@@ -370,7 +370,7 @@ second line under the name and the reading.
 -}
 rowClass : String
 rowClass =
-    "w-full grid grid-cols-[0.875rem_1.625rem_minmax(0,1fr)_3.375rem_5.25rem] items-start gap-x-[2px] gap-y-[2px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
+    "w-full grid grid-cols-[0.875rem_1.625rem_minmax(0,1fr)_3.375rem_5.25rem] items-start gap-x-[3px] gap-y-[2px] px-0.5 py-[2px] rounded text-left transition-colors cursor-pointer"
 
 
 ordinal : CarAt -> Html msg
@@ -412,17 +412,17 @@ now item =
             chip "OUT"
 
         Status.Retired ->
-            div [ class "col-start-4 row-start-2 justify-self-end text-[10px] leading-[18px] whitespace-nowrap text-muted-foreground", attribute "data-lane" "" ]
+            div [ class "col-start-4 row-start-2 me-1.5 justify-self-end text-[10px] leading-[18px] whitespace-nowrap text-muted-foreground", attribute "data-lane" "" ]
                 [ text "Retired" ]
 
         _ ->
-            div [ class "col-start-4 row-start-2", attribute "data-lane" "" ] []
+            div [ class "col-start-4 row-start-2 me-1.5", attribute "data-lane" "" ] []
 
 
 chip : String -> Html msg
 chip word =
     div
-        [ class "col-start-4 row-start-2 justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
+        [ class "col-start-4 row-start-2 me-1.5 justify-self-end inline-flex items-center justify-center rounded-full border border-border bg-card px-1 text-[9px] font-bold leading-4 whitespace-nowrap text-muted-foreground"
         , attribute "data-lane" ""
         ]
         [ text word ]
@@ -442,7 +442,7 @@ gapAhead snapshot ahead chasing =
     -- The track is always drawn, empty where there is no reading: the row's
     -- other tracks name their columns rather than being auto-placed, and a
     -- track that sometimes is not there at all would shift its neighbours.
-    div [ class "col-start-4 justify-self-end text-[10px] leading-[18px] tabular-nums whitespace-nowrap text-muted-foreground" ]
+    div [ class "col-start-4 me-1.5 justify-self-end text-[10px] leading-[18px] tabular-nums whitespace-nowrap text-muted-foreground" ]
         [ case ahead of
             Nothing ->
                 text ""
