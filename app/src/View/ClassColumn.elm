@@ -13,6 +13,10 @@ class has, leader first.
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
+The foot is the class's own pit board, and only when the lane has one of the
+class: the tracker's board ruled with just these cars, saying who is being
+served, who is driving away, and who climbed into the car.
+
 @docs view
 
 -}
@@ -32,6 +36,7 @@ import UI.Shadcn.Card as Card
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
+import View.PitLane as PitLane
 
 
 {-| What the column is given: the two ways a row answers a press -- the car has
@@ -106,20 +111,61 @@ view config snapshot class_ =
 
         counted =
             count cars
+
+        -- The class's cars in the lane, in the board's own order. An empty lane
+        -- takes no third line at all: an auto track with nothing but a rule
+        -- across it would cost the standings a line that says nothing.
+        lane =
+            List.filter (\car -> car.inLane /= Nothing) cars
+
+        foot =
+            if List.isEmpty lane then
+                []
+
+            else
+                [ pitBoard lane ]
     in
     Card.card
         [ attribute "data-class-column" (Class.toString class_) ]
         [ div [ class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ Card.content []
-                [ div [ class "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)] gap-y-1.5" ]
-                    [ head config class_ cars
-                    , Keyed.node "div"
-                        [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px" ]
+                [ div [ class (gridClass lane) ]
+                    ([ head config class_ cars
+                     , Keyed.node "div"
+                        [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
+                        , attribute "data-class-rows" ""
+                        ]
                         (rows config snapshot counted field)
-                    ]
+                     ]
+                        ++ foot
+                    )
                 ]
             ]
         ]
+
+
+{-| The class's own pit board: the tracker's board ruled with just this class's
+-- which of its cars is being served and which is driving away, and who is in
+the car, the driver change the box just made among them. The lane's readings
+stand apart from the standings above: a car in its box has no interval and no
+place to report, and its row here says who climbed in instead.
+-}
+pitBoard : List CarAt -> Html msg
+pitBoard lane =
+    div [ class "min-h-0 max-h-40 overflow-y-auto border-t border-border pt-1" ]
+        [ PitLane.board lane ]
+
+
+{-| The standings hold their scroll; the board, when the lane has one of the
+class, takes the line under them.
+-}
+gridClass : List CarAt -> String
+gridClass lane =
+    if List.isEmpty lane then
+        "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)] gap-y-1.5"
+
+    else
+        "h-full min-h-0 grid grid-rows-[auto_minmax(0,1fr)_auto] gap-y-1.5"
 
 
 {-| The class, how many cars it has out, and the fastest lap the class has run.

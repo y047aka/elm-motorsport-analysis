@@ -154,11 +154,13 @@ function intervals(rows: Locator) {
 }
 
 /** Where a class's column rules itself into groups, in the words the rules are
- * labelled with. The rules are the list's only children that are not rows, and
- * the words are read as Elm wrote them rather than as CSS spells them. */
+ * labelled with. The rules are the standings' own children -- read off the
+ * scroller the standings carry their rows in, since the pit board under them
+ * is another list and scrolls too -- and the words are read as Elm wrote them
+ * rather than as CSS spells them. */
 function divisions(page: Page, className: string) {
   return classColumn(page, className).evaluate((column) =>
-    [...column.querySelectorAll('.overflow-y-auto > div')].map(
+    [...column.querySelectorAll('[data-class-rows] > div')].map(
       (rule) => rule.textContent?.trim() ?? '',
     ),
   );
