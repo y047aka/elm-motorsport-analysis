@@ -655,7 +655,8 @@ bottomPanel tab table cars timeline snapshot =
                     CarCardList.view snapshot
 
                 EventsTab ->
-                    DataView.view (timelineTableConfig cars) table (List.indexedMap Tuple.pair (Timeline.toList timeline))
+                    DataView.view (timelineTableConfig cars) table
+                        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
     in
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
@@ -701,7 +702,9 @@ draws belongs to a lap. The car column is the right-hand timeline's own
 
 Rows are keyed by their place in the timeline — a number no two events share,
 where a moment's milliseconds and its words are the same for any two events
-of one kind at one instant, which the file can hold.
+of one kind at one instant, which the file can hold. The fastest-lap events
+are not among the rows, as they are not in the teaser beside the tracker
+either -- see `isFastestLap`.
 
 -}
 timelineTableConfig : List Car -> DataView.Config ( Int, TimelineEvent ) Msg
@@ -810,8 +813,26 @@ eventRows cars timeline occurredCount =
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
+        |> List.filter (not << isFastestLap)
         |> List.map (eventRow carsByNumber)
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
+
+
+{-| Fastest-lap events are kept out of both event lists -- the teaser beside
+the tracker, and the Events table in its own tab. The fastest a class has run
+is the reference at the head of that class's own column, and the race's stands
+with the records on the car's panel; a line for every one of these only
+repeats news the strip is already showing. The teaser's limit counts the
+events read, so it can hold fewer lines than it.
+-}
+isFastestLap : TimelineEvent -> Bool
+isFastestLap event =
+    case event.eventType of
+        CarEvent _ FastestLap ->
+            True
+
+        _ ->
+            False
 
 
 {-| A row is one line as tall as the badge: the `1.375rem` is
@@ -832,12 +853,7 @@ eventRow carsByNumber event =
             div [ Attributes.class classes ] children
 
         name =
-            case ( event.eventType, car |> Maybe.andThen (\item -> TimelineEvent.runningLap item event) |> Maybe.andThen .time ) of
-                ( CarEvent _ FastestLap, Just time ) ->
-                    Duration.toString time ++ " (Fastest)"
-
-                _ ->
-                    TimelineEvent.describe event.eventType
+            TimelineEvent.describe event.eventType
     in
     div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
         [ cell "" [ car |> Maybe.map (.metadata >> ClassMark.view) |> Maybe.withDefault (text "") ]
