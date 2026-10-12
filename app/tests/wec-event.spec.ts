@@ -5,11 +5,11 @@ const TRACKER_PANE = '[data-tracker-pane]';
 const TRACKER_COLUMN = '[data-tracker-column]';
 
 /**
- * Open a column of the tracker. The pane's card is the opener, and the column
- * arrives on the next frame, so it is the column that is waited for.
+ * The tracker's column, which stands in the strip from page load. It arrives
+ * on the first frame that knows the field, so it is the column that is waited
+ * for.
  */
-async function openTrackerColumn(page: Page) {
-  await page.locator(TRACKER_PANE).click();
+async function waitForTrackerColumn(page: Page) {
   await expect(page.locator(TRACKER_COLUMN)).toHaveCount(1);
 }
 
@@ -34,7 +34,7 @@ test.describe('Le Mans 2025 Visual Tests', () => {
   // across the line and the fifteen mini-sector names Le Mans is timed by.
   test('should render the tracker at full detail', async ({ page }) => {
     await setLapCount(page, 180);
-    await openTrackerColumn(page);
+    await waitForTrackerColumn(page);
     await expect(page.locator(TRACKER_COLUMN)).toHaveScreenshot('tracker-column-lap-180.png');
   });
 

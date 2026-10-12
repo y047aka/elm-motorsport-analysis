@@ -24,29 +24,30 @@ suite : Test
 suite =
     describe "Page.Wec.Columns"
         [ describe "the opening strip"
-            [ test "one column per class, in the order the field puts the classes" <|
+            [ test "one column per class, in the order the field puts the classes, and the tracker behind them" <|
                 \_ ->
                     Columns.init
                         |> keysOf
-                        |> Expect.equal [ classColumnOf "HYPERCAR", classColumnOf "LMGT3" ]
+                        |> Expect.equal
+                            [ classColumnOf "HYPERCAR", classColumnOf "LMGT3", Tracker ]
             , test "the tracker trails the class columns" <|
                 \_ ->
                     Columns.init
+                        |> step (ShowTracker False)
                         |> step (ShowTracker True)
                         |> keys
                         |> Expect.equal (classColumns ++ [ Tracker ])
             , test "the class columns are re-read, not frozen" <|
                 \_ ->
                     Columns.init
-                        |> step (ShowTracker True)
+                        |> step (ShowTracker False)
                         |> keysOf
-                        |> Expect.equal (classColumns ++ [ Tracker ])
+                        |> Expect.equal classColumns
             ]
         , describe "settling"
             [ test "picking a column up settles the strip" <|
                 \_ ->
                     Columns.init
-                        |> step (ShowTracker True)
                         |> step (Grab (Car "1") (pointer 1 0))
                         |> keys
                         |> Expect.equal (classColumns ++ [ Tracker ])
@@ -56,7 +57,7 @@ suite =
                     -- not the strip's starting one.
                     let
                         shown =
-                            step (ShowTracker True) Columns.init
+                            Columns.init
                     in
                     shown
                         |> step (Grab (Car "1") (pointer 1 0))
@@ -70,7 +71,6 @@ suite =
                     case classColumns of
                         headKey :: nextKey :: _ ->
                             Columns.init
-                                |> step (ShowTracker True)
                                 |> step (Grab headKey (pointer 1 0))
                                 |> step (Carrying (pointer 1 Columns.width))
                                 |> step (Release (pointer 1 Columns.width))
@@ -85,7 +85,6 @@ suite =
             [ test "a car opened goes behind the class columns and before the tracker" <|
                 \_ ->
                     Columns.init
-                        |> step (ShowTracker True)
                         |> step (Open (Car "9"))
                         |> keysOf
                         |> Expect.equal (classColumns ++ [ Car "9", Tracker ])
@@ -95,7 +94,8 @@ suite =
                         |> step (Close (classColumnOf "HYPERCAR"))
                         |> step (Open (classColumnOf "HYPERCAR"))
                         |> keysOf
-                        |> Expect.equal [ classColumnOf "LMGT3", classColumnOf "HYPERCAR" ]
+                        |> Expect.equal
+                            [ classColumnOf "LMGT3", classColumnOf "HYPERCAR", Tracker ]
             , test "opening a column the strip holds already changes nothing" <|
                 \_ ->
                     case classColumns of
@@ -112,6 +112,7 @@ suite =
                         |> step (Open (Car "9"))
                         |> step (Close (classColumnOf "LMGT3"))
                         |> step (Close (classColumnOf "HYPERCAR"))
+                        |> step (Close Tracker)
                         |> step (Close (Car "9"))
                         |> keysOf
                         |> Expect.equal [ Car "9" ]
@@ -147,7 +148,6 @@ suite =
                     -- One step left: the tracker takes the second-to-last
                     -- place of the settled strip.
                     Columns.init
-                        |> step (ShowTracker True)
                         |> step (Step Tracker -1)
                         |> keys
                         |> Expect.equal
@@ -207,13 +207,13 @@ suite =
                         |> step (Open (Car "9"))
                         |> step (Step (Car "9") -1)
                         |> .announcement
-                        |> Expect.equal ("Car #9 moved to column 2 of " ++ String.fromInt (List.length classColumns + 1))
+                        |> Expect.equal ("Car #9 moved to column 2 of " ++ String.fromInt (List.length classColumns + 2))
             , test "a moved class column is announced by its class" <|
                 \_ ->
                     Columns.init
                         |> step (Step (classColumnOf "LMGT3") -1)
                         |> .announcement
-                        |> Expect.equal "LMGT3 column moved to column 1 of 2"
+                        |> Expect.equal "LMGT3 column moved to column 1 of 3"
             , test "a carry is clamped by the widths that stand, not the pitch that counts" <|
                 \_ ->
                     -- The first class column stands a narrow slot wide; the second
@@ -276,11 +276,13 @@ keysOf model =
 
 
 {-| The columns the strip opens with: one for each class the fixture's field has
-cars out in, in the order its running order puts the classes.
+cars out in, in the order its running order puts the classes, its tracker's
+column trailing them -- which is why it is filtered out here.
 -}
 classColumns : List StripKey
 classColumns =
     Columns.keysOf field Columns.init.order
+        |> List.filter ((/=) Tracker)
 
 
 classColumnOf : String -> StripKey

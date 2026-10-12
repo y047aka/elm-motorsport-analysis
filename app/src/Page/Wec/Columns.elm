@@ -438,7 +438,7 @@ type alias Model =
 
 init : Model
 init =
-    { order = Live { tracker = False }
+    { order = Live { tracker = True }
     , carried = Drag.init
     , stripScroll = { from = 0, to = 0 }
     , scrolls = Dict.empty

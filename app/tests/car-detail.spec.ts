@@ -183,6 +183,19 @@ async function inView(page: Page, column: Locator) {
   return box.x >= strip.x - 1 && box.x + box.width <= strip.x + strip.width + 1;
 }
 
+/** Take the tracker's column out of the strip, and wait for it to stop
+ * gliding. It stands there from page load; the tests below count places, and a
+ * column they never name would be a place they did not count. */
+async function closeTrackerColumn(page: Page) {
+  const standing = page
+    .locator('[data-tracker-column]')
+    .getByRole('button', { name: 'Close this column' });
+  if (await standing.count() === 0) return;
+  await standing.click();
+  await expect(page.locator('[data-tracker-column]')).toHaveCount(0);
+  await settleStrip(page);
+}
+
 /** Take the class columns out of the strip, and wait for it to stop gliding. */
 async function closeClassColumns(page: Page) {
   for (const class_ of CLASSES) {
@@ -207,6 +220,7 @@ async function closeClassColumns(page: Page) {
 async function standCars(page: Page) {
   await selectCars(page, THREE_CARS);
   await closeClassColumns(page);
+  await closeTrackerColumn(page);
   await expectStrip(page, THREE_CARS);
   await stripToHead(page);
 }
@@ -219,6 +233,7 @@ async function standCars(page: Page) {
 async function selectOnlyCar(page: Page, carNumber: string) {
   await selectCar(page, carNumber);
   await closeClassColumns(page);
+  await closeTrackerColumn(page);
   const others = () => page.locator(`${DETAIL}:not([data-car-detail="${carNumber}"])`);
   for (let left = await others().count(); left > 0; left -= 1) {
     await others().first().getByRole('button', { name: 'Close this column' }).click();
@@ -340,7 +355,7 @@ test.describe('Class columns', () => {
     // A race is several races, and the front of each is a fight rather than a
     // car, so the page follows the classes until the reader says otherwise -- in
     // the order the running order puts the classes in.
-    await expectStrip(page, CLASSES.map((c) => c.name));
+    await expectStrip(page, [...CLASSES.map((c) => c.name), 'TRACKER']);
     // A column as any other is: named in the header's list of them, and the
     // reader's to close.
     for (const class_ of CLASSES) {
@@ -442,7 +457,7 @@ test.describe('Class columns', () => {
     // The class is followed still, and one of its cars is followed in detail
     // beside it.
     await expectColumns(page, ['83']);
-    await expectStrip(page, [...CLASSES.map((c) => c.name), '83']);
+    await expectStrip(page, [...CLASSES.map((c) => c.name), '83', 'TRACKER']);
     await expect(standingsRow(page, '83')).toHaveAttribute('aria-pressed', 'true');
     // The new column stood off the strip's own right edge, and the strip went to
     // it: a press whose result the reader cannot see reads as a press that did
@@ -464,22 +479,22 @@ test.describe('Class columns', () => {
     await classColumn(page, 'HYPERCAR')
       .getByRole('button', { name: 'Close this column' })
       .click();
-    await expectStrip(page, ['LMP2', 'LMGT3']);
+    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER']);
     // The page stops choosing for the reader: still following, it would have
     // filled Hypercar's place back in from the class it leads on the next render.
     await selectCar(page, '83');
-    await expectStrip(page, ['LMP2', 'LMGT3', '83']);
+    await expectStrip(page, ['LMP2', 'LMGT3', '83', 'TRACKER']);
   });
 
   test('should call a closed class column back by its name', async ({ page }) => {
     await classColumn(page, 'HYPERCAR')
       .getByRole('button', { name: 'Close this column' })
       .click();
-    await expectStrip(page, ['LMP2', 'LMGT3']);
+    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER']);
     // The class's name in the standings is where its column is asked for again,
     // which is where the class's cars are listed already.
     await page.getByRole('button', { name: 'Open the HYPERCAR column' }).click();
-    await expectStrip(page, ['LMP2', 'LMGT3', 'HYPERCAR']);
+    await expectStrip(page, ['LMP2', 'LMGT3', 'HYPERCAR', 'TRACKER']);
     await expect(page.getByRole('button', { name: 'Open the HYPERCAR column' })).toHaveCount(0);
     // A class with a column is drawn as a name, not as a thing to open.
     await expect(classColumn(page, 'HYPERCAR')).toBeVisible();
@@ -607,10 +622,10 @@ test.describe('Class columns', () => {
     // The class is what the strip opens with, and a class is moved as a car is.
     await stripGrip(page, 0).focus();
     await page.keyboard.press('ArrowRight');
-    await expectStrip(page, ['LMP2', 'HYPERCAR', 'LMGT3']);
+    await expectStrip(page, ['LMP2', 'HYPERCAR', 'LMGT3', 'TRACKER']);
     await expect(stripGrip(page, 1)).toBeFocused();
     await expect(page.locator('[aria-live="polite"]')).toHaveText(
-      'HYPERCAR column moved to column 2 of 3',
+      'HYPERCAR column moved to column 2 of 4',
     );
   });
 
