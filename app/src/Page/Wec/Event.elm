@@ -241,8 +241,8 @@ unavailable shared =
 
 {-| The strip's columns, in order, at the moment of the render or the
 message. Read once per render and handed to everything that draws or names
-a column: playback re-reads the order every frame, and each reading costs
-the field walk the columns are resolved against.
+a column: each reading costs the field walk the columns are resolved
+against.
 -}
 columnKeys : Shared.Model -> Model -> List Columns.StripKey
 columnKeys shared m =
@@ -291,7 +291,7 @@ trackerCard several held track replay fieldEvents snapshot =
                           else
                             []
                          )
-                            ++ [ Header.closeButton (ColumnsMsg (Columns.ShowTracker False)) ]
+                            ++ [ Header.closeButton (ColumnsMsg (Columns.Close Columns.Tracker)) ]
                         )
                     ]
                 ]

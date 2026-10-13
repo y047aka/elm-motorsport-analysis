@@ -86,35 +86,26 @@ carOfKey key =
             Nothing
 
 
-{-| The order of the strip.
-
-`Live` is one column for each class the field has cars out in, re-read from the
-snapshot as the race runs so that each class's order is its own, with the
-tracker's column behind them where its flag says. While live, the tracker
-trails the class columns however their running order moves. `Picked` is fixed,
-in the order the reader left them in, and any open, close or move settles the
-strip into one -- the tracker's index then means where it stood at that settle.
-
+{-| The order of the strip: the columns, in the order the reader left them
+in. An order nobody has touched is the strip as the round opens it -- one
+column per class the field has cars out in, in the order a classification
+lists the classes, and the tracker's column behind them -- which is what
+`keysOf` reads out of the field; the first open, close or move writes that
+opening down as a list.
 -}
-type Columns
-    = Live { tracker : Bool }
-    | Picked StripKey (List StripKey)
+type alias Columns =
+    List StripKey
 
 
 keysOf : Snapshot -> Columns -> List StripKey
 keysOf snapshot columns =
     case columns of
-        Live { tracker } ->
+        [] ->
             List.map ClassColumn (classesOf snapshot)
-                ++ (if tracker then
-                        [ Tracker ]
+                ++ [ Tracker ]
 
-                    else
-                        []
-                   )
-
-        Picked first rest ->
-            first :: rest
+        keys ->
+            keys
 
 
 {-| The standings mark cars from a snapshot that can be a frame older than
@@ -143,40 +134,49 @@ carsIn snapshot keys =
         |> List.filterMap (\carNumber -> Snapshot.get carNumber snapshot)
 
 
-{-| The classes come in the order their leaders run in.
+{-| The classes the field has cars out in, in the order a classification
+lists them -- the opening columns do not change places as the race runs.
 -}
 classesOf : Snapshot -> List Class
 classesOf snapshot =
-    Snapshot.toClassList snapshot
-        |> List.map Tuple.first
+    Snapshot.toList snapshot
+        |> List.map (\carAt -> carAt.metadata.class)
+        |> List.foldr
+            (\class rest ->
+                if List.member class rest then
+                    rest
+
+                else
+                    class :: rest
+            )
+            []
+        |> List.sortWith Class.compare
 
 
 {-| There is no ceiling on how many, and each column draws its own charts on
-every frame of playback. A column opened joins the back, and never jumps over
-the tracker's column.
+every frame of playback. A column opened joins the back of the strip.
 -}
 open : StripKey -> Snapshot -> Columns -> Columns
 open key snapshot columns =
     let
         current =
             keysOf snapshot columns
-
-        at =
-            List.Extra.elemIndex Tracker current
-                |> Maybe.withDefault (List.length current)
     in
     if List.member key current then
-        columns
+        current
 
     else
-        pickedOr columns (List.take at current ++ [ key ] ++ List.drop at current)
+        current ++ [ key ]
 
 
 close : StripKey -> Snapshot -> Columns -> Columns
 close key snapshot columns =
-    keysOf snapshot columns
-        |> List.filter ((/=) key)
-        |> pickedOr columns
+    case keysOf snapshot columns |> List.filter ((/=) key) of
+        [] ->
+            columns
+
+        remaining ->
+            remaining
 
 
 {-| Moving takes a key -- a class's, a car's or the tracker's -- and steps it
@@ -201,57 +201,10 @@ move key steps snapshot columns =
                 columns
 
             else
-                pickedOr columns (List.take to others ++ key :: List.drop to others)
+                List.take to others ++ [ key ] ++ List.drop to others
 
         Nothing ->
             columns
-
-
-{-| Adding and taking away the tracker's column settles nothing: a live strip
-stays live and the tracker trails it as the flag says, and a settled one gains
-the tracker's column at its end or loses that column alone.
--}
-showTracker : Snapshot -> Columns -> Columns
-showTracker snapshot columns =
-    case columns of
-        Live _ ->
-            Live { tracker = True }
-
-        Picked first rest ->
-            if List.member Tracker (first :: rest) then
-                columns
-
-            else
-                Picked first (rest ++ [ Tracker ])
-
-
-hideTracker : Snapshot -> Columns -> Columns
-hideTracker snapshot columns =
-    case columns of
-        Live _ ->
-            Live { tracker = False }
-
-        Picked first rest ->
-            List.filter ((/=) Tracker) (first :: rest)
-                |> pickedOr (Live { tracker = False })
-
-
-{-| The class columns are re-read every frame, so a column being carried among
-them could change places under the pointer.
--}
-settle : Snapshot -> Columns -> Columns
-settle snapshot columns =
-    pickedOr columns (keysOf snapshot columns)
-
-
-pickedOr : Columns -> List StripKey -> Columns
-pickedOr fallback keys =
-    case keys of
-        [] ->
-            fallback
-
-        first :: rest ->
-            Picked first rest
 
 
 {-| What the reader is told when a column moves.
@@ -266,25 +219,12 @@ announcement key order =
             ""
 
 
-{-| The column under the pointer, and the orders a carry answers to: `before`
-stands as it did when the column was picked up, `settled` is what picking it
-up made of them. A carry that lands where it began puts `before` back, unless
-something else has changed the columns since.
+{-| The column under the pointer. The order stands while a carry goes on:
+nothing is written until the column is let go of, and a release where it
+began writes nothing at all.
 -}
 type alias Carry =
-    { key : StripKey
-    , before : Columns
-    , settled : Columns
-    }
-
-
-putBack : Carry -> Columns -> Columns
-putBack carry columns =
-    if columns == carry.settled then
-        carry.before
-
-    else
-        columns
+    { key : StripKey }
 
 
 {-| How far a carry has gone: the pointer's travel and the strip's together,
@@ -438,7 +378,7 @@ type alias Model =
 
 init : Model
 init =
-    { order = Live { tracker = True }
+    { order = []
     , carried = Drag.init
     , stripScroll = { from = 0, to = 0 }
     , scrolls = Dict.empty
@@ -449,7 +389,6 @@ init =
 type Msg
     = Open StripKey
     | Close StripKey
-    | ShowTracker Bool
     | Grab StripKey Pointer
     | Carrying Pointer
     | Release Pointer
@@ -467,7 +406,7 @@ focus first, since focusing scrolls the grip into view and that scrolls the
 panel too.
 
 A frame with no round leaves the order where it was; the pointer is still
-answered to, and settles nothing that cannot be settled.
+answered to.
 
 -}
 update : Maybe Snapshot -> Msg -> Model -> ( Model, Cmd Msg )
@@ -488,11 +427,8 @@ update field msg m =
                         }
                     )
 
-        ShowTracker shown ->
-            shownColumn field shown m
-
         Grab key pointer ->
-            grab field key pointer m
+            grab key pointer m
 
         Carrying pointer ->
             let
@@ -505,12 +441,11 @@ update field msg m =
             release field pointer m
 
         Cancel pointerId ->
-            case Drag.update (Drag.Cancel pointerId) m.carried of
-                ( carried, Just done ) ->
-                    letGo { m | carried = carried } done.location
-
-                ( carried, Nothing ) ->
-                    ( { m | carried = carried }, Cmd.none )
+            let
+                ( carried, _ ) =
+                    Drag.update (Drag.Cancel pointerId) m.carried
+            in
+            ( { m | carried = carried }, Cmd.none )
 
         StripScrolledFrom left ->
             ( { m | stripScroll = { from = left, to = left } }, Cmd.none )
@@ -579,44 +514,17 @@ reveal keys index =
                 |> Task.attempt (\_ -> Settled)
 
 
-shownColumn : Maybe Snapshot -> Bool -> Model -> ( Model, Cmd Msg )
-shownColumn field shown m =
-    case field of
-        Just round ->
-            ( { m
-                | order =
-                    if shown then
-                        showTracker round m.order
-
-                    else
-                        hideTracker round m.order
-              }
-            , Cmd.none
-            )
-
-        Nothing ->
-            ( m, Cmd.none )
-
-
-grab : Maybe Snapshot -> StripKey -> Pointer -> Model -> ( Model, Cmd Msg )
-grab field key pointer m =
+grab : StripKey -> Pointer -> Model -> ( Model, Cmd Msg )
+grab key pointer m =
     if Drag.isCarrying m.carried then
         ( m, Cmd.none )
 
     else
         let
-            settled =
-                case field of
-                    Just round ->
-                        settle round m.order
-
-                    Nothing ->
-                        m.order
-
             ( carried, _ ) =
-                Drag.update (Drag.Pick { key = key, before = m.order, settled = settled } pointer) m.carried
+                Drag.update (Drag.Pick { key = key } pointer) m.carried
         in
-        ( { m | order = settled, carried = carried, stripScroll = { from = 0, to = 0 } }
+        ( { m | carried = carried, stripScroll = { from = 0, to = 0 } }
         , Browser.Dom.getViewportOf stripId
             |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
         )
@@ -637,13 +545,13 @@ release field pointer m =
                             move done.location.key (columnsCarried (withScroll after done.travel)) round m.order
                     in
                     if moved == m.order then
-                        letGo after done.location
+                        ( after, Cmd.none )
 
                     else
                         reorder round { moved = done.location.key, refocus = False } after moved
 
                 Nothing ->
-                    letGo after done.location
+                    ( after, Cmd.none )
 
         ( carried, Nothing ) ->
             ( { m | carried = carried }, Cmd.none )
@@ -671,11 +579,6 @@ stepBy field key steps m =
 
             Nothing ->
                 ( m, Cmd.none )
-
-
-letGo : Model -> Carry -> ( Model, Cmd Msg )
-letGo m carry =
-    ( { m | order = putBack carry m.order }, Cmd.none )
 
 
 edit : Maybe Snapshot -> Model -> (Snapshot -> Columns -> Columns) -> ( Model, Cmd Msg )

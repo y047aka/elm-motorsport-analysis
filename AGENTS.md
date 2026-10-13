@@ -198,10 +198,10 @@ down each car's panel was scrolled. The page holds one `Columns.Model`,
 forwards through `ColumnsMsg`, and hands the field in per call.
 
 A column is keyed by `StripKey` -- a class's, a car's or the tracker's. The strip
-opens **live**: one column per class the field has cars out in, re-read from every
-frame so that each class's order is its own, and a car's column joins behind them
-when the reader picks one. Any open, close or move settles the strip into the
-order the reader left it in.
+opens with one column per class the field has cars out in, in the order a
+classification lists them and not the order their leaders run in, the tracker's
+column behind them; a car's column joins at the back when the reader picks one,
+and from the first open, close or move the order is the reader's.
 
 A class's column (`View/ClassColumn.elm`) is how a race is followed while it is
 still sorting itself out, and is the standings read down one class instead of the
@@ -218,11 +218,6 @@ did not.
 Every column is drawn `Columns.width` wide, and everything that measures the
 strip -- where a column stands, how far a carry moves one, how far a press
 scrolls -- is done in that one width and `pitch`.
-
-**The tracker's index means where it stood when the strip settled**: while the
-class columns are live the tracker trails them however the running order moves,
-and picking, closing or moving a column fixes it among the cars where it stood at
-that moment.
 
 ### The shadcn components
 
