@@ -84,7 +84,8 @@ describe eventType =
             "Finished"
 
 
-{-| Whether the field's panel draws the event.
+{-| Whether the event is the field's own, which is what its list of events
+keeps.
 
     forField (CarEvent "51" FastestLap)
     --> True
