@@ -109,9 +109,10 @@ function classColumn(page: Page, className: string) {
   return page.locator(`[data-class-column="${className}"]`);
 }
 
-/** The rows of a class's column, leader first. */
+/** The rows of a class's column, leader first. The head's curve picker carries
+ * `aria-pressed` too, so the rows are the pressed buttons that name a car. */
 function classRows(page: Page, className: string) {
-  return classColumn(page, className).locator('button[aria-pressed]');
+  return classColumn(page, className).locator('button[aria-pressed][aria-label^="Car #"]');
 }
 
 /** A car's row in a class's own column, which names the class it is drawn in. */
@@ -120,16 +121,16 @@ function classRow(page: Page, carNumber: string, className: string) {
 }
 
 /** Every column of the strip, left to right: a class's named, a car's numbered,
- * the tracker's as `TRACKER`. A class's column carries its class on the card it
- * is; a car's panel carries its number deeper in, and the tracker's column
- * carries neither. */
+ * the tracker's as `TRACKER`, the events table's as `EVENTS`. A class's column
+ * carries its class on the card it is; a car's panel carries its number deeper
+ * in, and the tracker's and the events' column carry their own marks. */
 function stripOrder(page: Page) {
   return page.locator('#column-strip > div').evaluateAll((cells) =>
     cells.map(
       (cell) =>
         cell.querySelector('[data-class-column]')?.getAttribute('data-class-column') ??
         cell.querySelector('[data-car-detail]')?.getAttribute('data-car-detail') ??
-        'TRACKER',
+        (cell.querySelector('[data-events-column]') ? 'EVENTS' : 'TRACKER'),
     ),
   );
 }
@@ -172,7 +173,7 @@ function divisions(page: Page, className: string) {
  * PIT, OUT or Retired, and nothing at all for a car on the road. */
 function laneMarks(page: Page, className: string) {
   return classColumn(page, className)
-    .locator('button[aria-pressed]')
+    .locator('button[aria-pressed][aria-label^="Car #"]')
     .evaluateAll((rows) => rows.map((row) => (row.querySelector('[data-lane]')?.textContent ?? '').trim()));
 }
 
@@ -211,6 +212,18 @@ async function closeClassColumns(page: Page) {
   await settleStrip(page);
 }
 
+/** Take the events column out of the strip, as the tracker's is taken: the
+ * tests that count places name every column that stands. */
+async function closeEventsColumn(page: Page) {
+  const standing = page
+    .locator('[data-events-column]')
+    .getByRole('button', { name: 'Close this column' });
+  if (await standing.count() === 0) return;
+  await standing.click();
+  await expect(page.locator('[data-events-column]')).toHaveCount(0);
+  await settleStrip(page);
+}
+
 /**
  * Stand three cars up in columns of their own, then take the class columns out
  * of the strip: what the tests below drive is a strip of car columns, and with
@@ -221,6 +234,7 @@ async function standCars(page: Page) {
   await selectCars(page, THREE_CARS);
   await closeClassColumns(page);
   await closeTrackerColumn(page);
+  await closeEventsColumn(page);
   await expectStrip(page, THREE_CARS);
   await stripToHead(page);
 }
@@ -234,6 +248,7 @@ async function selectOnlyCar(page: Page, carNumber: string) {
   await selectCar(page, carNumber);
   await closeClassColumns(page);
   await closeTrackerColumn(page);
+  await closeEventsColumn(page);
   const others = () => page.locator(`${DETAIL}:not([data-car-detail="${carNumber}"])`);
   for (let left = await others().count(); left > 0; left -= 1) {
     await others().first().getByRole('button', { name: 'Close this column' }).click();
@@ -355,7 +370,7 @@ test.describe('Class columns', () => {
     // A race is several races, and the front of each is a fight rather than a
     // car, so the page opens one column per class until the reader says
     // otherwise -- in the order a classification lists the classes.
-    await expectStrip(page, [...CLASSES.map((c) => c.name), 'TRACKER']);
+    await expectStrip(page, [...CLASSES.map((c) => c.name), 'TRACKER', 'EVENTS']);
     // A column as any other is: named in the header's list of them, and the
     // reader's to close.
     for (const class_ of CLASSES) {
@@ -364,7 +379,7 @@ test.describe('Class columns', () => {
       ).toBeVisible();
     }
     await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(
-      CLASSES.length + 1, // the tracker's column, standing from the load, is one of them
+      CLASSES.length + 2, // the tracker's column and the events table, standing from the load, are two of them
     );
     // Nothing has been picked, so no car is marked anywhere.
     await expect(page.locator('[data-live-standings] [aria-pressed="true"]')).toHaveCount(0);
@@ -457,7 +472,7 @@ test.describe('Class columns', () => {
     // The class is followed still, and one of its cars is followed in detail
     // beside it.
     await expectColumns(page, ['83']);
-    await expectStrip(page, [...CLASSES.map((c) => c.name), 'TRACKER', '83']);
+    await expectStrip(page, [...CLASSES.map((c) => c.name), 'TRACKER', 'EVENTS', '83']);
     await expect(standingsRow(page, '83')).toHaveAttribute('aria-pressed', 'true');
     // The new column stood off the strip's own right edge, and the strip went to
     // it: a press whose result the reader cannot see reads as a press that did
@@ -479,20 +494,20 @@ test.describe('Class columns', () => {
     await classColumn(page, 'HYPERCAR')
       .getByRole('button', { name: 'Close this column' })
       .click();
-    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER']);
+    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER', 'EVENTS']);
     await selectCar(page, '83');
-    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER', '83']);
+    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER', 'EVENTS', '83']);
   });
 
   test('should call a closed class column back by its name', async ({ page }) => {
     await classColumn(page, 'HYPERCAR')
       .getByRole('button', { name: 'Close this column' })
       .click();
-    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER']);
+    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER', 'EVENTS']);
     // The class's name in the standings is where its column is asked for again,
     // which is where the class's cars are listed already.
     await page.getByRole('button', { name: 'Open the HYPERCAR column' }).click();
-    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER', 'HYPERCAR']);
+    await expectStrip(page, ['LMP2', 'LMGT3', 'TRACKER', 'EVENTS', 'HYPERCAR']);
     await expect(page.getByRole('button', { name: 'Open the HYPERCAR column' })).toHaveCount(0);
     // A class with a column is drawn as a name, not as a thing to open.
     await expect(classColumn(page, 'HYPERCAR')).toBeVisible();
@@ -620,10 +635,10 @@ test.describe('Class columns', () => {
     // The class is what the strip opens with, and a class is moved as a car is.
     await stripGrip(page, 0).focus();
     await page.keyboard.press('ArrowRight');
-    await expectStrip(page, ['LMP2', 'HYPERCAR', 'LMGT3', 'TRACKER']);
+    await expectStrip(page, ['LMP2', 'HYPERCAR', 'LMGT3', 'TRACKER', 'EVENTS']);
     await expect(stripGrip(page, 1)).toBeFocused();
     await expect(page.locator('[aria-live="polite"]')).toHaveText(
-      'HYPERCAR column moved to column 2 of 4',
+      'HYPERCAR column moved to column 2 of 5',
     );
   });
 
@@ -636,6 +651,45 @@ test.describe('Class columns', () => {
     const before = await height();
     await selectCar(page, '83');
     await expect.poll(() => height()).toBe(before);
+  });
+
+  test('should switch the rows\' curve from the column\'s head, one class at a time', async ({ page }) => {
+    // Every row carries a curve of how its car is running, and the head's
+    // picker chooses which -- for this column alone, since the reading a
+    // reader wants down Hypercar is not the one they want down LMGT3.
+    const traces = (className: string) =>
+      classColumn(page, className)
+        .locator('[data-row-trace]')
+        .evaluateAll((els) => [...new Set(els.map((el) => el.getAttribute('data-row-trace')))]);
+    // Pace is what the rows come up showing, whatever the class.
+    await expect.poll(() => traces('HYPERCAR')).toEqual(['pace']);
+    await classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Gap', exact: true }).click();
+    await expect.poll(() => traces('HYPERCAR')).toEqual(['gap']);
+    // The class beside it keeps its own: the pick is the column's.
+    await expect.poll(() => traces('LMP2')).toEqual(['pace']);
+    await classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Laps', exact: true }).click();
+    await expect.poll(() => traces('HYPERCAR')).toEqual(['laps']);
+    // The picker says on itself which curve the rows are drawn with.
+    await expect(
+      classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Laps', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('should stand the round\'s events in a column of their own', async ({ page }) => {
+    // The table the foot of the page used to hold stands at the back of the
+    // strip now: named in the header's list as any other column is, and the
+    // reader's to close.
+    await expectStrip(page, [...CLASSES.map((c) => c.name), 'TRACKER', 'EVENTS']);
+    await expect(
+      page.getByRole('button', { name: 'Scroll to the events column' }),
+    ).toBeVisible();
+    // The race has run 180 laps by now, and the table holds its events.
+    await expect(page.locator('[data-events-column] tbody tr').first()).not.toBeEmpty();
+    // It is the strip's last column, so it scrolls into view like any other.
+    await page.getByRole('button', { name: 'Scroll to the events column' }).click();
+    await expect.poll(() => inView(page, page.locator('[data-events-column]'))).toBe(true);
+    await closeEventsColumn(page);
+    await expectStrip(page, [...CLASSES.map((c) => c.name), 'TRACKER']);
   });
 });
 
