@@ -13,6 +13,10 @@ class has, leader first.
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
+Each row carries the car's recent battle with its class rivals underneath it:
+how the interval to the cars around it has been growing and shrinking over the
+last stretch of the race.
+
 The foot is the class's own pit board, and only when the lane has one of the
 class: the tracker's board ruled with just these cars, saying who is being
 served, who is driving away, and who climbed into the car.
@@ -25,6 +29,8 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
+import Motorsport.Analysis.Rivals as Rivals
+import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -128,7 +134,7 @@ view config snapshot class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted field)
+                        (rows config snapshot counted cars field)
                      ]
                         ++ foot
                     )
@@ -248,8 +254,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot ( ahead, item ) =
+row : Config msg -> Snapshot -> List CarAt -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot classCars ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -269,8 +275,39 @@ row config snapshot ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
+        , gapTrace classCars snapshot item
         ]
     )
+
+
+{-| How the car has been running against its class rivals lately: the relative
+gap over the last stretch of laps, the car and the rival either side of it, as
+[`gapSparkline`](Motorsport-Chart-GapChart#gapSparkline) draws it.
+
+The gaps are matched by lap number, so a lapped rival is about a lap of
+cumulative time away at the same lap number and is clipped outside the band as
+an outlier rather than flattening it.
+-}
+gapTrace : List CarAt -> Snapshot -> CarAt -> Html msg
+gapTrace classCars snapshot item =
+    let
+        currentLap =
+            item.standing.lapsCompleted
+    in
+    div [ class "col-span-5 row-start-3", attribute "data-gap-trace" "" ]
+        [ GapChart.gapSparkline
+            { first = currentLap - recentLapCount, last = currentLap }
+            (Snapshot.lapHistory snapshot)
+            (Rivals.around classCars item)
+        ]
+
+
+{-| How many laps back the trace reaches: a row is a reading of the race as it
+is running, not of the race.
+-}
+recentLapCount : Int
+recentLapCount =
+    20
 
 
 {-| The car side on, as the car's own panel and the car cards draw it, as tall
@@ -331,8 +368,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted field =
+rows : Config msg -> Snapshot -> Count -> List CarAt -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted classCars field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -340,7 +377,7 @@ rows config snapshot counted field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot pair :: acc
+                    row config snapshot classCars pair :: acc
             in
             if back == behind then
                 ( behind, lines )
