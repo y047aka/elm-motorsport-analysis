@@ -393,7 +393,7 @@ recentLapCount =
     20
 
 
-{-| The car side on, as the car's own panel and the car cards draw it, as tall
+{-| The car side on, as the car's own panel draws it, as tall
 as the two lines together and against the right edge -- and nothing where the
 round has no photograph for it, which is a missing row of `car-images.json`,
 not a car off the field.

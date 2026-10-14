@@ -42,9 +42,7 @@ import Task
 import Time
 import UI.Notice as Notice
 import UI.Shadcn.Card as Card
-import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
-import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
@@ -60,7 +58,6 @@ import View.PlaybackControls as PlaybackControls
 
 type alias Model =
     { strip : Columns.Model
-    , bottomTab : BottomTab
     , rowTrace : Dict String ClassColumn.Trace
     , timelineTable : DataView.Model
     , comparison : CarDetail.Comparison
@@ -76,15 +73,9 @@ standingsFence =
     }
 
 
-type BottomTab
-    = CardsTab
-    | EventsTab
-
-
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { strip = Columns.init
-      , bottomTab = CardsTab
       , rowTrace = Dict.empty
       , timelineTable = DataView.init "timeline-events" timelineTableOptions
       , comparison = CarDetail.initialComparison
@@ -104,7 +95,6 @@ type Msg
     | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
-    | BottomTabChange BottomTab
     | RowTraceChosen Class ClassColumn.Trace
     | TimelineTableMsg DataView.Msg
     | ReplayMsg Replay.Msg
@@ -148,9 +138,6 @@ update shared msg m =
 
                 Nothing ->
                     ( m, Effect.none )
-
-        BottomTabChange tab ->
-            ( { m | bottomTab = tab }, Effect.none )
 
         RowTraceChosen class_ trace ->
             ( { m | rowTrace = Dict.insert (Class.toString class_) trace m.rowTrace }, Effect.none )
@@ -336,7 +323,7 @@ mainGrid round keys m =
             [ standingsCell keys m snapshot replay.race.cars
             , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
             ]
-        , bottomPanel m.bottomTab m.timelineTable round.replay.race.cars round.timeline snapshot
+        , bottomPanel m.timelineTable round.replay.race.cars round.timeline
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -590,45 +577,19 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-bottomPanel : BottomTab -> DataView.Model -> List Car -> Timeline -> Snapshot -> Html Msg
-bottomPanel tab table cars timeline snapshot =
-    let
-        body =
-            case tab of
-                CardsTab ->
-                    CarCardList.view snapshot
-
-                EventsTab ->
-                    DataView.view (timelineTableConfig cars)
-                        table
-                        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
-    in
+{-| The round's events, in one table at the foot of the page.
+-}
+bottomPanel : DataView.Model -> List Car -> Timeline -> Html Msg
+bottomPanel table cars timeline =
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
-            [ Card.header []
-                [ Card.action [] [ bottomTabs tab ] ]
-            , Card.content [] [ body ]
+            [ Card.content []
+                [ DataView.view (timelineTableConfig cars)
+                    table
+                    (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
+                ]
             ]
         ]
-
-
-bottomTabs : BottomTab -> Html Msg
-bottomTabs current =
-    let
-        tabItem label tab =
-            { label = label
-            , active = current == tab
-            , disabled = False
-            , onSelect = BottomTabChange tab
-            }
-    in
-    ToggleGroup.view
-        { items =
-            [ tabItem "Cards" CardsTab
-            , tabItem "Events" EventsTab
-            ]
-        }
-        []
 
 
 timelineTableOptions : Options
