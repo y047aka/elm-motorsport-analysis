@@ -613,7 +613,7 @@ timelineTableOptions =
     { sorting = Sorting
     , filtering = Filtering
     , selecting = NoSelecting
-    , pagination = Pagination 15
+    , pagination = Pagination 30
     }
 
 
