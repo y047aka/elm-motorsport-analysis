@@ -927,7 +927,7 @@ test.describe('Car Detail Columns', () => {
     await expectColumns(page, ['48', '92', '6', '83', '12', '8']);
   });
 
-  test('should stop following the running order once a column has been moved', async ({ page }) => {
+  test('should keep the columns where the reader left them as the clock runs back', async ({ page }) => {
     await carry(page, 0, PITCH);
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);

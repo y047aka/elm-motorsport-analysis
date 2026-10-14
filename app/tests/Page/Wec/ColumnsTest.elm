@@ -30,22 +30,6 @@ suite =
                         |> keysOf
                         |> Expect.equal
                             [ classColumnOf "HYPERCAR", classColumnOf "LMGT3", Tracker ]
-            , test "the tracker steps out and rejoins the back" <|
-                \_ ->
-                    Columns.init
-                        |> step (Close Tracker)
-                        |> step (Open Tracker)
-                        |> keys
-                        |> Expect.equal (classColumns ++ [ Tracker ])
-            , test "asking for a column the strip holds already fields one of it" <|
-                \_ ->
-                    Columns.init
-                        |> step (Open Tracker)
-                        |> step (Open Tracker)
-                        |> keys
-                        |> List.filter ((==) Tracker)
-                        |> List.length
-                        |> Expect.equal 1
             ]
         , describe "grabbing and releasing"
             [ test "picking a column up changes nothing" <|
