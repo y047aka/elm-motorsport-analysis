@@ -14,8 +14,8 @@ A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
 Each row carries a curve of how the car is running underneath it -- the gap
-out to the rivals either side of it, or the spread of its own lap times --
-and the reader picks which from the column's head.
+out to the rivals either side of it, the spread of its own lap times, or the
+lap times themselves -- and the reader picks which from the column's head.
 
 The foot is the class's own pit board, and only when the lane has one of the
 class: the tracker's board ruled with just these cars, saying who is being
@@ -45,6 +45,7 @@ import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.PitLane as PitLane
+import View.SectorAndLaps as SectorAndLaps
 
 
 {-| What the column is given: the two ways a row answers a press -- the car has
@@ -68,11 +69,13 @@ type alias Config msg =
 
 
 {-| The curve drawn under every car of the column: the gap out to the rivals
-either side, or the spread of the car's own lap times.
+either side, the spread of the car's own lap times, or the lap times
+themselves.
 -}
 type Trace
     = GapTrace
     | PaceTrace
+    | LapsTrace
 
 
 {-| The laps the class leader has completed, which is what every car's distance
@@ -213,6 +216,11 @@ traceChoice config =
               , disabled = False
               , onSelect = config.onTrace PaceTrace
               }
+            , { label = "Laps"
+              , active = config.trace == LapsTrace
+              , disabled = False
+              , onSelect = config.onTrace LapsTrace
+              }
             ]
         }
         [ class "shrink-0" ]
@@ -329,6 +337,9 @@ rivals not in it at all -- two classes on one lap-time axis flatten both. The
 range spans the whole race the car has run: `Pace` clips its outliers against
 the range it is given, so a recent window would measure the fence against the
 stretch it is supposed to filter.
+
+Laps: the lap the car is on, its sectors as a pie, beside the lap it just
+completed, as [`view`](View-SectorAndLaps) draws them.
 -}
 rowTrace : Trace -> List CarAt -> Snapshot -> CarAt -> Html msg
 rowTrace trace classCars snapshot item =
@@ -352,6 +363,9 @@ rowTrace trace classCars snapshot item =
                     { first = 1, last = currentLap }
                     history
                     item
+
+            LapsTrace ->
+                SectorAndLaps.view item
         ]
 
 
@@ -366,6 +380,9 @@ traceName trace =
 
         PaceTrace ->
             "pace"
+
+        LapsTrace ->
+            "laps"
 
 
 {-| How many laps back the gap curve reaches: a row is a reading of the race as
