@@ -696,7 +696,8 @@ timelineTableConfig cars =
 {-| The most recent events the field draws, newest first: when each happened,
 whose it was, and what kind of thing it was.
 
-`recentEventLimit` counts the rows here, not the round's events.
+`recentEventLimit` counts the events read, so the rows come out fewer than it
+by the fastest laps among them; see `isFastestLap`.
 
 The rows are rebuilt only when an event arrives. A thunk's arguments are
 compared by `===`, so every one of these is held to something that survives a
@@ -727,8 +728,6 @@ recentEventLimit =
 {-| Fastest-lap events are kept out of both event lists -- the one in the
 tracker's column, and the Events table in its own tab; their news is the
 reference lap at the head of a class's column and the records on a car's panel.
-The tracker column's limit counts the events read, so it can hold fewer lines
-than it.
 -}
 isFastestLap : TimelineEvent -> Bool
 isFastestLap event =

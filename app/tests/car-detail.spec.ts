@@ -184,8 +184,8 @@ async function inView(page: Page, column: Locator) {
 }
 
 /** Take the tracker's column out of the strip, and wait for it to stop
- * gliding. It stands there from page load; the tests below count places, and a
- * column they never name would be a place they did not count. */
+ * gliding: the tests below count places, and a column they never name would
+ * be a place they did not count. */
 async function closeTrackerColumn(page: Page) {
   const standing = page
     .locator('[data-tracker-column]')

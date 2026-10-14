@@ -26,9 +26,6 @@ suite =
         [ describe "the opening strip"
             [ test "one column per class, in the order the grid lists them, and the tracker behind them" <|
                 \_ ->
-                    -- The fixture's GT3 is the fastest car the field holds:
-                    -- a strip that followed the running order would open
-                    -- LMGT3 first.
                     Columns.init
                         |> keysOf
                         |> Expect.equal

@@ -154,7 +154,7 @@ classesOf snapshot =
 
 
 {-| There is no ceiling on how many, and each column draws its own charts on
-every frame of playback. A column opened joins the back of the strip.
+every frame of playback.
 -}
 open : StripKey -> Snapshot -> Columns -> Columns
 open key snapshot columns =
@@ -220,8 +220,7 @@ announcement key order =
 
 
 {-| The column under the pointer. The order stands while a carry goes on:
-nothing is written until the column is let go of, and a release where it
-began writes nothing at all.
+nothing is written until the column is let go of.
 -}
 type alias Carry =
     { key : StripKey }

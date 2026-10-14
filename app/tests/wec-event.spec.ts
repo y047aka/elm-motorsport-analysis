@@ -4,9 +4,8 @@ import { waitForPageReady, setLapCount } from './helpers';
 const TRACKER_COLUMN = '[data-tracker-column]';
 
 /**
- * The tracker's column, which stands in the strip from page load. It arrives
- * on the first frame that knows the field, so it is the column that is waited
- * for.
+ * The tracker's column stands in the strip from page load and arrives on the
+ * first frame that knows the field.
  */
 async function waitForTrackerColumn(page: Page) {
   await expect(page.locator(TRACKER_COLUMN)).toHaveCount(1);
@@ -19,8 +18,8 @@ test.describe('Le Mans 2025 Visual Tests', () => {
   });
 
   // Mid-race state: the standings and their gaps, the cars on the tracker, and
-  // the columns the page opens on, one for each class the field runs. The rendering
-  // at lap 180 is determined solely by the lap data.
+  // the columns the page opens on -- one per class the field runs, the tracker
+  // behind them. The rendering at lap 180 is determined solely by the lap data.
   test('should render a mid-race state correctly', async ({ page }) => {
     await setLapCount(page, 180);
     await expect(page.getByText('KUBICA').first()).toBeVisible();
