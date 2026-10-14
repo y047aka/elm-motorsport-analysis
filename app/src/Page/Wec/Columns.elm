@@ -7,8 +7,9 @@ module Page.Wec.Columns exposing
 {-| The strip of columns: what order they stand in, which one a pointer is
 carrying, and where each is drawn while that goes on.
 
-A column belongs to a class, to a car or to the tracker; `StripKey` is that
-choice, and the order -- `Columns` -- is a list of them. Every edit is total.
+A column belongs to a class, to a car, to the tracker or to the events
+table; `StripKey` is that choice, and the order -- `Columns` -- is a list of
+them. Every edit is total.
 
 The names sort into five shelves:
 
@@ -39,12 +40,14 @@ import Motorsport.Wec.Class as Class exposing (Class)
 import Task
 
 
-{-| A column of the strip: a class's, a car's, or the tracker's.
+{-| A column of the strip: a class's, a car's, the tracker's or the events
+table's.
 -}
 type StripKey
     = Car CarNumber
     | ClassColumn Class
     | Tracker
+    | Events
 
 
 keyName : StripKey -> String
@@ -58,6 +61,9 @@ keyName key =
 
         Tracker ->
             "tracker"
+
+        Events ->
+            "events"
 
 
 {-| What a column is called when one is spoken about, which is what the reader
@@ -75,6 +81,9 @@ name key =
         Tracker ->
             "Tracker"
 
+        Events ->
+            "Events column"
+
 
 carOfKey : StripKey -> Maybe CarNumber
 carOfKey key =
@@ -89,7 +98,8 @@ carOfKey key =
 {-| The order of the strip: the columns, in the order the reader left them
 in. An order nobody has touched is the strip as the round opens it -- one
 column per class the field has cars out in, in the order a classification
-lists the classes, and the tracker's column behind them -- which is what
+lists the classes, the tracker's column and then the events table behind
+them -- which is what
 `keysOf` reads out of the field; the first open, close or move writes that
 opening down as a list.
 -}
@@ -102,7 +112,7 @@ keysOf snapshot columns =
     case columns of
         [] ->
             List.map ClassColumn (classesOf snapshot)
-                ++ [ Tracker ]
+                ++ [ Tracker, Events ]
 
         keys ->
             keys
@@ -124,6 +134,9 @@ resolve snapshot =
                     Snapshot.inClass class_ snapshot /= []
 
                 Tracker ->
+                    True
+
+                Events ->
                     True
         )
 

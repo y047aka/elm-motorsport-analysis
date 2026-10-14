@@ -405,6 +405,33 @@ openColumn keys class_ =
         Just (ColumnsMsg (Columns.Open key))
 
 
+{-| The round's events as a column of the strip: the whole table the foot of
+the page holds, scrolling inside the card. The visual tests locate it by
+`data-events-column`.
+
+Both readings share the one `DataView.Model`, so paging or sorting the table
+in one moves the other.
+
+-}
+eventsColumn : Bool -> Bool -> DataView.Model -> List Car -> Timeline -> Html Msg
+eventsColumn several held table cars timeline =
+    Card.card [ attribute "data-events-column" "" ]
+        [ div [ Attributes.class "relative flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
+            [ div [ Attributes.class "min-h-0 overflow-y-auto" ]
+                [ Card.content [] [ eventTable table cars timeline ] ]
+            , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
+                ((if several then
+                    [ columnGrip held Columns.Events ]
+
+                  else
+                    []
+                 )
+                    ++ [ Header.closeButton (ColumnsMsg (Columns.Close Columns.Events)) ]
+                )
+            ]
+        ]
+
+
 {-| One keyed child of the strip: a grid of the width the column stands at,
 whatever is drawn in it, standing as its placement says -- flush for a
 resting one, an offset and a shadow for a carried one.
@@ -458,6 +485,12 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
                         Columns.width
                         placement
                         (trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot)
+
+                Columns.Events ->
+                    stripColumn (Columns.keyName key)
+                        Columns.width
+                        placement
+                        (eventsColumn several (Columns.isCarried placement) m.timelineTable replay.race.cars timeline)
     in
     case keys of
         [] ->
@@ -583,13 +616,18 @@ bottomPanel : DataView.Model -> List Car -> Timeline -> Html Msg
 bottomPanel table cars timeline =
     div [ Attributes.class "shrink-0 grid" ]
         [ Card.card []
-            [ Card.content []
-                [ DataView.view (timelineTableConfig cars)
-                    table
-                    (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
-                ]
-            ]
+            [ Card.content [] [ eventTable table cars timeline ] ]
         ]
+
+
+{-| The events table itself: the whole timeline, oldest first, minus the
+fastest laps; see `isFastestLap`.
+-}
+eventTable : DataView.Model -> List Car -> Timeline -> Html Msg
+eventTable table cars timeline =
+    DataView.view (timelineTableConfig cars)
+        table
+        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
 
 
 timelineTableOptions : Options
@@ -853,6 +891,9 @@ headerColumn maybeSnapshot key =
                 ( Columns.Tracker, _ ) ->
                     mark "TRACK"
 
+                ( Columns.Events, _ ) ->
+                    mark "EVENTS"
+
         mark label =
             div [ Attributes.class "w-[35px] p-1 rounded flex flex-col items-center justify-center border border-border leading-none text-[9px] font-bold" ]
                 [ text label ]
@@ -867,6 +908,9 @@ headerColumn maybeSnapshot key =
 
                 Columns.Tracker ->
                     "Scroll to the tracker"
+
+                Columns.Events ->
+                    "Scroll to the events column"
     in
     button
         [ Attributes.class "shrink-0 flex items-center p-0.5 rounded cursor-pointer transition-colors hover:bg-accent/40"

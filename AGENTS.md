@@ -197,10 +197,12 @@ order, the one column a pointer carries, and how far
 down each car's panel was scrolled. The page holds one `Columns.Model`,
 forwards through `ColumnsMsg`, and hands the field in per call.
 
-A column is keyed by `StripKey` -- a class's, a car's or the tracker's. The strip
+A column is keyed by `StripKey` -- a class's, a car's, the tracker's or the
+events table's. The strip
 opens with one column per class the field has cars out in, in the order a
 classification lists them and not the order their leaders run in, the tracker's
-column behind them; a car's column joins at the back when the reader picks one,
+column and the events table behind them; a car's column joins at the back when
+the reader picks one,
 and from the first open, close or move the order is the reader's.
 
 A class's column (`View/ClassColumn.elm`) is how a race is followed while it is
