@@ -11,7 +11,6 @@ import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src)
 import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Position as Position
 import Motorsport.Race.LapHistory exposing (LapHistory)
@@ -41,7 +40,6 @@ view lapHistory allCars item =
                 , portrait item.metadata.imageUrl item
                 , SectorAndLaps.view item
                 , rivalGapSparkline lapHistory allCars item
-                , LapTimeDistribution.sparkline { first = 1, last = item.standing.lapsCompleted } lapHistory item
                 ]
             ]
         ]
@@ -50,7 +48,7 @@ view lapHistory allCars item =
 {-| The car itself, side on, across the card at the height of the sector times
 under it. These cards are 260px, so it cannot go beside the heading without
 cutting the team's name, and at the width it arrives at it stands as tall as
-those times and both charts together.
+those times and the chart together.
 -}
 portrait : Maybe String -> CarAt -> Html msg
 portrait carImageUrl item =
