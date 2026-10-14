@@ -312,17 +312,17 @@ mainGrid round keys m =
             round.replay
     in
     div
-        [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
-        [ div
-            -- The whole class string is written intact: Tailwind generates a
-            -- class only from a string it finds intact in the source, so one
-            -- assembled from fragments silently ships no
-            -- `grid-template-columns` at all, and every track sizes to its
-            -- content.
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[auto_1fr] gap-2.5" ]
-            [ standingsCell keys m snapshot replay.race.cars
-            , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
-            ]
+        -- The whole class string is written intact: Tailwind generates a
+        -- class only from a string it finds intact in the source, so one
+        -- assembled from fragments silently ships no
+        -- `grid-template-columns` at all, and every track sizes to its
+        -- content.
+        [
+            Attributes.class
+                "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
+        ]
+        [ standingsCell keys m snapshot replay.race.cars
+        , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
