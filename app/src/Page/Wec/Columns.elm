@@ -219,13 +219,6 @@ announcement key order =
             ""
 
 
-{-| The column under the pointer. The order stands while a carry goes on:
-nothing is written until the column is let go of.
--}
-type alias Carry =
-    { key : StripKey }
-
-
 {-| How far a carry has gone: the pointer's travel and the strip's together,
 since the strip can be scrolled under a pointer that holds still.
 -}
@@ -309,7 +302,7 @@ placements measure underPointer keys =
 carrying : Model -> Maybe ( StripKey, Float )
 carrying m =
     Drag.carrying m.carried
-        |> Maybe.map (\carry -> ( carry.location.key, withScroll m (Drag.travel carry) ))
+        |> Maybe.map (\carry -> ( carry.location, withScroll m (Drag.travel carry) ))
 
 
 isCarried : Placement -> Bool
@@ -365,10 +358,13 @@ car's panel was scrolled, and what to say when a column moved.
 carry measures its travel against. It keeps the last carry's reading between
 carries; only a carry is ever measured with it.
 
+The order stands while a carry goes on: nothing is written until the column is
+let go of.
+
 -}
 type alias Model =
     { order : Columns
-    , carried : Drag.State Carry
+    , carried : Drag.State StripKey
     , stripScroll : { from : Float, to : Float }
     , scrolls : Dict CarNumber Float
     , announcement : String
@@ -521,7 +517,7 @@ grab key pointer m =
     else
         let
             ( carried, _ ) =
-                Drag.update (Drag.Pick { key = key } pointer) m.carried
+                Drag.update (Drag.Pick key pointer) m.carried
         in
         ( { m | carried = carried, stripScroll = { from = 0, to = 0 } }
         , Browser.Dom.getViewportOf stripId
@@ -541,13 +537,13 @@ release field pointer m =
                 Just round ->
                     let
                         moved =
-                            move done.location.key (columnsCarried (withScroll after done.travel)) round m.order
+                            move done.location (columnsCarried (withScroll after done.travel)) round m.order
                     in
                     if moved == m.order then
                         ( after, Cmd.none )
 
                     else
-                        reorder round { moved = done.location.key, refocus = False } after moved
+                        reorder round { moved = done.location, refocus = False } after moved
 
                 Nothing ->
                     ( after, Cmd.none )
