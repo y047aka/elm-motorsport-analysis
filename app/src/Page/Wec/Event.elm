@@ -317,9 +317,8 @@ mainGrid round keys m =
         -- assembled from fragments silently ships no
         -- `grid-template-columns` at all, and every track sizes to its
         -- content.
-        [
-            Attributes.class
-                "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
+        [ Attributes.class
+            "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         ]
         [ standingsCell keys m snapshot replay.race.cars
         , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
@@ -558,9 +557,8 @@ classColumn several standing held trace snapshot class_ =
         class_
 
 
-{-| Which curve a class's column draws under its cars. Pace until the reader
-picks otherwise; `Class` carries a record, so the choice is kept under the
-name the class prints.
+{-| `Class` carries a record, so each column's curve choice is kept under the
+name its class prints.
 -}
 rowTrace : Model -> Class -> ClassColumn.Trace
 rowTrace m class_ =

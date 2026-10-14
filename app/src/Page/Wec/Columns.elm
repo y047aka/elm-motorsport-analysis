@@ -99,9 +99,8 @@ carOfKey key =
 in. An order nobody has touched is the strip as the round opens it -- one
 column per class the field has cars out in, in the order a classification
 lists the classes, the tracker's column and then the events table behind
-them -- which is what
-`keysOf` reads out of the field; the first open, close or move writes that
-opening down as a list.
+them -- which is what `keysOf` reads out of the field; the first open, close
+or move writes that opening down as a list.
 -}
 type alias Columns =
     List StripKey

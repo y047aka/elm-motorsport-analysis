@@ -1,4 +1,7 @@
-module View.ClassColumn exposing (Trace(..), view)
+module View.ClassColumn exposing
+    ( view
+    , Trace(..)
+    )
 
 {-| One class of the field as a column of the strip: its cars in running order,
 each measured against the class-mate ahead of it.
@@ -13,9 +16,8 @@ class has, leader first.
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
-Each row carries a curve of how the car is running underneath it -- the gap
-out to the rivals either side of it, the spread of its own lap times, or the
-lap times themselves -- and the reader picks which from the column's head.
+Each row carries a curve of how the car is running underneath it, and the
+reader picks which of three from the column's head.
 
 The foot is the class's own pit board, and only when the lane has one of the
 class: the tracker's board ruled with just these cars, saying who is being
@@ -199,8 +201,7 @@ head config class_ cars =
         ]
 
 
-{-| The head's picker for the rows' curve: one press per column, and the
-page holds which curve it asks for.
+{-| The head's picker for the rows' curve.
 -}
 traceChoice : Config msg -> Html msg
 traceChoice config =
@@ -323,23 +324,14 @@ row config snapshot classCars ( ahead, item ) =
     )
 
 
-{-| The curve under the car, of whichever kind the column's head picks.
+{-| Gap: the gaps are matched by lap number, so a lapped rival is about a lap
+of cumulative time away at the same lap number and is clipped outside the
+band as an outlier rather than flattening it.
 
-Gap: the car and the rival either side over the last stretch of laps, as
-[`gapSparkline`](Motorsport-Chart-GapChart#gapSparkline) draws it. The gaps are
-matched by lap number, so a lapped rival is about a lap of cumulative time
-away at the same lap number and is clipped outside the band as an outlier
-rather than flattening it.
+Pace: the range spans the whole race the car has run -- `Pace` clips its
+outliers against the range it is given, so a recent window would measure the
+fence against the stretch it is supposed to filter.
 
-Pace: the car's own racing laps as one curve on a lap-time scale of its own,
-as [`sparkline`](Motorsport-Chart-LapTimeDistribution#sparkline) draws it, the
-rivals not in it at all -- two classes on one lap-time axis flatten both. The
-range spans the whole race the car has run: `Pace` clips its outliers against
-the range it is given, so a recent window would measure the fence against the
-stretch it is supposed to filter.
-
-Laps: the lap the car is on, its sectors as a pie, beside the lap it just
-completed, as [`view`](View-SectorAndLaps) draws them.
 -}
 rowTrace : Trace -> List CarAt -> Snapshot -> CarAt -> Html msg
 rowTrace trace classCars snapshot item =
@@ -385,9 +377,6 @@ traceName trace =
             "laps"
 
 
-{-| How many laps back the gap curve reaches: a row is a reading of the race as
-it is running, not of the race.
--}
 recentLapCount : Int
 recentLapCount =
     20
