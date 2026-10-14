@@ -278,14 +278,7 @@ trackerCard several held track replay fieldEvents snapshot =
                 [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
                     [ TrackerChart.view TrackerChart.Full track snapshot
                     , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
-                        ((if several then
-                            [ columnGrip held Columns.Tracker ]
-
-                          else
-                            []
-                         )
-                            ++ [ Header.closeButton (ColumnsMsg (Columns.Close Columns.Tracker)) ]
-                        )
+                        (cornerControls (corner several held Columns.Tracker))
                     ]
                 ]
             , button
@@ -419,14 +412,7 @@ eventsColumn several held table cars timeline =
                     ]
                 ]
             , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
-                ((if several then
-                    [ columnGrip held Columns.Events ]
-
-                  else
-                    []
-                 )
-                    ++ [ Header.closeButton (ColumnsMsg (Columns.Close Columns.Events)) ]
-                )
+                (cornerControls (corner several held Columns.Events))
             ]
         ]
 
@@ -460,36 +446,27 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
             List.map (\car -> car.metadata.carNumber) (Columns.carsIn snapshot keys)
 
         columnCell key placement =
-            case key of
-                Columns.Car carNumber ->
-                    stripColumn (Columns.keyName key)
-                        Columns.width
-                        placement
-                        (Snapshot.get carNumber snapshot
+            stripColumn (Columns.keyName key)
+                Columns.width
+                placement
+                (case key of
+                    Columns.Car carNumber ->
+                        Snapshot.get carNumber snapshot
                             |> Maybe.map
                                 (\car ->
                                     Html.Lazy.lazy6 (carCard several) timeline (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
                                 )
                             |> Maybe.withDefault (text "")
-                        )
 
-                Columns.ClassColumn class_ ->
-                    stripColumn (Columns.keyName key)
-                        Columns.width
-                        placement
-                        (classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot class_)
+                    Columns.ClassColumn class_ ->
+                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot class_
 
-                Columns.Tracker ->
-                    stripColumn (Columns.keyName key)
-                        Columns.width
-                        placement
-                        (trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot)
+                    Columns.Tracker ->
+                        trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
 
-                Columns.Events ->
-                    stripColumn (Columns.keyName key)
-                        Columns.width
-                        placement
-                        (eventsColumn several (Columns.isCarried placement) m.timelineTable replay.race.cars timeline)
+                    Columns.Events ->
+                        eventsColumn several (Columns.isCarried placement) m.timelineTable replay.race.cars timeline
+                )
     in
     case keys of
         [] ->
@@ -529,29 +506,53 @@ columnGrip held key =
         }
 
 
+type alias Corner =
+    { onClose : Maybe Msg
+    , grip : Maybe (Html Msg)
+    }
+
+
+{-| The corner every column carries: taking a column away is `Columns.Close`
+for its key, and standing alone it has neither control.
+-}
+corner : Bool -> Bool -> Columns.StripKey -> Corner
+corner several held key =
+    if several then
+        { onClose = Just (ColumnsMsg (Columns.Close key))
+        , grip = Just (columnGrip held key)
+        }
+
+    else
+        { onClose = Nothing
+        , grip = Nothing
+        }
+
+
+{-| The corner drawn as a row, in the order every column that floats its
+controls draws them in.
+-}
+cornerControls : Corner -> List (Html Msg)
+cornerControls corners =
+    List.filterMap identity [ corners.grip, Maybe.map Header.closeButton corners.onClose ]
+
+
 {-| One class of the field, which is what the strip opens with: `View.ClassColumn`
 draws its cars each against the class-mate ahead of it.
 -}
 classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> Class -> Html Msg
 classColumn several standing held trace snapshot class_ =
+    let
+        corners =
+            corner several held (Columns.ClassColumn class_)
+    in
     ClassColumn.view
         { onSelect = pickCar
         , onReveal = revealCar
         , withColumns = standing
         , trace = trace
         , onTrace = RowTraceChosen class_
-        , onClose =
-            if several then
-                Just (ColumnsMsg (Columns.Close (Columns.ClassColumn class_)))
-
-            else
-                Nothing
-        , grip =
-            if several then
-                Just (columnGrip held (Columns.ClassColumn class_))
-
-            else
-                Nothing
+        , onClose = corners.onClose
+        , grip = corners.grip
         }
         snapshot
         class_
@@ -571,6 +572,9 @@ carCard several timeline held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
+
+        corners =
+            corner several held (Columns.Car carNumber)
     in
     Card.card []
         -- A card's content does not shrink below what it holds, so the card
@@ -583,18 +587,8 @@ carCard several timeline held comparison cars snapshot car =
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
-                    , onClose =
-                        if several then
-                            Just (ColumnsMsg (Columns.Close (Columns.Car carNumber)))
-
-                        else
-                            Nothing
-                    , grip =
-                        if several then
-                            Just (columnGrip held (Columns.Car carNumber))
-
-                        else
-                            Nothing
+                    , onClose = corners.onClose
+                    , grip = corners.grip
                     , comparison = comparison
                     , scrollId = Columns.scrollId carNumber
                     , onScroll = Columns.PanelScrolled carNumber >> ColumnsMsg
