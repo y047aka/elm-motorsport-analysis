@@ -313,7 +313,7 @@ defines, which is why that file scans `/package` too.
 **`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport
 has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
 are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`,
-the sortable, filterable, paginated table the app's Events tab configures
+the sortable, filterable, paginated table the app's Events column configures
 directly, with the `Table` it draws its rows with.
 
 Directly under `Motorsport/` are the primitives the rest is written in.

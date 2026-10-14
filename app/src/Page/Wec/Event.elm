@@ -323,7 +323,6 @@ mainGrid round keys m =
             [ standingsCell keys m snapshot replay.race.cars
             , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
             ]
-        , bottomPanel m.timelineTable round.replay.race.cars round.timeline
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -405,20 +404,21 @@ openColumn keys class_ =
         Just (ColumnsMsg (Columns.Open key))
 
 
-{-| The round's events as a column of the strip: the whole table the foot of
-the page holds, scrolling inside the card. The visual tests locate it by
-`data-events-column`.
-
-Both readings share the one `DataView.Model`, so paging or sorting the table
-in one moves the other.
-
+{-| The round's events as a column of the strip: the whole timeline, oldest
+first, minus the fastest laps; see `isFastestLap`. The visual tests locate it
+by `data-events-column`.
 -}
 eventsColumn : Bool -> Bool -> DataView.Model -> List Car -> Timeline -> Html Msg
 eventsColumn several held table cars timeline =
     Card.card [ attribute "data-events-column" "" ]
         [ div [ Attributes.class "relative flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
             [ div [ Attributes.class "min-h-0 overflow-y-auto" ]
-                [ Card.content [] [ eventTable table cars timeline ] ]
+                [ Card.content []
+                    [ DataView.view (timelineTableConfig cars)
+                        table
+                        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
+                    ]
+                ]
             , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
                 ((if several then
                     [ columnGrip held Columns.Events ]
@@ -610,26 +610,6 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-{-| The round's events, in one table at the foot of the page.
--}
-bottomPanel : DataView.Model -> List Car -> Timeline -> Html Msg
-bottomPanel table cars timeline =
-    div [ Attributes.class "shrink-0 grid" ]
-        [ Card.card []
-            [ Card.content [] [ eventTable table cars timeline ] ]
-        ]
-
-
-{-| The events table itself: the whole timeline, oldest first, minus the
-fastest laps; see `isFastestLap`.
--}
-eventTable : DataView.Model -> List Car -> Timeline -> Html Msg
-eventTable table cars timeline =
-    DataView.view (timelineTableConfig cars)
-        table
-        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
-
-
 timelineTableOptions : Options
 timelineTableOptions =
     { sorting = Sorting
@@ -742,8 +722,8 @@ recentEventLimit =
     100
 
 
-{-| Fastest-lap events are kept out of both event lists -- the one in the
-tracker's column, and the Events table in its own tab; their news is the
+{-| Fastest-lap events are kept out of both event lists -- the recent rows in
+the tracker's column, and the events column's table; their news is the
 reference lap at the head of a class's column and the records on a car's panel.
 -}
 isFastestLap : TimelineEvent -> Bool
