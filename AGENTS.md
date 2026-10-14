@@ -193,7 +193,7 @@ everything it draws.
 ### The car column strip
 
 `Page/Wec/Columns.elm` is the strip's own model, messages and update: the
-order, the tracker's column, the one column a pointer carries, and how far
+order, the one column a pointer carries, and how far
 down each car's panel was scrolled. The page holds one `Columns.Model`,
 forwards through `ColumnsMsg`, and hands the field in per call.
 
