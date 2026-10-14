@@ -364,7 +364,7 @@ test.describe('Class columns', () => {
       ).toBeVisible();
     }
     await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(
-      CLASSES.length,
+      CLASSES.length + 1, // the tracker's column, standing from the load, is one of them
     );
     // Nothing has been picked, so no car is marked anywhere.
     await expect(page.locator('[data-live-standings] [aria-pressed="true"]')).toHaveCount(0);
