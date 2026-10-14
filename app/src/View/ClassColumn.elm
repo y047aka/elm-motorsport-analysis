@@ -13,9 +13,9 @@ class has, leader first.
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
-Each row carries the car's recent battle with its class rivals underneath it:
-how the interval to the cars around it has been growing and shrinking over the
-last stretch of the race.
+Each row carries the distribution of the car's own racing laps underneath it:
+the pace it has been holding and how tightly it holds it, with the lap it has
+just completed marked on the curve.
 
 The foot is the class's own pit board, and only when the lane has one of the
 class: the tracker's board ruled with just these cars, saying who is being
@@ -29,8 +29,7 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
-import Motorsport.Analysis.Rivals as Rivals
-import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -134,7 +133,7 @@ view config snapshot class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted cars field)
+                        (rows config snapshot counted field)
                      ]
                         ++ foot
                     )
@@ -254,8 +253,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> List CarAt -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot classCars ( ahead, item ) =
+row : Config msg -> Snapshot -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -275,39 +274,28 @@ row config snapshot classCars ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
-        , gapTrace classCars snapshot item
+        , paceTrace snapshot item
         ]
     )
 
 
-{-| How the car has been running against its class rivals lately: the relative
-gap over the last stretch of laps, the car and the rival either side of it, as
-[`gapSparkline`](Motorsport-Chart-GapChart#gapSparkline) draws it.
+{-| What pace the car has been holding, as its own racing laps drawn by
+[`sparkline`](Motorsport-Chart-LapTimeDistribution#sparkline): one curve on a
+lap-time scale of its own, the car's rivals in it not at all -- two classes on
+one lap-time axis flatten both.
 
-The gaps are matched by lap number, so a lapped rival is about a lap of
-cumulative time away at the same lap number and is clipped outside the band as
-an outlier rather than flattening it.
+The range spans the whole race the car has run: `Pace` clips its outliers
+against the range it is given, so a recent window would measure the fence
+against the stretch it is supposed to filter.
 -}
-gapTrace : List CarAt -> Snapshot -> CarAt -> Html msg
-gapTrace classCars snapshot item =
-    let
-        currentLap =
-            item.standing.lapsCompleted
-    in
-    div [ class "col-span-5 row-start-3", attribute "data-gap-trace" "" ]
-        [ GapChart.gapSparkline
-            { first = currentLap - recentLapCount, last = currentLap }
+paceTrace : Snapshot -> CarAt -> Html msg
+paceTrace snapshot item =
+    div [ class "col-span-5 row-start-3", attribute "data-pace-trace" "" ]
+        [ LapTimeDistribution.sparkline
+            { first = 1, last = item.standing.lapsCompleted }
             (Snapshot.lapHistory snapshot)
-            (Rivals.around classCars item)
+            item
         ]
-
-
-{-| How many laps back the trace reaches: a row is a reading of the race as it
-is running, not of the race.
--}
-recentLapCount : Int
-recentLapCount =
-    20
 
 
 {-| The car side on, as the car's own panel and the car cards draw it, as tall
@@ -368,8 +356,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> List CarAt -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted classCars field =
+rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -377,7 +365,7 @@ rows config snapshot counted classCars field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot classCars pair :: acc
+                    row config snapshot pair :: acc
             in
             if back == behind then
                 ( behind, lines )
