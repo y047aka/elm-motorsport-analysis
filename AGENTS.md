@@ -145,7 +145,7 @@ fetched at runtime via `Http`.
   that is not shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
   `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
-  the car cards, the live standings, a class's own column, the tracker's pit lane
+  the car cards, the live standings, a class's own column with its pit lane
   list, and the badge and class mark those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
@@ -193,15 +193,15 @@ everything it draws.
 ### The car column strip
 
 `Page/Wec/Columns.elm` is the strip's own model, messages and update: the
-order, the tracker's column, the one column a pointer carries, and how far
+order, the one column a pointer carries, and how far
 down each car's panel was scrolled. The page holds one `Columns.Model`,
 forwards through `ColumnsMsg`, and hands the field in per call.
 
 A column is keyed by `StripKey` -- a class's, a car's or the tracker's. The strip
-opens **live**: one column per class the field has cars out in, re-read from every
-frame so that each class's order is its own, and a car's column joins behind them
-when the reader picks one. Any open, close or move settles the strip into the
-order the reader left it in.
+opens with one column per class the field has cars out in, in the order a
+classification lists them and not the order their leaders run in, the tracker's
+column behind them; a car's column joins at the back when the reader picks one,
+and from the first open, close or move the order is the reader's.
 
 A class's column (`View/ClassColumn.elm`) is how a race is followed while it is
 still sorting itself out, and is the standings read down one class instead of the
@@ -218,11 +218,6 @@ did not.
 Every column is drawn `Columns.width` wide, and everything that measures the
 strip -- where a column stands, how far a carry moves one, how far a press
 scrolls -- is done in that one width and `pitch`.
-
-**The tracker's index means where it stood when the strip settled**: while the
-class columns are live the tracker trails them however the running order moves,
-and picking, closing or moving a column fixes it among the cars where it stood at
-that moment.
 
 ### The shadcn components
 

@@ -133,9 +133,9 @@ rebuilt as playback runs.
 against, and the only one of them a round can go without: nothing playback reads
 is counted off them.
 
-`fieldEvents` is those of them the field's panel draws, held apart rather than read
-off `timeline` on the way: the panel's rows are built behind a `Html.Lazy` thunk,
-and a timeline made afresh on a frame is a new reference on every one.
+`fieldEvents` is those of them the tracker's column draws, held apart rather
+than read off `timeline` on the way: those rows are built behind a `Html.Lazy`
+thunk, and a timeline made afresh on a frame is a new reference on every one.
 
 -}
 type alias LoadedRound =
