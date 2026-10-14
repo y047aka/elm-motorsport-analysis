@@ -61,6 +61,7 @@ import View.PlaybackControls as PlaybackControls
 type alias Model =
     { strip : Columns.Model
     , bottomTab : BottomTab
+    , rowTrace : Dict String ClassColumn.Trace
     , timelineTable : DataView.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
@@ -84,6 +85,7 @@ init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { strip = Columns.init
       , bottomTab = CardsTab
+      , rowTrace = Dict.empty
       , timelineTable = DataView.init "timeline-events" timelineTableOptions
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
@@ -103,6 +105,7 @@ type Msg
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
     | BottomTabChange BottomTab
+    | RowTraceChosen Class ClassColumn.Trace
     | TimelineTableMsg DataView.Msg
     | ReplayMsg Replay.Msg
     | CarDetailMsg CarDetail.Msg
@@ -148,6 +151,9 @@ update shared msg m =
 
         BottomTabChange tab ->
             ( { m | bottomTab = tab }, Effect.none )
+
+        RowTraceChosen class_ trace ->
+            ( { m | rowTrace = Dict.insert (Class.toString class_) trace m.rowTrace }, Effect.none )
 
         TimelineTableMsg timelineMsg ->
             ( { m | timelineTable = DataView.update timelineMsg m.timelineTable }, Effect.none )
@@ -458,7 +464,7 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
                     stripColumn (Columns.keyName key)
                         Columns.width
                         placement
-                        (classColumn several standing (Columns.isCarried placement) snapshot class_)
+                        (classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot class_)
 
                 Columns.Tracker ->
                     stripColumn (Columns.keyName key)
@@ -507,12 +513,14 @@ columnGrip held key =
 {-| One class of the field, which is what the strip opens with: `View.ClassColumn`
 draws its cars each against the class-mate ahead of it.
 -}
-classColumn : Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
-classColumn several standing held snapshot class_ =
+classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> Class -> Html Msg
+classColumn several standing held trace snapshot class_ =
     ClassColumn.view
         { onSelect = pickCar
         , onReveal = revealCar
         , withColumns = standing
+        , trace = trace
+        , onTrace = RowTraceChosen class_
         , onClose =
             if several then
                 Just (ColumnsMsg (Columns.Close (Columns.ClassColumn class_)))
@@ -528,6 +536,16 @@ classColumn several standing held snapshot class_ =
         }
         snapshot
         class_
+
+
+{-| Which curve a class's column draws under its cars. Pace until the reader
+picks otherwise; `Class` carries a record, so the choice is kept under the
+name the class prints.
+-}
+rowTrace : Model -> Class -> ClassColumn.Trace
+rowTrace m class_ =
+    Dict.get (Class.toString class_) m.rowTrace
+        |> Maybe.withDefault ClassColumn.PaceTrace
 
 
 carCard : Bool -> Timeline -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
