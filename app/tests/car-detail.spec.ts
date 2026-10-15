@@ -20,6 +20,16 @@ function readConstant(name: string, source: string, pattern: RegExp): number {
   return value;
 }
 
+/** The string sibling of `readConstant`, for the labels a selector matches
+ * the prefix of. */
+function readString(name: string, source: string, pattern: RegExp): string {
+  const value = pattern.exec(source)?.[1];
+  if (value === undefined) {
+    throw new Error(`${name} not found in its source -- did it move?`);
+  }
+  return value;
+}
+
 /** One column's width, and the pitch one column moves by. */
 const columnsSource = readFileSync(new URL('../src/Page/Wec/Columns.elm', import.meta.url), 'utf8');
 const COLUMN_WIDTH = readConstant('Columns.width', columnsSource, /\nwidth =\n\s+(\d+)/);
@@ -34,6 +44,16 @@ const STANDINGS_MIN = readConstant('LiveStandings.minWidth', standingsSource, /\
 const STANDINGS_MAX = readConstant('LiveStandings.maxWidth', standingsSource, /\nmaxWidth =\n\s+(\d+)/);
 const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
 const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsFence =\n\s*\{[\s\S]*?step = (\d+)/);
+
+/** How `rowButton` opens every class row's label. The head's curve picker
+ * carries `aria-pressed` too, so the rows are the pressed buttons whose label
+ * begins this way -- and this is the label that says so, not a copy. */
+const classColumnSource = readFileSync(new URL('../src/View/ClassColumn.elm', import.meta.url), 'utf8');
+const ROW_LABEL = readString(
+  'rowButton aria-label',
+  classColumnSource,
+  /attribute "aria-label" \("([^"]+)" \+\+/,
+);
 
 /** The car's row in the live standings, which is where a car is picked. */
 function standingsRow(page: Page, carNumber: string) {
@@ -109,15 +129,14 @@ function classColumn(page: Page, className: string) {
   return page.locator(`[data-class-column="${className}"]`);
 }
 
-/** The rows of a class's column, leader first. The head's curve picker carries
- * `aria-pressed` too, so the rows are the pressed buttons that name a car. */
+/** The rows of a class's column, leader first. */
 function classRows(page: Page, className: string) {
-  return classColumn(page, className).locator('button[aria-pressed][aria-label^="Car #"]');
+  return classColumn(page, className).locator(`button[aria-pressed][aria-label^="${ROW_LABEL}"]`);
 }
 
 /** A car's row in a class's own column, which names the class it is drawn in. */
 function classRow(page: Page, carNumber: string, className: string) {
-  return page.getByRole('button', { name: `Car #${carNumber} in ${className}` });
+  return page.getByRole('button', { name: `${ROW_LABEL}${carNumber} in ${className}` });
 }
 
 /** Every column of the strip, left to right: a class's named, a car's numbered,
@@ -173,7 +192,7 @@ function divisions(page: Page, className: string) {
  * PIT, OUT or Retired, and nothing at all for a car on the road. */
 function laneMarks(page: Page, className: string) {
   return classColumn(page, className)
-    .locator('button[aria-pressed][aria-label^="Car #"]')
+    .locator(`button[aria-pressed][aria-label^="${ROW_LABEL}"]`)
     .evaluateAll((rows) => rows.map((row) => (row.querySelector('[data-lane]')?.textContent ?? '').trim()));
 }
 
