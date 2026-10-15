@@ -151,7 +151,7 @@ view config snapshot class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted cars field)
+                        (rows config snapshot counted field)
                      ]
                         ++ foot
                     )
@@ -201,8 +201,6 @@ head config class_ cars =
         ]
 
 
-{-| The head's picker for the rows' curve.
--}
 traceChoice : Config msg -> Html msg
 traceChoice config =
     ToggleGroup.view
@@ -298,8 +296,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> List CarAt -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot classCars ( ahead, item ) =
+row : Config msg -> Snapshot -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -319,7 +317,7 @@ row config snapshot classCars ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
-        , rowTrace config.trace classCars snapshot item
+        , rowTrace config.trace snapshot item
         ]
     )
 
@@ -333,8 +331,8 @@ outliers against the range it is given, so a recent window would measure the
 fence against the stretch it is supposed to filter.
 
 -}
-rowTrace : Trace -> List CarAt -> Snapshot -> CarAt -> Html msg
-rowTrace trace classCars snapshot item =
+rowTrace : Trace -> Snapshot -> CarAt -> Html msg
+rowTrace trace snapshot item =
     let
         currentLap =
             item.standing.lapsCompleted
@@ -348,7 +346,7 @@ rowTrace trace classCars snapshot item =
                 GapChart.gapSparkline
                     { first = currentLap - recentLapCount, last = currentLap }
                     history
-                    (Rivals.around classCars item)
+                    (Rivals.around (Snapshot.toList snapshot) item)
 
             PaceTrace ->
                 LapTimeDistribution.sparkline
@@ -440,8 +438,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> List CarAt -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted classCars field =
+rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -449,7 +447,7 @@ rows config snapshot counted classCars field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot classCars pair :: acc
+                    row config snapshot pair :: acc
             in
             if back == behind then
                 ( behind, lines )
