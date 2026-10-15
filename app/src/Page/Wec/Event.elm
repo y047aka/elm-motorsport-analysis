@@ -532,8 +532,8 @@ corner several held key =
 controls draws them in.
 -}
 cornerControls : Corner -> List (Html Msg)
-cornerControls corners =
-    List.filterMap identity [ corners.grip, Maybe.map Header.closeButton corners.onClose ]
+cornerControls controls =
+    List.filterMap identity [ controls.grip, Maybe.map Header.closeButton controls.onClose ]
 
 
 {-| One class of the field, which is what the strip opens with: `View.ClassColumn`
@@ -542,7 +542,7 @@ draws its cars each against the class-mate ahead of it.
 classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> Class -> Html Msg
 classColumn several standing held trace snapshot class_ =
     let
-        corners =
+        controls =
             corner several held (Columns.ClassColumn class_)
     in
     ClassColumn.view
@@ -551,8 +551,8 @@ classColumn several standing held trace snapshot class_ =
         , withColumns = standing
         , trace = trace
         , onTrace = RowTraceChosen class_
-        , onClose = corners.onClose
-        , grip = corners.grip
+        , onClose = controls.onClose
+        , grip = controls.grip
         }
         snapshot
         class_
@@ -573,7 +573,7 @@ carCard several timeline held comparison cars snapshot car =
         carNumber =
             car.metadata.carNumber
 
-        corners =
+        controls =
             corner several held (Columns.Car carNumber)
     in
     Card.card []
@@ -587,8 +587,8 @@ carCard several timeline held comparison cars snapshot car =
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
-                    , onClose = corners.onClose
-                    , grip = corners.grip
+                    , onClose = controls.onClose
+                    , grip = controls.grip
                     , comparison = comparison
                     , scrollId = Columns.scrollId carNumber
                     , onScroll = Columns.PanelScrolled carNumber >> ColumnsMsg
