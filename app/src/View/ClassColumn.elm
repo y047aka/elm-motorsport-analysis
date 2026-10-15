@@ -1,4 +1,7 @@
-module View.ClassColumn exposing (view)
+module View.ClassColumn exposing
+    ( view
+    , Trace(..)
+    )
 
 {-| One class of the field as a column of the strip: its cars in running order,
 each measured against the class-mate ahead of it.
@@ -13,6 +16,9 @@ class has, leader first.
 A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
+Each row carries a curve of how the car is running underneath it, and the
+reader picks which of three from the column's head.
+
 The foot is the class's own pit board, and only when the lane has one of the
 class: the tracker's board ruled with just these cars, saying who is being
 served, who is driving away, and who climbed into the car.
@@ -25,6 +31,9 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
+import Motorsport.Analysis.Rivals as Rivals
+import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -33,10 +42,12 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
+import UI.Shadcn.ToggleGroup as ToggleGroup
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.PitLane as PitLane
+import View.SectorAndLaps as SectorAndLaps
 
 
 {-| What the column is given: the two ways a row answers a press -- the car has
@@ -52,9 +63,21 @@ type alias Config msg =
     { onSelect : CarNumber -> msg
     , onReveal : CarNumber -> msg
     , withColumns : List CarNumber
+    , trace : Trace
+    , onTrace : Trace -> msg
     , onClose : Maybe msg
     , grip : Maybe (Html msg)
     }
+
+
+{-| The curve drawn under every car of the column: the gap out to the rivals
+either side, the spread of the car's own lap times, or the lap times
+themselves.
+-}
+type Trace
+    = GapTrace
+    | PaceTrace
+    | LapsTrace
 
 
 {-| The laps the class leader has completed, which is what every car's distance
@@ -171,10 +194,35 @@ head config class_ cars =
             [ ClassMark.name class_
             , div [ class "ms-auto text-[10px] text-muted-foreground tabular-nums whitespace-nowrap" ]
                 [ text (carCount cars) ]
+            , traceChoice config
             , div [ class "flex items-start gap-x-1" ] (corner config)
             ]
         , reference cars
         ]
+
+
+traceChoice : Config msg -> Html msg
+traceChoice config =
+    ToggleGroup.view
+        { items =
+            [ { label = "Gap"
+              , active = config.trace == GapTrace
+              , disabled = False
+              , onSelect = config.onTrace GapTrace
+              }
+            , { label = "Pace"
+              , active = config.trace == PaceTrace
+              , disabled = False
+              , onSelect = config.onTrace PaceTrace
+              }
+            , { label = "Laps"
+              , active = config.trace == LapsTrace
+              , disabled = False
+              , onSelect = config.onTrace LapsTrace
+              }
+            ]
+        }
+        [ class "shrink-0" ]
 
 
 carCount : List CarAt -> String
@@ -269,11 +317,70 @@ row config snapshot ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
+        , rowTrace config.trace snapshot item
         ]
     )
 
 
-{-| The car side on, as the car's own panel and the car cards draw it, as tall
+{-| Gap: the gaps are matched by lap number, so a lapped rival is about a lap
+of cumulative time away at the same lap number and is clipped outside the
+band as an outlier rather than flattening it.
+
+Pace: the range spans the whole race the car has run -- `Pace` clips its
+outliers against the range it is given, so a recent window would measure the
+fence against the stretch it is supposed to filter.
+
+-}
+rowTrace : Trace -> Snapshot -> CarAt -> Html msg
+rowTrace trace snapshot item =
+    let
+        currentLap =
+            item.standing.lapsCompleted
+
+        history =
+            Snapshot.lapHistory snapshot
+    in
+    div [ class "col-span-5 row-start-3", attribute "data-row-trace" (traceName trace) ]
+        [ case trace of
+            GapTrace ->
+                GapChart.gapSparkline
+                    { first = currentLap - recentLapCount, last = currentLap }
+                    history
+                    (Rivals.around (Snapshot.toList snapshot) item)
+
+            PaceTrace ->
+                LapTimeDistribution.sparkline
+                    { first = 1, last = currentLap }
+                    history
+                    item
+
+            LapsTrace ->
+                SectorAndLaps.view item
+        ]
+
+
+{-| The value `data-row-trace` carries, which the visual tests locate a row's
+curve by.
+-}
+traceName : Trace -> String
+traceName trace =
+    case trace of
+        GapTrace ->
+            "gap"
+
+        PaceTrace ->
+            "pace"
+
+        LapsTrace ->
+            "laps"
+
+
+recentLapCount : Int
+recentLapCount =
+    20
+
+
+{-| The car side on, as the car's own panel draws it, as tall
 as the two lines together and against the right edge -- and nothing where the
 round has no photograph for it, which is a missing row of `car-images.json`,
 not a car off the field.

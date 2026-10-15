@@ -145,8 +145,8 @@ fetched at runtime via `Http`.
   that is not shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
   `setPointerCapture`
 - `View/` — what a page is laid out of: the car detail panel and its sections,
-  the car cards, the live standings, a class's own column with its pit lane
-  list, and the badge and class mark those share
+  the live standings, a class's own column with its pit lane list, and the
+  badge and class mark those share
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
 `/api/wec/index.json`. It is the app's only source for which rounds exist, what
@@ -197,11 +197,12 @@ order, the one column a pointer carries, and how far
 down each car's panel was scrolled. The page holds one `Columns.Model`,
 forwards through `ColumnsMsg`, and hands the field in per call.
 
-A column is keyed by `StripKey` -- a class's, a car's or the tracker's. The strip
-opens with one column per class the field has cars out in, in the order a
-classification lists them and not the order their leaders run in, the tracker's
-column behind them; a car's column joins at the back when the reader picks one,
-and from the first open, close or move the order is the reader's.
+A column is keyed by `StripKey` -- a class's, a car's, the tracker's or the
+events table's. The strip opens with one column per class the field has cars
+out in, in the order a classification lists them and not the order their
+leaders run in, the tracker's column and the events table behind them; a
+car's column joins at the back when the reader picks one, and from the first
+open, close or move the order is the reader's.
 
 A class's column (`View/ClassColumn.elm`) is how a race is followed while it is
 still sorting itself out, and is the standings read down one class instead of the
@@ -311,7 +312,7 @@ defines, which is why that file scans `/package` too.
 **`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport
 has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
 are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`,
-the sortable, filterable, paginated table the app's Events tab configures
+the sortable, filterable, paginated table the app's Events column configures
 directly, with the `Table` it draws its rows with.
 
 Directly under `Motorsport/` are the primitives the rest is written in.

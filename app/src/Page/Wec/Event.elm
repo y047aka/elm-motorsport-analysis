@@ -42,9 +42,7 @@ import Task
 import Time
 import UI.Notice as Notice
 import UI.Shadcn.Card as Card
-import UI.Shadcn.ToggleGroup as ToggleGroup
 import View exposing (View)
-import View.CarCardList as CarCardList
 import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
@@ -60,7 +58,7 @@ import View.PlaybackControls as PlaybackControls
 
 type alias Model =
     { strip : Columns.Model
-    , bottomTab : BottomTab
+    , rowTrace : Dict String ClassColumn.Trace
     , timelineTable : DataView.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
@@ -75,15 +73,10 @@ standingsFence =
     }
 
 
-type BottomTab
-    = CardsTab
-    | EventsTab
-
-
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { strip = Columns.init
-      , bottomTab = CardsTab
+      , rowTrace = Dict.empty
       , timelineTable = DataView.init "timeline-events" timelineTableOptions
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
@@ -102,7 +95,7 @@ type Msg
     | FocusColumn Columns.StripKey
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
-    | BottomTabChange BottomTab
+    | RowTraceChosen Class ClassColumn.Trace
     | TimelineTableMsg DataView.Msg
     | ReplayMsg Replay.Msg
     | CarDetailMsg CarDetail.Msg
@@ -146,8 +139,8 @@ update shared msg m =
                 Nothing ->
                     ( m, Effect.none )
 
-        BottomTabChange tab ->
-            ( { m | bottomTab = tab }, Effect.none )
+        RowTraceChosen class_ trace ->
+            ( { m | rowTrace = Dict.insert (Class.toString class_) trace m.rowTrace }, Effect.none )
 
         TimelineTableMsg timelineMsg ->
             ( { m | timelineTable = DataView.update timelineMsg m.timelineTable }, Effect.none )
@@ -285,14 +278,7 @@ trackerCard several held track replay fieldEvents snapshot =
                 [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
                     [ TrackerChart.view TrackerChart.Full track snapshot
                     , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
-                        ((if several then
-                            [ columnGrip held Columns.Tracker ]
-
-                          else
-                            []
-                         )
-                            ++ [ Header.closeButton (ColumnsMsg (Columns.Close Columns.Tracker)) ]
-                        )
+                        (cornerControls (corner several held Columns.Tracker))
                     ]
                 ]
             , button
@@ -319,18 +305,16 @@ mainGrid round keys m =
             round.replay
     in
     div
-        [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
-        [ div
-            -- The whole class string is written intact: Tailwind generates a
-            -- class only from a string it finds intact in the source, so one
-            -- assembled from fragments silently ships no
-            -- `grid-template-columns` at all, and every track sizes to its
-            -- content.
-            [ Attributes.class "shrink-0 h-full grid grid-cols-[auto_1fr] gap-2.5" ]
-            [ standingsCell keys m snapshot replay.race.cars
-            , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
-            ]
-        , bottomPanel m.bottomTab m.timelineTable round.replay.race.cars round.timeline snapshot
+        -- The whole class string is written intact: Tailwind generates a
+        -- class only from a string it finds intact in the source, so one
+        -- assembled from fragments silently ships no
+        -- `grid-template-columns` at all, and every track sizes to its
+        -- content.
+        [ Attributes.class
+            "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
+        ]
+        [ standingsCell keys m snapshot replay.race.cars
+        , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -412,6 +396,27 @@ openColumn keys class_ =
         Just (ColumnsMsg (Columns.Open key))
 
 
+{-| The round's events as a column of the strip: the whole timeline, oldest
+first, minus the fastest laps; see `isFastestLap`. The visual tests locate it
+by `data-events-column`.
+-}
+eventsColumn : Bool -> Bool -> DataView.Model -> List Car -> Timeline -> Html Msg
+eventsColumn several held table cars timeline =
+    Card.card [ attribute "data-events-column" "" ]
+        [ div [ Attributes.class "relative flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]" ]
+            [ div [ Attributes.class "min-h-0 overflow-y-auto" ]
+                [ Card.content []
+                    [ DataView.view (timelineTableConfig cars)
+                        table
+                        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
+                    ]
+                ]
+            , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
+                (cornerControls (corner several held Columns.Events))
+            ]
+        ]
+
+
 {-| One keyed child of the strip: a grid of the width the column stands at,
 whatever is drawn in it, standing as its placement says -- flush for a
 resting one, an offset and a shadow for a carried one.
@@ -441,30 +446,27 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
             List.map (\car -> car.metadata.carNumber) (Columns.carsIn snapshot keys)
 
         columnCell key placement =
-            case key of
-                Columns.Car carNumber ->
-                    stripColumn (Columns.keyName key)
-                        Columns.width
-                        placement
-                        (Snapshot.get carNumber snapshot
+            stripColumn (Columns.keyName key)
+                Columns.width
+                placement
+                (case key of
+                    Columns.Car carNumber ->
+                        Snapshot.get carNumber snapshot
                             |> Maybe.map
                                 (\car ->
                                     Html.Lazy.lazy6 (carCard several) timeline (Columns.isCarried placement) m.comparison replay.race.cars snapshot car
                                 )
                             |> Maybe.withDefault (text "")
-                        )
 
-                Columns.ClassColumn class_ ->
-                    stripColumn (Columns.keyName key)
-                        Columns.width
-                        placement
-                        (classColumn several standing (Columns.isCarried placement) snapshot class_)
+                    Columns.ClassColumn class_ ->
+                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot class_
 
-                Columns.Tracker ->
-                    stripColumn (Columns.keyName key)
-                        Columns.width
-                        placement
-                        (trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot)
+                    Columns.Tracker ->
+                        trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
+
+                    Columns.Events ->
+                        eventsColumn several (Columns.isCarried placement) m.timelineTable replay.race.cars timeline
+                )
     in
     case keys of
         [] ->
@@ -504,30 +506,65 @@ columnGrip held key =
         }
 
 
+type alias Corner =
+    { onClose : Maybe Msg
+    , grip : Maybe (Html Msg)
+    }
+
+
+{-| The corner every column carries: taking a column away is `Columns.Close`
+for its key, and standing alone it has neither control.
+-}
+corner : Bool -> Bool -> Columns.StripKey -> Corner
+corner several held key =
+    if several then
+        { onClose = Just (ColumnsMsg (Columns.Close key))
+        , grip = Just (columnGrip held key)
+        }
+
+    else
+        { onClose = Nothing
+        , grip = Nothing
+        }
+
+
+{-| The corner drawn as a row, in the order every column that floats its
+controls draws them in.
+-}
+cornerControls : Corner -> List (Html Msg)
+cornerControls controls =
+    List.filterMap identity [ controls.grip, Maybe.map Header.closeButton controls.onClose ]
+
+
 {-| One class of the field, which is what the strip opens with: `View.ClassColumn`
 draws its cars each against the class-mate ahead of it.
 -}
-classColumn : Bool -> List CarNumber -> Bool -> Snapshot -> Class -> Html Msg
-classColumn several standing held snapshot class_ =
+classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> Class -> Html Msg
+classColumn several standing held trace snapshot class_ =
+    let
+        controls =
+            corner several held (Columns.ClassColumn class_)
+    in
     ClassColumn.view
         { onSelect = pickCar
         , onReveal = revealCar
         , withColumns = standing
-        , onClose =
-            if several then
-                Just (ColumnsMsg (Columns.Close (Columns.ClassColumn class_)))
-
-            else
-                Nothing
-        , grip =
-            if several then
-                Just (columnGrip held (Columns.ClassColumn class_))
-
-            else
-                Nothing
+        , trace = trace
+        , onTrace = RowTraceChosen class_
+        , onClose = controls.onClose
+        , grip = controls.grip
         }
         snapshot
         class_
+
+
+{-| `Class` carries a record, so each column's curve choice is kept under the
+name its class prints.
+-}
+rowTrace : Model -> Class -> ClassColumn.Trace
+rowTrace m class_ =
+    Dict.get (Class.toString class_) m.rowTrace
+        |> Maybe.withDefault ClassColumn.PaceTrace
 
 
 carCard : Bool -> Timeline -> Bool -> CarDetail.Comparison -> List Car -> Snapshot -> CarAt -> Html Msg
@@ -535,6 +572,9 @@ carCard several timeline held comparison cars snapshot car =
     let
         carNumber =
             car.metadata.carNumber
+
+        controls =
+            corner several held (Columns.Car carNumber)
     in
     Card.card []
         -- A card's content does not shrink below what it holds, so the card
@@ -547,18 +587,8 @@ carCard several timeline held comparison cars snapshot car =
             [ Card.content []
                 [ CarDetail.view
                     { toMsg = CarDetailMsg
-                    , onClose =
-                        if several then
-                            Just (ColumnsMsg (Columns.Close (Columns.Car carNumber)))
-
-                        else
-                            Nothing
-                    , grip =
-                        if several then
-                            Just (columnGrip held (Columns.Car carNumber))
-
-                        else
-                            Nothing
+                    , onClose = controls.onClose
+                    , grip = controls.grip
                     , comparison = comparison
                     , scrollId = Columns.scrollId carNumber
                     , onScroll = Columns.PanelScrolled carNumber >> ColumnsMsg
@@ -572,53 +602,12 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-bottomPanel : BottomTab -> DataView.Model -> List Car -> Timeline -> Snapshot -> Html Msg
-bottomPanel tab table cars timeline snapshot =
-    let
-        body =
-            case tab of
-                CardsTab ->
-                    CarCardList.view snapshot
-
-                EventsTab ->
-                    DataView.view (timelineTableConfig cars)
-                        table
-                        (List.indexedMap Tuple.pair (List.filter (not << isFastestLap) (Timeline.toList timeline)))
-    in
-    div [ Attributes.class "shrink-0 grid" ]
-        [ Card.card []
-            [ Card.header []
-                [ Card.action [] [ bottomTabs tab ] ]
-            , Card.content [] [ body ]
-            ]
-        ]
-
-
-bottomTabs : BottomTab -> Html Msg
-bottomTabs current =
-    let
-        tabItem label tab =
-            { label = label
-            , active = current == tab
-            , disabled = False
-            , onSelect = BottomTabChange tab
-            }
-    in
-    ToggleGroup.view
-        { items =
-            [ tabItem "Cards" CardsTab
-            , tabItem "Events" EventsTab
-            ]
-        }
-        []
-
-
 timelineTableOptions : Options
 timelineTableOptions =
     { sorting = Sorting
     , filtering = Filtering
     , selecting = NoSelecting
-    , pagination = Pagination 15
+    , pagination = Pagination 30
     }
 
 
@@ -725,8 +714,8 @@ recentEventLimit =
     100
 
 
-{-| Fastest-lap events are kept out of both event lists -- the one in the
-tracker's column, and the Events table in its own tab; their news is the
+{-| Fastest-lap events are kept out of both event lists -- the recent rows in
+the tracker's column, and the events column's table; their news is the
 reference lap at the head of a class's column and the records on a car's panel.
 -}
 isFastestLap : TimelineEvent -> Bool
@@ -874,6 +863,9 @@ headerColumn maybeSnapshot key =
                 ( Columns.Tracker, _ ) ->
                     mark "TRACK"
 
+                ( Columns.Events, _ ) ->
+                    mark "EVENTS"
+
         mark label =
             div [ Attributes.class "w-[35px] p-1 rounded flex flex-col items-center justify-center border border-border leading-none text-[9px] font-bold" ]
                 [ text label ]
@@ -888,6 +880,9 @@ headerColumn maybeSnapshot key =
 
                 Columns.Tracker ->
                     "Scroll to the tracker"
+
+                Columns.Events ->
+                    "Scroll to the events column"
     in
     button
         [ Attributes.class "shrink-0 flex items-center p-0.5 rounded cursor-pointer transition-colors hover:bg-accent/40"
