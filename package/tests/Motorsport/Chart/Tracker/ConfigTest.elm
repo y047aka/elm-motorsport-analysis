@@ -2,8 +2,8 @@ module Motorsport.Chart.Tracker.ConfigTest exposing (tests)
 
 import Expect
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), TrackConfig)
+import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Wec.Circuit.LeMans.Layout exposing (TimingLines)
 import Test exposing (Test, describe, test)
 
 
@@ -59,7 +59,7 @@ bySectors =
 sectorLines : TimingLines
 sectorLines =
     { sectors = { s1 = 1000, s2 = 4000, s3 = 10000 }
-    , miniSectors = LeMans.initialize (\_ -> Nothing)
+    , miniSectors = LeMansMiniSectors (LeMans.initialize (\_ -> Nothing))
     }
 
 
@@ -108,20 +108,22 @@ miniSectorLines : TimingLines
 miniSectorLines =
     { sectors = { s1 = 1800, s2 = 6000, s3 = 12000 }
     , miniSectors =
-        LeMans.initialize
-            (\mini ->
-                case mini of
-                    IP1 ->
-                        Just 1800
+        LeMansMiniSectors
+            (LeMans.initialize
+                (\mini ->
+                    case mini of
+                        IP1 ->
+                            Just 1800
 
-                    IP2 ->
-                        Just 6000
+                        IP2 ->
+                            Just 6000
 
-                    FL ->
-                        Just 12000
+                        FL ->
+                            Just 12000
 
-                    _ ->
-                        Nothing
+                        _ ->
+                            Nothing
+                )
             )
     }
 

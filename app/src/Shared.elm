@@ -27,6 +27,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Msg(..))
@@ -459,16 +460,24 @@ roundFrom id summary rawLaps timelineEvents =
     }
 
 
-{-| `le_mans_24h` is the calendar's id for the round, as `Data.Wec.CarImage`
-keys it too. The summary does not say which circuit it was run on.
+{-| Which circuit a round was run on, by the calendar's id for it -- the key
+`Data.Wec.CarImage` uses too. The summary does not say.
+
+Rounds whose circuit is not drawn here come out as the ring, which is the shape
+the proportions the summary does carry can describe.
+
 -}
 trackOf : RoundId -> Wec.Track -> Tracker.Track
 trackOf id track =
-    if id.id == "le_mans_24h" then
-        Tracker.onCircuit (LeMansLayout.layout id.season) track
+    case id.id of
+        "le_mans_24h" ->
+            Tracker.onCircuit (LeMansLayout.layout id.season) track
 
-    else
-        Tracker.fromConfig track
+        "cota_6h" ->
+            Tracker.onCircuit CotaLayout.layout track
+
+        _ ->
+            Tracker.fromConfig track
 
 
 mapLoaded : (LoadedRound -> LoadedRound) -> Round -> Round

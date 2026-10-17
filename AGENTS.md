@@ -361,8 +361,9 @@ a caller handing it less would leave the position chart drawn against a class
 with cars missing, with nothing to say so.
 
 `Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
-passed through (`Class`, `Era`), and Le Mans's mini-sectors
-(`Circuit/LeMans`). Decoding the timing feed stays app-side in `Data.Wec` /
+passed through (`Class`, `Era`), Le Mans's mini-sectors (`Circuit/LeMans`), and
+the shape of the circuits the tracker draws (`Circuit/Layout`, and one directory
+per circuit). Decoding the timing feed stays app-side in `Data.Wec` /
 `Data.Wec.Laps` — the shape of one publisher's files, not of the domain.
 `Data.Wec.Manufacturer` and `Data.Wec.CarImage` are app-side for the same
 reason: which manufacturers there are, how each is coloured and badged, and
@@ -371,35 +372,73 @@ application's assets. Neither holds any of it itself — each decodes the table
 that does, and what reaches `Car.Metadata` is the resolved colour, badge and
 photograph rather than the tables.
 
-Le Mans is also drawn to its own shape rather than as a ring.
-`Circuit/LeMans/Geometry` is the lap and the pit lane out of OpenStreetMap
-(ODbL, © OpenStreetMap contributors), written by
-`node app/scripts/le-mans-geometry.mjs` and never by hand. `Circuit/LeMans/Layout`
-holds where each season's timing lines stand, copied from the "Approximate
-Distances" on Al Kamel's circuit map for that race; the maps themselves are not
-to be redistributed, so they are not in the repository. A line a map gives no
-distance for is placed by the time between the lines either side of it
-(`Tracker.Config.lapScale`). The summary does not say which circuit a round was
-run on, so `Shared` picks the layout by the calendar's round id.
+Two circuits are drawn to their own shape rather than as a ring: Le Mans, and
+at `cota_6h` the Circuit of the Americas. `Circuit/Layout` is what
+`Tracker.onCircuit` is handed — the lap, the pit lane, the lines the lap is
+timed at, and the circuit's `drawingScale` — and it is where the surveyed
+degrees are projected into drawing metres, once, whichever circuit they came
+from. Each circuit's `Layout` holds its distances; its `Geometry` is generated
+beside them and never by hand.
+
+The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
+circuit, which supplies the relation, the member role naming the line the lap
+is measured from, the published length the surveyed line is stretched to, and
+the prose the generated module is documented with—
+`node app/scripts/cota-geometry.mjs [overpass.json]`. OpenStreetMap holds a
+circuit however whoever mapped it tagged it, and the two here are tagged
+differently: Le Mans's relation names one node `start-finish`, and COTA's names
+two, `start` and `finish`, 297 m apart along the lap. The lap's zero is the
+`finish` one, and the circuit's own published coordinates for its timing line
+are written into the script, so a run that answers the other role fails before
+it writes anything rather than drawing every car 297 m early.
+
+Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
+map for that race, and differ by season; the maps are not to be redistributed,
+so they are not in the repository. COTA's are its own track sector map's—
+1,313.2, 2,254.3 and 1,947.5 m, which add up to the 5,515 m centreline the same
+map gives — and are one set used for every season here, since no later map has
+been read. The feed's own splits are what to re-read a new season against, and
+the arithmetic sits in `Circuit/Cota/Layout`: 21.2 / 37.8 / 40.6% of a lap over
+2025 is 159, 159 and 122 km/h of mean sector speed across those distances,
+where the places the turns are usually said to fall would ask for 333. A line a
+map gives no distance for is placed by the time between the lines either side
+of it (`Tracker.Config.lapScale`), and a circuit whose feed never measures the
+lap finer than three sectors — every circuit here but Le Mans's — has no
+finer lines to place a car by either. That is a different answer from fifteen
+lines most of which the map leaves no distance for, so it is a sum rather than a
+record of nothings, and it is drawn less finely too: between two of its lines a
+COTA car is placed by the time it has run between them, where a Le Mans car is
+placed by a mini-sector.
+
+The tracker's cars, labels and lines are metres on the ground measured against
+Le Mans, which is why a circuit hands over one `drawingScale` rather than its
+own set of lengths: scaling by exactly 1 leaves Le Mans drawn as every VRT
+baseline was rendered, and COTA — 1,825 m across and 1,043 m tall against Le
+Mans's 2,712 and 5,387 — is drawn at 0.3. One number cannot be right in both
+directions for a lap of a different proportion, so the improvement is to
+measure each circuit's constants of itself, which moves every Le Mans baseline
+and so goes through `update-snapshots-ci`. The summary does not say which
+circuit a round was run on, so `Shared.trackOf` picks the layout by the
+calendar's round id.
 
 Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
-round the lap it stands, and `Layout` projects those degrees into the drawing
-through the `Circuit.Geodesy.Frame` the generator writes beside them — to the tenth
-of a metre the survey is kept to, which is the tenth every VRT baseline was
-rendered at. The frame's origin is the north-west corner of the survey, so the
+round the lap it stands, and `Circuit/Layout` projects those degrees into the
+drawing through the `Circuit.Geodesy.Frame` the generator writes beside them — to
+the tenth of a metre the survey is kept to, which is the tenth every VRT baseline
+was rendered at. The frame's origin is the north-west corner of the survey, so the
 drawing never falls below its own zero, and a test holds every projected place
 clear of the half-tenth its rounding turns on — measured before the rounding,
 since a rounded place is clear of every boundary by construction. The tightest
-stands 113 micrometres, which is what lets the metres be projected rather than
-written down. A second circuit's generator writes the same frame, out of the
-parallel it scales east-west at and the north-west corner of what it surveyed,
-and adds nothing to `Circuit/`.
+place stands 113 micrometres clear at Le Mans and 39 at COTA, which is what lets
+the metres be projected rather than written down. Every circuit's generator writes
+the same frame, out of the parallel it scales east-west at and the north-west
+corner of what it surveyed, and adds nothing to `Circuit/`.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
 `Circuit/LeMans`'s type, `Leaderboard` carries `*_Wec` and `*_LeMans24h`
-views beside the generic ones, and `Chart/Tracker` draws
-`Circuit/LeMans/Layout`. Reversing that arrow is its own change.
+views beside the generic ones, and `Chart/Tracker` draws `Wec/Circuit/Layout`,
+whose finer lines are Le Mans's. Reversing that arrow is its own change.
 
 There is no view-model layer between the two. `Race.Snapshot` is the whole
 per-frame derivation — sampling the cars at the clock, ordering the field,

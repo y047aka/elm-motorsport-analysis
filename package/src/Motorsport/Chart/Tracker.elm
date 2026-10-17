@@ -11,8 +11,8 @@ import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
+import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans as LeMans
-import Motorsport.Wec.Circuit.LeMans.Layout exposing (Layout)
 import Motorsport.Wec.Class as Class
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg, circle, g, line, polygon, polyline, svg, text, text_)
@@ -153,6 +153,7 @@ type alias Circuit =
     , pitLane : List Point
     , scale : LapScale
     , bounds : Bounds
+    , drawingScale : Float
     }
 
 
@@ -174,6 +175,10 @@ fromConfig =
 
 {-| The track drawn to the circuit's own shape, with the cars placed by the
 lines it is timed at. The pit lane is drawn and no car is placed on it.
+
+The lengths [Tracker](Motorsport-Chart-Tracker) draws with were measured against
+Le Mans, and the circuit's `drawingScale` scales them.
+
 -}
 onCircuit : Layout -> { direction : Direction, config : TrackConfig } -> Track
 onCircuit layout { direction, config } =
@@ -183,6 +188,7 @@ onCircuit layout { direction, config } =
         , shape = layout.shape
         , pitLane = layout.pitLane
         , scale = Config.lapScale layout.timingLines config
+        , drawingScale = layout.drawingScale
         , bounds =
             boundsOf
                 (List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks layout.shape)
@@ -518,8 +524,8 @@ type alias CircuitConstants =
     }
 
 
-circuitConstants : Detail -> CircuitConstants
-circuitConstants detail =
+leMansCircuitConstants : Detail -> CircuitConstants
+leMansCircuitConstants detail =
     case detail of
         Compact ->
             { margin = 150
@@ -554,6 +560,44 @@ circuitConstants detail =
             }
 
 
+{-| Those lengths at the size the circuit is. Le Mans scales by 1, being the
+circuit those lengths were measured against, so the floats it draws with are
+unchanged by this and its VRT baselines still hold.
+-}
+circuitConstants : Detail -> Float -> CircuitConstants
+circuitConstants detail drawingScale =
+    let
+        scaled value =
+            value * drawingScale
+
+        base =
+            leMansCircuitConstants detail
+    in
+    { margin = scaled base.margin
+    , trackWidth = scaled base.trackWidth
+    , pitLaneWidth = scaled base.pitLaneWidth
+    , startFinishLineExtension = scaled base.startFinishLineExtension
+    , startFinishLineStrokeWidth = scaled base.startFinishLineStrokeWidth
+    , sectorBoundaryOffset = scaled base.sectorBoundaryOffset
+    , sectorBoundaryStrokeWidth = scaled base.sectorBoundaryStrokeWidth
+    , carSize = scaled base.carSize
+    , labels =
+        case base.labels of
+            NoLabels ->
+                NoLabels
+
+            Labels labels ->
+                Labels
+                    { sectorRadius = scaled labels.sectorRadius
+                    , sectorFontSize = scaled labels.sectorFontSize
+                    , miniSectorRadius = scaled labels.miniSectorRadius
+                    , miniSectorFontSize = scaled labels.miniSectorFontSize
+                    , carRadius = scaled labels.carRadius
+                    , carFontSize = scaled labels.carFontSize
+                    }
+    }
+
+
 {-| The circuit's own box, plus the margin the labels stand off in: the square
 ring's viewBox would scale a tall circuit by its width alone, and such a
 track would read much smaller than the card it is drawn in. The svg keeps
@@ -564,7 +608,7 @@ viewOnCircuit : Detail -> Circuit -> Snapshot -> Svg msg
 viewOnCircuit detail circuit standings =
     let
         { margin } =
-            circuitConstants detail
+            circuitConstants detail circuit.drawingScale
 
         { minX, minY, maxX, maxY } =
             circuit.bounds
@@ -582,7 +626,7 @@ circuitTrack : Detail -> Circuit -> Svg msg
 circuitTrack detail circuit =
     let
         c =
-            circuitConstants detail
+            circuitConstants detail circuit.drawingScale
 
         pitLane =
             polyline
@@ -783,7 +827,7 @@ renderCarOnCircuit : Detail -> Circuit -> CarAt -> Svg msg
 renderCarOnCircuit detail circuit car =
     let
         c =
-            circuitConstants detail
+            circuitConstants detail circuit.drawingScale
 
         position =
             Shape.at (Config.toMetres circuit.scale (Config.computeProgress circuit.config car)) circuit.shape

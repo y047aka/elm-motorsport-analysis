@@ -3,6 +3,7 @@ module Motorsport.Wec.Circuit.LeMans.LayoutTest exposing (tests)
 import Expect
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector
+import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..))
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Wec.Circuit.LeMans.Geometry as Geometry
 import Motorsport.Wec.Circuit.LeMans.Layout exposing (layout)
@@ -40,7 +41,7 @@ tests =
                                     (layout season).timingLines
                             in
                             increasing (Sector.values lines.sectors)
-                                && increasing (List.filterMap identity (LeMans.values lines.miniSectors))
+                                && increasing (List.filterMap identity (distances lines.miniSectors))
                         )
                     |> Expect.equal [ True, True, True ]
         ]
@@ -50,3 +51,15 @@ increasing : List Float -> Bool
 increasing xs =
     List.map2 (<) xs (List.drop 1 xs)
         |> List.all identity
+
+
+{-| The lines the circuit places, whether it places fifteen or none.
+-}
+distances : MiniSectorLines -> List (Maybe Float)
+distances lines =
+    case lines of
+        SectorsOnly ->
+            []
+
+        LeMansMiniSectors mini ->
+            LeMans.values mini
