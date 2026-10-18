@@ -33,25 +33,31 @@ layout =
     }
 
 
-{-| Le Mans's lengths at three tenths, which is where a lap drawn 1,825 m across
-and 1,043 m tall wants a car marker of 29 m, sector labels of 51 m and a margin
-of 210 m: the lap then fills four fifths of its box's width and two thirds of its
-height, where Le Mans fills two thirds and four fifths of its own box.
+{-| The lengths this drawing is measured at, in metres on the ground.
 
-What the multiplier sets is the furniture's size on the screen and not the
-drawing's: the box is fitted by width, so this lap comes out 286 px wide and 186
-tall in the 286x525 row the visual tests give it, where Le Mans comes out 286 by
-472 -- 0.127 px to the metre against Le Mans's 0.070. At three tenths a car is
-3.7 px across and its number 5.3 px tall, against Le Mans's 6.8 and 9.8, and the
-lap line is 0.6 px against 1.1. Som over six tenths would match Le Mans's on the
-screen -- and leave the row's lower half empty all the same, since that is the
-lap's own proportion and not the length of anything here. The margin is the one
-length not to take there with the others: it is added to the box as well as to the
-furniture, so scaled whole it brings the lap back down to 189 px wide against the
-232 it is drawn at now.
+`Full` is measured so that its furniture comes to the same pixels as Le Mans's.
+The tracker draws every circuit in one portrait row -- 286x525 where the visual
+tests put it -- and both boxes are narrower in proportion than that row is wide, so
+each is fitted by width: 0.127 px to the metre here, Le Mans's 0.070. A length is
+then drawn as large as Le Mans's when it stands at 2245/4112, the ratio of the two
+boxes' widths, which is where these come from, rounded to a tenth of a metre: a car
+marked at 53 m, a car's number at 76.5 m, the lap stroked at 8.7 m.
 
-The mini-sector lengths are three tenths of Le Mans's because the record holds
-them, not because this lap has mini-sectors to name: it has none.
+The margin is the length that cannot be taken there with the rest, because it is
+added to the box as well as to what stands in it: six tenths of Le Mans's
+everything, margin included, and the lap comes back down to 189 px wide against the
+232 it is drawn at now. `LayoutTest` holds each length at the ratio and the margin
+where it is, so a drawing seen at two sizes at once is a failing test. The band left
+under the lap -- two thirds of the row -- is the lap's own proportion, 1,825 m across
+and 1,043 m tall in a row 0.545 wide-to-tall, and no length here touches it. The
+mini-sector lengths are in the record because `Lengths` holds them, at the same
+ratio as the rest, and not because this lap has mini-sectors to name: it has none.
+
+`Compact` is three tenths of Le Mans's and has no measurement behind it. Nothing
+draws that detail -- the app draws `Full` and nothing else -- and the two circuits'
+compact boxes are fitted on different axes, Le Mans's 3012 by 5687 on its height and
+this one's 1915 by 1133 on its width, so there is no one ratio to read it from. It
+is the set to measure when a compact tracker is drawn.
 
 -}
 lengths : { compact : Circuit.Lengths, full : Circuit.Lengths }
@@ -69,21 +75,21 @@ lengths =
         }
     , full =
         { margin = 210
-        , trackWidth = 4.8
-        , pitLaneWidth = 3
-        , startFinishLineExtension = 48
-        , startFinishLineStrokeWidth = 6.6
-        , sectorBoundaryOffset = 32.4
-        , sectorBoundaryStrokeWidth = 9.6
-        , carSize = 29.1
+        , trackWidth = 8.7
+        , pitLaneWidth = 5.5
+        , startFinishLineExtension = 87.4
+        , startFinishLineStrokeWidth = 12
+        , sectorBoundaryOffset = 59
+        , sectorBoundaryStrokeWidth = 17.5
+        , carSize = 53
         , labels =
             Just
-                { sectorRadius = 114
-                , sectorFontSize = 51
-                , miniSectorRadius = -51
-                , miniSectorFontSize = 36
-                , carRadius = 57
-                , carFontSize = 42
+                { sectorRadius = 207.6
+                , sectorFontSize = 92.9
+                , miniSectorRadius = -92.9
+                , miniSectorFontSize = 65.6
+                , carRadius = 103.8
+                , carFontSize = 76.5
                 }
         }
     }

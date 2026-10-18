@@ -427,17 +427,19 @@ map leaves no distance for, so it is a sum rather than a record of nothings, and
 is drawn less finely too: between two of its lines a COTA car is placed by the time
 it has run between them, where a Le Mans car is placed by a mini-sector.
 
-The tracker's cars, labels and lines are metres on the ground, so each circuit
-writes a set of them for itself — `Circuit/Layout`'s `Lengths`, one per detail,
-and `Compact` carries no names because it draws none. Le Mans's set is the
-reference the tracker was measured at, and a test freezes it: those are the
-numbers every Le Mans snapshot was rendered with. COTA's is three tenths of it,
-which is a scale rather than a measurement — a lap 1,825 m across and 1,043 m
-tall is wide-to-tall 1.75 where Le Mans is 0.50, and no one multiplier is right
-in both directions of that. So the lengths are to be measured one at a time, and
-every length tuned away from three tenths is a decision of its own. Tuning a
-length of Le Mans's set moves every baseline it has and so goes through
-`update-snapshots-ci`.
+The tracker's cars, labels and lines are metres on the ground, and the svg divides
+every one of them by whichever axis the circuit's box binds in the card it stands
+in — so a set is measured against a rendered drawing, and one circuit's set is not
+another's multiplied by a scale. `Circuit/Layout`'s `Lengths` holds one set per
+circuit per detail, and `Compact` carries no names because it draws none. Le Mans's
+set is the reference the tracker was measured at, and a test freezes it: those are
+the numbers every Le Mans snapshot was rendered with. In the tracker's portrait row
+every circuit here is fitted by width, so COTA's `Full` stands at 2245/4112 — the
+ratio of the two boxes' widths, which is what draws a car, a number and a line the
+same size at both — with its margin the one length left at three tenths of Le
+Mans's, since that is added to the width every ratio is taken over. `LayoutTest`
+holds each length at the ratio. Tuning a length of Le Mans's set moves every
+baseline it has, and any length moved anywhere goes through `update-snapshots-ci`.
 
 Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
 round the lap it stands, and `Circuit/Layout` projects those degrees into the

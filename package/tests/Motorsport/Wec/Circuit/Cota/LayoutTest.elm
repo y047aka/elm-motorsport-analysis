@@ -5,7 +5,7 @@ import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.Cota.Geometry as Geometry
 import Motorsport.Wec.Circuit.Cota.Layout exposing (layout)
-import Motorsport.Wec.Circuit.Layout exposing (LabelLengths, Lengths, MiniSectorLines(..))
+import Motorsport.Wec.Circuit.Layout exposing (Layout, Lengths, MiniSectorLines(..))
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMans
 import Test exposing (Test, describe, test)
 
@@ -52,9 +52,24 @@ tests =
                     |> Expect.equal SectorsOnly
         , describe
             "the lengths it is drawn at"
-            [ test "every one is three tenths of Le Mans's" <|
+            [ test "the set the drawing was measured at" <|
                 \_ ->
-                    List.append (moved .compact) (moved .full)
+                    Expect.equal layout.lengths fullAndCompact
+            , test "every length is drawn at Le Mans's size on the screen" <|
+                \_ ->
+                    -- Both circuits are drawn in one box, and each box is fitted by its own
+                    -- width: the row is narrower in proportion than either of them. A length
+                    -- therefore reaches the same pixels at both circuits when it stands at
+                    -- the ratio of the two widths -- which is how these were set. The margin
+                    -- is the one length held back at three tenths of Le Mans's, since it is
+                    -- added to that width and so moves what every ratio is taken over.
+                    let
+                        expected =
+                            boxWidth layout / boxWidth (LeMans.layout 2025)
+                    in
+                    ratios expected
+                        |> List.filter (\( name, got ) -> abs (got - expected) > 0.01)
+                        |> List.map (\( name, got ) -> name ++ " at " ++ String.fromFloat got ++ " against " ++ String.fromFloat expected)
                         |> Expect.equal []
             , test "the detail that names no line at Le Mans names none here" <|
                 \_ ->
@@ -63,59 +78,98 @@ tests =
         ]
 
 
-{-| The lengths of one detail that stand at other than three tenths of the
-reference circuit's, by name. The tolerance is the last bit of a float and no
-more: 97 * 0.3 is 29.099999999999998, which this circuit writes as 29.1, and a
-length measured on its own rather than scaled would be off by hundreds of
-thousandths at the least.
+{-| The circuit as drawn: the width the tracker fits it into, in metres on the
+ ground. `Tracker`'s own `bounds` plus the margin the labels stand off in, which is
+ the axis both of these circuits are fitted by.
 -}
-moved : ({ compact : Lengths, full : Lengths } -> Lengths) -> List String
-moved detail =
+boxWidth : Layout -> Float
+boxWidth this =
     let
-        cota =
-            detail layout.lengths
-
-        leMans =
-            detail (LeMans.layout 2025).lengths
-
-        ratios =
-            [ ( "margin", cota.margin / leMans.margin )
-            , ( "trackWidth", cota.trackWidth / leMans.trackWidth )
-            , ( "pitLaneWidth", cota.pitLaneWidth / leMans.pitLaneWidth )
-            , ( "startFinishLineExtension", cota.startFinishLineExtension / leMans.startFinishLineExtension )
-            , ( "startFinishLineStrokeWidth", cota.startFinishLineStrokeWidth / leMans.startFinishLineStrokeWidth )
-            , ( "sectorBoundaryOffset", cota.sectorBoundaryOffset / leMans.sectorBoundaryOffset )
-            , ( "sectorBoundaryStrokeWidth", cota.sectorBoundaryStrokeWidth / leMans.sectorBoundaryStrokeWidth )
-            , ( "carSize", cota.carSize / leMans.carSize )
-            ]
-                ++ List.map
-                        (\( name, cotaLength, leMansLength ) ->
-                            ( name, cotaLength / leMansLength )
-                        )
-                        (nameLengths cota.labels leMans.labels)
+        xs =
+            List.map .x (Shape.marks this.shape) ++ List.map .x this.pitLane
     in
-    ratios
-        |> List.filter (\( _, ratio ) -> abs (ratio - 0.3) > 1.0e-9)
-        |> List.map (\( name, ratio ) -> name ++ " at " ++ String.fromFloat ratio)
-
-
-{-| The names' lengths, beside the reference circuit's. Which detail has names is
-asserted apart, so only the two that both have them are divided here.
--}
-nameLengths : Maybe LabelLengths -> Maybe LabelLengths -> List ( String, Float, Float )
-nameLengths cota leMans =
-    case ( cota, leMans ) of
-        ( Just a, Just b ) ->
-            [ ( "sectorRadius", a.sectorRadius, b.sectorRadius )
-            , ( "sectorFontSize", a.sectorFontSize, b.sectorFontSize )
-            , ( "miniSectorRadius", a.miniSectorRadius, b.miniSectorRadius )
-            , ( "miniSectorFontSize", a.miniSectorFontSize, b.miniSectorFontSize )
-            , ( "carRadius", a.carRadius, b.carRadius )
-            , ( "carFontSize", a.carFontSize, b.carFontSize )
-            ]
+    case ( List.minimum xs, List.maximum xs ) of
+        ( Just lo, Just hi ) ->
+            hi - lo + 2 * this.lengths.full.margin
 
         _ ->
-            []
+            0
+
+
+{-| Every `Full` length beside the reference circuit's, as a ratio. The names are
+ the ones a failing length is reported by.
+-}
+ratios : Float -> List ( String, Float )
+ratios expected =
+    let
+        cota =
+            layout.lengths.full
+
+        leMans =
+            (LeMans.layout 2025).lengths.full
+
+        names =
+            case ( cota.labels, leMans.labels ) of
+                ( Just a, Just b ) ->
+                    [ ( "sectorRadius", a.sectorRadius / b.sectorRadius )
+                    , ( "sectorFontSize", a.sectorFontSize / b.sectorFontSize )
+                    , ( "miniSectorRadius", a.miniSectorRadius / b.miniSectorRadius )
+                    , ( "miniSectorFontSize", a.miniSectorFontSize / b.miniSectorFontSize )
+                    , ( "carRadius", a.carRadius / b.carRadius )
+                    , ( "carFontSize", a.carFontSize / b.carFontSize )
+                    ]
+
+                _ ->
+                    []
+    in
+    [ ( "trackWidth", cota.trackWidth / leMans.trackWidth )
+    , ( "pitLaneWidth", cota.pitLaneWidth / leMans.pitLaneWidth )
+    , ( "startFinishLineExtension", cota.startFinishLineExtension / leMans.startFinishLineExtension )
+    , ( "startFinishLineStrokeWidth", cota.startFinishLineStrokeWidth / leMans.startFinishLineStrokeWidth )
+    , ( "sectorBoundaryOffset", cota.sectorBoundaryOffset / leMans.sectorBoundaryOffset )
+    , ( "sectorBoundaryStrokeWidth", cota.sectorBoundaryStrokeWidth / leMans.sectorBoundaryStrokeWidth )
+    , ( "carSize", cota.carSize / leMans.carSize )
+    ]
+        ++ names
+
+
+{-| The lengths as this circuit writes them, written out rather than derived so a
+ change is a decision. `Full` was measured against the rendered drawing; see the
+ drawing's own docstring for what each length comes to on the screen.
+-}
+fullAndCompact : { compact : Lengths, full : Lengths }
+fullAndCompact =
+    { compact =
+        { margin = 45
+        , trackWidth = 6.6
+        , pitLaneWidth = 4.2
+        , startFinishLineExtension = 39
+        , startFinishLineStrokeWidth = 9.6
+        , sectorBoundaryOffset = 31.5
+        , sectorBoundaryStrokeWidth = 12.6
+        , carSize = 31.5
+        , labels = Nothing
+        }
+    , full =
+        { margin = 210
+        , trackWidth = 8.7
+        , pitLaneWidth = 5.5
+        , startFinishLineExtension = 87.4
+        , startFinishLineStrokeWidth = 12
+        , sectorBoundaryOffset = 59
+        , sectorBoundaryStrokeWidth = 17.5
+        , carSize = 53
+        , labels =
+            Just
+                { sectorRadius = 207.6
+                , sectorFontSize = 92.9
+                , miniSectorRadius = -92.9
+                , miniSectorFontSize = 65.6
+                , carRadius = 103.8
+                , carFontSize = 76.5
+                }
+        }
+    }
 
 
 increasing : List Float -> Bool

@@ -68,7 +68,7 @@ type MiniSectorLines
 {-| The lengths one detail of a circuit's drawing is made at, in metres on the
 ground: the `viewBox` margin the labels stand off in, the width of the ribbon the
 lap and pit lane are stroked at, the start/finish line and sector boundaries,
-and the diameter of a car.
+and the radius a car is marked at.
 
 They are written per circuit because they are measured on one circuit's ground.
 A car marker of 97 m reads right against a lap 13.6 km round and 5.4 km tall and
@@ -82,6 +82,11 @@ beside this in that module.
 
 `labels` is `Nothing` at a detail that draws no names, rather than a set of
 lengths nothing reads.
+
+Which pixels one of these comes to is the box's doing as much as the number's: the
+svg fits the circuit's box into the card it stands in, and divides every length by
+whichever axis binds. A set is therefore measured against a rendered drawing, and
+one circuit's set is not another's multiplied by a scale.
 
 -}
 type alias Lengths =
