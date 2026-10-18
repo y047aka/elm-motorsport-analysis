@@ -460,24 +460,33 @@ roundFrom id summary rawLaps timelineEvents =
     }
 
 
-{-| Which circuit a round was run on, by the calendar's id for it -- the key
-`Data.Wec.CarImage` uses too. The summary does not say.
+{-| Which drawing of a circuit the round is put in, by the circuit the summary
+names for it -- `Motorsport.Events.circuit`. The round id is still asked for,
+because which lines Le Mans is drawn with turns on the season.
 
-Rounds whose circuit is not drawn here come out as the ring, which is the shape
-the proportions the summary does carry can describe.
+A circuit this app has no drawing of is drawn as the ring, which is the shape
+the proportions the summary carries can describe; so is a round exported before
+the summary named its circuit.
 
 -}
 trackOf : RoundId -> Wec.Track -> Tracker.Track
 trackOf id track =
-    case id.id of
-        "le_mans_24h" ->
-            Tracker.onCircuit (LeMansLayout.layout id.season) track
+    let
+        -- The circuit picks the drawing; the drawing is told which way round the
+        -- lap goes and how it divides. Which circuit it is stops being the
+        -- drawing's business the moment the choice is made.
+        drawing =
+            { direction = track.direction, config = track.config }
+    in
+    case track.circuit of
+        Just "le_mans" ->
+            Tracker.onCircuit (LeMansLayout.layout id.season) drawing
 
-        "cota_6h" ->
-            Tracker.onCircuit CotaLayout.layout track
+        Just "cota" ->
+            Tracker.onCircuit CotaLayout.layout drawing
 
         _ ->
-            Tracker.fromConfig track
+            Tracker.fromConfig drawing
 
 
 mapLoaded : (LoadedRound -> LoadedRound) -> Round -> Round

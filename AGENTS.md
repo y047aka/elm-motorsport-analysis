@@ -378,9 +378,13 @@ at `cota_6h` the Circuit of the Americas. `Circuit/Layout` is what
 timed at, and the metres the tracker draws at — and it is where the surveyed
 degrees are projected into drawing metres, once, whichever circuit they came
 from. Each circuit's `Layout` holds its distances and its lengths; its
-`Geometry` is generated beside them and never by hand. The summary does not say
-which circuit a round was run on, so `Shared` picks the layout by the calendar's
-round id. A circuit with no directory of its own is the ring.
+`Geometry` is generated beside them and never by hand. Which circuit a round was
+run on comes in with the summary (`Motorsport.Events.circuit`, keyed by round id
+and tested against the calendar the way `direction` is), and `Shared` picks the
+layout by that word rather than by the round id — which is still asked for,
+because which lines Le Mans is drawn with turns on the season. A circuit with no
+directory of its own, and a round exported before the summary named its circuit,
+is drawn as the ring.
 
 The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
 circuit, which supplies the relation, the member role naming the line the lap
@@ -407,11 +411,10 @@ up to. What the times can answer is whether the lines have moved, and they are
 read that way in `Circuit/Cota/Layout`: each class's best sector times as two
 distances round the lap, which the two rounds here place within 28 m of each
 other — 0.5% of a lap, and the only evidence available that one map serves
-both. A line a
-map gives no distance for is placed by the time between the lines either side
-of it (`Tracker.Config.lapScale`), and a circuit whose feed never measures the
-lap finer than three sectors — every circuit here but Le Mans's — has no
-finer lines to place a car by either. That is a different answer from fifteen
+both. A line a map gives no distance for is placed by the time between the lines
+either side of it (`Tracker.Config.lapScale`), and a circuit whose feed never
+measures the lap finer than three sectors — every circuit here but Le Mans's —
+has no finer lines to place a car by either. That is a different answer from fifteen
 lines most of which the map leaves no distance for, so it is a sum rather than a
 record of nothings, and it is drawn less finely too: between two of its lines a
 COTA car is placed by the time it has run between them, where a Le Mans car is

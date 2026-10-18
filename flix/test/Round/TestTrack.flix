@@ -3,6 +3,7 @@ pub mod Round.TestTrack {
     use Round.TestSupport
     use Round.Summary
     use Motorsport.Calendar.Entry
+    use Motorsport.Circuit.Circuit
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Sector.Sector
@@ -153,6 +154,7 @@ pub mod Round.TestTrack {
         Assert.assertTrue(String.contains({substr = "\"s1\""}, json));
         Assert.assertTrue(String.contains({substr = "\"start\""}, json));
         Assert.assertTrue(String.contains({substr = "\"share\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"circuit\""}, json));
         Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));
         Assert.assertTrue(String.contains({substr = "\"scl2\""}, json));
         Assert.assertTrue(String.contains({substr = "\"fl\""}, json))
@@ -174,5 +176,16 @@ pub mod Round.TestTrack {
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
         let json = Encode.render(Track.toJson(track(clockwise(), laps)));
         Assert.assertTrue(not String.contains({substr = "\"miniSectors\""}, json))
+
+    /// Which ground a round was run on comes out of the summary beside the
+    /// direction it already carried, off the round's id -- and an id no one
+    /// answers carries neither, rather than naming whichever circuit is drawn.
+    @Test
+    def testTheCircuitComesOffTheRoundId(): Unit \ {Assert, IO} =
+        let laps = mkLap(15000, Some(5000), Some(5000), Some(5000)) :: Nil;
+        let cota = track({ season = 2025, id = "cota_6h", date = "2025-09-07" }, laps);
+        Assert.assertTrue(cota#circuit == Some(Circuit.Cota));
+        let unnamed = track(unknownDirection(), laps);
+        Assert.assertTrue(Option.isEmpty(unnamed#circuit))
 
 }

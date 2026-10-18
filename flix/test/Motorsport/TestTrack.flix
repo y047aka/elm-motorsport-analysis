@@ -2,6 +2,7 @@
 /// records is `Round.Summary`'s to find and `Round.TestTrack`'s to check.
 pub mod Motorsport.TestTrack {
 
+    use Motorsport.Circuit.Circuit
     use Motorsport.Circuit.Direction.Direction
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
@@ -10,6 +11,7 @@ pub mod Motorsport.TestTrack {
     use Motorsport.Track.Share
     use Util.Duration
     use Util.Duration.Duration
+    use Util.Json.Encode
 
     def sectors(s1: Option[Int32], s2: Option[Int32], s3: Option[Int32]): Sector -> Option[Duration] =
         sector -> Option.map(Duration.fromMillis, match sector {
@@ -40,14 +42,14 @@ pub mod Motorsport.TestTrack {
 
     @Test
     def aStretchTakesTheShareItsRecordIsOfTheLap(): Unit \ Assert =
-        let track = Track.fromFastest(Some(Direction.Clockwise), sectors(Some(20000), Some(30000), Some(50000)), None);
+        let track = Track.fromFastest(Some(Circuit.LeMans), Some(Direction.Clockwise), sectors(Some(20000), Some(30000), Some(50000)), None);
         Assert.assertTrue(isShare(0.0f64, 0.2f64, shareOf(Sector.S1, track)));
         Assert.assertTrue(isShare(0.2f64, 0.3f64, shareOf(Sector.S2, track)));
         Assert.assertTrue(isShare(0.5f64, 0.5f64, shareOf(Sector.S3, track)))
 
     @Test
     def aStretchWithNoRecordTakesNoShare(): Unit \ Assert =
-        let track = Track.fromFastest(Some(Direction.Clockwise), sectors(Some(20000), None, Some(30000)), None);
+        let track = Track.fromFastest(Some(Circuit.LeMans), Some(Direction.Clockwise), sectors(Some(20000), None, Some(30000)), None);
         Assert.assertTrue(isShare(0.0f64, 0.4f64, shareOf(Sector.S1, track)));
         Assert.assertTrue(isShare(0.4f64, 0.0f64, shareOf(Sector.S2, track)));
         Assert.assertTrue(isShare(0.4f64, 0.6f64, shareOf(Sector.S3, track)))
@@ -56,7 +58,7 @@ pub mod Motorsport.TestTrack {
     /// round, so the lap is still divided, in equal parts.
     @Test
     def noRecordsAtAllDividesTheLapEvenly(): Unit \ Assert =
-        let track = Track.fromFastest(None, sectors(None, None, None), None);
+        let track = Track.fromFastest(None, None, sectors(None, None, None), None);
         Assert.assertTrue(isShare(0.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S1, track)));
         Assert.assertTrue(isShare(2.0f64 / 3.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S3, track)));
         Assert.assertTrue(Option.isEmpty(track#miniSectors))
@@ -66,6 +68,7 @@ pub mod Motorsport.TestTrack {
     @Test
     def aSectorIsWhatItsMiniSectorsTakeBetweenThem(): Unit \ Assert =
         let track = Track.fromFastest(
+            Some(Circuit.Cota),
             Some(Direction.Clockwise),
             sectors(Some(1000), Some(1000), Some(1000)),
             evenMiniSectors(1000)
@@ -75,5 +78,32 @@ pub mod Motorsport.TestTrack {
         Assert.assertTrue(isShare(7.0f64 / 15.0f64, 8.0f64 / 15.0f64, shareOf(Sector.S3, track)));
         Assert.assertTrue(isShare(0.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.SCL2, track)));
         Assert.assertTrue(isShare(14.0f64 / 15.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.FL, track)))
+
+    /// Which ground the round was run on is nothing to how the lap divides, and
+    /// everything to which drawing it is put in -- so it travels to the summary
+    /// as it was given, in the one word the app chooses its drawing by.
+    @Test
+    def theCircuitTravelsToTheSummaryAsGiven(): Unit \ Assert =
+        let track = Track.fromFastest(
+            Some(Circuit.Cota),
+            Some(Direction.CounterClockwise),
+            sectors(Some(20000), Some(30000), Some(50000)),
+            None
+        );
+        let json = Encode.render(Track.toJson(track));
+        Assert.assertTrue(String.contains({substr = "\"circuit\": \"cota\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"direction\": \"counter_clockwise\""}, json))
+
+    /// A round `Motorsport.Events` has never been told about states no circuit,
+    /// rather than naming whichever one it has a drawing of.
+    @Test
+    def aRoundOfUnknownCircuitStatesNone(): Unit \ Assert =
+        let track = Track.fromFastest(
+            None,
+            None,
+            sectors(Some(20000), Some(30000), Some(50000)),
+            None
+        );
+        Assert.assertTrue(not String.contains({substr = "\"circuit\""}, Encode.render(Track.toJson(track))))
 
 }

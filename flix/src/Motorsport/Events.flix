@@ -1,5 +1,6 @@
 pub mod Motorsport.Events {
 
+    use Motorsport.Circuit.Circuit
     use Motorsport.Circuit.Direction.Direction
 
     pub def displayName(eventId: String): String =
@@ -34,6 +35,29 @@ pub mod Motorsport.Events {
             case "fuji_6h"       => Some(Direction.Clockwise)
             case "bahrain_8h"    => Some(Direction.Clockwise)
             case "sao_paulo_6h"  => Some(Direction.CounterClockwise)
+            case _               => None
+        }
+
+    /// Which circuit the round was run on, which the laps say nothing about any
+    /// more than the direction does: a file of lap times is not a map.
+    ///
+    /// This is the round's circuit whether or not anything draws it, so the key
+    /// is written for every round and the app decides what to draw it with. The
+    /// name is the stem the round ids share: see `Motorsport.Circuit`.
+    ///
+    /// Held here rather than read off the round id by cutting the suffix off,
+    /// because the suffixes are not a grammar -- `_6h`, `_8h`, `_24h`, `_1812km`
+    /// -- and one that arrives would be cut into a circuit name silently.
+    pub def circuit(eventId: String): Option[Circuit] =
+        match eventId {
+            case "qatar_1812km"  => Some(Circuit.Qatar)
+            case "imola_6h"      => Some(Circuit.Imola)
+            case "spa_6h"        => Some(Circuit.Spa)
+            case "le_mans_24h"   => Some(Circuit.LeMans)
+            case "cota_6h"       => Some(Circuit.Cota)
+            case "fuji_6h"       => Some(Circuit.Fuji)
+            case "bahrain_8h"    => Some(Circuit.Bahrain)
+            case "sao_paulo_6h"  => Some(Circuit.SaoPaulo)
             case _               => None
         }
 

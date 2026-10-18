@@ -11,6 +11,7 @@ pub mod Motorsport.Track {
     use Util.Duration.Duration
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonFloat, JsonString}
+    use Motorsport.Circuit.Circuit
     use Motorsport.Circuit.Direction
     use Motorsport.Circuit.Direction.Direction
     use Motorsport.MiniSector
@@ -28,9 +29,12 @@ pub mod Motorsport.Track {
     /// The whole lap, divided, and which way round it is driven. Both grains
     /// cover the same lap, so a car can be placed by either.
     ///
-    /// `direction` is the one thing here not read off the laps, which say
-    /// nothing about it -- see `Motorsport.Events.direction`.
+    /// `direction` and `circuit` are the two things here not read off the laps,
+    /// which say nothing about either -- see `Motorsport.Events.direction` and
+    /// `Motorsport.Events.circuit`. `circuit` is which ground the round was run
+    /// on, which is what the drawing of it is chosen by.
     pub type alias Track = {
+        circuit     = Option[Circuit],
         direction   = Option[Direction],
         sectors     = List[(Sector, Share)],
         miniSectors = Option[List[(MiniSectorId, Share)]]
@@ -40,24 +44,34 @@ pub mod Motorsport.Track {
     /// rather than from a list of event names: `miniSectorTime` is given only
     /// for a round that measured them.
     pub def fromFastest(
+        circuit: Option[Circuit],
         direction: Option[Direction],
         sectorTime: Sector -> Option[Duration],
         miniSectorTime: Option[MiniSectorId -> Option[Duration]]
     ): Track =
         match miniSectorTime {
-            case Some(timeOf) => atMiniSectorGrain(direction, timeOf)
-            case None         => atSectorGrain(direction, sectorTime)
+            case Some(timeOf) => atMiniSectorGrain(circuit, direction, timeOf)
+            case None         => atSectorGrain(circuit, direction, sectorTime)
         }
 
-    def atSectorGrain(direction: Option[Direction], sectorTime: Sector -> Option[Duration]): Track =
+    def atSectorGrain(
+        circuit: Option[Circuit],
+        direction: Option[Direction],
+        sectorTime: Sector -> Option[Duration]
+    ): Track =
         let ratio = ratiosOver(Sector.all(), sectorTime);
         {
+            circuit     = circuit,
             direction   = direction,
             sectors     = sharesOver(ratio, Sector.all()),
             miniSectors = None
         }
 
-    def atMiniSectorGrain(direction: Option[Direction], miniSectorTime: MiniSectorId -> Option[Duration]): Track =
+    def atMiniSectorGrain(
+        circuit: Option[Circuit],
+        direction: Option[Direction],
+        miniSectorTime: MiniSectorId -> Option[Duration]
+    ): Track =
         let miniRatio = ratiosOver(MiniSector.all(), miniSectorTime);
         let sectorRatio = sector ->
             MiniSector.all()
@@ -65,6 +79,7 @@ pub mod Motorsport.Track {
                 |> List.map(miniRatio)
                 |> sum;
         {
+            circuit     = circuit,
             direction   = direction,
             sectors     = sharesOver(sectorRatio, Sector.all()),
             miniSectors = Some(sharesOver(miniRatio, MiniSector.all()))
@@ -88,6 +103,10 @@ pub mod Motorsport.Track {
         List.foldLeft((acc, x) -> acc + x, 0.0f64, xs)
 
     pub def toJson(track: Track): Encode.JsonValue =
+        let circuit = match track#circuit {
+            case None     => Nil
+            case Some(c)  => ("circuit", JsonString(Circuit.jsonValue(c))) :: Nil
+        };
         let direction = match track#direction {
             case None    => Nil
             case Some(d) => ("direction", JsonString(Direction.jsonValue(d))) :: Nil
@@ -99,7 +118,7 @@ pub mod Motorsport.Track {
                 let entries = list |> List.map(match (id, share) -> (MiniSector.jsonKey(id), shareToJson(share)));
                 ("miniSectors", JsonObject(entries)) :: Nil
         };
-        JsonObject(List.append(direction, ("sectors", JsonObject(sectors)) :: miniSectors))
+        JsonObject(List.append(circuit, List.append(direction, ("sectors", JsonObject(sectors)) :: miniSectors)))
 
     def shareToJson(share: Share): Encode.JsonValue =
         JsonObject(
