@@ -103,13 +103,15 @@ no later map has been read. A season that moved its lines would be drawn with th
 wrong boundaries, and would place every car wrong between them.
 
 What a new season is checked against is the round's own splits, and for movement
-only. A sector's share of a lap is not a share of its distance, so the times
-cannot say where a line stands; they say whether two rounds put the lines in the
-same places. Read one class's best sector times as two distances round a lap of
-this length: 2025 answers 1,143.8 and 3,245.5 m for a Hypercar and 1,194.6 and
-3,316.8 m for an LMGT3, and 2026 answers 1,172.1 and 3,257.0, and 1,189.8 and
-3,304.1. Two seasons, two grids, and 28 m between them -- a season answering
-further than that has new lines, and needs a map read from them.
+only: `node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025` reads
+each class's fastest sector times as two distances round a lap of this length, and
+judges how far apart the two seasons put the lines. A sector's share of a lap is
+not a share of its distance, so the times cannot say where a line stands -- the
+shares themselves place the first line 170 m from where this layout does -- they
+say whether two rounds put the lines in the same places. 2025 answers 1,143.8 and
+3,245.5 m for a Hypercar and 1,194.6 and 3,316.8 m for an LMGT3, and 2026 answers
+1,172.1 and 3,257.0, and 1,189.8 and 3,304.1: two seasons, two grids, and 28 m
+between them. How far apart is too far is the command's to say, not this drawing's.
 
 Nothing here splits the lap finer: the feed carries no mini-sector times for
 this round, so a car between two of these lines is placed by the share of the

@@ -9,9 +9,9 @@
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // module written here is a derivative of it.
 
-import { main } from "./circuit-geometry.mjs";
+import { isEntry, main } from "./circuit-geometry.mjs";
 
-const circuit = {
+export const circuit = {
   relation: 6537729,
 
   // The relation tags two nodes, `start` and `finish`, 297 m apart along the
@@ -48,4 +48,6 @@ the carriageway end to end, which reaches past the painted lines the sector map
 puts at 116 m before the finish line and 390 m after it.`,
 };
 
-await main(circuit, process.argv.slice(2));
+if (isEntry(import.meta.url)) {
+  await main(circuit, process.argv.slice(2));
+}

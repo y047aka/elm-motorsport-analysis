@@ -17,7 +17,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const overpass = "https://overpass-api.de/api/interpreter";
@@ -52,6 +52,15 @@ const radius = 6371008.8;
  * @property {string} centrelineDoc
  * @property {string} pitLaneDoc
  */
+
+/** Whether the module named is the script the process was started from, as
+ * against a config another script imported to read a published length out of.
+ * `import.meta.url` is the caller's own and not this file's, so it is passed in:
+ * read from here it would answer for `circuit-geometry.mjs`, which every circuit's
+ * script imports and none enters. */
+export function isEntry(moduleUrl) {
+  return pathToFileURL(process.argv[1] ?? "").href === moduleUrl;
+}
 
 /** Read a circuit out of OpenStreetMap and write its module. `argv` is the
  * script's own, whose first entry may name a file to read the answer from. */

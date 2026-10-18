@@ -9,9 +9,9 @@
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // module written here is a derivative of it.
 
-import { main } from "./circuit-geometry.mjs";
+import { isEntry, main } from "./circuit-geometry.mjs";
 
-const circuit = {
+export const circuit = {
   relation: 2126739,
 
   // The relation tags one node `start-finish`, which is where Al Kamel measures
@@ -39,4 +39,6 @@ which is the scale the timing feed counts lap distances in.`,
 it in the Dunlop curve, in the direction it is driven.`,
 };
 
-await main(circuit, process.argv.slice(2));
+if (isEntry(import.meta.url)) {
+  await main(circuit, process.argv.slice(2));
+}

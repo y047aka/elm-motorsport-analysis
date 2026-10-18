@@ -407,18 +407,21 @@ been read. Nothing in a round's own times picks one placement of those lines
 out of another: a sector's share of a lap is not a share of its distance, and
 every placement has a mean speed of its own. What they rest on is that the
 circuit published them as the lines it times to, beside the lap length they add
-up to. What the times can answer is whether the lines have moved, and they are
-read that way in `Circuit/Cota/Layout`: each class's best sector times as two
-distances round the lap, which the two rounds here place within 28 m of each
-other — 0.5% of a lap, and the only evidence available that one map serves
-both. A line a map gives no distance for is placed by the time between the lines
-either side of it (`Tracker.Config.lapScale`), and a circuit whose feed never
-measures the lap finer than three sectors — every circuit here but Le Mans's —
-has no finer lines to place a car by either. That is a different answer from fifteen
-lines most of which the map leaves no distance for, so it is a sum rather than a
-record of nothings, and it is drawn less finely too: between two of its lines a
-COTA car is placed by the time it has run between them, where a Le Mans car is
-placed by a mini-sector.
+up to. What the times can answer is whether the lines have moved, and
+`node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025` reads that:
+each class's fastest sector times as two distances round the lap, which the two
+rounds here agree on within 28 m — 0.5% of a lap, and the only evidence there is
+that one map serves both. The command judges the season-to-season difference
+against 40 m and never the shares against the map; it reads the fastest sectors
+the summary itself is counted from, and refuses to conclude anything while the
+export in the tree disagrees with the CSV. A line a map gives no distance for is
+placed by the time between the lines either side of it
+(`Tracker.Config.lapScale`), and a circuit whose feed never measures the lap finer
+than three sectors — every circuit here but Le Mans's — has no finer lines to place
+a car by either. That is a different answer from fifteen lines most of which the
+map leaves no distance for, so it is a sum rather than a record of nothings, and it
+is drawn less finely too: between two of its lines a COTA car is placed by the time
+it has run between them, where a Le Mans car is placed by a mini-sector.
 
 The tracker's cars, labels and lines are metres on the ground, so each circuit
 writes a set of them for itself — `Circuit/Layout`'s `Lengths`, one per detail,
