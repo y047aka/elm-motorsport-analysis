@@ -1,0 +1,1885 @@
+{
+  "name": "Lone Star Le Mans",
+  "season": 2025,
+  "date": "2025-09-07",
+  "race": {
+    "startedAt": "13:00:00.317",
+    "duration": "6:03:08.498",
+    "timeLimit": "6:00:00.000",
+    "lapTotal": 120
+  },
+  "track": {
+    "circuit": "cota",
+    "direction": "counter_clockwise",
+    "sectors": {
+      "s1": { "start": 0.0, "share": 0.20739060549440685 },
+      "s2": { "start": 0.20739060549440685, "share": 0.38109186445933046 },
+      "s3": { "start": 0.5884824699537373, "share": 0.4115175300462627 }
+    }
+  },
+  "startingGrid": {
+    "basis": "lap1_s1",
+    "entries": [
+      {
+        "position": 1,
+        "car": {
+          "carNumber": "83",
+          "drivers": [
+            { "name": "Philip HANSON" },
+            { "name": "Yifei YE" },
+            { "name": "Robert KUBICA" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "AF Corse",
+          "manufacturer": "Ferrari"
+        }
+      },
+      {
+        "position": 2,
+        "car": {
+          "carNumber": "51",
+          "drivers": [
+            { "name": "James CALADO" },
+            { "name": "Antonio GIOVINAZZI" },
+            { "name": "Alessandro PIER GUIDI" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Ferrari AF Corse",
+          "manufacturer": "Ferrari"
+        }
+      },
+      {
+        "position": 3,
+        "car": {
+          "carNumber": "6",
+          "drivers": [
+            { "name": "Laurens VANTHOOR" },
+            { "name": "Matt CAMPBELL" },
+            { "name": "Kévin ESTRE" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Porsche Penske Motorsport",
+          "manufacturer": "Porsche"
+        }
+      },
+      {
+        "position": 4,
+        "car": {
+          "carNumber": "50",
+          "drivers": [
+            { "name": "Nicklas NIELSEN" },
+            { "name": "Antonio FUOCO" },
+            { "name": "Miguel MOLINA" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Ferrari AF Corse",
+          "manufacturer": "Ferrari"
+        }
+      },
+      {
+        "position": 5,
+        "car": {
+          "carNumber": "99",
+          "drivers": [
+            { "name": "Nicolas VARRONE" },
+            { "name": "Nicolas PINO" },
+            { "name": "Neel JANI" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Proton Competition",
+          "manufacturer": "Porsche"
+        }
+      },
+      {
+        "position": 6,
+        "car": {
+          "carNumber": "35",
+          "drivers": [
+            { "name": "Ferdinand HABSBURG" },
+            { "name": "Paul-Loup CHATIN" },
+            { "name": "Charles MILESI" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Alpine Endurance Team",
+          "manufacturer": "Alpine"
+        }
+      },
+      {
+        "position": 7,
+        "car": {
+          "carNumber": "8",
+          "drivers": [
+            { "name": "Brendon HARTLEY" },
+            { "name": "Ryo HIRAKAWA" },
+            { "name": "Sébastien BUEMI" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Toyota Gazoo Racing",
+          "manufacturer": "Toyota"
+        }
+      },
+      {
+        "position": 8,
+        "car": {
+          "carNumber": "15",
+          "drivers": [
+            { "name": "Kevin MAGNUSSEN" },
+            { "name": "Raffaele MARCIELLO" },
+            { "name": "Dries VANTHOOR" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "BMW M Team WRT",
+          "manufacturer": "BMW"
+        }
+      },
+      {
+        "position": 9,
+        "car": {
+          "carNumber": "009",
+          "drivers": [
+            { "name": "Alex RIBERAS" },
+            { "name": "Marco SORENSEN" }
+          ],
+          "class": "HYPERCAR",
+          "group": "",
+          "team": "Aston Martin Thor Team",
+          "manufacturer": "Aston Martin"
+        }
+      },
+      {
+        "position": 10,
+        "car": {
+          "carNumber": "5",
+          "drivers": [
+            { "name": "Julien ANDLAUER" },
+            { "name": "Mathieu JAMINET" },
+            { "name": "Michael CHRISTENSEN" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Porsche Penske Motorsport",
+          "manufacturer": "Porsche"
+        }
+      },
+      {
+        "position": 11,
+        "car": {
+          "carNumber": "94",
+          "drivers": [
+            { "name": "Loïc DUVAL" },
+            { "name": "Malthe JAKOBSEN" },
+            { "name": "Stoffel VANDOORNE" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Peugeot TotalEnergies",
+          "manufacturer": "Peugeot"
+        }
+      },
+      {
+        "position": 12,
+        "car": {
+          "carNumber": "36",
+          "drivers": [
+            { "name": "Frédéric MAKOWIECKI" },
+            { "name": "Jules GOUNON" },
+            { "name": "Mick SCHUMACHER" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Alpine Endurance Team",
+          "manufacturer": "Alpine"
+        }
+      },
+      {
+        "position": 13,
+        "car": {
+          "carNumber": "20",
+          "drivers": [
+            { "name": "René RAST" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "BMW M Team WRT",
+          "manufacturer": "BMW"
+        }
+      },
+      {
+        "position": 14,
+        "car": {
+          "carNumber": "007",
+          "drivers": [
+            { "name": "Tom GAMBLE" },
+            { "name": "Harry TINCKNELL" }
+          ],
+          "class": "HYPERCAR",
+          "group": "",
+          "team": "Aston Martin Thor Team",
+          "manufacturer": "Aston Martin"
+        }
+      },
+      {
+        "position": 15,
+        "car": {
+          "carNumber": "38",
+          "drivers": [
+            { "name": "Earl BAMBER" },
+            { "name": "Sébastien BOURDAIS" },
+            { "name": "Jenson BUTTON" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Cadillac Hertz Team JOTA",
+          "manufacturer": "Cadillac"
+        }
+      },
+      {
+        "position": 16,
+        "car": {
+          "carNumber": "12",
+          "drivers": [
+            { "name": "Will STEVENS" },
+            { "name": "Alex LYNN" },
+            { "name": "Norman NATO" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Cadillac Hertz Team JOTA",
+          "manufacturer": "Cadillac"
+        }
+      },
+      {
+        "position": 17,
+        "car": {
+          "carNumber": "7",
+          "drivers": [
+            { "name": "Nyck DE VRIES" },
+            { "name": "Jose Maria LOPEZ" },
+            { "name": "Kamui KOBAYASHI" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Toyota Gazoo Racing",
+          "manufacturer": "Toyota"
+        }
+      },
+      {
+        "position": 18,
+        "car": {
+          "carNumber": "93",
+          "drivers": [
+            { "name": "Jean-Eric VERGNE" },
+            { "name": "Paul DI RESTA" },
+            { "name": "Mikkel JENSEN" }
+          ],
+          "class": "HYPERCAR",
+          "group": "H",
+          "team": "Peugeot TotalEnergies",
+          "manufacturer": "Peugeot"
+        }
+      },
+      {
+        "position": 19,
+        "car": {
+          "carNumber": "88",
+          "drivers": [
+            { "name": "Stefano GATTUSO" },
+            { "name": "Giammarco LEVORATO" },
+            { "name": "Dennis OLSEN" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Proton Competition",
+          "manufacturer": "Ford"
+        }
+      },
+      {
+        "position": 20,
+        "car": {
+          "carNumber": "77",
+          "drivers": [
+            { "name": "Bernardo SOUSA" },
+            { "name": "Ben TUCK" },
+            { "name": "Benjamin BARKER" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Proton Competition",
+          "manufacturer": "Ford"
+        }
+      },
+      {
+        "position": 21,
+        "car": {
+          "carNumber": "95",
+          "drivers": [
+            { "name": "Darren LEUNG" },
+            { "name": "Sean GELAEL" },
+            { "name": "Marino SATO" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "United Autosports",
+          "manufacturer": "McLaren"
+        }
+      },
+      {
+        "position": 22,
+        "car": {
+          "carNumber": "46",
+          "drivers": [
+            { "name": "Ahmad AL HARTHY" },
+            { "name": "Valentino ROSSI" },
+            { "name": "Kelvin VAN DER LINDE" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Team WRT",
+          "manufacturer": "BMW"
+        }
+      },
+      {
+        "position": 23,
+        "car": {
+          "carNumber": "59",
+          "drivers": [
+            { "name": "James COTTINGHAM" },
+            { "name": "Sébastien BAUD" },
+            { "name": "Grégoire SAUCY" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "United Autosports",
+          "manufacturer": "McLaren"
+        }
+      },
+      {
+        "position": 24,
+        "car": {
+          "carNumber": "78",
+          "drivers": [
+            { "name": "Arnold ROBIN" },
+            { "name": "Finn GEHRSITZ" },
+            { "name": "Ben BARNICOAT" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Akkodis ASP Team",
+          "manufacturer": "Lexus"
+        }
+      },
+      {
+        "position": 25,
+        "car": {
+          "carNumber": "60",
+          "drivers": [
+            { "name": "Andrew GILBERT" },
+            { "name": "Lorcan HANAFIN" },
+            { "name": "Fran RUEDA" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Iron Lynx",
+          "manufacturer": "Mercedes"
+        }
+      },
+      {
+        "position": 26,
+        "car": {
+          "carNumber": "33",
+          "drivers": [
+            { "name": "Ben KEATING" },
+            { "name": "Jonny EDGAR" },
+            { "name": "Daniel JUNCADELLA" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "TF Sport",
+          "manufacturer": "Corvette"
+        }
+      },
+      {
+        "position": 27,
+        "car": {
+          "carNumber": "31",
+          "drivers": [
+            { "name": "Yasser SHAHIN" },
+            { "name": "Timur BOGUSLAVSKIY" },
+            { "name": "Augusto FARFUS" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "The Bend Team WRT",
+          "manufacturer": "BMW"
+        }
+      },
+      {
+        "position": 28,
+        "car": {
+          "carNumber": "27",
+          "drivers": [
+            { "name": "Ian JAMES" },
+            { "name": "Zacharie ROBICHON" },
+            { "name": "Mattia DRUDI" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Heart of Racing Team",
+          "manufacturer": "Aston Martin"
+        }
+      },
+      {
+        "position": 29,
+        "car": {
+          "carNumber": "81",
+          "drivers": [
+            { "name": "Tom VAN ROMPUY" },
+            { "name": "Rui ANDRADE" },
+            { "name": "Charlie EASTWOOD" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "TF Sport",
+          "manufacturer": "Corvette"
+        }
+      },
+      {
+        "position": 30,
+        "car": {
+          "carNumber": "61",
+          "drivers": [
+            { "name": "Martin BERRY" },
+            { "name": "Lin HODENIUS" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Iron Lynx",
+          "manufacturer": "Mercedes"
+        }
+      },
+      {
+        "position": 31,
+        "car": {
+          "carNumber": "92",
+          "drivers": [
+            { "name": "Ryan HARDWICK" },
+            { "name": "Riccardo PERA" },
+            { "name": "Richard LIETZ" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Manthey 1ST Phorm",
+          "manufacturer": "Porsche"
+        }
+      },
+      {
+        "position": 32,
+        "car": {
+          "carNumber": "54",
+          "drivers": [
+            { "name": "Thomas FLOHR" },
+            { "name": "Francesco CASTELLACCI" },
+            { "name": "Davide RIGON" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Vista AF Corse",
+          "manufacturer": "Ferrari"
+        }
+      },
+      {
+        "position": 33,
+        "car": {
+          "carNumber": "10",
+          "drivers": [
+            { "name": "Derek DEBOER" },
+            { "name": "Eduardo BARRICHELLO" },
+            { "name": "Valentin HASSE CLOT" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Racing Spirit of Leman",
+          "manufacturer": "Aston Martin"
+        }
+      },
+      {
+        "position": 34,
+        "car": {
+          "carNumber": "21",
+          "drivers": [
+            { "name": "François HERIAU" },
+            { "name": "Simon MANN" },
+            { "name": "Alessio ROVERA" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Vista AF Corse",
+          "manufacturer": "Ferrari"
+        }
+      },
+      {
+        "position": 35,
+        "car": {
+          "carNumber": "85",
+          "drivers": [
+            { "name": "Celia MARTIN" },
+            { "name": "Rahel FREY" },
+            { "name": "Michelle GATTING" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Iron Dames",
+          "manufacturer": "Porsche"
+        }
+      },
+      {
+        "position": 36,
+        "car": {
+          "carNumber": "87",
+          "drivers": [
+            { "name": "Clemens SCHMID" },
+            { "name": "Petru UMBRARESCU" }
+          ],
+          "class": "LMGT3",
+          "group": "",
+          "team": "Akkodis ASP Team",
+          "manufacturer": "Lexus"
+        }
+      }
+    ]
+  },
+  "index": {
+    "lapCompletions": [
+      { "lap": 1, "elapsed": "3:19.104" },
+      { "lap": 2, "elapsed": "6:27.414" },
+      { "lap": 3, "elapsed": "9:31.192" },
+      { "lap": 4, "elapsed": "12:33.912" },
+      { "lap": 5, "elapsed": "15:36.707" },
+      { "lap": 6, "elapsed": "18:37.908" },
+      { "lap": 7, "elapsed": "21:37.419" },
+      { "lap": 8, "elapsed": "24:35.584" },
+      { "lap": 9, "elapsed": "27:33.773" },
+      { "lap": 10, "elapsed": "30:32.689" },
+      { "lap": 11, "elapsed": "33:29.757" },
+      { "lap": 12, "elapsed": "36:25.628" },
+      { "lap": 13, "elapsed": "39:23.756" },
+      { "lap": 14, "elapsed": "42:18.890" },
+      { "lap": 15, "elapsed": "45:36.732" },
+      { "lap": 16, "elapsed": "48:54.049" },
+      { "lap": 17, "elapsed": "52:17.418" },
+      { "lap": 18, "elapsed": "56:21.236" },
+      { "lap": 19, "elapsed": "1:00:20.613" },
+      { "lap": 20, "elapsed": "1:43:58.268" },
+      { "lap": 21, "elapsed": "1:47:01.357" },
+      { "lap": 22, "elapsed": "1:49:49.613" },
+      { "lap": 23, "elapsed": "1:52:03.284" },
+      { "lap": 24, "elapsed": "1:54:16.373" },
+      { "lap": 25, "elapsed": "1:56:40.395" },
+      { "lap": 26, "elapsed": "2:00:36.545" },
+      { "lap": 27, "elapsed": "2:04:25.423" },
+      { "lap": 28, "elapsed": "2:07:59.770" },
+      { "lap": 29, "elapsed": "2:11:05.242" },
+      { "lap": 30, "elapsed": "2:13:51.814" },
+      { "lap": 31, "elapsed": "2:16:03.878" },
+      { "lap": 32, "elapsed": "2:18:14.067" },
+      { "lap": 33, "elapsed": "2:20:22.891" },
+      { "lap": 34, "elapsed": "2:22:32.874" },
+      { "lap": 35, "elapsed": "2:24:42.363" },
+      { "lap": 36, "elapsed": "2:26:53.615" },
+      { "lap": 37, "elapsed": "2:29:03.607" },
+      { "lap": 38, "elapsed": "2:31:11.793" },
+      { "lap": 39, "elapsed": "2:33:20.283" },
+      { "lap": 40, "elapsed": "2:35:28.831" },
+      { "lap": 41, "elapsed": "2:37:35.884" },
+      { "lap": 42, "elapsed": "2:39:44.009" },
+      { "lap": 43, "elapsed": "2:41:59.196" },
+      { "lap": 44, "elapsed": "2:46:04.595" },
+      { "lap": 45, "elapsed": "2:51:07.274" },
+      { "lap": 46, "elapsed": "2:55:22.877" },
+      { "lap": 47, "elapsed": "2:59:53.690" },
+      { "lap": 48, "elapsed": "3:03:00.514" },
+      { "lap": 49, "elapsed": "3:05:22.093" },
+      { "lap": 50, "elapsed": "3:07:42.064" },
+      { "lap": 51, "elapsed": "3:10:00.744" },
+      { "lap": 52, "elapsed": "3:12:19.847" },
+      { "lap": 53, "elapsed": "3:14:39.448" },
+      { "lap": 54, "elapsed": "3:16:58.053" },
+      { "lap": 55, "elapsed": "3:19:15.574" },
+      { "lap": 56, "elapsed": "3:21:32.405" },
+      { "lap": 57, "elapsed": "3:23:48.316" },
+      { "lap": 58, "elapsed": "3:26:03.188" },
+      { "lap": 59, "elapsed": "3:28:17.886" },
+      { "lap": 60, "elapsed": "3:30:31.432" },
+      { "lap": 61, "elapsed": "3:32:45.600" },
+      { "lap": 62, "elapsed": "3:34:58.074" },
+      { "lap": 63, "elapsed": "3:37:11.439" },
+      { "lap": 64, "elapsed": "3:39:26.353" },
+      { "lap": 65, "elapsed": "3:41:42.138" },
+      { "lap": 66, "elapsed": "3:43:54.403" },
+      { "lap": 67, "elapsed": "3:46:06.069" },
+      { "lap": 68, "elapsed": "3:48:17.443" },
+      { "lap": 69, "elapsed": "3:50:28.679" },
+      { "lap": 70, "elapsed": "3:52:39.460" },
+      { "lap": 71, "elapsed": "3:54:51.849" },
+      { "lap": 72, "elapsed": "3:58:48.728" },
+      { "lap": 73, "elapsed": "4:03:55.513" },
+      { "lap": 74, "elapsed": "4:07:59.934" },
+      { "lap": 75, "elapsed": "4:11:55.945" },
+      { "lap": 76, "elapsed": "4:15:00.232" },
+      { "lap": 77, "elapsed": "4:17:16.074" },
+      { "lap": 78, "elapsed": "4:19:31.427" },
+      { "lap": 79, "elapsed": "4:21:44.288" },
+      { "lap": 80, "elapsed": "4:23:57.205" },
+      { "lap": 81, "elapsed": "4:26:17.271" },
+      { "lap": 82, "elapsed": "4:30:22.995" },
+      { "lap": 83, "elapsed": "4:34:24.318" },
+      { "lap": 84, "elapsed": "4:38:22.659" },
+      { "lap": 85, "elapsed": "4:41:46.929" },
+      { "lap": 86, "elapsed": "4:43:55.994" },
+      { "lap": 87, "elapsed": "4:46:03.609" },
+      { "lap": 88, "elapsed": "4:48:11.695" },
+      { "lap": 89, "elapsed": "4:50:36.937" },
+      { "lap": 90, "elapsed": "4:54:42.495" },
+      { "lap": 91, "elapsed": "4:57:30.994" },
+      { "lap": 92, "elapsed": "4:59:36.763" },
+      { "lap": 93, "elapsed": "5:01:43.009" },
+      { "lap": 94, "elapsed": "5:03:49.342" },
+      { "lap": 95, "elapsed": "5:05:56.029" },
+      { "lap": 96, "elapsed": "5:08:05.908" },
+      { "lap": 97, "elapsed": "5:10:14.080" },
+      { "lap": 98, "elapsed": "5:12:20.600" },
+      { "lap": 99, "elapsed": "5:14:27.004" },
+      { "lap": 100, "elapsed": "5:16:34.149" },
+      { "lap": 101, "elapsed": "5:18:40.288" },
+      { "lap": 102, "elapsed": "5:20:47.468" },
+      { "lap": 103, "elapsed": "5:22:54.194" },
+      { "lap": 104, "elapsed": "5:25:01.579" },
+      { "lap": 105, "elapsed": "5:27:08.370" },
+      { "lap": 106, "elapsed": "5:29:38.975" },
+      { "lap": 107, "elapsed": "5:33:40.423" },
+      { "lap": 108, "elapsed": "5:35:43.866" },
+      { "lap": 109, "elapsed": "5:37:48.791" },
+      { "lap": 110, "elapsed": "5:39:53.837" },
+      { "lap": 111, "elapsed": "5:42:00.603" },
+      { "lap": 112, "elapsed": "5:44:06.676" },
+      { "lap": 113, "elapsed": "5:46:12.796" },
+      { "lap": 114, "elapsed": "5:48:46.702" },
+      { "lap": 115, "elapsed": "5:50:55.184" },
+      { "lap": 116, "elapsed": "5:53:02.301" },
+      { "lap": 117, "elapsed": "5:55:07.783" },
+      { "lap": 118, "elapsed": "5:57:15.372" },
+      { "lap": 119, "elapsed": "5:59:19.839" },
+      { "lap": 120, "elapsed": "6:01:25.310" }
+    ],
+    "bestTimeChanges": {
+      "fastestLapTime": [
+        {
+          "elapsed": "6:27.414",
+          "time": "3:08.310",
+          "carNumber": "83",
+          "lap": 2,
+          "driver": "Philip HANSON"
+        },
+        {
+          "elapsed": "6:32.119",
+          "time": "3:08.019",
+          "carNumber": "99",
+          "lap": 2,
+          "driver": "Nicolas VARRONE"
+        },
+        {
+          "elapsed": "6:33.124",
+          "time": "3:07.498",
+          "carNumber": "35",
+          "lap": 2,
+          "driver": "Ferdinand HABSBURG"
+        },
+        {
+          "elapsed": "6:35.989",
+          "time": "3:07.358",
+          "carNumber": "15",
+          "lap": 2,
+          "driver": "Kevin MAGNUSSEN"
+        },
+        {
+          "elapsed": "6:38.984",
+          "time": "3:06.530",
+          "carNumber": "94",
+          "lap": 2,
+          "driver": "Loïc DUVAL"
+        },
+        {
+          "elapsed": "6:43.761",
+          "time": "3:05.357",
+          "carNumber": "007",
+          "lap": 2,
+          "driver": "Tom GAMBLE"
+        },
+        {
+          "elapsed": "9:31.192",
+          "time": "3:03.778",
+          "carNumber": "83",
+          "lap": 3,
+          "driver": "Philip HANSON"
+        },
+        {
+          "elapsed": "9:32.253",
+          "time": "3:02.835",
+          "carNumber": "51",
+          "lap": 3,
+          "driver": "James CALADO"
+        },
+        {
+          "elapsed": "9:33.036",
+          "time": "3:02.718",
+          "carNumber": "6",
+          "lap": 3,
+          "driver": "Laurens VANTHOOR"
+        },
+        {
+          "elapsed": "12:37.245",
+          "time": "3:02.435",
+          "carNumber": "50",
+          "lap": 4,
+          "driver": "Nicklas NIELSEN"
+        },
+        {
+          "elapsed": "12:37.829",
+          "time": "3:02.058",
+          "carNumber": "99",
+          "lap": 4,
+          "driver": "Nicolas VARRONE"
+        },
+        {
+          "elapsed": "12:39.002",
+          "time": "3:01.858",
+          "carNumber": "35",
+          "lap": 4,
+          "driver": "Ferdinand HABSBURG"
+        },
+        {
+          "elapsed": "12:53.733",
+          "time": "3:01.545",
+          "carNumber": "38",
+          "lap": 4,
+          "driver": "Earl BAMBER"
+        },
+        {
+          "elapsed": "12:54.623",
+          "time": "3:01.448",
+          "carNumber": "12",
+          "lap": 4,
+          "driver": "Will STEVENS"
+        },
+        {
+          "elapsed": "12:56.031",
+          "time": "3:01.048",
+          "carNumber": "7",
+          "lap": 4,
+          "driver": "Nyck DE VRIES"
+        },
+        {
+          "elapsed": "12:57.601",
+          "time": "3:00.657",
+          "carNumber": "93",
+          "lap": 4,
+          "driver": "Jean-Eric VERGNE"
+        },
+        {
+          "elapsed": "12:58.569",
+          "time": "3:00.655",
+          "carNumber": "88",
+          "lap": 4,
+          "driver": "Stefano GATTUSO"
+        },
+        {
+          "elapsed": "12:59.134",
+          "time": "3:00.349",
+          "carNumber": "77",
+          "lap": 4,
+          "driver": "Bernardo SOUSA"
+        },
+        {
+          "elapsed": "13:00.830",
+          "time": "3:00.290",
+          "carNumber": "95",
+          "lap": 4,
+          "driver": "Darren LEUNG"
+        },
+        {
+          "elapsed": "13:04.652",
+          "time": "3:00.076",
+          "carNumber": "78",
+          "lap": 4,
+          "driver": "Arnold ROBIN"
+        },
+        {
+          "elapsed": "13:05.819",
+          "time": "2:58.959",
+          "carNumber": "60",
+          "lap": 4,
+          "driver": "Andrew GILBERT"
+        },
+        {
+          "elapsed": "13:08.859",
+          "time": "2:58.828",
+          "carNumber": "27",
+          "lap": 4,
+          "driver": "Ian JAMES"
+        },
+        {
+          "elapsed": "13:09.385",
+          "time": "2:58.789",
+          "carNumber": "81",
+          "lap": 4,
+          "driver": "Tom VAN ROMPUY"
+        },
+        {
+          "elapsed": "13:10.717",
+          "time": "2:58.398",
+          "carNumber": "61",
+          "lap": 4,
+          "driver": "Martin BERRY"
+        },
+        {
+          "elapsed": "13:15.976",
+          "time": "2:57.816",
+          "carNumber": "21",
+          "lap": 4,
+          "driver": "François HERIAU"
+        },
+        {
+          "elapsed": "19:37.404",
+          "time": "2:32.798",
+          "carNumber": "87",
+          "lap": 6,
+          "driver": "Petru UMBRARESCU"
+        },
+        {
+          "elapsed": "40:11.423",
+          "time": "2:31.750",
+          "carNumber": "78",
+          "lap": 13,
+          "driver": "Arnold ROBIN"
+        },
+        {
+          "elapsed": "1:52:03.284",
+          "time": "2:13.671",
+          "carNumber": "83",
+          "lap": 23,
+          "driver": "Philip HANSON"
+        },
+        {
+          "elapsed": "1:54:16.373",
+          "time": "2:13.089",
+          "carNumber": "83",
+          "lap": 24,
+          "driver": "Philip HANSON"
+        },
+        {
+          "elapsed": "2:16:03.878",
+          "time": "2:12.064",
+          "carNumber": "83",
+          "lap": 31,
+          "driver": "Philip HANSON"
+        },
+        {
+          "elapsed": "2:18:14.067",
+          "time": "2:10.189",
+          "carNumber": "83",
+          "lap": 32,
+          "driver": "Philip HANSON"
+        },
+        {
+          "elapsed": "2:18:15.688",
+          "time": "2:09.818",
+          "carNumber": "51",
+          "lap": 32,
+          "driver": "James CALADO"
+        },
+        {
+          "elapsed": "2:20:22.891",
+          "time": "2:08.824",
+          "carNumber": "83",
+          "lap": 33,
+          "driver": "Philip HANSON"
+        },
+        {
+          "elapsed": "2:22:53.023",
+          "time": "2:08.674",
+          "carNumber": "38",
+          "lap": 34,
+          "driver": "Earl BAMBER"
+        },
+        {
+          "elapsed": "2:25:48.209",
+          "time": "2:08.069",
+          "carNumber": "93",
+          "lap": 35,
+          "driver": "Jean-Eric VERGNE"
+        },
+        {
+          "elapsed": "2:27:55.942",
+          "time": "2:07.733",
+          "carNumber": "93",
+          "lap": 36,
+          "driver": "Jean-Eric VERGNE"
+        },
+        {
+          "elapsed": "2:33:32.261",
+          "time": "2:06.771",
+          "carNumber": "50",
+          "lap": 39,
+          "driver": "Nicklas NIELSEN"
+        },
+        {
+          "elapsed": "4:59:36.763",
+          "time": "2:05.769",
+          "carNumber": "6",
+          "lap": 92,
+          "driver": "Kévin ESTRE"
+        },
+        {
+          "elapsed": "5:24:51.455",
+          "time": "2:05.333",
+          "carNumber": "15",
+          "lap": 102,
+          "driver": "Dries VANTHOOR"
+        },
+        {
+          "elapsed": "5:26:56.545",
+          "time": "2:05.090",
+          "carNumber": "15",
+          "lap": 103,
+          "driver": "Dries VANTHOOR"
+        },
+        {
+          "elapsed": "5:35:43.866",
+          "time": "2:03.443",
+          "carNumber": "6",
+          "lap": 108,
+          "driver": "Kévin ESTRE"
+        }
+      ],
+      "sectors": {
+        "s1": [
+          {
+            "elapsed": "6:27.414",
+            "time": "40.152",
+            "carNumber": "83",
+            "lap": 2,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "6:29.418",
+            "time": "39.447",
+            "carNumber": "51",
+            "lap": 2,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "9:32.253",
+            "time": "39.023",
+            "carNumber": "51",
+            "lap": 3,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "12:59.134",
+            "time": "38.749",
+            "carNumber": "77",
+            "lap": 4,
+            "driver": "Bernardo SOUSA"
+          },
+          {
+            "elapsed": "13:00.830",
+            "time": "37.877",
+            "carNumber": "95",
+            "lap": 4,
+            "driver": "Darren LEUNG"
+          },
+          {
+            "elapsed": "13:02.488",
+            "time": "37.560",
+            "carNumber": "46",
+            "lap": 4,
+            "driver": "Ahmad AL HARTHY"
+          },
+          {
+            "elapsed": "13:04.652",
+            "time": "36.566",
+            "carNumber": "78",
+            "lap": 4,
+            "driver": "Arnold ROBIN"
+          },
+          {
+            "elapsed": "19:37.404",
+            "time": "33.159",
+            "carNumber": "87",
+            "lap": 6,
+            "driver": "Petru UMBRARESCU"
+          },
+          {
+            "elapsed": "28:17.144",
+            "time": "33.029",
+            "carNumber": "81",
+            "lap": 9,
+            "driver": "Tom VAN ROMPUY"
+          },
+          {
+            "elapsed": "37:11.062",
+            "time": "32.916",
+            "carNumber": "61",
+            "lap": 12,
+            "driver": "Martin BERRY"
+          },
+          {
+            "elapsed": "40:11.423",
+            "time": "32.042",
+            "carNumber": "78",
+            "lap": 13,
+            "driver": "Arnold ROBIN"
+          },
+          {
+            "elapsed": "56:59.223",
+            "time": "31.727",
+            "carNumber": "61",
+            "lap": 18,
+            "driver": "Martin BERRY"
+          },
+          {
+            "elapsed": "1:52:03.284",
+            "time": "28.566",
+            "carNumber": "83",
+            "lap": 23,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "1:54:16.373",
+            "time": "28.514",
+            "carNumber": "83",
+            "lap": 24,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "1:54:39.521",
+            "time": "28.438",
+            "carNumber": "93",
+            "lap": 24,
+            "driver": "Jean-Eric VERGNE"
+          },
+          {
+            "elapsed": "2:16:03.878",
+            "time": "28.096",
+            "carNumber": "83",
+            "lap": 31,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:16:47.121",
+            "time": "28.061",
+            "carNumber": "15",
+            "lap": 31,
+            "driver": "Kevin MAGNUSSEN"
+          },
+          {
+            "elapsed": "2:18:14.067",
+            "time": "28.026",
+            "carNumber": "83",
+            "lap": 32,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:18:15.688",
+            "time": "27.633",
+            "carNumber": "51",
+            "lap": 32,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "2:20:22.891",
+            "time": "26.947",
+            "carNumber": "83",
+            "lap": 33,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:24:42.363",
+            "time": "26.749",
+            "carNumber": "83",
+            "lap": 35,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:27:55.942",
+            "time": "26.414",
+            "carNumber": "93",
+            "lap": 36,
+            "driver": "Jean-Eric VERGNE"
+          },
+          {
+            "elapsed": "2:35:47.575",
+            "time": "26.387",
+            "carNumber": "5",
+            "lap": 40,
+            "driver": "Julien ANDLAUER"
+          },
+          {
+            "elapsed": "2:37:57.610",
+            "time": "26.383",
+            "carNumber": "5",
+            "lap": 41,
+            "driver": "Julien ANDLAUER"
+          },
+          {
+            "elapsed": "4:59:07.738",
+            "time": "26.151",
+            "carNumber": "35",
+            "lap": 91,
+            "driver": "Charles MILESI"
+          },
+          {
+            "elapsed": "4:59:36.763",
+            "time": "26.141",
+            "carNumber": "6",
+            "lap": 92,
+            "driver": "Kévin ESTRE"
+          },
+          {
+            "elapsed": "4:59:50.861",
+            "time": "26.048",
+            "carNumber": "94",
+            "lap": 92,
+            "driver": "Stoffel VANDOORNE"
+          },
+          {
+            "elapsed": "5:01:57.303",
+            "time": "25.965",
+            "carNumber": "94",
+            "lap": 93,
+            "driver": "Stoffel VANDOORNE"
+          },
+          {
+            "elapsed": "5:05:56.029",
+            "time": "25.943",
+            "carNumber": "6",
+            "lap": 95,
+            "driver": "Kévin ESTRE"
+          },
+          {
+            "elapsed": "5:12:20.600",
+            "time": "25.862",
+            "carNumber": "6",
+            "lap": 98,
+            "driver": "Kévin ESTRE"
+          },
+          {
+            "elapsed": "5:14:40.255",
+            "time": "25.784",
+            "carNumber": "94",
+            "lap": 99,
+            "driver": "Stoffel VANDOORNE"
+          },
+          {
+            "elapsed": "5:16:56.760",
+            "time": "25.778",
+            "carNumber": "93",
+            "lap": 100,
+            "driver": "Mikkel JENSEN"
+          },
+          {
+            "elapsed": "5:18:40.288",
+            "time": "25.715",
+            "carNumber": "6",
+            "lap": 101,
+            "driver": "Kévin ESTRE"
+          },
+          {
+            "elapsed": "5:19:03.509",
+            "time": "25.637",
+            "carNumber": "93",
+            "lap": 101,
+            "driver": "Mikkel JENSEN"
+          },
+          {
+            "elapsed": "5:35:43.866",
+            "time": "25.418",
+            "carNumber": "6",
+            "lap": 108,
+            "driver": "Kévin ESTRE"
+          }
+        ],
+        "s2": [
+          {
+            "elapsed": "3:19.104",
+            "time": "1:17.560",
+            "carNumber": "83",
+            "lap": 1,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "3:20.771",
+            "time": "1:17.377",
+            "carNumber": "51",
+            "lap": 1,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "3:44.662",
+            "time": "1:16.976",
+            "carNumber": "93",
+            "lap": 1,
+            "driver": "Jean-Eric VERGNE"
+          },
+          {
+            "elapsed": "3:48.940",
+            "time": "1:16.436",
+            "carNumber": "46",
+            "lap": 1,
+            "driver": "Ahmad AL HARTHY"
+          },
+          {
+            "elapsed": "3:52.136",
+            "time": "1:16.401",
+            "carNumber": "78",
+            "lap": 1,
+            "driver": "Arnold ROBIN"
+          },
+          {
+            "elapsed": "3:55.189",
+            "time": "1:16.392",
+            "carNumber": "31",
+            "lap": 1,
+            "driver": "Yasser SHAHIN"
+          },
+          {
+            "elapsed": "3:57.650",
+            "time": "1:16.159",
+            "carNumber": "27",
+            "lap": 1,
+            "driver": "Ian JAMES"
+          },
+          {
+            "elapsed": "3:58.015",
+            "time": "1:15.938",
+            "carNumber": "81",
+            "lap": 1,
+            "driver": "Tom VAN ROMPUY"
+          },
+          {
+            "elapsed": "6:27.414",
+            "time": "1:12.811",
+            "carNumber": "83",
+            "lap": 2,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "6:30.318",
+            "time": "1:12.015",
+            "carNumber": "6",
+            "lap": 2,
+            "driver": "Laurens VANTHOOR"
+          },
+          {
+            "elapsed": "6:32.119",
+            "time": "1:11.864",
+            "carNumber": "99",
+            "lap": 2,
+            "driver": "Nicolas VARRONE"
+          },
+          {
+            "elapsed": "6:33.124",
+            "time": "1:10.281",
+            "carNumber": "35",
+            "lap": 2,
+            "driver": "Ferdinand HABSBURG"
+          },
+          {
+            "elapsed": "10:18.160",
+            "time": "1:08.605",
+            "carNumber": "21",
+            "lap": 3,
+            "driver": "François HERIAU"
+          },
+          {
+            "elapsed": "17:04.606",
+            "time": "1:03.983",
+            "carNumber": "87",
+            "lap": 5,
+            "driver": "Petru UMBRARESCU"
+          },
+          {
+            "elapsed": "19:22.472",
+            "time": "58.105",
+            "carNumber": "10",
+            "lap": 6,
+            "driver": "Derek DEBOER"
+          },
+          {
+            "elapsed": "19:37.404",
+            "time": "57.920",
+            "carNumber": "87",
+            "lap": 6,
+            "driver": "Petru UMBRARESCU"
+          },
+          {
+            "elapsed": "34:21.129",
+            "time": "57.341",
+            "carNumber": "61",
+            "lap": 11,
+            "driver": "Martin BERRY"
+          },
+          {
+            "elapsed": "37:39.673",
+            "time": "56.103",
+            "carNumber": "78",
+            "lap": 12,
+            "driver": "Arnold ROBIN"
+          },
+          {
+            "elapsed": "40:12.093",
+            "time": "55.749",
+            "carNumber": "46",
+            "lap": 13,
+            "driver": "Ahmad AL HARTHY"
+          },
+          {
+            "elapsed": "1:52:03.284",
+            "time": "49.779",
+            "carNumber": "83",
+            "lap": 23,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "1:54:16.373",
+            "time": "49.377",
+            "carNumber": "83",
+            "lap": 24,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "1:56:41.664",
+            "time": "49.344",
+            "carNumber": "51",
+            "lap": 25,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "2:17:11.692",
+            "time": "48.671",
+            "carNumber": "007",
+            "lap": 31,
+            "driver": "Harry TINCKNELL"
+          },
+          {
+            "elapsed": "2:18:14.067",
+            "time": "48.532",
+            "carNumber": "83",
+            "lap": 32,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:18:15.688",
+            "time": "48.415",
+            "carNumber": "51",
+            "lap": 32,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "2:20:22.891",
+            "time": "48.350",
+            "carNumber": "83",
+            "lap": 33,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:20:27.965",
+            "time": "48.260",
+            "carNumber": "6",
+            "lap": 33,
+            "driver": "Laurens VANTHOOR"
+          },
+          {
+            "elapsed": "2:21:32.814",
+            "time": "48.179",
+            "carNumber": "007",
+            "lap": 33,
+            "driver": "Harry TINCKNELL"
+          },
+          {
+            "elapsed": "2:22:33.831",
+            "time": "48.156",
+            "carNumber": "51",
+            "lap": 34,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "2:22:53.023",
+            "time": "48.077",
+            "carNumber": "38",
+            "lap": 34,
+            "driver": "Earl BAMBER"
+          },
+          {
+            "elapsed": "2:29:53.387",
+            "time": "48.074",
+            "carNumber": "12",
+            "lap": 37,
+            "driver": "Alex LYNN"
+          },
+          {
+            "elapsed": "2:30:14.360",
+            "time": "47.935",
+            "carNumber": "007",
+            "lap": 37,
+            "driver": "Harry TINCKNELL"
+          },
+          {
+            "elapsed": "2:33:32.261",
+            "time": "47.655",
+            "carNumber": "50",
+            "lap": 39,
+            "driver": "Nicklas NIELSEN"
+          },
+          {
+            "elapsed": "4:58:02.919",
+            "time": "47.640",
+            "carNumber": "38",
+            "lap": 91,
+            "driver": "Jenson BUTTON"
+          },
+          {
+            "elapsed": "4:59:54.589",
+            "time": "47.583",
+            "carNumber": "93",
+            "lap": 92,
+            "driver": "Mikkel JENSEN"
+          },
+          {
+            "elapsed": "5:20:54.574",
+            "time": "47.507",
+            "carNumber": "50",
+            "lap": 102,
+            "driver": "Miguel MOLINA"
+          },
+          {
+            "elapsed": "5:23:15.921",
+            "time": "47.431",
+            "carNumber": "93",
+            "lap": 103,
+            "driver": "Mikkel JENSEN"
+          },
+          {
+            "elapsed": "5:35:35.443",
+            "time": "47.118",
+            "carNumber": "15",
+            "lap": 106,
+            "driver": "Dries VANTHOOR"
+          },
+          {
+            "elapsed": "5:35:54.113",
+            "time": "47.044",
+            "carNumber": "94",
+            "lap": 108,
+            "driver": "Stoffel VANDOORNE"
+          },
+          {
+            "elapsed": "5:35:59.919",
+            "time": "46.707",
+            "carNumber": "93",
+            "lap": 108,
+            "driver": "Mikkel JENSEN"
+          }
+        ],
+        "s3": [
+          {
+            "elapsed": "3:19.104",
+            "time": "1:13.095",
+            "carNumber": "83",
+            "lap": 1,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "3:24.100",
+            "time": "1:12.907",
+            "carNumber": "99",
+            "lap": 1,
+            "driver": "Nicolas VARRONE"
+          },
+          {
+            "elapsed": "3:27.542",
+            "time": "1:11.416",
+            "carNumber": "8",
+            "lap": 1,
+            "driver": "Brendon HARTLEY"
+          },
+          {
+            "elapsed": "3:29.939",
+            "time": "1:10.806",
+            "carNumber": "009",
+            "lap": 1,
+            "driver": "Alex RIBERAS"
+          },
+          {
+            "elapsed": "3:30.460",
+            "time": "1:10.081",
+            "carNumber": "5",
+            "lap": 1,
+            "driver": "Julien ANDLAUER"
+          },
+          {
+            "elapsed": "3:33.043",
+            "time": "1:09.867",
+            "carNumber": "36",
+            "lap": 1,
+            "driver": "Frédéric MAKOWIECKI"
+          },
+          {
+            "elapsed": "4:01.198",
+            "time": "1:09.533",
+            "carNumber": "92",
+            "lap": 1,
+            "driver": "Ryan HARDWICK"
+          },
+          {
+            "elapsed": "4:02.448",
+            "time": "1:09.494",
+            "carNumber": "54",
+            "lap": 1,
+            "driver": "Thomas FLOHR"
+          },
+          {
+            "elapsed": "4:03.679",
+            "time": "1:09.182",
+            "carNumber": "21",
+            "lap": 1,
+            "driver": "François HERIAU"
+          },
+          {
+            "elapsed": "7:09.454",
+            "time": "1:08.822",
+            "carNumber": "21",
+            "lap": 2,
+            "driver": "François HERIAU"
+          },
+          {
+            "elapsed": "7:10.194",
+            "time": "1:08.456",
+            "carNumber": "85",
+            "lap": 2,
+            "driver": "Celia MARTIN"
+          },
+          {
+            "elapsed": "9:42.696",
+            "time": "1:07.112",
+            "carNumber": "94",
+            "lap": 3,
+            "driver": "Loïc DUVAL"
+          },
+          {
+            "elapsed": "9:43.894",
+            "time": "1:06.938",
+            "carNumber": "36",
+            "lap": 3,
+            "driver": "Frédéric MAKOWIECKI"
+          },
+          {
+            "elapsed": "9:44.779",
+            "time": "1:05.811",
+            "carNumber": "20",
+            "lap": 3,
+            "driver": "René RAST"
+          },
+          {
+            "elapsed": "13:08.859",
+            "time": "1:05.530",
+            "carNumber": "27",
+            "lap": 4,
+            "driver": "Ian JAMES"
+          },
+          {
+            "elapsed": "13:09.385",
+            "time": "1:05.083",
+            "carNumber": "81",
+            "lap": 4,
+            "driver": "Tom VAN ROMPUY"
+          },
+          {
+            "elapsed": "13:10.717",
+            "time": "1:04.767",
+            "carNumber": "61",
+            "lap": 4,
+            "driver": "Martin BERRY"
+          },
+          {
+            "elapsed": "13:14.299",
+            "time": "1:04.740",
+            "carNumber": "85",
+            "lap": 4,
+            "driver": "Celia MARTIN"
+          },
+          {
+            "elapsed": "13:15.976",
+            "time": "1:04.018",
+            "carNumber": "21",
+            "lap": 4,
+            "driver": "François HERIAU"
+          },
+          {
+            "elapsed": "19:22.472",
+            "time": "1:01.609",
+            "carNumber": "10",
+            "lap": 6,
+            "driver": "Derek DEBOER"
+          },
+          {
+            "elapsed": "22:31.248",
+            "time": "1:00.598",
+            "carNumber": "85",
+            "lap": 7,
+            "driver": "Celia MARTIN"
+          },
+          {
+            "elapsed": "34:21.129",
+            "time": "1:00.520",
+            "carNumber": "61",
+            "lap": 11,
+            "driver": "Martin BERRY"
+          },
+          {
+            "elapsed": "37:39.673",
+            "time": "1:00.029",
+            "carNumber": "78",
+            "lap": 12,
+            "driver": "Arnold ROBIN"
+          },
+          {
+            "elapsed": "40:14.495",
+            "time": "59.368",
+            "carNumber": "31",
+            "lap": 13,
+            "driver": "Yasser SHAHIN"
+          },
+          {
+            "elapsed": "1:49:58.409",
+            "time": "59.361",
+            "carNumber": "38",
+            "lap": 22,
+            "driver": "Earl BAMBER"
+          },
+          {
+            "elapsed": "1:49:59.580",
+            "time": "58.916",
+            "carNumber": "12",
+            "lap": 22,
+            "driver": "Will STEVENS"
+          },
+          {
+            "elapsed": "1:50:00.559",
+            "time": "58.150",
+            "carNumber": "7",
+            "lap": 22,
+            "driver": "Nyck DE VRIES"
+          },
+          {
+            "elapsed": "1:52:03.284",
+            "time": "55.326",
+            "carNumber": "83",
+            "lap": 23,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "1:52:24.878",
+            "time": "54.763",
+            "carNumber": "93",
+            "lap": 23,
+            "driver": "Jean-Eric VERGNE"
+          },
+          {
+            "elapsed": "2:14:59.569",
+            "time": "54.614",
+            "carNumber": "007",
+            "lap": 30,
+            "driver": "Harry TINCKNELL"
+          },
+          {
+            "elapsed": "2:16:03.878",
+            "time": "54.477",
+            "carNumber": "83",
+            "lap": 31,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:18:14.067",
+            "time": "53.631",
+            "carNumber": "83",
+            "lap": 32,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:20:22.891",
+            "time": "53.527",
+            "carNumber": "83",
+            "lap": 33,
+            "driver": "Philip HANSON"
+          },
+          {
+            "elapsed": "2:20:27.965",
+            "time": "53.292",
+            "carNumber": "6",
+            "lap": 33,
+            "driver": "Laurens VANTHOOR"
+          },
+          {
+            "elapsed": "2:22:33.831",
+            "time": "53.173",
+            "carNumber": "51",
+            "lap": 34,
+            "driver": "James CALADO"
+          },
+          {
+            "elapsed": "2:22:36.993",
+            "time": "53.128",
+            "carNumber": "6",
+            "lap": 34,
+            "driver": "Laurens VANTHOOR"
+          },
+          {
+            "elapsed": "2:24:47.228",
+            "time": "52.807",
+            "carNumber": "6",
+            "lap": 35,
+            "driver": "Laurens VANTHOOR"
+          },
+          {
+            "elapsed": "2:29:07.141",
+            "time": "52.758",
+            "carNumber": "6",
+            "lap": 37,
+            "driver": "Laurens VANTHOOR"
+          },
+          {
+            "elapsed": "2:33:32.261",
+            "time": "52.200",
+            "carNumber": "50",
+            "lap": 39,
+            "driver": "Nicklas NIELSEN"
+          },
+          {
+            "elapsed": "4:59:36.763",
+            "time": "51.950",
+            "carNumber": "6",
+            "lap": 92,
+            "driver": "Kévin ESTRE"
+          },
+          {
+            "elapsed": "5:24:51.455",
+            "time": "51.833",
+            "carNumber": "15",
+            "lap": 102,
+            "driver": "Dries VANTHOOR"
+          },
+          {
+            "elapsed": "5:26:17.104",
+            "time": "51.765",
+            "carNumber": "12",
+            "lap": 104,
+            "driver": "Norman NATO"
+          },
+          {
+            "elapsed": "5:26:56.545",
+            "time": "51.671",
+            "carNumber": "15",
+            "lap": 103,
+            "driver": "Dries VANTHOOR"
+          },
+          {
+            "elapsed": "5:34:26.520",
+            "time": "51.630",
+            "carNumber": "5",
+            "lap": 107,
+            "driver": "Michael CHRISTENSEN"
+          },
+          {
+            "elapsed": "5:34:32.157",
+            "time": "51.032",
+            "carNumber": "38",
+            "lap": 107,
+            "driver": "Jenson BUTTON"
+          },
+          {
+            "elapsed": "5:35:43.866",
+            "time": "50.887",
+            "carNumber": "6",
+            "lap": 108,
+            "driver": "Kévin ESTRE"
+          },
+          {
+            "elapsed": "5:46:41.691",
+            "time": "50.731",
+            "carNumber": "51",
+            "lap": 113,
+            "driver": "Alessandro PIER GUIDI"
+          },
+          {
+            "elapsed": "5:48:50.678",
+            "time": "50.634",
+            "carNumber": "6",
+            "lap": 114,
+            "driver": "Kévin ESTRE"
+          },
+          {
+            "elapsed": "5:51:22.345",
+            "time": "50.436",
+            "carNumber": "51",
+            "lap": 115,
+            "driver": "Alessandro PIER GUIDI"
+          }
+        ]
+      },
+      "miniSectors": {
+        "scl2": [],
+        "z4": [],
+        "ip1": [],
+        "z12": [],
+        "sclc": [],
+        "a7_1": [],
+        "ip2": [],
+        "a8_1": [],
+        "sclb": [],
+        "porin": [],
+        "porout": [],
+        "pitref": [],
+        "scl1": [],
+        "fordout": [],
+        "fl": []
+      }
+    },
+    "flagChanges": [
+      { "elapsed": "3:19.104", "flag": "safetyCar" },
+      { "elapsed": "1:00:20.613", "flag": "redFlag" },
+      { "elapsed": "1:43:58.268", "flag": "safetyCar" },
+      { "elapsed": "1:49:49.613", "flag": "greenFlag" },
+      { "elapsed": "1:56:40.395", "flag": "safetyCar" },
+      { "elapsed": "2:13:51.814", "flag": "greenFlag" },
+      { "elapsed": "2:50:29.816", "flag": "safetyCar" },
+      { "elapsed": "3:03:00.514", "flag": "greenFlag" },
+      { "elapsed": "4:03:36.618", "flag": "safetyCar" },
+      { "elapsed": "4:15:00.232", "flag": "greenFlag" },
+      { "elapsed": "4:26:17.271", "flag": "safetyCar" },
+      { "elapsed": "4:41:46.929", "flag": "greenFlag" },
+      { "elapsed": "4:50:14.855", "flag": "fullCourseYellow" },
+      { "elapsed": "4:56:11.839", "flag": "greenFlag" },
+      { "elapsed": "5:28:45.759", "flag": "fullCourseYellow" },
+      { "elapsed": "5:33:32.908", "flag": "greenFlag" }
+    ]
+  }
+}

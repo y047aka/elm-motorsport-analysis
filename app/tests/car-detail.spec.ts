@@ -1,6 +1,6 @@
 import { test, expect, Locator, Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { waitForPageReady, setLapCount } from './helpers';
+import { waitForPageReady, setLapCount, LE_MANS } from './helpers';
 
 const DETAIL = '[data-car-detail]';
 const CLASS_COLUMN = '[data-class-column]';
@@ -65,7 +65,7 @@ function standingsRow(page: Page, carNumber: string) {
 async function openEvent(page: Page) {
   await page.goto('/wec/2025/le_mans_24h', { waitUntil: 'load' });
   await waitForPageReady(page, 'text=24 Hours of Le Mans');
-  await setLapCount(page, 180);
+  await setLapCount(page, LE_MANS, 180);
 }
 
 /**
@@ -474,12 +474,12 @@ test.describe('Class columns', () => {
     // Nothing picked, nothing moved: the column is the class's running order,
     // which is the race's to change. Before the first lap is done the classes are
     // led by other cars, and no class has finished a timed lap to be a reference.
-    await setLapCount(page, 0);
+    await setLapCount(page, LE_MANS, 0);
     for (const class_ of CLASSES) {
       await expect(classRows(page, class_.name).first()).toContainText(class_.atStart);
       await expect(classColumn(page, class_.name)).toContainText('no timed lap');
     }
-    await setLapCount(page, 180);
+    await setLapCount(page, LE_MANS, 180);
     for (const class_ of CLASSES) {
       await expect(classRows(page, class_.name).first()).toContainText(class_.leader);
       await expect(classColumn(page, class_.name)).not.toContainText('no timed lap');
@@ -614,7 +614,7 @@ test.describe('Class columns', () => {
     ]);
     // And before the race has moved anybody the track is blank for every car of
     // the class: nobody is in the lane yet.
-    await setLapCount(page, 0);
+    await setLapCount(page, LE_MANS, 0);
     expect(await laneMarks(page, 'LMGT3')).toEqual(new Array(24).fill(''));
   });
 
@@ -1004,7 +1004,7 @@ test.describe('Car Detail Columns', () => {
     await carry(page, 0, PITCH);
     await page.mouse.up();
     await expectColumns(page, ['48', '6', '92']);
-    await setLapCount(page, 0);
+    await setLapCount(page, LE_MANS, 0);
     await expectColumns(page, ['48', '6', '92']);
   });
 

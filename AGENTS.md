@@ -63,13 +63,17 @@ Every round is loaded and every round is written. `--export-only <season>/<id>`
 narrows the writing stage alone, repeated to name more than one, and a name no
 round on the calendar answers to fails the run before anything is written.
 
-**A checkout holds the CSV, the calendar and one round's files.** 2025's Le
-Mans is kept, so the VRT and a dev server work with nothing run first. The
-other thirteen are 50MB the rows already say, so they are ignored rather than
-committed, and `.#tauri-build` is the one command that writes them — a bundle
-carries the files it opens, and nothing else needs all of them at once. A round
-left unwritten is quiet: the dev server answers `/api` for it with a 502, and a
-Tauri bundle hands back its own `index.html`.
+**A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le
+Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work
+with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB
+against Le Mans's 25MB of laps. The other twelve are 50MB the rows already say, so
+they are ignored rather than committed, and `.#tauri-build` is the one command that
+writes them — a bundle carries the files it opens, and nothing else needs all of
+them at once. A round left unwritten is quiet: the dev server answers `/api` for it
+with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an
+export like any other, so a summary that grows a key the drawing is chosen by has
+to be written out again over the kept rounds: `track.circuit` missing reads as a
+circuit with no drawing.
 
 `.#cli-load` and `.#cli-export` are those two stages singly. The stage that
 writes reads none of the CSV, so the files are an image of the rows and of
@@ -433,8 +437,7 @@ tall is wide-to-tall 1.75 where Le Mans is 0.50, and no one multiplier is right
 in both directions of that. So the lengths are to be measured one at a time, and
 every length tuned away from three tenths is a decision of its own. Tuning a
 length of Le Mans's set moves every baseline it has and so goes through
-`update-snapshots-ci`. The summary does not say which circuit a round was run
-on, so `Shared.trackOf` picks the layout by the calendar's round id.
+`update-snapshots-ci`.
 
 Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
 round the lap it stands, and `Circuit/Layout` projects those degrees into the
@@ -574,9 +577,13 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   reaches.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
-  answers `/api` from `static/`, and those are the same bytes. It drives
-  2025's Le Mans because that is the round a checkout keeps; a test reaching
-  for another needs `.#serve-api` behind it. Local runs allow a 0.1%
+  answers `/api` from `static/`, and those are the same bytes. It drives the two
+  rounds a checkout keeps; a test reaching for a third needs `.#serve-api` behind
+  it. Two ways a round loses its drawing without failing anything are told apart
+  there without a baseline to compare pixels to: `helpers.ts` reads a kept round's
+  summary for the moment to stop at and refuses one naming no `track.circuit`, and
+  `expectSurveyedLap` asserts the tracker drew a polygon where the ring draws a
+  circle. Local runs allow a 0.1%
   pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`, and 0.15% for
   `position-tab`) for cross-platform diffs; CI is strict 0.
 
