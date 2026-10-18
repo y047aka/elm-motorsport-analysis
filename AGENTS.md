@@ -383,7 +383,7 @@ beside them and never by hand.
 The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
 circuit, which supplies the relation, the member role naming the line the lap
 is measured from, the published length the surveyed line is stretched to, and
-the prose the generated module is documented with—
+the prose the generated module is documented with —
 `node app/scripts/cota-geometry.mjs [overpass.json]`. OpenStreetMap holds a
 circuit however whoever mapped it tagged it, and the two here are tagged
 differently: Le Mans's relation names one node `start-finish`, and COTA's names
@@ -394,13 +394,18 @@ it writes anything rather than drawing every car 297 m early.
 
 Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
 map for that race, and differ by season; the maps are not to be redistributed,
-so they are not in the repository. COTA's are its own track sector map's—
+so they are not in the repository. COTA's are its own track sector map's —
 1,313.2, 2,254.3 and 1,947.5 m, which add up to the 5,515 m centreline the same
 map gives — and are one set used for every season here, since no later map has
-been read. The feed's own splits are what to re-read a new season against, and
-the arithmetic sits in `Circuit/Cota/Layout`: 21.2 / 37.8 / 40.6% of a lap over
-2025 is 159, 159 and 122 km/h of mean sector speed across those distances,
-where the places the turns are usually said to fall would ask for 333. A line a
+been read. Nothing in a round's own times picks one placement of those lines
+out of another: a sector's share of a lap is not a share of its distance, and
+every placement has a mean speed of its own. What they rest on is that the
+circuit published them as the lines it times to, beside the lap length they add
+up to. What the times can answer is whether the lines have moved, and they are
+read that way in `Circuit/Cota/Layout`: each class's best sector times as two
+distances round the lap, which the two rounds here place within 28 m of each
+other — 0.5% of a lap, and the only evidence available that one map serves
+both. A line a
 map gives no distance for is placed by the time between the lines either side
 of it (`Tracker.Config.lapScale`), and a circuit whose feed never measures the
 lap finer than three sectors — every circuit here but Le Mans's — has no

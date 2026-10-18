@@ -55,13 +55,18 @@ which add up to the 5,515 m centreline the same map gives, and are what
 print for this circuit run 5,513 m, 2 m short of the map's own total; the map is
 quoted because every line above is measured along it.
 
-The map is the April 2021 event's. A season that moved its lines would be drawn
-with the wrong boundaries, and would place every car wrong between them, so the
-lap times are what to check a new season against: across 3,883 laps of the 2025
-round the three take 21.2 / 37.8 / 40.6% of the lap, which over these stretches
-is a mean of 159 / 159 / 122 km/h. Where the turns are usually said to fall --
-the first line at the end of Turn 11 -- the same times would ask for 333 km/h,
-so the lines are these.
+The map is the April 2021 event's, and every season here is drawn with it, since
+no later map has been read. A season that moved its lines would be drawn with the
+wrong boundaries, and would place every car wrong between them.
+
+What a new season is checked against is the round's own splits, and for movement
+only. A sector's share of a lap is not a share of its distance, so the times
+cannot say where a line stands; they say whether two rounds put the lines in the
+same places. Read one class's best sector times as two distances round a lap of
+this length: 2025 answers 1,143.8 and 3,245.5 m for a Hypercar and 1,194.6 and
+3,316.8 m for an LMGT3, and 2026 answers 1,172.1 and 3,257.0, and 1,189.8 and
+3,304.1. Two seasons, two grids, and 28 m between them -- a season answering
+further than that has new lines, and needs a map read from them.
 
 Nothing here splits the lap finer: the feed carries no mini-sector times for
 this round, so a car between two of these lines is placed by the share of the
