@@ -1,5 +1,6 @@
 module Motorsport.Wec.Circuit.Layout exposing
     ( Layout, TimingLines, MiniSectorLines(..)
+    , Lengths, LabelLengths
     , shapeOf, pitLaneOf
     )
 
@@ -13,6 +14,7 @@ module; the projection into drawing metres happens here, once, so that every
 circuit is drawn to the same tenth of a metre.
 
 @docs Layout, TimingLines, MiniSectorLines
+@docs Lengths, LabelLengths
 @docs shapeOf, pitLaneOf
 
 -}
@@ -25,19 +27,15 @@ import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 
 {-| The circuit as the tracker draws it.
 
-`drawingScale` is how big this circuit is against the circuit the tracker's
-lengths were measured against. Those are metres on the ground -- a car marker,
-a font, a margin -- so one set of them cannot serve Le Mans's lap, drawn 2.7 km
-across and 5.4 km tall, and one drawn 1.8 across and 1.0 tall. It multiplies
-every length in [`Tracker`](Motorsport-Chart-Tracker) at once, which is one
-number for a drawing whose width and height may want different ones.
+`lengths` is what the drawing is made at, per detail: see
+[`Lengths`](#Lengths).
 
 -}
 type alias Layout =
     { shape : Shape
     , pitLane : List Point
     , timingLines : TimingLines
-    , drawingScale : Float
+    , lengths : { compact : Lengths, full : Lengths }
     }
 
 
@@ -65,6 +63,52 @@ are read together.
 type MiniSectorLines
     = SectorsOnly
     | LeMansMiniSectors (ByMiniSector (Maybe Float))
+
+
+{-| The lengths one detail of a circuit's drawing is made at, in metres on the
+ground: the `viewBox` margin the labels stand off in, the width of the ribbon the
+lap and pit lane are stroked at, the start/finish line and sector boundaries,
+and the diameter of a car.
+
+They are written per circuit because they are measured on one circuit's ground.
+A car marker of 97 m reads right against a lap 13.6 km round and 5.4 km tall and
+swallows one 5.5 km round and 1 km tall, and no single number mends a lap whose
+width-to-height ratio differs from the first lap's -- a wide-to-tall 1.75 against
+0.5 -- since a car marker, a margin and a font want three different things of
+it. So each circuit writes its own set for each detail it is drawn at, and
+[`Tracker`](Motorsport-Chart-Tracker) draws from whatever set it is handed. The
+chart's own ring, which no circuit is measured against, has lengths of its own
+beside this in that module.
+
+`labels` is `Nothing` at a detail that draws no names, rather than a set of
+lengths nothing reads.
+
+-}
+type alias Lengths =
+    { margin : Float
+    , trackWidth : Float
+    , pitLaneWidth : Float
+    , startFinishLineExtension : Float
+    , startFinishLineStrokeWidth : Float
+    , sectorBoundaryOffset : Float
+    , sectorBoundaryStrokeWidth : Float
+    , carSize : Float
+    , labels : Maybe LabelLengths
+    }
+
+
+{-| How far from the line it names a name stands, and the font it is set in, all
+in metres. Positive stands outwards from the lap, negative inwards: a
+mini-sector's name is set inside the lap it names.
+-}
+type alias LabelLengths =
+    { sectorRadius : Float
+    , sectorFontSize : Float
+    , miniSectorRadius : Float
+    , miniSectorFontSize : Float
+    , carRadius : Float
+    , carFontSize : Float
+    }
 
 
 {-| The lap's centreline as a line on the ground, from the degrees it was

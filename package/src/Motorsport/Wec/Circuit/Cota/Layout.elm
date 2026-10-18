@@ -23,18 +23,61 @@ import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLine
 The lap runs counter-clockwise, as OpenStreetMap's own one-way tags say and as
 the CLI answers the summary.
 
-Its `drawingScale` is 0.3: cars of 29 m, sector labels of 51 m and a margin of
-210 m, which is where those lengths measure right against a lap drawn 1,825 m
-across and 1,043 m tall, and fills four fifths of the drawing's width and two
-thirds of its height.
-
 -}
 layout : Layout
 layout =
     { shape = shape
     , pitLane = pitLane
     , timingLines = timingLines
-    , drawingScale = 0.3
+    , lengths = lengths
+    }
+
+
+{-| Le Mans's lengths at three tenths, which is where a lap drawn 1,825 m across
+and 1,043 m tall wants a car marker of 29 m, sector labels of 51 m and a margin
+of 210 m: four fifths of the drawing's width and two thirds of its height, where
+Le Mans fills two thirds and four fifths of its own box.
+
+One tenth of three is not the last word for a lap of this proportion -- one
+number cannot be right in both directions of a wide-to-tall 1.75 -- so these are
+the numbers to measure one at a time, and a length tuned away from three tenths
+is a decision of its own rather than a scale of its own. The mini-sector lengths
+are three tenths of Le Mans's because the record holds them, not because this
+lap has mini-sectors to name: it has none.
+
+-}
+lengths : { compact : Circuit.Lengths, full : Circuit.Lengths }
+lengths =
+    { compact =
+        { margin = 45
+        , trackWidth = 6.6
+        , pitLaneWidth = 4.2
+        , startFinishLineExtension = 39
+        , startFinishLineStrokeWidth = 9.6
+        , sectorBoundaryOffset = 31.5
+        , sectorBoundaryStrokeWidth = 12.6
+        , carSize = 31.5
+        , labels = Nothing
+        }
+    , full =
+        { margin = 210
+        , trackWidth = 4.8
+        , pitLaneWidth = 3
+        , startFinishLineExtension = 48
+        , startFinishLineStrokeWidth = 6.6
+        , sectorBoundaryOffset = 32.4
+        , sectorBoundaryStrokeWidth = 9.6
+        , carSize = 29.1
+        , labels =
+            Just
+                { sectorRadius = 114
+                , sectorFontSize = 51
+                , miniSectorRadius = -51
+                , miniSectorFontSize = 36
+                , carRadius = 57
+                , carFontSize = 42
+                }
+        }
     }
 
 

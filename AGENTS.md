@@ -375,10 +375,12 @@ photograph rather than the tables.
 Two circuits are drawn to their own shape rather than as a ring: Le Mans, and
 at `cota_6h` the Circuit of the Americas. `Circuit/Layout` is what
 `Tracker.onCircuit` is handed — the lap, the pit lane, the lines the lap is
-timed at, and the circuit's `drawingScale` — and it is where the surveyed
+timed at, and the metres the tracker draws at — and it is where the surveyed
 degrees are projected into drawing metres, once, whichever circuit they came
-from. Each circuit's `Layout` holds its distances; its `Geometry` is generated
-beside them and never by hand.
+from. Each circuit's `Layout` holds its distances and its lengths; its
+`Geometry` is generated beside them and never by hand. The summary does not say
+which circuit a round was run on, so `Shared` picks the layout by the calendar's
+round id. A circuit with no directory of its own is the ring.
 
 The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
 circuit, which supplies the relation, the member role naming the line the lap
@@ -415,16 +417,18 @@ record of nothings, and it is drawn less finely too: between two of its lines a
 COTA car is placed by the time it has run between them, where a Le Mans car is
 placed by a mini-sector.
 
-The tracker's cars, labels and lines are metres on the ground measured against
-Le Mans, which is why a circuit hands over one `drawingScale` rather than its
-own set of lengths: scaling by exactly 1 leaves Le Mans drawn as every VRT
-baseline was rendered, and COTA — 1,825 m across and 1,043 m tall against Le
-Mans's 2,712 and 5,387 — is drawn at 0.3. One number cannot be right in both
-directions for a lap of a different proportion, so the improvement is to
-measure each circuit's constants of itself, which moves every Le Mans baseline
-and so goes through `update-snapshots-ci`. The summary does not say which
-circuit a round was run on, so `Shared.trackOf` picks the layout by the
-calendar's round id.
+The tracker's cars, labels and lines are metres on the ground, so each circuit
+writes a set of them for itself — `Circuit/Layout`'s `Lengths`, one per detail,
+and `Compact` carries no names because it draws none. Le Mans's set is the
+reference the tracker was measured at, and a test freezes it: those are the
+numbers every Le Mans snapshot was rendered with. COTA's is three tenths of it,
+which is a scale rather than a measurement — a lap 1,825 m across and 1,043 m
+tall is wide-to-tall 1.75 where Le Mans is 0.50, and no one multiplier is right
+in both directions of that. So the lengths are to be measured one at a time, and
+every length tuned away from three tenths is a decision of its own. Tuning a
+length of Le Mans's set moves every baseline it has and so goes through
+`update-snapshots-ci`. The summary does not say which circuit a round was run
+on, so `Shared.trackOf` picks the layout by the calendar's round id.
 
 Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
 round the lap it stands, and `Circuit/Layout` projects those degrees into the

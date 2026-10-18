@@ -21,17 +21,55 @@ import Motorsport.Wec.Circuit.LeMans.Geometry as Geometry
 
 {-| The circuit as a season's race was timed on it. A season after the last one
 here is read as that one.
-
-The tracker's cars, labels and lines are measured against this circuit, which is
-what its `drawingScale` of 1 says.
-
 -}
 layout : Int -> Layout
 layout season =
     { shape = shape
     , pitLane = pitLane
     , timingLines = timingLines season
-    , drawingScale = 1
+    , lengths = lengths
+    }
+
+
+{-| The lengths the tracker's drawing was measured against, in metres on the
+ground: the car the field is drawn with, the ribbon, the margin and the names.
+Every other circuit's set is read against this one.
+
+`Compact` draws no names, so it carries none.
+
+-}
+lengths : { compact : Circuit.Lengths, full : Circuit.Lengths }
+lengths =
+    { compact =
+        { margin = 150
+        , trackWidth = 22
+        , pitLaneWidth = 14
+        , startFinishLineExtension = 130
+        , startFinishLineStrokeWidth = 32
+        , sectorBoundaryOffset = 105
+        , sectorBoundaryStrokeWidth = 42
+        , carSize = 105
+        , labels = Nothing
+        }
+    , full =
+        { margin = 700
+        , trackWidth = 16
+        , pitLaneWidth = 10
+        , startFinishLineExtension = 160
+        , startFinishLineStrokeWidth = 22
+        , sectorBoundaryOffset = 108
+        , sectorBoundaryStrokeWidth = 32
+        , carSize = 97
+        , labels =
+            Just
+                { sectorRadius = 380
+                , sectorFontSize = 170
+                , miniSectorRadius = -170
+                , miniSectorFontSize = 120
+                , carRadius = 190
+                , carFontSize = 140
+                }
+        }
     }
 
 
