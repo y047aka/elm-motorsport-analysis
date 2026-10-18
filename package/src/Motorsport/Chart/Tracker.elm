@@ -551,9 +551,15 @@ circuitConstants detail circuit =
 
 {-| The circuit's own box, plus the margin the labels stand off in: the square
 ring's viewBox would scale a tall circuit by its width alone, and such a
-track would read much smaller than the card it is drawn in. The svg keeps
-this box's proportions inside whatever card it stands in, so a portrait
-circuit fills a portrait column's width and a wide one fills its height.
+track would read much smaller than the card it is drawn in.
+
+The svg keeps this box's proportions, and which axis binds is the box's doing and
+not the drawing's. The visual tests give the column a 286x525 row, 0.545
+wide-to-tall, and a box is fitted by height only below that: Le Mans's 4112 by
+6787 is 0.61 and comes out 286 wide and 472 tall, COTA's 2245 by 1463 is 1.53 and
+comes out 286 wide and 186. Both are fitted by width, and the band left under a
+wide circuit is that circuit's shape rather than a length to tune.
+
 -}
 viewOnCircuit : Detail -> Circuit -> Snapshot -> Svg msg
 viewOnCircuit detail circuit standings =

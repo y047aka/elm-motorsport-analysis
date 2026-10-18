@@ -35,15 +35,23 @@ layout =
 
 {-| Le Mans's lengths at three tenths, which is where a lap drawn 1,825 m across
 and 1,043 m tall wants a car marker of 29 m, sector labels of 51 m and a margin
-of 210 m: four fifths of the drawing's width and two thirds of its height, where
-Le Mans fills two thirds and four fifths of its own box.
+of 210 m: the lap then fills four fifths of its box's width and two thirds of its
+height, where Le Mans fills two thirds and four fifths of its own box.
 
-One tenth of three is not the last word for a lap of this proportion -- one
-number cannot be right in both directions of a wide-to-tall 1.75 -- so these are
-the numbers to measure one at a time, and a length tuned away from three tenths
-is a decision of its own rather than a scale of its own. The mini-sector lengths
-are three tenths of Le Mans's because the record holds them, not because this
-lap has mini-sectors to name: it has none.
+What the multiplier sets is the furniture's size on the screen and not the
+drawing's: the box is fitted by width, so this lap comes out 286 px wide and 186
+tall in the 286x525 row the visual tests give it, where Le Mans comes out 286 by
+472 -- 0.127 px to the metre against Le Mans's 0.070. At three tenths a car is
+3.7 px across and its number 5.3 px tall, against Le Mans's 6.8 and 9.8, and the
+lap line is 0.6 px against 1.1. Som over six tenths would match Le Mans's on the
+screen -- and leave the row's lower half empty all the same, since that is the
+lap's own proportion and not the length of anything here. The margin is the one
+length not to take there with the others: it is added to the box as well as to the
+furniture, so scaled whole it brings the lap back down to 189 px wide against the
+232 it is drawn at now.
+
+The mini-sector lengths are three tenths of Le Mans's because the record holds
+them, not because this lap has mini-sectors to name: it has none.
 
 -}
 lengths : { compact : Circuit.Lengths, full : Circuit.Lengths }
