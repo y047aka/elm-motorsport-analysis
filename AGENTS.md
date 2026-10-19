@@ -428,8 +428,8 @@ each class's fastest sector times as two distances round the lap, which the two
 rounds here agree on within 28 m — 0.5% of a lap, and the only evidence there is
 that one map serves both. The command judges the season-to-season difference
 against 40 m and never the shares against the map; it reads the fastest sectors
-the summary itself is counted from, and refuses to conclude anything while the
-export in the tree disagrees with the CSV. A line a map gives no distance for is
+the summary itself is counted from, and prints whether the export in the tree
+counts the same shares. A line a map gives no distance for is
 placed by the time between the lines either side of it
 (`Tracker.Config.lapScale`), and a circuit whose feed never measures the lap finer
 than three sectors — every circuit here but Le Mans's — has no finer lines to place

@@ -25,10 +25,12 @@
 // So the shares are printed beside the map's lines and never judged against them,
 // and the season-to-season difference is the thing judged against the tolerance.
 //
-// The reading is the one the summary is built from -- the fastest sector over every
-// lap, which is what `Round.Summary`'s `fastestSectors` asks the database -- and
-// where the round's export is in the tree its shares are compared with, so what is
-// printed is the pipeline reading the CSV rather than this file's idea of a reading.
+// The map's lines are read from `cota-geometry.mjs`, which is where the pipeline
+// keeps them. The reading of the feed is the summary's -- the fastest sector over
+// every lap, which is what `Round.Summary`'s `fastestSectors` asks the database --
+// and where the round's export is in the tree its shares are printed against, so
+// a stale export reads as a disagreement in the print rather than as a verdict
+// this command has no standing to make.
 
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -51,8 +53,6 @@ const sectors = ["S1", "S2", "S3"];
 // The class every lap of the field is pooled into, whose shares are the summary's.
 const whole = "the round";
 
-const modulePath = (moduleName) => join("package", "src", ...moduleName.split(".")) + ".elm";
-
 // The rounds this reads, and the lines each is drawn on. A circuit timed at one
 // grain per season is not this question to ask: Le Mans's lines are copied from the
 // organiser's map of each year and differ between them by design, so there is
@@ -60,8 +60,9 @@ const modulePath = (moduleName) => join("package", "src", ...moduleName.split(".
 // circuit already here is one more entry naming the same layout and lap.
 const rounds = {
   cota_6h: {
-    circuit: "the Circuit of the Americas",
-    layout: modulePath(cota.layout),
+    circuit: cota.survey,
+    script: cota.script,
+    lines: linesOf(cota),
     lapLength: cota.lapLength,
   },
 };
@@ -93,7 +94,6 @@ async function main() {
   }
 
   const round = rounds[args.id];
-  const lines = await layoutLines(round);
   const seasons = args.against === null ? [args.season] : [args.season, args.against];
 
   const readings = [];
@@ -102,8 +102,8 @@ async function main() {
     readings.push({ reading, note: await agreesWithExport(reading) });
   }
 
-  console.log(`The lines ${round.circuit} is drawn on, out of ${round.layout}: ${linePositions(lines)}.`);
-  for (const each of readings) printRound(each, round, lines);
+  console.log(`The lines ${round.circuit} is drawn on, out of ${round.script}: ${linePositions(round.lines)}.`);
+  for (const each of readings) printRound(each, round, round.lines);
   if (args.against !== null) judge(readings[0].reading, readings[1].reading, round, args.tolerance);
 }
 
@@ -204,9 +204,10 @@ function impliedLines(fastest, lapLength) {
   return lines;
 }
 
-/** Whether this reading is the summary's reading. The export and this are readings
- * of one file, so either the two agree to the last bit or the export is not a
- * reading of this CSV. */
+/** Whether this reading is the summary's reading -- printed, never judged. An
+ * export in the tree is a file a run wrote some time ago, and whether a pipeline
+ * reads its CSV the way it did when the file was written is the pipeline's own
+ * business to test. */
 async function agreesWithExport(reading) {
   const path = join("app", "static", "wec", String(reading.season), `${reading.id}.json`);
   if (!existsSync(join(repoDir, path))) {
@@ -219,42 +220,28 @@ async function agreesWithExport(reading) {
     ...sectors.map((sector) => Math.abs(shares[sector] - track.sectors[sector.toLowerCase()].share)),
   );
   if (worst > 1e-9) {
-    fail(
-      `${path} counts sectors ${worst.toExponential(1)} from the CSV's fastest, so that export is not this CSV.`,
-    );
+    return `The export in the tree counts sectors ${worst.toExponential(1)} from this CSV -- it was written from a different one.`;
   }
-  return `The export counts the same shares${worst === 0 ? " exactly" : `, to ${worst.toExponential(1)}`}.`;
+  return "The export counts the same shares exactly.";
 }
 
 // ---------------------------------------------------------------- the layout
 
-/** The lines the layout is drawn on, in metres round the lap, read out of the
- * module that draws them. */
-async function layoutLines(round) {
-  const text = await readFile(join(repoDir, round.layout), "utf8");
-  const definition = timingLinesDefinition(text, round.layout);
-  const at = sectors.map((sector) => {
-    const arm = definition.match(new RegExp(`${sector} ->\\s+([\\d.]+|Shape\\.length shape)\\b`));
-    if (arm === null) fail(`${round.layout} places no line for ${sector}.`);
-    return arm[1] === "Shape.length shape" ? round.lapLength : Number(arm[1]);
-  });
-  if (!(at[0] < at[1] && at[1] < at[2])) fail(`${round.layout} places its lines out of order.`);
-  return { first: at[0], second: at[1], lap: at[2] };
-}
-
-/** Just the `timingLines` definition, so a distance written for another reason
- * elsewhere in the module is not read for a timing line. Its own type annotation
- * and its own definition line both stand at column nought, as Elm writes them, so
- * the definition is read from the second of them to the first line that does not
- * belong to it. */
-function timingLinesDefinition(text, path) {
-  const lines = text.split(/\r?\n/);
-  const type = lines.findIndex((line) => line.startsWith("timingLines :"));
-  const body = lines.findIndex((line, at) => at > type && type !== -1 && line.startsWith("timingLines ="));
-  if (body === -1) fail(`${path} places no timing lines to read.`);
-  const rest = lines.slice(body + 1).findIndex((line) => line !== "" && !line.startsWith(" "));
-  const end = rest === -1 ? lines.length : body + 1 + rest;
-  return lines.slice(body, end).join("\n");
+/** Where the map's lines stand round the lap: the first line, the second, and
+ * the lap the third ends at. The stretches are the map's own, and the only
+ * thing a script may check them against is the lap length they add up to --
+ * the shares themselves place a line some 170 m from one of these, by the
+ * method's own error, and say nothing about a mistake here. */
+function linesOf(config) {
+  if (config.sectorMapStretches.length !== sectors.length) {
+    fail(`${config.script} gives ${config.sectorMapStretches.length} stretches for ${sectors.length} sectors.`);
+  }
+  const total = config.sectorMapStretches.reduce((sum, stretch) => sum + stretch, 0);
+  if (Math.abs(total - config.lapLength) > 0.05) {
+    fail(`${config.script}'s stretches add up to ${total} m, not its ${config.lapLength} m lap.`);
+  }
+  const first = config.sectorMapStretches[0];
+  return { first, second: first + config.sectorMapStretches[1], lap: config.lapLength };
 }
 
 const linePositions = ({ first, second, lap }) =>
