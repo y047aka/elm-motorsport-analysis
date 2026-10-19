@@ -1,6 +1,6 @@
 module Motorsport.Wec.Circuit.Cota.Geometry exposing (LapPoint, PitPoint, centreline, frame, pitLane)
 
-{-| The Circuit of the Americas as OpenStreetMap surveys it (2026-10-15T08:47:10Z),
+{-| The Circuit of the Americas as OpenStreetMap surveys it (2026-10-19T03:01:20Z),
 in WGS84 degrees, with how far round the lap each point stands. North is up and
 `y` runs south in the drawing these degrees are projected into, which
 `Motorsport.Wec.Circuit.Cota.Layout` writes. Written by

@@ -2,9 +2,12 @@
 // centreline and pit lane, out of OpenStreetMap's relation for the circuit. The
 // pipeline itself is `circuit-geometry.mjs`, which every circuit's script runs.
 //
-//     node scripts/le-mans-geometry.mjs [overpass.json]
+//     node scripts/le-mans-geometry.mjs [--refresh | overpass.json]
 //
-// Given a file, reads the Overpass answer out of it rather than asking.
+// The surveyed answer is read out of `circuit.fixture`, which is kept in the
+// repository; `--refresh` asks OpenStreetMap for it again and keeps what comes
+// back. `check-geometry.mjs` writes this module out of that fixture and reports
+// any difference.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // module written here is a derivative of it.
@@ -12,7 +15,9 @@
 import { isEntry, main } from "./circuit-geometry.mjs";
 
 export const circuit = {
+  name: "le-mans",
   relation: 2126739,
+  fixture: "app/scripts/fixtures/overpass/le-mans-2126739.json",
 
   // The relation tags one node `start-finish`, which is where Al Kamel measures
   // from and so where the lap's zero stands.
