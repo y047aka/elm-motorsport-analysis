@@ -438,6 +438,19 @@ map leaves no distance for, so it is a sum rather than a record of nothings, and
 is drawn less finely too: between two of its lines a COTA car is placed by the time
 it has run between them, where a Le Mans car is placed by a mini-sector.
 
+That sum is named `LeMansMiniSectors`, holds Le Mans's fifteen by name, and is
+load-bearing in three places at once: the sum, `Data.Wec`'s `byMiniSectorDecoder`,
+which requires all fifteen keys and so reads a differently-split lap as
+`NoMiniSectors`, and `Tracker.Config.lapScale`, which matches the pair of
+constructors. The first circuit after Le Mans whose feed carries mini-sector shares
+has to generalize all three together — a named list at both ends, joined by name —
+and re-make the decoder's `optional` decision rather than copy it, because what
+catches a missing line today is the record's totality and a list has nothing else.
+`ConfigTest` names the two combinations the `lapScale` catch-all holds — a round
+timed finer than its circuit places lines, and lines the circuit places that no
+round was timed across — which is what stops a future edit "simplifying" that branch
+into reading one side alone.
+
 The tracker's cars, labels and lines are metres on the ground, and the svg divides
 every one of them by whichever axis the circuit's box binds in the card it stands
 in — so a set is measured against a rendered drawing, and one circuit's set is not
