@@ -39,6 +39,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` rewrites the module from the geometry kept in the tree) |
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, and keep it beside it (`cota [--file gp.geojson]`) |
+| `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -410,7 +411,13 @@ against, which is what an Overpass answer never was. `nix run .#geometry-atlas
 cota` reads the track-atlas line — a midline measured from orthoimagery, not a
 survey stretched to a published length, at 5,500.2 m against the 5,515 m this
 app draws — keeps it as `<circuit>.atlas.geojson` with `stretched: false`, and
-prints how far the two lines stand apart. It writes no Elm: drawing on a
+prints how far the two lines stand apart. The geometry also publishes what the
+circuit itself publishes about its lines: the COTA sector map's stretches travel
+as `sectors`, authored in the circuit's script, and `check-timing-lines.mjs`
+reads them from the geometry rather than the script. `nix run .#geometry-diff`
+lays any two kept geometries against each other — mean and maximum apartness,
+and an SVG overlay on request — so a fresh survey is read against the old one,
+or the atlas line against either, with no script in between. It writes no Elm: drawing on a
 measured line would move every tracker baseline and re-open where the timing
 lines stand, which is its own change judged on that report. The tests still
 cannot hold a survey: the pipeline stretches whatever degrees it gets to the
