@@ -2,7 +2,10 @@
 // beside our own geometries, and says how far it stands from the line this app
 // draws.
 //
-//     node scripts/atlas-geometry.mjs cota [--file gp.geojson]
+//     node scripts/atlas-geometry.mjs <circuit> [--file gp.geojson]
+//
+// A circuit joins the `atlas` table below by one entry naming the script that
+// surveys it and the atlas outline for the layout this app draws.
 //
 // The atlas draws its outlines from orthoimagery registered to lidar, so its
 // line is an independent second survey of the same ground: where our geometry
@@ -38,13 +41,12 @@ import { fileURLToPath } from "node:url";
 
 import { cumulative, degreesToMetres, projection } from "./circuit-geometry.mjs";
 import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
-import { circuit as cota } from "./cota-geometry.mjs";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const atlas = {
   cota: {
-    circuit: cota,
+    script: "./cota-geometry.mjs",
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
     // The reading lands beside the scripts rather than in `static/`: it is
     // evidence a decision is judged on, never bytes the app asks for.
@@ -72,7 +74,7 @@ try {
 async function run(slug, argv) {
   const entry = atlas[slug];
   if (!entry) throw new Error(`no atlas line is registered for '${slug}': known are ${Object.keys(atlas).join(", ")}`);
-  const { circuit } = entry;
+  const { circuit } = await import(entry.script);
 
   const at = argv.indexOf("--file");
   const file = at === -1 ? null : argv[at + 1];
