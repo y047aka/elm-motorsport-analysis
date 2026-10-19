@@ -20,6 +20,7 @@ import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Dict
 import Effect exposing (Effect)
 import Http
+import Json.Decode exposing (Decoder)
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car
@@ -601,33 +602,44 @@ keyOf id =
 
 {-| Whether the summary's circuit wants its geometry -- from the cache if it is
 already in one, from `/static/geometry/` if it is not -- or wants nothing, being
-a circuit with no drawing here.
+a circuit with no decoder here.
 -}
 awaiting : Wec.Event -> Dict.Dict String Geometry -> ( Awaited, Maybe String )
 awaiting summary cache =
     case summary.track.circuit of
         Just circuit ->
-            if hasDrawing circuit then
-                case Dict.get circuit cache of
-                    Just geometry ->
-                        ( Decoded geometry, Nothing )
+            case decoderFor circuit of
+                Nothing ->
+                    ( Undrawn, Nothing )
 
-                    Nothing ->
-                        ( Fetching circuit, Just circuit )
+                Just _ ->
+                    case Dict.get circuit cache of
+                        Just geometry ->
+                            ( Decoded geometry, Nothing )
 
-            else
-                ( Undrawn, Nothing )
+                        Nothing ->
+                            ( Fetching circuit, Just circuit )
 
         Nothing ->
             ( Unnamed, Nothing )
 
 
-{-| Which circuits are drawn to their own shape: the words `trackOf` keeps and
-`getGeometry` fetches, kept in step by `geometry-contract.spec.ts`.
+{-| Which circuits are drawn to their own shape: one word, one decoder. A
+word here is a word `getGeometry` can fetch, which is what keeps an awaited
+circuit from waiting for a file no decoder asked for; `trackOf` matches the
+same words and `geometry-contract.spec.ts` keeps them in step.
 -}
-hasDrawing : String -> Bool
-hasDrawing circuit =
-    circuit == "le_mans" || circuit == "cota"
+decoderFor : String -> Maybe (Decoder Geometry)
+decoderFor circuit =
+    case circuit of
+        "cota" ->
+            Just CotaLayout.decoder
+
+        "le_mans" ->
+            Just LeMansLayout.decoder
+
+        _ ->
+            Nothing
 
 
 {-| The geometry a drawn circuit reads itself from, at the same URL pattern the
@@ -635,18 +647,14 @@ manufacturer table uses, named by the word the summary sends for it.
 -}
 getGeometry : { season : Int, id : String } -> String -> Cmd Msg
 getGeometry key circuit =
-    let
-        url =
-            "/static/geometry/" ++ circuit ++ ".geojson"
-    in
-    case circuit of
-        "cota" ->
-            Http.get { url = url, expect = Http.expectJson (GeometryLoaded key circuit) CotaLayout.decoder }
+    case decoderFor circuit of
+        Just decoder ->
+            Http.get
+                { url = "/static/geometry/" ++ circuit ++ ".geojson"
+                , expect = Http.expectJson (GeometryLoaded key circuit) decoder
+                }
 
-        "le_mans" ->
-            Http.get { url = url, expect = Http.expectJson (GeometryLoaded key circuit) LeMansLayout.decoder }
-
-        _ ->
+        Nothing ->
             Cmd.none
 
 

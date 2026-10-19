@@ -410,9 +410,9 @@ because the app reads it from there at load, through
 `Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the
 bytes as they arrive. Nothing generates Elm from it: `--from-geojson` runs
 those checks with no OpenStreetMap, which is what a regeneration being nothing
-is checked with now. A drawn circuit is three lists in `Shared` — the words
-`trackOf` matches, `hasDrawing` awaits, `getGeometry` fetches — and one file,
-and `geometry-contract.spec.ts` keeps all four in step, since none of them
+is checked with now. A drawn circuit is two lists in `Shared` — the words
+`trackOf` matches and `decoderFor` decodes — and one file, and
+`geometry-contract.spec.ts` keeps all three in step, since none of them
 compiles against another. The geometries are kept because the app reads them,
 and as the line other datasets are measured against, which is what an Overpass
 answer never was. `nix run .#geometry-atlas

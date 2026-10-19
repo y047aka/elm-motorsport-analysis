@@ -5,9 +5,9 @@ import { geometryFromGeoJson } from '../scripts/circuit-geometry.mjs';
 import { drawnNames, readSource } from './helpers';
 
 /**
- * The served half of the circuit seam. A drawn circuit is three lists in
- * `Shared` -- the words `trackOf` matches, the words `hasDrawing` awaits, the
- * words `getGeometry` fetches -- and a geometry file at
+ * The served half of the circuit seam. A drawn circuit is two lists in
+ * `Shared` -- the words `trackOf` matches and the words `decoderFor` decodes --
+ * and a geometry file at
  * `app/static/geometry/<word>.geojson` behind them. None of it compiles: a file
  * missing is a round that fails to load, a file gone stale is pixels nobody
  * chose, and a decoder given the wrong lap length reads every honest geometry
@@ -43,12 +43,11 @@ test('the Elm decoder is given the lap length the script was given', () => {
   }
 });
 
-test('the circuits drawn, awaited and fetched are one list', () => {
+test('the circuits drawn and decoded are one list', () => {
   const shared = readSource('app/src/Shared.elm');
-  const fetched = [...clause(shared, 'getGeometry :', '-- SUBSCRIPTIONS').matchAll(/\n        "([a-z_]+)" ->/g)].map((m) => m[1]);
-  const awaited = [...clause(shared, 'hasDrawing circuit =', '\n\n\n').matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
-  expect(fetched.sort(), 'getGeometry fetches something other than what trackOf draws').toEqual(drawnNames().sort());
-  expect(awaited.sort(), 'hasDrawing awaits something other than what trackOf draws').toEqual(drawnNames().sort());
+  const decoded = [...clause(shared, 'decoderFor circuit =', '\n\n\n').matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
+  expect(decoded.length, 'decoderFor decodes no circuit name').toBeGreaterThan(0);
+  expect(decoded.sort(), 'decoderFor decodes something other than what trackOf draws').toEqual(drawnNames().sort());
 });
 
 /** The body of a top-level definition, up to the next one. */
