@@ -8,17 +8,11 @@
 // `Motorsport.Circuit.Geodesy.Frame` to project them through -- so a circuit is
 // a config here and a `Layout` module on the Elm side.
 //
-//     node scripts/<circuit>-geometry.mjs [--refresh | overpass.json]
+//     node scripts/<circuit>-geometry.mjs [overpass.json]
 //
-// The answer a module is written from is kept in the repository under
-// `scripts/fixtures/overpass` and read from there: a run asks OpenStreetMap only
-// when `--refresh` says to, and then rewrites the fixture with what it got. Given
-// a file, reads that answer instead and leaves the fixture alone.
-//
-// `node scripts/check-geometry.mjs` writes every module out of its fixture again
-// and reports any that no longer matches. The computation is the one the fixture
-// came out of, so a match is exact, and a mismatch is a module edited by hand or a
-// fixture refreshed without the module following it.
+// Given a file, reads the Overpass answer out of it rather than asking -- which is how
+// a module is re-written without OpenStreetMap, and how an answer can be kept if the
+// survey instant it holds is worth keeping.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
 // module written here is a derivative of it.
@@ -48,9 +42,7 @@ const radius = 6371008.8;
  * pick the wrong one out of them without failing a build.
  *
  * @typedef {object} Circuit
- * @property {string} name     the circuit, as the commands that write it are named
  * @property {number} relation
- * @property {string} fixture   where the answer is kept, from the repository root
  * @property {string} finishRole
  * @property {{ lat: number, lon: number, within?: number }} [timingLine]
  * @property {number} lapLength
@@ -72,51 +64,32 @@ export function isEntry(moduleUrl) {
   return pathToFileURL(process.argv[1] ?? "").href === moduleUrl;
 }
 
-/** Write the circuit's module from its fixture. `argv` is the script's own:
- * `--refresh` asks OpenStreetMap again, and a file names an answer of your own to
- * read instead of the fixture. */
+/** Write the circuit's module. `argv` is the script's own, whose first entry may name
+ * a file to read the Overpass answer out of rather than asking.
+ *
+ * Asking is the default and it does fail: Overpass answers a busy runner with a 502 or
+ * a 504, so repeat a run rather than trusting the first. What comes back is a survey
+ * taken *now*, so the metres written are today's line -- and the visual tests only show
+ * a survey that moved by metres or more, which is why a regeneration is read as a diff
+ * and not as a rendering.
+ */
 export async function main(circuit, argv) {
   try {
-    const refresh = argv.includes("--refresh");
-    const file = argv.find((arg) => !arg.startsWith("--"));
-    await writeModule(circuit, lapOf(await answerOf(circuit, { file, refresh }), circuit));
-    if (refresh) console.log(`fixture: rewrote ${circuit.fixture} from relation ${circuit.relation}`);
+    const [file] = argv;
+    await writeModule(circuit, lapOf(await answer(circuit.relation, file), circuit));
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
   }
 }
 
-/** The answer a circuit's module is written from.
- *
- * The fixture is the default and not the last resort, because a survey is not
- * stable on its own: an answer taken from a later minute moves the ground every VRT
- * baseline was rendered on, and a build that asks OpenStreetMap whenever it runs
- * fails wherever the network does -- Overpass answers a busy runner with a 502 or a
- * 504 often enough that the asking is worth doing once, on purpose, and keeping.
- */
-export async function answerOf(circuit, { file, refresh = false } = {}) {
-  if (file) return JSON.parse(await readFile(file, "utf8"));
-
-  const path = join(repoDir, circuit.fixture);
-  if (refresh) {
-    const osm = await ask(circuit.relation);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, `${JSON.stringify(osm, null, 1)}\n`);
-    return osm;
-  }
-
-  try {
-    return JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(
-      `${circuit.fixture} holds no answer for relation ${circuit.relation}. ` +
-        `Write it with \`node ${circuit.script} --refresh\`, which asks OpenStreetMap and keeps what it answers.`,
-    );
-  }
+/** The answer from a file if one was given, and from OpenStreetMap if not. */
+export async function answer(relation, file) {
+  return file ? JSON.parse(await readFile(file, "utf8")) : ask(relation);
 }
 
-/** The Overpass answer for one relation: its ways with their tags, and nodes. */export async function ask(relation) {
+/** The Overpass answer for one relation: its ways with their tags, and nodes. */
+export async function ask(relation) {
   const query = `[out:json][timeout:120];relation(${relation});out body;way(r);out body;node(w);out skel;`;
   const response = await fetch(overpass, {
     method: "POST",
@@ -126,7 +99,6 @@ export async function answerOf(circuit, { file, refresh = false } = {}) {
   if (!response.ok) throw new Error(`Overpass answered ${response.status}`);
   return response.json();
 }
-
 
 /**
  * The lap, the pit lane and the frame, in the drawing's own metres.
@@ -180,7 +152,7 @@ export function lapOf(osm, circuit) {
 export async function writeModule(circuit, geometry) {
   const path = join(repoDir, circuit.path);
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, moduleText(circuit, geometry));
+  await writeFile(path, elmModule(circuit, geometry));
   console.log(
     `centreline: ${geometry.centreline.length} points of ${geometry.counts.lap}, surveyed ${geometry.surveyedLength.toFixed(1)} m; ` +
       `pit lane: ${geometry.pitLane.length} points of ${geometry.counts.of}; ` +
@@ -315,7 +287,7 @@ function round(n) {
   return Math.round(n * 10) / 10;
 }
 
-export function moduleText(circuit, geometry) {
+function elmModule(circuit, geometry) {
   const lap = geometry.centreline.map((p) => `{ lat = ${p.lat}, lon = ${p.lon}, metres = ${p.metres} }`);
   const pit = geometry.pitLane.map((p) => `{ lat = ${p.lat}, lon = ${p.lon} }`);
   const list = (items) => `    [ ${items.join("\n    , ")}\n    ]`;

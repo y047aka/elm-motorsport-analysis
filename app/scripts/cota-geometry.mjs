@@ -2,12 +2,12 @@
 // centreline and pit lane, out of OpenStreetMap's relation for the circuit. The
 // pipeline itself is `circuit-geometry.mjs`, which every circuit's script runs.
 //
-//     node scripts/cota-geometry.mjs [--refresh | overpass.json]
+//     node scripts/cota-geometry.mjs [overpass.json]
 //
-// The surveyed answer is read out of `circuit.fixture`, which is kept in the
-// repository; `--refresh` asks OpenStreetMap for it again and keeps what comes
-// back. `check-geometry.mjs` writes this module out of that fixture and reports
-// any difference.
+// Asks OpenStreetMap, which answers a busy runner with a 502 or a 504: repeat
+// the run. The answer a module should be written from can be handed in as a
+// file instead. A survey that moved moves every tracker baseline, and the
+// visual tests only notice metres, so read a regeneration's diff.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // module written here is a derivative of it.
@@ -15,9 +15,7 @@
 import { isEntry, main } from "./circuit-geometry.mjs";
 
 export const circuit = {
-  name: "cota",
   relation: 6537729,
-  fixture: "app/scripts/fixtures/overpass/cota-6537729.json",
 
   // The relation tags two nodes, `start` and `finish`, 297 m apart along the
   // lap: the first is where the race starts and the second is the line the lap is

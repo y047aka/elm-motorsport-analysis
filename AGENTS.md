@@ -37,8 +37,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of the surveyed answer kept in the repository (`--refresh` asks OpenStreetMap again) |
-| `nix run .#geometry-check` | Report any circuit module that is not what the answer kept beside the scripts writes |
+| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -384,7 +383,9 @@ at `cota_6h` the Circuit of the Americas. `Circuit/Layout` is what
 timed at, and the metres the tracker draws at — and it is where the surveyed
 degrees are projected into drawing metres, once, whichever circuit they came
 from. Each circuit's `Layout` holds its distances and its lengths; its
-`Geometry` is generated beside them and never by hand. Which circuit a round was
+`Geometry` is generated beside them and never by hand, out of OpenStreetMap's map
+data (ODbL, © OpenStreetMap contributors), which the generated module records
+beside its own survey time. Which circuit a round was
 run on comes in with the summary (`Motorsport.Events.circuit`, keyed by round id
 and tested against the calendar the way `direction` is), and `Shared` picks the
 layout by that word rather than by the round id — which is still asked for,
@@ -396,16 +397,15 @@ The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
 circuit, which supplies the relation, the member role naming the line the lap
 is measured from, the published length the surveyed line is stretched to, and
 the prose the generated module is documented with — `nix run .#geometry-cota`,
-`nix run .#geometry-le-mans`. The answer each is written from is kept with the
-scripts under `app/scripts/fixtures/overpass` — map data under the ODbL, the same
-licence as the module written out of it — so a run asks OpenStreetMap only
-when it is told to — `--refresh`, which rewrites the fixture with what came back —
-and `nix run .#geometry-check`, which CI runs, writes every module out of its
-fixture again and fails on any that differs. The comparison is exact because the
-fixture holds the very answer the module was written from; asking OpenStreetMap
-whenever a build runs would fail wherever the network does, and an answer taken
-from a later minute would move the ground every tracker baseline was rendered on
-with no module edited to say so. OpenStreetMap holds a
+`nix run .#geometry-le-mans`. Both ask OpenStreetMap, which answers a busy runner with
+a 502 or a 504 — repeat the run, or hand the answer in as a file. Nothing in the
+repository keeps the answer a module was written from, and nothing checks a module
+against one, because the tests could not hold it anyway: the pipeline stretches a
+survey to the circuit's published lap length whatever the degrees say, so a point
+moved 20 m passes every Elm test and leaves the tracker's pixels where they were. A
+regeneration is read as a diff, and a survey that moved by metres goes to
+`update-snapshots-ci` with it, since every tracker baseline is drawn on those degrees.
+OpenStreetMap holds a
 circuit however whoever mapped it tagged it, and the two here are tagged
 differently: Le Mans's relation names one node `start-finish`, and COTA's names
 two, `start` and `finish`, 297 m apart along the lap. The lap's zero is the

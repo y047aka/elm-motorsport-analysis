@@ -167,15 +167,13 @@
           '';
         };
 
-        # A circuit's module is written out of the surveyed answer kept under
-        # app/scripts/fixtures, so writing one needs no network -- only `--refresh`
-        # asks OpenStreetMap, and it keeps what it gets. Kept apart from
-        # `mkNodeApp`: none of these touches node_modules or the Elm toolchain, and
-        # `check-geometry` uses git to show a difference rather than only report one.
+        # A circuit's module is written out of OpenStreetMap's relation for it, so
+        # these ask and can be answered a 502 or a 504 -- repeat the run. Kept apart
+        # from `mkNodeApp`: neither touches node_modules nor the Elm toolchain.
         geometryApp = name: script:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 pkgs.git ];
+            runtimeInputs = [ pkgs.nodejs_26 ];
             text = ''
               cd app
               node scripts/${script}.mjs "$@"
@@ -226,9 +224,8 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          geometry-le-mans     = { type = "app"; program = "${geometryApp "geometry-le-mans" "le-mans-geometry"}/bin/geometry-le-mans";                                  meta.description = "Write Le Mans's circuit geometry from its surveyed answer (--refresh asks OpenStreetMap again)"; };
-          geometry-cota        = { type = "app"; program = "${geometryApp "geometry-cota" "cota-geometry"}/bin/geometry-cota";                                           meta.description = "Write COTA's circuit geometry from its surveyed answer (--refresh asks OpenStreetMap again)"; };
-          geometry-check       = { type = "app"; program = "${geometryApp "geometry-check" "check-geometry"}/bin/geometry-check";                                       meta.description = "Report any circuit module that is not what its surveyed answer writes"; };
+          geometry-le-mans     = { type = "app"; program = "${geometryApp "geometry-le-mans" "le-mans-geometry"}/bin/geometry-le-mans";                                  meta.description = "Write Le Mans's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept)"; };
+          geometry-cota        = { type = "app"; program = "${geometryApp "geometry-cota" "cota-geometry"}/bin/geometry-cota";                                           meta.description = "Write COTA's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };

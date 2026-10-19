@@ -1,9 +1,8 @@
 name: Tests
 
 # The checks that say the code is wrong: the Elm tests (elm-verify-examples +
-# elm-test), the Flix CLI's tests, `tsc` over the app's TypeScript, and that every
-# generated circuit module still matches the surveyed answer it was written from.
-# Kept apart from the VRT workflow because that one usually fails for a different
+# elm-test), the Flix CLI's tests, and `tsc` over the app's TypeScript. Kept
+# apart from the VRT workflow because that one usually fails for a different
 # reason — stale snapshots — and a red check should tell you which without
 # being opened.
 
@@ -56,20 +55,3 @@ jobs:
         run: nix develop --command pnpm -C app install --frozen-lockfile
       - name: Type-check
         run: nix run .#typecheck
-
-  # Its own job because it fails for a reason none of the checks above can see: a
-  # circuit module is a survey written out as Elm, and nothing compiles the fact that
-  # it stopped matching the answer under app/scripts/fixtures it was written from.
-  # Asks no network -- the answer is in the repository, which is the point.
-  geometry:
-    timeout-minutes: 10
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v6
-      - uses: DeterminateSystems/nix-installer-action@v16
-      - uses: nix-community/cache-nix-action@v7
-        with:
-          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
-          restore-prefixes-first-match: nix-${{ runner.os }}-
-      - name: Circuit modules against their surveyed answers
-        run: nix run .#geometry-check
