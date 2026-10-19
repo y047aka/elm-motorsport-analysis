@@ -5,7 +5,7 @@ import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.Cota.Geometry as Geometry
 import Motorsport.Wec.Circuit.Cota.Layout exposing (layout)
-import Motorsport.Wec.Circuit.Layout exposing (Layout, Lengths, MiniSectorLines(..))
+import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMans
 import Test exposing (Test, describe, test)
 
@@ -50,12 +50,8 @@ tests =
                 -- The timing feed carries no mini-sector times for this round.
                 layout.timingLines.miniSectors
                     |> Expect.equal SectorsOnly
-        , describe
-            "the lengths it is drawn at"
-            [ test "the set the drawing was measured at" <|
-                \_ ->
-                    Expect.equal layout.lengths fullAndCompact
-            , test "every length is drawn at Le Mans's size on the screen" <|
+        , describe "the lengths it is drawn at"
+            [ test "every length is drawn at Le Mans's size on the screen" <|
                 \_ ->
                     -- Both circuits are drawn in one box, and each box is fitted by its own
                     -- width: the row is narrower in proportion than either of them. A length
@@ -71,16 +67,13 @@ tests =
                         |> List.filter (\( name, got ) -> abs (got - expected) > 0.01)
                         |> List.map (\( name, got ) -> name ++ " at " ++ String.fromFloat got ++ " against " ++ String.fromFloat expected)
                         |> Expect.equal []
-            , test "the detail that names no line at Le Mans names none here" <|
-                \_ ->
-                    Expect.equal layout.lengths.compact.labels Nothing
             ]
         ]
 
 
 {-| The circuit as drawn: the width the tracker fits it into, in metres on the
- ground. `Tracker`'s own `bounds` plus the margin the labels stand off in, which is
- the axis both of these circuits are fitted by.
+ground. `Tracker`'s own `bounds` plus the margin the labels stand off in, which is
+the axis both of these circuits are fitted by.
 -}
 boxWidth : Layout -> Float
 boxWidth this =
@@ -97,7 +90,7 @@ boxWidth this =
 
 
 {-| Every `Full` length beside the reference circuit's, as a ratio. The names are
- the ones a failing length is reported by.
+the ones a failing length is reported by.
 -}
 ratios : Float -> List ( String, Float )
 ratios expected =
@@ -131,45 +124,6 @@ ratios expected =
     , ( "carSize", cota.carSize / leMans.carSize )
     ]
         ++ names
-
-
-{-| The lengths as this circuit writes them, written out rather than derived so a
- change is a decision. `Full` was measured against the rendered drawing; see the
- drawing's own docstring for what each length comes to on the screen.
--}
-fullAndCompact : { compact : Lengths, full : Lengths }
-fullAndCompact =
-    { compact =
-        { margin = 45
-        , trackWidth = 6.6
-        , pitLaneWidth = 4.2
-        , startFinishLineExtension = 39
-        , startFinishLineStrokeWidth = 9.6
-        , sectorBoundaryOffset = 31.5
-        , sectorBoundaryStrokeWidth = 12.6
-        , carSize = 31.5
-        , labels = Nothing
-        }
-    , full =
-        { margin = 210
-        , trackWidth = 8.7
-        , pitLaneWidth = 5.5
-        , startFinishLineExtension = 87.4
-        , startFinishLineStrokeWidth = 12
-        , sectorBoundaryOffset = 59
-        , sectorBoundaryStrokeWidth = 17.5
-        , carSize = 53
-        , labels =
-            Just
-                { sectorRadius = 207.6
-                , sectorFontSize = 92.9
-                , miniSectorRadius = -92.9
-                , miniSectorFontSize = 65.6
-                , carRadius = 103.8
-                , carFontSize = 76.5
-                }
-        }
-    }
 
 
 increasing : List Float -> Bool

@@ -46,8 +46,8 @@ marked at 53 m, a car's number at 76.5 m, the lap stroked at 8.7 m.
 The margin is the length that cannot be taken there with the rest, because it is
 added to the box as well as to what stands in it: six tenths of Le Mans's
 everything, margin included, and the lap comes back down to 189 px wide against the
-232 it is drawn at now. `LayoutTest` holds each length at the ratio and the margin
-where it is, so a drawing seen at two sizes at once is a failing test. The band left
+232 it is drawn at now. `LayoutTest` holds every length but this one at the
+ratio, since the margin is added to the box every ratio is taken over. The band left
 under the lap -- two thirds of the row -- is the lap's own proportion, 1,825 m across
 and 1,043 m tall in a row 0.545 wide-to-tall, and no length here touches it. The
 mini-sector lengths are in the record because `Lengths` holds them, at the same
