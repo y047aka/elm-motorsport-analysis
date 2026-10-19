@@ -169,7 +169,9 @@
 
         # A circuit's module is written out of OpenStreetMap's relation for it, so
         # these ask and can be answered a 502 or a 504 -- repeat the run, or hand
-        # in a kept answer as a file.
+        # in a kept answer as a file. Either way the geometry lands under
+        # app/scripts/geometry, and --from-geojson writes the module from that
+        # with no network.
         geometryApp = name: script:
           pkgs.writeShellApplication {
             inherit name;
@@ -224,8 +226,9 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          geometry-le-mans     = { type = "app"; program = "${geometryApp "geometry-le-mans" "le-mans-geometry"}/bin/geometry-le-mans";                                  meta.description = "Write Le Mans's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept)"; };
-          geometry-cota        = { type = "app"; program = "${geometryApp "geometry-cota" "cota-geometry"}/bin/geometry-cota";                                           meta.description = "Write COTA's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept)"; };
+          geometry-le-mans     = { type = "app"; program = "${geometryApp "geometry-le-mans" "le-mans-geometry"}/bin/geometry-le-mans";                                  meta.description = "Write Le Mans's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept; --from-geojson to rewrite the module from the kept geometry)"; };
+          geometry-cota        = { type = "app"; program = "${geometryApp "geometry-cota" "cota-geometry"}/bin/geometry-cota";                                           meta.description = "Write COTA's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept; --from-geojson to rewrite the module from the kept geometry)"; };
+          geometry-atlas       = { type = "app"; program = "${geometryApp "geometry-atlas" "atlas-geometry"}/bin/geometry-atlas";                                        meta.description = "Measure a dataset's line against a circuit's kept geometry, and keep it beside it (cota [--file gp.geojson])"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
