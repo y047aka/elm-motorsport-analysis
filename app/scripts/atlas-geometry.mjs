@@ -10,9 +10,10 @@
 // length, theirs is a measurement of the track surface at its own length. This
 // writes `geometry/<circuit>.atlas.geojson` — their outline and corner markers
 // in this repository's geometry profile, at their length and *not* stretched —
-// and prints the two readings that matter before anyone draws on them: how far
-// the lines stand apart in metres, and whether the atlas corner markers land at
-// the lap distances our geometry puts its timing lines beside.
+// and prints the three readings that matter before anyone draws on them: how
+// far the lines stand apart in metres, whether the atlas corner markers land at
+// the lap distances our geometry puts them at, and where the circuit's own
+// published sector lines stand on each of the two lines.
 //
 // It writes no Elm and no Layout. Whether to draw on a measured line instead of
 // the stretched survey is a separate change, and an expensive one: every tracker
@@ -23,6 +24,10 @@
 // some other line would shift every marker by the distance between them while
 // still looking like a lap.
 //
+// The apartness math is `geometry-diff.mjs`'s, shared with the tool that
+// compares any two kept geometries; this file adds only what is specific to
+// taking a foreign dataset in: the guard, the corner reading, and the writing.
+//
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery; the written file carries the source URL
 // beside the license.
@@ -32,6 +37,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { cumulative, degreesToMetres, projection } from "./circuit-geometry.mjs";
+import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
 import { circuit as cota } from "./cota-geometry.mjs";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -75,7 +81,9 @@ async function run(slug, argv) {
 
   const ours = readKeptGeometry(await readFile(join(repoDir, circuit.geojson), "utf8"));
   const earth = ([lon, lat]) => ({ lat, lon });
-  const { project } = projection([...outline.geometry.coordinates, ...ours.coords, ...corners.map((c) => c.geometry.coordinates)].map(earth));
+  const { project } = projection(
+    [...outline.geometry.coordinates, ...ours.coords, ...corners.map((c) => c.geometry.coordinates)].map(earth),
+  );
   const theirPoints = outline.geometry.coordinates.map(earth).map(project);
   const ourPoints = ours.coords.map(earth).map(project);
   const theirMetres = cumulative(theirPoints);
@@ -99,9 +107,28 @@ async function run(slug, argv) {
       distance: near.distance,
     };
   });
+  const atLines = sectorLines(ours.props.sectors).map((line) => {
+    const near = nearestOn(interpolate(ourPoints, ours.metres, line.metres), theirPoints, theirMetres);
+    return { ...line, theirMetres: near.metres, distance: near.distance };
+  });
 
   await writeAtlasGeometry(circuit, slug, entry.url, outline, corners, theirMetres);
-  print(slug, circuit, entry.every, length, originDistance, apart, atCorners);
+  print(slug, circuit, entry.every, length, originDistance, apart, atCorners, atLines, ours.props.sectors);
+}
+
+// The lines the circuit's own map publishes, as positions round the lap: each
+// stretch ends where the next begins, and the last ends at the line the lap is
+// measured from — which is where it started, so it is not a line to place.
+function sectorLines(sectors) {
+  if (!sectors) return [];
+  const names = ["s2", "s3", "s4"];
+  const lines = [];
+  let at = 0;
+  for (const [index, stretch] of sectors.stretches.entries()) {
+    at += stretch;
+    if (index < sectors.stretches.length - 1) lines.push({ id: names[index], metres: at });
+  }
+  return lines;
 }
 
 // Distance on the ground between a surveyed degree pair and the line the
@@ -127,52 +154,8 @@ function ask(url) {
 function readKeptGeometry(text) {
   const outline = JSON.parse(text).features.find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error("the kept geometry holds no outline feature");
-  return { coords: outline.geometry.coordinates, metres: outline.properties.metres };
-}
-
-// The two lines laid against each other: sampled every `every` metres along
-// theirs, the nearest ground distance to ours and the lap distance here that
-// same place falls at.
-function apartness(theirPoints, theirMetres, ourPoints, ourMetres, every) {
-  const length = theirMetres[theirMetres.length - 1];
-  const samples = [];
-  for (let s = 0; s < length; s += every) {
-    const near = nearestOn(interpolate(theirPoints, theirMetres, s), ourPoints, ourMetres);
-    samples.push({ theirMetres: s, ourMetres: near.metres, distance: near.distance });
-  }
-  const worst = samples.reduce((a, b) => (b.distance > a.distance ? b : a));
-  const mean = samples.reduce((sum, x) => sum + x.distance, 0) / samples.length;
-  return { count: samples.length, mean, worst };
-}
-
-function interpolate(points, metres, s) {
-  let i = 1;
-  while (i < metres.length - 1 && metres[i] < s) i++;
-  const span = metres[i] - metres[i - 1];
-  const at = span === 0 ? 0 : (s - metres[i - 1]) / span;
-  return {
-    x: points[i - 1].x + (points[i].x - points[i - 1].x) * at,
-    y: points[i - 1].y + (points[i].y - points[i - 1].y) * at,
-  };
-}
-
-function nearestOn(point, points, metres) {
-  let best = { distance: Infinity, metres: 0 };
-  for (let i = 1; i < points.length; i++) {
-    const near = toSegment(point, points[i - 1], points[i]);
-    if (near.distance < best.distance) {
-      best = { distance: near.distance, metres: metres[i - 1] + (metres[i] - metres[i - 1]) * near.at };
-    }
-  }
-  return best;
-}
-
-function toSegment(p, a, b) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const span = dx * dx + dy * dy;
-  const at = span === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / span));
-  return { distance: Math.hypot(p.x - (a.x + dx * at), p.y - (a.y + dy * at)), at };
+  const { metres, ...props } = outline.properties;
+  return { coords: outline.geometry.coordinates, metres, props };
 }
 
 // The atlas line in this repository's own profile, at its own length: a reader
@@ -202,12 +185,12 @@ async function writeAtlasGeometry(circuit, slug, url, outline, corners, theirMet
     })),
   ];
   const body = features.map((f) => `    ${JSON.stringify(f)}`).join(",\n");
-  const path = join(repoDir, "app", "scripts", "geometry", `${slug}.atlas.geojson`);
+  const path = join(repoDir, dirname(circuit.geojson), `${slug}.atlas.geojson`);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
 }
 
-function print(slug, circuit, every, length, originDistance, apart, atCorners) {
+function print(slug, circuit, every, length, originDistance, apart, atCorners, atLines, sectors) {
   const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
   const distances = atCorners.map((c) => c.distance);
   const laps = atCorners.map((c) => c.ourMetres - c.theirMetres);
@@ -219,7 +202,7 @@ function print(slug, circuit, every, length, originDistance, apart, atCorners) {
   );
   console.log(
     `lines sampled every ${every} m (${apart.count}): mean apart ${apart.mean.toFixed(1)} m, ` +
-      `max ${apart.worst.distance.toFixed(1)} m at their ${apart.worst.theirMetres.toFixed(0)} m, our ${apart.worst.ourMetres.toFixed(1)} m`,
+      `max ${apart.worst.distance.toFixed(1)} m at their ${apart.worst.aMetres.toFixed(0)} m, our ${apart.worst.bMetres.toFixed(1)} m`,
   );
   console.log(
     `corners (${atCorners.length}): mean apart ${mean(distances).toFixed(1)} m, max ${Math.max(...distances).toFixed(1)} m; ` +
@@ -230,6 +213,15 @@ function print(slug, circuit, every, length, originDistance, apart, atCorners) {
       `  ${c.id}: marker at ${c.theirMetres.toFixed(1)} m, our line has that place at ` +
         `${c.ourMetres.toFixed(1)} m (${signed(c.ourMetres - c.theirMetres)}), ${c.distance.toFixed(1)} m apart`,
     );
+  }
+  if (atLines.length > 0) {
+    console.log(`the lines ${sectors.source} publishes, on each line:`);
+    for (const l of atLines) {
+      console.log(
+        `  ${l.id} begins at our ${l.metres.toFixed(1)} m; the atlas line has that place at ` +
+          `${l.theirMetres.toFixed(1)} m (${signed(l.theirMetres - l.metres)}), ${l.distance.toFixed(1)} m apart`,
+      );
+    }
   }
 }
 
