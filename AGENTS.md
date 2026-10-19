@@ -38,7 +38,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
-| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, and keep it beside it (`cota [--file gp.geojson]`) |
+| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `scripts/geometry/<circuit>.atlas.geojson` — beside the readers, not in what gets served (`cota [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
