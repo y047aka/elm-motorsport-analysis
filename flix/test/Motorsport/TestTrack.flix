@@ -68,7 +68,7 @@ pub mod Motorsport.TestTrack {
     @Test
     def aSectorIsWhatItsMiniSectorsTakeBetweenThem(): Unit \ Assert =
         let track = Track.fromFastest(
-            Some(Circuit.Cota),
+            None,
             Some(Direction.Clockwise),
             sectors(Some(1000), Some(1000), Some(1000)),
             evenMiniSectors(1000)

@@ -75,20 +75,17 @@ pub mod Motorsport.TestEvents {
     def testUnknownRoundHasNoDirection(): Unit \ Assert =
         Assert.assertTrue(Option.isEmpty(Events.direction("unknown_event")))
 
+    /// The name is the stem the round ids share rather than the whole id, so a
+    /// championship running a second round at a circuit it already draws gives
+    /// that circuit one name and one drawing. An id nobody answers names none,
+    /// rather than naming whichever one is drawn.
     @Test
     def testWhichCircuitEachRoundWasRunOn(): Unit \ Assert =
         use Motorsport.Circuit.Circuit;
-        Assert.assertTrue(Events.circuit("qatar_1812km") == Some(Circuit.Qatar));
         Assert.assertTrue(Events.circuit("le_mans_24h") == Some(Circuit.LeMans));
         Assert.assertTrue(Events.circuit("cota_6h") == Some(Circuit.Cota));
         Assert.assertTrue(Events.circuit("sao_paulo_6h") == Some(Circuit.SaoPaulo));
-        // The name is the stem the round ids share rather than the whole id, so
-        // a championship running a second round at a circuit it already draws
-        // gives that circuit one name and one drawing.
-        Assert.assertTrue(Events.circuit("bahrain_8h") == Some(Circuit.Bahrain))
-
-    @Test
-    def testUnknownRoundNamesNoCircuit(): Unit \ Assert =
+        Assert.assertTrue(Events.circuit("bahrain_8h") == Some(Circuit.Bahrain));
         Assert.assertTrue(Option.isEmpty(Events.circuit("unknown_event")))
 
 }

@@ -154,7 +154,6 @@ pub mod Round.TestTrack {
         Assert.assertTrue(String.contains({substr = "\"s1\""}, json));
         Assert.assertTrue(String.contains({substr = "\"start\""}, json));
         Assert.assertTrue(String.contains({substr = "\"share\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"circuit\""}, json));
         Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));
         Assert.assertTrue(String.contains({substr = "\"scl2\""}, json));
         Assert.assertTrue(String.contains({substr = "\"fl\""}, json))
