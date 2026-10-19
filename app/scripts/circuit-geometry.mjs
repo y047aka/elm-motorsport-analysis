@@ -249,11 +249,11 @@ export async function writeGeoJson(circuit, geometry) {
   await writeFile(path, geoJsonString(circuit, geometry));
 }
 
-/** The geometry a module is written from, read back out of a geometry file. The
- * outline's metres are checked against the file's own claims before anything is
- * written: one per point, going up, ending where the published lap length
- * says -- because a file that drifted past its generator would otherwise reach
- * the drawing with the survey's authority and none of its own. */
+/** The geometry a circuit is drawn from, read back out of a geometry file. The
+ * outline's metres are checked against the file's own claims: one per point,
+ * going up, ending where the published lap length says -- because a file that
+ * drifted from its generator would otherwise reach the drawing with the
+ * survey's authority and none of its own. */
 export function geometryFromGeoJson(json, circuit) {
   const features = json.features ?? [];
   const outline = features.find((f) => f.properties?.role === "outline");

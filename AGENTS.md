@@ -37,7 +37,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` rewrites the module from the geometry kept in the tree) |
+| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, and keep it beside it (`cota [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
@@ -384,10 +384,12 @@ at `cota_6h` the Circuit of the Americas. `Circuit/Layout` is what
 `Tracker.onCircuit` is handed — the lap, the pit lane, the lines the lap is
 timed at, and the metres the tracker draws at — and it is where the surveyed
 degrees are projected into drawing metres, once, whichever circuit they came
-from. Each circuit's `Layout` holds its distances and its lengths; its
-`Geometry` is generated beside them and never by hand, out of OpenStreetMap's map
-data (ODbL, © OpenStreetMap contributors), which the generated module records
-beside its own survey time. Which circuit a round was
+from. Each circuit's `Layout` holds its distances and its lengths; the degrees
+themselves are no Elm module: each circuit's geometry is a GeoJSON file at
+`static/geometry/<circuit>.geojson`, written out of OpenStreetMap's map
+data (ODbL, © OpenStreetMap contributors) into a file that records its own
+survey time, and `Motorsport.Wec.Circuit.Geometry` reads it back as a round
+loads. Which circuit a round was
 run on comes in with the summary (`Motorsport.Events.circuit`, keyed by round id
 and tested against the calendar the way `direction` is), and `Shared` picks the
 layout by that word rather than by the round id — which is still asked for,
@@ -398,16 +400,22 @@ is drawn as the ring.
 The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
 circuit, which supplies the relation, the member role naming the line the lap
 is measured from, the published length the surveyed line is stretched to, and
-the prose the generated module is documented with — `nix run .#geometry-cota`,
+the prose the geometry file is documented with — `nix run .#geometry-cota`,
 `nix run .#geometry-le-mans`. Both ask OpenStreetMap, which answers a busy runner with
 a 502 or a 504 — repeat the run, or hand the answer in as a file. The answer is
-reduced to a geometry GeoJSON under `app/scripts/geometry/` — the degrees, the
-metres per point, the frame, a `basis` saying what kind of line it is — and the
-Elm module is generated from that geometry alone, so `--from-geojson` rewrites
-the module with no OpenStreetMap and an empty `git diff` is what a regeneration
-being nothing is checked with. The geometries are kept because they are read
-twice — once by the generator, once as the line other datasets are measured
-against, which is what an Overpass answer never was. `nix run .#geometry-atlas
+reduced to a geometry GeoJSON under `app/static/geometry/`, named by the word
+the summaries send for the circuit — the degrees, the metres per point, the
+frame, a `basis` saying what kind of line it is — and it lands in `static/`
+because the app reads it from there at load, through
+`Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the
+bytes as they arrive. Nothing generates Elm from it: `--from-geojson` runs
+those checks with no OpenStreetMap, which is what a regeneration being nothing
+is checked with now. A drawn circuit is three lists in `Shared` — the words
+`trackOf` matches, `hasDrawing` awaits, `getGeometry` fetches — and one file,
+and `geometry-contract.spec.ts` keeps all four in step, since none of them
+compiles against another. The geometries are kept because the app reads them,
+and as the line other datasets are measured against, which is what an Overpass
+answer never was. `nix run .#geometry-atlas
 cota` reads the track-atlas line — a midline measured from orthoimagery, not a
 survey stretched to a published length, at 5,500.2 m against the 5,515 m this
 app draws — keeps it as `<circuit>.atlas.geojson` with `stretched: false`, and
@@ -600,7 +608,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **Elm** — `elm-test` for unit tests, `elm-verify-examples` for docstring
   examples. Benchmarks live in `/package/benchmark/`. Tests of app modules run
   from `app/tests/` and of the library's from `package/tests/`; `.#test` runs
-  both. `elm-explorations/test` sits in the app's `dependencies` for this --
+  both. The package's circuit tests read the geometry bytes as the app reads
+  them: `.#test` first runs `app/scripts/test-fixtures.mjs`, which writes the
+  served files out as ignored Elm modules under `TestHelpers/Survey/`, and a
+  bare `elm-test` without them fails to compile by name.
+  `elm-explorations/test` sits in the app's `dependencies` for this --
   hand-written `test-dependencies` read fine to elm-test but make every
   `elm make` fail with "dependencies edited by hand", which is a build break
   the test runner does not see.

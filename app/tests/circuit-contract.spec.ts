@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { drawnNames } from './helpers';
 
 /**
  * The circuit name one round is known by in two languages. Flix's
@@ -14,7 +15,6 @@ import { join } from 'node:path';
  */
 
 const flixSource = readFileSync(join(import.meta.dirname, '..', '..', 'flix', 'src', 'Motorsport', 'Circuit.flix'), 'utf8');
-const sharedSource = readFileSync(join(import.meta.dirname, '..', 'src', 'Shared.elm'), 'utf8');
 
 /** The spellings `Circuit.jsonValue` can send, which are the words the
  * summaries carry. Flix closes the module's last definition with a `}` at
@@ -26,18 +26,11 @@ function sentNames(): string[] {
   return names;
 }
 
-/** The names `Shared.trackOf` has a drawing for, and the layout each is
- * drawn with. `mapLoaded` is the next top-level definition. */
-function drawnNames(): string[] {
-  const body = sharedSource.split('trackOf :')[1]?.split('\nmapLoaded')[0] ?? '';
-  const names = [...body.matchAll(/Just "([a-z_]+)" ->/g)].map((m) => m[1]);
-  expect(names.length, 'Shared.trackOf matches no circuit name').toBeGreaterThan(0);
-  return names;
-}
-
 test('every circuit Shared draws is one Flix can name', () => {
   const sent = sentNames();
-  for (const name of drawnNames()) {
+  const drawn = drawnNames();
+  expect(drawn.length, 'Shared.trackOf matches no circuit name').toBeGreaterThan(0);
+  for (const name of drawn) {
     expect(sent, `Shared.elm draws "${name}", a circuit no summary can name`).toContain(name);
   }
 });

@@ -28,6 +28,7 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
+import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Msg(..))
@@ -44,6 +45,7 @@ type alias Model =
     { calendar : Catalogue
     , manufacturers : Maybe Manufacturers
     , carImages : Maybe CarImages
+    , geometry : Dict.Dict String Geometry
     , round : Round
     }
 
@@ -99,15 +101,17 @@ along beside it.
 -}
 type alias Partial =
     { files : Files
+    , geometry : Awaited
     , timeline : Maybe (List TimelineEvent)
     }
 
 
 {-| The summary and the laps, which arrive in either order and are what a round
-is. Three cases rather than a pair of `Maybe`s: having both is not a state, it is
-the move to `Loaded`.
+is. A round whose circuit has a drawing here waits on a third file -- its
+geometry -- so having both of these is a state rather than the move to `Loaded`,
+and is held as `GotBoth` until that one arrives.
 
-The timeline is not one of the two and gates nothing, so it stays the `Maybe` it
+The timeline is not one of the three and gates nothing, so it stays the `Maybe` it
 looks like: a fraction of the size of the laps, it commonly arrives before there
 is a round to put it on, and is kept until there is.
 
@@ -116,11 +120,23 @@ type Files
     = NothingYet
     | GotSummary Wec.Event
     | GotLaps (List WecLaps.RawLap)
+    | GotBoth Wec.Event (List WecLaps.RawLap)
+
+
+{-| The geometry a circuit is drawn from, or how far waiting for it has got.
+`Unnamed` is a summary that named no circuit and `Undrawn` one this app draws
+as the ring; neither has a file to wait for.
+-}
+type Awaited
+    = Unnamed
+    | Undrawn
+    | Fetching String
+    | Decoded Geometry
 
 
 nothingYet : Partial
 nothingYet =
-    { files = NothingYet, timeline = Nothing }
+    { files = NothingYet, geometry = Unnamed, timeline = Nothing }
 
 
 {-| A loaded round, as the pages read it. The race itself is `replay.race`, a
@@ -154,7 +170,7 @@ the app opened on, and a round reached by its URL still draws on all three.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
-    ( { calendar = Arriving, manufacturers = Nothing, carImages = Nothing, round = NoRound }
+    ( { calendar = Arriving, manufacturers = Nothing, carImages = Nothing, geometry = Dict.empty, round = NoRound }
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
@@ -260,7 +276,14 @@ update msg m =
             resumeWaitingRound { m | round = Waiting params }
 
         JsonLoaded_Wec key (Ok summary) ->
-            ( { m | round = forRound key (withSummary summary) m.round }, Effect.none )
+            case awaiting summary m.geometry of
+                ( awaited, Just circuit ) ->
+                    ( { m | round = forRound key (withSummary summary awaited) m.round }
+                    , Effect.sendCmd (getGeometry key circuit)
+                    )
+
+                ( awaited, Nothing ) ->
+                    ( { m | round = forRound key (withSummary summary awaited) m.round }, Effect.none )
 
         JsonLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
@@ -278,6 +301,15 @@ update msg m =
             -- The events table goes without rather than the round: a page draws
             -- every other part of one from the summary and the laps.
             ( m, Effect.none )
+
+        GeometryLoaded key circuit (Ok geometry) ->
+            ( { m | geometry = Dict.insert circuit geometry m.geometry, round = forRound key (geometryArrived circuit geometry) m.round }, Effect.none )
+
+        GeometryLoaded key _ (Err error) ->
+            -- A drawn round fails rather than falling back to the ring: a
+            -- round drawn as a ring is a wrong drawing read back as a round
+            -- that loaded.
+            ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         ReplayMsg replayMsg ->
             ( { m | round = mapLoaded (stepReplay replayMsg) m.round }, Effect.none )
@@ -373,24 +405,69 @@ forRound key step round =
             round
 
 
-withSummary : Wec.Event -> RoundId -> Partial -> Round
-withSummary summary id partial =
-    case partial.files of
-        GotLaps rawLaps ->
-            Loaded id (roundFrom id summary rawLaps (eventsOf partial))
-
-        _ ->
-            Loading id { partial | files = GotSummary summary }
+withSummary : Wec.Event -> Awaited -> RoundId -> Partial -> Round
+withSummary summary awaited id partial =
+    arriving id { partial | files = bothWith summary partial.files, geometry = awaited }
 
 
 withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
 withLaps rawLaps id partial =
-    case partial.files of
-        GotSummary summary ->
-            Loaded id (roundFrom id summary rawLaps (eventsOf partial))
+    arriving id { partial | files = bothWithLaps rawLaps partial.files }
+
+
+bothWith : Wec.Event -> Files -> Files
+bothWith summary files =
+    case files of
+        GotLaps rawLaps ->
+            GotBoth summary rawLaps
 
         _ ->
-            Loading id { partial | files = GotLaps rawLaps }
+            GotSummary summary
+
+
+bothWithLaps : List WecLaps.RawLap -> Files -> Files
+bothWithLaps rawLaps files =
+    case files of
+        GotSummary summary ->
+            GotBoth summary rawLaps
+
+        _ ->
+            GotLaps rawLaps
+
+
+{-| A round is made once its files are here and its geometry is settled --
+decoded, or not wanted. Whichever of them arrives last finds the others.
+-}
+arriving : RoundId -> Partial -> Round
+arriving id partial =
+    case partial.files of
+        GotBoth summary rawLaps ->
+            case partial.geometry of
+                Fetching _ ->
+                    Loading id partial
+
+                _ ->
+                    Loaded id (roundFrom id summary rawLaps (eventsOf partial) partial.geometry)
+
+        _ ->
+            Loading id partial
+
+
+{-| A response naming a circuit the round stopped waiting for is the cache's
+business and not this round's: the geometry is still worth keeping.
+-}
+geometryArrived : String -> Geometry -> RoundId -> Partial -> Round
+geometryArrived circuit geometry id partial =
+    case partial.geometry of
+        Fetching asked ->
+            if asked == circuit then
+                arriving id { partial | geometry = Decoded geometry }
+
+            else
+                Loading id partial
+
+        _ ->
+            Loading id partial
 
 
 eventsOf : Partial -> List TimelineEvent
@@ -439,8 +516,8 @@ fieldEventsOf events =
         |> Timeline.fromList
 
 
-roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> LoadedRound
-roundFrom id summary rawLaps timelineEvents =
+roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
+roundFrom id summary rawLaps timelineEvents geometry =
     let
         replay =
             summary.startingGrid.entries
@@ -454,7 +531,7 @@ roundFrom id summary rawLaps timelineEvents =
     in
     { replay = replay
     , snapshot = snapshotOf replay
-    , track = trackOf id summary.track
+    , track = trackOf id summary.track geometry
     , timeline = Timeline.fromList timelineEvents
     , fieldEvents = fieldEventsOf timelineEvents
     }
@@ -466,21 +543,33 @@ because which lines Le Mans is drawn with turns on the season.
 
 A circuit this app has no drawing of is drawn as the ring, which is the shape
 the proportions the summary carries can describe; so is a round exported before
-the summary named its circuit.
+the summary named its circuit. A circuit that has a drawing and whose geometry
+is somehow not here falls to the ring too: the load gates on it, so reaching
+this arm means a gate was opened elsewhere.
 
 -}
-trackOf : RoundId -> Wec.Track -> Tracker.Track
-trackOf id track =
+trackOf : RoundId -> Wec.Track -> Awaited -> Tracker.Track
+trackOf id track geometry =
     let
         drawing =
             { direction = track.direction, config = track.config }
     in
     case track.circuit of
         Just "le_mans" ->
-            Tracker.onCircuit (LeMansLayout.layout id.season) drawing
+            case geometry of
+                Decoded lap ->
+                    Tracker.onCircuit (LeMansLayout.layout id.season lap) drawing
+
+                _ ->
+                    Tracker.fromConfig drawing
 
         Just "cota" ->
-            Tracker.onCircuit CotaLayout.layout drawing
+            case geometry of
+                Decoded lap ->
+                    Tracker.onCircuit (CotaLayout.layout lap) drawing
+
+                _ ->
+                    Tracker.fromConfig drawing
 
         _ ->
             Tracker.fromConfig drawing
@@ -508,6 +597,57 @@ stepReplay replayMsg loaded =
 keyOf : RoundId -> { season : Int, id : String }
 keyOf id =
     { season = id.season, id = id.id }
+
+
+{-| Whether the summary's circuit wants its geometry -- from the cache if it is
+already in one, from `/static/geometry/` if it is not -- or wants nothing, being
+a circuit with no drawing here.
+-}
+awaiting : Wec.Event -> Dict.Dict String Geometry -> ( Awaited, Maybe String )
+awaiting summary cache =
+    case summary.track.circuit of
+        Just circuit ->
+            if hasDrawing circuit then
+                case Dict.get circuit cache of
+                    Just geometry ->
+                        ( Decoded geometry, Nothing )
+
+                    Nothing ->
+                        ( Fetching circuit, Just circuit )
+
+            else
+                ( Undrawn, Nothing )
+
+        Nothing ->
+            ( Unnamed, Nothing )
+
+
+{-| Which circuits are drawn to their own shape: the words `trackOf` keeps and
+`getGeometry` fetches, kept in step by `geometry-contract.spec.ts`.
+-}
+hasDrawing : String -> Bool
+hasDrawing circuit =
+    circuit == "le_mans" || circuit == "cota"
+
+
+{-| The geometry a drawn circuit reads itself from, at the same URL pattern the
+manufacturer table uses, named by the word the summary sends for it.
+-}
+getGeometry : { season : Int, id : String } -> String -> Cmd Msg
+getGeometry key circuit =
+    let
+        url =
+            "/static/geometry/" ++ circuit ++ ".geojson"
+    in
+    case circuit of
+        "cota" ->
+            Http.get { url = url, expect = Http.expectJson (GeometryLoaded key circuit) CotaLayout.decoder }
+
+        "le_mans" ->
+            Http.get { url = url, expect = Http.expectJson (GeometryLoaded key circuit) LeMansLayout.decoder }
+
+        _ ->
+            Cmd.none
 
 
 {-| The race read where playback has got to.

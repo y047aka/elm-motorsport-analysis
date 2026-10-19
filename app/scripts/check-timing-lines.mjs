@@ -25,7 +25,7 @@
 // So the shares are printed beside the map's lines and never judged against them,
 // and the season-to-season difference is the thing judged against the tolerance.
 //
-// The map's lines are read from the kept geometry, `app/scripts/geometry/<circuit>.geojson`, which
+// The map's lines are read from the kept geometry, `app/static/geometry/<circuit>.geojson`, which
 // publishes them as the circuit's script authored them. The reading of the feed
 // is the summary's -- the fastest sector over every lap, which is what
 // `Round.Summary`'s `fastestSectors` asks the database --

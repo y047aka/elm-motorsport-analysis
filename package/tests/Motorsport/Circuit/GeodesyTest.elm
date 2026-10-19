@@ -5,8 +5,8 @@ import Motorsport.Circuit.Geodesy exposing (Coordinate, Frame, frame, project)
 import Test exposing (Test, describe, test)
 
 
-{-| The frame `Motorsport.Wec.Circuit.LeMans.Geometry` writes, and the corner of
-the survey it stands at.
+{-| The frame of Le Mans's kept geometry, and the corner of the survey it
+stands at.
 -}
 leMans : Frame
 leMans =
