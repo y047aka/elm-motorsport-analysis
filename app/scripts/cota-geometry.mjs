@@ -1,21 +1,27 @@
-// Writes `Motorsport.Wec.Circuit.Cota.Geometry`: the Circuit of the Americas'
-// centreline and pit lane, out of OpenStreetMap's relation for the circuit. The
-// pipeline itself is `circuit-geometry.mjs`, which every circuit's script runs.
+// Writes the Circuit of the Americas' geometry: its centreline and pit lane,
+// out of OpenStreetMap's relation for the circuit, as the served file the
+// tracker decodes at runtime. The pipeline itself is `circuit-geometry.mjs`,
+// which every circuit's script runs.
 //
 //     node scripts/cota-geometry.mjs [overpass.json]
+//     node scripts/cota-geometry.mjs --from-geojson [geometry.json]
 //
 // Asks OpenStreetMap, which answers a busy runner with a 502 or a 504: repeat
-// the run. The answer a module should be written from can be handed in as a
-// file instead. A survey that moved moves every tracker baseline, and the
-// visual tests only notice metres, so read a regeneration's diff.
+// the run. The answer a geometry should be written from can be handed in as a
+// file instead. Either way the geometry lands where the app serves it, as
+// `static/geometry/cota.geojson`; `--from-geojson` checks the kept file against
+// this config with no OpenStreetMap. A survey that moved moves every tracker
+// baseline, and the visual tests only notice metres, so read a regeneration's
+// diff.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
-// module written here is a derivative of it.
+// geometry written here is a derivative of it.
 
 import { isEntry, main } from "./circuit-geometry.mjs";
 
 export const circuit = {
   relation: 6537729,
+  slug: "cota",
 
   // The relation tags two nodes, `start` and `finish`, 297 m apart along the
   // lap: the first is where the race starts and the second is the line the lap is
@@ -35,28 +41,17 @@ export const circuit = {
   lapLength: 5515.0,
 
   // Where the sector map puts the lines the lap is timed to, measured along it
-  // -- the same distances `Motorsport.Wec.Circuit.Cota.Layout` places, spelled
-  // here so `check-timing-lines.mjs` reads one file rather than parsing the
-  // Elm module. The drawing is checked against the published lap length and
-  // not against these; a line moved in one and not the other is a drift to
-  // read as a diff, as a regeneration is.
+  // -- the same distances `Motorsport.Wec.Circuit.Cota.Layout` places, written
+  // into the geometry as `sectors` so `check-timing-lines.mjs` reads the
+  // geometry file rather than this script. The drawing is checked against the
+  // published lap length and not against these; a line moved in one and not the
+  // other is a drift to read as a diff, as a regeneration is.
   sectorMapStretches: [1313.2, 2254.3, 1947.5],
+  sectorsSource: "the circuit's own track sector map",
 
-  module: "Motorsport.Wec.Circuit.Cota.Geometry",
-  path: "package/src/Motorsport/Wec/Circuit/Cota/Geometry.elm",
-  layout: "Motorsport.Wec.Circuit.Cota.Layout",
+  geojson: "app/static/geometry/cota.geojson",
   script: "app/scripts/cota-geometry.mjs",
   survey: "The Circuit of the Americas",
-
-  centrelineDoc: `The racing lap from the finish line, counter-clockwise, back to the finish
-line. \`metres\` is how far round the lap a point is, stretched to the 5,515 m of
-the circuit's own sector map. A sample read back off the line is stretched with
-it, which is the scale the timing feed counts lap distances in.`,
-
-  pitLaneDoc: `From where it leaves the lap 382 m before the finish line to where it merges
-with it again 631 m after, in the direction it is driven. OpenStreetMap draws
-the carriageway end to end, which reaches past the painted lines the sector map
-puts at 116 m before the finish line and 390 m after it.`,
 };
 
 if (isEntry(import.meta.url)) {

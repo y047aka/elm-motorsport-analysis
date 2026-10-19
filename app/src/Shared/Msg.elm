@@ -15,9 +15,10 @@ import Data.Wec.Manufacturer exposing (Manufacturers)
 import Http
 import Motorsport.Race.TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 
 
-{-| The three file responses carry the round they were asked for.
+{-| The file responses carry the round they were asked for.
 
 Nothing cancels an `Http.get`, so leaving a round mid-load leaves its responses
 in flight. Untagged, one of them lands beside the next round's other file and
@@ -32,4 +33,5 @@ type Msg
     | JsonLoaded_Wec { season : Int, id : String } (Result Http.Error Wec.Event)
     | LapsLoaded_Wec { season : Int, id : String } (Result Http.Error (List WecLaps.RawLap))
     | TimelineLoaded_Wec { season : Int, id : String } (Result Http.Error (List TimelineEvent))
+    | GeometryLoaded { season : Int, id : String } String (Result Http.Error Geometry)
     | ReplayMsg Replay.Msg

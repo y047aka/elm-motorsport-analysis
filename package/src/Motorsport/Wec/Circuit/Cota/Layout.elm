@@ -1,20 +1,33 @@
-module Motorsport.Wec.Circuit.Cota.Layout exposing (layout)
+module Motorsport.Wec.Circuit.Cota.Layout exposing (decoder, layout)
 
 {-| The Circuit of the Americas as a map draws it: the lap, the pit lane beside
 it, and where round the lap the lines it is timed at stand.
 
-The record and the projection the degrees are drawn through are
+The lap itself arrives as the served geometry -- `static/geometry/cota.geojson`,
+decoded and checked by [`Motorsport.Wec.Circuit.Geometry`](Motorsport-Wec-Circuit-Geometry)
+-- and what is written here is what the file cannot know: the drawing's lengths
+and the circuit's own published timing lines. The record and the projection the
+degrees are drawn through are
 [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-@docs layout
+@docs decoder, layout
 
 -}
 
+import Json.Decode exposing (Decoder)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
-import Motorsport.Wec.Circuit.Cota.Geometry as Geometry
+import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
+
+
+{-| Reading the served geometry against the 5,515 m the circuit's own sector
+map publishes.
+-}
+decoder : Decoder Geometry
+decoder =
+    Geometry.decoder { lapLength = 5515.0 }
 
 
 {-| The circuit, on one set of timing lines for every season; see
@@ -24,11 +37,18 @@ The lap runs counter-clockwise, as OpenStreetMap's own one-way tags say and as
 the CLI answers the summary.
 
 -}
-layout : Layout
-layout =
-    { shape = shape
-    , pitLane = pitLane
-    , timingLines = timingLines
+layout : Geometry -> Layout
+layout geometry =
+    let
+        lap =
+            shape geometry
+
+        pit =
+            pitLane geometry
+    in
+    { shape = lap
+    , pitLane = pit
+    , timingLines = timingLines lap
     , lengths = lengths
     }
 
@@ -94,20 +114,20 @@ lengths =
     }
 
 
-shape : Shape
-shape =
-    Circuit.shapeOf Geometry.frame Geometry.centreline
+shape : Geometry -> Shape
+shape geometry =
+    Circuit.shapeOf geometry.frame geometry.centreline
 
 
-pitLane : List Point
-pitLane =
-    Circuit.pitLaneOf Geometry.frame Geometry.pitLane
+pitLane : Geometry -> List Point
+pitLane geometry =
+    Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
 {-| The circuit's own track sector map: 1,313.2 m from the finish line to the
 first intermediate line, 2,254.3 m further to the second, and 1,947.5 m home --
-which add up to the 5,515 m centreline the same map gives, and are what
-`Geometry` stretches OpenStreetMap's 5,502 m survey to. The distances the series
+which add up to the 5,515 m centreline the same map gives, and are what the
+served geometry stretches OpenStreetMap's 5,502 m survey to. The distances the series
 print for this circuit run 5,513 m, 2 m short of the map's own total; the map is
 quoted because every line above is measured along it.
 
@@ -129,8 +149,8 @@ this round, so a car between two of these lines is placed by the share of the
 time between them it has run.
 
 -}
-timingLines : TimingLines
-timingLines =
+timingLines : Shape -> TimingLines
+timingLines lap =
     { sectors =
         Sector.initialize
             (\sector ->
@@ -142,7 +162,7 @@ timingLines =
                         3567.5
 
                     S3 ->
-                        Shape.length shape
+                        Shape.length lap
             )
     , miniSectors = SectorsOnly
     }

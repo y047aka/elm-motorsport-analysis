@@ -3,6 +3,22 @@ import { expect, Page } from '@playwright/test';
 
 export const WAIT_TIMEOUT = 10_000;
 
+/** Reads a file from the repository root. */
+export function readSource(pathFromRoot: string): string {
+  return readFileSync(new URL(`../../${pathFromRoot}`, import.meta.url), 'utf8');
+}
+
+/**
+ * Which circuits `Shared` draws to their own shape: the words it matches in `trackOf`,
+ * which are the words it asks `/static/geometry/<word>.geojson` for and the words
+ * Flix's `Circuit.jsonValue` sends.
+ */
+export function drawnNames(): string[] {
+  const body = readSource('app/src/Shared.elm').split('trackOf :')[1];
+  if (!body) throw new Error('trackOf not found in Shared.elm');
+  return [...body.split('\nmapLoaded')[0].matchAll(/Just "([a-z_]+)" ->/g)].map((m) => m[1]);
+}
+
 /** The rounds a checkout keeps, spelled as the calendar spells them. */
 export const LE_MANS = '2025/le_mans_24h';
 export const COTA = '2025/cota_6h';

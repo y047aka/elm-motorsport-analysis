@@ -25,9 +25,10 @@
 // So the shares are printed beside the map's lines and never judged against them,
 // and the season-to-season difference is the thing judged against the tolerance.
 //
-// The map's lines are read from `cota-geometry.mjs`, which is where the pipeline
-// keeps them. The reading of the feed is the summary's -- the fastest sector over
-// every lap, which is what `Round.Summary`'s `fastestSectors` asks the database --
+// The map's lines are read from the kept geometry, `app/static/geometry/<circuit>.geojson`, which
+// publishes them as the circuit's script authored them. The reading of the feed
+// is the summary's -- the fastest sector over every lap, which is what
+// `Round.Summary`'s `fastestSectors` asks the database --
 // and where the round's export is in the tree its shares are printed against, so
 // a stale export reads as a disagreement in the print rather than as a verdict
 // this command has no standing to make.
@@ -38,6 +39,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { circuit as cota } from "./cota-geometry.mjs";
+
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -62,7 +64,7 @@ const rounds = {
   cota_6h: {
     circuit: cota.survey,
     script: cota.script,
-    lines: linesOf(cota),
+    geojson: cota.geojson,
     lapLength: cota.lapLength,
   },
 };
@@ -93,7 +95,7 @@ async function main() {
     fail(`${args.id} is not a round this reads, which reads ${Object.keys(rounds).join(" and ")}.`);
   }
 
-  const round = rounds[args.id];
+  const round = { ...rounds[args.id], lines: await linesOf(rounds[args.id]) };
   const seasons = args.against === null ? [args.season] : [args.season, args.against];
 
   const readings = [];
@@ -228,20 +230,26 @@ async function agreesWithExport(reading) {
 // ---------------------------------------------------------------- the layout
 
 /** Where the map's lines stand round the lap: the first line, the second, and
- * the lap the third ends at. The stretches are the map's own, and the only
- * thing a script may check them against is the lap length they add up to --
+ * the lap the third ends at. The stretches are the map's own, kept in the
+ * geometry by the script that authored them, and the only thing a check may
+ * compare them against is the lap length they add up to --
  * the shares themselves place a line some 170 m from one of these, by the
  * method's own error, and say nothing about a mistake here. */
-function linesOf(config) {
-  if (config.sectorMapStretches.length !== sectors.length) {
-    fail(`${config.script} gives ${config.sectorMapStretches.length} stretches for ${sectors.length} sectors.`);
+async function linesOf(round) {
+  const outline = JSON.parse(await readFile(join(repoDir, round.geojson), "utf8")).features.find((f) => f.properties?.role === "outline");
+  const published = outline?.properties?.sectors;
+  if (!published) {
+    fail(`${round.geojson} publishes no sectors: ${round.script} authors them and a regeneration writes them.`);
   }
-  const total = config.sectorMapStretches.reduce((sum, stretch) => sum + stretch, 0);
-  if (Math.abs(total - config.lapLength) > 0.05) {
-    fail(`${config.script}'s stretches add up to ${total} m, not its ${config.lapLength} m lap.`);
+  if (published.stretches.length !== sectors.length) {
+    fail(`${round.geojson} gives ${published.stretches.length} stretches for ${sectors.length} sectors.`);
   }
-  const first = config.sectorMapStretches[0];
-  return { first, second: first + config.sectorMapStretches[1], lap: config.lapLength };
+  const total = published.stretches.reduce((sum, stretch) => sum + stretch, 0);
+  if (Math.abs(total - round.lapLength) > 0.05) {
+    fail(`${round.geojson}'s stretches add up to ${total} m, not its ${round.lapLength} m lap.`);
+  }
+  const first = published.stretches[0];
+  return { first, second: first + published.stretches[1], lap: round.lapLength };
 }
 
 const linePositions = ({ first, second, lap }) =>

@@ -1,32 +1,50 @@
-module Motorsport.Wec.Circuit.LeMans.Layout exposing (layout)
+module Motorsport.Wec.Circuit.LeMans.Layout exposing (decoder, layout)
 
 {-| The Circuit de la Sarthe as a map draws it: the lap, the pit lane beside
 it, and where round the lap the lines it is timed at stand.
 
-What is written here is the season's distances; the record they are written into
-and the projection the degrees are drawn through are
-[`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
+The lap itself arrives as the served geometry -- `static/geometry/le_mans.geojson`,
+decoded and checked by [`Motorsport.Wec.Circuit.Geometry`](Motorsport-Wec-Circuit-Geometry).
+What is written here is the season's distances and the drawing's lengths; the
+record they are written into and the projection the degrees are drawn through
+are [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-@docs layout
+@docs decoder, layout
 
 -}
 
+import Json.Decode exposing (Decoder)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Wec.Circuit.LeMans.Geometry as Geometry
+
+
+{-| Reading the served geometry, checked against the 13,625.7 m Al Kamel's maps
+give the centreline in every season from 2024.
+-}
+decoder : Decoder Geometry
+decoder =
+    Geometry.decoder { lapLength = 13625.7 }
 
 
 {-| The circuit as a season's race was timed on it. A season after the last one
 here is read as that one.
 -}
-layout : Int -> Layout
-layout season =
-    { shape = shape
-    , pitLane = pitLane
-    , timingLines = timingLines season
+layout : Int -> Geometry -> Layout
+layout season geometry =
+    let
+        lap =
+            shape geometry
+
+        pit =
+            pitLane geometry
+    in
+    { shape = lap
+    , pitLane = pit
+    , timingLines = timingLines season lap
     , lengths = lengths
     }
 
@@ -73,22 +91,22 @@ lengths =
     }
 
 
-shape : Shape
-shape =
-    Circuit.shapeOf Geometry.frame Geometry.centreline
+shape : Geometry -> Shape
+shape geometry =
+    Circuit.shapeOf geometry.frame geometry.centreline
 
 
-pitLane : List Point
-pitLane =
-    Circuit.pitLaneOf Geometry.frame Geometry.pitLane
+pitLane : Geometry -> List Point
+pitLane geometry =
+    Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
 {-| The "Approximate Distances" of Al Kamel's circuit map for each race, which
 name six of the lines and not the rest. 2024's map gives Ford In apart from
 Safety Car Line 1, and does not place the latter.
 -}
-timingLines : Int -> TimingLines
-timingLines season =
+timingLines : Int -> Shape -> TimingLines
+timingLines season lap =
     if season <= 2024 then
         published
             { intermediate1 = 1899.09
@@ -98,6 +116,7 @@ timingLines season =
             , safetyCarLine1 = Nothing
             , fordOut = 13469.78
             }
+            lap
 
     else if season == 2025 then
         published
@@ -108,6 +127,7 @@ timingLines season =
             , safetyCarLine1 = Just 13251.0
             , fordOut = 13469.78
             }
+            lap
 
     else
         published
@@ -118,6 +138,7 @@ timingLines season =
             , safetyCarLine1 = Just 13246.35
             , fordOut = 13470.88
             }
+            lap
 
 
 published :
@@ -128,11 +149,12 @@ published :
     , safetyCarLine1 : Maybe Float
     , fordOut : Float
     }
+    -> Shape
     -> TimingLines
-published lines =
+published lines lap =
     let
         finishLine =
-            Shape.length shape
+            Shape.length lap
     in
     { sectors =
         Sector.initialize
