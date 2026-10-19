@@ -54,9 +54,8 @@ pub mod Motorsport.TestEvents {
         Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids));
         Assert.assertTrue(List.forAll(id -> Events.displayName(id) != id, ids))
 
-    /// Which ground a round was run on is no more in the laps than which way
-    /// round they were driven: an id nobody answers leaves the app to choose a
-    /// drawing by guessing, so every round answers.
+    /// Which ground a round was run on is read off the calendar, as the
+    /// direction above is.
     @Test
     def testEveryRoundOnTheCalendarNamesItsCircuit(): Unit \ Assert =
         let ids = calendarIds();
@@ -75,10 +74,8 @@ pub mod Motorsport.TestEvents {
     def testUnknownRoundHasNoDirection(): Unit \ Assert =
         Assert.assertTrue(Option.isEmpty(Events.direction("unknown_event")))
 
-    /// The name is the stem the round ids share rather than the whole id, so a
-    /// championship running a second round at a circuit it already draws gives
-    /// that circuit one name and one drawing. An id nobody answers names none,
-    /// rather than naming whichever one is drawn.
+    /// The name is the stem the round ids share, so a second round at a circuit
+    /// already drawn gives it one name and one drawing.
     @Test
     def testWhichCircuitEachRoundWasRunOn(): Unit \ Assert =
         use Motorsport.Circuit.Circuit;
@@ -86,6 +83,8 @@ pub mod Motorsport.TestEvents {
         Assert.assertTrue(Events.circuit("cota_6h") == Some(Circuit.Cota));
         Assert.assertTrue(Events.circuit("sao_paulo_6h") == Some(Circuit.SaoPaulo));
         Assert.assertTrue(Events.circuit("bahrain_8h") == Some(Circuit.Bahrain));
+        // An id nobody answers names none, rather than naming whichever circuit
+        // is drawn.
         Assert.assertTrue(Option.isEmpty(Events.circuit("unknown_event")))
 
 }

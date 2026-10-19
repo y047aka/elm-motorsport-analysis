@@ -35,27 +35,20 @@ tests =
             ]
         , describe "the grain a round and its circuit disagree on"
             [
-                -- `lapScale` reads the finer grain only when the round is timed at it
-                -- *and* the circuit places the lines, so these two combinations are what
-                -- its catch-all holds. They look like mistakes -- a round measured fifteen
-                -- ways over a circuit that places three lines, and lines placed that no
-                -- lap was ever timed across -- and the scale answers each by falling back
-                -- to the sector grain. A reading that reached for a round's own shares
-                -- where the circuit gives no distance for them would place a car between
-                -- lines the drawing has no place for.
+                -- `lapScale` reads the finer grain only when the round is timed
+                -- at it *and* the circuit places the lines; each of these two
+                -- combinations answers at the sector grain.
                 test "a round timed finer than its circuit places lines" <|
                 \_ ->
-                    -- The circuit places 1,000, 4,000 and 10,000 m and nothing finer, so
-                    -- the round's fifteen shares are not read and the answers interpolate
-                    -- those three distances.
+                    -- Nothing finer than 1,000, 4,000 and 10,000 m is placed,
+                    -- and these interpolate those three distances.
                     [ 0.1, 0.35, 0.75 ]
                         |> List.map (Config.toMetres (Config.lapScale sectorsOnlyLines byMiniSectors))
                         |> expectAll [ 500, 2687.5, 7187.5 ]
             , test "lines the circuit places that no round was timed across" <|
                 \_ ->
-                    -- Fifteen lines placed and a round that split its lap three ways, so
-                    -- the placed lines are not read either: these interpolate the circuit's
-                    -- sector distances of 1,800, 6,000 and 12,000 m.
+                    -- Fifteen lines placed and a lap split three ways: these
+                    -- interpolate 1,800, 6,000 and 12,000 m.
                     [ 0.1, 0.35, 0.75 ]
                         |> List.map (Config.toMetres (Config.lapScale miniSectorLines bySectors))
                         |> expectAll [ 900, 3900, 9000 ]

@@ -33,8 +33,7 @@ test.describe('Circuit of the Americas Visual Tests', () => {
   //
   // Lap 71 is where the field is widest: 35 of the 36 cars are out, running over 18
   // of the 20 tenths of the lap, at a green-flag stretch between the safety car at
-  // 2:50 and the next at 4:03. A tracker shot of a bunched field shows whether the
-  // drawing arrived and little of what it is for.
+  // 2:50 and the next at 4:03.
   test('should render the tracker at full detail', async ({ page }) => {
     await setLapCount(page, COTA, 71);
     await waitForTrackerColumn(page);

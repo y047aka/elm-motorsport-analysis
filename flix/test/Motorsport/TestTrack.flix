@@ -79,9 +79,8 @@ pub mod Motorsport.TestTrack {
         Assert.assertTrue(isShare(0.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.SCL2, track)));
         Assert.assertTrue(isShare(14.0f64 / 15.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.FL, track)))
 
-    /// Which ground the round was run on is nothing to how the lap divides, and
-    /// everything to which drawing it is put in -- so it travels to the summary
-    /// as it was given, in the one word the app chooses its drawing by.
+    /// The circuit travels to the summary as it was given, in the one word the
+    /// app chooses its drawing by.
     @Test
     def theCircuitTravelsToTheSummaryAsGiven(): Unit \ Assert =
         let track = Track.fromFastest(
@@ -94,8 +93,7 @@ pub mod Motorsport.TestTrack {
         Assert.assertTrue(String.contains({substr = "\"circuit\": \"cota\""}, json));
         Assert.assertTrue(String.contains({substr = "\"direction\": \"counter_clockwise\""}, json))
 
-    /// A round `Motorsport.Events` has never been told about states no circuit,
-    /// rather than naming whichever one it has a drawing of.
+    /// A round `Motorsport.Events` has never been told about states no circuit.
     @Test
     def aRoundOfUnknownCircuitStatesNone(): Unit \ Assert =
         let track = Track.fromFastest(

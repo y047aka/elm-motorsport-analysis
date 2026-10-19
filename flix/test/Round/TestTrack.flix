@@ -176,9 +176,8 @@ pub mod Round.TestTrack {
         let json = Encode.render(Track.toJson(track(clockwise(), laps)));
         Assert.assertTrue(not String.contains({substr = "\"miniSectors\""}, json))
 
-    /// Which ground a round was run on comes out of the summary beside the
-    /// direction it already carried, off the round's id -- and an id no one
-    /// answers carries neither, rather than naming whichever circuit is drawn.
+    /// The summary's circuit comes off the round's id, beside the direction it
+    /// already carried.
     @Test
     def testTheCircuitComesOffTheRoundId(): Unit \ {Assert, IO} =
         let laps = mkLap(15000, Some(5000), Some(5000), Some(5000)) :: Nil;
