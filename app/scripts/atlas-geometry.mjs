@@ -7,16 +7,21 @@
 // A circuit joins the `atlas` table below by one entry naming the script that
 // surveys it and the atlas outline for the layout this app draws.
 //
-// The atlas draws its outlines from orthoimagery registered to lidar, so its
-// line is an independent second survey of the same ground: where our geometry
-// is the OpenStreetMap centreline stretched to the circuit's published lap
-// length, theirs is a measurement of the track surface at its own length. This
-// writes `geometry/<circuit>.atlas.geojson` — their outline and corner markers
-// in this repository's geometry profile, at their length and *not* stretched —
-// and prints the three readings that matter before anyone draws on them: how
-// far the lines stand apart in metres, whether the atlas corner markers land at
-// the lap distances our geometry puts them at, and where the circuit's own
-// published sector lines stand on each of the two lines.
+// The atlas measures its outlines' edges off orthoimagery registered to lidar;
+// OpenStreetMap's centreline seeds that measurement, its own `surface.sources`
+// recording that the seed "fixes lap order, origin and direction; the edges are
+// measured". This writes `geometry/<circuit>.atlas.geojson` — their outline and
+// corner markers in this repository's geometry profile, at their length and
+// *not* stretched — and prints the three readings that matter before anyone
+// draws on them: how far the lines stand apart in metres, whether the atlas
+// corner markers land at the lap distances our geometry puts them at, and where
+// the circuit's own published sector lines stand on each of the two lines.
+//
+// For a circuit this repository has not surveyed yet, the atlas's
+// `start_finish` point is a surveyed coordinate to seed the circuit script's
+// `timingLine` with. The origin guard below is what checks such a seed; whether
+// the lines the times are read against stand where the seeded line puts them is
+// `check-timing-lines.mjs`'s to answer, once a round has been loaded.
 //
 // It writes no Elm and no Layout. Whether to draw on a measured line instead of
 // the stretched survey is a separate change, and an expensive one: every tracker
@@ -45,6 +50,8 @@ import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const atlas = {
+  // Keyed by the circuit word — the slug its script holds, which the summaries
+  // send for the circuit and `Shared.trackOf` picks a drawing by.
   cota: {
     script: "./cota-geometry.mjs",
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
