@@ -17,10 +17,15 @@ What the checks are _for_ is one number the file cannot vouch for itself: its
 last metre must stand where the circuit's published lap length says, which is
 only known from the authored side and is why the decoder is given it.
 
+`mgold/elm-geojson` decodes the RFC itself -- features, lines, positions --
+and what is checked here is what that cannot know: the `role`s this file uses,
+the metres beside the points, the frame, the published length.
+
 @docs Geometry, LapPoint, decoder
 
 -}
 
+import GeoJson
 import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Circuit.Geodesy as Geodesy exposing (Coordinate, Frame)
 
@@ -55,8 +60,45 @@ placed by them, and `check-timing-lines.mjs` is the reader that judges them.
 -}
 decoder : { lapLength : Float } -> Decoder Geometry
 decoder { lapLength } =
-    Decode.field "features" (Decode.list feature)
-        |> Decode.andThen (assemble lapLength)
+    GeoJson.decoder
+        |> Decode.andThen
+            (\( collection, _ ) ->
+                case collection of
+                    GeoJson.FeatureCollection features ->
+                        assemble lapLength (List.filterMap line features)
+
+                    _ ->
+                        Decode.fail "the geometry is not a feature collection"
+            )
+
+
+{-| The features that matter: one whose `role` is known, with a line as its
+geometry. A feature of another role is not this geometry's business, and a role
+without a line is not a feature of it.
+-}
+line : GeoJson.FeatureObject -> Maybe Feature
+line feature =
+    case ( Decode.decodeValue (Decode.field "role" Decode.string) feature.properties, roundTheLap feature.geometry ) of
+        ( Ok role, Just coordinates ) ->
+            Just
+                { role = role
+                , coordinates = coordinates
+                , metres = Decode.decodeValue (Decode.field "metres" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
+                , frame = Decode.decodeValue frame feature.properties |> Result.toMaybe
+                }
+
+        _ ->
+            Nothing
+
+
+roundTheLap : Maybe GeoJson.Geometry -> Maybe (List Coordinate)
+roundTheLap geometry =
+    case geometry of
+        Just (GeoJson.LineString positions) ->
+            Just (List.map (\( lon, lat, _ ) -> { lat = lat, lon = lon }) positions)
+
+        _ ->
+            Nothing
 
 
 type alias Feature =
@@ -140,22 +182,6 @@ firstDrop rest previous at =
 
                 Nothing ->
                     firstDrop after (Just next) (at + 1)
-
-
-feature : Decoder Feature
-feature =
-    Decode.map4 Feature
-        (Decode.field "properties" (Decode.field "role" Decode.string))
-        (Decode.field "geometry" (Decode.field "coordinates" (Decode.list coordinate)))
-        (Decode.maybe (Decode.field "properties" (Decode.field "metres" (Decode.list Decode.float))))
-        (Decode.maybe (Decode.field "properties" frame))
-
-
-coordinate : Decoder Coordinate
-coordinate =
-    Decode.map2 (\lon lat -> { lat = lat, lon = lon })
-        (Decode.index 0 Decode.float)
-        (Decode.index 1 Decode.float)
 
 
 frame : Decoder Frame

@@ -50,6 +50,11 @@ tests =
             \_ ->
                 decode { outline | frame = Nothing }
                     |> complainsAbout "no metres or no frame"
+        , test "a role drawn as a point is no line, and so no outline" <|
+            \_ ->
+                decodeOf [ outlineFeature outline (point [ 0.2, 47.9 ]), pitLane ]
+                    |> Result.toMaybe
+                    |> Expect.equal Nothing
         ]
 
 
@@ -80,7 +85,13 @@ frame =
 
 features : List Encode.Value -> Lap -> List Encode.Value
 features extra lap =
-    [ Encode.object
+    [ outlineFeature lap (line [ ( 47.9, 0.1 ), ( 47.9, 0.2 ), ( 47.91, 0.2 ) ]) ]
+        ++ extra
+
+
+outlineFeature : Lap -> Encode.Value -> Encode.Value
+outlineFeature lap geometry =
+    Encode.object
         [ ( "type", Encode.string "Feature" )
         , ( "properties",
                 Encode.object
@@ -90,10 +101,13 @@ features extra lap =
                         ++ Maybe.withDefault [] (Maybe.map (\f -> [ ( "frame", f ) ]) lap.frame)
                    )
           )
-        , ( "geometry", line [ ( 47.9, 0.1 ), ( 47.9, 0.2 ), ( 47.91, 0.2 ) ] )
+        , ( "geometry", geometry )
         ]
-    ]
-        ++ extra
+
+
+point : List Float -> Encode.Value
+point coordinates =
+    Encode.object [ ( "type", Encode.string "Point" ), ( "coordinates", Encode.list Encode.float coordinates ) ]
 
 
 pitLane : Encode.Value
