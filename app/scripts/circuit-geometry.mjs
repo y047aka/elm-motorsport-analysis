@@ -56,6 +56,8 @@ const radius = 6371008.8;
  * @property {string} finishRole
  * @property {{ lat: number, lon: number, within?: number }} [timingLine]
  * @property {number} lapLength
+ * @property {number[]} [sectorMapStretches] the circuit's published sector lengths
+ * @property {string} [sectorsSource]         who publishes them
  * @property {string} module    e.g. `Motorsport.Wec.Circuit.Cota.Geometry`
  * @property {string} path      the module's file, from the repository root
  * @property {string} geojson   the geometry file, from the repository root
@@ -205,7 +207,10 @@ export async function writeModule(circuit, geometry) {
 // degrees project through, whole, so the module's `Geodesy.frame` is a copy and
 // not a re-derivation. A `basis` says what kind of line it is -- the OSM centreline
 // stretched, a measurement's midline -- so a file cannot be mistaken for the
-// other, and the ODbL copyright travels in `source` and `license`.
+// other, and the ODbL copyright travels in `source` and `license`. Where the
+// circuit itself publishes the lines it times to, those authored stretches
+// travel as `sectors`, so a check of the timing lines reads data rather than a
+// script's config.
 
 export function geoJsonString(circuit, geometry) {
   const outline = feature(
@@ -218,6 +223,10 @@ export function geoJsonString(circuit, geometry) {
       surveyed_at: geometry.surveyedAt,
       lap_length_m: circuit.lapLength,
       surveyed_length_m: geometry.surveyedLength,
+      sectors:
+        circuit.sectorMapStretches === undefined
+          ? undefined
+          : { source: circuit.sectorsSource, stretches: circuit.sectorMapStretches },
       frame: geometry.frame,
       metres: geometry.centreline.map((p) => p.metres),
     },
@@ -234,7 +243,9 @@ export function geoJsonString(circuit, geometry) {
 // geometry is one line per property rather than one per number -- a refreshed
 // survey reads as two changed lines per feature.
 function feature(props, coordinates) {
-  const entries = Object.entries(props).map(([key, value]) => `        ${JSON.stringify(key)}: ${JSON.stringify(value)}`);
+  const entries = Object.entries(props)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `        ${JSON.stringify(key)}: ${JSON.stringify(value)}`);
   return (
     `    {\n      "type": "Feature",\n      "properties": {\n${entries.join(",\n")}\n      },\n` +
     `      "geometry": ${JSON.stringify({ type: "LineString", coordinates })}\n    }`
@@ -269,6 +280,13 @@ export function geometryFromGeoJson(json, circuit) {
       `the outline ends at ${metres[metres.length - 1]} m, not the published ${circuit.lapLength} m`,
     );
   }
+  const sectors = props.sectors ?? null;
+  if (sectors) {
+    const total = sectors.stretches.reduce((sum, stretch) => sum + stretch, 0);
+    if (Math.abs(total - circuit.lapLength) > 0.15) {
+      throw new Error(`the sectors add up to ${total} m, not the published ${circuit.lapLength} m`);
+    }
+  }
   const onEarth = ([lon, lat]) => ({ lat, lon });
   return {
     centreline: coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
@@ -276,6 +294,7 @@ export function geometryFromGeoJson(json, circuit) {
     frame: props.frame,
     surveyedAt: props.surveyed_at ?? null,
     surveyedLength: props.surveyed_length_m ?? null,
+    sectors,
     counts: null,
   };
 }
@@ -310,7 +329,7 @@ function nearTimingLine(rel, nodes, chosen, circuit) {
   );
 }
 
-const degreesToMetres = (Math.PI / 180) * radius;
+export const degreesToMetres = (Math.PI / 180) * radius;
 
 // The relation lists its ways in no particular order, and a way open to traffic
 // both ways may be drawn against the direction of the race. A oneway way is
@@ -350,7 +369,7 @@ function rotate(ids, start) {
 // Equirectangular about the circuit's own latitude: across the few km a circuit
 // covers its error is far below the tolerance the line is simplified to. `y`
 // runs south, as SVG's does, so north is up.
-function projection(points) {
+export function projection(points) {
   const parallel = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
   const east = Math.cos(parallel * (Math.PI / 180));
   const project = ({ lat, lon }) => ({
@@ -372,7 +391,7 @@ function frameOf(points, parallel) {
   };
 }
 
-function cumulative(points) {
+export function cumulative(points) {
   const out = [0];
   for (let i = 1; i < points.length; i++) {
     out.push(out[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));

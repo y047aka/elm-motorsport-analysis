@@ -40,12 +40,13 @@ export const circuit = {
   lapLength: 5515.0,
 
   // Where the sector map puts the lines the lap is timed to, measured along it
-  // -- the same distances `Motorsport.Wec.Circuit.Cota.Layout` places, spelled
-  // here so `check-timing-lines.mjs` reads one file rather than parsing the
-  // Elm module. The drawing is checked against the published lap length and
-  // not against these; a line moved in one and not the other is a drift to
-  // read as a diff, as a regeneration is.
+  // -- the same distances `Motorsport.Wec.Circuit.Cota.Layout` places, written
+  // into the geometry as `sectors` so `check-timing-lines.mjs` reads the
+  // geometry file rather than this script. The drawing is checked against the
+  // published lap length and not against these; a line moved in one and not the
+  // other is a drift to read as a diff, as a regeneration is.
   sectorMapStretches: [1313.2, 2254.3, 1947.5],
+  sectorsSource: "the circuit's own track sector map",
 
   module: "Motorsport.Wec.Circuit.Cota.Geometry",
   path: "package/src/Motorsport/Wec/Circuit/Cota/Geometry.elm",
