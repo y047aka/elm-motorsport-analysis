@@ -37,7 +37,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept) |
+| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` rewrites the module from the geometry kept in the tree) |
+| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, and keep it beside it (`cota [--file gp.geojson]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -398,10 +399,22 @@ circuit, which supplies the relation, the member role naming the line the lap
 is measured from, the published length the surveyed line is stretched to, and
 the prose the generated module is documented with — `nix run .#geometry-cota`,
 `nix run .#geometry-le-mans`. Both ask OpenStreetMap, which answers a busy runner with
-a 502 or a 504 — repeat the run, or hand the answer in as a file. Nothing in the
-repository keeps the answer a module was written from, and nothing checks a module
-against one, because the tests could not hold it anyway: the pipeline stretches a
-survey to the circuit's published lap length whatever the degrees say, so a point
+a 502 or a 504 — repeat the run, or hand the answer in as a file. The answer is
+reduced to a geometry GeoJSON under `app/scripts/geometry/` — the degrees, the
+metres per point, the frame, a `basis` saying what kind of line it is — and the
+Elm module is generated from that geometry alone, so `--from-geojson` rewrites
+the module with no OpenStreetMap and an empty `git diff` is what a regeneration
+being nothing is checked with. The geometries are kept because they are read
+twice — once by the generator, once as the line other datasets are measured
+against, which is what an Overpass answer never was. `nix run .#geometry-atlas
+cota` reads the track-atlas line — a midline measured from orthoimagery, not a
+survey stretched to a published length, at 5,500.2 m against the 5,515 m this
+app draws — keeps it as `<circuit>.atlas.geojson` with `stretched: false`, and
+prints how far the two lines stand apart. It writes no Elm: drawing on a
+measured line would move every tracker baseline and re-open where the timing
+lines stand, which is its own change judged on that report. The tests still
+cannot hold a survey: the pipeline stretches whatever degrees it gets to the
+circuit's published lap length whatever the degrees say, so a point
 moved 20 m passes every Elm test and leaves the tracker's pixels where they were. A
 regeneration is read as a diff, and a survey that moved by metres goes to
 `update-snapshots-ci` with it, since every tracker baseline is drawn on those degrees.
