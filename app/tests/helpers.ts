@@ -14,9 +14,9 @@ const keptRounds = [LE_MANS, COTA];
  *
  * It has to name the circuit the round was run on. Which drawing a round gets --
  * the surveyed lap or the ring -- is the summary's `track.circuit` and nothing
- * else, so a file exported before the CLI wrote that key draws Le Mans's lap as a
- * ring and COTA's as a ring too, and no pixel-level check can tell that a
- * rendering of the wrong shape is wrong. Failing here says what to run instead.
+ * else, so a file exported before the CLI wrote that key draws every lap as a
+ * ring, and no pixel-level check can tell that a rendering of the wrong shape is
+ * wrong.
  */
 export function summaryOf(round: string): {
   track?: { circuit?: string };
@@ -55,12 +55,10 @@ export async function waitForPageReady(page: Page, contentSelector: string) {
 export const TRACKER_COLUMN = '[data-tracker-column]';
 
 /**
- * Assert the tracker drew the circuit and not the ring it falls back to.
- *
- * Which of the two a round is put in is the summary's `track.circuit`, so a summary
- * written before that key existed draws a surveyed lap as a ring: nothing fails, and
- * the only thing that moved is the shape of the race. The ring's lap is a circle and
- * the surveyed lap is a polygon, which the ring's drawing has none of.
+ * Assert the tracker drew the circuit and not the ring it falls back to. Nothing
+ * fails when the ring is drawn; what moved is the shape of the race. The ring's
+ * lap is a circle and the surveyed lap is a polygon, which the ring's drawing has
+ * none of, so the polygon says a drawing was chosen -- no baseline needed.
  */
 export async function expectSurveyedLap(page: Page) {
   await expect(page.locator(`${TRACKER_COLUMN} svg polygon`)).toHaveCount(1);

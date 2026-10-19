@@ -47,7 +47,6 @@ tests =
                     |> Expect.equal []
         , test "the lap is not divided finer than its three sectors" <|
             \_ ->
-                -- The timing feed carries no mini-sector times for this round.
                 layout.timingLines.miniSectors
                     |> Expect.equal SectorsOnly
         , describe "the lengths it is drawn at"
@@ -56,9 +55,9 @@ tests =
                     -- Both circuits are drawn in one box, and each box is fitted by its own
                     -- width: the row is narrower in proportion than either of them. A length
                     -- therefore reaches the same pixels at both circuits when it stands at
-                    -- the ratio of the two widths -- which is how these were set. The margin
-                    -- is the one length held back at three tenths of Le Mans's, since it is
-                    -- added to that width and so moves what every ratio is taken over.
+                    -- the ratio of the two widths. The margin is the one length held back at
+                    -- three tenths of Le Mans's, since it is added to that width and so moves
+                    -- what every ratio is taken over.
                     let
                         expected =
                             boxWidth layout / boxWidth (LeMans.layout 2025)

@@ -61,13 +61,9 @@ has a map of, [`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig) for
 every other.
 
 `circuit` is the CLI's word for the ground the round was run on --
-`Motorsport.Events.circuit` -- and it is kept as the word rather than as a case
-here because the word is vocabulary that grows: a new round at a new venue is
-data the CLI is told, not a discovery about circuits. What the app asks it is
-only "is there a drawing of this", and a name it has never had one for is the
-ring, which is the answer `Nothing` gives too. A key written in a shape other
-than a string fails the round, as `sectors` does: that is a disagreement with
-the file, not an unfamiliar name.
+`Motorsport.Events.circuit`. What the app asks it is only "is there a drawing
+of this", and a name it has never had one for is the ring, which is the answer
+`Nothing` gives too.
 
 -}
 type alias Track =

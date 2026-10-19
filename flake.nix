@@ -168,8 +168,8 @@
         };
 
         # A circuit's module is written out of OpenStreetMap's relation for it, so
-        # these ask and can be answered a 502 or a 504 -- repeat the run. Kept apart
-        # from `mkNodeApp`: neither touches node_modules nor the Elm toolchain.
+        # these ask and can be answered a 502 or a 504 -- repeat the run, or hand
+        # in a kept answer as a file.
         geometryApp = name: script:
           pkgs.writeShellApplication {
             inherit name;

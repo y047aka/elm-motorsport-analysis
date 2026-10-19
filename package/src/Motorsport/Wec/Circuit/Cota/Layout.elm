@@ -47,11 +47,10 @@ The margin is the length that cannot be taken there with the rest, because it is
 added to the box as well as to what stands in it: six tenths of Le Mans's
 everything, margin included, and the lap comes back down to 189 px wide against the
 232 it is drawn at now. `LayoutTest` holds every length but this one at the
-ratio, since the margin is added to the box every ratio is taken over. The band left
-under the lap -- two thirds of the row -- is the lap's own proportion, 1,825 m across
-and 1,043 m tall in a row 0.545 wide-to-tall, and no length here touches it. The
+ratio, since the margin is added to the box every ratio is taken over. The
 mini-sector lengths are in the record because `Lengths` holds them, at the same
-ratio as the rest, and not because this lap has mini-sectors to name: it has none.
+ratio as the rest, and not because this lap has mini-sectors to name: it has
+none.
 
 `Compact` is three tenths of Le Mans's and has no measurement behind it. Nothing
 draws that detail -- the app draws `Full` and nothing else -- and the two circuits'
@@ -117,20 +116,17 @@ no later map has been read. A season that moved its lines would be drawn with th
 wrong boundaries, and would place every car wrong between them.
 
 What a new season is checked against is the round's own splits, and for movement
-only: `node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025` reads
-each class's fastest sector times as two distances round a lap of this length, and
-judges how far apart the two seasons put the lines. A sector's share of a lap is
-not a share of its distance, so the times cannot say where a line stands -- the
-shares themselves place the first line 170 m from where this layout does -- they
-say whether two rounds put the lines in the same places. 2025 answers 1,143.8 and
-3,245.5 m for a Hypercar and 1,194.6 and 3,316.8 m for an LMGT3, and 2026 answers
-1,172.1 and 3,257.0, and 1,189.8 and 3,304.1: two seasons, two grids, and 28 m
-between them. How far apart is too far is the command's to say, not this drawing's.
+only: `node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025`
+reads each class's fastest sector times as two distances round a lap of this
+length. A sector's share of a lap is not a share of its distance -- the shares
+themselves place the first line 170 m from where this layout does -- so the
+times say whether two seasons put the lines in the same places, not where a
+line stands. How far apart is too far is the command's to say, not this
+drawing's.
 
 Nothing here splits the lap finer: the feed carries no mini-sector times for
 this round, so a car between two of these lines is placed by the share of the
-time between them it has run. Le Mans has lines finer than these to place a car
-at, and so is placed to a mini-sector rather than to a few hundred metres.
+time between them it has run.
 
 -}
 timingLines : TimingLines

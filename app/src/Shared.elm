@@ -472,9 +472,6 @@ the summary named its circuit.
 trackOf : RoundId -> Wec.Track -> Tracker.Track
 trackOf id track =
     let
-        -- The circuit picks the drawing; the drawing is told which way round the
-        -- lap goes and how it divides. Which circuit it is stops being the
-        -- drawing's business the moment the choice is made.
         drawing =
             { direction = track.direction, config = track.config }
     in

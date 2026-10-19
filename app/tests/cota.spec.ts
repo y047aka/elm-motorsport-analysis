@@ -15,10 +15,6 @@ test.describe('Circuit of the Americas Visual Tests', () => {
     await waitForPageReady(page, 'text=Lone Star Le Mans');
   });
 
-  // Which of the two drawings a round is put in is the summary's `track.circuit`,
-  // so a summary exported before that key existed draws this lap as the ring it
-  // falls back to. The ring is a circle the cars run round and the surveyed lap is
-  // a polygon, which is told apart here without a baseline to compare pixels to.
   test('should draw the surveyed lap and not the ring', async ({ page }) => {
     await setLapCount(page, COTA, 71);
     await waitForTrackerColumn(page);
@@ -26,10 +22,7 @@ test.describe('Circuit of the Americas Visual Tests', () => {
   });
 
   // The lap, the pit lane beside it and the three sector boundaries the round is
-  // timed at, at the lengths COTA writes for itself: three tenths of the metres Le
-  // Mans's tracker is measured in, which is a scale rather than a measurement -- a
-  // lap 1,825 m across and 1,043 m tall is wide-to-tall 1.75 where Le Mans is 0.50,
-  // so no one multiplier is right in both directions of that.
+  // timed at, at the lengths COTA's `Layout` writes for itself.
   //
   // Lap 71 is where the field is widest: 35 of the 36 cars are out, running over 18
   // of the 20 tenths of the lap, at a green-flag stretch between the safety car at
