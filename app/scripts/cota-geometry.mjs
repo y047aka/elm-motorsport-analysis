@@ -3,11 +3,15 @@
 // pipeline itself is `circuit-geometry.mjs`, which every circuit's script runs.
 //
 //     node scripts/cota-geometry.mjs [overpass.json]
+//     node scripts/cota-geometry.mjs --from-geojson [geometry.json]
 //
 // Asks OpenStreetMap, which answers a busy runner with a 502 or a 504: repeat
 // the run. The answer a module should be written from can be handed in as a
-// file instead. A survey that moved moves every tracker baseline, and the
-// visual tests only notice metres, so read a regeneration's diff.
+// file instead. Either way the geometry lands beside these scripts, as
+// `geometry/cota.geojson`; `--from-geojson` writes the module from that with no
+// OpenStreetMap, which is how a regeneration is shown to have changed nothing.
+// A survey that moved moves every tracker baseline, and the visual tests only
+// notice metres, so read a regeneration's diff.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // module written here is a derivative of it.
@@ -16,6 +20,7 @@ import { isEntry, main } from "./circuit-geometry.mjs";
 
 export const circuit = {
   relation: 6537729,
+  slug: "cota",
 
   // The relation tags two nodes, `start` and `finish`, 297 m apart along the
   // lap: the first is where the race starts and the second is the line the lap is
@@ -44,6 +49,7 @@ export const circuit = {
 
   module: "Motorsport.Wec.Circuit.Cota.Geometry",
   path: "package/src/Motorsport/Wec/Circuit/Cota/Geometry.elm",
+  geojson: "app/scripts/geometry/cota.geojson",
   layout: "Motorsport.Wec.Circuit.Cota.Layout",
   script: "app/scripts/cota-geometry.mjs",
   survey: "The Circuit of the Americas",

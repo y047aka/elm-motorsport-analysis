@@ -1,6 +1,7 @@
 // The pipeline every circuit's geometry module is written by: take a relation's
 // surveyed points, chain its ways into a lap, stretch the lap to the length the
-// circuit publishes, simplify it, and write the Elm module.
+// circuit publishes, simplify it, and write the geometry GeoJSON and the Elm
+// module.
 //
 // One file per circuit calls this with its own relation, its own published lap
 // length and its own docstring prose. What it writes is the same shape every
@@ -9,13 +10,21 @@
 // a config here and a `Layout` module on the Elm side.
 //
 //     node scripts/<circuit>-geometry.mjs [overpass.json]
+//     node scripts/<circuit>-geometry.mjs --from-geojson [geometry.json]
 //
-// Given a file, reads the Overpass answer out of it rather than asking -- which is how
-// a module is re-written without OpenStreetMap, and how an answer can be kept if the
-// survey instant it holds is worth keeping.
+// Given an Overpass answer as a file, reads it rather than asking.
+//
+// The geometry GeoJSON is the seam the module is written from: the answer is
+// reduced to it, and the Elm module is generated out of it alone. It is kept in
+// the repository beside the scripts, which is what `--from-geojson` reads -- a
+// module can be rewritten, and shown to be the same module, with no
+// OpenStreetMap. The Overpass answer itself is not kept: it is asked again on a
+// regeneration, and nothing else reads it. What the GeoJSON holds is read twice
+// -- by this pipeline, and by `atlas-geometry.mjs`, which measures another
+// dataset's line against it.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
-// module written here is a derivative of it.
+// geometry and module written here is a derivative of it.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -43,11 +52,13 @@ const radius = 6371008.8;
  *
  * @typedef {object} Circuit
  * @property {number} relation
+ * @property {string} slug      e.g. `cota`; names the geometry file
  * @property {string} finishRole
  * @property {{ lat: number, lon: number, within?: number }} [timingLine]
  * @property {number} lapLength
  * @property {string} module    e.g. `Motorsport.Wec.Circuit.Cota.Geometry`
  * @property {string} path      the module's file, from the repository root
+ * @property {string} geojson   the geometry file, from the repository root
  * @property {string} layout    the Elm module that draws it, named in the header
  * @property {string} script    this file, named in the header
  * @property {string} survey    e.g. `The Circuit of the Americas`
@@ -64,23 +75,45 @@ export function isEntry(moduleUrl) {
   return pathToFileURL(process.argv[1] ?? "").href === moduleUrl;
 }
 
-/** Write the circuit's module. `argv` is the script's own, whose first entry may name
- * a file to read the Overpass answer out of rather than asking.
+/** Write the circuit's geometry, and the module written from it. `argv` is the
+ * script's own:
  *
- * Asking is the default and it does fail: Overpass answers a busy runner with a 502 or
- * a 504, so repeat a run rather than trusting the first. What comes back is a survey
- * taken *now*, so the metres written are today's line -- and the visual tests only show
- * a survey that moved by metres or more, which is why a regeneration is read as a diff
+ *   - `--from-geojson [file]` writes the module out of a geometry file -- the
+ *     circuit's kept one when no file is named -- and asks OpenStreetMap
+ *     nothing. This is how a module is shown to still be the geometry it says
+ *     it is: run it and read the empty diff.
+ *   - a file names an Overpass answer to read instead of asking.
+ *   - neither asks OpenStreetMap, which a busy runner answers with a 502 or a
+ *     504; repeat the run rather than trusting the first.
+ *
+ * Asking writes both files, so what comes back is a survey taken *now* and the
+ * metres written are today's line -- and the visual tests only show a survey
+ * that moved by metres or more, which is why a regeneration is read as a diff
  * and not as a rendering.
  */
 export async function main(circuit, argv) {
   try {
-    const [file] = argv;
-    await writeModule(circuit, lapOf(await answer(circuit.relation, file), circuit));
+    const from = valueOf(argv, "--from-geojson");
+    if (from !== null) {
+      const path = from || join(repoDir, circuit.geojson);
+      await writeModule(circuit, geometryFromGeoJson(JSON.parse(await readFile(path, "utf8")), circuit));
+      return;
+    }
+    const [file] = argv.filter((a) => !a.startsWith("--"));
+    const geometry = lapOf(await answer(circuit.relation, file), circuit);
+    await writeGeoJson(circuit, geometry);
+    await writeModule(circuit, geometry);
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
   }
+}
+
+/** The value following `flag`, the empty string when it stands alone, and null
+ * when the flag is absent. */
+function valueOf(argv, flag) {
+  const at = argv.indexOf(flag);
+  return at === -1 ? null : argv[at + 1] || "";
 }
 
 /** The answer from a file if one was given, and from OpenStreetMap if not. */
@@ -148,16 +181,103 @@ export function lapOf(osm, circuit) {
   };
 }
 
-/** Write the module, and say what was read out of the answer. */
+/** Write the module, and say what it was written from. */
 export async function writeModule(circuit, geometry) {
   const path = join(repoDir, circuit.path);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, elmModule(circuit, geometry));
+  const surveyed = geometry.surveyedLength === null ? "" : `, surveyed ${geometry.surveyedLength.toFixed(1)} m`;
+  const of = geometry.counts === null ? "" : ` of ${geometry.counts.lap}`;
+  const pit = geometry.counts === null ? "" : ` of ${geometry.counts.of}`;
   console.log(
-    `centreline: ${geometry.centreline.length} points of ${geometry.counts.lap}, surveyed ${geometry.surveyedLength.toFixed(1)} m; ` +
-      `pit lane: ${geometry.pitLane.length} points of ${geometry.counts.of}; ` +
+    `centreline: ${geometry.centreline.length} points${of}${surveyed}; ` +
+      `pit lane: ${geometry.pitLane.length} points${pit}; ` +
       `frame: origin ${geometry.frame.origin.lat}, ${geometry.frame.origin.lon} parallel ${geometry.frame.parallel}`,
   );
+}
+
+// -- the geometry GeoJSON -----------------------------------------------------
+//
+// The profile both sides read: EPSG:4326 throughout, as the Atlas keeps it; one
+// `outline` LineString whose `metres` property holds, point for point, how far
+// round the lap each stands, in the circuit's published metres; one `pit_lane`
+// LineString with no metres because nothing times along it; and the frame the
+// degrees project through, whole, so the module's `Geodesy.frame` is a copy and
+// not a re-derivation. A `basis` says what kind of line it is -- the OSM centreline
+// stretched, a measurement's midline -- so a file cannot be mistaken for the
+// other, and the ODbL copyright travels in `source` and `license`.
+
+export function geoJsonString(circuit, geometry) {
+  const outline = feature(
+    {
+      role: "outline",
+      circuit: circuit.slug,
+      basis: "osm-centreline",
+      source: `https://www.openstreetmap.org/relation/${circuit.relation}`,
+      license: "ODbL",
+      surveyed_at: geometry.surveyedAt,
+      lap_length_m: circuit.lapLength,
+      surveyed_length_m: geometry.surveyedLength,
+      frame: geometry.frame,
+      metres: geometry.centreline.map((p) => p.metres),
+    },
+    geometry.centreline.map((p) => [p.lon, p.lat]),
+  );
+  const pitLane = feature(
+    { role: "pit_lane", circuit: circuit.slug, basis: "osm-centreline", license: "ODbL" },
+    geometry.pitLane.map((p) => [p.lon, p.lat]),
+  );
+  return `{"type": "FeatureCollection", "features": [\n${[outline, pitLane].join(",\n")}\n]}\n`;
+}
+
+// Coordinates, metres and every other array print on one line each, so a kept
+// geometry is one line per property rather than one per number -- a refreshed
+// survey reads as two changed lines per feature.
+function feature(props, coordinates) {
+  const entries = Object.entries(props).map(([key, value]) => `        ${JSON.stringify(key)}: ${JSON.stringify(value)}`);
+  return (
+    `    {\n      "type": "Feature",\n      "properties": {\n${entries.join(",\n")}\n      },\n` +
+    `      "geometry": ${JSON.stringify({ type: "LineString", coordinates })}\n    }`
+  );
+}
+
+export async function writeGeoJson(circuit, geometry) {
+  const path = join(repoDir, circuit.geojson);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, geoJsonString(circuit, geometry));
+}
+
+/** The geometry a module is written from, read back out of a geometry file. The
+ * outline's metres are checked against the file's own claims before anything is
+ * written: one per point, going up, ending where the published lap length
+ * says -- because a file that drifted past its generator would otherwise reach
+ * the drawing with the survey's authority and none of its own. */
+export function geometryFromGeoJson(json, circuit) {
+  const features = json.features ?? [];
+  const outline = features.find((f) => f.properties?.role === "outline");
+  const pit = features.find((f) => f.properties?.role === "pit_lane");
+  if (!outline || !pit) throw new Error("the geometry holds no outline or no pit lane");
+  const props = outline.properties;
+  const coords = outline.geometry.coordinates;
+  const metres = props.metres;
+  if (metres.length !== coords.length) throw new Error(`${metres.length} metres for ${coords.length} points`);
+  for (let i = 1; i < metres.length; i++) {
+    if (metres[i] < metres[i - 1]) throw new Error(`metres go backwards at point ${i}`);
+  }
+  if (Math.abs(metres[metres.length - 1] - circuit.lapLength) > 0.1) {
+    throw new Error(
+      `the outline ends at ${metres[metres.length - 1]} m, not the published ${circuit.lapLength} m`,
+    );
+  }
+  const onEarth = ([lon, lat]) => ({ lat, lon });
+  return {
+    centreline: coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
+    pitLane: pit.geometry.coordinates.map(onEarth),
+    frame: props.frame,
+    surveyedAt: props.surveyed_at ?? null,
+    surveyedLength: props.surveyed_length_m ?? null,
+    counts: null,
+  };
 }
 
 /**

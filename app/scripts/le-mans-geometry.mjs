@@ -3,11 +3,15 @@
 // pipeline itself is `circuit-geometry.mjs`, which every circuit's script runs.
 //
 //     node scripts/le-mans-geometry.mjs [overpass.json]
+//     node scripts/le-mans-geometry.mjs --from-geojson [geometry.json]
 //
 // Asks OpenStreetMap, which answers a busy runner with a 502 or a 504: repeat
 // the run. The answer a module should be written from can be handed in as a
-// file instead. A survey that moved moves every tracker baseline, and the
-// visual tests only notice metres, so read a regeneration's diff.
+// file instead. Either way the geometry lands beside these scripts, as
+// `geometry/le-mans.geojson`; `--from-geojson` writes the module from that with
+// no OpenStreetMap, which is how a regeneration is shown to have changed
+// nothing. A survey that moved moves every tracker baseline, and the visual
+// tests only notice metres, so read a regeneration's diff.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // module written here is a derivative of it.
@@ -16,6 +20,7 @@ import { isEntry, main } from "./circuit-geometry.mjs";
 
 export const circuit = {
   relation: 2126739,
+  slug: "le-mans",
 
   // The relation tags one node `start-finish`, which is where Al Kamel measures
   // from and so where the lap's zero stands.
@@ -29,6 +34,7 @@ export const circuit = {
 
   module: "Motorsport.Wec.Circuit.LeMans.Geometry",
   path: "package/src/Motorsport/Wec/Circuit/LeMans/Geometry.elm",
+  geojson: "app/scripts/geometry/le-mans.geojson",
   layout: "Motorsport.Wec.Circuit.LeMans.Layout",
   script: "app/scripts/le-mans-geometry.mjs",
   survey: "The Circuit de la Sarthe",
