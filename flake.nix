@@ -167,6 +167,19 @@
           '';
         };
 
+        # A circuit's module is written out of OpenStreetMap's relation for it, so
+        # these ask and can be answered a 502 or a 504 -- repeat the run, or hand
+        # in a kept answer as a file.
+        geometryApp = name: script:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ pkgs.nodejs_26 ];
+            text = ''
+              cd app
+              node scripts/${script}.mjs "$@"
+            '';
+          };
+
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched --
         # subcommands resolve flake.lock, app/elm.json and node_modules
@@ -211,6 +224,8 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
+          geometry-le-mans     = { type = "app"; program = "${geometryApp "geometry-le-mans" "le-mans-geometry"}/bin/geometry-le-mans";                                  meta.description = "Write Le Mans's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept)"; };
+          geometry-cota        = { type = "app"; program = "${geometryApp "geometry-cota" "cota-geometry"}/bin/geometry-cota";                                           meta.description = "Write COTA's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };

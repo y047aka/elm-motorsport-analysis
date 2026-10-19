@@ -1,36 +1,22 @@
-module Motorsport.Wec.Circuit.LeMans.Layout exposing (Layout, TimingLines, layout)
+module Motorsport.Wec.Circuit.LeMans.Layout exposing (layout)
 
 {-| The Circuit de la Sarthe as a map draws it: the lap, the pit lane beside
 it, and where round the lap the lines it is timed at stand.
 
-@docs Layout, TimingLines, layout
+What is written here is the season's distances; the record they are written into
+and the projection the degrees are drawn through are
+[`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
+circuit is drawn out of.
+
+@docs layout
 
 -}
 
-import Motorsport.Circuit.Geodesy as Geodesy
-import Motorsport.Circuit.Shape as Shape exposing (Mark, Point, Shape)
-import Motorsport.Sector as Sector exposing (BySector, Sector(..))
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector(..))
+import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
+import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Wec.Circuit.LeMans.Geometry as Geometry
-
-
-type alias Layout =
-    { shape : Shape
-    , pitLane : List Point
-    , timingLines : TimingLines
-    }
-
-
-{-| How far round the lap, in metres, each stretch of it ends: where the line it
-is timed to stands. A mini-sector ends at the line it is named for.
-
-`Nothing` is a line the season's circuit map gives no distance for.
-
--}
-type alias TimingLines =
-    { sectors : BySector Float
-    , miniSectors : ByMiniSector (Maybe Float)
-    }
 
 
 {-| The circuit as a season's race was timed on it. A season after the last one
@@ -41,53 +27,60 @@ layout season =
     { shape = shape
     , pitLane = pitLane
     , timingLines = timingLines season
+    , lengths = lengths
+    }
+
+
+{-| The lengths the tracker's drawing was measured against, in metres on the
+ground: the car the field is drawn with, the ribbon, the margin and the names.
+Every other circuit's set is read against this one.
+
+`Compact` draws no names, so it carries none.
+
+-}
+lengths : { compact : Circuit.Lengths, full : Circuit.Lengths }
+lengths =
+    { compact =
+        { margin = 150
+        , trackWidth = 22
+        , pitLaneWidth = 14
+        , startFinishLineExtension = 130
+        , startFinishLineStrokeWidth = 32
+        , sectorBoundaryOffset = 105
+        , sectorBoundaryStrokeWidth = 42
+        , carSize = 105
+        , labels = Nothing
+        }
+    , full =
+        { margin = 700
+        , trackWidth = 16
+        , pitLaneWidth = 10
+        , startFinishLineExtension = 160
+        , startFinishLineStrokeWidth = 22
+        , sectorBoundaryOffset = 108
+        , sectorBoundaryStrokeWidth = 32
+        , carSize = 97
+        , labels =
+            Just
+                { sectorRadius = 380
+                , sectorFontSize = 170
+                , miniSectorRadius = -170
+                , miniSectorFontSize = 120
+                , carRadius = 190
+                , carFontSize = 140
+                }
+        }
     }
 
 
 shape : Shape
 shape =
-    List.map mark Geometry.centreline
-        |> Shape.fromMarks
+    Circuit.shapeOf Geometry.frame Geometry.centreline
 
 
 pitLane : List Point
 pitLane =
-    List.map drawn Geometry.pitLane
-
-
-mark : Geometry.LapPoint -> Mark
-mark point =
-    let
-        place =
-            drawn point
-    in
-    { x = place.x
-    , y = place.y
-    , metres = point.metres
-    }
-
-
-drawn : { a | lat : Float, lon : Float } -> Point
-drawn place =
-    let
-        metres =
-            Geodesy.project Geometry.frame { lat = place.lat, lon = place.lon }
-    in
-    { x = tenth metres.x
-    , y = tenth metres.y
-    }
-
-
-{-| The survey's own resolution: a tenth of a metre.
-
-Where a mini-sector's name is written turns on which way the line goes at its
-point, and that reading has a threshold in it, so a drawing carried to the last
-digit of a projection can move a name by its own width.
-
--}
-tenth : Float -> Float
-tenth value =
-    toFloat (round (value * 10)) / 10
+    Circuit.pitLaneOf Geometry.frame Geometry.pitLane
 
 
 {-| The "Approximate Distances" of Al Kamel's circuit map for each race, which
@@ -155,52 +148,54 @@ published lines =
                         finishLine
             )
     , miniSectors =
-        LeMans.initialize
-            (\mini ->
-                case mini of
-                    SCL2 ->
-                        Nothing
+        LeMansMiniSectors
+            (LeMans.initialize
+                (\mini ->
+                    case mini of
+                        SCL2 ->
+                            Nothing
 
-                    Z4 ->
-                        Nothing
+                        Z4 ->
+                            Nothing
 
-                    IP1 ->
-                        Just lines.intermediate1
+                        IP1 ->
+                            Just lines.intermediate1
 
-                    Z12 ->
-                        Nothing
+                        Z12 ->
+                            Nothing
 
-                    SCLC ->
-                        Nothing
+                        SCLC ->
+                            Nothing
 
-                    A7_1 ->
-                        Nothing
+                        A7_1 ->
+                            Nothing
 
-                    IP2 ->
-                        Just lines.intermediate2
+                        IP2 ->
+                            Just lines.intermediate2
 
-                    A8_1 ->
-                        Nothing
+                        A8_1 ->
+                            Nothing
 
-                    SCLB ->
-                        Nothing
+                        SCLB ->
+                            Nothing
 
-                    PORIN ->
-                        Just lines.porscheIn
+                        PORIN ->
+                            Just lines.porscheIn
 
-                    POROUT ->
-                        Just lines.porscheOut
+                        POROUT ->
+                            Just lines.porscheOut
 
-                    PITREF ->
-                        Nothing
+                        PITREF ->
+                            Nothing
 
-                    SCL1 ->
-                        lines.safetyCarLine1
+                        SCL1 ->
+                            lines.safetyCarLine1
 
-                    FORDOUT ->
-                        Just lines.fordOut
+                        FORDOUT ->
+                            Just lines.fordOut
 
-                    FL ->
-                        Just finishLine
+                        FL ->
+                            Just finishLine
+                )
             )
     }

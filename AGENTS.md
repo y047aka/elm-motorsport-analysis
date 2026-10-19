@@ -37,6 +37,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
+| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -63,13 +64,17 @@ Every round is loaded and every round is written. `--export-only <season>/<id>`
 narrows the writing stage alone, repeated to name more than one, and a name no
 round on the calendar answers to fails the run before anything is written.
 
-**A checkout holds the CSV, the calendar and one round's files.** 2025's Le
-Mans is kept, so the VRT and a dev server work with nothing run first. The
-other thirteen are 50MB the rows already say, so they are ignored rather than
-committed, and `.#tauri-build` is the one command that writes them — a bundle
-carries the files it opens, and nothing else needs all of them at once. A round
-left unwritten is quiet: the dev server answers `/api` for it with a 502, and a
-Tauri bundle hands back its own `index.html`.
+**A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le
+Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work
+with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB
+against Le Mans's 25MB of laps. The other twelve are 50MB the rows already say, so
+they are ignored rather than committed, and `.#tauri-build` is the one command that
+writes them — a bundle carries the files it opens, and nothing else needs all of
+them at once. A round left unwritten is quiet: the dev server answers `/api` for it
+with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an
+export like any other, so a summary that grows a key the drawing is chosen by has
+to be written out again over the kept rounds: `track.circuit` missing reads as a
+circuit with no drawing.
 
 `.#cli-load` and `.#cli-export` are those two stages singly. The stage that
 writes reads none of the CSV, so the files are an image of the rows and of
@@ -361,8 +366,9 @@ a caller handing it less would leave the position chart drawn against a class
 with cars missing, with nothing to say so.
 
 `Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
-passed through (`Class`, `Era`), and Le Mans's mini-sectors
-(`Circuit/LeMans`). Decoding the timing feed stays app-side in `Data.Wec` /
+passed through (`Class`, `Era`), Le Mans's mini-sectors (`Circuit/LeMans`), and
+the shape of the circuits the tracker draws (`Circuit/Layout`, and one directory
+per circuit). Decoding the timing feed stays app-side in `Data.Wec` /
 `Data.Wec.Laps` — the shape of one publisher's files, not of the domain.
 `Data.Wec.Manufacturer` and `Data.Wec.CarImage` are app-side for the same
 reason: which manufacturers there are, how each is coloured and badged, and
@@ -371,35 +377,112 @@ application's assets. Neither holds any of it itself — each decodes the table
 that does, and what reaches `Car.Metadata` is the resolved colour, badge and
 photograph rather than the tables.
 
-Le Mans is also drawn to its own shape rather than as a ring.
-`Circuit/LeMans/Geometry` is the lap and the pit lane out of OpenStreetMap
-(ODbL, © OpenStreetMap contributors), written by
-`node app/scripts/le-mans-geometry.mjs` and never by hand. `Circuit/LeMans/Layout`
-holds where each season's timing lines stand, copied from the "Approximate
-Distances" on Al Kamel's circuit map for that race; the maps themselves are not
-to be redistributed, so they are not in the repository. A line a map gives no
-distance for is placed by the time between the lines either side of it
-(`Tracker.Config.lapScale`). The summary does not say which circuit a round was
-run on, so `Shared` picks the layout by the calendar's round id.
+Two circuits are drawn to their own shape rather than as a ring: Le Mans, and
+at `cota_6h` the Circuit of the Americas. `Circuit/Layout` is what
+`Tracker.onCircuit` is handed — the lap, the pit lane, the lines the lap is
+timed at, and the metres the tracker draws at — and it is where the surveyed
+degrees are projected into drawing metres, once, whichever circuit they came
+from. Each circuit's `Layout` holds its distances and its lengths; its
+`Geometry` is generated beside them and never by hand, out of OpenStreetMap's map
+data (ODbL, © OpenStreetMap contributors), which the generated module records
+beside its own survey time. Which circuit a round was
+run on comes in with the summary (`Motorsport.Events.circuit`, keyed by round id
+and tested against the calendar the way `direction` is), and `Shared` picks the
+layout by that word rather than by the round id — which is still asked for,
+because which lines Le Mans is drawn with turns on the season. A circuit with no
+directory of its own, and a round exported before the summary named its circuit,
+is drawn as the ring.
+
+The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
+circuit, which supplies the relation, the member role naming the line the lap
+is measured from, the published length the surveyed line is stretched to, and
+the prose the generated module is documented with — `nix run .#geometry-cota`,
+`nix run .#geometry-le-mans`. Both ask OpenStreetMap, which answers a busy runner with
+a 502 or a 504 — repeat the run, or hand the answer in as a file. Nothing in the
+repository keeps the answer a module was written from, and nothing checks a module
+against one, because the tests could not hold it anyway: the pipeline stretches a
+survey to the circuit's published lap length whatever the degrees say, so a point
+moved 20 m passes every Elm test and leaves the tracker's pixels where they were. A
+regeneration is read as a diff, and a survey that moved by metres goes to
+`update-snapshots-ci` with it, since every tracker baseline is drawn on those degrees.
+OpenStreetMap holds a
+circuit however whoever mapped it tagged it, and the two here are tagged
+differently: Le Mans's relation names one node `start-finish`, and COTA's names
+two, `start` and `finish`, 297 m apart along the lap. The lap's zero is the
+`finish` one, and the circuit's own published coordinates for its timing line
+are written into the script, so a run that answers the other role fails before
+it writes anything rather than drawing every car 297 m early.
+
+Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
+map for that race, and differ by season; the maps are not to be redistributed,
+so they are not in the repository. COTA's are its own track sector map's —
+1,313.2, 2,254.3 and 1,947.5 m, which add up to the 5,515 m centreline the same
+map gives — and are one set used for every season here, since no later map has
+been read. Nothing in a round's own times picks one placement of those lines
+out of another: a sector's share of a lap is not a share of its distance, and
+every placement has a mean speed of its own. What they rest on is that the
+circuit published them as the lines it times to, beside the lap length they add
+up to. What the times can answer is whether the lines have moved, and
+`node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025` reads that:
+each class's fastest sector times as two distances round the lap, which the two
+rounds here agree on within 28 m — 0.5% of a lap, and the only evidence there is
+that one map serves both. The command judges the season-to-season difference
+against 40 m and never the shares against the map; it reads the fastest sectors
+the summary itself is counted from, and prints whether the export in the tree
+counts the same shares. A line a map gives no distance for is
+placed by the time between the lines either side of it
+(`Tracker.Config.lapScale`), and a circuit whose feed never measures the lap finer
+than three sectors — every circuit here but Le Mans's — has no finer lines to place
+a car by either. That is a different answer from fifteen lines most of which the
+map leaves no distance for, so it is a sum rather than a record of nothings, and it
+is drawn less finely too: between two of its lines a COTA car is placed by the time
+it has run between them, where a Le Mans car is placed by a mini-sector.
+
+That sum is named `LeMansMiniSectors`, holds Le Mans's fifteen by name, and is
+load-bearing in three places at once: the sum, `Data.Wec`'s `byMiniSectorDecoder`,
+which requires all fifteen keys and so reads a differently-split lap as
+`NoMiniSectors`, and `Tracker.Config.lapScale`, which matches the pair of
+constructors. The first circuit after Le Mans whose feed carries mini-sector shares
+has to generalize all three together — a named list at both ends, joined by name —
+and re-make the decoder's `optional` decision rather than copy it, because what
+catches a missing line today is the record's totality and a list has nothing else.
+`ConfigTest` names the two combinations the `lapScale` catch-all holds — a round
+timed finer than its circuit places lines, and lines the circuit places that no
+round was timed across — which is what stops a future edit "simplifying" that branch
+into reading one side alone.
+
+The tracker's cars, labels and lines are metres on the ground, and the svg divides
+every one of them by whichever axis the circuit's box binds in the card it stands
+in — so a set is measured against a rendered drawing, and one circuit's set is not
+another's multiplied by a scale. `Circuit/Layout`'s `Lengths` holds one set per
+circuit per detail, and `Compact` carries no names because it draws none. Le Mans's
+set is the reference the tracker was measured at, and a test freezes it: those are
+the numbers every Le Mans snapshot was rendered with. In the tracker's portrait row
+every circuit here is fitted by width, so COTA's `Full` stands at 2245/4112 — the
+ratio of the two boxes' widths, which is what draws a car, a number and a line the
+same size at both — with its margin the one length left at three tenths of Le
+Mans's, since that is added to the width every ratio is taken over. `LayoutTest`
+holds each length at the ratio. Tuning a length of Le Mans's set moves every
+baseline it has, and any length moved anywhere goes through `update-snapshots-ci`.
 
 Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
-round the lap it stands, and `Layout` projects those degrees into the drawing
-through the `Circuit.Geodesy.Frame` the generator writes beside them — to the tenth
-of a metre the survey is kept to, which is the tenth every VRT baseline was
-rendered at. The frame's origin is the north-west corner of the survey, so the
+round the lap it stands, and `Circuit/Layout` projects those degrees into the
+drawing through the `Circuit.Geodesy.Frame` the generator writes beside them — to
+the tenth of a metre the survey is kept to, which is the tenth every VRT baseline
+was rendered at. The frame's origin is the north-west corner of the survey, so the
 drawing never falls below its own zero, and a test holds every projected place
 clear of the half-tenth its rounding turns on — measured before the rounding,
 since a rounded place is clear of every boundary by construction. The tightest
-stands 113 micrometres, which is what lets the metres be projected rather than
-written down. A second circuit's generator writes the same frame, out of the
-parallel it scales east-west at and the north-west corner of what it surveyed,
-and adds nothing to `Circuit/`.
+place stands 113 micrometres clear at Le Mans and 39 at COTA, which is what lets
+the metres be projected rather than written down. Every circuit's generator writes
+the same frame, out of the parallel it scales east-west at and the north-west
+corner of what it surveyed, and adds nothing to `Circuit/`.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
 `Circuit/LeMans`'s type, `Leaderboard` carries `*_Wec` and `*_LeMans24h`
-views beside the generic ones, and `Chart/Tracker` draws
-`Circuit/LeMans/Layout`. Reversing that arrow is its own change.
+views beside the generic ones, and `Chart/Tracker` draws `Wec/Circuit/Layout`,
+whose finer lines are Le Mans's. Reversing that arrow is its own change.
 
 There is no view-model layer between the two. `Race.Snapshot` is the whole
 per-frame derivation — sampling the cars at the clock, ordering the field,
@@ -515,14 +598,24 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   that moves modules must take its pattern with it; `readConstant` fails the
   spec load by name when a pattern misses, rather than letting the constant
   become `NaN` and every assertion expect `NaNpx`.
+- **Circuit names** (`/app/tests/circuit-contract.spec.ts`) — the word Flix's
+  `Circuit.jsonValue` sends and the word `Shared.trackOf` picks a drawing by,
+  read out of both sources and compared. Neither compiler sees the other, the
+  kept summaries are frozen at whichever word was current when they were
+  written, and a rename on one side is a round drawn as the ring with nothing
+  red.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
-  answers `/api` from `static/`, and those are the same bytes. It drives
-  2025's Le Mans because that is the round a checkout keeps; a test reaching
-  for another needs `.#serve-api` behind it. Local runs allow a 0.1%
+  answers `/api` from `static/`, and those are the same bytes. It drives the two
+  rounds a checkout keeps; a test reaching for a third needs `.#serve-api` behind
+  it. Two ways a round loses its drawing without failing anything are told apart
+  there without a baseline to compare pixels to: `helpers.ts` reads a kept round's
+  summary for the moment to stop at and refuses one naming no `track.circuit`, and
+  `expectSurveyedLap` asserts the tracker drew a polygon where the ring draws a
+  circle. Local runs allow a 0.1%
   pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`, and 0.15% for
   `position-tab`) for cross-platform diffs; CI is strict 0.
 

@@ -23,8 +23,8 @@ shares are held per sector and per mini-sector, so reading one is
 
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
-import Motorsport.Wec.Circuit.LeMans.Layout exposing (TimingLines)
 
 
 {-| The whole lap, divided. Both grains cover the same lap, so a car can be
@@ -164,11 +164,14 @@ lapScale lines config =
                 Nothing
 
         ends =
-            case config.miniSectors of
-                MiniSectorShares shares ->
-                    LeMans.values (LeMans.map2 knot shares lines.miniSectors)
+            case ( config.miniSectors, lines.miniSectors ) of
+                ( MiniSectorShares shares, LeMansMiniSectors published ) ->
+                    LeMans.values (LeMans.map2 knot shares published)
 
-                NoMiniSectors ->
+                -- Either the round was never timed at the finer grain or the
+                -- circuit places no lines finer than its three sectors; the
+                -- sector grain is the answer either way.
+                _ ->
                     Sector.values (Sector.map2 (\share metres -> knot share (Just metres)) config.sectors lines.sectors)
     in
     LapScale ({ progress = 0, metres = 0 } :: List.filterMap identity ends)

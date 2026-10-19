@@ -11,8 +11,8 @@ import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
+import Motorsport.Wec.Circuit.Layout exposing (LabelLengths, Layout, Lengths)
 import Motorsport.Wec.Circuit.LeMans as LeMans
-import Motorsport.Wec.Circuit.LeMans.Layout exposing (Layout)
 import Motorsport.Wec.Class as Class
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg, circle, g, line, polygon, polyline, svg, text, text_)
@@ -52,14 +52,7 @@ type alias Constants =
 
 type Labels
     = NoLabels
-    | Labels
-        { sectorRadius : Float
-        , sectorFontSize : Float
-        , miniSectorRadius : Float
-        , miniSectorFontSize : Float
-        , carRadius : Float
-        , carFontSize : Float
-        }
+    | Labels LabelLengths
 
 
 constants : Detail -> Constants
@@ -153,6 +146,7 @@ type alias Circuit =
     , pitLane : List Point
     , scale : LapScale
     , bounds : Bounds
+    , lengths : { compact : Lengths, full : Lengths }
     }
 
 
@@ -174,6 +168,10 @@ fromConfig =
 
 {-| The track drawn to the circuit's own shape, with the cars placed by the
 lines it is timed at. The pit lane is drawn and no car is placed on it.
+
+The lengths it is drawn at come with the circuit: see
+[`Lengths`](Motorsport-Wec-Circuit-Layout#Lengths).
+
 -}
 onCircuit : Layout -> { direction : Direction, config : TrackConfig } -> Track
 onCircuit layout { direction, config } =
@@ -183,6 +181,7 @@ onCircuit layout { direction, config } =
         , shape = layout.shape
         , pitLane = layout.pitLane
         , scale = Config.lapScale layout.timingLines config
+        , lengths = layout.lengths
         , bounds =
             boundsOf
                 (List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks layout.shape)
@@ -518,53 +517,55 @@ type alias CircuitConstants =
     }
 
 
-circuitConstants : Detail -> CircuitConstants
-circuitConstants detail =
-    case detail of
-        Compact ->
-            { margin = 150
-            , trackWidth = 22
-            , pitLaneWidth = 14
-            , startFinishLineExtension = 130
-            , startFinishLineStrokeWidth = 32
-            , sectorBoundaryOffset = 105
-            , sectorBoundaryStrokeWidth = 42
-            , carSize = 105
-            , labels = NoLabels
-            }
+{-| The circuit's lengths for the detail being drawn, in the shape the drawing
+reads them. `Compact` carries no names, as the circuit said.
+-}
+circuitConstants : Detail -> Circuit -> CircuitConstants
+circuitConstants detail circuit =
+    let
+        lengths =
+            case detail of
+                Compact ->
+                    circuit.lengths.compact
 
-        Full ->
-            { margin = 700
-            , trackWidth = 16
-            , pitLaneWidth = 10
-            , startFinishLineExtension = 160
-            , startFinishLineStrokeWidth = 22
-            , sectorBoundaryOffset = 108
-            , sectorBoundaryStrokeWidth = 32
-            , carSize = 97
-            , labels =
-                Labels
-                    { sectorRadius = 380
-                    , sectorFontSize = 170
-                    , miniSectorRadius = -170
-                    , miniSectorFontSize = 120
-                    , carRadius = 190
-                    , carFontSize = 140
-                    }
-            }
+                Full ->
+                    circuit.lengths.full
+    in
+    { margin = lengths.margin
+    , trackWidth = lengths.trackWidth
+    , pitLaneWidth = lengths.pitLaneWidth
+    , startFinishLineExtension = lengths.startFinishLineExtension
+    , startFinishLineStrokeWidth = lengths.startFinishLineStrokeWidth
+    , sectorBoundaryOffset = lengths.sectorBoundaryOffset
+    , sectorBoundaryStrokeWidth = lengths.sectorBoundaryStrokeWidth
+    , carSize = lengths.carSize
+    , labels =
+        case lengths.labels of
+            Nothing ->
+                NoLabels
+
+            Just these ->
+                Labels these
+    }
 
 
 {-| The circuit's own box, plus the margin the labels stand off in: the square
 ring's viewBox would scale a tall circuit by its width alone, and such a
-track would read much smaller than the card it is drawn in. The svg keeps
-this box's proportions inside whatever card it stands in, so a portrait
-circuit fills a portrait column's width and a wide one fills its height.
+track would read much smaller than the card it is drawn in.
+
+The svg keeps this box's proportions, and which axis binds is the box's doing and
+not the drawing's. The visual tests give the column a 286x525 row, 0.545
+wide-to-tall, and a box is fitted by height only below that: Le Mans's 4112 by
+6787 is 0.61 and comes out 286 wide and 472 tall, COTA's 2245 by 1463 is 1.53 and
+comes out 286 wide and 186. Both are fitted by width, and the band left under a
+wide circuit is that circuit's shape rather than a length to tune.
+
 -}
 viewOnCircuit : Detail -> Circuit -> Snapshot -> Svg msg
 viewOnCircuit detail circuit standings =
     let
         { margin } =
-            circuitConstants detail
+            circuitConstants detail circuit
 
         { minX, minY, maxX, maxY } =
             circuit.bounds
@@ -582,7 +583,7 @@ circuitTrack : Detail -> Circuit -> Svg msg
 circuitTrack detail circuit =
     let
         c =
-            circuitConstants detail
+            circuitConstants detail circuit
 
         pitLane =
             polyline
@@ -783,7 +784,7 @@ renderCarOnCircuit : Detail -> Circuit -> CarAt -> Svg msg
 renderCarOnCircuit detail circuit car =
     let
         c =
-            circuitConstants detail
+            circuitConstants detail circuit
 
         position =
             Shape.at (Config.toMetres circuit.scale (Config.computeProgress circuit.config car)) circuit.shape

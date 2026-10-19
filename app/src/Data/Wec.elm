@@ -53,12 +53,22 @@ type alias Event =
     }
 
 
-{-| The circuit as the summary describes it: which way round it goes, and how
-the lap divides. Handed to
-[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
+{-| The circuit as the summary describes it: which circuit it is, which way
+round it goes, and how the lap divides. The last two are what a drawing is told;
+which circuit it is decides which drawing they are told to --
+[`Tracker.onCircuit`](Motorsport-Chart-Tracker#onCircuit) for a circuit the app
+has a map of, [`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig) for
+every other.
+
+`circuit` is the CLI's word for the ground the round was run on --
+`Motorsport.Events.circuit`. What the app asks it is only "is there a drawing
+of this", and a name it has never had one for is the ring, which is the answer
+`Nothing` gives too.
+
 -}
 type alias Track =
-    { direction : Direction
+    { circuit : Maybe String
+    , direction : Direction
     , config : TrackConfig
     }
 
@@ -107,30 +117,34 @@ eventDecoder era manufacturers carImageUrl =
         (field "index" Race.indexDecoder)
 
 
-{-| Two keys the CLI leaves out when it has nothing to say, and `optional`
+{-| Three keys the CLI leaves out when it has nothing to say, and `optional`
 rather than `oneOf` is what tells that apart from a key it wrote wrong. `oneOf`
 cannot: a `miniSectors` object one key short of fifteen would fall through to
 the same branch a missing one does, and Le Mans would quietly draw as a circuit
 that is not split that far.
 
-Left out, the two mean different things. A round the CLI has not been told the
+Left out, the three mean different things. A round the CLI has not been told the
 direction of has one all the same -- every circuit goes round one way or the
 other -- so clockwise stands in, and that it is a guess is why the CLI does not
-make it. A round with no `miniSectors` genuinely has none to draw.
+make it. A round with no `miniSectors` genuinely has none to draw. A round with
+no `circuit` ran at a circuit the CLI has no name for, which is the same answer
+as a name this app has no drawing of: the ring.
 
-Written wrong, both mean the same thing: this app and the CLI that wrote the
-file disagree about the shape of it, which is not a thing to carry on from --
-`sectors` beside them has always failed the event for it.
+Written wrong, all three mean the same thing: this app and the CLI that wrote
+the file disagree about the shape of it, which is not a thing to carry on from
+-- `sectors` beside them has always failed the event for it.
 
 -}
 trackDecoder : Decoder Track
 trackDecoder =
     Decode.succeed
-        (\direction sectors miniSectors ->
-            { direction = direction
+        (\circuit direction sectors miniSectors ->
+            { circuit = circuit
+            , direction = direction
             , config = { sectors = sectors, miniSectors = miniSectors }
             }
         )
+        |> optional "circuit" (Decode.map Just Decode.string) Nothing
         |> optional "direction" directionDecoder Clockwise
         |> required "sectors" bySectorDecoder
         |> optional "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder) NoMiniSectors

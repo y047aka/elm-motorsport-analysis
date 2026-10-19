@@ -39,17 +39,28 @@ pub mod Motorsport.TestEvents {
     def testUnknownPassThrough(): Unit \ Assert =
         Assert.assertTrue(Events.displayName("unknown_event") == "unknown_event")
 
-    /// Reads the ids off `Motorsport.Calendar` rather than listing them again,
-    /// so a round added to the calendar and to nothing else fails here.
+    /// Reads the ids off `Motorsport.Calendar` rather than listing them again, so
+    /// a round added to the calendar and to nothing else fails here.
+    def calendarIds(): List[String] =
+        let seasons = 2024 :: 2025 :: 2026 :: Nil;
+        seasons
+            |> List.flatMap(season -> Calendar.rounds(season) |> Option.getWithDefault(Nil))
+            |> List.map(r -> r#id)
+
     @Test
     def testEveryRoundOnTheCalendarHasADirection(): Unit \ Assert =
-        let seasons = 2024 :: 2025 :: 2026 :: Nil;
-        let ids = seasons
-            |> List.flatMap(season -> Calendar.rounds(season) |> Option.getWithDefault(Nil))
-            |> List.map(r -> r#id);
+        let ids = calendarIds();
         Assert.assertTrue(not List.isEmpty(ids));
         Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids));
         Assert.assertTrue(List.forAll(id -> Events.displayName(id) != id, ids))
+
+    /// Which ground a round was run on is read off the calendar, as the
+    /// direction above is.
+    @Test
+    def testEveryRoundOnTheCalendarNamesItsCircuit(): Unit \ Assert =
+        let ids = calendarIds();
+        Assert.assertTrue(not List.isEmpty(ids));
+        Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.circuit(id)), ids))
 
     @Test
     def testWhichRoundsRunCounterClockwise(): Unit \ Assert =
@@ -62,5 +73,18 @@ pub mod Motorsport.TestEvents {
     @Test
     def testUnknownRoundHasNoDirection(): Unit \ Assert =
         Assert.assertTrue(Option.isEmpty(Events.direction("unknown_event")))
+
+    /// The name is the stem the round ids share, so a second round at a circuit
+    /// already drawn gives it one name and one drawing.
+    @Test
+    def testWhichCircuitEachRoundWasRunOn(): Unit \ Assert =
+        use Motorsport.Circuit.Circuit;
+        Assert.assertTrue(Events.circuit("le_mans_24h") == Some(Circuit.LeMans));
+        Assert.assertTrue(Events.circuit("cota_6h") == Some(Circuit.Cota));
+        Assert.assertTrue(Events.circuit("sao_paulo_6h") == Some(Circuit.SaoPaulo));
+        Assert.assertTrue(Events.circuit("bahrain_8h") == Some(Circuit.Bahrain));
+        // An id nobody answers names none, rather than naming whichever circuit
+        // is drawn.
+        Assert.assertTrue(Option.isEmpty(Events.circuit("unknown_event")))
 
 }

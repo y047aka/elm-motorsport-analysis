@@ -1,6 +1,6 @@
 module Motorsport.Wec.Circuit.LeMans.Geometry exposing (LapPoint, PitPoint, centreline, frame, pitLane)
 
-{-| The Circuit de la Sarthe as OpenStreetMap surveys it (2026-09-28T16:16:02Z),
+{-| The Circuit de la Sarthe as OpenStreetMap surveys it (2026-10-19T03:03:20Z),
 in WGS84 degrees, with how far round the lap each point stands. North is up and
 `y` runs south in the drawing these degrees are projected into, which
 `Motorsport.Wec.Circuit.LeMans.Layout` writes. Written by
