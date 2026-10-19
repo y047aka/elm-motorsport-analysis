@@ -1,9 +1,8 @@
 module Motorsport.Wec.Circuit.GeometryTest exposing (tests)
 
-{-| The decoder that reads a served geometry, on geometries written here: the
-bytes the pipeline actually writes are read by each circuit's own `GeometryTest`
-against its kept file; what is checked here is what the decoder does with bytes
-it should not accept.
+{-| What the decoder does with bytes it should not accept, on geometries
+written here; the kept files themselves are read by each circuit's own
+`GeometryTest`.
 -}
 
 import Expect

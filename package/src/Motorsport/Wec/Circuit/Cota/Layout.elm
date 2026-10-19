@@ -22,9 +22,8 @@ import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 
 
-{-| Reading the served geometry: the same checks the pipeline ran on the way
-out, run on the bytes as they arrive, against the 5,515 m the circuit's own
-sector map publishes.
+{-| Reading the served geometry against the 5,515 m the circuit's own sector
+map publishes.
 -}
 decoder : Decoder Geometry
 decoder =

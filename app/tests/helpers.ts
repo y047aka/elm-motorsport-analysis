@@ -3,7 +3,7 @@ import { expect, Page } from '@playwright/test';
 
 export const WAIT_TIMEOUT = 10_000;
 
-/** Reads a file from the repository root, the way the contract specs read sources. */
+/** Reads a file from the repository root. */
 export function readSource(pathFromRoot: string): string {
   return readFileSync(new URL(`../../${pathFromRoot}`, import.meta.url), 'utf8');
 }

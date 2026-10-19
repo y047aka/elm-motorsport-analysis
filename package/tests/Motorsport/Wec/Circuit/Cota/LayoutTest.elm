@@ -1,8 +1,7 @@
 module Motorsport.Wec.Circuit.Cota.LayoutTest exposing (tests)
 
-{-| The COTA drawing, built from the geometry bytes the app serves -- read here
-through the same decoder the app reads them with, so what is tested is what
-ships.
+{-| The COTA drawing, built from the geometry bytes the app serves, read
+through the app's own decoder.
 -}
 
 import Expect

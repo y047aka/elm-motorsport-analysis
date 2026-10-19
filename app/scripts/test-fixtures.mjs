@@ -4,9 +4,9 @@
  * read, so those tests check the geometry the app ships rather than a copy
  * kept by hand beside it.
  *
- * `nix run .#test` runs this before the package's tests; a bare `elm-test`
- * without it fails to compile, which is loud rather than silent. The modules
- * are generated and ignored; nothing else reads them.
+ * `nix run .#test` runs this before the package's tests. The modules are
+ * generated and ignored; a bare `elm-test` without them fails to compile by
+ * module name.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";

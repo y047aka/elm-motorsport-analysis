@@ -23,8 +23,7 @@ import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..
 
 
 {-| Reading the served geometry, checked against the 13,625.7 m Al Kamel's maps
-give the centreline as in every season from 2024 -- one length, which is why
-this decoder needs no season.
+give the centreline in every season from 2024.
 -}
 decoder : Decoder Geometry
 decoder =

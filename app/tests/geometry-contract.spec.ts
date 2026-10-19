@@ -11,8 +11,8 @@ import { drawnNames, readSource } from './helpers';
  * `app/static/geometry/<word>.geojson` behind them. None of it compiles: a file
  * missing is a round that fails to load, a file gone stale is pixels nobody
  * chose, and a decoder given the wrong lap length reads every honest geometry
- * as a lie. What is read here comes out of the sources and the kept files, the
- * way the other contract specs read theirs; nothing needs a browser.
+ * as a lie. The words come out of the sources and the geometry out of the
+ * kept files; nothing needs a browser.
  */
 
 const authored: Record<string, typeof cota> = { cota, le_mans: leMans };

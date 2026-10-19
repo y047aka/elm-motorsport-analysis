@@ -5,21 +5,19 @@ surveyed degrees, how far round the lap each stands, and the
 [`Frame`](Motorsport-Circuit-Geodesy#Frame) to project them through.
 
 The file is written by the pipeline in `app/scripts` and served under
-`/static/geometry/`, named by the word the summaries send for the circuit. The
-pipeline checks the file against the circuit's authored config on the way out;
-[`decoder`](#decoder) runs the same checks again on the bytes as they arrive,
-because a served file is not a compiled one: it can be stale, truncated, or --
-in a Tauri bundle -- the app shell itself, which is what the asset resolver
+`/static/geometry/`, named by the word the summaries send for the circuit.
+[`decoder`](#decoder) checks the bytes as they arrive: a served file can be
+stale, truncated, or -- in a Tauri bundle -- the app shell the asset resolver
 answers for a path it does not know. A geometry that fails here fails as the
 round's own load failure rather than as a drawing that quietly lacks a circuit.
 
-What the checks are _for_ is one number the file cannot vouch for itself: its
-last metre must stand where the circuit's published lap length says, which is
-only known from the authored side and is why the decoder is given it.
+The last metre must stand where the circuit's published lap length says --
+the one number the file cannot vouch for itself, which is why the decoder is
+given it.
 
-`mgold/elm-geojson` decodes the RFC itself -- features, lines, positions --
-and what is checked here is what that cannot know: the `role`s this file uses,
-the metres beside the points, the frame, the published length.
+The RFC layer is `mgold/elm-geojson`; what is read here is what that cannot
+know: the `role`s this file uses, the metres beside the points, the frame, the
+published length.
 
 @docs Geometry, LapPoint, decoder
 
@@ -51,8 +49,7 @@ type alias Geometry =
 
 {-| Read a served geometry, checking it against the lap length the circuit
 publishes: one metre per point, none going backwards, and the last one standing
-at the published length -- the same three checks the pipeline runs on the way
-out, run again on the way in.
+at the published length.
 
 The file's own `sectors` are not read or checked here: nothing in a drawing is
 placed by them, and `check-timing-lines.mjs` is the reader that judges them.
@@ -72,9 +69,7 @@ decoder { lapLength } =
             )
 
 
-{-| The features that matter: one whose `role` is known, with a line as its
-geometry. A feature of another role is not this geometry's business, and a role
-without a line is not a feature of it.
+{-| The features that matter: a known `role`, with a line as its geometry.
 -}
 line : GeoJson.FeatureObject -> Maybe Feature
 line feature =

@@ -414,8 +414,7 @@ is checked with now. A drawn circuit is two lists in `Shared` — the words
 `trackOf` matches and `decoderFor` decodes — and one file, and
 `geometry-contract.spec.ts` keeps all three in step, since none of them
 compiles against another. The geometries are kept because the app reads them,
-and as the line other datasets are measured against, which is what an Overpass
-answer never was. `nix run .#geometry-atlas
+and as the line other datasets are measured against. `nix run .#geometry-atlas
 cota` reads the track-atlas line — a midline measured from orthoimagery, not a
 survey stretched to a published length, at 5,500.2 m against the 5,515 m this
 app draws — keeps it as `<circuit>.atlas.geojson` with `stretched: false`, and

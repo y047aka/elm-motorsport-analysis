@@ -454,9 +454,6 @@ arriving id partial =
             Loading id partial
 
 
-{-| A response naming a circuit the round stopped waiting for is the cache's
-business and not this round's: the geometry is still worth keeping.
--}
 geometryArrived : String -> Geometry -> RoundId -> Partial -> Round
 geometryArrived circuit geometry id partial =
     case partial.geometry of
@@ -545,7 +542,7 @@ because which lines Le Mans is drawn with turns on the season.
 A circuit this app has no drawing of is drawn as the ring, which is the shape
 the proportions the summary carries can describe; so is a round exported before
 the summary named its circuit. A circuit that has a drawing and whose geometry
-is somehow not here falls to the ring too: the load gates on it, so reaching
+is not here falls to the ring too: the load gates on the geometry, so reaching
 this arm means a gate was opened elsewhere.
 
 -}
@@ -624,10 +621,9 @@ awaiting summary cache =
             ( Unnamed, Nothing )
 
 
-{-| Which circuits are drawn to their own shape: one word, one decoder. A
-word here is a word `getGeometry` can fetch, which is what keeps an awaited
-circuit from waiting for a file no decoder asked for; `trackOf` matches the
-same words and `geometry-contract.spec.ts` keeps them in step.
+{-| Which circuits are drawn to their own shape: one word, one decoder.
+`trackOf` matches the same words; `geometry-contract.spec.ts` keeps them in
+step.
 -}
 decoderFor : String -> Maybe (Decoder Geometry)
 decoderFor circuit =
