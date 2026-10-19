@@ -1,27 +1,28 @@
-// The pipeline every circuit's geometry module is written by: take a relation's
+// The pipeline every circuit's geometry file is written by: take a relation's
 // surveyed points, chain its ways into a lap, stretch the lap to the length the
-// circuit publishes, simplify it, and write the geometry GeoJSON and the Elm
-// module.
+// circuit publishes, simplify it, and write the geometry GeoJSON.
 //
 // One file per circuit calls this with its own relation, its own published lap
-// length and its own docstring prose. What it writes is the same shape every
-// time -- WGS84 degrees, how far round the lap each stands, and the
-// `Motorsport.Circuit.Geodesy.Frame` to project them through -- so a circuit is
-// a config here and a `Layout` module on the Elm side.
+// length, and the word its rounds are known by. What it writes is the same
+// shape every time -- WGS84 degrees, how far round the lap each stands, and the
+// frame `Motorsport.Circuit.Geodesy` projects them through -- and the file is
+// not a build artifact but a served one: `app/static/geometry/<circuit>.geojson`
+// is what the app fetches at runtime, decoded and checked by
+// `Motorsport.Wec.Circuit.Geometry`, with a `Layout` module on the Elm side
+// holding what the file cannot know: the drawing's lengths and timing lines.
 //
 //     node scripts/<circuit>-geometry.mjs [overpass.json]
 //     node scripts/<circuit>-geometry.mjs --from-geojson [geometry.json]
 //
 // Given an Overpass answer as a file, reads it rather than asking.
 //
-// The geometry GeoJSON is the seam the module is written from: the answer is
-// reduced to it, and the Elm module is generated out of it alone. It is kept in
-// the repository beside the scripts, which is what `--from-geojson` reads -- a
-// module can be rewritten, and shown to be the same module, with no
-// OpenStreetMap. The Overpass answer itself is not kept: it is asked again on a
-// regeneration, and nothing else reads it. What the GeoJSON holds is read twice
-// -- by this pipeline, and by `atlas-geometry.mjs`, which measures another
-// dataset's line against it.
+// `--from-geojson` writes nothing: it reads the kept geometry, runs the checks
+// the runtime decoder will run, and says what stood. It is how a file is shown
+// to still answer to its circuit's authored config -- the published lap length,
+// the sectors that must add up -- with no OpenStreetMap and no app. The Overpass
+// answer itself is not kept: it is asked again on a regeneration, and nothing
+// else reads it. What the geometry holds is read twice -- by the app at runtime,
+// and by `atlas-geometry.mjs`, which measures another dataset's line against it.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
 // geometry and module written here is a derivative of it.
@@ -43,7 +44,7 @@ const radius = 6371008.8;
 
 /**
  * A circuit: where its geometry is surveyed from, what the lap is stretched to,
- * and the words the generated module is documented with.
+ * and the published sector lines the geometry carries beside the lap.
  *
  * `finishRole` names the relation member the lap is measured from. `timingLine`
  * is where it stands on the earth as the circuit itself publishes it, in which
@@ -52,20 +53,15 @@ const radius = 6371008.8;
  *
  * @typedef {object} Circuit
  * @property {number} relation
- * @property {string} slug      e.g. `cota`; names the geometry file
+ * @property {string} slug      the circuit word `Motorsport.Circuit.jsonValue` sends
  * @property {string} finishRole
  * @property {{ lat: number, lon: number, within?: number }} [timingLine]
  * @property {number} lapLength
  * @property {number[]} [sectorMapStretches] the circuit's published sector lengths
  * @property {string} [sectorsSource]         who publishes them
- * @property {string} module    e.g. `Motorsport.Wec.Circuit.Cota.Geometry`
- * @property {string} path      the module's file, from the repository root
  * @property {string} geojson   the geometry file, from the repository root
- * @property {string} layout    the Elm module that draws it, named in the header
- * @property {string} script    this file, named in the header
+ * @property {string} script    this file, named in the reports
  * @property {string} survey    e.g. `The Circuit of the Americas`
- * @property {string} centrelineDoc
- * @property {string} pitLaneDoc
  */
 
 /** Whether the module named is the script the process was started from, as
@@ -77,38 +73,48 @@ export function isEntry(moduleUrl) {
   return pathToFileURL(process.argv[1] ?? "").href === moduleUrl;
 }
 
-/** Write the circuit's geometry, and the module written from it. `argv` is the
- * script's own:
+/** Write the circuit's geometry, or check the kept one. `argv` is the script's
+ * own:
  *
- *   - `--from-geojson [file]` writes the module out of a geometry file -- the
- *     circuit's kept one when no file is named -- and asks OpenStreetMap
- *     nothing. This is how a module is shown to still be the geometry it says
- *     it is: run it and read the empty diff.
+ *   - `--from-geojson [file]` reads a geometry file -- the circuit's kept one
+ *     when no file is named -- runs every check on it, and writes nothing. The
+ *     checks are the ones the app's decoder will run on the bytes it fetches.
  *   - a file names an Overpass answer to read instead of asking.
  *   - neither asks OpenStreetMap, which a busy runner answers with a 502 or a
  *     504; repeat the run rather than trusting the first.
  *
- * Asking writes both files, so what comes back is a survey taken *now* and the
- * metres written are today's line -- and the visual tests only show a survey
- * that moved by metres or more, which is why a regeneration is read as a diff
- * and not as a rendering.
+ * Asking writes the served file, so what comes back is a survey taken *now* and
+ * the metres written are today's line -- and the visual tests only show a
+ * survey that moved by metres or more, which is why a regeneration is read as a
+ * diff and not as a rendering.
  */
 export async function main(circuit, argv) {
   try {
     const from = valueOf(argv, "--from-geojson");
     if (from !== null) {
       const path = from || join(repoDir, circuit.geojson);
-      await writeModule(circuit, geometryFromGeoJson(JSON.parse(await readFile(path, "utf8")), circuit));
+      report("checked", circuit, geometryFromGeoJson(JSON.parse(await readFile(path, "utf8")), circuit));
       return;
     }
     const [file] = argv.filter((a) => !a.startsWith("--"));
     const geometry = lapOf(await answer(circuit.relation, file), circuit);
     await writeGeoJson(circuit, geometry);
-    await writeModule(circuit, geometry);
+    report("written", circuit, geometry);
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
   }
+}
+
+function report(done, circuit, geometry) {
+  const surveyed = geometry.surveyedLength === null ? "" : `, surveyed ${geometry.surveyedLength.toFixed(1)} m`;
+  const of = geometry.counts === null ? "" : ` of ${geometry.counts.lap}`;
+  const pit = geometry.counts === null ? "" : ` of ${geometry.counts.of}`;
+  console.log(
+    `${circuit.slug} ${done}: centreline ${geometry.centreline.length} points${of}${surveyed}; ` +
+      `pit lane ${geometry.pitLane.length} points${pit}; ` +
+      `frame origin ${geometry.frame.origin.lat}, ${geometry.frame.origin.lon} parallel ${geometry.frame.parallel}`,
+  );
 }
 
 /** The value following `flag`, the empty string when it stands alone, and null
@@ -181,21 +187,6 @@ export function lapOf(osm, circuit) {
     counts: { kept: kept.length, lap: lapPoints.length, pit: keptPit.length, of: pitPoints.length },
     surveyedLength: surveyed[surveyed.length - 1],
   };
-}
-
-/** Write the module, and say what it was written from. */
-export async function writeModule(circuit, geometry) {
-  const path = join(repoDir, circuit.path);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, elmModule(circuit, geometry));
-  const surveyed = geometry.surveyedLength === null ? "" : `, surveyed ${geometry.surveyedLength.toFixed(1)} m`;
-  const of = geometry.counts === null ? "" : ` of ${geometry.counts.lap}`;
-  const pit = geometry.counts === null ? "" : ` of ${geometry.counts.of}`;
-  console.log(
-    `centreline: ${geometry.centreline.length} points${of}${surveyed}; ` +
-      `pit lane: ${geometry.pitLane.length} points${pit}; ` +
-      `frame: origin ${geometry.frame.origin.lat}, ${geometry.frame.origin.lon} parallel ${geometry.frame.parallel}`,
-  );
 }
 
 // -- the geometry GeoJSON -----------------------------------------------------
@@ -426,68 +417,3 @@ function round(n) {
   return Math.round(n * 10) / 10;
 }
 
-function elmModule(circuit, geometry) {
-  const lap = geometry.centreline.map((p) => `{ lat = ${p.lat}, lon = ${p.lon}, metres = ${p.metres} }`);
-  const pit = geometry.pitLane.map((p) => `{ lat = ${p.lat}, lon = ${p.lon} }`);
-  const list = (items) => `    [ ${items.join("\n    , ")}\n    ]`;
-  const surveyedAt = geometry.surveyedAt ? ` (${geometry.surveyedAt})` : "";
-  return `module ${circuit.module} exposing (LapPoint, PitPoint, centreline, frame, pitLane)
-
-{-| ${circuit.survey} as OpenStreetMap surveys it${surveyedAt},
-in WGS84 degrees, with how far round the lap each point stands. North is up and
-\`y\` runs south in the drawing these degrees are projected into, which
-\`${circuit.layout}\` writes. Written by
-\`${circuit.script}\`; edit that rather than this.
-
-Map data © OpenStreetMap contributors, under the Open Database License.
-
-@docs LapPoint, PitPoint, centreline, frame, pitLane
-
--}
-
-import Motorsport.Circuit.Geodesy as Geodesy exposing (Frame)
-
-
-{-| A point of the lap: where it stands on the earth, and how far round the lap it
-is.
--}
-type alias LapPoint =
-    { lat : Float
-    , lon : Float
-    , metres : Float
-    }
-
-
-{-| Where the pit lane stands on the earth.
--}
-type alias PitPoint =
-    { lat : Float
-    , lon : Float
-    }
-
-
-{-| The drawing's metres measured on the earth: every point below is where
-[\`Geodesy.project\`](Motorsport-Circuit-Geodesy#project) puts it in this frame.
--}
-frame : Frame
-frame =
-    Geodesy.frame
-        { origin = { lat = ${geometry.frame.origin.lat}, lon = ${geometry.frame.origin.lon} }
-        , parallel = ${geometry.frame.parallel}
-        }
-
-
-{-| ${circuit.centrelineDoc}
--}
-centreline : List LapPoint
-centreline =
-${list(lap)}
-
-
-{-| ${circuit.pitLaneDoc}
--}
-pitLane : List PitPoint
-pitLane =
-${list(pit)}
-`;
-}

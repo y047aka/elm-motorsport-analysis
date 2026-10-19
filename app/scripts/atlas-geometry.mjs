@@ -46,6 +46,9 @@ const atlas = {
   cota: {
     circuit: cota,
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
+    // The reading lands beside the scripts rather than in `static/`: it is
+    // evidence a decision is judged on, never bytes the app asks for.
+    out: "app/scripts/geometry/cota.atlas.geojson",
     // How far the file's first point may stand from the published timing line
     // before the lap is judged to start somewhere else. The mistake this
     // catches is the one the Circuit of the Americas' relation actually makes:
@@ -112,7 +115,7 @@ async function run(slug, argv) {
     return { ...line, theirMetres: near.metres, distance: near.distance };
   });
 
-  await writeAtlasGeometry(circuit, slug, entry.url, outline, corners, theirMetres);
+  await writeAtlasGeometry(entry.out, slug, entry.url, outline, corners, theirMetres);
   print(slug, circuit, entry.every, length, originDistance, apart, atCorners, atLines, ours.props.sectors);
 }
 
@@ -161,7 +164,7 @@ function readKeptGeometry(text) {
 // The atlas line in this repository's own profile, at its own length: a reader
 // that later hands it to the module generator is told it does not end at the
 // published lap length, because it was written not to pretend otherwise.
-async function writeAtlasGeometry(circuit, slug, url, outline, corners, theirMetres) {
+async function writeAtlasGeometry(out, slug, url, outline, corners, theirMetres) {
   const length = theirMetres[theirMetres.length - 1];
   const features = [
     {
@@ -185,7 +188,7 @@ async function writeAtlasGeometry(circuit, slug, url, outline, corners, theirMet
     })),
   ];
   const body = features.map((f) => `    ${JSON.stringify(f)}`).join(",\n");
-  const path = join(repoDir, dirname(circuit.geojson), `${slug}.atlas.geojson`);
+  const path = join(repoDir, out);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
 }
