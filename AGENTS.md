@@ -598,6 +598,12 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   that moves modules must take its pattern with it; `readConstant` fails the
   spec load by name when a pattern misses, rather than letting the constant
   become `NaN` and every assertion expect `NaNpx`.
+- **Circuit names** (`/app/tests/circuit-contract.spec.ts`) — the word Flix's
+  `Circuit.jsonValue` sends and the word `Shared.trackOf` picks a drawing by,
+  read out of both sources and compared. Neither compiler sees the other, the
+  kept summaries are frozen at whichever word was current when they were
+  written, and a rename on one side is a round drawn as the ring with nothing
+  red.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

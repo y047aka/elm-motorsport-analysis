@@ -21,9 +21,11 @@ pub mod Motorsport.Circuit {
     }
 
     /// The spelling the summary sends for it, which is the word the app matches
-    /// on to choose a drawing. Nothing checks the two sides against each other,
-    /// as nothing checks `Direction.jsonValue`'s either: a circuit named here and
-    /// not drawn app-side is a round drawn as a ring.
+    /// on to choose a drawing. A circuit named here and not drawn app-side is a
+    /// round drawn as a ring, and nothing minds; a drawing reached for by a word
+    /// no summary can send is the mistake that passes every compiler, and
+    /// `app/tests/circuit-contract.spec.ts` reads this file and `Shared.elm` to
+    /// catch it. `Direction.jsonValue`'s half has no such check.
     pub def jsonValue(circuit: Circuit): String =
         match circuit {
             case Circuit.Qatar    => "qatar"
