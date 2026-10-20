@@ -40,6 +40,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `scripts/geometry/<circuit>.atlas.geojson` — beside the readers, not in what gets served (`cota [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
+| `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -426,10 +427,13 @@ lays any two kept geometries against each other — mean and maximum apartness,
 and an SVG overlay on request — so a fresh survey is read against the old one,
 or the atlas line against either, with no script in between. It writes no Elm: drawing on a
 measured line would move every tracker baseline and re-open where the timing
-lines stand, which is its own change judged on that report. The tests still
+lines stand, which is its own change judged on that report. The Elm tests still
 cannot hold a survey: the pipeline stretches whatever degrees it gets to the
 circuit's published lap length whatever the degrees say, so a point
-moved 20 m passes every Elm test and leaves the tracker's pixels where they were. A
+moved 20 m passes every Elm test and leaves the tracker's pixels where they were
+— the fence `.#geometry-regenerate` runs holds it instead, re-running the
+pipeline over the circuit's kept Overpass answer, under `scripts/geometry/` like
+the atlas readings beside it. A
 regeneration is read as a diff, and a survey that moved by metres goes to
 `update-snapshots-ci` with it, since every tracker baseline is drawn on those degrees.
 OpenStreetMap holds a

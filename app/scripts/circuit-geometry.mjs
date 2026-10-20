@@ -20,9 +20,11 @@
 // the runtime decoder will run, and says what stood. It is how a file is shown
 // to still answer to its circuit's authored config -- the published lap length,
 // the sectors that must add up -- with no OpenStreetMap and no app. The Overpass
-// answer itself is not kept: it is asked again on a regeneration, and nothing
-// else reads it. What the geometry holds is read twice -- by the app at runtime,
-// and by `atlas-geometry.mjs`, which measures another dataset's line against it.
+// answer a geometry was drawn from is kept as the pipeline's frozen input under
+// `scripts/geometry/`, which `regenerate-geometry.mjs` re-runs this module over;
+// a regeneration asks OpenStreetMap again regardless. What the geometry holds is
+// read twice -- by the app at runtime, and by `atlas-geometry.mjs`, which
+// measures another dataset's line against it.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
 // geometry and module written here is a derivative of it.
