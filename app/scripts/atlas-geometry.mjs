@@ -12,10 +12,12 @@
 // recording that the seed "fixes lap order, origin and direction; the edges are
 // measured". This writes `geometry/<circuit>.atlas.geojson` — their outline and
 // corner markers in this repository's geometry profile, at their length and
-// *not* stretched — and prints the three readings that matter before anyone
+// *not* stretched — and prints the four readings that matter before anyone
 // draws on them: how far the lines stand apart in metres, whether the atlas
-// corner markers land at the lap distances our geometry puts them at, and where
-// the circuit's own published sector lines stand on each of the two lines.
+// corner markers land at the lap distances our geometry puts them at, whether
+// the atlas pit entry and exit stand on the pit lane this app chains out of the
+// relation, and where the circuit's own published sector lines stand on each of
+// the two lines.
 //
 // For a circuit this repository has not surveyed yet, the atlas's
 // `start_finish` point is a surveyed coordinate to seed the circuit script's
@@ -34,7 +36,8 @@
 //
 // The apartness math is `geometry-diff.mjs`'s, shared with the tool that
 // compares any two kept geometries; this file adds only what is specific to
-// taking a foreign dataset in: the guard, the corner reading, and the writing.
+// taking a foreign dataset in: the guard, the corner and pit readings, and the
+// writing.
 //
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery; the written file carries the source URL
@@ -96,11 +99,20 @@ async function run(slug, argv) {
   const outline = (theirs.features ?? []).find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error("the atlas file holds no outline feature");
   const corners = theirs.features.filter((f) => f.properties?.role === "corner");
+  const pits = ["pit_entry", "pit_exit"]
+    .map((role) => theirs.features.find((f) => f.properties?.role === role))
+    .filter((f) => f !== undefined);
 
   const ours = readKeptGeometry(await readFile(join(repoDir, circuit.geojson), "utf8"));
   const earth = ([lon, lat]) => ({ lat, lon });
   const { project } = projection(
-    [...outline.geometry.coordinates, ...ours.coords, ...corners.map((c) => c.geometry.coordinates)].map(earth),
+    [
+      ...outline.geometry.coordinates,
+      ...ours.coords,
+      ...ours.pit,
+      ...corners.map((c) => c.geometry.coordinates),
+      ...pits.map((p) => p.geometry.coordinates),
+    ].map(earth),
   );
   const theirPoints = outline.geometry.coordinates.map(earth).map(project);
   const ourPoints = ours.coords.map(earth).map(project);
@@ -130,8 +142,30 @@ async function run(slug, argv) {
     return { ...line, theirMetres: near.metres, distance: near.distance };
   });
 
-  await writeAtlasGeometry(entry.out, slug, entry.url, outline, corners, theirMetres);
-  print(slug, circuit, entry.every, length, originDistance, apart, atCorners, atLines, ours.props.sectors);
+  const pitPoints = ours.pit.map(earth).map(project);
+  const pitMetres = cumulative(pitPoints);
+  const atPits = pits.map((p) => {
+    const near = nearestOn(project(earth(p.geometry.coordinates)), pitPoints, pitMetres);
+    return {
+      role: p.properties.role,
+      theirMetres: p.properties.marker * length,
+      along: near.metres,
+      distance: near.distance,
+    };
+  });
+
+  await writeAtlasGeometry(entry.out, slug, entry.url, outline, corners, pits, theirMetres);
+  print(slug, circuit, {
+    every: entry.every,
+    length,
+    originDistance,
+    apart,
+    atCorners,
+    atPits,
+    pitLength: pitMetres[pitMetres.length - 1],
+    atLines,
+    sectors: ours.props.sectors,
+  });
 }
 
 // The lines the circuit's own map publishes, as positions round the lap: each
@@ -170,16 +204,18 @@ function ask(url) {
 }
 
 function readKeptGeometry(text) {
-  const outline = JSON.parse(text).features.find((f) => f.properties?.role === "outline");
-  if (!outline) throw new Error("the kept geometry holds no outline feature");
+  const json = JSON.parse(text);
+  const outline = json.features.find((f) => f.properties?.role === "outline");
+  const pit = json.features.find((f) => f.properties?.role === "pit_lane");
+  if (!outline || !pit) throw new Error("the kept geometry holds no outline or no pit lane");
   const { metres, ...props } = outline.properties;
-  return { coords: outline.geometry.coordinates, metres, props };
+  return { coords: outline.geometry.coordinates, metres, props, pit: pit.geometry.coordinates };
 }
 
 // The atlas line in this repository's own profile, at its own length: a reader
 // that later hands it to the module generator is told it does not end at the
 // published lap length, because it was written not to pretend otherwise.
-async function writeAtlasGeometry(out, slug, url, outline, corners, theirMetres) {
+async function writeAtlasGeometry(out, slug, url, outline, corners, pits, theirMetres) {
   const length = theirMetres[theirMetres.length - 1];
   const features = [
     {
@@ -201,6 +237,11 @@ async function writeAtlasGeometry(out, slug, url, outline, corners, theirMetres)
       properties: { role: "corner", id: c.properties.id, marker: c.properties.marker, direction: c.properties.direction },
       geometry: c.geometry,
     })),
+    ...pits.map((p) => ({
+      type: "Feature",
+      properties: { role: p.properties.role, name: p.properties.name, marker: p.properties.marker },
+      geometry: p.geometry,
+    })),
   ];
   const body = features.map((f) => `    ${JSON.stringify(f)}`).join(",\n");
   const path = join(repoDir, out);
@@ -208,7 +249,7 @@ async function writeAtlasGeometry(out, slug, url, outline, corners, theirMetres)
   await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
 }
 
-function print(slug, circuit, every, length, originDistance, apart, atCorners, atLines, sectors) {
+function print(slug, circuit, { every, length, originDistance, apart, atCorners, atPits, pitLength, atLines, sectors }) {
   const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
   const distances = atCorners.map((c) => c.distance);
   const laps = atCorners.map((c) => c.ourMetres - c.theirMetres);
@@ -234,6 +275,15 @@ function print(slug, circuit, every, length, originDistance, apart, atCorners, a
       `  ${c.id}: marker at ${c.theirMetres.toFixed(1)} m, our line has that place at ` +
         `${c.ourMetres.toFixed(1)} m (${signed(c.ourMetres - c.theirMetres)}), ${c.distance.toFixed(1)} m apart`,
     );
+  }
+  if (atPits.length > 0) {
+    console.log(`pit markers (${atPits.length}), against our own pit lane of ${pitLength.toFixed(1)} m:`);
+    for (const p of atPits) {
+      console.log(
+        `  ${p.role}: the atlas stands it at lap ${p.theirMetres.toFixed(1)} m; ` +
+          `${p.distance.toFixed(1)} m from our pit lane, ${p.along.toFixed(1)} m along it`,
+      );
+    }
   }
   if (atLines.length > 0) {
     console.log(`the lines ${sectors.source} publishes, on each line:`);
