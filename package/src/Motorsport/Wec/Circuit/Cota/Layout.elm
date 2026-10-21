@@ -33,8 +33,8 @@ decoder =
 {-| The circuit, on one set of timing lines for every season; see
 [`timingLines`](#timingLines).
 
-The lap runs counter-clockwise, as OpenStreetMap's own one-way tags say and as
-the CLI answers the summary.
+The lap runs the direction its survey was chained in -- the word arrives with
+the geometry, as OpenStreetMap's own one-way tags say it.
 
 -}
 layout : Geometry -> Layout

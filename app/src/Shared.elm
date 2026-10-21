@@ -539,38 +539,35 @@ roundFrom id summary rawLaps timelineEvents geometry =
 names for it -- `Motorsport.Events.circuit`. The round id is still asked for,
 because which lines Le Mans is drawn with turns on the season.
 
-A circuit this app has no drawing of is drawn as the ring, which is the shape
-the proportions the summary carries can describe; so is a round exported before
-the summary named its circuit. A circuit that has a drawing and whose geometry
-is not here falls to the ring too: the load gates on the geometry, so reaching
-this arm means a gate was opened elsewhere.
+A circuit this app has no drawing of is drawn as the ring -- clockwise, the
+way a circuit whose ground is unknown may always be imagined to run -- which is
+the shape the proportions the summary carries can describe; so is a round
+exported before the summary named its circuit. A circuit that has a drawing and
+whose geometry is not here falls to the ring too: the load gates on the
+geometry, so reaching this arm means a gate was opened elsewhere.
 
 -}
 trackOf : RoundId -> Wec.Track -> Awaited -> Tracker.Track
 trackOf id track geometry =
-    let
-        drawing =
-            { direction = track.direction, config = track.config }
-    in
     case track.circuit of
         Just "le_mans" ->
             case geometry of
                 Decoded lap ->
-                    Tracker.onCircuit (LeMansLayout.layout id.season lap) drawing
+                    Tracker.onCircuit (LeMansLayout.layout id.season lap) { direction = lap.direction, config = track.config }
 
                 _ ->
-                    Tracker.fromConfig drawing
+                    Tracker.fromConfig track.config
 
         Just "cota" ->
             case geometry of
                 Decoded lap ->
-                    Tracker.onCircuit (CotaLayout.layout lap) drawing
+                    Tracker.onCircuit (CotaLayout.layout lap) { direction = lap.direction, config = track.config }
 
                 _ ->
-                    Tracker.fromConfig drawing
+                    Tracker.fromConfig track.config
 
         _ ->
-            Tracker.fromConfig drawing
+            Tracker.fromConfig track.config
 
 
 mapLoaded : (LoadedRound -> LoadedRound) -> Round -> Round

@@ -132,10 +132,7 @@ or to its own shape. See [`fromConfig`](#fromConfig) and
 [`onCircuit`](#onCircuit).
 -}
 type Track
-    = Ring
-        { direction : Direction
-        , config : TrackConfig
-        }
+    = Ring TrackConfig
     | OnCircuit Circuit
 
 
@@ -158,16 +155,20 @@ type alias Bounds =
     }
 
 
-{-| The track as the summary describes it. Hold on to the result and hand it to
-[`view`](#view) each frame.
+{-| The track as the summary's proportions describe it: a ring, run clockwise.
+A circuit the app has a map of is drawn [`onCircuit`](#onCircuit) instead, and
+runs the way its survey says.
+
+Hold on to the result and hand it to [`view`](#view) each frame.
 -}
-fromConfig : { direction : Direction, config : TrackConfig } -> Track
+fromConfig : TrackConfig -> Track
 fromConfig =
     Ring
 
 
 {-| The track drawn to the circuit's own shape, with the cars placed by the
-lines it is timed at. The pit lane is drawn and no car is placed on it.
+lines it is timed at. The pit lane is drawn and no car is placed on it; the lap
+runs the direction its survey was chained in.
 
 The lengths it is drawn at come with the circuit: see
 [`Lengths`](Motorsport-Wec-Circuit-Layout#Lengths).
@@ -216,8 +217,8 @@ way round. Settling the box first is the caller's work.
 view : Detail -> Track -> Snapshot -> Svg msg
 view detail shown standings =
     case shown of
-        Ring { direction, config } ->
-            viewWithConfig detail direction config standings
+        Ring config ->
+            viewWithConfig detail Clockwise config standings
 
         OnCircuit circuit ->
             viewOnCircuit detail circuit standings

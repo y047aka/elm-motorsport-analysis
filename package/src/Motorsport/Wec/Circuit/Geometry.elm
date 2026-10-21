@@ -17,7 +17,7 @@ given it.
 
 The RFC layer is `mgold/elm-geojson`; what is read here is what that cannot
 know: the `role`s this file uses, the metres beside the points, the frame, the
-published length.
+direction the survey runs, the published length.
 
 @docs Geometry, LapPoint, decoder
 
@@ -25,6 +25,7 @@ published length.
 
 import GeoJson
 import Json.Decode as Decode exposing (Decoder)
+import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.Geodesy as Geodesy exposing (Coordinate, Frame)
 
 
@@ -42,6 +43,7 @@ type alias LapPoint =
 -}
 type alias Geometry =
     { frame : Frame
+    , direction : Direction
     , centreline : List LapPoint
     , pitLane : List Coordinate
     }
@@ -80,6 +82,7 @@ line feature =
                 , coordinates = coordinates
                 , metres = Decode.decodeValue (Decode.field "metres" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
                 , frame = Decode.decodeValue frame feature.properties |> Result.toMaybe
+                , direction = Decode.decodeValue directionDecoder feature.properties |> Result.toMaybe
                 }
 
         _ ->
@@ -101,6 +104,7 @@ type alias Feature =
     , coordinates : List Coordinate
     , metres : Maybe (List Float)
     , frame : Maybe Frame
+    , direction : Maybe Direction
     }
 
 
@@ -108,8 +112,8 @@ assemble : Float -> List Feature -> Decoder Geometry
 assemble lapLength features =
     case ( find "outline" features, find "pit_lane" features ) of
         ( Just outline, Just pitLane ) ->
-            case ( outline.metres, outline.frame ) of
-                ( Just metres, Just projected ) ->
+            case ( outline.metres, outline.frame, outline.direction ) of
+                ( Just metres, Just projected, Just whichWay ) ->
                     case verify lapLength metres outline.coordinates of
                         Just complaint ->
                             Decode.fail complaint
@@ -117,6 +121,7 @@ assemble lapLength features =
                         Nothing ->
                             Decode.succeed
                                 { frame = projected
+                                , direction = whichWay
                                 , centreline =
                                     List.map2
                                         (\place metre -> { lat = place.lat, lon = place.lon, metres = metre })
@@ -126,7 +131,7 @@ assemble lapLength features =
                                 }
 
                 _ ->
-                    Decode.fail "the outline carries no metres or no frame"
+                    Decode.fail "the outline carries no metres, frame, or direction"
 
         _ ->
             Decode.fail "the geometry holds no outline or no pit lane"
@@ -188,3 +193,25 @@ frame =
         (Decode.field "frame" (Decode.field "origin" (Decode.field "lat" Decode.float)))
         (Decode.field "frame" (Decode.field "origin" (Decode.field "lon" Decode.float)))
         (Decode.field "frame" (Decode.field "parallel" Decode.float))
+
+
+{-| Which way a car goes round the outline. Both spellings are matched and a
+third is a failure rather than a silent half-turn: the word comes from the
+survey's own orientation, and a file that spells it some other way has been
+edited rather than surveyed.
+-}
+directionDecoder : Decoder Direction
+directionDecoder =
+    Decode.field "direction" Decode.string
+        |> Decode.andThen
+            (\raw ->
+                case raw of
+                    "clockwise" ->
+                        Decode.succeed Clockwise
+
+                    "counter_clockwise" ->
+                        Decode.succeed CounterClockwise
+
+                    other ->
+                        Decode.fail ("Unknown circuit direction: " ++ other)
+            )

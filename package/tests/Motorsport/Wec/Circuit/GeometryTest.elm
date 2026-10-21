@@ -48,7 +48,15 @@ tests =
         , test "an outline carrying no frame cannot be projected" <|
             \_ ->
                 decode { outline | frame = Nothing }
-                    |> complainsAbout "no metres or no frame"
+                    |> complainsAbout "no metres, frame, or direction"
+        , test "an outline that cannot say which way it runs is not surveyed" <|
+            \_ ->
+                decode { outline | direction = Nothing }
+                    |> complainsAbout "no metres, frame, or direction"
+        , test "a direction spelled some third way is a disagreement, not a half-turn" <|
+            \_ ->
+                decode { outline | direction = Just "anticlockwise" }
+                    |> complainsAbout "no metres, frame, or direction"
         , test "a role drawn as a point is no line, and so no outline" <|
             \_ ->
                 decodeOf [ outlineFeature outline (point [ 0.2, 47.9 ]), pitLane ]
@@ -64,6 +72,7 @@ tests =
 type alias Lap =
     { metres : List Float
     , frame : Maybe Encode.Value
+    , direction : Maybe String
     }
 
 
@@ -71,6 +80,7 @@ outline : Lap
 outline =
     { metres = [ 0, 5, 10 ]
     , frame = Just frame
+    , direction = Just "clockwise"
     }
 
 
@@ -98,6 +108,7 @@ outlineFeature lap geometry =
                      , ( "metres", Encode.list Encode.float lap.metres )
                      ]
                         ++ Maybe.withDefault [] (Maybe.map (\f -> [ ( "frame", f ) ]) lap.frame)
+                        ++ Maybe.withDefault [] (Maybe.map (\d -> [ ( "direction", Encode.string d ) ]) lap.direction)
                    )
           )
         , ( "geometry", geometry )
