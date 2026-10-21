@@ -8,6 +8,7 @@
         "source": "https://www.openstreetmap.org/relation/6537729",
         "license": "ODbL",
         "surveyed_at": "2026-10-20T07:01:01Z",
+        "direction": "counter_clockwise",
         "lap_length_m": 5515,
         "surveyed_length_m": 5502.238574528194,
         "sectors": {"source":"the circuit's own track sector map","stretches":[1313.2,2254.3,1947.5]},

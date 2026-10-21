@@ -114,6 +114,7 @@ function report(done, circuit, geometry) {
   const pit = geometry.counts === null ? "" : ` of ${geometry.counts.of}`;
   console.log(
     `${circuit.slug} ${done}: centreline ${geometry.centreline.length} points${of}${surveyed}; ` +
+      `direction ${geometry.direction}; ` +
       `pit lane ${geometry.pitLane.length} points${pit}; ` +
       `frame origin ${geometry.frame.origin.lat}, ${geometry.frame.origin.lon} parallel ${geometry.frame.parallel}`,
   );
@@ -170,6 +171,7 @@ export function lapOf(osm, circuit) {
   const surveyed = cumulative(lapPoints);
   const stretch = circuit.lapLength / surveyed[surveyed.length - 1];
   const metres = surveyed.map((m) => m * stretch);
+  const direction = turnDirection(lapPoints);
 
   const half = Math.floor(lapPoints.length / 2);
   const kept = [
@@ -185,6 +187,7 @@ export function lapOf(osm, circuit) {
     centreline: kept.map((i) => ({ ...onEarth(lapNodes[i]), metres: round(metres[i]) })),
     pitLane: keptPit.map((i) => onEarth(pitNodes[i])),
     frame,
+    direction,
     surveyedAt: osm.osm3s?.timestamp_osm_base,
     counts: { kept: kept.length, lap: lapPoints.length, pit: keptPit.length, of: pitPoints.length },
     surveyedLength: surveyed[surveyed.length - 1],
@@ -196,14 +199,15 @@ export function lapOf(osm, circuit) {
 // The profile both sides read: EPSG:4326 throughout, as the Atlas keeps it; one
 // `outline` LineString whose `metres` property holds, point for point, how far
 // round the lap each stands, in the circuit's published metres; one `pit_lane`
-// LineString with no metres because nothing times along it; and the frame the
-// degrees project through, whole, so the module's `Geodesy.frame` is a copy and
-// not a re-derivation. A `basis` says what kind of line it is -- the OSM centreline
-// stretched, a measurement's midline -- so a file cannot be mistaken for the
-// other, and the ODbL copyright travels in `source` and `license`. Where the
-// circuit itself publishes the lines it times to, those authored stretches
-// travel as `sectors`, so a check of the timing lines reads data rather than a
-// script's config.
+// LineString with no metres because nothing times along it; the `direction` the
+// chained survey runs, which is which way a car goes round the drawing; and the
+// frame the degrees project through, whole, so the module's `Geodesy.frame` is
+// a copy and not a re-derivation. A `basis` says what kind of line it is -- the
+// OSM centreline stretched, a measurement's midline -- so a file cannot be
+// mistaken for the other, and the ODbL copyright travels in `source` and
+// `license`. Where the circuit itself publishes the lines it times to, those
+// authored stretches travel as `sectors`, so a check of the timing lines reads
+// data rather than a script's config.
 
 export function geoJsonString(circuit, geometry) {
   const outline = feature(
@@ -214,6 +218,7 @@ export function geoJsonString(circuit, geometry) {
       source: `https://www.openstreetmap.org/relation/${circuit.relation}`,
       license: "ODbL",
       surveyed_at: geometry.surveyedAt,
+      direction: geometry.direction,
       lap_length_m: circuit.lapLength,
       surveyed_length_m: geometry.surveyedLength,
       sectors:
@@ -255,7 +260,9 @@ export async function writeGeoJson(circuit, geometry) {
  * outline's metres are checked against the file's own claims: one per point,
  * going up, ending where the published lap length says -- because a file that
  * drifted from its generator would otherwise reach the drawing with the
- * survey's authority and none of its own. */
+ * survey's authority and none of its own. The `direction` is read as the Elm
+ * decoder reads it: a required word, so a file that cannot say which way a car
+ * goes round it fails here and fails there alike. */
 export function geometryFromGeoJson(json, circuit) {
   const features = json.features ?? [];
   const outline = features.find((f) => f.properties?.role === "outline");
@@ -264,6 +271,9 @@ export function geometryFromGeoJson(json, circuit) {
   const props = outline.properties;
   const coords = outline.geometry.coordinates;
   const metres = props.metres;
+  if (!["clockwise", "counter_clockwise"].includes(props.direction)) {
+    throw new Error(`the outline says it runs ${JSON.stringify(props.direction)}, which is not a direction`);
+  }
   if (metres.length !== coords.length) throw new Error(`${metres.length} metres for ${coords.length} points`);
   for (let i = 1; i < metres.length; i++) {
     if (metres[i] < metres[i - 1]) throw new Error(`metres go backwards at point ${i}`);
@@ -285,6 +295,7 @@ export function geometryFromGeoJson(json, circuit) {
     centreline: coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
     pitLane: pit.geometry.coordinates.map(onEarth),
     frame: props.frame,
+    direction: props.direction,
     surveyedAt: props.surveyed_at ?? null,
     surveyedLength: props.surveyed_length_m ?? null,
     sectors,
@@ -390,6 +401,22 @@ export function cumulative(points) {
     out.push(out[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));
   }
   return out;
+}
+
+// Which way the closed loop runs, read off the shoelace sum in the drawing's
+// own metres: positive is clockwise in the map view, because this projection's
+// y runs south. The chain follows ways as they are driven, so the survey says
+// this of itself; a circuit relation whose ways are mis-oriented would say it
+// too, which is why the word is worth checking against the circuit's own claim
+// when the circuit publishes one.
+function turnDirection(points) {
+  let sum = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    sum += a.x * b.y - b.x * a.y;
+  }
+  return sum > 0 ? "clockwise" : "counter_clockwise";
 }
 
 // Ramer-Douglas-Peucker over indices, so a kept point keeps the distance it was

@@ -8,6 +8,7 @@
         "source": "https://www.openstreetmap.org/relation/2126739",
         "license": "ODbL",
         "surveyed_at": "2026-10-20T07:03:04Z",
+        "direction": "clockwise",
         "lap_length_m": 13625.7,
         "surveyed_length_m": 13611.695362464507,
         "frame": {"origin":{"lat":47.9618722,"lon":0.2074582},"parallel":47.943644259125485},
