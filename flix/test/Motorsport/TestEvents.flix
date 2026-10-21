@@ -48,31 +48,18 @@ pub mod Motorsport.TestEvents {
             |> List.map(r -> r#id)
 
     @Test
-    def testEveryRoundOnTheCalendarHasADirection(): Unit \ Assert =
+    def testEveryRoundOnTheCalendarHasAName(): Unit \ Assert =
         let ids = calendarIds();
         Assert.assertTrue(not List.isEmpty(ids));
-        Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids));
         Assert.assertTrue(List.forAll(id -> Events.displayName(id) != id, ids))
 
-    /// Which ground a round was run on is read off the calendar, as the
-    /// direction above is.
+    /// Which ground a round was run on is read off the calendar; the drawing
+    /// of it runs the way its survey says, not the way the calendar does.
     @Test
     def testEveryRoundOnTheCalendarNamesItsCircuit(): Unit \ Assert =
         let ids = calendarIds();
         Assert.assertTrue(not List.isEmpty(ids));
         Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.circuit(id)), ids))
-
-    @Test
-    def testWhichRoundsRunCounterClockwise(): Unit \ Assert =
-        use Motorsport.Circuit.Direction.Direction;
-        Assert.assertTrue(Events.direction("imola_6h") == Some(Direction.CounterClockwise));
-        Assert.assertTrue(Events.direction("cota_6h") == Some(Direction.CounterClockwise));
-        Assert.assertTrue(Events.direction("sao_paulo_6h") == Some(Direction.CounterClockwise));
-        Assert.assertTrue(Events.direction("fuji_6h") == Some(Direction.Clockwise))
-
-    @Test
-    def testUnknownRoundHasNoDirection(): Unit \ Assert =
-        Assert.assertTrue(Option.isEmpty(Events.direction("unknown_event")))
 
     /// The name is the stem the round ids share, so a second round at a circuit
     /// already drawn gives it one name and one drawing.

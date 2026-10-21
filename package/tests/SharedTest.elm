@@ -58,8 +58,7 @@ summaryJson =
     , "date": "2025-05-10"
     , "race": { "duration": "6:00:00.000", "timeLimit": "6:00:00.000", "lapTotal": 2 }
     , "track":
-        { "direction": "clockwise"
-        , "sectors":
+        { "sectors":
             { "s1": { "start": 0.0, "share": 0.3 }
             , "s2": { "start": 0.3, "share": 0.4 }
             , "s3": { "start": 0.7, "share": 0.3 }

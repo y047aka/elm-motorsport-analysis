@@ -10,7 +10,6 @@
   },
   "track": {
     "circuit": "le_mans",
-    "direction": "clockwise",
     "sectors": {
       "s1": { "start": 0.0, "share": 0.15773423688862698 },
       "s2": { "start": 0.15773423688862698, "share": 0.38525829895894714 },

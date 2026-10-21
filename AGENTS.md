@@ -392,7 +392,7 @@ data (ODbL, © OpenStreetMap contributors) into a file that records its own
 survey time, and `Motorsport.Wec.Circuit.Geometry` reads it back as a round
 loads. Which circuit a round was
 run on comes in with the summary (`Motorsport.Events.circuit`, keyed by round id
-and tested against the calendar the way `direction` is), and `Shared` picks the
+and tested against the calendar), and `Shared` picks the
 layout by that word rather than by the round id — which is still asked for,
 because which lines Le Mans is drawn with turns on the season. A circuit with no
 directory of its own, and a round exported before the summary named its circuit,
@@ -406,7 +406,11 @@ the prose the geometry file is documented with — `nix run .#geometry-cota`,
 a 502 or a 504 — repeat the run, or hand the answer in as a file. The answer is
 reduced to a geometry GeoJSON under `app/static/geometry/`, named by the word
 the summaries send for the circuit — the degrees, the metres per point, the
-frame, a `basis` saying what kind of line it is — and it lands in `static/`
+frame, a `basis` saying what kind of line it is, and the direction the survey
+runs, which is the shoelace of the chained outline written into the outline's
+properties and the app's only word for which way round a drawn circuit goes; a
+circuit with no drawing is a ring, and a ring runs clockwise — and it lands in
+`static/`
 because the app reads it from there at load, through
 `Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the
 bytes as they arrive. Nothing generates Elm from it: `--from-geojson` runs
