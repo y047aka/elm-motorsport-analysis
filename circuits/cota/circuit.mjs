@@ -3,8 +3,8 @@
 // tracker decodes at runtime. The pipeline itself is `circuit-geometry.mjs`,
 // which every circuit's script runs.
 //
-//     node circuits/cota-geometry.mjs [overpass.json]
-//     node circuits/cota-geometry.mjs --from-geojson [geometry.json]
+//     node circuits/cota/circuit.mjs [overpass.json]
+//     node circuits/cota/circuit.mjs --from-geojson [geometry.json]
 //
 // Asks OpenStreetMap, which answers a busy runner with a 502 or a 504: repeat
 // the run. The answer a geometry should be written from can be handed in as a
@@ -17,7 +17,7 @@
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // geometry written here is a derivative of it.
 
-import { isEntry, main } from "./circuit-geometry.mjs";
+import { isEntry, main } from "../circuit-geometry.mjs";
 
 export const circuit = {
   relation: 6537729,
@@ -50,7 +50,7 @@ export const circuit = {
   sectorsSource: "the circuit's own track sector map",
 
   geojson: "app/static/geometry/cota.geojson",
-  script: "circuits/cota-geometry.mjs",
+  script: "circuits/cota/circuit.mjs",
   survey: "The Circuit of the Americas",
 };
 

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { circuit as cota } from '../../circuits/cota-geometry.mjs';
-import { circuit as leMans } from '../../circuits/le-mans-geometry.mjs';
+import { circuit as cota } from '../../circuits/cota/circuit.mjs';
+import { circuit as leMans } from '../../circuits/le_mans/circuit.mjs';
 import { geometryFromGeoJson } from '../../circuits/circuit-geometry.mjs';
 import { drawnNames, readSource } from './helpers';
 
@@ -32,6 +32,12 @@ test('every circuit Shared draws has its geometry where the app reaches for it',
     geometryFromGeoJson(file, script);
     const outline = file.features.find((f: { properties?: { role?: string } }) => f.properties?.role === 'outline');
     expect(outline.properties.circuit, `${name}: the kept file is not the geometry the script writes`).toBe(name);
+  }
+});
+
+test("a circuit's directory is named by the word the app draws it by", () => {
+  for (const name of drawnNames()) {
+    expect(authored[name].script, `${name}'s config does not live in circuits/${name}/`).toBe(`circuits/${name}/circuit.mjs`);
   }
 });
 

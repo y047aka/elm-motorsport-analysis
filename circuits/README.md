@@ -1,8 +1,8 @@
 # circuits
 
 The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
-and beside the scripts the kept Overpass answers and atlas readings that say a
-kept geometry still answers to its survey. The commands are the flake's —
+and one directory per circuit — the script that surveyed it, the Overpass
+answer it was written from, and the atlas reading measured against it. The commands are the flake's —
 `nix run .#geometry-cota`, `.#geometry-le-mans`, `.#geometry-probe`,
 `.#geometry-atlas`, `.#geometry-diff`, `.#geometry-regenerate` — and
 `check-timing-lines.mjs` is run with `node` beside the export it judges. What
@@ -14,7 +14,8 @@ source relation and the license in their own properties.
 
 ## One pipeline, one thin script per circuit
 
-`circuit-geometry.mjs` is the pipeline, and a circuit's own script supplies the
+`circuit-geometry.mjs` is the pipeline, and a circuit joins as a directory
+named by the word the summaries send for it. Its `circuit.mjs` supplies the
 relation, the member role naming the line the lap is measured from, the
 published length the surveyed line is stretched to, and the prose the geometry
 file is documented with. They ask OpenStreetMap, which answers a busy runner
@@ -40,8 +41,8 @@ The Elm tests cannot hold a survey: the pipeline stretches whatever degrees it
 gets to the circuit's published lap length whatever the degrees say, so a point
 moved 20 m passes every Elm test and leaves the tracker's pixels where they
 were. `.#geometry-regenerate` holds it instead, re-running the pipeline over
-each circuit's kept Overpass answer — kept under this directory, like the atlas
-readings beside it — and failing unless it reproduces the kept geometry, every
+each circuit's kept Overpass answer — kept in each circuit's own directory —
+and failing unless it reproduces the kept geometry, every
 fenced property exactly. `surveyed_at` is the one exempt property: it stamps
 which answer a file was written from rather than what the drawing is made of,
 and it is the one property a live regeneration must move while every degree
@@ -115,7 +116,7 @@ hold it.
 `nix run .#geometry-atlas <circuit>` reads the track-atlas line — a midline
 measured from orthoimagery, not a survey stretched to a published length, at
 5,500.2 m against the 5,515 m this app draws — keeps it as
-`<circuit>.atlas.geojson` with `stretched: false`, and prints how far the two
+`<circuit>/atlas.geojson` with `stretched: false`, and prints how far the two
 lines stand apart, whether the atlas corner markers land at the lap distances
 the geometry puts them at, whether its pit entry and exit stand on the pit lane
 the geometry chains out of the relation, and where the circuit's own sector
@@ -136,9 +137,11 @@ change judged on that report.
 
 The geometries are kept because the app reads them, and as the line other
 datasets are measured against. A drawn circuit is two lists in `Shared` — the
-words `trackOf` matches and `decoderFor` decodes — and one file here, and
-`app/tests/geometry-contract.spec.ts` keeps all three in step, since none of
-them compiles against another. `app/tests/circuit-contract.spec.ts` pins the
+words `trackOf` matches and `decoderFor` decodes — and a geometry file at
+`app/static/geometry/<word>.geojson`, and `app/tests/geometry-contract.spec.ts`
+keeps all three in step, since none of them compiles against another — and
+pins that the circuit's directory under this one is named by that same word.
+`app/tests/circuit-contract.spec.ts` pins the
 word the summaries send for a circuit against the word `Shared.trackOf` picks a
 drawing by; a rename on one side alone would leave a round drawn as the ring
 with nothing red.

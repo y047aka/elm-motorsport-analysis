@@ -38,7 +38,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { circuit as cota } from "./cota-geometry.mjs";
+import { circuit as cota } from "./cota/circuit.mjs";
 
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");

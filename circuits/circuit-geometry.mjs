@@ -11,8 +11,8 @@
 // `Motorsport.Wec.Circuit.Geometry`, with a `Layout` module on the Elm side
 // holding what the file cannot know: the drawing's lengths and timing lines.
 //
-//     node circuits/<circuit>-geometry.mjs [overpass.json]
-//     node circuits/<circuit>-geometry.mjs --from-geojson [geometry.json]
+//     node circuits/<circuit>/circuit.mjs [overpass.json]
+//     node circuits/<circuit>/circuit.mjs --from-geojson [geometry.json]
 //
 // Given an Overpass answer as a file, reads it rather than asking.
 //

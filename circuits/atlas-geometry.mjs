@@ -10,7 +10,7 @@
 // The atlas measures its outlines' edges off orthoimagery registered to lidar;
 // OpenStreetMap's centreline seeds that measurement, its own `surface.sources`
 // recording that the seed "fixes lap order, origin and direction; the edges are
-// measured". This writes `circuits/<circuit>.atlas.geojson` — their outline and
+// measured". This writes `circuits/<circuit>/atlas.geojson` — their outline and
 // corner markers in this repository's geometry profile, at their length and
 // *not* stretched — and prints the four readings that matter before anyone
 // draws on them: how far the lines stand apart in metres, whether the atlas
@@ -55,25 +55,25 @@ const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const atlas = {
   // Keyed by the circuit word — the slug its script holds, which the summaries
   // send for the circuit and `Shared.trackOf` picks a drawing by. `script` is
-  // the one that surveys it; the reading lands beside the scripts rather than
-  // in `static/` — it is evidence a decision is judged on, never bytes the app
-  // asks for. `originWithin` is how far the file's first point may stand from
+  // the one that surveys it; the reading lands in the circuit's own directory
+  // rather than in `static/` — it is evidence a decision is judged on, never
+  // bytes the app asks for. `originWithin` is how far the file's first point may stand from
   // the published timing line before the lap is judged to start somewhere
   // else; the mistake it was written for is COTA's relation actually making
   // one, its two tagged lines standing 297 m apart along the lap. `every` is
   // how often the line is sampled for the apartness reading — corners sit tens
   // of metres apart and the deviation is a slow wave along the lap.
   cota: {
-    script: "./cota-geometry.mjs",
+    script: "./cota/circuit.mjs",
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
-    out: "circuits/cota.atlas.geojson",
+    out: "circuits/cota/atlas.geojson",
     originWithin: 25,
     every: 25,
   },
   le_mans: {
-    script: "./le-mans-geometry.mjs",
+    script: "./le_mans/circuit.mjs",
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson",
-    out: "circuits/le_mans.atlas.geojson",
+    out: "circuits/le_mans/atlas.geojson",
     originWithin: 25,
     every: 25,
   },
