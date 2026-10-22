@@ -124,8 +124,8 @@ async function run(slug, argv) {
     };
   });
 
-  await writeAtlasGeometry(keptAtlas(circuit), slug, circuit.atlas.url, outline, corners, pits, theirMetres);
-  print(slug, circuit, {
+  await writeAtlasGeometry(circuit, outline, corners, pits, theirMetres);
+  print(circuit, {
     every,
     length,
     originDistance,
@@ -160,16 +160,16 @@ function readKeptGeometry(text, name) {
 // The atlas line in this repository's own profile, at its own length: a reader
 // that later hands it to the module generator is told it does not end at the
 // published lap length, because it was written not to pretend otherwise.
-async function writeAtlasGeometry(path, slug, url, outline, corners, pits, theirMetres) {
+async function writeAtlasGeometry(circuit, outline, corners, pits, theirMetres) {
   const length = theirMetres[theirMetres.length - 1];
   const features = [
     {
       type: "Feature",
       properties: {
         role: "outline",
-        circuit: slug,
+        circuit: circuit.slug,
         basis: "measured-midline",
-        source: url,
+        source: circuit.atlas.url,
         license: "ODbL",
         lap_length_m: roundTenth(length),
         stretched: false,
@@ -189,16 +189,17 @@ async function writeAtlasGeometry(path, slug, url, outline, corners, pits, their
     })),
   ];
   const body = features.map((f) => `    ${JSON.stringify(f)}`).join(",\n");
+  const path = keptAtlas(circuit);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
 }
 
-function print(slug, circuit, { every, length, originDistance, deviation, atCorners, atPits, pitLength, atLines, sectors }) {
+function print(circuit, { every, length, originDistance, deviation, atCorners, atPits, pitLength, atLines, sectors }) {
   const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
   const distances = atCorners.map((c) => c.distance);
   const laps = atCorners.map((c) => c.ourMetres - c.theirMetres);
   const worstLap = laps.reduce((a, b) => (Math.abs(b) > Math.abs(a) ? b : a), 0);
-  console.log(`== ${slug}: the atlas line against the geometry this app draws`);
+  console.log(`== ${circuit.slug}: the atlas line against the geometry this app draws`);
   console.log(
     `length: measured ${length.toFixed(1)} m against the published ${circuit.lapLength} m ` +
       `(${signed(length - circuit.lapLength)}); ` +
