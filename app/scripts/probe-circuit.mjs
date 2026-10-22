@@ -105,6 +105,7 @@ function describe(tags) {
 
 function looksLikeACircuit(tags) {
   if (tags.type === "circuit" || tags.motorsport !== undefined) return true;
+  if (tags.highway === "raceway") return true;
   if (String(tags.sport ?? "").startsWith("motor")) return true;
   if (tags.type === "route") {
     return /motor|rally|rac|circ/.test(String(tags.route ?? "")) || Object.keys(tags).some((k) => k.startsWith("raceway:"));
