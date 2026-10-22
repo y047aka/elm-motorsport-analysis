@@ -37,8 +37,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { cumulative, degreesToMetres, projection, sectorLines } from "./circuit-geometry.mjs";
-import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
+import { apart, cumulative, projection, sectorLines } from "./circuit-geometry.mjs";
+import { apartness, interpolate, nearestOn, outlineOf } from "./geometry-diff.mjs";
 import { circuits, keptAtlas } from "./registry.mjs";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -74,7 +74,7 @@ async function run(slug, argv) {
     .map((role) => theirs.features.find((f) => f.properties?.role === role))
     .filter((f) => f !== undefined);
 
-  const ours = readKeptGeometry(await readFile(join(repoDir, circuit.geojson), "utf8"));
+  const ours = readKeptGeometry(await readFile(join(repoDir, circuit.geojson), "utf8"), circuit.slug);
   const earth = ([lon, lat]) => ({ lat, lon });
   const { project } = projection(
     [
@@ -90,7 +90,8 @@ async function run(slug, argv) {
   const theirMetres = cumulative(theirPoints);
   const length = theirMetres[theirMetres.length - 1];
 
-  const originDistance = toPublished(outline.geometry.coordinates[0], circuit.timingLine);
+  const first = { lat: outline.geometry.coordinates[0][1], lon: outline.geometry.coordinates[0][0] };
+  const originDistance = circuit.timingLine ? apart(first, circuit.timingLine) : 0;
   if (circuit.timingLine && originDistance > originWithin) {
     throw new Error(
       `the atlas lap starts ${originDistance.toFixed(1)} m from the published timing line, ` +
@@ -140,17 +141,6 @@ async function run(slug, argv) {
   });
 }
 
-// Distance on the ground between a surveyed degree pair and the line the
-// circuit publishes for its lap zero — the same equirectangular measure a
-// relation's finish node is checked with.
-function toPublished([lon, lat], published) {
-  if (!published) return 0;
-  return Math.hypot(
-    (lat - published.lat) * degreesToMetres,
-    (lon - published.lon) * degreesToMetres * Math.cos((lat * Math.PI) / 180),
-  );
-}
-
 function ask(url) {
   return fetch(url, { headers: { "User-Agent": "elm-motorsport-analysis/1.0 (atlas geometry)" } })
     .then((r) => {
@@ -160,13 +150,14 @@ function ask(url) {
     .then(JSON.parse);
 }
 
-function readKeptGeometry(text) {
-  const json = JSON.parse(text);
-  const outline = json.features.find((f) => f.properties?.role === "outline");
-  const pit = json.features.find((f) => f.properties?.role === "pit_lane");
-  if (!outline || !pit) throw new Error("the kept geometry holds no outline or no pit lane");
-  const { metres, ...props } = outline.properties;
-  return { coords: outline.geometry.coordinates, metres, props, pit: pit.geometry.coordinates };
+// The geometry the app serves, read the way `geometry-diff.mjs` reads any
+// geometry — outline, its own metres, and the properties a report quotes —
+// plus the pit lane the atlas pit markers are placed against.
+function readKeptGeometry(text, name) {
+  const outline = outlineOf(text, name);
+  const pit = JSON.parse(text).features.find((f) => f.properties?.role === "pit_lane");
+  if (!pit) throw new Error(`${name}: the kept geometry holds no pit lane`);
+  return { ...outline, pit: pit.geometry.coordinates };
 }
 
 // The atlas line in this repository's own profile, at its own length: a reader

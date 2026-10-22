@@ -362,7 +362,7 @@ export const degreesToMetres = (Math.PI / 180) * radius;
 /** Metres between two places, east-west taken at the parallel of the second —
  * an approximation only ever asked of distances across a circuit's few
  * kilometres. */
-function apart(a, b) {
+export function apart(a, b) {
   const east = Math.cos((b.lat * Math.PI) / 180);
   return Math.hypot(b.lat - a.lat, (b.lon - a.lon) * east) * degreesToMetres;
 }
