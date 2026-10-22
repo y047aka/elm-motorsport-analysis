@@ -15,8 +15,7 @@
 // answer a file was written from rather than what the drawing is made of, and
 // it is the one property a live regeneration must move while every degree
 // stands still. The Elm side reads neither it nor `surveyed_length_m`; the
-// fence reads both, so a file cannot quietly stop answering to the survey it
-// claims.
+// fence reads both.
 //
 // --write re-lays the geometry files from the kept answer — where a changed
 // writer lands its bytes with no survey moved. --freeze asks OpenStreetMap now
@@ -34,9 +33,9 @@ import { ask, geoJsonString, lapOf } from "./circuit-geometry.mjs";
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const circuits = {
-  // Keyed by the circuit word, as the atlas table keys itself: `script` is the
-  // one that surveys the circuit, `answer` the kept Overpass answer beside this
-  // file — evidence a check is made against, never bytes the app asks for.
+  // Keyed by the circuit word: `script` is the one that surveys the circuit,
+  // `answer` the kept Overpass answer beside this file — never bytes the app
+  // asks for.
   cota: { script: "./cota-geometry.mjs", answer: "app/scripts/geometry/cota.overpass.json" },
   le_mans: { script: "./le-mans-geometry.mjs", answer: "app/scripts/geometry/le_mans.overpass.json" },
 };

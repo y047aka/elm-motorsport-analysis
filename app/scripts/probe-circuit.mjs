@@ -24,7 +24,7 @@ const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 
 // How far a candidate's probed ways may run before the report gives up on them;
 // a relation this box catches that is not a circuit is usually a road or an
-// administrative boundary, and its geometry is not what anyone came for.
+// administrative boundary.
 const probeLimit = 10;
 
 async function main(argv) {
@@ -92,9 +92,8 @@ async function probe(place, radiusKm) {
 }
 
 /** What the tags say, before any geometry is asked for: what kind of relation
- * it is, what it is called, and the length the tags themselves claim -- the
- * Sarthe relation tags its own `distance` as 13.626, which is the figure the
- * report reads the measured lap against. */
+ * it is, what it is called, and the length the tags themselves claim — the
+ * Sarthe relation tags its own `distance` as 13.626. */
 function describe(tags) {
   const parts = [tags.type && `type=${tags.type}`, tags.route && `route=${tags.route}`, tags.sport && `sport=${tags.sport}`]
     .filter(Boolean)

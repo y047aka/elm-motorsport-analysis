@@ -136,10 +136,8 @@ export async function answer(relation, file) {
 }
 
 /** One query, walked over the runners: a busy one answers 502 or 504 — or 200
- * with an HTML error page behind a proxy, which is why the body is looked at
- * and not just the status — and the next answers the same query. A failure that
- * outlasts the walk is a runner that is busy for real, and the advice is
- * unchanged: ask again later. */
+ * with an HTML error page behind a proxy, so the body is looked at and not just
+ * the status — and the next answers the same query. */
 export async function askOverpass(query) {
   let failure = "no runner was reached";
   for (const [runner, url] of overpassRunners.entries()) {
@@ -360,18 +358,15 @@ function nearTimingLine(rel, nodes, chosen, circuit) {
 
 export const degreesToMetres = (Math.PI / 180) * radius;
 
-/** Metres between two places on the earth, east-west taken at the parallel of
- * the second — far finer than the metre a survey is kept to, and only ever
- * asked of distances across a circuit's few kilometres. */
+/** Metres between two places, east-west taken at the parallel of the second —
+ * an approximation only ever asked of distances across a circuit's few
+ * kilometres. */
 function apart(a, b) {
   const east = Math.cos((b.lat * Math.PI) / 180);
   return Math.hypot(b.lat - a.lat, (b.lon - a.lon) * east) * degreesToMetres;
 }
 
-/** Metres along a list of places, each stretch taken at its own parallel: a
- * way's own geometry measured straight, without the chain or the projection.
- * `atlas-geometry.mjs` weighs another dataset's ways with it, and a chain that
- * stops short reports its leftovers with it. */
+/** Metres along a list of places, each stretch taken at its own parallel. */
 export function polylineMetres(points) {
   let metres = 0;
   for (let i = 1; i < points.length; i++) metres += apart(points[i - 1], points[i]);
@@ -470,12 +465,9 @@ export function cumulative(points) {
   return out;
 }
 
-// Which way the closed loop runs, read off the shoelace sum in the drawing's
-// own metres: positive is clockwise in the map view, because this projection's
-// y runs south. The chain follows ways as they are driven, so the survey says
-// this of itself; a circuit relation whose ways are mis-oriented would say it
-// too, which is why the word is worth checking against the circuit's own claim
-// when the circuit publishes one.
+// Which way the closed loop runs, from the shoelace sum in the drawing's own
+// metres: positive is clockwise, because this projection's y runs south. A
+// circuit relation whose ways are mis-oriented says so too.
 function turnDirection(points) {
   let sum = 0;
   for (let i = 0; i < points.length; i++) {
