@@ -18,7 +18,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `app/static` into the bundle.
 - **`/circuits`** — the geometry pipeline: OpenStreetMap relations through
   `circuits/circuit-geometry.mjs` into the served `app/static/geometry/*.geojson`,
-  with one directory per circuit — its survey script, its kept Overpass answer
+  with one directory per circuit — its config, its kept Overpass answer
   and its atlas reading — named by the word the summaries send for the circuit.
   It sits outside `/app` because nothing it writes but the geometry files is
   ever served, and nothing in the bundle reads the pipeline itself.
