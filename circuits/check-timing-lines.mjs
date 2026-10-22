@@ -271,7 +271,7 @@ function judge(season, against, round, limit) {
     console.log(table(columns, [className, ...round.lines.map((line, at) => movedMetres(moved(className, at)))]));
   }
   for (const className of new Set([...season.lines.keys(), ...against.lines.keys()])) {
-    if (!both.includes(className) && className !== whole) {
+    if (!both.includes(className)) {
       console.log(`${className} ran in one season only, so its lines are not compared.`);
     }
   }
