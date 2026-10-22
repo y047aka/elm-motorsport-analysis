@@ -4,7 +4,7 @@ module Motorsport.Wec.Circuit.Geometry exposing (Geometry, LapPoint, decoder)
 surveyed degrees, how far round the lap each stands, and the
 [`Frame`](Motorsport-Circuit-Geodesy#Frame) to project them through.
 
-The file is written by the pipeline in `app/scripts` and served under
+The file is written by the pipeline in `circuits/` and served under
 `/static/geometry/`, named by the word the summaries send for the circuit.
 [`decoder`](#decoder) checks the bytes as they arrive: a served file can be
 stale, truncated, or -- in a Tauri bundle -- the app shell the asset resolver
