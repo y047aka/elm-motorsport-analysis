@@ -40,6 +40,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `scripts/geometry/<circuit>.atlas.geojson` — beside the readers, not in what gets served (`cota [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
+| `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (`<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
 | `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
@@ -403,7 +404,12 @@ circuit, which supplies the relation, the member role naming the line the lap
 is measured from, the published length the surveyed line is stretched to, and
 the prose the geometry file is documented with — `nix run .#geometry-cota`,
 `nix run .#geometry-le-mans`. Both ask OpenStreetMap, which answers a busy runner with
-a 502 or a 504 — repeat the run, or hand the answer in as a file. The answer is
+a 502, a 504 or something that is not JSON; a run walks a second runner before it
+fails, and a failure past both is still a survey to repeat later — or to hand in
+as a file. Which relation a circuit is before any config says is
+`nix run .#geometry-probe`, which prints the circuit relations at a place on earth
+with each one's unroled ways measured — the length is what tells the full Sarthe
+circuit from the Grand Prix circuit standing beside it. The answer is
 reduced to a geometry GeoJSON under `app/static/geometry/`, named by the word
 the summaries send for the circuit — the degrees, the metres per point, the
 frame, a `basis` saying what kind of line it is, and the direction the survey

@@ -34,7 +34,10 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const overpass = "https://overpass-api.de/api/interpreter";
+const overpassRunners = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
 const userAgent = "elm-motorsport-analysis/1.0 (circuit geometry)";
 
 // Metres a simplified line may stray from the surveyed one.
@@ -132,16 +135,42 @@ export async function answer(relation, file) {
   return file ? JSON.parse(await readFile(file, "utf8")) : ask(relation);
 }
 
+/** One query, walked over the runners: a busy one answers 502 or 504 — or 200
+ * with an HTML error page behind a proxy, which is why the body is looked at
+ * and not just the status — and the next answers the same query. A failure that
+ * outlasts the walk is a runner that is busy for real, and the advice is
+ * unchanged: ask again later. */
+export async function askOverpass(query) {
+  let failure = "no runner was reached";
+  for (const [runner, url] of overpassRunners.entries()) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "User-Agent": userAgent, "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ data: query }),
+        });
+        const body = await response.text();
+        if (!response.ok) throw new Error(`Overpass answered ${response.status}`);
+        if (!"{[".includes(body[0])) throw new Error("Overpass answered with something that is not JSON");
+        return JSON.parse(body);
+      } catch (error) {
+        failure = error.message;
+        const left = overpassRunners.length - runner + (2 - attempt);
+        if (left > 1) await sleep(attempt * 4000);
+      }
+    }
+  }
+  throw new Error(`every Overpass runner failed: ${failure}`);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** The Overpass answer for one relation: its ways with their tags, and nodes. */
 export async function ask(relation) {
-  const query = `[out:json][timeout:120];relation(${relation});out body;way(r);out body;node(w);out skel;`;
-  const response = await fetch(overpass, {
-    method: "POST",
-    headers: { "User-Agent": userAgent, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ data: query }),
-  });
-  if (!response.ok) throw new Error(`Overpass answered ${response.status}`);
-  return response.json();
+  return askOverpass(`[out:json][timeout:120];relation(${relation});out body;way(r);out body;node(w);out skel;`);
 }
 
 /**
