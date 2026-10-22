@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { circuit as cota } from '../scripts/cota-geometry.mjs';
-import { circuit as leMans } from '../scripts/le-mans-geometry.mjs';
-import { geometryFromGeoJson } from '../scripts/circuit-geometry.mjs';
+import { circuit as cota } from '../../circuits/cota-geometry.mjs';
+import { circuit as leMans } from '../../circuits/le-mans-geometry.mjs';
+import { geometryFromGeoJson } from '../../circuits/circuit-geometry.mjs';
 import { drawnNames, readSource } from './helpers';
 
 /**

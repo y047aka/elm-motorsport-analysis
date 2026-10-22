@@ -11,8 +11,8 @@
 // `Motorsport.Wec.Circuit.Geometry`, with a `Layout` module on the Elm side
 // holding what the file cannot know: the drawing's lengths and timing lines.
 //
-//     node scripts/<circuit>-geometry.mjs [overpass.json]
-//     node scripts/<circuit>-geometry.mjs --from-geojson [geometry.json]
+//     node circuits/<circuit>-geometry.mjs [overpass.json]
+//     node circuits/<circuit>-geometry.mjs --from-geojson [geometry.json]
 //
 // Given an Overpass answer as a file, reads it rather than asking.
 //
@@ -21,7 +21,7 @@
 // to still answer to its circuit's authored config -- the published lap length,
 // the sectors that must add up -- with no OpenStreetMap and no app. The Overpass
 // answer a geometry was drawn from is kept as the pipeline's frozen input under
-// `scripts/geometry/`, which `regenerate-geometry.mjs` re-runs this module over;
+// `circuits/`, which `regenerate-geometry.mjs` re-runs this module over;
 // a regeneration asks OpenStreetMap again regardless. What the geometry holds is
 // read twice -- by the app at runtime, and by `atlas-geometry.mjs`, which
 // measures another dataset's line against it.
@@ -33,7 +33,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const overpassRunners = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",

@@ -3,8 +3,8 @@
 // decodes at runtime. The pipeline itself is `circuit-geometry.mjs`, which
 // every circuit's script runs.
 //
-//     node scripts/le-mans-geometry.mjs [overpass.json]
-//     node scripts/le-mans-geometry.mjs --from-geojson [geometry.json]
+//     node circuits/le-mans-geometry.mjs [overpass.json]
+//     node circuits/le-mans-geometry.mjs --from-geojson [geometry.json]
 //
 // Asks OpenStreetMap, which answers a busy runner with a 502 or a 504: repeat
 // the run. The answer a geometry should be written from can be handed in as a
@@ -37,7 +37,7 @@ export const circuit = {
   lapLength: 13625.7,
 
   geojson: "app/static/geometry/le_mans.geojson",
-  script: "app/scripts/le-mans-geometry.mjs",
+  script: "circuits/le-mans-geometry.mjs",
   survey: "The Circuit de la Sarthe",
 };
 

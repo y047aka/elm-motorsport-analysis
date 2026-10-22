@@ -2,9 +2,9 @@
 // kept Overpass answer and fails unless it reproduces the geometry the app
 // serves.
 //
-//     node scripts/regenerate-geometry.mjs [<circuit> ...] [--write | --freeze]
+//     node circuits/regenerate-geometry.mjs [<circuit> ...] [--write | --freeze]
 //
-// The answer under `scripts/geometry/` is the survey a kept geometry was
+// The kept answers beside this file are the surveys a kept geometry was
 // judged from, kept as the runner served it — the pipeline's frozen input. Its
 // degrees cannot move, so a run over it that does not reproduce the geometry
 // moved them in the code. This is the check no Elm test can be:
@@ -30,14 +30,14 @@ import { fileURLToPath } from "node:url";
 
 import { ask, geoJsonString, lapOf } from "./circuit-geometry.mjs";
 
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const circuits = {
   // Keyed by the circuit word: `script` is the one that surveys the circuit,
   // `answer` the kept Overpass answer beside this file — never bytes the app
   // asks for.
-  cota: { script: "./cota-geometry.mjs", answer: "app/scripts/geometry/cota.overpass.json" },
-  le_mans: { script: "./le-mans-geometry.mjs", answer: "app/scripts/geometry/le_mans.overpass.json" },
+  cota: { script: "./cota-geometry.mjs", answer: "circuits/cota.overpass.json" },
+  le_mans: { script: "./le-mans-geometry.mjs", answer: "circuits/le_mans.overpass.json" },
 };
 
 main().catch((error) => {

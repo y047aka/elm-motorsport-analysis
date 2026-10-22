@@ -16,8 +16,13 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
+- **`/circuits`** — the geometry pipeline: OpenStreetMap relations through
+  `circuits/circuit-geometry.mjs` into the served `app/static/geometry/*.geojson`,
+  with each circuit's kept Overpass answer and atlas reading beside the readers.
+  It sits outside `/app` because nothing it writes but the geometry files is
+  ever served, and nothing in the bundle reads the pipeline itself.
 
-There is no manifest at the repository root; the flake is what ties the three
+There is no manifest at the repository root; the flake is what ties the parts
 together.
 
 ## Commands
@@ -38,7 +43,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
-| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `scripts/geometry/<circuit>.atlas.geojson` — beside the readers, not in what gets served (`<circuit> [--file gp.geojson]`) |
+| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>.atlas.geojson` — beside the readers, not in what gets served (`<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (`<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
 | `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
@@ -399,7 +404,7 @@ because which lines Le Mans is drawn with turns on the season. A circuit with no
 directory of its own, and a round exported before the summary named its circuit,
 is drawn as the ring.
 
-The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
+The pipeline is `circuits/circuit-geometry.mjs` plus one thin script per
 circuit, which supplies the relation, the member role naming the line the lap
 is measured from, the published length the surveyed line is stretched to, and
 the prose the geometry file is documented with — `nix run .#geometry-cota`,
@@ -442,7 +447,7 @@ cannot hold a survey: the pipeline stretches whatever degrees it gets to the
 circuit's published lap length whatever the degrees say, so a point
 moved 20 m passes every Elm test and leaves the tracker's pixels where they were
 — the fence `.#geometry-regenerate` runs holds it instead, re-running the
-pipeline over the circuit's kept Overpass answer, under `scripts/geometry/` like
+pipeline over the circuit's kept Overpass answer, under `circuits/` like
 the atlas readings beside it. A
 regeneration is read as a diff, and a survey that moved by metres goes to
 `update-snapshots-ci` with it, since every tracker baseline is drawn on those degrees.
@@ -464,7 +469,7 @@ out of another: a sector's share of a lap is not a share of its distance, and
 every placement has a mean speed of its own. What they rest on is that the
 circuit published them as the lines it times to, beside the lap length they add
 up to. What the times can answer is whether the lines have moved, and
-`node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025` reads that:
+`node circuits/check-timing-lines.mjs 2026/cota_6h --against 2025` reads that:
 each class's fastest sector times as two distances round the lap, which the two
 rounds here agree on within 28 m — 0.5% of a lap, and the only evidence there is
 that one map serves both. The command judges the season-to-season difference

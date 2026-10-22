@@ -2,7 +2,7 @@
 // beside our own geometries, and says how far it stands from the line this app
 // draws.
 //
-//     node scripts/atlas-geometry.mjs <circuit> [--file gp.geojson]
+//     node circuits/atlas-geometry.mjs <circuit> [--file gp.geojson]
 //
 // A circuit joins the `atlas` table below by one entry naming the script that
 // surveys it and the atlas outline for the layout this app draws.
@@ -10,7 +10,7 @@
 // The atlas measures its outlines' edges off orthoimagery registered to lidar;
 // OpenStreetMap's centreline seeds that measurement, its own `surface.sources`
 // recording that the seed "fixes lap order, origin and direction; the edges are
-// measured". This writes `geometry/<circuit>.atlas.geojson` — their outline and
+// measured". This writes `circuits/<circuit>.atlas.geojson` — their outline and
 // corner markers in this repository's geometry profile, at their length and
 // *not* stretched — and prints the four readings that matter before anyone
 // draws on them: how far the lines stand apart in metres, whether the atlas
@@ -50,7 +50,7 @@ import { fileURLToPath } from "node:url";
 import { cumulative, degreesToMetres, projection } from "./circuit-geometry.mjs";
 import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
 
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const atlas = {
   // Keyed by the circuit word — the slug its script holds, which the summaries
@@ -66,14 +66,14 @@ const atlas = {
   cota: {
     script: "./cota-geometry.mjs",
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
-    out: "app/scripts/geometry/cota.atlas.geojson",
+    out: "circuits/cota.atlas.geojson",
     originWithin: 25,
     every: 25,
   },
   le_mans: {
     script: "./le-mans-geometry.mjs",
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson",
-    out: "app/scripts/geometry/le_mans.atlas.geojson",
+    out: "circuits/le_mans.atlas.geojson",
     originWithin: 25,
     every: 25,
   },

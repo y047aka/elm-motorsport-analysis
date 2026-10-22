@@ -2,7 +2,7 @@
 // says, in metres, where they disagree — optionally as an SVG overlay, which is
 // the same reading at one glance instead of three numbers.
 //
-//     node scripts/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
+//     node circuits/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
 //
 // The only claim a file must keep is the one the profile makes of its outline:
 // a line with metres measured from its own lap's zero. The basis is free — this
@@ -56,7 +56,7 @@ function readArgs(argv) {
     else if (argv[at] === "--svg") args.svg = argv[++at];
     else args.paths.push(resolve(argv[at]));
   }
-  if (args.paths.length !== 2) fail("usage: node scripts/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
+  if (args.paths.length !== 2) fail("usage: node circuits/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
   if (!Number.isFinite(args.every) || args.every <= 0) fail(`"${args.every}" is not a distance`);
   return args;
 }

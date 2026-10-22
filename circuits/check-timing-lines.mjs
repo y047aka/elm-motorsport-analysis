@@ -1,7 +1,7 @@
 // Whether a circuit's timing lines still stand where they were put a season
 // earlier, read off the timing feed of two rounds at the same circuit.
 //
-//     node scripts/check-timing-lines.mjs <season>/<id> [--against <season>]
+//     node circuits/check-timing-lines.mjs <season>/<id> [--against <season>]
 //                                         [--tolerance <metres>]
 //
 // A circuit is drawn on one set of lines. Where they come from a document of one
@@ -41,7 +41,7 @@ import { fileURLToPath } from "node:url";
 import { circuit as cota } from "./cota-geometry.mjs";
 
 
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 // How far round the lap a line implied one season may sit from the same line
 // implied the season after before the two are said to be on different lines. What
@@ -348,7 +348,7 @@ function readArgs(argv) {
     } else fail(`unknown argument: ${argv[at]}`);
   }
   if (args.id === null) {
-    fail("usage: node scripts/check-timing-lines.mjs <season>/<id> [--against <season>] [--tolerance <metres>]");
+    fail("usage: node circuits/check-timing-lines.mjs <season>/<id> [--against <season>] [--tolerance <metres>]");
   }
   if (args.against !== null && !/^\d{4}$/.test(String(args.against))) fail(`"${args.against}" is not a season.`);
   if (!Number.isFinite(args.tolerance) || args.tolerance <= 0) fail(`"${args.tolerance}" is not a distance.`);

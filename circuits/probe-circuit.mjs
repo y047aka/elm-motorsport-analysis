@@ -8,8 +8,8 @@
 // 4.4 km Grand Prix circuit both stand, and a name alone does not tell them
 // apart.
 //
-//     node scripts/probe-circuit.mjs <lat>,<lon> [...] [--radius <km>]
-//     node scripts/probe-circuit.mjs <south>,<west>,<north>,<east> [...]
+//     node circuits/probe-circuit.mjs <lat>,<lon> [...] [--radius <km>]
+//     node circuits/probe-circuit.mjs <south>,<west>,<north>,<east> [...]
 //
 // A centre is widened into a box by --radius, 5 km unless named otherwise;
 // four numbers are the box itself, which is what to give when the circuit's own

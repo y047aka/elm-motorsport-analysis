@@ -136,7 +136,7 @@ no later map has been read. A season that moved its lines would be drawn with th
 wrong boundaries, and would place every car wrong between them.
 
 What a new season is checked against is the round's own splits, and for movement
-only: `node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025`
+only: `node circuits/check-timing-lines.mjs 2026/cota_6h --against 2025`
 reads each class's fastest sector times as two distances round a lap of this
 length. A sector's share of a lap is not a share of its distance -- the shares
 themselves place the first line 170 m from where this layout does -- so the
