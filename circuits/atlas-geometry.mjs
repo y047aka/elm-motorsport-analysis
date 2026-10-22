@@ -67,6 +67,14 @@ async function run(slug, argv) {
   const features = theirs.features ?? [];
   const outline = features.find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error("the atlas file holds no outline feature");
+  // The reading is kept under the slug given on the command line, whatever
+  // the file was measured from — a mismatched pair replaces one circuit's
+  // kept evidence with another circuit's line.
+  if (outline.properties.circuit && outline.properties.circuit !== circuit.slug) {
+    throw new Error(
+      `the atlas file names itself '${outline.properties.circuit}', not '${circuit.slug}' — it is not this circuit's line`,
+    );
+  }
   const corners = features.filter((f) => f.properties?.role === "corner");
   const pits = ["pit_entry", "pit_exit"]
     .map((role) => features.find((f) => f.properties?.role === role))
