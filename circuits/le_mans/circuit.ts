@@ -1,7 +1,7 @@
 // The Circuit de la Sarthe's config for the geometry pipeline: the relation to
 // survey, the figures the circuit publishes, and the word its rounds are known
-// by. What the pipeline writes and how is `circuit-geometry.mjs`, run by
-// `write-geometry.mjs`; where these figures come from and what holds them is
+// by. What the pipeline writes and how is `circuit-geometry.ts`, run by
+// `write-geometry.ts`; where these figures come from and what holds them is
 // `circuits/README.md`.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
@@ -25,12 +25,12 @@ export const circuit = {
   lapLength: 13625.7,
 
   // The track-atlas layer for the 24h layout — a midline measured off
-  // orthoimagery, read against the survey above by `atlas-geometry.mjs`.
+  // orthoimagery, read against the survey above by `atlas-geometry.ts`.
   atlas: {
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson",
   },
 
   geojson: "app/static/geometry/le_mans.geojson",
-  script: "circuits/le_mans/circuit.mjs",
+  script: "circuits/le_mans/circuit.ts",
   survey: "The Circuit de la Sarthe",
 };

@@ -5,7 +5,7 @@
 // reproduce the geometry moved the degrees in the code; why that is the check
 // no Elm test can be is `circuits/README.md`.
 //
-//     node circuits/regenerate-geometry.mjs [<circuit> ...] [--write | --freeze]
+//     node circuits/regenerate-geometry.ts [<circuit> ...] [--write | --freeze]
 //
 // `surveyed_at` is the one property exempt from the fence: it stamps which
 // answer a file was written from rather than what the drawing is made of, and
@@ -23,15 +23,16 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { ask, geoJsonString, lapOf, repoDir } from "./circuit-geometry.mjs";
-import { circuits, keptAnswer } from "./registry.mjs";
+import type { Circuit } from "./circuit-geometry.ts";
+import { ask, geoJsonString, lapOf, repoDir } from "./circuit-geometry.ts";
+import { circuits, keptAnswer } from "./registry.ts";
 
 main().catch((error) => {
-  console.error(error.message);
+  console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
 
-async function main() {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const write = argv.includes("--write");
   const freeze = argv.includes("--freeze");
@@ -45,7 +46,7 @@ async function main() {
   }
 }
 
-async function reRun(circuit, write, freeze) {
+async function reRun(circuit: Circuit, write: boolean, freeze: boolean): Promise<void> {
   const path = keptAnswer(circuit);
 
   let answer;
@@ -55,7 +56,7 @@ async function reRun(circuit, write, freeze) {
     try {
       answer = JSON.parse(await readFile(path, "utf8"));
     } catch (error) {
-      if (error.code !== "ENOENT") throw error;
+      if ((error as { code?: string }).code !== "ENOENT") throw error;
       console.log(`${circuit.slug}: no kept answer yet — --freeze asks OpenStreetMap and keeps one.`);
       return;
     }
@@ -86,12 +87,12 @@ async function reRun(circuit, write, freeze) {
 // property by property. The comparison is of parsed data, not bytes: what the
 // fence answers for is the drawing, and the writer's layout is allowed to
 // change between the file and this reading — --write is where it lands.
-function driftOf(fresh, kept) {
-  const drift = [];
-  const roles = [...new Set([...fresh.features, ...kept.features].map((f) => f.properties?.role))];
+function driftOf(fresh: any, kept: any): string[] {
+  const drift: string[] = [];
+  const roles = [...new Set([...fresh.features, ...kept.features].map((f: any) => f.properties?.role))];
   for (const role of roles) {
-    const a = fresh.features.find((f) => f.properties?.role === role);
-    const b = kept.features.find((f) => f.properties?.role === role);
+    const a = fresh.features.find((f: any) => f.properties?.role === role);
+    const b = kept.features.find((f: any) => f.properties?.role === role);
     if (!a || !b) {
       drift.push(`${role}: only ${a ? "the regeneration" : "the kept file"} holds it`);
       continue;
@@ -109,11 +110,11 @@ function driftOf(fresh, kept) {
   return drift;
 }
 
-function firstDiff(a, b) {
+function firstDiff(a: any[], b: any[]): number {
   for (let at = 0; at < Math.max(a.length, b.length); at++) {
     if (JSON.stringify(a[at]) !== JSON.stringify(b[at])) return at;
   }
   return -1;
 }
 
-const shown = (value) => (value === undefined ? "absent" : JSON.stringify(value));
+const shown = (value: unknown) => (value === undefined ? "absent" : JSON.stringify(value));

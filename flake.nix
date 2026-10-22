@@ -176,7 +176,7 @@
             inherit name;
             runtimeInputs = [ pkgs.nodejs_26 ];
             text = ''
-              node circuits/${script}.mjs "$@"
+              node circuits/${script}.ts "$@"
             '';
           };
 

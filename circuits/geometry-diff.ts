@@ -2,7 +2,7 @@
 // says, in metres, where they disagree — optionally as an SVG overlay, which is
 // the same reading at one glance instead of three numbers.
 //
-//     node circuits/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
+//     node circuits/geometry-diff.ts <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
 //
 // The only claim a file must keep is the one the profile makes of its outline:
 // a line with metres measured from its own lap's zero. The basis is free — this
@@ -20,11 +20,27 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 
-import { isEntry, onEarth, projection } from "./circuit-geometry.mjs";
+import type { Point } from "./circuit-geometry.ts";
+import { isEntry, onEarth, projection, reason } from "./circuit-geometry.ts";
 
 const width = 1000;
 
-async function run(lines, args) {
+/** One geometry laid against the others: its name, the properties a report
+ * quotes, its coordinates as they stand in the file, and its own metres. */
+export type KeptLine = {
+  name: string;
+  props: Record<string, any>;
+  coords: [number, number][];
+  metres: number[];
+};
+
+/** One sampling of a line against another: where on each line's own measure
+ * the nearest place stands, and how far apart they are. */
+export type Sample = { aMetres: number; bMetres: number; distance: number };
+
+export type Apartness = { count: number; mean: number; worst: Sample };
+
+async function run(lines: KeptLine[], args: { paths: string[]; every: number; svg: string | null }): Promise<void> {
   const { project } = projection(lines.flatMap((line) => line.coords.map(onEarth)));
   const points = lines.map((line) => line.coords.map(onEarth).map(project));
   for (const [at, line] of lines.entries()) {
@@ -49,22 +65,22 @@ async function run(lines, args) {
   }
 }
 
-function readArgs(argv) {
-  const args = { paths: [], every: 25, svg: null };
+function readArgs(argv: string[]): { paths: string[]; every: number; svg: string | null } {
+  const args: { paths: string[]; every: number; svg: string | null } = { paths: [], every: 25, svg: null };
   for (let at = 0; at < argv.length; at++) {
     if (argv[at] === "--every") args.every = Number(argv[++at]);
     else if (argv[at] === "--svg") args.svg = argv[++at];
     else args.paths.push(resolve(argv[at]));
   }
-  if (args.paths.length !== 2) fail("usage: node circuits/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
+  if (args.paths.length !== 2) fail("usage: node circuits/geometry-diff.ts <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
   if (!Number.isFinite(args.every) || args.every <= 0) fail(`"${args.every}" is not a distance`);
   return args;
 }
 
 /** The outline of one geometry file: its coordinates, its own metres, and the
  * properties a report quotes so the reader knows what two lines were compared. */
-export function outlineOf(text, name) {
-  const outline = JSON.parse(text).features.find((f) => f.properties?.role === "outline");
+export function outlineOf(text: string, name?: string): KeptLine {
+  const outline = (JSON.parse(text).features as any[]).find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error(`${name}: no outline feature`);
   const { metres, ...props } = outline.properties;
   if (!Array.isArray(metres)) throw new Error(`${name}: the outline publishes no metres`);
@@ -77,7 +93,13 @@ export function outlineOf(text, name) {
 /** The first line laid against the second, sampled every `every` metres along
  * the first: the nearest ground distance to the second and where that place
  * falls on each line's own measure. */
-export function apartness(aPoints, aMetres, bPoints, bMetres, every) {
+export function apartness(
+  aPoints: Point[],
+  aMetres: number[],
+  bPoints: Point[],
+  bMetres: number[],
+  every: number,
+): Apartness {
   const length = aMetres[aMetres.length - 1];
   const samples = [];
   for (let s = 0; s < length; s += every) {
@@ -89,7 +111,7 @@ export function apartness(aPoints, aMetres, bPoints, bMetres, every) {
   return { count: samples.length, mean, worst };
 }
 
-export function interpolate(points, metres, s) {
+export function interpolate(points: Point[], metres: number[], s: number): Point {
   let i = 1;
   while (i < metres.length - 1 && metres[i] < s) i++;
   const span = metres[i] - metres[i - 1];
@@ -100,7 +122,7 @@ export function interpolate(points, metres, s) {
   };
 }
 
-export function nearestOn(point, points, metres) {
+export function nearestOn(point: Point, points: Point[], metres: number[]): { metres: number; distance: number } {
   let best = { distance: Infinity, metres: 0 };
   for (let i = 1; i < points.length; i++) {
     const near = toSegment(point, points[i - 1], points[i]);
@@ -111,7 +133,7 @@ export function nearestOn(point, points, metres) {
   return best;
 }
 
-function toSegment(p, a, b) {
+function toSegment(p: Point, a: Point, b: Point): { distance: number; at: number } {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const span = dx * dx + dy * dy;
@@ -122,14 +144,14 @@ function toSegment(p, a, b) {
 // The overlay is a reading aid, not a drawing: two strokes of one projection,
 // and the provenance each file carries as its own comment, so a saved overlay
 // says what it was comparing long after the files moved.
-function svgOverlay(lines, points) {
+function svgOverlay(lines: KeptLine[], points: Point[][]): string {
   const at = { x: Math.min(...points.flat().map((p) => p.x)), y: Math.min(...points.flat().map((p) => p.y)) };
   const span = {
     x: Math.max(...points.flat().map((p) => p.x)) - at.x,
     y: Math.max(...points.flat().map((p) => p.y)) - at.y,
   };
   const scale = (width - 40) / Math.max(span.x, span.y);
-  const place = (p) => `${(20 + (p.x - at.x) * scale).toFixed(1)},${(20 + (at.y + span.y - p.y) * scale).toFixed(1)}`;
+  const place = (p: Point) => `${(20 + (p.x - at.x) * scale).toFixed(1)},${(20 + (at.y + span.y - p.y) * scale).toFixed(1)}`;
   const colours = ["#d43a3a", "#2a6df4"];
   const paths = lines
     .map((line, at) => `  <path d="M ${points[at].map(place).join(" L ")}" fill="none" stroke="${colours[at]}" stroke-width="2" opacity="0.8"/>`)
@@ -147,7 +169,7 @@ ${paths}
 `;
 }
 
-function fail(message) {
+function fail(message: string): never {
   console.error(message);
   process.exit(1);
 }
@@ -155,11 +177,11 @@ function fail(message) {
 if (isEntry(import.meta.url)) {
   const args = readArgs(process.argv.slice(2));
   try {
-    const lines = [];
+    const lines: KeptLine[] = [];
     for (const path of args.paths) lines.push(outlineOf(await readFile(path, "utf8"), basename(path, ".geojson")));
     await run(lines, args);
   } catch (error) {
-    console.error(error.message);
+    console.error(reason(error));
     process.exitCode = 1;
   }
 }

@@ -15,8 +15,8 @@ source relation and the license in their own properties.
 
 ## One pipeline, one thin config per circuit
 
-`circuit-geometry.mjs` is the pipeline, and a circuit joins it as a directory
-named by the word the summaries send for it. Its `circuit.mjs` supplies the
+`circuit-geometry.ts` is the pipeline, and a circuit joins it as a directory
+named by the word the summaries send for it. Its `circuit.ts` supplies the
 relation, the member role naming the line the lap is measured from, the
 published length the surveyed line is stretched to, and the prose the geometry
 file is documented with. What it writes is not a build artifact but a served
@@ -112,7 +112,7 @@ judged against rather than in what gets served. For a circuit this repository
 has not surveyed yet, the atlas's `start_finish` point is a surveyed
 coordinate to seed a circuit config's `timingLine` with; whether the lines the
 times are read against stand where the seeded line puts them is
-`check-timing-lines.mjs`'s to answer, once a round has been loaded.
+`check-timing-lines.ts`'s to answer, once a round has been loaded.
 
 `nix run .#geometry-diff` lays any two kept geometries against each other —
 mean and maximum apartness, and an SVG overlay on request — so a fresh survey

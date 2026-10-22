@@ -4,8 +4,8 @@
 // rather than a name: around Le Mans the full 13.6 km circuit and the 4.4 km
 // Grand Prix circuit both stand, and the measured lap is what tells them apart.
 //
-//     node circuits/probe-circuit.mjs <lat>,<lon> [...] [--radius <km>]
-//     node circuits/probe-circuit.mjs <south>,<west>,<north>,<east> [...]
+//     node circuits/probe-circuit.ts <lat>,<lon> [...] [--radius <km>]
+//     node circuits/probe-circuit.ts <south>,<west>,<north>,<east> [...]
 //
 // A centre is widened into a box by --radius, 5 km unless named otherwise; four
 // numbers are the box itself, which is what to give when the circuit's own
@@ -14,18 +14,21 @@
 // geometry. Nothing is written: the report goes to a human, and the pipeline
 // begins once a config names the relation the report picked.
 
-import { askOverpass, polylineMetres, sleep, valueOf } from "./circuit-geometry.mjs";
+import { askOverpass, polylineMetres, reason, sleep, valueOf } from "./circuit-geometry.ts";
+
+/** A box on the earth, degrees, as Overpass takes it: south, west, north, east. */
+type Box = { s: number; w: number; n: number; e: number };
 
 // How far a candidate's probed ways may run before the report gives up on them;
 // a relation this box catches that is not a circuit is usually a road or an
 // administrative boundary.
 const probeLimit = 10;
 
-async function main(argv) {
+async function main(argv: string[]): Promise<void> {
   const radiusKm = Number(valueOf(argv, "--radius") || 5);
   const places = argv.filter((a) => !a.startsWith("--"));
   if (places.length === 0 || !Number.isFinite(radiusKm)) {
-    console.error("usage: probe-circuit.mjs <lat>,<lon> [...] [--radius <km>], or <south>,<west>,<north>,<east> [...]");
+    console.error("usage: probe-circuit.ts <lat>,<lon> [...] [--radius <km>], or <south>,<west>,<north>,<east> [...]");
     process.exitCode = 1;
     return;
   }
@@ -35,7 +38,7 @@ async function main(argv) {
   }
 }
 
-async function probe(place, radiusKm) {
+async function probe(place: string, radiusKm: number): Promise<void> {
   const box = bboxOf(place, radiusKm);
   const bounds = `${box.s},${box.w},${box.n},${box.e}`;
   console.log(`\n== ${place} (bbox ${bounds})`);
@@ -74,7 +77,7 @@ async function probe(place, radiusKm) {
     try {
       console.log(`      ${await measure(el.id)}`);
     } catch (error) {
-      console.log(`      probing failed: ${error.message}`);
+      console.log(`      probing failed: ${reason(error)}`);
     }
     await sleep(1500);
   }
@@ -83,7 +86,7 @@ async function probe(place, radiusKm) {
 /** What the tags say, before any geometry is asked for: what kind of relation
  * it is, what it is called, and the length the tags themselves claim — the
  * Sarthe relation tags its own `distance` as 13.626. */
-function describe(tags) {
+function describe(tags: Record<string, string>): string {
   const parts = [tags.type && `type=${tags.type}`, tags.route && `route=${tags.route}`, tags.sport && `sport=${tags.sport}`]
     .filter(Boolean)
     .join(" ");
@@ -92,7 +95,7 @@ function describe(tags) {
   return `${parts}  "${name}"${claimed}`;
 }
 
-function looksLikeACircuit(tags) {
+function looksLikeACircuit(tags: Record<string, string>): boolean {
   if (tags.type === "circuit" || tags.motorsport !== undefined) return true;
   if (tags.highway === "raceway") return true;
   if (String(tags.sport ?? "").startsWith("motor")) return true;
@@ -107,12 +110,12 @@ function looksLikeACircuit(tags) {
  * role, which is the role the pipeline chains and the kept geometries carry.
  * Ways may overlap or double back at a pit complex, so the sum is an estimate
  * beside the tags' own claim, not a second survey. */
-async function measure(relation) {
+async function measure(relation: number): Promise<string> {
   const answer = await askOverpass(`[out:json][timeout:90];relation(${relation});out body;way(r);out geom;`);
-  const rel = answer.elements.find((el) => el.type === "relation");
-  const ways = new Map(answer.elements.filter((el) => el.type === "way").map((w) => [w.id, w]));
-  const byRole = new Map();
-  const nodeRoles = [];
+  const rel = answer.elements.find((el: any) => el.type === "relation");
+  const ways = new Map<number, any>(answer.elements.filter((el: any) => el.type === "way").map((w: any) => [w.id, w]));
+  const byRole = new Map<string, { ways: number; metres: number }>();
+  const nodeRoles: string[] = [];
   for (const member of rel.members ?? []) {
     if (member.type !== "way") {
       if (member.role) nodeRoles.push(member.role);
@@ -140,7 +143,7 @@ async function measure(relation) {
 /** `s,w,n,e` as given, or a `lat,lon` centre widened by the radius: 111.32 km
  * per degree of latitude, and that times the cosine of the parallel for
  * longitude. */
-function bboxOf(place, radiusKm) {
+function bboxOf(place: string, radiusKm: number): Box {
   const numbers = place.split(",").map(Number);
   if (numbers.length === 4 && numbers.every(Number.isFinite)) {
     const [s, w, n, e] = numbers;
@@ -157,6 +160,6 @@ function bboxOf(place, radiusKm) {
 }
 
 main(process.argv.slice(2)).catch((error) => {
-  console.error(error.message);
+  console.error(reason(error));
   process.exitCode = 1;
 });

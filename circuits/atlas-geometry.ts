@@ -4,10 +4,10 @@
 // keeps it in this repository's geometry profile, at the atlas length and
 // *not* stretched.
 //
-//     node circuits/atlas-geometry.mjs <circuit> [--file gp.geojson]
+//     node circuits/atlas-geometry.ts <circuit> [--file gp.geojson]
 //
 // A circuit joins these readings by carrying an `atlas` entry naming the
-// track-atlas layer for the layout this app draws; `registry.mjs` is where
+// track-atlas layer for the layout this app draws; `registry.ts` is where
 // circuits are listed. It prints
 // the four readings that matter before anyone draws on them: how far the lines
 // stand apart in metres; whether the atlas corner markers land at the lap
@@ -16,16 +16,16 @@
 // where the circuit's own published sector lines stand on each of the two
 // lines.
 //
-// The lap-origin guard below is the same check `circuit-geometry.mjs` makes of
+// The lap-origin guard below is the same check `circuit-geometry.ts` makes of
 // a relation's finish node: a file that started at some other line would shift
 // every marker by the distance between them while still looking like a lap.
 // For a circuit this repository has not surveyed yet, the atlas's
 // `start_finish` point is a surveyed coordinate to seed a circuit script's
 // `timingLine` with; whether the lines the times are read against stand where
-// the seeded line puts them is `check-timing-lines.mjs`'s to answer, once a
+// the seeded line puts them is `check-timing-lines.ts`'s to answer, once a
 // round has been loaded.
 //
-// The apartness math is `geometry-diff.mjs`'s, shared with the tool that
+// The apartness math is `geometry-diff.ts`'s, shared with the tool that
 // compares any two kept geometries; this file adds only what is specific to
 // taking a foreign dataset in.
 //
@@ -36,9 +36,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { apart, cumulative, onEarth, projection, repoDir, roundTenth, sectorLines } from "./circuit-geometry.mjs";
-import { apartness, interpolate, nearestOn, outlineOf } from "./geometry-diff.mjs";
-import { circuits, keptAtlas } from "./registry.mjs";
+import type { Circuit, Sectors } from "./circuit-geometry.ts";
+import { apart, cumulative, onEarth, projection, reason, repoDir, roundTenth, sectorLines } from "./circuit-geometry.ts";
+import type { Apartness, KeptLine } from "./geometry-diff.ts";
+import { apartness, interpolate, nearestOn, outlineOf } from "./geometry-diff.ts";
+import { circuits, keptAtlas } from "./registry.ts";
 
 // How far an atlas file's first point may stand from the published timing line
 // before the lap is judged to start somewhere else, and how often the line is
@@ -51,11 +53,11 @@ const [slug, ...argv] = process.argv.slice(2);
 try {
   await run(slug, argv);
 } catch (error) {
-  console.error(error.message);
+  console.error(reason(error));
   process.exitCode = 1;
 }
 
-async function run(slug, argv) {
+async function run(slug: string, argv: string[]): Promise<void> {
   const circuit = circuits[slug];
   if (!circuit) throw new Error(`no circuit is surveyed under '${slug}': known are ${Object.keys(circuits).join(", ")}`);
   if (!circuit.atlas) throw new Error(`${slug}'s config names no atlas layer to read`);
@@ -64,8 +66,8 @@ async function run(slug, argv) {
   const file = at === -1 ? null : argv[at + 1];
   const theirs = file ? JSON.parse(await readFile(file, "utf8")) : await ask(circuit.atlas.url);
 
-  const features = theirs.features ?? [];
-  const outline = features.find((f) => f.properties?.role === "outline");
+  const features: any[] = theirs.features ?? [];
+  const outline = features.find((f: any) => f.properties?.role === "outline");
   if (!outline) throw new Error("the atlas file holds no outline feature");
   // The reading is kept under the slug given on the command line, whatever
   // the file was measured from — a mismatched pair replaces one circuit's
@@ -75,10 +77,10 @@ async function run(slug, argv) {
       `the atlas file names itself '${outline.properties.circuit}', not '${circuit.slug}' — it is not this circuit's line`,
     );
   }
-  const corners = features.filter((f) => f.properties?.role === "corner");
-  const pits = ["pit_entry", "pit_exit"]
-    .map((role) => features.find((f) => f.properties?.role === role))
-    .filter((f) => f !== undefined);
+  const corners: any[] = features.filter((f: any) => f.properties?.role === "corner");
+  const pits: any[] = ["pit_entry", "pit_exit"]
+    .map((role) => features.find((f: any) => f.properties?.role === role))
+    .filter((f: any) => f !== undefined);
 
   const ours = readKeptGeometry(await readFile(join(repoDir, circuit.geojson), "utf8"), circuit.slug);
   const { project } = projection(
@@ -86,8 +88,8 @@ async function run(slug, argv) {
       ...outline.geometry.coordinates,
       ...ours.coords,
       ...ours.pit,
-      ...corners.map((c) => c.geometry.coordinates),
-      ...pits.map((p) => p.geometry.coordinates),
+      ...corners.map((c: any) => c.geometry.coordinates),
+      ...pits.map((p: any) => p.geometry.coordinates),
     ].map(onEarth),
   );
   const theirPoints = outline.geometry.coordinates.map(onEarth).map(project);
@@ -105,7 +107,7 @@ async function run(slug, argv) {
   }
 
   const deviation = apartness(theirPoints, theirMetres, ourPoints, ours.metres, every);
-  const atCorners = corners.map((c) => {
+  const atCorners = corners.map((c: any) => {
     const near = nearestOn(project(onEarth(c.geometry.coordinates)), ourPoints, ours.metres);
     return {
       id: c.properties.id,
@@ -122,7 +124,7 @@ async function run(slug, argv) {
 
   const pitPoints = ours.pit.map(onEarth).map(project);
   const pitMetres = cumulative(pitPoints);
-  const atPits = pits.map((p) => {
+  const atPits = pits.map((p: any) => {
     const near = nearestOn(project(onEarth(p.geometry.coordinates)), pitPoints, pitMetres);
     return {
       role: p.properties.role,
@@ -146,7 +148,7 @@ async function run(slug, argv) {
   });
 }
 
-function ask(url) {
+function ask(url: string): Promise<any> {
   return fetch(url, { headers: { "User-Agent": "elm-motorsport-analysis/1.0 (atlas geometry)" } })
     .then((r) => {
       if (!r.ok) throw new Error(`the atlas answered ${r.status} for ${url}`);
@@ -155,12 +157,12 @@ function ask(url) {
     .then(JSON.parse);
 }
 
-// The geometry the app serves, read the way `geometry-diff.mjs` reads any
+// The geometry the app serves, read the way `geometry-diff.ts` reads any
 // geometry — outline, its own metres, and the properties a report quotes —
 // plus the pit lane the atlas pit markers are placed against.
-function readKeptGeometry(text, name) {
+function readKeptGeometry(text: string, name: string): KeptLine & { pit: [number, number][] } {
   const outline = outlineOf(text, name);
-  const pit = JSON.parse(text).features.find((f) => f.properties?.role === "pit_lane");
+  const pit = (JSON.parse(text).features as any[]).find((f) => f.properties?.role === "pit_lane");
   if (!pit) throw new Error(`${name}: the kept geometry holds no pit lane`);
   return { ...outline, pit: pit.geometry.coordinates };
 }
@@ -169,7 +171,13 @@ function readKeptGeometry(text, name) {
 // not end at the published lap length, and it is written not to pretend
 // otherwise — `stretched: false` says so at the properties a reader sees
 // first.
-async function writeAtlasGeometry(circuit, outline, corners, pits, theirMetres) {
+async function writeAtlasGeometry(
+  circuit: Circuit,
+  outline: any,
+  corners: any[],
+  pits: any[],
+  theirMetres: number[],
+): Promise<void> {
   const length = theirMetres[theirMetres.length - 1];
   const features = [
     {
@@ -178,7 +186,7 @@ async function writeAtlasGeometry(circuit, outline, corners, pits, theirMetres) 
         role: "outline",
         circuit: circuit.slug,
         basis: "measured-midline",
-        source: circuit.atlas.url,
+        source: circuit.atlas!.url,
         license: "ODbL",
         lap_length_m: roundTenth(length),
         stretched: false,
@@ -186,12 +194,12 @@ async function writeAtlasGeometry(circuit, outline, corners, pits, theirMetres) 
       },
       geometry: { type: "LineString", coordinates: outline.geometry.coordinates },
     },
-    ...corners.map((c) => ({
+    ...corners.map((c: any) => ({
       type: "Feature",
       properties: { role: "corner", id: c.properties.id, marker: c.properties.marker, direction: c.properties.direction },
       geometry: c.geometry,
     })),
-    ...pits.map((p) => ({
+    ...pits.map((p: any) => ({
       type: "Feature",
       properties: { role: p.properties.role, name: p.properties.name, marker: p.properties.marker },
       geometry: p.geometry,
@@ -203,8 +211,23 @@ async function writeAtlasGeometry(circuit, outline, corners, pits, theirMetres) 
   await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
 }
 
-function print(circuit, { every, length, originDistance, deviation, atCorners, atPits, pitLength, atLines, sectors }) {
-  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+/** What the reading prints: the apartness of the two lines, and where each
+ * atlas marker — a corner, a pit, a published line — stands on this app's
+ * line. */
+type Reading = {
+  every: number;
+  length: number;
+  originDistance: number;
+  deviation: Apartness;
+  atCorners: { id: string; theirMetres: number; ourMetres: number; distance: number }[];
+  atPits: { role: string; theirMetres: number; along: number; distance: number }[];
+  pitLength: number;
+  atLines: { id: string; metres: number; theirMetres: number; distance: number }[];
+  sectors: Sectors;
+};
+
+function print(circuit: Circuit, { every, length, originDistance, deviation, atCorners, atPits, pitLength, atLines, sectors }: Reading): void {
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
   const distances = atCorners.map((c) => c.distance);
   const laps = atCorners.map((c) => c.ourMetres - c.theirMetres);
   const worstLap = laps.reduce((a, b) => (Math.abs(b) > Math.abs(a) ? b : a), 0);
@@ -250,6 +273,6 @@ function print(circuit, { every, length, originDistance, deviation, atCorners, a
   }
 }
 
-function signed(n) {
+function signed(n: number): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
 }
