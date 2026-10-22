@@ -140,8 +140,10 @@ export async function answer(relation, file) {
  * the status — and the next answers the same query. */
 export async function askOverpass(query) {
   let failure = "no runner was reached";
+  const tries = overpassRunners.length * 2;
   for (const [runner, url] of overpassRunners.entries()) {
     for (let attempt = 1; attempt <= 2; attempt++) {
+      const left = tries - (runner * 2 + attempt);
       try {
         const response = await fetch(url, {
           method: "POST",
@@ -154,8 +156,7 @@ export async function askOverpass(query) {
         return JSON.parse(body);
       } catch (error) {
         failure = error.message;
-        const left = overpassRunners.length - runner + (2 - attempt);
-        if (left > 1) await sleep(attempt * 4000);
+        if (left > 0) await sleep(attempt * 4000);
       }
     }
   }
