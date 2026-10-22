@@ -23,7 +23,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// Every tool in this directory works from the repository root, which is where
+// the configs' `geojson` paths and the data and export directories live.
+export const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const overpassRunners = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
@@ -108,7 +110,7 @@ function report(done, circuit, geometry) {
 
 /** The value following `flag`, the empty string when it stands alone, and null
  * when the flag is absent. */
-function valueOf(argv, flag) {
+export function valueOf(argv, flag) {
   const at = argv.indexOf(flag);
   return at === -1 ? null : argv[at + 1] || "";
 }
@@ -146,7 +148,7 @@ export async function askOverpass(query) {
   throw new Error(`every Overpass runner failed: ${failure}`);
 }
 
-function sleep(ms) {
+export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -192,11 +194,11 @@ export function lapOf(osm, circuit) {
   const keptPit = simplify(pitPoints, 0, pitPoints.length - 1);
 
   const frame = frameOf([...lapNodes, ...pitNodes], parallel);
-  const onEarth = (node) => ({ lat: node.lat, lon: node.lon });
+  const fromNode = (node) => ({ lat: node.lat, lon: node.lon });
 
   return {
-    centreline: kept.map((i) => ({ ...onEarth(lapNodes[i]), metres: round(metres[i]) })),
-    pitLane: keptPit.map((i) => onEarth(pitNodes[i])),
+    centreline: kept.map((i) => ({ ...fromNode(lapNodes[i]), metres: roundTenth(metres[i]) })),
+    pitLane: keptPit.map((i) => fromNode(pitNodes[i])),
     frame,
     direction,
     surveyedAt: osm.osm3s?.timestamp_osm_base,
@@ -296,7 +298,6 @@ export function geometryFromGeoJson(json, circuit) {
   }
   const sectors = props.sectors ?? null;
   if (sectors) sectorLines(sectors, circuit.lapLength);
-  const onEarth = ([lon, lat]) => ({ lat, lon });
   return {
     centreline: coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
     pitLane: pit.geometry.coordinates.map(onEarth),
@@ -502,7 +503,12 @@ function simplify(points, from, to) {
   return [...simplify(points, from, at).slice(0, -1), ...simplify(points, at, to)];
 }
 
-function round(n) {
+/** A pair of degrees as the place on earth it names. */
+export const onEarth = ([lon, lat]) => ({ lat, lon });
+
+/** A distance in metres, kept to the tenth of a metre the survey is held at —
+ * and every baseline rendered from it. */
+export function roundTenth(n) {
   return Math.round(n * 10) / 10;
 }
 

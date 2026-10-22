@@ -21,13 +21,10 @@
 // meaning what it says.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
-import { ask, geoJsonString, lapOf } from "./circuit-geometry.mjs";
+import { ask, geoJsonString, lapOf, repoDir } from "./circuit-geometry.mjs";
 import { circuits, keptAnswer } from "./registry.mjs";
-
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 main().catch((error) => {
   console.error(error.message);

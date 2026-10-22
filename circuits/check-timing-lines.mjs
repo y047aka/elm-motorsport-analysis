@@ -28,13 +28,10 @@
 
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import { circuits } from "./registry.mjs";
-import { sectorLines } from "./circuit-geometry.mjs";
-
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+import { repoDir, sectorLines } from "./circuit-geometry.mjs";
 
 // How far round the lap a line implied one season may sit from the same line
 // implied the season after before the two are said to be on different lines. What

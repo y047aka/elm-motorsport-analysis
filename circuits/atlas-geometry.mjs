@@ -34,14 +34,11 @@
 // beside the license.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
-import { apart, cumulative, projection, sectorLines } from "./circuit-geometry.mjs";
+import { apart, cumulative, projection, repoDir, roundTenth, sectorLines } from "./circuit-geometry.mjs";
 import { apartness, interpolate, nearestOn, outlineOf } from "./geometry-diff.mjs";
 import { circuits, keptAtlas } from "./registry.mjs";
-
-const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 // How far an atlas file's first point may stand from the published timing line
 // before the lap is judged to start somewhere else, and how often the line is
@@ -174,9 +171,9 @@ async function writeAtlasGeometry(path, slug, url, outline, corners, pits, their
         basis: "measured-midline",
         source: url,
         license: "ODbL",
-        lap_length_m: round1(length),
+        lap_length_m: roundTenth(length),
         stretched: false,
-        metres: theirMetres.map(round1),
+        metres: theirMetres.map(roundTenth),
       },
       geometry: { type: "LineString", coordinates: outline.geometry.coordinates },
     },
@@ -241,10 +238,6 @@ function print(slug, circuit, { every, length, originDistance, apart, atCorners,
       );
     }
   }
-}
-
-function round1(n) {
-  return Math.round(n * 10) / 10;
 }
 
 function signed(n) {

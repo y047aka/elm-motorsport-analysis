@@ -20,13 +20,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 
-import { isEntry, projection } from "./circuit-geometry.mjs";
+import { isEntry, onEarth, projection } from "./circuit-geometry.mjs";
 
 const width = 1000;
 
 async function run(lines, args) {
-  const { project } = projection(lines.flatMap((line) => line.coords.map(earth)));
-  const points = lines.map((line) => line.coords.map(earth).map(project));
+  const { project } = projection(lines.flatMap((line) => line.coords.map(onEarth)));
+  const points = lines.map((line) => line.coords.map(onEarth).map(project));
   for (const [at, line] of lines.entries()) {
     console.log(
       `${line.name}: basis ${line.props.basis ?? "?"}, ${line.metres[line.metres.length - 1].toFixed(1)} m` +
@@ -60,8 +60,6 @@ function readArgs(argv) {
   if (!Number.isFinite(args.every) || args.every <= 0) fail(`"${args.every}" is not a distance`);
   return args;
 }
-
-const earth = ([lon, lat]) => ({ lat, lon });
 
 /** The outline of one geometry file: its coordinates, its own metres, and the
  * properties a report quotes so the reader knows what two lines were compared. */

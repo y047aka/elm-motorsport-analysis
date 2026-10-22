@@ -14,9 +14,7 @@
 // geometry. Nothing is written: the report goes to a human, and the pipeline
 // begins once a config names the relation the report picked.
 
-import { askOverpass, polylineMetres } from "./circuit-geometry.mjs";
-
-const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+import { askOverpass, polylineMetres, sleep, valueOf } from "./circuit-geometry.mjs";
 
 // How far a candidate's probed ways may run before the report gives up on them;
 // a relation this box catches that is not a circuit is usually a road or an
@@ -33,13 +31,8 @@ async function main(argv) {
   }
   for (const place of places) {
     await probe(place, radiusKm);
-    await pause(3000);
+    await sleep(3000);
   }
-}
-
-function valueOf(argv, flag) {
-  const at = argv.indexOf(flag);
-  return at === -1 ? null : argv[at + 1] || "";
 }
 
 async function probe(place, radiusKm) {
@@ -83,7 +76,7 @@ async function probe(place, radiusKm) {
     } catch (error) {
       console.log(`      probing failed: ${error.message}`);
     }
-    await pause(1500);
+    await sleep(1500);
   }
 }
 
