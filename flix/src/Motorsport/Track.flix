@@ -28,9 +28,11 @@ pub mod Motorsport.Track {
     ///
     /// `circuit` is the one thing here not read off the laps, which say nothing
     /// about it -- see `Motorsport.Events.circuit`. It is which ground the round
-    /// was run on, which is what the drawing of it is chosen by; which way
-    /// round that drawing runs is the map's own affair, carried by its
-    /// geometry.
+    /// was run on, which is what the drawing of it is chosen by. Which way
+    /// round the drawing runs is the drawing's own affair: a drawn circuit
+    /// carries it in its geometry, and the ring has no geometry to ask and runs
+    /// clockwise -- so São Paulo and Imola are drawn the other way from the way
+    /// their cars went.
     pub type alias Track = {
         circuit     = Option[Circuit],
         sectors     = List[(Sector, Share)],

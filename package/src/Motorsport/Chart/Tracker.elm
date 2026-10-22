@@ -160,6 +160,7 @@ A circuit the app has a map of is drawn [`onCircuit`](#onCircuit) instead, and
 runs the way its survey says.
 
 Hold on to the result and hand it to [`view`](#view) each frame.
+
 -}
 fromConfig : TrackConfig -> Track
 fromConfig =
