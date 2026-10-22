@@ -1,8 +1,8 @@
 # circuits
 
 The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
-and one directory per circuit — the script that surveyed it, the Overpass
-answer it was written from, and the atlas reading measured against it. The
+and one directory per circuit — its config, the Overpass answer the geometry
+was written from, and the atlas reading measured against it. The
 commands are the flake's — `nix run .#geometry-write -- <circuit>`,
 `.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`,
 `.#geometry-regenerate`, `.#geometry-timing-lines`. What follows is what no
@@ -13,7 +13,7 @@ OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; every
 geometry and module here is a derivative of it, and the written files carry the
 source relation and the license in their own properties.
 
-## One pipeline, one thin script per circuit
+## One pipeline, one thin config per circuit
 
 `circuit-geometry.mjs` is the pipeline, and a circuit joins it as a directory
 named by the word the summaries send for it. Its `circuit.mjs` supplies the
@@ -71,7 +71,7 @@ circuit from the Grand Prix circuit standing beside it.
 
 OpenStreetMap holds a circuit however whoever mapped it tagged it, and the two
 here are tagged differently: Le Mans's relation names one node `start-finish`,
-and COTA's names two, 297 m apart along the lap. A circuit script writes in
+and COTA's names two, 297 m apart along the lap. A circuit's config carries
 the timing line's published coordinates, so a run that answers the wrong role
 fails before it writes anything rather than drawing every car early; how each
 relation is actually tagged is the circuit's own config comment to say.
@@ -98,7 +98,7 @@ tree counts the same shares.
 
 The geometry publishes what the circuit itself publishes about its lines: the
 authored stretches travel in the geometry as `sectors`, so the check reads the
-geometry file rather than a script. How the drawing places a line the map gives
+geometry file rather than the config behind it. How the drawing places a line the map gives
 no distance for is app-side — `Tracker.Config.lapScale`, and the `ConfigTest`
 combinations that hold it.
 
@@ -110,7 +110,7 @@ measured from orthoimagery, not a survey stretched to a published length, at
 `<circuit>/atlas.geojson` with `stretched: false`, beside the survey it is
 judged against rather than in what gets served. For a circuit this repository
 has not surveyed yet, the atlas's `start_finish` point is a surveyed
-coordinate to seed a circuit script's `timingLine` with; whether the lines the
+coordinate to seed a circuit config's `timingLine` with; whether the lines the
 times are read against stand where the seeded line puts them is
 `check-timing-lines.mjs`'s to answer, once a round has been loaded.
 

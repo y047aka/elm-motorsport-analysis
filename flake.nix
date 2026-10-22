@@ -167,11 +167,10 @@
           '';
         };
 
-        # A circuit's geometry is written out of OpenStreetMap's relation for it,
-        # so these ask and can be answered a 502 or a 504 -- repeat the run, or
-        # hand in a kept answer as a file. Either way the geometry lands under
-        # app/static/geometry, where the app reads it, and --from-geojson runs
-        # the geometry's checks over it with no network.
+        # The tools under circuits/, each run by Node with nothing else to
+        # carry. Which circuits are surveyed is the registry's, not these
+        # registrations'; only geometry-write writes what the app serves,
+        # under app/static/geometry, and the rest write beside it or read it.
         geometryApp = name: script:
           pkgs.writeShellApplication {
             inherit name;

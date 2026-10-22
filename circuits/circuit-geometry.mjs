@@ -62,10 +62,10 @@ const radius = 6371008.8;
  * @property {string} survey    e.g. `The Circuit of the Americas`
  */
 
-/** Whether the module named is the script the process was started from, as
- * against a config another script imported to read a published length out of.
- * `import.meta.url` is the caller's own and not this file's, so it is passed
- * in. */
+/** Whether the module named is the script the process was started from.
+ * `geometry-diff.mjs` asks because it is a command to the shell and a library
+ * to the atlas reading. `import.meta.url` is the caller's own and not this
+ * file's, so it is passed in. */
 export function isEntry(moduleUrl) {
   return pathToFileURL(process.argv[1] ?? "").href === moduleUrl;
 }

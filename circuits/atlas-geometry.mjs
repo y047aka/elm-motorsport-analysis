@@ -165,9 +165,10 @@ function readKeptGeometry(text, name) {
   return { ...outline, pit: pit.geometry.coordinates };
 }
 
-// The atlas line in this repository's own profile, at its own length: a reader
-// that later hands it to the module generator is told it does not end at the
-// published lap length, because it was written not to pretend otherwise.
+// The atlas line in this repository's own profile, at its own length: it does
+// not end at the published lap length, and it is written not to pretend
+// otherwise — `stretched: false` says so at the properties a reader sees
+// first.
 async function writeAtlasGeometry(circuit, outline, corners, pits, theirMetres) {
   const length = theirMetres[theirMetres.length - 1];
   const features = [
