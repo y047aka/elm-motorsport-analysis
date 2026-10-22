@@ -117,7 +117,7 @@ export function valueOf(argv, flag) {
 }
 
 /** The answer from a file if one was given, and from OpenStreetMap if not. */
-export async function answer(relation, file) {
+async function answer(relation, file) {
   return file ? JSON.parse(await readFile(file, "utf8")) : ask(relation);
 }
 
@@ -264,7 +264,7 @@ function feature(props, coordinates) {
   );
 }
 
-export async function writeGeoJson(circuit, geometry) {
+async function writeGeoJson(circuit, geometry) {
   const path = join(repoDir, circuit.geojson);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, geoJsonString(circuit, geometry));
@@ -359,7 +359,7 @@ function nearTimingLine(rel, nodes, chosen, circuit) {
   );
 }
 
-export const degreesToMetres = (Math.PI / 180) * radius;
+const degreesToMetres = (Math.PI / 180) * radius;
 
 /** Metres between two places, east-west taken at the parallel of the second —
  * an approximation only ever asked of distances across a circuit's few
