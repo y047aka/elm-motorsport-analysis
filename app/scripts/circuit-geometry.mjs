@@ -187,9 +187,9 @@ export function lapOf(osm, circuit) {
 
   nearTimingLine(rel, nodes, start, circuit);
 
-  const track = chain(rel.members.filter((m) => m.type === "way" && m.role === "").map((m) => ways.get(m.ref)), start);
+  const track = chain(rel.members.filter((m) => m.type === "way" && m.role === "").map((m) => ways.get(m.ref)), start, nodes);
   const lap = [...rotate(track.slice(0, -1), start), start];
-  const pit = chain(rel.members.filter((m) => m.role === "pit_lane").map((m) => ways.get(m.ref)), null);
+  const pit = chain(rel.members.filter((m) => m.role === "pit_lane").map((m) => ways.get(m.ref)), null, nodes);
 
   const lapNodes = lap.map((id) => nodes.get(id));
   const pitNodes = pit.map((id) => nodes.get(id));
@@ -344,11 +344,7 @@ export function geometryFromGeoJson(json, circuit) {
 function nearTimingLine(rel, nodes, chosen, circuit) {
   if (!circuit.timingLine) return;
   const within = circuit.timingLine.within ?? 10;
-  const distance = (node) =>
-    Math.hypot(
-      (node.lat - circuit.timingLine.lat) * degreesToMetres,
-      (node.lon - circuit.timingLine.lon) * degreesToMetres * Math.cos((node.lat * Math.PI) / 180),
-    );
+  const distance = (node) => apart(circuit.timingLine, node);
 
   if (distance(nodes.get(chosen)) <= within) return;
 
@@ -364,10 +360,28 @@ function nearTimingLine(rel, nodes, chosen, circuit) {
 
 export const degreesToMetres = (Math.PI / 180) * radius;
 
+/** Metres between two places on the earth, east-west taken at the parallel of
+ * the second — far finer than the metre a survey is kept to, and only ever
+ * asked of distances across a circuit's few kilometres. */
+function apart(a, b) {
+  const east = Math.cos((b.lat * Math.PI) / 180);
+  return Math.hypot(b.lat - a.lat, (b.lon - a.lon) * east) * degreesToMetres;
+}
+
+/** Metres along a list of places, each stretch taken at its own parallel: a
+ * way's own geometry measured straight, without the chain or the projection.
+ * `atlas-geometry.mjs` weighs another dataset's ways with it, and a chain that
+ * stops short reports its leftovers with it. */
+export function polylineMetres(points) {
+  let metres = 0;
+  for (let i = 1; i < points.length; i++) metres += apart(points[i - 1], points[i]);
+  return metres;
+}
+
 // The relation lists its ways in no particular order, and a way open to traffic
 // both ways may be drawn against the direction of the race. A oneway way is
 // drawn the way it is driven, so the chain follows those and turns the others.
-function chain(members, start) {
+function chain(members, start, nodes) {
   const segments = members.map((w) => ({
     id: w.id,
     nodes: w.nodes,
@@ -388,10 +402,34 @@ function chain(members, start) {
     used.add(next.id);
     ids.push(...(next.nodes[0] === end ? next.nodes : [...next.nodes].reverse()).slice(1));
   }
-  const left = segments.filter((s) => !used.has(s.id)).map((s) => s.id);
-  if (left.length > 0) throw new Error(`ways left out of the chain: ${left.join(", ")}`);
-  if (start !== null && ids.at(-1) !== ids[0]) throw new Error("the lap does not close");
+  const left = segments.filter((s) => !used.has(s.id));
+  if (left.length > 0) {
+    const stopped = nodes.get(ids.at(-1));
+    throw new Error(`ways left out of the chain: ${left.map((s) => straggled(s, stopped, nodes)).join("; ")}`);
+  }
+  if (start !== null && ids.at(-1) !== ids[0]) {
+    throw new Error(
+      `the lap does not close: its last point stands ${apart(nodes.get(ids.at(-1)), nodes.get(ids[0])).toFixed(1)} m from its first`,
+    );
+  }
   return ids;
+}
+
+/** One way the chain could not take, reported with what decides its remedy:
+ * how long it is, how far its nearest end stands from where the chain stopped,
+ * and whether it is driven one way. A oneway way lying at the stop is an
+ * orientation the survey disagrees with; a way standing tens of metres off is
+ * ground OpenStreetMap does not connect; a short one far from everything is
+ * usually a road that has no business in the relation. */
+function straggled(segment, stopped, nodes) {
+  const points = segment.nodes.map((id) => nodes.get(id));
+  const gap = Math.min(apart(stopped, points[0]), apart(stopped, points.at(-1)));
+  const near = gap < 0.5;
+  const drive = segment.oneway ? (near ? ", driven the other way" : ", oneway") : "";
+  return (
+    `${segment.id} is ${Math.round(polylineMetres(points))} m, ` +
+    `nearest end ${near ? "at" : `${gap.toFixed(1)} m from`} where the chain stopped${drive}`
+  );
 }
 
 function rotate(ids, start) {

@@ -18,7 +18,7 @@
 // geometry. Nothing is written: the report goes to a human, and the pipeline
 // begins once a config names the relation the report picked.
 
-import { askOverpass, degreesToMetres } from "./circuit-geometry.mjs";
+import { askOverpass, polylineMetres } from "./circuit-geometry.mjs";
 
 const pause = (ms) => new Promise((done) => setTimeout(done, ms));
 
@@ -132,7 +132,7 @@ async function measure(relation) {
     const role = member.role || "";
     const entry = byRole.get(role) ?? { ways: 0, metres: 0 };
     entry.ways++;
-    entry.metres += length(ways.get(member.ref));
+    entry.metres += polylineMetres(ways.get(member.ref)?.geometry ?? []);
     byRole.set(role, entry);
   }
   const lap = byRole.get("") ?? { ways: 0, metres: 0 };
@@ -146,16 +146,6 @@ async function measure(relation) {
     `${pitNote}; roles: ${roles}` +
     (nodeRoles.length === 0 ? "" : `; nodes: ${nodeRoles.join(", ")}`)
   );
-}
-
-function length(way) {
-  const points = way?.geometry ?? [];
-  let metres = 0;
-  for (let i = 1; i < points.length; i++) {
-    const mid = ((points[i].lat + points[i - 1].lat) / 2) * (Math.PI / 180);
-    metres += Math.hypot(points[i].lat - points[i - 1].lat, (points[i].lon - points[i - 1].lon) * Math.cos(mid)) * degreesToMetres;
-  }
-  return metres;
 }
 
 /** `s,w,n,e` as given, or a `lat,lon` centre widened by the radius: 111.32 km
