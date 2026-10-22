@@ -52,6 +52,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (`<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
 | `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
+| `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (`<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |

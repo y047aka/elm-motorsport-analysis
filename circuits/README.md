@@ -5,10 +5,9 @@ and one directory per circuit — the script that surveyed it, the Overpass
 answer it was written from, and the atlas reading measured against it. The
 commands are the flake's — `nix run .#geometry-write -- <circuit>`,
 `.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`,
-`.#geometry-regenerate` — and `check-timing-lines.mjs` is run with `node`
-beside the export it judges. What follows is what no single script's header
-says for itself; what a script can say at its own call site, its header says
-there and is not repeated here.
+`.#geometry-regenerate`, `.#geometry-timing-lines`. What follows is what no
+single script's header says for itself; what a script can say at its own call
+site, its header says there and is not repeated here.
 
 OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; every
 geometry and module here is a derivative of it, and the written files carry the
@@ -89,8 +88,8 @@ placement has a mean speed of its own — so what they rest on is that the
 circuit published them as the lines it times to, beside the lap length they
 add up to.
 
-What the times can answer is whether the lines have moved, and `node
-circuits/check-timing-lines.mjs 2026/cota_6h --against 2025` reads that: each
+What the times can answer is whether the lines have moved, and `nix run
+.#geometry-timing-lines -- 2026/cota_6h --against 2025` reads that: each
 class's fastest sector times as two distances round the lap, and the two
 rounds here agree within half a percent of a lap — the only evidence there is
 that one map serves both. The command judges the season-to-season difference
