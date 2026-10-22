@@ -2,11 +2,13 @@
 
 The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
 and one directory per circuit — the script that surveyed it, the Overpass
-answer it was written from, and the atlas reading measured against it. The commands are the flake's —
-`nix run .#geometry-cota`, `.#geometry-le-mans`, `.#geometry-probe`,
-`.#geometry-atlas`, `.#geometry-diff`, `.#geometry-regenerate` — and
-`check-timing-lines.mjs` is run with `node` beside the export it judges. What
-follows is what no single script's header says for itself.
+answer it was written from, and the atlas reading measured against it. The
+commands are the flake's — `nix run .#geometry-cota`, `.#geometry-le-mans`,
+`.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`,
+`.#geometry-regenerate` — and `check-timing-lines.mjs` is run with `node`
+beside the export it judges. What follows is what no single script's header
+says for itself; what a script can say at its own call site, its header says
+there and is not repeated here.
 
 OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; every
 geometry and module here is a derivative of it, and the written files carry the
@@ -14,26 +16,20 @@ source relation and the license in their own properties.
 
 ## One pipeline, one thin script per circuit
 
-`circuit-geometry.mjs` is the pipeline, and a circuit joins as a directory
+`circuit-geometry.mjs` is the pipeline, and a circuit joins it as a directory
 named by the word the summaries send for it. Its `circuit.mjs` supplies the
 relation, the member role naming the line the lap is measured from, the
 published length the surveyed line is stretched to, and the prose the geometry
-file is documented with. They ask OpenStreetMap, which answers a busy runner
-with a 502, a 504 or something that is not JSON; a run walks a second runner
-before it fails, and a failure past both is still a survey to repeat later —
-or to hand in as a file.
-
-The answer is reduced to a geometry GeoJSON under `app/static/geometry/`, named
-by the word the summaries send for the circuit — the degrees, the metres per
-point, the frame, a `basis` saying what kind of line it is, and the direction
-the survey runs, which is the shoelace of the chained outline written into the
-outline's properties and the app's only word for which way round a drawn
-circuit goes; a circuit with no drawing is a ring, and a ring runs clockwise.
-It lands in `static/` because the app reads it from there at load, through
+file is documented with. What it writes is not a build artifact but a served
+one: the app reads `app/static/geometry/<word>.geojson` at load, through
 `Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the
-bytes as they arrive. Nothing generates Elm from it: `--from-geojson` runs
-those checks with no OpenStreetMap, which is what a regeneration being nothing
-is checked with now.
+bytes as they arrive, and the `Layout` module beside it holds what the file
+cannot know — the drawing's lengths and timing lines. Nothing generates Elm
+from the geometry.
+
+A run asks OpenStreetMap, which answers a busy runner with a 502, a 504 or
+something that is not JSON; a run walks a second runner before it fails, and a
+failure past both is a survey to repeat later — or to hand in as a file.
 
 ## The fence
 
@@ -41,12 +37,11 @@ The Elm tests cannot hold a survey: the pipeline stretches whatever degrees it
 gets to the circuit's published lap length whatever the degrees say, so a point
 moved 20 m passes every Elm test and leaves the tracker's pixels where they
 were. `.#geometry-regenerate` holds it instead, re-running the pipeline over
-each circuit's kept Overpass answer — kept in each circuit's own directory —
-and failing unless it reproduces the kept geometry, every
-fenced property exactly. `surveyed_at` is the one exempt property: it stamps
-which answer a file was written from rather than what the drawing is made of,
-and it is the one property a live regeneration must move while every degree
-stands still.
+each circuit's kept Overpass answer — kept in the circuit's own directory —
+and failing unless it reproduces the kept geometry, every fenced property
+exactly. `surveyed_at` is the one exempt property: it stamps which answer a
+file was written from rather than what the drawing is made of, and it is the
+one property a live regeneration must move while every degree stands still.
 
 A regeneration is read as a diff, and a survey that moved by metres goes to
 `update-snapshots-ci` with it, since every tracker baseline is drawn on those
@@ -77,54 +72,48 @@ circuit from the Grand Prix circuit standing beside it.
 
 OpenStreetMap holds a circuit however whoever mapped it tagged it, and the two
 here are tagged differently: Le Mans's relation names one node `start-finish`,
-and COTA's names two, `start` and `finish`, 297 m apart along the lap. The
-lap's zero is the `finish` one, and the circuit's own published coordinates for
-its timing line are written into the script, so a run that answers the other
-role fails before it writes anything rather than drawing every car 297 m early.
+and COTA's names two, 297 m apart along the lap. A circuit script writes in
+the timing line's published coordinates, so a run that answers the wrong role
+fails before it writes anything rather than drawing every car early; how each
+relation is actually tagged is the circuit's own config comment to say.
 
 ## The timing lines, and where their distances come from
 
 Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
 map for that race, and differ by season; the maps are not to be redistributed,
-so they are not in the repository. COTA's are its own track sector map's —
-1,313.2, 2,254.3 and 1,947.5 m, which add up to the 5,515 m centreline the same
-map gives — and are one set used for every season here, since no later map has
-been read. Nothing in a round's own times picks one placement of those lines
-out of another: a sector's share of a lap is not a share of its distance, and
-every placement has a mean speed of its own. What they rest on is that the
-circuit published them as the lines it times to, beside the lap length they add
-up to.
+so they are not in the repository. COTA's are its own track sector map's, and
+are one set used for every season here, since no later map has been read.
+Nothing in a round's own times picks one placement of those lines out of
+another — a sector's share of a lap is not a share of its distance, and every
+placement has a mean speed of its own — so what they rest on is that the
+circuit published them as the lines it times to, beside the lap length they
+add up to.
 
 What the times can answer is whether the lines have moved, and `node
 circuits/check-timing-lines.mjs 2026/cota_6h --against 2025` reads that: each
-class's fastest sector times as two distances round the lap, which the two
-rounds here agree on within 28 m — 0.5% of a lap, and the only evidence there
-is that one map serves both. The command judges the season-to-season difference
-against 40 m and never the shares against the map; it reads the fastest sectors
-the summary itself is counted from, and prints whether the export in the tree
-counts the same shares.
+class's fastest sector times as two distances round the lap, and the two
+rounds here agree within half a percent of a lap — the only evidence there is
+that one map serves both. The command judges the season-to-season difference
+and never the shares against the map, and prints whether the export in the
+tree counts the same shares.
 
 The geometry publishes what the circuit itself publishes about its lines: the
-COTA sector map's stretches travel in the geometry as `sectors`, authored in
-the circuit's script, so the check reads the geometry file rather than the
-script. How the drawing places a line the map gives no distance for is
-app-side — `Tracker.Config.lapScale`, and the `ConfigTest` combinations that
-hold it.
+authored stretches travel in the geometry as `sectors`, so the check reads the
+geometry file rather than a script. How the drawing places a line the map gives
+no distance for is app-side — `Tracker.Config.lapScale`, and the `ConfigTest`
+combinations that hold it.
 
 ## The atlas readings
 
 `nix run .#geometry-atlas <circuit>` reads the track-atlas line — a midline
 measured from orthoimagery, not a survey stretched to a published length, at
-5,500.2 m against the 5,515 m this app draws — keeps it as
-`<circuit>/atlas.geojson` with `stretched: false`, and prints how far the two
-lines stand apart, whether the atlas corner markers land at the lap distances
-the geometry puts them at, whether its pit entry and exit stand on the pit lane
-the geometry chains out of the relation, and where the circuit's own sector
-lines stand on each of the two lines. For a circuit this repository has not
-surveyed yet, the atlas's `start_finish` point is a surveyed coordinate to seed
-a circuit script's `timingLine` with; whether the lines the times are read
-against stand where the seeded line puts them is `check-timing-lines.mjs`'s to
-answer, once a round has been loaded.
+5,500.2 m against the 5,515 m this app draws — and keeps it as
+`<circuit>/atlas.geojson` with `stretched: false`, beside the survey it is
+judged against rather than in what gets served. For a circuit this repository
+has not surveyed yet, the atlas's `start_finish` point is a surveyed
+coordinate to seed a circuit script's `timingLine` with; whether the lines the
+times are read against stand where the seeded line puts them is
+`check-timing-lines.mjs`'s to answer, once a round has been loaded.
 
 `nix run .#geometry-diff` lays any two kept geometries against each other —
 mean and maximum apartness, and an SVG overlay on request — so a fresh survey
@@ -141,7 +130,6 @@ words `trackOf` matches and `decoderFor` decodes — and a geometry file at
 `app/static/geometry/<word>.geojson`, and `app/tests/geometry-contract.spec.ts`
 keeps all three in step, since none of them compiles against another — and
 pins that the circuit's directory under this one is named by that same word.
-`app/tests/circuit-contract.spec.ts` pins the
-word the summaries send for a circuit against the word `Shared.trackOf` picks a
-drawing by; a rename on one side alone would leave a round drawn as the ring
-with nothing red.
+`app/tests/circuit-contract.spec.ts` pins the word the summaries send for a
+circuit against the word `Shared.trackOf` picks a drawing by; a rename on one
+side alone would leave a round drawn as the ring with nothing red.

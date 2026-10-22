@@ -1,43 +1,32 @@
-// Reads one circuit's measured line out of the track-atlas dataset, keeps it
-// beside our own geometries, and says how far it stands from the line this app
-// draws.
+// Reads one circuit's measured line out of the track-atlas dataset — its
+// outline's edges are measured off orthoimagery registered to lidar, with
+// OpenStreetMap's centreline fixing the lap order, origin and direction — and
+// keeps it in this repository's geometry profile, at the atlas length and
+// *not* stretched.
 //
 //     node circuits/atlas-geometry.mjs <circuit> [--file gp.geojson]
 //
 // A circuit joins the `atlas` table below by one entry naming the script that
-// surveys it and the atlas outline for the layout this app draws.
+// surveys it and the atlas outline for the layout this app draws. It prints
+// the four readings that matter before anyone draws on them: how far the lines
+// stand apart in metres; whether the atlas corner markers land at the lap
+// distances this app's geometry puts them at; whether the atlas pit entry and
+// exit stand on the pit lane that geometry chains out of the relation; and
+// where the circuit's own published sector lines stand on each of the two
+// lines.
 //
-// The atlas measures its outlines' edges off orthoimagery registered to lidar;
-// OpenStreetMap's centreline seeds that measurement, its own `surface.sources`
-// recording that the seed "fixes lap order, origin and direction; the edges are
-// measured". This writes `circuits/<circuit>/atlas.geojson` — their outline and
-// corner markers in this repository's geometry profile, at their length and
-// *not* stretched — and prints the four readings that matter before anyone
-// draws on them: how far the lines stand apart in metres, whether the atlas
-// corner markers land at the lap distances our geometry puts them at, whether
-// the atlas pit entry and exit stand on the pit lane this app chains out of the
-// relation, and where the circuit's own published sector lines stand on each of
-// the two lines.
-//
+// The lap-origin guard below is the same check `circuit-geometry.mjs` makes of
+// a relation's finish node: a file that started at some other line would shift
+// every marker by the distance between them while still looking like a lap.
 // For a circuit this repository has not surveyed yet, the atlas's
-// `start_finish` point is a surveyed coordinate to seed the circuit script's
-// `timingLine` with. The origin guard below is what checks such a seed; whether
-// the lines the times are read against stand where the seeded line puts them is
-// `check-timing-lines.mjs`'s to answer, once a round has been loaded.
-//
-// It writes no Elm and no Layout. Whether to draw on a measured line instead of
-// the stretched survey is a separate change, and an expensive one: every tracker
-// baseline moves with it, and the timing-line placements would have to be
-// re-argued against the new basis. The lap-origin guard below is the same check
-// `circuit-geometry.mjs` makes of a relation's finish node — the atlas lap
-// starts where the circuit says its timing line is, and a file that started at
-// some other line would shift every marker by the distance between them while
-// still looking like a lap.
+// `start_finish` point is a surveyed coordinate to seed a circuit script's
+// `timingLine` with; whether the lines the times are read against stand where
+// the seeded line puts them is `check-timing-lines.mjs`'s to answer, once a
+// round has been loaded.
 //
 // The apartness math is `geometry-diff.mjs`'s, shared with the tool that
 // compares any two kept geometries; this file adds only what is specific to
-// taking a foreign dataset in: the guard, the corner and pit readings, and the
-// writing.
+// taking a foreign dataset in.
 //
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery; the written file carries the source URL
@@ -53,16 +42,14 @@ import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const atlas = {
-  // Keyed by the circuit word — the slug its script holds, which the summaries
-  // send for the circuit and `Shared.trackOf` picks a drawing by. `script` is
-  // the one that surveys it; the reading lands in the circuit's own directory
-  // rather than in `static/` — it is evidence a decision is judged on, never
-  // bytes the app asks for. `originWithin` is how far the file's first point may stand from
-  // the published timing line before the lap is judged to start somewhere
-  // else; the mistake it was written for is COTA's relation actually making
-  // one, its two tagged lines standing 297 m apart along the lap. `every` is
-  // how often the line is sampled for the apartness reading — corners sit tens
-  // of metres apart and the deviation is a slow wave along the lap.
+  // Keyed by the circuit word, the slug its script holds. `script` is the one
+  // that surveys it; the reading lands in the circuit's own directory rather
+  // than in `static/` — it is evidence a decision is judged on, never bytes
+  // the app asks for. `originWithin` is how far the file's first point may
+  // stand from the published timing line before the lap is judged to start
+  // somewhere else. `every` is how often the line is sampled for the
+  // apartness reading — corners sit tens of metres apart and the deviation is
+  // a slow wave along the lap.
   cota: {
     script: "./cota/circuit.mjs",
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",

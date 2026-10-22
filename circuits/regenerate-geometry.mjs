@@ -1,15 +1,11 @@
 // The regeneration fence: re-runs the geometry pipeline over each circuit's
-// kept Overpass answer and fails unless it reproduces the geometry the app
-// serves.
+// kept Overpass answer — the survey a kept geometry was judged from, kept as
+// the runner served it, whose degrees cannot move — and fails unless it
+// reproduces the geometry the app serves. A run over the answer that does not
+// reproduce the geometry moved the degrees in the code; why that is the check
+// no Elm test can be is `circuits/README.md`.
 //
 //     node circuits/regenerate-geometry.mjs [<circuit> ...] [--write | --freeze]
-//
-// The kept answer in each circuit's directory is the survey a kept geometry was
-// judged from, kept as the runner served it — the pipeline's frozen input. Its
-// degrees cannot move, so a run over it that does not reproduce the geometry
-// moved them in the code. This is the check no Elm test can be:
-// `circuit-geometry.mjs` stretches whatever degrees it is given, so a survey
-// swapped under a drawing reads exactly as the drawing expects.
 //
 // `surveyed_at` is the one property exempt from the fence: it stamps which
 // answer a file was written from rather than what the drawing is made of, and

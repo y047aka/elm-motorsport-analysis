@@ -1,18 +1,14 @@
 // The first question about a circuit nobody has surveyed yet: which relation
-// OpenStreetMap holds it as. A circuit's config for the pipeline names one
-// relation, the role of its finish line and the lap length the circuit
-// publishes; this asks what stands at a place on earth before any of that
-// exists, and prints each candidate whole — its tags, its member ways measured,
-// its roles counted — so the relation is picked from an answer. The measured
-// lap is what discriminates: around Le Mans the full 13.6 km circuit and the
-// 4.4 km Grand Prix circuit both stand, and a name alone does not tell them
-// apart.
+// OpenStreetMap holds it as. Prints each candidate whole — its tags, its member
+// ways measured, its roles counted — so the relation is picked from an answer
+// rather than a name: around Le Mans the full 13.6 km circuit and the 4.4 km
+// Grand Prix circuit both stand, and the measured lap is what tells them apart.
 //
 //     node circuits/probe-circuit.mjs <lat>,<lon> [...] [--radius <km>]
 //     node circuits/probe-circuit.mjs <south>,<west>,<north>,<east> [...]
 //
-// A centre is widened into a box by --radius, 5 km unless named otherwise;
-// four numbers are the box itself, which is what to give when the circuit's own
+// A centre is widened into a box by --radius, 5 km unless named otherwise; four
+// numbers are the box itself, which is what to give when the circuit's own
 // relation spans more. Candidates are the circuit, motor-sport and raceway
 // relations the box holds; each likely one is then asked again for its ways'
 // geometry. Nothing is written: the report goes to a human, and the pipeline

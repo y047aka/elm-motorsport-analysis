@@ -3,28 +3,18 @@
 // circuit publishes, simplify it, and write the geometry GeoJSON.
 //
 // One file per circuit calls this with its own relation, its own published lap
-// length, and the word its rounds are known by. What it writes is the same
-// shape every time -- WGS84 degrees, how far round the lap each stands, and the
-// frame `Motorsport.Circuit.Geodesy` projects them through -- and the file is
-// not a build artifact but a served one: `app/static/geometry/<circuit>.geojson`
-// is what the app fetches at runtime, decoded and checked by
-// `Motorsport.Wec.Circuit.Geometry`, with a `Layout` module on the Elm side
-// holding what the file cannot know: the drawing's lengths and timing lines.
+// length, and the word its rounds are known by. Where the written file stands,
+// who reads it and what holds it is `circuits/README.md`.
 //
 //     node circuits/<circuit>/circuit.mjs [overpass.json]
 //     node circuits/<circuit>/circuit.mjs --from-geojson [geometry.json]
 //
 // Given an Overpass answer as a file, reads it rather than asking.
-//
-// `--from-geojson` writes nothing: it reads the kept geometry, runs the checks
-// the runtime decoder will run, and says what stood. It is how a file is shown
-// to still answer to its circuit's authored config -- the published lap length,
-// the sectors that must add up -- with no OpenStreetMap and no app. The Overpass
-// answer a geometry was drawn from is kept as the pipeline's frozen input under
-// `circuits/`, which `regenerate-geometry.mjs` re-runs this module over;
-// a regeneration asks OpenStreetMap again regardless. What the geometry holds is
-// read twice -- by the app at runtime, and by `atlas-geometry.mjs`, which
-// measures another dataset's line against it.
+// `--from-geojson` writes nothing: it runs the checks the app's runtime decoder
+// will run, over the kept geometry and with no OpenStreetMap. The answer a
+// geometry was drawn from is kept beside each circuit's config as the
+// pipeline's frozen input, which `regenerate-geometry.mjs` re-runs this module
+// over; a live regeneration asks OpenStreetMap again regardless.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
 // geometry and module written here is a derivative of it.
@@ -71,9 +61,8 @@ const radius = 6371008.8;
 
 /** Whether the module named is the script the process was started from, as
  * against a config another script imported to read a published length out of.
- * `import.meta.url` is the caller's own and not this file's, so it is passed in:
- * read from here it would answer for `circuit-geometry.mjs`, which every circuit's
- * script imports and none enters. */
+ * `import.meta.url` is the caller's own and not this file's, so it is passed
+ * in. */
 export function isEntry(moduleUrl) {
   return pathToFileURL(process.argv[1] ?? "").href === moduleUrl;
 }
@@ -82,16 +71,10 @@ export function isEntry(moduleUrl) {
  * own:
  *
  *   - `--from-geojson [file]` reads a geometry file -- the circuit's kept one
- *     when no file is named -- runs every check on it, and writes nothing. The
- *     checks are the ones the app's decoder will run on the bytes it fetches.
+ *     when no file is named -- runs every check on it, and writes nothing.
  *   - a file names an Overpass answer to read instead of asking.
- *   - neither asks OpenStreetMap, which a busy runner answers with a 502 or a
- *     504; repeat the run rather than trusting the first.
- *
- * Asking writes the served file, so what comes back is a survey taken *now* and
- * the metres written are today's line -- and the visual tests only show a
- * survey that moved by metres or more, which is why a regeneration is read as a
- * diff and not as a rendering.
+ *   - neither asks OpenStreetMap, and a run that asks writes the served file
+ *     from a survey taken *now*.
  */
 export async function main(circuit, argv) {
   try {
@@ -135,9 +118,9 @@ export async function answer(relation, file) {
   return file ? JSON.parse(await readFile(file, "utf8")) : ask(relation);
 }
 
-/** One query, walked over the runners: a busy one answers 502 or 504 — or 200
- * with an HTML error page behind a proxy, so the body is looked at and not just
- * the status — and the next answers the same query. */
+/** One query, walked over the runners twice each: a busy one answers 502 or
+ * 504 — or 200 with an HTML error page behind a proxy, so the body is looked at
+ * and not just the status — and the next answers the same query. */
 export async function askOverpass(query) {
   let failure = "no runner was reached";
   const tries = overpassRunners.length * 2;
@@ -412,11 +395,11 @@ function chain(members, start, nodes) {
 }
 
 /** One way the chain could not take, reported with what decides its remedy:
- * how long it is, how far its nearest end stands from where the chain stopped,
- * and whether it is driven one way. A oneway way lying at the stop is an
- * orientation the survey disagrees with; a way standing tens of metres off is
- * ground OpenStreetMap does not connect; a short one far from everything is
- * usually a road that has no business in the relation. */
+ * its length, how far its nearest end stands from where the chain stopped, and
+ * whether it is driven one way. A oneway way lying at the stop is an
+ * orientation the survey disagrees with; a way tens of metres off is ground
+ * OpenStreetMap does not connect; a short one far from everything is usually a
+ * road with no business in the relation. */
 function straggled(segment, stopped, nodes) {
   const points = segment.nodes.map((id) => nodes.get(id));
   const gap = Math.min(apart(stopped, points[0]), apart(stopped, points.at(-1)));

@@ -4,34 +4,27 @@
 //     node circuits/check-timing-lines.mjs <season>/<id> [--against <season>]
 //                                         [--tolerance <metres>]
 //
-// A circuit is drawn on one set of lines. Where they come from a document of one
-// year -- the Circuit of the Americas' own track sector map, which is what
-// `Circuit/Cota/Layout` is drawn on, and every season of it since -- a new season
-// at that circuit asks whether the lines have moved. This answers it without a map
-// of the later year.
+// A circuit is drawn on one set of lines, and a new season at that circuit
+// asks whether the lines have moved; this answers it without a map of the
+// later year. The feed holds times, so the lines are inferred from them: each
+// class's fastest sector, as a share of the fastest lap the same class could
+// make, is read as a share of the distance round the lap. A sector's time is
+// not proportional to the ground it covers — that ground is a mixture of
+// corners and straights — and the fastest Hypercar laps put the first line
+// some 170 m from where the circuit's own map draws it. So the shares are
+// printed beside the map's lines and never judged against them, and what is
+// judged against the tolerance is the season-to-season difference: both
+// readings carry that error of the method, a line the organisers moved would
+// show as hundreds of metres, and a changed Balance of Performance or a new
+// tyre costs tens.
 //
-// The feed holds times, so the lines are inferred from them: each class's fastest
-// sector, as a share of the fastest lap the same class could make, is read as a
-// share of the distance round the lap. How that is wrong is worth saying out loud.
-// A sector's time is not proportional to the ground it covers, since the ground a
-// sector covers is a mixture of corners and straights, and the shares of the
-// fastest Hypercar laps put the first line some 170 m from where the circuit's own
-// map draws it. What shares are good for is the difference between two seasons.
-// Both readings carry that error of the method, so a class that drove over the same
-// lines in two seasons implies lines that agree; a line the organisers moved would
-// show as hundreds of metres, and a changed Balance of Performance or a new tyre
-// costs tens.
-//
-// So the shares are printed beside the map's lines and never judged against them,
-// and the season-to-season difference is the thing judged against the tolerance.
-//
-// The map's lines are read from the kept geometry, `app/static/geometry/<circuit>.geojson`, which
-// publishes them as the circuit's script authored them. The reading of the feed
-// is the summary's -- the fastest sector over every lap, which is what
-// `Round.Summary`'s `fastestSectors` asks the database --
-// and where the round's export is in the tree its shares are printed against, so
-// a stale export reads as a disagreement in the print rather than as a verdict
-// this command has no standing to make.
+// The map's lines are read from the kept geometry, which publishes them as the
+// circuit's script authored them. The reading of the feed is the summary's —
+// the fastest sector over every lap, which is what `Round.Summary`'s
+// `fastestSectors` asks the database — and where the round's export is in the
+// tree its shares are printed against, so a stale export reads as a
+// disagreement in the print rather than a verdict this command has no standing
+// to make.
 
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -56,10 +49,10 @@ const sectors = ["S1", "S2", "S3"];
 const whole = "the round";
 
 // The rounds this reads, and the lines each is drawn on. A circuit timed at one
-// grain per season is not this question to ask: Le Mans's lines are copied from the
-// organiser's map of each year and differ between them by design, so there is
-// nothing to check there that a map does not already answer. A second round at a
-// circuit already here is one more entry naming the same layout and lap.
+// grain per season is not this question to ask: Le Mans's lines are copied from
+// the organiser's map of each year and differ between them by design. A second
+// round at a circuit already here is one more entry naming the same layout and
+// lap.
 const rounds = {
   cota_6h: {
     circuit: cota.survey,
@@ -206,10 +199,9 @@ function impliedLines(fastest, lapLength) {
   return lines;
 }
 
-/** Whether this reading is the summary's reading -- printed, never judged. An
- * export in the tree is a file a run wrote some time ago, and whether a pipeline
- * reads its CSV the way it did when the file was written is the pipeline's own
- * business to test. */
+/** Whether this reading is the summary's reading — printed, never judged:
+ * whether a pipeline reads its CSV the way it did when the export in the tree
+ * was written is the pipeline's own business to test. */
 async function agreesWithExport(reading) {
   const path = join("app", "static", "wec", String(reading.season), `${reading.id}.json`);
   if (!existsSync(join(repoDir, path))) {
@@ -230,11 +222,10 @@ async function agreesWithExport(reading) {
 // ---------------------------------------------------------------- the layout
 
 /** Where the map's lines stand round the lap: the first line, the second, and
- * the lap the third ends at. The stretches are the map's own, kept in the
- * geometry by the script that authored them, and the only thing a check may
- * compare them against is the lap length they add up to --
- * the shares themselves place a line some 170 m from one of these, by the
- * method's own error, and say nothing about a mistake here. */
+ * the lap the third ends at. The only thing a check may compare the map's own
+ * stretches against is the lap length they add up to — the shares place a line
+ * some 170 m from these, by the method's own error, and say nothing about a
+ * mistake here. */
 async function linesOf(round) {
   const outline = JSON.parse(await readFile(join(repoDir, round.geojson), "utf8")).features.find((f) => f.properties?.role === "outline");
   const published = outline?.properties?.sectors;
