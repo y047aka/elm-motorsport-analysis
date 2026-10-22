@@ -67,6 +67,7 @@ export function outlineOf(text, name) {
   const outline = JSON.parse(text).features.find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error(`${name}: no outline feature`);
   const { metres, ...props } = outline.properties;
+  if (!Array.isArray(metres)) throw new Error(`${name}: the outline publishes no metres`);
   if (outline.geometry.coordinates.length !== metres.length) {
     throw new Error(`${name}: ${metres.length} metres for ${outline.geometry.coordinates.length} points`);
   }

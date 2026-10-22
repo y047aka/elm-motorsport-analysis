@@ -64,11 +64,12 @@ async function run(slug, argv) {
   const file = at === -1 ? null : argv[at + 1];
   const theirs = file ? JSON.parse(await readFile(file, "utf8")) : await ask(circuit.atlas.url);
 
-  const outline = (theirs.features ?? []).find((f) => f.properties?.role === "outline");
+  const features = theirs.features ?? [];
+  const outline = features.find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error("the atlas file holds no outline feature");
-  const corners = theirs.features.filter((f) => f.properties?.role === "corner");
+  const corners = features.filter((f) => f.properties?.role === "corner");
   const pits = ["pit_entry", "pit_exit"]
-    .map((role) => theirs.features.find((f) => f.properties?.role === role))
+    .map((role) => features.find((f) => f.properties?.role === role))
     .filter((f) => f !== undefined);
 
   const ours = readKeptGeometry(await readFile(join(repoDir, circuit.geojson), "utf8"), circuit.slug);
