@@ -36,7 +36,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { apart, cumulative, projection, repoDir, roundTenth, sectorLines } from "./circuit-geometry.mjs";
+import { apart, cumulative, onEarth, projection, repoDir, roundTenth, sectorLines } from "./circuit-geometry.mjs";
 import { apartness, interpolate, nearestOn, outlineOf } from "./geometry-diff.mjs";
 import { circuits, keptAtlas } from "./registry.mjs";
 
@@ -73,7 +73,6 @@ async function run(slug, argv) {
     .filter((f) => f !== undefined);
 
   const ours = readKeptGeometry(await readFile(join(repoDir, circuit.geojson), "utf8"), circuit.slug);
-  const earth = ([lon, lat]) => ({ lat, lon });
   const { project } = projection(
     [
       ...outline.geometry.coordinates,
@@ -81,14 +80,14 @@ async function run(slug, argv) {
       ...ours.pit,
       ...corners.map((c) => c.geometry.coordinates),
       ...pits.map((p) => p.geometry.coordinates),
-    ].map(earth),
+    ].map(onEarth),
   );
-  const theirPoints = outline.geometry.coordinates.map(earth).map(project);
-  const ourPoints = ours.coords.map(earth).map(project);
+  const theirPoints = outline.geometry.coordinates.map(onEarth).map(project);
+  const ourPoints = ours.coords.map(onEarth).map(project);
   const theirMetres = cumulative(theirPoints);
   const length = theirMetres[theirMetres.length - 1];
 
-  const first = { lat: outline.geometry.coordinates[0][1], lon: outline.geometry.coordinates[0][0] };
+  const first = onEarth(outline.geometry.coordinates[0]);
   const originDistance = circuit.timingLine ? apart(first, circuit.timingLine) : 0;
   if (circuit.timingLine && originDistance > originWithin) {
     throw new Error(
@@ -99,7 +98,7 @@ async function run(slug, argv) {
 
   const deviation = apartness(theirPoints, theirMetres, ourPoints, ours.metres, every);
   const atCorners = corners.map((c) => {
-    const near = nearestOn(project(earth(c.geometry.coordinates)), ourPoints, ours.metres);
+    const near = nearestOn(project(onEarth(c.geometry.coordinates)), ourPoints, ours.metres);
     return {
       id: c.properties.id,
       theirMetres: c.properties.marker * length,
@@ -113,10 +112,10 @@ async function run(slug, argv) {
     return { ...line, theirMetres: near.metres, distance: near.distance };
   });
 
-  const pitPoints = ours.pit.map(earth).map(project);
+  const pitPoints = ours.pit.map(onEarth).map(project);
   const pitMetres = cumulative(pitPoints);
   const atPits = pits.map((p) => {
-    const near = nearestOn(project(earth(p.geometry.coordinates)), pitPoints, pitMetres);
+    const near = nearestOn(project(onEarth(p.geometry.coordinates)), pitPoints, pitMetres);
     return {
       role: p.properties.role,
       theirMetres: p.properties.marker * length,
