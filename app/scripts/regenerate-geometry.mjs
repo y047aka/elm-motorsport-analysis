@@ -67,8 +67,6 @@ async function reRun(name, write, freeze) {
   let answer;
   if (freeze) {
     answer = await ask(circuit.relation);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, JSON.stringify(answer));
   } else {
     try {
       answer = JSON.parse(await readFile(path, "utf8"));
@@ -81,6 +79,10 @@ async function reRun(name, write, freeze) {
 
   const written = geoJsonString(circuit, lapOf(answer, circuit));
   if (write || freeze) {
+    if (freeze) {
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, JSON.stringify(answer));
+    }
     await writeFile(join(repoDir, circuit.geojson), written);
     console.log(`${name}: geometry written from ${freeze ? "a fresh survey" : "the kept answer"}`);
     return;
