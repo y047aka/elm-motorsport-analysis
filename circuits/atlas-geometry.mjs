@@ -97,7 +97,7 @@ async function run(slug, argv) {
     );
   }
 
-  const apart = apartness(theirPoints, theirMetres, ourPoints, ours.metres, every);
+  const deviation = apartness(theirPoints, theirMetres, ourPoints, ours.metres, every);
   const atCorners = corners.map((c) => {
     const near = nearestOn(project(earth(c.geometry.coordinates)), ourPoints, ours.metres);
     return {
@@ -130,7 +130,7 @@ async function run(slug, argv) {
     every,
     length,
     originDistance,
-    apart,
+    deviation,
     atCorners,
     atPits,
     pitLength: pitMetres[pitMetres.length - 1],
@@ -194,7 +194,7 @@ async function writeAtlasGeometry(path, slug, url, outline, corners, pits, their
   await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
 }
 
-function print(slug, circuit, { every, length, originDistance, apart, atCorners, atPits, pitLength, atLines, sectors }) {
+function print(slug, circuit, { every, length, originDistance, deviation, atCorners, atPits, pitLength, atLines, sectors }) {
   const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
   const distances = atCorners.map((c) => c.distance);
   const laps = atCorners.map((c) => c.ourMetres - c.theirMetres);
@@ -208,8 +208,8 @@ function print(slug, circuit, { every, length, originDistance, apart, atCorners,
         : "the circuit script names no timing line, so the atlas lap's start goes unchecked"),
   );
   console.log(
-    `lines sampled every ${every} m (${apart.count}): mean apart ${apart.mean.toFixed(1)} m, ` +
-      `max ${apart.worst.distance.toFixed(1)} m at their ${apart.worst.aMetres.toFixed(0)} m, our ${apart.worst.bMetres.toFixed(1)} m`,
+    `lines sampled every ${every} m (${deviation.count}): mean apart ${deviation.mean.toFixed(1)} m, ` +
+      `max ${deviation.worst.distance.toFixed(1)} m at their ${deviation.worst.aMetres.toFixed(0)} m, our ${deviation.worst.bMetres.toFixed(1)} m`,
   );
   console.log(
     `corners (${atCorners.length}): mean apart ${mean(distances).toFixed(1)} m, max ${Math.max(...distances).toFixed(1)} m; ` +
