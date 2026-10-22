@@ -32,6 +32,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { circuits } from "./registry.mjs";
+import { sectorLines } from "./circuit-geometry.mjs";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -56,19 +57,15 @@ const rounds = {
   cota_6h: circuits.cota,
 };
 
-const columns = [
+// The table's columns: the class, each sector's fastest time and share, each
+// intermediate line's implied position under the name the geometry gives it,
+// and the mean speed the map's stretches work out to.
+const columnsOf = (lines) => [
   ["class", 12],
-  ["S1 s", 9],
-  ["S2 s", 9],
-  ["S3 s", 9],
-  ["S1 %", 8],
-  ["S2 %", 8],
-  ["S3 %", 8],
-  ["line 1 m", 11],
-  ["line 2 m", 11],
-  ["S1 km/h", 9],
-  ["S2 km/h", 9],
-  ["S3 km/h", 9],
+  ...sectors.map((sector) => [`${sector} s`, 9]),
+  ...sectors.map((sector) => [`${sector} %`, 8]),
+  ...lines.map((line) => [`${line.id} m`, 11]),
+  ...sectors.map((sector) => [`${sector} km/h`, 9]),
 ];
 
 main().catch((error) => {
@@ -91,8 +88,8 @@ async function main() {
     readings.push({ reading, note: await agreesWithExport(reading) });
   }
 
-  console.log(`The lines ${round.survey} is drawn on, out of ${round.script}: ${linePositions(round.lines)}.`);
-  for (const each of readings) printRound(each, round, round.lines);
+  console.log(`The lines ${round.survey} is drawn on, out of ${round.script}: ${linePositions(round)}.`);
+  for (const each of readings) printRound(each, round);
   if (args.against !== null) judge(readings[0].reading, readings[1].reading, round, args.tolerance);
 }
 
@@ -104,7 +101,7 @@ async function readRound(season, id, round) {
   const path = join("data", "wec", String(season), `${id}.csv`);
   const laps = await readCsv(path);
   const fastest = fastestSectors(laps, path);
-  return { season, id, path, laps: laps.length, fastest, lines: impliedLines(fastest, round.lapLength) };
+  return { season, id, path, laps: laps.length, fastest, lines: impliedLines(fastest, round) };
 }
 
 /** The feed's rows, one per lap. `path` is relative to the repository, as the
@@ -179,16 +176,16 @@ function sharesOf(times) {
   return Object.fromEntries(sectors.map((sector) => [sector, times[sector] / total]));
 }
 
-/** Where round the lap those shares put the two intermediate lines. The third line
- * is the one the lap is measured from, which stands at nought and at the end. */
-function impliedLines(fastest, lapLength) {
+/** Where round the lap those shares put the intermediate lines, in the order
+ * and under the names the geometry gives them. The line the lap is measured
+ * from is not among them: it stands at nought and at the end. */
+function impliedLines(fastest, round) {
   const lines = new Map();
   for (const [className, times] of fastest) {
     const shares = sharesOf(times);
-    lines.set(className, {
-      first: shares.S1 * lapLength,
-      second: (shares.S1 + shares.S2) * lapLength,
-    });
+    let at = 0;
+    const cum = sectors.map((sector) => (at += shares[sector]) * round.lapLength);
+    lines.set(className, round.lines.map((line, index) => cum[index]));
   }
   return lines;
 }
@@ -215,10 +212,10 @@ async function agreesWithExport(reading) {
 
 // ---------------------------------------------------------------- the layout
 
-/** Where the map's lines stand round the lap: the first line, the second, and
- * the lap the third ends at. The only thing a check may compare the map's own
- * stretches against is the lap length they add up to — the shares place a line
- * some 170 m from these, by the method's own error, and say nothing about a
+/** Where the map's lines stand round the lap, out of the geometry the circuit's
+ * script wrote. The only thing a check may compare the map's own stretches
+ * against is the lap length they add up to — the shares place a line some
+ * 170 m from these, by the method's own error, and say nothing about a
  * mistake here. */
 async function linesOf(round) {
   const outline = JSON.parse(await readFile(join(repoDir, round.geojson), "utf8")).features.find((f) => f.properties?.role === "outline");
@@ -229,57 +226,52 @@ async function linesOf(round) {
   if (published.stretches.length !== sectors.length) {
     fail(`${round.geojson} gives ${published.stretches.length} stretches for ${sectors.length} sectors.`);
   }
-  const total = published.stretches.reduce((sum, stretch) => sum + stretch, 0);
-  if (Math.abs(total - round.lapLength) > 0.05) {
-    fail(`${round.geojson}'s stretches add up to ${total} m, not its ${round.lapLength} m lap.`);
-  }
-  const first = published.stretches[0];
-  return { first, second: first + published.stretches[1], lap: round.lapLength };
+  return sectorLines(published, round.lapLength);
 }
 
-const linePositions = ({ first, second, lap }) =>
-  [first, second, lap].map((metre, at) => `${sectors[at]} at ${metres(metre)} m`).join(", ");
+const linePositions = (round) =>
+  [...round.lines.map((line) => `${line.id} at ${metres(line.metres)} m`), `lap at ${metres(round.lapLength)} m`].join(", ");
 
 // ---------------------------------------------------------------- printing
 
-function printRound({ reading, note }, round, lines) {
+function printRound({ reading, note }, round) {
   const { season, id, path, laps } = reading;
+  const columns = columnsOf(round.lines);
   console.log(`\n${season}/${id}: ${laps.toLocaleString("en-US")} laps of ${path}`);
-  console.log(table(columns.map(([name]) => name)));
+  console.log(table(columns, columns.map(([name]) => name)));
   for (const [className, times] of reading.fastest) {
     const shares = sharesOf(times);
     const implied = reading.lines.get(className);
     console.log(
-      table([
+      table(columns, [
         className,
         ...sectors.map((sector) => seconds(times[sector])),
         ...sectors.map((sector) => percent(shares[sector])),
-        metres(implied.first),
-        metres(implied.second),
-        ...speeds(times, lines),
+        ...implied.map((metre) => metres(metre)),
+        ...speeds(times, round),
       ]),
     );
   }
   console.log(note);
 }
 
-/** The mean speed over each of the map's three stretches, which is what a sector
+/** The mean speed over each of the map's stretches, which is what a sector
  * time taken for a share of the distance hides. */
-function speeds(times, lines) {
-  const stretches = [lines.first, lines.second - lines.first, lines.lap - lines.second];
-  return sectors.map((sector, at) => ((stretches[at] / (times[sector] / 1000)) * 3.6).toFixed(1));
+function speeds(times, round) {
+  const edges = [0, ...round.lines.map((line) => line.metres), round.lapLength];
+  return sectors.map((sector, at) => (((edges[at + 1] - edges[at]) / (times[sector] / 1000)) * 3.6).toFixed(1));
 }
 
 function judge(season, against, round, limit) {
   const both = [...season.lines.keys()].filter((className) => against.lines.has(className));
-  const moved = (className, which) => season.lines.get(className)[which] - against.lines.get(className)[which];
-  const apart = (className) => ["first", "second"].map((which) => Math.abs(moved(className, which)));
+  const moved = (className, at) => season.lines.get(className)[at] - against.lines.get(className)[at];
+  const apart = (className) => season.lines.get(className).map((_metre, at) => Math.abs(moved(className, at)));
+  const columns = [["class", 12], ...round.lines.map((line) => [line.id, 11])];
 
   console.log(`\n${season.season} against ${against.season}: how far round the lap one line stands`);
-  console.log(table(["class", "line 1", "line 2"]));
+  console.log(table(columns, columns.map(([name]) => name)));
   for (const className of both) {
-    const by = ["first", "second"].map((which) => movedMetres(moved(className, which)));
-    console.log(table([className, ...by]));
+    console.log(table(columns, [className, ...round.lines.map((line, at) => movedMetres(moved(className, at)))]));
   }
   for (const className of new Set([...season.lines.keys(), ...against.lines.keys()])) {
     if (!both.includes(className) && className !== whole) {
@@ -292,7 +284,7 @@ function judge(season, against, round, limit) {
     console.log(
       [
         `\n${metres(furthest)} m is over the ${metres(limit)} m allowed:`,
-        `${season.season} and ${against.season} are far enough apart at ${round.circuit}`,
+        `${season.season} and ${against.season} are far enough apart at ${round.survey}`,
         `to read a map of the later one and place the lines by season, as Le Mans's are.`,
       ].join(" "),
     );
@@ -307,7 +299,7 @@ function judge(season, against, round, limit) {
   }
 }
 
-const table = (cells) =>
+const table = (columns, cells) =>
   cells.map((cell, at) => String(cell).padEnd(columns[at] ? columns[at][1] : String(cell).length)).join(" ");
 
 const seconds = (ms) => (ms / 1000).toFixed(3);

@@ -37,7 +37,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { cumulative, degreesToMetres, projection } from "./circuit-geometry.mjs";
+import { cumulative, degreesToMetres, projection, sectorLines } from "./circuit-geometry.mjs";
 import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
 import { circuits, keptAtlas } from "./registry.mjs";
 
@@ -108,7 +108,8 @@ async function run(slug, argv) {
       distance: near.distance,
     };
   });
-  const atLines = sectorLines(ours.props.sectors).map((line) => {
+  const published = ours.props.sectors;
+  const atLines = (published ? sectorLines(published, circuit.lapLength) : []).map((line) => {
     const near = nearestOn(interpolate(ourPoints, ours.metres, line.metres), theirPoints, theirMetres);
     return { ...line, theirMetres: near.metres, distance: near.distance };
   });
@@ -137,21 +138,6 @@ async function run(slug, argv) {
     atLines,
     sectors: ours.props.sectors,
   });
-}
-
-// The lines the circuit's own map publishes, as positions round the lap: each
-// stretch ends where the next begins, and the last ends at the line the lap is
-// measured from — which is where it started, so it is not a line to place.
-function sectorLines(sectors) {
-  if (!sectors) return [];
-  const names = ["s2", "s3", "s4"];
-  const lines = [];
-  let at = 0;
-  for (const [index, stretch] of sectors.stretches.entries()) {
-    at += stretch;
-    if (index < sectors.stretches.length - 1) lines.push({ id: names[index], metres: at });
-  }
-  return lines;
 }
 
 // Distance on the ground between a surveyed degree pair and the line the

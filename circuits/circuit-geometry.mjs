@@ -295,12 +295,7 @@ export function geometryFromGeoJson(json, circuit) {
     );
   }
   const sectors = props.sectors ?? null;
-  if (sectors) {
-    const total = sectors.stretches.reduce((sum, stretch) => sum + stretch, 0);
-    if (Math.abs(total - circuit.lapLength) > 0.15) {
-      throw new Error(`the sectors add up to ${total} m, not the published ${circuit.lapLength} m`);
-    }
-  }
+  if (sectors) sectorLines(sectors, circuit.lapLength);
   const onEarth = ([lon, lat]) => ({ lat, lon });
   return {
     centreline: coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
@@ -312,6 +307,28 @@ export function geometryFromGeoJson(json, circuit) {
     sectors,
     counts: null,
   };
+}
+
+/** The intermediate timing lines a circuit's published stretches imply: each
+ * stretch ends where the next begins, and the last ends at the line the lap is
+ * measured from — which is where it started, so it is not a line to place. A
+ * line is named for the sector that begins at it, so every tool reading the
+ * same map's stretches — the atlas reading, the timing-lines check — calls the
+ * same line the same thing. The only thing stretches are trusted with is the
+ * lap length they add up to; where the times place them is
+ * `check-timing-lines.mjs`'s to answer. */
+export function sectorLines(sectors, lapLength) {
+  const total = sectors.stretches.reduce((sum, stretch) => sum + stretch, 0);
+  if (Math.abs(total - lapLength) > 0.15) {
+    throw new Error(`the sectors add up to ${total} m, not the published ${lapLength} m`);
+  }
+  const lines = [];
+  let at = 0;
+  for (const stretch of sectors.stretches.slice(0, -1)) {
+    at += stretch;
+    lines.push({ id: `s${lines.length + 2}`, metres: at });
+  }
+  return lines;
 }
 
 /**
