@@ -4,7 +4,7 @@ module Motorsport.Wec.Circuit.Geometry exposing (Geometry, LapPoint, decoder)
 surveyed degrees, how far round the lap each stands, and the
 [`Frame`](Motorsport-Circuit-Geodesy#Frame) to project them through.
 
-The file is written by the pipeline in `app/scripts` and served under
+The file is written by the pipeline in `circuits/` and served under
 `/static/geometry/`, named by the word the summaries send for the circuit.
 [`decoder`](#decoder) checks the bytes as they arrive: a served file can be
 stale, truncated, or -- in a Tauri bundle -- the app shell the asset resolver
@@ -17,7 +17,7 @@ given it.
 
 The RFC layer is `mgold/elm-geojson`; what is read here is what that cannot
 know: the `role`s this file uses, the metres beside the points, the frame, the
-published length.
+direction the survey runs, the published length.
 
 @docs Geometry, LapPoint, decoder
 
@@ -25,6 +25,7 @@ published length.
 
 import GeoJson
 import Json.Decode as Decode exposing (Decoder)
+import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.Geodesy as Geodesy exposing (Coordinate, Frame)
 
 
@@ -42,6 +43,7 @@ type alias LapPoint =
 -}
 type alias Geometry =
     { frame : Frame
+    , direction : Direction
     , centreline : List LapPoint
     , pitLane : List Coordinate
     }
@@ -80,6 +82,7 @@ line feature =
                 , coordinates = coordinates
                 , metres = Decode.decodeValue (Decode.field "metres" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
                 , frame = Decode.decodeValue frame feature.properties |> Result.toMaybe
+                , direction = Decode.decodeValue (Decode.maybe (Decode.field "direction" Decode.string)) feature.properties |> Result.withDefault Nothing
                 }
 
         _ ->
@@ -101,6 +104,7 @@ type alias Feature =
     , coordinates : List Coordinate
     , metres : Maybe (List Float)
     , frame : Maybe Frame
+    , direction : Maybe String
     }
 
 
@@ -110,20 +114,26 @@ assemble lapLength features =
         ( Just outline, Just pitLane ) ->
             case ( outline.metres, outline.frame ) of
                 ( Just metres, Just projected ) ->
-                    case verify lapLength metres outline.coordinates of
-                        Just complaint ->
+                    case directionOf outline.direction of
+                        Err complaint ->
                             Decode.fail complaint
 
-                        Nothing ->
-                            Decode.succeed
-                                { frame = projected
-                                , centreline =
-                                    List.map2
-                                        (\place metre -> { lat = place.lat, lon = place.lon, metres = metre })
-                                        outline.coordinates
-                                        metres
-                                , pitLane = pitLane.coordinates
-                                }
+                        Ok whichWay ->
+                            case verify lapLength metres outline.coordinates of
+                                Just complaint ->
+                                    Decode.fail complaint
+
+                                Nothing ->
+                                    Decode.succeed
+                                        { frame = projected
+                                        , direction = whichWay
+                                        , centreline =
+                                            List.map2
+                                                (\place metre -> { lat = place.lat, lon = place.lon, metres = metre })
+                                                outline.coordinates
+                                                metres
+                                        , pitLane = pitLane.coordinates
+                                        }
 
                 _ ->
                     Decode.fail "the outline carries no metres or no frame"
@@ -188,3 +198,24 @@ frame =
         (Decode.field "frame" (Decode.field "origin" (Decode.field "lat" Decode.float)))
         (Decode.field "frame" (Decode.field "origin" (Decode.field "lon" Decode.float)))
         (Decode.field "frame" (Decode.field "parallel" Decode.float))
+
+
+{-| Which way a car goes round the outline. Both spellings are matched and a
+third fails by naming the word it disagreed with, kept apart from the silence
+of an absent key: the word comes from the survey's own orientation, and a file
+that spells it some other way has been edited rather than surveyed.
+-}
+directionOf : Maybe String -> Result String Direction
+directionOf word =
+    case word of
+        Just "clockwise" ->
+            Ok Clockwise
+
+        Just "counter_clockwise" ->
+            Ok CounterClockwise
+
+        Just other ->
+            Err ("the outline says it runs " ++ other ++ ", which is not a direction this decoder knows")
+
+        Nothing ->
+            Err "the outline names no direction"

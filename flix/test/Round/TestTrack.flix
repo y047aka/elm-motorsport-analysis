@@ -16,14 +16,12 @@ pub mod Round.TestTrack {
     use Util.HourClock.Hour
     use Util.Json.Encode
 
-    /// Rounds whose ids give `Motorsport.Events` the direction each test is
-    /// about. Written out rather than looked up, so a change to the real
-    /// calendar cannot quietly rewrite what a test asserts.
-    def clockwise(): Entry = { season = 2025, id = "spa_6h", date = "2025-05-09" }
+    /// Rounds whose ids the tests fall back on; written out rather than looked
+    /// up, so a change to the real calendar cannot quietly rewrite what a test
+    /// asserts.
+    def spa(): Entry = { season = 2025, id = "spa_6h", date = "2025-05-09" }
 
-    def counterClockwise(): Entry = { season = 2025, id = "imola_6h", date = "2025-04-19" }
-
-    def unknownDirection(): Entry = { season = 2025, id = "custom_event", date = "2025-01-01" }
+    def unknownCircuit(): Entry = { season = 2025, id = "custom_event", date = "2025-01-01" }
 
     def track(entry: Entry, laps: List[RawLap]): Track.Track \ IO =
         TestSupport.onRound(entry, numbered(laps), () ->
@@ -102,7 +100,7 @@ pub mod Round.TestTrack {
             mkLap(200000, Some(80000), Some(60000), Some(60000)) ::
             mkLap(100000, Some(20000), Some(30000), Some(50000)) ::
             Nil;
-        let track = track(clockwise(), laps);
+        let track = track(spa(), laps);
         Assert.assertTrue(isShare(0.0f64, 0.2f64, shareOf(Sector.S1, track)))
 
     @Test
@@ -110,7 +108,7 @@ pub mod Round.TestTrack {
         // S2 was never recorded, so S3 starts where S1 left off and the lap is
         // still divided in full.
         let laps = mkLap(50000, Some(20000), None, Some(30000)) :: Nil;
-        let track = track(clockwise(), laps);
+        let track = track(spa(), laps);
         Assert.assertTrue(isShare(0.0f64, 0.4f64, shareOf(Sector.S1, track)));
         Assert.assertTrue(isShare(0.4f64, 0.0f64, shareOf(Sector.S2, track)));
         Assert.assertTrue(isShare(0.4f64, 0.6f64, shareOf(Sector.S3, track)))
@@ -120,7 +118,7 @@ pub mod Round.TestTrack {
         // Nothing is known about how long each stretch is until a lap has been
         // round, whether the file holds a blank lap or no laps at all.
         List#{mkLap(0, None, None, None) :: Nil, Nil} |> List.forEach(laps -> {
-            let track = track(unknownDirection(), laps);
+            let track = track(unknownCircuit(), laps);
             Assert.assertTrue(isShare(0.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S1, track)));
             Assert.assertTrue(isShare(2.0f64 / 3.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S3, track)));
             Assert.assertTrue(Option.isEmpty(track#miniSectors))
@@ -134,7 +132,7 @@ pub mod Round.TestTrack {
             withMiniSectors(id -> if (id == MiniSectorId.SCL2) Some(1) else Some(1000), mkLap(0, None, None, None)) ::
             withEvenMiniSectors(1000, mkLap(15000, None, None, None)) ::
             Nil;
-        let track = track(clockwise(), laps);
+        let track = track(spa(), laps);
         Assert.assertTrue(isShare(0.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.SCL2, track)))
 
     @Test
@@ -143,13 +141,13 @@ pub mod Round.TestTrack {
             mkLap(15000, Some(1000), Some(1000), Some(1000)) ::
             withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) ::
             Nil;
-        let track = track(clockwise(), laps);
+        let track = track(spa(), laps);
         Assert.assertTrue(isShare(0.0f64, 3.0f64 / 15.0f64, shareOf(Sector.S1, track)))
 
     @Test
     def testToJsonRendersExpectedKeys(): Unit \ {Assert, IO} =
         let laps = withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) :: Nil;
-        let json = Encode.render(Track.toJson(track(clockwise(), laps)));
+        let json = Encode.render(Track.toJson(track(spa(), laps)));
         Assert.assertTrue(String.contains({substr = "\"sectors\""}, json));
         Assert.assertTrue(String.contains({substr = "\"s1\""}, json));
         Assert.assertTrue(String.contains({substr = "\"start\""}, json));
@@ -159,31 +157,19 @@ pub mod Round.TestTrack {
         Assert.assertTrue(String.contains({substr = "\"fl\""}, json))
 
     @Test
-    def testDirectionIsWrittenOutAsGiven(): Unit \ {Assert, IO} =
-        let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let json = Encode.render(Track.toJson(track(counterClockwise(), laps)));
-        Assert.assertTrue(String.contains({substr = "\"direction\": \"counter_clockwise\""}, json))
-
-    @Test
-    def testCircuitOfUnknownDirectionSaysNothing(): Unit \ {Assert, IO} =
-        let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let json = Encode.render(Track.toJson(track(unknownDirection(), laps)));
-        Assert.assertTrue(not String.contains({substr = "\"direction\""}, json))
-
-    @Test
     def testRoundWithoutMiniSectorsOmitsThem(): Unit \ {Assert, IO} =
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let json = Encode.render(Track.toJson(track(clockwise(), laps)));
+        let json = Encode.render(Track.toJson(track(spa(), laps)));
         Assert.assertTrue(not String.contains({substr = "\"miniSectors\""}, json))
 
-    /// The summary's circuit comes off the round's id, beside the direction it
-    /// already carried.
+    /// The summary's circuit comes off the round's id; which way round the
+    /// drawing of it runs is the geometry's own business.
     @Test
     def testTheCircuitComesOffTheRoundId(): Unit \ {Assert, IO} =
         let laps = mkLap(15000, Some(5000), Some(5000), Some(5000)) :: Nil;
         let cota = track({ season = 2025, id = "cota_6h", date = "2025-09-07" }, laps);
         Assert.assertTrue(cota#circuit == Some(Circuit.Cota));
-        let unnamed = track(unknownDirection(), laps);
+        let unnamed = track(unknownCircuit(), laps);
         Assert.assertTrue(Option.isEmpty(unnamed#circuit))
 
 }

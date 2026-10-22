@@ -167,18 +167,16 @@
           '';
         };
 
-        # A circuit's geometry is written out of OpenStreetMap's relation for it,
-        # so these ask and can be answered a 502 or a 504 -- repeat the run, or
-        # hand in a kept answer as a file. Either way the geometry lands under
-        # app/static/geometry, where the app reads it, and --from-geojson runs
-        # the geometry's checks over it with no network.
+        # The tools under circuits/, each run by Node with nothing else to
+        # carry. Which circuits are surveyed is the registry's, not these
+        # registrations'; only geometry-write writes what the app serves,
+        # under app/static/geometry, and the rest write beside it or read it.
         geometryApp = name: script:
           pkgs.writeShellApplication {
             inherit name;
             runtimeInputs = [ pkgs.nodejs_26 ];
             text = ''
-              cd app
-              node scripts/${script}.mjs "$@"
+              node circuits/${script}.mjs "$@"
             '';
           };
 
@@ -226,10 +224,12 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          geometry-le-mans     = { type = "app"; program = "${geometryApp "geometry-le-mans" "le-mans-geometry"}/bin/geometry-le-mans";                                  meta.description = "Write Le Mans's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept; --from-geojson to re-check the kept geometry with no network)"; };
-          geometry-cota        = { type = "app"; program = "${geometryApp "geometry-cota" "cota-geometry"}/bin/geometry-cota";                                           meta.description = "Write COTA's circuit geometry out of OpenStreetMap ([overpass.json] to use an answer you kept; --from-geojson to re-check the kept geometry with no network)"; };
-          geometry-atlas       = { type = "app"; program = "${geometryApp "geometry-atlas" "atlas-geometry"}/bin/geometry-atlas";                                        meta.description = "Measure a dataset's line against a circuit's kept geometry, and keep it beside it (cota [--file gp.geojson])"; };
+          geometry-write       = { type = "app"; program = "${geometryApp "geometry-write" "write-geometry"}/bin/geometry-write";                                        meta.description = "Write a circuit's geometry out of OpenStreetMap, or check the kept one (<circuit>; [overpass.json] to use an answer you kept; --from-geojson to re-check the kept geometry with no network)"; };
+          geometry-atlas       = { type = "app"; program = "${geometryApp "geometry-atlas" "atlas-geometry"}/bin/geometry-atlas";                                        meta.description = "Measure a dataset's line against a circuit's kept geometry, and keep it beside it (<circuit> [--file gp.geojson])"; };
           geometry-diff        = { type = "app"; program = "${geometryApp "geometry-diff" "geometry-diff"}/bin/geometry-diff";                                          meta.description = "Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from app/, [--every <m>] [--svg <out.svg>])"; };
+          geometry-regenerate  = { type = "app"; program = "${geometryApp "geometry-regenerate" "regenerate-geometry"}/bin/geometry-regenerate";                      meta.description = "Re-run the geometry pipeline over each circuit's kept Overpass answer and fail unless it reproduces the kept geometry ([<circuit> ...]; --write re-lays the files from the kept answer; --freeze asks OpenStreetMap now and keeps both)"; };
+          geometry-timing-lines = { type = "app"; program = "${geometryApp "geometry-timing-lines" "check-timing-lines"}/bin/geometry-timing-lines";                   meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (<season>/<id> [--against <season>] [--tolerance <metres>])"; };
+          geometry-probe       = { type = "app"; program = "${geometryApp "geometry-probe" "probe-circuit"}/bin/geometry-probe";                                          meta.description = "Ask OpenStreetMap which relations hold a circuit at a place, each lap measured, before a circuit's config is authored (<lat>,<lon> [...] [--radius <km>], or a s,w,n,e box)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };

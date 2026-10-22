@@ -25,7 +25,7 @@ pub mod Motorsport.Circuit {
     /// round drawn as a ring, and nothing minds; a drawing reached for by a word
     /// no summary can send is the mistake that passes every compiler, and
     /// `app/tests/circuit-contract.spec.ts` reads this file and `Shared.elm` to
-    /// catch it. `Direction.jsonValue`'s half has no such check.
+    /// catch it.
     pub def jsonValue(circuit: Circuit): String =
         match circuit {
             case Circuit.Qatar    => "qatar"

@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { circuit as cota } from '../scripts/cota-geometry.mjs';
-import { circuit as leMans } from '../scripts/le-mans-geometry.mjs';
-import { geometryFromGeoJson } from '../scripts/circuit-geometry.mjs';
+import { existsSync, readdirSync } from 'node:fs';
+import { circuit as cota } from '../../circuits/cota/circuit.mjs';
+import { circuit as leMans } from '../../circuits/le_mans/circuit.mjs';
+import { geometryFromGeoJson } from '../../circuits/circuit-geometry.mjs';
 import { drawnNames, readSource } from './helpers';
 
 /**
@@ -13,6 +14,11 @@ import { drawnNames, readSource } from './helpers';
  * chose, and a decoder given the wrong lap length reads every honest geometry
  * as a lie. The words come out of the sources and the geometry out of the
  * kept files; nothing needs a browser.
+ *
+ * The flake's geometry apps are the one list here that nothing else reads:
+ * the `nix run` name, the script it runs and the script's own header are
+ * three spellings of one command, and a rename of any of them fails at run
+ * time with a Node message rather than at check time with a test name.
  */
 
 const authored: Record<string, typeof cota> = { cota, le_mans: leMans };
@@ -35,6 +41,12 @@ test('every circuit Shared draws has its geometry where the app reaches for it',
   }
 });
 
+test("a circuit's directory is named by the word the app draws it by", () => {
+  for (const name of drawnNames()) {
+    expect(authored[name].script, `${name}'s config does not live in circuits/${name}/`).toBe(`circuits/${name}/circuit.mjs`);
+  }
+});
+
 test('the Elm decoder is given the lap length the script was given', () => {
   for (const name of drawnNames()) {
     const given = readSource(layouts[name]).match(/Geometry\.decoder \{ lapLength = ([0-9.]+) \}/);
@@ -48,6 +60,24 @@ test('the circuits drawn and decoded are one list', () => {
   const decoded = [...clause(shared, 'decoderFor circuit =', '\n\n\n').matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
   expect(decoded.length, 'decoderFor decodes no circuit name').toBeGreaterThan(0);
   expect(decoded.sort(), 'decoderFor decodes something other than what trackOf draws').toEqual(drawnNames().sort());
+});
+
+test('the flake commands and the circuit tools are one list', () => {
+  const registered = [...readSource('flake.nix').matchAll(/geometryApp "([\w-]+)" "([\w-]+)"/g)]
+    .map(([, app, script]) => ({ app, script }));
+  expect(registered.length, 'the flake registers no geometry commands').toBeGreaterThan(0);
+
+  for (const { app, script } of registered) {
+    expect(existsSync(new URL(`../../circuits/${script}.mjs`, import.meta.url)), `nix run .#${app} would fail: circuits/${script}.mjs is not here`).toBe(true);
+  }
+
+  // A tool is a script whose own header runs itself by its own filename;
+  // library modules cite other tools' usage but never their own name.
+  const unwrapped = readdirSync(new URL('../../circuits/', import.meta.url))
+    .filter((file) => file.endsWith('.mjs'))
+    .filter((file) => readSource(`circuits/${file}`).includes(`node circuits/${file}`))
+    .filter((file) => !registered.some((each) => each.script === file.replace(/\.mjs$/, '')));
+  expect(unwrapped, `these tools name themselves commands but no geometry app registers them: ${unwrapped.join(', ')}`).toEqual([]);
 });
 
 /** The body of a top-level definition, up to the next one. */

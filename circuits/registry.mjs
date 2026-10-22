@@ -1,0 +1,29 @@
+// The circuits this repository has surveyed, keyed by the word the app draws
+// them by, and where a circuit's kept files stand beside the config that
+// surveyed it. Every tool that iterates circuits or reaches one by that word
+// imports them from here rather than keeping its own table: the config in
+// `<circuit>/circuit.mjs` is where a circuit's figures are authored, so a new
+// survey is one config and one line here, and nothing downstream has to be
+// told twice.
+//
+// It cannot live in `circuit-geometry.mjs`: every config imports that module,
+// so a module listing the configs there would make each config import itself.
+
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { circuit as cota } from "./cota/circuit.mjs";
+import { circuit as leMans } from "./le_mans/circuit.mjs";
+
+export const circuits = { cota, le_mans: leMans };
+
+const circuitsDir = dirname(fileURLToPath(import.meta.url));
+
+/** The Overpass answer a kept geometry was drawn from, kept beside the config
+ * that surveyed it — evidence the regeneration fence reads, never bytes the
+ * app asks for. */
+export const keptAnswer = (circuit) => join(circuitsDir, circuit.slug, "overpass.json");
+
+/** Where a circuit's atlas line lands once measured: beside the survey it is
+ * judged against, not in what gets served. */
+export const keptAtlas = (circuit) => join(circuitsDir, circuit.slug, "atlas.geojson");

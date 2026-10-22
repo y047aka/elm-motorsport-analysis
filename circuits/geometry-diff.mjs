@@ -2,7 +2,7 @@
 // says, in metres, where they disagree — optionally as an SVG overlay, which is
 // the same reading at one glance instead of three numbers.
 //
-//     node scripts/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
+//     node circuits/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
 //
 // The only claim a file must keep is the one the profile makes of its outline:
 // a line with metres measured from its own lap's zero. The basis is free — this
@@ -20,13 +20,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 
-import { isEntry, projection } from "./circuit-geometry.mjs";
+import { isEntry, onEarth, projection } from "./circuit-geometry.mjs";
 
 const width = 1000;
 
 async function run(lines, args) {
-  const { project } = projection(lines.flatMap((line) => line.coords.map(earth)));
-  const points = lines.map((line) => line.coords.map(earth).map(project));
+  const { project } = projection(lines.flatMap((line) => line.coords.map(onEarth)));
+  const points = lines.map((line) => line.coords.map(onEarth).map(project));
   for (const [at, line] of lines.entries()) {
     console.log(
       `${line.name}: basis ${line.props.basis ?? "?"}, ${line.metres[line.metres.length - 1].toFixed(1)} m` +
@@ -56,12 +56,10 @@ function readArgs(argv) {
     else if (argv[at] === "--svg") args.svg = argv[++at];
     else args.paths.push(resolve(argv[at]));
   }
-  if (args.paths.length !== 2) fail("usage: node scripts/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
+  if (args.paths.length !== 2) fail("usage: node circuits/geometry-diff.mjs <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
   if (!Number.isFinite(args.every) || args.every <= 0) fail(`"${args.every}" is not a distance`);
   return args;
 }
-
-const earth = ([lon, lat]) => ({ lat, lon });
 
 /** The outline of one geometry file: its coordinates, its own metres, and the
  * properties a report quotes so the reader knows what two lines were compared. */
@@ -69,6 +67,7 @@ export function outlineOf(text, name) {
   const outline = JSON.parse(text).features.find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error(`${name}: no outline feature`);
   const { metres, ...props } = outline.properties;
+  if (!Array.isArray(metres)) throw new Error(`${name}: the outline publishes no metres`);
   if (outline.geometry.coordinates.length !== metres.length) {
     throw new Error(`${name}: ${metres.length} metres for ${outline.geometry.coordinates.length} points`);
   }

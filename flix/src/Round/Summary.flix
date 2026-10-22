@@ -221,7 +221,7 @@ pub mod Round.Summary {
                         Some(id -> Map.get(MiniSector.positionOf(id), mini))
                     else
                         None;
-                Track.fromFastest(Events.circuit(entry#id), Events.direction(entry#id), sectorTime, miniSectorTime)
+                Track.fromFastest(Events.circuit(entry#id), sectorTime, miniSectorTime)
         }
 
     def fastestSectors(entry: Entry): (Option[Duration], Option[Duration], Option[Duration], Bool) \ DbRead =

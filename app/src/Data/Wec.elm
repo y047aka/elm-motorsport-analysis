@@ -14,7 +14,6 @@ import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
-import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race
@@ -53,12 +52,12 @@ type alias Event =
     }
 
 
-{-| The circuit as the summary describes it: which circuit it is, which way
-round it goes, and how the lap divides. The last two are what a drawing is told;
-which circuit it is decides which drawing they are told to --
-[`Tracker.onCircuit`](Motorsport-Chart-Tracker#onCircuit) for a circuit the app
-has a map of, [`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig) for
-every other.
+{-| The circuit as the summary describes it: which circuit it is, and how the
+lap divides -- what a drawing is told, and which drawing it is told to.
+[`Tracker.onCircuit`](Motorsport-Chart-Tracker#onCircuit) draws a circuit the app
+has a map of, with the direction that map's survey carries;
+[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig) draws every other as
+the ring.
 
 `circuit` is the CLI's word for the ground the round was run on --
 `Motorsport.Events.circuit`. What the app asks it is only "is there a drawing
@@ -68,7 +67,6 @@ of this", and a name it has never had one for is the ring, which is the answer
 -}
 type alias Track =
     { circuit : Maybe String
-    , direction : Direction
     , config : TrackConfig
     }
 
@@ -117,59 +115,33 @@ eventDecoder era manufacturers carImageUrl =
         (field "index" Race.indexDecoder)
 
 
-{-| Three keys the CLI leaves out when it has nothing to say, and `optional`
+{-| Two keys the CLI leaves out when it has nothing to say, and `optional`
 rather than `oneOf` is what tells that apart from a key it wrote wrong. `oneOf`
 cannot: a `miniSectors` object one key short of fifteen would fall through to
 the same branch a missing one does, and Le Mans would quietly draw as a circuit
 that is not split that far.
 
-Left out, the three mean different things. A round the CLI has not been told the
-direction of has one all the same -- every circuit goes round one way or the
-other -- so clockwise stands in, and that it is a guess is why the CLI does not
-make it. A round with no `miniSectors` genuinely has none to draw. A round with
-no `circuit` ran at a circuit the CLI has no name for, which is the same answer
-as a name this app has no drawing of: the ring.
+Left out, the two mean different things. A round with no `miniSectors`
+genuinely has none to draw. A round with no `circuit` ran at a circuit the CLI
+has no name for, which is the same answer as a name this app has no drawing of:
+the ring.
 
-Written wrong, all three mean the same thing: this app and the CLI that wrote
-the file disagree about the shape of it, which is not a thing to carry on from
+Written wrong, both mean the same thing: this app and the CLI that wrote the
+file disagree about the shape of it, which is not a thing to carry on from
 -- `sectors` beside them has always failed the event for it.
 
 -}
 trackDecoder : Decoder Track
 trackDecoder =
     Decode.succeed
-        (\circuit direction sectors miniSectors ->
+        (\circuit sectors miniSectors ->
             { circuit = circuit
-            , direction = direction
             , config = { sectors = sectors, miniSectors = miniSectors }
             }
         )
         |> optional "circuit" (Decode.map Just Decode.string) Nothing
-        |> optional "direction" directionDecoder Clockwise
         |> required "sectors" bySectorDecoder
         |> optional "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder) NoMiniSectors
-
-
-{-| Both spellings are matched, so a third one is a disagreement rather than a
-silent half-turn. Unlike [`Basis`](#Basis), which carries what it did not
-recognize, there is nowhere to put it: a track has to be drawn one way round or
-the other.
--}
-directionDecoder : Decoder Direction
-directionDecoder =
-    string
-        |> Decode.andThen
-            (\raw ->
-                case raw of
-                    "clockwise" ->
-                        Decode.succeed Clockwise
-
-                    "counter_clockwise" ->
-                        Decode.succeed CounterClockwise
-
-                    other ->
-                        Decode.fail ("Unknown circuit direction: " ++ other)
-            )
 
 
 shareDecoder : Decoder Share

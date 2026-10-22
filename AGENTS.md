@@ -16,8 +16,18 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
+- **`/circuits`** — the geometry pipeline: OpenStreetMap relations through
+  `circuits/circuit-geometry.mjs` into the served `app/static/geometry/*.geojson`,
+  with one directory per circuit — its config, its kept Overpass answer
+  and its atlas reading — named by the word the summaries send for the circuit.
+  It sits outside `/app` because nothing it writes but the geometry files is
+  ever served, and nothing in the bundle reads the pipeline itself.
+  `circuits/README.md` describes it — the fence that keeps a geometry an
+  answer to its survey, what a circuit's config is authored from, and where
+  the timing lines' distances come from — and is the thing to read before
+  changing anything under `/circuits`.
 
-There is no manifest at the repository root; the flake is what ties the three
+There is no manifest at the repository root; the flake is what ties the parts
 together.
 
 ## Commands
@@ -37,9 +47,12 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry-le-mans` / `.#geometry-cota` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
-| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `scripts/geometry/<circuit>.atlas.geojson` — beside the readers, not in what gets served (`cota [--file gp.geojson]`) |
+| `nix run .#geometry-write -- <circuit>` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
+| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
+| `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (`<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
+| `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
+| `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (`<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -391,72 +404,17 @@ data (ODbL, © OpenStreetMap contributors) into a file that records its own
 survey time, and `Motorsport.Wec.Circuit.Geometry` reads it back as a round
 loads. Which circuit a round was
 run on comes in with the summary (`Motorsport.Events.circuit`, keyed by round id
-and tested against the calendar the way `direction` is), and `Shared` picks the
+and tested against the calendar), and `Shared` picks the
 layout by that word rather than by the round id — which is still asked for,
 because which lines Le Mans is drawn with turns on the season. A circuit with no
 directory of its own, and a round exported before the summary named its circuit,
 is drawn as the ring.
 
-The pipeline is `app/scripts/circuit-geometry.mjs` plus one thin script per
-circuit, which supplies the relation, the member role naming the line the lap
-is measured from, the published length the surveyed line is stretched to, and
-the prose the geometry file is documented with — `nix run .#geometry-cota`,
-`nix run .#geometry-le-mans`. Both ask OpenStreetMap, which answers a busy runner with
-a 502 or a 504 — repeat the run, or hand the answer in as a file. The answer is
-reduced to a geometry GeoJSON under `app/static/geometry/`, named by the word
-the summaries send for the circuit — the degrees, the metres per point, the
-frame, a `basis` saying what kind of line it is — and it lands in `static/`
-because the app reads it from there at load, through
-`Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the
-bytes as they arrive. Nothing generates Elm from it: `--from-geojson` runs
-those checks with no OpenStreetMap, which is what a regeneration being nothing
-is checked with now. A drawn circuit is two lists in `Shared` — the words
-`trackOf` matches and `decoderFor` decodes — and one file, and
-`geometry-contract.spec.ts` keeps all three in step, since none of them
-compiles against another. The geometries are kept because the app reads them,
-and as the line other datasets are measured against. `nix run .#geometry-atlas
-cota` reads the track-atlas line — a midline measured from orthoimagery, not a
-survey stretched to a published length, at 5,500.2 m against the 5,515 m this
-app draws — keeps it as `<circuit>.atlas.geojson` with `stretched: false`, and
-prints how far the two lines stand apart. The geometry also publishes what the
-circuit itself publishes about its lines: the COTA sector map's stretches travel
-as `sectors`, authored in the circuit's script, and `check-timing-lines.mjs`
-reads them from the geometry rather than the script. `nix run .#geometry-diff`
-lays any two kept geometries against each other — mean and maximum apartness,
-and an SVG overlay on request — so a fresh survey is read against the old one,
-or the atlas line against either, with no script in between. It writes no Elm: drawing on a
-measured line would move every tracker baseline and re-open where the timing
-lines stand, which is its own change judged on that report. The tests still
-cannot hold a survey: the pipeline stretches whatever degrees it gets to the
-circuit's published lap length whatever the degrees say, so a point
-moved 20 m passes every Elm test and leaves the tracker's pixels where they were. A
-regeneration is read as a diff, and a survey that moved by metres goes to
-`update-snapshots-ci` with it, since every tracker baseline is drawn on those degrees.
-OpenStreetMap holds a
-circuit however whoever mapped it tagged it, and the two here are tagged
-differently: Le Mans's relation names one node `start-finish`, and COTA's names
-two, `start` and `finish`, 297 m apart along the lap. The lap's zero is the
-`finish` one, and the circuit's own published coordinates for its timing line
-are written into the script, so a run that answers the other role fails before
-it writes anything rather than drawing every car 297 m early.
-
-Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
-map for that race, and differ by season; the maps are not to be redistributed,
-so they are not in the repository. COTA's are its own track sector map's —
-1,313.2, 2,254.3 and 1,947.5 m, which add up to the 5,515 m centreline the same
-map gives — and are one set used for every season here, since no later map has
-been read. Nothing in a round's own times picks one placement of those lines
-out of another: a sector's share of a lap is not a share of its distance, and
-every placement has a mean speed of its own. What they rest on is that the
-circuit published them as the lines it times to, beside the lap length they add
-up to. What the times can answer is whether the lines have moved, and
-`node app/scripts/check-timing-lines.mjs 2026/cota_6h --against 2025` reads that:
-each class's fastest sector times as two distances round the lap, which the two
-rounds here agree on within 28 m — 0.5% of a lap, and the only evidence there is
-that one map serves both. The command judges the season-to-season difference
-against 40 m and never the shares against the map; it reads the fastest sectors
-the summary itself is counted from, and prints whether the export in the tree
-counts the same shares. A line a map gives no distance for is
+The lines a drawing times to come from the circuit’s own published map of
+them — where those distances come from and how the times are read against
+them is `circuits/README.md`’s to say; what is decided here is how a car is
+placed between them.
+A line a map gives no distance for is
 placed by the time between the lines either side of it
 (`Tracker.Config.lapScale`), and a circuit whose feed never measures the lap finer
 than three sectors — every circuit here but Le Mans's — has no finer lines to place
@@ -491,19 +449,6 @@ same size at both — with its margin the one length left at three tenths of Le
 Mans's, since that is added to the width every ratio is taken over. `LayoutTest`
 holds each length at the ratio. Tuning a length of Le Mans's set moves every
 baseline it has, and any length moved anywhere goes through `update-snapshots-ci`.
-
-Every surveyed point is held in the degrees OpenStreetMap gives it, with how far
-round the lap it stands, and `Circuit/Layout` projects those degrees into the
-drawing through the `Circuit.Geodesy.Frame` the generator writes beside them — to
-the tenth of a metre the survey is kept to, which is the tenth every VRT baseline
-was rendered at. The frame's origin is the north-west corner of the survey, so the
-drawing never falls below its own zero, and a test holds every projected place
-clear of the half-tenth its rounding turns on — measured before the rounding,
-since a rounded place is clear of every boundary by construction. The tightest
-place stands 113 micrometres clear at Le Mans and 39 at COTA, which is what lets
-the metres be projected rather than written down. Every circuit's generator writes
-the same frame, out of the parallel it scales east-west at and the north-west
-corner of what it surveyed, and adds nothing to `Circuit/`.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
@@ -554,6 +499,14 @@ keeps them apart at the call site. A module handing out only the frozen form may
 name it for what it holds instead (`LapHistory`); one holding both names them for
 the difference (`BestTimes.Changes` spans the race, `BestTimes.Snapshot` is one
 moment of it).
+
+### The circuits side
+
+`circuits/README.md` is the other end of a drawing: how a geometry is surveyed
+out of OpenStreetMap, what the kept file is checked against — `--from-geojson`
+at a regeneration being nothing, the fence over the kept Overpass answer, the
+contract spec against the app's lists — where the timing lines' distances come
+from, and how far an atlas line stands from the one drawn.
 
 ### The Flix side
 
