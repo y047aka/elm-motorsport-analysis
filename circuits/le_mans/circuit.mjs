@@ -28,6 +28,12 @@ export const circuit = {
   // is stretched to the published length rather than the lines moved.
   lapLength: 13625.7,
 
+  // The track-atlas layer for the 24h layout — a midline measured off
+  // orthoimagery, read against the survey above by `atlas-geometry.mjs`.
+  atlas: {
+    url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson",
+  },
+
   geojson: "app/static/geometry/le_mans.geojson",
   script: "circuits/le_mans/circuit.mjs",
   survey: "The Circuit de la Sarthe",

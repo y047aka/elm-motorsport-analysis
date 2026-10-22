@@ -38,6 +38,12 @@ export const circuit = {
   sectorMapStretches: [1313.2, 2254.3, 1947.5],
   sectorsSource: "the circuit's own track sector map",
 
+  // The track-atlas layer for the layout this app draws — a midline measured
+  // off orthoimagery, read against the survey above by `atlas-geometry.mjs`.
+  atlas: {
+    url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
+  },
+
   geojson: "app/static/geometry/cota.geojson",
   script: "circuits/cota/circuit.mjs",
   survey: "The Circuit of the Americas",

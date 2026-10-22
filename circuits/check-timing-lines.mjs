@@ -31,8 +31,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { circuit as cota } from "./cota/circuit.mjs";
-
+import { circuits } from "./registry.mjs";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -48,18 +47,13 @@ const sectors = ["S1", "S2", "S3"];
 // The class every lap of the field is pooled into, whose shares are the summary's.
 const whole = "the round";
 
-// The rounds this reads, and the lines each is drawn on. A circuit timed at one
-// grain per season is not this question to ask: Le Mans's lines are copied from
-// the organiser's map of each year and differ between them by design. A second
-// round at a circuit already here is one more entry naming the same layout and
-// lap.
+// The rounds this reads, each as the config of the circuit it is run on — a
+// second round at a circuit already here is one more entry naming the same
+// layout and lap. A circuit timed at one grain per season is not this question
+// to ask: Le Mans's lines are copied from the organiser's map of each year and
+// differ between them by design.
 const rounds = {
-  cota_6h: {
-    circuit: cota.survey,
-    script: cota.script,
-    geojson: cota.geojson,
-    lapLength: cota.lapLength,
-  },
+  cota_6h: circuits.cota,
 };
 
 const columns = [
@@ -97,7 +91,7 @@ async function main() {
     readings.push({ reading, note: await agreesWithExport(reading) });
   }
 
-  console.log(`The lines ${round.circuit} is drawn on, out of ${round.script}: ${linePositions(round.lines)}.`);
+  console.log(`The lines ${round.survey} is drawn on, out of ${round.script}: ${linePositions(round.lines)}.`);
   for (const each of readings) printRound(each, round, round.lines);
   if (args.against !== null) judge(readings[0].reading, readings[1].reading, round, args.tolerance);
 }

@@ -25,15 +25,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ask, geoJsonString, lapOf } from "./circuit-geometry.mjs";
+import { circuits, keptAnswer } from "./registry.mjs";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-
-const circuits = {
-  // Keyed by the circuit word, which is also the directory its script and its
-  // kept answer live in — the answer is never bytes the app asks for.
-  cota: { script: "./cota/circuit.mjs", answer: "circuits/cota/overpass.json" },
-  le_mans: { script: "./le_mans/circuit.mjs", answer: "circuits/le_mans/overpass.json" },
-};
 
 main().catch((error) => {
   console.error(error.message);
@@ -48,16 +42,14 @@ async function main() {
   const named = argv.filter((a) => !a.startsWith("--"));
   for (const name of named.length > 0 ? named : Object.keys(circuits)) {
     if (!(name in circuits)) {
-      throw new Error(`no answer is registered for '${name}': known are ${Object.keys(circuits).join(", ")}`);
+      throw new Error(`no circuit is surveyed under '${name}': known are ${Object.keys(circuits).join(", ")}`);
     }
-    await reRun(name, write, freeze);
+    await reRun(circuits[name], write, freeze);
   }
 }
 
-async function reRun(name, write, freeze) {
-  const entry = circuits[name];
-  const { circuit } = await import(new URL(entry.script, import.meta.url));
-  const path = join(repoDir, entry.answer);
+async function reRun(circuit, write, freeze) {
+  const path = keptAnswer(circuit);
 
   let answer;
   if (freeze) {
@@ -67,7 +59,7 @@ async function reRun(name, write, freeze) {
       answer = JSON.parse(await readFile(path, "utf8"));
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
-      console.log(`${name}: no kept answer yet — --freeze asks OpenStreetMap and keeps one.`);
+      console.log(`${circuit.slug}: no kept answer yet — --freeze asks OpenStreetMap and keeps one.`);
       return;
     }
   }
@@ -79,16 +71,16 @@ async function reRun(name, write, freeze) {
       await writeFile(path, JSON.stringify(answer));
     }
     await writeFile(join(repoDir, circuit.geojson), written);
-    console.log(`${name}: geometry written from ${freeze ? "a fresh survey" : "the kept answer"}`);
+    console.log(`${circuit.slug}: geometry written from ${freeze ? "a fresh survey" : "the kept answer"}`);
     return;
   }
 
   const drift = driftOf(JSON.parse(written), JSON.parse(await readFile(join(repoDir, circuit.geojson), "utf8")));
   if (drift.length === 0) {
-    console.log(`${name}: reproduces the kept geometry, every fenced property exactly`);
+    console.log(`${circuit.slug}: reproduces the kept geometry, every fenced property exactly`);
     return;
   }
-  console.log(`${name}: the kept geometry is not what the kept answer draws`);
+  console.log(`${circuit.slug}: the kept geometry is not what the kept answer draws`);
   for (const line of drift) console.log(`  ${line}`);
   process.exitCode = 1;
 }

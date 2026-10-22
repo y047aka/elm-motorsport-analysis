@@ -6,8 +6,9 @@
 //
 //     node circuits/atlas-geometry.mjs <circuit> [--file gp.geojson]
 //
-// A circuit joins the `atlas` table below by one entry naming the script that
-// surveys it and the atlas outline for the layout this app draws. It prints
+// A circuit joins these readings by carrying an `atlas` entry naming the
+// track-atlas layer for the layout this app draws; `registry.mjs` is where
+// circuits are listed. It prints
 // the four readings that matter before anyone draws on them: how far the lines
 // stand apart in metres; whether the atlas corner markers land at the lap
 // distances this app's geometry puts them at; whether the atlas pit entry and
@@ -38,33 +39,16 @@ import { fileURLToPath } from "node:url";
 
 import { cumulative, degreesToMetres, projection } from "./circuit-geometry.mjs";
 import { apartness, interpolate, nearestOn } from "./geometry-diff.mjs";
+import { circuits, keptAtlas } from "./registry.mjs";
 
 const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const atlas = {
-  // Keyed by the circuit word, the slug its script holds. `script` is the one
-  // that surveys it; the reading lands in the circuit's own directory rather
-  // than in `static/` — it is evidence a decision is judged on, never bytes
-  // the app asks for. `originWithin` is how far the file's first point may
-  // stand from the published timing line before the lap is judged to start
-  // somewhere else. `every` is how often the line is sampled for the
-  // apartness reading — corners sit tens of metres apart and the deviation is
-  // a slow wave along the lap.
-  cota: {
-    script: "./cota/circuit.mjs",
-    url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
-    out: "circuits/cota/atlas.geojson",
-    originWithin: 25,
-    every: 25,
-  },
-  le_mans: {
-    script: "./le_mans/circuit.mjs",
-    url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson",
-    out: "circuits/le_mans/atlas.geojson",
-    originWithin: 25,
-    every: 25,
-  },
-};
+// How far an atlas file's first point may stand from the published timing line
+// before the lap is judged to start somewhere else, and how often the line is
+// sampled for the apartness reading — corners sit tens of metres apart and the
+// deviation is a slow wave along the lap.
+const originWithin = 25;
+const every = 25;
 
 const [slug, ...argv] = process.argv.slice(2);
 try {
@@ -75,13 +59,13 @@ try {
 }
 
 async function run(slug, argv) {
-  const entry = atlas[slug];
-  if (!entry) throw new Error(`no atlas line is registered for '${slug}': known are ${Object.keys(atlas).join(", ")}`);
-  const { circuit } = await import(entry.script);
+  const circuit = circuits[slug];
+  if (!circuit) throw new Error(`no circuit is surveyed under '${slug}': known are ${Object.keys(circuits).join(", ")}`);
+  if (!circuit.atlas) throw new Error(`${slug}'s config names no atlas layer to read`);
 
   const at = argv.indexOf("--file");
   const file = at === -1 ? null : argv[at + 1];
-  const theirs = file ? JSON.parse(await readFile(file, "utf8")) : await ask(entry.url);
+  const theirs = file ? JSON.parse(await readFile(file, "utf8")) : await ask(circuit.atlas.url);
 
   const outline = (theirs.features ?? []).find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error("the atlas file holds no outline feature");
@@ -107,14 +91,14 @@ async function run(slug, argv) {
   const length = theirMetres[theirMetres.length - 1];
 
   const originDistance = toPublished(outline.geometry.coordinates[0], circuit.timingLine);
-  if (circuit.timingLine && originDistance > entry.originWithin) {
+  if (circuit.timingLine && originDistance > originWithin) {
     throw new Error(
       `the atlas lap starts ${originDistance.toFixed(1)} m from the published timing line, ` +
-        `which is more than ${entry.originWithin} m — its markers would be measured from the wrong line`,
+        `which is more than ${originWithin} m — its markers would be measured from the wrong line`,
     );
   }
 
-  const apart = apartness(theirPoints, theirMetres, ourPoints, ours.metres, entry.every);
+  const apart = apartness(theirPoints, theirMetres, ourPoints, ours.metres, every);
   const atCorners = corners.map((c) => {
     const near = nearestOn(project(earth(c.geometry.coordinates)), ourPoints, ours.metres);
     return {
@@ -141,9 +125,9 @@ async function run(slug, argv) {
     };
   });
 
-  await writeAtlasGeometry(entry.out, slug, entry.url, outline, corners, pits, theirMetres);
+  await writeAtlasGeometry(keptAtlas(circuit), slug, circuit.atlas.url, outline, corners, pits, theirMetres);
   print(slug, circuit, {
-    every: entry.every,
+    every,
     length,
     originDistance,
     apart,
@@ -202,7 +186,7 @@ function readKeptGeometry(text) {
 // The atlas line in this repository's own profile, at its own length: a reader
 // that later hands it to the module generator is told it does not end at the
 // published lap length, because it was written not to pretend otherwise.
-async function writeAtlasGeometry(out, slug, url, outline, corners, pits, theirMetres) {
+async function writeAtlasGeometry(path, slug, url, outline, corners, pits, theirMetres) {
   const length = theirMetres[theirMetres.length - 1];
   const features = [
     {
@@ -231,7 +215,6 @@ async function writeAtlasGeometry(out, slug, url, outline, corners, pits, theirM
     })),
   ];
   const body = features.map((f) => `    ${JSON.stringify(f)}`).join(",\n");
-  const path = join(repoDir, out);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
 }
