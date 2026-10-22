@@ -48,15 +48,15 @@ tests =
         , test "an outline carrying no frame cannot be projected" <|
             \_ ->
                 decode { outline | frame = Nothing }
-                    |> complainsAbout "no metres, frame, or direction"
+                    |> complainsAbout "no metres or no frame"
         , test "an outline that cannot say which way it runs is not surveyed" <|
             \_ ->
                 decode { outline | direction = Nothing }
-                    |> complainsAbout "no metres, frame, or direction"
+                    |> complainsAbout "names no direction"
         , test "a direction spelled some third way is a disagreement, not a half-turn" <|
             \_ ->
                 decode { outline | direction = Just "anticlockwise" }
-                    |> complainsAbout "no metres, frame, or direction"
+                    |> complainsAbout "says it runs anticlockwise"
         , test "a role drawn as a point is no line, and so no outline" <|
             \_ ->
                 decodeOf [ outlineFeature outline (point [ 0.2, 47.9 ]), pitLane ]

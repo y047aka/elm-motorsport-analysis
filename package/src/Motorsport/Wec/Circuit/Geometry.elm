@@ -82,7 +82,7 @@ line feature =
                 , coordinates = coordinates
                 , metres = Decode.decodeValue (Decode.field "metres" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
                 , frame = Decode.decodeValue frame feature.properties |> Result.toMaybe
-                , direction = Decode.decodeValue directionDecoder feature.properties |> Result.toMaybe
+                , direction = Decode.decodeValue (Decode.maybe (Decode.field "direction" Decode.string)) feature.properties |> Result.withDefault Nothing
                 }
 
         _ ->
@@ -104,7 +104,7 @@ type alias Feature =
     , coordinates : List Coordinate
     , metres : Maybe (List Float)
     , frame : Maybe Frame
-    , direction : Maybe Direction
+    , direction : Maybe String
     }
 
 
@@ -112,26 +112,31 @@ assemble : Float -> List Feature -> Decoder Geometry
 assemble lapLength features =
     case ( find "outline" features, find "pit_lane" features ) of
         ( Just outline, Just pitLane ) ->
-            case ( outline.metres, outline.frame, outline.direction ) of
-                ( Just metres, Just projected, Just whichWay ) ->
-                    case verify lapLength metres outline.coordinates of
-                        Just complaint ->
+            case ( outline.metres, outline.frame ) of
+                ( Just metres, Just projected ) ->
+                    case directionOf outline.direction of
+                        Err complaint ->
                             Decode.fail complaint
 
-                        Nothing ->
-                            Decode.succeed
-                                { frame = projected
-                                , direction = whichWay
-                                , centreline =
-                                    List.map2
-                                        (\place metre -> { lat = place.lat, lon = place.lon, metres = metre })
-                                        outline.coordinates
-                                        metres
-                                , pitLane = pitLane.coordinates
-                                }
+                        Ok whichWay ->
+                            case verify lapLength metres outline.coordinates of
+                                Just complaint ->
+                                    Decode.fail complaint
+
+                                Nothing ->
+                                    Decode.succeed
+                                        { frame = projected
+                                        , direction = whichWay
+                                        , centreline =
+                                            List.map2
+                                                (\place metre -> { lat = place.lat, lon = place.lon, metres = metre })
+                                                outline.coordinates
+                                                metres
+                                        , pitLane = pitLane.coordinates
+                                        }
 
                 _ ->
-                    Decode.fail "the outline carries no metres, frame, or direction"
+                    Decode.fail "the outline carries no metres or no frame"
 
         _ ->
             Decode.fail "the geometry holds no outline or no pit lane"
@@ -196,22 +201,21 @@ frame =
 
 
 {-| Which way a car goes round the outline. Both spellings are matched and a
-third is a failure rather than a silent half-turn: the word comes from the
-survey's own orientation, and a file that spells it some other way has been
-edited rather than surveyed.
+third fails by naming the word it disagreed with, kept apart from the silence
+of an absent key: the word comes from the survey's own orientation, and a file
+that spells it some other way has been edited rather than surveyed.
 -}
-directionDecoder : Decoder Direction
-directionDecoder =
-    Decode.field "direction" Decode.string
-        |> Decode.andThen
-            (\raw ->
-                case raw of
-                    "clockwise" ->
-                        Decode.succeed Clockwise
+directionOf : Maybe String -> Result String Direction
+directionOf word =
+    case word of
+        Just "clockwise" ->
+            Ok Clockwise
 
-                    "counter_clockwise" ->
-                        Decode.succeed CounterClockwise
+        Just "counter_clockwise" ->
+            Ok CounterClockwise
 
-                    other ->
-                        Decode.fail ("Unknown circuit direction: " ++ other)
-            )
+        Just other ->
+            Err ("the outline says it runs " ++ other ++ ", which is not a direction this decoder knows")
+
+        Nothing ->
+            Err "the outline names no direction"
