@@ -1,15 +1,11 @@
 // The Circuit de la Sarthe's config for the geometry pipeline: the relation to
 // survey, the figures the circuit publishes, and the word its rounds are known
-// by. What the pipeline writes and how is `circuit-geometry.mjs`; where these
-// figures come from and what holds them is `circuits/README.md`.
-//
-//     node circuits/le_mans/circuit.mjs [overpass.json]
-//     node circuits/le_mans/circuit.mjs --from-geojson [geometry.json]
+// by. What the pipeline writes and how is `circuit-geometry.mjs`, run by
+// `write-geometry.mjs`; where these figures come from and what holds them is
+// `circuits/README.md`.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // geometry written here is a derivative of it.
-
-import { isEntry, main } from "../circuit-geometry.mjs";
 
 export const circuit = {
   relation: 2126739,
@@ -38,7 +34,3 @@ export const circuit = {
   script: "circuits/le_mans/circuit.mjs",
   survey: "The Circuit de la Sarthe",
 };
-
-if (isEntry(import.meta.url)) {
-  await main(circuit, process.argv.slice(2));
-}

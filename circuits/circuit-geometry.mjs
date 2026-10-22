@@ -2,12 +2,13 @@
 // surveyed points, chain its ways into a lap, stretch the lap to the length the
 // circuit publishes, simplify it, and write the geometry GeoJSON.
 //
-// One file per circuit calls this with its own relation, its own published lap
-// length, and the word its rounds are known by. Where the written file stands,
-// who reads it and what holds it is `circuits/README.md`.
+// A circuit's config — its relation, its published lap length, the word its
+// rounds are known by — is what this module is given; `write-geometry.mjs` is
+// what runs it. Where the written file stands, who reads it and what holds it
+// is `circuits/README.md`.
 //
-//     node circuits/<circuit>/circuit.mjs [overpass.json]
-//     node circuits/<circuit>/circuit.mjs --from-geojson [geometry.json]
+//     node circuits/write-geometry.mjs <circuit> [overpass.json]
+//     node circuits/write-geometry.mjs <circuit> --from-geojson [geometry.json]
 //
 // Given an Overpass answer as a file, reads it rather than asking.
 // `--from-geojson` writes nothing: it runs the checks the app's runtime decoder

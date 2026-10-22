@@ -1,15 +1,11 @@
 // The Circuit of the Americas' config for the geometry pipeline: the relation
 // to survey, the figures the circuit publishes, and the word its rounds are
-// known by. What the pipeline writes and how is `circuit-geometry.mjs`; where
-// these figures come from and what holds them is `circuits/README.md`.
-//
-//     node circuits/cota/circuit.mjs [overpass.json]
-//     node circuits/cota/circuit.mjs --from-geojson [geometry.json]
+// known by. What the pipeline writes and how is `circuit-geometry.mjs`, run by
+// `write-geometry.mjs`; where these figures come from and what holds them is
+// `circuits/README.md`.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // geometry written here is a derivative of it.
-
-import { isEntry, main } from "../circuit-geometry.mjs";
 
 export const circuit = {
   relation: 6537729,
@@ -48,7 +44,3 @@ export const circuit = {
   script: "circuits/cota/circuit.mjs",
   survey: "The Circuit of the Americas",
 };
-
-if (isEntry(import.meta.url)) {
-  await main(circuit, process.argv.slice(2));
-}

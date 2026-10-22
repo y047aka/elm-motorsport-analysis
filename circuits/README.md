@@ -3,7 +3,7 @@
 The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
 and one directory per circuit — the script that surveyed it, the Overpass
 answer it was written from, and the atlas reading measured against it. The
-commands are the flake's — `nix run .#geometry-cota`, `.#geometry-le-mans`,
+commands are the flake's — `nix run .#geometry-write -- <circuit>`,
 `.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`,
 `.#geometry-regenerate` — and `check-timing-lines.mjs` is run with `node`
 beside the export it judges. What follows is what no single script's header
