@@ -6,8 +6,8 @@
 // survey is one config and one line here, and nothing downstream has to be
 // told twice.
 //
-// It cannot live in `circuit-geometry.ts`: every config imports that module,
-// so a module listing the configs there would make each config import itself.
+// It sits beside the pipeline rather than in it: `circuit-geometry.ts` works
+// on whichever config it is handed and names no circuit.
 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

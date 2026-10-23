@@ -24,11 +24,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import type { Circuit } from "./circuit-geometry.ts";
-import { ask, geoJsonString, lapOf, repoDir } from "./circuit-geometry.ts";
+import { ask, geoJsonString, lapOf, reason, repoDir } from "./circuit-geometry.ts";
 import { circuits, keptAnswer } from "./registry.ts";
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(reason(error));
   process.exitCode = 1;
 });
 
