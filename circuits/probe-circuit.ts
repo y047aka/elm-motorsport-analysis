@@ -15,6 +15,7 @@
 // begins once a config names the relation the report picked.
 
 import { askOverpass, polylineMetres, reason, sleep, valueOf } from "./circuit-geometry.ts";
+import type { OsmRelation, OsmWay } from "./circuit-geometry.ts";
 
 /** A box on the earth, degrees, as Overpass takes it: south, west, north, east. */
 type Box = { s: number; w: number; n: number; e: number };
@@ -112,8 +113,11 @@ function looksLikeACircuit(tags: Record<string, string>): boolean {
  * beside the tags' own claim, not a second survey. */
 async function measure(relation: number): Promise<string> {
   const answer = await askOverpass(`[out:json][timeout:90];relation(${relation});out body;way(r);out geom;`);
-  const rel = answer.elements.find((el: any) => el.type === "relation");
-  const ways = new Map<number, any>(answer.elements.filter((el: any) => el.type === "way").map((w: any) => [w.id, w]));
+  const rel = answer.elements.find((el): el is OsmRelation => el.type === "relation");
+  if (!rel) throw new Error(`the answer holds no relation ${relation}`);
+  const ways = new Map<number, OsmWay>(
+    answer.elements.filter((el): el is OsmWay => el.type === "way").map((w) => [w.id, w]),
+  );
   const byRole = new Map<string, { ways: number; metres: number }>();
   const nodeRoles: string[] = [];
   for (const member of rel.members ?? []) {

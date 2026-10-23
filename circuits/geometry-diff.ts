@@ -20,7 +20,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 
-import type { Point } from "./circuit-geometry.ts";
+import type { GeometryFile, OutlineProperties, Point } from "./circuit-geometry.ts";
 import { isEntry, onEarth, projection, reason } from "./circuit-geometry.ts";
 
 const width = 1000;
@@ -29,7 +29,7 @@ const width = 1000;
  * quotes, its coordinates as they stand in the file, and its own metres. */
 export type KeptLine = {
   name: string;
-  props: Record<string, any>;
+  props: OutlineProperties;
   coords: [number, number][];
   metres: number[];
 };
@@ -79,15 +79,17 @@ function readArgs(argv: string[]): { paths: string[]; every: number; svg: string
 
 /** The outline of one geometry file: its coordinates, its own metres, and the
  * properties a report quotes so the reader knows what two lines were compared. */
-export function outlineOf(text: string, name?: string): KeptLine {
-  const outline = (JSON.parse(text).features as any[]).find((f) => f.properties?.role === "outline");
+export function outlineOf(text: string, name: string): KeptLine {
+  const file = JSON.parse(text) as GeometryFile;
+  const outline = (file.features ?? []).find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error(`${name}: no outline feature`);
-  const { metres, ...props } = outline.properties;
+  const { metres, ...props } = outline.properties ?? {};
+  const coords = outline.geometry?.coordinates ?? [];
   if (!Array.isArray(metres)) throw new Error(`${name}: the outline publishes no metres`);
-  if (outline.geometry.coordinates.length !== metres.length) {
-    throw new Error(`${name}: ${metres.length} metres for ${outline.geometry.coordinates.length} points`);
+  if (coords.length !== metres.length) {
+    throw new Error(`${name}: ${metres.length} metres for ${coords.length} points`);
   }
-  return { name: name ?? outline.properties.circuit, props, coords: outline.geometry.coordinates, metres };
+  return { name, props, coords, metres };
 }
 
 /** The first line laid against the second, sampled every `every` metres along

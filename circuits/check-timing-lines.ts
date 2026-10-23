@@ -30,7 +30,7 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import type { Circuit, SectorLine } from "./circuit-geometry.ts";
+import type { Circuit, GeometryFile, SectorLine } from "./circuit-geometry.ts";
 import { reason, repoDir, sectorLines } from "./circuit-geometry.ts";
 import { circuits } from "./registry.ts";
 
@@ -241,10 +241,8 @@ async function agreesWithExport(reading: Reading): Promise<string> {
  * 170 m from these, by the method's own error, and say nothing about a
  * mistake here. */
 async function linesOf(round: Circuit): Promise<SectorLine[]> {
-  const outline = (JSON.parse(await readFile(join(repoDir, round.geojson), "utf8")).features as any[]).find(
-    (f) => f.properties?.role === "outline",
-  );
-  const published = outline?.properties?.sectors;
+  const file = JSON.parse(await readFile(join(repoDir, round.geojson), "utf8")) as GeometryFile;
+  const published = file.features?.find((f) => f.properties?.role === "outline")?.properties?.sectors;
   if (!published) {
     fail(`${round.geojson} publishes no sectors: ${round.script} authors them and a regeneration writes them.`);
   }

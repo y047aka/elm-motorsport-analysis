@@ -63,13 +63,56 @@ export type Sectors = { source?: string; stretches: number[] };
 /** An intermediate timing line, named for the sector that begins at it. */
 export type SectorLine = { id: string; metres: number };
 
+/** The properties an outline feature is written with — a survey's stretched
+ * to a published lap, or a measurement at its own length. What a reader of a
+ * kept file may ask for; the claims that matter to a drawing are checked on
+ * reading, not here. */
+export type OutlineProperties = {
+  role?: string;
+  circuit?: string;
+  basis?: string;
+  source?: string;
+  license?: string;
+  surveyed_at?: string;
+  direction?: string;
+  lap_length_m?: number;
+  surveyed_length_m?: number;
+  sectors?: Sectors;
+  frame?: Frame;
+  metres?: number[];
+  [extra: string]: unknown;
+};
+
+/** One feature of a geometry file of this repository's profile; coordinates
+ * are degrees, lon before lat, as GeoJSON gives them. */
+export type GeometryFeature = {
+  properties?: OutlineProperties;
+  geometry?: { type?: string; coordinates?: [number, number][] };
+};
+
+export type GeometryFile = { type?: string; features?: GeometryFeature[] };
+
 export type Counts = { kept: number; lap: number; pit: number; of: number };
 
-/** An Overpass answer as the runner served it. Its elements are left as they
- * arrived: which are nodes, ways and relations is decided by their `type`, and
- * only this pipeline's own queries are ever read back. */
+export type OsmTags = Record<string, string>;
+
+export type OsmNode = { type: "node"; id: number; lat: number; lon: number; tags?: OsmTags };
+
+/** A way with its node references, as `out body` serves it; an `out geom`
+ * answer — what `geometry-probe` asks — carries the same line projected into
+ * a `geometry` instead. */
+export type OsmWay = { type: "way"; id: number; nodes?: number[]; tags?: OsmTags; geometry?: Place[] };
+
+/** One member of a relation; the role is "" for the ways a lap chains from. */
+export type OsmMember = { type: string; role: string; ref: number };
+
+export type OsmRelation = { type: "relation"; id: number; members?: OsmMember[]; tags?: OsmTags };
+
+export type OsmElement = OsmNode | OsmWay | OsmRelation;
+
+/** An Overpass answer as the runner served it. */
 export type OverpassAnswer = {
-  elements: any[];
+  elements: OsmElement[];
   osm3s?: { timestamp_osm_base?: string };
 };
 
@@ -185,7 +228,7 @@ async function answer(relation: number, file: string | undefined): Promise<Overp
 /** One query, walked over the runners twice each: a busy one answers 502 or
  * 504 — or 200 with an HTML error page behind a proxy, so the body is looked at
  * and not just the status — and the next answers the same query. */
-export async function askOverpass(query: string): Promise<any> {
+export async function askOverpass(query: string): Promise<OverpassAnswer> {
   let failure = "no runner was reached";
   const tries = overpassRunners.length * 2;
   for (const [runner, url] of overpassRunners.entries()) {
@@ -226,12 +269,16 @@ export async function ask(relation: number): Promise<OverpassAnswer> {
  * module's working, and Elm re-derives them from the frame.
  */
 export function lapOf(osm: OverpassAnswer, circuit: Circuit): Geometry {
-  const rel = osm.elements.find((e) => e.type === "relation" && e.id === circuit.relation);
+  const rel = osm.elements.find((el): el is OsmRelation => el.type === "relation" && el.id === circuit.relation);
   if (!rel) throw new Error(`the answer holds no relation ${circuit.relation}`);
-  const members: any[] = rel.members ?? [];
-  const ways = new Map<number, any>(osm.elements.filter((e) => e.type === "way").map((w) => [w.id, w]));
-  const nodes = new Map<number, Place>(osm.elements.filter((e) => e.type === "node").map((n) => [n.id, { lat: n.lat, lon: n.lon }]));
-  const wayOf = (ref: number): any => {
+  const members = rel.members ?? [];
+  const ways = new Map<number, OsmWay>(
+    osm.elements.filter((el): el is OsmWay => el.type === "way").map((w) => [w.id, w]),
+  );
+  const nodes = new Map<number, OsmNode>(
+    osm.elements.filter((el): el is OsmNode => el.type === "node").map((n) => [n.id, n]),
+  );
+  const wayOf = (ref: number): OsmWay => {
     const way = ways.get(ref);
     if (!way) throw new Error(`relation ${circuit.relation} names way ${ref}, which the answer does not hold`);
     return way;
@@ -348,16 +395,17 @@ async function writeGeoJson(circuit: Circuit, geometry: Geometry): Promise<void>
  * survey's authority and none of its own. The `direction` is read as the Elm
  * decoder reads it: a required word, so a file that cannot say which way a car
  * goes round it fails here and fails there alike. */
-export function geometryFromGeoJson(json: any, circuit: Circuit): Geometry {
-  const features: any[] = json.features ?? [];
+export function geometryFromGeoJson(json: GeometryFile, circuit: Circuit): Geometry {
+  const features = json.features ?? [];
   const outline = features.find((f) => f.properties?.role === "outline");
   const pit = features.find((f) => f.properties?.role === "pit_lane");
   if (!outline || !pit) throw new Error("the geometry holds no outline or no pit lane");
-  const props = outline.properties;
-  const coords = outline.geometry.coordinates;
-  const metres = props.metres;
-  if (!["clockwise", "counter_clockwise"].includes(props.direction)) {
-    throw new Error(`the outline says it runs ${JSON.stringify(props.direction)}, which is not a direction`);
+  const props = outline.properties ?? {};
+  const coords = outline.geometry?.coordinates ?? [];
+  const metres = props.metres ?? [];
+  const direction = props.direction;
+  if (direction !== "clockwise" && direction !== "counter_clockwise") {
+    throw new Error(`the outline says it runs ${JSON.stringify(direction)}, which is not a direction`);
   }
   if (metres.length !== coords.length) throw new Error(`${metres.length} metres for ${coords.length} points`);
   for (let i = 1; i < metres.length; i++) {
@@ -370,11 +418,13 @@ export function geometryFromGeoJson(json: any, circuit: Circuit): Geometry {
   }
   const sectors = props.sectors ?? null;
   if (sectors) sectorLines(sectors, circuit.lapLength);
+  const frame = props.frame;
+  if (!frame) throw new Error("the outline carries no frame to project through");
   return {
-    centreline: coords.map((c: [number, number], i: number) => ({ ...onEarth(c), metres: metres[i] })),
-    pitLane: (pit.geometry.coordinates as [number, number][]).map(onEarth),
-    frame: props.frame,
-    direction: props.direction,
+    centreline: coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
+    pitLane: (pit.geometry?.coordinates ?? []).map(onEarth),
+    frame,
+    direction,
     surveyedAt: props.surveyed_at ?? null,
     surveyedLength: props.surveyed_length_m ?? null,
     sectors,
@@ -413,7 +463,7 @@ export function sectorLines(sectors: Sectors, lapLength: number): SectorLine[] {
  * role was answered to. Getting it wrong moves the whole field down the lap by
  * the distance between the two and draws fine doing it.
  */
-function nearTimingLine(members: any[], nodes: Map<number, Place>, chosen: number, circuit: Circuit): void {
+function nearTimingLine(members: OsmMember[], nodes: Map<number, Place>, chosen: number, circuit: Circuit): void {
   const timingLine = circuit.timingLine;
   if (!timingLine) return;
   const within = timingLine.within ?? 10;
@@ -453,10 +503,10 @@ export function polylineMetres(points: Place[]): number {
 // drawn the way it is driven, so the chain follows those and turns the others.
 type Segment = { id: number; nodes: number[]; oneway: boolean };
 
-function chain(members: any[], start: number | null, nodes: Map<number, Place>): number[] {
+function chain(members: OsmWay[], start: number | null, nodes: Map<number, Place>): number[] {
   const segments: Segment[] = members.map((w) => ({
     id: w.id,
-    nodes: w.nodes,
+    nodes: w.nodes ?? [],
     oneway: w.tags?.oneway === "yes",
   }));
   const first =
