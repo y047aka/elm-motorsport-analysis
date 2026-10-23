@@ -37,7 +37,7 @@ export const whole = "the round";
 // set it is the two rounds of the Circuit of the Americas there are: their fastest
 // sectors imply lines 28.3 m apart at the widest class, and a line the series
 // actually moved would land hundreds of metres away.
-const tolerance = 40.0;
+export const defaultTolerance = 40.0;
 
 /** A reading that cannot go on, stated for the human the command prints it to. */
 export function fail(message: string): never {
@@ -175,7 +175,7 @@ export function readArgs(argv: string[]): Args {
   let season: string | null = null;
   let id: string | null = null;
   let against: string | null = null;
-  let limit = tolerance;
+  let limit = defaultTolerance;
   for (let at = 0; at < argv.length; at++) {
     if (argv[at] === "--against") against = argv[++at];
     else if (argv[at] === "--tolerance") limit = Number(argv[++at]);

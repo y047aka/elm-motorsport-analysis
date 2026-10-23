@@ -39,12 +39,21 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import type { Circuit, GeometryFile, Sectors } from "./circuit-geometry.ts";
+import type { Circuit, Sectors } from "./circuit-geometry.ts";
 import { cumulative, onEarth, projection, reason, repoDir, sectorLines } from "./circuit-geometry.ts";
-import type { Apartness, KeptLine } from "./geometry-diff.ts";
-import { apartness, interpolate, nearestOn, outlineOf } from "./geometry-diff.ts";
+import type { Apartness } from "./geometry-diff.ts";
+import { apartness, interpolate, nearestOn } from "./geometry-diff.ts";
 import type { AtlasFeature, AtlasFile } from "./atlas-line.ts";
-import { atlasFileText, checkIdentity, checkOrigin, lineOf, markerOf, placeOf, signed } from "./atlas-line.ts";
+import {
+  atlasFileText,
+  checkIdentity,
+  checkOrigin,
+  lineOf,
+  markerOf,
+  placeOf,
+  readKeptGeometry,
+  signed,
+} from "./atlas-line.ts";
 import { circuits, keptAtlas } from "./registry.ts";
 
 // How often the line is sampled for the apartness reading — corners sit tens of
@@ -143,18 +152,6 @@ function ask(url: string): Promise<AtlasFile> {
       return r.text();
     })
     .then(JSON.parse);
-}
-
-// The geometry the app serves, read the way `geometry-diff.ts` reads any
-// geometry — outline, its own metres, and the properties a report quotes —
-// plus the pit lane the atlas pit markers are placed against.
-function readKeptGeometry(text: string, name: string): KeptLine & { pit: [number, number][] } {
-  const outline = outlineOf(text, name);
-  const pit = ((JSON.parse(text) as GeometryFile).features ?? []).find((f) => f.properties?.role === "pit_lane");
-  if (!pit) throw new Error(`${name}: the kept geometry holds no pit lane`);
-  const pitCoords = pit.geometry?.coordinates;
-  if (!pitCoords) throw new Error(`${name}: the kept pit lane holds no coordinates`);
-  return { ...outline, pit: pitCoords };
 }
 
 // Where a reading lands, and the only side effect of a run: the file itself.

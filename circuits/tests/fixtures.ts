@@ -18,6 +18,19 @@ export const testCircuit: Circuit = {
 /** A circuit's published sector lengths summing to `testCircuit`'s lap. */
 export const stretches = [2000, 1200, 800];
 
+/** A stand-in for a circuit like COTA: a lap of the length the timing feed
+ * measures in seconds, and an atlas layer to read against it. */
+export const cotaLike: Circuit = {
+  relation: 1,
+  slug: "cota",
+  finishRole: "start",
+  lapLength: 5515,
+  atlas: { url: "https://example.org/cota.geojson" },
+  geojson: "x",
+  script: "x",
+  survey: "The Circuit of the Americas",
+};
+
 export const osmNode = (id: number, lat: number, lon: number): OsmNode => ({ type: "node", id, lat, lon });
 
 export const osmWay = (id: number, nodes: number[], tags: Record<string, string> = {}): OsmWay => ({

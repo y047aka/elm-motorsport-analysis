@@ -37,8 +37,9 @@ const userAgent = "elm-motorsport-analysis/1.0 (circuit geometry)";
 const tolerance = 1.0;
 
 // The earth every drawing is measured on: the same sphere
-// `Motorsport.Circuit.Geodesy` projects through.
-const radius = 6371008.8;
+// `Motorsport.Circuit.Geodesy` projects through. Exported because tests
+// measure against it rather than restating it.
+export const earthRadius = 6371008.8;
 
 /** A place on earth, in the degrees OpenStreetMap gives it. */
 export type Place = { lat: number; lon: number };
@@ -482,7 +483,7 @@ function nearTimingLine(members: OsmMember[], nodes: Map<number, Place>, chosen:
   );
 }
 
-const degreesToMetres = (Math.PI / 180) * radius;
+const degreesToMetres = (Math.PI / 180) * earthRadius;
 
 /** Metres between two places, east-west taken at the parallel of the second —
  * an approximation only ever asked of distances across a circuit's few
@@ -569,8 +570,8 @@ export function projection(points: Place[]): { project: (p: Place) => Point; par
   const parallel = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
   const east = Math.cos(parallel * (Math.PI / 180));
   const project = ({ lat, lon }: Place): Point => ({
-    x: lon * (Math.PI / 180) * radius * east,
-    y: -lat * (Math.PI / 180) * radius,
+    x: lon * (Math.PI / 180) * earthRadius * east,
+    y: -lat * (Math.PI / 180) * earthRadius,
   });
   return { project, parallel };
 }

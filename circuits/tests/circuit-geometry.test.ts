@@ -9,6 +9,7 @@ import type { GeometryFile, OsmWay, Place } from "../circuit-geometry.ts";
 import {
   apart,
   cumulative,
+  earthRadius,
   geoJsonString,
   geometryFromGeoJson,
   lapOf,
@@ -182,7 +183,7 @@ test("sectorLines names each intermediate line for the sector that begins at it"
 
 test("apart measures degrees as ground, east-west at the second place's parallel", () => {
   const here: Place = { lat: 47.0, lon: 0.0 };
-  const degree = (Math.PI / 180) * 6371008.8;
+  const degree = (Math.PI / 180) * earthRadius;
   assert.equal(apart(here, here), 0);
   assert.ok(Math.abs(apart(here, { lat: 48.0, lon: 0.0 }) - degree) < 1e-6, "a degree of latitude, on this sphere");
 

@@ -6,19 +6,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { Circuit } from "../circuit-geometry.ts";
-import { atlasFileText, checkIdentity, checkOrigin, lineOf, markerOf, placeOf, signed } from "../atlas-line.ts";
+import { atlasFileText, checkIdentity, checkOrigin, lineOf, markerOf, placeOf, readKeptGeometry, signed } from "../atlas-line.ts";
 import type { AtlasFeature } from "../atlas-line.ts";
+import { cotaLike } from "./fixtures.ts";
 
-const circuit: Circuit = {
-  relation: 1,
-  slug: "cota",
-  finishRole: "start",
-  lapLength: 5515,
-  atlas: { url: "https://example.org/cota.geojson" },
-  geojson: "x",
-  script: "x",
-  survey: "x",
-};
+const circuit: Circuit = cotaLike;
 
 const feature = (properties: AtlasFeature["properties"], coordinates?: unknown): AtlasFeature => ({
   properties,
@@ -101,4 +93,29 @@ test("signed says which line is longer", () => {
   assert.equal(signed(1.23), "+1.2");
   assert.equal(signed(-0.04), "-0.0");
   assert.equal(signed(0), "+0.0");
+});
+
+test("readKeptGeometry wants a kept outline and its pit lane both present", () => {
+  const kept = {
+    features: [
+      {
+        properties: { role: "outline", metres: [0, 50, 100] },
+        geometry: { type: "LineString", coordinates: [[-97.6, 30.1], [-97.61, 30.11], [-97.62, 30.12]] },
+      },
+      {
+        properties: { role: "pit_lane" },
+        geometry: { type: "LineString", coordinates: [[-97.6, 30.1], [-97.601, 30.101]] },
+      },
+    ],
+  };
+  const read = readKeptGeometry(JSON.stringify(kept), "cota");
+  assert.deepEqual(read.pit, [[-97.6, 30.1], [-97.601, 30.101]]);
+  assert.deepEqual(read.metres, [0, 50, 100]);
+
+  const noPit = { features: kept.features.slice(0, 1) };
+  assert.throws(() => readKeptGeometry(JSON.stringify(noPit), "cota"), /cota: the kept geometry holds no pit lane/);
+
+  const barePit = JSON.parse(JSON.stringify(kept));
+  delete barePit.features[1].geometry;
+  assert.throws(() => readKeptGeometry(JSON.stringify(barePit), "cota"), /cota: the kept pit lane holds no coordinates/);
 });

@@ -8,8 +8,10 @@
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery.
 
-import type { Circuit, Place } from "./circuit-geometry.ts";
+import type { Circuit, GeometryFile, Place } from "./circuit-geometry.ts";
 import { apart, onEarth, roundTenth } from "./circuit-geometry.ts";
+import type { KeptLine } from "./geometry-diff.ts";
+import { outlineOf } from "./geometry-diff.ts";
 
 /** One feature of a track-atlas layer: its role, and what that role's own
  * properties say. Corner and pit markers place themselves along the lap with
@@ -137,4 +139,16 @@ export function atlasFileText(
 /** A distance shown with the sign that says which line is longer. */
 export function signed(n: number): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
+}
+
+/** The geometry the app serves, read the way `geometry-diff.ts` reads any
+ * geometry — outline, its own metres, and the properties a report quotes —
+ * plus the pit lane the atlas pit markers are placed against. */
+export function readKeptGeometry(text: string, name: string): KeptLine & { pit: [number, number][] } {
+  const outline = outlineOf(text, name);
+  const pit = ((JSON.parse(text) as GeometryFile).features ?? []).find((f) => f.properties?.role === "pit_lane");
+  if (!pit) throw new Error(`${name}: the kept geometry holds no pit lane`);
+  const pitCoords = pit.geometry?.coordinates;
+  if (!pitCoords) throw new Error(`${name}: the kept pit lane holds no coordinates`);
+  return { ...outline, pit: pitCoords };
 }

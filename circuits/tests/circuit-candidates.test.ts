@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { OverpassAnswer } from "../circuit-geometry.ts";
+import { earthRadius } from "../circuit-geometry.ts";
 import { bboxOf, describe, looksLikeACircuit, measureAnswer } from "../circuit-candidates.ts";
 
 test("bboxOf takes a box as given and widens a centre by the radius", () => {
@@ -49,7 +50,7 @@ test("describe prints the kind, the name and the length the tags themselves clai
 /** One relation: two unroled ways, one pit way, one named node — the roles the
  * probe reports, with ways measured in degrees so the metres are countable. */
 function answer(): OverpassAnswer {
-  const point = (metres: number) => [{ lat: metres / 111194.9, lon: 0 }, { lat: 0, lon: 0 }];
+  const point = (metres: number) => [{ lat: metres / ((Math.PI / 180) * earthRadius), lon: 0 }, { lat: 0, lon: 0 }];
   return {
     elements: [
       {

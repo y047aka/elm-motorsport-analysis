@@ -5,8 +5,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { Circuit } from "../circuit-geometry.ts";
 import {
+  defaultTolerance,
   fastestSectors,
   impliedLines,
   lineMovement,
@@ -22,17 +22,9 @@ import {
   table,
   whole,
 } from "../timing-feed.ts";
+import { cotaLike } from "./fixtures.ts";
 
-const circuit: Circuit = {
-  relation: 1,
-  slug: "cota",
-  finishRole: "start",
-  lapLength: 5515,
-  geojson: "x",
-  script: "x",
-  survey: "x",
-};
-const round = { ...circuit, lines: [{ id: "s2", metres: 2000 }, { id: "s3", metres: 3500 }] };
+const round = { ...cotaLike, lines: [{ id: "s2", metres: 2000 }, { id: "s3", metres: 3500 }] };
 
 const feed = [
   "CLASS;S1;S2;S3",
@@ -129,7 +121,7 @@ test("sharesOf is what the export is asked to agree with", () => {
 });
 
 test("readArgs reads the round, the season against, and the distance allowed", () => {
-  assert.deepEqual(readArgs(["2026/cota_6h"]), { season: 2026, id: "cota_6h", against: null, tolerance: 40 });
+  assert.deepEqual(readArgs(["2026/cota_6h"]), { season: 2026, id: "cota_6h", against: null, tolerance: defaultTolerance });
   assert.deepEqual(readArgs(["2026/cota_6h", "--against", "2025", "--tolerance", "55.5"]), {
     season: 2026,
     id: "cota_6h",
