@@ -24,6 +24,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { outlineOf, pitLaneOf } from "./geometry-file.ts";
+
 // Every tool in this directory works from the repository root, which is where
 // the configs' `geojson` paths and the data and export directories live.
 export const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -389,29 +391,23 @@ async function writeGeoJson(circuit: Circuit, geometry: Geometry): Promise<void>
   await writeFile(path, geoJsonString(circuit, geometry));
 }
 
-/** The geometry a circuit is drawn from, read back out of a geometry file. The
- * outline's metres are checked against the file's own claims: one per point,
- * going up, ending where the published lap length says -- because a file that
- * drifted from its generator would otherwise reach the drawing with the
- * survey's authority and none of its own. The `direction` is read as the Elm
- * decoder reads it: a required word, so a file that cannot say which way a car
- * goes round it fails here and fails there alike. */
+/** The geometry a circuit is drawn from, read back out of a geometry file --
+ * the profile read the way every reader of a kept file reads it, and then the
+ * circuit's own claims checked on top: the last metre ending where *this*
+ * circuit's published lap length says, the published stretches adding up to
+ * it, a direction the file can say -- because a file that drifted from its
+ * generator would otherwise reach the drawing with the survey's authority and
+ * none of its own. The `direction` is read as the Elm decoder reads it: a
+ * required word, so a file that cannot say which way a car goes round it fails
+ * here and fails there alike. */
 export function geometryFromGeoJson(json: GeometryFile, circuit: Circuit): Geometry {
-  const features = json.features ?? [];
-  const outline = features.find((f) => f.properties?.role === "outline");
-  const pit = features.find((f) => f.properties?.role === "pit_lane");
-  if (!outline || !pit) throw new Error("the geometry holds no outline or no pit lane");
-  const props = outline.properties ?? {};
-  const coords = outline.geometry?.coordinates ?? [];
-  const metres = props.metres ?? [];
+  const outline = outlineOf(json, circuit.slug);
+  const pit = pitLaneOf(json, circuit.slug);
+  const props = outline.props;
+  const metres = outline.metres;
   const direction = props.direction;
   if (direction !== "clockwise" && direction !== "counter_clockwise") {
     throw new Error(`the outline says it runs ${JSON.stringify(direction)}, which is not a direction`);
-  }
-  if (coords.length === 0) throw new Error("the outline holds no points to draw");
-  if (metres.length !== coords.length) throw new Error(`${metres.length} metres for ${coords.length} points`);
-  for (let i = 1; i < metres.length; i++) {
-    if (metres[i] < metres[i - 1]) throw new Error(`metres go backwards at point ${i}`);
   }
   if (Math.abs(metres[metres.length - 1] - circuit.lapLength) > 0.1) {
     throw new Error(
@@ -423,8 +419,8 @@ export function geometryFromGeoJson(json: GeometryFile, circuit: Circuit): Geome
   const frame = props.frame;
   if (!frame) throw new Error("the outline carries no frame to project through");
   return {
-    centreline: coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
-    pitLane: (pit.geometry?.coordinates ?? []).map(onEarth),
+    centreline: outline.coords.map((c, i) => ({ ...onEarth(c), metres: metres[i] })),
+    pitLane: pit.map(onEarth),
     frame,
     direction,
     surveyedAt: props.surveyed_at ?? null,

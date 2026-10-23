@@ -43,6 +43,7 @@ import type { Circuit, Sectors } from "./circuit-geometry.ts";
 import { cumulative, onEarth, projection, reason, repoDir, sectorLines } from "./circuit-geometry.ts";
 import type { Apartness } from "./geometry-diff.ts";
 import { apartness, interpolate, nearestOn } from "./geometry-diff.ts";
+import { readKeptGeometry } from "./geometry-file.ts";
 import type { AtlasFeature, AtlasFile } from "./atlas-line.ts";
 import {
   atlasFileText,
@@ -51,7 +52,6 @@ import {
   lineOf,
   markerOf,
   placeOf,
-  readKeptGeometry,
   signed,
 } from "./atlas-line.ts";
 import { circuits, keptAtlas } from "./registry.ts";

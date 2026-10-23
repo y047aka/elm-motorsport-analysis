@@ -20,19 +20,12 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 
-import type { GeometryFile, OutlineProperties, Point } from "./circuit-geometry.ts";
+import type { GeometryFile, Point } from "./circuit-geometry.ts";
 import { isEntry, onEarth, projection, reason } from "./circuit-geometry.ts";
+import type { KeptLine } from "./geometry-file.ts";
+import { outlineOf } from "./geometry-file.ts";
 
 const width = 1000;
-
-/** One geometry laid against the others: its name, the properties a report
- * quotes, its coordinates as they stand in the file, and its own metres. */
-export type KeptLine = {
-  name: string;
-  props: OutlineProperties;
-  coords: [number, number][];
-  metres: number[];
-};
 
 /** One sampling of a line against another: where on each line's own measure
  * the nearest place stands, and how far apart they are. */
@@ -75,21 +68,6 @@ export function readArgs(argv: string[]): { paths: string[]; every: number; svg:
   if (args.paths.length !== 2) fail("usage: node circuits/geometry-diff.ts <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
   if (!Number.isFinite(args.every) || args.every <= 0) fail(`"${args.every}" is not a distance`);
   return args;
-}
-
-/** The outline of one geometry file: its coordinates, its own metres, and the
- * properties a report quotes so the reader knows what two lines were compared. */
-export function outlineOf(text: string, name: string): KeptLine {
-  const file = JSON.parse(text) as GeometryFile;
-  const outline = (file.features ?? []).find((f) => f.properties?.role === "outline");
-  if (!outline) throw new Error(`${name}: no outline feature`);
-  const { metres, ...props } = outline.properties ?? {};
-  const coords = outline.geometry?.coordinates ?? [];
-  if (!Array.isArray(metres)) throw new Error(`${name}: the outline publishes no metres`);
-  if (coords.length !== metres.length) {
-    throw new Error(`${name}: ${metres.length} metres for ${coords.length} points`);
-  }
-  return { name, props, coords, metres };
 }
 
 /** The first line laid against the second, sampled every `every` metres along
@@ -179,7 +157,9 @@ if (isEntry(import.meta.url)) {
   try {
     const args = readArgs(process.argv.slice(2));
     const lines: KeptLine[] = [];
-    for (const path of args.paths) lines.push(outlineOf(await readFile(path, "utf8"), basename(path, ".geojson")));
+    for (const path of args.paths) {
+      lines.push(outlineOf(JSON.parse(await readFile(path, "utf8")) as GeometryFile, basename(path, ".geojson")));
+    }
     await run(lines, args);
   } catch (error) {
     console.error(reason(error));

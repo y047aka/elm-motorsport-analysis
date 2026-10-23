@@ -1,48 +1,19 @@
-// The apartness math both the diff tool and the atlas reading run on: reading
-// a file's own claims, interpolating and projecting onto a line measured in
-// metres of its own lap, and the overlay that draws the same reading.
+// The apartness math both the diff tool and the atlas reading run on: laying
+// two lines against each other, interpolating and projecting onto a line
+// measured in metres of its own lap, and the overlay that draws the same
+// reading. The reading of a file itself is `geometry-file.ts`'s.
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { Point } from "../circuit-geometry.ts";
-import { apartness, interpolate, nearestOn, outlineOf, readArgs, svgOverlay, toSegment } from "../geometry-diff.ts";
+import { apartness, interpolate, nearestOn, readArgs, svgOverlay, toSegment } from "../geometry-diff.ts";
 
 const line = (y: number): Point[] => [
   { x: 0, y },
   { x: 100, y },
 ];
 const metres = [0, 100];
-
-test("outlineOf takes a file's outline, its own metres and what a report should quote", () => {
-  const kept = outlineOf(
-    JSON.stringify({
-      features: [
-        {
-          properties: { role: "outline", basis: "measured-midline", metres: [0, 50, 100] },
-          geometry: { type: "LineString", coordinates: [[0, 47], [0.01, 47], [0.01, 46.99]] },
-        },
-      ],
-    }),
-    "cota",
-  );
-  assert.equal(kept.name, "cota");
-  assert.deepEqual(kept.props, { role: "outline", basis: "measured-midline" }, "the metres belong to the line, not the props");
-  assert.deepEqual(kept.metres, [0, 50, 100]);
-  assert.equal(kept.coords.length, 3);
-});
-
-test("outlineOf refuses a file by name when its claims and points disagree", () => {
-  assert.throws(() => outlineOf(`{"features": []}`, "cota"), /cota: no outline feature/);
-  assert.throws(
-    () => outlineOf(JSON.stringify({ features: [{ properties: { role: "outline" }, geometry: { coordinates: [] } }] }), "cota"),
-    /cota: the outline publishes no metres/,
-  );
-  assert.throws(
-    () => outlineOf(JSON.stringify({ features: [{ properties: { role: "outline", metres: [0, 1] }, geometry: { coordinates: [[0, 47]] } }] }), "cota"),
-    /cota: 2 metres for 1 points/,
-  );
-});
 
 test("interpolate walks a line by its own metres", () => {
   const points = line(0);

@@ -128,10 +128,13 @@ Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the
 reading moved into a module beside it that opens nothing. `timing-feed.ts` turns
 the feed's text into rows, fastest sectors, shares and implied lines;
 `circuit-candidates.ts` says which tags could name a circuit and what an answer's
-roles measure; `atlas-line.ts` holds the atlas file's shape checks, its two
+roles measure; `geometry-file.ts` holds the profile's own reading — the outline
+with its own metres going up, and the pit lane beside it — which the
+`--from-geojson` check, the diff and the atlas reading all run, so what the
+fence checks and what the diff lays together are one reading of a file;
+`atlas-line.ts` holds the atlas file's shape checks and its two
 guards — the one that keeps a mismatched line out, and the one that keeps the lap
-starting at the published line — and the kept geometry with its pit lane that
-those guards are measured against; `geometry-drift.ts` compares two geometries
+starting at the published line; `geometry-drift.ts` compares two geometries
 the way the fence does; and `circuit-geometry.ts` asks nothing until `main` is
 told to. Printing stays with the command — what a reading is worth is what it
 answers, not how its table is padded. `nix run .#geometry-test` runs Node's own test runner over `circuits/tests/`,

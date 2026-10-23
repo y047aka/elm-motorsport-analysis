@@ -160,7 +160,7 @@ test("geometryFromGeoJson refuses a file with no frame, and one missing either f
   const file = JSON.parse(geometryFile({ metres: [0, 2000, 4000] }, [[0, 47], [0.01, 47], [0.01, 46.99]])) as GeometryFile;
   assert.throws(
     () => geometryFromGeoJson({ features: file.features!.slice(0, 1) }, testCircuit),
-    /the geometry holds no outline or no pit lane/,
+    /test_circuit: the geometry holds no pit lane/,
   );
 });
 
