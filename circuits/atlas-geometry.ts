@@ -16,9 +16,10 @@
 // where the circuit's own published sector lines stand on each of the two
 // lines.
 //
-// The lap-origin guard below is the same check `circuit-geometry.ts` makes of
-// a relation's finish node: a file that started at some other line would shift
-// every marker by the distance between them while still looking like a lap.
+// The lap-origin guard in `atlas-line.ts` is the same check
+// `circuit-geometry.ts` makes of a relation's finish node: a file that started
+// at some other line would shift every marker by the distance between them
+// while still looking like a lap.
 // For a circuit this repository has not surveyed yet, the atlas's
 // `start_finish` point is a surveyed coordinate to seed a circuit script's
 // `timingLine` with; whether the lines the times are read against stand where
@@ -26,8 +27,10 @@
 // round has been loaded.
 //
 // The apartness math is `geometry-diff.ts`'s, shared with the tool that
-// compares any two kept geometries; this file adds only what is specific to
-// taking a foreign dataset in.
+// compares any two kept geometries; the feature shape checks, the guards and
+// the written file are `atlas-line.ts`'s, shared with nothing but the tests.
+// This file adds only the measuring: what is specific to laying one circuit's
+// atlas line against the geometry this app draws.
 //
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery; the written file carries the source URL
@@ -36,66 +39,17 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import type { Circuit, GeometryFile, Place, Sectors } from "./circuit-geometry.ts";
-import { apart, cumulative, onEarth, projection, reason, repoDir, roundTenth, sectorLines } from "./circuit-geometry.ts";
+import type { Circuit, GeometryFile, Sectors } from "./circuit-geometry.ts";
+import { cumulative, onEarth, projection, reason, repoDir, sectorLines } from "./circuit-geometry.ts";
 import type { Apartness, KeptLine } from "./geometry-diff.ts";
 import { apartness, interpolate, nearestOn, outlineOf } from "./geometry-diff.ts";
+import type { AtlasFeature, AtlasFile } from "./atlas-line.ts";
+import { atlasFileText, checkIdentity, checkOrigin, lineOf, markerOf, placeOf, signed } from "./atlas-line.ts";
 import { circuits, keptAtlas } from "./registry.ts";
 
-// How far an atlas file's first point may stand from the published timing line
-// before the lap is judged to start somewhere else, and how often the line is
-// sampled for the apartness reading — corners sit tens of metres apart and the
-// deviation is a slow wave along the lap.
-const originWithin = 25;
+// How often the line is sampled for the apartness reading — corners sit tens of
+// metres apart and the deviation is a slow wave along the lap.
 const every = 25;
-
-/** One feature of a track-atlas layer: its role, and what that role's own
- * properties say. Corner and pit markers place themselves along the lap with
- * a `marker` — a fraction of it, not a metre. */
-type AtlasFeature = {
-  properties: {
-    role?: string;
-    circuit?: string;
-    id?: string;
-    name?: string;
-    marker?: number;
-    direction?: string;
-  };
-  geometry?: { type?: string; coordinates?: unknown };
-};
-
-type AtlasFile = { features?: AtlasFeature[] };
-
-/** An atlas outline as the line it measures: degrees, lon before lat. */
-function lineOf(feature: AtlasFeature): [number, number][] {
-  const coordinates = feature.geometry?.coordinates;
-  if (!Array.isArray(coordinates) || !Array.isArray(coordinates[0]) || coordinates.length < 2) {
-    throw new Error("the atlas outline holds no line to measure");
-  }
-  return coordinates as [number, number][];
-}
-
-/** An atlas point feature — a corner or a pit marker — as the place it
- * stands at: a Point's coordinates are that pair itself, not a list of
- * them, unlike the outline's LineString. */
-function placeOf(feature: AtlasFeature): Place {
-  const coordinates = feature.geometry?.coordinates;
-  if (!Array.isArray(coordinates) || coordinates.length !== 2 || typeof coordinates[0] !== "number") {
-    throw new Error(`the atlas ${feature.properties.role ?? "feature"} carries no point`);
-  }
-  return onEarth(coordinates as [number, number]);
-}
-
-/** Where on the lap a corner or pit marker stands, as the atlas's fraction of
- * it. A feature with no marker would otherwise be measured at `NaN m` rather
- * than fail by name. */
-function markerOf(feature: AtlasFeature): number {
-  const marker = feature.properties.marker;
-  if (typeof marker !== "number" || !Number.isFinite(marker)) {
-    throw new Error(`the atlas ${feature.properties.role ?? "feature"} carries no marker`);
-  }
-  return marker;
-}
 
 const [slug, ...argv] = process.argv.slice(2);
 try {
@@ -117,14 +71,7 @@ async function run(slug: string, argv: string[]): Promise<void> {
   const features: AtlasFeature[] = theirs.features ?? [];
   const outline = features.find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error("the atlas file holds no outline feature");
-  // The reading is kept under the slug given on the command line, whatever
-  // the file was measured from — a mismatched pair replaces one circuit's
-  // kept evidence with another circuit's line.
-  if (outline.properties.circuit && outline.properties.circuit !== circuit.slug) {
-    throw new Error(
-      `the atlas file names itself '${outline.properties.circuit}', not '${circuit.slug}' — it is not this circuit's line`,
-    );
-  }
+  checkIdentity(outline.properties.circuit, circuit.slug);
   const corners = features.filter((f) => f.properties?.role === "corner");
   const pits = ["pit_entry", "pit_exit"]
     .map((role) => features.find((f) => f.properties?.role === role))
@@ -145,14 +92,7 @@ async function run(slug: string, argv: string[]): Promise<void> {
   const theirMetres = cumulative(theirPoints);
   const length = theirMetres[theirMetres.length - 1];
 
-  const first = onEarth(coords[0]);
-  const originDistance = circuit.timingLine ? apart(first, circuit.timingLine) : 0;
-  if (circuit.timingLine && originDistance > originWithin) {
-    throw new Error(
-      `the atlas lap starts ${originDistance.toFixed(1)} m from the published timing line, ` +
-        `which is more than ${originWithin} m — its markers would be measured from the wrong line`,
-    );
-  }
+  const originDistance = checkOrigin(onEarth(coords[0]), circuit.timingLine);
 
   const deviation = apartness(theirPoints, theirMetres, ourPoints, ours.metres, every);
   const atCorners = corners.map((c) => {
@@ -182,7 +122,7 @@ async function run(slug: string, argv: string[]): Promise<void> {
     };
   });
 
-  await writeAtlasGeometry(circuit, coords, corners, pits, theirMetres);
+  await keep(circuit, coords, corners, pits, theirMetres);
   print(circuit, {
     every,
     length,
@@ -217,48 +157,18 @@ function readKeptGeometry(text: string, name: string): KeptLine & { pit: [number
   return { ...outline, pit: pitCoords };
 }
 
-// The atlas line in this repository's own profile, at its own length: it does
-// not end at the published lap length, and it is written not to pretend
-// otherwise — `stretched: false` says so at the properties a reader sees
-// first.
-async function writeAtlasGeometry(
+// Where a reading lands, and the only side effect of a run: the file itself.
+// What its bytes say is `atlas-line.ts`'s `atlasFileText`.
+async function keep(
   circuit: Circuit,
   coords: [number, number][],
   corners: AtlasFeature[],
   pits: AtlasFeature[],
   theirMetres: number[],
 ): Promise<void> {
-  const length = theirMetres[theirMetres.length - 1];
-  const features = [
-    {
-      type: "Feature",
-      properties: {
-        role: "outline",
-        circuit: circuit.slug,
-        basis: "measured-midline",
-        source: circuit.atlas!.url,
-        license: "ODbL",
-        lap_length_m: roundTenth(length),
-        stretched: false,
-        metres: theirMetres.map(roundTenth),
-      },
-      geometry: { type: "LineString", coordinates: coords },
-    },
-    ...corners.map((c) => ({
-      type: "Feature",
-      properties: { role: "corner", id: c.properties.id, marker: c.properties.marker, direction: c.properties.direction },
-      geometry: c.geometry,
-    })),
-    ...pits.map((p) => ({
-      type: "Feature",
-      properties: { role: p.properties.role, name: p.properties.name, marker: p.properties.marker },
-      geometry: p.geometry,
-    })),
-  ];
-  const body = features.map((f) => `    ${JSON.stringify(f)}`).join(",\n");
   const path = keptAtlas(circuit);
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `{"type": "FeatureCollection", "features": [\n${body}\n]}\n`);
+  await writeFile(path, atlasFileText(circuit, coords, corners, pits, theirMetres));
 }
 
 /** What the reading prints: the apartness of the two lines, and where each
@@ -321,8 +231,4 @@ function print(circuit: Circuit, { every, length, originDistance, deviation, atC
       );
     }
   }
-}
-
-function signed(n: number): string {
-  return `${n >= 0 ? "+" : ""}${n.toFixed(1)}`;
 }

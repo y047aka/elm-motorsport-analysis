@@ -65,7 +65,7 @@ async function run(lines: KeptLine[], args: { paths: string[]; every: number; sv
   }
 }
 
-function readArgs(argv: string[]): { paths: string[]; every: number; svg: string | null } {
+export function readArgs(argv: string[]): { paths: string[]; every: number; svg: string | null } {
   const args: { paths: string[]; every: number; svg: string | null } = { paths: [], every: 25, svg: null };
   for (let at = 0; at < argv.length; at++) {
     if (argv[at] === "--every") args.every = Number(argv[++at]);
@@ -135,7 +135,7 @@ export function nearestOn(point: Point, points: Point[], metres: number[]): { me
   return best;
 }
 
-function toSegment(p: Point, a: Point, b: Point): { distance: number; at: number } {
+export function toSegment(p: Point, a: Point, b: Point): { distance: number; at: number } {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const span = dx * dx + dy * dy;
@@ -146,7 +146,7 @@ function toSegment(p: Point, a: Point, b: Point): { distance: number; at: number
 // The overlay is a reading aid, not a drawing: two strokes of one projection,
 // and the provenance each file carries as its own comment, so a saved overlay
 // says what it was comparing long after the files moved.
-function svgOverlay(lines: KeptLine[], points: Point[][]): string {
+export function svgOverlay(lines: KeptLine[], points: Point[][]): string {
   const at = { x: Math.min(...points.flat().map((p) => p.x)), y: Math.min(...points.flat().map((p) => p.y)) };
   const span = {
     x: Math.max(...points.flat().map((p) => p.x)) - at.x,
@@ -172,13 +172,12 @@ ${paths}
 }
 
 function fail(message: string): never {
-  console.error(message);
-  process.exit(1);
+  throw new Error(message);
 }
 
 if (isEntry(import.meta.url)) {
-  const args = readArgs(process.argv.slice(2));
   try {
+    const args = readArgs(process.argv.slice(2));
     const lines: KeptLine[] = [];
     for (const path of args.paths) lines.push(outlineOf(await readFile(path, "utf8"), basename(path, ".geojson")));
     await run(lines, args);

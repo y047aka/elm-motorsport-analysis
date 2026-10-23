@@ -180,6 +180,20 @@
             '';
           };
 
+        # The circuit tools' unit tests, on Node's own test runner. They reach
+        # each tool's pure reading -- the half that opens no file and asks no
+        # network -- and the runner is in Node itself, so this directory keeps
+        # installing nothing. The files are named out rather than the directory:
+        # Node's test discovery does not offer up .ts files at every version
+        # pinned here.
+        geometryTest = pkgs.writeShellApplication {
+          name = "geometry-test";
+          runtimeInputs = [ pkgs.nodejs_26 ];
+          text = ''
+            node --test circuits/tests/*.test.ts
+          '';
+        };
+
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched --
         # subcommands resolve flake.lock, app/elm.json and node_modules
@@ -230,6 +244,7 @@
           geometry-regenerate  = { type = "app"; program = "${geometryApp "geometry-regenerate" "regenerate-geometry"}/bin/geometry-regenerate";                      meta.description = "Re-run the geometry pipeline over each circuit's kept Overpass answer and fail unless it reproduces the kept geometry ([<circuit> ...]; --write re-lays the files from the kept answer; --freeze asks OpenStreetMap now and keeps both)"; };
           geometry-timing-lines = { type = "app"; program = "${geometryApp "geometry-timing-lines" "check-timing-lines"}/bin/geometry-timing-lines";                   meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (<season>/<id> [--against <season>] [--tolerance <metres>])"; };
           geometry-probe       = { type = "app"; program = "${geometryApp "geometry-probe" "probe-circuit"}/bin/geometry-probe";                                          meta.description = "Ask OpenStreetMap which relations hold a circuit at a place, each lap measured, before a circuit's config is authored (<lat>,<lon> [...] [--radius <km>], or a s,w,n,e box)"; };
+          geometry-test        = { type = "app"; program = "${geometryTest}/bin/geometry-test";                                                                          meta.description = "Run the circuit tools' unit tests (Node's own runner over circuits/tests/; no network, no files written)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };

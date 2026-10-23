@@ -121,6 +121,22 @@ in between. Neither writes Elm: drawing on a measured line would move every
 tracker baseline and re-open where the timing lines stand, which is its own
 change judged on that report.
 
+## The readings, and their tests
+
+Every tool is two things: the asking, and the reading of an answer. The asking —
+Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the
+reading moved into a module beside it that opens nothing. `timing-feed.ts` turns
+the feed's text into rows, fastest sectors, shares and implied lines;
+`circuit-candidates.ts` says which tags could name a circuit and what an answer's
+roles measure; `atlas-line.ts` holds the atlas file's shape checks and its two
+guards — the one that keeps a mismatched line out, and the one that keeps the lap
+starting at the published line; `geometry-drift.ts` compares two geometries the
+way the fence does; and `circuit-geometry.ts` asks nothing until `main` is told
+to. `nix run .#geometry-test` runs Node's own test runner over `circuits/tests/`,
+where those readings are handed fixtures rather than surveys. What is judged
+against the repository's real bytes stays this file's other sections': the fence,
+the contract specs, the VRT.
+
 ## Where the app reads this
 
 The geometries are kept because the app reads them, and as the line other

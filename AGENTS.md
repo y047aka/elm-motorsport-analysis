@@ -51,6 +51,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (`<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
+| `nix run .#geometry-test` | The circuit tools' unit tests: their side-effect-free readings, run by Node's own runner over fixtures (`circuits/tests/`, no network, nothing written) |
 | `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (`<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
@@ -579,6 +580,13 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   place. Its compiler and `@types/node` are the app's, reached by `typeRoots`
   — the directory installs nothing, which is also why it holds a dependency-
   free `package.json` only to say its modules are ESM.
+- **Circuit tools** (`circuits/tests/`) — `nix run .#geometry-test`, Node's built-in
+  runner; the directory installs nothing. Each command kept its own I/O and moved
+  its reading of an answer into a module that opens nothing — `timing-feed.ts` (the
+  CSV's text), `circuit-candidates.ts` (an Overpass answer already got),
+  `atlas-line.ts` (a foreign file's shapes and guards), `geometry-drift.ts` (two
+  geometries laid together) — and the tests hand those fixtures. Judging this
+  repository's real bytes stays the fence's and the contract specs'.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources
