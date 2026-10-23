@@ -110,10 +110,10 @@ mod DepsAudit.TestCli {
                 case Nil     => k(None)
                 case l :: ls => { Ref.put(ls, remaining); k(Some(l)) }
             }
-            def print(_, k)    = k()
-            def eprint(_, k)   = k()
-            def println(_, k)  = k()
-            def eprintln(_, k) = k()
+            def write(_, k)      = k()
+            def writeLine(_, k)  = k()
+            def writeErr(_, k)   = k()
+            def writeErrLine(_, k) = k()
         }
     }
 
