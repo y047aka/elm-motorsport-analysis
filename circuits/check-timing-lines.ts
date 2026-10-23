@@ -58,9 +58,7 @@ import {
 
 // The rounds this reads, each as the config of the circuit it is run on — a
 // second round at a circuit already here is one more entry naming the same
-// layout and lap. A circuit timed at one grain per season is not this question
-// to ask: Le Mans's lines are copied from the organiser's map of each year and
-// differ between them by design.
+// layout and lap.
 const rounds: Record<string, Circuit> = {
   cota_6h: circuits.cota,
 };
@@ -97,8 +95,15 @@ async function main(): Promise<void> {
   if (!Object.hasOwn(rounds, args.id)) {
     fail(`${args.id} is not a round this reads, which reads ${Object.keys(rounds).join(" and ")}.`);
   }
+  const circuit = rounds[args.id];
+  // The question this asks — do one map's lines still stand a season later —
+  // has no answer on a circuit the organiser re-maps every year; the refusal
+  // quotes the circuit's own reason rather than this script's opinion.
+  if (circuit.sectors.kind !== "published") {
+    fail(`${args.id} is run on ${circuit.survey}, whose timing map is not one set of lines: ${circuit.sectors.reason}.`);
+  }
 
-  const round: Round = { ...rounds[args.id], lines: await linesOf(rounds[args.id]) };
+  const round: Round = { ...circuit, lines: await linesOf(circuit) };
   const seasons = args.against === null ? [args.season] : [args.season, args.against];
 
   const readings: { reading: Reading; note: string }[] = [];

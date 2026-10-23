@@ -5,18 +5,19 @@
 
 import type { Circuit, OsmMember, OsmNode, OsmRelation, OsmWay, OverpassAnswer } from "../circuit-geometry.ts";
 
+/** A circuit's published sector lengths summing to `testCircuit`'s lap. */
+export const stretches = [2000, 1200, 800];
+
 export const testCircuit: Circuit = {
   relation: 999,
   slug: "test_circuit",
   finishRole: "start",
   lapLength: 4000,
+  sectors: { kind: "published", source: "a map the test circuit publishes", stretches },
   geojson: "app/static/geometry/test_circuit.geojson",
   script: "circuits/tests/fixtures.ts",
   survey: "The Test Circuit",
 };
-
-/** A circuit's published sector lengths summing to `testCircuit`'s lap. */
-export const stretches = [2000, 1200, 800];
 
 /** A stand-in for a circuit like COTA: a lap of the length the timing feed
  * measures in seconds, and an atlas layer to read against it. */
@@ -25,6 +26,7 @@ export const cotaLike: Circuit = {
   slug: "cota",
   finishRole: "start",
   lapLength: 5515,
+  sectors: { kind: "published", source: "the circuit's own track sector map", stretches: [2000, 1500, 2015] },
   atlas: { url: "https://example.org/cota.geojson" },
   geojson: "x",
   script: "x",

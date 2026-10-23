@@ -65,6 +65,18 @@ export type Frame = { origin: Place; parallel: number };
  * length they add up to. */
 export type Sectors = { source?: string; stretches: number[] };
 
+/** Whose map the timing lines come from, and for how long one of its sets
+ * holds. `published`: one map the circuit itself publishes, its stretches
+ * adding up to the lap and serving every season here; it travels into the
+ * geometry as `sectors`, so a check of the lines reads the file rather than
+ * this config. `perSeason`: lines the organiser re-publishes each year, so no
+ * one set answers for two seasons. `reason` says what keeps the seasons
+ * apart, and is what a tool that reads only one map quotes when it refuses a
+ * circuit drawn on this kind of map. */
+export type TimingMap =
+  | { kind: "published"; source: string; stretches: number[] }
+  | { kind: "perSeason"; reason: string };
+
 /** An intermediate timing line, named for the sector that begins at it. */
 export type SectorLine = { id: string; metres: number };
 
@@ -137,10 +149,9 @@ export interface Circuit {
   finishRole: string;
   timingLine?: PublishedLine;
   lapLength: number;
-  /** The circuit's published sector lengths. */
-  sectorMapStretches?: number[];
-  /** Who publishes them. */
-  sectorsSource?: string;
+  /** Whose map the lines the lap is timed to come from, and whether one set
+   * of them answers for every season here. */
+  sectors: TimingMap;
   /** The track-atlas layer a measured midline is read off. */
   atlas?: { url: string };
   /** The geometry file, from the repository root. */
@@ -359,9 +370,9 @@ export function geoJsonString(circuit: Circuit, geometry: Geometry): string {
       lap_length_m: circuit.lapLength,
       surveyed_length_m: geometry.surveyedLength,
       sectors:
-        circuit.sectorMapStretches === undefined
-          ? undefined
-          : { source: circuit.sectorsSource, stretches: circuit.sectorMapStretches },
+        circuit.sectors.kind === "published"
+          ? { source: circuit.sectors.source, stretches: circuit.sectors.stretches }
+          : undefined,
       frame: geometry.frame,
       metres: geometry.centreline.map((p) => p.metres),
     },

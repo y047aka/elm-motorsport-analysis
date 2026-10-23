@@ -7,7 +7,9 @@
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // geometry written here is a derivative of it.
 
-export const circuit = {
+import type { Circuit } from "../circuit-geometry.ts";
+
+export const circuit: Circuit = {
   relation: 2126739,
 
   // The word `Motorsport.Circuit.jsonValue` sends for Le Mans, which names the
@@ -23,6 +25,16 @@ export const circuit = {
   // measured along it. OpenStreetMap's ways come to a little less, so the lap
   // is stretched to the published length rather than the lines moved.
   lapLength: 13625.7,
+
+  // The lines are copied from Al Kamel's map of each year and differ between
+  // them by design, so no one set answers for two seasons — which is why
+  // `check-timing-lines.ts` refuses to read a round here against a season.
+  // The maps are not to be redistributed, so nothing here holds their figures;
+  // the season's own `Layout` module is where its line placements live.
+  sectors: {
+    kind: "perSeason",
+    reason: "the organiser's map is re-issued every year and its lines differ between seasons",
+  },
 
   // The track-atlas layer for the 24h layout — a midline measured off
   // orthoimagery, read against the survey above by `atlas-geometry.ts`.

@@ -21,7 +21,7 @@ import {
 } from "../circuit-geometry.ts";
 import { geometryFile, squareAnswer, stretches, testCircuit } from "./fixtures.ts";
 
-const circuit = { ...testCircuit, sectorMapStretches: stretches, timingLine: { lat: 47.0, lon: 0.0 } };
+const circuit = { ...testCircuit, timingLine: { lat: 47.0, lon: 0.0 } };
 
 test("lapOf chains the unroled ways into a lap and stretches it to the published length", () => {
   const geometry = lapOf(squareAnswer(), circuit);
@@ -122,8 +122,14 @@ test("geoJsonString and geometryFromGeoJson are each other's inverse on the data
   assert.deepEqual(read.pitLane, geometry.pitLane);
   assert.deepEqual(read.frame, geometry.frame);
   assert.equal(read.direction, geometry.direction);
-  assert.deepEqual(read.sectors, { stretches }, "the undefined source drops out of the written file");
+  assert.deepEqual(read.sectors, { source: "a map the test circuit publishes", stretches }, "a published map travels into the file whole");
   assert.equal(read.counts, null, "a read-back file cannot say what a simplification left out");
+});
+
+test("a map the organiser re-issues per season travels into the file as nothing", () => {
+  const sarthe = { ...testCircuit, sectors: { kind: "perSeason" as const, reason: "the map is re-issued every year" } };
+  const parsed = JSON.parse(geoJsonString(sarthe, lapOf(squareAnswer(), sarthe))) as GeometryFile;
+  assert.equal(parsed.features![0].properties?.sectors, undefined, "there are no one-set lines to carry");
 });
 
 test("geoJsonString writes degrees lon before lat, one property per line", () => {

@@ -81,8 +81,11 @@ relation is actually tagged is the circuit's own config comment to say.
 Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
 map for that race, and differ by season; the maps are not to be redistributed,
 so they are not in the repository. COTA's are its own track sector map's, and
-are one set used for every season here, since no later map has been read.
-Nothing in a round's own times picks one placement of those lines out of
+are one set used for every season here, since no later map has been read. Which
+of the two a circuit's map is belongs to its config, as its `sectors` — one set
+`published` for every season, or `perSeason` — and the timing-lines check refuses
+a round on the second kind by quoting the circuit's own reason. Nothing in a
+round's own times picks one placement of those lines out of
 another — a sector's share of a lap is not a share of its distance, and every
 placement has a mean speed of its own — so what they rest on is that the
 circuit published them as the lines it times to, beside the lap length they
