@@ -33,12 +33,18 @@ jobs:
           restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: none of these commands touches node_modules. The Elm
       # tests need only the elm toolchain the flake supplies, the CLI resolves
-      # its own dependencies through flix, and the circuit tools' tests run on
-      # the Node the flake brings — their directory installs nothing.
+      # its own dependencies through flix -- and the timing report resolves nothing
+      # at all, its project holding no Maven dependency -- and the circuit tools'
+      # tests run on the Node the flake brings, their directory installing nothing.
       - name: Elm tests
         run: nix run .#test
       - name: CLI tests
         run: nix run .#flix-test
+      # Its own step because its own project: the report's tests compile the
+      # sources which `circuits/timing/src` symlinks out of `flix/src`, so a symlink
+      # that does not survive the checkout fails here rather than at a report.
+      - name: Timing report tests
+        run: nix run .#geometry-timing-test
       - name: Circuit tool tests
         run: nix run .#geometry-test
 

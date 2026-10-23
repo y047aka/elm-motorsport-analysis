@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { readdirSync, lstatSync, realpathSync, statSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { circuits } from '../../circuits/registry.ts';
 import { readSource } from './helpers';
@@ -164,4 +166,70 @@ test('a circuit Flix holds a map for is one whose config authors it that way', (
   for (const word of [...caseNames().values()].filter((each) => !(each in circuits))) {
     expect(flixMap(word).unsurveyed, `${word} has no config here, so the report has no lines to read for it`).toBe(true);
   }
+});
+
+/**
+ * The report's project shares `flix/src` by symlink rather than by copy, because
+ * Flix has no local path dependency — `flix.toml` answers anything else with
+ * "A Flix dependency should be formatted like so: 'github:username/projectname'",
+ * and `flix build` takes no source directory as an argument. Two facts hold that
+ * sharing up and neither is visible from either project's own build: a symlinked
+ * directory is walked as nothing, so the links must be one per file; and a link
+ * which does not survive a checkout fails as `Undefined use 'Util.Csv.Decode'`,
+ * named in the module that needed it rather than in the link that broke.
+ */
+
+const reportRoot = fileURLToPath(new URL('../../circuits/timing/src', import.meta.url));
+
+/** Every shared source, as the path it holds under the report's own `src`. */
+function links(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = `${dir}/${entry.name}`;
+    const name = path.slice(reportRoot.length + 1);
+    if (lstatSync(path).isSymbolicLink()) return [name];
+    return entry.isDirectory() ? links(path) : [];
+  });
+}
+
+/** The path under `flix/src` each shared source is expected to hold. */
+function sharedSources(): string[] {
+  return [
+    'Cli.flix',
+    'Cli/Errors.flix',
+    'Db.flix',
+    'Motorsport.flix',
+    'Motorsport/Calendar.flix',
+    'Motorsport/Circuit.flix',
+    'Motorsport/Events.flix',
+    'Util/Csv.flix',
+    'Util/Csv/Decode.flix',
+    'Util/Csv/Decode/Extra.flix',
+    'Util/Csv/Parser.flix',
+    'Util/Duration.flix',
+    'Util/Files.flix',
+  ];
+}
+
+test('the report shares flix/src one file per symlink, and each one resolves', () => {
+  const held = links(reportRoot).sort();
+  expect(held, 'the report shares a different set of sources than the ones it reads').toEqual(sharedSources());
+  const root = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
+  for (const name of sharedSources()) {
+    const path = `${reportRoot}/${name}`;
+    expect(lstatSync(path).isSymbolicLink(), `${name} is a copy of a shared source, so it can disagree with it`).toBe(true);
+    // A linked directory is walked as nothing, which is what makes the per-file
+    // rule load-bearing rather than tidy.
+    expect(statSync(path).isFile(), `${name} links a directory, which Flix will not descend`).toBe(true);
+    expect(realpathSync(path), `${name} does not hold flix/src/${name}`).toBe(`${root}/flix/src/${name}`);
+  }
+});
+
+test('the report resolves no dependency, which is the separation for', () => {
+  const toml = readSource('circuits/timing/flix.toml');
+  expect(toml, 'the report has a dependency, so a database is reachable from it').not.toMatch(/mvn-dependencies|dependencies/);
+  // One compiler version for the two projects: a link out of `flix/src` is read by
+  // whichever `flix` runs, and a source the other project's version parses
+  // differently is a report that fails for a reason neither project states.
+  const version = (file: string) => readSource(file).match(/flix\s*=\s*"([^"]+)"/)?.[1];
+  expect(version('circuits/timing/flix.toml'), 'the two projects are not on one Flix version').toBe(version('flix/flix.toml'));
 });

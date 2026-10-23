@@ -6,9 +6,9 @@ use Cli.Args
 use Cli.Args.Command
 use Db.Jdbc
 use Cli.Errors.CliError
+use Cli.Errors.checkDirectory
 use Cli.Load
 use Cli.Export
-use Cli.TimingLines
 
 def main(): Unit \ {Env, IO, Exit, Console} =
     let code = match Args.parse(Env.getArgs()) {
@@ -25,8 +25,6 @@ def main(): Unit \ {Env, IO, Exit, Console} =
             onDirectories(load#csv :: Nil, load#database, () -> Load.runAll(load#csv))
         case Ok(Command.Export(export)) =>
             onDirectories(export#out :: Nil, export#database, () -> Export.runAll(export#out, export#exported))
-        case Ok(Command.TimingLines(lines)) =>
-            onFeed(lines#csv, () -> TimingLines.runAll(lines#csv, lines#season, lines#id, lines#against, lines#tolerance))
     };
     Exit.exit(code)
 
@@ -54,17 +52,6 @@ def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> I
                         1
                 }
             )
-    }
-
-/// The timing-lines report reads the feeds and prints: nothing it answers is
-/// counted in SQL, so it is handed no `--database` and no `DATABASE_URL`, and the
-/// directory it is given is only checked for being there, as `--csv` is.
-def onFeed(dir: String, stage: Unit -> Int32 \ {IO, Console}): Int32 \ {IO, Console} =
-    match checkDirectory(dir) {
-        case Err(e) =>
-            Console.eprintln("Error: ${e}");
-            1
-        case Ok(()) => stage()
     }
 
 /// The database is reached once per request, so the server starts before one is
@@ -95,14 +82,3 @@ def databaseUrl(database: Option[String]): Option[String] \ Env =
         case None      => Env.getVar("DATABASE_URL")
     }
 
-/// Checked once here rather than once per round, so a mistyped directory reads
-/// as one mistake instead of as every race being missing. `--out` is checked as
-/// `--csv` is, though the season directories under it are made as they are
-/// needed: a mistyped one would otherwise be made too.
-def checkDirectory(dir: String): Result[CliError, Unit] \ IO =
-    forM(
-        exists <- Files.exists(dir) |> Result.mapErr(CliError.File);
-        _      <- if (exists) Ok(()) else Err(CliError.InputPathNotFound(dir));
-        isDir  <- Files.isDirectory(dir) |> Result.mapErr(CliError.File);
-        _      <- if (isDir) Ok(()) else Err(CliError.RootNotADirectory(dir))
-    ) yield ()
