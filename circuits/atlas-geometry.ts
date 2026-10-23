@@ -16,8 +16,8 @@
 // where the circuit's own published sector lines stand on each of the two
 // lines.
 //
-// The lap-origin guard in `atlas-line.ts` is the same check
-// `circuit-geometry.ts` makes of a relation's finish node: a file that started
+// The lap-origin guard in `timing-line.ts` is the same question
+// `circuit-geometry.ts` asks of a relation's finish node: a file that started
 // at some other line would shift every marker by the distance between them
 // while still looking like a lap.
 // For a circuit this repository has not surveyed yet, the atlas's
@@ -48,12 +48,12 @@ import type { AtlasFeature, AtlasFile } from "./atlas-line.ts";
 import {
   atlasFileText,
   checkIdentity,
-  checkOrigin,
   lineOf,
   markerOf,
   placeOf,
   signed,
 } from "./atlas-line.ts";
+import { checkOrigin } from "./timing-line.ts";
 import { circuits, keptAtlas } from "./registry.ts";
 
 // How often the line is sampled for the apartness reading — corners sit tens of

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { Circuit } from "../circuit-geometry.ts";
-import { atlasFileText, checkIdentity, checkOrigin, lineOf, markerOf, placeOf, signed } from "../atlas-line.ts";
+import { atlasFileText, checkIdentity, lineOf, markerOf, placeOf, signed } from "../atlas-line.ts";
 import type { AtlasFeature } from "../atlas-line.ts";
 import { cotaLike } from "./fixtures.ts";
 
@@ -46,20 +46,6 @@ test("checkIdentity refuses a file that names another circuit, and trusts an ano
   assert.throws(
     () => checkIdentity("le_mans", "cota"),
     /the atlas file names itself 'le_mans', not 'cota' — it is not this circuit's line/,
-  );
-});
-
-test("checkOrigin measures the atlas lap's start against the published line", () => {
-  const published = { lat: 30.1, lon: -97.6 };
-  assert.equal(checkOrigin({ lat: 30.1, lon: -97.6 }, published), 0);
-  assert.ok(checkOrigin({ lat: 30.1001, lon: -97.6 }, published) < 25, "a tenth of a hundredth of a degree walks");
-
-  // A circuit whose script publishes no line cannot fail this, and says so at nought.
-  assert.equal(checkOrigin({ lat: 0, lon: 0 }, undefined), 0);
-
-  assert.throws(
-    () => checkOrigin({ lat: 30.101, lon: -97.6 }, published),
-    /the atlas lap starts \d+\.\d m from the published timing line, which is more than 25 m/,
   );
 });
 

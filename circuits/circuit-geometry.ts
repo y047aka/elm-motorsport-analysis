@@ -25,6 +25,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { outlineOf, pitLaneOf } from "./geometry-file.ts";
+import type { PublishedLine } from "./timing-line.ts";
+import { checkStandsAt, nodeWithin } from "./timing-line.ts";
 
 // Every tool in this directory works from the repository root, which is where
 // the configs' `geojson` paths and the data and export directories live.
@@ -133,7 +135,7 @@ export interface Circuit {
   /** The circuit word `Motorsport.Circuit.jsonValue` sends. */
   slug: string;
   finishRole: string;
-  timingLine?: Place & { within?: number };
+  timingLine?: PublishedLine;
   lapLength: number;
   /** The circuit's published sector lengths. */
   sectorMapStretches?: number[];
@@ -461,21 +463,34 @@ export function sectorLines(sectors: Sectors, lapLength: number): SectorLine[] {
  * role was answered to. Getting it wrong moves the whole field down the lap by
  * the distance between the two and draws fine doing it.
  */
+/**
+ * The line the lap is measured from, checked against where the circuit says it
+ * stands. A circuit may publish more than one line -- a start line and a finish
+ * line, which are not the same place -- and every `metres` below is measured
+ * from whichever role was answered to. Getting it wrong moves the whole field
+ * down the lap by the distance between the two and draws fine doing it.
+ */
+/**
+ * The line the lap is measured from, checked against where the circuit says it
+ * stands -- the same question `timing-line.ts` asks of an atlas line's start.
+ *
+ * A circuit may publish more than one line -- a start line and a finish line,
+ * which are not the same place -- and every `metres` below is measured from
+ * whichever role was answered to. Getting it wrong moves the whole field down
+ * the lap by the distance between the two and draws fine doing it.
+ */
 function nearTimingLine(members: OsmMember[], nodes: Map<number, Place>, chosen: number, circuit: Circuit): void {
-  const timingLine = circuit.timingLine;
-  if (!timingLine) return;
-  const within = timingLine.within ?? 10;
-  const distance = (node: Place) => apart(timingLine, node);
-
-  if (distance(nodes.get(chosen)!) <= within) return;
-
-  const lines = members
-    .filter((m) => m.type === "node")
-    .map((m) => `role=${m.role} is ${distance(nodes.get(m.ref)!).toFixed(1)} m from it`)
-    .join("; ");
-  throw new Error(
-    `role=${circuit.finishRole} is ${distance(nodes.get(chosen)!).toFixed(1)} m from the published timing line, ` +
-      `which is not within ${within} m. The relation's lines: ${lines}.`,
+  const line = circuit.timingLine;
+  checkStandsAt(
+    `role=${circuit.finishRole}`,
+    nodes.get(chosen)!,
+    line,
+    nodeWithin,
+    () =>
+      `The relation's lines: ${members
+        .filter((m) => m.type === "node")
+        .map((m) => `role=${m.role} is ${apart(line!, nodes.get(m.ref)!).toFixed(1)} m from it`)
+        .join("; ")}.`,
   );
 }
 

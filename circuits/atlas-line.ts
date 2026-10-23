@@ -1,17 +1,18 @@
 // The track-atlas line as this repository reads it: the shape checks that turn
-// an atlas feature into a line, a place or a fraction of a lap; the guards a
+// an atlas feature into a line, a place or a fraction of a lap; the guard a
 // foreign file passes before it is kept as one circuit's evidence; and the file
 // it is written back into. `atlas-geometry.ts` is the command — it asks, keeps
 // and prints; everything below opens nothing, which is what lets a guard be
-// tested against a file that was never fetched. The kept geometry those guards
-// are measured against is `geometry-file.ts`'s reading, shared with every
-// other reader of a served file.
+// tested against a file that was never fetched. The kept geometry the guard is
+// measured against is `geometry-file.ts`'s reading, shared with every other
+// reader of a served file, and the lap-origin guard is `timing-line.ts`'s —
+// the question the pipeline asks of a relation's finish node too.
 //
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery.
 
 import type { Circuit, Place } from "./circuit-geometry.ts";
-import { apart, onEarth, roundTenth } from "./circuit-geometry.ts";
+import { onEarth, roundTenth } from "./circuit-geometry.ts";
 
 /** One feature of a track-atlas layer: its role, and what that role's own
  * properties say. Corner and pit markers place themselves along the lap with
@@ -29,13 +30,6 @@ export type AtlasFeature = {
 };
 
 export type AtlasFile = { features?: AtlasFeature[] };
-
-// How far an atlas file's first point may stand from the published timing line
-// before the lap is judged to start somewhere else. A file that started at some
-// other line would shift every marker by the distance between them while still
-// looking like a lap — the same mistake `circuit-geometry.ts` guards against
-// when it checks a relation's finish node.
-const originWithin = 25;
 
 /** An atlas outline as the line it measures: degrees, lon before lat. */
 export function lineOf(feature: AtlasFeature): [number, number][] {
@@ -78,20 +72,6 @@ export function checkIdentity(named: string | undefined, slug: string): void {
       `the atlas file names itself '${named}', not '${slug}' — it is not this circuit's line`,
     );
   }
-}
-
-/** How far the atlas lap's first point stands from the published timing line,
- * and the failure when that is further than the lap may start elsewhere. A
- * circuit that publishes no line goes unchecked, and says so with nought. */
-export function checkOrigin(first: Place, timingLine?: Place & { within?: number }): number {
-  const distance = timingLine ? apart(first, timingLine) : 0;
-  if (timingLine && distance > originWithin) {
-    throw new Error(
-      `the atlas lap starts ${distance.toFixed(1)} m from the published timing line, ` +
-        `which is more than ${originWithin} m — its markers would be measured from the wrong line`,
-    );
-  }
-  return distance;
 }
 
 /** The atlas line in this repository's own profile, at its own length: it does
