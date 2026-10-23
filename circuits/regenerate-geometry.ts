@@ -5,13 +5,11 @@
 // reproduce the geometry moved the degrees in the code; why that is the check
 // no Elm test can be is `circuits/README.md`.
 //
-//     node circuits/regenerate-geometry.mjs [<circuit> ...] [--write | --freeze]
+//     node circuits/regenerate-geometry.ts [<circuit> ...] [--write | --freeze]
 //
-// `surveyed_at` is the one property exempt from the fence: it stamps which
-// answer a file was written from rather than what the drawing is made of, and
-// it is the one property a live regeneration must move while every degree
-// stands still. The Elm side reads neither it nor `surveyed_length_m`; the
-// fence reads both.
+// `surveyed_at` is the one exempt property — `geometry-drift.ts` says what it
+// stamps and why a live regeneration must move it. The Elm side reads neither
+// it nor `surveyed_length_m`; the fence reads both.
 //
 // --write re-lays the geometry files from the kept answer — where a changed
 // writer lands its bytes with no survey moved. --freeze asks OpenStreetMap now
@@ -19,19 +17,24 @@
 // circuit's geometry script never reaches the answer by default: a
 // regeneration that silently answered itself from the frozen survey would stop
 // meaning what it says.
+//
+// How a fresh file answers to a kept one — feature by feature, property by
+// property, `surveyed_at` exempt — is `geometry-drift.ts`, which opens nothing.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { ask, geoJsonString, lapOf, repoDir } from "./circuit-geometry.mjs";
-import { circuits, keptAnswer } from "./registry.mjs";
+import type { Circuit } from "./circuit-geometry.ts";
+import { ask, geoJsonString, lapOf, reason, repoDir } from "./circuit-geometry.ts";
+import { driftOf } from "./geometry-drift.ts";
+import { circuits, keptAnswer } from "./registry.ts";
 
 main().catch((error) => {
-  console.error(error.message);
+  console.error(reason(error));
   process.exitCode = 1;
 });
 
-async function main() {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const write = argv.includes("--write");
   const freeze = argv.includes("--freeze");
@@ -45,7 +48,7 @@ async function main() {
   }
 }
 
-async function reRun(circuit, write, freeze) {
+async function reRun(circuit: Circuit, write: boolean, freeze: boolean): Promise<void> {
   const path = keptAnswer(circuit);
 
   let answer;
@@ -55,7 +58,7 @@ async function reRun(circuit, write, freeze) {
     try {
       answer = JSON.parse(await readFile(path, "utf8"));
     } catch (error) {
-      if (error.code !== "ENOENT") throw error;
+      if ((error as { code?: string }).code !== "ENOENT") throw error;
       console.log(`${circuit.slug}: no kept answer yet — --freeze asks OpenStreetMap and keeps one.`);
       return;
     }
@@ -82,38 +85,3 @@ async function reRun(circuit, write, freeze) {
   process.exitCode = 1;
 }
 
-// How one geometry file's data answers to another's, feature by feature and
-// property by property. The comparison is of parsed data, not bytes: what the
-// fence answers for is the drawing, and the writer's layout is allowed to
-// change between the file and this reading — --write is where it lands.
-function driftOf(fresh, kept) {
-  const drift = [];
-  const roles = [...new Set([...fresh.features, ...kept.features].map((f) => f.properties?.role))];
-  for (const role of roles) {
-    const a = fresh.features.find((f) => f.properties?.role === role);
-    const b = kept.features.find((f) => f.properties?.role === role);
-    if (!a || !b) {
-      drift.push(`${role}: only ${a ? "the regeneration" : "the kept file"} holds it`);
-      continue;
-    }
-    if (JSON.stringify(a.geometry) !== JSON.stringify(b.geometry)) {
-      drift.push(`${role}: the line's points differ at point ${firstDiff(a.geometry.coordinates, b.geometry.coordinates)}`);
-    }
-    for (const key of new Set([...Object.keys(a.properties), ...Object.keys(b.properties)])) {
-      if (key === "surveyed_at") continue;
-      if (JSON.stringify(a.properties[key]) !== JSON.stringify(b.properties[key])) {
-        drift.push(`${role}: ${key} is ${shown(b.properties[key])} in the file, ${shown(a.properties[key])} from the answer`);
-      }
-    }
-  }
-  return drift;
-}
-
-function firstDiff(a, b) {
-  for (let at = 0; at < Math.max(a.length, b.length); at++) {
-    if (JSON.stringify(a[at]) !== JSON.stringify(b[at])) return at;
-  }
-  return -1;
-}
-
-const shown = (value) => (value === undefined ? "absent" : JSON.stringify(value));

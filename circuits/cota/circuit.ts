@@ -1,13 +1,15 @@
 // The Circuit of the Americas' config for the geometry pipeline: the relation
 // to survey, the figures the circuit publishes, and the word its rounds are
-// known by. What the pipeline writes and how is `circuit-geometry.mjs`, run by
-// `write-geometry.mjs`; where these figures come from and what holds them is
+// known by. What the pipeline writes and how is `circuit-geometry.ts`, run by
+// `write-geometry.ts`; where these figures come from and what holds them is
 // `circuits/README.md`.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // geometry written here is a derivative of it.
 
-export const circuit = {
+import type { Circuit } from "../circuit-geometry.ts";
+
+export const circuit: Circuit = {
   relation: 6537729,
   slug: "cota",
 
@@ -27,20 +29,24 @@ export const circuit = {
   lapLength: 5515.0,
 
   // Where the sector map puts the lines the lap is timed to, measured along
-  // the centreline; they add up to the published length exactly. Written into
-  // the geometry as `sectors` so `check-timing-lines.mjs` reads the geometry
-  // file rather than this script. The drawing is checked against the published
-  // lap length and not against these.
-  sectorMapStretches: [1313.2, 2254.3, 1947.5],
-  sectorsSource: "the circuit's own track sector map",
+  // the centreline; they add up to the published length exactly. One map
+  // serves every season here, so it is written into the geometry as `sectors`
+  // and `check-timing-lines.ts` reads the geometry file rather than this
+  // script. The drawing is checked against the published lap length and not
+  // against these.
+  sectors: {
+    kind: "published",
+    source: "the circuit's own track sector map",
+    stretches: [1313.2, 2254.3, 1947.5],
+  },
 
   // The track-atlas layer for the layout this app draws — a midline measured
-  // off orthoimagery, read against the survey above by `atlas-geometry.mjs`.
+  // off orthoimagery, read against the survey above by `atlas-geometry.ts`.
   atlas: {
     url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson",
   },
 
   geojson: "app/static/geometry/cota.geojson",
-  script: "circuits/cota/circuit.mjs",
+  script: "circuits/cota/circuit.ts",
   survey: "The Circuit of the Americas",
 };

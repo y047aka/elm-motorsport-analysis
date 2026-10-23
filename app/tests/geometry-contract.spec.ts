@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { existsSync, readdirSync } from 'node:fs';
-import { circuit as cota } from '../../circuits/cota/circuit.mjs';
-import { circuit as leMans } from '../../circuits/le_mans/circuit.mjs';
-import { geometryFromGeoJson } from '../../circuits/circuit-geometry.mjs';
+import { circuit as cota } from '../../circuits/cota/circuit.ts';
+import { circuit as leMans } from '../../circuits/le_mans/circuit.ts';
+import { geometryFromGeoJson } from '../../circuits/circuit-geometry.ts';
 import { drawnNames, readSource } from './helpers';
 
 /**
@@ -43,7 +43,7 @@ test('every circuit Shared draws has its geometry where the app reaches for it',
 
 test("a circuit's directory is named by the word the app draws it by", () => {
   for (const name of drawnNames()) {
-    expect(authored[name].script, `${name}'s config does not live in circuits/${name}/`).toBe(`circuits/${name}/circuit.mjs`);
+    expect(authored[name].script, `${name}'s config does not live in circuits/${name}/`).toBe(`circuits/${name}/circuit.ts`);
   }
 });
 
@@ -68,15 +68,15 @@ test('the flake commands and the circuit tools are one list', () => {
   expect(registered.length, 'the flake registers no geometry commands').toBeGreaterThan(0);
 
   for (const { app, script } of registered) {
-    expect(existsSync(new URL(`../../circuits/${script}.mjs`, import.meta.url)), `nix run .#${app} would fail: circuits/${script}.mjs is not here`).toBe(true);
+    expect(existsSync(new URL(`../../circuits/${script}.ts`, import.meta.url)), `nix run .#${app} would fail: circuits/${script}.ts is not here`).toBe(true);
   }
 
   // A tool is a script whose own header runs itself by its own filename;
   // library modules cite other tools' usage but never their own name.
   const unwrapped = readdirSync(new URL('../../circuits/', import.meta.url))
-    .filter((file) => file.endsWith('.mjs'))
+    .filter((file) => file.endsWith('.ts'))
     .filter((file) => readSource(`circuits/${file}`).includes(`node circuits/${file}`))
-    .filter((file) => !registered.some((each) => each.script === file.replace(/\.mjs$/, '')));
+    .filter((file) => !registered.some((each) => each.script === file.replace(/\.ts$/, '')));
   expect(unwrapped, `these tools name themselves commands but no geometry app registers them: ${unwrapped.join(', ')}`).toEqual([]);
 });
 

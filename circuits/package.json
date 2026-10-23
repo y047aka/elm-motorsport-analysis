@@ -1,0 +1,4 @@
+{
+  "//": "Declares this directory's modules as ES modules; there are no dependencies here and nothing is ever installed into it.",
+  "type": "module"
+}
