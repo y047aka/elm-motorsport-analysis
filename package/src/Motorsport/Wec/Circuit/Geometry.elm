@@ -54,7 +54,9 @@ publishes: one metre per point, none going backwards, and the last one standing
 at the published length.
 
 The file's own `sectors` are not read or checked here: nothing in a drawing is
-placed by them, and `check-timing-lines.mjs` is the reader that judges them.
+placed by them, and `nix run .#geometry-timing-lines` is the reader that judges
+them -- out of the figures `Motorsport.Circuit` holds rather than out of this
+file.
 
 -}
 decoder : { lapLength : Float } -> Decoder Geometry

@@ -31,9 +31,12 @@ export const circuit: Circuit = {
   // Where the sector map puts the lines the lap is timed to, measured along
   // the centreline; they add up to the published length exactly. One map
   // serves every season here, so it is written into the geometry as `sectors`
-  // and `check-timing-lines.ts` reads the geometry file rather than this
-  // script. The drawing is checked against the published lap length and not
-  // against these.
+  // and the drawing places its cars between them. The lap length and these
+  // stretches are authored again in `Motorsport.Circuit.timingMap`, which is
+  // what `nix run .#geometry-timing-lines` reads instead of this file — it
+  // reads no JSON, and is told the two sets of figures agree by
+  // `app/tests/circuit-timing-map.spec.ts` and by nothing else. The drawing is
+  // checked against the published lap length and not against these.
   sectors: {
     kind: "published",
     source: "the circuit's own track sector map",

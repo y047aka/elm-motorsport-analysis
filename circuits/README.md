@@ -5,7 +5,10 @@ and one directory per circuit — its config, the Overpass answer the geometry
 was written from, and the atlas reading measured against it. The
 commands are the flake's — `nix run .#geometry-write -- <circuit>`,
 `.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`,
-`.#geometry-regenerate`, `.#geometry-timing-lines`. What follows is what no
+`.#geometry-regenerate`, `.#geometry-timing-lines`. Everything here is
+TypeScript but one: the timing-lines reading is a command of the Flix CLI, so it
+reads the feed the load reads with the decoder the load decodes it with, and
+`flix/README.md` holds how that command runs. What follows is what no
 single script's header says for itself; what a script can say at its own call
 site, its header says there and is not repeated here.
 
@@ -83,8 +86,9 @@ map for that race, and differ by season; the maps are not to be redistributed,
 so they are not in the repository. COTA's are its own track sector map's, and
 are one set used for every season here, since no later map has been read. Which
 of the two a circuit's map is belongs to its config, as its `sectors` — one set
-`published` for every season, or `perSeason` — and the timing-lines check refuses
-a round on the second kind by quoting the circuit's own reason. Nothing in a
+`published` for every season, or `perSeason` — and `nix run
+.#geometry-timing-lines` refuses a round on the second kind by quoting the
+circuit's own reason. Nothing in a
 round's own times picks one placement of those lines out of
 another — a sector's share of a lap is not a share of its distance, and every
 placement has a mean speed of its own — so what they rest on is that the
@@ -96,14 +100,25 @@ What the times can answer is whether the lines have moved, and `nix run
 class's fastest sector times as two distances round the lap, and the two
 rounds here agree within half a percent of a lap — the only evidence there is
 that one map serves both. The command judges the season-to-season difference
-and never the shares against the map, and prints whether the export in the
-tree counts the same shares.
+and never the shares against the map.
 
 The geometry publishes what the circuit itself publishes about its lines: the
-authored stretches travel in the geometry as `sectors`, so the check reads the
-geometry file rather than the config behind it. How the drawing places a line the map gives
-no distance for is app-side — `Tracker.Config.lapScale`, and the `ConfigTest`
-combinations that hold it.
+authored stretches travel in the geometry as `sectors`, which is what the
+drawing places its cars between. The report reads the same figures from
+`Motorsport.Circuit.timingMap` rather than from the geometry, because a report
+that laid a place the times imply against the surveyed shape would need a JSON
+reader and this project has none — `Util.Json.Encode` writes and parses
+nothing. So a circuit's published lap length and stretches are held twice, in
+the circuit's config and in `Motorsport.Circuit`, one for the drawing and one
+for the report, and `app/tests/circuit-timing-map.spec.ts` reads both sources
+and fails them apart; nothing else connects them. What is not answerable this
+way is where a place the shares imply stands against the drawn line itself —
+that is `.#geometry-regenerate`'s and `.#geometry-diff`'s to say, measuring the
+geometry rather than a season. It is how COTA's second line was found standing
+6.7 m off the circuit's own map, which is how far a round whose two seasons agree
+to within 40 m can still be drawn wrong by. How the drawing places a line the map
+gives no distance for is app-side — `Tracker.Config.lapScale`, and the
+`ConfigTest` combinations that hold it.
 
 ## The atlas readings
 
@@ -114,8 +129,8 @@ measured from orthoimagery, not a survey stretched to a published length, at
 judged against rather than in what gets served. For a circuit this repository
 has not surveyed yet, the atlas's `start_finish` point is a surveyed
 coordinate to seed a circuit config's `timingLine` with; whether the lines the
-times are read against stand where the seeded line puts them is
-`check-timing-lines.ts`'s to answer, once a round has been loaded.
+times are read against stand where the seeded line puts them is `nix run
+.#geometry-timing-lines`'s to answer, once a round has been loaded.
 
 `nix run .#geometry-diff` lays any two kept geometries against each other —
 mean and maximum apartness, and an SVG overlay on request — so a fresh survey
@@ -128,8 +143,11 @@ change judged on that report.
 
 Every tool is two things: the asking, and the reading of an answer. The asking —
 Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the
-reading moved into a module beside it that opens nothing. `timing-feed.ts` turns
-the feed's text into rows, fastest sectors, shares and implied lines;
+reading moved into a module beside it that opens nothing. `Cli.TimingLines.Feed`
+in the Flix CLI turns the feed's text into rows, fastest sectors, shares and
+implied lines, and is tested by `nix run .#flix-test` rather than here; the
+reading of a CSV is one reading and the load's `Util.Csv.Decode` is the other
+half of it, which is why the report is written where the feed is already read;
 `circuit-candidates.ts` says which tags could name a circuit and what an answer's
 roles measure; `geometry-file.ts` holds the profile's own reading — the outline
 with its own metres going up, and the pit lane beside it — which the
@@ -156,3 +174,6 @@ pins that the circuit's directory under this one is named by that same word.
 `app/tests/circuit-contract.spec.ts` pins the word the summaries send for a
 circuit against the word `Shared.trackOf` picks a drawing by; a rename on one
 side alone would leave a round drawn as the ring with nothing red.
+`app/tests/circuit-timing-map.spec.ts` pins the figures the report reads — the
+published lap length and sector stretches — against the figures the drawing was
+laid from, which are held in two languages and compiled against nothing.

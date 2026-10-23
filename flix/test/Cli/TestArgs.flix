@@ -177,4 +177,69 @@ pub mod Cli.TestArgs {
     def testServeTakesNoDirectory(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("--serve" :: "../app/static/wec" :: Nil)))
 
+    // ------------------------------------------------------------ timing lines
+
+    def report(): List[String] = "--timing-lines" :: csv()
+
+    /// The report reads one round's feed, named outright rather than taken from the
+    /// calendar's whole field: the question is about one circuit.
+    @Test
+    def testReportReadsOneRound(): Unit \ Assert =
+        match Args.parse(report() ::: "2026/cota_6h" :: Nil) {
+            case Ok(Command.TimingLines(lines)) =>
+                Assert.assertTrue(lines#csv == "../data/wec");
+                Assert.assertTrue(lines#season == 2026);
+                Assert.assertTrue(lines#id == "cota_6h");
+                Assert.assertTrue(lines#against == None);
+                Assert.assertTrue(lines#tolerance == 40.0)
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// The season to lay beside it, and the distance one line is allowed to have
+    /// moved.
+    @Test
+    def testReportTakesASeasonAndADistance(): Unit \ Assert =
+        match Args.parse(report() ::: "--against" :: "2025" :: "--tolerance" :: "55.5" :: "2026/cota_6h" :: Nil) {
+            case Ok(Command.TimingLines(lines)) =>
+                Assert.assertTrue(lines#against == Some(2025));
+                Assert.assertTrue(lines#tolerance == 55.5)
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// The feeds are read out of a directory, so a report given none has nowhere to
+    /// look.
+    @Test
+    def testReportNeedsTheFeedDirectory(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--timing-lines" :: "2026/cota_6h" :: Nil)))
+
+    /// A report is not a stage of a converting run, and is given no database to
+    /// compute in.
+    @Test
+    def testReportIsNotAStageOfConverting(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "--load" :: "2026/cota_6h" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "--export" :: "2026/cota_6h" :: Nil)))
+
+    /// The round is named as one the calendar lists, which is where its season's
+    /// directory comes from: a bare id is no round, and neither is a season that ran
+    /// no such round.
+    @Test
+    def testReportRefusesEverythingElseByName(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "cota_6h" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "2024/cota_6h" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "2026/cota_6h" :: "extra" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "--against" :: "24" :: "2026/cota_6h" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "--tolerance" :: "0" :: "2026/cota_6h" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "--tolerance" :: "far" :: "2026/cota_6h" :: Nil)))
+
+    /// A report asked for with no round names the mistake rather than reading every
+    /// season at once.
+    @Test
+    def testReportNamesOneRound(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "--against" :: "2025" :: Nil)))
+
+    /// `--port` is the server's, and a run naming the report is not the server.
+    @Test
+    def testPortIsNotForTheReport(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse(report() ::: "--port" :: "9000" :: "2026/cota_6h" :: Nil)))
+
 }

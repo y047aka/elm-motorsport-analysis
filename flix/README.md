@@ -6,6 +6,19 @@ of the same jar. They are run through the repository's Nix flake, which the
 root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
 `.#cli-run`, `.#cli-load`, `.#cli-export`, `.#serve-api`.
 
+A third command comes out of the same jar and computes in no database: `.#
+geometry-timing-lines` reads two seasons' timing feeds and prints how far round
+the lap one circuit's timing lines have moved between them. It is a command of
+this CLI rather than a tool under `circuits/` because it reads the feed the load
+reads with the decoder the load decodes it with, and divides the lap the way
+`Motorsport.Track` divides it — written again there, deliberately, since a
+reading that calls the function that wrote the numbers it is checking can report
+no disagreement. `Cli.TimingLines.runAll` prints and returns an exit code, and
+its effect says `IO` and `Console` and no `SqlRead`, which is how a command that
+cannot reach a database cannot be answered from a stale one; the flake hands it
+no `--database` and no `DATABASE_URL`. Where its timings come from and what they
+cannot answer is `circuits/README.md`'s.
+
 What follows is what the code cannot say for itself.
 
 ## The server
@@ -480,6 +493,13 @@ paying for the same split.
   how the lap divides) and needs no database; `test/Round/` and
   `test/Server/TestApi.flix` drive the reading, and need one. A subject with
   both has a file in each, named for the module it drives.
+- **A reading with no database** — `test/Cli/TestTimingFeed.flix` hands the
+  timing feed a CSV written out in the file, and `test/Motorsport/TestCircuit.flix`
+  freezes what each circuit publishes about its timing lines. Neither reaches a
+  database, a file or the network, which is what the readings they drive are for;
+  the figures `Motorsport.Circuit` holds are tied to the ones the drawing is laid
+  from by `app/tests/circuit-timing-map.spec.ts`, and nothing in this project can
+  read the geometry file to do it.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`
   is removed. `rm -rf flix/build` before believing a green run.

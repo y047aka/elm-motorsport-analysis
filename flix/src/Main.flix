@@ -8,6 +8,7 @@ use Db.Jdbc
 use Cli.Errors.CliError
 use Cli.Load
 use Cli.Export
+use Cli.TimingLines
 
 def main(): Unit \ {Env, IO, Exit, Console} =
     let code = match Args.parse(Env.getArgs()) {
@@ -24,6 +25,8 @@ def main(): Unit \ {Env, IO, Exit, Console} =
             onDirectories(load#csv :: Nil, load#database, () -> Load.runAll(load#csv))
         case Ok(Command.Export(export)) =>
             onDirectories(export#out :: Nil, export#database, () -> Export.runAll(export#out, export#exported))
+        case Ok(Command.TimingLines(lines)) =>
+            onFeed(lines#csv, () -> TimingLines.runAll(lines#csv, lines#season, lines#id, lines#against, lines#tolerance))
     };
     Exit.exit(code)
 
@@ -51,6 +54,17 @@ def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> I
                         1
                 }
             )
+    }
+
+/// The timing-lines report reads the feeds and prints: nothing it answers is
+/// counted in SQL, so it is handed no `--database` and no `DATABASE_URL`, and the
+/// directory it is given is only checked for being there, as `--csv` is.
+def onFeed(dir: String, stage: Unit -> Int32 \ {IO, Console}): Int32 \ {IO, Console} =
+    match checkDirectory(dir) {
+        case Err(e) =>
+            Console.eprintln("Error: ${e}");
+            1
+        case Ok(()) => stage()
     }
 
 /// The database is reached once per request, so the server starts before one is

@@ -137,6 +137,14 @@
           (cd flix && flix run -- ${csvDir} ${outDir})
         '';
 
+        # The timing-lines report is a command of this CLI rather than a tool
+        # under `circuits/`: it reads the same feed the load reads, and the
+        # figures `Motorsport.Circuit` holds, and computes in no database -- so
+        # it is the one `flix run` handed neither `--database` nor
+        # `DATABASE_URL`, which is how a run that cannot reach a database
+        # cannot be answered from a stale one.
+        timingLinesCmd = "flix run -- --timing-lines ${csvDir} \"$@\"";
+
         # The CLI converts the rounds `Motorsport.Calendar` lists, reading each
         # season directory under one directory and writing into the same one
         # under the other. Anything else given to `nix run` is forwarded, which
@@ -171,6 +179,8 @@
         # carry. Which circuits are surveyed is the registry's, not these
         # registrations'; only geometry-write writes what the app serves,
         # under app/static/geometry, and the rest write beside it or read it.
+        # Timing lines are not among them: that reading is a command of the
+        # CLI, and is registered with the `flix` apps below.
         geometryApp = name: script:
           pkgs.writeShellApplication {
             inherit name;
@@ -242,7 +252,7 @@
           geometry-atlas       = { type = "app"; program = "${geometryApp "geometry-atlas" "atlas-geometry"}/bin/geometry-atlas";                                        meta.description = "Measure a dataset's line against a circuit's kept geometry, and keep it beside it (<circuit> [--file gp.geojson])"; };
           geometry-diff        = { type = "app"; program = "${geometryApp "geometry-diff" "geometry-diff"}/bin/geometry-diff";                                          meta.description = "Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from app/, [--every <m>] [--svg <out.svg>])"; };
           geometry-regenerate  = { type = "app"; program = "${geometryApp "geometry-regenerate" "regenerate-geometry"}/bin/geometry-regenerate";                      meta.description = "Re-run the geometry pipeline over each circuit's kept Overpass answer and fail unless it reproduces the kept geometry ([<circuit> ...]; --write re-lays the files from the kept answer; --freeze asks OpenStreetMap now and keeps both)"; };
-          geometry-timing-lines = { type = "app"; program = "${geometryApp "geometry-timing-lines" "check-timing-lines"}/bin/geometry-timing-lines";                   meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (<season>/<id> [--against <season>] [--tolerance <metres>])"; };
+          geometry-timing-lines = { type = "app"; program = "${mkFlixApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (Flix; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           geometry-probe       = { type = "app"; program = "${geometryApp "geometry-probe" "probe-circuit"}/bin/geometry-probe";                                          meta.description = "Ask OpenStreetMap which relations hold a circuit at a place, each lap measured, before a circuit's config is authored (<lat>,<lon> [...] [--radius <km>], or a s,w,n,e box)"; };
           geometry-test        = { type = "app"; program = "${geometryTest}/bin/geometry-test";                                                                          meta.description = "Run the circuit tools' unit tests (Node's own runner over circuits/tests/; no network, no files written)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
