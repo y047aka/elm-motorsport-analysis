@@ -11,7 +11,7 @@
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery.
 
-import type { Circuit, Place } from "./circuit-geometry.ts";
+import type { Place } from "./circuit-geometry.ts";
 import { onEarth, roundTenth } from "./circuit-geometry.ts";
 
 /** One feature of a track-atlas layer: its role, and what that role's own
@@ -74,12 +74,17 @@ export function checkIdentity(named: string | undefined, slug: string): void {
   }
 }
 
+/** Whose line it is and where it was measured from — the two claims of its
+ * own that the written atlas file carries, and the only two the writing
+ * needs. */
+export type AtlasProvenance = { slug: string; source: string };
+
 /** The atlas line in this repository's own profile, at its own length: it does
  * not end at the published lap length, and it is written not to pretend
  * otherwise — `stretched: false` says so at the properties a reader sees
  * first. Keeping it anywhere is `atlas-geometry.ts`'s. */
 export function atlasFileText(
-  circuit: Circuit,
+  line: AtlasProvenance,
   coords: [number, number][],
   corners: AtlasFeature[],
   pits: AtlasFeature[],
@@ -91,9 +96,9 @@ export function atlasFileText(
       type: "Feature",
       properties: {
         role: "outline",
-        circuit: circuit.slug,
+        circuit: line.slug,
         basis: "measured-midline",
-        source: circuit.atlas!.url,
+        source: line.source,
         license: "ODbL",
         lap_length_m: roundTenth(length),
         stretched: false,

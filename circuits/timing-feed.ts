@@ -10,7 +10,7 @@
 // `circuits/README.md`; what lives here is only the arithmetic that error was
 // measured against.
 
-import type { Circuit, SectorLine } from "./circuit-geometry.ts";
+import type { SectorLine } from "./circuit-geometry.ts";
 
 /** A feed row: every column as the file wrote it. */
 export type Row = Record<string, string>;
@@ -19,9 +19,10 @@ export type Row = Record<string, string>;
  * time is recorded. */
 export type Times = { [sector: string]: number | null };
 
-/** A round as these readings need it: a circuit's config and the map's lines
- * the readings are printed against. */
-export type Round = Circuit & { lines: SectorLine[] };
+/** A round as these readings need it: the lap length the map's lines add up
+ * to, and the map's lines the readings are printed against. Nothing about the
+ * circuit itself reaches these readings. */
+export type Round = { lapLength: number; lines: SectorLine[] };
 
 /** Parsed arguments: the round to read, the season to read it against, and how
  * far apart one line may come to stand in the two readings. */

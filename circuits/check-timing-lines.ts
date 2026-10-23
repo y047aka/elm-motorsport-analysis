@@ -97,13 +97,12 @@ async function main(): Promise<void> {
   }
   const circuit = rounds[args.id];
   // The question this asks — do one map's lines still stand a season later —
-  // has no answer on a circuit the organiser re-maps every year; the refusal
-  // quotes the circuit's own reason rather than this script's opinion.
+  // has no answer on a circuit the organiser re-maps every year.
   if (circuit.sectors.kind !== "published") {
     fail(`${args.id} is run on ${circuit.survey}, whose timing map is not one set of lines: ${circuit.sectors.reason}.`);
   }
 
-  const round: Round = { ...circuit, lines: await linesOf(circuit) };
+  const round: Round = { lapLength: circuit.lapLength, lines: await linesOf(circuit) };
   const seasons = args.against === null ? [args.season] : [args.season, args.against];
 
   const readings: { reading: Reading; note: string }[] = [];
@@ -112,9 +111,9 @@ async function main(): Promise<void> {
     readings.push({ reading, note: await agreesWithExport(reading) });
   }
 
-  console.log(`The lines ${round.survey} is drawn on, out of ${round.script}: ${linePositions(round)}.`);
+  console.log(`The lines ${circuit.survey} is drawn on, out of ${circuit.script}: ${linePositions(round)}.`);
   for (const each of readings) printRound(each, round);
-  if (args.against !== null) judge(readings[0].reading, readings[1].reading, round, args.tolerance);
+  if (args.against !== null) judge(readings[0].reading, readings[1].reading, round, circuit, args.tolerance);
 }
 
 // ---------------------------------------------------------------- the feed
@@ -202,7 +201,7 @@ function printRound(each: { reading: Reading; note: string }, round: Round): voi
   console.log(each.note);
 }
 
-function judge(season: Reading, against: Reading, round: Round, limit: number): void {
+function judge(season: Reading, against: Reading, round: Round, circuit: Circuit, limit: number): void {
   const shift = lineMovement(season.lines, against.lines);
   const columns: [string, number][] = [["class", 12], ...round.lines.map((line): [string, number] => [line.id, 11])];
 
@@ -219,7 +218,7 @@ function judge(season: Reading, against: Reading, round: Round, limit: number): 
     console.log(
       [
         `\n${metres(shift.furthest)} m is over the ${metres(limit)} m allowed:`,
-        `${season.season} and ${against.season} are far enough apart at ${round.survey}`,
+        `${season.season} and ${against.season} are far enough apart at ${circuit.survey}`,
         `to read a map of the later one and place the lines by season, as Le Mans's are.`,
       ].join(" "),
     );

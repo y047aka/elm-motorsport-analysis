@@ -5,12 +5,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { Circuit } from "../circuit-geometry.ts";
 import { atlasFileText, checkIdentity, lineOf, markerOf, placeOf, signed } from "../atlas-line.ts";
 import type { AtlasFeature } from "../atlas-line.ts";
-import { cotaLike } from "./fixtures.ts";
-
-const circuit: Circuit = cotaLike;
 
 const feature = (properties: AtlasFeature["properties"], coordinates?: unknown): AtlasFeature => ({
   properties,
@@ -57,7 +53,13 @@ test("atlasFileText writes the atlas line at its own length, saying so", () => {
   ];
   const corners = [feature({ role: "corner", id: "T1", marker: 0.02, direction: "right" }, [-97.605, 30.105])];
   const pits = [feature({ role: "pit_entry", name: "Pit Entry", marker: 0.95 }, [-97.615, 30.115])];
-  const written = atlasFileText(circuit, coords, corners, pits, [0, 2750.14, 5500.23]);
+  const written = atlasFileText(
+    { slug: "cota", source: "https://example.org/cota.geojson" },
+    coords,
+    corners,
+    pits,
+    [0, 2750.14, 5500.23],
+  );
 
   const file = JSON.parse(written) as { features: { properties: Record<string, unknown>; geometry: unknown }[] };
   assert.equal(file.features.length, 3, "outline, corner and pit");

@@ -22,9 +22,9 @@ import {
   table,
   whole,
 } from "../timing-feed.ts";
-import { cotaLike } from "./fixtures.ts";
+import type { Round } from "../timing-feed.ts";
 
-const round = { ...cotaLike, lines: [{ id: "s2", metres: 2000 }, { id: "s3", metres: 3500 }] };
+const round: Round = { lapLength: 5515, lines: [{ id: "s2", metres: 2000 }, { id: "s3", metres: 3500 }] };
 
 const feed = [
   "CLASS;S1;S2;S3",

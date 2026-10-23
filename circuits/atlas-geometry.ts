@@ -131,7 +131,7 @@ async function run(slug: string, argv: string[]): Promise<void> {
     };
   });
 
-  await keep(circuit, coords, corners, pits, theirMetres);
+  await keep(circuit, circuit.atlas.url, coords, corners, pits, theirMetres);
   print(circuit, {
     every,
     length,
@@ -155,9 +155,11 @@ function ask(url: string): Promise<AtlasFile> {
 }
 
 // Where a reading lands, and the only side effect of a run: the file itself.
-// What its bytes say is `atlas-line.ts`'s `atlasFileText`.
+// What its bytes say is `atlas-line.ts`'s `atlasFileText`, to which the slug
+// and the fetched layer's URL are all the provenance a file carries.
 async function keep(
   circuit: Circuit,
+  source: string,
   coords: [number, number][],
   corners: AtlasFeature[],
   pits: AtlasFeature[],
@@ -165,7 +167,7 @@ async function keep(
 ): Promise<void> {
   const path = keptAtlas(circuit);
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, atlasFileText(circuit, coords, corners, pits, theirMetres));
+  await writeFile(path, atlasFileText({ slug: circuit.slug, source }, coords, corners, pits, theirMetres));
 }
 
 /** What the reading prints: the apartness of the two lines, and where each

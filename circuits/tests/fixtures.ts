@@ -19,20 +19,6 @@ export const testCircuit: Circuit = {
   survey: "The Test Circuit",
 };
 
-/** A stand-in for a circuit like COTA: a lap of the length the timing feed
- * measures in seconds, and an atlas layer to read against it. */
-export const cotaLike: Circuit = {
-  relation: 1,
-  slug: "cota",
-  finishRole: "start",
-  lapLength: 5515,
-  sectors: { kind: "published", source: "the circuit's own track sector map", stretches: [2000, 1500, 2015] },
-  atlas: { url: "https://example.org/cota.geojson" },
-  geojson: "x",
-  script: "x",
-  survey: "The Circuit of the Americas",
-};
-
 export const osmNode = (id: number, lat: number, lon: number): OsmNode => ({ type: "node", id, lat, lon });
 
 export const osmWay = (id: number, nodes: number[], tags: Record<string, string> = {}): OsmWay => ({
