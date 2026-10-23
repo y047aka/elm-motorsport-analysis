@@ -8,10 +8,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { GeometryFile } from "../circuit-geometry.ts";
-import { outlineOf, pitLaneOf, readKeptGeometry } from "../geometry-file.ts";
+import { lineBases, outlineOf, pitLaneOf, readKeptGeometry } from "../geometry-file.ts";
 
 const outline = (props: Record<string, unknown>, coords: [number, number][]) => ({
-  properties: { role: "outline", ...props },
+  properties: { role: "outline", basis: "measured-midline", ...props },
   geometry: { type: "LineString", coordinates: coords },
 });
 const pit = (coords?: unknown) => ({
@@ -46,6 +46,21 @@ test("outlineOf refuses a file by name when its claims and points disagree", () 
     () => outlineOf(file([outline({ metres: [0, 60, 50] }, [[0, 47], [0.01, 47], [0.01, 46.99]])]), "cota"),
     /cota: metres go backwards at point 2/,
   );
+});
+
+test("outlineOf refuses a basis it does not know, and a file that names none", () => {
+  assert.throws(
+    () => outlineOf(file([outline({ basis: "satellite-stitch", metres: [0, 50] }, [[0, 47], [0.01, 47]])]), "cota"),
+    /cota: the outline names basis "satellite-stitch", which is not a line this repository reads/,
+  );
+  const { properties: _properties, ...headless } = outline({ metres: [0, 50] }, [[0, 47], [0.01, 47]]);
+  assert.throws(
+    () => outlineOf(file([{ ...headless, properties: { role: "outline" } }]), "cota"),
+    /cota: the outline names basis nothing, which is not a line this repository reads/,
+  );
+  for (const basis of lineBases) {
+    assert.equal(outlineOf(file([outline({ basis, metres: [0, 50] }, [[0, 47], [0.01, 47]])]), "cota").props.basis, basis);
+  }
 });
 
 test("pitLaneOf wants a pit lane that is a line", () => {

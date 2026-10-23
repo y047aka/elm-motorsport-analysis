@@ -8,13 +8,29 @@
 // stranger's too — the atlas line is one — so a failure names the file it was
 // reading.
 //
-// What is checked here is what the profile itself claims of a line: one metre
-// per point, none of them going backwards, and points enough to be a line. The
+// What is checked here is what the profile itself claims of a line: a basis
+// among the kinds its readers know, one metre per point, none of them going
+// backwards, and points enough to be a line. The
 // claims that belong to a circuit — that the last metre stands at *its*
 // published length, that published stretches add up — are checked by the
 // reader that knows the circuit, on top of this.
 
 import type { GeometryFile, OutlineProperties } from "./circuit-geometry.ts";
+
+/** The kinds of line a file of this profile may name as its `basis`: the
+ * OpenStreetMap centreline, stretched to a published lap, and a midline
+ * measured off orthoimagery at its own length. What a reader may trust a line
+ * for turns on which of the two it is — one ends where the published lap says,
+ * the other is not expected to — so a file naming a basis outside these is
+ * either a kind of line no reader has been told about yet, or an edited file.
+ * Both answer to a failure by name better than to a default that reads the
+ * line like any other. */
+export const lineBases = ["osm-centreline", "measured-midline"] as const;
+
+export type LineBasis = (typeof lineBases)[number];
+
+const isBasis = (word: string | undefined): word is LineBasis =>
+  lineBases.includes(word as LineBasis);
 
 /** One geometry laid against the others: its name, the properties a report
  * quotes, its coordinates as they stand in the file, and its own metres. */
@@ -31,6 +47,12 @@ export type KeptLine = {
 export function outlineOf(json: GeometryFile, name: string): KeptLine {
   const outline = (json.features ?? []).find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error(`${name}: no outline feature`);
+  const basis = outline.properties?.basis;
+  if (!isBasis(basis)) {
+    throw new Error(
+      `${name}: the outline names basis ${basis === undefined ? "nothing" : `"${basis}"`}, which is not a line this repository reads`,
+    );
+  }
   const coords = outline.geometry?.coordinates ?? [];
   if (coords.length === 0) throw new Error(`${name}: the outline holds no points to draw`);
   const { metres, ...props } = outline.properties ?? {};

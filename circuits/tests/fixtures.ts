@@ -77,7 +77,7 @@ export function geometryFile(outline: Record<string, unknown>, coords: [number, 
     features: [
       {
         type: "Feature",
-        properties: { role: "outline", circuit: "test_circuit", direction: "clockwise", frame: { origin: { lat: 47.0, lon: -0.002 }, parallel: 46.994 }, ...outline },
+        properties: { role: "outline", circuit: "test_circuit", basis: "osm-centreline", direction: "clockwise", frame: { origin: { lat: 47.0, lon: -0.002 }, parallel: 46.994 }, ...outline },
         geometry: { type: "LineString", coordinates: coords },
       },
       {
