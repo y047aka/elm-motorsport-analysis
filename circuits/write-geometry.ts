@@ -5,10 +5,9 @@
 //     node circuits/write-geometry.ts <circuit> --from-geojson [geometry.json]
 //
 // One command for every circuit because the registry is what knows circuits; a
-// flake app per circuit would make a new survey a new registration too. Given
-// an Overpass answer as a file, reads it rather than asking. `--from-geojson`
-// writes nothing: it runs the checks the app's runtime decoder will run, over
-// the kept geometry and with no OpenStreetMap.
+// flake app per circuit would make a new survey a new registration too. The
+// pipeline it runs is `circuit-geometry.ts`, and `main` there is where the
+// flags mean what they say.
 
 import { main } from "./circuit-geometry.ts";
 import { circuits } from "./registry.ts";

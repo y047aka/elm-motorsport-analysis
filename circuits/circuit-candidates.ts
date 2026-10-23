@@ -3,7 +3,7 @@
 // about itself, how far a probe box reaches, and what an answer says about the
 // roles its members carry. `probe-circuit.ts` is the command that asks; this
 // is the reading of an answer already got, opening nothing and reaching no
-// network, which is what lets it be handed one that was kept.
+// network.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; what is
 // printed here is a derivative of their tags.

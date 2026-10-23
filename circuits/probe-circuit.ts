@@ -13,11 +13,6 @@
 // relations the box holds; each likely one is then asked again for its ways'
 // geometry. Nothing is written: the report goes to a human, and the pipeline
 // begins once a config names the relation the report picked.
-//
-// This is the asking; what an answer means — the box a place widens to, which
-// tags could name a circuit, what a relation's roles measure — is
-// `circuit-candidates.ts`, which reaches no network and is what the tests read
-// a kept answer with.
 
 import { askOverpass, reason, sleep, valueOf } from "./circuit-geometry.ts";
 import { bboxOf, describe, looksLikeACircuit, measureAnswer } from "./circuit-candidates.ts";

@@ -25,10 +25,6 @@
 // tree its shares are printed against, so a stale export reads as a
 // disagreement in the print rather than a verdict this command has no standing
 // to make.
-//
-// This is the command; the reading itself — the CSV's text to rows, shares,
-// lines and a season-to-season comparison — is `timing-feed.ts`, which opens
-// nothing and is what `circuits/tests/timing-feed.test.ts` exercises.
 
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";

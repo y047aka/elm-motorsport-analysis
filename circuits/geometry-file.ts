@@ -22,9 +22,7 @@ import type { GeometryFile, OutlineProperties } from "./circuit-geometry.ts";
  * measured off orthoimagery at its own length. What a reader may trust a line
  * for turns on which of the two it is — one ends where the published lap says,
  * the other is not expected to — so a file naming a basis outside these is
- * either a kind of line no reader has been told about yet, or an edited file.
- * Both answer to a failure by name better than to a default that reads the
- * line like any other. */
+ * either a kind of line no reader has been told about yet, or an edited file. */
 export const lineBases = ["osm-centreline", "measured-midline"] as const;
 
 export type LineBasis = (typeof lineBases)[number];
@@ -42,8 +40,7 @@ export type KeptLine = {
 };
 
 /** The outline of one geometry file. Coordinates are degrees, lon before lat,
- * as GeoJSON gives them; the metres leave the properties on the way through,
- * because they belong to the line and not to a report. */
+ * as GeoJSON gives them; the metres leave the properties on the way through. */
 export function outlineOf(json: GeometryFile, name: string): KeptLine {
   const outline = (json.features ?? []).find((f) => f.properties?.role === "outline");
   if (!outline) throw new Error(`${name}: no outline feature`);

@@ -7,11 +7,9 @@
 //
 //     node circuits/regenerate-geometry.ts [<circuit> ...] [--write | --freeze]
 //
-// `surveyed_at` is the one property exempt from the fence: it stamps which
-// answer a file was written from rather than what the drawing is made of, and
-// it is the one property a live regeneration must move while every degree
-// stands still. The Elm side reads neither it nor `surveyed_length_m`; the
-// fence reads both.
+// `surveyed_at` is the one exempt property — `geometry-drift.ts` says what it
+// stamps and why a live regeneration must move it. The Elm side reads neither
+// it nor `surveyed_length_m`; the fence reads both.
 //
 // --write re-lays the geometry files from the kept answer — where a changed
 // writer lands its bytes with no survey moved. --freeze asks OpenStreetMap now

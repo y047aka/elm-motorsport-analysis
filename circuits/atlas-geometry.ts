@@ -16,21 +16,13 @@
 // where the circuit's own published sector lines stand on each of the two
 // lines.
 //
-// The lap-origin guard in `timing-line.ts` is the same question
-// `circuit-geometry.ts` asks of a relation's finish node: a file that started
-// at some other line would shift every marker by the distance between them
-// while still looking like a lap.
-// For a circuit this repository has not surveyed yet, the atlas's
-// `start_finish` point is a surveyed coordinate to seed a circuit script's
-// `timingLine` with; whether the lines the times are read against stand where
-// the seeded line puts them is `check-timing-lines.ts`'s to answer, once a
-// round has been loaded.
-//
-// The apartness math is `geometry-diff.ts`'s, shared with the tool that
-// compares any two kept geometries; the feature shape checks, the guards and
-// the written file are `atlas-line.ts`'s, shared with nothing but the tests.
-// This file adds only the measuring: what is specific to laying one circuit's
-// atlas line against the geometry this app draws.
+// The lap-origin guard in `timing-line.ts` is asked of the measured line's
+// start before anything is kept. The apartness math is `geometry-diff.ts`'s,
+// shared with the tool that compares any two kept geometries; the feature
+// shape checks, the guards and the written file are `atlas-line.ts`'s, shared
+// with nothing but the tests. This file adds only the measuring: what is
+// specific to laying one circuit's atlas line against the geometry this app
+// draws.
 //
 // The atlas data is © its contributors under the ODbL, itself derived from
 // OpenStreetMap and open orthoimagery; the written file carries the source URL

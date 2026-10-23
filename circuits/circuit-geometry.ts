@@ -4,18 +4,11 @@
 //
 // A circuit's config — its relation, its published lap length, the word its
 // rounds are known by — is what this module is given; `write-geometry.ts` is
-// what runs it. Where the written file stands, who reads it and what holds it
-// is `circuits/README.md`.
-//
-//     node circuits/write-geometry.ts <circuit> [overpass.json]
-//     node circuits/write-geometry.ts <circuit> --from-geojson [geometry.json]
-//
-// Given an Overpass answer as a file, reads it rather than asking.
-// `--from-geojson` writes nothing: it runs the checks the app's runtime decoder
-// will run, over the kept geometry and with no OpenStreetMap. The answer a
-// geometry was drawn from is kept beside each circuit's config as the
-// pipeline's frozen input, which `regenerate-geometry.ts` re-runs this module
-// over; a live regeneration asks OpenStreetMap again regardless.
+// what runs it, and its `main` below is where the flags mean what they say.
+// The answer a geometry was drawn from is kept beside each circuit's config as
+// the pipeline's frozen input, which `regenerate-geometry.ts` re-runs this
+// module over; a live regeneration asks OpenStreetMap again regardless. Where
+// the written file stands, who reads it and what holds it is `circuits/README.md`.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
 // geometry and module written here is a derivative of it.
@@ -41,8 +34,7 @@ const userAgent = "elm-motorsport-analysis/1.0 (circuit geometry)";
 const tolerance = 1.0;
 
 // The earth every drawing is measured on: the same sphere
-// `Motorsport.Circuit.Geodesy` projects through. Exported because tests
-// measure against it rather than restating it.
+// `Motorsport.Circuit.Geodesy` projects through.
 export const earthRadius = 6371008.8;
 
 /** A place on earth, in the degrees OpenStreetMap gives it. */
@@ -137,10 +129,8 @@ export type OverpassAnswer = {
  * A circuit: where its geometry is surveyed from, what the lap is stretched to,
  * and the published sector lines the geometry carries beside the lap.
  *
- * `finishRole` names the relation member the lap is measured from. `timingLine`
- * is where it stands on the earth as the circuit itself publishes it, in which
- * case a run checks the role answered to; a relation may tag several lines and
- * pick the wrong one out of them without failing a build.
+ * `finishRole` names the relation member the lap is measured from, and
+ * `timingLine` where the circuit itself publishes that line to stand.
  */
 export interface Circuit {
   relation: number;

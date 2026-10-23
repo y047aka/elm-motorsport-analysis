@@ -2,8 +2,7 @@
 // each class's fastest sector times, the shares those times become, the lines
 // those shares place round the lap, and the season-to-season comparison of
 // those lines. Nothing here reaches a file or the network; `check-timing-lines.ts`
-// is the command that feeds this the text and prints its answers, which is why
-// the readings can be tested without a round.
+// is the command that feeds this the text and prints its answers.
 //
 // The method's error — a sector's time is not a share of its distance — lives
 // in `impliedLines` and is described in `check-timing-lines.ts`'s header and
@@ -40,7 +39,6 @@ export const whole = "the round";
 // actually moved would land hundreds of metres away.
 export const defaultTolerance = 40.0;
 
-/** A reading that cannot go on, stated for the human the command prints it to. */
 export function fail(message: string): never {
   throw new Error(message);
 }
