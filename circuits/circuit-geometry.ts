@@ -407,6 +407,7 @@ export function geometryFromGeoJson(json: GeometryFile, circuit: Circuit): Geome
   if (direction !== "clockwise" && direction !== "counter_clockwise") {
     throw new Error(`the outline says it runs ${JSON.stringify(direction)}, which is not a direction`);
   }
+  if (coords.length === 0) throw new Error("the outline holds no points to draw");
   if (metres.length !== coords.length) throw new Error(`${metres.length} metres for ${coords.length} points`);
   for (let i = 1; i < metres.length; i++) {
     if (metres[i] < metres[i - 1]) throw new Error(`metres go backwards at point ${i}`);

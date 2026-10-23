@@ -86,6 +86,17 @@ function placeOf(feature: AtlasFeature): Place {
   return onEarth(coordinates as [number, number]);
 }
 
+/** Where on the lap a corner or pit marker stands, as the atlas's fraction of
+ * it. A feature with no marker would otherwise be measured at `NaN m` rather
+ * than fail by name. */
+function markerOf(feature: AtlasFeature): number {
+  const marker = feature.properties.marker;
+  if (typeof marker !== "number" || !Number.isFinite(marker)) {
+    throw new Error(`the atlas ${feature.properties.role ?? "feature"} carries no marker`);
+  }
+  return marker;
+}
+
 const [slug, ...argv] = process.argv.slice(2);
 try {
   await run(slug, argv);
@@ -148,7 +159,7 @@ async function run(slug: string, argv: string[]): Promise<void> {
     const near = nearestOn(project(placeOf(c)), ourPoints, ours.metres);
     return {
       id: c.properties.id,
-      theirMetres: c.properties.marker! * length,
+      theirMetres: markerOf(c) * length,
       ourMetres: near.metres,
       distance: near.distance,
     };
@@ -165,7 +176,7 @@ async function run(slug: string, argv: string[]): Promise<void> {
     const near = nearestOn(project(placeOf(p)), pitPoints, pitMetres);
     return {
       role: p.properties.role,
-      theirMetres: p.properties.marker! * length,
+      theirMetres: markerOf(p) * length,
       along: near.metres,
       distance: near.distance,
     };
