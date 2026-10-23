@@ -1,0 +1,22 @@
+{
+  // The circuit tools' own project: Node with no DOM, and no build — Node 26
+  // runs these files by stripping their types. The compiler and `@types/node`
+  // are the app's, reached by typeRoots, because this directory installs
+  // nothing of its own.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "typeRoots": ["../app/node_modules/@types"],
+    "strict": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    // `node` runs these files as they stand, and stripping leaves a value
+    // import of a type in place, so a type crossing modules has to say so.
+    "verbatimModuleSyntax": true
+  },
+  "include": ["*.ts", "*/*.ts"]
+}

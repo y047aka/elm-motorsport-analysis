@@ -39,7 +39,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
-| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
+| `nix run .#typecheck` | `tsc --noEmit` over each TypeScript project: the app's, then the circuit tools' |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
 | `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
@@ -568,10 +568,17 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   hand-written `test-dependencies` read fine to elm-test but make every
   `elm make` fail with "dependencies edited by hand", which is a build break
   the test runner does not see.
-- **TypeScript** — `tsc --noEmit`, over `index.ts`, `vite.config.ts` and
-  `src/`. `/app/tests/` is outside the TS project on purpose: Playwright comes
-  from the flake rather than from `node_modules`, so `@playwright/test` does
-  not resolve for `tsc`.
+- **TypeScript** — two projects, one command. The app's `tsc --noEmit` covers
+  `index.ts`, `vite.config.ts` and `src/`; `/app/tests/` is outside the TS
+  project on purpose: Playwright comes from the flake rather than from
+  `node_modules`, so `@playwright/test` does not resolve for `tsc`.
+  `circuits/tsconfig.json` is the circuit tools' own: Node and no DOM, with
+  `nodenext` resolution and `allowImportingTsExtensions` because Node runs
+  those files by stripping types and rewriting no import specifier, and
+  `verbatimModuleSyntax` because stripping leaves a value import of a type in
+  place. Its compiler and `@types/node` are the app's, reached by `typeRoots`
+  — the directory installs nothing, which is also why it holds a dependency-
+  free `package.json` only to say its modules are ESM.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources
