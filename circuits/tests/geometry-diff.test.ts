@@ -44,6 +44,14 @@ test("apartness samples one line against another at its own spacing", () => {
   assert.deepEqual(read.worst, { aMetres: 0, bMetres: 0, distance: 5 }, "all equal: the first sample is the worst");
 });
 
+test("apartness refuses a line whose own metres never leave zero, rather than an unnamed reduce failure", () => {
+  assert.throws(
+    () => apartness([{ x: 0, y: 0 }], [0], line(5), metres, 25),
+    /nothing is measured along the sampled line: its own metres end at 0 m/,
+  );
+  assert.throws(() => apartness([], [], line(5), metres, 25), /its own metres end at 0 m/);
+});
+
 test("toSegment clamps to a stretch and knows a point that is one", () => {
   assert.deepEqual(toSegment({ x: 4, y: 3 }, { x: 0, y: 0 }, { x: 10, y: 0 }), { distance: 3, at: 0.4 });
   assert.equal(toSegment({ x: -5, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 0 }).at, 0, "before the start is at the start");

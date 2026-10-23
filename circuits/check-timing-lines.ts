@@ -148,7 +148,13 @@ async function agreesWithExport(reading: Reading): Promise<string> {
   const { track } = JSON.parse(await readFile(join(repoDir, path), "utf8"));
   const shares = sharesOf(reading.fastest.get(whole)!);
   const worst = Math.max(
-    ...sectors.map((sector) => Math.abs(shares[sector] - track.sectors[sector.toLowerCase()].share)),
+    ...sectors.map((sector) => {
+      const share = track?.sectors?.[sector.toLowerCase()]?.share;
+      if (typeof share !== "number") {
+        fail(`${path} names no '${sector.toLowerCase()}' share: there is nothing there to agree with.`);
+      }
+      return Math.abs(shares[sector] - share);
+    }),
   );
   if (worst > 1e-9) {
     return `The export in the tree counts sectors ${worst.toExponential(1)} from this CSV -- it was written from a different one.`;

@@ -36,14 +36,14 @@ export function checkStandsAt(
   candidate: Place,
   line: PublishedLine | undefined,
   within: number,
-  elsewhere: () => string,
+  elsewhere: (line: PublishedLine) => string,
 ): number {
   if (!line) return 0;
   const distance = apart(candidate, line);
   const limit = line.within ?? within;
   if (distance > limit) {
     throw new Error(
-      `${subject} is ${distance.toFixed(1)} m from the published timing line, which is not within ${limit} m. ${elsewhere()}`,
+      `${subject} is ${distance.toFixed(1)} m from the published timing line, which is not within ${limit} m. ${elsewhere(line)}`,
     );
   }
   return distance;

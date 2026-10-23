@@ -80,7 +80,10 @@ export function apartness(
   bMetres: number[],
   every: number,
 ): Apartness {
-  const length = aMetres[aMetres.length - 1];
+  const length = aMetres[aMetres.length - 1] ?? 0;
+  if (length <= 0) {
+    fail(`nothing is measured along the sampled line: its own metres end at ${length} m`);
+  }
   const samples = [];
   for (let s = 0; s < length; s += every) {
     const near = nearestOn(interpolate(aPoints, aMetres, s), bPoints, bMetres);

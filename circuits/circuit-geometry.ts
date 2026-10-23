@@ -467,22 +467,6 @@ export function sectorLines(sectors: Sectors, lapLength: number): SectorLine[] {
 
 /**
  * The line the lap is measured from, checked against where the circuit says it
- * stands.
- *
- * A relation may tag more than one line -- a start line and a finish line, which
- * are not the same place -- and every `metres` below is measured from whichever
- * role was answered to. Getting it wrong moves the whole field down the lap by
- * the distance between the two and draws fine doing it.
- */
-/**
- * The line the lap is measured from, checked against where the circuit says it
- * stands. A circuit may publish more than one line -- a start line and a finish
- * line, which are not the same place -- and every `metres` below is measured
- * from whichever role was answered to. Getting it wrong moves the whole field
- * down the lap by the distance between the two and draws fine doing it.
- */
-/**
- * The line the lap is measured from, checked against where the circuit says it
  * stands -- the same question `timing-line.ts` asks of an atlas line's start.
  *
  * A circuit may publish more than one line -- a start line and a finish line,
@@ -491,16 +475,15 @@ export function sectorLines(sectors: Sectors, lapLength: number): SectorLine[] {
  * the lap by the distance between the two and draws fine doing it.
  */
 function nearTimingLine(members: OsmMember[], nodes: Map<number, Place>, chosen: number, circuit: Circuit): void {
-  const line = circuit.timingLine;
   checkStandsAt(
     `role=${circuit.finishRole}`,
     nodes.get(chosen)!,
-    line,
+    circuit.timingLine,
     nodeWithin,
-    () =>
+    (line) =>
       `The relation's lines: ${members
         .filter((m) => m.type === "node")
-        .map((m) => `role=${m.role} is ${apart(line!, nodes.get(m.ref)!).toFixed(1)} m from it`)
+        .map((m) => `role=${m.role} is ${apart(line, nodes.get(m.ref)!).toFixed(1)} m from it`)
         .join("; ")}.`,
   );
 }

@@ -202,10 +202,12 @@ function print(circuit: Circuit, { every, length, originDistance, deviation, atC
     `lines sampled every ${every} m (${deviation.count}): mean apart ${deviation.mean.toFixed(1)} m, ` +
       `max ${deviation.worst.distance.toFixed(1)} m at their ${deviation.worst.aMetres.toFixed(0)} m, our ${deviation.worst.bMetres.toFixed(1)} m`,
   );
-  console.log(
-    `corners (${atCorners.length}): mean apart ${mean(distances).toFixed(1)} m, max ${Math.max(...distances).toFixed(1)} m; ` +
-      `lap distance differs by ${mean(laps.map(Math.abs)).toFixed(1)} m on average, worst ${signed(worstLap)} m`,
-  );
+  const corners =
+    atCorners.length === 0
+      ? "corners (0): the atlas layer holds no corner markers, so nothing was laid against our line"
+      : `corners (${atCorners.length}): mean apart ${mean(distances).toFixed(1)} m, max ${Math.max(...distances).toFixed(1)} m; ` +
+        `lap distance differs by ${mean(laps.map(Math.abs)).toFixed(1)} m on average, worst ${signed(worstLap)} m`;
+  console.log(corners);
   for (const c of atCorners) {
     console.log(
       `  ${c.id}: marker at ${c.theirMetres.toFixed(1)} m, our line has that place at ` +
