@@ -3,36 +3,25 @@
 ///
 ///     nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025
 ///
-/// A circuit is drawn on one set of lines, and a new season at that circuit asks
-/// whether the lines have moved; this answers it without a map of the later year.
 /// The feed holds times, so the lines are inferred from them: each class's
 /// fastest sector, as a share of the fastest lap the same class could make, is
 /// read as a share of the distance round the lap. A sector's time is not
 /// proportional to the ground it covers -- that ground is a mixture of corners and
 /// straights -- and the fastest Hypercar laps put the first line some 170 m from
 /// where the circuit's own map draws it. So the shares are printed beside the
-/// map's lines and never judged against them, and what is judged against the
-/// distance allowed is the season-to-season difference: both readings carry that
-/// error of the method, a line the organisers moved would show as hundreds of
+/// map's lines and never judged against them; what is judged against the distance
+/// allowed is the season-to-season difference, since both readings carry that
+/// error of the method -- a line the organisers moved would show as hundreds of
 /// metres, and a changed Balance of Performance or a new tyre costs tens.
 ///
 /// The map's lines are `Motorsport.Circuit`'s, and the reading of the feed is the
-/// summary's -- the fastest sector over every lap, which is what
-/// `Round.Summary`'s `fastestSectors` asks the database.
+/// summary's: `Round.Summary`'s `fastestSectors` asks the database the same
+/// question of the same rows.
 ///
-/// What this cannot answer is where a place the shares imply stands against the
-/// drawn line. A drawn line is a surveyed shape, a surveyed shape is a JSON file,
-/// and nothing in this project parses JSON -- `Util.Json.Encode` writes and reads
-/// nothing. So the shares are judged against the published stretches alone, and
-/// how far a drawn line stands from the figures it was laid from is
-/// `.#geometry-regenerate`'s and `.#geometry-diff`'s to say. Measured that way,
-/// COTA's second line stands 6.7 m off its circuit's own map -- a lap whose
-/// sector times are within tolerance of another season's can still be drawn
-/// against a line nobody surveyed.
-///
-/// This opens no database. The flake runs it with neither `--database` nor
-/// `DATABASE_URL`, and `runAll`'s effect says the same: it reads the feed and
-/// prints.
+/// Where a share places a line against the drawn shape itself is not asked here,
+/// and `circuits/README.md` holds why the reading stops short of it;
+/// `.#geometry-regenerate` and `.#geometry-diff` are the readers that measure the
+/// geometry.
 pub mod Cli.TimingLines {
 
     use Cli.Errors.CliError
@@ -194,8 +183,7 @@ pub mod Cli.TimingLines {
     }
 
     /// Where the circuit's own map puts its lines, spelled as the map spells
-    /// them. The circuit's name is not repeated here: `Motorsport.Circuit`'s word
-    /// for the circuit is the one name it has in this project.
+    /// them.
     def mapLine(report: Report): String =
         let placed = List.map(line -> "${line#id} at ${metres(line#metres)} m", report#lines);
         let lap = "lap at ${metres(report#lapLength)} m";

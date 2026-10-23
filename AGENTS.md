@@ -12,7 +12,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
   the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a second, dependency-free Flix project at `circuits/timing/`, which compiles parts of this `src` through symlinks.
+  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles thirteen of this `src`'s files through symlinks.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -26,9 +26,9 @@ SQLite → HTTP or a JSON export → Elm visualization.
   answer to its survey, what a circuit's config is authored from, and where
   the timing lines' distances come from — and is the thing to read before
   changing anything under `/circuits`. It holds the repository's second Flix
-  project too: `circuits/timing/`, the timing-lines report, whose `flix.toml`
-  resolves nothing and whose shared sources are symlinks into `flix/src` — one per
-  file, because a linked directory is walked as nothing.
+  project too: `circuits/timing/`, the timing-lines report, which resolves nothing
+  and shares its `flix/src` sources by symlink — one per file, because a linked
+  directory is walked as nothing.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -590,11 +590,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   `circuit-candidates.ts` (an Overpass answer already got),
   `atlas-line.ts` (a foreign file's shapes and guards), `geometry-drift.ts` (two
   geometries laid together) — and the tests hand those fixtures. The feed's own
-  reading is Flix's and lives with the report — `circuits/timing/src/Cli/TimingLines/Feed.flix`,
-  tested by `.#geometry-timing-test`, because reading a timing CSV in two languages
-  tests the CSV parsers and not the reading.
-  Judging this
-  repository's real bytes stays the fence's and the contract specs'.
+  reading is Flix's, driven by `nix run .#geometry-timing-test`: a timing CSV is
+  read in one language and not two. Judging this repository's real bytes stays the
+  fence's and the contract specs'.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources
@@ -616,9 +614,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   laid against the ones the circuit's config authors and the kept geometry
   publishes. Flix parses no JSON, so the report cannot read the geometry the
   drawing is laid from and the same figures stand on either side of that with no
-  compiler between them. The same spec pins that every source the report project
-  symlinks out of `flix/src` resolves: a link that does not survive a checkout
-  otherwise fails as `Undefined use`, a thousand characters from its cause.
+  compiler between them. The spec also pins that the report project's thirteen
+  symlinks into `flix/src` resolve — a broken one fails elsewhere as
+  `Undefined use`, far from its cause.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

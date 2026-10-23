@@ -1,14 +1,9 @@
-/// The timing feed read without opening it: the rows a CSV's text leaves into,
-/// each class's fastest sector times, the shares those times become, the lines
-/// those shares place round the lap, and one season's lines laid against
-/// another's -- with the columns spelled as the sport spells them. Nothing here
-/// reaches a file, a geometry or the network; `Cli.TimingLines` is the command
-/// that hands this the text and prints what it answers.
-///
-/// The method's error -- a sector's time is not a share of the ground it covers,
-/// so the lines the shares imply stand some distance from where the circuit drew
-/// them -- is `Cli.TimingLines`'s to state and `circuits/README.md`'s to
-/// qualify. What lives here is the arithmetic that error was measured against.
+/// The timing feed read without opening it: rows, each class's fastest sector
+/// times, the shares those become, the lines those shares place round the lap, and
+/// one season's lines laid against another's -- with the columns spelled as the
+/// sport spells them. Nothing here reaches a file, a geometry or the network;
+/// `Cli.TimingLines` hands this the text and prints what it answers, and states
+/// the error of the method these readings are subject to.
 ///
 /// `sharesOf` divides a lap the way `Motorsport.Track.ratiosOver` does, written
 /// again rather than called. The shares in the export are counted by SQL `MIN`
@@ -257,10 +252,8 @@ pub mod Cli.TimingLines.Feed {
             ))
 
     /// Each sector as a share of the fastest lap the same class could make, in
-    /// the order a car drives them.
-    ///
-    /// The same three quotients `Motorsport.Track` divides, and deliberately not
-    /// that function: see this module's header.
+    /// the order a car drives them: the same three quotients `Motorsport.Track`
+    /// divides, written again for the reason in this module's header.
     pub def sharesOf(times: Times): List[Float64] =
         let ran = sectorsOf(times);
         let over = Int32.toFloat64(List.sum(List.map(Util.Duration.millis, ran)));

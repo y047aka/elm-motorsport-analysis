@@ -28,12 +28,10 @@ export const circuit: Circuit = {
 
   // The lines are copied from Al Kamel's map of each year and differ between
   // them by design, so no one set answers for two seasons — which is why
-  // `nix run .#geometry-timing-lines` refuses to read a round here against a
-  // season, and quotes this reason doing it: `Motorsport.Circuit.timingMap`
-  // holds the same one, and `app/tests/circuit-timing-map.spec.ts` compares
-  // the two. The maps are not to be redistributed, so nothing here holds their
-  // figures; the season's own `Layout` module is where its line placements
-  // live.
+  // `nix run .#geometry-timing-lines` refuses a round here and quotes this
+  // reason doing it; `Motorsport.Circuit.timingMap` holds the same one. The maps
+  // are not to be redistributed, so nothing here holds their figures; the
+  // season's own `Layout` module is where its line placements live.
   sectors: {
     kind: "perSeason",
     reason: "the organiser's map is re-issued every year and its lines differ between seasons",

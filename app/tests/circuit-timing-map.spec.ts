@@ -7,19 +7,18 @@ import { readSource } from './helpers';
 
 /**
  * The figures a circuit's timing lines are read at, held twice on purpose.
- * `circuits/<circuit>/circuit.ts` authors them and the drawing is laid from
- * them; `Motorsport.Circuit.timingMap` holds the same ones and is what
- * `nix run .#geometry-timing-lines` reads, because the report reads the feed
- * and the published figures and no JSON at all -- `Util.Json.Encode` writes and
- * parses nothing. Neither compiler sees the other and nothing at run time
- * compares them, so a stretch moved in one copy and not the other leaves a
- * report measuring one lap while the drawing shows another, printing numbers
- * that look like a circuit's own.
+ * `circuits/<circuit>/circuit.ts` authors them and the drawing is laid from them;
+ * `Motorsport.Circuit.timingMap` holds the same ones for
+ * `nix run .#geometry-timing-lines`, which reads no geometry file —
+ * `Util.Json.Encode` writes and parses nothing. Neither compiler sees the other,
+ * so a stretch moved in one copy and not the other leaves a report measuring one
+ * lap while the drawing shows another, printing numbers that look like a circuit's
+ * own.
  *
- * The published numbers come out of the config and out of the geometry the
- * config was already written into -- the bytes the app is served -- and Flix's
- * out of its source, the way `circuit-contract.spec.ts` reads both sides of a
- * circuit's name. Nothing here needs a browser.
+ * The published numbers are read out of the config and out of the geometry the
+ * config was written into — the bytes the app is served — and Flix's out of its
+ * source, the way `circuit-contract.spec.ts` reads both sides of a circuit's name.
+ * Nothing here needs a browser.
  */
 
 const flixSource = readSource('flix/src/Motorsport/Circuit.flix');
@@ -169,14 +168,12 @@ test('a circuit Flix holds a map for is one whose config authors it that way', (
 });
 
 /**
- * The report's project shares `flix/src` by symlink rather than by copy, because
- * Flix has no local path dependency — `flix.toml` answers anything else with
- * "A Flix dependency should be formatted like so: 'github:username/projectname'",
- * and `flix build` takes no source directory as an argument. Two facts hold that
- * sharing up and neither is visible from either project's own build: a symlinked
+ * The report's project shares `flix/src` by symlink, because Flix has no local
+ * path dependency and `flix build` takes no source directory. Two facts hold that
+ * sharing up, and neither is visible from either project's own build: a symlinked
  * directory is walked as nothing, so the links must be one per file; and a link
- * which does not survive a checkout fails as `Undefined use 'Util.Csv.Decode'`,
- * named in the module that needed it rather than in the link that broke.
+ * which does not survive a checkout fails as `Undefined use`, named in the module
+ * that needed it rather than in the link that broke.
  */
 
 const reportRoot = fileURLToPath(new URL('../../circuits/timing/src', import.meta.url));
@@ -219,8 +216,7 @@ test('the report shares flix/src one file per symlink, and each one resolves', (
     expect(lstatSync(path).isSymbolicLink(), `${name} is a copy of a shared source, so it can disagree with it`).toBe(true);
     // A linked directory is walked as nothing, which is what makes the per-file
     // rule load-bearing rather than tidy.
-    expect(statSync(path).isFile(), `${name} links a directory, which Flix will not descend`).toBe(true);
-    expect(realpathSync(path), `${name} does not hold flix/src/${name}`).toBe(`${root}/flix/src/${name}`);
+    expect(statSync(path).isFile(), `${name} links a directory, which Flix will not descend`).toBe(true);    expect(realpathSync(path), `${name} does not hold flix/src/${name}`).toBe(`${root}/flix/src/${name}`);
   }
 });
 
@@ -228,8 +224,8 @@ test('the report resolves no dependency, which is the separation for', () => {
   const toml = readSource('circuits/timing/flix.toml');
   expect(toml, 'the report has a dependency, so a database is reachable from it').not.toMatch(/mvn-dependencies|dependencies/);
   // One compiler version for the two projects: a link out of `flix/src` is read by
-  // whichever `flix` runs, and a source the other project's version parses
-  // differently is a report that fails for a reason neither project states.
+  // whichever `flix` runs, and a source the other version parses differently fails
+  // for a reason neither project states.
   const version = (file: string) => readSource(file).match(/flix\s*=\s*"([^"]+)"/)?.[1];
   expect(version('circuits/timing/flix.toml'), 'the two projects are not on one Flix version').toBe(version('flix/flix.toml'));
 });

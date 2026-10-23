@@ -4,13 +4,8 @@
 ///
 /// Written over `Util.GetOpt` as `Cli.Args` is, so that one style of `--help`
 /// answers in this repository. `--load`, `--export`, `--serve`, `--port` and
-/// `--database` are refused rather than ignored: they belong to the CLI's other
-/// commands, which compute in a database.
-///
-/// Nothing here opens a file. The distance allowed defaults to
-/// `Cli.TimingLines.defaultTolerance`, the command that reads it and says what it
-/// is judged against, and the round is checked against `Motorsport.Calendar`
-/// rather than against four digits a reader types.
+/// `--database` are refused: they belong to the CLI's other commands, which
+/// compute in a database. Nothing here opens a file.
 pub mod Report {
 
     use Util.GetOpt.ArgDescr
@@ -21,8 +16,7 @@ pub mod Report {
     use Sys.Console
 
     /// The round and its season -- the `Motorsport.Calendar` entry's own season,
-    /// which names the directory its feed is in -- the season laid beside it, the
-    /// distance allowed, and where the feeds are.
+    /// which names the directory its feed is in -- and what to judge against.
     pub type alias Request = {
         csv = String,
         season = Int32,
@@ -31,9 +25,7 @@ pub mod Report {
         tolerance = Float64
     }
 
-    /// The arguments as given, when they are not what the report reads. Derived,
-    /// as `Cli.Args.ArgsError` is, so that the flag which was wrong is named in
-    /// what the reader sees rather than in a stack trace.
+    /// The arguments as given, when they are not what the report reads.
     pub enum ReportError with ToString {
         case MissingDirectory(String)
         case UnexpectedArguments(List[String])
@@ -46,10 +38,8 @@ pub mod Report {
         case Tolerance(String)
     }
 
-    /// The exit code the arguments come to: 1 for arguments which cannot be read
-    /// or a feed directory which is not there, and whatever the report itself
-    /// says -- 1 from the report also being an answer, the distance having been
-    /// exceeded.
+    /// The exit code the arguments come to. 1 is an answer the report gives as
+    /// well: a line standing further round the lap than the distance allowed.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
         match parse(args) {
             case Err(e) =>
@@ -59,8 +49,6 @@ pub mod Report {
             case Ok(request) => feed(request)
         }
 
-    /// The feeds are read out of a directory, so a report given one which is not
-    /// there says so rather than reporting no laps.
     def feed(request: Request): Int32 \ { IO, Console } =
         match checkDirectory(request#csv) {
             case Err(e) =>
@@ -116,8 +104,6 @@ pub mod Report {
             tolerance = tolerance
         }
 
-    /// A report reads its feeds out of a directory, so one given none has nowhere
-    /// to look.
     def required(name: String, dir: Option[String]): Result[ReportError, String] =
         Option.toOk(ReportError.MissingDirectory("--${name}"), dir)
 
@@ -156,10 +142,9 @@ pub mod Report {
             case _ => None
         }
 
-    /// The last `--against` wins, as the last `--database` does in the CLI. A
-    /// season is read as an integer and not checked against `Motorsport.Calendar`:
-    /// the directory that is not there is named by the report itself, which is the
-    /// one place that knows whether a season ran this round.
+    /// The last `--against` wins, as the last `--database` does in the CLI. Whether
+    /// that season ran this round is the report's to find out, since it is the one
+    /// place that looks in the directory.
     def againstSeason(settings: List[Setting]): Result[ReportError, Option[Int32]] =
         match last(seasonNamed, settings) {
             case None       => Ok(None)

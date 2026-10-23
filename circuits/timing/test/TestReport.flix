@@ -2,11 +2,10 @@
 /// laid beside it, how far one line may stand apart, and which flags are not the
 /// report's. `Cli.TestTimingFeed` drives the readings these select.
 pub mod TestReport {
-
     def csv(): List[String] = "--csv" :: "../data/wec" :: Nil
 
-    /// The report reads one round's feed, named outright rather than taken from
-    /// the calendar's whole field: the question is about one circuit.
+    /// The defaults a round named alone gets: no season laid beside it, and the
+    /// distance the report sets for itself.
     @Test
     def testReportReadsOneRound(): Unit \ Assert =
         match Report.parse(csv() ::: "2026/cota_6h" :: Nil) {
@@ -19,8 +18,6 @@ pub mod TestReport {
             case Err(_) => Assert.assertTrue(false)
         }
 
-    /// The season to lay beside it, and the distance one line is allowed to have
-    /// moved.
     @Test
     def testReportTakesASeasonAndADistance(): Unit \ Assert =
         match Report.parse(csv() ::: "--against" :: "2025" :: "--tolerance" :: "55.5" :: "2026/cota_6h" :: Nil) {
@@ -30,7 +27,7 @@ pub mod TestReport {
             case Err(_) => Assert.assertTrue(false)
         }
 
-    /// The last of a repeated flag is the one the reader meant, as in the CLI.
+    /// The last of a repeated flag is the one the reader meant.
     @Test
     def testLastFlagWins(): Unit \ Assert =
         match Report.parse(csv() ::: "--against" :: "2024" :: "--against" :: "2025" :: "2026/cota_6h" :: Nil) {
@@ -38,8 +35,6 @@ pub mod TestReport {
             case Err(_)      => Assert.assertTrue(false)
         }
 
-    /// The feeds are read out of a directory, so a report given none has nowhere
-    /// to look.
     @Test
     def testReportNeedsTheFeedDirectory(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Report.parse("2026/cota_6h" :: Nil)))
@@ -56,14 +51,11 @@ pub mod TestReport {
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--tolerance" :: "0" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--tolerance" :: "far" :: "2026/cota_6h" :: Nil)))
 
-    /// A report asked for with no round names the mistake rather than reading every
-    /// season at once.
     @Test
     def testReportNamesOneRound(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--against" :: "2025" :: Nil)))
 
-    /// A flag of the CLI's other commands is refused rather than ignored: those
-    /// stages compute in a database, which this project has no way to name.
+    /// A flag of the CLI's database-computing commands is refused, not ignored.
     @Test
     def testTheOtherCommandsFlagsAreRefused(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--load" :: "2026/cota_6h" :: Nil)));
@@ -72,8 +64,7 @@ pub mod TestReport {
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--port" :: "9000" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--database" :: "jdbc:h2:mem:" :: "2026/cota_6h" :: Nil)))
 
-    /// What the reader is told when the arguments are wrong names the flag, which
-    /// is what a derived `ToString` is for.
+    /// The message the reader sees names the flag that was wrong.
     @Test
     def testAnErrorNamesWhatWasWrong(): Unit \ Assert =
         match Report.parse("2026/cota_6h" :: Nil) {

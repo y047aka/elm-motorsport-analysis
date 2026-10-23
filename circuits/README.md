@@ -122,40 +122,32 @@ gives no distance for is app-side — `Tracker.Config.lapScale`, and the
 
 ## The report is a project of its own
 
-`circuits/timing/` is a second Flix package: `flix.toml` with no Maven
-dependency, `src/Report.flix` reading the arguments, `src/Main.flix` handing them
-over, and `src/Cli/TimingLines.flix` with its `Feed.flix` reading the two feeds
-and printing. It is a project rather than a command of the CLI because of what
-that keeps out: the CLI's argument parsing, its `Db` effects, and the JDBC driver
-it resolves. The report resolves nothing, so `nix run .#geometry-timing-lines`
-compiles in about 4.1 s where the CLI's commands take 6.4 s, and nothing compiled
-into it can reach a database — which is a fact about the code rather than a
-convention the flake enforces by withholding `--database`.
+`circuits/timing/` is a second Flix package: `flix.toml` with no Maven dependency,
+`src/Report.flix` reading the arguments, `src/Main.flix` handing them over, and
+`src/Cli/TimingLines.flix` with its `Feed.flix` reading the two feeds and printing.
+Nothing compiled into it can name a database: no `Db` effect, no argument flag for
+one, and no JDBC driver resolved.
 
 Thirteen of its sources are symlinks into `flix/src`: the decoding of a CSV
-(`Util/Csv/`), the durations, the file readings, the parent stubs `Cli.flix`,
-`Motorsport.flix` and `Util/Csv.flix`, `Cli/Errors.flix` — whose `Reading` case is
-what a feed says when the data handed to it is wrong — `Db.flix`, which that error
-type names `Db.Error` through, and `Motorsport/`'s `Circuit.flix`, `Events.flix`
-and `Calendar.flix`. Compiled twice, held once.
+(`Util/Csv/`), the durations, the file readings, `Cli/Errors.flix` — whose `Reading`
+case is what a feed says when the data handed to it is wrong — `Db.flix`, which that
+error type names `Db.Error` through, the parent stubs `Cli.flix`, `Motorsport.flix`
+and `Util/Csv.flix`, and `Motorsport/`'s `Circuit.flix`, `Events.flix` and
+`Calendar.flix`. Compiled twice, held once.
 
 **A symlink per file, never one per directory.** Flix's source walker does not
-descend a symlinked directory: one link at `src/Util` compiles as nothing, and says
-so a long way off, as `Undefined use 'Util.Csv.Decode'` in the module that needed
-it. Copies were the alternative — Flix has no local path dependency (`flix.toml`
-answers `A Flix dependency should be formatted like so: 'github:username/'projectname'`
-to anything else, and `flix build` takes no source directory as an argument), so the
-only other way to share `Util.Csv.Decode` was a second copy of its 552 lines, which
-is a second answer to the same question. Per-file links also leave each shared
-source visible in `git ls-files -s` as mode `120000`, rather than hidden behind one
-link that hides thirteen.
+descend a symlinked directory: one link at `src/Util` compiles as nothing and fails
+as `Undefined use 'Util.Csv.Decode'`, reported in the module that needed the link
+rather than in the link itself. Copies are no easier: Flix has no local path
+dependency, answering anything but `github:username/projectname` with a format
+error, and `flix build` takes no source directory as an argument — so a shared
+`Util.Csv.Decode` is a shared file, not a second copy of its 552 lines. Per-file
+links also leave each shared source visible in `git ls-files -s` as mode `120000`.
 
-`nix run .#geometry-timing-test` runs that package's own `flix test` —
-`TestReport.flix` for the arguments, `Cli/TestTimingFeed.flix` for the readings —
-and CI runs it beside `.#flix-test`, that step being what proves the links came
-through the checkout as well as that the readings are right.
-`app/tests/circuit-timing-map.spec.ts` pins the figures the report reads to the
-figures the drawing was laid from, and pins that every link resolves.
+`nix run .#geometry-timing-test` runs that package's own `flix test`, beside
+`.#flix-test` in CI, which is what proves the links survived the checkout as well as
+that the readings are right. `app/tests/circuit-timing-map.spec.ts` pins that every
+link resolves to the `flix/src` file of the same relative path.
 
 ## The atlas readings
 

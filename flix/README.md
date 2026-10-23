@@ -6,20 +6,15 @@ of the same jar. They are run through the repository's Nix flake, which the
 root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
 `.#cli-run`, `.#cli-load`, `.#cli-export`, `.#serve-api`.
 
-The timing-lines report is not a third command of this jar. It is a second Flix
-project, at `circuits/timing/`: `nix run .#geometry-timing-lines` reads two
-seasons' timing feeds and prints how far round the lap one circuit's timing lines
-have moved between them. What the separation keeps out is the point — the report
-compiles no `Db` effect, no argument parsing that offers one, and no Maven
-dependency, so it has no JDBC driver to be answered by either; `Cli.TimingLines`prints and returns an exit code, and its effect says `IO` and `Console`. What the
-report shares with this project it shares by symlinking the source rather than
-copying it: the decoding of a CSV, the durations, the file readings,
-`Cli/Errors.flix` — whose `Reading` case is what a reading says when the data it
-was handed is wrong — and the figures `Motorsport.Circuit` publishes about a
-circuit's lines are each compiled twice and held once. `circuits/README.md` holds
-why those links are one per file, and what a walker that does not descend a linked
-directory has to do with that. Where the report's timings come from and what it
-cannot answer is `circuits/README.md`'s too.
+The timing-lines report is not a command of this jar. It is a second Flix project,
+at `circuits/timing/`, which resolves no Maven dependency and compiles no `Db`
+effect. Thirteen sources under its `src` are symlinks into this `src` — the
+decoding of a CSV, the durations, the file readings, `Cli/Errors.flix`,
+`Motorsport/Circuit.flix` among them — so editing one of those files is compiled and
+tested twice, by `nix run .#flix-test` and by `nix run .#geometry-timing-test`, and
+moving or renaming one breaks both until its link moves too. `circuits/README.md`
+keeps the list, says why the links are one per file, and holds where the report's
+timings come from and what it cannot answer.
 
 What follows is what the code cannot say for itself.
 
@@ -496,12 +491,10 @@ paying for the same split.
   `test/Server/TestApi.flix` drive the reading, and need one. A subject with
   both has a file in each, named for the module it drives.
 - **A reading with no database** — `test/Motorsport/TestCircuit.flix` freezes what
-  each circuit publishes about its timing lines, reaching no database, no file and
-  no network. The figures it freezes are the ones the timing report reads through a
-  symlink into this `src`, and are tied to the ones the drawing is laid from by
-  `app/tests/circuit-timing-map.spec.ts`; nothing in this project can read the
-  geometry file to do it. The feed's own readings are not here either — they drive
-  `Cli.TimingLines.Feed`, which lives under `circuits/timing/src`, and are run by
+  each circuit publishes about its timing lines: no database, no file, no network.
+  The report reads the same figures through a symlink into this `src`, and
+  `app/tests/circuit-timing-map.spec.ts` is the one thing that ties the two copies.
+  The feed's own readings are driven under `circuits/timing`, by
   `nix run .#geometry-timing-test`.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`

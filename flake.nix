@@ -67,12 +67,10 @@
             '';
           };
 
-        # The timing-lines report is a second Flix project, at `circuits/timing`:
-        # it reads the feed and the figures a circuit publishes and computes in no
-        # database, so nothing that carries a JDBC driver is built or put on its
-        # class path. The sources of it which are symlinks into `flix/src` -- the
-        # feed's decoding, the durations, the calendar and the published figures --
-        # are compiled twice and held once.
+        # The timing-lines report is a second Flix project, at `circuits/timing`.
+        # Of the flake's Flix commands it is the only one handed neither `--database`
+        # nor `DATABASE_URL`, and its `flix.toml` resolves no JDBC driver, so it has
+        # no way to name a database, stale or otherwise.
         mkTimingApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
@@ -140,12 +138,11 @@
         # server. Passed before "$@", so a run can name another round as well.
         exportedRound = "--export-only 2025/le_mans_24h";
 
-    # Relative to `flix`, which every command below changes to.
+        # Relative to `flix`, which every command below changes to.
         csvDir = "--csv ../data/wec";
         outDir = "--out ../app/static/wec";
 
-        # Relative to `circuits/timing`, which the two commands of the report change
-        # to.
+        # Relative to `circuits/timing`, which the report's two commands change to.
         timingCsvDir = "--csv ../../data/wec";
 
         # What `.#tauri-build` runs first, and the one place every round is
@@ -157,13 +154,9 @@
           (cd flix && flix run -- ${csvDir} ${outDir})
         '';
 
-    # The timing-lines report is its own project rather than a command of the CLI
-    # because it reads the feed the load reads and the figures `Motorsport.Circuit`
-    # publishes, and computes in no database at all: given neither `--database` nor
-    # `DATABASE_URL`, a run that cannot reach a database cannot be answered from a
-    # stale one. Where its timings come from and what they cannot answer is
-    # `circuits/README.md`'s.
-    timingLinesCmd = "flix run -- ${timingCsvDir} \"$@\"";
+        # Where its timings come from, and what they cannot answer, is
+        # `circuits/README.md`'s.
+        timingLinesCmd = "flix run -- ${timingCsvDir} \"$@\"";
 
         # The CLI converts the rounds `Motorsport.Calendar` lists, reading each
         # season directory under one directory and writing into the same one

@@ -436,12 +436,10 @@ export function geometryFromGeoJson(json: GeometryFile, circuit: Circuit): Geome
 /** The intermediate timing lines a circuit's published stretches imply: each
  * stretch ends where the next begins, and the last ends at the line the lap is
  * measured from — which is where it started, so it is not a line to place. A
- * line is named for the sector that begins at it, so every tool reading the
- * same map's stretches — the atlas reading, and `Cli.TimingLines.Feed`'s
- * `publishedLines`, which derives the same names from the same stretches over
- * in Flix — calls the same line the same thing. The only thing stretches are
- * trusted with is the lap length they add up to; where the times place them is
- * `nix run .#geometry-timing-lines`'s to answer. */
+ * line is named for the sector that begins at it, which is how the atlas reading
+ * and `Cli.TimingLines.Feed`'s `publishedLines` — over in Flix, sharing only the
+ * geometry file — spell the same line the same thing. Stretches are trusted with
+ * the lap length they add up to and with nothing else. */
 export function sectorLines(sectors: Sectors, lapLength: number): SectorLine[] {
   const total = sectors.stretches.reduce((sum, stretch) => sum + stretch, 0);
   if (Math.abs(total - lapLength) > 0.15) {

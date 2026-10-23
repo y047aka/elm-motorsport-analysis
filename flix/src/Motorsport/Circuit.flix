@@ -54,14 +54,10 @@ pub mod Motorsport.Circuit {
     /// may lay one season's times against another's; `Unsurveyed` is a circuit
     /// no geometry is kept for, which therefore publishes nothing here.
     ///
-    /// The figures are copied from the circuit's own map, which
-    /// `circuits/<circuit>/circuit.ts` also copies to lay the drawing with. They
-    /// are held twice because the two readings do not meet: a drawing is laid
-    /// from the surveyed shape and the stretches are only placed against the
-    /// published length, while `Cli.TimingLines` reads two rounds' sector times
-    /// and never touches the shape. A length or stretch moved in one copy and
-    /// not the other is caught by `app/tests/circuit-timing-map.spec.ts`, which
-    /// reads both sources, and by nothing else.
+    /// Held twice, because the two readings do not meet: the drawing is laid from
+    /// the surveyed shape, which `circuits/<circuit>/circuit.ts` authors, and
+    /// `Cli.TimingLines` reads these figures and no geometry. The one thing that
+    /// compares the two copies is `app/tests/circuit-timing-map.spec.ts`.
     pub enum TimingMap {
         case Published(PublishedMap)
         case PerSeason(String)
