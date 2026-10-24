@@ -15,7 +15,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { outlineOf, pitLaneOf } from "./geometry-file.ts";
 import type { PublishedLine } from "./timing-line.ts";
@@ -170,14 +170,6 @@ export interface Geometry {
 /** What a failure says, whether it is an Error or what a runner threw. */
 export function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-/** Whether the module named is the script the process was started from.
- * `geometry-diff.ts` asks because it is a command to the shell and a library
- * to the atlas reading. `import.meta.url` is the caller's own and not this
- * file's, so it is passed in. */
-export function isEntry(moduleUrl: string): boolean {
-  return pathToFileURL(process.argv[1] ?? "").href === moduleUrl;
 }
 
 /** Write the circuit's geometry, or check the kept one. `argv` is the script's

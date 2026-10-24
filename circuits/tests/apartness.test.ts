@@ -1,9 +1,9 @@
-// The apartness math both the diff tool and the atlas reading run on: laying two
+// The apartness math both the diff and the atlas reading run on: laying two
 // lines against each other, interpolating and projecting onto a line measured in
 // metres of its own lap. `circuits/geometry/src/Apart.flix` is the same four readings
 // for the commands that are Flix, and these are the expectations it is held to as
 // well — the same numbers, written down twice, in the two languages that compute them.
-// The drawing of an overlay is `geometry-diff.ts`'s, and the reading of a file itself
+// The drawing of an overlay is the diff's own, and the reading of a file itself
 // is `geometry-file.ts`'s.
 
 import assert from "node:assert/strict";

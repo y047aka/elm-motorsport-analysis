@@ -274,10 +274,11 @@ are laid on — and over the tenth a metre is kept to, the tolerance the thinnin
 and which of two equally far points it keeps, the one stretch factor, the order the
 properties are claimed in and which claims go unwritten. It is the only thing between the
 two pipelines besides the bytes themselves, and there is no compiler that sees both.
-`circuits/geometry-diff.ts` is the diff in the language the
-pipeline is written in: it answers the identical report and draws the identical overlay,
-and the flake runs the Flix one, so `node circuits/geometry-diff.ts` and its Node test
-are all that reaches it.
+The diff is written once. The asking of two paths, the report and the overlay are
+`Diff.flix`'s and nothing else's, so what stands twice is the comparison under them —
+`apartness.ts`, which the atlas command samples, and `Apart.flix`, which this command
+samples — and `app/tests/circuits-geometry-reading.spec.ts` holds those two to one set of
+numbers.
 
 ## The atlas readings
 

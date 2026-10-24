@@ -38,7 +38,6 @@ import { readSource } from './helpers';
  */
 
 const node = readSource('circuits/apartness.ts');
-const asking = readSource('circuits/geometry-diff.ts');
 const kept = readSource('circuits/geometry-file.ts');
 const drift = readSource('circuits/geometry-drift.ts');
 const allowance = readSource('circuits/timing-line.ts');
@@ -285,25 +284,6 @@ test('both lines are laid on one plane about the places of both', () => {
     command.match(/Apart\.parallelOf\(List\.flatMap\(line -> line#coords, lines\)\)/),
     'the diff no longer projects the two lines together',
   ).toBeTruthy();
-});
-
-/**
- * Two deliberate differences, pinned so that a third reading of them is a decision
- * rather than a slip. A spacing the reader cannot have meant is echoed as the word they
- * typed in Flix and as the coerced `NaN` in TypeScript; and a path is left as it was
- * typed in Flix and resolved against the working directory in TypeScript, which the
- * flake's runner restores by another means.
- *
- * These are read out of `circuits/geometry-diff.ts` — where the asking of two paths
- * stayed when the comparison was split out of it — and not out of `apartness.ts`, which
- * the atlas command reads and the arguments never reach.
- */
-test('the two readings differ where they are known to', () => {
-  expect(asking.match(/args\.every = Number\(argv\[\+\+at\]\)/), 'the TypeScript reading no longer coerces a distance').toBeTruthy();
-  expect(asking).toContain('is not a distance');
-  expect(command).toContain('\\"${spelled}\\" is not a distance');
-  expect(command.match(/paths = paths, every = asked/), 'the Flix reading no longer keeps paths as they were typed').toBeTruthy();
-  expect(asking).toContain('args.paths.push(resolve(argv[at]))');
 });
 
 /**

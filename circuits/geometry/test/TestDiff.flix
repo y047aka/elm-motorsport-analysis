@@ -1,6 +1,5 @@
 /// The diff command's own two readings: the arguments it asks with and the drawing it
-/// writes, against the expectations `circuits/tests/geometry-diff.test.ts` holds the
-/// TypeScript tool to. `TestApart` tests the comparison these are printed with, and
+/// writes. `TestApart` tests the comparison these are printed with, and
 /// `TestGeometry` the reading of a file.
 pub mod TestDiff {
 
@@ -58,8 +57,8 @@ pub mod TestDiff {
         Assert.assertTrue(refused("usage: nix run .#geometry-diff", "a.geojson" :: Nil));
         Assert.assertTrue(refused("usage: nix run .#geometry-diff", "a.geojson" :: "b.geojson" :: "c.geojson" :: Nil));
         Assert.assertTrue(refused("\"0\" is not a distance", "a.geojson" :: "b.geojson" :: "--every" :: "0" :: Nil));
-        // The word the reader typed is the word quoted back, which is what the reader
-        // can correct: the TypeScript tool echoed the coerced `NaN` instead.
+        // The word the reader typed is the word quoted back, which is what a reader can
+        // correct: a coerced number echoes a value they never wrote.
         Assert.assertTrue(refused("\"often\" is not a distance", "a.geojson" :: "b.geojson" :: "--every" :: "often" :: Nil))
 
     @Test
@@ -110,8 +109,8 @@ pub mod TestDiff {
         Assert.assertTrueWithMsg(String.contains({substr = "<!-- atlas: measured-midline — no source -->"}, drawing), "a line with no source says it has none");
         Assert.assertTrue(String.contains({substr = "Data: survey is © under ODbL."}, drawing));
         Assert.assertTrueWithMsg(String.contains({substr = "height=\"520\""}, drawing), "the margin twice, plus the span of both lines scaled to the fixed width");
-        // The drawing ends with a newline, as every kept file does: the same last byte
-        // the TypeScript tool writes, or a re-laid overlay is a changed file.
+        // The drawing ends with a newline, as every kept file does, so an overlay laid
+        // twice is one file rather than a file with a byte added to it.
         Assert.assertTrue(String.endsWith({suffix = "</svg>\n"}, drawing))
 
     @Test
