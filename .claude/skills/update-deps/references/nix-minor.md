@@ -23,6 +23,7 @@ nix run .#test
 nix run .#flix-test
 nix run .#geometry-timing-test
 nix run .#geometry-probe-test
+nix run .#geometry-diff-test
 nix run .#build
 ```
 

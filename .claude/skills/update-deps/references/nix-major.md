@@ -36,11 +36,13 @@ nix run .#test
 nix run .#flix-test
 nix run .#geometry-timing-test
 nix run .#geometry-probe-test
+nix run .#geometry-diff-test
 nix run .#build
 ```
 
-`circuits/timing/` and `circuits/probe/` are Flix projects too, each with its own
-`flix.toml`: bumping the `flix` version in `flake.nix` is a run of all three, and one
+`circuits/timing/`, `circuits/probe/` and `circuits/geometry/` are Flix projects too,
+each with its own `flix.toml`: bumping the `flix` version in `flake.nix` is a run of all
+four, and one
 left behind fails as its own red rather than as the flake not evaluating.
 
 A new nixpkgs can move `playwright-test`, which the VRT renders with, so run

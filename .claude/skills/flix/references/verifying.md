@@ -9,22 +9,26 @@ rm -rf flix/build && nix run .#flix-test
 `flix build` and `flix test` are incremental and CI is not. A cold run is the
 only one worth believing.
 
-## The other two projects
+## The other three projects
 
-`circuits/timing/` and `circuits/probe/` are Flix projects with their own
-`flix.toml`, and nothing about a green `.#flix-test` says anything about either:
+`circuits/timing/`, `circuits/probe/` and `circuits/geometry/` are Flix projects with
+their own `flix.toml`, and nothing about a green `.#flix-test` says anything about any of
+them:
 
 ```bash
 nix run .#geometry-timing-test   # the report's `flix test`
 nix run .#geometry-probe-test    # the probe's
+nix run .#geometry-diff-test     # the geometry commands'
 ```
 
 The report compiles nine sources *out of* `flix/src` by symlink, so a change to one of
 those is compiled twice and tested twice, once per project — and a symlink that did not
 survive a checkout fails as `Undefined use`, reported in the module that needed it
 rather than in the link. The probe shares no source, so its build is independent of
-`flix/src` altogether. Neither project needs a jar to be tested: both commands run the
-interpreter.
+`flix/src` altogether, and neither does the geometry project share one: it reads a kept
+geometry file and writes an overlay when asked for one, and its tests hand every reading
+a string rather than a file, so a run of them writes nothing. Neither project needs a jar
+to be tested: all three commands run the interpreter.
 
 ## What is written where
 
@@ -38,7 +42,8 @@ alone is `lib/`, the resolution cache CI restores — clearing it makes the next
 Maven Central again, which answers a busy runner with a 429.
 
 A second Flix project writes those same two directories wherever it is run, so it takes
-a `.gitignore` with it: `circuits/timing/` and `circuits/probe/` each hold a copy.
+a `.gitignore` with it: `circuits/timing/`, `circuits/probe/` and `circuits/geometry/`
+each hold a copy.
 
 ## The stack check
 
@@ -74,5 +79,6 @@ Two things that waste time here:
 ## What CI runs
 
 `test.yml` on ubuntu-24.04 runs the Elm tests, then each Flix project's own tests —
-the CLI's, the report's, the probe's — then the circuit tools' and `tsc`. A failure
+the CLI's, the report's, the probe's and the geometry commands' — then the circuit
+tools' and `tsc`. A failure
 there that passes locally is either the cold build or the stack.
