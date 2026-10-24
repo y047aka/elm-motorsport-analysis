@@ -1,27 +1,38 @@
 import { test, expect } from '@playwright/test';
 import { readdirSync, lstatSync } from 'node:fs';
+import { circuit as cota } from '../../circuits/cota/circuit.ts';
+import { circuit as leMans } from '../../circuits/le_mans/circuit.ts';
 
 import { readSource } from './helpers';
 
 /**
- * One comparison, read in two languages, and no compiler sees both.
+ * One set of readings, held in two languages, and no compiler sees both.
  *
  * The atlas command measures a measured line against a kept geometry in TypeScript
- * (`circuits/apartness.ts`, which `circuits/atlas-geometry.ts` imports), and the diff
- * lays the same two kinds of file against each other in Flix (`circuits/geometry/`,
- * `nix run .#geometry-diff`). They are deliberately separate programs — one writes an
- * atlas line into the repository, the other compares what is already there — but the
- * comparison they are built on is one set of arithmetic, and it is now written twice.
+ * (`circuits/apartness.ts`, which `circuits/atlas-geometry.ts` imports), and the diff lays
+ * the same two kinds of file against each other in Flix (`circuits/geometry/`, `nix run
+ * .#geometry-diff`). They are deliberately separate programs — one writes an atlas line
+ * into the repository, the other compares what is already there — but the comparison they
+ * are built on is one set of arithmetic, and it is written twice.
  *
- * A comparison that parts silently says nothing: the apartness of two lines sampled on
- * a different bound is a mean within a few metres of the truth, which reads as a real
- * reading of two lines that in fact disagree. The numbers a report prints are the same
- * hazard the other way round — a metre printed as `5515.0` where the kept files print
- * `5515` is a changed file, and a fence that compares bytes fails on the print alone. So
- * the bound of each loop, which stretch a tie falls on, how a zero-length stretch is
- * walked through, and the sphere both are laid on are read out of both sources here, the
- * way `circuit-overpass.spec.ts` reads the Overpass facts out of both sides of the
- * Flix/TypeScript line.
+ * The survey is written twice too, and is the larger of the two duplications.
+ * `circuits/circuit-geometry.ts` reads an Overpass answer, chains a relation's ways into a
+ * lap, stretches it to the length the circuit publishes and writes the file the app serves;
+ * `circuits/geometry/src/Survey.flix` and `Write.flix` do the same over a kept answer, and
+ * `nix run .#geometry-survey` fails unless the bytes it lays are the bytes the app serves.
+ * Asking OpenStreetMap for a survey nobody has seen, the atlas reading and the two
+ * circuits' configs are still TypeScript's, so the two pipelines are one pipeline only for
+ * as long as something compares them.
+ *
+ * A comparison that parts silently says nothing: the apartness of two lines sampled on a
+ * different bound is a mean within a few metres of the truth, which reads as a real
+ * reading of two lines that in fact disagree. A survey that parts says it louder — a lap
+ * that chains the other way round is a field drawn at the wrong metre for everyone — but
+ * only where a survey is actually run, and the Flix survey runs over two kept answers. So
+ * the bound of each loop, which stretch a tie falls on, the order the claims are written
+ * in, the sphere both are laid on and the tenth a metre is kept to are read out of both
+ * sources here, the way `circuit-overpass.spec.ts` reads the Overpass facts out of both
+ * sides of the Flix/TypeScript line.
  *
  * Nothing here needs a browser.
  */
@@ -29,28 +40,53 @@ import { readSource } from './helpers';
 const node = readSource('circuits/apartness.ts');
 const asking = readSource('circuits/geometry-diff.ts');
 const kept = readSource('circuits/geometry-file.ts');
+const drift = readSource('circuits/geometry-drift.ts');
+const allowance = readSource('circuits/timing-line.ts');
+const survey = readSource('circuits/circuit-geometry.ts');
+const atlas = readSource('circuits/atlas-geometry.ts');
 const flix = readSource('circuits/geometry/src/Apart.flix');
 const file = readSource('circuits/geometry/src/Geometry.flix');
 const command = readSource('circuits/geometry/src/Diff.flix');
 const printed = readSource('circuits/geometry/src/Util/Format.flix');
-const survey = readSource('circuits/circuit-geometry.ts');
-const atlas = readSource('circuits/atlas-geometry.ts');
+const config = readSource('circuits/geometry/src/Circuit.flix');
+const chained = readSource('circuits/geometry/src/Survey.flix');
+const writer = readSource('circuits/geometry/src/Write.flix');
+const main = readSource('circuits/geometry/src/Main.flix');
+
+const authored: Record<string, typeof cota> = { cota, le_mans: leMans };
 
 /**
- * Every source either reading compiles, for the reading of their text alone: the
- * project's own six and the two TypeScript modules it duplicates, since a word a database
- * is named by would arrive in a source file and not in a build product.
+ * Every `.flix` file on one shelf of the geometry project, with a symlink named rather than
+ * followed. The timing report links nine of `flix/src`'s sources because it reads readings
+ * that live there; this project reads none of them, and a link would compile — `Sql.flix`
+ * declares an effect that opens no connection — so a project could acquire a way to name a
+ * database without being asked to.
  */
-const everySource = [
-  node,
-  kept,
-  flix,
-  file,
-  command,
-  printed,
-  readSource('circuits/geometry/src/Util/Files.flix'),
-  readSource('circuits/geometry/src/Main.flix'),
-];
+function readDir(dir: string): string[] {
+  const found: string[] = [];
+  const walk = (at: string) => {
+    for (const entry of readdirSync(new URL(`../../${at}`, import.meta.url), { withFileTypes: true })) {
+      const path = `${at}/${entry.name}`;
+      if (lstatSync(new URL(`../../${path}`, import.meta.url)).isSymbolicLink()) {
+        throw new Error(`${path} links out of the geometry project, which shares no source with anything`);
+      }
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name.endsWith('.flix')) found.push(path);
+    }
+  };
+  walk(dir);
+  return found.sort();
+}
+
+const project = [...readDir('circuits/geometry/src'), ...readDir('circuits/geometry/test')];
+
+
+/**
+ * Every source the geometry project compiles — nine of Flix and five of tests, which is
+ * what the project is asserted to hold — for the reading of their text alone: a word a
+ * database is named by would arrive in a source file and not in a build product.
+ */
+const everySource = project.map(readSource);
 
 /**
  * The sampling stops short of the line's own end: a line of 100 m at 25 m is four
@@ -280,12 +316,28 @@ test("the flake's geometry commands reach the sources they run", () => {
   expect(registered.sort(), 'the flake registers a different set of geometry commands than these').toEqual([
     'geometry-diff',
     'geometry-diff-test',
+    'geometry-survey',
   ]);
-  const main = readSource('circuits/geometry/src/Main.flix');
+  // Each app hands its subcommand word to the jar, so a renamed subcommand is a flake app
+  // that answers with a usage where the reader expected a report.
+  const flake = readSource('flake.nix');
+  for (const [app, word] of [
+    ['geometry-diff', 'diff'],
+    ['geometry-survey', 'survey'],
+  ]) {
+    expect(flake, `nix run .#${app} no longer hands the jar the "${word}" subcommand`).toContain(
+      `mkGeometryApp "${app}" "flix run -- ${word} \\"$@\\""`,
+    );
+  }
   expect(main, 'nix run .#geometry-diff runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Diff.exitCode(rest))',
   );
-  expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain('"diff" :: Nil');
+  expect(main, 'nix run .#geometry-survey runs a main that hands the reader its arguments to nothing').toContain(
+    'Exit.exit(Write.exitCode(rest))',
+  );
+  expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
+    '"diff" :: "survey" :: Nil',
+  );
 });
 
 /**
@@ -300,25 +352,21 @@ test("the flake's geometry commands reach the sources they run", () => {
  * resolves a JDBC driver for it.
  */
 test('the geometry project shares no source, resolves no dependency and names no database', () => {
-  const held: string[] = [];
-  const walk = (dir: string) => {
-    for (const entry of readdirSync(new URL(`../../circuits/geometry/${dir}`, import.meta.url), { withFileTypes: true })) {
-      const path = `${dir}/${entry.name}`;
-      if (lstatSync(new URL(`../../circuits/geometry/${path}`, import.meta.url)).isSymbolicLink()) {
-        expect(true, `${path} links out of the geometry project, which shares no source with anything`).toBe(false);
-      } else if (entry.isDirectory()) walk(path);
-      else if (entry.name.endsWith('.flix')) held.push(path.replace(/^\/+/, ''));
-    }
-  };
-  walk('src');
-
-  expect(held.sort(), 'the geometry project holds sources this spec does not know').toEqual([
-    'src/Apart.flix',
-    'src/Diff.flix',
-    'src/Geometry.flix',
-    'src/Main.flix',
-    'src/Util/Files.flix',
-    'src/Util/Format.flix',
+  expect(project, 'the geometry project holds a different set of sources than these').toEqual([
+    'circuits/geometry/src/Apart.flix',
+    'circuits/geometry/src/Circuit.flix',
+    'circuits/geometry/src/Diff.flix',
+    'circuits/geometry/src/Geometry.flix',
+    'circuits/geometry/src/Main.flix',
+    'circuits/geometry/src/Survey.flix',
+    'circuits/geometry/src/Util/Files.flix',
+    'circuits/geometry/src/Util/Format.flix',
+    'circuits/geometry/src/Write.flix',
+    'circuits/geometry/test/TestApart.flix',
+    'circuits/geometry/test/TestDiff.flix',
+    'circuits/geometry/test/TestGeometry.flix',
+    'circuits/geometry/test/TestSurvey.flix',
+    'circuits/geometry/test/TestWrite.flix',
   ]);
 
   const toml = readSource('circuits/geometry/flix.toml');
@@ -356,4 +404,259 @@ test('a path a reader types is read from where they typed it', () => {
   expect(reader, 'the geometry project no longer asks for the directory it was run from').toContain(
     'Env.getVar("GEOMETRY_FROM")',
   );
+});
+
+/**
+ * One circuit's config, in the language the Flix survey is written in. The two records are
+ * authored apart — the TypeScript one is what the survey and the atlas reading are given,
+ * the Flix one is what `geometry-survey` is given — and every figure in them is a fact about
+ * a circuit, which is one fact twice over with no compiler between the two copies.
+ */
+function flixConfig(word: string): string {
+  const claims = new RegExp(`word\\s+=\\s+"${word}"`);
+  const body = config
+    .split('\n    def ')
+    .slice(1)
+    .find((each) => claims.test(each));
+  if (!body) throw new Error(`circuits/geometry/src/Circuit.flix authors no circuit the word "${word}" answers to`);
+  return body.split('\n    }')[0];
+}
+
+/** A figure the Flix config states, with Flix's own width off the literal. */
+function figure(source: string, key: string): string {
+  const stated = source.match(new RegExp(`\\b${key}\\s*=\\s*([^,\\n]+)`));
+  expect(stated, `the Flix config states no ${key}`).toBeTruthy();
+  return stated![1].trim().replace(/i64$/, '');
+}
+
+const lineOf = (source: string, key: string): string | undefined =>
+  source.split('\n').find((each) => each.includes(`${key} =`))?.trim();
+
+test("a circuit's figures are authored once and held in either language", () => {
+  for (const [word, circuit] of Object.entries(authored)) {
+    const held = flixConfig(word);
+
+    expect(Number(figure(held, 'relation')), `${word}: the two surveys read different relations`).toBe(
+      circuit.relation,
+    );
+    expect(figure(held, 'word'), `${word}: the Flix survey draws it by another word`).toBe(`"${circuit.slug}"`);
+    expect(figure(held, 'timedFrom'), `${word}: the two surveys start from different lines`).toBe(
+      `"${circuit.finishRole}"`,
+    );
+    expect(Number(figure(held, 'lap')), `${word}: the two surveys stretch to different laps`).toBe(
+      circuit.lapLength,
+    );
+    expect(figure(held, 'file'), `${word}: the Flix survey writes somewhere else`).toBe(`"${circuit.geojson}"`);
+    expect(figure(held, 'survey'), `${word}: the two surveys read different answers`).toBe(`"${circuit.survey}"`);
+
+    const timing = lineOf(held, 'timingLine');
+    expect(timing, `${word}: the Flix config says nothing about the timing line`).toBeTruthy();
+    if (circuit.timingLine) {
+      expect(
+        Number(timing!.match(/lat = (-?[\d.]+)/)?.[1]),
+        `${word}: the Flix line's latitude is not the published one`,
+      ).toBe(circuit.timingLine.lat);
+      expect(
+        Number(timing!.match(/lon = (-?[\d.]+)/)?.[1]),
+        `${word}: the Flix line's longitude is not the published one`,
+      ).toBe(circuit.timingLine.lon);
+      expect(
+        Number(timing!.match(/within = Some\(([\d.]+)\)/)?.[1]),
+        `${word}: the Flix line allows another distance than the published one`,
+      ).toBe(circuit.timingLine.within ?? 10);
+    } else {
+      expect(timing, `${word}: the Flix config times from a line the circuit does not publish`).toContain(
+        'timingLine = None',
+      );
+    }
+
+    const sectors = circuit.sectors;
+    if (sectors.kind === 'published') {
+      expect(figure(held, 'source'), `${word}: the two configs credit different maps`).toBe(`"${sectors.source}"`);
+      const stretches = held.match(/stretches = ([^\n]+)/);
+      expect(stretches, `${word}: the Flix config publishes no stretches`).toBeTruthy();
+      const every = stretches![1].split('::').map((each) => each.trim()).filter((each) => each !== 'Nil');
+      expect(
+        every.map((each) => Number(each)),
+        `${word}: the two configs time the lap at different lines`,
+      ).toEqual(sectors.stretches);
+    } else {
+      expect(held, `${word}: the Flix config publishes stretches a per-season map has`).toContain('published = None');
+      expect(
+        held,
+        `${word}: the Flix config does not carry the reason a round of that circuit is refused`,
+      ).toContain(`"${sectors.reason}"`);
+    }
+  }
+
+  // How far a relation's node may stand from the published line and still be it: the map's
+  // own crosshair, which is a fact about the map and not about a language.
+  expect(
+    Number(config.match(/pub def nodeWithin\(\): Float64 = ([\d.]+)/)?.[1]),
+    'the Flix crosshair is not the crosshair the TypeScript survey allows',
+  ).toBe(Number(allowance.match(/export const nodeWithin = ([\d.]+)/)?.[1]));
+});
+
+test('the two writers lay the same claims, in one order, in one file', () => {
+  const outline = survey.split('export function geoJsonString')[1].split('const pitLane = feature(')[0];
+  const claimed = [...outline.matchAll(/^      ([a-z_]+):/gm)].map((m) => m[1]);
+  expect(claimed, 'the kept files claim these things in this order; read them off the writer').toEqual([
+    'role',
+    'circuit',
+    'basis',
+    'source',
+    'license',
+    'surveyed_at',
+    'direction',
+    'lap_length_m',
+    'surveyed_length_m',
+    'sectors',
+    'frame',
+    'metres',
+  ]);
+
+  const claims = writer.split('def authored(circuit: Circuit')[1].split('/// The pit lane')[0];
+  expect(
+    [...claims.matchAll(/\("([a-z_]+)",/g)].map((m) => m[1]),
+    'the Flix writer lays the claims in another order than the file was written in',
+  ).toEqual(claimed);
+
+  const pit = survey.split('const pitLane = feature(')[1].split('\n')[1];
+  expect(
+    [...writer.split('def pitOf(circuit: Circuit')[1].split('/// The kind of line')[0].matchAll(/\("([a-z_]+)",/g)].map(
+      (m) => m[1],
+    ),
+    'the Flix writer says something of the pit lane the TypeScript writer does not',
+  ).toEqual([...pit.matchAll(/([a-z_]+): /g)].map((m) => m[1]));
+
+  // The file's own shape, which both writers have to hit byte for byte: the header, one
+  // Feature per line of the two, and a geometry whose coordinates are on the one line.
+  expect(survey).toContain('{"type": "FeatureCollection", "features": [');
+  expect(writer).toContain('{\\"type\\": \\"FeatureCollection\\", \\"features\\": [');
+  expect(survey).toContain('JSON.stringify({ type: "LineString", coordinates })');
+  expect(writer).toContain('{\\"type\\":\\"LineString\\",\\"coordinates\\":');
+
+  // A claim a circuit cannot make is no line at all rather than a `null` one: Le Mans has no
+  // stamp to write and no published map, and a file that said `"sectors": null` would read
+  // as a circuit that publishes empty lines.
+  expect(survey).toContain('.filter(([, value]) => value !== undefined)');
+  expect(claims).toContain('Option.map(stamped -> ("surveyed_at", text(stamped)), geometry#surveyedAt)');
+  // ... and only a circuit that publishes one map sends its timing lines, whichever kind of
+  // `sectors` the config holds.
+  expect(survey).toContain('circuit.sectors.kind === "published"');
+  expect(claims).toContain('Option.map(lines -> ("sectors", published(lines)), circuit#sectors#published)');
+});
+
+test('a metre is kept to the tenth the survey is held at in either pipeline', () => {
+  expect(survey, 'the TypeScript survey no longer keeps a metre to a tenth').toContain('return Math.round(n * 10) / 10;');
+  expect(chained, 'the Flix survey keeps a tenth the Java way, which sends a positive half down').toContain(
+    'Int64.toFloat64(Float64.truncateToInt64((metres * tenths()) + 0.5)) / tenths()',
+  );
+  expect(Number(chained.match(/pub def tenths\(\): Float64 = ([\d.]+)/)?.[1]), 'the Flix tenth is not a tenth').toBe(
+    Number(survey.match(/Math\.round\(n \* ([\d.]+)\) \/ ([\d.]+)/)?.[1]),
+  );
+
+  // A number that would print differently in the two writers is a drawing that moved by a
+  // digit: Flix spells a whole float `5515.0` where JavaScript spells `5515`, and neither
+  // reaches the exponential form a metre, a latitude or a longitude never gets near.
+  expect(survey).toContain('JSON.stringify(value)');
+  expect(writer).toContain('if (String.endsWith({suffix = ".0"}, spelled)) String.dropRight(2, spelled) else spelled');
+
+  // The bound the thinning stops at is a drawing's, not a language's: it is the reason a
+  // kept file holds the points it holds.
+  expect(
+    Number(survey.match(/^const tolerance = ([\d.]+);/m)?.[1]),
+    'the thinning tolerance is not the same in the two surveys',
+  ).toBe(Number(chained.match(/pub def tolerance\(\): Float64 = ([\d.]+)/)?.[1]));
+});
+
+test('the thinning splits a lap at its own middle and turns on the first of two ties', () => {
+  // A lap is closed, so its first point is its last; thinning the whole thing would let that
+  // one point be the pivot of both halves at once.
+  expect(survey).toContain('const half = Math.floor(lapPoints.length / 2);');
+  expect(chained).toContain('let half = List.length(lapPoints) / 2;');
+  expect(survey).toContain(
+    '...simplify(lapPoints, 0, half).slice(0, -1),\n    ...simplify(lapPoints, half, lapPoints.length - 1),',
+  );
+  expect(chained).toContain(
+    'List.append(withoutLast(simplify(points, 0, half)), simplify(points, half, lastIndex(points)))',
+  );
+
+  expect(survey).toContain('if (furthest <= tolerance) return [from, to];');
+  expect(chained).toContain('if (best <= tolerance() or at < 0) lo :: hi :: Nil');
+  // Strictly further, so the first of two points equally far off the chord is the one kept:
+  // a tie taken the other way is a survey that keeps another point, anywhere on the lap.
+  expect(survey).toContain('if (d > furthest) {');
+  expect(chained).toContain('if (distance > best)');
+});
+
+test('the lap is stretched by one factor taken off its own surveyed length', () => {
+  expect(survey).toContain('const stretch = circuit.lapLength / surveyed[surveyed.length - 1];');
+  expect(chained).toContain('let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));');
+  expect(survey).toContain('const metres = surveyed.map((m) => m * stretch);');
+  expect(chained).toContain('let metres = List.map(each -> each * stretch, surveyed);');
+
+  // The cumulative sum runs each line forwards from nought, which is the only reason the
+  // surveyed length a file carries is reproducible by another program at all.
+  expect(survey).toContain('out.push(out[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));');
+  expect(chained).toContain('let step = total + Apart.hypot(one#x - ahead#x, one#y - ahead#y);');
+
+  // The corner both are measured from is the north-west of every place of both lines, and
+  // `y` runs south, which is why a positive shoelace is a clockwise lap in either language.
+  expect(survey).toContain('lat: Math.max(...points.map((p) => p.lat)),');
+  expect(survey).toContain('lon: Math.min(...points.map((p) => p.lon)),');
+  expect(chained).toContain('lat = if (place#lat > corner#lat) place#lat else corner#lat,');
+  expect(chained).toContain('lon = if (place#lon < corner#lon) place#lon else corner#lon');
+  expect(survey).toContain('return sum > 0 ? "clockwise" : "counter_clockwise";');
+  expect(chained).toContain('if (shoelace(points) > 0.0) clockwise() else counterClockwise()');
+});
+
+test('a survey that cannot be chained is refused in one set of words', () => {
+  for (const sentence of [
+    'the answer holds no relation',
+    'tags no member with role',
+    'which the answer does not hold',
+    'the relation holds no way the lap can start from',
+    'ways left out of the chain',
+    'nearest end',
+    'where the chain stopped',
+    'driven the other way',
+    'the lap does not close',
+    'the chain ended at a node the answer does not hold',
+    "The relation's lines:",
+  ]) {
+    expect(survey, `the TypeScript survey no longer says "${sentence}" where the Flix survey does`).toContain(sentence);
+    expect(chained, `the Flix survey no longer says "${sentence}" where the TypeScript survey does`).toContain(sentence);
+  }
+
+  // The timing line's own refusal is one module's, and both surveys reach it for the same
+  // relation member: a line further than the map's crosshair is another line.
+  expect(allowance).toContain('m from the published timing line, which is not within');
+  expect(chained).toContain('m from the published timing line, which is not within');
+});
+
+test('a byte comparison exempts nothing, where a property comparison exempts the stamp', () => {
+  // The regeneration fence compares two parsed files property by property and lets
+  // `surveyed_at` move, because a regeneration that asks OpenStreetMap now takes a newer
+  // survey. The Flix comparison is of bytes, and has nothing to exempt: it reads the very
+  // answer whose stamp the property carries, so the stamp it writes is the stamp it reads.
+  expect(drift).toContain('if (key === "surveyed_at") continue;');
+  expect(writer).toContain('`surveyed_at` needs no');
+  expect(writer).toContain('written == kept');
+});
+
+test('the Flix survey is fenced against the bytes the app serves', () => {
+  const workflow = readSource('.github/workflows/test.yml');
+  for (const circuit of Object.keys(authored)) {
+    expect(
+      workflow,
+      `CI no longer asks whether the Flix survey lays ${circuit}'s kept geometry`,
+    ).toContain(`nix run .#geometry-survey -- ${circuit}`);
+  }
+  expect(workflow, 'CI no longer runs the geometry project').toContain('nix run .#geometry-diff-test');
+  // A CI run compares; a run that writes is the reader's own, and a `--write` in CI would
+  // make the fence pass by rewriting what it is meant to be fencing.
+  for (const step of workflow.match(/nix run \.#geometry-survey[^\n]*/g) ?? []) {
+    expect(step, `CI writes ${step.trim()} rather than comparing it`).not.toContain('--write');
+  }
 });

@@ -83,11 +83,14 @@
             '';
           };
 
-        # Laying two kept geometries against each other is the fourth Flix project, at
-        # `circuits/geometry`, and the first of the circuit commands to move: the
-        # pipeline that writes those files, the atlas reading that measures a foreign
-        # line against one, and the two circuits' configs are still Node's. The project
-        # reads a file and writes one and reaches neither a database nor a network.
+        # Laying two kept geometries against each other, and surveying a circuit's geometry
+        # out of its kept Overpass answer, are the fourth Flix project, at
+        # `circuits/geometry`. The pipeline that asks OpenStreetMap for a survey it has
+        # never seen, the atlas reading that measures a foreign line against a kept one,
+        # and the two circuits' configs are still Node's — so the two projects hold the
+        # same figures and `app/tests/circuits-geometry-reading.spec.ts` is what keeps them
+        # one set. The project reads a file and writes one and reaches neither a database
+        # nor a network.
         #
         # `GEOMETRY_FROM` is the directory the reader was standing in: `flix` has to be
         # started inside the project to find its `flix.toml`, and the reader names
@@ -301,7 +304,8 @@
           geometry-write       = { type = "app"; program = "${geometryApp "geometry-write" "write-geometry"}/bin/geometry-write";                                        meta.description = "Write a circuit's geometry out of OpenStreetMap, or check the kept one (<circuit>; [overpass.json] to use an answer you kept; --from-geojson to re-check the kept geometry with no network)"; };
           geometry-atlas       = { type = "app"; program = "${geometryApp "geometry-atlas" "atlas-geometry"}/bin/geometry-atlas";                                        meta.description = "Measure a dataset's line against a circuit's kept geometry, and keep it beside it (<circuit> [--file gp.geojson])"; };
           geometry-diff        = { type = "app"; program = "${mkGeometryApp "geometry-diff" "flix run -- diff \"$@\""}/bin/geometry-diff";                              meta.description = "Lay two kept geometries against each other in metres, optionally as an SVG overlay (the circuits/geometry project, reading no database; paths from where the command is run, [--every <m>] [--svg <out.svg>])"; };
-          geometry-diff-test   = { type = "app"; program = "${mkGeometryApp "geometry-diff-test" "flix test"}/bin/geometry-diff-test";                             meta.description = "Run the geometry commands' tests (the circuits/geometry project's; no network, no database, no files written)"; };
+          geometry-survey      = { type = "app"; program = "${mkGeometryApp "geometry-survey" "flix run -- survey \"$@\""}/bin/geometry-survey";                          meta.description = "Survey a circuit's geometry out of its kept Overpass answer, and fail unless it is the bytes the app serves (the circuits/geometry project, reaching no database and no network; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
+          geometry-diff-test   = { type = "app"; program = "${mkGeometryApp "geometry-diff-test" "flix test"}/bin/geometry-diff-test";                             meta.description = "Run the circuits/geometry project's tests — the readings behind geometry-diff and geometry-survey (no network, no database, no files written)"; };
           geometry-regenerate  = { type = "app"; program = "${geometryApp "geometry-regenerate" "regenerate-geometry"}/bin/geometry-regenerate";                      meta.description = "Re-run the geometry pipeline over each circuit's kept Overpass answer and fail unless it reproduces the kept geometry ([<circuit> ...]; --write re-lays the files from the kept answer; --freeze asks OpenStreetMap now and keeps both)"; };
           geometry-timing-lines = { type = "app"; program = "${mkTimingApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits/timing project, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           geometry-timing-test = { type = "app"; program = "${mkTimingApp "geometry-timing-test" "flix test"}/bin/geometry-timing-test";                                   meta.description = "Run the timing report's tests (the circuits/timing project's; no database, no network, no files written)"; };

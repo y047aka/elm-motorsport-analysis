@@ -1,0 +1,680 @@
+/// The survey read, the lap chained, and the line stretched to the length the circuit
+/// publishes: what stands between an Overpass answer and the geometry the app serves, in
+/// the language the commands a person runs are written in.
+///
+/// A relation lists its ways in no order, may draw a two-way way against the direction of
+/// the race, and comes to whatever length OpenStreetMap happens to hold; what the pipeline
+/// owes the drawing is one closed line that starts at the line the circuit times from, runs
+/// in the direction the race does, and ends at the metre the circuit publishes. Every point
+/// keeps the degrees it was surveyed at — the metres are this module's working, and the app
+/// re-derives them from the frame written beside them.
+///
+/// What is refused here is what an answer owes a survey: the relation is in the answer, the
+/// line the lap is measured from stands where the circuit says it stands, every way in the
+/// relation made it into the chain, and the chain closed. Each says what it found rather
+/// than that a lookup returned nothing.
+///
+/// The same pipeline is TypeScript's in `circuits/circuit-geometry.ts`. Which of the two the
+/// flake runs is `circuits/README.md`'s to say; the numbers both are laid on — the sphere,
+/// the parallel both lines are drawn about, the bound the thinning stops at and the tenth it
+/// stops at, which of two equally far points a stretch turns on — are what
+/// `app/tests/circuits-geometry-reading.spec.ts` reads out of both sources.
+pub mod Survey {
+
+    use Geometry.Place
+    use Apart.Point
+    use Util.Json.Json
+    use Circuit.Circuit
+
+    // ------------------------------------------------------------------ the answer
+
+    /// Whatever a relation or a way is tagged, in OpenStreetMap's own spellings. Only
+    /// `oneway` is read out of these; the rest travels with the answer it came in.
+    pub type alias Tags = Map[String, String]
+
+    /// One member of a relation. The role is the empty string for the ways a lap is
+    /// chained from, which is why it is carried rather than dropped: it is the whole
+    /// difference between the lap and the pit lane.
+    pub type alias Member = {
+        kind = String,
+        role = String,
+        ref  = Int64
+    }
+
+    /// One element of an answer, of whichever kind it was: a node carries a place and no
+    /// line, a way the node ids its line runs through, a relation its members. The answer is
+    /// `out body`, the one spelling that carries a way's node refs and a node's degrees at
+    /// once, which is what chaining a line of places needs both of.
+    pub type alias Element = {
+        id      = Int64,
+        kind    = String,
+        tags    = Tags,
+        at      = Option[Place],
+        nodes   = List[Int64],
+        members = List[Member]
+    }
+
+    /// An answer, read. `surveyedAt` is the answer's own stamp — which moment of the map it
+    /// surveyed — and is the one property of a written geometry a live regeneration is
+    /// allowed to move while every degree stands still.
+    pub type alias Answer = {
+        elements   = List[Element],
+        surveyedAt = Option[String]
+    }
+
+    /// An answer's text, read. What is no JSON at all failed to answer, and says so with the
+    /// parser's own words.
+    pub def answer(text: String): Result[String, Answer] =
+        match Util.Json.parse(text) {
+            case Err(problem) => Err("${problem}")
+            case Ok(json) =>
+                let root = objectOf(json);
+                Ok({elements = List.filterMap(elementOf, array("elements", root)), surveyedAt = stamped(root)})
+        }
+
+    def elementOf(json: Json): Option[Element] =
+        let root = objectOf(json);
+        match (wordOf("type", root), wholeOf("id", root)) {
+            case (Some(kind), Some(id)) =>
+                Some({
+                    kind    = kind,
+                    id      = id,
+                    tags    = tagsOf(root),
+                    at      = placeOf(json),
+                    nodes   = wholeArray("nodes", root),
+                    members = List.filterMap(memberOf, array("members", root))
+                })
+            case _ => None
+        }
+
+    /// A relation's member: what kind of thing it is, which line it is on, and what it
+    /// stands for. A role the answer does not spell is the empty one, which is the lap's.
+    def memberOf(json: Json): Option[Member] =
+        let root = objectOf(json);
+        match wholeOf("ref", root) {
+            case None      => None
+            case Some(ref) => Some({kind = wordWith("type", root), role = wordWith("role", root), ref = ref})
+        }
+
+    /// A node's place, and nothing else's: a way has no latitude of its own, and a relation
+    /// least of all.
+    def placeOf(json: Json): Option[Place] =
+        let root = objectOf(json);
+        match (numberOf("lat", root), numberOf("lon", root)) {
+            case (Some(lat), Some(lon)) => Some({lat = lat, lon = lon})
+            case _                      => None
+        }
+
+    def tagsOf(root: Map[String, Json]): Tags =
+        match Map.get("tags", root) {
+            case Some(tags) => paired(List.filterMap(tagOf, Map.toList(objectOf(tags))))
+            case None       => Map.empty()
+        }
+
+    /// A tag whose value is not a word is no tag: OpenStreetMap tags by string, and a
+    /// number in a tag is a survey this reading does not know how to read.
+    def tagOf(pair: (String, Json)): Option[(String, String)] =
+        match pair {
+            case (key, Json.JString(value)) => Some((key, value))
+            case _                          => None
+        }
+
+    /// The moment the answer says the map was surveyed at.
+    def stamped(root: Map[String, Json]): Option[String] =
+        match Map.get("osm3s", root) {
+            case Some(osm) => wordOf("timestamp_osm_base", objectOf(osm))
+            case None      => None
+        }
+
+    // ------------------------------------------------------------------ the geometry
+
+    /// A place on the lap with how far round the lap it stands, in the circuit's published
+    /// metres.
+    pub type alias MetredPlace = {
+        lat    = Float64,
+        lon    = Float64,
+        metres = Float64
+    }
+
+    /// The frame the degrees project through: its origin the north-west corner of the
+    /// survey, `parallel` the latitude the east-west is scaled at. The drawing's own
+    /// `Circuit.Geodesy` re-runs this projection, so what is written is a copy of the frame
+    /// the survey was measured on and never a re-derivation of one.
+    pub type alias Frame = {
+        origin   = Place,
+        parallel = Float64
+    }
+
+    /// What the pipeline kept and what it was handed. A read-back file cannot say these,
+    /// since it holds the line that came out and not the one that went in.
+    pub type alias Counts = {
+        kept = Int32,
+        lap  = Int32,
+        pit  = Int32,
+        of   = Int32
+    }
+
+    /// The lap, the pit lane and the frame, in the drawing's own metres.
+    pub type alias Geometry = {
+        centreline     = List[MetredPlace],
+        pitLane        = List[Place],
+        frame          = Frame,
+        direction      = String,
+        surveyedAt     = Option[String],
+        surveyedLength = Option[Float64],
+        counts         = Option[Counts]
+    }
+
+    /// Which way a car goes round the drawing, as the geometry says it goes.
+    pub def clockwise(): String = "clockwise"
+
+    pub def counterClockwise(): String = "counter_clockwise"
+
+    /// Metres a thinned line may stray from the surveyed one, and the tenth of a metre a
+    /// survey is kept to — which is the tenth every baseline was rendered at.
+    pub def tolerance(): Float64 = 1.0
+
+    pub def tenths(): Float64 = 10.0
+
+    /// The lap, the pit lane and the frame, chained out of an answer.
+    pub def lapOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
+        match relationOf(reading, circuit#relation) {
+            case Err(problem) => Err(problem)
+            case Ok(relation) =>
+                let nodes = nodesOf(reading);
+                let ways = waysOf(reading);
+                match lineOf(relation, circuit) {
+                    case Err(problem) => Err(problem)
+                    case Ok(start) =>
+                        match standsAtLine(relation#members, nodes, start, circuit) {
+                            case Err(problem) => Err(problem)
+                            case Ok(_) =>
+                                chained(relation, ways, nodes, start)
+                                    |> Result.flatMap(lap ->
+                                        pitChained(relation, ways, nodes)
+                                            |> Result.map(pit -> laidOut(reading, nodes, lap, pit, circuit))
+                                    )
+                        }
+                }
+        }
+
+    def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
+        match List.find(each -> each#kind == "relation" and each#id == relation, reading#elements) {
+            case Some(one) => Ok(one)
+            case None      => Err("the answer holds no relation ${relation}")
+        }
+
+    /// Every place the answer holds a node for, by its id. A node the answer does not hold
+    /// is dropped rather than guessed at, and shows up as a lap with a place missing.
+    def nodesOf(reading: Answer): Map[Int64, Place] =
+        paired(
+            List.filterMap(
+                each -> match each#at {
+                    case Some(at) => Some((each#id, at))
+                    case None     => None
+                },
+                List.filter(each -> each#kind == "node", reading#elements)
+            )
+        )
+
+    def waysOf(reading: Answer): Map[Int64, Element] =
+        paired(List.map(each -> (each#id, each), List.filter(each -> each#kind == "way", reading#elements)))
+
+    /// The relation member the lap is measured from. A circuit says which role tags it, and
+    /// getting it wrong moves the whole field down the lap by the distance between two tagged
+    /// lines while still drawing fine.
+    def lineOf(relation: Element, circuit: Circuit): Result[String, Int64] =
+        match List.find(member -> member#role == circuit#timedFrom, relation#members) {
+            case Some(member) => Ok(member#ref)
+            case None         => Err("relation ${circuit#relation} tags no member with role '${circuit#timedFrom}'")
+        }
+
+    /// The line the lap is measured from, checked against where the circuit says it stands.
+    /// A refusal lists the lines the relation does tag and how far each stands from the
+    /// published place, which is the reading the reader needed in the first place.
+    def standsAtLine(members: List[Member], nodes: Map[Int64, Place], start: Int64, circuit: Circuit): Result[String, Float64] =
+        match circuit#timingLine {
+            case None => Ok(0.0)
+            case Some(line) =>
+                let distance = apart(nodeOf(nodes, start), line#place);
+                let limit = Option.getWithDefault(Circuit.nodeWithin(), line#within);
+                if (distance > limit)
+                    Err(
+                        "role=${circuit#timedFrom} is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.whole(limit)} m. ${relationLines(members, nodes, line)}"
+                    )
+                else
+                    Ok(distance)
+        }
+
+    def relationLines(members: List[Member], nodes: Map[Int64, Place], line: Circuit.TimingLine): String =
+        let distances = List.map(
+            member -> "role=${member#role} is ${Util.Format.fixed(1, apart(nodeOf(nodes, member#ref), line#place))} m from it",
+            List.filter(member -> member#kind == "node", members)
+        );
+        "The relation's lines: ${String.intercalate("; ", distances)}."
+
+    /// A node the answer does not hold is the zero of the map, which is a sea no circuit is
+    /// at: the distance it makes is a refusal, where a silence would be a pass.
+    def nodeOf(nodes: Map[Int64, Place], id: Int64): Place =
+        Option.getWithDefault({lat = 0.0, lon = 0.0}, Map.get(id, nodes))
+
+    // ---------------------------------------------------------------- chaining a lap
+
+    /// One way of a relation, as a chain sees it: the node ids its line runs through, and
+    /// whether traffic drives it one way — which is the only permission a chain has to turn a
+    /// way around.
+    pub type alias Segment = {
+        id     = Int64,
+        nodes  = List[Int64],
+        oneway = Bool
+    }
+
+    /// The lap: the ways the relation lists with no role, chained from the line the lap is
+    /// measured from, turned to start there, and closed back onto it.
+    def chained(relation: Element, ways: Map[Int64, Element], nodes: Map[Int64, Place], start: Int64): Result[String, List[Int64]] =
+        lapSegments(relation, ways)
+            |> Result.flatMap(segments -> chain(segments, nodes, Some(start)))
+            |> Result.map(track -> List.append(rotate(withoutLast(track), start), start :: Nil))
+
+    /// The pit lane, chained from whichever of its ways begins where no other way ends: a pit
+    /// lane is drawn and never timed, so it has no line to start at and no expectation of
+    /// closing back onto one.
+    def pitChained(relation: Element, ways: Map[Int64, Element], nodes: Map[Int64, Place]): Result[String, List[Int64]] =
+        pitSegments(relation, ways)
+            |> Result.flatMap(segments -> chain(segments, nodes, None))
+
+    /// The ways a lap is chained from are the ones the relation puts on no line at all.
+    def lapSegments(relation: Element, ways: Map[Int64, Element]): Result[String, List[Segment]] =
+        Result.traverse(
+            member -> wayOf(relation, ways, member),
+            List.filter(member -> member#kind == "way" and member#role == "", relation#members)
+        )
+
+    /// A pit lane's members are named by their role alone: a relation may tag a node as part
+    /// of a pit lane, and that is a member no line can be chained out of.
+    def pitSegments(relation: Element, ways: Map[Int64, Element]): Result[String, List[Segment]] =
+        Result.traverse(
+            member -> wayOf(relation, ways, member),
+            List.filter(member -> member#role == "pit_lane", relation#members)
+        )
+
+    def wayOf(relation: Element, ways: Map[Int64, Element], member: Member): Result[String, Segment] =
+        match Map.get(member#ref, ways) {
+            case Some(way) => Ok({id = way#id, nodes = way#nodes, oneway = Map.get("oneway", way#tags) == Some("yes")})
+            case None      => Err("relation ${relation#id} names way ${member#ref}, which the answer does not hold")
+        }
+
+    /// The walk. The way a lap opens with is the one carrying the line the race times across,
+    /// which must be driven the way the race goes round; after it, a way drawn forwards is
+    /// taken forwards and a way that is not driven one way may be taken backwards, which is
+    /// what closes a lap out of ways each mapper drew in the direction they happened to walk.
+    pub def chain(segments: List[Segment], nodes: Map[Int64, Place], start: Option[Int64]): Result[String, List[Int64]] =
+        match openedAt(segments, start) {
+            case None => Err("the relation holds no way the lap can start from")
+            case Some(first) =>
+                let walked = walked(segments, Set.insert(first#id, Set.empty()), first#nodes);
+                match leftOver(segments, walked#used, walked#ids, nodes) {
+                    case Err(problem) => Err(problem)
+                    case Ok(_) =>
+                        if (Option.nonEmpty(start) and not closes(nodes, walked#ids))
+                            Err("the lap does not close: its last point stands ${unclosed(nodes, walked#ids)} m from its first")
+                        else
+                            Ok(walked#ids)
+                }
+        }
+
+    /// The way the chain opens with. Of a lap it is the way carrying the timed line, which
+    /// fixes the direction it is taken in; of a line with no such claim — a pit lane — it is
+    /// the way no other way runs into, which fixes the end it starts from.
+    def openedAt(segments: List[Segment], start: Option[Int64]): Option[Segment] =
+        match start {
+            case Some(at) => List.find(segment -> List.memberOf(at, segment#nodes) and segment#oneway, segments)
+            case None => List.find(candidate -> not runsIntoOther(candidate, segments), segments)
+        }
+
+    /// Whether some other way ends where this one begins, which is what makes a way the
+    /// beginning of an open line rather than a link in it.
+    def runsIntoOther(candidate: Segment, segments: List[Segment]): Bool =
+        List.exists(
+            other -> other#id != candidate#id and List.last(other#nodes) == List.head(candidate#nodes),
+            segments
+        )
+
+    /// The walk over the relation's ways, keeping which have been taken: a way is taken once,
+    /// and the ids it adds are its own or its reverse, less the place the chain already stood
+    /// at.
+    def walked(segments: List[Segment], used: Set[Int64], ids: List[Int64]): {ids = List[Int64], used = Set[Int64]} =
+        match List.last(ids) {
+            case None      => {ids = ids, used = used}
+            case Some(end) =>
+                match nextOf(segments, used, end) {
+                    case None => {ids = ids, used = used}
+                    case Some(next) =>
+                        let taken = if (List.head(next#nodes) == Some(end)) next#nodes else List.reverse(next#nodes);
+                        walked(segments, Set.insert(next#id, used), List.append(ids, List.drop(1, taken)))
+                }
+        }
+
+    def nextOf(segments: List[Segment], used: Set[Int64], end: Int64): Option[Segment] =
+        match List.find(segment -> not taken(segment, used) and List.head(segment#nodes) == Some(end), segments) {
+            case Some(one) => Some(one)
+            case None => List.find(segment -> not taken(segment, used) and not segment#oneway and List.last(segment#nodes) == Some(end), segments)
+        }
+
+    def taken(segment: Segment, used: Set[Int64]): Bool = Set.memberOf(segment#id, used)
+
+    /// The ways the chain could not take, which is a failure and never a shortened lap: a
+    /// relation whose ways do not connect is a survey read wrongly. Every way left out is
+    /// reported with what decides its remedy — its length, how far its nearest end stands from
+    /// where the chain stopped, and whether it is driven one way. A oneway way lying at the
+    /// stop is an orientation the survey disagrees with; a way tens of metres off is ground
+    /// OpenStreetMap does not connect; a short one far from everything is a road with no
+    /// business in the relation.
+    def leftOver(segments: List[Segment], used: Set[Int64], ids: List[Int64], nodes: Map[Int64, Place]): Result[String, List[Int64]] =
+        let left = List.filter(segment -> not taken(segment, used), segments);
+        if (List.isEmpty(left))
+            Ok(ids)
+        else
+            match endPlace(nodes, ids) {
+                case None => Err("the chain ended at a node the answer does not hold")
+                case Some(stopped) =>
+                    Err("ways left out of the chain: ${String.intercalate("; ", List.map(segment -> straggled(segment, stopped, nodes), left))}")
+            }
+
+    def straggled(segment: Segment, stopped: Place, nodes: Map[Int64, Place]): String = {
+        let points = List.filterMap(id -> Map.get(id, nodes), segment#nodes);
+        let gap = nearestGap(stopped, points);
+        let near = gap < 0.5;
+        let drive = if (not segment#oneway) "" else if (near) ", driven the other way" else ", oneway";
+        let stands = if (near) "at" else "${Util.Format.fixed(1, gap)} m from";
+        "${segment#id} is ${Util.Format.whole(Float64.round(polylineMetres(points)))} m, nearest end ${stands} where the chain stopped${drive}"
+    }
+
+    /// How far the nearer end of a way stands from where the chain stopped.
+    def nearestGap(stopped: Place, points: List[Place]): Float64 =
+        match (List.head(points), List.last(points)) {
+            case (Some(first), Some(last)) => Float64.min(apart(stopped, first), apart(stopped, last))
+            case _                         => 0.0
+        }
+
+    /// Whether the chained ids come back to the place they started from, which is what a
+    /// closed lap is and what a relation whose ways are mis-oriented says not to be.
+    def closes(nodes: Map[Int64, Place], ids: List[Int64]): Bool =
+        match (startPlace(nodes, ids), endPlace(nodes, ids)) {
+            case (Some(first), Some(last)) => samePlace(first, last)
+            case _                         => false
+        }
+
+    /// Two places are the one place when both their degrees agree, which is what a
+    /// closed lap asks of its first and its last: a record carries no equality of its
+    /// own, and the degrees are the equality the survey is measured on.
+    def samePlace(a: Place, b: Place): Bool = a#lat == b#lat and a#lon == b#lon
+
+    def startPlace(nodes: Map[Int64, Place], ids: List[Int64]): Option[Place] =
+        Map.get(Option.getWithDefault(-1i64, List.head(ids)), nodes)
+
+    def endPlace(nodes: Map[Int64, Place], ids: List[Int64]): Option[Place] =
+        Map.get(Option.getWithDefault(-1i64, List.last(ids)), nodes)
+
+    /// The distance between a lap's last place and its first, spelled for the sentence that
+    /// refuses a lap which does not come back to where it started.
+    def unclosed(nodes: Map[Int64, Place], ids: List[Int64]): String =
+        let last = endPlace(nodes, ids);
+        let to = startPlace(nodes, ids);
+        if (not Option.nonEmpty(last) or not Option.nonEmpty(to))
+            "nothing"
+        else
+            Util.Format.fixed(1, apart(Option.getWithDefault({lat = 0.0, lon = 0.0}, last), Option.getWithDefault({lat = 0.0, lon = 0.0}, to)))
+
+    /// The ids turned to start at the line the lap is measured from, which is where the lap's
+    /// own zero stands.
+    def rotate(ids: List[Int64], start: Int64): List[Int64] =
+        match indexWhere(id -> id == start, ids, 0) {
+            case None     => ids
+            case Some(at) => List.append(List.drop(at, ids), List.take(at, ids))
+        }
+
+    def indexWhere(matching: Int64 -> Bool, ids: List[Int64], at: Int32): Option[Int32] =
+        match ids {
+            case Nil => None
+            case one :: rest => if (matching(one)) Some(at) else indexWhere(matching, rest, at + 1)
+        }
+
+    // --------------------------------------------------- metres, direction, thinning
+
+    /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
+    /// stretched to the length the circuit publishes, the direction the survey runs, and the
+    /// line thinned to what a drawing at a tenth of a metre cannot show.
+    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit): Geometry = {
+        let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
+        let pitNodes = List.filterMap(id -> Map.get(id, nodes), pit);
+        let both = List.append(lapNodes, pitNodes);
+        let parallel = Apart.parallelOf(both);
+        let lapPoints = List.map(Apart.projectOn(parallel), lapNodes);
+        let pitPoints = List.map(Apart.projectOn(parallel), pitNodes);
+        let surveyed = cumulative(lapPoints);
+        let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));
+        let metres = List.map(each -> each * stretch, surveyed);
+        let half = List.length(lapPoints) / 2;
+        let kept = thinned(lapPoints, half);
+        let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
+        {
+            centreline = List.map(at -> metred(at, lapNodes, metres), kept),
+            pitLane = List.filterMap(at -> nth(at, pitNodes), keptPit),
+            frame = {origin = cornerOf(both), parallel = parallel},
+            direction = turnDirection(lapPoints),
+            surveyedAt = reading#surveyedAt,
+            surveyedLength = Some(Option.getWithDefault(0.0, List.last(surveyed))),
+            counts = Some({
+                kept = List.length(kept),
+                lap = List.length(lapPoints),
+                pit = List.length(keptPit),
+                of = List.length(pitPoints)
+            })
+        }
+    }
+
+    /// One kept point: the degrees it was surveyed at, and the published metre it stands at.
+    def metred(at: Int32, lapNodes: List[Place], metres: List[Float64]): MetredPlace = {
+        let place = Option.getWithDefault({lat = 0.0, lon = 0.0}, nth(at, lapNodes));
+        {lat = place#lat, lon = place#lon, metres = roundTenth(Option.getWithDefault(0.0, nth(at, metres)))}
+    }
+
+    /// The lap thinned: split at its own middle, so that the place the lap starts and ends at
+    /// is not the pivot of both halves at once, and the halves joined at their meeting point
+    /// rather than holding it twice.
+    def thinned(points: List[Point], half: Int32): List[Int32] =
+        List.append(withoutLast(simplify(points, 0, half)), simplify(points, half, lastIndex(points)))
+
+    /// Ramer–Douglas–Peucker over indices, so a kept point keeps the distance it was surveyed
+    /// at rather than the shorter one the thinned line would give it. Of two points equally
+    /// far, the first is the one turned on, which is what makes two runs over one answer keep
+    /// the same points.
+    pub def simplify(points: List[Point], lo: Int32, hi: Int32): List[Int32] =
+        match (nth(lo, points), nth(hi, points)) {
+            case (Some(a), Some(b)) =>
+                let dx = b#x - a#x;
+                let dy = b#y - a#y;
+                let norm = Apart.hypot(dx, dy);
+                match furthest(points, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
+                    case (best, at) =>
+                        if (best <= tolerance() or at < 0) lo :: hi :: Nil
+                        else List.append(withoutLast(simplify(points, lo, at)), simplify(points, at, hi))
+                }
+            case _ => Nil
+        }
+
+    /// The point of the stretch furthest from the line joining its ends, and how far it
+    /// stands: the distance is the cross product over the line's own length, which is the
+    /// height of the triangle and not the hypotenuse of anything.
+    def furthest(
+        points: List[Point],
+        hi: Int32,
+        a: Point,
+        b: Point,
+        dx: Float64,
+        dy: Float64,
+        norm: Float64,
+        best: Float64,
+        at: Int32,
+        every: Int32
+    ): (Float64, Int32) =
+        if (every >= hi)
+            (best, at)
+        else
+            match nth(every, points) {
+                case None => (best, at)
+                case Some(p) =>
+                    let distance = offLine(p, a, b, dx, dy, norm);
+                    if (distance > best)
+                        furthest(points, hi, a, b, dx, dy, norm, distance, every, every + 1)
+                    else
+                        furthest(points, hi, a, b, dx, dy, norm, best, at, every + 1)
+            }
+
+    def offLine(p: Point, a: Point, b: Point, dx: Float64, dy: Float64, norm: Float64): Float64 =
+        if (norm == 0.0)
+            Apart.hypot(p#x - a#x, p#y - a#y)
+        else
+            Float64.abs((dy * p#x) - (dx * p#y) + (b#x * a#y) - (b#y * a#x)) / norm
+
+    /// Metres round a line of drawing metres, each stretch its own hypotenuse, from the
+    /// line's own zero. The sum runs forwards, which is the only reason the figure a file
+    /// carries as its surveyed length is reproducible at all.
+    pub def cumulative(points: List[Point]): List[Float64] =
+        match points {
+            case Nil           => Nil
+            case first :: rest => walkedBy(first, rest, 0.0, 0.0 :: Nil)
+        }
+
+    def walkedBy(ahead: Point, rest: List[Point], total: Float64, kept: List[Float64]): List[Float64] =
+        match rest {
+            case Nil => List.reverse(kept)
+            case one :: more =>
+                let step = total + Apart.hypot(one#x - ahead#x, one#y - ahead#y);
+                walkedBy(one, more, step, step :: kept)
+        }
+
+    /// Which way the closed line runs, from the shoelace sum in the drawing's own metres:
+    /// positive is clockwise, because this projection's `y` runs south. A relation whose ways
+    /// are mis-oriented says so here, in the one property of a geometry that no drawing reads
+    /// without drawing the whole lap with it.
+    pub def turnDirection(points: List[Point]): String =
+        if (shoelace(points) > 0.0) clockwise() else counterClockwise()
+
+    def shoelace(points: List[Point]): Float64 =
+        List.foldLeft(
+            (total, pair) -> match pair {
+                case (a, b) => total + ((a#x * b#y) - (b#x * a#y))
+            },
+            0.0,
+            List.zip(points, List.append(List.drop(1, points), List.take(1, points)))
+        )
+
+    /// The north-west corner of the survey: the drawing's metres are measured from it, so a
+    /// line never falls below its own zero.
+    pub def cornerOf(points: List[Place]): Place =
+        match points {
+            case Nil => {lat = 0.0, lon = 0.0}
+            case first :: rest =>
+                List.foldLeft(
+                    (corner, place) -> {
+                        lat = if (place#lat > corner#lat) place#lat else corner#lat,
+                        lon = if (place#lon < corner#lon) place#lon else corner#lon
+                    },
+                    {lat = first#lat, lon = first#lon},
+                    rest
+                )
+        }
+
+    /// A distance kept to the tenth of a metre the survey is held at, and every baseline
+    /// rendered from: half goes up, which is the half JavaScript's `Math.round` sends up too.
+    pub def roundTenth(metres: Float64): Float64 =
+        Int64.toFloat64(Float64.truncateToInt64((metres * tenths()) + 0.5)) / tenths()
+
+    /// Metres between two places, east-west taken at the parallel of the second — the one
+    /// approximation asked of distances across a circuit's few kilometres, and the one a probe
+    /// measures its candidate lengths with too.
+    pub def apart(a: Place, b: Place): Float64 =
+        Apart.hypot(b#lat - a#lat, (b#lon - a#lon) * Apart.cos(b#lat)) * degreesToMetres()
+
+    /// Metres along a line of places, each stretch taken at its own parallel.
+    pub def polylineMetres(points: List[Place]): Float64 =
+        List.zipWith((ahead, behind) -> apart(ahead, behind), points, List.drop(1, points))
+            |> List.foldLeft((total, metres) -> total + metres, 0.0)
+
+    /// The metres one degree of the sphere comes to, which is the sphere's own constant and
+    /// not a second one: `Apart` projects by the same two factors.
+    def degreesToMetres(): Float64 = Apart.radians() * Apart.earthMetres()
+
+    // ------------------------------------------------------------------ the JSON read
+
+    def objectOf(json: Json): Map[String, Json] =
+        match json {
+            case Json.JObject(members) => members
+            case _                     => Map.empty()
+        }
+
+    def array(key: String, root: Map[String, Json]): List[Json] =
+        match Map.get(key, root) {
+            case Some(Json.JArray(items)) => Vector.toList(items)
+            case _                        => Nil
+        }
+
+    /// A word the answer carries. An absent one and a member of another kind answer the same
+    /// nothing, which is what lets a member carry the empty role rather than a hole.
+    def wordOf(key: String, root: Map[String, Json]): Option[String] =
+        match Map.get(key, root) {
+            case Some(Json.JString(spelled)) => Some(spelled)
+            case _                           => None
+        }
+
+    def wordWith(key: String, root: Map[String, Json]): String =
+        Option.getWithDefault("", wordOf(key, root))
+
+    def numberOf(key: String, root: Map[String, Json]): Option[Float64] =
+        match Map.get(key, root) {
+            case Some(Json.JNumber(spelled)) => Float64.fromString(BigDecimal.toPlainString(spelled))
+            case _                           => None
+        }
+
+    /// A whole number: an id, a node reference. The answer's ids are far inside what a double
+    /// holds exactly, so a plain spelling is read as a float and cut to a whole rather than
+    /// looked for as an integer the answer never writes.
+    def wholeOf(key: String, root: Map[String, Json]): Option[Int64] =
+        Option.map(Float64.truncateToInt64, numberOf(key, root))
+
+    def wholeArray(key: String, root: Map[String, Json]): List[Int64] =
+        List.filterMap(wholeNumber, array(key, root))
+
+    def wholeNumber(json: Json): Option[Int64] =
+        match numberOfAt(json) {
+            case Some(spelled) => Some(Float64.truncateToInt64(spelled))
+            case None          => None
+        }
+
+    def numberOfAt(json: Json): Option[Float64] =
+        match json {
+            case Json.JNumber(spelled) => Float64.fromString(BigDecimal.toPlainString(spelled))
+            case _                     => None
+        }
+
+    // ---------------------------------------------------------------- the lists at hand
+
+    /// A Map from pairs, which the standard library builds by insertion and this reading
+    /// needs at every turn: an answer's nodes, its ways, its tags.
+    def paired(pairs: List[(k, v)]): Map[k, v] with Order[k] =
+        List.foldLeft((held, pair) -> match pair {case (key, value) => Map.insert(key, value, held)}, Map.empty(), pairs)
+
+    /// Everything but the last of a list, which is how a line joined to another at their
+    /// meeting point is spelled: the meeting point held once.
+    def withoutLast(points: List[a]): List[a] =
+        Option.getWithDefault(Nil, List.init(points))
+
+    /// The index of a line's last point, and nought of a line with no points at all, which is
+    /// a line with nothing to thin.
+    def lastIndex(points: List[a]): Int32 =
+        Int32.max(0, List.length(points) - 1)
+
+    def nth(at: Int32, points: List[a]): Option[a] = List.nth(at, points)
+}

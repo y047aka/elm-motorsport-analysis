@@ -24,17 +24,17 @@ pub mod Apart {
     use Geometry.Place
 
     /// The earth every drawing is measured on, in metres.
-    def earthMetres(): Float64 = 6371008.8
+    pub def earthMetres(): Float64 = 6371008.8
 
-    def radians(): Float64 = Math.PI / 180.0
+    pub def radians(): Float64 = Math.PI / 180.0
 
     /// The two calls every distance here is measured with. Flix's effect checker asks a
     /// call into Java to be `IO` and has not been told that these read nothing but
     /// their arguments; the cast says so to it, which is what keeps every reading here
     /// pure enough for a test to hand it a fixture.
-    def cos(degrees: Float64): Float64 = unsafe IO { Math.cos(degrees * radians()) }
+    pub def cos(degrees: Float64): Float64 = unsafe IO { Math.cos(degrees * radians()) }
 
-    def hypot(east: Float64, south: Float64): Float64 = unsafe IO { Math.hypot(east, south) }
+    pub def hypot(east: Float64, south: Float64): Float64 = unsafe IO { Math.hypot(east, south) }
 
     /// A place of the plane both lines are drawn on: metres east and south of the
     /// projection's own zero.
