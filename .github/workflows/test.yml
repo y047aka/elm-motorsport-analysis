@@ -32,8 +32,8 @@ jobs:
           key: flix-deps-${{ runner.os }}-${{ hashFiles('flix/flix.toml') }}
           restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: none of these commands touches node_modules. The Elm
-      # tests need only the elm toolchain the flake supplies, the two Flix projects
-      # resolve their own dependencies through flix, and the circuit tools' tests run
+      # tests need only the elm toolchain the flake supplies, the Flix projects
+      # resolve what they resolve through flix, and the circuit tools' tests run
       # on the Node the flake brings — their directory installs nothing.
       - name: Elm tests
         run: nix run .#test
@@ -47,6 +47,11 @@ jobs:
       # network — which is what these tests are written to keep it out of.
       - name: Probe tests
         run: nix run .#geometry-probe-test
+      # The geometry commands' own project. Every reading is handed a fixture rather
+      # than a file, so no geometry has to be written to be read back, and nothing here
+      # can change a kept file.
+      - name: Geometry command tests
+        run: nix run .#geometry-diff-test
       - name: Circuit tool tests
         run: nix run .#geometry-test
 

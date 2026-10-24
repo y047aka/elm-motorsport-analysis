@@ -18,7 +18,11 @@ import { drawnNames, readSource } from './helpers';
  * The flake's geometry apps are the one list here that nothing else reads:
  * the `nix run` name, the script it runs and the script's own header are
  * three spellings of one command, and a rename of any of them fails at run
- * time with a Node message rather than at check time with a test name.
+ * time with a Node message rather than at check time with a test name. A
+ * command the Flix project answers registers itself the same way with a
+ * `flix` command line where the script name would be; those names are
+ * exempt here and read in `circuits-geometry-reading.spec.ts`, which is also
+ * where the dispatch they reach is read.
  */
 
 const authored: Record<string, typeof cota> = { cota, le_mans: leMans };
@@ -63,7 +67,8 @@ test('the circuits drawn and decoded are one list', () => {
 });
 
 test('the flake commands and the circuit tools are one list', () => {
-  const registered = [...readSource('flake.nix').matchAll(/geometryApp "([\w-]+)" "([\w-]+)"/g)]
+  const flake = readSource('flake.nix');
+  const registered = [...flake.matchAll(/geometryApp "([\w-]+)" "([\w-]+)"/g)]
     .map(([, app, script]) => ({ app, script }));
   expect(registered.length, 'the flake registers no geometry commands').toBeGreaterThan(0);
 
@@ -71,12 +76,16 @@ test('the flake commands and the circuit tools are one list', () => {
     expect(existsSync(new URL(`../../circuits/${script}.ts`, import.meta.url)), `nix run .#${app} would fail: circuits/${script}.ts is not here`).toBe(true);
   }
 
+  // The names a `flix` command line answers, as opposed to a script in this directory.
+  const flix = [...flake.matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
+
   // A tool is a script whose own header runs itself by its own filename;
   // library modules cite other tools' usage but never their own name.
   const unwrapped = readdirSync(new URL('../../circuits/', import.meta.url))
     .filter((file) => file.endsWith('.ts'))
     .filter((file) => readSource(`circuits/${file}`).includes(`node circuits/${file}`))
-    .filter((file) => !registered.some((each) => each.script === file.replace(/\.ts$/, '')));
+    .filter((file) => !registered.some((each) => each.script === file.replace(/\.ts$/, '')))
+    .filter((file) => !flix.includes(file.replace(/\.ts$/, '')));
   expect(unwrapped, `these tools name themselves commands but no geometry app registers them: ${unwrapped.join(', ')}`).toEqual([]);
 });
 

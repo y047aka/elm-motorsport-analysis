@@ -11,11 +11,10 @@
 // `source` beside every figure, so an output can never be read as two files
 // agreeing when only one line was kept.
 //
-// Distances are ground distances on one equirectangular projection of the two
-// lines together; each line's own metres travel with its points, so a line
-// stretched to a published lap length and a line measured at its own are still
-// compared place against place, which is the comparison that says what a basis
-// change would cost.
+// The comparison itself — the projection, the sampling, the nearness — is
+// `apartness.ts`, which the atlas command reads too. Its own claim to keep is the
+// one the profile makes of a file: a line with metres measured from its own lap's
+// zero.
 
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, basename } from "node:path";
@@ -24,14 +23,9 @@ import type { GeometryFile, Point } from "./circuit-geometry.ts";
 import { isEntry, onEarth, projection, reason } from "./circuit-geometry.ts";
 import type { KeptLine } from "./geometry-file.ts";
 import { outlineOf } from "./geometry-file.ts";
+import { apartness } from "./apartness.ts";
 
 const width = 1000;
-
-/** One sampling of a line against another: where on each line's own measure
- * the nearest place stands, and how far apart they are. */
-export type Sample = { aMetres: number; bMetres: number; distance: number };
-
-export type Apartness = { count: number; mean: number; worst: Sample };
 
 async function run(lines: KeptLine[], args: { paths: string[]; every: number; svg: string | null }): Promise<void> {
   const { project } = projection(lines.flatMap((line) => line.coords.map(onEarth)));
@@ -68,60 +62,6 @@ export function readArgs(argv: string[]): { paths: string[]; every: number; svg:
   if (args.paths.length !== 2) fail("usage: node circuits/geometry-diff.ts <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]");
   if (!Number.isFinite(args.every) || args.every <= 0) fail(`"${args.every}" is not a distance`);
   return args;
-}
-
-/** The first line laid against the second, sampled every `every` metres along
- * the first: the nearest ground distance to the second and where that place
- * falls on each line's own measure. */
-export function apartness(
-  aPoints: Point[],
-  aMetres: number[],
-  bPoints: Point[],
-  bMetres: number[],
-  every: number,
-): Apartness {
-  const length = aMetres[aMetres.length - 1] ?? 0;
-  if (length <= 0) {
-    fail(`nothing is measured along the sampled line: its own metres end at ${length} m`);
-  }
-  const samples = [];
-  for (let s = 0; s < length; s += every) {
-    const near = nearestOn(interpolate(aPoints, aMetres, s), bPoints, bMetres);
-    samples.push({ aMetres: s, bMetres: near.metres, distance: near.distance });
-  }
-  const worst = samples.reduce((a, b) => (b.distance > a.distance ? b : a));
-  const mean = samples.reduce((sum, x) => sum + x.distance, 0) / samples.length;
-  return { count: samples.length, mean, worst };
-}
-
-export function interpolate(points: Point[], metres: number[], s: number): Point {
-  let i = 1;
-  while (i < metres.length - 1 && metres[i] < s) i++;
-  const span = metres[i] - metres[i - 1];
-  const at = span === 0 ? 0 : (s - metres[i - 1]) / span;
-  return {
-    x: points[i - 1].x + (points[i].x - points[i - 1].x) * at,
-    y: points[i - 1].y + (points[i].y - points[i - 1].y) * at,
-  };
-}
-
-export function nearestOn(point: Point, points: Point[], metres: number[]): { metres: number; distance: number } {
-  let best = { distance: Infinity, metres: 0 };
-  for (let i = 1; i < points.length; i++) {
-    const near = toSegment(point, points[i - 1], points[i]);
-    if (near.distance < best.distance) {
-      best = { distance: near.distance, metres: metres[i - 1] + (metres[i] - metres[i - 1]) * near.at };
-    }
-  }
-  return best;
-}
-
-export function toSegment(p: Point, a: Point, b: Point): { distance: number; at: number } {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const span = dx * dx + dy * dy;
-  const at = span === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / span));
-  return { distance: Math.hypot(p.x - (a.x + dx * at), p.y - (a.y + dy * at)), at };
 }
 
 // The overlay is a reading aid, not a drawing: two strokes of one projection,

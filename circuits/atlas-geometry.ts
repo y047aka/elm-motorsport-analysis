@@ -17,8 +17,8 @@
 // lines.
 //
 // The lap-origin guard in `timing-line.ts` is asked of the measured line's
-// start before anything is kept. The apartness math is `geometry-diff.ts`'s,
-// shared with the tool that compares any two kept geometries; the feature
+// start before anything is kept. The apartness math is `apartness.ts`'s, shared
+// with the tool that compares any two kept geometries; the feature
 // shape checks, the guards and the written file are `atlas-line.ts`'s, shared
 // with nothing but the tests. This file adds only the measuring: what is
 // specific to laying one circuit's atlas line against the geometry this app
@@ -33,8 +33,8 @@ import { dirname, join } from "node:path";
 
 import type { Circuit, Sectors } from "./circuit-geometry.ts";
 import { cumulative, onEarth, projection, reason, repoDir, sectorLines } from "./circuit-geometry.ts";
-import type { Apartness } from "./geometry-diff.ts";
-import { apartness, interpolate, nearestOn } from "./geometry-diff.ts";
+import type { Apartness } from "./apartness.ts";
+import { apartness, interpolate, nearestOn } from "./apartness.ts";
 import { readKeptGeometry } from "./geometry-file.ts";
 import type { AtlasFeature, AtlasFile } from "./atlas-line.ts";
 import {
