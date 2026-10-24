@@ -227,7 +227,11 @@ pub mod Write {
             case Ok(asked) => ask(asked)
         }
 
-    def ask(asked: Args): Int32 \ { IO, Console } =
+    /// The answer read, then surveyed. Public because `Fetch.writeExitCode` runs the
+    /// whole pipeline and a named answer travels through exactly this: the reading,
+    /// the missing-file refusal, and the survey are one story whether the run was a
+    /// survey alone or the whole of it.
+    pub def ask(asked: Args): Int32 \ { IO, Console } =
         match Util.Files.read(asked#answer) {
             case Err(_) =>
                 if (asked#asked)
@@ -250,7 +254,11 @@ pub mod Write {
         0
     }
 
-    def surveyed(asked: Args, spelled: String): Int32 \ { IO, Console } =
+    /// An answer's text — from a kept file or from a runner — surveyed and laid. This
+    /// is the turning stage: what `fetch` hands over and what a fence reads back out
+    /// of a kept file both come to `surveyed`, so a live survey and a comparison of a
+    /// kept one fail and reproduce in the same words.
+    pub def surveyed(asked: Args, spelled: String): Int32 \ { IO, Console } =
         match Survey.answer(spelled) {
             case Err(problem) =>
                 Console.eprintln("${asked#answer}: ${problem}");

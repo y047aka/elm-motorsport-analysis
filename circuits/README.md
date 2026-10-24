@@ -3,16 +3,17 @@
 The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
 and one directory per circuit — its config, the Overpass answer the geometry
 was written from, and the atlas reading measured against it. The
-commands are the flake's — `nix run .#geometry-write -- <circuit>`,
+commands are the flake's — `nix run .#geometry-fetch -- <circuit>`,
+`.#geometry-write -- <circuit>`,
 `.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`, `.#geometry-survey`,
-`.#geometry-regenerate`, `.#geometry-timing-lines`. Everything here is
-TypeScript but three directories: `circuits/timing/`, the timing-lines report, is a
+`.#geometry-regenerate`, `.#geometry-timing-lines`. The pipeline itself is the
+Flix project at this directory's root: it asks OpenStreetMap, surveys a circuit
+out of an answer, and writes the file the app serves. `circuits/timing/`, the timing-lines report, is a
 Flix project of its own, reading the feed the load reads with the decoder the
 load decodes it with; `circuits/probe/` is another — the same question
-OpenStreetMap answers, asked in Flix before a circuit has a config to author — and
-`circuits/geometry/` a third, laying two kept geometries against each other and
-drawing where they stand apart, and laying a circuit's kept Overpass answer against
-the geometry that answer wrote.
+OpenStreetMap answers, asked in Flix before a circuit has a config to author.
+What is still TypeScript is the atlas reading, the regeneration fence, and the
+re-check of a kept geometry against its circuit's own claims.
 What follows is what no
 single script's header says for itself; what a script can say at its own call
 site, its header says there and is not repeated here.
@@ -222,15 +223,17 @@ out of all three languages that use it, the probe's and the survey's and
 mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
 lap is the one reading a config is authored from.
 
-## The geometry commands are a project of their own as well
+## The pipeline is the project at this directory's root
 
-`circuits/geometry/` is the third Flix package of this directory and the only one of
-the three that writes a file: `src/Geometry.flix` reads a kept file's outline and its
+The geometry pipeline is the Flix package at `circuits/`: `src/Geometry.flix` reads a kept file's outline and its
 pit lane, `src/Apart.flix` lays one line against another, `src/Diff.flix` asks the two
 files, prints the report and draws the overlay, `src/Circuit.flix` authors the two
 circuits' figures the way `circuits/<circuit>/circuit.ts` authors them, `src/Survey.flix`
-reads a kept Overpass answer and chains it into a lap, and `src/Write.flix` lays those
-places, metres and claims out as the bytes the app reads — with `src/Main.flix` holding
+reads a kept Overpass answer and chains it into a lap, `src/Overpass.flix` asks the
+runners for that answer and `src/Fetch.flix` is the commands that ask — `fetch` keeps
+one beside a circuit, `write` runs the asking, the survey and the laying off one
+reading of the arguments — and `src/Write.flix` lays those
+places, metres and claims out as the bytes the app reads, with `src/Main.flix` holding
 the words the commands go by and the exit code one comes to. It resolves no dependency and
 links no source — it reads nothing `flix/src` holds, which is what the report's nine links
 are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
@@ -239,9 +242,10 @@ are for — so no `Db` effect is compiled into it and no JDBC driver is resolved
 two paths, the report and the overlay are `Diff.flix`'s. The survey is written twice —
 `Survey.flix` chains what `circuit-geometry.ts` chains — and so is the comparison under them,
 because the atlas reading is TypeScript and samples `apartness.ts` while the diff samples
-`Apart.flix`. TypeScript still holds the only copy of two things: asking OpenStreetMap for an
-answer nobody has kept is `.#geometry-write`'s, and the fence over every circuit at once is
-`circuits/regenerate-geometry.ts`'s.
+`Apart.flix`. And the asking of OpenStreetMap is written twice, `Overpass.flix` and
+`circuit-geometry.ts` spelling the same runners, until the TypeScript pipeline retires and
+only the fence over every circuit at once — `circuits/regenerate-geometry.ts`'s — and the
+`--from-geojson` re-check are TypeScript's alone.
 
 `nix run .#geometry-survey -- cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
@@ -287,7 +291,7 @@ mean and maximum apartness, and an SVG overlay on request — so a fresh survey
 is read against the old one, or the atlas line against either, with no script
 in between. Neither writes Elm: drawing on a measured line would move every
 tracker baseline and re-open where the timing lines stand, which is its own
-change judged on that report. Both commands are `circuits/geometry/`'s.
+change judged on that report. Both commands are the project at this directory's root.
 
 ## The readings, and their tests
 

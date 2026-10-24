@@ -9,7 +9,7 @@ import { readSource } from './helpers';
  * One set of readings, held in two languages, and no compiler sees both.
  *
  * The comparison is `circuits/apartness.ts`, which the atlas command samples, and
- * `circuits/geometry/src/Apart.flix`, which the diff samples. The survey is
+ * `circuits/src/Apart.flix`, which the diff samples. The survey is
  * `circuits/circuit-geometry.ts`, which reads an Overpass answer, chains a relation's ways into
  * a lap, stretches it to the length the circuit publishes and writes the file the app serves,
  * and `Survey.flix` with `Write.flix`, which do the same over a kept answer — `nix run
@@ -34,14 +34,14 @@ const drift = readSource('circuits/geometry-drift.ts');
 const allowance = readSource('circuits/timing-line.ts');
 const survey = readSource('circuits/circuit-geometry.ts');
 const atlas = readSource('circuits/atlas-geometry.ts');
-const flix = readSource('circuits/geometry/src/Apart.flix');
-const file = readSource('circuits/geometry/src/Geometry.flix');
-const command = readSource('circuits/geometry/src/Diff.flix');
-const printed = readSource('circuits/geometry/src/Util/Format.flix');
-const config = readSource('circuits/geometry/src/Circuit.flix');
-const chained = readSource('circuits/geometry/src/Survey.flix');
-const writer = readSource('circuits/geometry/src/Write.flix');
-const main = readSource('circuits/geometry/src/Main.flix');
+const flix = readSource('circuits/src/Apart.flix');
+const file = readSource('circuits/src/Geometry.flix');
+const command = readSource('circuits/src/Diff.flix');
+const printed = readSource('circuits/src/Util/Format.flix');
+const config = readSource('circuits/src/Circuit.flix');
+const chained = readSource('circuits/src/Survey.flix');
+const writer = readSource('circuits/src/Write.flix');
+const main = readSource('circuits/src/Main.flix');
 
 const authored: Record<string, typeof cota> = { cota, le_mans: leMans };
 
@@ -68,11 +68,11 @@ function readDir(dir: string): string[] {
   return found.sort();
 }
 
-const project = [...readDir('circuits/geometry/src'), ...readDir('circuits/geometry/test')];
+const project = [...readDir('circuits/src'), ...readDir('circuits/test')];
 
 
 /**
- * Every source the geometry project compiles — nine of Flix and five of tests, which is
+ * Every source the geometry project compiles — eleven of Flix and seven of tests, which is
  * what the project is asserted to hold — for the reading of their text alone: a word a
  * database is named by would arrive in a source file and not in a build product.
  */
@@ -236,7 +236,7 @@ test('both comparisons are laid on the sphere every drawing is measured on', () 
     return Number(found![1]);
   };
   const surveyed = radius(survey.split('export const earthRadius')[1]!.split('\n')[0]!, 'circuit-geometry.ts');
-  const measured = radius(flix.split('def earthMetres')[1]!.split('\n')[0]!, 'circuits/geometry/src/Apart.flix');
+  const measured = radius(flix.split('def earthMetres')[1]!.split('\n')[0]!, 'circuits/src/Apart.flix');
   const drawn = radius(readSource('package/src/Motorsport/Circuit/Geodesy.elm'), 'Motorsport.Circuit.Geodesy');
   expect(measured, 'the geometry project measures on a sphere the survey does not').toBe(surveyed);
   expect(drawn, 'the drawing projects through a sphere its own surveys are not measured on').toBe(surveyed);
@@ -286,14 +286,18 @@ test("the flake's geometry commands reach the sources they run", () => {
   expect(registered.sort(), 'the flake registers a different set of geometry commands than these').toEqual([
     'geometry-diff',
     'geometry-diff-test',
+    'geometry-fetch',
     'geometry-survey',
+    'geometry-write',
   ]);
   // Each app hands its subcommand word to the jar, so a renamed subcommand is a flake app
   // that answers with a usage where the reader expected a report.
   const flake = readSource('flake.nix');
   for (const [app, word] of [
     ['geometry-diff', 'diff'],
+    ['geometry-fetch', 'fetch'],
     ['geometry-survey', 'survey'],
+    ['geometry-write', 'write'],
   ]) {
     expect(flake, `nix run .#${app} no longer hands the jar the "${word}" subcommand`).toContain(
       `mkGeometryApp "${app}" "flix run -- ${word} \\"$@\\""`,
@@ -305,8 +309,14 @@ test("the flake's geometry commands reach the sources they run", () => {
   expect(main, 'nix run .#geometry-survey runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Write.exitCode(rest))',
   );
+  expect(main, 'nix run .#geometry-fetch runs a main that hands the reader its arguments to nothing').toContain(
+    'Exit.exit(Fetch.exitCode(rest))',
+  );
+  expect(main, 'nix run .#geometry-write runs a main that hands the reader its arguments to nothing').toContain(
+    'Exit.exit(Fetch.writeExitCode(rest))',
+  );
   expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
-    '"diff" :: "survey" :: Nil',
+    '"diff" :: "fetch" :: "survey" :: "write" :: Nil',
   );
 });
 
@@ -323,23 +333,27 @@ test("the flake's geometry commands reach the sources they run", () => {
  */
 test('the geometry project shares no source, resolves no dependency and names no database', () => {
   expect(project, 'the geometry project holds a different set of sources than these').toEqual([
-    'circuits/geometry/src/Apart.flix',
-    'circuits/geometry/src/Circuit.flix',
-    'circuits/geometry/src/Diff.flix',
-    'circuits/geometry/src/Geometry.flix',
-    'circuits/geometry/src/Main.flix',
-    'circuits/geometry/src/Survey.flix',
-    'circuits/geometry/src/Util/Files.flix',
-    'circuits/geometry/src/Util/Format.flix',
-    'circuits/geometry/src/Write.flix',
-    'circuits/geometry/test/TestApart.flix',
-    'circuits/geometry/test/TestDiff.flix',
-    'circuits/geometry/test/TestGeometry.flix',
-    'circuits/geometry/test/TestSurvey.flix',
-    'circuits/geometry/test/TestWrite.flix',
+    'circuits/src/Apart.flix',
+    'circuits/src/Circuit.flix',
+    'circuits/src/Diff.flix',
+    'circuits/src/Fetch.flix',
+    'circuits/src/Geometry.flix',
+    'circuits/src/Main.flix',
+    'circuits/src/Overpass.flix',
+    'circuits/src/Survey.flix',
+    'circuits/src/Util/Files.flix',
+    'circuits/src/Util/Format.flix',
+    'circuits/src/Write.flix',
+    'circuits/test/TestApart.flix',
+    'circuits/test/TestDiff.flix',
+    'circuits/test/TestFetch.flix',
+    'circuits/test/TestGeometry.flix',
+    'circuits/test/TestOverpass.flix',
+    'circuits/test/TestSurvey.flix',
+    'circuits/test/TestWrite.flix',
   ]);
 
-  const toml = readSource('circuits/geometry/flix.toml');
+  const toml = readSource('circuits/flix.toml');
   expect(toml, 'the geometry project resolves a dependency, so a database is reachable from it').not.toMatch(
     /mvn-dependencies|\[dependencies\]/,
   );
@@ -351,7 +365,7 @@ test('the geometry project shares no source, resolves no dependency and names no
   // by whichever `flix` runs, and a version the others moved past fails for a reason no
   // project states.
   const version = (path: string) => readSource(path).match(/flix\s*=\s*"([^"]+)"/)?.[1];
-  expect(version('circuits/geometry/flix.toml'), 'the geometry project is not on the CLI\'s Flix version').toBe(
+  expect(version('circuits/flix.toml'), 'the geometry project is not on the CLI\'s Flix version').toBe(
     version('flix/flix.toml'),
   );
   expect(version('circuits/probe/flix.toml'), 'the two newer Flix projects are not on one Flix version').toBe(
@@ -370,7 +384,7 @@ test('a path a reader types is read from where they typed it', () => {
   expect(readSource('flake.nix'), 'the flake no longer hands the geometry project the directory it was run from').toContain(
     'export GEOMETRY_FROM="$PWD"',
   );
-  const reader = readSource('circuits/geometry/src/Util/Files.flix');
+  const reader = readSource('circuits/src/Util/Files.flix');
   expect(reader, 'the geometry project no longer asks for the directory it was run from').toContain(
     'Env.getVar("GEOMETRY_FROM")',
   );
@@ -388,7 +402,7 @@ function flixConfig(word: string): string {
     .split('\n    def ')
     .slice(1)
     .find((each) => claims.test(each));
-  if (!body) throw new Error(`circuits/geometry/src/Circuit.flix authors no circuit the word "${word}" answers to`);
+  if (!body) throw new Error(`circuits/src/Circuit.flix authors no circuit the word "${word}" answers to`);
   return body.split('\n    }')[0];
 }
 

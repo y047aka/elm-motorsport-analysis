@@ -83,10 +83,11 @@
             '';
           };
 
-        # The fourth Flix project, at `circuits/geometry`: it lays two kept geometries
-        # together and surveys a circuit out of its kept Overpass answer, reading a file and
-        # writing one and reaching neither a database nor a network. Which parts of the
-        # pipeline stayed TypeScript's is `circuits/README.md`'s to say.
+        # The geometry pipeline itself, a Flix project at the root of `circuits/`:
+        # it asks OpenStreetMap for an answer, surveys a circuit out of one, lays two
+        # kept geometries together, and writes the file the app serves. It reaches no
+        # database, and no network until a `fetch` or a `write` asks one; which parts
+        # of the pipeline are still TypeScript's is `circuits/README.md`'s to say.
         #
         # `GEOMETRY_FROM` is the directory the reader was standing in: `flix` has to be
         # started inside the project to find its `flix.toml`, and the reader names
@@ -97,7 +98,7 @@
             runtimeInputs = [ flix ];
             text = ''
               export GEOMETRY_FROM="$PWD"
-              cd circuits/geometry
+              cd circuits
               ${cmd}
             '';
           };
@@ -225,10 +226,11 @@
 
         # The tools under circuits/ that are Node's, each run with nothing else to
         # carry. Which circuits are surveyed is the registry's, not these
-        # registrations'; only geometry-write writes what the app serves,
-        # under app/static/geometry, and the rest write beside it or read it.
-        # Probing a place, laying two geometries against each other and reading timing
-        # lines are not among them: each is a Flix project of `circuits/` now, and each
+        # registrations'; the pipeline writes what the app serves from the Flix
+        # project at this directory's root, and these write beside it or read it.
+        # Asking OpenStreetMap for a circuit, laying two geometries against each
+        # other, surveying a circuit out of a kept answer and reading timing lines are
+        # not among them: the pipeline at `circuits/` is a Flix project now, and each
         # is registered with its own runner below.
         geometryApp = name: script:
           pkgs.writeShellApplication {
@@ -297,11 +299,12 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          geometry-write       = { type = "app"; program = "${geometryApp "geometry-write" "write-geometry"}/bin/geometry-write";                                        meta.description = "Write a circuit's geometry out of OpenStreetMap, or check the kept one (<circuit>; [overpass.json] to use an answer you kept; --from-geojson to re-check the kept geometry with no network)"; };
+          geometry-fetch      = { type = "app"; program = "${mkGeometryApp "geometry-fetch" "flix run -- fetch \"$@\""}/bin/geometry-fetch";                            meta.description = "Ask OpenStreetMap a circuit's relation, and keep the answer beside its config — the pipeline's asking stage (the circuits geometry project; <circuit> [--out <overpass.json>], paths from where the command is run)"; };
+          geometry-write      = { type = "app"; program = "${mkGeometryApp "geometry-write" "flix run -- write \"$@\""}/bin/geometry-write";                              meta.description = "Run the whole geometry pipeline: ask OpenStreetMap (or read the answer named), survey it, and fail unless the bytes are the ones the app serves — --write lays them (the circuits geometry project; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
           geometry-atlas       = { type = "app"; program = "${geometryApp "geometry-atlas" "atlas-geometry"}/bin/geometry-atlas";                                        meta.description = "Measure a dataset's line against a circuit's kept geometry, and keep it beside it (<circuit> [--file gp.geojson])"; };
-          geometry-diff        = { type = "app"; program = "${mkGeometryApp "geometry-diff" "flix run -- diff \"$@\""}/bin/geometry-diff";                              meta.description = "Lay two kept geometries against each other in metres, optionally as an SVG overlay (the circuits/geometry project, reading no database; paths from where the command is run, [--every <m>] [--svg <out.svg>])"; };
-          geometry-survey      = { type = "app"; program = "${mkGeometryApp "geometry-survey" "flix run -- survey \"$@\""}/bin/geometry-survey";                          meta.description = "Survey a circuit's geometry out of its kept Overpass answer, and fail unless it is the bytes the app serves (the circuits/geometry project, reaching no database and no network; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
-          geometry-diff-test   = { type = "app"; program = "${mkGeometryApp "geometry-diff-test" "flix test"}/bin/geometry-diff-test";                             meta.description = "Run the circuits/geometry project's tests — the readings behind geometry-diff and geometry-survey (no network, no database, no files written)"; };
+          geometry-diff        = { type = "app"; program = "${mkGeometryApp "geometry-diff" "flix run -- diff \"$@\""}/bin/geometry-diff";                              meta.description = "Lay two kept geometries against each other in metres, optionally as an SVG overlay (the circuits geometry project, reading no database; paths from where the command is run, [--every <m>] [--svg <out.svg>])"; };
+          geometry-survey      = { type = "app"; program = "${mkGeometryApp "geometry-survey" "flix run -- survey \"$@\""}/bin/geometry-survey";                          meta.description = "Survey a circuit's geometry out of its kept Overpass answer, and fail unless it is the bytes the app serves (the circuits geometry project, reaching no database and no network; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
+          geometry-diff-test   = { type = "app"; program = "${mkGeometryApp "geometry-diff-test" "flix test"}/bin/geometry-diff-test";                             meta.description = "Run the circuits geometry project's tests — the readings behind geometry-fetch, geometry-diff and geometry-survey (no network, no database, no files written)"; };
           geometry-regenerate  = { type = "app"; program = "${geometryApp "geometry-regenerate" "regenerate-geometry"}/bin/geometry-regenerate";                      meta.description = "Re-run the geometry pipeline over each circuit's kept Overpass answer and fail unless it reproduces the kept geometry ([<circuit> ...]; --write re-lays the files from the kept answer; --freeze asks OpenStreetMap now and keeps both)"; };
           geometry-timing-lines = { type = "app"; program = "${mkTimingApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits/timing project, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           geometry-timing-test = { type = "app"; program = "${mkTimingApp "geometry-timing-test" "flix test"}/bin/geometry-timing-test";                                   meta.description = "Run the timing report's tests (the circuits/timing project's; no database, no network, no files written)"; };

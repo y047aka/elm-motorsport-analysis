@@ -6,12 +6,13 @@ import { readSource } from './helpers';
 /**
  * OpenStreetMap is asked from two languages, and no compiler sees the other.
  *
- * The pipeline that writes a circuit's geometry asks it in TypeScript
- * (`circuits/circuit-geometry.ts`), and the probe that decides which relation a
- * circuit is asks it in Flix (`circuits/probe/`, `nix run .#geometry-probe`). The
- * two are deliberately separate programs — one surveys, the other chooses what to
- * survey — but they meet the same service, and four of the facts about that
- * meeting are held twice: which runners there are and in which order, what a run
+ * The pipeline that writes a circuit's geometry asked it in TypeScript
+ * (`circuits/circuit-geometry.ts`), the probe that decides which relation a
+ * circuit is asks it in Flix (`circuits/probe/`, `nix run .#geometry-probe`), and
+ * the pipeline asks it in Flix too now (`circuits/src/Overpass.flix`, `nix run
+ * .#geometry-fetch`) — the TypeScript spelling is what the atlas reading and the
+ * regeneration fence still import, so the four facts about the meeting are held
+ * three times: which runners there are and in which order, what a run
  * calls itself, how many times each runner is asked, and how long one that just
  * failed is left alone.
  *
@@ -29,6 +30,7 @@ import { readSource } from './helpers';
 
 const node = readSource('circuits/circuit-geometry.ts');
 const flix = readSource('circuits/probe/src/Overpass.flix');
+const pipeline = readSource('circuits/src/Overpass.flix');
 const candidates = readSource('circuits/probe/src/Candidates.flix');
 const command = readSource('circuits/probe/src/Probe.flix');
 
@@ -43,15 +45,25 @@ function nodeRunners(): string[] {
 }
 
 function flixRunners(): string[] {
-  const body = flix.split('pub def runners()')[1]?.split(':: Nil')[0];
-  expect(body, 'the probe declares no runners() to compare').toBeTruthy();
+  return flixRunnersIn(flix, 'the probe');
+}
+
+/** The same reading of any Flix spelling of the asking. */
+function flixRunnersIn(source: string, where: string): string[] {
+  const body = source.split('pub def runners()')[1]?.split(':: Nil')[0];
+  expect(body, `${where} declares no runners() to compare`).toBeTruthy();
   return [...body!.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 }
 
 /** A `pub def name(): T = ...` in the probe, cut at the blank line that ends it. */
 function flixDef(name: string): string {
-  const body = flix.split(`pub def ${name}`)[1]?.split('\n\n')[0];
-  expect(body, `the probe states no ${name}() for this spec to read`).toBeTruthy();
+  return flixDefIn(flix, name, 'the probe');
+}
+
+/** The same reading of any Flix spelling of the asking. */
+function flixDefIn(source: string, name: string, where: string): string {
+  const body = source.split(`pub def ${name}`)[1]?.split('\n\n')[0];
+  expect(body, `${where} states no ${name}() for this spec to read`).toBeTruthy();
   return body!;
 }
 
@@ -94,6 +106,44 @@ test('each runner is asked twice, and one that failed is left alone by the same 
   const flixUnit = Number(flixDef('backoff').match(/Duration\.of\((\d+) \* attempt/)?.[1]);
   expect(nodeUnit, 'the pipeline backs off by an amount this spec cannot read').toBeGreaterThan(0);
   expect(flixUnit, 'the probe backs off by an amount this spec cannot read').toBe(nodeUnit);
+});
+
+/**
+ * The pipeline's own Flix asking, read against the same two spellings. It is a
+ * third holder of the four facts rather than a new kind of fact: the survey kept
+ * its runners, its name, its tries and its backoff when it moved out of
+ * `circuits/geometry/` and started asking for itself, and a rename of any one of
+ * them on one side is a run that visits a runner the others steer around.
+ */
+test('the Flix pipeline asks the same runners, of its own name, the same number of times', () => {
+  const asked = nodeRunners();
+  expect(
+    flixRunnersIn(pipeline, 'the Flix pipeline'),
+    'the Flix pipeline walks a different list of Overpass runners, or the same ones in another order',
+  ).toEqual(asked);
+
+  const agent = quoted(node.split('const userAgent = ')[1]!, 'circuit-geometry.ts userAgent');
+  expect(
+    quoted(flixDefIn(pipeline, 'userAgent', 'the Flix pipeline'), 'the Flix pipeline userAgent'),
+    'a runner reading a log cannot tell this probe from this survey, and neither can a rate limiter',
+  ).toBe(agent);
+
+  const perRunner = Number(node.split('attempt <= ')[1]?.match(/^(\d+)/)?.[1]);
+  expect(
+    Number(flixDefIn(pipeline, 'tries', 'the Flix pipeline').match(/= (\d+)/)?.[1]),
+    'the Flix pipeline asks each runner a different number of times',
+  ).toBe(perRunner);
+
+  const flixUnit = Number(flixDef('backoff').match(/Duration\.of\((\d+) \* attempt/)?.[1]);
+  const pipelineUnit = Number(flixDefIn(pipeline, 'backoff', 'the Flix pipeline').match(/Duration\.of\((\d+) \* attempt/)?.[1]);
+  expect(pipelineUnit, 'the Flix pipeline backs off by an amount this spec cannot read').toBe(flixUnit);
+
+  for (const sentence of [
+    'Overpass answered with something that is not JSON',
+    'every Overpass runner failed',
+  ]) {
+    expect(pipeline, `the Flix pipeline does not say "${sentence}" where the probe does`).toContain(sentence);
+  }
 });
 
 /**
