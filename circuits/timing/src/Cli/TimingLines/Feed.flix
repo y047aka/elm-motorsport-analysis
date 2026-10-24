@@ -6,10 +6,10 @@
 /// the error of the method these readings are subject to.
 ///
 /// `sharesOf` divides a lap the way `Motorsport.Track.ratiosOver` does, written
-/// again rather than called. The shares in the export are counted by SQL `MIN`
-/// over the rows and divided by `Motorsport.Track`, and a reading that has to say
-/// whether the export in the tree still counts the same shares is worth nothing
-/// once it calls the function that wrote them.
+/// again rather than called: the export's shares are counted by SQL `MIN` over
+/// the rows and divided by `Motorsport.Track`, and this division stays
+/// independent of the one that wrote them, so a reading here can still report a
+/// disagreement with the export rather than only ever agreeing with it.
 pub mod Cli.TimingLines.Feed {
 
     use Cli.Errors.CliError
@@ -388,8 +388,6 @@ pub mod Cli.TimingLines.Feed {
 
     // ------------------------------------------------------------------ sums
 
-    /// The three sectors in the order a car drives them, which is the order every
-    /// list of shares, positions and speeds is in.
     /// The three sector times in the order a car drives them, which is the order
     /// every list of shares, positions and speeds is in.
     pub def sectorsOf(times: Times): List[Duration] = List#{times#s1, times#s2, times#s3}

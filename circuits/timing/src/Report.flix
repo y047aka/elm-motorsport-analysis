@@ -2,10 +2,10 @@
 /// season to read it against, how far round the lap one line may come to stand
 /// between the two readings, and the directory the feeds are in.
 ///
-/// Written over `Util.GetOpt` as `Cli.Args` is, so that one style of `--help`
-/// answers in this repository. `--load`, `--export`, `--serve`, `--port` and
-/// `--database` are refused: they belong to the CLI's other commands, which
-/// compute in a database. Nothing here opens a file.
+/// Written over `Util.GetOpt` as `Cli.Args` is, so a wrong flag is answered with
+/// one style of usage at either command. `--load`, `--export`, `--serve`,
+/// `--port` and `--database` are refused: they belong to the CLI's other
+/// commands, which compute in a database. Nothing here opens a file.
 pub mod Report {
 
     use Util.GetOpt.ArgDescr
@@ -26,10 +26,20 @@ pub mod Report {
     }
 
     /// The arguments as given, when they are not what the report reads.
-    pub enum ReportError with ToString {
+    pub enum ReportError {
         case MissingDirectory(String)
         case UnexpectedArguments(List[String])
         case ParseErrors(List[String])
+    }
+
+    /// Each case already carries the sentence naming what was wrong; the derived
+    /// one would wrap it in constructor syntax before it reaches stderr.
+    instance ToString[ReportError] {
+        pub def toString(e: ReportError): String = match e {
+            case ReportError.MissingDirectory(flag)      => "${flag} is required: the feed sits in the season directories under it."
+            case ReportError.UnexpectedArguments(extras) => "${List.join(", ", extras)} are not arguments this report reads, which names one round as <season>/<id>."
+            case ReportError.ParseErrors(messages)       => List.join(" ", messages)
+        }
     }
 
     enum Setting {
@@ -149,10 +159,9 @@ pub mod Report {
         match last(seasonNamed, settings) {
             case None       => Ok(None)
             case Some(name) =>
-                // Four digits, because the calendar's seasons are spelled that way and a
-                // reader typing `24` means a season and not twenty-four AD. Whether that
-                // season ran this round is the report's to find out, since it is the one
-                // place that looks in the directory.
+                // Four digits, because the calendar's seasons are spelled that
+                // way and a reader typing `24` means a season and not
+                // twenty-four AD.
                 match Int32.fromString(name) {
                     case Some(season) =>
                         if (String.length(name) == 4)

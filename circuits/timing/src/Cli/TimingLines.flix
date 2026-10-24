@@ -70,7 +70,8 @@ pub mod Cli.TimingLines {
 
     /// The report printed, and the code to exit with: 1 where a line stands
     /// further round the lap than the distance allowed, which is the answer that
-    /// the two seasons were not run on one map.
+    /// the two seasons were not run on one map. One reading alone is printed and
+    /// exits 0: nothing was judged.
     pub def runAll(csv: String, season: Int32, id: String, against: Option[Int32], tolerance: Float64): Int32 \ {IO, Console} =
         match read(csv, season, id, against, tolerance) {
             case Err(problem) =>
@@ -252,7 +253,17 @@ pub mod Cli.TimingLines {
                     shift#oneSeasonOnly
                 );
                 verdict(shift, report, first#season, second#season)
-            case _ => 1
+            case one :: Nil =>
+                Console.println("");
+                Console.println(
+                    "${one#season}/${one#id} is read against no other season: --against names one, and only two readings can be judged apart."
+                );
+                0
+            case Nil =>
+                // Reached by no run: `read` traverses `seasonsOf`, which always
+                // holds the round's own season, and fails before printing if
+                // that feed cannot be read.
+                1
         }
 
     def verdict(shift: Movement, report: Report, season: Int32, against: Int32): Int32 \ Console =

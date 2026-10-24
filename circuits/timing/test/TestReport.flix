@@ -2,7 +2,9 @@
 /// laid beside it, how far one line may stand apart, and which flags are not the
 /// report's. `Cli.TestTimingFeed` drives the readings these select.
 pub mod TestReport {
-    def csv(): List[String] = "--csv" :: "../data/wec" :: Nil
+    /// The directory the flake's own `--csv` names, so a test's parse reads like
+    /// the command a reader runs.
+    def csv(): List[String] = "--csv" :: "../../data/wec" :: Nil
 
     /// The defaults a round named alone gets: no season laid beside it, and the
     /// distance the report sets for itself.
@@ -10,7 +12,7 @@ pub mod TestReport {
     def testReportReadsOneRound(): Unit \ Assert =
         match Report.parse(csv() ::: "2026/cota_6h" :: Nil) {
             case Ok(request) =>
-                Assert.assertTrue(request#csv == "../data/wec");
+                Assert.assertTrue(request#csv == "../../data/wec");
                 Assert.assertTrue(request#season == 2026);
                 Assert.assertTrue(request#id == "cota_6h");
                 Assert.assertTrue(request#against == None);
@@ -64,11 +66,12 @@ pub mod TestReport {
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--port" :: "9000" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--database" :: "jdbc:h2:mem:" :: "2026/cota_6h" :: Nil)))
 
-    /// The message the reader sees names the flag that was wrong.
+    /// The message the reader sees names the flag that was wrong, in the words
+    /// the error carries rather than a constructor's spelling.
     @Test
     def testAnErrorNamesWhatWasWrong(): Unit \ Assert =
         match Report.parse("2026/cota_6h" :: Nil) {
-            case Err(e) => Assert.assertTrue("${e}".startsWith("MissingDirectory"))
+            case Err(e) => Assert.assertTrue(String.contains({substr = "--csv is required"}, "${e}"))
             case Ok(_)  => Assert.assertTrue(false)
         }
 

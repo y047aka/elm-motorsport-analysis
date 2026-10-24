@@ -100,7 +100,11 @@ What the times can answer is whether the lines have moved, and `nix run
 class's fastest sector times as two distances round the lap, and the two
 rounds here agree within half a percent of a lap — the only evidence there is
 that one map serves both. The command judges the season-to-season difference
-and never the shares against the map.
+and never the shares against the map. An older check printed whether the export
+in the tree counted the same shares as the feed; that print is gone with the
+report's move to Flix, which parses no JSON, and the export is confirmed where
+it is written — `.#cli-run` reads its own integrity checks back out of the rows
+it wrote the export from.
 
 The geometry publishes what the circuit itself publishes about its lines: the
 authored stretches travel in the geometry as `sectors`, which is what the
@@ -199,10 +203,11 @@ change judged on that report.
 Every tool is two things: the asking, and the reading of an answer. The asking —
 Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the
 reading moved into a module beside it that opens nothing. `Cli.TimingLines.Feed`
-in the Flix CLI turns the feed's text into rows, fastest sectors, shares and
-implied lines, and is tested by `nix run .#flix-test` rather than here; the
-reading of a CSV is one reading and the load's `Util.Csv.Decode` is the other
-half of it, which is why the report is written where the feed is already read;
+in the report's own project turns the feed's text into rows, fastest sectors,
+shares and implied lines, and is tested by `nix run .#geometry-timing-test`
+rather than here; the reading of a CSV is one reading and the load's
+`Util.Csv.Decode` is the other half of it, which is why the report is written
+where the feed is already read;
 `circuit-candidates.ts` says which tags could name a circuit and what an answer's
 roles measure; `geometry-file.ts` holds the profile's own reading — the outline
 with its own metres going up, and the pit lane beside it — which the
