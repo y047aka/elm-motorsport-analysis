@@ -89,6 +89,40 @@ rest fly. Nothing here does that, so nothing here has one.
 `bug!(cause)` where `cause` is a `Db.Error` does not compile; `bug!("${cause}")`
 does.
 
+### A signature's effects are one braced set
+
+```
+E6629  Expected '=' before ','.
+E6217  Unused effect ...
+E6216  Unexpected effect 'Assert' in function declared as {'IO'}.
+```
+
+`Unit \ Assert, IO` does not parse: the comma ends the signature and the rest is
+read as a new declaration, which is why two of the three errors name a line that is
+fine. Write `Unit \ {Assert, IO}`, as every multi-effect signature in the tree does
+(`Main`, `Cli.Load.reportUnlistedCsvFiles`).
+
+### `java.lang.Math` is `IO` to the checker
+
+```
+E8752  Unexpected effect 'IO' in {} function.
+
+5 |     def apart(a: Place, b: Place): Float64 = Math.hypot(...)…
+```
+
+`cos`, `sin`, `sqrt`, `hypot` and `atan2` are declared to perform `IO`, and there is
+no way to tell the checker that a particular call reads nothing but its arguments.
+A reading that must stay pure — one a test hands a fixture rather than one that asks
+a network — casts each call once, where it is imported:
+
+```flix
+def cos(degrees: Float64): Float64 = unsafe IO { Math.cos(degrees * (Math.PI / 180.0)) }
+```
+
+`circuits/probe/src/Candidates.flix` holds the two this project needs, and every
+call site in it goes through them. Casting per call site instead spreads the lie
+across the module; casting the whole `Math` class is not a thing the language offers.
+
 ## Reported elsewhere, not hit here
 
 From `ababup1192/sqlfx`'s `docs/spikes.md` (same compiler version):

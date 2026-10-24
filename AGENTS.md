@@ -12,7 +12,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
   the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles nine of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `Util/Files.flix` rather than linking those two — they are the modules whose rest computes in a database.
+  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles nine of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `Util/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Neither is the probe at `circuits/probe/`, the third project and the only one of the three that asks a question of anything but a database; it links none of this `src`, because nothing in `flix/src` asks OpenStreetMap anything.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -25,10 +25,11 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `circuits/README.md` describes it — the fence that keeps a geometry an
   answer to its survey, what a circuit's config is authored from, and where
   the timing lines' distances come from — and is the thing to read before
-  changing anything under `/circuits`. It holds the repository's second Flix
-  project too: `circuits/timing/`, the timing-lines report, which resolves nothing
+  changing anything under `/circuits`. It holds two of the repository's three Flix
+  projects: `circuits/timing/`, the timing-lines report, which resolves nothing
   and shares its `flix/src` sources by symlink — one per file, because a linked
-  directory is walked as nothing.
+  directory is walked as nothing — and `circuits/probe/`, which resolves nothing,
+  links nothing, and asks the one question asked before a circuit has a config.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -53,7 +54,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-write -- <circuit>` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
-| `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (`<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
+| `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (the `circuits/probe` project, which resolves no dependency, links no source and computes in no database; `<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
+| `nix run .#geometry-probe-test` | The probe's own tests (the `circuits/probe` project's; no network, no database, nothing written) |
 | `nix run .#geometry-test` | The circuit tools' unit tests: their side-effect-free readings, run by Node's own runner over fixtures (`circuits/tests/`, no network, nothing written) |
 | `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the `circuits/timing` project, which resolves no dependency and computes in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
@@ -587,11 +589,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **Circuit tools** (`circuits/tests/`) — `nix run .#geometry-test`, Node's built-in
   runner; the directory installs nothing. Each command kept its own I/O and moved
   its reading of an answer into a module that opens nothing —
-  `circuit-candidates.ts` (an Overpass answer already got),
   `atlas-line.ts` (a foreign file's shapes and guards), `geometry-drift.ts` (two
-  geometries laid together) — and the tests hand those fixtures. The feed's own
-  reading is Flix's, driven by `nix run .#geometry-timing-test`: a timing CSV is
-  read in one language and not two. Judging this repository's real bytes stays the
+  geometries laid together) — and the tests hand those fixtures. The readings of
+  the two feeds are Flix's, driven by `nix run .#geometry-timing-test` and
+  `.#geometry-probe-test`: a timing CSV and an Overpass answer are each read in one
+  language and not two. Judging this repository's real bytes stays the
   fence's and the contract specs'.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
@@ -618,6 +620,17 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   symlinks into `flix/src` resolve — a broken one fails elsewhere as
   `Undefined use`, far from its cause — names the sources the report holds a second
   copy of, and fails everything it compiles for naming a database.
+- **Overpass, asked in two languages** (`/app/tests/circuit-overpass.spec.ts`) —
+  the probe reads OpenStreetMap in Flix and the pipeline reads it in TypeScript, so
+  the runners, their order, the user agent, the tries per runner and the backoff
+  arithmetic are four facts held twice with no compiler between them; none of them
+  fails loudly when they part, since a runner missing from one list is a run with
+  nowhere else to go. The sphere a probe's metres are measured on is read out of all
+  three languages that use it — the survey's, the probe's and the projection's —
+  because the one reading that decides a config is whether a lap measures 13.6 km.
+  The spec also pins that the probe shares no source by symlink, which is the
+  timing project's rule and not this one's, and that nothing it compiles can name a
+  database.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

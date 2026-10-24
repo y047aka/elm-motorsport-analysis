@@ -21,6 +21,8 @@ nix flake update
 ```bash
 nix run .#test
 nix run .#flix-test
+nix run .#geometry-timing-test
+nix run .#geometry-probe-test
 nix run .#build
 ```
 

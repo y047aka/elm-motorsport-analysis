@@ -43,6 +43,10 @@ jobs:
       # sources `circuits/timing/src` symlinks out of `flix/src`.
       - name: Timing report tests
         run: nix run .#geometry-timing-test
+      # The probe's own project, and the only one of the three that reaches a
+      # network — which is what these tests are written to keep it out of.
+      - name: Probe tests
+        run: nix run .#geometry-probe-test
       - name: Circuit tool tests
         run: nix run .#geometry-test
 

@@ -6,9 +6,11 @@ was written from, and the atlas reading measured against it. The
 commands are the flake's — `nix run .#geometry-write -- <circuit>`,
 `.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`,
 `.#geometry-regenerate`, `.#geometry-timing-lines`. Everything here is
-TypeScript but one directory: `circuits/timing/`, the timing-lines report, is a
+TypeScript but two directories: `circuits/timing/`, the timing-lines report, is a
 Flix project of its own, reading the feed the load reads with the decoder the
-load decodes it with. What follows is what no
+load decodes it with, and `circuits/probe/` is another — the same question
+OpenStreetMap answers, asked in Flix before a circuit has a config to author.
+What follows is what no
 single script's header says for itself; what a script can say at its own call
 site, its header says there and is not repeated here.
 
@@ -70,7 +72,12 @@ nothing to `Circuit/`.
 Which relation a circuit is before any config says is `nix run
 .#geometry-probe`, which prints the circuit relations at a place on earth with
 each one's unroled ways measured — the length is what tells the full Sarthe
-circuit from the Grand Prix circuit standing beside it.
+circuit from the Grand Prix circuit standing beside it. It asks two questions:
+which relations the box holds and how each is tagged, then, for the ones whose
+tags could name a circuit, its ways with their geometry, which is the only
+answer a role's length can be measured out of. The box a run opened is printed
+back, since a centre widened to 5 km holds Le Mans's Grand Prix circuit and not
+the 13.6 km one.
 
 OpenStreetMap holds a circuit however whoever mapped it tagged it, and the two
 here are tagged differently: Le Mans's relation names one node `start-finish`,
@@ -181,6 +188,37 @@ link resolves to the `flix/src` file of the same relative path, names the source
 directory holds itself, and reads every source the report compiles — every link
 dereferenced — for the words a database is named by.
 
+## The probe is a project of its own too
+
+`circuits/probe/` is the third Flix package and the only one of the three that asks
+something of a network rather than of a database: `src/Probe.flix` reads the
+arguments and prints, `src/Overpass.flix` walks the runners and gives an answer its
+shape, and `src/Candidates.flix` reads an answer already got — which tags could name
+a circuit, and what a relation's roles measure. `nix run .#geometry-probe-test` runs
+its `flix test`, which is the only way a probe is testable at all: the asking is one
+call and the reading is a fixture, and the tests are given fixtures.
+
+**It links no source.** The report links nine because the readings it wants are
+already in `flix/src` — a CSV's decoding, a circuit's timing map — and a second copy
+of one of those is a second table with one reader. The probe wants nothing that is:
+every distance in it comes off an answer about OpenStreetMap, which `flix/src` has no
+reason to hold. A link would compile, and that is the hazard rather than the freedom:
+`Sql.flix` declares three effects that open no connection, so a project linking it
+acquires a way to name a database none of its commands can reach, and `flix.toml`
+would resolve a JDBC driver to name it with. `app/tests/circuit-overpass.spec.ts`
+fails a symlink under the probe's `src`, a resolved dependency, the word `Jdbc`, and
+a Flix version the three projects do not share.
+
+What the two projects do hold twice is the service: which runners there are and in
+which order, what a run calls itself, how many times each runner is asked, and how
+long one that just failed is left alone. Those are facts about OpenStreetMap and not
+about either project, TypeScript's copy is `circuit-geometry.ts`'s, and the same spec
+reads both and fails them apart — as it reads the sphere the metres are measured on
+out of all three languages that use it, the probe's and the survey's and
+`Motorsport.Circuit.Geodesy`'s. Measuring on the equatorial radius instead of the
+mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
+lap is the one reading a config is authored from.
+
 ## The atlas readings
 
 `nix run .#geometry-atlas <circuit>` reads the track-atlas line — a midline
@@ -209,9 +247,11 @@ in the report's own project turns the feed's text into rows, fastest sectors,
 shares and implied lines, and is tested by `nix run .#geometry-timing-test`
 rather than here; the reading of a CSV is one reading and the load's
 `Util.Csv.Decode` is the other half of it, which is why the report is written
-where the feed is already read;
-`circuit-candidates.ts` says which tags could name a circuit and what an answer's
-roles measure; `geometry-file.ts` holds the profile's own reading — the outline
+where the feed is already read; `Candidates.flix` in the probe's own project says
+which tags could name a circuit and what an answer's roles measure, and is tested
+by `nix run .#geometry-probe-test` for the same reason — an Overpass answer is read
+in one language and not two; `geometry-file.ts` holds the profile's own reading — the
+outline
 with its own metres going up, and the pit lane beside it — which the
 `--from-geojson` check, the diff and the atlas reading all run, so what the
 fence checks and what the diff lays together are one reading of a file;
@@ -239,3 +279,5 @@ side alone would leave a round drawn as the ring with nothing red.
 `app/tests/circuit-timing-map.spec.ts` pins the figures the report reads — the
 published lap length and sector stretches — against the figures the drawing was
 laid from, which are held in two languages and compiled against nothing.
+`app/tests/circuit-overpass.spec.ts` pins what the two languages that ask
+OpenStreetMap hold in common about it, which is nothing either compiler can see.

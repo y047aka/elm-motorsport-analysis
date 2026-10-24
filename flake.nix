@@ -67,6 +67,22 @@
             '';
           };
 
+        # Probing OpenStreetMap before a config is authored is the third Flix
+        # project, at `circuits/probe`. It is the flake's only Flix command that
+        # neither computes in a database nor reads one: it is the one that asks a
+        # question of OpenStreetMap, and it keeps its own reading of that rather than
+        # symlinking one out of `flix/src`, because there is nothing in `flix/src`
+        # that asks a question of anything but a database.
+        mkProbeApp = name: cmd:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ flix ];
+            text = ''
+              cd circuits/probe
+              ${cmd}
+            '';
+          };
+
         # The timing-lines report is a second Flix project, at `circuits/timing`.
         # Of the flake's Flix commands it is the only one handed neither `--database`
         # nor `DATABASE_URL`, and its `flix.toml` resolves no JDBC driver, so it has
@@ -188,12 +204,13 @@
           '';
         };
 
-        # The tools under circuits/, each run by Node with nothing else to
+        # The tools under circuits/ that are Node's, each run with nothing else to
         # carry. Which circuits are surveyed is the registry's, not these
         # registrations'; only geometry-write writes what the app serves,
         # under app/static/geometry, and the rest write beside it or read it.
-        # Timing lines are not among them: that reading is a command of the
-        # CLI, and is registered with the `flix` apps below.
+        # Probing a place and reading timing lines are not among them: both are
+        # Flix projects of `circuits/` now, and each is registered with its own
+        # runner below.
         geometryApp = name: script:
           pkgs.writeShellApplication {
             inherit name;
@@ -267,7 +284,8 @@
           geometry-regenerate  = { type = "app"; program = "${geometryApp "geometry-regenerate" "regenerate-geometry"}/bin/geometry-regenerate";                      meta.description = "Re-run the geometry pipeline over each circuit's kept Overpass answer and fail unless it reproduces the kept geometry ([<circuit> ...]; --write re-lays the files from the kept answer; --freeze asks OpenStreetMap now and keeps both)"; };
           geometry-timing-lines = { type = "app"; program = "${mkTimingApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits/timing project, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           geometry-timing-test = { type = "app"; program = "${mkTimingApp "geometry-timing-test" "flix test"}/bin/geometry-timing-test";                                   meta.description = "Run the timing report's tests (the circuits/timing project's; no database, no network, no files written)"; };
-          geometry-probe       = { type = "app"; program = "${geometryApp "geometry-probe" "probe-circuit"}/bin/geometry-probe";                                          meta.description = "Ask OpenStreetMap which relations hold a circuit at a place, each lap measured, before a circuit's config is authored (<lat>,<lon> [...] [--radius <km>], or a s,w,n,e box)"; };
+          geometry-probe       = { type = "app"; program = "${mkProbeApp "geometry-probe" "flix run -- \"$@\""}/bin/geometry-probe";                                 meta.description = "Ask OpenStreetMap which relations hold a circuit at a place, each lap measured, before a circuit's config is authored (the circuits/probe project, computing in no database; <lat>,<lon> [...] [--radius <km>], or a s,w,n,e box)"; };
+          geometry-probe-test  = { type = "app"; program = "${mkProbeApp "geometry-probe-test" "flix test"}/bin/geometry-probe-test";                              meta.description = "Run the probe's tests (the circuits/probe project's; no network, no database, no files written)"; };
           geometry-test        = { type = "app"; program = "${geometryTest}/bin/geometry-test";                                                                          meta.description = "Run the circuit tools' unit tests (Node's own runner over circuits/tests/; no network, no files written)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };

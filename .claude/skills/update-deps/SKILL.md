@@ -85,6 +85,7 @@ Collect **Verify** commands from each updated ecosystem's reference file and ded
 | `nix run .#test` | x | x | | x |
 | `nix run .#build` | x | x | | x |
 | `nix run .#flix-test` | | | | x |
+| `nix run .#geometry-timing-test` / `.#geometry-probe-test` | | | | x |
 | `cargo check --manifest-path app/src-tauri/Cargo.toml` | | | x | |
 
 Show `git diff --stat` so the user can see what changed.

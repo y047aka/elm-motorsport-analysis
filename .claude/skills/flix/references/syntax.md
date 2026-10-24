@@ -58,12 +58,58 @@ reason belongs in `flix/README.md` rather than in a comment.
   `let code: Int32 = e.getErrorCode();`.
 - Catch clauses name the imported class (`case e: SQLException`), not `##java...`.
 
+### A literal does not widen to the integer the parameter wants
+
+```
+E7685  Unexpected argument: expected 'Int64', got 'Int32'.
+```
+
+An OpenStreetMap id is an `Int64` and a test writes `List#{way(1, 100.0)}`, which
+reads as a number and is not one of the type the parameter asks for. Every literal
+feeding an `Int64` field or argument carries the suffix: `way(1i64, 100.0)`,
+`{ id = 7i64, ... }`. Seen in `circuits/probe/test/TestCandidates.flix`.
+
+### Only a labelled-record parameter is passed by name
+
+`String.replace` is `replace(src: {src = String}, dst: {dst = String}, s: String)`.
+Its first two parameters are records wearing a label and are passed `src = "'"`;
+the third is a plain `String` and stays positional. Passing `s = text` gives:
+
+```
+E7685  Unexpected argument: expected 'String', got '{ s = String }'.
+```
+
+which reads like a string-vs-record confusion and is a call-site mistake. Write
+`String.replace(src = "'", dst = "\"", text)` — as `circuits/probe/test/TestOverpass.flix`
+does to keep a JSON fixture readable. The same shape is why
+`Assert.assertTrueWithMsg(cond, msg)` takes its message second and unlabelled, and
+why `Assert.assertTrue` takes no message at all.
+
+### Records do not have `Eq`
+
+```
+E7027  Equality is not defined on { lat = Float64, lon = Float64 }. Define or derive an
+       instance of Eq.
+```
+
+`==` on tuples and on primitives is built in; on a record it is not, and so neither is
+it on a `List` of records — `line == Nil` fails, not because the list is compared but
+because its item is. `List.isEmpty(line)` says the same thing without asking for an
+`Eq` the domain has no use for, and comparing the fields (`line#lat == 47.9`) is what a
+test of a reading actually wants. Seen in `circuits/probe/test/TestOverpass.flix`; the
+alternative — an `Eq` instance per record — would say two places are the same place
+without saying what that means.
+
 ### Standard library names that catch people out
 
 The names this tree reaches for, when the obvious one is not there:
 `Option.getWithDefault`, `Option.toOk`, `Int32.remainder`, `Result.traverse`,
-`List.forEachWithIndex`. Check `https://api.flix.dev/` before guessing at a
-name — a wrong guess reads as a type error somewhere else.
+`List.forEachWithIndex`, `List.range` (there is no `rangeTo`, and `range(b, e)` runs
+from `b` inclusive to `e` exclusive, so the attempts a run makes are
+`List.range(1, tries() + 1)`), `Result.flatMap` (there is no `andThen`), `Map.empty`
+with `Map.insert` (there is no `Map.fromKeyValue`). Check
+`https://api.flix.dev/` before guessing at a name — a wrong guess reads as a type
+error somewhere else.
 
 ## Reported elsewhere, not hit here
 
@@ -74,8 +120,6 @@ From `ababup1192/sqlfx`'s `docs/flix-conventions.md` and `docs/spikes.md`:
   which can then run without terminating and without printing anything. The
   report is six hours lost to `{ into = ..., from = ... }`. If a build produces
   no output and does not finish, suspect a field name before anything else.
-- Records do not derive `Eq`, so a test comparing two of them maps to tuples or
-  to an enum first.
 - A dotted module (`mod Example.Users`) can fail to resolve both its types and
   its functions; top-level `def`s share one namespace across files.
 - `BigDecimal` literals are written `1.5ff`.
