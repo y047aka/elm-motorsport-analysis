@@ -141,9 +141,11 @@ parent it has never seen. Compiled twice, held once.
 **A link compiles every function a module holds for the few one command calls,** and
 the two projects divide at that rate. What the report reads through is linked; what
 belongs to the commands that compute in a database is held again on this side,
-smaller. `Cli/Errors.flix` keeps five of the CLI's eight cases — a feed that could
-not be decoded, a directory that is not there, a directory that is not one, and what
-the feed said about itself — and `Util/Files.flix` three of its six functions, the
+smaller. `Cli/Errors.flix` keeps four of the CLI's seven cases — a directory that is
+not there, a directory that is not one, a file that would not open, and a feed that
+could not be decoded — beside a fifth the CLI holds no failure like: what a reading
+found wrong with the data it was handed, which no command that computes in a
+database fails into. `Util/Files.flix` keeps three of its six functions, the
 three that read and stat, neither writing, making a directory nor globbing. Of the
 three cases this side drops — an empty file, a round no run loaded, a database's
 failure — only the last asked for a source of its own: `Db.flix`, three effects, ten
