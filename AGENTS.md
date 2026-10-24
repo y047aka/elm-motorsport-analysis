@@ -12,7 +12,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
   the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles nine of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `Util/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Neither is the probe at `circuits/probe/`, which asks the one question asked of OpenStreetMap rather than of a row, nor the diff at `circuits/geometry/`, which reads two kept geometry files and writes an overlay; neither links any of this `src`, because nothing in `flix/src` asks OpenStreetMap anything or reads a GeoJSON.
+  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles nine of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `Util/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Neither is the probe at `circuits/probe/`, which asks the one question asked of OpenStreetMap rather than of a row, nor the geometry commands at `circuits/geometry/`, which lay two kept geometry files together and re-lay a served one out of the answer it was written from; neither links any of this `src`, because nothing in `flix/src` asks OpenStreetMap anything or reads a GeoJSON.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -30,8 +30,9 @@ SQLite → HTTP or a JSON export → Elm visualization.
   and shares its `flix/src` sources by symlink — one per file, because a linked
   directory is walked as nothing — `circuits/probe/`, which resolves nothing,
   links nothing, and asks the one question asked before a circuit has a config,
-  and `circuits/geometry/`, the geometry diff, which resolves and links nothing
-  and is the one of the three that writes a file.
+  and `circuits/geometry/`, the geometry commands, which resolve and link nothing
+  and are the ones of the three that write a file — the diff's overlay, and, over a
+  circuit's kept answer, the served geometry itself.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -57,6 +58,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (the `circuits/geometry` project, reading no database; paths from where the command is run, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#geometry-diff-test` | The geometry commands' own tests (the `circuits/geometry` project's; no network, no database, nothing written) |
+| `nix run .#geometry-survey -- <circuit>` | Whether the survey over a circuit's kept Overpass answer still lays the bytes the app serves (the `circuits/geometry` project's own reading of the pipeline: it chains the answer's ways, stretches them to the published lap, thins them and compares; no network and no database; `[--answer <overpass.json>] [--write]`) |
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (the `circuits/probe` project, which resolves no dependency, links no source and computes in no database; `<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
 | `nix run .#geometry-probe-test` | The probe's own tests (the `circuits/probe` project's; no network, no database, nothing written) |
 | `nix run .#geometry-test` | The circuit tools' unit tests: their side-effect-free readings, run by Node's own runner over fixtures (`circuits/tests/`, no network, nothing written) |
@@ -645,10 +647,18 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   a nought-length stretch is walked through, the words a self-contradicting file is
   refused with, the bases a file may name, how a metre is printed and the sphere both are
   laid on are read out of both sources, because none of them parts loudly — a mean
-  sampled on another bound still reads as a reading of two lines. The spec also pins that
+  sampled on another bound still reads as a reading of two lines. The survey stands twice
+  in the same file now that `.#geometry-survey` writes a geometry over a kept answer: the
+  tenth a metre is kept to, the tolerance the thinning stops at and which of two equally
+  far points it keeps, the one stretch factor taken off the surveyed length, the order the
+  properties are claimed in, which claims are left unwritten rather than written `null`,
+  and the reason a byte comparison exempts nothing where the regeneration fence exempts
+  `surveyed_at`. A survey that parts is a field drawn at the wrong metre for every round,
+  which no kept file says. The spec also pins that
   the project links no source and resolves no dependency, that the flake's
-  `GEOMETRY_FROM` and the reader's `Env.getVar` name one directory, and that every
-  `geometry-<command>` the flake registers reaches the dispatch in `Main.flix`.
+  `GEOMETRY_FROM` and the reader's `Env.getVar` name one directory, that every
+  `geometry-<command>` the flake registers reaches the dispatch in `Main.flix`, and that
+  CI compares the served bytes without ever asking the survey to write them.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
