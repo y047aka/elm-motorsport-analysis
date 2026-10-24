@@ -8,13 +8,16 @@ root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
 
 The timing-lines report is not a command of this jar. It is a second Flix project,
 at `circuits/timing/`, which resolves no Maven dependency and compiles no `Db`
-effect. Thirteen sources under its `src` are symlinks into this `src` — the
-decoding of a CSV, the durations, the file readings, `Cli/Errors.flix`,
-`Motorsport/Circuit.flix` among them — so editing one of those files is compiled and
-tested twice, by `nix run .#flix-test` and by `nix run .#geometry-timing-test`, and
-moving or renaming one breaks both until its link moves too. `circuits/README.md`
-keeps the list, says why the links are one per file, and holds where the report's
-timings come from and what it cannot answer.
+effect. Nine sources under its `src` are symlinks into this `src` — the decoding of
+a CSV, the durations, `Motorsport/Circuit.flix` among them — so editing one of those
+files is compiled and tested twice, by `nix run .#flix-test` and by
+`nix run .#geometry-timing-test`, and moving or renaming one breaks both until its
+link moves too. `Cli/Errors.flix` and `Util/Files.flix` are not among them: the
+report holds its own of those two, smaller, they being the modules whose rest
+belongs to the commands that compute in a database. `circuits/README.md` keeps the
+list, says which modules are shared and which are held twice on purpose, why the
+links are one per file, and holds where the report's timings come from and what it
+cannot answer.
 
 What follows is what the code cannot say for itself.
 

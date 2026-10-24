@@ -174,50 +174,101 @@ test('a circuit Flix holds a map for is one whose config authors it that way', (
  * directory is walked as nothing, so the links must be one per file; and a link
  * which does not survive a checkout fails as `Undefined use`, named in the module
  * that needed it rather than in the link that broke.
+ *
+ * A link compiles a whole module for the few of its functions one command calls,
+ * so the links are held to the readings the report reads through. Where most of a
+ * module belongs to the commands that compute in a database it is held separately:
+ * `Cli/Errors.flix` states five of the CLI's eight cases and `Util/Files.flix`
+ * three of its six functions, and the one case carrying a database's failure —
+ * reached from no call here — was the whole reason `Db.flix` was a source of this
+ * project at all.
  */
 
 const reportRoot = fileURLToPath(new URL('../../circuits/timing/src', import.meta.url));
 
-/** Every shared source, as the path it holds under the report's own `src`. */
-function links(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+type Tree = { linked: string[]; held: string[] };
+
+/** Every source under the report's `src`, sorted by whether it is a link. */
+function walk(dir: string, found: Tree): Tree {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = `${dir}/${entry.name}`;
     const name = path.slice(reportRoot.length + 1);
-    if (lstatSync(path).isSymbolicLink()) return [name];
-    return entry.isDirectory() ? links(path) : [];
-  });
+    if (lstatSync(path).isSymbolicLink()) found.linked.push(name);
+    else if (statSync(path).isDirectory()) walk(path, found);
+    else if (entry.name.endsWith('.flix')) found.held.push(name);
+  }
+  return found;
 }
 
-/** The path under `flix/src` each shared source is expected to hold. */
+/** The shared readings, each named as the path under `flix/src` it holds. */
 function sharedSources(): string[] {
   return [
     'Cli.flix',
-    'Cli/Errors.flix',
-    'Db.flix',
     'Motorsport.flix',
     'Motorsport/Calendar.flix',
     'Motorsport/Circuit.flix',
     'Motorsport/Events.flix',
     'Util/Csv.flix',
     'Util/Csv/Decode.flix',
-    'Util/Csv/Decode/Extra.flix',
     'Util/Csv/Parser.flix',
     'Util/Duration.flix',
+  ];
+}
+
+/** The report's own command, and the two modules whose rest is the other
+ * commands': an error type with no database in it, and a file reading that is
+ * never given a file to write into. */
+function heldSources(): string[] {
+  return [
+    'Cli/Errors.flix',
+    'Cli/TimingLines.flix',
+    'Cli/TimingLines/Feed.flix',
+    'Main.flix',
+    'Report.flix',
     'Util/Files.flix',
   ];
 }
 
 test('the report shares flix/src one file per symlink, and each one resolves', () => {
-  const held = links(reportRoot).sort();
-  expect(held, 'the report shares a different set of sources than the ones it reads').toEqual(sharedSources());
+  const found = walk(reportRoot, { linked: [], held: [] });
+  expect(found.linked.sort(), 'the report shares a different set of sources than the ones it reads').toEqual(
+    sharedSources(),
+  );
+  expect(found.held.sort(), 'the report holds a source no test names').toEqual(heldSources());
   const root = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
   for (const name of sharedSources()) {
     const path = `${reportRoot}/${name}`;
-    expect(lstatSync(path).isSymbolicLink(), `${name} is a copy of a shared source, so it can disagree with it`).toBe(true);
+    expect(lstatSync(path).isSymbolicLink(), `${name} is a copy of a shared source, so it can disagree with it`).toBe(
+      true,
+    );
     // A linked directory is walked as nothing, which is what makes the per-file
     // rule load-bearing rather than tidy.
-    expect(statSync(path).isFile(), `${name} links a directory, which Flix will not descend`).toBe(true);    expect(realpathSync(path), `${name} does not hold flix/src/${name}`).toBe(`${root}/flix/src/${name}`);
+    expect(statSync(path).isFile(), `${name} links a directory, which Flix will not descend`).toBe(true);
+    expect(realpathSync(path), `${name} does not hold flix/src/${name}`).toBe(`${root}/flix/src/${name}`);
   }
+});
+
+/** Every source the report's compiler reads: its own, and what each link holds. */
+function compiledSources(): string[] {
+  return [...sharedSources(), ...heldSources()].map((name) => readSource(`circuits/timing/src/${name}`));
+}
+
+/**
+ * A link to `flix/src/Db.flix` would compile — an effect declaration opens no
+ * connection and needs no driver — so that the report has no way to name a
+ * database is a fact about its sources and nothing else, and these are the
+ * sources that say it.
+ */
+test('nothing the report compiles reaches a database', () => {
+  const text = compiledSources().join('\n');
+  for (const name of ['SqlRead', 'SqlWrite', 'DbErr', 'Db.Error', 'Db.Value', 'Jdbc']) {
+    expect(text, `the report compiles ${name}, which no command here can reach`).not.toContain(name);
+  }
+  const files = readSource('circuits/timing/src/Util/Files.flix');
+  expect(files, 'the report holds a Util.Files that writes, which is not the reading it is').not.toMatch(
+    /pub def (write|mkDirs|walkCsvFiles)/,
+  );
+  expect(files, 'the report globs a directory').not.toContain('Glob');
 });
 
 test('the report resolves no dependency, which is the separation for', () => {

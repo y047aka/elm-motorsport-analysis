@@ -12,7 +12,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
   the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles thirteen of this `src`'s files through symlinks.
+  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles nine of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `Util/Files.flix` rather than linking those two — they are the modules whose rest computes in a database.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -614,9 +614,10 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   laid against the ones the circuit's config authors and the kept geometry
   publishes. Flix parses no JSON, so the report cannot read the geometry the
   drawing is laid from and the same figures stand on either side of that with no
-  compiler between them. The spec also pins that the report project's thirteen
+  compiler between them. The spec also pins that the report project's nine
   symlinks into `flix/src` resolve — a broken one fails elsewhere as
-  `Undefined use`, far from its cause.
+  `Undefined use`, far from its cause — names the sources the report holds a second
+  copy of, and fails everything it compiles for naming a database.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

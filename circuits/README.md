@@ -125,29 +125,55 @@ gives no distance for is app-side — `Tracker.Config.lapScale`, and the
 `circuits/timing/` is a second Flix package: `flix.toml` with no Maven dependency,
 `src/Report.flix` reading the arguments, `src/Main.flix` handing them over, and
 `src/Cli/TimingLines.flix` with its `Feed.flix` reading the two feeds and printing.
-Nothing compiled into it can name a database: no `Db` effect, no argument flag for
-one, and no JDBC driver resolved.
+Nothing compiled into it can name a database: no `Db` effect among its sources, no
+argument flag for one, and no JDBC driver resolved.
 
-Thirteen of its sources are symlinks into `flix/src`: the decoding of a CSV
-(`Util/Csv/`), the durations, the file readings, `Cli/Errors.flix` — whose `Reading`
-case is what a feed says when the data handed to it is wrong — `Db.flix`, which that
-error type names `Db.Error` through, the parent stubs `Cli.flix`, `Motorsport.flix`
-and `Util/Csv.flix`, and `Motorsport/`'s `Circuit.flix`, `Events.flix` and
-`Calendar.flix`. Compiled twice, held once.
+Nine of its sources are symlinks into `flix/src`: the decoding of a CSV
+(`Util/Csv/`), the durations, `Motorsport/`'s `Circuit.flix`, `Events.flix` and
+`Calendar.flix`, and the parent stubs `Cli.flix`, `Motorsport.flix` and
+`Util/Csv.flix`, which are compiled because Flix will not enter a module whose
+parent it has never seen. Compiled twice, held once.
+
+**A link compiles every function a module holds for the few one command calls,** and
+the two projects divide at that rate. What the report reads through is linked; what
+belongs to the commands that compute in a database is held again on this side,
+smaller. `Cli/Errors.flix` keeps five of the CLI's eight cases — a feed that could
+not be decoded, a directory that is not there, a directory that is not one, and what
+the feed said about itself — and `Util/Files.flix` three of its six functions, the
+three that read and stat, neither writing, making a directory nor globbing. Of the
+three cases this side drops — an empty file, a round no run loaded, a database's
+failure — only the last asked for a source of its own: `Db.flix`, three effects, ten
+functions and three enums, reached from no call.
+`Util/Csv/Decode/Extra.flix` was linked on the same reading and answered to nothing
+at all, `traverse` being what `Motorsport.Wec.decoder` uses and no reading of a
+timing feed.
+
+Two of the links are called at one point each and stay links for that: `Calendar.find`
+is what refuses a round the calendar does not list, and the calendar's rounds are the
+thing the report cannot hold a second copy of; `Events.circuit` says which ground a
+round was run on, which is the word the export sends and the drawing matches, and
+`app/tests/circuit-contract.spec.ts` reads it out of `flix/src` — a copy here would
+be a second table with one reader.
+
+So `Cli.Errors` and `Util.Files` are each two modules of one name, one per project,
+each compiled from its own file. What the two `Cli.Errors` keep in common is a
+wording: one bad `--csv` is answered in the same words at either command.
 
 **A symlink per file, never one per directory.** Flix's source walker does not
 descend a symlinked directory: one link at `src/Util` compiles as nothing and fails
 as `Undefined use 'Util.Csv.Decode'`, reported in the module that needed the link
-rather than in the link itself. Copies are no easier: Flix has no local path
-dependency, answering anything but `github:username/projectname` with a format
-error, and `flix build` takes no source directory as an argument — so a shared
+rather than in the link itself. Copies are no easier for what is shared: Flix has no
+local path dependency, answering anything but `github:username/projectname` with a
+format error, and `flix build` takes no source directory as an argument — so a shared
 `Util.Csv.Decode` is a shared file, not a second copy of its 552 lines. Per-file
 links also leave each shared source visible in `git ls-files -s` as mode `120000`.
 
 `nix run .#geometry-timing-test` runs that package's own `flix test`, beside
 `.#flix-test` in CI, which is what proves the links survived the checkout as well as
 that the readings are right. `app/tests/circuit-timing-map.spec.ts` pins that every
-link resolves to the `flix/src` file of the same relative path.
+link resolves to the `flix/src` file of the same relative path, names the sources this
+directory holds itself, and reads every source the report compiles — every link
+dereferenced — for the words a database is named by.
 
 ## The atlas readings
 
