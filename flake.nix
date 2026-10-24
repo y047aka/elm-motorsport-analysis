@@ -83,14 +83,10 @@
             '';
           };
 
-        # Laying two kept geometries against each other, and surveying a circuit's geometry
-        # out of its kept Overpass answer, are the fourth Flix project, at
-        # `circuits/geometry`. The pipeline that asks OpenStreetMap for a survey it has
-        # never seen, the atlas reading that measures a foreign line against a kept one,
-        # and the two circuits' configs are still Node's — so the two projects hold the
-        # same figures and `app/tests/circuits-geometry-reading.spec.ts` is what keeps them
-        # one set. The project reads a file and writes one and reaches neither a database
-        # nor a network.
+        # The fourth Flix project, at `circuits/geometry`: it lays two kept geometries
+        # together and surveys a circuit out of its kept Overpass answer, reading a file and
+        # writing one and reaching neither a database nor a network. Which parts of the
+        # pipeline stayed TypeScript's is `circuits/README.md`'s to say.
         #
         # `GEOMETRY_FROM` is the directory the reader was standing in: `flix` has to be
         # started inside the project to find its `flix.toml`, and the reader names

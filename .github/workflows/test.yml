@@ -47,17 +47,15 @@ jobs:
       # network — which is what these tests are written to keep it out of.
       - name: Probe tests
         run: nix run .#geometry-probe-test
-      # The geometry project's own tests: the reading of a kept geometry file, the
-      # comparison of two lines, the reading of an Overpass answer, the chaining of a
-      # lap and the bytes a geometry is written in. Every reading is handed a fixture
-      # rather than a file, so no geometry has to be written to be read back, and
-      # nothing here can change a kept file.
+      # The geometry project's own tests: a kept geometry file read, two lines laid
+      # together, an Overpass answer read, a lap chained and the bytes a geometry is
+      # written in. Every reading is handed a fixture, so nothing here can change a kept
+      # file.
       - name: Geometry command tests
         run: nix run .#geometry-diff-test
-      # The survey is Flix's now as well as TypeScript's, so the question the regeneration
-      # fence asks of that pipeline is asked of this one: does the survey over a kept answer
-      # still draw the bytes the app serves? Two writers of one file, both fenced, is what
-      # keeps them one pipeline rather than two that happen to agree today.
+      # Does the survey over a kept answer still draw the bytes the app serves? The
+      # regeneration fence asks that of the TypeScript pipeline; this is the other author
+      # of the same file asked, over the two circuits a checkout keeps.
       - name: Geometry survey reproduces the kept geometries
         run: nix run .#geometry-survey -- cota && nix run .#geometry-survey -- le_mans
       - name: Circuit tool tests

@@ -8,31 +8,22 @@ import { readSource } from './helpers';
 /**
  * One set of readings, held in two languages, and no compiler sees both.
  *
- * The atlas command measures a measured line against a kept geometry in TypeScript
- * (`circuits/apartness.ts`, which `circuits/atlas-geometry.ts` imports), and the diff lays
- * the same two kinds of file against each other in Flix (`circuits/geometry/`, `nix run
- * .#geometry-diff`). They are deliberately separate programs — one writes an atlas line
- * into the repository, the other compares what is already there — but the comparison they
- * are built on is one set of arithmetic, and it is written twice.
+ * The comparison is `circuits/apartness.ts`, which the atlas command samples, and
+ * `circuits/geometry/src/Apart.flix`, which the diff samples. The survey is
+ * `circuits/circuit-geometry.ts`, which reads an Overpass answer, chains a relation's ways into
+ * a lap, stretches it to the length the circuit publishes and writes the file the app serves,
+ * and `Survey.flix` with `Write.flix`, which do the same over a kept answer — `nix run
+ * .#geometry-survey` fails unless the bytes it lays are the bytes the app serves. Asking
+ * OpenStreetMap for an answer nobody has kept is TypeScript's alone; `circuits/README.md` says
+ * which of the two a command runs.
  *
- * The survey is written twice too, and is the larger of the two duplications.
- * `circuits/circuit-geometry.ts` reads an Overpass answer, chains a relation's ways into a
- * lap, stretches it to the length the circuit publishes and writes the file the app serves;
- * `circuits/geometry/src/Survey.flix` and `Write.flix` do the same over a kept answer, and
- * `nix run .#geometry-survey` fails unless the bytes it lays are the bytes the app serves.
- * Asking OpenStreetMap for a survey nobody has seen, the atlas reading and the two
- * circuits' configs are still TypeScript's, so the two pipelines are one pipeline only for
- * as long as something compares them.
- *
- * A comparison that parts silently says nothing: the apartness of two lines sampled on a
- * different bound is a mean within a few metres of the truth, which reads as a real
- * reading of two lines that in fact disagree. A survey that parts says it louder — a lap
- * that chains the other way round is a field drawn at the wrong metre for everyone — but
- * only where a survey is actually run, and the Flix survey runs over two kept answers. So
- * the bound of each loop, which stretch a tie falls on, the order the claims are written
- * in, the sphere both are laid on and the tenth a metre is kept to are read out of both
- * sources here, the way `circuit-overpass.spec.ts` reads the Overpass facts out of both
- * sides of the Flix/TypeScript line.
+ * A parting is silent in both directions. The apartness of two lines sampled on another bound is
+ * a mean within a few metres of the truth, which reads as a reading of two lines that in fact
+ * disagree; a survey that parts is louder, and audible only where a survey is run — which is
+ * over two kept answers. So the bound of each loop, which stretch a tie falls on, the order the
+ * claims are written in, the sphere both are laid on and the tenth a metre is kept to are read
+ * out of both sources here, the way `circuit-overpass.spec.ts` reads the Overpass facts out of
+ * both sides of the Flix/TypeScript line.
  *
  * Nothing here needs a browser.
  */
@@ -190,11 +181,10 @@ test('both readings know the same kinds of line', () => {
 });
 
 /**
- * A metre is printed the way the files that hold it were written: `5515` and not
- * `5515.0`, `1.2 m` and not `1.2000000000000002 m`. Java prints a `Float64` with its
- * decimal always present, so a command that interpolates what it computed rewrites
- * every whole metre in a file — and the overlay this command writes is compared to the
- * one the TypeScript tool writes, byte for byte, by whoever re-lays it.
+ * A metre is printed the way the files that hold it were written: `5515` and not `5515.0`,
+ * `1.2 m` and not `1.2000000000000002 m`. Java prints a `Float64` with its decimal always
+ * present, so a command that writes a kept file or an overlay cannot interpolate what it
+ * computed, or every whole metre in the file is a changed line.
  */
 test('a distance is printed as the files that hold it were printed', () => {
   // The rounding is the one `toFixed` states: nearest at that many decimals, ties away
@@ -210,7 +200,7 @@ test('a distance is printed as the files that hold it were printed', () => {
   }
   expect(
     command,
-    'the report quotes a place along a line with a decimal, which the TypeScript tool does not',
+    'the report no longer quotes a place along a line at whole metres, as the files spell it',
   ).toContain('Util.Format.fixed(0, apart#worst#aMetres)');
 });
 

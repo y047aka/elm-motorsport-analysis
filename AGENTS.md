@@ -58,7 +58,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (the `circuits/geometry` project, reading no database; paths from where the command is run, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#geometry-diff-test` | The geometry commands' own tests (the `circuits/geometry` project's; no network, no database, nothing written) |
-| `nix run .#geometry-survey -- <circuit>` | Whether the survey over a circuit's kept Overpass answer still lays the bytes the app serves (the `circuits/geometry` project's own reading of the pipeline: it chains the answer's ways, stretches them to the published lap, thins them and compares; no network and no database; `[--answer <overpass.json>] [--write]`) |
+| `nix run .#geometry-survey -- <circuit>` | Whether the survey over a circuit's kept Overpass answer still lays the bytes the app serves, optionally writing them with `--write` (the `circuits/geometry` project, reaching no database and no network; `[--answer <overpass.json>] [--write]`) |
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (the `circuits/probe` project, which resolves no dependency, links no source and computes in no database; `<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
 | `nix run .#geometry-probe-test` | The probe's own tests (the `circuits/probe` project's; no network, no database, nothing written) |
 | `nix run .#geometry-test` | The circuit tools' unit tests: their side-effect-free readings, run by Node's own runner over fixtures (`circuits/tests/`, no network, nothing written) |
@@ -640,25 +640,17 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   timing project's rule and not this one's, and that nothing it compiles can name a
   database.
 - **Geometry, read in two languages** (`/app/tests/circuits-geometry-reading.spec.ts`) —
-  the diff is Flix's (`circuits/geometry/`) and the pipeline that writes the files it
-  compares is still TypeScript, so the profile's refusals and the apartness arithmetic
-  stand twice: in `geometry-file.ts` and `apartness.ts`, and in `Geometry.flix` and
-  `Apart.flix`. The bound each sampling loop stops at, which stretch a tie falls on, how
-  a nought-length stretch is walked through, the words a self-contradicting file is
-  refused with, the bases a file may name, how a metre is printed and the sphere both are
-  laid on are read out of both sources, because none of them parts loudly — a mean
-  sampled on another bound still reads as a reading of two lines. The survey stands twice
-  in the same file now that `.#geometry-survey` writes a geometry over a kept answer: the
-  tenth a metre is kept to, the tolerance the thinning stops at and which of two equally
-  far points it keeps, the one stretch factor taken off the surveyed length, the order the
-  properties are claimed in, which claims are left unwritten rather than written `null`,
-  and the reason a byte comparison exempts nothing where the regeneration fence exempts
-  `surveyed_at`. A survey that parts is a field drawn at the wrong metre for every round,
-  which no kept file says. The spec also pins that
-  the project links no source and resolves no dependency, that the flake's
-  `GEOMETRY_FROM` and the reader's `Env.getVar` name one directory, that every
-  `geometry-<command>` the flake registers reaches the dispatch in `Main.flix`, and that
-  CI compares the served bytes without ever asking the survey to write them.
+  the comparison and the survey each stand in TypeScript and in Flix (`circuits/geometry/`),
+  and what the spec reads are the readings that part without printing anything: a sampling
+  loop's bound, which stretch a tie falls on, how a nought-length stretch is walked through,
+  the tenth a metre is kept to, the tolerance the thinning stops at and which of two equally
+  far points it keeps, the one stretch factor, and the order a geometry's properties are
+  claimed in. A survey that parts is a field drawn at the wrong metre for every round, which
+  no kept file says. The spec also pins that the project links no source and resolves no
+  dependency, that the flake's `GEOMETRY_FROM` and the reader's `Env.getVar` name one
+  directory, that every `geometry-<command>` the flake registers reaches the dispatch in
+  `Main.flix`, and that CI compares the served bytes without asking the survey to write them.
+  Which language runs which command is `circuits/README.md`'s to say.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

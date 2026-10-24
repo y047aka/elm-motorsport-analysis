@@ -1,16 +1,16 @@
-/// Lays any two geometries of this repository's profile against each other and says,
-/// in metres, where they disagree — optionally as an SVG overlay, which is the same
-/// reading at one glance instead of three numbers.
+/// Lays any two geometries of this repository's profile against each other and says, in
+/// metres, where they disagree — optionally as an SVG overlay.
 ///
 ///     nix run .#geometry-diff -- app/static/geometry/le_mans.geojson circuits/le_mans/atlas.geojson
 ///
-/// The only claim a file must keep is the one the profile makes of its outline: a line
-/// with metres measured from its own lap's zero. The basis is free — this is the reading
-/// that compares a survey to a measurement, or a survey to the same survey a year later
-/// — and the report quotes each file's own `basis` and `source` beside every figure, so
-/// an output cannot be read as two files agreeing when only one line was kept.
-/// `Geometry` is that reading and `Apart` the comparison; this is the asking of two
-/// files, the printing, and the drawing.
+/// The only claim a file must keep is the one the profile makes of its outline: a line with
+/// metres measured from its own lap's zero. The basis is free — this is the reading that
+/// compares a survey to a measurement, or a survey to the same survey a year later — and the
+/// report quotes each file's own `basis` and `source` beside every figure, so an output cannot
+/// be read as two files agreeing when only one line was kept.
+///
+/// `Geometry` is that reading and `Apart` the comparison; this is the asking of two files,
+/// the printing, and the drawing.
 pub mod Diff {
 
     use Apart.Apartness

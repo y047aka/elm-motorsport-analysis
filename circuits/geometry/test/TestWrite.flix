@@ -1,11 +1,8 @@
-/// The geometry file as bytes: the spelling a number is given, the claims a circuit does
-/// not make left unwritten, the layout every reader of a kept file reads, and where two
-/// files part. `circuits/geometry/src/Write.flix` is the writer these hold to its word;
-/// the survey that fills it is `TestSurvey`'s. The pipeline's TypeScript writer lays the
-/// same bytes for the two circuits this repository surveys — which `nix run .#geometry-survey`
-/// answers for by comparing against the kept files — and
-/// `app/tests/circuits-geometry-reading.spec.ts` reads the two sources and fails them apart
-/// over the order of the claims and what a comparison is allowed to exempt.
+/// The geometry file as bytes: the spelling a number is given, the claims a circuit does not
+/// make left unwritten, the layout every reader of a kept file reads, and where two files part.
+/// `nix run .#geometry-survey` answers whether these are the bytes the app serves, and
+/// `app/tests/circuits-geometry-reading.spec.ts` holds this writer and the pipeline's to one
+/// claim order.
 pub mod TestWrite {
 
     use Circuit.Circuit

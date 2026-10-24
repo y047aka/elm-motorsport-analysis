@@ -1,11 +1,8 @@
-/// Reading a file, and writing one. The commands these readings serve are the
-/// ones a person runs by hand, so both directions belong to them: a geometry is
-/// read to be laid against another, and an overlay or a measured line is written
-/// to be looked at later. The globbing, the stat-ing and the CSV-walking the load
-/// and the export do are `flix/src`'s `Util.Files`, and the report that reads a
-/// timing feed holds a third module of the same name with no way to write — at
-/// `flix/src`, `circuits/timing`'s and here, three modules, three projects, one
-/// name, none of them able to reach the others'.
+/// Reading a file, and writing one: the commands these serve are run by hand, so a geometry
+/// is read to be laid against another and an overlay written to be looked at later. The
+/// globbing, the stat-ing and the CSV-walking the load and the export do are `flix/src`'s
+/// `Util.Files`. Three projects hold a module of this name — `flix/src`, `circuits/timing`'s
+/// and this one — and none of them can reach the others'.
 pub mod Util.Files {
 
     use Sys.Env

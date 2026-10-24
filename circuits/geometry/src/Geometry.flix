@@ -1,21 +1,16 @@
-/// The reading of this repository's own geometry-file profile: the outline as the
-/// line it claims to be — its points, its own metres, the properties a report
-/// quotes — and the pit lane beside it. `circuits/geometry-file.ts` is the same
-/// reading in the language the pipeline and the regeneration fence are written in,
-/// and until that pipeline is Flix the two are held side by side: this is what the
-/// commands a person runs read, that is what the fence reads, and
-/// `app/tests/circuits-geometry-reading.spec.ts` reads both sources and fails them
-/// apart over the sentences and the claims they are made of. A kept file reaching
-/// one reading and not the other is a file whose survey means one thing to the
-/// report and another to the fence.
+/// The reading of this repository's own geometry-file profile: the outline as the line it
+/// claims to be — its points, its own metres, the properties a report quotes — and the pit
+/// lane beside it. `circuits/geometry-file.ts` is the same reading in the language the
+/// lane beside it. `circuits/geometry-file.ts` is the same reading in the language the
+/// pipeline is written in, and `app/tests/circuits-geometry-reading.spec.ts` holds the two
+/// to one set of refusals and one set of claims.
 ///
-/// What is checked here is what the profile claims of a line: a basis among the
-/// kinds its readers know, one metre per point, none of them going backwards, and
-/// points enough to be a line. The claims that belong to a circuit — that the last
-/// metre stands at *its* published length, that published stretches add up — are
-/// the reader that knows the circuit's, and no kept file is read here by a command
-/// that knows one: the diff lays two files against each other and quotes what each
-/// says about itself, which is why every failure names the file it was reading.
+/// What is checked here is what the profile claims of a line: a basis among the kinds its
+/// readers know, one metre per point, none of them going backwards, and points enough to be a
+/// line. The claims that belong to a circuit — that the last metre stands at *its* published
+/// length, that published stretches add up — are the reader that knows the circuit's. Every
+/// failure names the file it was reading, because a kept file is as often a stranger's as
+/// it is this repository's.
 pub mod Geometry {
 
     use Util.Json.Json

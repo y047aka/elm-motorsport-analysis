@@ -1,20 +1,15 @@
 /// A number as the kept files print it.
 ///
-/// The geometries, the atlas lines and the overlays in this repository were
-/// written by the TypeScript tools, which printed their numbers the way
-/// JavaScript prints them: a whole distance as `5515` and not `5515.0`, and a
-/// report figure to whichever decimal the sentence asked for. Flix prints a
-/// `Float64` through Java, which says `5515.0` — so a tool that rewrites a kept
-/// file cannot simply interpolate what it computed, or every whole metre in a
-/// kept geometry becomes a changed line in review and in the fence that compares
-/// one file to another. These are the two printings the tools need, and the
-/// second is what a report's sentences are built out of.
+/// A kept geometry is written by two tools in two languages, and they print a number
+/// differently: JavaScript says `5515` where Flix prints a `Float64` through Java and says
+/// `5515.0`, so a tool that rewrites a kept file cannot simply interpolate what it computed,
+/// or every whole metre in that file becomes a changed line in review and in the fence that
+/// compares one file to another.
 ///
-/// Both are written on the rounding JavaScript's `toFixed` states: the nearest
-/// value at that many decimals, ties away from zero — `562.25` at one decimal is
-/// `562.3`. The distances these print are metres and drawing units, which are
-/// never negative, so the tie never has to say which of two infinities it runs
-/// toward.
+/// Both printings are written on the rounding JavaScript's `toFixed` states: the nearest value
+/// at that many decimals, ties away from zero — `562.25` at one decimal is `562.3`. What these
+/// print is metres and drawing units, which are never negative, so a tie never has to say
+/// which of two infinities it runs toward.
 pub mod Util.Format {
 
     /// A number with `digits` decimals, as `toFixed` writes it.

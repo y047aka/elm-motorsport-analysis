@@ -19,14 +19,11 @@
 /// geometry is one line per property rather than one per number, and a refreshed survey
 /// reads as two changed lines per feature.
 ///
-/// A run without `--write` changes nothing and answers the regeneration fence's question
-/// for one circuit: does the survey over the kept answer still draw the bytes the app
-/// serves? The fence over every circuit at once stays TypeScript's —
-/// `circuits/regenerate-geometry.ts` — and compares two parsed files property by property
-/// with `surveyed_at` exempt, which answers a kept file's layout as much as its data.
-/// This comparison is of bytes, the stricter question while two writers lay one file: a
-/// metre that lands on a different digit is a drawing that moved. `surveyed_at` needs no
-/// exemption here, because the survey is read from the very answer whose stamp it is.
+/// A run without `--write` changes nothing and answers one question: does the survey over
+/// the kept answer still draw the bytes the app serves? The fence over every circuit at once
+/// is `circuits/regenerate-geometry.ts`'s, and compares parsed properties with `surveyed_at`
+/// exempt; this comparison is of bytes, and `surveyed_at` needs no exemption here because
+/// the survey reads the very answer whose stamp the property carries.
 pub mod Write {
 
     use Circuit.Circuit
@@ -143,15 +140,11 @@ pub mod Write {
 
     // ------------------------------------------------------------------ the spelling
 
-    /// A number as JSON spells it. Java keeps a decimal point where JavaScript drops it,
-    /// and both print the shortest double that reads back as the same number — so a metre
-    /// written here is the metre the pipeline's writer wrote, digit for digit, which is
-    /// what lets a survey written in Flix be fenced against a kept file bytewise.
-    ///
-    /// The two spellings part company only outside the magnitudes a geometry holds: a
-    /// Java double reaches for an exponent at ten million and below a thousandth, where
-    /// JavaScript waits for 1e21 and 1e-6. A metre, a latitude and a longitude never get
-    /// there, and an exponent form would still be valid JSON if one did.
+    /// A number as JSON spells it. Java keeps a decimal point where JavaScript drops it, and
+    /// both print the shortest double that reads back as the same number — so a metre written
+    /// here is the metre the pipeline's writer wrote, digit for digit. The two spellings part
+    /// only outside the magnitudes a geometry holds: Java reaches for an exponent at ten
+    /// million and below a thousandth, JavaScript at 1e21 and 1e-6.
     pub def number(value: Float64): String =
         let spelled = Float64.toString(value);
         if (String.endsWith({suffix = ".0"}, spelled)) String.dropRight(2, spelled) else spelled
@@ -311,10 +304,8 @@ pub mod Write {
         1
     }
 
-    /// Where two files part: the line they part at, and what each of them says there. The
-    /// file is not printed — a geometry is twelve lines, two of them thousands of numbers
-    /// — and the numbers are cut short because a metre that moved is found by where it
-    /// moved, not by the eleven thousand digits around it.
+    /// Where two files part: the line they part at, and what each of them says there, cut
+    /// short — a metre that moved is found by where it moved, not by the digits around it.
     pub def firstPart(written: String, kept: String): String =
         parted(String.lines(written), String.lines(kept), 1)
 

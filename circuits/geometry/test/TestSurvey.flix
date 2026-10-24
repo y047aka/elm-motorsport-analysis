@@ -1,10 +1,7 @@
 /// The survey between an Overpass answer and a geometry file: the answer read, the lap
-/// chained out of a relation's ways, the line stretched to the length the circuit
-/// publishes and thinned to what a drawing can show. These are the readings
-/// `circuits/tests/circuit-geometry.test.ts` holds the TypeScript pipeline to, in the
-/// language the commands a person runs are written in — the same readings twice because
-/// two writers lay one file until the pipeline moves, and a lap that chains one way in one
-/// of them and another way in the other is a field drawn at the wrong metre for everyone.
+/// chained out of a relation's ways, the line stretched to the length the circuit publishes
+/// and thinned to what a drawing can show. `circuits/tests/circuit-geometry.test.ts` holds the
+/// TypeScript pipeline to the same readings, in the language that pipeline is written in.
 pub mod TestSurvey {
 
     use Apart.Point

@@ -1,22 +1,15 @@
-/// Laying one line against another: how far a place stands from a line measured in
-/// metres of its own lap, and the apartness of two such lines. The atlas reading runs
-/// on these three readings too, which is why they are a module of their own rather
-/// than the diff's arithmetic.
+/// Laying one line against another: how far a place stands from a line measured in metres
+/// of its own lap, and the apartness of two such lines. The atlas reading runs on the same
+/// three readings in TypeScript — `circuits/apartness.ts` — and
+/// `app/tests/circuits-geometry-reading.spec.ts` holds the two to one set of numbers.
 ///
 /// The sphere is the one every drawing in this repository is measured on: the one
-/// `Motorsport.Circuit.Geodesy` projects through, the one the survey is measured with
-/// and the one the probe counts its laps on. The same three readings are also
-/// TypeScript's — `circuits/apartness.ts`, for the atlas command that is not Flix yet
-/// — and `app/tests/circuits-geometry-reading.spec.ts` reads the two sources and fails
-/// them apart over the bound of the sampling loop, which stretch a tie falls on, how a
-/// zero-length stretch is walked through, and the sphere both are laid on. Two readings
-/// of one comparison, agreeing by a test rather than by a compiler, is the state this
-/// project is in until the pipeline moves; it is not the state to keep.
+/// `Motorsport.Circuit.Geodesy` projects through, the one the survey is measured with and the
+/// one the probe counts its laps on.
 ///
-/// Distances are ground distances on one equirectangular projection of the two lines
-/// together, and each line's own metres travel with its points — so a line stretched to
-/// a published lap length and a line measured at its own are still compared place
-/// against place, which is the comparison that says what a basis change would cost.
+/// Distances are ground distances on one equirectangular projection of the two lines together,
+/// and each line's own metres travel with its points — so a line stretched to a published lap
+/// length and a line measured at its own are still compared place against place.
 pub mod Apart {
 
     import java.lang.Math

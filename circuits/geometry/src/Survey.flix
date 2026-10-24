@@ -1,24 +1,15 @@
 /// The survey read, the lap chained, and the line stretched to the length the circuit
-/// publishes: what stands between an Overpass answer and the geometry the app serves, in
-/// the language the commands a person runs are written in.
+/// publishes: what stands between an Overpass answer and the geometry the app serves.
 ///
 /// A relation lists its ways in no order, may draw a two-way way against the direction of
-/// the race, and comes to whatever length OpenStreetMap happens to hold; what the pipeline
-/// owes the drawing is one closed line that starts at the line the circuit times from, runs
-/// in the direction the race does, and ends at the metre the circuit publishes. Every point
-/// keeps the degrees it was surveyed at — the metres are this module's working, and the app
+/// the race, and comes to whatever length OpenStreetMap happens to hold; what the drawing
+/// asks for is one closed line that starts at the line the circuit times from, runs in the
+/// direction the race does, and ends at the metre the circuit publishes. Every point keeps
+/// the degrees it was surveyed at — the metres are this module's working, and the app
 /// re-derives them from the frame written beside them.
 ///
-/// What is refused here is what an answer owes a survey: the relation is in the answer, the
-/// line the lap is measured from stands where the circuit says it stands, every way in the
-/// relation made it into the chain, and the chain closed. Each says what it found rather
-/// than that a lookup returned nothing.
-///
-/// The same pipeline is TypeScript's in `circuits/circuit-geometry.ts`. Which of the two the
-/// flake runs is `circuits/README.md`'s to say; the numbers both are laid on — the sphere,
-/// the parallel both lines are drawn about, the bound the thinning stops at and the tenth it
-/// stops at, which of two equally far points a stretch turns on — are what
-/// `app/tests/circuits-geometry-reading.spec.ts` reads out of both sources.
+/// The same pipeline is TypeScript's in `circuits/circuit-geometry.ts`, and which of the two
+/// runs is `circuits/README.md`'s to say.
 pub mod Survey {
 
     use Geometry.Place
@@ -32,9 +23,8 @@ pub mod Survey {
     /// `oneway` is read out of these; the rest travels with the answer it came in.
     pub type alias Tags = Map[String, String]
 
-    /// One member of a relation. The role is the empty string for the ways a lap is
-    /// chained from, which is why it is carried rather than dropped: it is the whole
-    /// difference between the lap and the pit lane.
+    /// One member of a relation. The role is the empty string for the ways a lap is chained
+    /// from, which is the whole difference between the lap and the pit lane.
     pub type alias Member = {
         kind = String,
         role = String,
@@ -44,7 +34,7 @@ pub mod Survey {
     /// One element of an answer, of whichever kind it was: a node carries a place and no
     /// line, a way the node ids its line runs through, a relation its members. The answer is
     /// `out body`, the one spelling that carries a way's node refs and a node's degrees at
-    /// once, which is what chaining a line of places needs both of.
+    /// once.
     pub type alias Element = {
         id      = Int64,
         kind    = String,
@@ -96,8 +86,7 @@ pub mod Survey {
             case Some(ref) => Some({kind = wordWith("type", root), role = wordWith("role", root), ref = ref})
         }
 
-    /// A node's place, and nothing else's: a way has no latitude of its own, and a relation
-    /// least of all.
+    /// A node's place, and nothing else's: a way has no latitude of its own.
     def placeOf(json: Json): Option[Place] =
         let root = objectOf(json);
         match (numberOf("lat", root), numberOf("lon", root)) {
@@ -363,13 +352,9 @@ pub mod Survey {
 
     def taken(segment: Segment, used: Set[Int64]): Bool = Set.memberOf(segment#id, used)
 
-    /// The ways the chain could not take, which is a failure and never a shortened lap: a
-    /// relation whose ways do not connect is a survey read wrongly. Every way left out is
-    /// reported with what decides its remedy — its length, how far its nearest end stands from
-    /// where the chain stopped, and whether it is driven one way. A oneway way lying at the
-    /// stop is an orientation the survey disagrees with; a way tens of metres off is ground
-    /// OpenStreetMap does not connect; a short one far from everything is a road with no
-    /// business in the relation.
+    /// The ways the chain could not take, which is a failure and never a shortened lap.
+    /// Every way left out is reported with what decides its remedy — its length, how far its
+    /// nearest end stands from where the chain stopped, and whether it is driven one way.
     def leftOver(segments: List[Segment], used: Set[Int64], ids: List[Int64], nodes: Map[Int64, Place]): Result[String, List[Int64]] =
         let left = List.filter(segment -> not taken(segment, used), segments);
         if (List.isEmpty(left))
@@ -397,17 +382,15 @@ pub mod Survey {
             case _                         => 0.0
         }
 
-    /// Whether the chained ids come back to the place they started from, which is what a
-    /// closed lap is and what a relation whose ways are mis-oriented says not to be.
+    /// Whether the chained ids come back to the place they started from.
     def closes(nodes: Map[Int64, Place], ids: List[Int64]): Bool =
         match (startPlace(nodes, ids), endPlace(nodes, ids)) {
             case (Some(first), Some(last)) => samePlace(first, last)
             case _                         => false
         }
 
-    /// Two places are the one place when both their degrees agree, which is what a
-    /// closed lap asks of its first and its last: a record carries no equality of its
-    /// own, and the degrees are the equality the survey is measured on.
+    /// Two places are the one place when both their degrees agree: a record carries no
+    /// equality of its own, and the degrees are the equality the survey is measured on.
     def samePlace(a: Place, b: Place): Bool = a#lat == b#lat and a#lon == b#lon
 
     def startPlace(nodes: Map[Int64, Place], ids: List[Int64]): Option[Place] =
@@ -556,9 +539,7 @@ pub mod Survey {
         }
 
     /// Which way the closed line runs, from the shoelace sum in the drawing's own metres:
-    /// positive is clockwise, because this projection's `y` runs south. A relation whose ways
-    /// are mis-oriented says so here, in the one property of a geometry that no drawing reads
-    /// without drawing the whole lap with it.
+    /// positive is clockwise, because this projection's `y` runs south.
     pub def turnDirection(points: List[Point]): String =
         if (shoelace(points) > 0.0) clockwise() else counterClockwise()
 
@@ -662,7 +643,7 @@ pub mod Survey {
     // ---------------------------------------------------------------- the lists at hand
 
     /// A Map from pairs, which the standard library builds by insertion and this reading
-    /// needs at every turn: an answer's nodes, its ways, its tags.
+    /// needs for an answer's nodes, ways and tags.
     def paired(pairs: List[(k, v)]): Map[k, v] with Order[k] =
         List.foldLeft((held, pair) -> match pair {case (key, value) => Map.insert(key, value, held)}, Map.empty(), pairs)
 

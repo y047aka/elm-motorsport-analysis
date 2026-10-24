@@ -5,31 +5,27 @@
 /// circuit puts its own timing line, whose map the lines come from — is held here a second
 /// time because Flix reads no TypeScript. That is three holders of one set of figures
 /// counting the drawing's own `Motorsport.Circuit`: `app/tests/circuit-timing-map.spec.ts`
-/// lays the TypeScript against the Elm, and `circuits-geometry-reading.spec.ts` lays these
-/// against both, figure by figure, since a lap length that moves on one side is a survey
-/// stretched to a different circuit.
+/// lays the TypeScript against the Elm and
+/// `app/tests/circuits-geometry-reading.spec.ts` lays this against both, figure by figure.
 ///
-/// What is *not* here is a circuit's atlas layer and its geometry script's own name: those
-/// belong to the atlas reading and to the TypeScript reports, which are not this project.
+/// A circuit's atlas layer is not here: it belongs to the atlas reading, which writes a line
+/// this project never draws.
 pub mod Circuit {
 
     use Geometry.Place
 
-    /// Where the line the lap is measured from is put by the circuit itself. COTA's comes
-    /// off the same document its sector distances come from; Le Mans publishes no place
-    /// its relation does not already tag, and so asks nothing of a survey.
+    /// Where the line the lap is measured from is put by the circuit itself. A circuit that
+    /// publishes no place tags nothing a survey could mistake for it, and is asked nothing.
     pub type alias TimingLine = {
         place  = Place,
         within = Option[Float64]
     }
 
-    /// Whose map the lines the lap is timed to come from. `published` is one map the
-    /// circuit itself publishes — its stretches add up to the lap and it travels into the
-    /// geometry as `sectors`, so a check of the lines reads the file rather than a config;
-    /// `eachSeason` says why the organiser's map answers for one season only, and is what
-    /// the timing report quotes when it refuses a round here. Only one of the two is ever
-    /// filled, and which one a circuit fills is the difference the geometry file either
-    /// shows or does not.
+    /// Whose map the lines the lap is timed to come from. `published` is one map the circuit
+    /// itself publishes — its stretches add up to the lap, and it travels into the geometry as
+    /// `sectors`, so a check of the lines reads the file rather than a config; `eachSeason`
+    /// says why the organiser's map answers for one season only, and is what the timing report
+    /// quotes when it refuses a round here. Only one of the two is ever filled.
     pub type alias Lines = {
         published  = Option[Publishes],
         eachSeason = Option[String]
@@ -44,7 +40,6 @@ pub mod Circuit {
     /// One circuit: what was surveyed, what the circuit says the survey is worth, and
     /// where the file it draws lands.
     pub type alias Circuit = {
-        // The OpenStreetMap relation the survey is read out of.
         relation = Int64,
         // The word the summaries send for the circuit, which names its directory, its
         // kept answer and the file the app reads.
@@ -52,22 +47,19 @@ pub mod Circuit {
         // The relation member the lap is measured from. A relation may tag more than one
         // line, and every metre is measured from whichever one was answered to.
         timedFrom = String,
-        // How far the line the lap is measured from may stand from the published place
-        // and still be it; nothing is asked of a circuit that publishes no place.
         timingLine = Option[TimingLine],
         // The length the surveyed line is stretched to, in the circuit's own metres.
         lap      = Float64,
-        // The timing lines, and whose map they came from.
         sectors  = Lines,
         // The geometry file, from the directory the command was asked from.
         file     = String,
-        // What the survey is called, in the survey's own words.
+        // The prose the geometry file documents its survey with.
         survey   = String
     }
 
     /// How far a relation's node may stand from the published line and still be it: the
-    /// relation tags the line itself, so the distance allowed is the map's own crosshair.
-    /// The atlas reading allows a wider distance than this one, and says why there.
+    /// relation tags the line itself, so the distance allowed is the map's own crosshair. The
+    /// atlas reading allows a wider distance than this one, and says why there.
     pub def nodeWithin(): Float64 = 10.0
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser

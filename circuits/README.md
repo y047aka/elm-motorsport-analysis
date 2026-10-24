@@ -235,50 +235,40 @@ the words the commands go by and the exit code one comes to. It resolves no depe
 links no source — it reads nothing `flix/src` holds, which is what the report's nine links
 are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
 
-**The survey is written twice, and one comparison is what keeps the two together.**
-`nix run .#geometry-survey -- cota` reads `circuits/cota/overpass.json`, finds the relation
-by the role that names the line the lap is timed from, chains the ways into a closed lap
-and a pit lane, stretches the surveyed length to the published one, thins it at a metre and
-answers whether what it would write is the file the app serves; `--write` writes it. Asking
-OpenStreetMap for an answer nobody has kept is still `.#geometry-write`'s, and the fence over
-every circuit at once is still `circuits/regenerate-geometry.ts`'s. A run without `--write`
-compares bytes where the regeneration fence compares parsed properties, and needs no
-`surveyed_at` exemption to do it: it reads the very answer whose stamp the property carries,
-so the stamp it would write is the stamp it reads. A metre that lands on a different digit is
-a drawing that moved, which is the difference between the two comparisons and the reason both
-are kept. CI runs the comparison for both circuits and never passes `--write`, which
-`app/tests/circuits-geometry-reading.spec.ts` pins — a fence that rewrites what it fences
-passes by construction.
+**What is written once, and what is written twice.** The diff is written once: the asking of
+two paths, the report and the overlay are `Diff.flix`'s. The survey is written twice —
+`Survey.flix` chains what `circuit-geometry.ts` chains — and so is the comparison under them,
+because the atlas reading is TypeScript and samples `apartness.ts` while the diff samples
+`Apart.flix`. TypeScript still holds the only copy of two things: asking OpenStreetMap for an
+answer nobody has kept is `.#geometry-write`'s, and the fence over every circuit at once is
+`circuits/regenerate-geometry.ts`'s.
+
+`nix run .#geometry-survey -- cota` reads `circuits/cota/overpass.json`, finds the relation by
+the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
+lane, stretches the surveyed length to the published one, thins it at a metre, and answers
+whether what it would write is the file the app serves; `--write` writes it. CI runs the
+comparison for both circuits and never passes `--write`, which
+`app/tests/circuits-geometry-reading.spec.ts` pins: a fence that rewrites what it fences passes
+by construction. That spec is also where the twice-written readings are held together, and it
+lists at its own head what it reads out of both sources — the readings that part without
+printing anything, such as a sampling loop's bound, which stretch a tie falls on, the tenth a
+metre is kept to, and the order a geometry's properties are claimed in.
+
+**A byte comparison and a property comparison, kept because they answer different
+questions.** `geometry-survey` without `--write` compares bytes; the regeneration fence
+compares parsed properties with `surveyed_at` exempt, because asking OpenStreetMap now takes a
+newer survey while every degree stands still. The byte comparison needs no such exemption — it
+reads the very answer whose stamp the property carries, so the stamp it would write is the stamp
+it reads — and a metre that lands on a different digit is a drawing that moved.
 
 **Its runner changes directory, and says so.** `flix` has to start inside the project to
 find its `flix.toml`, and a reader names `app/static/geometry/le_mans.geojson` from
 outside it, so the flake exports `GEOMETRY_FROM` as the directory the command was asked
 from and `Util/Files.flix` resolves every path there. Rename the variable in either
 place and every path a reader types is a file not found, with the name they typed in the
-message — which is why `app/tests/circuits-geometry-reading.spec.ts` reads both places.
-`nix run .#geometry-diff-test` runs the package's own `flix test`, every reading being
-handed a fixture rather than a file — an Overpass answer written out in the test that reads
-it, two geometries laid together in the test that measures them — and both commands the
-package ships are what it tests.
-
-What it reads and computes, it reads and computes a second time: `Geometry.flix` is
-`geometry-file.ts`'s reading of the profile and `Apart.flix` is `apartness.ts`'s
-comparison, because the fence and the atlas command are still TypeScript and the diff is
-not. Now that the survey is written in Flix too, the second reading of a feed is an Overpass
-answer's: `Survey.flix` chains what `circuit-geometry.ts` chains. The two are held together
-by `app/tests/circuits-geometry-reading.spec.ts`, which reads both
-sources and fails them apart over the bound each sampling loop stops at, which stretch a
-tie falls on, how a nought-length stretch is walked through, the words a refused file is
-refused with, which bases a file may name, how a metre is printed and the sphere both
-are laid on — and over the tenth a metre is kept to, the tolerance the thinning stops at
-and which of two equally far points it keeps, the one stretch factor, the order the
-properties are claimed in and which claims go unwritten. It is the only thing between the
-two pipelines besides the bytes themselves, and there is no compiler that sees both.
-The diff is written once. The asking of two paths, the report and the overlay are
-`Diff.flix`'s and nothing else's, so what stands twice is the comparison under them —
-`apartness.ts`, which the atlas command samples, and `Apart.flix`, which this command
-samples — and `app/tests/circuits-geometry-reading.spec.ts` holds those two to one set of
-numbers.
+message. `nix run .#geometry-diff-test` runs the package's own `flix test`, every reading
+being handed a fixture rather than a file — an Overpass answer written out in the test that
+reads it, two geometries laid together in the test that measures them.
 
 ## The atlas readings
 
@@ -297,10 +287,7 @@ mean and maximum apartness, and an SVG overlay on request — so a fresh survey
 is read against the old one, or the atlas line against either, with no script
 in between. Neither writes Elm: drawing on a measured line would move every
 tracker baseline and re-open where the timing lines stand, which is its own
-change judged on that report. Both commands are `circuits/geometry/`'s now — the diff
-that reads a geometry file and the survey that writes one — and the reading each
-makes of that file is held beside `geometry-file.ts`'s while the pipeline that first
-wrote those files is TypeScript.
+change judged on that report. Both commands are `circuits/geometry/`'s.
 
 ## The readings, and their tests
 
