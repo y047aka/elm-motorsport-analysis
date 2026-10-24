@@ -24,7 +24,10 @@ source relation and the license in their own properties.
 
 ## One pipeline, one thin config per circuit
 
-`circuit-geometry.ts` is the pipeline, and a circuit joins it as a directory
+The pipeline is the Flix project at this directory's root: `Survey.flix`
+chains an answer into a lap and `Write.flix` lays the bytes the app serves.
+`circuit-geometry.ts` spells the same survey and the same writing for the
+atlas reading and the regeneration fence, and a circuit joins both as a directory
 named by the word the summaries send for it. Its `circuit.ts` supplies the
 relation, the member role naming the line the lap is measured from, the
 published length the surveyed line is stretched to, and the prose the geometry
@@ -51,9 +54,12 @@ exactly. `surveyed_at` is the one exempt property: it stamps which answer a
 file was written from rather than what the drawing is made of, and it is the
 one property a live regeneration must move while every degree stands still.
 
-A regeneration is read as a diff, and a survey that moved by metres goes to
-`update-snapshots-ci` with it, since every tracker baseline is drawn on those
-degrees.
+A regeneration is read as a diff of the geometry itself — `nix run
+.#geometry-diff` lays the moved file against the kept one and prints the
+metres between them. A survey that moved by metres then takes a re-baseline
+of the tracker's VRT with it, since every tracker baseline is drawn on those
+degrees — but the size of a move is measured on the GeoJSON, and the pixels
+only follow it.
 
 ## What the bytes are kept to
 

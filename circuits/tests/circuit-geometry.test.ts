@@ -17,7 +17,6 @@ import {
   reason,
   roundTenth,
   sectorLines,
-  valueOf,
 } from "../circuit-geometry.ts";
 import { geometryFile, squareAnswer, stretches, testCircuit } from "./fixtures.ts";
 
@@ -207,12 +206,6 @@ test("roundTenth keeps the tenth every baseline was rendered at", () => {
   assert.equal(roundTenth(1.04), 1);
   assert.equal(roundTenth(1.05), 1.1);
   assert.equal(roundTenth(3999.949999), 3999.9);
-});
-
-test("valueOf reads a flag's value, its bare self, and its absence", () => {
-  assert.equal(valueOf(["--from-geojson", "a.json"], "--from-geojson"), "a.json");
-  assert.equal(valueOf(["--from-geojson"], "--from-geojson"), "");
-  assert.equal(valueOf(["other"], "--from-geojson"), null);
 });
 
 test("reason says what a failure says, however it was thrown", () => {

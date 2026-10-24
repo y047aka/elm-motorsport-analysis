@@ -1,20 +1,23 @@
-// The pipeline every circuit's geometry file is written by: take a relation's
-// surveyed points, chain its ways into a lap, stretch the lap to the length the
-// circuit publishes, simplify it, and write the geometry GeoJSON.
+// The geometry pipeline in the language the atlas reading and the regeneration
+// fence are written in: take a relation's surveyed points, chain its ways into
+// a lap, stretch the lap to the length the circuit publishes, simplify it, and
+// write the geometry GeoJSON. The commands that ask OpenStreetMap and lay the
+// served file are the Flix project at this directory's root now; what still
+// reaches here — the atlas reading, the regeneration fence, the geometry
+// contract — reaches it as a library, and `regenerate-geometry.ts` is where a
+// run still asks OpenStreetMap in TypeScript.
 //
 // A circuit's config — its relation, its published lap length, the word its
-// rounds are known by — is what this module is given; `write-geometry.ts` is
-// what runs it, and its `main` below is where the flags mean what they say.
-// The answer a geometry was drawn from is kept beside each circuit's config as
-// the pipeline's frozen input, which `regenerate-geometry.ts` re-runs this
-// module over; a live regeneration asks OpenStreetMap again regardless. Where
-// the written file stands, who reads it and what holds it is `circuits/README.md`.
+// rounds are known by — is what this module is given. The answer a geometry
+// was drawn from is kept beside each circuit's config as the pipeline's frozen
+// input, which `regenerate-geometry.ts` re-runs this module over; a live
+// regeneration asks OpenStreetMap again regardless. Where the written file
+// stands, who reads it and what holds it is `circuits/README.md`.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
 // geometry and module written here is a derivative of it.
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { outlineOf, pitLaneOf } from "./geometry-file.ts";
@@ -172,57 +175,6 @@ export function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Write the circuit's geometry, or check the kept one. `argv` is the script's
- * own:
- *
- *   - `--from-geojson [file]` reads a geometry file -- the circuit's kept one
- *     when no file is named -- runs every check on it, and writes nothing.
- *   - a file names an Overpass answer to read instead of asking.
- *   - neither asks OpenStreetMap, and a run that asks writes the served file
- *     from a survey taken *now*.
- */
-export async function main(circuit: Circuit, argv: string[]): Promise<void> {
-  try {
-    const from = valueOf(argv, "--from-geojson");
-    if (from !== null) {
-      const path = from || join(repoDir, circuit.geojson);
-      report("checked", circuit, geometryFromGeoJson(JSON.parse(await readFile(path, "utf8")), circuit));
-      return;
-    }
-    const [file] = argv.filter((a) => !a.startsWith("--"));
-    const geometry = lapOf(await answer(circuit.relation, file), circuit);
-    await writeGeoJson(circuit, geometry);
-    report("written", circuit, geometry);
-  } catch (error) {
-    console.error(reason(error));
-    process.exitCode = 1;
-  }
-}
-
-function report(done: string, circuit: Circuit, geometry: Geometry): void {
-  const surveyed = geometry.surveyedLength === null ? "" : `, surveyed ${geometry.surveyedLength.toFixed(1)} m`;
-  const of = geometry.counts === null ? "" : ` of ${geometry.counts.lap}`;
-  const pit = geometry.counts === null ? "" : ` of ${geometry.counts.of}`;
-  console.log(
-    `${circuit.slug} ${done}: centreline ${geometry.centreline.length} points${of}${surveyed}; ` +
-      `direction ${geometry.direction}; ` +
-      `pit lane ${geometry.pitLane.length} points${pit}; ` +
-      `frame origin ${geometry.frame.origin.lat}, ${geometry.frame.origin.lon} parallel ${geometry.frame.parallel}`,
-  );
-}
-
-/** The value following `flag`, the empty string when it stands alone, and null
- * when the flag is absent. */
-export function valueOf(argv: string[], flag: string): string | null {
-  const at = argv.indexOf(flag);
-  return at === -1 ? null : argv[at + 1] || "";
-}
-
-/** The answer from a file if one was given, and from OpenStreetMap if not. */
-async function answer(relation: number, file: string | undefined): Promise<OverpassAnswer> {
-  return file ? JSON.parse(await readFile(file, "utf8")) : ask(relation);
-}
-
 /** One query, walked over the runners twice each: a busy one answers 502 or
  * 504 — or 200 with an HTML error page behind a proxy, so the body is looked at
  * and not just the status — and the next answers the same query. */
@@ -378,12 +330,6 @@ function feature(props: Record<string, unknown>, coordinates: [number, number][]
     `    {\n      "type": "Feature",\n      "properties": {\n${entries.join(",\n")}\n      },\n` +
     `      "geometry": ${JSON.stringify({ type: "LineString", coordinates })}\n    }`
   );
-}
-
-async function writeGeoJson(circuit: Circuit, geometry: Geometry): Promise<void> {
-  const path = join(repoDir, circuit.geojson);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, geoJsonString(circuit, geometry));
 }
 
 /** The geometry a circuit is drawn from, read back out of a geometry file --

@@ -57,7 +57,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#geometry-fetch -- <circuit>` | Ask OpenStreetMap a circuit's relation and keep the answer beside its config — the pipeline's asking stage (the `circuits` geometry project; `[--out <overpass.json>]`) |
-| `nix run .#geometry-write -- <circuit>` | Run the whole geometry pipeline: ask OpenStreetMap (or read the answer named), survey it, and fail unless the bytes are the ones the app serves, `--write` laying them (the `circuits` geometry project; `[--answer <overpass.json>] [--write]`; the `--from-geojson` re-check is still `node circuits/write-geometry.ts`) |
+| `nix run .#geometry-write -- <circuit>` | Run the whole geometry pipeline: ask OpenStreetMap (or read the answer named), survey it, and fail unless the bytes are the ones the app serves, `--write` laying them (the `circuits` geometry project; `[--answer <overpass.json>] [--write]`, paths from where the command is run) |
 | `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (the `circuits` geometry project, reading no database; paths from where the command is run, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#geometry-diff-test` | The geometry commands' own tests (the `circuits` geometry project's; no network, no database, nothing written) |

@@ -77,11 +77,7 @@ test('the flake commands and the circuit tools are one list', () => {
   }
 
   // The names a `flix` command line answers, as opposed to a script in this directory.
-  // A script the jar answers under another name is listed beside that name: the jar
-  // answers a renamed subcommand with a usage, so a rename on either side surfaces
-  // here rather than at a `nix run` in a shell.
   const flix = [...flake.matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
-  const answeredAs: Record<string, string> = { 'write-geometry': 'geometry-write' };
 
   // A tool is a script whose own header runs itself by its own filename;
   // library modules cite other tools' usage but never their own name.
@@ -89,10 +85,7 @@ test('the flake commands and the circuit tools are one list', () => {
     .filter((file) => file.endsWith('.ts'))
     .filter((file) => readSource(`circuits/${file}`).includes(`node circuits/${file}`))
     .filter((file) => !registered.some((each) => each.script === file.replace(/\.ts$/, '')))
-    .filter((file) => {
-      const stem = file.replace(/\.ts$/, '');
-      return !flix.includes(answeredAs[stem] ?? stem);
-    });
+    .filter((file) => !flix.includes(file.replace(/\.ts$/, '')));
   expect(unwrapped, `these tools name themselves commands but no geometry app registers them: ${unwrapped.join(', ')}`).toEqual([]);
 });
 

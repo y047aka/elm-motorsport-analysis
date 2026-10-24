@@ -1,8 +1,7 @@
 // The Circuit of the Americas' config for the geometry pipeline: the relation
 // to survey, the figures the circuit publishes, and the word its rounds are
-// known by. What the pipeline writes and how is `circuit-geometry.ts`, run by
-// `write-geometry.ts`; where these figures come from and what holds them is
-// `circuits/README.md`.
+// known by. What the pipeline writes and how, and where these figures come
+// from and what holds them, is `circuits/README.md`.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and the
 // geometry written here is a derivative of it.
