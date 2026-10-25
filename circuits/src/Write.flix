@@ -305,12 +305,22 @@ pub mod Write {
         1
     }
 
-    /// A circuit with no kept answer has not been surveyed yet, which is not a failure of
-    /// a run over every circuit: asking OpenStreetMap is the other command's, and says so
-    /// from where the asking happens.
-    def noSurvey(asked: Args): Int32 \ Console = {
-        Console.println("${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `nix run .#geometry-write`'s");
-        0
+    /// A kept answer is what makes a served file checkable, so the two ways a run ends
+    /// without a survey are told apart. A circuit with neither file has not been surveyed
+    /// yet: nothing was promised it, and that is nothing rather than failure. A circuit
+    /// served with no kept answer is the byte fence with its evidence gone — geometry
+    /// nobody can any longer show was surveyed from what it claims — which is exactly
+    /// what the fence is here to catch, so it fails and says so rather than reporting
+    /// that it reproduced something.
+    def noSurvey(asked: Args): Int32 \ { IO, Console } = {
+        match Util.Files.read(asked#circuit#file) {
+            case Ok(_) =>
+                Console.eprintln("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from");
+                1
+            case Err(_) =>
+                Console.println("${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `nix run .#geometry-write`'s");
+                0
+        }
     }
 
     /// An answer's text — from a kept file or from a runner — surveyed and laid.

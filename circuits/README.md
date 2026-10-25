@@ -272,7 +272,10 @@ comparison for both circuits and never passes `--write`, which
 passes by construction. That spec is where the project's wiring is read from outside it —
 the sources it holds, what it resolves, the flake apps that reach it, the directory a
 reader's paths resolve against — everything a Flix test run from inside the project
-cannot see.
+cannot see. What the comparison needs is two files, and their absence is read two ways:
+a circuit served with no kept answer fails, because the served bytes have no evidence
+left to re-survey them from, while a circuit with neither file has not been surveyed
+yet and says so quietly.
 
 **A byte comparison and a property comparison, kept because they answer different
 questions.** `geometry-survey` without `--write` compares bytes; the regeneration fence
