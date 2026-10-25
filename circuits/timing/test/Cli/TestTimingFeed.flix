@@ -199,13 +199,15 @@ pub mod Cli.TestTimingFeed {
     // ---------------------------------------------------------------- the map
 
     /// The line is `s2` because the second sector begins at it, and the last stretch
-    /// ends at the line the lap is measured from, which is not a line to place.
+    /// ends at the line the lap is measured from, which is not a line to place. The
+    /// names are the ones the geometry gives them too: the two readers of a
+    /// circuit's map call one place by one name.
     @Test
     def testPublishedLines(): Unit \ Assert =
         match publishedLines(List#{2000.0, 1500.0, 2015.0}, 5515.0) {
             case Ok(lines) =>
                 Assert.assertTrue(List.length(lines) == 2);
-                Assert.assertTrue(List.get(0, lines)#id == "s2");
+                Assert.assertTrue(List.map(line -> line#id, lines) == List#{"s2", "s3"});
                 Assert.assertTrue(List.get(0, lines)#metres == 2000.0);
                 Assert.assertTrue(List.get(1, lines)#metres == 3500.0)
             case Err(_) => Assert.assertTrue(false)
@@ -216,16 +218,6 @@ pub mod Cli.TestTimingFeed {
     @Test
     def testStretchesThatDoNotAddUpAreRefused(): Unit \ Assert =
         Assert.assertTrue(complains("add up to", publishedLines(List#{2000.0, 1500.0, 2015.0}, 6000.0)))
-
-    /// A circuit whose map is one set of lines has its intermediate lines named by
-    /// the sector that begins at them, which is the name the geometry gives them
-    /// too -- the two readers of a circuit's map call one place by one name.
-    @Test
-    def testLinesAreNamedByTheSectorTheyBegin(): Unit \ Assert =
-        match publishedLines(List#{2000.0, 1500.0, 2015.0}, 5515.0) {
-            case Ok(lines) => Assert.assertTrue(List.map(line -> line#id, lines) == List#{"s2", "s3"})
-            case Err(_)    => Assert.assertTrue(false)
-        }
 
     // --------------------------------------------------------------- the seasons
 
