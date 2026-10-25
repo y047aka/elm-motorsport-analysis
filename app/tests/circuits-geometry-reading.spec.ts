@@ -14,9 +14,10 @@ import { readSource } from './helpers';
  * a lap, stretches it to the length the circuit publishes and writes the file the app serves,
  * and `Survey.flix` with `Write.flix`, which do the same over a kept answer — `nix run
  * .#geometry-survey` fails unless the bytes it lays are the bytes the app serves. Asking
- * OpenStreetMap is Flix's now too; the TypeScript half asks only the regeneration fence's
- * `--freeze`, and `circuit-overpass.spec.ts` is where the facts of that asking are read
- * out of every spelling of it.
+ * OpenStreetMap is Flix's now too, and the regeneration fence asks it through the jar itself
+ * (`circuits/src/Regenerate.flix`, `nix run .#geometry-regenerate`); the TypeScript spelling
+ * of that asking stands until it retires, and `circuit-overpass.spec.ts` is where the facts
+ * of it are read out of every spelling that remains.
  *
  * A parting is silent in both directions. The apartness of two lines sampled on another bound is
  * a mean within a few metres of the truth, which reads as a reading of two lines that in fact
@@ -42,6 +43,7 @@ const printed = readSource('circuits/src/Util/Format.flix');
 const config = readSource('circuits/src/Circuit.flix');
 const chained = readSource('circuits/src/Survey.flix');
 const writer = readSource('circuits/src/Write.flix');
+const fence = readSource('circuits/src/Regenerate.flix');
 const main = readSource('circuits/src/Main.flix');
 
 const authored: Record<string, typeof cota> = { cota, le_mans: leMans };
@@ -73,7 +75,7 @@ const project = [...readDir('circuits/src'), ...readDir('circuits/test')];
 
 
 /**
- * Every source the geometry project compiles — eleven of Flix and seven of tests, which is
+ * Every source the geometry project compiles — twelve of Flix and eight of tests, which is
  * what the project is asserted to hold — for the reading of their text alone: a word a
  * database is named by would arrive in a source file and not in a build product.
  */
@@ -288,6 +290,7 @@ test("the flake's geometry commands reach the sources they run", () => {
     'geometry-diff',
     'geometry-diff-test',
     'geometry-fetch',
+    'geometry-regenerate',
     'geometry-survey',
     'geometry-write',
   ]);
@@ -297,6 +300,7 @@ test("the flake's geometry commands reach the sources they run", () => {
   for (const [app, word] of [
     ['geometry-diff', 'diff'],
     ['geometry-fetch', 'fetch'],
+    ['geometry-regenerate', 'regenerate'],
     ['geometry-survey', 'survey'],
     ['geometry-write', 'write'],
   ]) {
@@ -316,8 +320,11 @@ test("the flake's geometry commands reach the sources they run", () => {
   expect(main, 'nix run .#geometry-write runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Fetch.writeExitCode(rest))',
   );
+  expect(main, 'nix run .#geometry-regenerate runs a main that hands the reader its arguments to nothing').toContain(
+    'Exit.exit(Regenerate.exitCode(rest))',
+  );
   expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
-    '"diff" :: "fetch" :: "survey" :: "write" :: Nil',
+    '"diff" :: "fetch" :: "regenerate" :: "survey" :: "write" :: Nil',
   );
 });
 
@@ -341,6 +348,7 @@ test('the geometry project shares no source, resolves no dependency and names no
     'circuits/src/Geometry.flix',
     'circuits/src/Main.flix',
     'circuits/src/Overpass.flix',
+    'circuits/src/Regenerate.flix',
     'circuits/src/Survey.flix',
     'circuits/src/Util/Files.flix',
     'circuits/src/Util/Format.flix',
@@ -350,6 +358,7 @@ test('the geometry project shares no source, resolves no dependency and names no
     'circuits/test/TestFetch.flix',
     'circuits/test/TestGeometry.flix',
     'circuits/test/TestOverpass.flix',
+    'circuits/test/TestRegenerate.flix',
     'circuits/test/TestSurvey.flix',
     'circuits/test/TestWrite.flix',
   ]);
@@ -626,6 +635,9 @@ test('a byte comparison exempts nothing, where a property comparison exempts the
   // survey. The Flix comparison is of bytes, and has nothing to exempt: it reads the very
   // answer whose stamp the property carries, so the stamp it writes is the stamp it reads.
   expect(drift).toContain('if (key === "surveyed_at") continue;');
+  expect(fence, 'the Flix fence does not exempt the survey stamp where the property comparison exempts it').toContain(
+    'key != "surveyed_at"',
+  );
   expect(writer).toContain('`surveyed_at` needs no');
   expect(writer).toContain('written == kept');
 });

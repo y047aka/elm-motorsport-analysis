@@ -5,7 +5,11 @@
 // reproduce the geometry moved the degrees in the code; why that is the check
 // no Elm test can be is `circuits/README.md`.
 //
-//     node circuits/regenerate-geometry.ts [<circuit> ...] [--write | --freeze]
+// The command is `nix run .#geometry-regenerate` — the fence asks OpenStreetMap
+// and surveys through the Flix project at this directory's root. What stands
+// here is the same comparison in the language the atlas reading is written in,
+// until the atlas reading has a Flix reading of its own to stand on and this
+// retires with it.
 //
 // `surveyed_at` is the one exempt property — `geometry-drift.ts` says what it
 // stamps and why a live regeneration must move it. The Elm side reads neither

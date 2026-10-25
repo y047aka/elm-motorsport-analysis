@@ -4,6 +4,7 @@
 //     nix run .#geometry-survey   -- <circuit> [--answer <overpass.json>] [--write]
 //     nix run .#geometry-write    -- <circuit> [--answer <overpass.json>] [--write]
 //     nix run .#geometry-diff     -- <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
+//     nix run .#geometry-regenerate [<circuit> ...] [--write | --freeze]
 //
 // Each subcommand is a module that reads files, asks OpenStreetMap or writes one, and
 // says what it found; this is the asking of a word, the usage a wrong word is answered
@@ -17,7 +18,7 @@ use Time.Clock
 
 /// A word outside this list is a mistake, and is answered with the usage.
 def commands(): List[String] =
-    "diff" :: "fetch" :: "survey" :: "write" :: Nil
+    "diff" :: "fetch" :: "regenerate" :: "survey" :: "write" :: Nil
 
 def main(): Unit \ { Env, IO, Clock, Exit, Console } =
     match Env.getArgs() {
@@ -28,6 +29,8 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
             Exit.exit(Diff.exitCode(rest))
         case "fetch" :: rest =>
             Exit.exit(Fetch.exitCode(rest))
+        case "regenerate" :: rest =>
+            Exit.exit(Regenerate.exitCode(rest))
         case "survey" :: rest =>
             Exit.exit(Write.exitCode(rest))
         case "write" :: rest =>
@@ -40,4 +43,4 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
 
 /// Each command's own usage: the flake app a reader types, beside the arguments it takes.
 def usage(): String =
-    Diff.usage() + "\n${Fetch.usage()}" + "\n${Write.usage()}"
+    Diff.usage() + "\n${Fetch.usage()}" + "\n${Regenerate.usage()}" + "\n${Write.usage()}"

@@ -149,7 +149,9 @@ pub mod Geometry {
                 }
         }
 
-    def featuresOf(json: Json): List[Map[String, Json]] =
+    /// Public for the regeneration fence, which walks every feature of two files
+    /// rather than the one of each role a line is read out of.
+    pub def featuresOf(json: Json): List[Map[String, Json]] =
         match json {
             case Json.JObject(root) =>
                 match Map.get("features", root) {
@@ -169,7 +171,7 @@ pub mod Geometry {
     /// A feature's properties, whatever they are tagged with: the role that picks
     /// the feature out of the file lives inside them, and a feature carrying none
     /// picks nothing.
-    def propertiesOf(feature: Map[String, Json]): Map[String, Json] =
+    pub def propertiesOf(feature: Map[String, Json]): Map[String, Json] =
         match Map.get("properties", feature) {
             case Some(Json.JObject(props)) => props
             case _                         => Map.empty()
@@ -209,7 +211,7 @@ pub mod Geometry {
     /// Each is `None` for the wrong kind of member as well as for an absent one:
     /// what a reading does with a `"basis": 3` is refuse the file, and the sentence
     /// it refuses with says the basis is unnamed.
-    def word(key: String, props: Map[String, Json]): Option[String] =
+    pub def word(key: String, props: Map[String, Json]): Option[String] =
         match Map.get(key, props) {
             case Some(Json.JString(spelled)) => Some(spelled)
             case _                           => None
