@@ -1,7 +1,8 @@
 /// The asking commands' readings: which file a fetch keeps to, and which answer a run
 /// surveys from. The asking itself is `TestOverpass`'s and a network's; what is met
 /// here is the half that opens nothing — a word no circuit answers to, a flag that
-/// names no file, and the defaults a run falls back to when the reader named neither.
+/// names no file, an answer that surveys nothing, and the defaults a run falls back
+/// to when the reader named neither.
 pub mod TestFetch {
 
     @Test
@@ -85,5 +86,27 @@ pub mod TestFetch {
             case Ok(command) =>
                 Assert.assertTrue(command#asked);
                 Assert.assertTrue(command#answer == "kept.json")
+        }
+
+    /// That some JSON came back is not yet an answer the survey can read back: a kept
+    /// answer is the re-survey's evidence, so a runner's HTML page and an answer that
+    /// holds no relation are refused in the survey's own words, before a byte of
+    /// either is kept.
+    @Test
+    def testAnAnswerThatSurveysNothingIsRefused(): Unit \ Assert =
+        match Circuit.byWord("cota") {
+            case None    => Assert.assertTrue(false)
+            case Some(circuit) =>
+                match Fetch.surveyable("{}", circuit) {
+                    case Ok(_) => Assert.assertTrue(false)
+                    case Err(problem) =>
+                        Assert.assertTrue(
+                            String.contains({substr = "the answer holds no relation 6537729"}, problem)
+                        )
+                };
+                match Fetch.surveyable("<html><body>502</body></html>", circuit) {
+                    case Ok(_)        => Assert.assertTrue(false)
+                    case Err(problem) => Assert.assertTrue(not String.isEmpty(problem))
+                }
         }
 }
