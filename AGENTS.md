@@ -17,7 +17,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
 - **`/circuits`** — the geometry pipeline: OpenStreetMap relations through
-  `circuits/circuit-geometry.ts` into the served `app/static/geometry/*.geojson`,
+  the Flix project at `circuits/src` into the served `app/static/geometry/*.geojson`,
   with one directory per circuit — its config, its kept Overpass answer
   and its atlas reading — named by the word the summaries send for the circuit.
   It sits outside `/app` because nothing it writes but the geometry files is
@@ -518,9 +518,10 @@ moment of it).
 ### The circuits side
 
 `circuits/README.md` is the other end of a drawing: how a geometry is surveyed
-out of OpenStreetMap, what the kept file is checked against — `--from-geojson`
-at a regeneration being nothing, the fence over the kept Overpass answer, the
-contract spec against the app's lists — where the timing lines' distances come
+out of OpenStreetMap, what the kept file is checked against — the byte fence
+over a kept answer exempting nothing, the regeneration fence over every
+circuit exempting the stamp alone, the contract spec against the app's lists —
+where the timing lines' distances come
 from, and how far an atlas line stands from the one drawn.
 
 ### The Flix side
@@ -632,11 +633,12 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   `Undefined use`, far from its cause — names the sources the report holds a second
   copy of, and fails everything it compiles for naming a database.
 - **Overpass, asked in two languages** (`/app/tests/circuit-overpass.spec.ts`) —
-  the probe reads OpenStreetMap in Flix and the pipeline reads it in TypeScript, so
+  the probe and the pipeline at the `circuits/` root each read OpenStreetMap in
+  Flix and the regeneration fence still asks it in TypeScript, so
   the runners, their order, the user agent, the tries per runner and the backoff
-  arithmetic are four facts held twice with no compiler between them; none of them
-  fails loudly when they part, since a runner missing from one list is a run with
-  nowhere else to go. The sphere a probe's metres are measured on is read out of all
+  arithmetic are four facts held in every spelling that asks, with no compiler
+  between them; none of them fails loudly when they part, since a runner missing
+  from one list is a run with nowhere else to go. The sphere a probe's metres are measured on is read out of all
   three languages that use it — the survey's, the probe's and the projection's —
   because the one reading that decides a config is whether a lap measures 13.6 km.
   The spec also pins that the probe shares no source by symlink, which is the

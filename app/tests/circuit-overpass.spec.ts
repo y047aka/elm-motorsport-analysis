@@ -110,10 +110,10 @@ test('each runner is asked twice, and one that failed is left alone by the same 
 
 /**
  * The pipeline's own Flix asking, read against the same two spellings. It is a
- * third holder of the four facts rather than a new kind of fact: the survey kept
- * its runners, its name, its tries and its backoff when it moved out of
- * `circuits/geometry/` and started asking for itself, and a rename of any one of
- * them on one side is a run that visits a runner the others steer around.
+ * third holder of the four facts rather than a new kind of fact: the Flix
+ * survey spells its runners, its name, its tries and its backoff in a file of
+ * its own, and a rename of any one of them on one side is a run that visits a
+ * runner the others steer around.
  */
 test('the Flix pipeline asks the same runners, of its own name, the same number of times', () => {
   const asked = nodeRunners();

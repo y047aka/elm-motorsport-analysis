@@ -67,12 +67,11 @@
             '';
           };
 
-        # Probing OpenStreetMap before a config is authored is the third Flix
-        # project, at `circuits/probe`. It is the flake's only Flix command that
-        # neither computes in a database nor reads one: it is the one that asks a
-        # question of OpenStreetMap, and it keeps its own reading of that rather than
-        # symlinking one out of `flix/src`, because there is nothing in `flix/src`
-        # that asks a question of anything but a database.
+        # Probing OpenStreetMap before a config is authored is a Flix project
+        # of its own, at `circuits/probe`: it asks a question of OpenStreetMap
+        # and opens no file at all. It keeps its own reading of an answer
+        # rather than symlinking one out of `flix/src`, because there is
+        # nothing in `flix/src` that asks a question of anything but a database.
         mkProbeApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;

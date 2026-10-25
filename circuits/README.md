@@ -12,8 +12,7 @@ out of an answer, and writes the file the app serves. `circuits/timing/`, the ti
 Flix project of its own, reading the feed the load reads with the decoder the
 load decodes it with; `circuits/probe/` is another — the same question
 OpenStreetMap answers, asked in Flix before a circuit has a config to author.
-What is still TypeScript is the atlas reading, the regeneration fence, and the
-re-check of a kept geometry against its circuit's own claims.
+What is still TypeScript is the atlas reading and the regeneration fence.
 What follows is what no
 single script's header says for itself; what a script can say at its own call
 site, its header says there and is not repeated here.
@@ -200,8 +199,9 @@ dereferenced — for the words a database is named by.
 
 ## The probe is a project of its own too
 
-`circuits/probe/` is the third Flix package and the only one of the three that asks
-something of a network rather than of a database: `src/Probe.flix` reads the
+`circuits/probe/` is a Flix package of its own and the only one of the three
+here that opens no file at all — it asks something of a network rather than of
+a database: `src/Probe.flix` reads the
 arguments and prints, `src/Overpass.flix` walks the runners and gives an answer its
 shape, and `src/Candidates.flix` reads an answer already got — which tags could name
 a circuit, and what a relation's roles measure. `nix run .#geometry-probe-test` runs
@@ -219,11 +219,14 @@ would resolve a JDBC driver to name it with. `app/tests/circuit-overpass.spec.ts
 fails a symlink under the probe's `src`, a resolved dependency, the word `Jdbc`, and
 a Flix version the project and the CLI do not share.
 
-What the two projects do hold twice is the service: which runners there are and in
-which order, what a run calls itself, how many times each runner is asked, and how
-long one that just failed is left alone. Those are facts about OpenStreetMap and not
-about either project, TypeScript's copy is `circuit-geometry.ts`'s, and the same spec
-reads both and fails them apart — as it reads the sphere the metres are measured on
+What the projects do hold more than once is the service: which runners there
+are and in which order, what a run calls itself, how many times each runner is
+asked, and how long one that just failed is left alone. Those are facts about
+OpenStreetMap and not about any project: the probe spells them in
+`src/Overpass.flix`, the pipeline spells them in its own
+`circuits/src/Overpass.flix`, and the TypeScript fence still spells them in
+`circuit-geometry.ts` until it retires — and the same spec reads every spelling
+and fails them apart — as it reads the sphere the metres are measured on
 out of all three languages that use it, the probe's and the survey's and
 `Motorsport.Circuit.Geodesy`'s. Measuring on the equatorial radius instead of the
 mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
@@ -248,10 +251,11 @@ are for — so no `Db` effect is compiled into it and no JDBC driver is resolved
 two paths, the report and the overlay are `Diff.flix`'s. The survey is written twice —
 `Survey.flix` chains what `circuit-geometry.ts` chains — and so is the comparison under them,
 because the atlas reading is TypeScript and samples `apartness.ts` while the diff samples
-`Apart.flix`. And the asking of OpenStreetMap is written twice, `Overpass.flix` and
-`circuit-geometry.ts` spelling the same runners, until the TypeScript pipeline retires and
-only the fence over every circuit at once — `circuits/regenerate-geometry.ts`'s — and the
-`--from-geojson` re-check are TypeScript's alone.
+`Apart.flix`. And the asking of OpenStreetMap is written twice, `Overpass.flix`
+and `circuit-geometry.ts` spelling the same runners, until the regeneration
+fence learns to ask through the jar; the atlas reading measures lines the
+pipeline never writes and stays TypeScript's until it has a Flix reading of
+its own to stand on.
 
 `nix run .#geometry-survey -- cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
@@ -297,7 +301,8 @@ mean and maximum apartness, and an SVG overlay on request — so a fresh survey
 is read against the old one, or the atlas line against either, with no script
 in between. Neither writes Elm: drawing on a measured line would move every
 tracker baseline and re-open where the timing lines stand, which is its own
-change judged on that report. Both commands are the project at this directory's root.
+change judged on that report. The diff is the project at this directory's
+root; the atlas asking is still TypeScript's.
 
 ## The readings, and their tests
 
@@ -315,14 +320,14 @@ in one language and not two, and `Survey.flix`'s reading of a kept answer is hel
 the pipeline's by the bytes it lays rather than by a shared source; `geometry-file.ts` holds the profile's own reading — the
 outline
 with its own metres going up, and the pit lane beside it — which the
-`--from-geojson` check and the atlas reading run, the diff running
+contract spec's re-check and the atlas reading run, the diff running
 `Geometry.flix` over the same claims in the same refusals' words, which
 `app/tests/circuits-geometry-reading.spec.ts` compares;
 `atlas-line.ts` holds the atlas file's shape checks and its two
 guards — the one that keeps a mismatched line out, and the one that keeps the lap
 starting at the published line; `geometry-drift.ts` compares two geometries
-the way the fence does; and `circuit-geometry.ts` asks nothing until `main` is
-told to. Printing stays with the command — what a reading is worth is what it
+the way the fence does; and `circuit-geometry.ts` asks nothing until a
+regeneration's `--freeze` tells it to. Printing stays with the command — what a reading is worth is what it
 answers, not how its table is padded. `nix run .#geometry-test` runs Node's own test runner over `circuits/tests/`,
 where those readings are handed fixtures rather than surveys. What is judged
 against the repository's real bytes stays this file's other sections': the fence,

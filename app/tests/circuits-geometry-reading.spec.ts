@@ -14,8 +14,9 @@ import { readSource } from './helpers';
  * a lap, stretches it to the length the circuit publishes and writes the file the app serves,
  * and `Survey.flix` with `Write.flix`, which do the same over a kept answer — `nix run
  * .#geometry-survey` fails unless the bytes it lays are the bytes the app serves. Asking
- * OpenStreetMap for an answer nobody has kept is TypeScript's alone; `circuits/README.md` says
- * which of the two a command runs.
+ * OpenStreetMap is Flix's now too; the TypeScript half asks only the regeneration fence's
+ * `--freeze`, and `circuit-overpass.spec.ts` is where the facts of that asking are read
+ * out of every spelling of it.
  *
  * A parting is silent in both directions. The apartness of two lines sampled on another bound is
  * a mean within a few metres of the truth, which reads as a reading of two lines that in fact

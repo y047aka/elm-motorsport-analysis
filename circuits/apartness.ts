@@ -5,7 +5,7 @@
 //
 // The sphere is the one every drawing in this repository is measured on: the one
 // `Motorsport.Circuit.Geodesy` projects through, the one the survey is measured with and
-// the one the probe counts its laps on. `circuits/geometry/src/Apart.flix` is the same
+// the one the probe counts its laps on. `circuits/src/Apart.flix` is the same
 // four readings in the language the commands a person runs are written in, and
 // `app/tests/circuits-geometry-reading.spec.ts` reads the two sources and fails them
 // apart over the bound of the sampling loop, which stretch a tie falls on, how a

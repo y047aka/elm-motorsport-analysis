@@ -1,6 +1,6 @@
 // The apartness math both the diff and the atlas reading run on: laying two
 // lines against each other, interpolating and projecting onto a line measured in
-// metres of its own lap. `circuits/geometry/src/Apart.flix` is the same four readings
+// metres of its own lap. `circuits/src/Apart.flix` is the same four readings
 // for the commands that are Flix, and these are the expectations it is held to as
 // well — the same numbers, written down twice, in the two languages that compute them.
 // The drawing of an overlay is the diff's own, and the reading of a file itself

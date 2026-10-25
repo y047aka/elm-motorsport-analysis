@@ -2,8 +2,8 @@
 // the line it claims to be — its points, its own metres, the properties a
 // report quotes — and the pit lane beside it. Every tool that reads a kept
 // geometry file reaches these readings rather than finding features by role
-// again: the pipeline's `--from-geojson` check over the kept file,
-// `circuits/geometry`'s diff laying two lines against each other, and the atlas
+// again: the contract spec's re-check over the kept file, the diff at this
+// directory's root laying two lines against each other, and the atlas
 // reading measuring its line against the survey. A kept file is a file of a
 // stranger's too — the atlas line is one — so a failure names the file it was
 // reading.
