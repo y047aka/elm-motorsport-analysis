@@ -58,7 +58,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#geometry-fetch -- <circuit>` | Ask OpenStreetMap a circuit's relation and keep the answer beside its config — the pipeline's asking stage (the `circuits` geometry project; `[--out <overpass.json>]`) |
 | `nix run .#geometry-write -- <circuit>` | Run the whole geometry pipeline: ask OpenStreetMap (or read the answer named), survey it, and fail unless the bytes are the ones the app serves, `--write` laying them (the `circuits` geometry project; `[--answer <overpass.json>] [--write]`, paths from where the command is run) |
-| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
+| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (the `circuits` geometry project's atlas reading; `<circuit> [--file gp.geojson]`) |
 | `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (the `circuits` geometry project, reading no database; paths from where the command is run, `[--every <m>] [--svg <out.svg>]`) |
 | `nix run .#geometry-diff-test` | The geometry commands' own tests (the `circuits` geometry project's; no network, no database, nothing written) |
 | `nix run .#geometry-survey -- <circuit>` | Whether the survey over a circuit's kept Overpass answer still lays the bytes the app serves, optionally writing them with `--write` (the `circuits` geometry project, reaching no database and no network; `[--answer <overpass.json>] [--write]`) |
@@ -597,10 +597,13 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   free `package.json` only to say its modules are ESM.
 - **Circuit tools** (`circuits/tests/`) — `nix run .#geometry-test`, Node's built-in
   runner; the directory installs nothing. Each command kept its own I/O and moved
-  its reading of an answer into a module that opens nothing —
-  `atlas-line.ts` (a foreign file's shapes and guards) — and the tests hand
-  those fixtures; the regeneration fence's own comparison is `Regenerate.flix`'s,
-  tested in that project. The readings of
+  its reading of an answer into a module that opens nothing; the atlas
+  reading's shapes and guards are `Track.flix`'s, tested in that project beside
+  the readings it borrows, and the regeneration fence's own comparison is
+  `Regenerate.flix`'s, tested in that project. What Node's runner still holds is
+  the survey's own reading of a kept file and of a config — `geometry-file.ts`,
+  `timing-line.ts` and `circuit-geometry.ts`, which the contract specs still
+  read. The readings of
   the two feeds are Flix's, driven by `nix run .#geometry-timing-test` and
   `.#geometry-probe-test`: a timing CSV and an Overpass answer are each read in one
   language and not two. The geometry pipeline is a Flix project of its own (at the

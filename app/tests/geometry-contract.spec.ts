@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readdirSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { circuit as cota } from '../../circuits/cota/circuit.ts';
 import { circuit as leMans } from '../../circuits/le_mans/circuit.ts';
 import { geometryFromGeoJson } from '../../circuits/circuit-geometry.ts';
@@ -67,25 +67,18 @@ test('the circuits drawn and decoded are one list', () => {
 });
 
 test('the flake commands and the circuit tools are one list', () => {
+  // Every circuit command is the geometry project's now: `mkGeometryApp` over
+  // the jar is the only runner, and no Node script in `circuits/` is a command.
   const flake = readSource('flake.nix');
-  const registered = [...flake.matchAll(/geometryApp "([\w-]+)" "([\w-]+)"/g)]
-    .map(([, app, script]) => ({ app, script }));
+  const registered = [...flake.matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
   expect(registered.length, 'the flake registers no geometry commands').toBeGreaterThan(0);
-
-  for (const { app, script } of registered) {
-    expect(existsSync(new URL(`../../circuits/${script}.ts`, import.meta.url)), `nix run .#${app} would fail: circuits/${script}.ts is not here`).toBe(true);
-  }
-
-  // The names a `flix` command line answers, as opposed to a script in this directory.
-  const flix = [...flake.matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
 
   // A tool is a script whose own header runs itself by its own filename;
   // library modules cite other tools' usage but never their own name.
   const unwrapped = readdirSync(new URL('../../circuits/', import.meta.url))
     .filter((file) => file.endsWith('.ts'))
     .filter((file) => readSource(`circuits/${file}`).includes(`node circuits/${file}`))
-    .filter((file) => !registered.some((each) => each.script === file.replace(/\.ts$/, '')))
-    .filter((file) => !flix.includes(file.replace(/\.ts$/, '')));
+    .filter((file) => !registered.includes(file.replace(/\.ts$/, '')));
   expect(unwrapped, `these tools name themselves commands but no geometry app registers them: ${unwrapped.join(', ')}`).toEqual([]);
 });
 

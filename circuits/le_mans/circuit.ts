@@ -36,12 +36,6 @@ export const circuit: Circuit = {
     reason: "the organiser's map is re-issued every year and its lines differ between seasons",
   },
 
-  // The track-atlas layer for the 24h layout — a midline measured off
-  // orthoimagery, read against the survey above by `atlas-geometry.ts`.
-  atlas: {
-    url: "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson",
-  },
-
   geojson: "app/static/geometry/le_mans.geojson",
   script: "circuits/le_mans/circuit.ts",
   survey: "The Circuit de la Sarthe",

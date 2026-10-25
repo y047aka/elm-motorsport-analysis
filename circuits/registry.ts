@@ -24,7 +24,3 @@ const circuitsDir = dirname(fileURLToPath(import.meta.url));
  * that surveyed it — evidence the regeneration fence reads, never bytes the
  * app asks for. */
 export const keptAnswer = (circuit: Circuit): string => join(circuitsDir, circuit.slug, "overpass.json");
-
-/** Where a circuit's atlas line lands once measured: beside the survey it is
- * judged against, not in what gets served. */
-export const keptAtlas = (circuit: Circuit): string => join(circuitsDir, circuit.slug, "atlas.geojson");

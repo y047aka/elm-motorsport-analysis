@@ -1,9 +1,9 @@
-// The geometry pipeline in the language the atlas reading is written in: take a
-// relation's surveyed points, chain its ways into a lap, stretch the lap to the
-// length the circuit publishes, simplify it, and write the geometry GeoJSON.
-// The commands that ask OpenStreetMap and lay the served file, and the
-// regeneration fence over every circuit at once, are the Flix project at this
-// directory's root; what still reaches here — the atlas reading, the geometry
+// The geometry pipeline in the language the geometry contract is written in:
+// take a relation's surveyed points, chain its ways into a lap, stretch the lap
+// to the length the circuit publishes, simplify it, and write the geometry
+// GeoJSON. The commands that ask OpenStreetMap and lay the served file, the
+// regeneration fence over every circuit at once, and the atlas reading are the
+// Flix project at this directory's root; what still reaches here — the geometry
 // contract — reaches it as a library, and nothing in TypeScript asks
 // OpenStreetMap at all.
 //
@@ -133,8 +133,6 @@ export interface Circuit {
   /** Whose map the lines the lap is timed to come from, and whether one set
    * of them answers for every season here. */
   sectors: TimingMap;
-  /** The track-atlas layer a measured midline is read off. */
-  atlas?: { url: string };
   /** The geometry file, from the repository root. */
   geojson: string;
   /** This file, named in the reports. */

@@ -8,34 +8,36 @@ import { readSource } from './helpers';
 /**
  * One set of readings, held in two languages, and no compiler sees both.
  *
- * The comparison is `circuits/apartness.ts`, which the atlas command samples, and
- * `circuits/src/Apart.flix`, which the diff samples. The survey is
- * `circuits/circuit-geometry.ts`, which reads an Overpass answer, chains a relation's ways into
- * a lap, stretches it to the length the circuit publishes and writes the file the app serves,
- * and `Survey.flix` with `Write.flix`, which do the same over a kept answer — `nix run
- * .#geometry-survey` fails unless the bytes it lays are the bytes the app serves. Asking
- * OpenStreetMap is Flix's now too, and the regeneration fence asks it through the jar itself
- * (`circuits/src/Regenerate.flix`, `nix run .#geometry-regenerate`); nothing in TypeScript
- * asks OpenStreetMap at all, and `circuit-overpass.spec.ts` is where the facts of that asking
- * are read out of the two Flix spellings.
+ * The survey is `circuits/circuit-geometry.ts`, which reads an Overpass answer,
+ * chains a relation's ways into a lap, stretches it to the length the circuit
+ * publishes and writes the file the app serves, and `Survey.flix` with
+ * `Write.flix`, which do the same over a kept answer — `nix run
+ * .#geometry-survey` fails unless the bytes it lays are the bytes the app
+ * serves. The comparison of two lines and the atlas reading are Flix's now —
+ * `Apart.flix`, `Track.flix` and `Atlas.flix` are their only spellings, held by
+ * the project's own tests — and asking OpenStreetMap is too
+ * (`circuits/src/Regenerate.flix`, `nix run .#geometry-regenerate`);
+ * `circuit-overpass.spec.ts` is where the facts of that asking are read out of
+ * the two Flix spellings.
  *
- * A parting is silent in both directions. The apartness of two lines sampled on another bound is
- * a mean within a few metres of the truth, which reads as a reading of two lines that in fact
- * disagree; a survey that parts is louder, and audible only where a survey is run — which is
- * over two kept answers. So the bound of each loop, which stretch a tie falls on, the order the
- * claims are written in, the sphere both are laid on and the tenth a metre is kept to are read
- * out of both sources here, the way `circuit-overpass.spec.ts` reads the Overpass facts out of
- * both sides of the Flix/TypeScript line.
+ * What still stands in both languages is what is read here: the survey
+ * arithmetic and its refusals, the reading of a kept file and the words it
+ * refuses in, the sphere every metre is measured on, and the circuit's figures
+ * authored in two configs. A parting is silent in both directions: a survey
+ * that parts is louder, and audible only where a survey is run — which is over
+ * two kept answers. So the bound of each loop, which stretch a tie falls on,
+ * the order the claims are written in, the sphere both are laid on and the
+ * tenth a metre is kept to are read out of both sources here, the way
+ * `circuit-overpass.spec.ts` reads the Overpass facts out of both sides of the
+ * Flix/TypeScript line.
  *
  * Nothing here needs a browser.
  */
-
-const node = readSource('circuits/apartness.ts');
 const kept = readSource('circuits/geometry-file.ts');
 const allowance = readSource('circuits/timing-line.ts');
 const survey = readSource('circuits/circuit-geometry.ts');
-const atlas = readSource('circuits/atlas-geometry.ts');
 const flix = readSource('circuits/src/Apart.flix');
+const atlasReading = readSource('circuits/src/Atlas.flix');
 const file = readSource('circuits/src/Geometry.flix');
 const command = readSource('circuits/src/Diff.flix');
 const printed = readSource('circuits/src/Util/Format.flix');
@@ -79,74 +81,6 @@ const project = [...readDir('circuits/src'), ...readDir('circuits/test')];
  * database is named by would arrive in a source file and not in a build product.
  */
 const everySource = project.map(readSource);
-
-/**
- * The sampling stops short of the line's own end: a line of 100 m at 25 m is four
- * samples and not five, which is what `count` in the report means and what every kept
- * figure in the tests is a count of.
- */
-test("both languages stop sampling at the line's own end", () => {
-  expect(node.match(/for \(let s = 0; s < length; s \+= every\)/), 'the TypeScript sampling is not the bound this spec reads').toBeTruthy();
-  expect(
-    flix.match(/if \(at >= length\)\s*\n?\s*Nil/),
-    'the Flix sampling no longer stops where the TypeScript sampling stops',
-  ).toBeTruthy();
-});
-
-/**
- * Of two stretches equally near, the first is the one kept — which is the only reason
- * two runs over the same files print the same `our-side` figure. A `<=` in either
- * language moves the reported place to the last tie rather than the first and leaves
- * every mean the same, so nothing but a comparison sees it.
- */
-test('a tie between two near stretches falls on the first in either language', () => {
-  expect(node.match(/if \(near\.distance < best\.distance\)/), 'the TypeScript walk no longer keeps the first nearest').toBeTruthy();
-  expect(flix.match(/if \(on#distance < held#distance\)/), 'the Flix walk no longer keeps the first nearest').toBeTruthy();
-});
-
-/**
- * A stretch of nought length — two of the same place, which a survey full of
- * doublings has — is a place rather than a stretch: the nearest place on it is its own
- * start, and nothing divides by its nought length.
- */
-test('a zero-length stretch is a place rather than a stretch in either reading', () => {
-  expect(node.match(/const at = span === 0 \? 0 :/), 'the TypeScript projection does not settle a nought-length stretch').toBeTruthy();
-  expect(flix.match(/let along = if \(span == 0\.0\) 0\.0 else/), 'the Flix projection does not settle a nought-length stretch').toBeTruthy();
-});
-
-/**
- * The nearest place is reported at the metre it stands at, between the metres of the
- * stretch it was found on — not at that stretch's start. The difference is smaller than
- * the spacing the file was written at, which is exactly the size of the number the
- * report prints third, and a reading that snaps to the start reports `our-side 450.0 m`
- * where the other reports `450.3 m`.
- */
-test('the near place is measured between the metres of its stretch, not at its start', () => {
-  expect(
-    node.match(/metres: metres\[i - 1\] \+ \(metres\[i\] - metres\[i - 1\]\) \* near\.at/),
-    'the TypeScript reading reports a stretch start, not a place',
-  ).toBeTruthy();
-  expect(
-    flix.match(/stretch#metres \+ \(\(stretch#after - stretch#metres\) \* on#at\)/),
-    'the Flix reading reports a stretch start, not a place',
-  ).toBeTruthy();
-});
-
-/**
- * The place along a line is found by walking the line's own metres and stopping at the
- * first stretch whose end passes it, the last stretch excepted: a place beyond the
- * line's end falls on that last stretch rather than past the last point. Both languages
- * state the bound as `length - 1`; the Flix walk states it as `length - 2` because it
- * counts from the stretch rather than from the metre.
- */
-test('the walk along a line stops at its last stretch in either reading', () => {
-  expect(node.match(/while \(i < metres\.length - 1 && metres\[i\] < s\)/), 'the TypeScript walk has a bound this spec cannot read').toBeTruthy();
-  expect(flix.match(/walk\(points, metres, s, 1, List\.length\(metres\) - 2\)/), 'the Flix walk has a bound this spec cannot read').toBeTruthy();
-  expect(
-    flix.match(/if \(at <= last and far < s\)/),
-    'the Flix walk no longer excepts the last stretch, which is where a place past the end falls',
-  ).toBeTruthy();
-});
 
 /**
  * The claims a kept file makes of its outline, checked in the order the profile makes
@@ -208,13 +142,11 @@ test('a distance is printed as the files that hold it were printed', () => {
 
 /**
  * A sentence quotes a file's own figure without forcing decimals on it: a line whose
- * metres end at nought is refused as one that `ends at 0 m`, which is what the
- * TypeScript reading says and what every test of that reading matches.
+ * metres end at nought is refused as one that `ends at 0 m`. The sentence is
+ * read in one language now, and `TestApart.flix` and `TestGeometry.flix` match
+ * these bytes.
  */
 test('a figure quoted from a file is spelled as the file spelled it', () => {
-  expect(node, 'the TypeScript reading no longer quotes the length it refused').toContain(
-    'its own metres end at ${length} m',
-  );
   expect(flix, 'the Flix reading quotes a length the Java way, with a decimal on it').toContain(
     'its own metres end at ${Util.Format.spelled(length)} m',
   );
@@ -225,9 +157,9 @@ test('a figure quoted from a file is spelled as the file spelled it', () => {
 });
 
 /**
- * The sphere every metre here is measured on. Four sources hold the number — the
- * survey's, the probe's, the drawing's and this comparison's — and no compiler reads two
- * of them together. `circuit-overpass.spec.ts` holds the probe's copy to the survey's; a
+ * The sphere every metre here is measured on. Three sources hold the number — the
+ * survey's, the drawing's and the probe's — and no compiler reads two of them
+ * together. `circuit-overpass.spec.ts` holds the probe's copy to the survey's; a
  * comparison laid on another sphere measures a different circuit and prints it in metres
  * that look like metres.
  */
@@ -271,7 +203,10 @@ test('both lines are laid on one plane about the places of both', () => {
   expect(flix, 'the Flix y no longer runs south').toContain('y = 0.0 - (place#lat * radians() * earthMetres())');
 
   // The places the mean is taken over are the two lines' together, at both calls.
-  expect(atlas.match(/projection\(\[\s*\.\.\.coords\.map\(onEarth\),/), 'the atlas reading no longer projects the two lines together').toBeTruthy();
+  expect(
+    atlasReading.match(/Apart\.parallelOf\(coords \+\+ ours#coords \+\+ ours#pit \+\+ markers\)/),
+    'the atlas reading no longer projects the lines, the pit lane and the markers together',
+  ).toBeTruthy();
   expect(
     command.match(/Apart\.parallelOf\(List\.flatMap\(line -> line#coords, lines\)\)/),
     'the diff no longer projects the two lines together',
@@ -286,6 +221,7 @@ test('both lines are laid on one plane about the places of both', () => {
 test("the flake's geometry commands reach the sources they run", () => {
   const registered = [...readSource('flake.nix').matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
   expect(registered.sort(), 'the flake registers a different set of geometry commands than these').toEqual([
+    'geometry-atlas',
     'geometry-diff',
     'geometry-diff-test',
     'geometry-fetch',
@@ -297,6 +233,7 @@ test("the flake's geometry commands reach the sources they run", () => {
   // that answers with a usage where the reader expected a report.
   const flake = readSource('flake.nix');
   for (const [app, word] of [
+    ['geometry-atlas', 'atlas'],
     ['geometry-diff', 'diff'],
     ['geometry-fetch', 'fetch'],
     ['geometry-regenerate', 'regenerate'],
@@ -322,8 +259,11 @@ test("the flake's geometry commands reach the sources they run", () => {
   expect(main, 'nix run .#geometry-regenerate runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Regenerate.exitCode(rest))',
   );
+  expect(main, 'nix run .#geometry-atlas runs a main that hands the reader its arguments to nothing').toContain(
+    'Exit.exit(Atlas.exitCode(rest))',
+  );
   expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
-    '"diff" :: "fetch" :: "regenerate" :: "survey" :: "write" :: Nil',
+    '"atlas" :: "diff" :: "fetch" :: "regenerate" :: "survey" :: "write" :: Nil',
   );
 });
 
@@ -341,6 +281,7 @@ test("the flake's geometry commands reach the sources they run", () => {
 test('the geometry project shares no source, resolves no dependency and names no database', () => {
   expect(project, 'the geometry project holds a different set of sources than these').toEqual([
     'circuits/src/Apart.flix',
+    'circuits/src/Atlas.flix',
     'circuits/src/Circuit.flix',
     'circuits/src/Diff.flix',
     'circuits/src/Fetch.flix',
@@ -349,6 +290,7 @@ test('the geometry project shares no source, resolves no dependency and names no
     'circuits/src/Overpass.flix',
     'circuits/src/Regenerate.flix',
     'circuits/src/Survey.flix',
+    'circuits/src/Track.flix',
     'circuits/src/Util/Files.flix',
     'circuits/src/Util/Format.flix',
     'circuits/src/Write.flix',
@@ -359,6 +301,7 @@ test('the geometry project shares no source, resolves no dependency and names no
     'circuits/test/TestOverpass.flix',
     'circuits/test/TestRegenerate.flix',
     'circuits/test/TestSurvey.flix',
+    'circuits/test/TestTrack.flix',
     'circuits/test/TestWrite.flix',
   ]);
 

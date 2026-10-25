@@ -1,11 +1,10 @@
-// The line the lap is measured from, and the question both pipelines ask of a
+// The line the lap is measured from, and the question the survey asks of a
 // candidate for it: does this place stand where the circuit says its line
-// stands? A relation answers with a node, an orthoimagery measurement with its
-// first point, and a run that answered the wrong line shifts every distance by
-// the distance between the two lines while still looking like a lap.
-// `circuit-geometry.ts` asks the question of a relation's node and
-// `atlas-geometry.ts` of a measured line's start; the allowances differ, and
-// are written down here next to each other because the question is one.
+// stands? A relation answers with a node, and a run that answered the wrong
+// line shifts every distance by the distance between the two lines while still
+// looking like a lap. `circuit-geometry.ts` asks the question of a relation's
+// node; `circuits/src/Track.flix` asks the same question of a measured line's
+// start at a wider allowance, and says why there.
 
 import type { Place } from "./circuit-geometry.ts";
 import { apart } from "./circuit-geometry.ts";
@@ -19,12 +18,6 @@ export type PublishedLine = Place & { within?: number };
  * it: a relation tags the line itself, so the distance allowed is the map's
  * own crosshair. */
 export const nodeWithin = 10;
-
-/** How far the start of a line measured off orthoimagery may stand from the
- * published line and still be the same lap: where such a line begins is that
- * survey's own choice, and only a lap that begins at some other line — COTA's
- * `start` node, 297 m along the lap — must be kept out. */
-export const measuredWithin = 25;
 
 /** The candidate's distance from the published line, judged: a circuit that
  * publishes no line asks nothing, and is answered with nought. A candidate
@@ -49,11 +42,3 @@ export function checkStandsAt(
   return distance;
 }
 
-/** The atlas reading's share of the question: how far the measured lap's first
- * point stands from the published line, and the failure when it starts another
- * line over. */
-export function checkOrigin(first: Place, line?: PublishedLine): number {
-  return checkStandsAt("the atlas lap", first, line, measuredWithin, () =>
-    "Its markers would be measured from the wrong line.",
-  );
-}

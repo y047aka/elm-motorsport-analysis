@@ -8,8 +8,9 @@
 /// lays the TypeScript against the Elm and
 /// `app/tests/circuits-geometry-reading.spec.ts` lays this against both, figure by figure.
 ///
-/// A circuit's atlas layer is not here: it belongs to the atlas reading, which writes a line
-/// this project never draws.
+/// A circuit's atlas layer is here as the URL of the layer itself: the track-atlas line
+/// is authored in no config, and the reading that measures it writes its own file beside
+/// the config — `Atlas.flix`'s, kept at `keptAtlas`.
 pub mod Circuit {
 
     use Geometry.Place
@@ -53,6 +54,9 @@ pub mod Circuit {
         sectors  = Lines,
         // The geometry file, from the directory the command was asked from.
         file     = String,
+        // The track-atlas layer measured against this circuit's line, if one is read at
+        // all. It is the URL of the layer itself — the reading writes its own file.
+        atlas    = Option[String],
         // The prose the geometry file documents its survey with.
         survey   = String
     }
@@ -73,6 +77,7 @@ pub mod Circuit {
         lap      = 13625.7,
         sectors  = {published = None, eachSeason = Some("the organiser's map is re-issued every year and its lines differ between seasons")},
         file     = "app/static/geometry/le_mans.geojson",
+        atlas    = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson"),
         survey   = "The Circuit de la Sarthe"
     }
 
@@ -94,6 +99,7 @@ pub mod Circuit {
             eachSeason = None
         },
         file   = "app/static/geometry/cota.geojson",
+        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson"),
         survey = "The Circuit of the Americas"
     }
 
@@ -110,6 +116,13 @@ pub mod Circuit {
     /// surveyed it: evidence the regeneration fence reads, never bytes the app asks for.
     pub def keptAnswer(circuit: Circuit): String =
         "circuits/${circuit#word}/overpass.json"
+
+    /// The measured line kept beside the same config: the atlas reading's own file, in
+    /// this repository's profile at the line's own length — kept beside the circuit and
+    /// never served, which is what lets it disagree with the surveyed line by the metres
+    /// it says it does.
+    pub def keptAtlas(circuit: Circuit): String =
+        "circuits/${circuit#word}/atlas.geojson"
 
     /// The sentence for a word no circuit answers to, naming the words that do — which is
     /// the reader's own list, read back at them.

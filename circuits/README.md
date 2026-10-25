@@ -12,7 +12,8 @@ out of an answer, and writes the file the app serves. `circuits/timing/`, the ti
 Flix project of its own, reading the feed the load reads with the decoder the
 load decodes it with; `circuits/probe/` is another — the same question
 OpenStreetMap answers, asked in Flix before a circuit has a config to author.
-What is still TypeScript is the atlas reading.
+What is still TypeScript is the survey the contract spec re-checks and the
+reading of a kept file it reads there.
 What follows is what no
 single script's header says for itself; what a script can say at its own call
 site, its header says there and is not repeated here.
@@ -25,7 +26,7 @@ source relation and the license in their own properties.
 
 The pipeline is the Flix project at this directory's root: `Survey.flix`
 chains an answer into a lap and `Write.flix` lays the bytes the app serves.
-`circuit-geometry.ts` spells the same survey for the atlas reading, and a
+`circuit-geometry.ts` spells the same survey the contract spec re-checks, and a
 circuit joins both as a directory
 named by the word the summaries send for it. Its `circuit.ts` supplies the
 relation, the member role naming the line the lap is measured from, the
@@ -249,14 +250,14 @@ links no source — it reads nothing `flix/src` holds, which is what the report'
 are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
 
 **What is written once, and what is written twice.** The diff is written once: the asking of
-two paths, the report and the overlay are `Diff.flix`'s. The survey is written twice —
-`Survey.flix` chains what `circuit-geometry.ts` chains — and so is the comparison under them,
-because the atlas reading is TypeScript and samples `apartness.ts` while the diff samples
-`Apart.flix`. And the asking of OpenStreetMap is written twice, both spellings in Flix
-now: the pipeline's `Overpass.flix` and the probe's each hold the runners, joined only by
-the service facts `circuit-overpass.spec.ts` reads; the atlas reading measures lines the
-pipeline never writes and stays TypeScript's until it has a Flix reading of its own to
-stand on, and the regeneration fence asked the jar from its first run.
+two paths, the report and the overlay are `Diff.flix`'s. The comparison of two lines is
+written once too — `Apart.flix`, which the diff samples and the atlas reading samples — and
+the atlas reading's own shapes and guards are `Track.flix`'s. The survey is what is written
+twice: `Survey.flix` chains what `circuit-geometry.ts` chains, and the reading of a kept
+file stands in `Geometry.flix` and in `geometry-file.ts`, joined by what
+`circuits-geometry-reading.spec.ts` reads of both. And the asking of OpenStreetMap is
+written twice, both spellings in Flix: the pipeline's `Overpass.flix` and the probe's each
+hold the runners, joined only by the service facts `circuit-overpass.spec.ts` reads.
 
 `nix run .#geometry-survey -- cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
@@ -287,7 +288,10 @@ reads it, two geometries laid together in the test that measures them.
 
 ## The atlas readings
 
-`nix run .#geometry-atlas <circuit>` reads the track-atlas line — a midline
+`nix run .#geometry-atlas <circuit>` is the geometry project's own: `Track.flix`
+reads the foreign file's shapes and refuses what they contradict, `Atlas.flix`
+fetches or reads the layer, and the apartness is the diff's `Apart.flix`
+sampling the same pair of lines. It reads the track-atlas line — a midline
 measured from orthoimagery, not a survey stretched to a published length, at
 5,500.2 m against the 5,515 m this app draws — and keeps it as
 `<circuit>/atlas.geojson` with `stretched: false`, beside the survey it is
@@ -302,8 +306,8 @@ mean and maximum apartness, and an SVG overlay on request — so a fresh survey
 is read against the old one, or the atlas line against either, with no script
 in between. Neither writes Elm: drawing on a measured line would move every
 tracker baseline and re-open where the timing lines stand, which is its own
-change judged on that report. The diff is the project at this directory's
-root; the atlas asking is still TypeScript's.
+change judged on that report. The diff and the atlas reading are the project at
+this directory's root, and both sample `Apart.flix`.
 
 ## The readings, and their tests
 
@@ -321,10 +325,10 @@ in one language and not two, and `Survey.flix`'s reading of a kept answer is hel
 the pipeline's by the bytes it lays rather than by a shared source; `geometry-file.ts` holds the profile's own reading — the
 outline
 with its own metres going up, and the pit lane beside it — which the
-contract spec's re-check and the atlas reading run, the diff running
+contract spec's re-check run, the diff and the atlas reading running
 `Geometry.flix` over the same claims in the same refusals' words, which
 `app/tests/circuits-geometry-reading.spec.ts` compares;
-`atlas-line.ts` holds the atlas file's shape checks and its two
+`Track.flix` holds the atlas file's shape checks and its two
 guards — the one that keeps a mismatched line out, and the one that keeps the lap
 starting at the published line; and the comparison the fence makes is
 `Regenerate.flix`'s, asking of the survey's own output what a kept file asks of

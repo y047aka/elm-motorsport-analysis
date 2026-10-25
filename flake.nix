@@ -223,23 +223,6 @@
           '';
         };
 
-        # The tools under circuits/ that are Node's, each run with nothing else to
-        # carry. Which circuits are surveyed is the registry's, not these
-        # registrations'; the pipeline writes what the app serves from the Flix
-        # project at this directory's root, and these write beside it or read it.
-        # Asking OpenStreetMap for a circuit, laying two geometries against each
-        # other, surveying a circuit out of a kept answer and reading timing lines are
-        # not among them: the pipeline at `circuits/` is a Flix project now, and each
-        # is registered with its own runner below.
-        geometryApp = name: script:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 ];
-            text = ''
-              node circuits/${script}.ts "$@"
-            '';
-          };
-
         # The circuit tools' unit tests, on Node's own test runner. They reach
         # each tool's pure reading -- the half that opens no file and asks no
         # network -- and the runner is in Node itself, so this directory keeps
@@ -300,7 +283,7 @@
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
           geometry-fetch      = { type = "app"; program = "${mkGeometryApp "geometry-fetch" "flix run -- fetch \"$@\""}/bin/geometry-fetch";                            meta.description = "Ask OpenStreetMap a circuit's relation, and keep the answer beside its config — the pipeline's asking stage (the circuits geometry project; <circuit> [--out <overpass.json>], paths from where the command is run)"; };
           geometry-write      = { type = "app"; program = "${mkGeometryApp "geometry-write" "flix run -- write \"$@\""}/bin/geometry-write";                              meta.description = "Run the whole geometry pipeline: ask OpenStreetMap (or read the answer named), survey it, and fail unless the bytes are the ones the app serves — --write lays them (the circuits geometry project; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
-          geometry-atlas       = { type = "app"; program = "${geometryApp "geometry-atlas" "atlas-geometry"}/bin/geometry-atlas";                                        meta.description = "Measure a dataset's line against a circuit's kept geometry, and keep it beside it (<circuit> [--file gp.geojson])"; };
+          geometry-atlas       = { type = "app"; program = "${mkGeometryApp "geometry-atlas" "flix run -- atlas \"$@\""}/bin/geometry-atlas";                          meta.description = "Measure another dataset's line against a circuit's kept geometry, keeping the answer beside the survey that wrote it — not in what gets served (the circuits geometry project's atlas reading; <circuit> [--file gp.geojson], paths from where the command is run)"; };
           geometry-diff        = { type = "app"; program = "${mkGeometryApp "geometry-diff" "flix run -- diff \"$@\""}/bin/geometry-diff";                              meta.description = "Lay two kept geometries against each other in metres, optionally as an SVG overlay (the circuits geometry project, reading no database; paths from where the command is run, [--every <m>] [--svg <out.svg>])"; };
           geometry-survey      = { type = "app"; program = "${mkGeometryApp "geometry-survey" "flix run -- survey \"$@\""}/bin/geometry-survey";                          meta.description = "Survey a circuit's geometry out of its kept Overpass answer, and fail unless it is the bytes the app serves (the circuits geometry project, reaching no database and no network; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
           geometry-diff-test   = { type = "app"; program = "${mkGeometryApp "geometry-diff-test" "flix test"}/bin/geometry-diff-test";                             meta.description = "Run the circuits geometry project's tests — the readings behind geometry-fetch, geometry-diff, geometry-survey and the regeneration fence (no network, no database, no files written)"; };
