@@ -240,10 +240,11 @@ pit lane, `src/Apart.flix` lays one line against another, `src/Diff.flix` asks t
 files, prints the report and draws the overlay, `src/Circuit.flix` authors the two
 circuits' figures once, `src/Survey.flix`
 reads a kept Overpass answer and chains it into a lap, `src/Overpass.flix` asks the
-runners for that answer and `src/Fetch.flix` is the commands that ask — `fetch` keeps
-one beside a circuit, `write` runs the asking, the survey and the laying off one
-reading of the arguments — and `src/Write.flix` lays those
-places, metres and claims out as the bytes the app reads, with `src/Regenerate.flix` the
+runners for that answer, `src/Write.flix` lays those places, metres and claims out as
+the bytes the app reads and is the two commands that lay one — `survey` over a kept
+answer, `write` off one reading of the arguments, asking OpenStreetMap for the answer
+when the reader named none — `src/Fetch.flix` is the asking that keeps an answer
+beside a circuit, with `src/Regenerate.flix` the
 fence that re-surveys every circuit's kept answer and asks whether the served file still
 draws it, and `src/Main.flix` holding
 the words the commands go by and the exit code one comes to. It resolves no dependency and

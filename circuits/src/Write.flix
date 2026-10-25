@@ -4,6 +4,7 @@
 ///     nix run .#geometry-survey -- cota
 ///     nix run .#geometry-survey -- cota --write
 ///     nix run .#geometry-survey -- le_mans --answer circuits/le_mans/overpass.json
+///     nix run .#geometry-write -- cota [--answer <overpass.json>] [--write]
 ///
 /// The profile is the one every reader of a kept file reads: EPSG:4326 throughout, as
 /// the Atlas keeps it; one `outline` LineString whose `metres` property holds, point for
@@ -24,11 +25,18 @@
 /// is `Regenerate.flix`'s, and compares parsed properties with `surveyed_at`
 /// exempt; this comparison is of bytes, and `surveyed_at` needs no exemption here because
 /// the survey reads the very answer whose stamp the property carries.
+///
+/// The whole run is this module's too: `geometry-write` takes these flags unchanged
+/// and lays the file off one reading of the arguments, asking OpenStreetMap for the
+/// answer when the reader named none. Both commands parse one flag set and travel
+/// one path through `surveyed`; only the usage a wrong argument is answered with
+/// says which of them was run.
 pub mod Write {
 
     use Circuit.Circuit
     use Geometry.Place
     use Sys.Console
+    use Time.Clock
 
     /// The file as the app reads it: one FeatureCollection of the outline and the pit
     /// lane, in that order, the outline first because it is the line the drawing is
@@ -179,27 +187,33 @@ pub mod Write {
     }
 
     pub def parse(args: List[String]): Result[String, Args] =
-        walked(Nil, args, None, false)
+        parseFor("geometry-survey", args)
 
-    def walked(named: List[String], rest: List[String], answer: Option[String], write: Bool): Result[String, Args] =
+    /// One circuit and one answer, read for the command word given: the whole run
+    /// takes these flags unchanged, so only the usage a wrong argument is answered
+    /// with differs between the two commands.
+    pub def parseFor(goes: String, args: List[String]): Result[String, Args] =
+        walked(Nil, goes, args, None, false)
+
+    def walked(named: List[String], goes: String, rest: List[String], answer: Option[String], write: Bool): Result[String, Args] =
         match rest {
-            case Nil => complete(named, answer, write)
+            case Nil => complete(named, goes, answer, write)
             case "--answer" :: path :: further =>
                 // A flag is no file: `--answer --write` is a reader who meant something
                 // else, and a survey that read it as a path would report a file that cannot
                 // be opened rather than an argument it was not given.
                 if (String.startsWith({prefix = "--"}, path)) Err("--answer names no file to read")
-                else walked(named, further, Some(path), write)
+                else walked(named, goes, further, Some(path), write)
             case "--answer" :: Nil => Err("--answer names no file to read")
-            case "--write" :: further => walked(named, further, answer, true)
+            case "--write" :: further => walked(named, goes, further, answer, true)
             case one :: further =>
                 if (String.startsWith({prefix = "--"}, one)) Err("\"${one}\" is no flag of this command")
-                else walked(one :: named, further, answer, write)
+                else walked(one :: named, goes, further, answer, write)
         }
 
-    def complete(named: List[String], answer: Option[String], write: Bool): Result[String, Args] =
+    def complete(named: List[String], goes: String, answer: Option[String], write: Bool): Result[String, Args] =
         match named {
-            case Nil => Err(usage())
+            case Nil => Err(usageOf(goes))
             case one :: _ =>
                 match Circuit.byWord(one) {
                     case None => Err(Circuit.unknown(one))
@@ -214,7 +228,15 @@ pub mod Write {
         }
 
     pub def usage(): String =
-        "usage: nix run .#geometry-survey -- <circuit> [--answer <overpass.json>] [--write]"
+        usageOf("geometry-survey")
+
+    /// The whole run's line: the same arguments, at the command that asks for its
+    /// own answer when the reader named none.
+    pub def writeUsage(): String =
+        usageOf("geometry-write")
+
+    def usageOf(goes: String): String =
+        "usage: nix run .#${goes} -- <circuit> [--answer <overpass.json>] [--write]"
 
     /// The exit code the survey comes to: 1 for a word no circuit answers to, an answer it
     /// was pointed at and cannot read, a survey it could not chain, and a file it could not
@@ -227,11 +249,48 @@ pub mod Write {
             case Ok(asked) => ask(asked)
         }
 
-    /// The answer read, then surveyed. Public because `Fetch.writeExitCode` runs the
-    /// whole pipeline and a named answer travels through exactly this: the reading,
-    /// the missing-file refusal, and the survey are one story whether the run was a
-    /// survey alone or the whole of it.
-    pub def ask(asked: Args): Int32 \ { IO, Console } =
+    /// The exit code the whole run comes to: the survey's, with one difference — no
+    /// answer named asks OpenStreetMap now instead of reading the kept answer. What
+    /// comes back travels through exactly the `surveyed` a kept answer travels
+    /// through, so a live run and a survey over a kept file fail and reproduce in
+    /// the same words.
+    ///
+    /// A live asking keeps nothing by itself: `fetch` is the command that decides what
+    /// a run keeps beside a circuit, and a run that only wants the geometry should not
+    /// take the map's newest answer with it.
+    pub def writeExitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
+        match parseFor("geometry-write", args) {
+            case Err(problem) =>
+                Console.eprintln("${problem}");
+                1
+            case Ok(asked) =>
+                if (asked#asked)
+                    ask(asked)
+                else
+                    live(asked)
+        }
+
+    /// The asking, then the survey over what came back. The answer's name in the
+    /// report is the question rather than a file, because a file is what the reader
+    /// did not name.
+    def live(asked: Args): Int32 \ { IO, Clock, Console } =
+        match Overpass.askRelation(asked#circuit#relation) {
+            case Err(problem) =>
+                Console.eprintln("${asked#circuit#word}: ${problem}");
+                1
+            case Ok(text) =>
+                let fromRunner = {
+                    circuit = asked#circuit,
+                    answer = "OpenStreetMap relation ${asked#circuit#relation}",
+                    asked = asked#asked,
+                    write = asked#write
+                };
+                surveyed(fromRunner, text)
+        }
+
+    /// The answer read, then surveyed: the reading, the missing-file refusal and
+    /// the survey are one story whether the run was a survey alone or the whole of it.
+    def ask(asked: Args): Int32 \ { IO, Console } =
         match Util.Files.read(asked#answer) {
             case Err(_) =>
                 if (asked#asked)
@@ -254,11 +313,11 @@ pub mod Write {
         0
     }
 
-    /// An answer's text — from a kept file or from a runner — surveyed and laid. This
-    /// is the turning stage: what `fetch` hands over and what a fence reads back out
-    /// of a kept file both come to `surveyed`, so a live survey and a comparison of a
-    /// kept one fail and reproduce in the same words.
-    pub def surveyed(asked: Args, spelled: String): Int32 \ { IO, Console } =
+    /// An answer's text — from a kept file or from a runner — surveyed and laid.
+    /// This is the turning stage: what the asking hands over and what a fence reads
+    /// back out of a kept file both come to `surveyed`, so a live survey and a
+    /// comparison of a kept one fail and reproduce in the same words.
+    def surveyed(asked: Args, spelled: String): Int32 \ { IO, Console } =
         match Survey.answer(spelled) {
             case Err(problem) =>
                 Console.eprintln("${asked#answer}: ${problem}");

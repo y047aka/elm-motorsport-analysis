@@ -1,17 +1,16 @@
-/// The asking stage of the pipeline: the commands that put a question to OpenStreetMap.
+/// The pipeline's asking that keeps an answer: the question a circuit's relation is
+/// answered with, kept beside the config that will survey it.
 ///
 ///     nix run .#geometry-fetch -- <circuit> [--out <overpass.json>]
-///     nix run .#geometry-write -- <circuit> [--answer <overpass.json>] [--write]
 ///
-/// The stages are the CLI's two, in the same shape: `fetch` is the asking that keeps
-/// an answer beside a circuit, and `survey` is the turning of an answer into the file
-/// the app serves. `write` runs both off one reading of the arguments — as `cli-run`
-/// runs load and export — and takes the survey's flags unchanged, so one flag means
-/// one thing at either command. What differs is only what happens when no answer is
-/// named: the survey sends the reader to the kept answer, and this asks OpenStreetMap.
+/// The stages are the CLI's two, in the same shape: this is the asking that keeps
+/// an answer beside a circuit, and `Write.flix` is the turning of an answer into
+/// the file the app serves — whose whole run, `geometry-write`, does both off one
+/// reading of the arguments as `cli-run` runs load and export.
 ///
-/// Only these two commands reach the network, and only through `Overpass`; a run over
-/// a kept answer — the fence's, the diff's — asks nothing of anyone.
+/// `fetch` and `write` are the only commands that reach the network, and only
+/// through `Overpass`; a run over a kept answer — the survey's, the fence's, the
+/// diff's — asks nothing of anyone.
 pub mod Fetch {
 
     use Circuit.Circuit
@@ -74,7 +73,7 @@ pub mod Fetch {
         }
 
     def askOf(asked: Args): Int32 \ { IO, Clock, Console } =
-        match Overpass.paced(() -> Overpass.ask(Overpass.pipelineQuery(asked#circuit#relation))) {
+        match Overpass.askRelation(asked#circuit#relation) {
             case Err(problem) =>
                 Console.eprintln("${asked#circuit#word}: ${problem}");
                 1
@@ -120,45 +119,5 @@ pub mod Fetch {
                     case Err(problem) => Err(problem)
                     case Ok(_)        => Ok(reading)
                 }
-        }
-
-    // ---------------------------------------------------------------- the whole run
-
-    /// The whole pipeline off one reading of the arguments: the answer named is read,
-    /// and no answer named means asking OpenStreetMap now rather than a kept answer.
-    /// The survey does the rest — the same `surveyed` the kept answer travels through,
-    /// so a live survey and a fence over a kept one fail in the same words.
-    ///
-    /// A live asking keeps nothing by itself: `fetch` is the command that decides what
-    /// a run keeps beside a circuit, and a run that only wants the geometry should not
-    /// take the map's newest answer with it.
-    pub def writeExitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        match Write.parse(args) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
-            case Ok(asked) =>
-                if (asked#asked)
-                    Write.ask(asked)
-                else
-                    live(asked)
-        }
-
-    /// The asking, then the survey over what came back. The answer's name in the
-    /// report is the question rather than a file, because a file is what the reader
-    /// did not name.
-    def live(asked: Write.Args): Int32 \ { IO, Clock, Console } =
-        match Overpass.paced(() -> Overpass.ask(Overpass.pipelineQuery(asked#circuit#relation))) {
-            case Err(problem) =>
-                Console.eprintln("${asked#circuit#word}: ${problem}");
-                1
-            case Ok(text) =>
-                let fromRunner = {
-                    circuit = asked#circuit,
-                    answer = "OpenStreetMap relation ${asked#circuit#relation}",
-                    asked = asked#asked,
-                    write = asked#write
-                };
-                Write.surveyed(fromRunner, text)
         }
 }

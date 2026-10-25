@@ -189,6 +189,28 @@ pub mod TestWrite {
                 Assert.assertTrue(asked#write)
         }
 
+    /// The whole run takes the survey's flags unchanged — and no answer named is the
+    /// one difference: the survey reads the kept file, the whole run asks. A wrong
+    /// argument is answered with the whole run's own usage; the survey's line would
+    /// send the reader to the other command.
+    @Test
+    def testTheWholeRunTakesTheSurveysFlagsAndNamesItself(): Unit \ Assert =
+        match Write.parseFor("geometry-write", "cota" :: "--write" :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
+            case Ok(asked) =>
+                Assert.assertTrue(asked#circuit#word == "cota");
+                Assert.assertTrue(asked#write);
+                // The answer taken from the circuit's directory is not one the reader
+                // asked for — which is what sends this run to OpenStreetMap.
+                Assert.assertTrue(not asked#asked)
+        };
+        match Write.parseFor("geometry-write", Nil) {
+            case Ok(_) => Assert.assertTrue(false)
+            case Err(problem) =>
+                Assert.assertTrue(String.contains({substr = "nix run .#geometry-write --"}, problem));
+                Assert.assertTrue(not String.contains({substr = "geometry-survey"}, problem))
+        }
+
     // ----------------------------------------------------------------------- the parting
 
     @Test

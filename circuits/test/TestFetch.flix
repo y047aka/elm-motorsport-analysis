@@ -1,5 +1,5 @@
-/// The asking commands' readings: which file a fetch keeps to, and which answer a run
-/// surveys from. The asking itself is `TestOverpass`'s and a network's; what is met
+/// The asking's readings: which file a fetch keeps to, and which answer is worth
+/// keeping. The asking itself is `TestOverpass`'s and a network's; what is met
 /// here is the half that opens nothing — a word no circuit answers to, a flag that
 /// names no file, an answer that surveys nothing, and the defaults a run falls back
 /// to when the reader named neither.
@@ -63,29 +63,6 @@ pub mod TestFetch {
         match Fetch.parse("cota" :: "--freeze" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(problem == "\"--freeze\" is no flag of this command")
-        }
-
-    /// The whole run takes the survey's flags unchanged — and no answer named is the
-    /// one difference: the survey would read the kept file, and `write` asks.
-    @Test
-    def testTheWholeRunTakesTheSurveysFlags(): Unit \ Assert =
-        match Write.parse("cota" :: "--write" :: Nil) {
-            case Err(_)          => Assert.assertTrue(false)
-            case Ok(command) =>
-                Assert.assertTrue(command#circuit#word == "cota");
-                Assert.assertTrue(command#write);
-                Assert.assertTrue(not command#asked)
-        }
-
-    /// A run over a named answer is `asked` in the survey's own sense — the reader
-    /// pointed at a file — whichever command it is run at.
-    @Test
-    def testANamedAnswerIsTheSurveysOwnReading(): Unit \ Assert =
-        match Write.parse("cota" :: "--answer" :: "kept.json" :: "--write" :: Nil) {
-            case Err(_)          => Assert.assertTrue(false)
-            case Ok(command) =>
-                Assert.assertTrue(command#asked);
-                Assert.assertTrue(command#answer == "kept.json")
         }
 
     /// That some JSON came back is not yet an answer the survey can read back: a kept

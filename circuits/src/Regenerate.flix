@@ -132,7 +132,7 @@ pub mod Regenerate {
     def check(circuit: Circuit, mode: Mode): Result[String, Int32] \ { IO, Clock, Console } =
         match mode {
             case Mode.Freeze =>
-                match Overpass.paced(() -> Overpass.ask(Overpass.pipelineQuery(circuit#relation))) {
+                match Overpass.askRelation(circuit#relation) {
                     case Err(problem) => Err("${circuit#word}: ${problem}")
                     case Ok(answer)   => surveyed(circuit, answer, mode)
                 }

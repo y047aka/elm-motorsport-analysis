@@ -115,7 +115,7 @@ test("the flake's geometry commands reach the sources they run", () => {
     'Exit.exit(Fetch.exitCode(rest))',
   );
   expect(main, 'nix run .#geometry-write runs a main that hands the reader its arguments to nothing').toContain(
-    'Exit.exit(Fetch.writeExitCode(rest))',
+    'Exit.exit(Write.writeExitCode(rest))',
   );
   expect(main, 'nix run .#geometry-regenerate runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Regenerate.exitCode(rest))',

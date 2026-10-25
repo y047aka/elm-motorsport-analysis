@@ -80,6 +80,12 @@ pub mod Overpass {
     pub def ask(question: String): Result[String, String] \ { IO, Https } =
         walk(attempts(), question, "no runner was reached")
 
+    /// One circuit's relation, asked through the run's handlers: the pace, the walk
+    /// over the runners and the backoff are the asking's own, and every command that
+    /// asks a circuit asks this one question.
+    pub def askRelation(relation: Int64): Result[String, String] \ { IO, Clock } =
+        paced(() -> ask(pipelineQuery(relation)))
+
     /// Each runner twice, in the order the runners are held. The attempt travels with
     /// its runner because that is what says how long the next wait is.
     def attempts(): List[(String, Int32)] =
