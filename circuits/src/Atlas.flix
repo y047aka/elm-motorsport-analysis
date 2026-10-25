@@ -514,7 +514,7 @@ pub mod Atlas {
     def originSentence(circuit: Circuit, origin: Float64): String =
         match circuit#timingLine {
             case Some(_) => "the lap starts ${Util.Format.fixed(1, origin)} m from the published timing line"
-            case None    => "the circuit script names no timing line, so the atlas lap's start goes unchecked"
+            case None    => "the circuit's config names no timing line, so the atlas lap's start goes unchecked"
         }
 
     def cornersSentence(distances: List[Float64], laps: List[Float64], worstLap: Float64): String =

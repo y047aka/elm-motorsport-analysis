@@ -221,7 +221,6 @@ pub mod Diff {
         {origin = origin, reach = reach, scale = (width() - (2.0 * margin())) / widest(reach)}
     }
 
-    /// The north-west corner of both lines together.
     /// The north-west corner of both lines together — the first place they were
     /// measured at, not the zero of the plane, which is a place neither line passes
     /// and a drawing framed by it would leave the lines in one corner of it.
@@ -258,9 +257,6 @@ pub mod Diff {
     def widest(reach: Point): Float64 =
         if (reach#x >= reach#y) reach#x else reach#y
 
-    /// Both lines as one drawing, with the provenance each file carries written into it as
-    /// its own comment: an overlay that outlives its files says what it was comparing, and
-    /// what each of them was licensed under.
     /// Both lines as one drawing, with the provenance each file carries written into it
     /// as its own comment: an overlay that outlives its files says what it was comparing,
     /// and what each of them was licensed under.

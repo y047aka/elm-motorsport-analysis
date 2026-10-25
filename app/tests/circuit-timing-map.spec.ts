@@ -179,8 +179,9 @@ test('a circuit Flix holds a map for is one whose config authors it that way', (
  * A link compiles a whole module for the few of its functions one command calls,
  * so the links are held to the readings the report reads through. Where most of a
  * module belongs to the commands that compute in a database it is held separately:
- * `Cli/Errors.flix` states five of the CLI's eight cases and `Util/Files.flix`
- * three of its six functions, and the one case carrying a database's failure —
+ * `Cli/Errors.flix` keeps four of the CLI's seven cases beside a fifth the CLI
+ * holds no failure like and `Util/Files.flix` three of its six functions, and
+ * the one case carrying a database's failure —
  * reached from no call here — was the whole reason `Db.flix` was a source of this
  * project at all.
  */

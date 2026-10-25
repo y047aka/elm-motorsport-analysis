@@ -32,9 +32,9 @@ jobs:
           key: flix-deps-${{ runner.os }}-${{ hashFiles('flix/flix.toml') }}
           restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: none of these commands touches node_modules. The Elm
-      # tests need only the elm toolchain the flake supplies, the Flix projects
-      # resolve what they resolve through flix, and the circuit tools' tests run
-      # on the Node the flake brings — their directory installs nothing.
+      # tests need only the elm toolchain the flake supplies, and each Flix
+      # project — the CLI's and the three under `circuits/` — resolves what it
+      # resolves through flix.
       - name: Elm tests
         run: nix run .#test
       - name: CLI tests

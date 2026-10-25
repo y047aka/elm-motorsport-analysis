@@ -85,8 +85,8 @@
         # The geometry pipeline itself, a Flix project at the root of `circuits/`:
         # it asks OpenStreetMap for an answer, surveys a circuit out of one, lays two
         # kept geometries together, and writes the file the app serves. It reaches no
-        # database, and no network until a `fetch` or a `write` asks one; which parts
-        # of the pipeline are still TypeScript's is `circuits/README.md`'s to say.
+        # database, and no network until a `fetch` or a `write` asks one; which
+        # command runs where is `circuits/README.md`'s to say.
         #
         # `GEOMETRY_FROM` is the directory the reader was standing in: `flix` has to be
         # started inside the project to find its `flix.toml`, and the reader names
