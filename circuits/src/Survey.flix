@@ -131,15 +131,6 @@ pub mod Survey {
         parallel = Float64
     }
 
-    /// What the pipeline kept and what it was handed. A read-back file cannot say these,
-    /// since it holds the line that came out and not the one that went in.
-    pub type alias Counts = {
-        kept = Int32,
-        lap  = Int32,
-        pit  = Int32,
-        of   = Int32
-    }
-
     /// The lap, the pit lane and the frame, in the drawing's own metres.
     pub type alias Geometry = {
         centreline     = List[MetredPlace],
@@ -147,8 +138,7 @@ pub mod Survey {
         frame          = Frame,
         direction      = String,
         surveyedAt     = Option[String],
-        surveyedLength = Option[Float64],
-        counts         = Option[Counts]
+        surveyedLength = Option[Float64]
     }
 
     /// Which way a car goes round the drawing, as the geometry says it goes.
@@ -444,13 +434,7 @@ pub mod Survey {
             frame = {origin = cornerOf(both), parallel = parallel},
             direction = turnDirection(lapPoints),
             surveyedAt = reading#surveyedAt,
-            surveyedLength = Some(Option.getWithDefault(0.0, List.last(surveyed))),
-            counts = Some({
-                kept = List.length(kept),
-                lap = List.length(lapPoints),
-                pit = List.length(keptPit),
-                of = List.length(pitPoints)
-            })
+            surveyedLength = Some(Option.getWithDefault(0.0, List.last(surveyed)))
         }
     }
 

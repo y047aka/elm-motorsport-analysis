@@ -187,8 +187,7 @@ pub mod TestRegenerate {
         frame = frame(),
         direction = Survey.counterClockwise(),
         surveyedAt = Some("2026-10-20T07:01:01Z"),
-        surveyedLength = Some(5502.238574528194),
-        counts = Some({kept = 3, lap = 9, pit = 2, of = 4})
+        surveyedLength = Some(5502.238574528194)
     }
 
     /// The outline's property keys — a parsed file keeps them sorted, not in the

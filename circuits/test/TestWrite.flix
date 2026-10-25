@@ -29,15 +29,14 @@ pub mod TestWrite {
         parallel = 30.135089049999973
     }
 
-    /// A geometry as the survey hands one over: stamped, measured and counted.
+    /// A geometry as the survey hands one over: stamped and measured.
     def drawn(): Survey.Geometry = {
         centreline = lap(),
         pitLane = pit(),
         frame = frame(),
         direction = Survey.counterClockwise(),
         surveyedAt = Some("2026-10-20T07:01:01Z"),
-        surveyedLength = Some(5502.238574528194),
-        counts = Some({kept = 3, lap = 9, pit = 2, of = 4})
+        surveyedLength = Some(5502.238574528194)
     }
 
     /// The same line from an answer that said nothing about itself.
@@ -47,8 +46,7 @@ pub mod TestWrite {
         frame = frame(),
         direction = Survey.clockwise(),
         surveyedAt = None,
-        surveyedLength = None,
-        counts = None
+        surveyedLength = None
     }
 
     /// The file a circuit's survey would write, or the sentence that refused to write one.
