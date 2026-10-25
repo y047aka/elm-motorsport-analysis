@@ -12,10 +12,10 @@
 /// file — and what is kept beside a circuit is the runner's own bytes, so a kept answer
 /// stays evidence that can be re-read by another reader years later.
 ///
-/// The probe asks the same service a different question, and the TypeScript pipeline
-/// asks this one in its own words still; which runners there are, in which order, and
-/// what a run calls itself are facts held in more than one source with no compiler
-/// between them. `app/tests/circuit-overpass.spec.ts` is where that is held together.
+/// The probe asks the same service a different question, in a project of its own;
+/// which runners there are, in which order, and what a run calls itself are facts
+/// held in both projects with no compiler between them.
+/// `app/tests/circuit-overpass.spec.ts` is where that is held together.
 ///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; an answer read
 /// here is a derivative of their tags.

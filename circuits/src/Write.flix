@@ -21,7 +21,7 @@
 ///
 /// A run without `--write` changes nothing and answers one question: does the survey over
 /// the kept answer still draw the bytes the app serves? The fence over every circuit at once
-/// is `circuits/regenerate-geometry.ts`'s, and compares parsed properties with `surveyed_at`
+/// is `Regenerate.flix`'s, and compares parsed properties with `surveyed_at`
 /// exempt; this comparison is of bytes, and `surveyed_at` needs no exemption here because
 /// the survey reads the very answer whose stamp the property carries.
 pub mod Write {

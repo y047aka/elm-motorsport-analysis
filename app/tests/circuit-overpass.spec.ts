@@ -4,46 +4,42 @@ import { readdirSync, lstatSync } from 'node:fs';
 import { readSource } from './helpers';
 
 /**
- * OpenStreetMap is asked from two languages, and no compiler sees the other.
+ * OpenStreetMap is asked by two projects in one language, and no compiler sees
+ * both.
  *
- * The pipeline that writes a circuit's geometry asked it in TypeScript
- * (`circuits/circuit-geometry.ts`), the probe that decides which relation a
- * circuit is asks it in Flix (`circuits/probe/`, `nix run .#geometry-probe`), and
- * the pipeline asks it in Flix too now (`circuits/src/Overpass.flix`, `nix run
- * .#geometry-fetch`) — the TypeScript spelling is what the atlas reading and the
- * regeneration fence still import, so the four facts about the meeting are held
- * three times: which runners there are and in which order, what a run
- * calls itself, how many times each runner is asked, and how long one that just
- * failed is left alone.
+ * The pipeline that writes a circuit's geometry asks it
+ * (`circuits/src/Overpass.flix`, `nix run .#geometry-fetch`), and the probe that
+ * decides which relation a circuit is asks it (`circuits/probe/`, `nix run
+ * .#geometry-probe`) — the TypeScript asking retired with the regeneration
+ * fence's move into the jar, so the four facts about the meeting are held
+ * twice: which runners there are and in which order, what a run calls itself,
+ * how many times each runner is asked, and how long one that just failed is
+ * left alone.
  *
- * None of those fail loudly when they part. A runner dropped from one list sends
- * half the runs to a busy machine that the other language knows a second of; a
- * user agent that differs is a request whose operator cannot tell a probe from a
- * flood; and a backoff that shrinks to nothing is a retry loop aimed at a runner
- * that was already down. So the four are read out of both sources and compared,
- * the way `circuit-timing-map.spec.ts` reads a circuit's timing figures out of
- * both sides of the Flix/TypeScript line, and the sphere a probe's metres are
- * measured on is read out of all three languages that use it.
+ * None of those fail loudly when they part. A runner dropped from one list
+ * sends half the runs to a busy machine that the other project knows a second
+ * of; a user agent that differs is a request whose operator cannot tell a
+ * probe from a flood; and a backoff that shrinks to nothing is a retry loop
+ * aimed at a runner that was already down. So the four are read out of both
+ * sources and compared, the way `circuit-timing-map.spec.ts` reads a circuit's
+ * timing figures out of both sides of the Flix/TypeScript line, and the sphere
+ * a probe's metres are measured on is read out of all three languages that use
+ * it — three, because the atlas reading still measures metres in TypeScript
+ * even though nothing in TypeScript asks OpenStreetMap.
  *
  * Nothing here needs a browser.
  */
 
-const node = readSource('circuits/circuit-geometry.ts');
+const atlas = readSource('circuits/circuit-geometry.ts');
 const flix = readSource('circuits/probe/src/Overpass.flix');
 const pipeline = readSource('circuits/src/Overpass.flix');
 const candidates = readSource('circuits/probe/src/Candidates.flix');
 const command = readSource('circuits/probe/src/Probe.flix');
 
-/** Everything the probe compiles, for the readings that ask only of its text. */
-const everySource = [node, flix, candidates, command, readSource('circuits/probe/src/Main.flix')];
+/** Everything that asks OpenStreetMap, for the readings that ask only of its text. */
+const everySource = [pipeline, flix, candidates, command, readSource('circuits/probe/src/Main.flix')];
 
-/** The runners, in the order each language walks them. */
-function nodeRunners(): string[] {
-  const body = node.split('const overpassRunners = [')[1]?.split(']')[0];
-  expect(body, 'circuit-geometry.ts declares no overpassRunners to compare').toBeTruthy();
-  return [...body!.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-}
-
+/** The probe's runners, in the order it walks them. */
 function flixRunners(): string[] {
   return flixRunnersIn(flix, 'the probe');
 }
@@ -73,16 +69,17 @@ function quoted(text: string, where: string): string {
   return found![1];
 }
 
-test('both languages ask the same runners, in the same order', () => {
-  const asked = nodeRunners();
+test('the probe and the pipeline ask the same runners, in the same order', () => {
+  const asked = flixRunnersIn(pipeline, 'the pipeline');
   expect(asked.length, 'the pipeline asks no Overpass runner').toBeGreaterThan(1);
-  expect(flixRunners(), 'the probe walks a different list of Overpass runners, or the same ones in another order').toEqual(
-    asked,
-  );
+  expect(
+    flixRunners(),
+    'the probe walks a different list of Overpass runners, or the same ones in another order',
+  ).toEqual(asked);
 });
 
-test('a run names itself the same in either language', () => {
-  const agent = quoted(node.split('const userAgent = ')[1]!, 'circuit-geometry.ts userAgent');
+test('a run names itself the same in either project', () => {
+  const agent = quoted(flixDefIn(pipeline, 'userAgent', 'the pipeline'), 'the pipeline userAgent');
   expect(
     quoted(flixDef('userAgent'), 'the probe userAgent'),
     'a runner reading a log cannot tell this probe from that pipeline, and neither can a rate limiter',
@@ -91,59 +88,21 @@ test('a run names itself the same in either language', () => {
 
 /**
  * Each runner is asked twice, and the wait before the next request is a function
- * of which attempt just failed. TypeScript spells it `attempt * 4000` and Flix
- * `4000 * attempt`; the multiplication is the fact, and the order of the factors
- * is nothing.
+ * of which attempt just failed. The multiplication is the fact, and the order of
+ * the factors is nothing — which is why the two spellings are read for the unit
+ * rather than for the whole product.
  */
 test('each runner is asked twice, and one that failed is left alone by the same arithmetic', () => {
-  const perRunner = Number(node.split('attempt <= ')[1]?.match(/^(\d+)/)?.[1]);
-  expect(perRunner, 'circuit-geometry.ts asks each runner an unreadable number of times').toBe(2);
+  const perRunner = Number(flixDefIn(pipeline, 'tries', 'the pipeline').match(/= (\d+)/)?.[1]);
+  expect(perRunner, 'the pipeline asks each runner an unreadable number of times').toBe(2);
   expect(Number(flixDef('tries').match(/= (\d+)/)?.[1]), 'the probe asks each runner a different number of times').toBe(
     perRunner,
   );
 
-  const nodeUnit = Number(node.split('await sleep(')[1]?.match(/^attempt \* (\d+)/)?.[1]);
+  const pipelineUnit = Number(flixDefIn(pipeline, 'backoff', 'the pipeline').match(/Duration\.of\((\d+) \* attempt/)?.[1]);
   const flixUnit = Number(flixDef('backoff').match(/Duration\.of\((\d+) \* attempt/)?.[1]);
-  expect(nodeUnit, 'the pipeline backs off by an amount this spec cannot read').toBeGreaterThan(0);
-  expect(flixUnit, 'the probe backs off by an amount this spec cannot read').toBe(nodeUnit);
-});
-
-/**
- * The pipeline's own Flix asking, read against the same two spellings. It is a
- * third holder of the four facts rather than a new kind of fact: the Flix
- * survey spells its runners, its name, its tries and its backoff in a file of
- * its own, and a rename of any one of them on one side is a run that visits a
- * runner the others steer around.
- */
-test('the Flix pipeline asks the same runners, of its own name, the same number of times', () => {
-  const asked = nodeRunners();
-  expect(
-    flixRunnersIn(pipeline, 'the Flix pipeline'),
-    'the Flix pipeline walks a different list of Overpass runners, or the same ones in another order',
-  ).toEqual(asked);
-
-  const agent = quoted(node.split('const userAgent = ')[1]!, 'circuit-geometry.ts userAgent');
-  expect(
-    quoted(flixDefIn(pipeline, 'userAgent', 'the Flix pipeline'), 'the Flix pipeline userAgent'),
-    'a runner reading a log cannot tell this probe from this survey, and neither can a rate limiter',
-  ).toBe(agent);
-
-  const perRunner = Number(node.split('attempt <= ')[1]?.match(/^(\d+)/)?.[1]);
-  expect(
-    Number(flixDefIn(pipeline, 'tries', 'the Flix pipeline').match(/= (\d+)/)?.[1]),
-    'the Flix pipeline asks each runner a different number of times',
-  ).toBe(perRunner);
-
-  const flixUnit = Number(flixDef('backoff').match(/Duration\.of\((\d+) \* attempt/)?.[1]);
-  const pipelineUnit = Number(flixDefIn(pipeline, 'backoff', 'the Flix pipeline').match(/Duration\.of\((\d+) \* attempt/)?.[1]);
-  expect(pipelineUnit, 'the Flix pipeline backs off by an amount this spec cannot read').toBe(flixUnit);
-
-  for (const sentence of [
-    'Overpass answered with something that is not JSON',
-    'every Overpass runner failed',
-  ]) {
-    expect(pipeline, `the Flix pipeline does not say "${sentence}" where the probe does`).toContain(sentence);
-  }
+  expect(pipelineUnit, 'the pipeline backs off by an amount this spec cannot read').toBeGreaterThan(0);
+  expect(flixUnit, 'the probe backs off by an amount this spec cannot read').toBe(pipelineUnit);
 });
 
 /**
@@ -151,32 +110,36 @@ test('the Flix pipeline asks the same runners, of its own name, the same number 
  * to each other by any compiler, and a reader who has seen one and searches for
  * the other finds nothing.
  */
-test('an answer neither language can read is reported in one set of words', () => {
+test('an answer neither project can read is reported in one set of words', () => {
   for (const sentence of [
     'Overpass answered with something that is not JSON',
     'every Overpass runner failed',
   ]) {
-    expect(node, `the pipeline does not say "${sentence}" where the probe does`).toContain(sentence);
+    expect(pipeline, `the pipeline does not say "${sentence}" where the probe does`).toContain(sentence);
     expect(flix, `the probe does not say "${sentence}" where the pipeline does`).toContain(sentence);
   }
 });
 
 /**
  * A query is posted as a form body rather than put in a URL: an answer of tens of
- * thousands of points begins as a query long enough to be refused by one of the
- * two, and a 414 from a runner arrives as a failure to reach it.
+ * thousands of points begins as a query long enough to be refused by a runner,
+ * and a 414 arrives as a failure to reach it. Both Flix spellings post the same
+ * way; a third spelling in a language with no answer to that question no longer
+ * needs holding to it.
  */
 test('a query goes up as a form field and not as a URL', () => {
-  expect(node.split('body: ')[1], 'the pipeline no longer posts the query as a form body').toMatch(
-    /new URLSearchParams\(\{ data: query \}\)/,
-  );
-  expect(flix.split('HttpRequest.postWith')[1], 'the probe puts the query somewhere other than `data=`').toMatch(
-    /^\(url, "data=\$\{Net\.HttpLayer\.urlEncode\(question\)\}"/,
-  );
+  for (const [source, where] of [
+    [pipeline, 'the pipeline'],
+    [flix, 'the probe'],
+  ]) {
+    expect(source.split('HttpRequest.postWith')[1], `${where} no longer posts the query as a form body`).toMatch(
+      /^\(url, "data=\$\{Net\.HttpLayer\.urlEncode\(question\)\}"/,
+    );
+  }
 });
 
 /**
- * The second question both languages ask: the relation whole and its member ways.
+ * The second question both projects ask: the relation whole and its member ways.
  * `way(r)` is the recursion that brings the ways whose roles the probe counts and
  * whose lines the pipeline chains, so a question that stops short of it asks about
  * a circuit nobody measures. Where the two part is after that — the survey goes on
@@ -185,11 +148,10 @@ test('a query goes up as a form field and not as a URL', () => {
  * one.
  */
 test('the probe asks for the ways the pipeline chains', () => {
-  const askedByNode = node.split('askOverpass(`')[1]?.split('`')[0];
-  const askedByFlix = command.split('relation(${element#id});')[1]?.split(';')[0];
-  expect(askedByNode, 'the pipeline no longer asks a relation and its ways in one query').toBeTruthy();
-  expect(askedByNode!, "the pipeline no longer recurses to the relation's ways").toContain('way(r)');
-  expect(askedByFlix, "the probe no longer recurses to the relation's ways").toBe('out body');
+  const askedByProbe = command.split('relation(${element#id});')[1]?.split(';')[0];
+  expect(askedByProbe, "the probe no longer recurses to the relation's ways").toBe('out body');
+  expect(pipeline, "the pipeline no longer recurses to the relation's ways").toContain('way(r)');
+  expect(pipeline, 'the pipeline no longer asks for the nodes it chains').toContain('node(w)');
   expect(command, "the probe asks for nodes, which is a survey's question and not a probe's").not.toContain('node(w)');
 });
 
@@ -205,7 +167,7 @@ test("a probe's metres are measured on the sphere the survey is measured on", ()
     expect(found, `${where} states no earth radius in metres`).toBeTruthy();
     return Number(found![1]);
   };
-  const surveyed = radius(node.split('export const earthRadius')[1]!.split('\n')[0]!, 'circuit-geometry.ts');
+  const surveyed = radius(atlas.split('export const earthRadius')[1]!.split('\n')[0]!, 'circuit-geometry.ts');
   const probed = radius(candidates.split('def earthRadius')[1]!.split('\n')[0]!, 'the probe');
   const drawn = radius(readSource('package/src/Motorsport/Circuit/Geodesy.elm'), 'Motorsport.Circuit.Geodesy');
   expect(probed, 'a probe measures its laps on a different sphere from the one the geometry is measured on').toBe(

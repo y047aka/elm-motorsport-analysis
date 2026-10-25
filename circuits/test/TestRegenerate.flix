@@ -1,8 +1,7 @@
 /// The regeneration fence's comparison: what counts as the same drawing from a
 /// different run, what counts as the drawing having moved, and which single
-/// property a live regeneration is allowed to move. These are the readings
-/// `circuits/tests/geometry-drift.test.ts` holds the TypeScript comparison to, in
-/// the language the fence now runs in.
+/// property a live regeneration is allowed to move — and the coverage of the
+/// comparison over the file the project's own writer lays.
 pub mod TestRegenerate {
 
     use Circuit.Circuit

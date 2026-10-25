@@ -1,18 +1,11 @@
-// The geometry pipeline in the language the atlas reading and the regeneration
-// fence are written in: take a relation's surveyed points, chain its ways into
-// a lap, stretch the lap to the length the circuit publishes, simplify it, and
-// write the geometry GeoJSON. The commands that ask OpenStreetMap and lay the
-// served file are the Flix project at this directory's root now; what still
-// reaches here — the atlas reading, the regeneration fence, the geometry
-// contract — reaches it as a library, and `regenerate-geometry.ts` is where a
-// run still asks OpenStreetMap in TypeScript.
-//
-// A circuit's config — its relation, its published lap length, the word its
-// rounds are known by — is what this module is given. The answer a geometry
-// was drawn from is kept beside each circuit's config as the pipeline's frozen
-// input, which `regenerate-geometry.ts` re-runs this module over; a live
-// regeneration asks OpenStreetMap again regardless. Where the written file
-// stands, who reads it and what holds it is `circuits/README.md`.
+// The geometry pipeline in the language the atlas reading is written in: take a
+// relation's surveyed points, chain its ways into a lap, stretch the lap to the
+// length the circuit publishes, simplify it, and write the geometry GeoJSON.
+// The commands that ask OpenStreetMap and lay the served file, and the
+// regeneration fence over every circuit at once, are the Flix project at this
+// directory's root; what still reaches here — the atlas reading, the geometry
+// contract — reaches it as a library, and nothing in TypeScript asks
+// OpenStreetMap at all.
 //
 // OpenStreetMap data is © OpenStreetMap contributors, under the ODbL, and every
 // geometry and module written here is a derivative of it.
@@ -27,11 +20,6 @@ import { checkStandsAt, nodeWithin } from "./timing-line.ts";
 // Every tool in this directory works from the repository root, which is where
 // the configs' `geojson` paths and the data and export directories live.
 export const repoDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const overpassRunners = [
-  "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-];
-const userAgent = "elm-motorsport-analysis/1.0 (circuit geometry)";
 
 // Metres a simplified line may stray from the surveyed one.
 const tolerance = 1.0;
@@ -173,43 +161,6 @@ export interface Geometry {
 /** What a failure says, whether it is an Error or what a runner threw. */
 export function reason(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-/** One query, walked over the runners twice each: a busy one answers 502 or
- * 504 — or 200 with an HTML error page behind a proxy, so the body is looked at
- * and not just the status — and the next answers the same query. */
-export async function askOverpass(query: string): Promise<OverpassAnswer> {
-  let failure = "no runner was reached";
-  const tries = overpassRunners.length * 2;
-  for (const [runner, url] of overpassRunners.entries()) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const left = tries - (runner * 2 + attempt);
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "User-Agent": userAgent, "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ data: query }),
-        });
-        const body = await response.text();
-        if (!response.ok) throw new Error(`Overpass answered ${response.status}`);
-        if (!"{[".includes(body[0])) throw new Error("Overpass answered with something that is not JSON");
-        return JSON.parse(body);
-      } catch (error) {
-        failure = reason(error);
-        if (left > 0) await sleep(attempt * 4000);
-      }
-    }
-  }
-  throw new Error(`every Overpass runner failed: ${failure}`);
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** The Overpass answer for one relation: its ways with their tags, and nodes. */
-export async function ask(relation: number): Promise<OverpassAnswer> {
-  return askOverpass(`[out:json][timeout:120];relation(${relation});out body;way(r);out body;node(w);out skel;`);
 }
 
 /**

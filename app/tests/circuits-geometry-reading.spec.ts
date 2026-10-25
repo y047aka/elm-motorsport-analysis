@@ -15,9 +15,9 @@ import { readSource } from './helpers';
  * and `Survey.flix` with `Write.flix`, which do the same over a kept answer — `nix run
  * .#geometry-survey` fails unless the bytes it lays are the bytes the app serves. Asking
  * OpenStreetMap is Flix's now too, and the regeneration fence asks it through the jar itself
- * (`circuits/src/Regenerate.flix`, `nix run .#geometry-regenerate`); the TypeScript spelling
- * of that asking stands until it retires, and `circuit-overpass.spec.ts` is where the facts
- * of it are read out of every spelling that remains.
+ * (`circuits/src/Regenerate.flix`, `nix run .#geometry-regenerate`); nothing in TypeScript
+ * asks OpenStreetMap at all, and `circuit-overpass.spec.ts` is where the facts of that asking
+ * are read out of the two Flix spellings.
  *
  * A parting is silent in both directions. The apartness of two lines sampled on another bound is
  * a mean within a few metres of the truth, which reads as a reading of two lines that in fact
@@ -32,7 +32,6 @@ import { readSource } from './helpers';
 
 const node = readSource('circuits/apartness.ts');
 const kept = readSource('circuits/geometry-file.ts');
-const drift = readSource('circuits/geometry-drift.ts');
 const allowance = readSource('circuits/timing-line.ts');
 const survey = readSource('circuits/circuit-geometry.ts');
 const atlas = readSource('circuits/atlas-geometry.ts');
@@ -634,7 +633,6 @@ test('a byte comparison exempts nothing, where a property comparison exempts the
   // `surveyed_at` move, because a regeneration that asks OpenStreetMap now takes a newer
   // survey. The Flix comparison is of bytes, and has nothing to exempt: it reads the very
   // answer whose stamp the property carries, so the stamp it writes is the stamp it reads.
-  expect(drift).toContain('if (key === "surveyed_at") continue;');
   expect(fence, 'the Flix fence does not exempt the survey stamp where the property comparison exempts it').toContain(
     'key != "surveyed_at"',
   );

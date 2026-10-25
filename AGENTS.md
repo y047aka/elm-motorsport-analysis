@@ -65,7 +65,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (the `circuits/probe` project, which resolves no dependency, links no source and computes in no database; `<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
 | `nix run .#geometry-probe-test` | The probe's own tests (the `circuits/probe` project's; no network, no database, nothing written) |
 | `nix run .#geometry-test` | The circuit tools' unit tests: their side-effect-free readings, run by Node's own runner over fixtures (`circuits/tests/`, no network, nothing written) |
-| `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
+| `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (the `circuits` geometry project's own regeneration fence; `[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the `circuits/timing` project, which resolves no dependency and computes in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#geometry-timing-test` | The timing report's own tests (the `circuits/timing` project's; no database, no network, nothing written) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
@@ -598,8 +598,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **Circuit tools** (`circuits/tests/`) — `nix run .#geometry-test`, Node's built-in
   runner; the directory installs nothing. Each command kept its own I/O and moved
   its reading of an answer into a module that opens nothing —
-  `atlas-line.ts` (a foreign file's shapes and guards), `geometry-drift.ts` (two
-  geometries laid together) — and the tests hand those fixtures. The readings of
+  `atlas-line.ts` (a foreign file's shapes and guards) — and the tests hand
+  those fixtures; the regeneration fence's own comparison is `Regenerate.flix`'s,
+  tested in that project. The readings of
   the two feeds are Flix's, driven by `nix run .#geometry-timing-test` and
   `.#geometry-probe-test`: a timing CSV and an Overpass answer are each read in one
   language and not two. The geometry pipeline is a Flix project of its own (at the
@@ -632,12 +633,12 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   symlinks into `flix/src` resolve — a broken one fails elsewhere as
   `Undefined use`, far from its cause — names the sources the report holds a second
   copy of, and fails everything it compiles for naming a database.
-- **Overpass, asked in two languages** (`/app/tests/circuit-overpass.spec.ts`) —
+- **Overpass, asked twice in Flix** (`/app/tests/circuit-overpass.spec.ts`) —
   the probe and the pipeline at the `circuits/` root each read OpenStreetMap in
-  Flix and the regeneration fence still asks it in TypeScript, so
-  the runners, their order, the user agent, the tries per runner and the backoff
-  arithmetic are four facts held in every spelling that asks, with no compiler
-  between them; none of them fails loudly when they part, since a runner missing
+  a project of their own, the TypeScript asking having retired with the
+  regeneration fence's move into the jar, so the runners, their order, the user
+  agent, the tries per runner and the backoff arithmetic are four facts held in
+  both spellings that ask, with no compiler between them; none of them fails loudly when they part, since a runner missing
   from one list is a run with nowhere else to go. The sphere a probe's metres are measured on is read out of all
   three languages that use it — the survey's, the probe's and the projection's —
   because the one reading that decides a config is whether a lap measures 13.6 km.
