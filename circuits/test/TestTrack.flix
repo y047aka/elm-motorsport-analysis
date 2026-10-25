@@ -128,21 +128,24 @@ pub mod TestTrack {
     def testCheckOriginAnswersNoughtForACircuitPublishingNoLine(): Unit \ Assert =
         Assert.assertTrue(Track.checkOrigin({lon = 0.0, lat = 0.0}, None) == Ok(0.0))
 
+    /// The allowance a measured line is held to is the reading's own. The `within`
+    /// a circuit authors is how far a *relation's node* may stand from the published
+    /// place — the crosshair of the map the line was copied from — and a line
+    /// measured off orthoimagery chooses its own start, so it is not held to it.
     @Test
-    def testCheckOriginJudgesByTheLinesOwnAllowanceWhenItNamesOne(): Unit \ Assert =
+    def testCheckOriginHoldsTheMeasuredLineToTheReadingsOwnAllowance(): Unit \ Assert =
         let published = {place = {lon = 0.0, lat = 47.0}, within = Some(5.0)};
-        // A tenth of a hundredth of a degree walks about eleven metres — past five.
+        // A tenth of a hundredth of a degree walks about eleven metres — past the
+        // node's five, inside the reading's twenty-five.
         let candidate = {lon = 0.0, lat = 47.0001};
+        Assert.assertTrue(Result.isOk(Track.checkOrigin(candidate, Some(published))));
+        // Ten times as far is past the reading's own allowance, and the refusal
+        // quotes that allowance and not the node's.
         Assert.assertTrue(
             complains(
-                "the atlas lap is 11.1 m from the published timing line, which is not within 5 m. Its markers would be measured from the wrong line.",
-                Track.checkOrigin(candidate, Some(published))
+                "not within 25 m",
+                Track.checkOrigin({lon = 0.0, lat = 47.001}, Some(published))
             )
-        );
-        // The same distance at the reading's own allowance stands: a measured line
-        // chooses its own start, and only another line's start must be kept out.
-        Assert.assertTrue(
-            Result.isOk(Track.checkOrigin(candidate, Some({place = published#place, within = None})))
         )
 
     @Test

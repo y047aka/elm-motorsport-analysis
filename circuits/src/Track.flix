@@ -26,9 +26,12 @@ pub mod Track {
     /// reading of a feature is the reading of a map.
     pub type alias Feature = Map[String, Json]
 
-    /// How far the start of a line measured off orthoimagery may stand from the published
-    /// line and still be the same lap. The allowance a relation's node is held to is
-    /// narrower — `Circuit.nodeWithin` — because a relation tags the line itself.
+    /// How far the start of a line measured off orthoimagery may stand from the
+    /// published line and still be the same lap. The allowance a relation's node is
+    /// held to is narrower — `Circuit.nodeWithin` — because a relation tags the line
+    /// itself. It is not asked of a measured line: the `within` a circuit authors
+    /// belongs to the node the survey chains from, and `checkOrigin` holds every
+    /// atlas lap to this one distance whoever the line names.
     pub def measuredWithin(): Float64 = 25.0
 
     /// The file's features, whatever any of them is tagged with.
@@ -186,16 +189,17 @@ pub mod Track {
     /// The atlas reading's share of the one question both pipelines ask: how far the
     /// measured lap's first point stands from the published line, and the failure when
     /// it starts another line over. A circuit that publishes no line asks nothing, and
-    /// is answered with nought.
+    /// is answered with nought. The distance allowed is this reading's own
+    /// `measuredWithin`, not the line's `within`: where a line measured off
+    /// orthoimagery begins is that survey's own choice.
     pub def checkOrigin(first: Place, line: Option[TimingLine]): Result[String, Float64] =
         match line {
             case None => Ok(0.0)
             case Some(published) =>
                 let distance = Survey.apart(first, published#place);
-                let limit = Option.getWithDefault(measuredWithin(), published#within);
-                if (distance > limit)
+                if (distance > measuredWithin())
                     Err(
-                        "the atlas lap is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.spelled(limit)} m. Its markers would be measured from the wrong line."
+                        "the atlas lap is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.spelled(measuredWithin())} m. Its markers would be measured from the wrong line."
                     )
                 else
                     Ok(distance)
