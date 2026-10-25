@@ -148,6 +148,11 @@ pub mod Apart {
         distance = Float64
     }
 
+    /// How far apart two lines are sampled unless the reader names another spacing:
+    /// corners stand tens of metres apart and the apartness is a slow wave along a
+    /// lap. The commands that lay lines together all default to this one spacing.
+    pub def defaultEvery(): Float64 = 25.0
+
     /// The reading of two lines: how many places were sampled, the mean apartness, and
     /// the worst of them — the number a reader acts on, which is why it travels with the
     /// place it was found at on each line's own measure.

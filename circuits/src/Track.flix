@@ -216,7 +216,10 @@ pub mod Track {
     /// is named for the sector that begins at it, which is how the atlas reading and
     /// `Cli.TimingLines.Feed`'s `publishedLines` — over in the timing project, sharing
     /// only the geometry file — spell the same line the same thing. Stretches are
-    /// trusted with the lap length they add up to and with nothing else.
+    /// trusted with the lap length they add up to and with nothing else — and with
+    /// the same tenth of a metre `publishedLines` trusts them with, one spelling per
+    /// project because Flix links no local path; `app/tests/circuit-timing-map.spec.ts`
+    /// reads both spellings and fails them apart.
     pub type alias PublishedLine = {
         id     = String,
         metres = Float64

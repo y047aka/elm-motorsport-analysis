@@ -169,6 +169,29 @@ test('a circuit Flix holds a map for is one whose config authors it that way', (
 });
 
 /**
+ * The one claim a circuit's published stretches are trusted with -- that they
+ * add up to the lap -- is checked twice over, once per project, to a tenth of a
+ * metre each: `Track.sectorLines` turns a geometry's `sectors` away and
+ * `Feed.publishedLines` refuses the figures `Motorsport.Circuit` holds. Flix
+ * has no local path dependency, so the tenth is spelled in both sources and
+ * nothing compiles both; a tenth moved on one side alone would leave one
+ * reader accepting stretches the other refuses.
+ */
+test('both readers trust the published stretches by the same tenth', () => {
+  const tenth = (source: string, where: string): number => {
+    const found = source.match(/Float64\.abs\([a-zA-Z]+ - [a-zA-Z]+\) > ([0-9.]+)/);
+    expect(found, `${where} states no stretch-sum tolerance to compare`).toBeTruthy();
+    return Number(found![1]);
+  };
+  const drawing = tenth(readSource('circuits/src/Track.flix'), 'Track.sectorLines');
+  expect(drawing, 'the stretch-sum tolerance is not a readable distance').toBeGreaterThan(0);
+  expect(
+    tenth(readSource('circuits/timing/src/Cli/TimingLines/Feed.flix'), 'Feed.publishedLines'),
+    'one reader trusts stretches the other refuses',
+  ).toBe(drawing);
+});
+
+/**
  * The report's project shares `flix/src` by symlink, because Flix has no local
  * path dependency and `flix build` takes no source directory. Two facts hold that
  * sharing up, and neither is visible from either project's own build: a symlinked

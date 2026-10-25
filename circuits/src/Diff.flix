@@ -19,10 +19,6 @@ pub mod Diff {
     use Geometry.Place
     use Sys.Console
 
-    /// How far apart the two lines are sampled, unless the reader names another spacing:
-    /// corners stand tens of metres apart and the apartness is a slow wave along a lap.
-    pub def defaultEvery(): Float64 = 25.0
-
     /// The width the overlay is drawn at and the margin it is drawn inside, fixed so that
     /// two runs' overlays can be laid against each other: an overlay that resized itself
     /// to its contents would make a changed line look like a moved one.
@@ -63,7 +59,7 @@ pub mod Diff {
         }
 
     def complete(paths: List[String], every: Option[Float64], svg: Option[String]): Result[String, Args] = {
-        let asked = Option.getWithDefault(defaultEvery(), every);
+        let asked = Option.getWithDefault(Apart.defaultEvery(), every);
         if (List.length(paths) != 2)
             Err(usage())
         else if (asked <= 0.0)

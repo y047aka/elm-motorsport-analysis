@@ -240,7 +240,11 @@ pub mod Cli.TimingLines.Feed {
     /// place by two names.
     ///
     /// The only thing the stretches are trusted with is the lap length they add
-    /// up to; where the times place them is `Cli.TimingLines`'s question.
+    /// up to; where the times place them is `Cli.TimingLines`'s question. That
+    /// trust is the geometry project's `Track.sectorLines`' tenth too — the two
+    /// projects share no source, so the tenth is spelled twice and
+    /// `app/tests/circuit-timing-map.spec.ts` is what keeps the two spellings one
+    /// distance.
     pub def publishedLines(stretches: List[Float64], lapLength: Float64): Result[CliError, List[Line]] =
         let added = total(stretches);
         if (Float64.abs(added - lapLength) > 0.15)

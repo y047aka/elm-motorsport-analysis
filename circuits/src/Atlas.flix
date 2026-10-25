@@ -31,10 +31,6 @@ pub mod Atlas {
     use Sys.Console
     use Util.Json.Json
 
-    /// How often the line is sampled for the apartness reading — corners sit tens of
-    /// metres apart and the deviation is a slow wave along the lap.
-    pub def every(): Float64 = 25.0
-
     /// What a run calls itself at the atlas's home. Not the Overpass user agent: this
     /// asks a dataset's repository, not a live map's service, once and without retries.
     pub def userAgent(): String = "elm-motorsport-analysis/1.0 (atlas geometry)"
@@ -326,7 +322,7 @@ pub mod Atlas {
         let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
         match (
             Track.checkOrigin(first, circuit#timingLine),
-            Apart.apartness(theirPoints, theirMetres, ourPoints, ours#metres, every())
+            Apart.apartness(theirPoints, theirMetres, ourPoints, ours#metres, Apart.defaultEvery())
         ) {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
@@ -490,7 +486,7 @@ pub mod Atlas {
                 + originSentence(circuit, reading#origin)
         );
         Console.println(
-            "lines sampled every ${Util.Format.spelled(every())} m (${reading#deviation#count}): mean apart ${Util.Format.fixed(1, reading#deviation#mean)} m, "
+            "lines sampled every ${Util.Format.spelled(Apart.defaultEvery())} m (${reading#deviation#count}): mean apart ${Util.Format.fixed(1, reading#deviation#mean)} m, "
                 + "max ${Util.Format.fixed(1, reading#deviation#worst#distance)} m at their ${Util.Format.fixed(0, reading#deviation#worst#aMetres)} m, our ${Util.Format.fixed(1, reading#deviation#worst#bMetres)} m"
         );
         Console.println(cornersSentence(distances, laps, worstLap));
