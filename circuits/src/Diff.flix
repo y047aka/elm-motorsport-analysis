@@ -53,8 +53,8 @@ pub mod Diff {
             case Nil => complete(List.reverse(paths), every, svg)
             case "--every" :: spelled :: further =>
                 match Float64.fromString(spelled) {
-                    case Some(km) => walked(paths, further, Some(km), svg)
-                    case None     => Err("\"${spelled}\" is not a distance")
+                    case Some(metres) => walked(paths, further, Some(metres), svg)
+                    case None         => Err("\"${spelled}\" is not a distance")
                 }
             case "--every" :: Nil => Err("--every names no distance")
             case "--svg" :: path :: further => walked(paths, further, every, Some(path))
