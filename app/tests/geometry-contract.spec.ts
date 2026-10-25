@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { readdirSync } from 'node:fs';
-import { circuit as cota } from '../../circuits/cota/circuit.ts';
-import { circuit as leMans } from '../../circuits/le_mans/circuit.ts';
-import { geometryFromGeoJson } from '../../circuits/circuit-geometry.ts';
-import { drawnNames, readSource } from './helpers';
+import { existsSync } from 'node:fs';
+
+import { authoredCircuits, drawnNames, readSource } from './helpers';
 
 /**
  * The served half of the circuit seam. A drawn circuit is two lists in
@@ -15,47 +13,86 @@ import { drawnNames, readSource } from './helpers';
  * as a lie. The words come out of the sources and the geometry out of the
  * kept files; nothing needs a browser.
  *
- * The flake's geometry apps are the one list here that nothing else reads:
- * the `nix run` name, the script it runs and the script's own header are
- * three spellings of one command, and a rename of any of them fails at run
- * time with a Node message rather than at check time with a test name. A
- * command the Flix project answers registers itself the same way with a
- * `flix` command line where the script name would be; those names are
- * exempt here and read in `circuits-geometry-reading.spec.ts`, which is also
- * where the dispatch they reach is read.
+ * The figures a geometry is written from are authored once, in
+ * `circuits/src/Circuit.flix`; the re-check here reads the kept file with its
+ * own eyes -- the outline, its ascending metres, the pit lane beside it, the
+ * sectors it publishes -- so what it judges is the bytes the app is served and
+ * not a reading the pipeline shares.
  */
 
-const authored: Record<string, typeof cota> = { cota, le_mans: leMans };
+const authored = authoredCircuits();
 
-const layouts: Record<string, string> = {
-  cota: 'package/src/Motorsport/Wec/Circuit/Cota/Layout.elm',
-  le_mans: 'package/src/Motorsport/Wec/Circuit/LeMans/Layout.elm',
-};
+/** The outline the pipeline wrote, or nothing where none is kept. */
+function outline(file: unknown): { properties: Record<string, never> } | null {
+  const found = (file as { features: { properties?: { role?: string } }[] }).features.find(
+    (feature) => feature.properties?.role === 'outline',
+  );
+  return found ? { properties: found.properties as Record<string, never> } : null;
+}
 
 test('every circuit Shared draws has its geometry where the app reaches for it', async () => {
-  const names = drawnNames();
-  for (const name of names) {
-    const script = authored[name];
-    expect(script, `${name} is drawn, but no script authors its geometry to check it against`).toBeTruthy();
-    // The same checks the generator ran on the way out, run on the file as it is kept.
+  for (const name of drawnNames()) {
+    const circuit = authored[name];
+    expect(circuit, `${name} is drawn, but no config authors its geometry to check it against`).toBeTruthy();
     const file = JSON.parse(readSource(`app/static/geometry/${name}.geojson`));
-    geometryFromGeoJson(file, script);
-    const outline = file.features.find((f: { properties?: { role?: string } }) => f.properties?.role === 'outline');
-    expect(outline.properties.circuit, `${name}: the kept file is not the geometry the script writes`).toBe(name);
+    const props = outline(file)?.properties;
+    expect(props, `${name}: the kept file holds no outline`).toBeTruthy();
+    expect(props!.circuit, `${name}: the kept file is not the geometry the config writes`).toBe(name);
+    expect(
+      ['osm-centreline', 'measured-midline'],
+      `${name}: the kept file claims a basis no reading knows`,
+    ).toContain(props!.basis);
+    expect(props!.direction, `${name}: the kept file says it runs in no direction`).toMatch(
+      /^(clockwise|counter_clockwise)$/,
+    );
+    expect(
+      Math.abs(props!.lap_length_m - circuit!.lap),
+      `${name}: the kept file is a different lap from the one the config authors`,
+    ).toBeLessThanOrEqual(0.1);
+    const metres = props!.metres as number[];
+    expect(metres[metres.length - 1], `${name}: the kept file's own metres do not end at its lap`).toBeCloseTo(
+      props!.lap_length_m,
+      1,
+    );
+    for (let i = 1; i < metres.length; i++) {
+      expect(metres[i], `${name}: the kept file's metres go backwards at point ${i}`).toBeGreaterThanOrEqual(metres[i - 1]);
+    }
+    if (circuit!.sectors.kind === 'published') {
+      const stretches = props!.sectors.stretches as number[];
+      expect(
+        stretches.reduce((sum, stretch) => sum + stretch, 0),
+        `${name}: the kept file's sectors do not add up to the published lap`,
+      ).toBeCloseTo(circuit!.lap, 1);
+    }
+    const pit = (file as { features: { properties?: { role?: string } }[] }).features.find(
+      (feature) => feature.properties?.role === 'pit_lane',
+    );
+    expect(pit, `${name}: the kept file holds no pit lane`).toBeTruthy();
   }
 });
 
 test("a circuit's directory is named by the word the app draws it by", () => {
   for (const name of drawnNames()) {
-    expect(authored[name].script, `${name}'s config does not live in circuits/${name}/`).toBe(`circuits/${name}/circuit.ts`);
+    expect(authored[name], `${name} is drawn, but the Flix config authors no circuit by that word`).toBeTruthy();
+    expect(
+      existsSync(new URL(`../../circuits/${name}/overpass.json`, import.meta.url)),
+      `${name} is drawn, but no kept Overpass answer stands in circuits/${name}/`,
+    ).toBe(true);
   }
 });
 
-test('the Elm decoder is given the lap length the script was given', () => {
+test('the Elm decoder is given the lap length the config authors', () => {
+  const layouts: Record<string, string> = {
+    cota: 'package/src/Motorsport/Wec/Circuit/Cota/Layout.elm',
+    le_mans: 'package/src/Motorsport/Wec/Circuit/LeMans/Layout.elm',
+  };
   for (const name of drawnNames()) {
     const given = readSource(layouts[name]).match(/Geometry\.decoder \{ lapLength = ([0-9.]+) \}/);
     expect(given, `${name}'s Layout gives no lap length to the decoder`).toBeTruthy();
-    expect(Number(given![1]), `${name}: the decoder and the script are given different laps`).toBeCloseTo(authored[name].lapLength, 5);
+    expect(Number(given![1]), `${name}: the decoder and the config are given different laps`).toBeCloseTo(
+      authored[name].lap,
+      5,
+    );
   }
 });
 
@@ -64,22 +101,6 @@ test('the circuits drawn and decoded are one list', () => {
   const decoded = [...clause(shared, 'decoderFor circuit =', '\n\n\n').matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
   expect(decoded.length, 'decoderFor decodes no circuit name').toBeGreaterThan(0);
   expect(decoded.sort(), 'decoderFor decodes something other than what trackOf draws').toEqual(drawnNames().sort());
-});
-
-test('the flake commands and the circuit tools are one list', () => {
-  // Every circuit command is the geometry project's now: `mkGeometryApp` over
-  // the jar is the only runner, and no Node script in `circuits/` is a command.
-  const flake = readSource('flake.nix');
-  const registered = [...flake.matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
-  expect(registered.length, 'the flake registers no geometry commands').toBeGreaterThan(0);
-
-  // A tool is a script whose own header runs itself by its own filename;
-  // library modules cite other tools' usage but never their own name.
-  const unwrapped = readdirSync(new URL('../../circuits/', import.meta.url))
-    .filter((file) => file.endsWith('.ts'))
-    .filter((file) => readSource(`circuits/${file}`).includes(`node circuits/${file}`))
-    .filter((file) => !registered.includes(file.replace(/\.ts$/, '')));
-  expect(unwrapped, `these tools name themselves commands but no geometry app registers them: ${unwrapped.join(', ')}`).toEqual([]);
 });
 
 /** The body of a top-level definition, up to the next one. */

@@ -1,9 +1,8 @@
 /// The reading of a kept geometry file: the outline as the line it claims to be, and the
 /// refusals a file with a survey that means something different to the reader than to the
-/// fence would otherwise pass unseen. These are the sentences
-/// `circuits/tests/geometry-file.test.ts` holds the TypeScript reading to, in the language
-/// the commands a person runs read with — the same sentences twice because the kept files
-/// are read by both until the pipeline moves.
+/// fence would otherwise pass unseen. Every command that reads a kept file reads it
+/// through the module these tests hold: the diff, the atlas reading, the regeneration
+/// fence.
 pub mod TestGeometry {
 
     use Geometry.Line

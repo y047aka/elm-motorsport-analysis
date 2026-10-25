@@ -1,7 +1,6 @@
-/// The comparison both the diff command and the atlas reading run on, tested against the
-/// numbers `circuits/tests/apartness.test.ts` holds the TypeScript copy to: the same
-/// fixtures, the same expectations, written twice because two languages compute them
-/// until the pipeline moves. `TestDiff` drives the arguments and the drawing that one of
+/// The comparison both the diff command and the atlas reading run on: the sampling
+/// bound, the tie, the nought-length stretch and the walk to a place along a line, each
+/// held to its fixture. `TestDiff` drives the arguments and the drawing that one of
 /// these readings is printed with; `TestGeometry` the reading of a file.
 pub mod TestApart {
 

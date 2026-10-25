@@ -1,6 +1,6 @@
 /// The published timing maps the report reads, frozen at the figures the circuits
 /// publish. `app/tests/circuit-timing-map.spec.ts` ties these to the numbers
-/// `circuits/<circuit>/circuit.ts` authors the drawing from; what is pinned here is
+/// `circuits/src/Circuit.flix` authors the drawing from; what is pinned here is
 /// what the report would otherwise only find out while printing: that a circuit's
 /// stretches add up to the lap it publishes, and that a circuit re-mapped every
 /// season says so rather than standing silent.

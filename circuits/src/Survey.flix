@@ -7,9 +7,6 @@
 /// direction the race does, and ends at the metre the circuit publishes. Every point keeps
 /// the degrees it was surveyed at — the metres are this module's working, and the app
 /// re-derives them from the frame written beside them.
-///
-/// The same pipeline is TypeScript's in `circuits/circuit-geometry.ts`, and which of the two
-/// runs is `circuits/README.md`'s to say.
 pub mod Survey {
 
     use Geometry.Place

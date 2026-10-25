@@ -2,12 +2,11 @@ import { test, expect } from '@playwright/test';
 import { readdirSync, lstatSync, realpathSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { circuits } from '../../circuits/registry.ts';
-import { readSource } from './helpers';
+import { authoredCircuits, readSource } from './helpers';
 
 /**
  * The figures a circuit's timing lines are read at, held twice on purpose.
- * `circuits/<circuit>/circuit.ts` authors them and the drawing is laid from them;
+ * `circuits/src/Circuit.flix` authors them and the drawing is laid from them;
  * `Motorsport.Circuit.timingMap` holds the same ones for
  * `nix run .#geometry-timing-lines`, which reads no geometry file —
  * `Util.Json.Encode` writes and parses nothing. Neither compiler sees the other,
@@ -15,11 +14,13 @@ import { readSource } from './helpers';
  * lap while the drawing shows another, printing numbers that look like a circuit's
  * own.
  *
- * The published numbers are read out of the config and out of the geometry the
- * config was written into — the bytes the app is served — and Flix's out of its
- * source, the way `circuit-contract.spec.ts` reads both sides of a circuit's name.
- * Nothing here needs a browser.
+ * The published numbers are read out of the Flix config and out of the geometry
+ * the config was written into — the bytes the app is served — and the report's
+ * out of its own source, the way `circuit-contract.spec.ts` reads both sides of
+ * a circuit's name. Nothing here needs a browser.
  */
+
+const circuits = authoredCircuits();
 
 const flixSource = readSource('flix/src/Motorsport/Circuit.flix');
 
@@ -101,7 +102,7 @@ test('the report reads the lap the drawing was laid from', () => {
     if (circuit.sectors.kind === 'published') {
       expect(held.published, `${word} authors one map and Circuit.timingMap holds none`).toBeTruthy();
       expect(held.published!.lapLength, `${word}: the report and the drawing are given different laps`).toBe(
-        circuit.lapLength,
+        circuit.lap,
       );
       expect(held.published!.stretches, `${word}: the report and the drawing divide the lap differently`).toEqual(
         circuit.sectors.stretches,
@@ -117,7 +118,7 @@ test('the geometry the app is served publishes the stretches the report reads', 
   expect(published.length, 'no circuit here publishes one map of its timing lines').toBeGreaterThan(0);
   for (const [word, circuit] of published) {
     const held = flixMap(word).published!;
-    const kept = served(circuit.slug);
+    const kept = served(circuit.word);
     expect(kept.sectors, `${word}: the kept geometry publishes no sectors to compare against`).toBeTruthy();
     expect(kept.lapLength, `${word}: the kept geometry is a different lap from the one the report reads`).toBe(
       held.lapLength,
@@ -138,7 +139,7 @@ test('a circuit re-mapped every season is refused in both languages, quoting one
     );
     // Nothing in the served file to read two seasons against, which is the whole
     // reason the report refuses the round rather than printing noughts.
-    expect(served(circuit.slug).sectors, `${word}: the geometry publishes sectors the config says differ by season`).toBeUndefined();
+    expect(served(circuit.word).sectors, `${word}: the geometry publishes sectors the config says differ by season`).toBeUndefined();
   }
 });
 

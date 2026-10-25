@@ -1,7 +1,7 @@
 /// Laying one line against another: how far a place stands from a line measured in metres
-/// of its own lap, and the apartness of two such lines. The atlas reading runs on the same
-/// three readings in TypeScript — `circuits/apartness.ts` — and
-/// `app/tests/circuits-geometry-reading.spec.ts` holds the two to one set of numbers.
+/// of its own lap, and the apartness of two such lines. The diff and the atlas reading
+/// both sample these readings, so the two commands that lay lines together measure them
+/// on one bound.
 ///
 /// The sphere is the one every drawing in this repository is measured on: the one
 /// `Motorsport.Circuit.Geodesy` projects through, the one the survey is measured with and the

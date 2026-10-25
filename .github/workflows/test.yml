@@ -53,13 +53,11 @@ jobs:
       # file.
       - name: Geometry command tests
         run: nix run .#geometry-diff-test
-      # Does the survey over a kept answer still draw the bytes the app serves? The
-      # regeneration fence asks that of the TypeScript pipeline; this is the other author
-      # of the same file asked, over the two circuits a checkout keeps.
+      # Does the survey over a kept answer still draw the bytes the app serves?
+      # The regeneration fence asks the same of a fresh asking of OpenStreetMap;
+      # this is the byte fence, over the two circuits a checkout keeps.
       - name: Geometry survey reproduces the kept geometries
         run: nix run .#geometry-survey -- cota && nix run .#geometry-survey -- le_mans
-      - name: Circuit tool tests
-        run: nix run .#geometry-test
 
   # Its own job because it is the one check here that needs node_modules, and
   # because a type error and a failing test should not share a red mark.

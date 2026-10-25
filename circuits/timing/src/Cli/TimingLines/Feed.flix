@@ -233,8 +233,8 @@ pub mod Cli.TimingLines.Feed {
     /// last ends at the line the lap is measured from -- which is where the lap
     /// started, so it is not a line to place.
     ///
-    /// Naming a line is the rule the geometry is written under, which
-    /// `circuits/circuit-geometry.ts` has as well: a line is `s2` because the
+    /// Naming a line is the rule the geometry is written under, which the
+    /// survey that writes the geometry follows as well: a line is `s2` because the
     /// second sector begins at it. One circuit's two readers share only the
     /// geometry file, so both have to name a line the same way or they call one
     /// place by two names.

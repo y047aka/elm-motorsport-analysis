@@ -1,9 +1,8 @@
 /// The reading of this repository's own geometry-file profile: the outline as the line it
 /// claims to be — its points, its own metres, the properties a report quotes — and the pit
-/// lane beside it. `circuits/geometry-file.ts` is the same reading in the language the
-/// lane beside it. `circuits/geometry-file.ts` is the same reading in the language the
-/// pipeline is written in, and `app/tests/circuits-geometry-reading.spec.ts` holds the two
-/// to one set of refusals and one set of claims.
+/// lane beside it. The diff, the atlas reading, the regeneration fence and the survey's
+/// own comparison all read a kept file through this module, so what a file is refused
+/// for is one set of refusals wherever it is read.
 ///
 /// What is checked here is what the profile claims of a line: a basis among the kinds its
 /// readers know, one metre per point, none of them going backwards, and points enough to be a

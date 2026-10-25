@@ -1,16 +1,17 @@
-/// The circuits this project writes, in the language the writer is written in.
+/// The circuits this project writes, and the figures every drawing and report is laid
+/// from.
 ///
-/// A circuit's config is authored once, in `circuits/<word>/circuit.ts`, and what is
-/// authored there — the relation surveyed, the length the lap is stretched to, where the
-/// circuit puts its own timing line, whose map the lines come from — is held here a second
-/// time because Flix reads no TypeScript. That is three holders of one set of figures
-/// counting the drawing's own `Motorsport.Circuit`: `app/tests/circuit-timing-map.spec.ts`
-/// lays the TypeScript against the Elm and
-/// `app/tests/circuits-geometry-reading.spec.ts` lays this against both, figure by figure.
+/// A circuit's config is authored once, here: the relation surveyed, the length the lap
+/// is stretched to, where the circuit puts its own timing line, whose map the lines come
+/// from. The directory named by the circuit's word keeps the evidence — the kept Overpass
+/// answer and the kept atlas line — and no code. `app/tests/circuit-timing-map.spec.ts`
+/// lays these figures against the report's own copy in `Motorsport.Circuit` and against
+/// the geometry the pipeline wrote with them; `app/tests/geometry-contract.spec.ts`
+/// lays them against the bytes the app is served.
 ///
 /// A circuit's atlas layer is here as the URL of the layer itself: the track-atlas line
 /// is authored in no config, and the reading that measures it writes its own file beside
-/// the config — `Atlas.flix`'s, kept at `keptAtlas`.
+/// the circuit — `Atlas.flix`'s, kept at `keptAtlas`.
 pub mod Circuit {
 
     use Geometry.Place

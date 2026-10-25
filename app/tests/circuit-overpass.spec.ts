@@ -22,15 +22,14 @@ import { readSource } from './helpers';
  * probe from a flood; and a backoff that shrinks to nothing is a retry loop
  * aimed at a runner that was already down. So the four are read out of both
  * sources and compared, the way `circuit-timing-map.spec.ts` reads a circuit's
- * timing figures out of both sides of the Flix/TypeScript line, and the sphere
- * a probe's metres are measured on is read out of all three languages that use
- * it — three, because the atlas reading still measures metres in TypeScript
- * even though nothing in TypeScript asks OpenStreetMap.
+ * timing figures out of the config and out of the report, and the sphere a
+ * probe's metres are measured on is read out of every source that uses it — the
+ * geometry project's survey, the probe's, and the drawing's.
  *
  * Nothing here needs a browser.
  */
 
-const atlas = readSource('circuits/circuit-geometry.ts');
+const survey = readSource('circuits/src/Apart.flix');
 const flix = readSource('circuits/probe/src/Overpass.flix');
 const pipeline = readSource('circuits/src/Overpass.flix');
 const candidates = readSource('circuits/probe/src/Candidates.flix');
@@ -157,7 +156,7 @@ test('the probe asks for the ways the pipeline chains', () => {
 
 /**
  * One sphere measures a probe's metres, a survey's metres and the drawing's
- * projection. Three languages hold the number, no compiler reads two of them
+ * projection. Three sources hold the number, no compiler reads two of them
  * together, and a probe whose sphere differs from the pipeline's reports a 13.6 km
  * circuit as a 13.7 km one — which is the one reading that decides a config.
  */
@@ -167,7 +166,7 @@ test("a probe's metres are measured on the sphere the survey is measured on", ()
     expect(found, `${where} states no earth radius in metres`).toBeTruthy();
     return Number(found![1]);
   };
-  const surveyed = radius(atlas.split('export const earthRadius')[1]!.split('\n')[0]!, 'circuit-geometry.ts');
+  const surveyed = radius(survey.split('def earthMetres')[1]!.split('\n')[0]!, 'circuits/src/Apart.flix');
   const probed = radius(candidates.split('def earthRadius')[1]!.split('\n')[0]!, 'the probe');
   const drawn = radius(readSource('package/src/Motorsport/Circuit/Geodesy.elm'), 'Motorsport.Circuit.Geodesy');
   expect(probed, 'a probe measures its laps on a different sphere from the one the geometry is measured on').toBe(

@@ -18,8 +18,9 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `app/static` into the bundle.
 - **`/circuits`** — the geometry pipeline: OpenStreetMap relations through
   the Flix project at `circuits/src` into the served `app/static/geometry/*.geojson`,
-  with one directory per circuit — its config, its kept Overpass answer
-  and its atlas reading — named by the word the summaries send for the circuit.
+  with one directory per circuit — its kept Overpass answer
+  and its kept atlas line — named by the word the summaries send for the circuit,
+  and its figures authored in the project's own `Circuit.flix`.
   It sits outside `/app` because nothing it writes but the geometry files is
   ever served, and nothing in the bundle reads the pipeline itself.
   `circuits/README.md` describes it — the fence that keeps a geometry an
@@ -48,7 +49,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
-| `nix run .#typecheck` | `tsc --noEmit` over each TypeScript project: the app's, then the circuit tools' |
+| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript (the circuit tools are the geometry project's and compile with it) |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
 | `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
@@ -64,7 +65,6 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-survey -- <circuit>` | Whether the survey over a circuit's kept Overpass answer still lays the bytes the app serves, optionally writing them with `--write` (the `circuits` geometry project, reaching no database and no network; `[--answer <overpass.json>] [--write]`) |
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (the `circuits/probe` project, which resolves no dependency, links no source and computes in no database; `<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
 | `nix run .#geometry-probe-test` | The probe's own tests (the `circuits/probe` project's; no network, no database, nothing written) |
-| `nix run .#geometry-test` | The circuit tools' unit tests: their side-effect-free readings, run by Node's own runner over fixtures (`circuits/tests/`, no network, nothing written) |
 | `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (the `circuits` geometry project's own regeneration fence; `[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the `circuits/timing` project, which resolves no dependency and computes in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#geometry-timing-test` | The timing report's own tests (the `circuits/timing` project's; no database, no network, nothing written) |
@@ -584,32 +584,18 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   hand-written `test-dependencies` read fine to elm-test but make every
   `elm make` fail with "dependencies edited by hand", which is a build break
   the test runner does not see.
-- **TypeScript** — two projects, one command. The app's `tsc --noEmit` covers
-  `index.ts`, `vite.config.ts` and `src/`; `/app/tests/` is outside the TS
-  project on purpose: Playwright comes from the flake rather than from
-  `node_modules`, so `@playwright/test` does not resolve for `tsc`.
-  `circuits/tsconfig.json` is the circuit tools' own: Node and no DOM, with
-  `nodenext` resolution and `allowImportingTsExtensions` because Node runs
-  those files by stripping types and rewriting no import specifier, and
-  `verbatimModuleSyntax` because stripping leaves a value import of a type in
-  place. Its compiler and `@types/node` are the app's, reached by `typeRoots`
-  — the directory installs nothing, which is also why it holds a dependency-
-  free `package.json` only to say its modules are ESM.
-- **Circuit tools** (`circuits/tests/`) — `nix run .#geometry-test`, Node's built-in
-  runner; the directory installs nothing. Each command kept its own I/O and moved
-  its reading of an answer into a module that opens nothing; the atlas
-  reading's shapes and guards are `Track.flix`'s, tested in that project beside
-  the readings it borrows, and the regeneration fence's own comparison is
-  `Regenerate.flix`'s, tested in that project. What Node's runner still holds is
-  the survey's own reading of a kept file and of a config — `geometry-file.ts`,
-  `timing-line.ts` and `circuit-geometry.ts`, which the contract specs still
-  read. The readings of
-  the two feeds are Flix's, driven by `nix run .#geometry-timing-test` and
-  `.#geometry-probe-test`: a timing CSV and an Overpass answer are each read in one
-  language and not two. The geometry pipeline is a Flix project of its own (at the
-  `circuits/` root), tested by `nix run .#geometry-diff-test` beside those two;
-  what it reads of a geometry file, and the comparison it lays them with, are read in
-  two languages on purpose, and `circuits-geometry-reading.spec.ts` compares the two.
+- **TypeScript** — the app's `tsc --noEmit` covers `index.ts`, `vite.config.ts`
+  and `src/`; `/app/tests/` is outside the TS project on purpose: Playwright
+  comes from the flake rather than from `node_modules`, so `@playwright/test`
+  does not resolve for `tsc`.
+- **The geometry project** (`circuits/`) — a Flix project of its own, tested by
+  `nix run .#geometry-diff-test` beside the timing report's `.#geometry-timing-test`
+  and the probe's `.#geometry-probe-test`: every reading — the survey of an
+  answer, the reading of a kept file, the comparison of two lines, the atlas
+  file's shapes and guards, the regeneration fence's comparison — is handed a
+  fixture rather than a survey, in one language. What a Flix test cannot see
+  from inside the project — the sources it holds, what it resolves, the flake
+  apps that reach it, the CI fence — is `circuits-geometry-project.spec.ts`'s.
   Judging this repository's real bytes stays the fence's and the contract specs'.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
@@ -638,28 +624,25 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   copy of, and fails everything it compiles for naming a database.
 - **Overpass, asked twice in Flix** (`/app/tests/circuit-overpass.spec.ts`) —
   the probe and the pipeline at the `circuits/` root each read OpenStreetMap in
-  a project of their own, the TypeScript asking having retired with the
-  regeneration fence's move into the jar, so the runners, their order, the user
+  a project of their own, so the runners, their order, the user
   agent, the tries per runner and the backoff arithmetic are four facts held in
   both spellings that ask, with no compiler between them; none of them fails loudly when they part, since a runner missing
-  from one list is a run with nowhere else to go. The sphere a probe's metres are measured on is read out of all
-  three languages that use it — the survey's, the probe's and the projection's —
+  from one list is a run with nowhere else to go. The sphere a probe's metres are measured on is read out of
+  every source that uses it — the survey's, the probe's and the drawing's —
   because the one reading that decides a config is whether a lap measures 13.6 km.
   The spec also pins that the probe shares no source by symlink, which is the
   timing project's rule and not this one's, and that nothing it compiles can name a
   database.
-- **Geometry, read in two languages** (`/app/tests/circuits-geometry-reading.spec.ts`) —
-  the comparison and the survey each stand in TypeScript and in Flix (at the `circuits/` root),
-  and what the spec reads are the readings that part without printing anything: a sampling
-  loop's bound, which stretch a tie falls on, how a nought-length stretch is walked through,
-  the tenth a metre is kept to, the tolerance the thinning stops at and which of two equally
-  far points it keeps, the one stretch factor, and the order a geometry's properties are
-  claimed in. A survey that parts is a field drawn at the wrong metre for every round, which
-  no kept file says. The spec also pins that the project links no source and resolves no
-  dependency, that the flake's `GEOMETRY_FROM` and the reader's `Env.getVar` name one
+- **The geometry project's wiring** (`/app/tests/circuits-geometry-project.spec.ts`) —
+  what no test run from inside the project can see: the sources it holds, that it
+  links none of them and resolves no dependency and names no database, that the
+  flake's `GEOMETRY_FROM` and the reader's `Env.getVar` name one
   directory, that every `geometry-<command>` the flake registers reaches the dispatch in
-  `Main.flix`, and that CI compares the served bytes without asking the survey to write them.
-  Which language runs which command is `circuits/README.md`'s to say.
+  `Main.flix`, that both commands which lay lines together project them on one
+  plane, and that CI compares the served bytes without asking the survey to write
+  them. The readings themselves — a sampling loop's bound, which stretch a tie
+  falls on, the tenth a metre is kept to — are the project's own `flix test`'s;
+  which command runs where is `circuits/README.md`'s to say.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

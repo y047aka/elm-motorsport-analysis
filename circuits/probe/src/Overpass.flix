@@ -7,11 +7,12 @@
 /// twice, and a runner that failed is left alone longer each time, so that a run
 /// outlasts a runner's moment of being busy rather than its whole afternoon.
 ///
-/// The pipeline that writes a circuit's geometry asks the same service in
-/// TypeScript, so which runners there are, in which order, and what a run calls
-/// itself are facts held in two languages with no compiler between them.
-/// `app/tests/circuit-overpass.spec.ts` reads this file and `circuit-geometry.ts`
-/// and fails them apart; a run of either asks the same OpenStreetMap.
+/// The pipeline that writes a circuit's geometry asks the same service from its own
+/// spelling of the asking, so which runners there are, in which order, and what a run
+/// calls itself are facts held in two projects with no compiler between them.
+/// `app/tests/circuit-overpass.spec.ts` reads this file and the pipeline's
+/// `circuits/src/Overpass.flix` and fails them apart; a run of either asks the same
+/// OpenStreetMap.
 ///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; an answer
 /// read here is a derivative of their tags.

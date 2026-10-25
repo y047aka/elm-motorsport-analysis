@@ -1,8 +1,9 @@
 # circuits
 
 The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
-and one directory per circuit — its config, the Overpass answer the geometry
-was written from, and the atlas reading measured against it. The
+and one directory per circuit — the Overpass answer the geometry was written
+from and the atlas line measured against it, kept beside the config that
+surveyed them. The
 commands are the flake's — `nix run .#geometry-fetch -- <circuit>`,
 `.#geometry-write -- <circuit>`,
 `.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`, `.#geometry-survey`,
@@ -12,10 +13,10 @@ out of an answer, and writes the file the app serves. `circuits/timing/`, the ti
 Flix project of its own, reading the feed the load reads with the decoder the
 load decodes it with; `circuits/probe/` is another — the same question
 OpenStreetMap answers, asked in Flix before a circuit has a config to author.
-What is still TypeScript is the survey the contract spec re-checks and the
-reading of a kept file it reads there.
+Nothing here is TypeScript: the pipeline's readings, its commands and its tests
+are all the root project's now.
 What follows is what no
-single script's header says for itself; what a script can say at its own call
+single module's header says for itself; what a module can say at its own call
 site, its header says there and is not repeated here.
 
 OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; every
@@ -26,12 +27,12 @@ source relation and the license in their own properties.
 
 The pipeline is the Flix project at this directory's root: `Survey.flix`
 chains an answer into a lap and `Write.flix` lays the bytes the app serves.
-`circuit-geometry.ts` spells the same survey the contract spec re-checks, and a
-circuit joins both as a directory
-named by the word the summaries send for it. Its `circuit.ts` supplies the
-relation, the member role naming the line the lap is measured from, the
-published length the surveyed line is stretched to, and the prose the geometry
-file is documented with. What it writes is not a build artifact but a served
+A circuit joins as a record in `src/Circuit.flix` — the relation, the member
+role naming the line the lap is measured from, the published length the
+surveyed line is stretched to, the prose the geometry file is documented with —
+and as a directory named by the word the summaries send for it, which keeps
+only the evidence: the kept Overpass answer and, where one has been measured,
+the kept atlas line. What it writes is not a build artifact but a served
 one: the app reads `app/static/geometry/<word>.geojson` at load, through
 `Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the
 bytes as they arrive, and the `Layout` module beside it holds what the file
@@ -227,7 +228,7 @@ OpenStreetMap and not about any project: the probe spells them in
 `src/Overpass.flix` and the pipeline spells them in its own
 `circuits/src/Overpass.flix` — and the same spec reads both spellings and fails
 them apart — as it reads the sphere the metres are measured on
-out of all three languages that use it, the probe's and the survey's and
+out of every source that uses it — the survey's, the probe's and
 `Motorsport.Circuit.Geodesy`'s. Measuring on the equatorial radius instead of the
 mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
 lap is the one reading a config is authored from.
@@ -237,7 +238,7 @@ lap is the one reading a config is authored from.
 The geometry pipeline is the Flix package at `circuits/`: `src/Geometry.flix` reads a kept file's outline and its
 pit lane, `src/Apart.flix` lays one line against another, `src/Diff.flix` asks the two
 files, prints the report and draws the overlay, `src/Circuit.flix` authors the two
-circuits' figures the way `circuits/<circuit>/circuit.ts` authors them, `src/Survey.flix`
+circuits' figures once, `src/Survey.flix`
 reads a kept Overpass answer and chains it into a lap, `src/Overpass.flix` asks the
 runners for that answer and `src/Fetch.flix` is the commands that ask — `fetch` keeps
 one beside a circuit, `write` runs the asking, the survey and the laying off one
@@ -249,26 +250,28 @@ the words the commands go by and the exit code one comes to. It resolves no depe
 links no source — it reads nothing `flix/src` holds, which is what the report's nine links
 are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
 
-**What is written once, and what is written twice.** The diff is written once: the asking of
-two paths, the report and the overlay are `Diff.flix`'s. The comparison of two lines is
-written once too — `Apart.flix`, which the diff samples and the atlas reading samples — and
-the atlas reading's own shapes and guards are `Track.flix`'s. The survey is what is written
-twice: `Survey.flix` chains what `circuit-geometry.ts` chains, and the reading of a kept
-file stands in `Geometry.flix` and in `geometry-file.ts`, joined by what
-`circuits-geometry-reading.spec.ts` reads of both. And the asking of OpenStreetMap is
-written twice, both spellings in Flix: the pipeline's `Overpass.flix` and the probe's each
-hold the runners, joined only by the service facts `circuit-overpass.spec.ts` reads.
+**What is written once, and what is written twice.** The pipeline is written once: the
+asking of two paths, the report and the overlay are `Diff.flix`'s; the comparison of two
+lines is `Apart.flix`'s, which the diff samples and the atlas reading samples; the atlas
+file's shapes and guards are `Track.flix`'s; the survey of an answer, the reading of a
+kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.flix` and
+`Write.flix`, each one the only spelling. What is written twice is the asking of
+OpenStreetMap — the pipeline's `Overpass.flix` and the probe's each hold the runners,
+joined only by the service facts `circuit-overpass.spec.ts` reads — and the timing
+figures, authored in `src/Circuit.flix` for the drawing and held again in the report's
+`Motorsport.Circuit` for a run that reads no geometry, joined by
+`app/tests/circuit-timing-map.spec.ts`.
 
 `nix run .#geometry-survey -- cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
 lane, stretches the surveyed length to the published one, thins it at a metre, and answers
 whether what it would write is the file the app serves; `--write` writes it. CI runs the
 comparison for both circuits and never passes `--write`, which
-`app/tests/circuits-geometry-reading.spec.ts` pins: a fence that rewrites what it fences passes
-by construction. That spec is also where the twice-written readings are held together, and it
-lists at its own head what it reads out of both sources — the readings that part without
-printing anything, such as a sampling loop's bound, which stretch a tie falls on, the tenth a
-metre is kept to, and the order a geometry's properties are claimed in.
+`app/tests/circuits-geometry-project.spec.ts` pins: a fence that rewrites what it fences
+passes by construction. That spec is where the project's wiring is read from outside it —
+the sources it holds, what it resolves, the flake apps that reach it, the directory a
+reader's paths resolve against — everything a Flix test run from inside the project
+cannot see.
 
 **A byte comparison and a property comparison, kept because they answer different
 questions.** `geometry-survey` without `--write` compares bytes; the regeneration fence
@@ -297,7 +300,7 @@ measured from orthoimagery, not a survey stretched to a published length, at
 `<circuit>/atlas.geojson` with `stretched: false`, beside the survey it is
 judged against rather than in what gets served. For a circuit this repository
 has not surveyed yet, the atlas's `start_finish` point is a surveyed
-coordinate to seed a circuit config's `timingLine` with; whether the lines the
+coordinate to seed a config's `timingLine` with; whether the lines the
 times are read against stand where the seeded line puts them is `nix run
 .#geometry-timing-lines`'s to answer, once a round has been loaded.
 
@@ -322,19 +325,17 @@ where the feed is already read; `Candidates.flix` in the probe's own project say
 which tags could name a circuit and what an answer's roles measure, and is tested
 by `nix run .#geometry-probe-test` for the same reason — an Overpass answer is read
 in one language and not two, and `Survey.flix`'s reading of a kept answer is held to
-the pipeline's by the bytes it lays rather than by a shared source; `geometry-file.ts` holds the profile's own reading — the
-outline
-with its own metres going up, and the pit lane beside it — which the
-contract spec's re-check run, the diff and the atlas reading running
-`Geometry.flix` over the same claims in the same refusals' words, which
-`app/tests/circuits-geometry-reading.spec.ts` compares;
+the bytes the app serves rather than by a shared source; `Geometry.flix` holds the
+profile's own reading — the outline with its own metres going up, and the pit lane
+beside it — and every command that reads a kept file reads it through that one module;
 `Track.flix` holds the atlas file's shape checks and its two
 guards — the one that keeps a mismatched line out, and the one that keeps the lap
 starting at the published line; and the comparison the fence makes is
 `Regenerate.flix`'s, asking of the survey's own output what a kept file asks of
-its bytes — and `circuit-geometry.ts` asks nothing of anyone at all. Printing stays with the command — what a reading is worth is what it
-answers, not how its table is padded. `nix run .#geometry-test` runs Node's own test runner over `circuits/tests/`,
-where those readings are handed fixtures rather than surveys. What is judged
+its bytes — and nothing asks OpenStreetMap from outside the Flix projects at all. Printing stays with the command — what a reading is worth is what it
+answers, not how its table is padded. `nix run .#geometry-diff-test` runs the
+project's own `flix test`, where every reading is handed a fixture rather than a
+survey. What is judged
 against the repository's real bytes stays this file's other sections': the fence,
 the contract specs, the VRT.
 

@@ -1,8 +1,7 @@
 /// The geometry file as bytes: the spelling a number is given, the claims a circuit does not
 /// make left unwritten, the layout every reader of a kept file reads, and where two files part.
-/// `nix run .#geometry-survey` answers whether these are the bytes the app serves, and
-/// `app/tests/circuits-geometry-reading.spec.ts` holds this writer and the pipeline's to one
-/// claim order.
+/// `nix run .#geometry-survey` answers whether these are the bytes the app serves, and CI
+/// asks it of both circuits on every run.
 pub mod TestWrite {
 
     use Circuit.Circuit

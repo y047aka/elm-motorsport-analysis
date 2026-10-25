@@ -19,6 +19,86 @@ export function drawnNames(): string[] {
   return [...body.split('\nmapLoaded')[0].matchAll(/Just "([a-z_]+)" ->/g)].map((m) => m[1]);
 }
 
+/**
+ * A circuit's figures as authored in `circuits/src/Circuit.flix` -- the one
+ * place they are written, read back the way `circuit-contract.spec.ts` reads
+ * the words out of the sources that send them. A figure the source stops
+ * stating is an error named for the circuit and the figure, never a `NaN`
+ * an assertion would then expect.
+ */
+export type AuthoredSectors =
+  | { kind: 'published'; source: string; stretches: number[] }
+  | { kind: 'perSeason'; reason: string };
+
+export type Authored = {
+  relation: number;
+  word: string;
+  timedFrom: string;
+  timingLine: { lat: number; lon: number; within: number } | null;
+  lap: number;
+  sectors: AuthoredSectors;
+  file: string;
+  atlas: string | null;
+  survey: string;
+};
+
+export function authoredCircuits(): Record<string, Authored> {
+  const source = readSource('circuits/src/Circuit.flix');
+  const bodies = source
+    .split('\n    def ')
+    .slice(1)
+    .map((body) => body.split('\n    }')[0])
+    .filter((body) => /word\s+=\s+"[a-z_]+"/.test(body));
+  if (bodies.length === 0) throw new Error('circuits/src/Circuit.flix authors no circuit');
+
+  const stated = (body: string, word: string, figure: string, matched: RegExpMatchArray | null): string => {
+    if (!matched) throw new Error(`the Flix config states no ${figure} for ${word}`);
+    return matched[1];
+  };
+
+  const authored: Record<string, Authored> = {};
+  for (const body of bodies) {
+    const word = stated(body, '?', 'word', body.match(/word\s+=\s+"([a-z_]+)"/));
+    const sectorsMatch = body.match(
+      /published\s*=\s*Some\(\{\s*source\s*=\s*"([^"]+)",\s*stretches\s*=\s*([\d.]+(?:\s*::\s*[\d.]+)*)\s*::\s*Nil\s*\}\s*\)/,
+    );
+    const perSeason = body.match(/eachSeason\s*=\s*Some\("([^"]+)"\)/);
+    if (!!sectorsMatch === !!perSeason) {
+      throw new Error(`${word}: the Flix config fills neither or both of its two timing maps`);
+    }
+    const timingLine = body.match(
+      /timingLine\s*=\s*Some\(\{place\s*=\s*\{lon\s*=\s*(-?[\d.]+),\s*lat\s*=\s*(-?[\d.]+)\},\s*within\s*=\s*Some\(([\d.]+)\)\}\)/,
+    );
+    const atlas = body.match(/atlas\s*=\s*Some\("([^"]+)"\)/);
+    authored[word] = {
+      relation: Number(stated(body, word, 'relation', body.match(/relation\s*=\s*(\d+)i64/))),
+      word,
+      timedFrom: stated(body, word, 'timedFrom', body.match(/timedFrom\s*=\s*"([^"]+)"/)),
+      timingLine: timingLine
+        ? { lon: Number(timingLine[1]), lat: Number(timingLine[2]), within: Number(timingLine[3]) }
+        : /timingLine\s*=\s*None/.test(body)
+          ? null
+          : (() => {
+              throw new Error(`${word}: the Flix config says nothing about the timing line`);
+            })(),
+      lap: Number(stated(body, word, 'lap', body.match(/lap\s*=\s*([\d.]+)/))),
+      sectors: sectorsMatch
+        ? {
+            kind: 'published' as const,
+            source: sectorsMatch[1],
+            stretches: sectorsMatch[2].split('::').map((each) => Number(each.trim())),
+          }
+        : { kind: 'perSeason' as const, reason: perSeason![1] },
+      file: stated(body, word, 'file', body.match(/file\s*=\s*"([^"]+)"/)),
+      atlas: atlas ? atlas[1] : /atlas\s*=\s*None/.test(body) ? null : (() => {
+        throw new Error(`${word}: the Flix config says nothing about an atlas layer`);
+      })(),
+      survey: stated(body, word, 'survey', body.match(/survey\s*=\s*"([^"]+)"/)),
+    };
+  }
+  return authored;
+}
+
 /** The rounds a checkout keeps, spelled as the calendar spells them. */
 export const LE_MANS = '2025/le_mans_24h';
 export const COTA = '2025/cota_6h';
