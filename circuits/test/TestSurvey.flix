@@ -164,6 +164,52 @@ pub mod TestSurvey {
         Assert.assertTrue(refused("which is not within 10 m", written("cota", asking)));
         Assert.assertTrue(refused("The relation's lines: role=finish is", written("cota", asking)))
 
+    /// The `within` a circuit authors narrows the distance its node is held to, and one
+    /// that names none leaves the ten metres every node is held to. COTA authors its
+    /// crosshair at the same ten the fallback is, so one fixture read both ways is what
+    /// tells the two readings apart. Flix leaves no way to say one field of a record
+    /// differently, so each reading below spells every field COTA's says and differs
+    /// only in the crosshair under test.
+    @Test
+    def testThePublishedLineNarrowsItsOwnCrosshairAndNamesNoneToTen(): Unit \ Assert =
+        let asking = answer(List.append(relation(6537729, member("node", "finish", 1) :: Nil) :: Nil, places()));
+        match Circuit.byWord("cota") {
+            case None => Assert.assertTrue(false)
+            case Some(cota) =>
+                let place = Option.getWithDefault({lat = 0.0, lon = 0.0}, Option.map(line -> line#place, cota#timingLine));
+                let narrowed = {
+                    relation = cota#relation,
+                    word = cota#word,
+                    timedFrom = cota#timedFrom,
+                    timingLine = Some({place = place, within = Some(5.0)}),
+                    lap = cota#lap,
+                    sectors = cota#sectors,
+                    file = cota#file,
+                    atlas = cota#atlas,
+                    survey = cota#survey
+                };
+                let unauthored = {
+                    relation = narrowed#relation,
+                    word = narrowed#word,
+                    timedFrom = narrowed#timedFrom,
+                    timingLine = Some({place = place, within = None}),
+                    lap = narrowed#lap,
+                    sectors = narrowed#sectors,
+                    file = narrowed#file,
+                    atlas = narrowed#atlas,
+                    survey = narrowed#survey
+                };
+                match Survey.answer(asking) {
+                    case Err(problem) => Assert.assertTrueWithMsg(false, "read the answer: ${problem}")
+                    case Ok(reading) =>
+                        // Authored: the distance the circuit names is the distance kept.
+                        Assert.assertTrue(refused("which is not within 5 m", Survey.lapOf(reading, narrowed)));
+                        // Named none: the ten metres every node is held to, quoted in
+                        // the refusal and not the authored figure it leaves behind.
+                        Assert.assertTrue(refused("which is not within 10 m", Survey.lapOf(reading, unauthored)))
+                }
+        }
+
     // -------------------------------------------------------------------- the chain
 
     /// One way of a relation as a chain sees it. The ids are the answer's, which an answer
