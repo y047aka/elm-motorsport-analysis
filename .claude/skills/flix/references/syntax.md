@@ -100,6 +100,23 @@ test of a reading actually wants. Seen in `circuits/probe/test/TestOverpass.flix
 alternative — an `Eq` instance per record — would say two places are the same place
 without saying what that means.
 
+### A record update is not written with `with`
+
+The `{ r with field = v }` spelling — and the unbraced `r with field = v` — does not
+parse in 0.79.0. The parser stops at the word `with` and the errors that follow point at
+the record accessors a line or two later, so a failed update reads as trouble with `#` or
+`${}` rather than with the update:
+
+```
+E6629  Expected '}' before 'with'.
+E6629  Expected <declaration> before 'with'.
+```
+
+Write the whole record out instead: `Fetch.live` builds its `{ circuit = ..., answer =
+... }` field by field rather than updating a `Write.Args` in place. All three spellings
+were tried against the flake's own 0.79.0 compiler; none parses, so there is no `with`
+form to fall back to — only the whole record.
+
 ### Standard library names that catch people out
 
 The names this tree reaches for, when the obvious one is not there:

@@ -11,7 +11,8 @@ only one worth believing.
 
 ## The other three projects
 
-`circuits/timing/`, `circuits/probe/` and `circuits/geometry/` are Flix projects with
+The pipeline at the `circuits/` root, the report at `circuits/timing/` and the probe at
+`circuits/probe/` are Flix projects with
 their own `flix.toml`, and nothing about a green `.#flix-test` says anything about any of
 them:
 
@@ -25,10 +26,11 @@ The report compiles nine sources *out of* `flix/src` by symlink, so a change to 
 those is compiled twice and tested twice, once per project — and a symlink that did not
 survive a checkout fails as `Undefined use`, reported in the module that needed it
 rather than in the link. The probe shares no source, so its build is independent of
-`flix/src` altogether, and neither does the geometry project share one: it reads a kept
-geometry file and writes an overlay when asked for one, and its tests hand every reading
-a string rather than a file, so a run of them writes nothing. Neither project needs a jar
-to be tested: all three commands run the interpreter.
+`flix/src` altogether, and neither does the pipeline at the `circuits/` root: it asks
+OpenStreetMap and reads kept Overpass answers and geometry files, writing a kept answer,
+a served geometry or an overlay only when told to, while its own tests hand every reading
+a string rather than a file — so `.#geometry-diff-test` opens and writes nothing. None of
+the three needs a jar to be tested: all three commands run the interpreter.
 
 ## What is written where
 
@@ -42,8 +44,8 @@ alone is `lib/`, the resolution cache CI restores — clearing it makes the next
 Maven Central again, which answers a busy runner with a 429.
 
 A second Flix project writes those same two directories wherever it is run, so it takes
-a `.gitignore` with it: `circuits/timing/`, `circuits/probe/` and `circuits/geometry/`
-each hold a copy.
+a `.gitignore` with it: `circuits/`, `circuits/timing/` and `circuits/probe/` each hold a
+copy.
 
 ## The stack check
 

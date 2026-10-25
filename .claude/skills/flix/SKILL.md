@@ -33,7 +33,8 @@ nix run .#flix-test      # compile and run the tests
 Both are incremental and CI is not, so **`rm -rf flix/build` before believing a
 green run** — a compile that only fails from cold passes locally otherwise.
 
-`circuits/timing/`, `circuits/probe/` and `circuits/geometry/` are three more Flix
+The geometry pipeline at the `circuits/` root, the report at `circuits/timing/`
+and the probe at `circuits/probe/` are three more Flix
 projects, each with its own `flix.toml`, compiler version and tests;
 `references/verifying.md` says what
 each one writes and which of them a change to a shared source obliges you to run.

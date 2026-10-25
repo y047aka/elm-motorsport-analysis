@@ -40,7 +40,8 @@ nix run .#geometry-diff-test
 nix run .#build
 ```
 
-`circuits/timing/`, `circuits/probe/` and `circuits/geometry/` are Flix projects too,
+The pipeline at `circuits/`, the report at `circuits/timing/` and the probe at
+`circuits/probe/` are Flix projects too,
 each with its own `flix.toml`: bumping the `flix` version in `flake.nix` is a run of all
 four, and one
 left behind fails as its own red rather than as the flake not evaluating.
