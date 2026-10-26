@@ -60,8 +60,11 @@ pub mod Probe {
     pub def parse(args: List[String]): Result[ArgsError, Request] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
-            case Ok(scanned)  => requestOf(scanned#options, scanned#words)
+            case Ok(scanned)  => completed(scanned)
         }
+
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
+        requestOf(scanned#options, scanned#words)
 
     def requestOf(settings: List[Setting], places: List[String]): Result[ArgsError, Request] =
         match radiusOf(settings) {
@@ -117,7 +120,7 @@ pub mod Probe {
             usage(),
             isHelp,
             args,
-            scanned -> requestOf(scanned#options, scanned#words),
+            completed,
             request -> Overpass.paced(() -> probeAll(request))
         )
 

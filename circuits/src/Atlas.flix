@@ -151,12 +151,7 @@ pub mod Atlas {
                     usage(),
                     isHelp,
                     args,
-                    scanned ->
-                        readOf(
-                            scanned#words,
-                            Cli.Args.lastNamed(fileNamed, scanned#options),
-                            List.exists(isFetched, scanned#options)
-                        ),
+                    completed,
                     measuredReport
                 )
         )
@@ -192,16 +187,18 @@ pub mod Atlas {
     }
 
     /// The circuit to read, and where its layer comes from.
-    pub def asked(args: List[String]): Result[ArgsError, Asking] =
+    pub def parse(args: List[String]): Result[ArgsError, Asking] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
-            case Ok(scanned)  =>
-                readOf(
-                    scanned#words,
-                    Cli.Args.lastNamed(fileNamed, scanned#options),
-                    List.exists(isFetched, scanned#options)
-                )
+            case Ok(scanned)  => completed(scanned)
         }
+
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Asking] =
+        readOf(
+            scanned#words,
+            Cli.Args.lastNamed(fileNamed, scanned#options),
+            List.exists(isFetched, scanned#options)
+        )
 
     /// A flag is no file, as at the other commands: a run that read `--file --fetch`
     /// as a path would keep one circuit's evidence under a name no file can be

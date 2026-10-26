@@ -32,7 +32,10 @@ pub mod Cli.Args {
     }
 
     /// The walk every command shares: flags and words freely interspersed, and
-    /// every complaint GetOpt collected rather than only the first.
+    /// every complaint GetOpt collected rather than only the first. Each command
+    /// names the step from these tokens to its own arguments `completed` and hands
+    /// that one function to both its `parse` and to `answer` below, so a test can
+    /// never read arguments the run does not.
     pub type alias Scanned[s] = {options = List[s], words = List[String]}
 
     pub def scan(descrs: List[OptionDescr[s]], args: List[String]): Result[ArgsError, Scanned[s]] =

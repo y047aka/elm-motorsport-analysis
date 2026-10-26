@@ -188,14 +188,16 @@ pub mod Write {
     pub def parse(args: List[String]): Result[ArgsError, Args] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
-            case Ok(scanned)  =>
-                complete(
-                    scanned#words,
-                    Cli.Args.lastNamed(answerNamed, scanned#options),
-                    List.exists(isFetched, scanned#options),
-                    List.exists(isWritten, scanned#options)
-                )
+            case Ok(scanned)  => completed(scanned)
         }
+
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Args] =
+        complete(
+            scanned#words,
+            Cli.Args.lastNamed(answerNamed, scanned#options),
+            List.exists(isFetched, scanned#options),
+            List.exists(isWritten, scanned#options)
+        )
 
     enum Setting with Eq {
         case Answer(String)
@@ -287,12 +289,7 @@ pub mod Write {
             usage(),
             isHelp,
             args,
-            scanned -> complete(
-                scanned#words,
-                Cli.Args.lastNamed(answerNamed, scanned#options),
-                List.exists(isFetched, scanned#options),
-                List.exists(isWritten, scanned#options)
-            ),
+            completed,
             asked -> if (asked#fetch) live(asked) else ask(asked)
         )
 

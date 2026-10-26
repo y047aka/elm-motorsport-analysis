@@ -8,7 +8,7 @@ pub mod TestAtlas {
     /// asked of no home.
     @Test
     def testTheDefaultReadingReadsTheKeptLine(): Unit \ Assert =
-        match Atlas.asked("cota" :: Nil) {
+        match Atlas.parse("cota" :: Nil) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
             case Ok(asked) =>
                 Assert.assertTrue(asked#circuit#word == "cota");
@@ -18,11 +18,11 @@ pub mod TestAtlas {
 
     @Test
     def testFetchAsksTheHomeAndNamedFileReadsTheKeptOne(): Unit \ Assert =
-        match Atlas.asked("cota" :: "--fetch" :: Nil) {
+        match Atlas.parse("cota" :: "--fetch" :: Nil) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
             case Ok(asked) => Assert.assertTrue(asked#fetch)
         };
-        match Atlas.asked("cota" :: "--file" :: "elsewhere.geojson" :: Nil) {
+        match Atlas.parse("cota" :: "--file" :: "elsewhere.geojson" :: Nil) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
             case Ok(asked) =>
                 Assert.assertTrue(asked#file == Some("elsewhere.geojson"));
@@ -34,17 +34,17 @@ pub mod TestAtlas {
     @Test
     def testTheAskingRefusesWhatItCannotReadFrom(): Unit \ Assert =
         Assert.assertTrue(
-            refused("--file names no file to read", Atlas.asked("cota" :: "--file" :: "--fetch" :: Nil))
+            refused("--file names no file to read", Atlas.parse("cota" :: "--file" :: "--fetch" :: Nil))
         );
         Assert.assertTrue(
             refused(
                 "--file and --fetch ask for opposite things",
-                Atlas.asked("cota" :: "--file" :: "kept.geojson" :: "--fetch" :: Nil)
+                Atlas.parse("cota" :: "--file" :: "kept.geojson" :: "--fetch" :: Nil)
             )
         );
-        Assert.assertTrue(refused("atlas reads one circuit", Atlas.asked(Nil)));
+        Assert.assertTrue(refused("atlas reads one circuit", Atlas.parse(Nil)));
         Assert.assertTrue(
-            refused("no circuit is surveyed under 'monza'", Atlas.asked("monza" :: Nil))
+            refused("no circuit is surveyed under 'monza'", Atlas.parse("monza" :: Nil))
         )
 
     def refused(problem: String, asked: Result[Cli.Args.ArgsError, Atlas.Asking]): Bool =

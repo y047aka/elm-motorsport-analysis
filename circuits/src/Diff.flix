@@ -46,13 +46,15 @@ pub mod Diff {
     pub def parse(args: List[String]): Result[ArgsError, Args] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
-            case Ok(scanned)  =>
-                complete(
-                    scanned#words,
-                    Cli.Args.lastNamed(everyNamed, scanned#options),
-                    Cli.Args.lastNamed(svgNamed, scanned#options)
-                )
+            case Ok(scanned)  => completed(scanned)
         }
+
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Args] =
+        complete(
+            scanned#words,
+            Cli.Args.lastNamed(everyNamed, scanned#options),
+            Cli.Args.lastNamed(svgNamed, scanned#options)
+        )
 
     enum Setting with Eq {
         case Help
@@ -130,11 +132,7 @@ pub mod Diff {
             usage(),
             isHelp,
             args,
-            scanned -> complete(
-                scanned#words,
-                Cli.Args.lastNamed(everyNamed, scanned#options),
-                Cli.Args.lastNamed(svgNamed, scanned#options)
-            ),
+            completed,
             laid
         )
 

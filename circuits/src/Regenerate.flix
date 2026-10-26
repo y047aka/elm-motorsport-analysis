@@ -54,13 +54,11 @@ pub mod Regenerate {
     pub def parse(args: List[String]): Result[ArgsError, Args] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
-            case Ok(scanned)  =>
-                complete(
-                    scanned#words,
-                    List.exists(isWriting, scanned#options),
-                    List.exists(isFreeze, scanned#options)
-                )
+            case Ok(scanned)  => completed(scanned)
         }
+
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Args] =
+        complete(scanned#words, List.exists(isWriting, scanned#options), List.exists(isFreeze, scanned#options))
 
     enum Setting with Eq {
         case Help
@@ -140,7 +138,7 @@ pub mod Regenerate {
             usage(),
             isHelp,
             args,
-            scanned -> complete(scanned#words, List.exists(isWriting, scanned#options), List.exists(isFreeze, scanned#options)),
+            completed,
             asked -> {
                 warnUnlisted();
                 walked(Nil, asked#circuits, asked#mode)
