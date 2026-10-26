@@ -197,12 +197,14 @@ pub mod Write {
                 )
         }
 
-    enum Setting {
+    enum Setting with Eq {
         case Answer(String)
+        case Help
         case Written
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
             optionNames   = "answer" :: Nil,
@@ -215,6 +217,9 @@ pub mod Write {
             argDescriptor = ArgDescr.NoArg(Setting.Written),
             explanation   = "lay the geometry file down instead of answering whether\nthe survey still draws the kept bytes"
         } :: Nil
+
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
 
     /// A flag is no file: `--answer --write` is a reader who meant something else,
     /// and a survey that read it as a path would report a file that cannot be
@@ -270,10 +275,19 @@ pub mod Write {
     /// was pointed at and cannot read, a survey it could not chain, and a file it could not
     /// write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
-        match parse(args) {
-            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
-            case Ok(asked) => ask(asked)
-        }
+        Cli.Args.answer(
+            optionDescrs(),
+            usage(),
+            isHelp,
+            args,
+            scanned -> complete(
+                scanned#words,
+                "survey",
+                Cli.Args.lastNamed(answerNamed, scanned#options),
+                List.exists(isWritten, scanned#options)
+            ),
+            ask
+        )
 
     /// The exit code the whole run comes to: the survey's, with one difference — no
     /// answer named asks OpenStreetMap now instead of reading the kept answer. What
@@ -284,14 +298,19 @@ pub mod Write {
     /// A live asking keeps nothing by itself: `fetch` is the command that decides what
     /// a run keeps beside a circuit.
     pub def writeExitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        match parseFor("write", args) {
-            case Err(problem) => Cli.Args.refuseArgs("${problem}", writeUsage())
-            case Ok(asked) =>
-                if (asked#asked)
-                    ask(asked)
-                else
-                    live(asked)
-        }
+        Cli.Args.answer(
+            optionDescrs(),
+            writeUsage(),
+            isHelp,
+            args,
+            scanned -> complete(
+                scanned#words,
+                "write",
+                Cli.Args.lastNamed(answerNamed, scanned#options),
+                List.exists(isWritten, scanned#options)
+            ),
+            asked -> if (asked#asked) ask(asked) else live(asked)
+        )
 
     /// The asking, then the survey over what came back. The answer's name in the
     /// report is the question rather than a file.

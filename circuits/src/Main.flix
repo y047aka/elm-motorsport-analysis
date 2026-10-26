@@ -34,6 +34,9 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
         case Nil =>
             Console.println(usage());
             Exit.exit(0)
+        case "--help" :: _ =>
+            Console.println(usage());
+            Exit.exit(0)
         case "atlas" :: rest =>
             Exit.exit(Atlas.exitCode(rest))
         case "diff" :: rest =>

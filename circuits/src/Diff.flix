@@ -54,12 +54,14 @@ pub mod Diff {
                 )
         }
 
-    enum Setting {
+    enum Setting with Eq {
+        case Help
         case Every(String)
         case Svg(String)
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
             optionNames   = "every" :: Nil,
@@ -72,6 +74,9 @@ pub mod Diff {
             argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Svg(path)), "OUT.SVG"),
             explanation   = "draw the two lines over each other into this file"
         } :: Nil
+
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
 
     def complete(paths: List[String], every: Option[String], svg: Option[String]): Result[ArgsError, Args] =
         if (List.length(paths) != 2)
@@ -120,15 +125,25 @@ pub mod Diff {
     /// it cannot read or that is not a geometry of this profile, and for an overlay it
     /// could not write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
-        match parse(args) {
-            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
-            case Ok(asked) =>
-                match read(Nil, asked#paths) {
-                    case Err(problem) =>
-                        Console.eprintln("${problem}");
-                        1
-                    case Ok(lines) => report(lines, asked)
-                }
+        Cli.Args.answer(
+            optionDescrs(),
+            usage(),
+            isHelp,
+            args,
+            scanned -> complete(
+                scanned#words,
+                Cli.Args.lastNamed(everyNamed, scanned#options),
+                Cli.Args.lastNamed(svgNamed, scanned#options)
+            ),
+            laid
+        )
+
+    def laid(asked: Args): Int32 \ { IO, Console } =
+        match read(Nil, asked#paths) {
+            case Err(problem) =>
+                Console.eprintln("${problem}");
+                1
+            case Ok(lines) => report(lines, asked)
         }
 
     /// Each file read as the line it claims to be, under the name the file is known by —

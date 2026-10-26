@@ -29,17 +29,22 @@ pub mod Fetch {
         out     = String
     }
 
-    enum Setting {
+    enum Setting with Eq {
+        case Help
         case Out(String)
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
             optionNames   = "out" :: Nil,
             argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Out(path)), "OVERPASS.JSON"),
             explanation   = "keep the answer here instead of beside the circuit's config"
         } :: Nil
+
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
 
     pub def parse(args: List[String]): Result[ArgsError, Args] =
         match Cli.Args.scan(optionDescrs(), args) {
@@ -74,6 +79,7 @@ pub mod Fetch {
     def outNamed(setting: Setting): Option[String] =
         match setting {
             case Setting.Out(path) => Some(path)
+            case _                 => None
         }
 
     pub def usage(): String =
@@ -86,10 +92,14 @@ pub mod Fetch {
     /// of them reached, an answer the survey cannot read, and a file it could not
     /// write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        match parse(args) {
-            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
-            case Ok(asked) => askOf(asked)
-        }
+        Cli.Args.answer(
+            optionDescrs(),
+            usage(),
+            isHelp,
+            args,
+            scanned -> complete(scanned#words, Cli.Args.lastNamed(outNamed, scanned#options)),
+            askOf
+        )
 
     def askOf(asked: Args): Int32 \ { IO, Clock, Console } =
         match Overpass.askRelation(asked#circuit#relation) {

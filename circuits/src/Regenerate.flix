@@ -63,11 +63,13 @@ pub mod Regenerate {
         }
 
     enum Setting with Eq {
+        case Help
         case Writing
         case Freeze
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
             optionNames   = "write" :: Nil,
@@ -80,6 +82,9 @@ pub mod Regenerate {
             argDescriptor = ArgDescr.NoArg(Setting.Freeze),
             explanation   = "ask OpenStreetMap now and keep the answer and the\ngeometry as one reading"
         } :: Nil
+
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
 
     def isWriting(setting: Setting): Bool =
         setting == Setting.Writing
@@ -130,10 +135,14 @@ pub mod Regenerate {
     /// opposite flags, a run that could not ask, survey or write, and a drawing
     /// that moved.
     pub def exitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        match parse(args) {
-            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
-            case Ok(asked) => walked(Nil, asked#circuits, asked#mode)
-        }
+        Cli.Args.answer(
+            optionDescrs(),
+            usage(),
+            isHelp,
+            args,
+            scanned -> complete(scanned#words, List.exists(isWriting, scanned#options), List.exists(isFreeze, scanned#options)),
+            asked -> walked(Nil, asked#circuits, asked#mode)
+        )
 
     def walked(codes: List[Int32], rest: List[Circuit], mode: Mode): Int32 \ { IO, Clock, Console } =
         match rest {

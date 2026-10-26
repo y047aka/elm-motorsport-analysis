@@ -94,12 +94,14 @@ pub mod Atlas {
             optionDescrs()
         )
 
-    enum Setting {
+    enum Setting with Eq {
+        case Help
         case File(String)
     }
 
     /// `--file <path>`, and nothing else a run does not know. One run reads one layer.
     def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
             optionNames   = "file" :: Nil,
@@ -107,29 +109,41 @@ pub mod Atlas {
             explanation   = "read this kept layer instead of fetching the circuit's own"
         } :: Nil
 
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
+
     /// The exit code the reading comes to: 1 for a word no circuit answers to, a
     /// circuit with no atlas layer, a file that would not read or a line that failed a
     /// guard, and 0 once the line is measured and kept.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
         Net.Https.runWithIO(
             () ->
-                match asked(args) {
-                    case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
-                    case Ok((circuit, file)) =>
-                        match measure(circuit, file) {
-                            case Err(problem) =>
-                                Console.eprintln(problem);
-                                1
-                            case Ok(reading) =>
-                                report(reading);
-                                0
-                        }
-                }
+                Cli.Args.answer(
+                    optionDescrs(),
+                    usage(),
+                    isHelp,
+                    args,
+                    scanned -> readOf(scanned#words, Cli.Args.lastNamed(fileNamed, scanned#options)),
+                    measuredReport
+                )
         )
+
+    def measuredReport(circuitAndFile: (Circuit, Option[String])): Int32 \ { IO, Console, Https } =
+        match circuitAndFile {
+            case (circuit, file) =>
+                match measure(circuit, file) {
+                    case Err(problem) =>
+                        Console.eprintln(problem);
+                        1
+                    case Ok(reading) =>
+                        report(reading);
+                        0
+                }
+        }
 
     /// The circuit to read, and the layer to read it from: the file named, or the
     /// circuit's own layer fetched when no file is given.
-    def asked(args: List[String]): Result[ArgsError, (Circuit, Option[String])] =
+    pub def asked(args: List[String]): Result[ArgsError, (Circuit, Option[String])] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  =>
@@ -164,6 +178,7 @@ pub mod Atlas {
     def fileNamed(setting: Setting): Option[String] =
         match setting {
             case Setting.File(path) => Some(path)
+            case _                  => None
         }
 
     // ------------------------------------------------------------------ the measuring

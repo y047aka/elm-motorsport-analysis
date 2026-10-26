@@ -33,11 +33,53 @@ pub mod Cli.Args {
 
     /// The walk every command shares: flags and words freely interspersed, and
     /// every complaint GetOpt collected rather than only the first.
-    pub def scan(descrs: List[OptionDescr[s]], args: List[String]): Result[ArgsError, {options = List[s], words = List[String]}] =
+    pub type alias Scanned[s] = {options = List[s], words = List[String]}
+
+    pub def scan(descrs: List[OptionDescr[s]], args: List[String]): Result[ArgsError, Scanned[s]] =
         match Util.GetOpt.getOpt(Util.GetOpt.ArgOrder.Permute, descrs, args) {
             case Validation.Failure(errors) => Err(ArgsError.ParseErrors(Nec.toList(errors)))
             case Validation.Success(result) => Ok({options = result#options, words = result#nonOptions})
         }
+
+    /// The one flag every command takes, declared once and named by the
+    /// command's own `Help` case — so the flag table of each usage lists it
+    /// whether or not the command reads anything else.
+    pub def helpDescr(help: s): OptionDescr[s] =
+        {
+            optionIds     = Nil,
+            optionNames   = "help" :: Nil,
+            argDescriptor = ArgDescr.NoArg(help),
+            explanation   = "print this usage and stop"
+        }
+
+    /// The run every command is: scan, answer `--help` with the usage before the
+    /// command's own completing reads anything else, refuse a wrong argument with
+    /// the sentence and the usage, and hand a good one to `ask`.
+    pub def answer(
+        descrs: List[OptionDescr[s]],
+        usage: String,
+        isHelp: s -> Bool,
+        args: List[String],
+        complete: Scanned[s] -> Result[ArgsError, a],
+        ask: a -> Int32 \ ef
+    ): Int32 \ (ef + Console) =
+        match scan(descrs, args) {
+            case Err(problem) => refuseArgs("${problem}", usage)
+            case Ok(scanned) =>
+                if (List.exists(isHelp, scanned#options))
+                    printHelp(usage)
+                else
+                    match complete(scanned) {
+                        case Err(problem) => refuseArgs("${problem}", usage)
+                        case Ok(asked)    => ask(asked)
+                    }
+        }
+
+    /// A run that raised `--help` gets the usage on stdout and goes well.
+    pub def printHelp(usage: String): Int32 \ Console = {
+        Console.println(usage);
+        0
+    }
 
     /// The answer a wrong argument comes to, as `flix/src`'s `main` answers it: the
     /// sentence naming what was wrong, the command's own usage under it, and exit
