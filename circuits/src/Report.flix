@@ -2,15 +2,16 @@
 /// season to read it against, how far round the lap one line may come to stand
 /// between the two readings, and the directory the feeds are in.
 ///
-/// Written over `Util.GetOpt` as `Cli.Args` is, so a wrong flag is answered with
-/// one style of usage at either command. `--load`, `--export`, `--serve`,
-/// `--port` and `--database` are refused: they belong to the CLI's other
-/// commands, which compute in a database. Nothing here opens a file.
+/// Runs on the shared `Cli.Args` scan and answering, as every other word does,
+/// so a wrong flag is answered with one style of usage at either command.
+/// `--load`, `--export`, `--serve`, `--port` and `--database` are refused: they
+/// belong to the CLI's other commands, which compute in a database. Nothing
+/// here opens a file.
 pub mod Report {
 
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
-    use Cli.Errors.CliError
+    use Cli.Args.ArgsError
     use Cli.Errors.checkDirectory
     use Motorsport.Calendar
     use Sys.Console
@@ -25,24 +26,8 @@ pub mod Report {
         tolerance = Float64
     }
 
-    /// The arguments as given, when they are not what the report reads.
-    pub enum ReportError {
-        case MissingDirectory(String)
-        case UnexpectedArguments(List[String])
-        case ParseErrors(List[String])
-    }
-
-    /// Each case already carries the sentence naming what was wrong; the derived
-    /// one would wrap it in constructor syntax before it reaches stderr.
-    instance ToString[ReportError] {
-        pub def toString(e: ReportError): String = match e {
-            case ReportError.MissingDirectory(flag)      => "${flag} is required: the feed sits in the season directories under it."
-            case ReportError.UnexpectedArguments(extras) => "${List.join(", ", extras)} are not arguments this report reads, which names one round as <season>/<id>."
-            case ReportError.ParseErrors(messages)       => List.join(" ", messages)
-        }
-    }
-
-    enum Setting {
+    enum Setting with Eq {
+        case Help
         case Csv(String)
         case Against(String)
         case Tolerance(String)
@@ -51,10 +36,14 @@ pub mod Report {
     /// The exit code the arguments come to. 1 is an answer the report gives as
     /// well: a line standing further round the lap than the distance allowed.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
-        match parse(args) {
-            case Err(e) => Cli.Args.refuseArgs("${e}", usage())
-            case Ok(request) => feed(request)
-        }
+        Cli.Args.answer(
+            optionDescrs(),
+            usage(),
+            isHelp,
+            args,
+            scanned -> requestOf(scanned#options, scanned#words),
+            feed
+        )
 
     def feed(request: Request): Int32 \ { IO, Console } =
         match checkDirectory(request#csv) {
@@ -72,6 +61,7 @@ pub mod Report {
         }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
             optionNames   = "csv" :: Nil,
@@ -91,13 +81,16 @@ pub mod Report {
             explanation   = "how far round the lap one line may stand apart\nin the two readings (default ${Cli.TimingLines.defaultTolerance()} m)"
         } :: Nil
 
-    pub def parse(args: List[String]): Result[ReportError, Request] =
-        match Util.GetOpt.getOpt(Util.GetOpt.ArgOrder.Permute, optionDescrs(), args) {
-            case Validation.Failure(errors) => Err(ReportError.ParseErrors(Nec.toList(errors)))
-            case Validation.Success(result) => requestOf(result#options, result#nonOptions)
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
+
+    pub def parse(args: List[String]): Result[ArgsError, Request] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  => requestOf(scanned#options, scanned#words)
         }
 
-    def requestOf(settings: List[Setting], nonOptions: List[String]): Result[ReportError, Request] =
+    def requestOf(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Request] =
         forM(
             csv       <- required("csv", csvDir(settings));
             named     <- namedRound(nonOptions);
@@ -111,8 +104,8 @@ pub mod Report {
             tolerance = tolerance
         }
 
-    def required(name: String, dir: Option[String]): Result[ReportError, String] =
-        Option.toOk(ReportError.MissingDirectory("--${name}"), dir)
+    def required(name: String, dir: Option[String]): Result[ArgsError, String] =
+        Option.toOk(ArgsError.ParseErrors("--${name} is required: the feed sits in the season directories under it." :: Nil), dir)
 
     def csvDir(settings: List[Setting]): Option[String] =
         settings |> List.foldLeft((acc, setting) -> match setting {
@@ -128,16 +121,16 @@ pub mod Report {
         id = String
     }
 
-    def namedRound(nonOptions: List[String]): Result[ReportError, Named] =
+    def namedRound(nonOptions: List[String]): Result[ArgsError, Named] =
         match nonOptions {
             case only :: Nil =>
                 match roundName(only) {
                     case Some((season, id)) => Ok({ season = season, id = id })
                     case None               =>
-                        Err(ReportError.ParseErrors("\"${only}\" names no round: name one as <season>/<id>, like 2026/cota_6h." :: Nil))
+                        Err(ArgsError.ParseErrors("\"${only}\" names no round: name one as <season>/<id>, like 2026/cota_6h." :: Nil))
                 }
-            case Nil    => Err(ReportError.ParseErrors("the report reads one round, named as <season>/<id>." :: Nil))
-            case extras => Err(ReportError.UnexpectedArguments(extras))
+            case Nil    => Err(ArgsError.ParseErrors("the report reads one round, named as <season>/<id>." :: Nil))
+            case extras => Err(ArgsError.ParseErrors("${List.join(", ", extras)} are not arguments this report reads, which names one round as <season>/<id>." :: Nil))
         }
 
     def roundName(name: String): Option[(Int32, String)] =
@@ -150,7 +143,7 @@ pub mod Report {
         }
 
     /// The last `--against` wins, as the last `--database` does in the CLI.
-    def againstSeason(settings: List[Setting]): Result[ReportError, Option[Int32]] =
+    def againstSeason(settings: List[Setting]): Result[ArgsError, Option[Int32]] =
         match Cli.Args.lastNamed(seasonNamed, settings) {
             case None       => Ok(None)
             case Some(name) =>
@@ -162,15 +155,15 @@ pub mod Report {
                         if (String.length(name) == 4)
                             Ok(Some(season))
                         else
-                            Err(ReportError.ParseErrors("\"${name}\" is not a season: --against names a year, like 2025." :: Nil))
+                            Err(ArgsError.ParseErrors("\"${name}\" is not a season: --against names a year, like 2025." :: Nil))
                     case None =>
-                        Err(ReportError.ParseErrors("\"${name}\" is not a season: --against names a year, like 2025." :: Nil))
+                        Err(ArgsError.ParseErrors("\"${name}\" is not a season: --against names a year, like 2025." :: Nil))
                 }
         }
 
     /// The distance allowed, defaulting to the report's own and refusing nought:
     /// a run that allows no distance calls every two seasons run on different lines.
-    def distanceAllowed(settings: List[Setting]): Result[ReportError, Float64] =
+    def distanceAllowed(settings: List[Setting]): Result[ArgsError, Float64] =
         match Cli.Args.lastNamed(toleranceNamed, settings) {
             case None          => Ok(Cli.TimingLines.defaultTolerance())
             case Some(spelled) =>
@@ -179,9 +172,9 @@ pub mod Report {
                         if (metres > 0.0)
                             Ok(metres)
                         else
-                            Err(ReportError.ParseErrors("\"${spelled}\" is not a distance: --tolerance is metres, and more than nought." :: Nil))
+                            Err(ArgsError.ParseErrors("\"${spelled}\" is not a distance: --tolerance is metres, and more than nought." :: Nil))
                     case None =>
-                        Err(ReportError.ParseErrors("\"${spelled}\" is not a distance: --tolerance is metres, and more than nought." :: Nil))
+                        Err(ArgsError.ParseErrors("\"${spelled}\" is not a distance: --tolerance is metres, and more than nought." :: Nil))
                 }
         }
 

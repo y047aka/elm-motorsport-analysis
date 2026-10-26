@@ -18,6 +18,7 @@ pub mod Probe {
 
     use Candidates.{bboxOf, describe, looksLikeACircuit, measure}
     use Candidates.Box
+    use Cli.Args.ArgsError
     use Net.Https.Https
     use Overpass.Element
     use Sys.Console
@@ -31,19 +32,6 @@ pub mod Probe {
         places = List[String]
     }
 
-    /// The arguments as given, when they are not what the probe asks with.
-    pub enum ProbeError {
-        case ParseErrors(List[String])
-    }
-
-    /// Each case already carries the sentence naming what was wrong; the derived
-    /// one would wrap it in constructor syntax before it reaches stderr.
-    instance ToString[ProbeError] {
-        pub def toString(e: ProbeError): String = match e {
-            case ProbeError.ParseErrors(messages) => List.join(" ", messages)
-        }
-    }
-
     /// How far a centre is widened by default: 5 km, which holds the Grand Prix
     /// circuit at Le Mans and not the full Sarthe one.
     pub def defaultRadius(): Float64 = 5.0
@@ -52,11 +40,13 @@ pub mod Probe {
     /// tagged as a route catches it for its whole length.
     pub def probeLimit(): Int32 = 10
 
-    enum Setting {
+    enum Setting with Eq {
+        case Help
         case Radius(String)
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
             optionNames   = "radius" :: Nil,
@@ -64,18 +54,21 @@ pub mod Probe {
             explanation   = "how far round each named centre to look\n(default ${defaultRadius()} km)"
         } :: Nil
 
-    pub def parse(args: List[String]): Result[ProbeError, Request] =
-        match Util.GetOpt.getOpt(Util.GetOpt.ArgOrder.Permute, optionDescrs(), args) {
-            case Validation.Failure(errors) => Err(ProbeError.ParseErrors(Nec.toList(errors)))
-            case Validation.Success(result) => requestOf(result#options, result#nonOptions)
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
+
+    pub def parse(args: List[String]): Result[ArgsError, Request] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  => requestOf(scanned#options, scanned#words)
         }
 
-    def requestOf(settings: List[Setting], places: List[String]): Result[ProbeError, Request] =
+    def requestOf(settings: List[Setting], places: List[String]): Result[ArgsError, Request] =
         match radiusOf(settings) {
             case Err(problem) => Err(problem)
             case Ok(radius)   =>
                 match places {
-                    case Nil   => Err(ProbeError.ParseErrors(placesWanted() :: Nil))
+                    case Nil   => Err(ArgsError.ParseErrors(placesWanted() :: Nil))
                     case named => Ok({ radius = radius, places = named })
                 }
         }
@@ -85,8 +78,8 @@ pub mod Probe {
 
     /// The last `--radius` wins, as a repeated option usually does. Nought and a
     /// negative are refused rather than widened into a box that does not open.
-    def radiusOf(settings: List[Setting]): Result[ProbeError, Float64] =
-        match Cli.Args.lastNamed(lastRadius, settings) {
+    def radiusOf(settings: List[Setting]): Result[ArgsError, Float64] =
+        match Cli.Args.lastNamed(radiusNamed, settings) {
             case None => Ok(defaultRadius())
             case Some(spelled) =>
                 match Float64.fromString(spelled) {
@@ -94,17 +87,18 @@ pub mod Probe {
                         if (km > 0.0)
                             Ok(km)
                         else
-                            Err(ProbeError.ParseErrors(notARadius(spelled) :: Nil))
-                    case None => Err(ProbeError.ParseErrors(notARadius(spelled) :: Nil))
+                            Err(ArgsError.ParseErrors(notARadius(spelled) :: Nil))
+                    case None => Err(ArgsError.ParseErrors(notARadius(spelled) :: Nil))
                 }
         }
 
     def notARadius(spelled: String): String =
         "\"${spelled}\" is not a radius: --radius is kilometres, and more than nought."
 
-    def lastRadius(setting: Setting): Option[String] =
+    def radiusNamed(setting: Setting): Option[String] =
         match setting {
             case Setting.Radius(km) => Some(km)
+            case _                  => None
         }
 
     pub def usage(): String =
@@ -118,11 +112,14 @@ pub mod Probe {
     /// The exit code the probe comes to: 1 for arguments it cannot ask with, and
     /// for a question no runner answered.
     pub def exitCode(args: List[String]): Int32 \ { Clock, Console, IO } =
-        match parse(args) {
-            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
-            case Ok(request) =>
-                Overpass.paced(() -> probeAll(request))
-        }
+        Cli.Args.answer(
+            optionDescrs(),
+            usage(),
+            isHelp,
+            args,
+            scanned -> requestOf(scanned#options, scanned#words),
+            request -> Overpass.paced(() -> probeAll(request))
+        )
 
     /// Every place named, probed in turn. The first question no runner answers ends
     /// the run: the next place would be refused for the same reason.

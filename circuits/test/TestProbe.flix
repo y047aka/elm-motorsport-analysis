@@ -63,7 +63,7 @@ pub mod TestProbe {
         Assert.assertTrue(complains("is not a radius", parse("--radius" :: "-3" :: centre())));
         Assert.assertTrue(complains("is not a radius", parse("--radius" :: "far" :: centre())))
 
-    def complains(problem: String, asked: Result[Probe.ProbeError, Probe.Request]): Bool =
+    def complains(problem: String, asked: Result[Cli.Args.ArgsError, Probe.Request]): Bool =
         match asked {
             case Err(e)       => String.contains({substr = problem}, "${e}")
             case Ok(_)        => false

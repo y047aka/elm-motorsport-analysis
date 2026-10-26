@@ -15,7 +15,9 @@ pub mod TestUsage {
         Assert.assertTrue(saysHelp(Write.writeUsage()));
         Assert.assertTrue(saysHelp(Atlas.usage()));
         Assert.assertTrue(saysHelp(Diff.usage()));
-        Assert.assertTrue(saysHelp(Regenerate.usage()))
+        Assert.assertTrue(saysHelp(Regenerate.usage()));
+        Assert.assertTrue(saysHelp(Probe.usage()));
+        Assert.assertTrue(saysHelp(Report.usage()))
 
     /// The survey and the whole run take the flags unchanged, and each says
     /// which of them it is even in the help.
