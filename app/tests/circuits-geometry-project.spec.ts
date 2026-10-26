@@ -15,8 +15,7 @@ import { readSource } from './helpers';
  * which sources the project holds, which it links, what it resolves, the flake
  * apps that reach it, the directory a reader's paths resolve against, and the
  * CI steps that compare rather than write. Those are read here, the way
- * `circuit-overpass.spec.ts` reads the sphere and `circuit-timing-map.spec.ts`
- * the timing figures.
+ * `circuit-overpass.spec.ts` reads the sphere on the app's side of the seam.
  *
  * Nothing here needs a browser.
  */
@@ -30,8 +29,8 @@ const main = readSource('circuits/src/Main.flix');
  * symlink of the same relative path — one per file, because Flix walks a linked
  * directory as nothing. A broken link fails elsewhere as `Undefined use`, in the
  * module that needed it rather than in the link; `circuit-timing-map.spec.ts`
- * walks the same list against the real tree, resolves each link, and reads every
- * source dereferenced for the words a database is named by.
+ * walks the same list against the real tree and resolves each link, and this
+ * spec reads every source dereferenced for the words a database is named by.
  */
 const reportLinks: Set<string> = new Set([
   'src/Cli.flix',
@@ -72,7 +71,7 @@ function readDir(dir: string): string[] {
 const project = [...readDir('circuits/src'), ...readDir('circuits/test')];
 
 /**
- * Every source the geometry project compiles — thirty of Flix and thirteen of tests, which
+ * Every source the geometry project compiles — thirty of Flix and fourteen of tests, which
  * is what the project is asserted to hold — for the reading of their text alone: a word a
  * database is named by would arrive in a source file and not in a build product. A link
  * reads as what it holds, so this includes each of the report's nine as `flix/src` spells
@@ -210,6 +209,7 @@ test('the geometry project links only the report\'s nine, resolves no dependency
     'circuits/test/TestRegenerate.flix',
     'circuits/test/TestReport.flix',
     'circuits/test/TestSurvey.flix',
+    'circuits/test/TestTimingMap.flix',
     'circuits/test/TestTrack.flix',
     'circuits/test/TestWrite.flix',
   ]);

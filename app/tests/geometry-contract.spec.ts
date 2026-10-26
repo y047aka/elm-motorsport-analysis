@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { existsSync } from 'node:fs';
 
-import { authoredCircuits, drawnNames, readSource } from './helpers';
+import { drawnNames, readSource } from './helpers';
 
 /**
  * The served half of the circuit seam. A drawn circuit is two lists in
@@ -10,34 +10,40 @@ import { authoredCircuits, drawnNames, readSource } from './helpers';
  * `app/static/geometry/<word>.geojson` behind them. None of it compiles: a file
  * missing is a round that fails to load, a file gone stale is pixels nobody
  * chose, and a decoder given the wrong lap length reads every honest geometry
- * as a lie. The words come out of the sources and the geometry out of the
- * kept files; nothing needs a browser.
+ * as a lie. The words come out of the sources and the geometry out of the kept
+ * files; nothing needs a browser.
  *
- * The figures a geometry is written from are authored once, in
- * `circuits/src/Circuit.flix`; the re-check here reads the kept file with its
- * own eyes -- the outline, its ascending metres, the pit lane beside it, the
- * sectors it publishes -- so what it judges is the bytes the app is served and
- * not a reading the pipeline shares.
+ * What this reads is the bytes the app is served and the Elm sources that read
+ * them, and nothing else. The figures the geometry was authored from are a
+ * Flix-to-Flix reading -- `circuits/src/Circuit.flix` against
+ * `Motorsport.Circuit.timingMap` is `circuits/test/TestTimingMap.flix`, and the
+ * byte fence (`nix run .#geometry -- survey <word>`) is what holds the served
+ * file to the config -- so the checks here are the ones no Flix test can make:
+ * what an Elm source states, and whether the served file stands where the app
+ * reaches for it. Each one reads the kept file with its own eyes -- the
+ * outline, its ascending metres, the pit lane beside it, the sectors it
+ * publishes -- rather than trusting any reader's claims about them.
  */
 
-const authored = authoredCircuits();
+type Outline = { properties: Record<string, never> };
 
 /** The outline the pipeline wrote, or nothing where none is kept. */
-function outline(file: unknown): { properties: Record<string, never> } | null {
+function outline(file: unknown): Outline | null {
   const found = (file as { features: { properties?: { role?: string } }[] }).features.find(
     (feature) => feature.properties?.role === 'outline',
   );
   return found ? { properties: found.properties as Record<string, never> } : null;
 }
 
-test('every circuit Shared draws has its geometry where the app reaches for it', async () => {
+function served(word: string): unknown {
+  return JSON.parse(readSource(`app/static/geometry/${word}.geojson`));
+}
+
+test('every circuit Shared draws has its geometry where the app reaches for it', () => {
   for (const name of drawnNames()) {
-    const circuit = authored[name];
-    expect(circuit, `${name} is drawn, but no config authors its geometry to check it against`).toBeTruthy();
-    const file = JSON.parse(readSource(`app/static/geometry/${name}.geojson`));
-    const props = outline(file)?.properties;
+    const props = outline(served(name))?.properties;
     expect(props, `${name}: the kept file holds no outline`).toBeTruthy();
-    expect(props!.circuit, `${name}: the kept file is not the geometry the config writes`).toBe(name);
+    expect(props!.circuit, `${name}: the kept file is not the geometry the app reaches for`).toBe(name);
     expect(
       ['osm-centreline', 'measured-midline'],
       `${name}: the kept file claims a basis no reading knows`,
@@ -45,26 +51,24 @@ test('every circuit Shared draws has its geometry where the app reaches for it',
     expect(props!.direction, `${name}: the kept file says it runs in no direction`).toMatch(
       /^(clockwise|counter_clockwise)$/,
     );
-    expect(
-      Math.abs(props!.lap_length_m - circuit!.lap),
-      `${name}: the kept file is a different lap from the one the config authors`,
-    ).toBeLessThanOrEqual(0.1);
     const metres = props!.metres as number[];
     expect(metres[metres.length - 1], `${name}: the kept file's own metres do not end at its lap`).toBeCloseTo(
       props!.lap_length_m,
       1,
     );
     for (let i = 1; i < metres.length; i++) {
-      expect(metres[i], `${name}: the kept file's metres go backwards at point ${i}`).toBeGreaterThanOrEqual(metres[i - 1]);
+      expect(metres[i], `${name}: the kept file's metres go backwards at point ${i}`).toBeGreaterThanOrEqual(
+        metres[i - 1],
+      );
     }
-    if (circuit!.sectors.kind === 'published') {
-      const stretches = props!.sectors.stretches as number[];
+    if (props!.sectors) {
+      const stretches = (props!.sectors as { stretches: number[] }).stretches;
       expect(
         stretches.reduce((sum, stretch) => sum + stretch, 0),
-        `${name}: the kept file's sectors do not add up to the published lap`,
-      ).toBeCloseTo(circuit!.lap, 1);
+        `${name}: the kept file's sectors do not add up to the lap it publishes`,
+      ).toBeCloseTo(props!.lap_length_m, 1);
     }
-    const pit = (file as { features: { properties?: { role?: string } }[] }).features.find(
+    const pit = (served(name) as { features: { properties?: { role?: string } }[] }).features.find(
       (feature) => feature.properties?.role === 'pit_lane',
     );
     expect(pit, `${name}: the kept file holds no pit lane`).toBeTruthy();
@@ -73,7 +77,6 @@ test('every circuit Shared draws has its geometry where the app reaches for it',
 
 test("a circuit's directory is named by the word the app draws it by", () => {
   for (const name of drawnNames()) {
-    expect(authored[name], `${name} is drawn, but the Flix config authors no circuit by that word`).toBeTruthy();
     expect(
       existsSync(new URL(`../../circuits/${name}/overpass.json`, import.meta.url)),
       `${name} is drawn, but no kept Overpass answer stands in circuits/${name}/`,
@@ -81,7 +84,12 @@ test("a circuit's directory is named by the word the app draws it by", () => {
   }
 });
 
-test('the Elm decoder is given the lap length the config authors', () => {
+/**
+ * The decoder and the drawing read one file, so one lap length is a fact about
+ * that file and not a figure to carry from the config that authored it -- the
+ * config's own figures are `TestTimingMap`'s and the byte fence's to keep.
+ */
+test('the Elm decoder is given the lap length the served geometry publishes', () => {
   const layouts: Record<string, string> = {
     cota: 'package/src/Motorsport/Wec/Circuit/Cota/Layout.elm',
     le_mans: 'package/src/Motorsport/Wec/Circuit/LeMans/Layout.elm',
@@ -89,10 +97,11 @@ test('the Elm decoder is given the lap length the config authors', () => {
   for (const name of drawnNames()) {
     const given = readSource(layouts[name]).match(/Geometry\.decoder \{ lapLength = ([0-9.]+) \}/);
     expect(given, `${name}'s Layout gives no lap length to the decoder`).toBeTruthy();
-    expect(Number(given![1]), `${name}: the decoder and the config are given different laps`).toBeCloseTo(
-      authored[name].lap,
-      5,
-    );
+    const props = outline(served(name))?.properties;
+    expect(
+      Number(given![1]),
+      `${name}: the decoder and the geometry it decodes are given different laps`,
+    ).toBeCloseTo(props!.lap_length_m, 5);
   }
 });
 

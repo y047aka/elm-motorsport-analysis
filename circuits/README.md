@@ -133,8 +133,9 @@ report answers is a season against another season, which no geometry file
 holds — reading the served bytes would make the report's input whatever a
 survey happened to lay down. So a circuit's published lap length and stretches are held twice, in
 the circuit's config and in `Motorsport.Circuit`, one for the drawing and one
-for the report, and `app/tests/circuit-timing-map.spec.ts` reads both sources
-and fails them apart; nothing else connects them. What is not answerable this
+for the report, and `test/TestTimingMap.flix` lays the two copies together —
+it runs under `nix run .#geometry-test`, in the one project that compiles both,
+and fails a stretch moved on either side by name. What is not answerable this
 way is where a place the shares imply stands against the drawn line itself —
 that is `.#geometry -- regenerate`'s and `-- diff`'s to say, measuring the
 geometry rather than a season. It is how COTA's second line was found standing
@@ -218,10 +219,12 @@ in which order, what a run calls itself, how many times each runner is asked,
 and how long one that just failed is left alone — those are facts about
 OpenStreetMap, and `Overpass.flix` spells them once for the probe's question and
 the pipeline's alike, walking both through the same runners and handing the
-survey's answer back as text and the probe's as elements. What no compiler
-sees is the sphere the metres are measured on, held by the survey, the probe and
-`Motorsport.Circuit.Geodesy` alike, which `app/tests/circuit-overpass.spec.ts`
-reads out of all three and fails apart. Measuring on the equatorial radius instead of the
+survey's answer back as text and the probe's as elements. The sphere the metres
+are measured on is spelled once inside the project — `Apart.earthMetres`, which
+the survey chains with and the probe counts its laps through — and once outside
+it: `Motorsport.Circuit.Geodesy` projects the drawing through its own number at
+load, and `app/tests/circuit-overpass.spec.ts` lays that one against the
+project's and fails a second spelling inside the project by the way. Measuring on the equatorial radius instead of the
 mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
 lap is the one reading a config is authored from.
 
@@ -252,8 +255,8 @@ kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.fl
 OpenStreetMap, `Overpass.flix` one spelling of the runners for the survey's
 question and the probe's alike. What is written twice is the timing
 figures, authored in `src/Circuit.flix` for the drawing and held again in the linked
-`Motorsport.Circuit` for a run that reads no geometry, joined by
-`app/tests/circuit-timing-map.spec.ts`.
+`Motorsport.Circuit` for a run that reads no geometry, laid together by
+`test/TestTimingMap.flix`.
 
 `nix run .#geometry -- survey cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
@@ -330,7 +333,9 @@ starting at the published line; and the comparison the fence makes is
 its bytes — and nothing asks OpenStreetMap from outside this project at all. Printing stays with the command — what a reading is worth is what it
 answers, not how its table is padded. `nix run .#geometry-test` runs the
 project's own `flix test`, where every reading is handed a fixture rather than a
-survey. What is judged
+survey — the one exception reads no fixture on purpose: `TestTimingMap` lays the
+two authored copies of a circuit's timing figures together, and the real authors
+are what it is given. What is judged
 against the repository's real bytes stays this file's other sections': the fence,
 the contract specs, the VRT.
 
@@ -345,8 +350,11 @@ pins that the circuit's directory under this one is named by that same word.
 `app/tests/circuit-contract.spec.ts` pins the word the summaries send for a
 circuit against the word `Shared.trackOf` picks a drawing by; a rename on one
 side alone would leave a round drawn as the ring with nothing red.
-`app/tests/circuit-timing-map.spec.ts` pins the figures the report reads — the
-published lap length and sector stretches — against the figures the drawing was
-laid from, which are held in two languages and compiled against nothing.
-`app/tests/circuit-overpass.spec.ts` pins what the two languages that ask
-OpenStreetMap hold in common about it, which is nothing either compiler can see.
+The figures the report reads — the published lap length and sector stretches —
+and the figures the drawing was laid from are laid together by
+`test/TestTimingMap.flix`, in the one project that compiles both; what remains
+outside it is the sharing itself, and `app/tests/circuit-timing-map.spec.ts`
+walks the nine links into `flix/src` and resolves each one.
+`app/tests/circuit-overpass.spec.ts` pins the one measurement either side holds
+alone: the sphere the app's drawing projects through, now that the project
+spells its own once.

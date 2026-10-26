@@ -503,7 +503,8 @@ paying for the same split.
 - **A reading with no database** — `test/Motorsport/TestCircuit.flix` freezes what
   each circuit publishes about its timing lines: no database, no file, no network.
   The report reads the same figures through a symlink into this `src`, and
-  `app/tests/circuit-timing-map.spec.ts` is the one thing that ties the two copies.
+  `circuits/test/TestTimingMap.flix` — run by `nix run .#geometry-test` — is the
+  one thing that ties the two copies.
   The feed's own readings, and an Overpass answer's, are driven under `circuits/`, by
   `nix run .#geometry-test` — which compiles nine sources from this `src` through
   symlinks and tests nothing else of it.
