@@ -278,7 +278,9 @@ reads it, two geometries laid together in the test that measures them.
 
 `nix run .#geometry -- atlas <circuit>` is the geometry project's own: `Track.flix`
 reads the foreign file's shapes and refuses what they contradict, `Atlas.flix`
-fetches or reads the layer, and the apartness is the diff's `Apart.flix`
+reads the layer — the circuit's kept line by default, its home only on `--fetch`,
+the same offline-by-default convention the survey keeps — and the apartness is the
+diff's `Apart.flix`
 sampling the same pair of lines. It reads the track-atlas line — a midline
 measured from orthoimagery, not a survey stretched to a published length, at
 5,500.2 m against the 5,515 m this app draws — and keeps it as

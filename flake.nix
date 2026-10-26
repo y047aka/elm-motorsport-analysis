@@ -72,8 +72,9 @@
         # kept geometries together, writes the file the app serves, probes a place
         # for a circuit, and reads two rounds' feeds for the timing-lines report —
         # `flix/src`'s own CSV decoding, which nine symlinks bring into the project.
-        # It reaches no database, and no network until a `survey --fetch` asks
-        # one; which command runs where is `circuits/README.md`'s to say.
+        # It reaches no database, and no network until a `--fetch` — the survey's or
+        # the atlas's — asks one; which command runs where is `circuits/README.md`'s
+        # to say.
         #
         # `GEOMETRY_FROM` is the directory the reader was standing in: `flix` has to be
         # started inside the project to find its `flix.toml`, and the reader names

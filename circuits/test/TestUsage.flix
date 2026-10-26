@@ -17,13 +17,14 @@ pub mod TestUsage {
         Assert.assertTrue(saysHelp(Probe.usage()));
         Assert.assertTrue(saysHelp(Report.usage()))
 
-    /// The survey's usage is the one place a reader learns the flag that raises the
-    /// network: a descriptor dropped from the flag table drops out of the help too,
-    /// and the help line names the word it belongs to.
+    /// The survey's and the atlas's usages are the one place a reader learns the
+    /// flag that raises the network: a descriptor dropped from the flag table drops
+    /// out of the help too, and the help line names the word it belongs to.
     @Test
     def testTheSurveyUsageNamesTheFlagThatRaisesTheNetwork(): Unit \ Assert =
         Assert.assertTrue(String.contains({substr = "-- survey <circuit>"}, Write.usage()));
-        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Write.usage()))
+        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Write.usage()));
+        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Atlas.usage()))
 
     /// One dialect at every usage: a reader who mistypes a word is answered with all
     /// of them at once, so they should read as one command's help rather than as six

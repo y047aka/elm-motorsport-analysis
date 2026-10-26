@@ -3,7 +3,15 @@
 /// centreline fixing the lap order, origin and direction — and keeps it in this
 /// repository's geometry profile, at the atlas length and *not* stretched.
 ///
-///     nix run .#geometry -- atlas <circuit> [--file gp.geojson]
+///     nix run .#geometry -- atlas cota
+///     nix run .#geometry -- atlas cota --fetch
+///     nix run .#geometry -- atlas cota --file gp.geojson
+///
+/// The reading is offline by default: with no `--file` it measures the line the circuit
+/// already keeps, and `--fetch` is the one flag that asks the layer's home — the same
+/// convention the survey keeps, so the jar reaches no network a flag did not name.
+/// A circuit with no kept line answers the sentence saying so and exits 0: the kept
+/// atlas line is evidence a run has yet to make, not a file a round needs.
 ///
 /// A circuit joins the reading by carrying an `atlas` entry naming the track-atlas layer
 /// for the layout this app draws; a circuit without one is asked nothing. It prints the
@@ -90,31 +98,51 @@ pub mod Atlas {
 
     pub def usage(): String =
         Util.GetOpt.usageInfo(
-            "usage: nix run .#geometry -- atlas <circuit> [--file <atlas.geojson>]",
+            "usage: nix run .#geometry -- atlas <circuit> [--fetch] [--file <atlas.geojson>]",
             optionDescrs()
         )
 
-    enum Setting with Eq {
-        case Help
-        case File(String)
+    /// What a run asks: the circuit, the layer named if one was, and whether the
+    /// layer's home is asked now.
+    pub type alias Asking = {
+        circuit = Circuit,
+        file    = Option[String],
+        fetch   = Bool
     }
 
-    /// `--file <path>`, and nothing else a run does not know. One run reads one layer.
+    enum Setting with Eq {
+        case Fetch
+        case File(String)
+        case Help
+    }
+
+    /// `--fetch` and `--file <path>`, and nothing else a run does not know. One run
+    /// reads one layer.
     def optionDescrs(): List[OptionDescr[Setting]] =
         Cli.Args.helpDescr(Setting.Help) ::
         {
             optionIds     = Nil,
+            optionNames   = "fetch" :: Nil,
+            argDescriptor = ArgDescr.NoArg(Setting.Fetch),
+            explanation   = "ask the circuit's atlas layer now and keep its line\nhere instead of reading the kept one"
+        } ::
+        {
+            optionIds     = Nil,
             optionNames   = "file" :: Nil,
             argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.File(path)), "ATLAS.GEOJSON"),
-            explanation   = "read this kept layer instead of fetching the circuit's own"
+            explanation   = "read this kept layer instead of the circuit's own"
         } :: Nil
 
     def isHelp(setting: Setting): Bool =
         setting == Setting.Help
 
+    def isFetched(setting: Setting): Bool =
+        setting == Setting.Fetch
+
     /// The exit code the reading comes to: 1 for a word no circuit answers to, a
     /// circuit with no atlas layer, a file that would not read or a line that failed a
-    /// guard, and 0 once the line is measured and kept.
+    /// guard, and 0 once the line is measured and kept — or when a run handed no
+    /// `--fetch` has no kept line to measure yet.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
         Net.Https.runWithIO(
             () ->
@@ -123,37 +151,63 @@ pub mod Atlas {
                     usage(),
                     isHelp,
                     args,
-                    scanned -> readOf(scanned#words, Cli.Args.lastNamed(fileNamed, scanned#options)),
+                    scanned ->
+                        readOf(
+                            scanned#words,
+                            Cli.Args.lastNamed(fileNamed, scanned#options),
+                            List.exists(isFetched, scanned#options)
+                        ),
                     measuredReport
                 )
         )
 
-    def measuredReport(circuitAndFile: (Circuit, Option[String])): Int32 \ { IO, Console, Https } =
-        match circuitAndFile {
-            case (circuit, file) =>
-                match measure(circuit, file) {
-                    case Err(problem) =>
-                        Console.eprintln(problem);
-                        1
-                    case Ok(reading) =>
-                        report(reading);
-                        0
+    def measuredReport(asked: Asking): Int32 \ { IO, Console, Https } =
+        if (noneKept(asked))
+            noLine(asked#circuit)
+        else
+            match measure(asked) {
+                case Err(problem) =>
+                    Console.eprintln(problem);
+                    1
+                case Ok(reading) =>
+                    report(reading);
+                    0
+            }
+
+    /// Whether this run would read the circuit's own kept line and none is there.
+    def noneKept(asked: Asking): Bool \ IO =
+        match (asked#file, asked#fetch) {
+            case (Some(_), _) => false
+            case (None, true) => false
+            case (None, false) =>
+                match Cli.Errors.readFile(Circuit.keptAtlas(asked#circuit)) {
+                    case Err(_) => true
+                    case Ok(_)  => false
                 }
         }
 
-    /// The circuit to read, and the layer to read it from: the file named, or the
-    /// circuit's own layer fetched when no file is given.
-    pub def asked(args: List[String]): Result[ArgsError, (Circuit, Option[String])] =
+    def noLine(circuit: Circuit): Int32 \ Console = {
+        Console.println("${circuit#word}: no kept atlas line yet — `--fetch` asks the layer's home and keeps one");
+        0
+    }
+
+    /// The circuit to read, and where its layer comes from.
+    pub def asked(args: List[String]): Result[ArgsError, Asking] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  =>
-                readOf(scanned#words, Cli.Args.lastNamed(fileNamed, scanned#options))
+                readOf(
+                    scanned#words,
+                    Cli.Args.lastNamed(fileNamed, scanned#options),
+                    List.exists(isFetched, scanned#options)
+                )
         }
 
-    /// A flag is no file, as at the other commands: a run that read `--file --write`
+    /// A flag is no file, as at the other commands: a run that read `--file --fetch`
     /// as a path would keep one circuit's evidence under a name no file can be
-    /// called.
-    def readOf(words: List[String], file: Option[String]): Result[ArgsError, (Circuit, Option[String])] =
+    /// called. And `--file` beside `--fetch` names where to read and asks that the
+    /// run read nowhere — opposite answers for one layer.
+    def readOf(words: List[String], file: Option[String], fetch: Bool): Result[ArgsError, Asking] =
         match words {
             case Nil => Err(ArgsError.ParseErrors("atlas reads one circuit." :: Nil))
             case one :: extra =>
@@ -169,8 +223,10 @@ pub mod Atlas {
                                 case Some(_) =>
                                     if (Option.exists(Cli.Args.isFlag, file))
                                         Err(ArgsError.ParseErrors("--file names no file to read" :: Nil))
+                                    else if (Option.nonEmpty(file) and fetch)
+                                        Err(ArgsError.ParseErrors("--file and --fetch ask for opposite things: a layer already kept, and one asked now." :: Nil))
                                     else
-                                        Ok((circuit, file))
+                                        Ok({circuit = circuit, file = file, fetch = fetch})
                             }
                     }
         }
@@ -183,42 +239,47 @@ pub mod Atlas {
 
     // ------------------------------------------------------------------ the measuring
 
-    /// The layer read — the named file, or the circuit's own asked for now — measured
-    /// against the geometry the app serves, and kept beside the config. The guards all
-    /// answer before anything is written: a line that is another circuit's, or starts at
-    /// another line, never reaches disk.
-    def measure(circuit: Circuit, file: Option[String]): Result[String, Reading] \ { IO, Https } =
-        match read(file, circuit) {
+    /// The layer read — asked now, read from the named file, or read from the line
+    /// the circuit keeps — measured against the geometry the app serves, and kept
+    /// beside the config. The guards all answer before anything is written: a line
+    /// that is another circuit's, or starts at another line, never reaches disk.
+    def measure(asked: Asking): Result[String, Reading] \ { IO, Https } =
+        match read(asked) {
             case Err(problem) => Err(problem)
             case Ok(text) =>
-                match layerOf(text, circuit#word) {
+                match layerOf(text, asked#circuit#word) {
                     case Err(problem) => Err(problem)
                     case Ok((outline, corners, pits)) =>
                         match placesOf(corners ++ pits) {
                             case Err(problem) => Err(problem)
                             case Ok(markers) =>
-                                match kept(circuit) {
+                                match kept(asked#circuit) {
                                     case Err(problem) => Err(problem)
-                                    case Ok(ours) => measured(circuit, Option.getWithDefault("", circuit#atlas), outline, corners, pits, markers, ours)
+                                    case Ok(ours) => measured(asked#circuit, Option.getWithDefault("", asked#circuit#atlas), outline, corners, pits, markers, ours)
                                 }
                         }
                 }
         }
 
-    /// The layer's text, from the named file or from its home. The source the kept
-    /// file claims is the circuit's atlas URL either way: a reading from a kept file
-    /// re-keeps the line the URL's survey measured, and a file path would credit the
-    /// line to whomever saved it last.
-    def read(file: Option[String], circuit: Circuit): Result[String, String] \ { IO, Https } =
-        match circuit#atlas {
-            case None => Err("${circuit#word}'s config names no atlas layer to read")
+    /// The layer's text: from its home on `--fetch`, from the named file, or from the
+    /// line the circuit keeps. The source the kept file claims is the circuit's atlas
+    /// URL either way: a reading from a kept file re-keeps the line the URL's survey
+    /// measured, and a file path would credit the line to whomever saved it last.
+    def read(asked: Asking): Result[String, String] \ { IO, Https } =
+        match asked#circuit#atlas {
+            case None => Err("${asked#circuit#word}'s config names no atlas layer to read")
             case Some(url) =>
-                match file {
-                    case Some(path) =>
-                        Cli.Errors.readFile(path) |>
-                            Result.mapErr(problem -> "${problem}")
-                    case None => ask(url)
-                }
+                if (asked#fetch)
+                    ask(url)
+                else
+                    match asked#file {
+                        case Some(path) =>
+                            Cli.Errors.readFile(path) |>
+                                Result.mapErr(problem -> "${problem}")
+                        case None =>
+                            Cli.Errors.readFile(Circuit.keptAtlas(asked#circuit)) |>
+                                Result.mapErr(problem -> "${problem}")
+                    }
         }
 
     /// The layer asked of its home: once, without retries — a dataset's repository is
