@@ -15,9 +15,12 @@ pub mod Diff {
 
     use Apart.Apartness
     use Apart.Point
+    use Cli.Args.ArgsError
     use Geometry.Line
     use Geometry.Place
     use Sys.Console
+    use Util.GetOpt.ArgDescr
+    use Util.GetOpt.OptionDescr
 
     /// The width the overlay is drawn at and the margin it is drawn inside. Fixed,
     /// so an overlay that outlives its files can be laid against the next run's;
@@ -40,36 +43,76 @@ pub mod Diff {
 
     /// What the command asks for: two files, a spacing over nought metres, and an
     /// overlay to write. Paths are used as they stand.
-    pub def parse(args: List[String]): Result[String, Args] =
-        walked(Nil, args, None, None)
-
-    def walked(paths: List[String], rest: List[String], every: Option[Float64], svg: Option[String]): Result[String, Args] =
-        match rest {
-            case Nil => complete(List.reverse(paths), every, svg)
-            case "--every" :: spelled :: further =>
-                match Float64.fromString(spelled) {
-                    case Some(metres) => walked(paths, further, Some(metres), svg)
-                    case None         => Err("\"${spelled}\" is not a distance")
-                }
-            case "--every" :: Nil => Err("--every names no distance")
-            case "--svg" :: path :: further => walked(paths, further, every, Some(path))
-            case "--svg" :: Nil => Err("--svg names no file to write")
-            case one :: more => walked(one :: paths, more, every, svg)
+    pub def parse(args: List[String]): Result[ArgsError, Args] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  =>
+                complete(
+                    scanned#words,
+                    Cli.Args.lastNamed(everyNamed, scanned#options),
+                    Cli.Args.lastNamed(svgNamed, scanned#options)
+                )
         }
 
-    def complete(paths: List[String], every: Option[Float64], svg: Option[String]): Result[String, Args] = {
-        let asked = Option.getWithDefault(Apart.defaultEvery(), every);
-        if (List.length(paths) != 2)
-            Err(usage())
-        else if (asked <= 0.0)
-            Err("\"${Util.Format.spelled(asked)}\" is not a distance")
-        else
-            Ok({paths = paths, every = asked, svg = svg})
+    enum Setting {
+        case Every(String)
+        case Svg(String)
     }
+
+    def optionDescrs(): List[OptionDescr[Setting]] =
+        {
+            optionIds     = Nil,
+            optionNames   = "every" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(metres -> Some(Setting.Every(metres)), "METRES"),
+            explanation   = "how far apart the samples stand along each line\n(default ${Apart.defaultEvery()} m)"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "svg" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Svg(path)), "OUT.SVG"),
+            explanation   = "draw the two lines over each other into this file"
+        } :: Nil
+
+    def complete(paths: List[String], every: Option[String], svg: Option[String]): Result[ArgsError, Args] =
+        if (List.length(paths) != 2)
+            Err(ArgsError.ParseErrors(usage() :: Nil))
+        else
+            match spacing(every) {
+                case Err(problem) => Err(ArgsError.ParseErrors(problem :: Nil))
+                case Ok(metres)   => Ok({paths = paths, every = metres, svg = svg})
+            }
+
+    /// The word the reader typed is the word quoted back, which is what a reader can
+    /// correct: a coerced number echoes a value they never wrote.
+    def spacing(every: Option[String]): Result[String, Float64] =
+        match every {
+            case None => Ok(Apart.defaultEvery())
+            case Some(spelled) =>
+                match Float64.fromString(spelled) {
+                    case Some(metres) if metres > 0.0 => Ok(metres)
+                    case Some(metres) => Err("\"${Util.Format.spelled(metres)}\" is not a distance")
+                    case None         => Err("\"${spelled}\" is not a distance")
+                }
+        }
+
+    def everyNamed(setting: Setting): Option[String] =
+        match setting {
+            case Setting.Every(metres) => Some(metres)
+            case _                     => None
+        }
+
+    def svgNamed(setting: Setting): Option[String] =
+        match setting {
+            case Setting.Svg(path) => Some(path)
+            case _                 => None
+        }
 
     /// The sentence for anything the walk could not use; two files are wanted, and no more.
     pub def usage(): String =
-        "usage: nix run .#geometry -- diff <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]"
+        Util.GetOpt.usageInfo(
+            "usage: nix run .#geometry -- diff <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]",
+            optionDescrs()
+        )
 
     // ------------------------------------------------------------------- the command
 

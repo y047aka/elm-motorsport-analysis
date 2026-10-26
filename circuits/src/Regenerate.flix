@@ -23,8 +23,11 @@
 pub mod Regenerate {
 
     use Circuit.Circuit
+    use Cli.Args.ArgsError
     use Sys.Console
     use Time.Clock
+    use Util.GetOpt.ArgDescr
+    use Util.GetOpt.OptionDescr
     use Util.Json.Json
 
     /// What a run does with the survey: answer whether the kept geometry is what
@@ -48,25 +51,48 @@ pub mod Regenerate {
 
     // ------------------------------------------------------------------- the command
 
-    pub def parse(args: List[String]): Result[String, Args] =
-        flagged(Nil, args, false, false)
-
-    def flagged(named: List[String], rest: List[String], write: Bool, freeze: Bool): Result[String, Args] =
-        match rest {
-            case Nil                   => complete(named, write, freeze)
-            case "--write" :: further  => flagged(named, further, true, freeze)
-            case "--freeze" :: further => flagged(named, further, write, true)
-            case one :: further =>
-                if (String.startsWith({prefix = "--"}, one)) Err("\"${one}\" is no flag of this command")
-                else flagged(one :: named, further, write, freeze)
+    pub def parse(args: List[String]): Result[ArgsError, Args] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  =>
+                complete(
+                    scanned#words,
+                    List.exists(isWriting, scanned#options),
+                    List.exists(isFreeze, scanned#options)
+                )
         }
 
-    def complete(named: List[String], write: Bool, freeze: Bool): Result[String, Args] =
+    enum Setting with Eq {
+        case Writing
+        case Freeze
+    }
+
+    def optionDescrs(): List[OptionDescr[Setting]] =
+        {
+            optionIds     = Nil,
+            optionNames   = "write" :: Nil,
+            argDescriptor = ArgDescr.NoArg(Setting.Writing),
+            explanation   = "re-lay the geometry files from the kept answers"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "freeze" :: Nil,
+            argDescriptor = ArgDescr.NoArg(Setting.Freeze),
+            explanation   = "ask OpenStreetMap now and keep the answer and the\ngeometry as one reading"
+        } :: Nil
+
+    def isWriting(setting: Setting): Bool =
+        setting == Setting.Writing
+
+    def isFreeze(setting: Setting): Bool =
+        setting == Setting.Freeze
+
+    def complete(named: List[String], write: Bool, freeze: Bool): Result[ArgsError, Args] =
         if (write and freeze)
-            Err("--write and --freeze ask for opposite things: the kept answer, and a fresh survey.")
+            Err(ArgsError.ParseErrors("--write and --freeze ask for opposite things: the kept answer, and a fresh survey." :: Nil))
         else
-            match picked(List.reverse(named)) {
-                case Err(problem) => Err(problem)
+            match picked(named) {
+                case Err(problem) => Err(ArgsError.ParseErrors(problem :: Nil))
                 case Ok(chosen) =>
                     Ok({
                         circuits = chosen,
@@ -95,7 +121,10 @@ pub mod Regenerate {
             )
 
     pub def usage(): String =
-        "usage: nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]"
+        Util.GetOpt.usageInfo(
+            "usage: nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]",
+            optionDescrs()
+        )
 
     /// The exit code the fence comes to: 1 for a word no circuit answers to, two
     /// opposite flags, a run that could not ask, survey or write, and a drawing

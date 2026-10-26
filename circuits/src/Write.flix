@@ -32,9 +32,12 @@
 pub mod Write {
 
     use Circuit.Circuit
+    use Cli.Args.ArgsError
     use Geometry.Place
     use Sys.Console
     use Time.Clock
+    use Util.GetOpt.ArgDescr
+    use Util.GetOpt.OptionDescr
 
     /// The file as the app reads it: one FeatureCollection of the outline and the pit
     /// lane, in that order, the outline first because it is the line the drawing is
@@ -178,43 +181,76 @@ pub mod Write {
         write   = Bool
     }
 
-    pub def parse(args: List[String]): Result[String, Args] =
+    pub def parse(args: List[String]): Result[ArgsError, Args] =
         parseFor("survey", args)
 
     /// One circuit and one answer, read for the command word given.
-    pub def parseFor(goes: String, args: List[String]): Result[String, Args] =
-        walked(Nil, goes, args, None, false)
-
-    def walked(named: List[String], goes: String, rest: List[String], answer: Option[String], write: Bool): Result[String, Args] =
-        match rest {
-            case Nil => complete(named, goes, answer, write)
-            case "--answer" :: path :: further =>
-                // A flag is no file: `--answer --write` is a reader who meant something
-                // else, and a survey that read it as a path would report a file that cannot
-                // be opened rather than an argument it was not given.
-                if (String.startsWith({prefix = "--"}, path)) Err("--answer names no file to read")
-                else walked(named, goes, further, Some(path), write)
-            case "--answer" :: Nil => Err("--answer names no file to read")
-            case "--write" :: further => walked(named, goes, further, answer, true)
-            case one :: further =>
-                if (String.startsWith({prefix = "--"}, one)) Err("\"${one}\" is no flag of this command")
-                else walked(one :: named, goes, further, answer, write)
+    pub def parseFor(goes: String, args: List[String]): Result[ArgsError, Args] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  =>
+                complete(
+                    scanned#words,
+                    goes,
+                    Cli.Args.lastNamed(answerNamed, scanned#options),
+                    List.exists(isWritten, scanned#options)
+                )
         }
 
-    def complete(named: List[String], goes: String, answer: Option[String], write: Bool): Result[String, Args] =
-        match named {
-            case Nil => Err(usageOf(goes))
-            case one :: _ =>
-                match Circuit.byWord(one) {
-                    case None => Err(Circuit.unknown(one))
-                    case Some(circuit) =>
-                        Ok({
-                            circuit = circuit,
-                            answer = Option.getWithDefault(Circuit.keptAnswer(circuit), answer),
-                            asked = Option.nonEmpty(answer),
-                            write = write
-                        })
+    enum Setting {
+        case Answer(String)
+        case Written
+    }
+
+    def optionDescrs(): List[OptionDescr[Setting]] =
+        {
+            optionIds     = Nil,
+            optionNames   = "answer" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Answer(path)), "OVERPASS.JSON"),
+            explanation   = "survey the answer kept here instead of the circuit's own"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "write" :: Nil,
+            argDescriptor = ArgDescr.NoArg(Setting.Written),
+            explanation   = "lay the geometry file down instead of answering whether\nthe survey still draws the kept bytes"
+        } :: Nil
+
+    /// A flag is no file: `--answer --write` is a reader who meant something else,
+    /// and a survey that read it as a path would report a file that cannot be
+    /// opened rather than an argument it was not given. GetOpt hands the argument
+    /// over as it came; it is the completing that refuses one.
+    def complete(named: List[String], goes: String, answer: Option[String], write: Bool): Result[ArgsError, Args] =
+        match answer {
+            case Some(path) if Cli.Args.isFlag(path) =>
+                Err(ArgsError.ParseErrors("--answer names no file to read" :: Nil))
+            case _ =>
+                match named {
+                    case Nil => Err(ArgsError.ParseErrors(usageOf(goes) :: Nil))
+                    case one :: _ =>
+                        match Circuit.byWord(one) {
+                            case None => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
+                            case Some(circuit) =>
+                                Ok({
+                                    circuit = circuit,
+                                    answer = Option.getWithDefault(Circuit.keptAnswer(circuit), answer),
+                                    asked = Option.nonEmpty(answer),
+                                    write = write
+                                })
+                        }
                 }
+        }
+
+    def answerNamed(setting: Setting): Option[String] =
+        match setting {
+            case Setting.Answer(path) => Some(path)
+            case _                    => None
+        }
+
+    def isWritten(setting: Setting): Bool =
+        match setting {
+            case Setting.Written => true
+            case _               => false
         }
 
     pub def usage(): String =
@@ -225,7 +261,10 @@ pub mod Write {
         usageOf("write")
 
     def usageOf(goes: String): String =
-        "usage: nix run .#geometry -- ${goes} <circuit> [--answer <overpass.json>] [--write]"
+        Util.GetOpt.usageInfo(
+            "usage: nix run .#geometry -- ${goes} <circuit> [--answer <overpass.json>] [--write]",
+            optionDescrs()
+        )
 
     /// The exit code the survey comes to: 1 for a word no circuit answers to, an answer it
     /// was pointed at and cannot read, a survey it could not chain, and a file it could not

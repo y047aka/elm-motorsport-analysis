@@ -12,29 +12,29 @@ pub mod TestDiff {
     def kept(name: String, basis: String, source: Option[String]): Line =
         {name = name, props = {basis = basis, source = source, license = Some("ODbL")}, coords = Nil, metres = Nil}
 
-    def asked(args: List[String]): Result[String, Args] =
+    def asked(args: List[String]): Result[Cli.Args.ArgsError, Args] =
         Diff.parse(args)
 
     /// A refusal, and the phrase it refused with.
     def refused(phrase: String, args: List[String]): Bool =
         match asked(args) {
-            case Err(problem) => String.contains({substr = phrase}, problem)
+            case Err(problem) => String.contains({substr = phrase}, "${problem}")
             case Ok(_)        => false
         }
 
-    def pathsOf(result: Result[String, Args]): List[String] =
+    def pathsOf(result: Result[Cli.Args.ArgsError, Args]): List[String] =
         match result {
             case Ok(ask) => ask#paths
             case Err(_)  => Nil
         }
 
-    def distanceOf(result: Result[String, Args]): Float64 =
+    def distanceOf(result: Result[Cli.Args.ArgsError, Args]): Float64 =
         match result {
             case Ok(ask) => ask#every
             case Err(_)  => -1.0
         }
 
-    def overlayOf(result: Result[String, Args]): Option[String] =
+    def overlayOf(result: Result[Cli.Args.ArgsError, Args]): Option[String] =
         match result {
             case Ok(ask) => ask#svg
             case Err(_)  => None

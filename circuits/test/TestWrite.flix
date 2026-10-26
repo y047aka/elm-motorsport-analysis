@@ -171,11 +171,11 @@ pub mod TestWrite {
     def testParseRefusesWhatItCannotSurvey(): Unit \ Assert =
         Assert.assertTrue(refused(Write.usage(), Write.parse(Nil)));
         Assert.assertTrue(refused("no circuit is surveyed under 'monza': known are cota, le_mans", Write.parse("monza" :: Nil)));
-        Assert.assertTrue(refused("--answer names no file to read", Write.parse("--answer" :: Nil)));
+        Assert.assertTrue(refused("option '--answer' requires an argument", Write.parse("--answer" :: Nil)));
         // A flag is no file: `--answer --write` is a reader who meant something else, and
         // the survey that read it as a path would report a file that cannot be opened.
         Assert.assertTrue(refused("--answer names no file to read", Write.parse("cota" :: "--answer" :: "--write" :: Nil)));
-        Assert.assertTrue(refused("\"--froze\" is no flag of this command", Write.parse("cota" :: "--froze" :: Nil)))
+        Assert.assertTrue(refused("unrecognized option '--froze'", Write.parse("cota" :: "--froze" :: Nil)))
 
     @Test
     def testParseTakesAnAnswerNamedElsewhereAndLaysTheFileDown(): Unit \ Assert =
@@ -207,8 +207,8 @@ pub mod TestWrite {
         match Write.parseFor("write", Nil) {
             case Ok(_) => Assert.assertTrue(false)
             case Err(problem) =>
-                Assert.assertTrue(String.contains({substr = "nix run .#geometry -- write"}, problem));
-                Assert.assertTrue(not String.contains({substr = "-- survey"}, problem))
+                Assert.assertTrue(String.contains({substr = "nix run .#geometry -- write"}, "${problem}"));
+                Assert.assertTrue(not String.contains({substr = "-- survey"}, "${problem}"))
         }
 
     // ----------------------------------------------------------------------- the parting
@@ -235,9 +235,9 @@ pub mod TestWrite {
 
     /// A refusal that says what the reader asked for, which is the only thing a command can
     /// say to someone at a terminal.
-    def refused(problem: String, asked: Result[String, Write.Args]): Bool =
+    def refused(problem: String, asked: Result[Cli.Args.ArgsError, Write.Args]): Bool =
         match asked {
-            case Err(one) => String.contains({substr = problem}, one)
+            case Err(one) => String.contains({substr = problem}, "${one}")
             case Ok(_)    => false
         }
 }

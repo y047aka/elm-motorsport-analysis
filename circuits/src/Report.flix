@@ -154,7 +154,7 @@ pub mod Report {
 
     /// The last `--against` wins, as the last `--database` does in the CLI.
     def againstSeason(settings: List[Setting]): Result[ReportError, Option[Int32]] =
-        match last(seasonNamed, settings) {
+        match Cli.Args.lastNamed(seasonNamed, settings) {
             case None       => Ok(None)
             case Some(name) =>
                 // Four digits, because the calendar's seasons are spelled that
@@ -174,7 +174,7 @@ pub mod Report {
     /// The distance allowed, defaulting to the report's own and refusing nought:
     /// a run that allows no distance calls every two seasons run on different lines.
     def distanceAllowed(settings: List[Setting]): Result[ReportError, Float64] =
-        match last(toleranceNamed, settings) {
+        match Cli.Args.lastNamed(toleranceNamed, settings) {
             case None          => Ok(Cli.TimingLines.defaultTolerance())
             case Some(spelled) =>
                 match Float64.fromString(spelled) {
@@ -199,19 +199,6 @@ pub mod Report {
             case Setting.Tolerance(metres) => Some(metres)
             case _                         => None
         }
-
-    def last(asking: Setting -> Option[String], settings: List[Setting]): Option[String] =
-        List.foldLeft(
-            (acc, setting) -> {
-                let asked = asking(setting);
-                match asked {
-                    case None    => acc
-                    case Some(_) => asked
-                }
-            },
-            None,
-            settings
-        )
 
     pub def usage(): String =
         Util.GetOpt.usageInfo(

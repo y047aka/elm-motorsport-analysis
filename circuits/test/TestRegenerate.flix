@@ -238,7 +238,7 @@ pub mod TestRegenerate {
         Assert.assertTrue(
             refused("no circuit is surveyed under 'monza': known are cota, le_mans", Regenerate.parse("monza" :: Nil))
         );
-        Assert.assertTrue(refused("\"--froze\" is no flag of this command", Regenerate.parse("--froze" :: Nil)))
+        Assert.assertTrue(refused("unrecognized option '--froze'", Regenerate.parse("--froze" :: Nil)))
 
     @Test
     def testParseReadsWhatAFenceDoesWithItsCircuits(): Unit \ Assert =
@@ -254,9 +254,9 @@ pub mod TestRegenerate {
         }
 
     /// A refusal that says what the reader asked for.
-    def refused(phrase: String, asked: Result[String, a]): Bool =
+    def refused(phrase: String, asked: Result[e, a]): Bool with ToString[e] =
         match asked {
-            case Err(problem) => String.contains({substr = phrase}, problem)
+            case Err(problem) => String.contains({substr = phrase}, "${problem}")
             case Ok(_)        => false
         }
 }

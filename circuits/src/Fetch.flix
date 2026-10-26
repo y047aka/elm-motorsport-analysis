@@ -14,8 +14,11 @@
 pub mod Fetch {
 
     use Circuit.Circuit
+    use Cli.Args.ArgsError
     use Sys.Console
     use Time.Clock
+    use Util.GetOpt.ArgDescr
+    use Util.GetOpt.OptionDescr
 
     // ----------------------------------------------------------------- the fetching
 
@@ -26,40 +29,58 @@ pub mod Fetch {
         out     = String
     }
 
-    pub def parse(args: List[String]): Result[String, Args] =
-        walked(Nil, args, None)
+    enum Setting {
+        case Out(String)
+    }
 
-    def walked(named: List[String], rest: List[String], out: Option[String]): Result[String, Args] =
-        match rest {
-            case Nil => complete(named, out)
-            case "--out" :: path :: further =>
-                // A flag is no file: `--out --write` is a reader who meant something
-                // else, and a run that read it as a path would keep an answer under a
-                // name no file can be called.
-                if (String.startsWith({prefix = "--"}, path)) Err("--out names no file to write")
-                else walked(named, further, Some(path))
-            case "--out" :: Nil => Err("--out names no file to write")
-            case one :: further =>
-                if (String.startsWith({prefix = "--"}, one)) Err("\"${one}\" is no flag of this command")
-                else walked(one :: named, further, out)
+    def optionDescrs(): List[OptionDescr[Setting]] =
+        {
+            optionIds     = Nil,
+            optionNames   = "out" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Out(path)), "OVERPASS.JSON"),
+            explanation   = "keep the answer here instead of beside the circuit's config"
+        } :: Nil
+
+    pub def parse(args: List[String]): Result[ArgsError, Args] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  =>
+                complete(scanned#words, Cli.Args.lastNamed(outNamed, scanned#options))
         }
 
-    def complete(named: List[String], out: Option[String]): Result[String, Args] =
-        match named {
-            case Nil => Err(usage())
-            case one :: _ =>
-                match Circuit.byWord(one) {
-                    case None => Err(Circuit.unknown(one))
-                    case Some(circuit) =>
-                        Ok({
-                            circuit = circuit,
-                            out = Option.getWithDefault(Circuit.keptAnswer(circuit), out)
-                        })
+    /// A flag is no file: `--out --write` is a reader who meant something else, and
+    /// a run that read it as a path would keep an answer under a name no file can
+    /// be called. GetOpt hands the argument over as it came; it is the completing
+    /// that refuses one.
+    def complete(named: List[String], out: Option[String]): Result[ArgsError, Args] =
+        match out {
+            case Some(path) if Cli.Args.isFlag(path) =>
+                Err(ArgsError.ParseErrors("--out names no file to write" :: Nil))
+            case _ =>
+                match named {
+                    case Nil => Err(ArgsError.ParseErrors(usage() :: Nil))
+                    case one :: _ =>
+                        match Circuit.byWord(one) {
+                            case None => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
+                            case Some(circuit) =>
+                                Ok({
+                                    circuit = circuit,
+                                    out = Option.getWithDefault(Circuit.keptAnswer(circuit), out)
+                                })
+                        }
                 }
         }
 
+    def outNamed(setting: Setting): Option[String] =
+        match setting {
+            case Setting.Out(path) => Some(path)
+        }
+
     pub def usage(): String =
-        "usage: nix run .#geometry -- fetch <circuit> [--out <overpass.json>]"
+        Util.GetOpt.usageInfo(
+            "usage: nix run .#geometry -- fetch <circuit> [--out <overpass.json>]",
+            optionDescrs()
+        )
 
     /// The exit code of the asking: 1 for a word no circuit answers to, a runner none
     /// of them reached, an answer the survey cannot read, and a file it could not

@@ -86,7 +86,7 @@ pub mod Probe {
     /// The last `--radius` wins, as a repeated option usually does. Nought and a
     /// negative are refused rather than widened into a box that does not open.
     def radiusOf(settings: List[Setting]): Result[ProbeError, Float64] =
-        match last(lastRadius, settings) {
+        match Cli.Args.lastNamed(lastRadius, settings) {
             case None => Ok(defaultRadius())
             case Some(spelled) =>
                 match Float64.fromString(spelled) {
@@ -106,19 +106,6 @@ pub mod Probe {
         match setting {
             case Setting.Radius(km) => Some(km)
         }
-
-    def last(asking: Setting -> Option[String], settings: List[Setting]): Option[String] =
-        List.foldLeft(
-            (acc, setting) -> {
-                let asked = asking(setting);
-                match asked {
-                    case None    => acc
-                    case Some(_) => asked
-                }
-            },
-            None,
-            settings
-        )
 
     pub def usage(): String =
         Util.GetOpt.usageInfo(

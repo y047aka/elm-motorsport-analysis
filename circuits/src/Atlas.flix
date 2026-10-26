@@ -22,11 +22,14 @@
 pub mod Atlas {
 
     use Circuit.Circuit
+    use Cli.Args.ArgsError
     use Geometry.Place
     use IoError.IoError
     use Net.HttpRequest.HttpRequest
     use Net.Https.Https
     use Sys.Console
+    use Util.GetOpt.ArgDescr
+    use Util.GetOpt.OptionDescr
     use Util.Json.Json
 
     /// What a run calls itself at the atlas's home. Not the Overpass user agent: this
@@ -86,7 +89,23 @@ pub mod Atlas {
     // ------------------------------------------------------------------- the command
 
     pub def usage(): String =
-        "usage: nix run .#geometry -- atlas <circuit> [--file <atlas.geojson>]"
+        Util.GetOpt.usageInfo(
+            "usage: nix run .#geometry -- atlas <circuit> [--file <atlas.geojson>]",
+            optionDescrs()
+        )
+
+    enum Setting {
+        case File(String)
+    }
+
+    /// `--file <path>`, and nothing else a run does not know. One run reads one layer.
+    def optionDescrs(): List[OptionDescr[Setting]] =
+        {
+            optionIds     = Nil,
+            optionNames   = "file" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.File(path)), "ATLAS.GEOJSON"),
+            explanation   = "read this kept layer instead of fetching the circuit's own"
+        } :: Nil
 
     /// The exit code the reading comes to: 1 for a word no circuit answers to, a
     /// circuit with no atlas layer, a file that would not read or a line that failed a
@@ -96,7 +115,7 @@ pub mod Atlas {
             () ->
                 match asked(args) {
                     case Err(problem) =>
-                        Console.eprintln(problem);
+                        Console.eprintln("${problem}");
                         1
                     case Ok((circuit, file)) =>
                         match measure(circuit, file) {
@@ -112,33 +131,41 @@ pub mod Atlas {
 
     /// The circuit to read, and the layer to read it from: the file named, or the
     /// circuit's own layer fetched when no file is given.
-    def asked(args: List[String]): Result[String, (Circuit, Option[String])] =
-        match args {
-            case Nil => Err(usage())
-            case word :: rest =>
-                match Circuit.byWord(word) {
-                    case None => Err(Circuit.unknown(word))
-                    case Some(circuit) =>
-                        match (circuit#atlas, layer(rest)) {
-                            case (None, _)                => Err("${word}'s config names no atlas layer to read")
-                            case (Some(_), Err(problem))  => Err(problem)
-                            case (Some(_), Ok(file))      => Ok((circuit, file))
-                        }
-                }
+    def asked(args: List[String]): Result[ArgsError, (Circuit, Option[String])] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  =>
+                readOf(scanned#words, Cli.Args.lastNamed(fileNamed, scanned#options))
         }
 
-    /// `--file <path>`, and nothing else a run does not know. One run reads one layer.
-    def layer(args: List[String]): Result[String, Option[String]] =
-        match args {
-            case Nil                     => Ok(None)
-            case "--file" :: path :: Nil => Ok(Some(path))
-            case "--file" :: Nil         => Err("--file names no file to read")
-            case "--file" :: _ :: _      => Err("usage: ${usage()}")
-            case one :: _ =>
-                if (String.startsWith({prefix = "--"}, one))
-                    Err("\"${one}\" is no flag of this command")
+    /// A flag is no file, as at the other commands: a run that read `--file --write`
+    /// as a path would keep one circuit's evidence under a name no file can be
+    /// called.
+    def readOf(words: List[String], file: Option[String]): Result[ArgsError, (Circuit, Option[String])] =
+        match words {
+            case Nil => Err(ArgsError.ParseErrors(usage() :: Nil))
+            case one :: extra =>
+                if (not List.isEmpty(extra))
+                    Err(ArgsError.UnexpectedArguments(extra))
                 else
-                    Err("usage: ${usage()}")
+                    match Circuit.byWord(one) {
+                        case None => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
+                        case Some(circuit) =>
+                            match circuit#atlas {
+                                case None =>
+                                    Err(ArgsError.ParseErrors("${one}'s config names no atlas layer to read" :: Nil))
+                                case Some(_) =>
+                                    if (Option.exists(Cli.Args.isFlag, file))
+                                        Err(ArgsError.ParseErrors("--file names no file to read" :: Nil))
+                                    else
+                                        Ok((circuit, file))
+                            }
+                    }
+        }
+
+    def fileNamed(setting: Setting): Option[String] =
+        match setting {
+            case Setting.File(path) => Some(path)
         }
 
     // ------------------------------------------------------------------ the measuring

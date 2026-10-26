@@ -10,8 +10,8 @@ pub mod TestFetch {
         match Fetch.parse("nurburgring" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) =>
-                Assert.assertTrue(String.contains({substr = "no circuit is surveyed under 'nurburgring'"}, problem));
-                Assert.assertTrue(String.contains({substr = "cota"}, problem))
+                Assert.assertTrue(String.contains({substr = "no circuit is surveyed under 'nurburgring'"}, "${problem}"));
+                Assert.assertTrue(String.contains({substr = "cota"}, "${problem}"))
         }
 
     /// No circuit named is no asking either: the usage is the answer, as it is at the
@@ -20,7 +20,7 @@ pub mod TestFetch {
     def testAFetchNamingNoCircuitIsAnsweredWithItsUsage(): Unit \ Assert =
         match Fetch.parse("--out" :: "answer.json" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
-            case Err(problem) => Assert.assertTrue(String.contains({substr = "usage: nix run .#geometry -- fetch"}, problem))
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "usage: nix run .#geometry -- fetch"}, "${problem}"))
         }
 
     /// The kept answer beside the circuit's config is where an unnamed answer lands:
@@ -48,21 +48,21 @@ pub mod TestFetch {
     def testAFlagIsNoFileToWrite(): Unit \ Assert =
         match Fetch.parse("cota" :: "--out" :: "--write" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
-            case Err(problem) => Assert.assertTrue(problem == "--out names no file to write")
+            case Err(problem) => Assert.assertTrue("${problem}" == "--out names no file to write")
         }
 
     @Test
     def testAnOutNamingNothingIsRefused(): Unit \ Assert =
         match Fetch.parse("cota" :: "--out" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
-            case Err(problem) => Assert.assertTrue(problem == "--out names no file to write")
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "option '--out' requires an argument"}, "${problem}"))
         }
 
     @Test
     def testAFlagNoFetchKnowsIsRefused(): Unit \ Assert =
         match Fetch.parse("cota" :: "--freeze" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
-            case Err(problem) => Assert.assertTrue(problem == "\"--freeze\" is no flag of this command")
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "unrecognized option '--freeze'"}, "${problem}"))
         }
 
     /// That some JSON came back is not yet an answer the survey can read back: a kept
