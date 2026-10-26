@@ -24,10 +24,6 @@ use Sys.Env
 use Sys.Exit
 use Time.Clock
 
-/// A word outside this list is a mistake, and is answered with the usage.
-def commands(): List[String] =
-    "atlas" :: "diff" :: "probe" :: "regenerate" :: "survey" :: "timing-lines" :: Nil
-
 def main(): Unit \ { Env, IO, Clock, Exit, Console } =
     match Env.getArgs() {
         case Nil =>
