@@ -119,10 +119,7 @@ pub mod Probe {
     /// for a question no runner answered.
     pub def exitCode(args: List[String]): Int32 \ { Clock, Console, IO } =
         match parse(args) {
-            case Err(problem) =>
-                Console.eprintln("Error: ${problem}");
-                Console.eprintln(usage());
-                1
+            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
             case Ok(request) =>
                 Overpass.paced(() -> probeAll(request))
         }

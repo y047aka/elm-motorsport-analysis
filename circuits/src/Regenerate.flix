@@ -131,9 +131,7 @@ pub mod Regenerate {
     /// that moved.
     pub def exitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
         match parse(args) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
+            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
             case Ok(asked) => walked(Nil, asked#circuits, asked#mode)
         }
 

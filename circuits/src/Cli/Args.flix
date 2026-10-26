@@ -10,6 +10,7 @@
 /// for one run at all (`--write` against `--freeze`).
 pub mod Cli.Args {
 
+    use Sys.Console
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
 
@@ -23,7 +24,9 @@ pub mod Cli.Args {
 
     instance ToString[ArgsError] {
         pub def toString(e: ArgsError): String = match e {
-            case ArgsError.ParseErrors(messages)       => List.join(" ", messages)
+            // GetOpt's own sentences arrive with a newline of their own; the
+            // reporting that prints them adds the next one.
+            case ArgsError.ParseErrors(messages)       => List.join(" ", List.map(String.trimRight, messages))
             case ArgsError.UnexpectedArguments(extras) => "${List.join(", ", extras)} are not arguments this command reads."
         }
     }
@@ -35,6 +38,15 @@ pub mod Cli.Args {
             case Validation.Failure(errors) => Err(ArgsError.ParseErrors(Nec.toList(errors)))
             case Validation.Success(result) => Ok({options = result#options, words = result#nonOptions})
         }
+
+    /// The answer a wrong argument comes to, as `flix/src`'s `main` answers it: the
+    /// sentence naming what was wrong, the command's own usage under it, and exit
+    /// code 1. A command reaches a wrong argument through this and nothing else.
+    pub def refuseArgs(problem: String, usage: String): Int32 \ Console = {
+        Console.eprintln("Error: ${problem}");
+        Console.eprintln(usage);
+        1
+    }
 
     /// A flag is no file: `--out --write` is a reader who meant something else, and
     /// a run that read it as a path would keep an answer under a name no file can

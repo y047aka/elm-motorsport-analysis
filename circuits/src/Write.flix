@@ -226,7 +226,7 @@ pub mod Write {
                 Err(ArgsError.ParseErrors("--answer names no file to read" :: Nil))
             case _ =>
                 match named {
-                    case Nil => Err(ArgsError.ParseErrors(usageOf(goes) :: Nil))
+                    case Nil => Err(ArgsError.ParseErrors("${goes} reads one circuit." :: Nil))
                     case one :: _ =>
                         match Circuit.byWord(one) {
                             case None => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
@@ -271,9 +271,7 @@ pub mod Write {
     /// write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
         match parse(args) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
+            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
             case Ok(asked) => ask(asked)
         }
 
@@ -287,9 +285,7 @@ pub mod Write {
     /// a run keeps beside a circuit.
     pub def writeExitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
         match parseFor("write", args) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
+            case Err(problem) => Cli.Args.refuseArgs("${problem}", writeUsage())
             case Ok(asked) =>
                 if (asked#asked)
                     ask(asked)

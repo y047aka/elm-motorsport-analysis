@@ -169,7 +169,7 @@ pub mod TestWrite {
 
     @Test
     def testParseRefusesWhatItCannotSurvey(): Unit \ Assert =
-        Assert.assertTrue(refused(Write.usage(), Write.parse(Nil)));
+        Assert.assertTrue(refused("survey reads one circuit", Write.parse(Nil)));
         Assert.assertTrue(refused("no circuit is surveyed under 'monza': known are cota, le_mans", Write.parse("monza" :: Nil)));
         Assert.assertTrue(refused("option '--answer' requires an argument", Write.parse("--answer" :: Nil)));
         // A flag is no file: `--answer --write` is a reader who meant something else, and
@@ -207,9 +207,10 @@ pub mod TestWrite {
         match Write.parseFor("write", Nil) {
             case Ok(_) => Assert.assertTrue(false)
             case Err(problem) =>
-                Assert.assertTrue(String.contains({substr = "nix run .#geometry -- write"}, "${problem}"));
-                Assert.assertTrue(not String.contains({substr = "-- survey"}, "${problem}"))
-        }
+                Assert.assertTrue(String.contains({substr = "write reads one circuit"}, "${problem}"))
+        };
+        Assert.assertTrue(String.contains({substr = "nix run .#geometry -- write"}, Write.writeUsage()));
+        Assert.assertTrue(not String.contains({substr = "-- survey"}, Write.writeUsage()))
 
     // ----------------------------------------------------------------------- the parting
 

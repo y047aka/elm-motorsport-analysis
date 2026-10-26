@@ -75,7 +75,7 @@ pub mod Diff {
 
     def complete(paths: List[String], every: Option[String], svg: Option[String]): Result[ArgsError, Args] =
         if (List.length(paths) != 2)
-            Err(ArgsError.ParseErrors(usage() :: Nil))
+            Err(ArgsError.ParseErrors("diff lays two files, and no more: ${List.length(paths)} named." :: Nil))
         else
             match spacing(every) {
                 case Err(problem) => Err(ArgsError.ParseErrors(problem :: Nil))
@@ -121,9 +121,7 @@ pub mod Diff {
     /// could not write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
         match parse(args) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
+            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
             case Ok(asked) =>
                 match read(Nil, asked#paths) {
                     case Err(problem) =>

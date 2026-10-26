@@ -58,7 +58,7 @@ pub mod Fetch {
                 Err(ArgsError.ParseErrors("--out names no file to write" :: Nil))
             case _ =>
                 match named {
-                    case Nil => Err(ArgsError.ParseErrors(usage() :: Nil))
+                    case Nil => Err(ArgsError.ParseErrors("fetch reads one circuit." :: Nil))
                     case one :: _ =>
                         match Circuit.byWord(one) {
                             case None => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
@@ -87,9 +87,7 @@ pub mod Fetch {
     /// write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
         match parse(args) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
+            case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
             case Ok(asked) => askOf(asked)
         }
 

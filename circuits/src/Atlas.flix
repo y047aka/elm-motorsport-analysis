@@ -114,9 +114,7 @@ pub mod Atlas {
         Net.Https.runWithIO(
             () ->
                 match asked(args) {
-                    case Err(problem) =>
-                        Console.eprintln("${problem}");
-                        1
+                    case Err(problem) => Cli.Args.refuseArgs("${problem}", usage())
                     case Ok((circuit, file)) =>
                         match measure(circuit, file) {
                             case Err(problem) =>
@@ -143,7 +141,7 @@ pub mod Atlas {
     /// called.
     def readOf(words: List[String], file: Option[String]): Result[ArgsError, (Circuit, Option[String])] =
         match words {
-            case Nil => Err(ArgsError.ParseErrors(usage() :: Nil))
+            case Nil => Err(ArgsError.ParseErrors("atlas reads one circuit." :: Nil))
             case one :: extra =>
                 if (not List.isEmpty(extra))
                     Err(ArgsError.UnexpectedArguments(extra))

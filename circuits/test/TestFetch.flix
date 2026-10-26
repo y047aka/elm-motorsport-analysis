@@ -14,13 +14,13 @@ pub mod TestFetch {
                 Assert.assertTrue(String.contains({substr = "cota"}, "${problem}"))
         }
 
-    /// No circuit named is no asking either: the usage is the answer, as it is at the
-    /// survey.
+    /// No circuit named is no asking either: the refusal says what a fetch reads,
+    /// as it does at the survey, and the run answers it with the usage under it.
     @Test
-    def testAFetchNamingNoCircuitIsAnsweredWithItsUsage(): Unit \ Assert =
+    def testAFetchNamingNoCircuitIsRefused(): Unit \ Assert =
         match Fetch.parse("--out" :: "answer.json" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
-            case Err(problem) => Assert.assertTrue(String.contains({substr = "usage: nix run .#geometry -- fetch"}, "${problem}"))
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "fetch reads one circuit"}, "${problem}"))
         }
 
     /// The kept answer beside the circuit's config is where an unnamed answer lands:

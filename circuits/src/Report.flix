@@ -52,10 +52,7 @@ pub mod Report {
     /// well: a line standing further round the lap than the distance allowed.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
         match parse(args) {
-            case Err(e) =>
-                Console.eprintln("Error: ${e}");
-                Console.eprintln(usage());
-                1
+            case Err(e) => Cli.Args.refuseArgs("${e}", usage())
             case Ok(request) => feed(request)
         }
 
