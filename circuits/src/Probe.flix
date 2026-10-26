@@ -206,7 +206,7 @@ pub mod Probe {
     /// The relation's ways, asked for and measured: the asking is here, the reading
     /// of the answer is `Candidates.measure`'s.
     def measured(element: Element): Result[String, String] \ { IO, Https } =
-        Result.flatMap(answer -> measure(answer, element#id), Overpass.askElements(waysOf(element)))
+        Result.flatMap(answer -> measure(answer, element#id), Overpass.askElements(waysOf(element#id)))
 
     /// The first question: every relation the box holds that is tagged as a
     /// circuit, a motor-sport route or a raceway, with its tags and nothing else.
@@ -222,9 +222,11 @@ pub mod Probe {
         "[out:json][timeout:90];(${String.intercalate("", selectors)});out tags;"
 
     /// The second question: the relation whole and its ways with their geometry,
-    /// which is the only answer a role's length can be measured out of.
-    def waysOf(element: Element): String =
-        "[out:json][timeout:90];relation(${element#id});out body;way(r);out geom;"
+    /// which is the only answer a role's length can be measured out of. It stops
+    /// at the geometry the runner hands inline — nodes are the survey's question,
+    /// the one that chains a lap.
+    pub def waysOf(relation: Int64): String =
+        "[out:json][timeout:90];relation(${relation});out body;way(r);out geom;"
 
     /// A box as Overpass takes it in a query, and as the report echoes it back so
     /// that a reader can tell what was asked of the ground.

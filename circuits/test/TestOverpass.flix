@@ -19,6 +19,18 @@ pub mod TestOverpass {
         Assert.assertTrue(String.contains({substr = "node(w);out skel;"}, question));
         Assert.assertTrue(String.contains({substr = "relation(6537729);"}, question))
 
+    /// The probe's second question recurses to the relation's ways the way the
+    /// survey's does — `way(r)` is what brings the ways a role's length is
+    /// measured out of, and a question that stops short of it names a circuit
+    /// nobody can measure — and stops at the geometry the runner hands inline:
+    /// nodes are a survey's question, the one that chains a lap.
+    @Test
+    def testTheProbeAsksTheWaysAndNotTheirNodes(): Unit \ Assert =
+        let asked = Probe.waysOf(6537729i64);
+        Assert.assertTrue(String.contains({substr = "relation(6537729);out body;"}, asked));
+        Assert.assertTrue(String.contains({substr = "way(r);out geom;"}, asked));
+        Assert.assertTrue(String.contains({substr = "node(w)"}, asked) == false)
+
     @Test
     def testBothRunnersAreWalkedInOrder(): Unit \ Assert =
         Assert.assertTrue(List.length(runners()) == 2);

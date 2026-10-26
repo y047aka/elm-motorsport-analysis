@@ -56,8 +56,9 @@ pub mod Motorsport.Circuit {
     ///
     /// Held twice, because the two readings do not meet: the drawing is laid from
     /// the surveyed shape, which the geometry project's `circuits/src/Circuit.flix`
-    /// authors, and `Cli.TimingLines` reads these figures and no geometry. The one
-    /// thing that compares the two copies is `app/tests/circuit-timing-map.spec.ts`.
+    /// authors, and `Cli.TimingLines` reads these figures and no geometry. The two
+    /// copies are laid together by `circuits/test/TestTimingMap.flix`, which
+    /// compiles both — the only place they ever stand in one project.
     pub enum TimingMap {
         case Published(PublishedMap)
         case PerSeason(String)
