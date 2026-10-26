@@ -619,8 +619,9 @@ awaiting summary cache =
 
 
 {-| Which circuits are drawn to their own shape: one word, one decoder.
-`trackOf` matches the same words; `geometry-contract.spec.ts` keeps them in
-step.
+`trackOf` matches the same words, and a word either of them gains without the
+other is a round drawn as the ring with nothing red — nothing compares the
+two lists.
 -}
 decoderFor : String -> Maybe (Decoder Geometry)
 decoderFor circuit =

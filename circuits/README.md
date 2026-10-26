@@ -179,9 +179,8 @@ timing feed.
 Two of the links are called at one point each and stay links for that: `Calendar.find`
 is what refuses a round the calendar does not list, and the calendar's rounds are the
 thing the report cannot hold a second copy of; `Events.circuit` says which ground a
-round was run on, which is the word the export sends and the drawing matches, and
-`app/tests/circuit-contract.spec.ts` reads it out of `flix/src` — a copy here would
-be a second table with one reader.
+round was run on, which is the word the export sends and the drawing matches —
+a copy here would be a second table with one reader.
 
 So the two `Cli.Errors` — the CLI's and this project's smaller one — are each
 compiled from their own file. What they keep in common is a
@@ -199,10 +198,10 @@ links also leave each shared source visible in `git ls-files -s` as mode `120000
 `nix run .#geometry-test` runs the project's own `flix test`, and `.#flix-test`
 compiles the same nine files on the link's other side, which is what proves the
 links survived the checkout as well as
-that the readings are right. `app/tests/circuit-timing-map.spec.ts` pins that every
-link resolves to the `flix/src` file of the same relative path and names nothing
-beyond those nine, and `circuits-geometry-project.spec.ts` reads every source the
-project compiles — every link dereferenced — for the words a database is named by.
+that the readings are right — a link that broke fails the run that reads
+through it, as `Undefined use` in the module that needed it. Nothing walks the
+links, or the full set of sources the project compiles, from outside it; the
+sharing, the `flix.toml` and the flake's apps are reviewed by reading them.
 
 ## The probe is a word of the pipeline
 
@@ -221,10 +220,12 @@ OpenStreetMap, and `Overpass.flix` spells them once for the probe's question and
 the pipeline's alike, walking both through the same runners and handing the
 survey's answer back as text and the probe's as elements. The sphere the metres
 are measured on is spelled once inside the project — `Apart.earthMetres`, which
-the survey chains with and the probe counts its laps through — and once outside
-it: `Motorsport.Circuit.Geodesy` projects the drawing through its own number at
-load, and `app/tests/circuit-overpass.spec.ts` lays that one against the
-project's and fails a second spelling inside the project by the way. Measuring on the equatorial radius instead of the
+the survey chains with and the probe counts its laps through — and
+`app/tests/circuit-overpass.spec.ts` fails a second spelling inside it by the
+way. The app's drawing projects through its own number, in
+`Motorsport.Circuit.Geodesy`, and nothing compares that one with the project's:
+neither compiler reaches into the other's sources, and a Geodesy on another
+sphere lays a drawing whose metres are not the survey's. Measuring on the equatorial radius instead of the
 mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
 lap is the one reading a config is authored from.
 
@@ -262,12 +263,12 @@ figures, authored in `src/Circuit.flix` for the drawing and held again in the li
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
 lane, stretches the surveyed length to the published one, thins it at a metre, and answers
 whether what it would write is the file the app serves; `--write` writes it. CI runs the
-comparison for both circuits and never passes `--write`, which
-`app/tests/circuits-geometry-project.spec.ts` pins: a fence that rewrites what it fences
-passes by construction. That spec is where the project's wiring is read from outside it —
-the sources it holds, what it resolves, the flake apps that reach it, the directory a
-reader's paths resolve against — everything a Flix test run from inside the project
-cannot see. What the comparison needs is two files, and their absence is read two ways:
+comparison for both circuits and never passes `--write`: a fence that rewrites
+what it fences passes by construction. The wiring around the project — the
+sources it holds, what it resolves, the flake apps that reach it, the directory
+a reader's paths resolve against — is everything a Flix test run from inside
+the project cannot see, and nothing reads it from outside either; it is judged
+by reading `flake.nix` and `.github/workflows/test.yml`. What the comparison needs is two files, and their absence is read two ways:
 a circuit served with no kept answer fails, because the served bytes have no evidence
 left to re-survey them from, while a circuit with neither file has not been surveyed
 yet and says so quietly.
@@ -345,16 +346,16 @@ The geometries are kept because the app reads them, and as the line other
 datasets are measured against. A drawn circuit is two lists in `Shared` — the
 words `trackOf` matches and `decoderFor` decodes — and a geometry file at
 `app/static/geometry/<word>.geojson`, and `app/tests/geometry-contract.spec.ts`
-keeps all three in step, since none of them compiles against another — and
-pins that the circuit's directory under this one is named by that same word.
-`app/tests/circuit-contract.spec.ts` pins the word the summaries send for a
-circuit against the word `Shared.trackOf` picks a drawing by; a rename on one
-side alone would leave a round drawn as the ring with nothing red.
+reads the served file against those words: that it stands where the app reaches
+for it, that its metres ascend and end at the lap it publishes, that its
+sectors add up to that lap, and that the circuit's directory under this one is
+named by that same word. Which words the two Elm lists hold, and which word
+the Flix summary sends, nothing compares — no compiler reaches from one side
+of that seam to the other, and a rename on one side alone is a round drawn as
+the ring with nothing red.
 The figures the report reads — the published lap length and sector stretches —
 and the figures the drawing was laid from are laid together by
-`test/TestTimingMap.flix`, in the one project that compiles both; what remains
-outside it is the sharing itself, and `app/tests/circuit-timing-map.spec.ts`
-walks the nine links into `flix/src` and resolves each one.
-`app/tests/circuit-overpass.spec.ts` pins the one measurement either side holds
-alone: the sphere the app's drawing projects through, now that the project
-spells its own once.
+`test/TestTimingMap.flix`, in the one project that compiles both. What of the
+sharing is left to read from outside it is the report's own file reading, and
+`app/tests/report-files.spec.ts` holds that to reading and stat: it writes
+nothing.

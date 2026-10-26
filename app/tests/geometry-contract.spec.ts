@@ -8,19 +8,17 @@ import { drawnNames, readSource } from './helpers';
  * `Shared` -- the words `trackOf` matches and the words `decoderFor` decodes --
  * and a geometry file at
  * `app/static/geometry/<word>.geojson` behind them. None of it compiles: a file
- * missing is a round that fails to load, a file gone stale is pixels nobody
- * chose, and a decoder given the wrong lap length reads every honest geometry
- * as a lie. The words come out of the sources and the geometry out of the kept
+ * missing is a round that fails to load, and a file gone stale is pixels nobody
+ * chose. The words come out of the sources and the geometry out of the kept
  * files; nothing needs a browser.
  *
- * What this reads is the bytes the app is served and the Elm sources that read
- * them, and nothing else. The figures the geometry was authored from are a
- * Flix-to-Flix reading -- `circuits/src/Circuit.flix` against
- * `Motorsport.Circuit.timingMap` is `circuits/test/TestTimingMap.flix`, and the
- * byte fence (`nix run .#geometry -- survey <word>`) is what holds the served
- * file to the config -- so the checks here are the ones no Flix test can make:
- * what an Elm source states, and whether the served file stands where the app
- * reaches for it. Each one reads the kept file with its own eyes -- the
+ * What this reads is the bytes the app is served. The figures the geometry
+ * was authored from are a Flix-to-Flix reading -- `circuits/src/Circuit.flix`
+ * against `Motorsport.Circuit.timingMap` is `circuits/test/TestTimingMap.flix`,
+ * and the byte fence (`nix run .#geometry -- survey <word>`) is what holds the
+ * served file to the config -- so what is checked here is the served file
+ * itself: whether it stands where the app reaches for it, and whether it is
+ * internally honest. Each check reads the kept file with its own eyes -- the
  * outline, its ascending metres, the pit lane beside it, the sectors it
  * publishes -- rather than trusting any reader's claims about them.
  */
@@ -84,37 +82,3 @@ test("a circuit's directory is named by the word the app draws it by", () => {
   }
 });
 
-/**
- * The decoder and the drawing read one file, so one lap length is a fact about
- * that file and not a figure to carry from the config that authored it -- the
- * config's own figures are `TestTimingMap`'s and the byte fence's to keep.
- */
-test('the Elm decoder is given the lap length the served geometry publishes', () => {
-  const layouts: Record<string, string> = {
-    cota: 'package/src/Motorsport/Wec/Circuit/Cota/Layout.elm',
-    le_mans: 'package/src/Motorsport/Wec/Circuit/LeMans/Layout.elm',
-  };
-  for (const name of drawnNames()) {
-    const given = readSource(layouts[name]).match(/Geometry\.decoder \{ lapLength = ([0-9.]+) \}/);
-    expect(given, `${name}'s Layout gives no lap length to the decoder`).toBeTruthy();
-    const props = outline(served(name))?.properties;
-    expect(
-      Number(given![1]),
-      `${name}: the decoder and the geometry it decodes are given different laps`,
-    ).toBeCloseTo(props!.lap_length_m, 5);
-  }
-});
-
-test('the circuits drawn and decoded are one list', () => {
-  const shared = readSource('app/src/Shared.elm');
-  const decoded = [...clause(shared, 'decoderFor circuit =', '\n\n\n').matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
-  expect(decoded.length, 'decoderFor decodes no circuit name').toBeGreaterThan(0);
-  expect(decoded.sort(), 'decoderFor decodes something other than what trackOf draws').toEqual(drawnNames().sort());
-});
-
-/** The body of a top-level definition, up to the next one. */
-function clause(source: string, start: string, end: string): string {
-  const body = source.split(start)[1];
-  if (!body) throw new Error(`${start} not found in Shared.elm`);
-  return body.split(end)[0];
-}

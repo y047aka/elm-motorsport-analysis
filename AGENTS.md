@@ -511,7 +511,8 @@ moment of it).
 `circuits/README.md` is the other end of a drawing: how a geometry is surveyed
 out of OpenStreetMap, what the kept file is checked against — the byte fence
 over a kept answer exempting nothing, the regeneration fence over every
-circuit exempting the stamp alone, the contract spec against the app's lists —
+circuit exempting the stamp alone, the contract spec over the bytes the app
+is served —
 where the timing lines' distances come
 from, and how far an atlas line stands from the one drawn.
 
@@ -589,7 +590,8 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   report's copy in the linked `Motorsport.Circuit`, where the real authors are
   the fixture. What a Flix test cannot see
   from inside the project — the sources it holds, what it resolves, the flake
-  apps that reach it, the CI fence — is `circuits-geometry-project.spec.ts`'s.
+  apps that reach it, the CI fence — is held by no test: `flake.nix` and the
+  workflow are read, and read fairly, to judge it.
   Judging this repository's real bytes stays the fence's and the contract specs'.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
@@ -601,42 +603,26 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   that moves modules must take its pattern with it; `readConstant` fails the
   spec load by name when a pattern misses, rather than letting the constant
   become `NaN` and every assertion expect `NaNpx`.
-- **Circuit names** (`/app/tests/circuit-contract.spec.ts`) — the word Flix's
-  `Circuit.jsonValue` sends and the word `Shared.trackOf` picks a drawing by,
-  read out of both sources and compared. Neither compiler sees the other, the
-  kept summaries are frozen at whichever word was current when they were
-  written, and a rename on one side is a round drawn as the ring with nothing
-  red.
 - **Timing figures** (`circuits/test/TestTimingMap.flix`) — the lap length
   and sector stretches the timing-lines report reads out of `Motorsport.Circuit`
   are laid against the ones the circuit's config authors, by `.#geometry-test`,
   in the one project that compiles both — which is the stronger reading of two
-  copies no compiler compares. What remains for `/app/tests/circuit-timing-map.spec.ts`
-  is what the project's own build cannot see about the sharing: that the nine
-  symlinks into `flix/src` resolve — a broken one fails elsewhere as
-  `Undefined use`, far from its cause, and a linked directory would be walked as
-  nothing — and that the report's own file reading still writes nothing.
-- **What OpenStreetMap is asked, held in strings** (`/app/tests/circuit-overpass.spec.ts`) —
-  the asking is written once, in `circuits/src/Overpass.flix`, and both
-  questions' shapes are pinned by the project's own `flix test`: that each
-  recurses to `way(r)`, and that only the survey asks for `node(w)` — the
-  difference between drawing a lap and lengthening one. What no test inside the
-  project can reach is the sphere the drawing's own metres are projected on:
-  `Apart.earthMetres` spells it once for the survey and the probe, the app's
-  `Motorsport.Circuit.Geodesy` spells it again for the drawing, and the spec
-  lays the two together — because the one reading that decides a config is
-  whether a lap measures 13.6 km — and fails any second spelling inside the
-  project by the way.
-- **The geometry project's wiring** (`/app/tests/circuits-geometry-project.spec.ts`) —
-  what no test run from inside the project can see: the sources it holds, that it
-  links exactly the report's nine and no more, resolves no dependency and names no
-  database, that the
-  flake's `GEOMETRY_FROM` and the reader's `Env.getVar` name one
-  directory, that each app the flake registers forwards its arguments and `Main.flix`'s word list and dispatch are one list, that both commands which lay lines together project them on one
-  plane, and that CI compares the served bytes without asking the survey to write
-  them. The readings themselves — a sampling loop's bound, which stretch a tie
-  falls on, the tenth a metre is kept to — are the project's own `flix test`'s;
-  which command runs where is `circuits/README.md`'s to say.
+  copies no compiler compares. Nothing holds the nine links into `flix/src` to
+  their paths from outside; a broken one fails `.#geometry-test` itself, as
+  `Undefined use` in the module that needed it.
+- **The report's own file reading** (`/app/tests/report-files.spec.ts`) —
+  `Report/Files.flix` reads and stats and writes nothing, which is a fact about
+  a source no Flix test can see: the project's tests hand their fixtures and
+  ask nothing of the file system.
+- **The sphere, spelled once** (`/app/tests/circuit-overpass.spec.ts`) — the
+  survey chains its metres with `Apart.earthMetres` and the probe counts its
+  laps through it, and the spec fails any second spelling of the radius inside
+  `circuits/src`, because no compiler sees another's number and the one reading
+  that decides a config is the measured lap: 13.6 km or 13.7 km. Both
+  questions' shapes — each recursing to `way(r)`, and only the survey asking
+  for `node(w)`, the difference between drawing a lap and lengthening one — are
+  pinned by the project's own `flix test`, `circuits/src/Overpass.flix` having
+  written the asking once.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
