@@ -20,7 +20,7 @@
 ///
 /// Where a share places a line against the drawn shape itself is not asked here,
 /// and `circuits/README.md` holds why the reading stops short of it;
-/// `.#geometry-regenerate` and `.#geometry-diff` are the readers that measure the
+/// `.#geometry -- regenerate` and `.#geometry -- diff` are the readers that measure the
 /// geometry.
 pub mod Cli.TimingLines {
 

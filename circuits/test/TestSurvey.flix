@@ -1,6 +1,6 @@
 /// The survey between an Overpass answer and a geometry file: the answer read, the lap
 /// chained out of a relation's ways, the line stretched to the length the circuit publishes
-/// and thinned to what a drawing can show. `nix run .#geometry-survey` holds the whole of
+/// and thinned to what a drawing can show. `nix run .#geometry -- survey` holds the whole of
 /// it to the bytes the app serves, over both kept answers.
 pub mod TestSurvey {
 

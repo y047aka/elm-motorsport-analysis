@@ -1,11 +1,11 @@
 /// The pipeline's asking that keeps an answer: the question a circuit's relation is
 /// answered with, kept beside the config that will survey it.
 ///
-///     nix run .#geometry-fetch -- <circuit> [--out <overpass.json>]
+///     nix run .#geometry -- fetch <circuit> [--out <overpass.json>]
 ///
 /// The stages are the CLI's two, in the same shape: this is the asking that keeps
 /// an answer beside a circuit, and `Write.flix` is the turning of an answer into
-/// the file the app serves — whose whole run, `geometry-write`, does both off one
+/// the file the app serves — whose whole run, `-- write`, does both off one
 /// reading of the arguments as `cli-run` runs load and export.
 ///
 /// `fetch` and `write` are the only commands that reach the network, and only
@@ -59,7 +59,7 @@ pub mod Fetch {
         }
 
     pub def usage(): String =
-        "usage: nix run .#geometry-fetch -- <circuit> [--out <overpass.json>]"
+        "usage: nix run .#geometry -- fetch <circuit> [--out <overpass.json>]"
 
     /// The exit code of the asking: 1 for a word no circuit answers to, a runner none
     /// of them reached, an answer the survey cannot read, and a file it could not

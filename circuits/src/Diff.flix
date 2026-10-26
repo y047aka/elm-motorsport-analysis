@@ -1,7 +1,7 @@
 /// Lays any two geometries of this repository's profile against each other and says, in
 /// metres, where they disagree — optionally as an SVG overlay.
 ///
-///     nix run .#geometry-diff -- app/static/geometry/le_mans.geojson circuits/le_mans/atlas.geojson
+///     nix run .#geometry -- diff app/static/geometry/le_mans.geojson circuits/le_mans/atlas.geojson
 ///
 /// The only claim a file must keep is the one the profile makes of its outline: a line with
 /// metres measured from its own lap's zero. The basis is free — this is the reading that
@@ -71,7 +71,7 @@ pub mod Diff {
     /// The sentence for anything the walk could not use: it cannot tell a third file from
     /// a flag it has never heard of, and need not — two files are wanted, and no more.
     pub def usage(): String =
-        "usage: nix run .#geometry-diff -- <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]"
+        "usage: nix run .#geometry -- diff <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]"
 
     // ------------------------------------------------------------------- the command
 

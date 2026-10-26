@@ -42,22 +42,22 @@ jobs:
       # Its own project, so its own build: this is also the step that compiles the
       # sources `circuits/timing/src` symlinks out of `flix/src`.
       - name: Timing report tests
-        run: nix run .#geometry-timing-test
+        run: nix run .#geometry-test timing
       # The probe's own project, and the only one of the three that reaches a
       # network — which is what these tests are written to keep it out of.
       - name: Probe tests
-        run: nix run .#geometry-probe-test
+        run: nix run .#geometry-test probe
       # The geometry project's own tests: a kept geometry file read, two lines laid
       # together, an Overpass answer read, a lap chained and the bytes a geometry is
       # written in. Every reading is handed a fixture, so nothing here can change a kept
       # file.
       - name: Geometry command tests
-        run: nix run .#geometry-diff-test
+        run: nix run .#geometry-test geometry
       # Does the survey over a kept answer still draw the bytes the app serves?
       # The regeneration fence asks the same of a fresh asking of OpenStreetMap;
       # this is the byte fence, over the two circuits a checkout keeps.
       - name: Geometry survey reproduces the kept geometries
-        run: nix run .#geometry-survey -- cota && nix run .#geometry-survey -- le_mans
+        run: nix run .#geometry -- survey cota && nix run .#geometry -- survey le_mans
 
   # Its own job because it is the one check here that needs node_modules, and
   # because a type error and a failing test should not share a red mark.

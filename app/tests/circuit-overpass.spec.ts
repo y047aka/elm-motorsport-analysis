@@ -8,7 +8,7 @@ import { readSource } from './helpers';
  * both.
  *
  * The pipeline that writes a circuit's geometry asks it
- * (`circuits/src/Overpass.flix`, `nix run .#geometry-fetch`), and the probe that
+ * (`circuits/src/Overpass.flix`, `nix run .#geometry -- fetch`), and the probe that
  * decides which relation a circuit is asks it (`circuits/probe/`, `nix run
  * .#geometry-probe`) — the TypeScript asking retired with the regeneration
  * fence's move into the jar, so the four facts about the meeting are held
@@ -182,9 +182,8 @@ test("a probe's metres are measured on the sphere the survey is measured on", ()
  */
 test("the flake's probe commands reach the sources they run", () => {
   const registered = [...readSource('flake.nix').matchAll(/mkProbeApp "([\w-]+)"/g)].map((m) => m[1]);
-  expect(registered.sort(), 'the flake registers a different pair of probe commands than these').toEqual([
+  expect(registered.sort(), 'the flake registers a different set of probe commands than these').toEqual([
     'geometry-probe',
-    'geometry-probe-test',
   ]);
   expect(
     readSource('circuits/probe/src/Main.flix'),

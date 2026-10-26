@@ -102,6 +102,31 @@
             '';
           };
 
+        # The three Flix projects under `circuits/` — the pipeline at its root, the
+        # report at `circuits/timing/`, the probe at `circuits/probe/` — each hold
+        # their own `flix test`, and `flix` has to be started inside the project to
+        # find its `flix.toml`. Naming projects runs just theirs, so a CI step can
+        # still report one project's red on its own; naming none runs all three.
+        geometryTestApp = pkgs.writeShellApplication {
+          name = "geometry-test";
+          runtimeInputs = [ flix ];
+          text = ''
+            failed=""
+            if [ "$#" -eq 0 ]; then
+              set -- geometry timing probe
+            fi
+            for name in "$@"; do
+              case "$name" in
+                geometry) (cd circuits && flix test) ;;
+                timing)   (cd circuits/timing && flix test) ;;
+                probe)    (cd circuits/probe && flix test) ;;
+                *) echo "no circuits project \"$name\" — name geometry, timing or probe" >&2; exit 1 ;;
+              esac || failed="$failed $name"
+            done
+            [ -z "$failed" ] || { echo "flix test failed in:$failed" >&2; exit 1; }
+          '';
+        };
+
         # The timing-lines report is a second Flix project, at `circuits/timing`.
         # Of the flake's Flix commands it is the only one handed neither `--database`
         # nor `DATABASE_URL`, and its `flix.toml` resolves no JDBC driver, so it has
@@ -177,7 +202,7 @@
         csvDir = "--csv ../data/wec";
         outDir = "--out ../app/static/wec";
 
-        # Relative to `circuits/timing`, which the report's two commands change to.
+        # Relative to `circuits/timing`, which the report's command changes to.
         timingCsvDir = "--csv ../../data/wec";
 
         # What `.#tauri-build` runs first, and the one place every round is
@@ -267,17 +292,10 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          geometry-fetch      = { type = "app"; program = "${mkGeometryApp "geometry-fetch" "flix run -- fetch \"$@\""}/bin/geometry-fetch";                            meta.description = "Ask OpenStreetMap a circuit's relation, and keep the answer beside its config — the pipeline's asking stage (the circuits geometry project; <circuit> [--out <overpass.json>], paths from where the command is run)"; };
-          geometry-write      = { type = "app"; program = "${mkGeometryApp "geometry-write" "flix run -- write \"$@\""}/bin/geometry-write";                              meta.description = "Run the whole geometry pipeline: ask OpenStreetMap (or read the answer named), survey it, and fail unless the bytes are the ones the app serves — --write lays them (the circuits geometry project; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
-          geometry-atlas       = { type = "app"; program = "${mkGeometryApp "geometry-atlas" "flix run -- atlas \"$@\""}/bin/geometry-atlas";                          meta.description = "Measure another dataset's line against a circuit's kept geometry, keeping the answer beside the survey that wrote it — not in what gets served (the circuits geometry project's atlas reading; <circuit> [--file gp.geojson], paths from where the command is run)"; };
-          geometry-diff        = { type = "app"; program = "${mkGeometryApp "geometry-diff" "flix run -- diff \"$@\""}/bin/geometry-diff";                              meta.description = "Lay two kept geometries against each other in metres, optionally as an SVG overlay (the circuits geometry project, reading no database; paths from where the command is run, [--every <m>] [--svg <out.svg>])"; };
-          geometry-survey      = { type = "app"; program = "${mkGeometryApp "geometry-survey" "flix run -- survey \"$@\""}/bin/geometry-survey";                          meta.description = "Survey a circuit's geometry out of its kept Overpass answer, and fail unless it is the bytes the app serves (the circuits geometry project, reaching no database and no network; <circuit> [--answer <overpass.json>] [--write], paths from where the command is run)"; };
-          geometry-diff-test   = { type = "app"; program = "${mkGeometryApp "geometry-diff-test" "flix test"}/bin/geometry-diff-test";                             meta.description = "Run the circuits geometry project's tests — the readings behind geometry-fetch, geometry-diff, geometry-survey and the regeneration fence (no network, no database, no files written)"; };
-          geometry-regenerate  = { type = "app"; program = "${mkGeometryApp "geometry-regenerate" "flix run -- regenerate \"$@\""}/bin/geometry-regenerate";                    meta.description = "Re-run the geometry pipeline over each circuit's kept Overpass answer and fail unless it reproduces the kept geometry, the survey stamp alone exempt (the circuits geometry project, its own regeneration fence; [<circuit> ...]; --write re-lays the files from the kept answer; --freeze asks OpenStreetMap now and keeps both)"; };
+          geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: fetch | survey | write | atlas | diff | regenerate (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
+          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                                                          meta.description = "Run the flix test of the projects under circuits/ — geometry, timing, probe; name any of them to run just those (no network, no database, no files written)"; };
           geometry-timing-lines = { type = "app"; program = "${mkTimingApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits/timing project, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
-          geometry-timing-test = { type = "app"; program = "${mkTimingApp "geometry-timing-test" "flix test"}/bin/geometry-timing-test";                                   meta.description = "Run the timing report's tests (the circuits/timing project's; no database, no network, no files written)"; };
           geometry-probe       = { type = "app"; program = "${mkProbeApp "geometry-probe" "flix run -- \"$@\""}/bin/geometry-probe";                                 meta.description = "Ask OpenStreetMap which relations hold a circuit at a place, each lap measured, before a circuit's config is authored (the circuits/probe project, computing in no database; <lat>,<lon> [...] [--radius <km>], or a s,w,n,e box)"; };
-          geometry-probe-test  = { type = "app"; program = "${mkProbeApp "geometry-probe-test" "flix test"}/bin/geometry-probe-test";                              meta.description = "Run the probe's tests (the circuits/probe project's; no network, no database, no files written)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };

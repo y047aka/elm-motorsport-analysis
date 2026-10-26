@@ -1,11 +1,11 @@
 // The circuit geometry pipeline, under one jar:
 //
-//     nix run .#geometry-fetch    -- <circuit> [--out <overpass.json>]
-//     nix run .#geometry-survey   -- <circuit> [--answer <overpass.json>] [--write]
-//     nix run .#geometry-write    -- <circuit> [--answer <overpass.json>] [--write]
-//     nix run .#geometry-atlas    -- <circuit> [--file <atlas.geojson>]
-//     nix run .#geometry-diff     -- <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
-//     nix run .#geometry-regenerate [<circuit> ...] [--write | --freeze]
+//     nix run .#geometry -- fetch     <circuit> [--out <overpass.json>]
+//     nix run .#geometry -- survey    <circuit> [--answer <overpass.json>] [--write]
+//     nix run .#geometry -- write     <circuit> [--answer <overpass.json>] [--write]
+//     nix run .#geometry -- atlas     <circuit> [--file <atlas.geojson>]
+//     nix run .#geometry -- diff      <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
+//     nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]
 //
 // Each subcommand is a module that reads files, asks OpenStreetMap or writes one, and
 // says what it found; this is the asking of a word, the usage a wrong word is answered

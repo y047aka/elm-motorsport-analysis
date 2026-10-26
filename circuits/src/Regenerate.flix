@@ -3,7 +3,7 @@
 /// it, whose degrees cannot move — and fail unless it reproduces the geometry the
 /// app serves. Why that is the check no Elm test can be is `circuits/README.md`.
 ///
-///     nix run .#geometry-regenerate [<circuit> ...] [--write | --freeze]
+///     nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]
 ///
 /// A run over the answer that does not reproduce the geometry moved the degrees in
 /// the code. `--write` re-lays the geometry files from the kept answer — where a
@@ -12,7 +12,7 @@
 /// default run reaches the answer by no network at all, since a regeneration that
 /// silently answered itself from the frozen survey would stop meaning what it says.
 ///
-/// The comparison is of parsed properties and not of bytes — `geometry-survey`'s
+/// The comparison is of parsed properties and not of bytes — `-- survey`'s
 /// comparison is of bytes and has nothing to exempt. What the fence answers for is
 /// the drawing, and the writer's layout is allowed to change between the survey and
 /// this reading, so `surveyed_at` stands outside the comparison: it stamps which
@@ -96,7 +96,7 @@ pub mod Regenerate {
             )
 
     pub def usage(): String =
-        "usage: nix run .#geometry-regenerate [<circuit> ...] [--write | --freeze]"
+        "usage: nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]"
 
     /// The exit code the fence comes to: 1 for a word no circuit answers to, two
     /// opposite flags, a run that could not ask, survey or write, and a drawing

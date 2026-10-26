@@ -54,8 +54,8 @@ pub mod TestDiff {
 
     @Test
     def testParseRefusesWhatItCannotAskWith(): Unit \ Assert =
-        Assert.assertTrue(refused("usage: nix run .#geometry-diff", "a.geojson" :: Nil));
-        Assert.assertTrue(refused("usage: nix run .#geometry-diff", "a.geojson" :: "b.geojson" :: "c.geojson" :: Nil));
+        Assert.assertTrue(refused("usage: nix run .#geometry -- diff", "a.geojson" :: Nil));
+        Assert.assertTrue(refused("usage: nix run .#geometry -- diff", "a.geojson" :: "b.geojson" :: "c.geojson" :: Nil));
         Assert.assertTrue(refused("\"0\" is not a distance", "a.geojson" :: "b.geojson" :: "--every" :: "0" :: Nil));
         // The word the reader typed is the word quoted back, which is what a reader can
         // correct: a coerced number echoes a value they never wrote.

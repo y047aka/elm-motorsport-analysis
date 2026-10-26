@@ -77,55 +77,48 @@ test('both lines are laid on one plane about the places of both', () => {
 /**
  * The geometry project, read the way `circuit-overpass.spec.ts` reads the probe's:
  * a flake app whose entry point has moved fails at whoever typed it, in a shell,
- * with nothing to say why; and each app hands its subcommand word to the jar, so
- * a renamed subcommand is a flake app that answers with a usage where the reader
- * expected a report.
+ * with nothing to say why. The flake registers one app and hands it the whole
+ * command line, so the subcommand words live only in `Main.flix` — a renamed
+ * subcommand is a word Main answers with the usage there and no second place
+ * to move. The test therefore pins the one app's forwarding and that Main's
+ * list of words and Main's dispatch of them are the same list.
  */
-test("the flake's geometry commands reach the sources they run", () => {
-  const registered = [...readSource('flake.nix').matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
-  expect(registered.sort(), 'the flake registers a different set of geometry commands than these').toEqual([
-    'geometry-atlas',
-    'geometry-diff',
-    'geometry-diff-test',
-    'geometry-fetch',
-    'geometry-regenerate',
-    'geometry-survey',
-    'geometry-write',
-  ]);
+test("the flake's geometry command reaches the source it runs", () => {
   const flake = readSource('flake.nix');
-  for (const [app, word] of [
-    ['geometry-atlas', 'atlas'],
-    ['geometry-diff', 'diff'],
-    ['geometry-fetch', 'fetch'],
-    ['geometry-regenerate', 'regenerate'],
-    ['geometry-survey', 'survey'],
-    ['geometry-write', 'write'],
-  ]) {
-    expect(flake, `nix run .#${app} no longer hands the jar the "${word}" subcommand`).toContain(
-      `mkGeometryApp "${app}" "flix run -- ${word} \\"$@\\""`,
-    );
-  }
-  expect(main, 'nix run .#geometry-diff runs a main that hands the reader its arguments to nothing').toContain(
+  const registered = [...flake.matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
+  expect(registered.sort(), 'the flake registers a different set of geometry commands than these').toEqual([
+    'geometry',
+  ]);
+  expect(
+    flake,
+    'nix run .#geometry no longer hands the jar the reader\'s whole command line',
+  ).toContain('mkGeometryApp "geometry" "flix run -- \\"$@\\""');
+  expect(main, 'nix run .#geometry -- diff runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Diff.exitCode(rest))',
   );
-  expect(main, 'nix run .#geometry-survey runs a main that hands the reader its arguments to nothing').toContain(
+  expect(main, 'nix run .#geometry -- survey runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Write.exitCode(rest))',
   );
-  expect(main, 'nix run .#geometry-fetch runs a main that hands the reader its arguments to nothing').toContain(
+  expect(main, 'nix run .#geometry -- fetch runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Fetch.exitCode(rest))',
   );
-  expect(main, 'nix run .#geometry-write runs a main that hands the reader its arguments to nothing').toContain(
+  expect(main, 'nix run .#geometry -- write runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Write.writeExitCode(rest))',
   );
-  expect(main, 'nix run .#geometry-regenerate runs a main that hands the reader its arguments to nothing').toContain(
+  expect(main, 'nix run .#geometry -- regenerate runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Regenerate.exitCode(rest))',
   );
-  expect(main, 'nix run .#geometry-atlas runs a main that hands the reader its arguments to nothing').toContain(
+  expect(main, 'nix run .#geometry -- atlas runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Atlas.exitCode(rest))',
   );
   expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
     '"atlas" :: "diff" :: "fetch" :: "regenerate" :: "survey" :: "write" :: Nil',
   );
+  // `geometry-test` is the one way every project under `circuits/` is tested in
+  // CI, and `flix` has to start inside each project to find its `flix.toml`.
+  for (const dir of ['circuits', 'circuits/timing', 'circuits/probe']) {
+    expect(flake, `geometry-test no longer runs flix test inside ${dir}`).toContain(`(cd ${dir} && flix test)`);
+  }
 });
 
 /**
@@ -214,10 +207,10 @@ test('the Flix survey is fenced against the bytes the app serves', () => {
     expect(
       workflow,
       `CI no longer asks whether the Flix survey lays ${circuit}'s kept geometry`,
-    ).toContain(`nix run .#geometry-survey -- ${circuit}`);
+    ).toContain(`nix run .#geometry -- survey ${circuit}`);
   }
-  expect(workflow, 'CI no longer runs the geometry project').toContain('nix run .#geometry-diff-test');
-  for (const step of workflow.match(/nix run \.#geometry-survey[^\n]*/g) ?? []) {
+  expect(workflow, 'CI no longer runs the geometry project').toContain('nix run .#geometry-test geometry');
+  for (const step of workflow.match(/nix run \.#geometry -- survey[^\n]*/g) ?? []) {
     expect(step, `CI writes ${step.trim()} rather than comparing it`).not.toContain('--write');
   }
 });

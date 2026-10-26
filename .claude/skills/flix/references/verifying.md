@@ -17,10 +17,13 @@ their own `flix.toml`, and nothing about a green `.#flix-test` says anything abo
 them:
 
 ```bash
-nix run .#geometry-timing-test   # the report's `flix test`
-nix run .#geometry-probe-test    # the probe's
-nix run .#geometry-diff-test     # the geometry commands'
+nix run .#geometry-test timing    # the report's `flix test`
+nix run .#geometry-test probe     # the probe's
+nix run .#geometry-test geometry  # the geometry project's
 ```
+
+Naming no project runs all three; each run starts inside its own project,
+which is the only place `flix` finds its `flix.toml`.
 
 The report compiles nine sources *out of* `flix/src` by symlink, so a change to one of
 those is compiled twice and tested twice, once per project — and a symlink that did not
@@ -29,7 +32,7 @@ rather than in the link. The probe shares no source, so its build is independent
 `flix/src` altogether, and neither does the pipeline at the `circuits/` root: it asks
 OpenStreetMap and reads kept Overpass answers and geometry files, writing a kept answer,
 a served geometry or an overlay only when told to, while its own tests hand every reading
-a string rather than a file — so `.#geometry-diff-test` opens and writes nothing. None of
+a string rather than a file — so `.#geometry-test geometry` opens and writes nothing. None of
 the three needs a jar to be tested: all three commands run the interpreter.
 
 ## What is written where

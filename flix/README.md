@@ -11,7 +11,7 @@ at `circuits/timing/`, which resolves no Maven dependency and compiles no `Db`
 effect. Nine sources under its `src` are symlinks into this `src` — the decoding of
 a CSV, the durations, `Motorsport/Circuit.flix` among them — so editing one of those
 files is compiled and tested twice, by `nix run .#flix-test` and by
-`nix run .#geometry-timing-test`, and moving or renaming one breaks both until its
+`nix run .#geometry-test timing`, and moving or renaming one breaks both until its
 link moves too. `Cli/Errors.flix` and `Util/Files.flix` are not among them: the
 report holds its own of those two, smaller, they being the modules whose rest
 belongs to the commands that compute in a database. `circuits/README.md` keeps the
@@ -503,8 +503,8 @@ paying for the same split.
   The report reads the same figures through a symlink into this `src`, and
   `app/tests/circuit-timing-map.spec.ts` is the one thing that ties the two copies.
   The feed's own readings are driven under `circuits/timing`, by
-  `nix run .#geometry-timing-test`, and an Overpass answer's under `circuits/probe`, by
-  `nix run .#geometry-probe-test` — which shares no source here, and so tests nothing
+  `nix run .#geometry-test timing`, and an Overpass answer's under `circuits/probe`, by
+  `nix run .#geometry-test probe` — which shares no source here, and so tests nothing
   of this `src`.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`

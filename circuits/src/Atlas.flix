@@ -3,7 +3,7 @@
 /// centreline fixing the lap order, origin and direction — and keeps it in this
 /// repository's geometry profile, at the atlas length and *not* stretched.
 ///
-///     nix run .#geometry-atlas <circuit> [--file gp.geojson]
+///     nix run .#geometry -- atlas <circuit> [--file gp.geojson]
 ///
 /// A circuit joins the reading by carrying an `atlas` entry naming the track-atlas layer
 /// for the layout this app draws; a circuit without one is asked nothing. It prints the
@@ -88,7 +88,7 @@ pub mod Atlas {
     // ------------------------------------------------------------------- the command
 
     pub def usage(): String =
-        "usage: nix run .#geometry-atlas <circuit> [--file <atlas.geojson>]"
+        "usage: nix run .#geometry -- atlas <circuit> [--file <atlas.geojson>]"
 
     /// The exit code the reading comes to: 1 for a word no circuit answers to, a
     /// circuit with no atlas layer, a file that would not read or a line that failed a

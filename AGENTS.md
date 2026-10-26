@@ -57,17 +57,10 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry-fetch -- <circuit>` | Ask OpenStreetMap a circuit's relation and keep the answer beside its config — the pipeline's asking stage (the `circuits` geometry project; `[--out <overpass.json>]`) |
-| `nix run .#geometry-write -- <circuit>` | Run the whole geometry pipeline: ask OpenStreetMap (or read the answer named), survey it, and fail unless the bytes are the ones the app serves, `--write` laying them (the `circuits` geometry project; `[--answer <overpass.json>] [--write]`, paths from where the command is run) |
-| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (the `circuits` geometry project's atlas reading; `<circuit> [--file gp.geojson]`) |
-| `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (the `circuits` geometry project, reading no database; paths from where the command is run, `[--every <m>] [--svg <out.svg>]`) |
-| `nix run .#geometry-diff-test` | The geometry commands' own tests (the `circuits` geometry project's; no network, no database, nothing written) |
-| `nix run .#geometry-survey -- <circuit>` | Whether the survey over a circuit's kept Overpass answer still lays the bytes the app serves, optionally writing them with `--write` (the `circuits` geometry project, reaching no database and no network; `[--answer <overpass.json>] [--write]`) |
+| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `fetch` asks OpenStreetMap and keeps the answer beside the config; `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them); `write` runs both off one reading of the arguments; `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both). Paths from where the command is run; the Flix main owns the word list |
+| `nix run .#geometry-test [project ...]` | The `flix test` of the projects under `circuits/` — `geometry`, `timing`, `probe`; name any of them to run just those, none to run all three (no network, no database, no files written) |
 | `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (the `circuits/probe` project, which resolves no dependency, links no source and computes in no database; `<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
-| `nix run .#geometry-probe-test` | The probe's own tests (the `circuits/probe` project's; no network, no database, nothing written) |
-| `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (the `circuits` geometry project's own regeneration fence; `[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the `circuits/timing` project, which resolves no dependency and computes in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
-| `nix run .#geometry-timing-test` | The timing report's own tests (the `circuits/timing` project's; no database, no network, nothing written) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -589,8 +582,8 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   comes from the flake rather than from `node_modules`, so `@playwright/test`
   does not resolve for `tsc`.
 - **The geometry project** (`circuits/`) — a Flix project of its own, tested by
-  `nix run .#geometry-diff-test` beside the timing report's `.#geometry-timing-test`
-  and the probe's `.#geometry-probe-test`: every reading — the survey of an
+  `nix run .#geometry-test geometry` beside the timing report's and the probe's,
+  which the same command runs under their own names: every reading — the survey of an
   answer, the reading of a kept file, the comparison of two lines, the atlas
   file's shapes and guards, the regeneration fence's comparison — is handed a
   fixture rather than a survey, in one language. What a Flix test cannot see
@@ -637,8 +630,8 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   what no test run from inside the project can see: the sources it holds, that it
   links none of them and resolves no dependency and names no database, that the
   flake's `GEOMETRY_FROM` and the reader's `Env.getVar` name one
-  directory, that every `geometry-<command>` the flake registers reaches the dispatch in
-  `Main.flix`, that both commands which lay lines together project them on one
+  directory, that the one `geometry` app the flake registers forwards its whole
+  command line and `Main.flix`'s word list and dispatch are one list, that both commands which lay lines together project them on one
   plane, and that CI compares the served bytes without asking the survey to write
   them. The readings themselves — a sampling loop's bound, which stretch a tie
   falls on, the tenth a metre is kept to — are the project's own `flix test`'s;

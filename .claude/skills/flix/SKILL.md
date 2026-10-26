@@ -1,15 +1,13 @@
 ---
 name: flix
-description: "Diagnose Flix compile errors and write Flix the way this repository does. Use when a `nix run .#flix-build` / `.#flix-test` fails — or one of the other three Flix projects does, `.#geometry-timing-test`, `.#geometry-probe-test` and `.#geometry-diff-test` — when an error code appears (E6217 unused effect, E6218 mismatched effects, E6289 misplaced doc-comment, E6629 expected, E2136 undefined name, E0237 not accessible, E6794 unable to unify, E6469 effect formulas, E7685 unexpected argument, E8752 unexpected effect in a pure function, E7027 equality not defined), when a parse error has no obvious cause, when adding or changing an effect, handler or signature under /flix, and before believing a green build."
+description: "Diagnose Flix compile errors and write Flix the way this repository does. Use when a `nix run .#flix-build` / `.#flix-test` fails — or one of the other three Flix projects does, `.#geometry-test geometry`, `.#geometry-test timing` and `.#geometry-test probe` — when an error code appears (E6217 unused effect, E6218 mismatched effects, E6289 misplaced doc-comment, E6629 expected, E2136 undefined name, E0237 not accessible, E6794 unable to unify, E6469 effect formulas, E7685 unexpected argument, E8752 unexpected effect in a pure function, E7027 equality not defined), when a parse error has no obvious cause, when adding or changing an effect, handler or signature under /flix, and before believing a green build."
 allowed-tools:
   - Read
   - Grep
   - Glob
   - Bash(nix run .#flix-build*)
   - Bash(nix run .#flix-test*)
-  - Bash(nix run .#geometry-timing-test*)
-  - Bash(nix run .#geometry-probe-test*)
-  - Bash(nix run .#geometry-diff-test*)
+  - Bash(nix run .#geometry-test*)
   - Bash(nix shell nixpkgs#jdk21_headless*)
   - Bash(rm -rf flix/build*)
   - Bash(mkdir -p flix/build*)

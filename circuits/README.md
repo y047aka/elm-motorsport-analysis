@@ -4,10 +4,11 @@ The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
 and one directory per circuit — the Overpass answer the geometry was written
 from and the atlas line measured against it, kept beside the config that
 surveyed them. The
-commands are the flake's — `nix run .#geometry-fetch -- <circuit>`,
-`.#geometry-write -- <circuit>`,
-`.#geometry-probe`, `.#geometry-atlas`, `.#geometry-diff`, `.#geometry-survey`,
-`.#geometry-regenerate`, `.#geometry-timing-lines`. The pipeline itself is the
+commands are the flake's — one app for the pipeline, taking the word it runs:
+`nix run .#geometry -- fetch <circuit>`, `-- write <circuit>`, `-- survey
+<circuit>`, `-- atlas <circuit>`, `-- diff <a.geojson> <b.geojson>`, `--
+regenerate` — beside `.#geometry-probe`, `.#geometry-timing-lines`, and
+`.#geometry-test` for the three projects' tests. The pipeline itself is the
 Flix project at this directory's root: it asks OpenStreetMap, surveys a circuit
 out of an answer, and writes the file the app serves. `circuits/timing/`, the timing-lines report, is a
 Flix project of its own, reading the feed the load reads with the decoder the
@@ -48,7 +49,7 @@ failure past both is a survey to repeat later — or to hand in as a file.
 The Elm tests cannot hold a survey: the pipeline stretches whatever degrees it
 gets to the circuit's published lap length whatever the degrees say, so a point
 moved 20 m passes every Elm test and leaves the tracker's pixels where they
-were. `.#geometry-regenerate` holds it instead, re-running the pipeline over
+were. `.#geometry -- regenerate` holds it instead, re-running the pipeline over
 each circuit's kept Overpass answer — kept in the circuit's own directory —
 and failing unless it reproduces the kept geometry, every fenced property
 exactly. `surveyed_at` is the one exempt property: it stamps which answer a
@@ -56,7 +57,7 @@ file was written from rather than what the drawing is made of, and it is the
 one property a live regeneration must move while every degree stands still.
 
 A regeneration is read as a diff of the geometry itself — `nix run
-.#geometry-diff` lays the moved file against the kept one and prints the
+.#geometry -- diff` lays the moved file against the kept one and prints the
 metres between them. A survey that moved by metres then takes a re-baseline
 of the tracker's VRT with it, since every tracker baseline is drawn on those
 degrees — but the size of a move is measured on the GeoJSON, and the pixels
@@ -135,7 +136,7 @@ the circuit's config and in `Motorsport.Circuit`, one for the drawing and one
 for the report, and `app/tests/circuit-timing-map.spec.ts` reads both sources
 and fails them apart; nothing else connects them. What is not answerable this
 way is where a place the shares imply stands against the drawn line itself —
-that is `.#geometry-regenerate`'s and `.#geometry-diff`'s to say, measuring the
+that is `.#geometry -- regenerate`'s and `-- diff`'s to say, measuring the
 geometry rather than a season. It is how COTA's second line was found standing
 6.7 m off the circuit's own map, which is how far a round whose two seasons agree
 to within 40 m can still be drawn wrong by. How the drawing places a line the map
@@ -192,7 +193,7 @@ format error, and `flix build` takes no source directory as an argument — so a
 `Util.Csv.Decode` is a shared file, not a second copy of its 552 lines. Per-file
 links also leave each shared source visible in `git ls-files -s` as mode `120000`.
 
-`nix run .#geometry-timing-test` runs that package's own `flix test`, beside
+`nix run .#geometry-test timing` runs that package's own `flix test`, beside
 `.#flix-test` in CI, which is what proves the links survived the checkout as well as
 that the readings are right. `app/tests/circuit-timing-map.spec.ts` pins that every
 link resolves to the `flix/src` file of the same relative path, names the sources this
@@ -206,7 +207,7 @@ here that opens no file at all — it asks something of a network rather than of
 a database: `src/Probe.flix` reads the
 arguments and prints, `src/Overpass.flix` walks the runners and gives an answer its
 shape, and `src/Candidates.flix` reads an answer already got — which tags could name
-a circuit, and what a relation's roles measure. `nix run .#geometry-probe-test` runs
+a circuit, and what a relation's roles measure. `nix run .#geometry-test probe` runs
 its `flix test`, which is the only way a probe is testable at all: the asking is one
 call and the reading is a fixture, and the tests are given fixtures.
 
@@ -263,7 +264,7 @@ figures, authored in `src/Circuit.flix` for the drawing and held again in the re
 `Motorsport.Circuit` for a run that reads no geometry, joined by
 `app/tests/circuit-timing-map.spec.ts`.
 
-`nix run .#geometry-survey -- cota` reads `circuits/cota/overpass.json`, finds the relation by
+`nix run .#geometry -- survey cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
 lane, stretches the surveyed length to the published one, thins it at a metre, and answers
 whether what it would write is the file the app serves; `--write` writes it. CI runs the
@@ -278,7 +279,7 @@ left to re-survey them from, while a circuit with neither file has not been surv
 yet and says so quietly.
 
 **A byte comparison and a property comparison, kept because they answer different
-questions.** `geometry-survey` without `--write` compares bytes; the regeneration fence
+questions.** `-- survey` without `--write` compares bytes; the regeneration fence
 compares parsed properties with `surveyed_at` exempt, because asking OpenStreetMap now takes a
 newer survey while every degree stands still. The byte comparison needs no such exemption — it
 reads the very answer whose stamp the property carries, so the stamp it would write is the stamp
@@ -289,13 +290,13 @@ find its `flix.toml`, and a reader names `app/static/geometry/le_mans.geojson` f
 outside it, so the flake exports `GEOMETRY_FROM` as the directory the command was asked
 from and `Util/Files.flix` resolves every path there. Rename the variable in either
 place and every path a reader types is a file not found, with the name they typed in the
-message. `nix run .#geometry-diff-test` runs the package's own `flix test`, every reading
+message. `nix run .#geometry-test geometry` runs the package's own `flix test`, every reading
 being handed a fixture rather than a file — an Overpass answer written out in the test that
 reads it, two geometries laid together in the test that measures them.
 
 ## The atlas readings
 
-`nix run .#geometry-atlas <circuit>` is the geometry project's own: `Track.flix`
+`nix run .#geometry -- atlas <circuit>` is the geometry project's own: `Track.flix`
 reads the foreign file's shapes and refuses what they contradict, `Atlas.flix`
 fetches or reads the layer, and the apartness is the diff's `Apart.flix`
 sampling the same pair of lines. It reads the track-atlas line — a midline
@@ -308,7 +309,7 @@ coordinate to seed a config's `timingLine` with; whether the lines the
 times are read against stand where the seeded line puts them is `nix run
 .#geometry-timing-lines`'s to answer, once a round has been loaded.
 
-`nix run .#geometry-diff` lays any two kept geometries against each other —
+`nix run .#geometry -- diff` lays any two kept geometries against each other —
 mean and maximum apartness, and an SVG overlay on request — so a fresh survey
 is read against the old one, or the atlas line against either, with no script
 in between. Neither writes Elm: drawing on a measured line would move every
@@ -322,12 +323,12 @@ Every tool is two things: the asking, and the reading of an answer. The asking �
 Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the
 reading moved into a module beside it that opens nothing. `Cli.TimingLines.Feed`
 in the report's own project turns the feed's text into rows, fastest sectors,
-shares and implied lines, and is tested by `nix run .#geometry-timing-test`
+shares and implied lines, and is tested by `nix run .#geometry-test timing`
 rather than here; the reading of a CSV is one reading and the load's
 `Util.Csv.Decode` is the other half of it, which is why the report is written
 where the feed is already read; `Candidates.flix` in the probe's own project says
 which tags could name a circuit and what an answer's roles measure, and is tested
-by `nix run .#geometry-probe-test` for the same reason — an Overpass answer is read
+by `nix run .#geometry-test probe` for the same reason — an Overpass answer is read
 in one language and not two, and `Survey.flix`'s reading of a kept answer is held to
 the bytes the app serves rather than by a shared source; `Geometry.flix` holds the
 profile's own reading — the outline with its own metres going up, and the pit lane
@@ -337,7 +338,7 @@ guards — the one that keeps a mismatched line out, and the one that keeps the 
 starting at the published line; and the comparison the fence makes is
 `Regenerate.flix`'s, asking of the survey's own output what a kept file asks of
 its bytes — and nothing asks OpenStreetMap from outside the Flix projects at all. Printing stays with the command — what a reading is worth is what it
-answers, not how its table is padded. `nix run .#geometry-diff-test` runs the
+answers, not how its table is padded. `nix run .#geometry-test geometry` runs the
 project's own `flix test`, where every reading is handed a fixture rather than a
 survey. What is judged
 against the repository's real bytes stays this file's other sections': the fence,

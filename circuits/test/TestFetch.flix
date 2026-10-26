@@ -20,7 +20,7 @@ pub mod TestFetch {
     def testAFetchNamingNoCircuitIsAnsweredWithItsUsage(): Unit \ Assert =
         match Fetch.parse("--out" :: "answer.json" :: Nil) {
             case Ok(_)        => Assert.assertTrue(false)
-            case Err(problem) => Assert.assertTrue(String.contains({substr = "usage: nix run .#geometry-fetch"}, problem))
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "usage: nix run .#geometry -- fetch"}, problem))
         }
 
     /// The kept answer beside the circuit's config is where an unnamed answer lands:

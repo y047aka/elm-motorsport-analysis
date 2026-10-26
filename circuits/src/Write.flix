@@ -1,10 +1,10 @@
 /// The geometry file, written: the survey's places, metres and claims as the bytes the
 /// app reads.
 ///
-///     nix run .#geometry-survey -- cota
-///     nix run .#geometry-survey -- cota --write
-///     nix run .#geometry-survey -- le_mans --answer circuits/le_mans/overpass.json
-///     nix run .#geometry-write -- cota [--answer <overpass.json>] [--write]
+///     nix run .#geometry -- survey cota
+///     nix run .#geometry -- survey cota --write
+///     nix run .#geometry -- survey le_mans --answer circuits/le_mans/overpass.json
+///     nix run .#geometry -- write cota [--answer <overpass.json>] [--write]
 ///
 /// The profile is the one every reader of a kept file reads: EPSG:4326 throughout, as
 /// the Atlas keeps it; one `outline` LineString whose `metres` property holds, point for
@@ -26,7 +26,7 @@
 /// exempt; this comparison is of bytes, and `surveyed_at` needs no exemption here because
 /// the survey reads the very answer whose stamp the property carries.
 ///
-/// The whole run is this module's too: `geometry-write` takes these flags unchanged
+/// The whole run is this module's too: `-- write` takes these flags unchanged
 /// and lays the file off one reading of the arguments, asking OpenStreetMap for the
 /// answer when the reader named none. Both commands parse one flag set and travel
 /// one path through `surveyed`; only the usage a wrong argument is answered with
@@ -187,7 +187,7 @@ pub mod Write {
     }
 
     pub def parse(args: List[String]): Result[String, Args] =
-        parseFor("geometry-survey", args)
+        parseFor("survey", args)
 
     /// One circuit and one answer, read for the command word given: the whole run
     /// takes these flags unchanged, so only the usage a wrong argument is answered
@@ -228,15 +228,15 @@ pub mod Write {
         }
 
     pub def usage(): String =
-        usageOf("geometry-survey")
+        usageOf("survey")
 
     /// The whole run's line: the same arguments, at the command that asks for its
     /// own answer when the reader named none.
     pub def writeUsage(): String =
-        usageOf("geometry-write")
+        usageOf("write")
 
     def usageOf(goes: String): String =
-        "usage: nix run .#${goes} -- <circuit> [--answer <overpass.json>] [--write]"
+        "usage: nix run .#geometry -- ${goes} <circuit> [--answer <overpass.json>] [--write]"
 
     /// The exit code the survey comes to: 1 for a word no circuit answers to, an answer it
     /// was pointed at and cannot read, a survey it could not chain, and a file it could not
@@ -259,7 +259,7 @@ pub mod Write {
     /// a run keeps beside a circuit, and a run that only wants the geometry should not
     /// take the map's newest answer with it.
     pub def writeExitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        match parseFor("geometry-write", args) {
+        match parseFor("write", args) {
             case Err(problem) =>
                 Console.eprintln("${problem}");
                 1
@@ -318,7 +318,7 @@ pub mod Write {
                 Console.eprintln("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from");
                 1
             case Err(_) =>
-                Console.println("${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `nix run .#geometry-write`'s");
+                Console.println("${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `nix run .#geometry -- write`'s");
                 0
         }
     }
