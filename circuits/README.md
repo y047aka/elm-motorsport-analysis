@@ -7,13 +7,14 @@ surveyed them. The
 commands are the flake's — one app for the pipeline, taking the word it runs:
 `nix run .#geometry -- fetch <circuit>`, `-- write <circuit>`, `-- survey
 <circuit>`, `-- atlas <circuit>`, `-- diff <a.geojson> <b.geojson>`, `--
-regenerate` — beside `.#geometry-probe`, `.#geometry-timing-lines`, and
-`.#geometry-test` for the three projects' tests. The pipeline itself is the
+regenerate` — beside `.#geometry-timing-lines`, and
+`.#geometry-test` for the two projects' tests. The pipeline itself is the
 Flix project at this directory's root: it asks OpenStreetMap, surveys a circuit
-out of an answer, and writes the file the app serves. `circuits/timing/`, the timing-lines report, is a
+out of an answer, and writes the file the app serves. Its `-- probe` word is
+the same question OpenStreetMap answers, asked before a circuit has a config to
+author. `circuits/timing/`, the timing-lines report, is a
 Flix project of its own, reading the feed the load reads with the decoder the
-load decodes it with; `circuits/probe/` is another — the same question
-OpenStreetMap answers, asked in Flix before a circuit has a config to author.
+load decodes it with.
 Nothing here is TypeScript: the pipeline's readings, its commands and its tests
 are all the root project's now.
 What follows is what no
@@ -82,7 +83,7 @@ nothing to `Circuit/`.
 ## Authoring a circuit
 
 Which relation a circuit is before any config says is `nix run
-.#geometry-probe`, which prints the circuit relations at a place on earth with
+.#geometry -- probe`, which prints the circuit relations at a place on earth with
 each one's unroled ways measured — the length is what tells the full Sarthe
 circuit from the Grand Prix circuit standing beside it. It asks two questions:
 which relations the box holds and how each is tagged, then, for the ones whose
@@ -200,37 +201,25 @@ link resolves to the `flix/src` file of the same relative path, names the source
 directory holds itself, and reads every source the report compiles — every link
 dereferenced — for the words a database is named by.
 
-## The probe is a project of its own too
+## The probe is a word of the pipeline
 
-`circuits/probe/` is a Flix package of its own and the only one of the three
-here that opens no file at all — it asks something of a network rather than of
-a database: `src/Probe.flix` reads the
-arguments and prints, `src/Overpass.flix` walks the runners and gives an answer its
-shape, and `src/Candidates.flix` reads an answer already got — which tags could name
-a circuit, and what a relation's roles measure. `nix run .#geometry-test probe` runs
-its `flix test`, which is the only way a probe is testable at all: the asking is one
-call and the reading is a fixture, and the tests are given fixtures.
+`-- probe` opens no file at all — it asks something of a network rather than of
+a database: `src/Probe.flix` reads the arguments and prints, `src/Overpass.flix`
+walks the runners and gives an answer its shape, and `src/Candidates.flix` reads
+an answer already got — which tags could name a circuit, and what a relation's
+roles measure. `nix run .#geometry-test geometry` runs their `flix test`, which
+is the only way a probe is testable at all: the asking is one call
+and the reading is a fixture, and the tests are given fixtures.
 
-**It links no source.** The report links nine because the readings it wants are
-already in `flix/src` — a CSV's decoding, a circuit's timing map — and a second copy
-of one of those is a second table with one reader. The probe wants nothing that is:
-every distance in it comes off an answer about OpenStreetMap, which `flix/src` has no
-reason to hold. A link would compile, and that is the hazard rather than the freedom:
-`Sql.flix` declares three effects that open no connection, so a project linking it
-acquires a way to name a database none of its commands can reach, and `flix.toml`
-would resolve a JDBC driver to name it with. `app/tests/circuit-overpass.spec.ts`
-fails a symlink under the probe's `src`, a resolved dependency, the word `Jdbc`, and
-a Flix version the project and the CLI do not share.
-
-What the projects do hold more than once is the service: which runners there
-are and in which order, what a run calls itself, how many times each runner is
-asked, and how long one that just failed is left alone. Those are facts about
-OpenStreetMap and not about any project: the probe spells them in
-`src/Overpass.flix` and the pipeline spells them in its own
-`circuits/src/Overpass.flix` — and the same spec reads both spellings and fails
-them apart — as it reads the sphere the metres are measured on
-out of every source that uses it — the survey's, the probe's and
-`Motorsport.Circuit.Geodesy`'s. Measuring on the equatorial radius instead of the
+**One asking, two answers.** Which runners there are and
+in which order, what a run calls itself, how many times each runner is asked,
+and how long one that just failed is left alone — those are facts about
+OpenStreetMap, and `Overpass.flix` spells them once for the probe's question and
+the pipeline's alike, walking both through the same runners and handing the
+survey's answer back as text and the probe's as elements. What no compiler
+sees is the sphere the metres are measured on, held by the survey, the probe and
+`Motorsport.Circuit.Geodesy` alike, which `app/tests/circuit-overpass.spec.ts`
+reads out of all three and fails apart. Measuring on the equatorial radius instead of the
 mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
 lap is the one reading a config is authored from.
 
@@ -257,9 +246,9 @@ asking of two paths, the report and the overlay are `Diff.flix`'s; the compariso
 lines is `Apart.flix`'s, which the diff samples and the atlas reading samples; the atlas
 file's shapes and guards are `Track.flix`'s; the survey of an answer, the reading of a
 kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.flix` and
-`Write.flix`, each one the only spelling. What is written twice is the asking of
-OpenStreetMap — the pipeline's `Overpass.flix` and the probe's each hold the runners,
-joined only by the service facts `circuit-overpass.spec.ts` reads — and the timing
+`Write.flix`, each one the only spelling — and so is the asking of
+OpenStreetMap, `Overpass.flix` one spelling of the runners for the survey's
+question and the probe's alike. What is written twice is the timing
 figures, authored in `src/Circuit.flix` for the drawing and held again in the report's
 `Motorsport.Circuit` for a run that reads no geometry, joined by
 `app/tests/circuit-timing-map.spec.ts`.
@@ -326,9 +315,9 @@ in the report's own project turns the feed's text into rows, fastest sectors,
 shares and implied lines, and is tested by `nix run .#geometry-test timing`
 rather than here; the reading of a CSV is one reading and the load's
 `Util.Csv.Decode` is the other half of it, which is why the report is written
-where the feed is already read; `Candidates.flix` in the probe's own project says
-which tags could name a circuit and what an answer's roles measure, and is tested
-by `nix run .#geometry-test probe` for the same reason — an Overpass answer is read
+where the feed is already read; `Candidates.flix` says which tags could name a
+circuit and what an answer's roles measure, and is tested
+by `nix run .#geometry-test geometry` for the same reason — an Overpass answer is read
 in one language and not two, and `Survey.flix`'s reading of a kept answer is held to
 the bytes the app serves rather than by a shared source; `Geometry.flix` holds the
 profile's own reading — the outline with its own metres going up, and the pit lane

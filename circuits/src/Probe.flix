@@ -1,8 +1,8 @@
 /// Which relation OpenStreetMap holds a circuit as -- the question asked before a
 /// circuit has a config, and the one a config is then authored from.
 ///
-///     nix run .#geometry-probe -- 47.96,0.23 --radius 5
-///     nix run .#geometry-probe -- 47.9661,0.2086,47.9925,0.2405
+///     nix run .#geometry -- probe 47.96,0.23 --radius 5
+///     nix run .#geometry -- probe 47.9661,0.2086,47.9925,0.2405
 ///
 /// Each candidate relation the box holds is printed whole: its tags as they stand,
 /// its member ways measured, its roles counted. Around Le Mans the full 13.6 km
@@ -127,7 +127,7 @@ pub mod Probe {
 
     pub def usage(): String =
         Util.GetOpt.usageInfo(
-            "Usage: geometry-probe <lat>,<lon> [...] [--radius <km>], or <south>,<west>,<north>,<east> [...]",
+            "Usage: nix run .#geometry -- probe <lat>,<lon> [...] [--radius <km>], or <south>,<west>,<north>,<east> [...]",
             optionDescrs()
         )
 
@@ -161,7 +161,7 @@ pub mod Probe {
     def probePlace(radius: Float64, place: String): Result[String, Unit] \ { Console, IO, Https } =
         match forM(
             box   <- bboxOf(place, radius);
-            found <- Overpass.ask(candidatesOf(box))
+            found <- Overpass.askElements(candidatesOf(box))
         ) yield (box, found) {
             case Err(problem) => Err(problem)
             case Ok((box, found)) =>
@@ -206,7 +206,7 @@ pub mod Probe {
     /// The relation's ways, asked for and measured: the asking is here, the reading
     /// of the answer is `Candidates.measure`'s.
     def measured(element: Element): Result[String, String] \ { IO, Https } =
-        Result.flatMap(answer -> measure(answer, element#id), Overpass.ask(waysOf(element)))
+        Result.flatMap(answer -> measure(answer, element#id), Overpass.askElements(waysOf(element)))
 
     /// The first question: every relation the box holds that is tagged as a
     /// circuit, a motor-sport route or a raceway, with its tags and nothing else.

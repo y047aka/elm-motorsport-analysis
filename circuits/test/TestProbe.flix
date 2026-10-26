@@ -1,4 +1,4 @@
-/// The arguments of `nix run .#geometry-probe`: which places to ask about, how far
+/// The arguments of `nix run .#geometry -- probe`: which places to ask about, how far
 /// round each to look, and which flags are not the probe's. `TestOverpass` and
 /// `TestCandidates` drive the readings these select.
 pub mod TestProbe {
@@ -78,12 +78,12 @@ pub mod TestProbe {
             case Err(_)      => Assert.assertTrue(false)
         }
 
-    /// A flag of the CLI's database-computing commands, or of the timing report, is
-    /// refused rather than read as a place: the argument of a flag nobody heard of
-    /// would otherwise be probed as a coordinate.
+    /// A flag of a command that computes in a database is refused rather than read
+    /// as a place: the argument of a flag nobody heard of would otherwise be probed
+    /// as a coordinate.
     @Test
     def testTheOtherCommandsFlagsAreRefused(): Unit \ Assert =
-        Assert.assertTrue(Result.isErr(parse("--database" :: "jdbc:sqlite:x" :: centre())));
+        Assert.assertTrue(Result.isErr(parse("--database" :: "/somewhere/the.db" :: centre())));
         Assert.assertTrue(Result.isErr(parse("--csv" :: "../../data/wec" :: centre())));
         Assert.assertTrue(Result.isErr(parse("--every" :: "25" :: centre())))
 

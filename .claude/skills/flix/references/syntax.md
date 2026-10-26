@@ -67,7 +67,7 @@ E7685  Unexpected argument: expected 'Int64', got 'Int32'.
 An OpenStreetMap id is an `Int64` and a test writes `List#{way(1, 100.0)}`, which
 reads as a number and is not one of the type the parameter asks for. Every literal
 feeding an `Int64` field or argument carries the suffix: `way(1i64, 100.0)`,
-`{ id = 7i64, ... }`. Seen in `circuits/probe/test/TestCandidates.flix`.
+`{ id = 7i64, ... }`. Seen in `circuits/test/TestCandidates.flix`.
 
 ### Only a labelled-record parameter is passed by name
 
@@ -80,7 +80,7 @@ E7685  Unexpected argument: expected 'String', got '{ s = String }'.
 ```
 
 which reads like a string-vs-record confusion and is a call-site mistake. Write
-`String.replace(src = "'", dst = "\"", text)` — as `circuits/probe/test/TestOverpass.flix`
+`String.replace(src = "'", dst = "\"", text)` — as `circuits/test/TestOverpass.flix`
 does to keep a JSON fixture readable. The same shape is why
 `Assert.assertTrueWithMsg(cond, msg)` takes its message second and unlabelled, and
 why `Assert.assertTrue` takes no message at all.
@@ -96,7 +96,7 @@ E7027  Equality is not defined on { lat = Float64, lon = Float64 }. Define or de
 it on a `List` of records — `line == Nil` fails, not because the list is compared but
 because its item is. `List.isEmpty(line)` says the same thing without asking for an
 `Eq` the domain has no use for, and comparing the fields (`line#lat == 47.9`) is what a
-test of a reading actually wants. Seen in `circuits/probe/test/TestOverpass.flix`; the
+test of a reading actually wants. Seen in `circuits/test/TestOverpass.flix`; the
 alternative — an `Eq` instance per record — would say two places are the same place
 without saying what that means.
 

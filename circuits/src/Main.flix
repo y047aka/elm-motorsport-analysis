@@ -6,6 +6,7 @@
 //     nix run .#geometry -- atlas     <circuit> [--file <atlas.geojson>]
 //     nix run .#geometry -- diff      <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
 //     nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]
+//     nix run .#geometry -- probe     <lat>,<lon> [...] [--radius <km>]
 //
 // Each subcommand is a module that reads files, asks OpenStreetMap or writes one, and
 // says what it found; this is the asking of a word, the usage a wrong word is answered
@@ -13,7 +14,9 @@
 // load and export do: `fetch` keeps an answer, `survey` turns a kept answer into the
 // file the app serves, and `write` runs both off one reading of the arguments. The
 // atlas reading stands beside the pipeline rather than in it: it measures a foreign
-// line against a kept geometry and keeps its own file, never a served one.
+// line against a kept geometry and keeps its own file, never a served one. The
+// probe asks before any of this: which relation a circuit is, asked of
+// OpenStreetMap straight and printed for a human to author a config from.
 use Sys.Console
 use Sys.Env
 use Sys.Exit
@@ -21,7 +24,7 @@ use Time.Clock
 
 /// A word outside this list is a mistake, and is answered with the usage.
 def commands(): List[String] =
-    "atlas" :: "diff" :: "fetch" :: "regenerate" :: "survey" :: "write" :: Nil
+    "atlas" :: "diff" :: "fetch" :: "probe" :: "regenerate" :: "survey" :: "write" :: Nil
 
 def main(): Unit \ { Env, IO, Clock, Exit, Console } =
     match Env.getArgs() {
@@ -34,6 +37,8 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
             Exit.exit(Diff.exitCode(rest))
         case "fetch" :: rest =>
             Exit.exit(Fetch.exitCode(rest))
+        case "probe" :: rest =>
+            Exit.exit(Probe.exitCode(rest))
         case "regenerate" :: rest =>
             Exit.exit(Regenerate.exitCode(rest))
         case "survey" :: rest =>
@@ -48,4 +53,4 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
 
 /// Each command's own usage: the flake app a reader types, beside the arguments it takes.
 def usage(): String =
-    Atlas.usage() + "\n${Diff.usage()}" + "\n${Fetch.usage()}" + "\n${Regenerate.usage()}" + "\n${Write.usage()}" + "\n${Write.writeUsage()}"
+    Atlas.usage() + "\n${Diff.usage()}" + "\n${Fetch.usage()}" + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Write.usage()}" + "\n${Write.writeUsage()}"

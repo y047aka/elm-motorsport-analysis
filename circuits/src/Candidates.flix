@@ -6,9 +6,9 @@
 ///
 /// Every distance here is a ground distance on the sphere every drawing of a
 /// circuit is measured on -- the sphere `Motorsport.Circuit.Geodesy` projects
-/// through and the one the geometry project's `Apart.flix` measures its
-/// comparisons with, and the one a probe has to agree with or its lengths mean
-/// nothing to the survey they are being read before.
+/// through and the one this project's `Apart.flix` measures its comparisons with,
+/// and the one a probe has to agree with or its lengths mean nothing to the survey
+/// they are being read before.
 ///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; what a
 /// reading here prints is a derivative of their tags.

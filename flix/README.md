@@ -19,9 +19,10 @@ list, says which modules are shared and which are held twice on purpose, why the
 links are one per file, and holds where the report's timings come from and what it
 cannot answer.
 
-The probe is the third project, at `circuits/probe/`, and it links none of this `src`:
-every distance in it comes off an answer about OpenStreetMap, which nothing here has a
-reason to hold. It is the repository's only Flix project that asks a network, and
+The probe is a word of the pipeline at the `circuits/` root, not a project of its
+own, and the pipeline links none of this `src`:
+every distance in the probe comes off an answer about OpenStreetMap, which nothing here has a
+reason to hold. It is the repository's only Flix code that asks a network, and
 editing a file under this `src` compiles once for it rather than twice.
 
 What follows is what the code cannot say for itself.
@@ -503,8 +504,8 @@ paying for the same split.
   The report reads the same figures through a symlink into this `src`, and
   `app/tests/circuit-timing-map.spec.ts` is the one thing that ties the two copies.
   The feed's own readings are driven under `circuits/timing`, by
-  `nix run .#geometry-test timing`, and an Overpass answer's under `circuits/probe`, by
-  `nix run .#geometry-test probe` — which shares no source here, and so tests nothing
+  `nix run .#geometry-test timing`, and an Overpass answer's under `circuits/`, by
+  `nix run .#geometry-test geometry` — which shares no source here, and so tests nothing
   of this `src`.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`

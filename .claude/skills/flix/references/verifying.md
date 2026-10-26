@@ -9,31 +9,30 @@ rm -rf flix/build && nix run .#flix-test
 `flix build` and `flix test` are incremental and CI is not. A cold run is the
 only one worth believing.
 
-## The other three projects
+## The other two projects
 
-The pipeline at the `circuits/` root, the report at `circuits/timing/` and the probe at
-`circuits/probe/` are Flix projects with
-their own `flix.toml`, and nothing about a green `.#flix-test` says anything about any of
-them:
+The pipeline at the `circuits/` root — which holds the probe's readings as its
+`-- probe` word — and the report at `circuits/timing/` are Flix projects with
+their own `flix.toml`, and nothing about a green `.#flix-test` says anything about either
+of them:
 
 ```bash
 nix run .#geometry-test timing    # the report's `flix test`
-nix run .#geometry-test probe     # the probe's
-nix run .#geometry-test geometry  # the geometry project's
+nix run .#geometry-test geometry  # the geometry project's, probe readings included
 ```
 
-Naming no project runs all three; each run starts inside its own project,
+Naming no project runs both; each run starts inside its own project,
 which is the only place `flix` finds its `flix.toml`.
 
 The report compiles nine sources *out of* `flix/src` by symlink, so a change to one of
 those is compiled twice and tested twice, once per project — and a symlink that did not
 survive a checkout fails as `Undefined use`, reported in the module that needed it
-rather than in the link. The probe shares no source, so its build is independent of
-`flix/src` altogether, and neither does the pipeline at the `circuits/` root: it asks
+rather than in the link. Neither does the pipeline at the `circuits/` root link any
+source: it asks
 OpenStreetMap and reads kept Overpass answers and geometry files, writing a kept answer,
 a served geometry or an overlay only when told to, while its own tests hand every reading
-a string rather than a file — so `.#geometry-test geometry` opens and writes nothing. None of
-the three needs a jar to be tested: all three commands run the interpreter.
+a string rather than a file — so `.#geometry-test geometry` opens and writes nothing. Neither
+project needs a jar to be tested: both commands run the interpreter.
 
 ## What is written where
 
@@ -47,7 +46,7 @@ alone is `lib/`, the resolution cache CI restores — clearing it makes the next
 Maven Central again, which answers a busy runner with a 429.
 
 A second Flix project writes those same two directories wherever it is run, so it takes
-a `.gitignore` with it: `circuits/`, `circuits/timing/` and `circuits/probe/` each hold a
+a `.gitignore` with it: `circuits/` and `circuits/timing/` each hold a
 copy.
 
 ## The stack check
@@ -84,6 +83,7 @@ Two things that waste time here:
 ## What CI runs
 
 `test.yml` on ubuntu-24.04 runs the Elm tests, then each Flix project's own tests —
-the CLI's, the report's, the probe's and the geometry commands' — then the circuit
+the CLI's, the report's and the geometry commands' (the probe's readings among
+them) — then the circuit
 tools' and `tsc`. A failure
 there that passes locally is either the cold build or the stack.

@@ -12,7 +12,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
   the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles nine of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `Util/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Neither is the probe at `circuits/probe/`, which asks the one question asked of OpenStreetMap rather than of a row, nor the geometry pipeline at the `circuits/` root itself, which asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; neither links any of this `src`, because nothing in `flix/src` asks OpenStreetMap anything or reads a GeoJSON.
+  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a dependency-free Flix project at `circuits/timing/`, which compiles nine of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `Util/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the `circuits/` root pipeline's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and the pipeline itself asks OpenStreetMap its own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links none of this `src`, because nothing in `flix/src` asks OpenStreetMap anything or reads a GeoJSON.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -26,14 +26,12 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `circuits/README.md` describes it — the fence that keeps a geometry an
   answer to its survey, what a circuit's config is authored from, and where
   the timing lines' distances come from — and is the thing to read before
-  changing anything under `/circuits`. It holds the repository's four Flix
-  projects: three in their own directories — `circuits/timing/`, the timing-lines
+  changing anything under `/circuits`. It holds two of the repository's three Flix
+  projects: `circuits/timing/`, the timing-lines
   report, which resolves nothing
   and shares its `flix/src` sources by symlink — one per file, because a linked
-  directory is walked as nothing — `circuits/probe/`, which resolves nothing,
-  links nothing, and asks the one question asked before a circuit has a config,
-  and the geometry pipeline at the `circuits/` root itself, which resolves and links nothing
-  and is the one that asks OpenStreetMap and writes the served file — the diff's overlay, the
+  directory is walked as nothing — and the geometry pipeline at the `circuits/` root itself, which resolves and links nothing
+  and is the one that asks OpenStreetMap — the probe's question and its own — and writes the served file — the diff's overlay, the
   fetched answer, and, over a
   circuit's kept answer, the served geometry itself.
 
@@ -57,9 +55,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `fetch` asks OpenStreetMap and keeps the answer beside the config; `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them); `write` runs both off one reading of the arguments; `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both). Paths from where the command is run; the Flix main owns the word list |
-| `nix run .#geometry-test [project ...]` | The `flix test` of the projects under `circuits/` — `geometry`, `timing`, `probe`; name any of them to run just those, none to run all three (no network, no database, no files written) |
-| `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (the `circuits/probe` project, which resolves no dependency, links no source and computes in no database; `<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
+| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `fetch` asks OpenStreetMap and keeps the answer beside the config; `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them); `write` runs both off one reading of the arguments; `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both); `probe` asks which relations hold a place on earth, each candidate's ways measured, before a config is authored. Paths from where the command is run; the Flix main owns the word list |
+| `nix run .#geometry-test [project ...]` | The `flix test` of the projects under `circuits/` — `geometry`, which holds the probe's readings, and `timing`; name either to run just its own, none to run both (no network, no database, no files written) |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the `circuits/timing` project, which resolves no dependency and computes in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
@@ -582,8 +579,8 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   comes from the flake rather than from `node_modules`, so `@playwright/test`
   does not resolve for `tsc`.
 - **The geometry project** (`circuits/`) — a Flix project of its own, tested by
-  `nix run .#geometry-test geometry` beside the timing report's and the probe's,
-  which the same command runs under their own names: every reading — the survey of an
+  `nix run .#geometry-test geometry` beside the timing report's — the probe's
+  readings ride in the same project: every reading — the survey of an
   answer, the reading of a kept file, the comparison of two lines, the atlas
   file's shapes and guards, the regeneration fence's comparison — is handed a
   fixture rather than a survey, in one language. What a Flix test cannot see
@@ -615,17 +612,15 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   symlinks into `flix/src` resolve — a broken one fails elsewhere as
   `Undefined use`, far from its cause — names the sources the report holds a second
   copy of, and fails everything it compiles for naming a database.
-- **Overpass, asked twice in Flix** (`/app/tests/circuit-overpass.spec.ts`) —
-  the probe and the pipeline at the `circuits/` root each read OpenStreetMap in
-  a project of their own, so the runners, their order, the user
-  agent, the tries per runner and the backoff arithmetic are four facts held in
-  both spellings that ask, with no compiler between them; none of them fails loudly when they part, since a runner missing
-  from one list is a run with nowhere else to go. The sphere a probe's metres are measured on is read out of
-  every source that uses it — the survey's, the probe's and the drawing's —
-  because the one reading that decides a config is whether a lap measures 13.6 km.
-  The spec also pins that the probe shares no source by symlink, which is the
-  timing project's rule and not this one's, and that nothing it compiles can name a
-  database.
+- **What OpenStreetMap is asked, held in strings** (`/app/tests/circuit-overpass.spec.ts`) —
+  the asking is written once, in `circuits/src/Overpass.flix`, for the survey's
+  question and the probe's alike, and the probe's readings sit in the same project
+  as the survey's, so what no compiler compares is the ground the answers are
+  measured on: the sphere is read out of every source that uses it — the survey's,
+  the probe's and the drawing's — because the one reading that decides a config is
+  whether a lap measures 13.6 km. The spec also pins that both questions recurse
+  to `way(r)`, and that only the survey asks for nodes — the difference between
+  drawing a lap and lengthening one.
 - **The geometry project's wiring** (`/app/tests/circuits-geometry-project.spec.ts`) —
   what no test run from inside the project can see: the sources it holds, that it
   links none of them and resolves no dependency and names no database, that the

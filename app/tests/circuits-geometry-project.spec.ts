@@ -49,7 +49,7 @@ function readDir(dir: string): string[] {
 const project = [...readDir('circuits/src'), ...readDir('circuits/test')];
 
 /**
- * Every source the geometry project compiles — fourteen of Flix and nine of tests, which is
+ * Every source the geometry project compiles — sixteen of Flix and eleven of tests, which is
  * what the project is asserted to hold — for the reading of their text alone: a word a
  * database is named by would arrive in a source file and not in a build product.
  */
@@ -111,12 +111,15 @@ test("the flake's geometry command reaches the source it runs", () => {
   expect(main, 'nix run .#geometry -- atlas runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Atlas.exitCode(rest))',
   );
+  expect(main, 'nix run .#geometry -- probe runs a main that hands the reader its arguments to nothing').toContain(
+    'Exit.exit(Probe.exitCode(rest))',
+  );
   expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
-    '"atlas" :: "diff" :: "fetch" :: "regenerate" :: "survey" :: "write" :: Nil',
+    '"atlas" :: "diff" :: "fetch" :: "probe" :: "regenerate" :: "survey" :: "write" :: Nil',
   );
   // `geometry-test` is the one way every project under `circuits/` is tested in
   // CI, and `flix` has to start inside each project to find its `flix.toml`.
-  for (const dir of ['circuits', 'circuits/timing', 'circuits/probe']) {
+  for (const dir of ['circuits', 'circuits/timing']) {
     expect(flake, `geometry-test no longer runs flix test inside ${dir}`).toContain(`(cd ${dir} && flix test)`);
   }
 });
@@ -136,12 +139,14 @@ test('the geometry project shares no source, resolves no dependency and names no
   expect(project, 'the geometry project holds a different set of sources than these').toEqual([
     'circuits/src/Apart.flix',
     'circuits/src/Atlas.flix',
+    'circuits/src/Candidates.flix',
     'circuits/src/Circuit.flix',
     'circuits/src/Diff.flix',
     'circuits/src/Fetch.flix',
     'circuits/src/Geometry.flix',
     'circuits/src/Main.flix',
     'circuits/src/Overpass.flix',
+    'circuits/src/Probe.flix',
     'circuits/src/Regenerate.flix',
     'circuits/src/Survey.flix',
     'circuits/src/Track.flix',
@@ -149,10 +154,12 @@ test('the geometry project shares no source, resolves no dependency and names no
     'circuits/src/Util/Format.flix',
     'circuits/src/Write.flix',
     'circuits/test/TestApart.flix',
+    'circuits/test/TestCandidates.flix',
     'circuits/test/TestDiff.flix',
     'circuits/test/TestFetch.flix',
     'circuits/test/TestGeometry.flix',
     'circuits/test/TestOverpass.flix',
+    'circuits/test/TestProbe.flix',
     'circuits/test/TestRegenerate.flix',
     'circuits/test/TestSurvey.flix',
     'circuits/test/TestTrack.flix',
@@ -172,9 +179,6 @@ test('the geometry project shares no source, resolves no dependency and names no
   // project states.
   const version = (path: string) => readSource(path).match(/flix\s*=\s*"([^"]+)"/)?.[1];
   expect(version('circuits/flix.toml'), 'the geometry project is not on the CLI\'s Flix version').toBe(
-    version('flix/flix.toml'),
-  );
-  expect(version('circuits/probe/flix.toml'), 'the two newer Flix projects are not on one Flix version').toBe(
     version('flix/flix.toml'),
   );
 });
