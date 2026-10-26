@@ -4,7 +4,7 @@
 ///     nix run .#geometry -- survey cota
 ///     nix run .#geometry -- survey cota --write
 ///     nix run .#geometry -- survey le_mans --answer circuits/le_mans/overpass.json
-///     nix run .#geometry -- write cota [--answer <overpass.json>] [--write]
+///     nix run .#geometry -- survey cota --fetch
 ///
 /// The profile is the one every reader of a kept file reads: EPSG:4326 throughout, as
 /// the Atlas keeps it; one `outline` LineString whose `metres` property holds, point for
@@ -25,10 +25,13 @@
 /// exempt; this comparison is of bytes, and the byte comparison reads the very answer
 /// whose stamp the property carries, so it has nothing to exempt.
 ///
-/// `-- write` takes these flags unchanged and lays the file off one reading of the
-/// arguments, asking OpenStreetMap for the answer when the reader named none. Both
-/// commands parse one flag set and travel one path through `surveyed`; only the usage a
-/// wrong argument is answered with says which of them was run.
+/// `--fetch` is the network raised as a flag rather than as a command word: the run
+/// asks OpenStreetMap now, keeps the answer where `--answer` points — the circuit's own
+/// directory when it names none — and travels on through exactly the `surveyed` a kept
+/// answer travels through, so a live run and a run over a kept file fail and reproduce
+/// in the same words. Keeping an answer is `--fetch`'s alone and laying the geometry is
+/// `--write`'s alone; a `--fetch` without `--write` keeps the evidence and then answers,
+/// without laying anything down, whether the fresh survey moves the served bytes.
 pub mod Write {
 
     use Circuit.Circuit
@@ -178,27 +181,25 @@ pub mod Write {
         circuit = Circuit,
         answer  = String,
         asked   = Bool,
+        fetch   = Bool,
         write   = Bool
     }
 
     pub def parse(args: List[String]): Result[ArgsError, Args] =
-        parseFor("survey", args)
-
-    /// One circuit and one answer, read for the command word given.
-    pub def parseFor(goes: String, args: List[String]): Result[ArgsError, Args] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  =>
                 complete(
                     scanned#words,
-                    goes,
                     Cli.Args.lastNamed(answerNamed, scanned#options),
+                    List.exists(isFetched, scanned#options),
                     List.exists(isWritten, scanned#options)
                 )
         }
 
     enum Setting with Eq {
         case Answer(String)
+        case Fetch
         case Help
         case Written
     }
@@ -210,6 +211,12 @@ pub mod Write {
             optionNames   = "answer" :: Nil,
             argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Answer(path)), "OVERPASS.JSON"),
             explanation   = "survey the answer kept here instead of the circuit's own"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "fetch" :: Nil,
+            argDescriptor = ArgDescr.NoArg(Setting.Fetch),
+            explanation   = "ask OpenStreetMap now and keep the answer at --answer\nor beside the circuit instead of reading the kept one"
         } ::
         {
             optionIds     = Nil,
@@ -225,13 +232,13 @@ pub mod Write {
     /// and a survey that read it as a path would report a file that cannot be
     /// opened rather than an argument it was not given. GetOpt hands the argument
     /// over as it came; it is the completing that refuses one.
-    def complete(named: List[String], goes: String, answer: Option[String], write: Bool): Result[ArgsError, Args] =
+    def complete(named: List[String], answer: Option[String], fetch: Bool, write: Bool): Result[ArgsError, Args] =
         match answer {
             case Some(path) if Cli.Args.isFlag(path) =>
                 Err(ArgsError.ParseErrors("--answer names no file to read" :: Nil))
             case _ =>
                 match named {
-                    case Nil => Err(ArgsError.ParseErrors("${goes} reads one circuit." :: Nil))
+                    case Nil => Err(ArgsError.ParseErrors("survey reads one circuit." :: Nil))
                     case one :: _ =>
                         match Circuit.byWord(one) {
                             case None => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
@@ -240,6 +247,7 @@ pub mod Write {
                                     circuit = circuit,
                                     answer = Option.getWithDefault(Circuit.keptAnswer(circuit), answer),
                                     asked = Option.nonEmpty(answer),
+                                    fetch = fetch,
                                     write = write
                                 })
                         }
@@ -252,6 +260,12 @@ pub mod Write {
             case _                    => None
         }
 
+    def isFetched(setting: Setting): Bool =
+        match setting {
+            case Setting.Fetch => true
+            case _             => false
+        }
+
     def isWritten(setting: Setting): Bool =
         match setting {
             case Setting.Written => true
@@ -259,22 +273,15 @@ pub mod Write {
         }
 
     pub def usage(): String =
-        usageOf("survey")
-
-    /// The whole run's line.
-    pub def writeUsage(): String =
-        usageOf("write")
-
-    def usageOf(goes: String): String =
         Util.GetOpt.usageInfo(
-            "usage: nix run .#geometry -- ${goes} <circuit> [--answer <overpass.json>] [--write]",
+            "usage: nix run .#geometry -- survey <circuit> [--answer <overpass.json>] [--fetch] [--write]",
             optionDescrs()
         )
 
     /// The exit code the survey comes to: 1 for a word no circuit answers to, an answer it
     /// was pointed at and cannot read, a survey it could not chain, and a file it could not
     /// write.
-    pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
+    pub def exitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
         Cli.Args.answer(
             optionDescrs(),
             usage(),
@@ -282,55 +289,68 @@ pub mod Write {
             args,
             scanned -> complete(
                 scanned#words,
-                "survey",
                 Cli.Args.lastNamed(answerNamed, scanned#options),
+                List.exists(isFetched, scanned#options),
                 List.exists(isWritten, scanned#options)
             ),
-            ask
+            asked -> if (asked#fetch) live(asked) else ask(asked)
         )
 
-    /// The exit code the whole run comes to: the survey's, with one difference — no
-    /// answer named asks OpenStreetMap now instead of reading the kept answer. What
-    /// comes back travels through exactly the `surveyed` a kept answer travels
-    /// through, so a live run and a survey over a kept file fail and reproduce in
-    /// the same words.
+    /// The asking that keeps: OpenStreetMap now, the answer kept where `--answer`
+    /// points — the circuit's own directory when it names none — and the survey over
+    /// what came back, through exactly the `surveyed` a kept answer travels through.
     ///
-    /// A live asking keeps nothing by itself: `fetch` is the command that decides what
-    /// a run keeps beside a circuit.
-    pub def writeExitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        Cli.Args.answer(
-            optionDescrs(),
-            writeUsage(),
-            isHelp,
-            args,
-            scanned -> complete(
-                scanned#words,
-                "write",
-                Cli.Args.lastNamed(answerNamed, scanned#options),
-                List.exists(isWritten, scanned#options)
-            ),
-            asked -> if (asked#asked) ask(asked) else live(asked)
-        )
-
-    /// The asking, then the survey over what came back. The answer's name in the
-    /// report is the question rather than a file.
+    /// An answer is kept only once the survey can read it: an answer that surveys
+    /// nothing is evidence nobody can re-run. A runner's HTML page, a reply that
+    /// stopped half way through its JSON, and an answer whose relation will not chain
+    /// into a lap are all met here, in the same words the survey itself would say
+    /// them in, rather than in a file kept to be discovered later.
     def live(asked: Args): Int32 \ { IO, Clock, Console } =
         match Overpass.askRelation(asked#circuit#relation) {
             case Err(problem) =>
                 Console.eprintln("${asked#circuit#word}: ${problem}");
                 1
             case Ok(text) =>
-                let fromRunner = {
-                    circuit = asked#circuit,
-                    answer = "OpenStreetMap relation ${asked#circuit#relation}",
-                    asked = asked#asked,
-                    write = asked#write
-                };
-                surveyed(fromRunner, text)
+                match surveyable(text, asked#circuit) {
+                    case Err(problem) =>
+                        Console.eprintln("${asked#answer}: the answer surveys nothing: ${problem}");
+                        1
+                    case Ok(reading) =>
+                        match Cli.Errors.writeFile(asked#answer, text) {
+                            case Err(problem) =>
+                                Console.eprintln("${problem}");
+                                1
+                            case Ok(_) =>
+                                Console.println(kept(asked, reading));
+                                surveyed(asked, text)
+                        }
+                }
+        }
+
+    /// What the asking left beside the circuit.
+    def kept(asked: Args, reading: Survey.Answer): String =
+        let elements = Int32.toString(List.length(reading#elements));
+        let stamp = match reading#surveyedAt {
+            case None     => ""
+            case Some(at) => ", surveyed at ${at}"
+        };
+        "${asked#circuit#word}: kept an answer of ${elements} elements${stamp} at ${asked#answer}"
+
+    /// Whether this text is an answer the survey can read: the JSON, the circuit's
+    /// relation, the chained lap and the line the circuit says that lap starts at —
+    /// everything the kept file will be re-read for, asked before a byte is kept.
+    pub def surveyable(text: String, circuit: Circuit): Result[String, Survey.Answer] =
+        match Survey.answer(text) {
+            case Err(problem) => Err(problem)
+            case Ok(reading) =>
+                match Survey.lapOf(reading, circuit) {
+                    case Err(problem) => Err(problem)
+                    case Ok(_)        => Ok(reading)
+                }
         }
 
     /// The answer read, then surveyed: the reading, the missing-file refusal and
-    /// the survey are one story whether the run was a survey alone or the whole of it.
+    /// the survey are one story however the answer came to stand where it stands.
     def ask(asked: Args): Int32 \ { IO, Console } =
         match Util.Files.read(asked#answer) {
             case Err(_) =>
@@ -356,7 +376,7 @@ pub mod Write {
                 Console.eprintln("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from");
                 1
             case Err(_) =>
-                Console.println("${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `nix run .#geometry -- write`'s");
+                Console.println("${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `--fetch`'s");
                 0
         }
     }

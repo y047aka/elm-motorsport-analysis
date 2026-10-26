@@ -164,6 +164,8 @@ pub mod TestWrite {
                 // for, which is what tells a circuit nobody has surveyed from a file that
                 // cannot be read.
                 Assert.assertTrue(not asked#asked);
+                // The default run reaches no network: it reads the kept answer.
+                Assert.assertTrue(not asked#fetch);
                 Assert.assertTrue(not asked#write)
         }
 
@@ -189,28 +191,52 @@ pub mod TestWrite {
                 Assert.assertTrue(asked#write)
         }
 
-    /// The whole run takes the survey's flags unchanged — and no answer named is the
-    /// one difference: the survey reads the kept file, the whole run asks. A wrong
-    /// argument is answered with the whole run's own usage; the survey's line would
-    /// send the reader to the other command.
+    /// `--fetch` is the network raised as a flag rather than a command word: the run
+    /// keeps its answer where `--answer` points — the circuit's own directory when it
+    /// names none — and lays the geometry down only when `--write` says so. The usage
+    /// names the flag, because the usage is where a reader learns it exists.
     @Test
-    def testTheWholeRunTakesTheSurveysFlagsAndNamesItself(): Unit \ Assert =
-        match Write.parseFor("write", "cota" :: "--write" :: Nil) {
+    def testFetchRaisesTheNetworkAndKeepsWhereTheAnswerPoints(): Unit \ Assert =
+        match Write.parse("cota" :: "--fetch" :: Nil) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
             case Ok(asked) =>
                 Assert.assertTrue(asked#circuit#word == "cota");
-                Assert.assertTrue(asked#write);
-                // The answer taken from the circuit's directory is not one the reader
-                // asked for — which is what sends this run to OpenStreetMap.
-                Assert.assertTrue(not asked#asked)
+                Assert.assertTrue(asked#fetch);
+                // A `--fetch` without `--write` keeps the evidence and answers whether
+                // the fresh survey moves the served bytes, laying nothing down.
+                Assert.assertTrue(not asked#write);
+                Assert.assertTrue(asked#answer == "circuits/cota/overpass.json")
         };
-        match Write.parseFor("write", Nil) {
-            case Ok(_) => Assert.assertTrue(false)
-            case Err(problem) =>
-                Assert.assertTrue(String.contains({substr = "write reads one circuit"}, "${problem}"))
+        match Write.parse("cota" :: "--fetch" :: "--answer" :: "elsewhere.json" :: "--write" :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
+            case Ok(asked) =>
+                Assert.assertTrue(asked#answer == "elsewhere.json");
+                Assert.assertTrue(asked#fetch);
+                Assert.assertTrue(asked#write)
         };
-        Assert.assertTrue(String.contains({substr = "nix run .#geometry -- write"}, Write.writeUsage()));
-        Assert.assertTrue(not String.contains({substr = "-- survey"}, Write.writeUsage()))
+        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Write.usage()))
+
+    /// That some JSON came back is not yet an answer the survey can read back: a kept
+    /// answer is the re-survey's evidence, so a runner's HTML page and an answer that
+    /// holds no relation are refused in the survey's own words, before a byte of
+    /// either is kept.
+    @Test
+    def testAnAnswerThatSurveysNothingIsNotKept(): Unit \ Assert =
+        match Circuit.byWord("cota") {
+            case None    => Assert.assertTrue(false)
+            case Some(circuit) =>
+                match Write.surveyable("{}", circuit) {
+                    case Ok(_) => Assert.assertTrue(false)
+                    case Err(problem) =>
+                        Assert.assertTrue(
+                            String.contains({substr = "the answer holds no relation 6537729"}, problem)
+                        )
+                };
+                match Write.surveyable("<html><body>502</body></html>", circuit) {
+                    case Ok(_)        => Assert.assertTrue(false)
+                    case Err(problem) => Assert.assertTrue(not String.isEmpty(problem))
+                }
+        }
 
     // ----------------------------------------------------------------------- the parting
 

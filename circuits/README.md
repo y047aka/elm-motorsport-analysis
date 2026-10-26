@@ -5,8 +5,8 @@ and one directory per circuit — the Overpass answer the geometry was written
 from and the atlas line measured against it, kept beside the config that
 surveyed them. The
 commands are the flake's — one app for the pipeline, taking the word it runs:
-`nix run .#geometry -- fetch <circuit>`, `-- write <circuit>`, `-- survey
-<circuit>`, `-- atlas <circuit>`, `-- diff <a.geojson> <b.geojson>`, `--
+`nix run .#geometry -- survey <circuit> [--fetch] [--write]`, `-- atlas
+<circuit>`, `-- diff <a.geojson> <b.geojson>`, `--
 regenerate` — beside `.#geometry-timing-lines`, and
 `.#geometry-test` for the project's tests. The pipeline itself is the
 Flix project at this directory's root: it asks OpenStreetMap, surveys a circuit
@@ -243,7 +243,14 @@ figures, authored in `src/Circuit.flix` for the drawing and held again in the li
 `nix run .#geometry -- survey cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
 lane, stretches the surveyed length to the published one, thins it at a metre, and answers
-whether what it would write is the file the app serves; `--write` writes it. CI runs the
+whether what it would write is the file the app serves; `--write` writes it. The
+network is a flag and not a word: `--fetch` asks OpenStreetMap now, keeps the answer
+at `--answer` or beside the circuit — and keeps it only once the survey can read it,
+since an answer that surveys nothing is evidence nobody can re-run — and then travels
+on through exactly the survey a kept answer travels through. Keeping an answer is
+`--fetch`'s alone and laying the geometry is `--write`'s alone, so a `--fetch` with no
+`--write` keeps the fresh evidence and then answers, writing nothing else, whether the
+fresh survey moves the served bytes. CI runs the
 comparison for both circuits and never passes `--write`: a fence that rewrites
 what it fences passes by construction. The wiring around the project — the
 sources it holds, what it resolves, the flake apps that reach it, the directory

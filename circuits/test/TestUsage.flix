@@ -10,19 +10,18 @@ pub mod TestUsage {
 
     @Test
     def testEveryGeometryWordDeclaresItsHelpFlag(): Unit \ Assert =
-        Assert.assertTrue(saysHelp(Fetch.usage()));
         Assert.assertTrue(saysHelp(Write.usage()));
-        Assert.assertTrue(saysHelp(Write.writeUsage()));
         Assert.assertTrue(saysHelp(Atlas.usage()));
         Assert.assertTrue(saysHelp(Diff.usage()));
         Assert.assertTrue(saysHelp(Regenerate.usage()));
         Assert.assertTrue(saysHelp(Probe.usage()));
         Assert.assertTrue(saysHelp(Report.usage()))
 
-    /// The survey and the whole run take the flags unchanged, and each says
-    /// which of them it is even in the help.
+    /// The survey's usage is the one place a reader learns the flag that raises the
+    /// network: a descriptor dropped from the flag table drops out of the help too,
+    /// and the help line names the word it belongs to.
     @Test
-    def testTheHelpLinesSayWhichWordTheyBelongTo(): Unit \ Assert =
+    def testTheSurveyUsageNamesTheFlagThatRaisesTheNetwork(): Unit \ Assert =
         Assert.assertTrue(String.contains({substr = "-- survey <circuit>"}, Write.usage()));
-        Assert.assertTrue(String.contains({substr = "-- write <circuit>"}, Write.writeUsage()))
+        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Write.usage()))
 }

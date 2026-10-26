@@ -112,8 +112,9 @@ E6629  Expected '}' before 'with'.
 E6629  Expected <declaration> before 'with'.
 ```
 
-Write the whole record out instead: `Fetch.live` builds its `{ circuit = ..., answer =
-... }` field by field rather than updating a `Write.Args` in place. All three spellings
+Write the whole record out instead: `Write.complete` builds its `{ circuit = ..., answer
+= ..., asked = ..., fetch = ..., write = ... }` field by field rather than updating a
+defaults record in place. All three spellings
 were tried against the flake's own 0.79.0 compiler; none parses, so there is no `with`
 form to fall back to — only the whole record.
 
