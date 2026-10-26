@@ -253,6 +253,27 @@ pub mod TestRegenerate {
             case Ok(asked) => Assert.assertTrue(asked#mode == Mode.Freeze)
         }
 
+    // ------------------------------------------------------------- kept files unasked
+
+    @Test
+    def testKeptEvidenceUnderAnUnauthoredWordIsFound(): Unit \ Assert =
+        Assert.assertTrue(
+            Regenerate.Unlisted.detect("cota" :: "le_mans" :: Nil, "le_mans_2024" :: Nil) == "le_mans_2024" :: Nil
+        );
+        // Every name answered to, and the fence says nothing.
+        Assert.assertTrue(Regenerate.Unlisted.detect("cota" :: "le_mans" :: Nil, "cota" :: "le_mans" :: Nil) == Nil)
+
+    /// The config spells a full path and the directory spells a name; the two
+    /// meet at the file's own name, which is what the warning must print.
+    @Test
+    def testDrawnGeometryIsNamedAsTheConfigNamesIt(): Unit \ Assert =
+        Assert.assertTrue(
+            Regenerate.Unlisted.drawn(Circuit.circuits()) == "cota.geojson" :: "le_mans.geojson" :: Nil
+        );
+        Assert.assertTrue(
+            Regenerate.Unlisted.words(Circuit.circuits()) == "cota" :: "le_mans" :: Nil
+        )
+
     /// A refusal that says what the reader asked for.
     def refused(phrase: String, asked: Result[e, a]): Bool with ToString[e] =
         match asked {

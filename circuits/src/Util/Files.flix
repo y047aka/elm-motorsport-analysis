@@ -37,6 +37,15 @@ pub mod Util.Files {
             |> Result.mapErr(e -> "${e}")
     }
 
+    /// The names inside a directory — the kept evidence of a circuit no config
+    /// answers to is found by looking, and the fence that looks asks the same
+    /// directory the reader reads and writes ask.
+    pub def list(dir: String): Result[String, List[String]] \ IO =
+        Fs.DirList.runWithIO(
+            () -> Fs.DirList.list(placed(dir))
+        )
+            |> Result.mapErr(e -> "${e}")
+
     /// A path where the command was run from rather than where `flix` was started.
     /// The runner has to be in this project's own directory to find `flix.toml`, and a
     /// reader names `app/static/geometry/le_mans.geojson` from outside it.

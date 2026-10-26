@@ -141,8 +141,58 @@ pub mod Regenerate {
             isHelp,
             args,
             scanned -> complete(scanned#words, List.exists(isWriting, scanned#options), List.exists(isFreeze, scanned#options)),
-            asked -> walked(Nil, asked#circuits, asked#mode)
+            asked -> {
+                warnUnlisted();
+                walked(Nil, asked#circuits, asked#mode)
+            }
         )
+
+    /// Kept evidence and served geometry that answer to no config, printed as the
+    /// CLI prints its unlisted CSVs — a warning that changes no verdict. Which
+    /// circuits the run names changes nothing here: the disk holds what it holds.
+    def warnUnlisted(): Unit \ { IO, Console } = {
+        foreach (word <- unwordedEvidence())
+            Console.eprintln("circuits/${word}: kept evidence for no circuit — is its word misspelled?");
+        foreach (file <- undrawn())
+            Console.eprintln("app/static/geometry/${file}: geometry no config draws")
+    }
+
+    /// Directories under `circuits/` that hold a kept answer or a kept atlas line
+    /// under a name no config is authored for. A directory holding neither — the
+    /// project's own sources among them — keeps no evidence, and says nothing.
+    def unwordedEvidence(): List[String] \ IO =
+        match Util.Files.list("circuits") {
+            case Err(_)   => Nil
+            case Ok(names) =>
+                Regenerate.Unlisted.detect(
+                    Regenerate.Unlisted.words(Circuit.circuits()),
+                    List.filterMap(keepsEvidence, names)
+                )
+        }
+
+    def keepsEvidence(name: String): Option[String] \ IO =
+        if (String.startsWith({prefix = "."}, name))
+            None
+        else
+            match Util.Files.list("circuits/${name}") {
+                case Err(_)    => None
+                case Ok(files) =>
+                    if (List.exists(entry -> List.memberOf(entry, Regenerate.Unlisted.evidence()), files))
+                        Some(name)
+                    else
+                        None
+            }
+
+    /// Geometry files in the served directory whose name no config's `file` is.
+    def undrawn(): List[String] \ IO =
+        match Util.Files.list("app/static/geometry") {
+            case Err(_)    => Nil
+            case Ok(files) =>
+                Regenerate.Unlisted.detect(
+                    Regenerate.Unlisted.drawn(Circuit.circuits()),
+                    List.filter(file -> String.endsWith({suffix = ".geojson"}, file), files)
+                )
+        }
 
     def walked(codes: List[Int32], rest: List[Circuit], mode: Mode): Int32 \ { IO, Clock, Console } =
         match rest {
