@@ -19,15 +19,15 @@ pub mod Diff {
     use Geometry.Place
     use Sys.Console
 
-    /// The width the overlay is drawn at and the margin it is drawn inside, fixed so that
-    /// two runs' overlays can be laid against each other: an overlay that resized itself
-    /// to its contents would make a changed line look like a moved one.
+    /// The width the overlay is drawn at and the margin it is drawn inside. Fixed,
+    /// so an overlay that outlives its files can be laid against the next run's;
+    /// one that resized itself to its contents would make a changed line look like
+    /// a moved one.
     pub def width(): Float64 = 1000.0
 
     def margin(): Float64 = 20.0
 
-    /// The two lines' colours, in the order the files are named. The first file is the
-    /// one the report samples along, and so the one a reader looks for first.
+    /// The two lines' colours, in the order the files are named.
     def colours(): List[String] =
         "#d43a3a" :: "#2a6df4" :: Nil
 
@@ -39,8 +39,7 @@ pub mod Diff {
     }
 
     /// What the command asks for: two files, a spacing over nought metres, and an
-    /// overlay to write. Paths are used as they stand, so the report quotes the path the
-    /// reader typed rather than the one the shell meant.
+    /// overlay to write. Paths are used as they stand.
     pub def parse(args: List[String]): Result[String, Args] =
         walked(Nil, args, None, None)
 
@@ -68,8 +67,7 @@ pub mod Diff {
             Ok({paths = paths, every = asked, svg = svg})
     }
 
-    /// The sentence for anything the walk could not use: it cannot tell a third file from
-    /// a flag it has never heard of, and need not — two files are wanted, and no more.
+    /// The sentence for anything the walk could not use; two files are wanted, and no more.
     pub def usage(): String =
         "usage: nix run .#geometry -- diff <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]"
 
@@ -189,9 +187,8 @@ pub mod Diff {
     def metresOf(at: Int32, lines: List[Line]): List[Float64] =
         Option.getWithDefault(Nil, Option.map(line -> line#metres, List.nth(at, lines)))
 
-    /// One direction of the comparison as the sentence the report prints it in. Both are
-    /// printed, because sampling along one line and then along the other are two readings,
-    /// and the two disagree when one line has places the other has not.
+    /// One direction of the comparison as the sentence the report prints it in. Both
+    /// directions are printed: they disagree when one line has places the other has not.
     pub def said(at: Int32, lines: List[Line], apart: Apartness, every: Float64): String =
         "sampled every ${Util.Format.spelled(every)} m along ${nameOf(at, lines)} (${apart#count}): "
             + "mean apart ${Util.Format.fixed(1, apart#mean)} m, "
@@ -276,11 +273,10 @@ pub mod Diff {
         )
     }
 
-    /// One line, drawn: a stroke through the places it was measured at, in the colour its
-    /// place in the order the files were named in gives it. The files, their places and
-    /// the colours are walked together rather than mapped over: `List.map3` is a cross
-    /// product to Flix's `Applicative` rather than a zip, and would draw every line in
-    /// every colour it was handed.
+    /// One line, drawn, in the colour its place in the order the files were named in
+    /// gives it. The files, their places and the colours are walked together rather
+    /// than mapped over: `List.map3` is a cross product to Flix's `Applicative` rather
+    /// than a zip, and would draw every line in every colour it was handed.
     def drawn(lines: List[Line], projected: List[List[Point]], view: View): String =
         strokes(Nil, lines, projected, colours(), view) |> String.intercalate("\n")
 
@@ -310,9 +306,8 @@ pub mod Diff {
         "${Util.Format.fixed(1, east)},${Util.Format.fixed(1, north)}"
     }
 
-    /// What each file says it is, as the drawing's own comment. A line with no source says
-    /// it has none, which is the thing a reader of an overlay needs to know about a line
-    /// whose provenance they cannot otherwise see.
+    /// What each file says it is, as the drawing's own comment. A line with no source
+    /// says so.
     def provenance(lines: List[Line]): String =
         List.map(
             line -> "  <!-- ${line#name}: ${line#props#basis} — ${Option.getWithDefault("no source", line#props#source)} -->",

@@ -63,8 +63,8 @@ pub mod Circuit {
     }
 
     /// How far a relation's node may stand from the published line and still be it: the
-    /// relation tags the line itself, so the distance allowed is the map's own crosshair. The
-    /// atlas reading allows a wider distance than this one, and says why there.
+    /// relation tags the line itself, so the distance allowed is the map's own crosshair.
+    /// The atlas reading allows a wider distance — `Track.measuredWithin`.
     pub def nodeWithin(): Float64 = 10.0
 
     /// How far a circuit's published stretches may miss the lap they are trusted to
@@ -124,15 +124,13 @@ pub mod Circuit {
     pub def keptAnswer(circuit: Circuit): String =
         "circuits/${circuit#word}/overpass.json"
 
-    /// The measured line kept beside the same config: the atlas reading's own file, in
-    /// this repository's profile at the line's own length — kept beside the circuit and
-    /// never served, which is what lets it disagree with the surveyed line by the metres
-    /// it says it does.
+    /// The measured line kept beside the same config: the atlas reading's own file,
+    /// in this repository's profile at the line's own length — kept beside the circuit
+    /// and never served.
     pub def keptAtlas(circuit: Circuit): String =
         "circuits/${circuit#word}/atlas.geojson"
 
-    /// The sentence for a word no circuit answers to, naming the words that do — which is
-    /// the reader's own list, read back at them.
+    /// The sentence for a word no circuit answers to, naming the words that do.
     pub def unknown(word: String): String =
         "no circuit is surveyed under '${word}': known are ${String.intercalate(", ", List.map(circuit -> circuit#word, circuits()))}"
 }

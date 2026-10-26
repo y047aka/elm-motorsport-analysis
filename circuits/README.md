@@ -14,8 +14,6 @@ out of an answer, and writes the file the app serves. Its `-- probe` word is
 the same question OpenStreetMap answers, asked before a circuit has a config to
 author; its `-- timing-lines` word is the timing report, reading
 the feed the load reads with the decoder the load decodes it with.
-Nothing here is TypeScript: the pipeline's readings, its commands and its tests
-are all the root project's now.
 What follows is what no
 single module's header says for itself; what a module can say at its own call
 site, its header says there and is not repeated here.
@@ -26,8 +24,6 @@ source relation and the license in their own properties.
 
 ## One pipeline, one thin config per circuit
 
-The pipeline is the Flix project at this directory's root: `Survey.flix`
-chains an answer into a lap and `Write.flix` lays the bytes the app serves.
 A circuit joins as a record in `src/Circuit.flix` — the relation, the member
 role naming the line the lap is measured from, the published length the
 surveyed line is stretched to, the prose the geometry file is documented with —
@@ -119,9 +115,7 @@ What the times can answer is whether the lines have moved, and `nix run
 class's fastest sector times as two distances round the lap, and the two
 rounds here agree within half a percent of a lap — the only evidence there is
 that one map serves both. The command judges the season-to-season difference
-and never the shares against the map. An older check printed whether the export
-in the tree counted the same shares as the feed; that print is gone with the
-report's move to Flix, and the export is confirmed where
+and never the shares against the map. The export is confirmed where
 it is written — `.#cli-run` reads its own integrity checks back out of the rows
 it wrote the export from.
 
@@ -170,11 +164,8 @@ stat, neither writing, making a directory nor globbing — the project's own
 `Util/Files.flix` resolves every path from `GEOMETRY_FROM` and writes, and the two
 are named apart because they resolve apart. Of the
 three cases this side drops — an empty file, a round no run loaded, a database's
-failure — only the last asked for a source of its own: `Db.flix`, three effects, ten
-functions and three enums, reached from no call.
-`Util/Csv/Decode/Extra.flix` was linked on the same reading and answered to nothing
-at all, `traverse` being what `Motorsport.Wec.decoder` uses and no reading of a
-timing feed.
+failure — only the last asked for a source of its own, and `Db.flix` is reached
+from no call in this project.
 
 Two of the links are called at one point each and stay links for that: `Calendar.find`
 is what refuses a round the calendar does not list, and the calendar's rounds are the
@@ -231,19 +222,9 @@ lap is the one reading a config is authored from.
 
 ## The pipeline is the project at this directory's root
 
-The geometry pipeline is the Flix package at `circuits/`: `src/Geometry.flix` reads a kept file's outline and its
-pit lane, `src/Apart.flix` lays one line against another, `src/Diff.flix` asks the two
-files, prints the report and draws the overlay, `src/Circuit.flix` authors the two
-circuits' figures once, `src/Survey.flix`
-reads a kept Overpass answer and chains it into a lap, `src/Overpass.flix` asks the
-runners for that answer, `src/Write.flix` lays those places, metres and claims out as
-the bytes the app reads and is the two commands that lay one — `survey` over a kept
-answer, `write` off one reading of the arguments, asking OpenStreetMap for the answer
-when the reader named none — `src/Fetch.flix` is the asking that keeps an answer
-beside a circuit, with `src/Regenerate.flix` the
-fence that re-surveys every circuit's kept answer and asks whether the served file still
-draws it, and `src/Main.flix` holding
-the words the commands go by and the exit code one comes to. It resolves no dependency and
+The geometry pipeline is the Flix package at `circuits/`, one module per reading
+named in the sections above, with `src/Main.flix` holding the words the commands go
+by and the exit code one comes to. It resolves no dependency and
 links no source — it reads nothing `flix/src` holds, which is what the report's nine links
 are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
 
@@ -268,10 +249,7 @@ what it fences passes by construction. The wiring around the project — the
 sources it holds, what it resolves, the flake apps that reach it, the directory
 a reader's paths resolve against — is everything a Flix test run from inside
 the project cannot see, and nothing reads it from outside either; it is judged
-by reading `flake.nix` and `.github/workflows/test.yml`. What the comparison needs is two files, and their absence is read two ways:
-a circuit served with no kept answer fails, because the served bytes have no evidence
-left to re-survey them from, while a circuit with neither file has not been surveyed
-yet and says so quietly.
+by reading `flake.nix` and `.github/workflows/test.yml`.
 
 **A byte comparison and a property comparison, kept because they answer different
 questions.** `-- survey` without `--write` compares bytes; the regeneration fence
@@ -315,28 +293,18 @@ this directory's root, and both sample `Apart.flix`.
 ## The readings, and their tests
 
 Every tool is two things: the asking, and the reading of an answer. The asking —
-Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the
-reading moved into a module beside it that opens nothing. `Cli.TimingLines.Feed`
-turns the feed's text into rows, fastest sectors,
-shares and implied lines; the reading of a CSV is one reading and the load's
-`Util.Csv.Decode` is the other half of it, which is why the report is written
-where the feed is already read; `Candidates.flix` says which tags could name a
-circuit and what an answer's roles measure, and is tested
-by `nix run .#geometry-test` for the same reason — an Overpass answer is read
-in one language and not two, and `Survey.flix`'s reading of a kept answer is held to
-the bytes the app serves rather than by a shared source; `Geometry.flix` holds the
-profile's own reading — the outline with its own metres going up, and the pit lane
-beside it — and every command that reads a kept file reads it through that one module;
-`Track.flix` holds the atlas file's shape checks and its two
-guards — the one that keeps a mismatched line out, and the one that keeps the lap
-starting at the published line; and the comparison the fence makes is
-`Regenerate.flix`'s, asking of the survey's own output what a kept file asks of
-its bytes — and nothing asks OpenStreetMap from outside this project at all. Printing stays with the command — what a reading is worth is what it
-answers, not how its table is padded. `nix run .#geometry-test` runs the
-project's own `flix test`, where every reading is handed a fixture rather than a
-survey — the one exception reads no fixture on purpose: `TestTimingMap` lays the
-two authored copies of a circuit's timing figures together, and the real authors
-are what it is given. What is judged
+Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the reading
+moved into a module beside it that opens nothing, so `nix run .#geometry-test` can
+hand it a fixture: `Cli.TimingLines.Feed` turns feed text into rows, fastest sectors,
+shares and implied lines; `Candidates.flix` reads a probe answer; `Survey.flix` chains
+a kept answer and is held to the bytes the app serves rather than by a shared source;
+`Geometry.flix` is the one reader of every kept file; `Track.flix` holds the atlas
+file's shape checks and its two guards; and the comparison the fence makes is
+`Regenerate.flix`'s. Nothing asks OpenStreetMap from outside this project at all.
+Printing stays with the command — what a reading is worth is what it
+answers, not how its table is padded. The one test handed no fixture reads none on
+purpose: `TestTimingMap` lays the two authored copies of a circuit's timing figures
+together, and the real authors are what it is given. What is judged
 against the repository's real bytes stays this file's other sections': the fence,
 the contract specs, the VRT.
 

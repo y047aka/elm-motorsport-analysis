@@ -45,13 +45,11 @@ pub mod Probe {
     }
 
     /// How far a centre is widened by default: 5 km, which holds the Grand Prix
-    /// circuit at Le Mans and not the full Sarthe one. Widening it is the reader's
-    /// call, which is why the box a run opened is printed back.
+    /// circuit at Le Mans and not the full Sarthe one.
     pub def defaultRadius(): Float64 = 5.0
 
     /// How many candidates get their ways asked for. A box that catches a road
-    /// tagged as a route catches it for its whole length, and the ways of ten
-    /// candidates are more than anyone reads off a report anyway.
+    /// tagged as a route catches it for its whole length.
     pub def probeLimit(): Int32 = 10
 
     enum Setting {
@@ -86,9 +84,7 @@ pub mod Probe {
         "the probe reads one or more places, each a <lat>,<lon> centre or a <south>,<west>,<north>,<east> box."
 
     /// The last `--radius` wins, as a repeated option usually does. Nought and a
-    /// negative are refused rather than widened into a box that does not open: a
-    /// reader who meant a distance and typed one that asks nothing should be told
-    /// which of the two happened.
+    /// negative are refused rather than widened into a box that does not open.
     def radiusOf(settings: List[Setting]): Result[ProbeError, Float64] =
         match last(lastRadius, settings) {
             case None => Ok(defaultRadius())
@@ -111,7 +107,6 @@ pub mod Probe {
             case Setting.Radius(km) => Some(km)
         }
 
-    /// The last answer to a repeated option, which is the one the reader meant.
     def last(asking: Setting -> Option[String], settings: List[Setting]): Option[String] =
         List.foldLeft(
             (acc, setting) -> {
@@ -146,8 +141,7 @@ pub mod Probe {
         }
 
     /// Every place named, probed in turn. The first question no runner answers ends
-    /// the run: the next place would be refused for the same reason, and going on
-    /// would print nothing new in the time it took.
+    /// the run: the next place would be refused for the same reason.
     def probeAll(request: Request): Int32 \ { Console, IO, Https } =
         match Result.traverse(probePlace(request#radius), request#places) {
             case Ok(_) => 0
@@ -179,10 +173,8 @@ pub mod Probe {
         "  nothing tagged as a circuit, a motor-sport route or a raceway here. Either the box misses the circuit -- widen it -- or OpenStreetMap holds the ground untagged, and this pipeline, which chains a relation's ways, has nothing to start from."
 
     /// Each candidate relation the answer names, described; the ones whose tags
-    /// could name a circuit are asked again for their ways and measured. A
-    /// candidate whose ways come back wrong is reported and the reading of the
-    /// answer goes on: one relation that times out is no reason to stop reading
-    /// the answer that named it.
+    /// could name a circuit are asked again for their ways and measured. A candidate
+    /// whose ways come back wrong is reported and the reading goes on.
     def describeEach(elements: List[Element]): Unit \ { Console, IO, Https } =
         let _probed = List.foldLeft((count, element) -> describeOne(probeLimit(), count, element), 0, elements);
         ()

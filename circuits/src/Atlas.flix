@@ -14,10 +14,8 @@
 /// sector lines stand on each of the two lines.
 ///
 /// The lap-origin guard is asked of the measured line's start before anything is kept.
-/// The apartness math is `Apart`'s, shared with the tool that compares any two kept
-/// geometries; the feature shape checks, the guards and the written file are `Track`'s.
-/// This file adds only the measuring: what is specific to laying one circuit's atlas
-/// line against the geometry this app draws.
+/// The apartness math is `Apart`'s, shared with the diff; the feature shape checks, the
+/// guards and the written file are `Track`'s. This file adds only the measuring.
 ///
 /// The atlas data is © its contributors under the ODbL, itself derived from OpenStreetMap
 /// and open orthoimagery; the written file carries the source URL beside the license.
@@ -129,8 +127,7 @@ pub mod Atlas {
                 }
         }
 
-    /// `--file <path>`, and nothing else a run does not know. A second word is no
-    /// second circuit: one run reads one layer.
+    /// `--file <path>`, and nothing else a run does not know. One run reads one layer.
     def layer(args: List[String]): Result[String, Option[String]] =
         match args {
             case Nil                     => Ok(None)

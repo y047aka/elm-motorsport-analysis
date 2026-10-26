@@ -83,7 +83,7 @@ pub mod Survey {
             case Some(ref) => Some({kind = wordWith("type", root), role = wordWith("role", root), ref = ref})
         }
 
-    /// A node's place, and nothing else's: a way has no latitude of its own.
+    /// A node's place — a way has no latitude of its own.
     def placeOf(json: Json): Option[Place] =
         let root = objectOf(json);
         match (numberOf("lat", root), numberOf("lon", root)) {
@@ -376,8 +376,7 @@ pub mod Survey {
             case _                         => false
         }
 
-    /// Two places are the one place when both their degrees agree: a record carries no
-    /// equality of its own, and the degrees are the equality the survey is measured on.
+    /// The degrees are the equality the survey is measured on.
     def samePlace(a: Place, b: Place): Bool = a#lat == b#lat and a#lon == b#lon
 
     def startPlace(nodes: Map[Int64, Place], ids: List[Int64]): Option[Place] =
@@ -450,10 +449,9 @@ pub mod Survey {
     def thinned(points: List[Point], half: Int32): List[Int32] =
         List.append(withoutLast(simplify(points, 0, half)), simplify(points, half, lastIndex(points)))
 
-    /// Ramer–Douglas–Peucker over indices, so a kept point keeps the distance it was surveyed
-    /// at rather than the shorter one the thinned line would give it. Of two points equally
-    /// far, the first is the one turned on, which is what makes two runs over one answer keep
-    /// the same points.
+    /// Ramer–Douglas–Peucker over indices, so a kept point keeps the distance it was
+    /// surveyed at rather than the shorter one the thinned line would give it. Of two
+    /// points equally far, the first is the one turned on.
     pub def simplify(points: List[Point], lo: Int32, hi: Int32): List[Int32] =
         match (nth(lo, points), nth(hi, points)) {
             case (Some(a), Some(b)) =>
@@ -503,8 +501,8 @@ pub mod Survey {
             Float64.abs((dy * p#x) - (dx * p#y) + (b#x * a#y) - (b#y * a#x)) / norm
 
     /// Metres round a line of drawing metres, each stretch its own hypotenuse, from the
-    /// line's own zero. The sum runs forwards, which is the only reason the figure a file
-    /// carries as its surveyed length is reproducible at all.
+    /// line's own zero. The sum runs forwards, so the figure a file carries as its
+    /// surveyed length is reproducible.
     pub def cumulative(points: List[Point]): List[Float64] =
         match points {
             case Nil           => Nil
@@ -623,18 +621,14 @@ pub mod Survey {
 
     // ---------------------------------------------------------------- the lists at hand
 
-    /// A Map from pairs, which the standard library builds by insertion and this reading
-    /// needs for an answer's nodes, ways and tags.
     def paired(pairs: List[(k, v)]): Map[k, v] with Order[k] =
         List.foldLeft((held, pair) -> match pair {case (key, value) => Map.insert(key, value, held)}, Map.empty(), pairs)
 
-    /// Everything but the last of a list, which is how a line joined to another at their
-    /// meeting point is spelled: the meeting point held once.
+    /// Everything but the last of a list, so a line joined to another at their meeting
+    /// point holds that point once.
     def withoutLast(points: List[a]): List[a] =
         Option.getWithDefault(Nil, List.init(points))
 
-    /// The index of a line's last point, and nought of a line with no points at all, which is
-    /// a line with nothing to thin.
     def lastIndex(points: List[a]): Int32 =
         Int32.max(0, List.length(points) - 1)
 

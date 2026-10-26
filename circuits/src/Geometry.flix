@@ -58,8 +58,7 @@ pub mod Geometry {
             case Ok((props, shape)) => outlineOf(props, shape, name)
         }
 
-    /// The pit lane beside the outline: a line with no metres, because nothing
-    /// times along it.
+    /// The pit lane beside the outline: a line with no metres.
     pub def pitLane(text: String, name: String): Result[String, List[Place]] =
         match found(text, name, "pit_lane", "${name}: the geometry holds no pit lane") {
             case Err(problem) => Err(problem)
@@ -113,15 +112,10 @@ pub mod Geometry {
     def backwardsIn(metres: List[Float64]): Option[Int32] =
         backwards(Nil, metres)
 
-    /// The walk, with the places already counted: a metre is behind its
-    /// predecessor at the point one past the pair being looked at.
     def backwards(seen: List[Float64], rest: List[Float64]): Option[Int32] =
         match (seen, rest) {
             case (_, one :: two :: more) =>
-                // The index of the metre that stands behind the one before it, which
-                // is the point a reader goes to look at.
-                let at = List.length(seen) + 1;
-                if (two < one) Some(at) else backwards(one :: seen, two :: more)
+                if (two < one) Some(List.length(seen) + 1) else backwards(one :: seen, two :: more)
             case _ => None
         }
 
@@ -148,7 +142,7 @@ pub mod Geometry {
                 }
         }
 
-    /// Public for the regeneration fence, which walks every feature of two files
+    /// All the file's features. The regeneration fence walks every one of two files
     /// rather than the one of each role a line is read out of.
     pub def featuresOf(json: Json): List[Map[String, Json]] =
         match json {
@@ -167,9 +161,7 @@ pub mod Geometry {
             case Some(one) => Ok((propertiesOf(one), Option.getWithDefault(Json.JNull, Map.get("geometry", one))))
         }
 
-    /// A feature's properties, whatever they are tagged with: the role that picks
-    /// the feature out of the file lives inside them, and a feature carrying none
-    /// picks nothing.
+    /// A feature's properties. A feature carrying none picks nothing.
     pub def propertiesOf(feature: Map[String, Json]): Map[String, Json] =
         match Map.get("properties", feature) {
             case Some(Json.JObject(props)) => props

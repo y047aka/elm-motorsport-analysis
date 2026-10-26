@@ -152,9 +152,7 @@ pub mod Report {
             case _ => None
         }
 
-    /// The last `--against` wins, as the last `--database` does in the CLI. Whether
-    /// that season ran this round is the report's to find out, since it is the one
-    /// place that looks in the directory.
+    /// The last `--against` wins, as the last `--database` does in the CLI.
     def againstSeason(settings: List[Setting]): Result[ReportError, Option[Int32]] =
         match last(seasonNamed, settings) {
             case None       => Ok(None)
@@ -174,8 +172,7 @@ pub mod Report {
         }
 
     /// The distance allowed, defaulting to the report's own and refusing nought:
-    /// a run that allows no distance calls every two seasons run on different
-    /// lines, which is the one answer nobody came for.
+    /// a run that allows no distance calls every two seasons run on different lines.
     def distanceAllowed(settings: List[Setting]): Result[ReportError, Float64] =
         match last(toleranceNamed, settings) {
             case None          => Ok(Cli.TimingLines.defaultTolerance())
@@ -203,7 +200,6 @@ pub mod Report {
             case _                         => None
         }
 
-    /// The last answer to a repeated option, which is the one the reader meant.
     def last(asking: Setting -> Option[String], settings: List[Setting]): Option[String] =
         List.foldLeft(
             (acc, setting) -> {

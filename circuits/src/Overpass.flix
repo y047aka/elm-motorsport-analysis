@@ -28,9 +28,8 @@ pub mod Overpass {
     use Util.Json.Json
     use Util.Json.FromJson
 
-    /// Each runner, in the order a run walks them. The first is the one
-    /// OpenStreetMap points a caller at, and answers slowly when everyone else does
-    /// too; the second answers the same query off another machine.
+    /// Each runner, in the order a run walks them. The first answers slowly when
+    /// everyone else does too; the second answers the same query off another machine.
     pub def runners(): List[String] =
         "https://overpass-api.de/api/interpreter" ::
         "https://overpass.kumi.systems/api/interpreter" :: Nil
@@ -42,9 +41,7 @@ pub mod Overpass {
     /// request is a request nobody can tell from a flood.
     pub def userAgent(): String = "elm-motorsport-analysis/1.0 (circuit geometry)"
 
-    /// The shortest interval between two requests of one run. The pace is put on once
-    /// for a whole run rather than made where a walk happens to stop, so it is one
-    /// number no call site can outnumber.
+    /// The shortest interval between two requests of one run.
     pub def pace(): Duration = Duration.of(1500, Time.TimeUnit.Milliseconds)
 
     /// How long a runner that just failed is left alone for, longer each time that
@@ -63,9 +60,7 @@ pub mod Overpass {
     // ------------------------------------------------------------------- the asking
 
     /// The handlers one run asks through: the User-Agent every request carries, the
-    /// pace between them, and the client underneath. A run walks inside this, so that
-    /// the pace is kept between its requests rather than each request opening a client
-    /// of its own.
+    /// pace between them, and the client underneath.
     pub def paced(asking: Unit -> a \ ef): a \ (ef - Https) + { IO, Clock } =
         Net.Https.runWithIO(() ->
             Net.Https.withDefaultHeaders(headers(), () ->
@@ -81,14 +76,10 @@ pub mod Overpass {
     pub def ask(question: String): Result[String, String] \ { IO, Https } =
         walk(attempts(), question, "no runner was reached")
 
-    /// One circuit's relation, asked through the run's handlers: the pace, the walk
-    /// over the runners and the backoff are the asking's own, and every command that
-    /// asks a circuit asks this one question.
+    /// One circuit's relation, asked through the run's handlers.
     pub def askRelation(relation: Int64): Result[String, String] \ { IO, Clock } =
         paced(() -> ask(pipelineQuery(relation)))
 
-    /// Each runner twice, in the order the runners are held. The attempt travels with
-    /// its runner because that is what says how long the next wait is.
     def attempts(): List[(String, Int32)] =
         List.flatMap(url -> List.map(attempt -> (url, attempt), List.range(1, tries() + 1)), runners())
 
@@ -153,8 +144,7 @@ pub mod Overpass {
     pub type alias Tags = Map[String, String]
 
     /// One member of a relation. The role is the empty string for the ways a lap
-    /// is chained from, which is why it is carried rather than dropped: it is the
-    /// whole difference between the lap and the pit lane.
+    /// is chained from — the whole difference between the lap and the pit lane.
     pub type alias Member = {
         kind = String,
         role = String,
@@ -177,9 +167,7 @@ pub mod Overpass {
     pub def askElements(question: String): Result[String, List[Element]] \ { IO, Https } =
         Result.flatMap(answer, ask(question))
 
-    /// An answer's text, read. That it is JSON at all is the first thing asked of
-    /// it — `kept` is that fence once, and an answer it refuses is refused here in
-    /// the same words. An answer naming no elements is not a broken one — a box
+    /// An answer's text, read. An answer naming no elements is not a broken one — a box
     /// holding no circuit answers as exactly that — so it reads as nothing rather
     /// than as a failure.
     pub def answer(text: String): Result[String, List[Element]] =

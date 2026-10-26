@@ -9,12 +9,11 @@
 /// The profile is the one every reader of a kept file reads: EPSG:4326 throughout, as
 /// the Atlas keeps it; one `outline` LineString whose `metres` property holds, point for
 /// point, how far round the lap each stands, in the circuit's published metres; one
-/// `pit_lane` LineString with no metres because nothing times along it; the `direction`
-/// the chained survey runs; and the frame the degrees project through, whole, so the
-/// drawing's `Circuit.Geodesy` is a copy of it and not a re-derivation. A `basis` says
-/// what kind of line it is, and the ODbL copyright travels in `source` and `license`.
-/// Where the circuit itself publishes the lines it times to, those authored stretches
-/// travel as `sectors`, so a check of the timing lines reads data rather than a config.
+/// `pit_lane` LineString with no metres; the `direction` the chained survey runs; and
+/// the frame the degrees project through, whole, so the drawing's `Circuit.Geodesy` is
+/// a copy of it and not a re-derivation. A `basis` says what kind of line it is, and the
+/// ODbL copyright travels in `source` and `license`. Where the circuit itself publishes
+/// the lines it times to, those authored stretches travel as `sectors`.
 ///
 /// Coordinates, metres and every other array are written on one line each, so a kept
 /// geometry is one line per property rather than one per number, and a refreshed survey
@@ -23,14 +22,13 @@
 /// A run without `--write` changes nothing and answers one question: does the survey over
 /// the kept answer still draw the bytes the app serves? The fence over every circuit at once
 /// is `Regenerate.flix`'s, and compares parsed properties with `surveyed_at`
-/// exempt; this comparison is of bytes, and `surveyed_at` needs no exemption here because
-/// the survey reads the very answer whose stamp the property carries.
+/// exempt; this comparison is of bytes, and the byte comparison reads the very answer
+/// whose stamp the property carries, so it has nothing to exempt.
 ///
-/// The whole run is this module's too: `-- write` takes these flags unchanged
-/// and lays the file off one reading of the arguments, asking OpenStreetMap for the
-/// answer when the reader named none. Both commands parse one flag set and travel
-/// one path through `surveyed`; only the usage a wrong argument is answered with
-/// says which of them was run.
+/// `-- write` takes these flags unchanged and lays the file off one reading of the
+/// arguments, asking OpenStreetMap for the answer when the reader named none. Both
+/// commands parse one flag set and travel one path through `surveyed`; only the usage a
+/// wrong argument is answered with says which of them was run.
 pub mod Write {
 
     use Circuit.Circuit
@@ -48,16 +46,13 @@ pub mod Write {
 
         // ---------------------------------------------------------------- the properties
 
-    /// What the outline says it is, in the order the file says it in. The order is the
-    /// file's own: a kept geometry is read by people diffing it as much as by the app,
-    /// and a property that moved down the list is a diff that says nothing about the
-    /// survey.
+    /// What the outline says it is, in the order the file says it in. A kept geometry is
+    /// diffed by people as much as read by the app, so the order is the file's own.
     def outlineOf(circuit: Circuit, geometry: Survey.Geometry): List[String] =
         List.map(property, List.flatMap(present, authored(circuit, geometry)))
 
     /// What the outline claims, in the order it claims it. A claim a circuit cannot make
-    /// — no stamp on the answer, no map of its own — is `None` here and no line at all in
-    /// the file, which is what every reader of a kept geometry asks for.
+    /// — no stamp on the answer, no map of its own — writes no line at all in the file.
     def authored(circuit: Circuit, geometry: Survey.Geometry): List[Option[(String, String)]] =
         Some(("role", text("outline")))
             :: Some(("circuit", text(circuit#word)))
@@ -87,19 +82,17 @@ pub mod Write {
         )
 
     /// The kind of line this is: the OpenStreetMap centreline stretched to a published
-    /// lap, which is what a line measured off orthoimagery would say it is not.
+    /// lap — the claim a line measured off orthoimagery must not borrow.
     def centreline(): String = text("osm-centreline")
 
     def relation(circuit: Circuit): String =
         text("https://www.openstreetmap.org/relation/${circuit#relation}")
 
-    /// The copyright the survey came with, which is why the file says it and why every
-    /// drawing of it has to say it too.
+    /// The copyright the survey came with; ODbL requires every drawing of it to say so too.
     def licence(): String = text("ODbL")
 
     /// The timing lines the circuit publishes, and the map they were copied from. A
-    /// circuit whose map answers for one season only writes none, so that a reader of the
-    /// file is never handed one season's lines as though they served every one.
+    /// circuit whose map answers for one season only writes none.
     def published(lines: Circuit.Publishes): String =
         "{\"source\":${text(lines#source)},\"stretches\":${stretches(lines#stretches)}}"
 
@@ -107,8 +100,8 @@ pub mod Write {
         "[${String.intercalate(",", List.map(number, distances))}]"
 
     /// The frame the degrees project through, whole: the drawing re-runs this projection
-    /// rather than choosing one of its own, which is why the corner is written as the
-    /// survey measured it and not as a rounded box around it.
+    /// rather than choosing one of its own. The corner is written as the survey measured
+    /// it, not as a rounded box around it.
     def frame(laid: Survey.Frame): String =
         "{\"origin\":{\"lat\":${number(laid#origin#lat)},\"lon\":${number(laid#origin#lon)}},\"parallel\":${number(laid#parallel)}}"
 
@@ -130,7 +123,7 @@ pub mod Write {
 
     def each(place: Survey.MetredPlace): String = "[${number(place#lon)},${number(place#lat)}]"
 
-    /// The pit lane: degrees and nothing else, because nothing times along it.
+    /// The pit lane: degrees and nothing else.
     def pitLineOf(places: List[Place]): String =
         "{\"type\":\"LineString\",\"coordinates\":[${String.intercalate(",", List.map(eachAt, places))}]}"
 
@@ -142,8 +135,7 @@ pub mod Write {
             case (key, value) => "        ${text(key)}: ${value}"
         }
 
-    /// A property that is there. An absent one writes no line at all rather than a null,
-    /// which is what every reader of a kept geometry asks for.
+    /// A property that is there. An absent one writes no line at all rather than a null.
     def present(entry: Option[(String, String)]): List[(String, String)] = Option.toList(entry)
 
     // ------------------------------------------------------------------ the spelling
@@ -189,9 +181,7 @@ pub mod Write {
     pub def parse(args: List[String]): Result[String, Args] =
         parseFor("survey", args)
 
-    /// One circuit and one answer, read for the command word given: the whole run
-    /// takes these flags unchanged, so only the usage a wrong argument is answered
-    /// with differs between the two commands.
+    /// One circuit and one answer, read for the command word given.
     pub def parseFor(goes: String, args: List[String]): Result[String, Args] =
         walked(Nil, goes, args, None, false)
 
@@ -230,8 +220,7 @@ pub mod Write {
     pub def usage(): String =
         usageOf("survey")
 
-    /// The whole run's line: the same arguments, at the command that asks for its
-    /// own answer when the reader named none.
+    /// The whole run's line.
     pub def writeUsage(): String =
         usageOf("write")
 
@@ -256,8 +245,7 @@ pub mod Write {
     /// the same words.
     ///
     /// A live asking keeps nothing by itself: `fetch` is the command that decides what
-    /// a run keeps beside a circuit, and a run that only wants the geometry should not
-    /// take the map's newest answer with it.
+    /// a run keeps beside a circuit.
     pub def writeExitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
         match parseFor("write", args) {
             case Err(problem) =>
@@ -271,8 +259,7 @@ pub mod Write {
         }
 
     /// The asking, then the survey over what came back. The answer's name in the
-    /// report is the question rather than a file, because a file is what the reader
-    /// did not name.
+    /// report is the question rather than a file.
     def live(asked: Args): Int32 \ { IO, Clock, Console } =
         match Overpass.askRelation(asked#circuit#relation) {
             case Err(problem) =>
@@ -307,11 +294,8 @@ pub mod Write {
 
     /// A kept answer is what makes a served file checkable, so the two ways a run ends
     /// without a survey are told apart. A circuit with neither file has not been surveyed
-    /// yet: nothing was promised it, and that is nothing rather than failure. A circuit
-    /// served with no kept answer is the byte fence with its evidence gone — geometry
-    /// nobody can any longer show was surveyed from what it claims — which is exactly
-    /// what the fence is here to catch, so it fails and says so rather than reporting
-    /// that it reproduced something.
+    /// yet and exits 0. A circuit served with no kept answer fails: the served bytes have
+    /// no evidence left to re-survey them from, which is what the fence exists to catch.
     def noSurvey(asked: Args): Int32 \ { IO, Console } = {
         match Util.Files.read(asked#circuit#file) {
             case Ok(_) =>
@@ -323,10 +307,10 @@ pub mod Write {
         }
     }
 
-    /// An answer's text — from a kept file or from a runner — surveyed and laid.
-    /// This is the turning stage: what the asking hands over and what a fence reads
-    /// back out of a kept file both come to `surveyed`, so a live survey and a
-    /// comparison of a kept one fail and reproduce in the same words.
+    /// An answer's text — from a kept file or from a runner — surveyed and laid. What
+    /// the asking hands over and what a fence reads back out of a kept file both come
+    /// to `surveyed`, so a live survey and a comparison of a kept one fail and
+    /// reproduce in the same words.
     def surveyed(asked: Args, spelled: String): Int32 \ { IO, Console } =
         match Survey.answer(spelled) {
             case Err(problem) =>
@@ -382,7 +366,7 @@ pub mod Write {
     }
 
     /// Where two files part: the line they part at, and what each of them says there, cut
-    /// short — a metre that moved is found by where it moved, not by the digits around it.
+    /// short.
     pub def firstPart(written: String, kept: String): String =
         parted(String.lines(written), String.lines(kept), 1)
 

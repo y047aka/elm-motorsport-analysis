@@ -81,7 +81,7 @@ pub mod Fetch {
         }
 
     /// An answer is kept only once the survey can read it: an answer that surveys
-    /// nothing is evidence nobody can re-run, and a runner's HTML page, a reply that
+    /// nothing is evidence nobody can re-run. A runner's HTML page, a reply that
     /// stopped half way through its JSON, and an answer whose relation will not chain
     /// into a lap are all met here, in the same words the survey itself would say
     /// them in, rather than in a file kept to be discovered later.
@@ -109,8 +109,6 @@ pub mod Fetch {
     /// Whether this text is an answer the survey can read: the JSON, the circuit's
     /// relation, the chained lap and the line the circuit says that lap starts at —
     /// everything the kept file will be re-read for, asked before a byte is kept.
-    /// The answer comes back whole for the report, which prints what it says about
-    /// itself.
     pub def surveyable(text: String, circuit: Circuit): Result[String, Survey.Answer] =
         match Survey.answer(text) {
             case Err(problem) => Err(problem)

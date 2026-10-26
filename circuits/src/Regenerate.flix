@@ -42,9 +42,8 @@ pub mod Regenerate {
         mode     = Mode
     }
 
-    /// A feature of a geometry file: its members, JSON as the file's JSON gives
-    /// them. The role that picks a feature out of a file lives inside its
-    /// properties, which is why the reading of a feature is the reading of a map.
+    /// A feature of a geometry file: its members, JSON as the file's JSON gives them.
+    /// The role that picks a feature out of a file lives inside its properties.
     type alias Feature = Map[String, Json]
 
     // ------------------------------------------------------------------- the command
@@ -114,11 +113,9 @@ pub mod Regenerate {
             case Nil => if (List.memberOf(1, codes)) 1 else 0
             case one :: more =>
                 match check(one, mode) {
-                    // A run that could not ask, survey or write is not a drawing that
-                    // moved: the fence stops where it stands, so a failure in one circuit
-                    // never writes over another's geometry. A moved drawing is the one
-                    // verdict that leaves the run going, since the other circuits have
-                    // their own degrees to answer for.
+                    // A run that could not ask, survey or write stops the fence; a
+                    // moved drawing is the one verdict that leaves the run going, since
+                    // the other circuits have their own degrees to answer for.
                     case Err(problem) =>
                         Console.eprintln(problem);
                         1
@@ -187,8 +184,7 @@ pub mod Regenerate {
         }
 
     /// The question the fence answers: is the kept geometry what the kept answer
-    /// draws? Every drift is printed, since a reader fixing one wants to know
-    /// whether the rest of the file stands.
+    /// draws? Every drift is printed.
     def fenced(circuit: Circuit, written: String): Result[String, Int32] \ { IO, Console } =
         match Util.Files.read(circuit#file) {
             case Err(problem) => Err("${circuit#file}: no geometry to compare against: ${problem}")

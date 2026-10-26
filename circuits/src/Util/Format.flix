@@ -34,19 +34,15 @@ pub mod Util.Format {
     pub def whole(metres: Float64): String =
         fixed(0, metres)
 
-    /// A number as it was meant, with no decimals forced on it: what a sentence
-    /// quotes when a file's own figure is the thing being reported — the length a
-    /// line's metres end at, the spacing a reader asked for. Java prints `0.0` where
-    /// the tools that wrote the kept files printed `0`, and a sentence about a file
-    /// that ends at `0.0 m` reads as a different file than one that ends at `0 m`.
+    /// A number as it was meant, with no decimals forced on it. Java prints `0.0`
+    /// where the tools that wrote the kept files printed `0`, and a sentence about a
+    /// file that ends at `0.0 m` reads as a different file than one that ends at `0 m`.
     pub def spelled(metres: Float64): String = {
         let asWhole = Float64.truncateToInt64(metres);
         if (Int64.toFloat64(asWhole) == metres) "${asWhole}" else "${metres}"
     }
 
-    /// Ten to the `digits`, in the whole-number arithmetic a printed decimal is
-    /// counted in: the scale is multiplied into a distance by the caller, which
-    /// converts, and divided back out of one, which does not need to.
+    /// Ten to the `digits`, in whole-number arithmetic.
     def powerOfTen(digits: Int32): Int64 =
         List.foldLeft((acc, _) -> acc * 10i64, 1i64, List.repeat(digits, 1))
 }

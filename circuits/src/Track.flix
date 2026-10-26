@@ -1,17 +1,15 @@
 /// The track-atlas line as this repository reads it: the shape checks that turn an atlas
 /// feature into a line, a place or a fraction of a lap; the guards that keep a mismatched
 /// file from being kept as one circuit's evidence; and the file it is written back into.
-/// `Atlas` is the command — it asks, measures, keeps and prints; everything here opens
-/// nothing, which is what lets a guard be tested against a file that was never fetched.
-/// The kept geometry the guards are measured against is `Geometry`'s reading, shared with
-/// every other reader of a served file, and the lap-origin guard asks the same question of
-/// a measured line's start that `Survey` asks of a relation's finish node — at a wider
-/// allowance, because where a line measured off orthoimagery begins is that survey's own
-/// choice, and only a lap that begins at some other line must be kept out.
+/// `Atlas` is the command; everything here opens nothing. The kept geometry the guards are
+/// measured against is `Geometry`'s reading, shared with every other reader of a served
+/// file, and the lap-origin guard asks the same question of a measured line's start that
+/// `Survey` asks of a relation's finish node — at a wider allowance, because where a line
+/// measured off orthoimagery begins is that survey's own choice.
 ///
 /// A geometry is written back in this repository's spelling — `type` before `coordinates` —
-/// which is how every kept atlas file stands; and a number keeps the digits the layer
-/// spelled, so a point written here reads as the layer wrote it.
+/// and a number keeps the digits the layer spelled, so a point written here reads as the
+/// layer wrote it.
 ///
 /// The atlas data is © its contributors under the ODbL, itself derived from OpenStreetMap
 /// and open orthoimagery.
@@ -21,17 +19,15 @@ pub mod Track {
     use Geometry.Place
     use Util.Json.Json
 
-    /// One feature of an atlas file: its members as the file's JSON gives them. The role
-    /// that picks a feature out of a file lives inside its properties, which is why the
-    /// reading of a feature is the reading of a map.
+    /// One feature of an atlas file: its members as the file's JSON gives them. The
+    /// role that picks a feature out of a file lives inside its properties.
     pub type alias Feature = Map[String, Json]
 
     /// How far the start of a line measured off orthoimagery may stand from the
-    /// published line and still be the same lap. The allowance a relation's node is
-    /// held to is narrower — `Circuit.nodeWithin` — because a relation tags the line
-    /// itself. It is not asked of a measured line: the `within` a circuit authors
-    /// belongs to the node the survey chains from, and `checkOrigin` holds every
-    /// atlas lap to this one distance whoever the line names.
+    /// published line and still be the same lap. Wider than `Circuit.nodeWithin`,
+    /// which holds a relation's node: a relation tags the line itself, while where
+    /// a measured line begins is that survey's own choice. `checkOrigin` holds
+    /// every atlas lap to this one distance, not to a circuit's authored `within`.
     pub def measuredWithin(): Float64 = 25.0
 
     /// The file's features, whatever any of them is tagged with.
@@ -48,9 +44,8 @@ pub mod Track {
 
     // ---------------------------------------------------------------- the shapes
 
-    /// An atlas outline as the line it measures: degrees, lon before lat. A coordinate
-    /// that is not a pair of numbers is no point, and a line the reading does not
-    /// understand is refused whole rather than measured with a hole in it.
+    /// An atlas outline as the line it measures: degrees, lon before lat. A line the
+    /// reading does not understand is refused whole rather than measured with a hole in it.
     pub def lineOf(feature: Feature): Result[String, List[Place]] =
         match allPairs(positionsOf(feature)) {
             case Some(places) if List.length(places) >= 2 => Ok(places)
@@ -59,7 +54,7 @@ pub mod Track {
 
     /// An atlas point feature — a corner or a pit marker — as the place it stands at:
     /// a Point's coordinates are that pair itself, not a list of them, unlike the
-    /// outline's LineString. Both degrees are asked to be numbers.
+    /// outline's LineString.
     pub def placeOf(feature: Feature): Result[String, Place] =
         match allNumbers(positionsOf(feature)) {
             case Some(lon :: lat :: Nil) => Ok({lon = lon, lat = lat})
@@ -67,8 +62,6 @@ pub mod Track {
         }
 
     /// Where on the lap a corner or pit marker stands, as the atlas's fraction of it.
-    /// A feature with no marker would otherwise be measured at no metre rather than
-    /// fail by name.
     pub def markerOf(feature: Feature): Result[String, Float64] =
         match Map.get("marker", Geometry.propertiesOf(feature)) {
             case Some(Json.JNumber(spelled)) =>
@@ -100,7 +93,7 @@ pub mod Track {
     /// per position — written back from what the layer spelled, not from a reading of
     /// it. What makes a geometry a shape is its coordinates and not the word `type`:
     /// a marker carrying a pair of degrees is a point even when its `geometry` names
-    /// no type at all, which is how the layer's own fixtures stand.
+    /// no type at all, which is how the layer's own files stand.
     def shapeOf(feature: Feature): Option[Json] =
         match Map.get("geometry", feature) {
             case Some(shape) =>
@@ -147,8 +140,7 @@ pub mod Track {
         }
 
     /// The numbers a list of JSON values carries, or nothing at all when any of them is
-    /// not a number: a list holding one is not a list with a hole in it, it is a file
-    /// the reading does not understand.
+    /// not a number.
     def allNumbers(items: List[Json]): Option[List[Float64]] =
         List.foldRight(
             (json, rest) -> match (number(json), rest) {
@@ -173,7 +165,7 @@ pub mod Track {
     // ------------------------------------------------------------------- the guards
 
     /// The reading is kept under the word given on the command line, whatever the file
-    /// was measured from — a mismatched pair replaces one circuit's kept evidence with
+    /// was measured from: a mismatched pair replaces one circuit's kept evidence with
     /// another circuit's line. A file that names itself not at all is taken on the
     /// word's alone.
     pub def checkIdentity(claim: Option[String], slug: String): Result[String, Unit] =
@@ -188,10 +180,8 @@ pub mod Track {
 
     /// The atlas reading's share of the one question both pipelines ask: how far the
     /// measured lap's first point stands from the published line, and the failure when
-    /// it starts another line over. A circuit that publishes no line asks nothing, and
-    /// is answered with nought. The distance allowed is this reading's own
-    /// `measuredWithin`, not the line's `within`: where a line measured off
-    /// orthoimagery begins is that survey's own choice.
+    /// it starts another line over. A circuit that publishes no line asks nothing.
+    /// The distance allowed is `measuredWithin`, not the line's `within`.
     pub def checkOrigin(first: Place, line: Option[TimingLine]): Result[String, Float64] =
         match line {
             case None => Ok(0.0)
@@ -221,8 +211,7 @@ pub mod Track {
     /// `Cli.TimingLines.Feed`'s `publishedLines` — over in the timing project, sharing
     /// only the geometry file — spell the same line the same thing. Stretches are
     /// trusted with the lap length they add up to and with nothing else, at
-    /// `Circuit.stretchTolerance()` — the one distance `publishedLines` trusts them
-    /// with too.
+    /// `Circuit.stretchTolerance()`.
     pub type alias PublishedLine = {
         id     = String,
         metres = Float64
@@ -235,9 +224,9 @@ pub mod Track {
         else
             Ok(implied(Option.getWithDefault(Nil, List.init(sectors#stretches)), 0.0, 2, Nil))
 
-    /// The lines the stretches imply, in order: each begins where the running total
-    /// stands, and is named for the sector that begins at it — the second sector begins
-    /// at `s2`, which is why the counting starts there and not at one.
+    /// The lines the stretches imply, in order, each named for the sector that begins
+    /// at it — the second sector begins at `s2`, which is why the counting starts there
+    /// and not at one.
     def implied(stretches: List[Float64], at: Float64, sector: Int32, lines: List[PublishedLine]): List[PublishedLine] =
         match stretches {
             case Nil => List.reverse(lines)
@@ -248,8 +237,7 @@ pub mod Track {
 
     /// The sectors a kept file's outline claims, or nothing at all when it claims
     /// none. Half a claim — a source with no stretches, stretches with no source — is
-    /// no claim either: what a reading does with one is measure as if no map were
-    /// published, which is what a file no drawing reads says anyway.
+    /// no claim either.
     pub def sectorsClaimed(props: Map[String, Json]): Option[Sectors] =
         match Map.get("sectors", props) {
             case Some(Json.JObject(claim)) =>
@@ -267,9 +255,8 @@ pub mod Track {
     // ---------------------------------------------------------------- the file out
 
     /// The atlas line in this repository's own profile, at its own length: it does not
-    /// end at the published lap length, and it is written not to pretend otherwise —
-    /// `"stretched":false` says so at the properties a reader sees first. Keeping it
-    /// anywhere is `Atlas`'s. The outline's metres are the line's own, rounded to the
+    /// end at the published lap length, and `"stretched":false` says so at the properties
+    /// a reader sees first. The outline's metres are the line's own, rounded to the
     /// tenth like every kept metre; a marker keeps the layer's own fraction, and the
     /// geometry the layer spelled.
     pub def fileText(
@@ -322,7 +309,7 @@ pub mod Track {
 
     /// One property as the layer carries it, comma and all, or nothing when the layer
     /// holds no such property. A property the layer holds as JSON null is written as
-    /// the null the layer wrote; one the layer holds nothing for is no property at all.
+    /// the null the layer wrote.
     def carried(key: String, feature: Feature): String =
         match Map.get(key, Geometry.propertiesOf(feature)) {
             case None       => ""
@@ -330,9 +317,7 @@ pub mod Track {
         }
 
     /// A marker's place, its numbers as the layer spelled them, in the order this
-    /// repository writes a geometry: type before coordinates. A feature carrying no
-    /// shape is written as nothing — which nothing that reaches here ever is, since a
-    /// marker is only kept after `placeOf` has read a point out of it.
+    /// repository writes a geometry: type before coordinates.
     def geometryText(feature: Feature): String =
         match shapeOf(feature) {
             case None => "null"

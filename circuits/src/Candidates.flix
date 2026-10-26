@@ -29,23 +29,18 @@ pub mod Candidates {
         e = Float64
     }
 
-    /// The metres one degree comes to — on `Apart`'s sphere, the one every
-    /// drawing of a circuit is measured on. Spelled once there rather than
-    /// again here, because a probe measured on another sphere prints a lap the
-    /// survey will not measure, and that lap is the one reading a config is
-    /// authored from.
+    /// The metres one degree comes to, on `Apart`'s sphere — spelled once there.
+    /// A probe measured on another sphere prints a lap the survey will not measure,
+    /// and that lap is the one reading a config is authored from.
     def degreesToMetres(): Float64 = Apart.radians() * Apart.earthMetres()
 
-    /// The box's own rounding of a degree, which is not `degreesToMetres`: a probe
-    /// asks how far round a place to look, and a box a tenth of a kilometre wide of
-    /// the mark costs a relation standing in the next box over. The survey a probe
-    /// is read before measures with the sphere above rather than with this.
+    /// The box's own rounding of a degree, which is not `degreesToMetres`: a box a
+    /// tenth of a kilometre wide of the mark costs a relation standing in the next
+    /// box over.
     def kilometresPerLatitudeDegree(): Float64 = 111.32
 
-    /// The two calls every distance here is measured with. Flix's effect checker
-    /// asks a call into Java to be `IO` and has not been told that these two read
-    /// nothing but their arguments; the cast says so to it, which is what keeps
-    /// every reading here pure enough for a test to hand it a fixture.
+    /// Flix's effect checker asks a call into Java to be `IO` and has not been told
+    /// that these read nothing but their arguments; the cast says so to it.
     def cos(degrees: Float64): Float64 = unsafe IO { Math.cos(degrees * (Math.PI / 180.0)) }
 
     def metresBetween(x: Float64, y: Float64): Float64 = unsafe IO { Math.hypot(x, y) }
@@ -143,11 +138,10 @@ pub mod Candidates {
         Option.getWithDefault("", Map.get(key, tags))
 
     /// The relation's ways, measured: how many there are and under which roles,
-    /// and the length of the ones a lap would be chained from -- ways with no
+    /// and the length of the ones a lap would be chained from — ways with no
     /// role, which is the role the pipeline chains and the kept geometries carry.
     /// Ways may overlap or double back at a pit complex, so the sum is an estimate
-    /// beside the tags' own claim and not a second survey. The answer is one
-    /// already got; asking for it is `Probe`'s.
+    /// beside the tags' own claim and not a second survey.
     pub def measure(answer: List[Element], relation: Int64): Result[String, String] =
         match relationOf(answer, relation) {
             case None => Err("the answer holds no relation ${relation}")
@@ -170,9 +164,7 @@ pub mod Candidates {
         }
 
     /// How many ways a role carries and how far they run. The roles are held in the
-    /// order the answer first showed each of them rather than in alphabetical
-    /// order, because the report prints the roles as the relation carries them and
-    /// `(none)` belongs at the front of it.
+    /// order the answer first showed each of them, so `(none)` belongs at the front.
     pub type alias Tally = {
         role   = String,
         ways   = Int32,
@@ -228,17 +220,15 @@ pub mod Candidates {
         )
 
     /// A way's line by the id a member refers to. An answer lists its elements
-    /// flat, so the ways are looked for in it rather than gathered first: a probe
-    /// walks a relation's dozen ways, not a country's road network.
+    /// flat, so the ways are looked for in it rather than gathered first.
     def wayOf(answer: List[Element], ref: Int64): List[Place] =
         match List.find(element -> element#kind == "way" and element#id == ref, answer) {
             case None       => Nil
             case Some(way)  => way#line
         }
 
-    /// The relation the answer was asked for. The probe asks for one relation by
-    /// id, so an answer holding some other relation is a runner that answered a
-    /// different question -- which is exactly what the failure says.
+    /// The relation the answer was asked for. An answer holding some other relation
+    /// is a runner that answered a different question.
     def relationOf(answer: List[Element], relation: Int64): Option[Element] =
         List.find(element -> element#kind == "relation" and element#id == relation, answer)
 
