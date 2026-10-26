@@ -1,5 +1,8 @@
-/// What a report run says when it has no answer: the directory it was pointed at,
-/// the feed it could not read, and what the feed said about itself.
+/// What the commands say when a file goes wrong: the directory they were pointed
+/// at, the file they could not read or write, and what a feed said about itself.
+/// The read and the writing here are the reporting; a run that *branches* on a
+/// missing file — deciding a circuit was never surveyed, say — asks `Util.Files`
+/// itself, because the branch is a verdict and not a sentence.
 ///
 /// `flix/src` has a `Cli.Errors` of its own, a separate module of the same name in
 /// a separate project, carrying the failures of the commands that compute in a
@@ -17,6 +20,8 @@ pub mod Cli.Errors {
         case RootNotADirectory(String)
         case File(FileError)
         case Csv({ path = String, message = String })
+        case Read({ path = String, message = String })
+        case Write({ path = String, message = String })
         case Reading(String)
     }
 
@@ -26,6 +31,8 @@ pub mod Cli.Errors {
             case CliError.RootNotADirectory(p) => "Not a directory: ${p} (expected the directory holding the season directories)"
             case CliError.File(cause)          => "${cause}"
             case CliError.Csv(r)               => "Failed to decode ${r#path} (caused by: ${r#message})"
+            case CliError.Read(r)              => "Failed to read ${r#path} (caused by: ${r#message})"
+            case CliError.Write(w)             => "Failed to write ${w#path} (caused by: ${w#message})"
             // What a reading found wrong with the data it was handed: no file's
             // fault and no database's.
             case CliError.Reading(problem)     => problem
@@ -42,5 +49,18 @@ pub mod Cli.Errors {
             isDir  <- Files.isDirectory(dir) |> Result.mapErr(CliError.File);
             _      <- if (isDir) Ok(()) else Err(CliError.RootNotADirectory(dir))
         ) yield ()
+
+    /// A file read, and a file written: the name the reader gave rides along with
+    /// what the filesystem said, once. What a reading found wrong with bytes that
+    /// did arrive is `Reading`, not these; and a run that branches on the failure
+    /// rather than reporting it — deciding a circuit was never surveyed, say —
+    /// asks `Util.Files` directly.
+    pub def readFile(path: String): Result[CliError, String] \ IO =
+        Util.Files.read(path) |>
+            Result.mapErr(problem -> CliError.Read({path = path, message = problem}))
+
+    pub def writeFile(path: String, text: String): Result[CliError, Unit] \ IO =
+        Util.Files.write(path, text) |>
+            Result.mapErr(problem -> CliError.Write({path = path, message = problem}))
 
 }

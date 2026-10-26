@@ -215,10 +215,8 @@ pub mod Atlas {
             case Some(url) =>
                 match file {
                     case Some(path) =>
-                        match Util.Files.read(path) {
-                            case Err(problem) => Err("${path}: ${problem}")
-                            case Ok(text)     => Ok(text)
-                        }
+                        Cli.Errors.readFile(path) |>
+                            Result.mapErr(problem -> "${problem}")
                     case None => ask(url)
                 }
         }
@@ -295,8 +293,8 @@ pub mod Atlas {
 
     /// The kept geometry read beside the config.
     def kept(circuit: Circuit): Result[String, Kept] \ IO =
-        match Util.Files.read(circuit#file) {
-            case Err(problem) => Err("${circuit#file}: ${problem}")
+        match Cli.Errors.readFile(circuit#file) {
+            case Err(problem) => Err("${problem}")
             case Ok(text) =>
                 match (Geometry.outline(text, circuit#word), Geometry.pitLane(text, circuit#word)) {
                     case (Ok(outline), Ok(pit)) =>
@@ -501,8 +499,8 @@ pub mod Atlas {
     /// The keeping — the only side effect of a run, made once every guard has answered.
     def keep(reading: Reading): Result[String, Reading] \ IO =
         let text = Track.fileText(reading#source, reading#circuit#word, reading#coords, reading#corners, reading#pits, reading#theirMetres);
-        match Util.Files.write(Circuit.keptAtlas(reading#circuit), text) {
-            case Err(problem) => Err("${Circuit.keptAtlas(reading#circuit)}: ${problem}")
+        match Cli.Errors.writeFile(Circuit.keptAtlas(reading#circuit), text) {
+            case Err(problem) => Err("${problem}")
             case Ok(_)        => Ok(reading)
         }
 

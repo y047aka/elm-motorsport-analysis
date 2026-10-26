@@ -203,8 +203,8 @@ pub mod Regenerate {
             // reading of OpenStreetMap, and a geometry whose answer did not reach disk
             // would be evidence for no future run.
             case Mode.Freeze =>
-                match Util.Files.write(Circuit.keptAnswer(circuit), answer) {
-                    case Err(problem) => Err("${Circuit.keptAnswer(circuit)}: ${problem}")
+                match Cli.Errors.writeFile(Circuit.keptAnswer(circuit), answer) {
+                    case Err(problem) => Err("${problem}")
                     case Ok(_)        => writing(circuit, written, "a fresh survey")
                 }
             case Mode.Write   => writing(circuit, written, "the kept answer")
@@ -212,8 +212,8 @@ pub mod Regenerate {
         }
 
     def writing(circuit: Circuit, written: String, source: String): Result[String, Int32] \ { IO, Console } =
-        match Util.Files.write(circuit#file, written) {
-            case Err(problem) => Err("${circuit#file}: ${problem}")
+        match Cli.Errors.writeFile(circuit#file, written) {
+            case Err(problem) => Err("${problem}")
             case Ok(_) =>
                 Console.println("${circuit#word}: geometry written from ${source}");
                 Ok(0)

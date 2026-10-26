@@ -393,9 +393,9 @@ pub mod Write {
             }
 
     def laidDown(asked: Args, written: String): Int32 \ { IO, Console } =
-        match Util.Files.write(asked#circuit#file, written) {
+        match Cli.Errors.writeFile(asked#circuit#file, written) {
             case Err(problem) =>
-                Console.eprintln("${asked#circuit#file}: ${problem}");
+                Console.eprintln("${problem}");
                 1
             case Ok(_) =>
                 Console.println("${asked#circuit#word}: geometry written from ${asked#answer}");

@@ -153,8 +153,8 @@ pub mod Diff {
         match paths {
             case Nil => Ok(List.reverse(kept))
             case one :: more =>
-                match Util.Files.read(one) {
-                    case Err(problem) => Err("${one}: ${problem}")
+                match Cli.Errors.readFile(one) {
+                    case Err(problem) => Err("${problem}")
                     case Ok(text) =>
                         match Geometry.outline(text, baseName(one)) {
                             case Err(problem) => Err(problem)
@@ -204,9 +204,9 @@ pub mod Diff {
         match svg {
             case None => 0
             case Some(path) =>
-                match Util.Files.write(path, overlay(lines, projected)) {
+                match Cli.Errors.writeFile(path, overlay(lines, projected)) {
                     case Err(problem) =>
-                        Console.eprintln("${path}: ${problem}");
+                        Console.eprintln("${problem}");
                         1
                     case Ok(_) =>
                         Console.println("overlay: ${path}");

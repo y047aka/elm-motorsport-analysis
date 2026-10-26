@@ -120,9 +120,9 @@ pub mod Fetch {
                 Console.eprintln("${asked#out}: the answer surveys nothing: ${problem}");
                 1
             case Ok(reading) =>
-                match Util.Files.write(asked#out, text) {
+                match Cli.Errors.writeFile(asked#out, text) {
                     case Err(problem) =>
-                        Console.eprintln("${asked#out}: ${problem}");
+                        Console.eprintln("${problem}");
                         1
                     case Ok(_) =>
                         let elements = Int32.toString(List.length(reading#elements));
