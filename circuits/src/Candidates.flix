@@ -29,11 +29,12 @@ pub mod Candidates {
         e = Float64
     }
 
-    /// The earth every drawing is measured on, and the metres one degree of it
-    /// comes to.
-    def earthRadius(): Float64 = 6371008.8
-
-    def degreesToMetres(): Float64 = (Math.PI / 180.0) * earthRadius()
+    /// The metres one degree comes to — on `Apart`'s sphere, the one every
+    /// drawing of a circuit is measured on. Spelled once there rather than
+    /// again here, because a probe measured on another sphere prints a lap the
+    /// survey will not measure, and that lap is the one reading a config is
+    /// authored from.
+    def degreesToMetres(): Float64 = Apart.radians() * Apart.earthMetres()
 
     /// The box's own rounding of a degree, which is not `degreesToMetres`: a probe
     /// asks how far round a place to look, and a box a tenth of a kilometre wide of

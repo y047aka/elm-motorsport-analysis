@@ -4,10 +4,10 @@
 /// A circuit's config is authored once, here: the relation surveyed, the length the lap
 /// is stretched to, where the circuit puts its own timing line, whose map the lines come
 /// from. The directory named by the circuit's word keeps the evidence — the kept Overpass
-/// answer and the kept atlas line — and no code. `app/tests/circuit-timing-map.spec.ts`
-/// lays these figures against the report's own copy in `Motorsport.Circuit` and against
-/// the geometry the pipeline wrote with them; `app/tests/geometry-contract.spec.ts`
-/// lays them against the bytes the app is served.
+/// answer and the kept atlas line — and no code. `circuits/test/TestTimingMap.flix`
+/// lays these figures against the report's own copy in `Motorsport.Circuit`,
+/// which compiles beside them; the byte fence — `nix run .#geometry -- survey
+/// <word>` — lays them against the bytes the app is served.
 ///
 /// A circuit's atlas layer is here as the URL of the layer itself: the track-atlas line
 /// is authored in no config, and the reading that measures it writes its own file beside
@@ -66,6 +66,12 @@ pub mod Circuit {
     /// relation tags the line itself, so the distance allowed is the map's own crosshair. The
     /// atlas reading allows a wider distance than this one, and says why there.
     pub def nodeWithin(): Float64 = 10.0
+
+    /// How far a circuit's published stretches may miss the lap they are trusted to
+    /// add up to. The one distance both readers of those stretches allow:
+    /// `Track.sectorLines` when it lays the drawing's timing lines, and
+    /// `Cli.TimingLines.Feed.publishedLines` when it lays the report's.
+    pub def stretchTolerance(): Float64 = 0.15
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser
     /// measures from and so where the lap's zero stands; its map is re-issued every season

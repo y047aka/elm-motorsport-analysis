@@ -241,13 +241,11 @@ pub mod Cli.TimingLines.Feed {
     ///
     /// The only thing the stretches are trusted with is the lap length they add
     /// up to; where the times place them is `Cli.TimingLines`'s question. That
-    /// trust is the geometry project's `Track.sectorLines`' tenth too — the two
-    /// projects share no source, so the tenth is spelled twice and
-    /// `app/tests/circuit-timing-map.spec.ts` is what keeps the two spellings one
-    /// distance.
+    /// trust is `Circuit.stretchTolerance()`, the same allowance the geometry
+    /// project's `Track.sectorLines` holds them to.
     pub def publishedLines(stretches: List[Float64], lapLength: Float64): Result[CliError, List[Line]] =
         let added = total(stretches);
-        if (Float64.abs(added - lapLength) > 0.15)
+        if (Float64.abs(added - lapLength) > Circuit.stretchTolerance())
             Err(CliError.Reading("the sectors add up to ${added} m, not the published ${lapLength} m."))
         else
             Ok(List.mapWithIndex(

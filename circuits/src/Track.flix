@@ -220,10 +220,9 @@ pub mod Track {
     /// is named for the sector that begins at it, which is how the atlas reading and
     /// `Cli.TimingLines.Feed`'s `publishedLines` — over in the timing project, sharing
     /// only the geometry file — spell the same line the same thing. Stretches are
-    /// trusted with the lap length they add up to and with nothing else — and with
-    /// the same tenth of a metre `publishedLines` trusts them with, one spelling per
-    /// project because Flix links no local path; `app/tests/circuit-timing-map.spec.ts`
-    /// reads both spellings and fails them apart.
+    /// trusted with the lap length they add up to and with nothing else, at
+    /// `Circuit.stretchTolerance()` — the one distance `publishedLines` trusts them
+    /// with too.
     pub type alias PublishedLine = {
         id     = String,
         metres = Float64
@@ -231,7 +230,7 @@ pub mod Track {
 
     pub def sectorLines(sectors: Sectors, lap: Float64): Result[String, List[PublishedLine]] =
         let total = List.foldLeft((sum, stretch) -> sum + stretch, 0.0, sectors#stretches);
-        if (Float64.abs(total - lap) > 0.15)
+        if (Float64.abs(total - lap) > Circuit.stretchTolerance())
             Err("the sectors add up to ${Util.Format.spelled(total)} m, not the published ${Util.Format.spelled(lap)} m")
         else
             Ok(implied(Option.getWithDefault(Nil, List.init(sectors#stretches)), 0.0, 2, Nil))
