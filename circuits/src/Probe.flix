@@ -103,7 +103,7 @@ pub mod Probe {
 
     pub def usage(): String =
         Util.GetOpt.usageInfo(
-            "Usage: nix run .#geometry -- probe <lat>,<lon> [...] [--radius <km>], or <south>,<west>,<north>,<east> [...]",
+            "usage: nix run .#geometry -- probe <lat>,<lon> [...] [--radius <km>], or <south>,<west>,<north>,<east> [...]",
             optionDescrs()
         )
 

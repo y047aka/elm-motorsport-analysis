@@ -24,4 +24,21 @@ pub mod TestUsage {
     def testTheSurveyUsageNamesTheFlagThatRaisesTheNetwork(): Unit \ Assert =
         Assert.assertTrue(String.contains({substr = "-- survey <circuit>"}, Write.usage()));
         Assert.assertTrue(String.contains({substr = "[--fetch]"}, Write.usage()))
+
+    /// One dialect at every usage: a reader who mistypes a word is answered with all
+    /// of them at once, so they should read as one command's help rather than as six
+    /// programs'.
+    @Test
+    def testEveryUsageLineOpensTheSameWay(): Unit \ Assert =
+        foreach (
+            usage <-
+                Write.usage() ::
+                    Atlas.usage() ::
+                    Diff.usage() ::
+                    Probe.usage() ::
+                    Regenerate.usage() ::
+                    Report.usage() ::
+                    Nil
+        )
+            Assert.assertTrue(String.startsWith({prefix = "usage: nix run .#geometry -- "}, usage))
 }

@@ -192,7 +192,7 @@ pub mod Report {
 
     pub def usage(): String =
         Util.GetOpt.usageInfo(
-            "Usage: geometry-timing-lines --csv <dir> <season>/<id> [--against <season>] [--tolerance <metres>]",
+            "usage: nix run .#geometry -- timing-lines --csv <dir> <season>/<id> [--against <season>] [--tolerance <metres>]",
             optionDescrs()
         )
 
