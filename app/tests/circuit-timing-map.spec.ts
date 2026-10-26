@@ -9,10 +9,10 @@ import { authoredCircuits, readSource } from './helpers';
  * `circuits/src/Circuit.flix` authors them and the drawing is laid from them;
  * `Motorsport.Circuit.timingMap` holds the same ones for
  * `nix run .#geometry-timing-lines`, which reads no geometry file —
- * `Util.Json.Encode` writes and parses nothing. Neither compiler sees the other,
- * so a stretch moved in one copy and not the other leaves a report measuring one
- * lap while the drawing shows another, printing numbers that look like a circuit's
- * own.
+ * `Util.Json.Encode` writes and parses nothing. One project compiles both files,
+ * and no compiler compares what they state: a stretch moved in one copy and not
+ * the other leaves a report measuring one lap while the drawing shows another,
+ * printing numbers that look like a circuit's own.
  *
  * The published numbers are read out of the Flix config and out of the geometry
  * the config was written into — the bytes the app is served — and the report's
@@ -186,41 +186,36 @@ test('both readers trust the published stretches by the same tenth', () => {
   const drawing = tenth(readSource('circuits/src/Track.flix'), 'Track.sectorLines');
   expect(drawing, 'the stretch-sum tolerance is not a readable distance').toBeGreaterThan(0);
   expect(
-    tenth(readSource('circuits/timing/src/Cli/TimingLines/Feed.flix'), 'Feed.publishedLines'),
+    tenth(readSource('circuits/src/Cli/TimingLines/Feed.flix'), 'Feed.publishedLines'),
     'one reader trusts stretches the other refuses',
   ).toBe(drawing);
 });
 
 /**
- * The report's project shares `flix/src` by symlink, because Flix has no local
- * path dependency and `flix build` takes no source directory. Two facts hold that
- * sharing up, and neither is visible from either project's own build: a symlinked
- * directory is walked as nothing, so the links must be one per file; and a link
- * which does not survive a checkout fails as `Undefined use`, named in the module
- * that needed it rather than in the link that broke.
+ * The report's readings come into the geometry project by symlink, because Flix
+ * has no local path dependency and `flix build` takes no source directory. Two
+ * facts hold that sharing up, and neither is visible from the project's own
+ * build: a symlinked directory is walked as nothing, so the links must be one
+ * per file; and a link which does not survive a checkout fails as `Undefined
+ * use`, named in the module that needed it rather than in the link that broke.
  *
  * A link compiles a whole module for the few of its functions one command calls,
  * so the links are held to the readings the report reads through. Where most of a
  * module belongs to the commands that compute in a database it is held separately:
  * `Cli/Errors.flix` keeps four of the CLI's seven cases beside a fifth the CLI
- * holds no failure like and `Util/Files.flix` three of its six functions, and
- * the one case carrying a database's failure —
- * reached from no call here — was the whole reason `Db.flix` was a source of this
- * project at all.
+ * holds no failure like, and `Report/Files.flix` reads and stats — the pipeline's
+ * own `Util/Files.flix` resolves every path from `GEOMETRY_FROM` and writes, while
+ * the report's reads where it stands and writes nothing.
  */
 
-const reportRoot = fileURLToPath(new URL('../../circuits/timing/src', import.meta.url));
+const projectRoot = fileURLToPath(new URL('../../circuits/src', import.meta.url));
 
-type Tree = { linked: string[]; held: string[] };
-
-/** Every source under the report's `src`, sorted by whether it is a link. */
-function walk(dir: string, found: Tree): Tree {
+/** Every symlink under `circuits/src`, named by its path in the project. */
+function walk(dir: string, found: string[]): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = `${dir}/${entry.name}`;
-    const name = path.slice(reportRoot.length + 1);
-    if (lstatSync(path).isSymbolicLink()) found.linked.push(name);
+    if (lstatSync(path).isSymbolicLink()) found.push(path.slice(projectRoot.length + 1));
     else if (statSync(path).isDirectory()) walk(path, found);
-    else if (entry.name.endsWith('.flix')) found.held.push(name);
   }
   return found;
 }
@@ -240,29 +235,13 @@ function sharedSources(): string[] {
   ];
 }
 
-/** The report's own command, and the two modules whose rest is the other
- * commands': an error type with no database in it, and a file reading that is
- * never given a file to write into. */
-function heldSources(): string[] {
-  return [
-    'Cli/Errors.flix',
-    'Cli/TimingLines.flix',
-    'Cli/TimingLines/Feed.flix',
-    'Main.flix',
-    'Report.flix',
-    'Util/Files.flix',
-  ];
-}
-
-test('the report shares flix/src one file per symlink, and each one resolves', () => {
-  const found = walk(reportRoot, { linked: [], held: [] });
-  expect(found.linked.sort(), 'the report shares a different set of sources than the ones it reads').toEqual(
+test('the project shares flix/src one file per symlink, and each one resolves', () => {
+  expect(walk(projectRoot, []).sort(), 'the project shares a different set of sources than the report reads').toEqual(
     sharedSources(),
   );
-  expect(found.held.sort(), 'the report holds a source no test names').toEqual(heldSources());
   const root = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
   for (const name of sharedSources()) {
-    const path = `${reportRoot}/${name}`;
+    const path = `${projectRoot}/${name}`;
     expect(lstatSync(path).isSymbolicLink(), `${name} is a copy of a shared source, so it can disagree with it`).toBe(
       true,
     );
@@ -273,35 +252,18 @@ test('the report shares flix/src one file per symlink, and each one resolves', (
   }
 });
 
-/** Every source the report's compiler reads: its own, and what each link holds. */
-function compiledSources(): string[] {
-  return [...sharedSources(), ...heldSources()].map((name) => readSource(`circuits/timing/src/${name}`));
-}
-
 /**
  * A link to `flix/src/Db.flix` would compile — an effect declaration opens no
  * connection and needs no driver — so that the report has no way to name a
- * database is a fact about its sources and nothing else, and these are the
- * sources that say it.
+ * database is a fact about the project's sources and its `flix.toml`, which
+ * `circuits-geometry-project.spec.ts` reads over every source, each link
+ * dereferenced. What is read here instead is narrower: the report's own file
+ * reading is given nothing to write into.
  */
-test('nothing the report compiles reaches a database', () => {
-  const text = compiledSources().join('\n');
-  for (const name of ['SqlRead', 'SqlWrite', 'DbErr', 'Db.Error', 'Db.Value', 'Jdbc']) {
-    expect(text, `the report compiles ${name}, which no command here can reach`).not.toContain(name);
-  }
-  const files = readSource('circuits/timing/src/Util/Files.flix');
-  expect(files, 'the report holds a Util.Files that writes, which is not the reading it is').not.toMatch(
+test('the report reads and stats a file, and never writes one', () => {
+  const files = readSource('circuits/src/Report/Files.flix');
+  expect(files, 'the report holds a file reading that writes').not.toMatch(
     /pub def (write|mkDirs|walkCsvFiles)/,
   );
   expect(files, 'the report globs a directory').not.toContain('Glob');
-});
-
-test('the report resolves no dependency, which is the separation for', () => {
-  const toml = readSource('circuits/timing/flix.toml');
-  expect(toml, 'the report has a dependency, so a database is reachable from it').not.toMatch(/mvn-dependencies|dependencies/);
-  // One compiler version for the two projects: a link out of `flix/src` is read by
-  // whichever `flix` runs, and a source the other version parses differently fails
-  // for a reason neither project states.
-  const version = (file: string) => readSource(file).match(/flix\s*=\s*"([^"]+)"/)?.[1];
-  expect(version('circuits/timing/flix.toml'), 'the two projects are not on one Flix version').toBe(version('flix/flix.toml'));
 });

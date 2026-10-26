@@ -1,8 +1,8 @@
 /// Reading a file, and writing one: the commands these serve are run by hand, so a geometry
 /// is read to be laid against another and an overlay written to be looked at later. The
 /// globbing, the stat-ing and the CSV-walking the load and the export do are `flix/src`'s
-/// `Util.Files`. Three projects hold a module of this name — `flix/src`, `circuits/timing`'s
-/// and this one — and none of them can reach the others'.
+/// `Util.Files`. Two projects hold a module of this name — `flix/src`'s and this one, the
+/// report's reading being `Report.Files` — and neither can reach the other's.
 pub mod Util.Files {
 
     use Sys.Env

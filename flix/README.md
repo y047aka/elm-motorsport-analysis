@@ -6,14 +6,15 @@ of the same jar. They are run through the repository's Nix flake, which the
 root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
 `.#cli-run`, `.#cli-load`, `.#cli-export`, `.#serve-api`.
 
-The timing-lines report is not a command of this jar. It is a second Flix project,
-at `circuits/timing/`, which resolves no Maven dependency and compiles no `Db`
+The timing-lines report is not a command of this jar. It is a word of the
+`circuits/` project, which resolves no Maven dependency and compiles no `Db`
 effect. Nine sources under its `src` are symlinks into this `src` — the decoding of
 a CSV, the durations, `Motorsport/Circuit.flix` among them — so editing one of those
 files is compiled and tested twice, by `nix run .#flix-test` and by
-`nix run .#geometry-test timing`, and moving or renaming one breaks both until its
+`nix run .#geometry-test`, and moving or renaming one breaks both until its
 link moves too. `Cli/Errors.flix` and `Util/Files.flix` are not among them: the
-report holds its own of those two, smaller, they being the modules whose rest
+report project holds its own of those two — `Report/Files.flix` for the second,
+named apart because it resolves paths differently — smaller, they being the modules whose rest
 belongs to the commands that compute in a database. `circuits/README.md` keeps the
 list, says which modules are shared and which are held twice on purpose, why the
 links are one per file, and holds where the report's timings come from and what it
@@ -503,10 +504,9 @@ paying for the same split.
   each circuit publishes about its timing lines: no database, no file, no network.
   The report reads the same figures through a symlink into this `src`, and
   `app/tests/circuit-timing-map.spec.ts` is the one thing that ties the two copies.
-  The feed's own readings are driven under `circuits/timing`, by
-  `nix run .#geometry-test timing`, and an Overpass answer's under `circuits/`, by
-  `nix run .#geometry-test geometry` — which shares no source here, and so tests nothing
-  of this `src`.
+  The feed's own readings, and an Overpass answer's, are driven under `circuits/`, by
+  `nix run .#geometry-test` — which compiles nine sources from this `src` through
+  symlinks and tests nothing else of it.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`
   is removed. `rm -rf flix/build` before believing a green run.

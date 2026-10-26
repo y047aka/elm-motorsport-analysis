@@ -8,13 +8,15 @@ import { readSource } from './helpers';
  *
  * The pipeline is a Flix project at `circuits/` — asking OpenStreetMap,
  * surveying an answer into a lap, writing the bytes the app serves, comparing
- * two kept geometries, reading a track-atlas line, and fencing a regeneration
- * — and every reading in it is held by the project's own `flix test`. What a
- * Flix test cannot see is the wiring around the project: which sources the
- * project holds, what it resolves, the flake apps that reach it, the directory
- * a reader's paths resolve against, and the CI steps that compare rather than
- * write. Those are read here, the way `circuit-overpass.spec.ts` reads the
- * probe's and `circuit-timing-map.spec.ts` the report's.
+ * two kept geometries, reading a track-atlas line, fencing a regeneration,
+ * probing a place for a circuit, and reading two rounds' feeds for the
+ * timing-lines report — and every reading in it is held by the project's own
+ * `flix test`. What a Flix test cannot see is the wiring around the project:
+ * which sources the project holds, which it links, what it resolves, the flake
+ * apps that reach it, the directory a reader's paths resolve against, and the
+ * CI steps that compare rather than write. Those are read here, the way
+ * `circuit-overpass.spec.ts` reads the sphere and `circuit-timing-map.spec.ts`
+ * the timing figures.
  *
  * Nothing here needs a browser.
  */
@@ -24,11 +26,30 @@ const atlasReading = readSource('circuits/src/Atlas.flix');
 const main = readSource('circuits/src/Main.flix');
 
 /**
- * Every `.flix` file on one shelf of the geometry project, with a symlink named rather than
- * followed. The timing report links nine of `flix/src`'s sources because it reads readings
- * that live there; this project reads none of them, and a link would compile — `Sql.flix`
- * declares an effect that opens no connection — so a project could acquire a way to name a
- * database without being asked to.
+ * The nine `flix/src` sources the timing report reads through, each held as a
+ * symlink of the same relative path — one per file, because Flix walks a linked
+ * directory as nothing. A broken link fails elsewhere as `Undefined use`, in the
+ * module that needed it rather than in the link; `circuit-timing-map.spec.ts`
+ * walks the same list against the real tree, resolves each link, and reads every
+ * source dereferenced for the words a database is named by.
+ */
+const reportLinks: Set<string> = new Set([
+  'src/Cli.flix',
+  'src/Motorsport.flix',
+  'src/Motorsport/Calendar.flix',
+  'src/Motorsport/Circuit.flix',
+  'src/Motorsport/Events.flix',
+  'src/Util/Csv.flix',
+  'src/Util/Csv/Decode.flix',
+  'src/Util/Csv/Parser.flix',
+  'src/Util/Duration.flix',
+]);
+
+/**
+ * Every `.flix` file on one shelf of the geometry project, with a symlink named
+ * rather than followed. A link outside the report's nine would compile —
+ * `Sql.flix` declares an effect that opens no connection — so a project could
+ * acquire a way to name a database without being asked to.
  */
 function readDir(dir: string): string[] {
   const found: string[] = [];
@@ -36,9 +57,11 @@ function readDir(dir: string): string[] {
     for (const entry of readdirSync(new URL(`../../${at}`, import.meta.url), { withFileTypes: true })) {
       const path = `${at}/${entry.name}`;
       if (lstatSync(new URL(`../../${path}`, import.meta.url)).isSymbolicLink()) {
-        throw new Error(`${path} links out of the geometry project, which shares no source with anything`);
-      }
-      if (entry.isDirectory()) walk(path);
+        if (!reportLinks.has(path.replace(/^circuits\//, ''))) {
+          throw new Error(`${path} links out of the geometry project, which shares only the report's nine readings with flix/src`);
+        }
+        found.push(path);
+      } else if (entry.isDirectory()) walk(path);
       else if (entry.name.endsWith('.flix')) found.push(path);
     }
   };
@@ -49,9 +72,11 @@ function readDir(dir: string): string[] {
 const project = [...readDir('circuits/src'), ...readDir('circuits/test')];
 
 /**
- * Every source the geometry project compiles — sixteen of Flix and eleven of tests, which is
- * what the project is asserted to hold — for the reading of their text alone: a word a
- * database is named by would arrive in a source file and not in a build product.
+ * Every source the geometry project compiles — thirty of Flix and thirteen of tests, which
+ * is what the project is asserted to hold — for the reading of their text alone: a word a
+ * database is named by would arrive in a source file and not in a build product. A link
+ * reads as what it holds, so this includes each of the report's nine as `flix/src` spells
+ * it.
  */
 const everySource = project.map(readSource);
 
@@ -75,24 +100,33 @@ test('both lines are laid on one plane about the places of both', () => {
 });
 
 /**
- * The geometry project, read the way `circuit-overpass.spec.ts` reads the probe's:
+ * The geometry project, read the way `circuit-overpass.spec.ts` reads the sphere:
  * a flake app whose entry point has moved fails at whoever typed it, in a shell,
- * with nothing to say why. The flake registers one app and hands it the whole
- * command line, so the subcommand words live only in `Main.flix` — a renamed
+ * with nothing to say why. The flake registers the apps and hands each its
+ * arguments, so the subcommand words live only in `Main.flix` — a renamed
  * subcommand is a word Main answers with the usage there and no second place
- * to move. The test therefore pins the one app's forwarding and that Main's
- * list of words and Main's dispatch of them are the same list.
+ * to move. The test therefore pins each app's forwarding and that Main's list
+ * of words and Main's dispatch of them are the same list.
  */
-test("the flake's geometry command reaches the source it runs", () => {
+test("the flake's geometry commands reach the sources they run", () => {
   const flake = readSource('flake.nix');
   const registered = [...flake.matchAll(/mkGeometryApp "([\w-]+)"/g)].map((m) => m[1]);
   expect(registered.sort(), 'the flake registers a different set of geometry commands than these').toEqual([
     'geometry',
+    'geometry-test',
+    'geometry-timing-lines',
   ]);
   expect(
     flake,
     'nix run .#geometry no longer hands the jar the reader\'s whole command line',
   ).toContain('mkGeometryApp "geometry" "flix run -- \\"$@\\""');
+  expect(flake, 'geometry-test no longer runs the project\'s own flix test').toContain(
+    'mkGeometryApp "geometry-test" "flix test"',
+  );
+  expect(
+    flake,
+    'geometry-timing-lines no longer hands the jar its word and the feeds beside the repository',
+  ).toContain('flix run -- timing-lines --csv ../data/wec');
   expect(main, 'nix run .#geometry -- diff runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Diff.exitCode(rest))',
   );
@@ -114,45 +148,58 @@ test("the flake's geometry command reaches the source it runs", () => {
   expect(main, 'nix run .#geometry -- probe runs a main that hands the reader its arguments to nothing').toContain(
     'Exit.exit(Probe.exitCode(rest))',
   );
-  expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
-    '"atlas" :: "diff" :: "fetch" :: "probe" :: "regenerate" :: "survey" :: "write" :: Nil',
+  expect(main, 'nix run .#geometry -- timing-lines runs a main that hands the reader its arguments to nothing').toContain(
+    'Exit.exit(Report.exitCode(rest))',
   );
-  // `geometry-test` is the one way every project under `circuits/` is tested in
-  // CI, and `flix` has to start inside each project to find its `flix.toml`.
-  for (const dir of ['circuits', 'circuits/timing']) {
-    expect(flake, `geometry-test no longer runs flix test inside ${dir}`).toContain(`(cd ${dir} && flix test)`);
-  }
+  expect(main, 'the commands Main names and the commands it dispatches are not the same').toContain(
+    '"atlas" :: "diff" :: "fetch" :: "probe" :: "regenerate" :: "survey" :: "timing-lines" :: "write" :: Nil',
+  );
 });
 
 /**
- * The geometry project is a Flix project of `circuits/` that shares no source with the
- * CLI and reads no database: `flix/src` is reached by the timing report through symlinks
- * because the report reads readings that live there, and this project reads none — every
- * figure in it is a distance between two places in a file.
+ * The geometry project shares exactly the nine readings the timing report reads
+ * through — each a link of the same relative path, named in `reportLinks` above —
+ * and reads no database: every figure the pipeline itself computes is a distance
+ * between two places in a file.
  *
- * A link into `flix/src` would compile, which is what makes this worth a test:
- * `Sql.flix` declares an effect that opens no connection, so a project that symlinked it
- * acquires a way to name a database that no command in it can reach, and `flix/flix.toml`
- * resolves a JDBC driver for it.
+ * A link beyond those nine would compile, which is what makes this worth a test:
+ * `Sql.flix` declares an effect that opens no connection, so a project that
+ * symlinked it acquires a way to name a database that no command in it can
+ * reach, and `flix/flix.toml` resolves a JDBC driver for it.
  */
-test('the geometry project shares no source, resolves no dependency and names no database', () => {
+test('the geometry project links only the report\'s nine, resolves no dependency and names no database', () => {
   expect(project, 'the geometry project holds a different set of sources than these').toEqual([
     'circuits/src/Apart.flix',
     'circuits/src/Atlas.flix',
     'circuits/src/Candidates.flix',
     'circuits/src/Circuit.flix',
+    'circuits/src/Cli.flix',
+    'circuits/src/Cli/Errors.flix',
+    'circuits/src/Cli/TimingLines.flix',
+    'circuits/src/Cli/TimingLines/Feed.flix',
     'circuits/src/Diff.flix',
     'circuits/src/Fetch.flix',
     'circuits/src/Geometry.flix',
     'circuits/src/Main.flix',
+    'circuits/src/Motorsport.flix',
+    'circuits/src/Motorsport/Calendar.flix',
+    'circuits/src/Motorsport/Circuit.flix',
+    'circuits/src/Motorsport/Events.flix',
     'circuits/src/Overpass.flix',
     'circuits/src/Probe.flix',
     'circuits/src/Regenerate.flix',
+    'circuits/src/Report.flix',
+    'circuits/src/Report/Files.flix',
     'circuits/src/Survey.flix',
     'circuits/src/Track.flix',
+    'circuits/src/Util/Csv.flix',
+    'circuits/src/Util/Csv/Decode.flix',
+    'circuits/src/Util/Csv/Parser.flix',
+    'circuits/src/Util/Duration.flix',
     'circuits/src/Util/Files.flix',
     'circuits/src/Util/Format.flix',
     'circuits/src/Write.flix',
+    'circuits/test/Cli/TestTimingFeed.flix',
     'circuits/test/TestApart.flix',
     'circuits/test/TestCandidates.flix',
     'circuits/test/TestDiff.flix',
@@ -161,6 +208,7 @@ test('the geometry project shares no source, resolves no dependency and names no
     'circuits/test/TestOverpass.flix',
     'circuits/test/TestProbe.flix',
     'circuits/test/TestRegenerate.flix',
+    'circuits/test/TestReport.flix',
     'circuits/test/TestSurvey.flix',
     'circuits/test/TestTrack.flix',
     'circuits/test/TestWrite.flix',
@@ -174,9 +222,9 @@ test('the geometry project shares no source, resolves no dependency and names no
     expect(everySource.join('\n'), `the geometry project names ${name}`).not.toContain(name);
   }
 
-  // One compiler version for the projects under circuits/ and the CLI: a source is read
-  // by whichever `flix` runs, and a version the others moved past fails for a reason no
-  // project states.
+  // One compiler version for the geometry project and the CLI: a linked source is read
+  // by whichever `flix` runs, and a version the other moved past fails for a reason
+  // neither project states.
   const version = (path: string) => readSource(path).match(/flix\s*=\s*"([^"]+)"/)?.[1];
   expect(version('circuits/flix.toml'), 'the geometry project is not on the CLI\'s Flix version').toBe(
     version('flix/flix.toml'),
@@ -213,7 +261,7 @@ test('the Flix survey is fenced against the bytes the app serves', () => {
       `CI no longer asks whether the Flix survey lays ${circuit}'s kept geometry`,
     ).toContain(`nix run .#geometry -- survey ${circuit}`);
   }
-  expect(workflow, 'CI no longer runs the geometry project').toContain('nix run .#geometry-test geometry');
+  expect(workflow, 'CI no longer runs the geometry project').toContain('nix run .#geometry-test');
   for (const step of workflow.match(/nix run \.#geometry -- survey[^\n]*/g) ?? []) {
     expect(step, `CI writes ${step.trim()} rather than comparing it`).not.toContain('--write');
   }

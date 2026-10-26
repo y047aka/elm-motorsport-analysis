@@ -38,10 +38,10 @@ nix run .#geometry-test
 nix run .#build
 ```
 
-The pipeline at `circuits/` — the probe is its own word there — and the report at
-`circuits/timing/` are Flix projects too,
-each with its own `flix.toml`: bumping the `flix` version in `flake.nix` is a run of all
-three, and one
+The pipeline at `circuits/` — the probe and the timing report are its own words
+there — is a Flix project too,
+with its own `flix.toml`: bumping the `flix` version in `flake.nix` is a run of both
+projects, and one
 left behind fails as its own red rather than as the flake not evaluating.
 
 A new nixpkgs can move `playwright-test`, which the VRT renders with, so run

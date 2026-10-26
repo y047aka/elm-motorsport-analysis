@@ -69,9 +69,11 @@
 
         # The geometry pipeline itself, a Flix project at the root of `circuits/`:
         # it asks OpenStreetMap for an answer, surveys a circuit out of one, lays two
-        # kept geometries together, and writes the file the app serves. It reaches no
-        # database, and no network until a `fetch` or a `write` asks one; which
-        # command runs where is `circuits/README.md`'s to say.
+        # kept geometries together, writes the file the app serves, probes a place
+        # for a circuit, and reads two rounds' feeds for the timing-lines report —
+        # `flix/src`'s own CSV decoding, which nine symlinks bring into the project.
+        # It reaches no database, and no network until a `fetch` or a `write` asks
+        # one; which command runs where is `circuits/README.md`'s to say.
         #
         # `GEOMETRY_FROM` is the directory the reader was standing in: `flix` has to be
         # started inside the project to find its `flix.toml`, and the reader names
@@ -83,44 +85,6 @@
             text = ''
               export GEOMETRY_FROM="$PWD"
               cd circuits
-              ${cmd}
-            '';
-          };
-
-        # The two Flix projects under `circuits/` — the pipeline at its root, which
-        # is also the probe's home, and the report at `circuits/timing/` — each hold
-        # their own `flix test`, and `flix` has to be started inside the project to
-        # find its `flix.toml`. Naming projects runs just theirs, so a CI step can
-        # still report one project's red on its own; naming none runs both.
-        geometryTestApp = pkgs.writeShellApplication {
-          name = "geometry-test";
-          runtimeInputs = [ flix ];
-          text = ''
-            failed=""
-            if [ "$#" -eq 0 ]; then
-              set -- geometry timing
-            fi
-            for name in "$@"; do
-              case "$name" in
-                geometry) (cd circuits && flix test) ;;
-                timing)   (cd circuits/timing && flix test) ;;
-                *) echo "no circuits project \"$name\" — name geometry or timing" >&2; exit 1 ;;
-              esac || failed="$failed $name"
-            done
-            [ -z "$failed" ] || { echo "flix test failed in:$failed" >&2; exit 1; }
-          '';
-        };
-
-        # The timing-lines report is a second Flix project, at `circuits/timing`.
-        # Of the flake's Flix commands it is the only one handed neither `--database`
-        # nor `DATABASE_URL`, and its `flix.toml` resolves no JDBC driver, so it has
-        # no way to name a database, stale or otherwise.
-        mkTimingApp = name: cmd:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [ flix ];
-            text = ''
-              cd circuits/timing
               ${cmd}
             '';
           };
@@ -186,9 +150,6 @@
         csvDir = "--csv ../data/wec";
         outDir = "--out ../app/static/wec";
 
-        # Relative to `circuits/timing`, which the report's command changes to.
-        timingCsvDir = "--csv ../../data/wec";
-
         # What `.#tauri-build` runs first, and the one place every round is
         # written: a bundle answers out of the files beside it, so a round left
         # unwritten is a round it cannot open. Converts rather than exports,
@@ -199,8 +160,9 @@
         '';
 
         # Where its timings come from, and what they cannot answer, is
-        # `circuits/README.md`'s.
-        timingLinesCmd = "flix run -- ${timingCsvDir} \"$@\"";
+        # `circuits/README.md`'s. The `--csv` is the flake's, not the reader's:
+        # the feeds sit beside the repository this command's `circuits` is in.
+        timingLinesCmd = "flix run -- timing-lines --csv ../data/wec \"$@\"";
 
         # The CLI converts the rounds `Motorsport.Calendar` lists, reading each
         # season directory under one directory and writing into the same one
@@ -276,9 +238,9 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: fetch | survey | write | atlas | diff | regenerate | probe (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
-          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                                                          meta.description = "Run the flix test of the projects under circuits/ — geometry (which holds the probe's readings) and timing; name any of them to run just those (no network, no database, no files written)"; };
-          geometry-timing-lines = { type = "app"; program = "${mkTimingApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits/timing project, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
+          geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: fetch | survey | write | atlas | diff | regenerate | probe | timing-lines (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
+          geometry-test        = { type = "app"; program = "${mkGeometryApp "geometry-test" "flix test"}/bin/geometry-test";                                                meta.description = "Run the circuits project's flix test — the survey's, the probe's and the timing report's readings, the last of which compile nine symlinked flix/src sources (no network, no database, no files written)"; };
+          geometry-timing-lines = { type = "app"; program = "${mkGeometryApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits geometry project's timing-lines word, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };

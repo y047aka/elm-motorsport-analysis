@@ -33,23 +33,21 @@ jobs:
           restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: none of these commands touches node_modules. The Elm
       # tests need only the elm toolchain the flake supplies, and each Flix
-      # project — the CLI's and the two under `circuits/` — resolves what it
-      # resolves through flix.
+      # project — the CLI's and `circuits/` — resolves what it resolves
+      # through flix.
       - name: Elm tests
         run: nix run .#test
       - name: CLI tests
         run: nix run .#flix-test
-      # Its own project, so its own build: this is also the step that compiles the
-      # sources `circuits/timing/src` symlinks out of `flix/src`.
-      - name: Timing report tests
-        run: nix run .#geometry-test timing
       # The geometry project's own tests: a kept geometry file read, two lines laid
       # together, an Overpass answer read and read into elements — the probe's
       # readings ride with them, asked of fixtures rather than of a runner —, a lap
-      # chained and the bytes a geometry is written in. Every reading is handed a
-      # fixture, so nothing here can change a kept file.
+      # chained, the bytes a geometry is written in, and the timing report's
+      # feed readings, which is also what proves the nine `flix/src` symlinks
+      # survived the checkout. Every reading is handed a fixture, so nothing here
+      # can change a kept file.
       - name: Geometry command tests
-        run: nix run .#geometry-test geometry
+        run: nix run .#geometry-test
       # Does the survey over a kept answer still draw the bytes the app serves?
       # The regeneration fence asks the same of a fresh asking of OpenStreetMap;
       # this is the byte fence, over the two circuits a checkout keeps.

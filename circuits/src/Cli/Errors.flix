@@ -9,8 +9,8 @@
 /// check answers with.
 pub mod Cli.Errors {
 
-    use Util.Files
-    use Util.Files.FileError
+    use Report.Files
+    use Report.Files.FileError
 
     pub enum CliError {
         case InputPathNotFound(String)
