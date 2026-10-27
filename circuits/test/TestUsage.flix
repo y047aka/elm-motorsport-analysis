@@ -4,15 +4,6 @@
 /// is built from the same list. Which of its three answers a run of tokens comes
 /// to is read here rather than run, `Cli.Args.Parsed` handing `--help` and a wrong
 /// argument back as values and printing neither.
-///
-/// Which words there are at all is `Cli.Words`'s, and the usage-wide assertions walk
-/// that list, so a word added to the jar is held to them without a test being written.
-/// The assertions that name a command by hand are the ones reading its arguments, which
-/// no table can carry.
-///
-/// What the table cannot be asked is whether a command module joined it at all: a
-/// module's run is reached only through a case, and no compiler sees a case that was
-/// never written. That is `app/tests/geometry-words.spec.ts`'s, read out of the sources.
 pub mod TestUsage {
 
     def saysHelp(usage: String): Bool =
@@ -31,40 +22,14 @@ pub mod TestUsage {
             case _                                                   => false
         }
 
-    /// Every word the jar answers to declares the help flag, and declares it in the
-    /// usage that is printed for it: the flag table is the proof, so a word that
-    /// stopped declaring `--help` loses it from its own usage too, and a word missing
-    /// from the list is a word no run can reach at all.
     @Test
     def testEveryGeometryWordDeclaresItsHelpFlag(): Unit \ Assert =
-        foreach (one <- Cli.Words.words())
-            Assert.assertTrueWithMsg(
-                saysHelp(Cli.Words.usage(one)),
-                "${Cli.Words.name(one)}: its usage names no --help"
-            )
-
-    /// One dialect at every usage: a reader who mistypes a word is answered with all
-    /// of them at once, so they should read as one command's help rather than as six
-    /// programs'.
-    @Test
-    def testEveryUsageLineOpensTheSameWay(): Unit \ Assert =
-        foreach (one <- Cli.Words.words())
-            Assert.assertTrueWithMsg(
-                String.startsWith({prefix = "usage: nix run .#geometry -- "}, Cli.Words.usage(one)),
-                "${Cli.Words.name(one)}: ${Cli.Words.usage(one)}"
-            )
-
-    /// The word a usage is listed under is the word the usage names. A table pairs a
-    /// name, a run and a help line by hand, and the mistake it can make is a pairing:
-    /// a word refused with another word's usage, which is a reader told to look at the
-    /// wrong program's flags.
-    @Test
-    def testEveryUsageNamesTheWordItIsListedUnder(): Unit \ Assert =
-        foreach (one <- Cli.Words.words())
-            Assert.assertTrueWithMsg(
-                String.contains({substr = "-- ${Cli.Words.name(one)} "}, Cli.Words.usage(one)),
-                "the usage listed under ${Cli.Words.name(one)} does not name it: ${Cli.Words.usage(one)}"
-            )
+        Assert.assertTrue(saysHelp(Survey.usage()));
+        Assert.assertTrue(saysHelp(Atlas.usage()));
+        Assert.assertTrue(saysHelp(Diff.usage()));
+        Assert.assertTrue(saysHelp(Regenerate.usage()));
+        Assert.assertTrue(saysHelp(Probe.usage()));
+        Assert.assertTrue(saysHelp(Report.usage()))
 
     /// The survey's and the atlas's usages are the one place a reader learns the
     /// flag that raises the network: a descriptor dropped from the flag table drops
@@ -75,12 +40,27 @@ pub mod TestUsage {
         Assert.assertTrue(String.contains({substr = "[--fetch]"}, Survey.usage()));
         Assert.assertTrue(String.contains({substr = "[--fetch]"}, Atlas.usage()))
 
+    /// One dialect at every usage: a reader who mistypes a word is answered with all
+    /// of them at once, so they should read as one command's help rather than as six
+    /// programs'.
+    @Test
+    def testEveryUsageLineOpensTheSameWay(): Unit \ Assert =
+        foreach (
+            usage <-
+                Survey.usage() ::
+                    Atlas.usage() ::
+                    Diff.usage() ::
+                    Probe.usage() ::
+                    Regenerate.usage() ::
+                    Report.usage() ::
+                    Nil
+        )
+            Assert.assertTrue(String.startsWith({prefix = "usage: nix run .#geometry -- "}, usage))
+
     /// Every word answers `--help` before its own completing reads a word, which is
     /// what makes `atlas --help` the help and not the refusal of a run that named no
     /// circuit, and `timing-lines --help` the help and not the refusal of a run that
-    /// named no `--csv` nor a round. These walk the commands by hand rather than the
-    /// list above: a word's `arguments` answers in that word's own type, so the list
-    /// that pairs a run and a usage carries none of them.
+    /// named no `--csv` nor a round.
     @Test
     def testEveryWordAnswersHelpBeforeItReadsAWordOfItsOwn(): Unit \ Assert =
         Assert.assertTrue(saysUsage(Survey.arguments("--help" :: Nil)));

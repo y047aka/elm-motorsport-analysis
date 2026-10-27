@@ -8,8 +8,8 @@
 //     nix run .#geometry -- timing-lines --csv <dir> <season>/<id> [--against <season>] [--tolerance <metres>]
 //
 // Each subcommand is a module that reads files, asks OpenStreetMap or writes one, and
-// says what it found; this is the asking of a word once `Cli/Words.flix` has said which
-// word it was, and the exit code one comes to. `survey` turns an answer into the file the
+// says what it found; this is the asking of a word, the usage a wrong word is answered
+// with, and the exit code one comes to. `survey` turns an answer into the file the
 // app serves and lays it down only with `--write`; `--fetch` is the network raised as
 // a flag rather than a word — it asks OpenStreetMap now, keeps the answer beside the
 // circuit once the survey can read it, and travels on through the survey over what
@@ -27,18 +27,29 @@ use Time.Clock
 def main(): Unit \ { Env, IO, Clock, Exit, Console } =
     match Env.getArgs() {
         case Nil =>
-            Console.println(Cli.Words.usages());
+            Console.println(usage());
             Exit.exit(0)
         case "--help" :: _ =>
-            Console.println(Cli.Words.usages());
+            Console.println(usage());
             Exit.exit(0)
-        case typed :: rest =>
-            match Cli.Words.find(typed) {
-                case Some(one) =>
-                    Exit.exit(Cli.Words.asking(one, rest))
-                case None =>
-                    Console.eprintln("\"${typed}\" is no command of these");
-                    Console.eprintln(Cli.Words.usages());
-                    Exit.exit(1)
-            }
+        case "atlas" :: rest =>
+            Exit.exit(Atlas.exitCode(rest))
+        case "diff" :: rest =>
+            Exit.exit(Diff.exitCode(rest))
+        case "probe" :: rest =>
+            Exit.exit(Probe.exitCode(rest))
+        case "regenerate" :: rest =>
+            Exit.exit(Regenerate.exitCode(rest))
+        case "survey" :: rest =>
+            Exit.exit(Survey.exitCode(rest))
+        case "timing-lines" :: rest =>
+            Exit.exit(Report.exitCode(rest))
+        case word :: _ =>
+            Console.eprintln("\"${word}\" is no command of these");
+            Console.eprintln(usage());
+            Exit.exit(1)
     }
+
+/// Each command's own usage: the flake app a reader types, beside the arguments it takes.
+def usage(): String =
+    Atlas.usage() + "\n${Diff.usage()}" + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Survey.usage()}" + "\n${Report.usage()}"
