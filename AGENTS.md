@@ -623,6 +623,13 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   for `node(w)`, the difference between drawing a lap and lengthening one — are
   pinned by the project's own `flix test`, `circuits/src/Overpass.flix` having
   written the asking once.
+- **The response, read once** (`/app/tests/http-answer.spec.ts`) — the project asks
+  two services under two policies, and `Overpass.answered` is the one reading of what
+  either answered with, so the spec fails any second source that reads a response or
+  spells the sentence a failed answer is printed in. No Flix test can build an
+  `HttpResponse`, so a second reading that asked only the status — the fence's whole
+  reason, since a proxy answers a timed-out request as 200 with an HTML page — would
+  compile, pass offline and hand HTML on as a geometry.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.

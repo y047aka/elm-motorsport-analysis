@@ -285,19 +285,12 @@ pub mod Atlas {
         }
 
     /// The layer asked of its home: once, without retries — a dataset's repository is
-    /// not a busy map, and a run that missed it can be run again. That it is JSON is
-    /// asked here rather than left to a parse far from its cause.
+    /// not a busy map, and a run that missed it can be run again. What counts as an
+    /// answer is the reading the survey's runners are read by, under this URL's own name.
     def ask(url: String): Result[String, String] \ Https =
         match Https.send(getting(url)) {
-            case Err(error) => Err(Overpass.worded(error))
-            case Ok(response) =>
-                if (not Net.HttpResponse.isSuccess(response))
-                    Err("the atlas answered ${Net.HttpResponse.status(response)} for ${url}")
-                else
-                    match Util.Json.parse(Net.HttpResponse.body(response)) {
-                        case Err(problem) => Err("${url} answered with something that is not JSON: ${problem}")
-                        case Ok(_)        => Ok(Net.HttpResponse.body(response))
-                    }
+            case Err(error)   => Err(Overpass.worded(error))
+            case Ok(response) => Overpass.answered(response, url)
         }
 
     def getting(url: String): HttpRequest =

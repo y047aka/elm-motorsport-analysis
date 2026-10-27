@@ -16,12 +16,17 @@
 /// probe's answer is read into elements here and now: `Probe` and `Candidates`
 /// ask their questions through `askElements`.
 ///
+/// The atlas reading asks another service — a dataset's repository, once, with no list
+/// of runners to walk down — and reads its response here, so what an answer *is* is one
+/// reading for both services.
+///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; an answer read
 /// here is a derivative of their tags.
 pub mod Overpass {
 
     use IoError.IoError
     use Net.HttpRequest.HttpRequest
+    use Net.HttpResponse.HttpResponse
     use Net.Https.Https
     use Time.Clock
     use Time.Duration
@@ -103,15 +108,23 @@ pub mod Overpass {
 
     def send(url: String, question: String): Result[String, String] \ Https =
         match Https.send(post(url, question)) {
-            case Err(error) => Err(worded(error))
-            case Ok(response) =>
-                if (Net.HttpResponse.isSuccess(response))
-                    kept(Net.HttpResponse.body(response))
-                else
-                    Err("Overpass answered ${Net.HttpResponse.status(response)}")
+            case Err(error)   => Err(worded(error))
+            case Ok(response) => answered(response, "Overpass")
         }
 
-    /// A query as a form post, which is what Overpass reads rather than a query in a
+    /// A response, read: the body a service sent when it answered in JSON, or the sentence
+    /// it answered with. Two things make a body no answer — a status that is no success,
+    /// and text that is no JSON — and only the first of them is in the status: a service
+    /// behind a proxy answers a request it let time out as 200 with an HTML page. `asked`
+    /// is who the failure names, since the runner to re-ask and the dataset's home to
+    /// re-ask are two different places to go back to.
+    pub def answered(response: HttpResponse, asked: String): Result[String, String] =
+        if (not Net.HttpResponse.isSuccess(response))
+            Err("${asked} answered ${Net.HttpResponse.status(response)}")
+        else
+            kept(Net.HttpResponse.body(response), asked)
+
+    /// One query as a form post, which is what Overpass reads rather than a query in a
     /// URL: an answer of tens of thousands of points is no URL.
     def post(url: String, question: String): HttpRequest =
         HttpRequest.postWith(url, "data=${Net.HttpLayer.urlEncode(question)}")
@@ -125,12 +138,13 @@ pub mod Overpass {
     /// A body as it is kept, if it is an answer at all. That it is JSON is the first
     /// thing asked of it, since a proxy answers a query that timed out with an HTML
     /// page whose status is 200; what it says is read by `Survey.answer`, which is
-    /// where a JSON text that stopped half way through is met.
-    pub def kept(text: String): Result[String, String] =
+    /// where a JSON text that stopped half way through is met. The refusal names whoever
+    /// was asked.
+    pub def kept(text: String, asked: String): Result[String, String] =
         if (String.startsWith({prefix = "{"}, text) or String.startsWith({prefix = "["}, text))
             Ok(text)
         else
-            Err("Overpass answered with something that is not JSON")
+            Err("${asked} answered with something that is not JSON")
 
     // -------------------------------------------------------------- an answer, read
 
@@ -171,7 +185,7 @@ pub mod Overpass {
     /// holding no circuit answers as exactly that — so it reads as nothing rather
     /// than as a failure.
     pub def answer(text: String): Result[String, List[Element]] =
-        match kept(text) {
+        match kept(text, "Overpass") {
             case Err(problem) => Err(problem)
             case Ok(spelled) =>
                 match Util.Json.parse(spelled) {

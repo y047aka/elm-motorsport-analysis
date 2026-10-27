@@ -209,7 +209,14 @@ in which order, what a run calls itself, how many times each runner is asked,
 and how long one that just failed is left alone — those are facts about
 OpenStreetMap, and `Overpass.flix` spells them once for the probe's question and
 the pipeline's alike, walking both through the same runners and handing the
-survey's answer back as text and the probe's as elements. The sphere the metres
+survey's answer back as text and the probe's as elements. What a service
+*answered with* is the same one reading, whether it was answered by a runner or
+by the atlas's repository: a status that is no success and a body that is no JSON
+are the two ways a body is no answer, and only the first of them is in the status,
+since a service behind a proxy answers a request it let time out as 200 with an HTML
+page. `app/tests/http-answer.spec.ts` fails a second reading of a response anywhere
+else in the project — the only way that fence can be read from outside, since no
+Flix test can build an `HttpResponse` and the asking is never run offline. The sphere the metres
 are measured on is spelled once inside the project — `Apart.earthMetres`, and
 with it the approximation across a circuit hung off it, `Apart.apart`, which
 the survey chains with and the probe counts its laps through — and
@@ -369,4 +376,6 @@ and the figures the drawing was laid from are laid together by
 `test/TestTimingMap.flix`, in the one project that compiles both. What of the
 sharing is left to read from outside it is the report's own file reading, and
 `app/tests/report-files.spec.ts` holds that to reading and stat: it writes
-nothing.
+nothing. What the asking leaves outside the project's own readings — which sources
+read a response, and which sentences a failed answer is printed in — is
+`app/tests/http-answer.spec.ts`'s, held to one source.

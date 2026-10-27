@@ -56,16 +56,27 @@ pub mod TestOverpass {
     @Test
     def testABodyIsKeptAsTheRunnerSpelledIt(): Unit \ Assert =
         let answer = "{\"elements\": []}";
-        match Overpass.kept(answer) {
+        match Overpass.kept(answer, "Overpass") {
             case Ok(text) => Assert.assertTrue(text == answer)
             case Err(_)   => Assert.assertTrue(false)
         }
 
     @Test
     def testAnAnswerThatIsNotJsonIsRefused(): Unit \ Assert =
-        match Overpass.kept("<html><body>504 Gateway Timeout</body></html>") {
+        match Overpass.kept("<html><body>504 Gateway Timeout</body></html>", "Overpass") {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(problem == "Overpass answered with something that is not JSON")
+        }
+
+    /// The refusal names the service that said it, because the survey's runner and the
+    /// atlas's repository are two places to go back to and the sentence is the only
+    /// thing saying which one did not answer.
+    @Test
+    def testTheRefusalNamesWhoWasAsked(): Unit \ Assert =
+        let home = "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson";
+        match Overpass.kept("<html>404: Not Found</html>", home) {
+            case Ok(_)        => Assert.assertTrue(false)
+            case Err(problem) => Assert.assertTrue(problem == "${home} answered with something that is not JSON")
         }
 
     // -------------------------------------------------------- an answer, read
