@@ -351,7 +351,7 @@ pub mod TestSurvey {
         // 6371008.8 m of sphere, and the drawing's own Geodesy re-runs the same two
         // factors, so a degree of latitude is the same 111195.1 m here and there — the
         // figure does not turn on which parallel it was measured at.
-        let degree = Survey.apart({lat = 30.0, lon = -97.6}, {lat = 31.0, lon = -97.6});
+        let degree = Apart.apart({lat = 30.0, lon = -97.6}, {lat = 31.0, lon = -97.6});
         Assert.assertTrue(Write.number(Survey.roundTenth(degree)) == "111195.1")
 
     @Test
@@ -360,15 +360,15 @@ pub mod TestSurvey {
         // degree stands 111195.1 m apart on the equator and 96297.8 m apart at 30°, taken at
         // the parallel of the place ahead — the one approximation asked of distances across
         // a circuit's few kilometres.
-        let equator = Survey.apart({lat = 0.0, lon = 0.0}, {lat = 0.0, lon = 1.0});
-        let north = Survey.apart({lat = 30.0, lon = 0.0}, {lat = 30.0, lon = 1.0});
+        let equator = Apart.apart({lat = 0.0, lon = 0.0}, {lat = 0.0, lon = 1.0});
+        let north = Apart.apart({lat = 30.0, lon = 0.0}, {lat = 30.0, lon = 1.0});
         Assert.assertTrue(north < equator);
         Assert.assertTrue(Write.number(Survey.roundTenth(equator)) == "111195.1");
         Assert.assertTrue(Write.number(Survey.roundTenth(north)) == "96297.8")
 
     @Test
     def testPolylineMetresWalkTheStretchesInOrder(): Unit \ Assert =
-        let walked = Survey.polylineMetres({lat = 0.0, lon = 0.0} :: {lat = 0.0, lon = 1.0} :: {lat = 0.0, lon = 2.0} :: Nil);
+        let walked = Apart.polylineMetres({lat = 0.0, lon = 0.0} :: {lat = 0.0, lon = 1.0} :: {lat = 0.0, lon = 2.0} :: Nil);
         Assert.assertTrue(Write.number(Survey.roundTenth(walked)) == "222390.2")
 
     @Test

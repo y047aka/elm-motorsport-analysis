@@ -49,6 +49,24 @@ pub mod Apart {
         y = 0.0 - (place#lat * radians() * earthMetres())
     }
 
+    // ------------------------------------------------- the sphere at circuit scale
+
+    /// Metres between two places, east-west taken at the parallel of the second — the
+    /// one approximation asked of distances across a circuit's few kilometres, and the
+    /// one the survey measures a timing line with and the probe measures its candidate
+    /// lengths with.
+    pub def apart(a: Place, b: Place): Float64 =
+        hypot(b#lat - a#lat, (b#lon - a#lon) * cos(b#lat)) * degreesToMetres()
+
+    /// Metres along a line of places, each stretch taken at its own parallel.
+    pub def polylineMetres(points: List[Place]): Float64 =
+        List.zipWith((ahead, behind) -> apart(ahead, behind), points, List.drop(1, points))
+            |> List.foldLeft((total, metres) -> total + metres, 0.0)
+
+    /// The metres one degree of the sphere comes to, which is the sphere's own constant
+    /// and not a second one: `projectOn` spells the same two factors for the plane.
+    def degreesToMetres(): Float64 = radians() * earthMetres()
+
     // ------------------------------------------------------------------- nearness
 
     /// A stretch of a projected line, and where on the line's own measure each end

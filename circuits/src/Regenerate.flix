@@ -236,13 +236,9 @@ pub mod Regenerate {
     /// reading is the survey command's own, so a live survey and a fence over a
     /// kept answer fail in the same words.
     def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Int32] \ { IO, Console } =
-        match Survey.answer(answer) {
-            case Err(problem) => Err("${circuit#word}: ${problem}")
-            case Ok(reading) =>
-                match Survey.lapOf(reading, circuit) {
-                    case Err(problem) => Err("${circuit#word}: ${problem}")
-                    case Ok(geometry) => laid(circuit, Write.geoJson(circuit, geometry), answer, mode)
-                }
+        match Survey.survey(answer, circuit) {
+            case Err(problem)      => Err("${circuit#word}: ${problem}")
+            case Ok((_, geometry)) => laid(circuit, Write.geoJson(circuit, geometry), answer, mode)
         }
 
     def laid(circuit: Circuit, written: String, answer: String, mode: Mode): Result[String, Int32] \ { IO, Console } =

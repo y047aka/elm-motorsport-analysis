@@ -11,6 +11,8 @@ pub mod Survey {
 
     use Geometry.Place
     use Apart.Point
+    use Apart.apart
+    use Apart.polylineMetres
     use Util.Json.Json
     use Circuit.Circuit
 
@@ -172,6 +174,19 @@ pub mod Survey {
                                     )
                         }
                 }
+        }
+
+    /// An answer's text, read and surveyed in one go: the JSON, the circuit's relation,
+    /// the chained lap and the line the circuit says that lap starts at. The live
+    /// survey, the guard a fetched answer passes before it is kept, and the
+    /// regeneration fence all travel through here, so an answer that fails for one of
+    /// them fails for the other two for the same reason, in the same words. The reading
+    /// travels with the geometry: what keeps an answer counts its elements and quotes
+    /// the stamp the geometry will carry.
+    pub def survey(text: String, circuit: Circuit): Result[String, (Answer, Geometry)] =
+        match answer(text) {
+            case Err(problem) => Err(problem)
+            case Ok(reading)  => Result.map(geometry -> (reading, geometry), lapOf(reading, circuit))
         }
 
     def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
@@ -551,21 +566,6 @@ pub mod Survey {
     /// rendered from: half goes up, which is the half JavaScript's `Math.round` sends up too.
     pub def roundTenth(metres: Float64): Float64 =
         Int64.toFloat64(Float64.truncateToInt64((metres * tenths()) + 0.5)) / tenths()
-
-    /// Metres between two places, east-west taken at the parallel of the second — the one
-    /// approximation asked of distances across a circuit's few kilometres, and the one a probe
-    /// measures its candidate lengths with too.
-    pub def apart(a: Place, b: Place): Float64 =
-        Apart.hypot(b#lat - a#lat, (b#lon - a#lon) * Apart.cos(b#lat)) * degreesToMetres()
-
-    /// Metres along a line of places, each stretch taken at its own parallel.
-    pub def polylineMetres(points: List[Place]): Float64 =
-        List.zipWith((ahead, behind) -> apart(ahead, behind), points, List.drop(1, points))
-            |> List.foldLeft((total, metres) -> total + metres, 0.0)
-
-    /// The metres one degree of the sphere comes to, which is the sphere's own constant and
-    /// not a second one: `Apart` projects by the same two factors.
-    def degreesToMetres(): Float64 = Apart.radians() * Apart.earthMetres()
 
     // ------------------------------------------------------------------ the JSON read
 

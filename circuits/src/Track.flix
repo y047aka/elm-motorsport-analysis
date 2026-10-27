@@ -186,7 +186,7 @@ pub mod Track {
         match line {
             case None => Ok(0.0)
             case Some(published) =>
-                let distance = Survey.apart(first, published#place);
+                let distance = Apart.apart(first, published#place);
                 if (distance > measuredWithin())
                     Err(
                         "the atlas lap is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.spelled(measuredWithin())} m. Its markers would be measured from the wrong line."

@@ -210,10 +210,11 @@ and how long one that just failed is left alone — those are facts about
 OpenStreetMap, and `Overpass.flix` spells them once for the probe's question and
 the pipeline's alike, walking both through the same runners and handing the
 survey's answer back as text and the probe's as elements. The sphere the metres
-are measured on is spelled once inside the project — `Apart.earthMetres`, which
+are measured on is spelled once inside the project — `Apart.earthMetres`, and
+with it the approximation across a circuit hung off it, `Apart.apart`, which
 the survey chains with and the probe counts its laps through — and
-`app/tests/circuit-overpass.spec.ts` fails a second spelling inside it by the
-way. The app's drawing projects through its own number, in
+`app/tests/circuit-overpass.spec.ts` fails a second spelling of the radius
+inside it by the way. The app's drawing projects through its own number, in
 `Motorsport.Circuit.Geodesy`, and nothing compares that one with the project's:
 neither compiler reaches into the other's sources, and a Geodesy on another
 sphere lays a drawing whose metres are not the survey's. Measuring on the equatorial radius instead of the
@@ -233,9 +234,13 @@ asking of two paths, the report and the overlay are `Diff.flix`'s; the compariso
 lines is `Apart.flix`'s, which the diff samples and the atlas reading samples; the atlas
 file's shapes and guards are `Track.flix`'s; the survey of an answer, the reading of a
 kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.flix` and
-`Write.flix`, each one the only spelling — and so is the asking of
+`Write.flix`, each one the only spelling; the chain from an answer's text to a
+surveyed geometry is `Survey.survey`'s, asked whole by the live survey, by the
+guard a fetched answer passes before it is kept, and by the regeneration fence,
+so all three fail in one reading's words — and so is the asking of
 OpenStreetMap, `Overpass.flix` one spelling of the runners for the survey's
-question and the probe's alike. What is written twice is the timing
+question and the probe's alike, and of the sentence a transport failure is
+printed in. What is written twice is the timing
 figures, authored in `src/Circuit.flix` for the drawing and held again in the linked
 `Motorsport.Circuit` for a run that reads no geometry, laid together by
 `test/TestTimingMap.flix`.

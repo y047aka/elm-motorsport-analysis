@@ -4,17 +4,14 @@
 /// members carry. `Probe` is the command that asks; this is the reading of an
 /// answer already got, opening nothing and reaching no network.
 ///
-/// Every distance here is a ground distance on the sphere every drawing of a
-/// circuit is measured on -- the sphere `Motorsport.Circuit.Geodesy` projects
-/// through and the one this project's `Apart.flix` measures its comparisons with,
-/// and the one a probe has to agree with or its lengths mean nothing to the survey
-/// they are being read before.
+/// Every distance here is measured through `Apart.flix` -- the project's one
+/// spelling of the sphere every drawing of a circuit is measured on, the one
+/// `Motorsport.Circuit.Geodesy` projects through -- and a probe has to agree with
+/// that sphere or its lengths mean nothing to the survey they are being read before.
 ///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; what a
 /// reading here prints is a derivative of their tags.
 pub mod Candidates {
-
-    import java.lang.Math
 
     use Overpass.Element
     use Overpass.Member
@@ -29,36 +26,10 @@ pub mod Candidates {
         e = Float64
     }
 
-    /// The metres one degree comes to, on `Apart`'s sphere — spelled once there.
-    /// A probe measured on another sphere prints a lap the survey will not measure,
-    /// and that lap is the one reading a config is authored from.
-    def degreesToMetres(): Float64 = Apart.radians() * Apart.earthMetres()
-
-    /// The box's own rounding of a degree, which is not `degreesToMetres`: a box a
-    /// tenth of a kilometre wide of the mark costs a relation standing in the next
-    /// box over.
+    /// The box's own rounding of a degree, which is not `Apart`'s metres-per-degree:
+    /// a box a tenth of a kilometre wide of the mark costs a relation standing in
+    /// the next box over.
     def kilometresPerLatitudeDegree(): Float64 = 111.32
-
-    /// Flix's effect checker asks a call into Java to be `IO` and has not been told
-    /// that these read nothing but their arguments; the cast says so to it.
-    def cos(degrees: Float64): Float64 = unsafe IO { Math.cos(degrees * (Math.PI / 180.0)) }
-
-    def metresBetween(x: Float64, y: Float64): Float64 = unsafe IO { Math.hypot(x, y) }
-
-    /// Metres between two places, east-west taken at the parallel of the second --
-    /// an approximation only ever asked of distances across a circuit's few
-    /// kilometres.
-    pub def apart(a: Place, b: Place): Float64 =
-        let east = cos(b#lat);
-        metresBetween(b#lat - a#lat, (b#lon - a#lon) * east) * degreesToMetres()
-
-    /// Metres along a line of places, each stretch taken at its own parallel.
-    pub def polylineMetres(points: List[Place]): Float64 =
-        List.zip(points, List.drop(1, points))
-            |> List.map(stretch -> match stretch {
-                case (north, south) => apart(north, south)
-            })
-            |> List.foldLeft((total, metres) -> total + metres, 0.0)
 
     /// `s,w,n,e` as given, or a `lat,lon` centre widened by the radius: so many km
     /// per degree of latitude, and that times the cosine of the parallel for
@@ -77,7 +48,7 @@ pub mod Candidates {
                     case lat :: lon :: Nil =>
                         let km = kilometresPerLatitudeDegree();
                         let north = radiusKm / km;
-                        let east = radiusKm / (km * cos(lat));
+                        let east = radiusKm / (km * Apart.cos(lat));
                         Ok({ s = lat - north, w = lon - east, n = lat + north, e = lon + east })
                     case _ => Err("neither a centre nor a box: ${place}")
                 }
@@ -187,7 +158,7 @@ pub mod Candidates {
                 if (member#kind != "way")
                     entries
                 else
-                    add(member#role, polylineMetres(wayOf(answer, member#ref)), entries),
+                    add(member#role, Apart.polylineMetres(wayOf(answer, member#ref)), entries),
             Nil,
             members
         )

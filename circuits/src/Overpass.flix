@@ -118,7 +118,7 @@ pub mod Overpass {
 
     /// A transport failure as the report prints it: which kind, and what the client
     /// said about it.
-    def worded(error: IoError): String = match error {
+    pub def worded(error: IoError): String = match error {
         case IoError(kind, message) => "${kind}: ${message}"
     }
 

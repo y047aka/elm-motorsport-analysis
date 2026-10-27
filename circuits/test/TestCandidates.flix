@@ -6,7 +6,8 @@ pub mod TestCandidates {
 
     import java.lang.Math
 
-    use Candidates.{apart, bboxOf, describe, looksLikeACircuit, measure, polylineMetres}
+    use Apart.{apart, polylineMetres}
+    use Candidates.{bboxOf, describe, looksLikeACircuit, measure}
     use Overpass.Element
     use Overpass.Member
     use Overpass.Place

@@ -337,13 +337,9 @@ pub mod Write {
     /// relation, the chained lap and the line the circuit says that lap starts at —
     /// everything the kept file will be re-read for, asked before a byte is kept.
     pub def surveyable(text: String, circuit: Circuit): Result[String, Survey.Answer] =
-        match Survey.answer(text) {
-            case Err(problem) => Err(problem)
-            case Ok(reading) =>
-                match Survey.lapOf(reading, circuit) {
-                    case Err(problem) => Err(problem)
-                    case Ok(_)        => Ok(reading)
-                }
+        match Survey.survey(text, circuit) {
+            case Ok((reading, _)) => Ok(reading)
+            case Err(problem)     => Err(problem)
         }
 
     /// The answer read, then surveyed: the reading, the missing-file refusal and
@@ -383,17 +379,11 @@ pub mod Write {
     /// to `surveyed`, so a live survey and a comparison of a kept one fail and
     /// reproduce in the same words.
     def surveyed(asked: Args, spelled: String): Int32 \ { IO, Console } =
-        match Survey.answer(spelled) {
+        match Survey.survey(spelled, asked#circuit) {
             case Err(problem) =>
                 Console.eprintln("${asked#answer}: ${problem}");
                 1
-            case Ok(reading) =>
-                match Survey.lapOf(reading, asked#circuit) {
-                    case Err(problem) =>
-                        Console.eprintln("${asked#circuit#word}: ${problem}");
-                        1
-                    case Ok(geometry) => laid(asked, geoJson(asked#circuit, geometry))
-                }
+            case Ok((_, geometry)) => laid(asked, geoJson(asked#circuit, geometry))
         }
 
     /// The file laid down, or the kept one asked for and laid against what the survey

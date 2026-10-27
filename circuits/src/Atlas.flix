@@ -32,7 +32,6 @@ pub mod Atlas {
     use Circuit.Circuit
     use Cli.Args.ArgsError
     use Geometry.Place
-    use IoError.IoError
     use Net.HttpRequest.HttpRequest
     use Net.Https.Https
     use Sys.Console
@@ -284,7 +283,7 @@ pub mod Atlas {
     /// asked here rather than left to a parse far from its cause.
     def ask(url: String): Result[String, String] \ Https =
         match Https.send(getting(url)) {
-            case Err(error) => Err(worded(error))
+            case Err(error) => Err(Overpass.worded(error))
             case Ok(response) =>
                 if (not Net.HttpResponse.isSuccess(response))
                     Err("the atlas answered ${Net.HttpResponse.status(response)} for ${url}")
@@ -297,13 +296,6 @@ pub mod Atlas {
 
     def getting(url: String): HttpRequest =
         HttpRequest.withHeader("User-Agent", userAgent(), HttpRequest.get(url))
-
-    /// A transport failure as the report prints it: which kind, and what the client
-    /// said about it.
-    def worded(error: IoError): String =
-        match error {
-            case IoError(kind, message) => "${kind}: ${message}"
-        }
 
     /// The layer read down to its three kinds of feature: the outline that is the line,
     /// the corners, and whichever pit markers the layer holds. The identity guard is
@@ -413,44 +405,32 @@ pub mod Atlas {
         let pitMetres = Survey.cumulative(pitPoints);
         let length = Option.getWithDefault(0.0, List.last(theirMetres));
         let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
-        match (
-            Track.checkOrigin(first, circuit#timingLine),
-            Apart.apartness(theirPoints, theirMetres, ourPoints, ours#metres, Apart.defaultEvery())
-        ) {
-            case (Err(problem), _) => Err(problem)
-            case (_, Err(problem)) => Err(problem)
-            case (Ok(origin), Ok(deviation)) =>
-                match atCorners(corners, parallel, ourPoints, ours#metres, length) {
-                    case Err(problem) => Err(problem)
-                    case Ok(whereCorners) =>
-                        match atPublished(circuit, ours, theirPoints, theirMetres, ourPoints) {
-                            case Err(problem) => Err(problem)
-                            case Ok(whereLines) =>
-                                match atPits(pits, parallel, pitPoints, pitMetres, length) {
-                                    case Err(problem) => Err(problem)
-                                    case Ok(wherePits) =>
-                                        match whereLines {
-                                            case (claim, lines) => keep(
-                                                {
-                                                    circuit = circuit,
-                                                    source = source,
-                                                    coords = coords,
-                                                    corners = corners,
-                                                    pits = pits,
-                                                    theirMetres = theirMetres,
-                                                    origin = origin,
-                                                    deviation = deviation,
-                                                    atCorners = whereCorners,
-                                                    atPits = wherePits,
-                                                    pitLength = Option.getWithDefault(0.0, List.last(pitMetres)),
-                                                    atLines = lines,
-                                                    sectors = claim
-                                                }
-                                            )
-                                        }
-                                }
-                        }
-                }
+        match forM(
+            origin       <- Track.checkOrigin(first, circuit#timingLine);
+            deviation    <- Apart.apartness(theirPoints, theirMetres, ourPoints, ours#metres, Apart.defaultEvery());
+            whereCorners <- atCorners(corners, parallel, ourPoints, ours#metres, length);
+            published    <- atPublished(circuit, ours, theirPoints, theirMetres, ourPoints);
+            wherePits    <- atPits(pits, parallel, pitPoints, pitMetres, length)
+        ) yield (origin, deviation, whereCorners, published, wherePits) {
+            case Ok((origin, deviation, whereCorners, (claim, lines), wherePits)) =>
+                keep(
+                    {
+                        circuit = circuit,
+                        source = source,
+                        coords = coords,
+                        corners = corners,
+                        pits = pits,
+                        theirMetres = theirMetres,
+                        origin = origin,
+                        deviation = deviation,
+                        atCorners = whereCorners,
+                        atPits = wherePits,
+                        pitLength = Option.getWithDefault(0.0, List.last(pitMetres)),
+                        atLines = lines,
+                        sectors = claim
+                    }
+                )
+            case Err(problem) => Err(problem)
         }
     }
 
@@ -463,30 +443,22 @@ pub mod Atlas {
         ours: List[Float64],
         length: Float64
     ): Result[String, List[AtCorner]] =
-        walkingCorners(corners, parallel, ourPoints, ours, length)
+        Result.traverse(corner -> atCorner(corner, parallel, ourPoints, ours, length), corners)
 
-    def walkingCorners(
-        rest: List[Track.Feature],
+    def atCorner(
+        corner: Track.Feature,
         parallel: Float64,
         ourPoints: List[Apart.Point],
         ours: List[Float64],
         length: Float64
-    ): Result[String, List[AtCorner]] =
-        match rest {
-            case Nil => Ok(Nil)
-            case corner :: more =>
-                match (Track.placeOf(corner), Track.markerOf(corner)) {
-                    case (Err(problem), _) => Err(problem)
-                    case (_, Err(problem)) => Err(problem)
-                    case (Ok(place), Ok(marker)) =>
-                        match walkingCorners(more, parallel, ourPoints, ours, length) {
-                            case Err(problem) => Err(problem)
-                            case Ok(rows) =>
-                                let near = Apart.nearestOn(Apart.projectOn(parallel, place), ourPoints, ours);
-                                let spelled = Option.getWithDefault("undefined", Geometry.word("id", Geometry.propertiesOf(corner)));
-                                Ok({id = spelled, theirMetres = marker * length, ourMetres = near#metres, distance = near#distance} :: rows)
-                        }
-                }
+    ): Result[String, AtCorner] =
+        match (Track.placeOf(corner), Track.markerOf(corner)) {
+            case (Err(problem), _) => Err(problem)
+            case (_, Err(problem)) => Err(problem)
+            case (Ok(place), Ok(marker)) =>
+                let near = Apart.nearestOn(Apart.projectOn(parallel, place), ourPoints, ours);
+                let spelled = Option.getWithDefault("undefined", Geometry.word("id", Geometry.propertiesOf(corner)));
+                Ok({id = spelled, theirMetres = marker * length, ourMetres = near#metres, distance = near#distance})
         }
 
     /// Where each line the kept geometry publishes stands on each line: this app's
@@ -529,29 +501,21 @@ pub mod Atlas {
         pitMetres: List[Float64],
         length: Float64
     ): Result[String, List[AtPit]] =
-        walkingPits(pits, parallel, pitPoints, pitMetres, length)
+        Result.traverse(pit -> atPit(pit, parallel, pitPoints, pitMetres, length), pits)
 
-    def walkingPits(
-        rest: List[Track.Feature],
+    def atPit(
+        pit: Track.Feature,
         parallel: Float64,
         pitPoints: List[Apart.Point],
         pitMetres: List[Float64],
         length: Float64
-    ): Result[String, List[AtPit]] =
-        match rest {
-            case Nil => Ok(Nil)
-            case pit :: more =>
-                match (Track.placeOf(pit), Track.markerOf(pit)) {
-                    case (Err(problem), _) => Err(problem)
-                    case (_, Err(problem)) => Err(problem)
-                    case (Ok(place), Ok(marker)) =>
-                        match walkingPits(more, parallel, pitPoints, pitMetres, length) {
-                            case Err(problem) => Err(problem)
-                            case Ok(rows) =>
-                                let near = Apart.nearestOn(Apart.projectOn(parallel, place), pitPoints, pitMetres);
-                                Ok({role = Track.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance} :: rows)
-                        }
-                }
+    ): Result[String, AtPit] =
+        match (Track.placeOf(pit), Track.markerOf(pit)) {
+            case (Err(problem), _) => Err(problem)
+            case (_, Err(problem)) => Err(problem)
+            case (Ok(place), Ok(marker)) =>
+                let near = Apart.nearestOn(Apart.projectOn(parallel, place), pitPoints, pitMetres);
+                Ok({role = Track.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance})
         }
 
     /// The keeping — the only side effect of a run, made once every guard has answered.
