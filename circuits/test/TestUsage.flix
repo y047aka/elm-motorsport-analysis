@@ -24,7 +24,7 @@ pub mod TestUsage {
 
     @Test
     def testEveryGeometryWordDeclaresItsHelpFlag(): Unit \ Assert =
-        Assert.assertTrue(saysHelp(Write.usage()));
+        Assert.assertTrue(saysHelp(Survey.usage()));
         Assert.assertTrue(saysHelp(Atlas.usage()));
         Assert.assertTrue(saysHelp(Diff.usage()));
         Assert.assertTrue(saysHelp(Regenerate.usage()));
@@ -36,8 +36,8 @@ pub mod TestUsage {
     /// out of the help too, and the help line names the word it belongs to.
     @Test
     def testTheSurveyUsageNamesTheFlagThatRaisesTheNetwork(): Unit \ Assert =
-        Assert.assertTrue(String.contains({substr = "-- survey <circuit>"}, Write.usage()));
-        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Write.usage()));
+        Assert.assertTrue(String.contains({substr = "-- survey <circuit>"}, Survey.usage()));
+        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Survey.usage()));
         Assert.assertTrue(String.contains({substr = "[--fetch]"}, Atlas.usage()))
 
     /// One dialect at every usage: a reader who mistypes a word is answered with all
@@ -47,7 +47,7 @@ pub mod TestUsage {
     def testEveryUsageLineOpensTheSameWay(): Unit \ Assert =
         foreach (
             usage <-
-                Write.usage() ::
+                Survey.usage() ::
                     Atlas.usage() ::
                     Diff.usage() ::
                     Probe.usage() ::
@@ -63,7 +63,7 @@ pub mod TestUsage {
     /// named no `--csv` nor a round.
     @Test
     def testEveryWordAnswersHelpBeforeItReadsAWordOfItsOwn(): Unit \ Assert =
-        Assert.assertTrue(saysUsage(Write.arguments("--help" :: Nil)));
+        Assert.assertTrue(saysUsage(Survey.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Atlas.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Diff.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Probe.arguments("--help" :: Nil)));
@@ -82,7 +82,7 @@ pub mod TestUsage {
     /// another command's usage is a reader told to look at the wrong program.
     @Test
     def testAWrongArgumentIsRefusedWithItsOwnUsage(): Unit \ Assert =
-        Assert.assertTrue(refusedWith(Write.usage(), Write.arguments("cota" :: "--froze" :: Nil)));
+        Assert.assertTrue(refusedWith(Survey.usage(), Survey.arguments("cota" :: "--froze" :: Nil)));
         Assert.assertTrue(refusedWith(Atlas.usage(), Atlas.arguments("cota" :: "--file" :: "--fetch" :: Nil)));
         Assert.assertTrue(refusedWith(Report.usage(), Report.arguments("--serve" :: "2026/cota_6h" :: Nil)))
 
@@ -91,7 +91,7 @@ pub mod TestUsage {
     @Test
     def testGoodArgumentsReachTheRun(): Unit \ Assert =
         Assert.assertTrue(
-            match Write.arguments("cota" :: "--write" :: Nil) {
+            match Survey.arguments("cota" :: "--write" :: Nil) {
                 case Cli.Args.Parsed.Asked(asked) => asked#write and asked#circuit#word == "cota"
                 case _                            => false
             }

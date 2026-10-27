@@ -2,6 +2,9 @@
 /// chained out of a relation's ways, the line stretched to the length the circuit publishes
 /// and thinned to what a drawing can show. `nix run .#geometry -- survey` holds the whole of
 /// it to the bytes the app serves, over both kept answers.
+///
+/// The word's own arguments — which circuit, which answer, whether a file is laid down — are
+/// read here as well; those bytes, spelled and laid out, are `Geometry.TestWrite`'s.
 pub mod TestSurvey {
 
     use Apart.Point
@@ -82,7 +85,7 @@ pub mod TestSurvey {
             case Some(circuit) =>
                 match Survey.answer(text) {
                     case Err(problem) => Err(problem)
-                    case Ok(reading) => Result.map(geometry -> Write.geoJson(circuit, geometry), Survey.lapOf(reading, circuit))
+                    case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, geometry), Survey.lapOf(reading, circuit))
                 }
         }
 
@@ -340,9 +343,9 @@ pub mod TestSurvey {
     def testTenthsRoundUpAndHoldTheSurvey(): Unit \ Assert =
         // The tenth is what every baseline was rendered at, and half goes up.
         Assert.assertTrue(Survey.roundTenth(172.8) == 172.8);
-        Assert.assertTrue(Write.number(Survey.roundTenth(1.05)) == "1.1");
-        Assert.assertTrue(Write.number(Survey.roundTenth(1728.0)) == "1728");
-        Assert.assertTrue(Write.number(Survey.roundTenth(0.0)) == "0")
+        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(1.05)) == "1.1");
+        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(1728.0)) == "1728");
+        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(0.0)) == "0")
 
     // -------------------------------------------------------------------- the metres
 
@@ -352,7 +355,7 @@ pub mod TestSurvey {
         // factors, so a degree of latitude is the same 111195.1 m here and there — the
         // figure does not turn on which parallel it was measured at.
         let degree = Apart.apart({lat = 30.0, lon = -97.6}, {lat = 31.0, lon = -97.6});
-        Assert.assertTrue(Write.number(Survey.roundTenth(degree)) == "111195.1")
+        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(degree)) == "111195.1")
 
     @Test
     def testEastWestIsTakenAtTheParallelOfThePlaceAhead(): Unit \ Assert =
@@ -363,13 +366,13 @@ pub mod TestSurvey {
         let equator = Apart.apart({lat = 0.0, lon = 0.0}, {lat = 0.0, lon = 1.0});
         let north = Apart.apart({lat = 30.0, lon = 0.0}, {lat = 30.0, lon = 1.0});
         Assert.assertTrue(north < equator);
-        Assert.assertTrue(Write.number(Survey.roundTenth(equator)) == "111195.1");
-        Assert.assertTrue(Write.number(Survey.roundTenth(north)) == "96297.8")
+        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(equator)) == "111195.1");
+        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(north)) == "96297.8")
 
     @Test
     def testPolylineMetresWalkTheStretchesInOrder(): Unit \ Assert =
         let walked = Apart.polylineMetres({lat = 0.0, lon = 0.0} :: {lat = 0.0, lon = 1.0} :: {lat = 0.0, lon = 2.0} :: Nil);
-        Assert.assertTrue(Write.number(Survey.roundTenth(walked)) == "222390.2")
+        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(walked)) == "222390.2")
 
     @Test
     def testTheCornerIsTheNorthWestOfEveryPlace(): Unit \ Assert =
@@ -419,4 +422,98 @@ pub mod TestSurvey {
             + "\n      },"
             + "\n      \"geometry\": {\"type\":\"LineString\",\"coordinates\":[[-97.55,30.05],[-97.54,30.05]]}"
             + "\n    }"
+    // --------------------------------------------------------------- the survey word
+
+    @Test
+    def testParseWantsACircuitAndTakesTheAnswerWhereTheCircuitKeepsIt(): Unit \ Assert =
+        match Survey.parse("cota" :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
+            case Ok(asked) =>
+                Assert.assertTrue(asked#circuit#word == "cota");
+                Assert.assertTrue(asked#answer == "circuits/cota/overpass.json");
+                // The answer taken from the circuit's directory is not one the reader asked
+                // for, which is what tells a circuit nobody has surveyed from a file that
+                // cannot be read.
+                Assert.assertTrue(not asked#asked);
+                // The default run reaches no network: it reads the kept answer.
+                Assert.assertTrue(not asked#fetch);
+                Assert.assertTrue(not asked#write)
+        }
+
+    @Test
+    def testParseRefusesWhatItCannotSurvey(): Unit \ Assert =
+        Assert.assertTrue(argumentRefused("survey reads one circuit", Survey.parse(Nil)));
+        Assert.assertTrue(argumentRefused("no circuit is surveyed under 'monza': known are cota, le_mans", Survey.parse("monza" :: Nil)));
+        Assert.assertTrue(argumentRefused("option '--answer' requires an argument", Survey.parse("--answer" :: Nil)));
+        // A flag is no file: `--answer --write` is a reader who meant something else, and
+        // the survey that read it as a path would report a file that cannot be opened.
+        Assert.assertTrue(argumentRefused("--answer names no file to read", Survey.parse("cota" :: "--answer" :: "--write" :: Nil)));
+        Assert.assertTrue(argumentRefused("unrecognized option '--froze'", Survey.parse("cota" :: "--froze" :: Nil)))
+
+    @Test
+    def testParseTakesAnAnswerNamedElsewhereAndLaysTheFileDown(): Unit \ Assert =
+        match Survey.parse("le_mans" :: "--answer" :: "elsewhere/answer.json" :: "--write" :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
+            case Ok(asked) =>
+                Assert.assertTrue(asked#answer == "elsewhere/answer.json");
+                // A named answer is one the reader asked for: if it cannot be read, that is
+                // the failure, and not a circuit nobody has surveyed yet.
+                Assert.assertTrue(asked#asked);
+                Assert.assertTrue(asked#write)
+        }
+
+    /// `--fetch` is the network raised as a flag rather than a command word: the run
+    /// keeps its answer where `--answer` points — the circuit's own directory when it
+    /// names none — and lays the geometry down only when `--write` says so. The usage
+    /// names the flag, because the usage is where a reader learns it exists.
+    @Test
+    def testFetchRaisesTheNetworkAndKeepsWhereTheAnswerPoints(): Unit \ Assert =
+        match Survey.parse("cota" :: "--fetch" :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
+            case Ok(asked) =>
+                Assert.assertTrue(asked#circuit#word == "cota");
+                Assert.assertTrue(asked#fetch);
+                // A `--fetch` without `--write` keeps the evidence and answers whether
+                // the fresh survey moves the served bytes, laying nothing down.
+                Assert.assertTrue(not asked#write);
+                Assert.assertTrue(asked#answer == "circuits/cota/overpass.json")
+        };
+        match Survey.parse("cota" :: "--fetch" :: "--answer" :: "elsewhere.json" :: "--write" :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "parsed: ${problem}")
+            case Ok(asked) =>
+                Assert.assertTrue(asked#answer == "elsewhere.json");
+                Assert.assertTrue(asked#fetch);
+                Assert.assertTrue(asked#write)
+        };
+        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Survey.usage()))
+
+    // ----------------------------------------------------------------------- the parting
+
+    @Test
+    def testFirstPartSaysWhereTwoFilesPart(): Unit \ Assert =
+        // The reading of a drift is where the bytes part and what each side says there, not
+        // the whole file.
+        Assert.assertTrue(Survey.firstPart("one\ntwo\n", "one\ntwo\n") == "the two files are the same bytes after all");
+        Assert.assertTrue(Survey.firstPart("one\ntwo\n", "one\nthree\n") == "line 2 is \"three\" in the file, \"two\" from the answer");
+        Assert.assertTrue(
+            Survey.firstPart("one\ntwo\nthree\n", "one\n") == "the files part at line 2, where one of them has nothing left"
+        )
+
+    @Test
+    def testAPartingQuotesALineOnlyAsFarAsItIsWorthReading(): Unit \ Assert =
+        // Two of a geometry's lines are thousands of numbers long; a metre that moved is
+        // found by where it moved, not by the eleven thousand digits around it.
+        let long = String.repeat(400, "1234");
+        let part = Survey.firstPart("${long}\n", "1234\n");
+        Assert.assertTrue(String.startsWith({prefix = "line 1 is \"1234\" in the file, \"12341234"}, part));
+        Assert.assertTrue(String.endsWith({suffix = "\" from the answer"}, part));
+        Assert.assertTrue(String.length(part) < 300)
+
+    /// A refusal that says what the reader asked for, which is the only thing a command can
+    /// say to someone at a terminal.
+    def argumentRefused(problem: String, asked: Result[Cli.Args.ArgsError, Survey.Args]): Bool =
+        match asked {
+            case Err(one) => String.contains({substr = problem}, "${one}")
+            case Ok(_)    => false
+        }
 }

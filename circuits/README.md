@@ -234,7 +234,7 @@ asking of two paths, the report and the overlay are `Diff.flix`'s; the compariso
 lines is `Apart.flix`'s, which the diff samples and the atlas reading samples; the atlas
 file's shapes and guards are `Track.flix`'s; the survey of an answer, the reading of a
 kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.flix` and
-`Write.flix`, each one the only spelling; the chain from an answer's text to a
+`Geometry/Write.flix`, each one the only spelling; the chain from an answer's text to a
 surveyed geometry is `Survey.survey`'s, asked whole by the live survey, by the
 guard a fetched answer passes before it is kept, and by the regeneration fence,
 so all three fail in one reading's words — and so is the asking of
@@ -269,7 +269,7 @@ compares parsed properties with `surveyed_at` exempt, because asking OpenStreetM
 newer survey while every degree stands still. The byte comparison needs no such exemption — it
 reads the very answer whose stamp the property carries, so the stamp it would write is the stamp
 it reads — and a metre that lands on a different digit is a drawing that moved. The
-fence's list of compared properties is the writer's own list (`Write.claims`) less that
+fence's list of compared properties is the writer's own list (`Geometry.Write.claims`) less that
 one exemption, so a claim added to the profile is asked of both files at its own place
 in a drift line rather than in the unordered tail everything unnamed falls into; the
 two directions — every claim the writer lays is fenced or exempt, and every name in
@@ -325,8 +325,14 @@ Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the 
 moved into a module beside it that opens nothing, so `nix run .#geometry-test` can
 hand it a fixture: `Cli.TimingLines.Feed` turns feed text into rows, fastest sectors,
 shares and implied lines; `Candidates.flix` reads a probe answer; `Survey.flix` chains
-a kept answer and is held to the bytes the app serves rather than by a shared source;
-`Geometry.flix` is the one reader of every kept file; `Track.flix` holds the atlas
+a kept answer and is held to the bytes the app serves rather than by a shared source, and
+is where the `survey` word asks — the asking of a circuit sits with the reading of one, as
+it does for the atlas;
+`Geometry.flix` is the one reader of every kept file, and `Geometry/Write.flix` the one
+writer of them — the outline's layout, the property list and the JSON spelling, with no
+asking in it at all, which is what lets the `survey` word, the regeneration fence and the
+atlas line be written by one profile rather than by whichever command got there first;
+`Track.flix` holds the atlas
 file's shape checks and its two guards; and the comparison the fence makes is
 `Regenerate.flix`'s. Nothing asks OpenStreetMap from outside this project at all.
 Printing stays with the command — what a reading is worth is what it

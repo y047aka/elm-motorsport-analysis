@@ -270,18 +270,18 @@ pub mod Track {
         let length = Option.getWithDefault(0.0, List.last(metres));
         let outline =
             "{"
-                + "\"type\":${Write.text("Feature")},"
+                + "\"type\":${Geometry.Write.text("Feature")},"
                 + "\"properties\":{"
-                + "\"role\":${Write.text("outline")},"
-                + "\"circuit\":${Write.text(slug)},"
-                + "\"basis\":${Write.text("measured-midline")},"
-                + "\"source\":${Write.text(source)},"
-                + "\"license\":${Write.text("ODbL")},"
-                + "\"lap_length_m\":${Write.number(Survey.roundTenth(length))},"
+                + "\"role\":${Geometry.Write.text("outline")},"
+                + "\"circuit\":${Geometry.Write.text(slug)},"
+                + "\"basis\":${Geometry.Write.text("measured-midline")},"
+                + "\"source\":${Geometry.Write.text(source)},"
+                + "\"license\":${Geometry.Write.text("ODbL")},"
+                + "\"lap_length_m\":${Geometry.Write.number(Survey.roundTenth(length))},"
                 + "\"stretched\":false,"
-                + "\"metres\":[${String.intercalate(",", List.map(metre -> Write.number(Survey.roundTenth(metre)), metres))}]"
+                + "\"metres\":[${String.intercalate(",", List.map(metre -> Geometry.Write.number(Survey.roundTenth(metre)), metres))}]"
                 + "},"
-                + "\"geometry\":{\"type\":${Write.text("LineString")},\"coordinates\":${degrees(coords)}}"
+                + "\"geometry\":{\"type\":${Geometry.Write.text("LineString")},\"coordinates\":${degrees(coords)}}"
                 + "}";
         let features = outline :: List.map(corner -> featureText("corner", corner), corners) ++ List.map(pit -> pitText(pit), pits);
         "{\"type\": \"FeatureCollection\", \"features\": [\n${String.intercalate(",\n", List.map(each -> "    ${each}", features))}\n]}\n"
@@ -291,21 +291,21 @@ pub mod Track {
     /// turns — and nothing the layer did not carry.
     def featureText(role: String, feature: Feature): String =
         laidOut(
-            "\"role\":${Write.text(role)}" :: carried("id", feature) :: carried("marker", feature) :: carried("direction", feature) :: Nil,
+            "\"role\":${Geometry.Write.text(role)}" :: carried("id", feature) :: carried("marker", feature) :: carried("direction", feature) :: Nil,
             feature
         )
 
     /// A pit entry or exit, under the role the layer gave it.
     def pitText(feature: Feature): String =
         laidOut(
-            "\"role\":${Write.text(Option.getWithDefault("feature", roleOf(feature)))}" :: carried("name", feature) :: carried("marker", feature) :: Nil,
+            "\"role\":${Geometry.Write.text(Option.getWithDefault("feature", roleOf(feature)))}" :: carried("name", feature) :: carried("marker", feature) :: Nil,
             feature
         )
 
     /// One feature, from the properties already spelled: type before properties before
     /// geometry, as every feature of this profile stands.
     def laidOut(claims: List[String], feature: Feature): String =
-        "{\"type\":${Write.text("Feature")},\"properties\":{${String.intercalate("", claims)}},\"geometry\":${geometryText(feature)}}"
+        "{\"type\":${Geometry.Write.text("Feature")},\"properties\":{${String.intercalate("", claims)}},\"geometry\":${geometryText(feature)}}"
 
     /// One property as the layer carries it, comma and all, or nothing when the layer
     /// holds no such property. A property the layer holds as JSON null is written as
@@ -323,7 +323,7 @@ pub mod Track {
             case None => "null"
             case Some(shape) =>
                 let laid = List.map(positionText, positionsOf(feature));
-                "{\"type\":${Write.text(shapeWord(shape))},\"coordinates\":[${String.intercalate(",", laid)}]}"
+                "{\"type\":${Geometry.Write.text(shapeWord(shape))},\"coordinates\":[${String.intercalate(",", laid)}]}"
         }
 
     def scalar(json: Json): String = Util.Json.toCompactString(json)
@@ -343,5 +343,5 @@ pub mod Track {
     /// A line's degrees, lon before lat, each written as this repository writes every
     /// kept number.
     def degrees(coords: List[Place]): String =
-        "[${String.intercalate(",", List.map(place -> "[${Write.number(place#lon)},${Write.number(place#lat)}]", coords))}]"
+        "[${String.intercalate(",", List.map(place -> "[${Geometry.Write.number(place#lon)},${Geometry.Write.number(place#lat)}]", coords))}]"
 }

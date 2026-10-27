@@ -42,7 +42,7 @@ pub mod TestRegenerate {
     def withPlaces(at: String, end: Float64, coordinates: String): String =
         collection(
             featureWith(
-                "\"role\":\"outline\",\"circuit\":\"test_circuit\",\"surveyed_at\":\"${at}\",\"metres\":[0,2000,${Write.number(end)}]",
+                "\"role\":\"outline\",\"circuit\":\"test_circuit\",\"surveyed_at\":\"${at}\",\"metres\":[0,2000,${Geometry.Write.number(end)}]",
                 coordinates
             ) :: pitFeature() :: Nil
         )
@@ -149,25 +149,25 @@ pub mod TestRegenerate {
         // the bytes. A name in the list that the writer's reading of it does not answer
         // for writes no line at all, and would show as a claim missing from this file
         // rather than as a property the fence forgot to ask about. The order the report
-        // comes in is the order of `Write.claims`, which is `TestWrite`'s to hold against
+        // comes in is the order of `Geometry.Write.claims`, which is `Geometry.TestWrite`'s to hold against
         // the bytes; a parsed file cannot say the order its keys came in.
         let written = writtenFile();
         match outlineKeys(written) {
             case None => Assert.assertTrueWithMsg(false, "the written file holds no outline to read")
             case Some(keys) => {
-                Assert.assertTrue(List.sort(keys) == List.sort(Write.claims()));
+                Assert.assertTrue(List.sort(keys) == List.sort(Geometry.Write.claims()));
                 Assert.assertTrue(List.memberOf(Regenerate.exempt(), keys))
             }
         };
-        Assert.assertTrue(List.length(Regenerate.compared()) == List.length(Write.claims()) - 1);
+        Assert.assertTrue(List.length(Regenerate.compared()) == List.length(Geometry.Write.claims()) - 1);
         Assert.assertTrue(drifted(written, written) == Ok(Nil))
 
     /// The file the writer would lay for COTA, from the survey a kept answer
-    /// draws — the same fixture `TestWrite` lays its bytes from.
+    /// draws — the same fixture `Geometry.TestWrite` lays its bytes from.
     def writtenFile(): String =
         match Circuit.byWord("cota") {
             case None          => ""
-            case Some(circuit) => Write.geoJson(circuit, drawn())
+            case Some(circuit) => Geometry.Write.file(circuit, drawn())
         }
 
     def lap(): List[Survey.MetredPlace] =

@@ -258,7 +258,7 @@ pub mod Regenerate {
     def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
         match Survey.survey(answer, circuit) {
             case Err(problem)      => Err("${circuit#word}: ${problem}")
-            case Ok((_, geometry)) => laid(circuit, Write.geoJson(circuit, geometry), answer, mode)
+            case Ok((_, geometry)) => laid(circuit, Geometry.Write.file(circuit, geometry), answer, mode)
         }
 
     def laid(circuit: Circuit, written: String, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
@@ -310,7 +310,7 @@ pub mod Regenerate {
     /// would land in `askedOf`'s unordered tail instead. A property a file carries that
     /// no writer claims is still asked of it, by `askedOf`.
     pub def compared(): List[String] =
-        List.filter(name -> name != exempt(), Write.claims())
+        List.filter(name -> name != exempt(), Geometry.Write.claims())
 
     /// The one property outside the comparison: it stamps which answer a file was
     /// written from rather than what the drawing is made of, and it is the one property
