@@ -46,6 +46,18 @@ pub mod Cli.TimingLines {
     /// metres away.
     pub def defaultTolerance(): Float64 = 40.0
 
+    /// What the report is asked for: the round to read, the season to read it against,
+    /// how far round the lap one line may come to stand between the two readings, and the
+    /// directory the feeds are in. The `timing-lines` word parses it out of its flags --
+    /// see `Report` -- and hands it over whole.
+    pub type alias Request = {
+        csv       = String,
+        season    = Int32,
+        id        = String,
+        against   = Option[Int32],
+        tolerance = Float64
+    }
+
     /// One season read: what each class was fastest at, and where round the lap
     /// that implies the lines stand.
     type alias Reading = {
@@ -59,14 +71,15 @@ pub mod Cli.TimingLines {
 
     /// The circuit's map and the seasons read against it, in the order the reader
     /// named them -- the later season first, since the question is whether the
-    /// lines still stand where they stood.
+    /// lines still stand where they stood. What the run was asked for travels with the
+    /// readings, since the distance allowed is a reader's flag and no figure the readings
+    /// say for themselves.
     type alias Report = {
         circuit = Circuit,
         lines = List[Line],
         lapLength = Float64,
         readings = List[Reading],
-        tolerance = Float64,
-        against = Option[Int32]
+        asked = Request
     }
 
     /// The report read, printed and judged: `Err` is a reading that never happened,
@@ -74,8 +87,8 @@ pub mod Cli.TimingLines {
     /// further round the lap than the distance allowed, which is the answer that
     /// the two seasons were not run on one map. One reading alone is printed and
     /// exits 0: nothing was judged.
-    pub def runAll(csv: String, season: Int32, id: String, against: Option[Int32], tolerance: Float64): Result[CliError, Outcome] \ {IO, Console} =
-        match read(csv, season, id, against, tolerance) {
+    pub def runAll(asked: Request): Result[CliError, Outcome] \ {IO, Console} =
+        match read(asked) {
             case Err(problem) => Err(problem)
             case Ok(report) =>
                 printReadings(report);
@@ -84,10 +97,10 @@ pub mod Cli.TimingLines {
 
     /// Where the circuit's own map puts its lines, and the two rounds' feeds read
     /// against it.
-    def read(csv: String, season: Int32, id: String, against: Option[Int32], tolerance: Float64): Result[CliError, Report] \ IO =
+    def read(asked: Request): Result[CliError, Report] \ IO =
         match forM(
-            circuit   <- circuitOf(id);
-            published <- publishedMap(season, id, circuit);
+            circuit   <- circuitOf(asked#id);
+            published <- publishedMap(asked, circuit);
             lines     <- linesOf(published)
         ) yield (circuit, published, lines) {
             case Err(problem)                  => Err(problem)
@@ -99,10 +112,9 @@ pub mod Cli.TimingLines {
                         lines = circuitMap#lines,
                         lapLength = circuitMap#lapLength,
                         readings = readings,
-                        tolerance = tolerance,
-                        against = against
+                        asked = asked
                     },
-                    Result.traverse(readRound(circuitMap, csv, id), seasonsOf(season, against))
+                    Result.traverse(readRound(circuitMap, asked), seasonsOf(asked))
                 )
         }
 
@@ -119,16 +131,16 @@ pub mod Cli.TimingLines {
     /// A circuit the organiser re-maps every year is refused rather than read:
     /// the question -- do one map's lines still stand a season later -- has no
     /// answer where there is no such thing as one map.
-    def publishedMap(season: Int32, id: String, circuit: Circuit): Result[CliError, PublishedMap] =
+    def publishedMap(asked: Request, circuit: Circuit): Result[CliError, PublishedMap] =
         match Motorsport.Circuit.timingMap(circuit) {
             case TimingMap.Published(published) => Ok(published)
             case TimingMap.PerSeason(reason)    =>
                 Err(CliError.Reading(
-                    "${season}/${id} is run on a circuit whose timing map is not one set of lines: ${reason}."
+                    "${asked#season}/${asked#id} is run on a circuit whose timing map is not one set of lines: ${reason}."
                 ))
             case TimingMap.Unsurveyed =>
                 Err(CliError.Reading(
-                    "no timing map is published for ${season}/${id}: circuits/ surveys the lines of only some circuits, and this circuit is not one of them."
+                    "no timing map is published for ${asked#season}/${asked#id}: circuits/ surveys the lines of only some circuits, and this circuit is not one of them."
                 ))
         }
 
@@ -139,23 +151,25 @@ pub mod Cli.TimingLines {
     def linesOf(published: PublishedMap): Result[CliError, List[Line]] =
         publishedLines(published#stretches, published#lapLength)
 
-    def seasonsOf(season: Int32, against: Option[Int32]): List[Int32] =
-        match against {
-            case None        => season :: Nil
-            case Some(other) => season :: other :: Nil
+    /// The seasons read: the round's own first, then the one named against it, since what
+    /// is judged is whether the lines still stand where they stood a season earlier.
+    def seasonsOf(asked: Request): List[Int32] =
+        match asked#against {
+            case None        => asked#season :: Nil
+            case Some(other) => asked#season :: other :: Nil
         }
 
     /// One season of one round: how fast each class went round each sector, and
     /// where round the lap that implies the lines stand.
-    def readRound(circuitMap: CircuitMap, csv: String, id: String, season: Int32): Result[CliError, Reading] \ IO =
-        let path = "${csv}/${season}/${id}.csv";
+    def readRound(circuitMap: CircuitMap, asked: Request, season: Int32): Result[CliError, Reading] \ IO =
+        let path = "${asked#csv}/${season}/${asked#id}.csv";
         forM(
             lines   <- readCsv(path);
             rows    <- decode(path, List.join("\n", lines));
             fastest <- fastestSectors(rows)
         ) yield {
             season = season,
-            id = id,
+            id = asked#id,
             path = path,
             laps = List.length(rows),
             fastest = fastest,
@@ -270,16 +284,17 @@ pub mod Cli.TimingLines {
     /// allowed is what answers it, and the answer is printed rather than judged by
     /// the reader.
     def verdict(shift: Movement, report: Report, season: Int32, against: Int32): Outcome =
-        if (shift#furthest > report#tolerance)
+        let allowed = report#asked#tolerance;
+        if (shift#furthest > allowed)
             Outcome.Verdict(
                 ""
-                    :: "${metres(shift#furthest)} m is over the ${metres(report#tolerance)} m allowed: ${season} and ${against} are far enough apart to read a map of the later one and place the lines by season, as Le Mans's are."
+                    :: "${metres(shift#furthest)} m is over the ${metres(allowed)} m allowed: ${season} and ${against} are far enough apart to read a map of the later one and place the lines by season, as Le Mans's are."
                     :: Nil
             )
         else
             Outcome.Done(
                 ""
-                    :: "Within the ${metres(report#tolerance)} m allowed -- ${percent(shift#furthest / report#lapLength)} of a lap: one set of lines answers for ${season} and ${against}."
+                    :: "Within the ${metres(allowed)} m allowed -- ${percent(shift#furthest / report#lapLength)} of a lap: one set of lines answers for ${season} and ${against}."
                     :: Nil
             )
 

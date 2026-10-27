@@ -1,6 +1,8 @@
 /// What `nix run .#geometry-timing-lines` is asked for: the round to read, the
 /// season to read it against, how far round the lap one line may come to stand
-/// between the two readings, and the directory the feeds are in.
+/// between the two readings, and the directory the feeds are in. That is
+/// `Cli.TimingLines.Request`: this word parses it out of the flags, and the
+/// report is what reads it.
 ///
 /// Runs on the shared `Cli.Args` scan and answering, as every other word does,
 /// so a wrong flag is answered with one style of usage at either command.
@@ -17,16 +19,6 @@ pub mod Report {
     use Motorsport.Calendar
     use Sys.Console
 
-    /// The round and its season -- the `Motorsport.Calendar` entry's own season,
-    /// which names the directory its feed is in -- and what to judge against.
-    pub type alias Request = {
-        csv = String,
-        season = Int32,
-        id = String,
-        against = Option[Int32],
-        tolerance = Float64
-    }
-
     enum Setting with Eq {
         case Help
         case Csv(String)
@@ -41,12 +33,12 @@ pub mod Report {
 
     /// The arguments as far as the flag table reads them, before the report asks
     /// which round on the calendar was named.
-    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Cli.TimingLines.Request] =
         Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
 
     /// The directory the feeds sit in, asked once, and then the two rounds read and
     /// judged: a mistyped `--csv` is one mistake rather than every race missing.
-    def asking(request: Request): Outcome \ { IO, Console } =
+    def asking(request: Cli.TimingLines.Request): Outcome \ { IO, Console } =
         Cli.Args.outcomeOf(
             forM(
                 _       <- checkDirectory(request#csv) |> Result.mapErr(problem -> "${problem}");
@@ -56,14 +48,8 @@ pub mod Report {
 
     /// The report read, printed and judged, in the words the report says its own
     /// readings failed in.
-    def judged(request: Request): Result[String, Outcome] \ { IO, Console } =
-        Cli.TimingLines.runAll(
-            request#csv,
-            request#season,
-            request#id,
-            request#against,
-            request#tolerance
-        )
+    def judged(request: Cli.TimingLines.Request): Result[String, Outcome] \ { IO, Console } =
+        Cli.TimingLines.runAll(request)
             |> Result.mapErr(problem -> "${problem}")
 
     def optionDescrs(): List[OptionDescr[Setting]] =
@@ -90,16 +76,16 @@ pub mod Report {
     def isHelp(setting: Setting): Bool =
         setting == Setting.Help
 
-    pub def parse(args: List[String]): Result[ArgsError, Request] =
+    pub def parse(args: List[String]): Result[ArgsError, Cli.TimingLines.Request] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  => completed(scanned)
         }
 
-    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Cli.TimingLines.Request] =
         requestOf(scanned#options, scanned#words)
 
-    def requestOf(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Request] =
+    def requestOf(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Cli.TimingLines.Request] =
         forM(
             csv       <- required("csv", csvDir(settings));
             named     <- namedRound(nonOptions);
