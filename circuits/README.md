@@ -231,8 +231,9 @@ lap is the one reading a config is authored from.
 ## The pipeline is the project at this directory's root
 
 The geometry pipeline is the Flix package at `circuits/`, one module per reading
-named in the sections above, with `src/Main.flix` holding the words the commands go
-by and `src/Cli/Args.flix` the exit code each of them comes to. It resolves no dependency and
+named in the sections above, with `src/Main.flix` holding the asking once a word is named, `src/Cli/Words.flix`
+holding the words themselves and `src/Cli/Args.flix` the exit code each of them comes
+to. It resolves no dependency and
 links no source — it reads nothing `flix/src` holds, which is what the report's nine links
 are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
 
@@ -357,6 +358,20 @@ purpose: `TestTimingMap` lays the two authored copies of a circuit's timing figu
 together, and the real authors are what it is given. What is judged
 against the repository's real bytes stays this file's other sections': the fence,
 the contract specs, the VRT.
+
+**Which words there are is one list, and it is not a list of functions.**
+`src/Cli/Words.flix` holds the jar's words as the cases of an enum, beside the word each
+is typed as, the usage that refuses a wrong argument to it, the run it comes to, and the
+list the help prints and the dispatch looks a typed word up in: what was three spellings
+— a `match` in `Main.flix`, a chain of `+` joining the usages, and a sentence pointing at
+"these" — became one. The cases are an enum rather than records carrying the commands'
+own functions because a record's field would have one effect for all six, so `diff`,
+which reads two files and never a clock, would declare a clock it never reads for the
+shape of a table; and because `usage` and `asking` are then matches over the cases, so a
+word that joins the jar has to be answered in each before the jar compiles. What no
+compiler sees is a word missing from the jar altogether — a command module never given a
+case, or a case the list never carries — and `app/tests/geometry-words.spec.ts` reads
+that out of the sources, the flake app's own advertised word list with them.
 
 ## Where the app reads this
 

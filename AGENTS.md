@@ -56,7 +56,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them; `--fetch` is the network raised as a flag — it asks OpenStreetMap now, keeps the answer beside the config once the survey can read it, and surveys that instead); `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both); `probe` asks which relations hold a place on earth, each candidate's ways measured, before a config is authored; `timing-lines` reads two rounds' feeds and prints whether a circuit's timing lines held where they stood a season earlier. Paths from where the command is run; the Flix main owns the word list |
+| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them; `--fetch` is the network raised as a flag — it asks OpenStreetMap now, keeps the answer beside the config once the survey can read it, and surveys that instead); `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both); `probe` asks which relations hold a place on earth, each candidate's ways measured, before a config is authored; `timing-lines` reads two rounds' feeds and prints whether a circuit's timing lines held where they stood a season earlier. Paths from where the command is run; the word list is `circuits/src/Cli/Words.flix` |
 | `nix run .#geometry-test` | The project's `flix test` — the survey's and the probe's readings, and the timing report's, which compile the nine `flix/src` symlinks (no network, no database, no files written) |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the geometry project's `timing-lines` word, computing in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
@@ -630,6 +630,12 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   `HttpResponse`, so a second reading that asked only the status — the fence's whole
   reason, since a proxy answers a timed-out request as 200 with an HTML page — would
   compile, pass offline and hand HTML on as a geometry.
+- **The word list, joined** (`/app/tests/geometry-words.spec.ts`) — `Cli/Words.flix`
+  is the cases a word can be, its run and its usage being matches over those cases, so
+  the compiler does hold a new case to them; what it cannot see is a command module
+  never given a case, whose `exitCode` and `usage` compile as a pair nothing reaches.
+  The spec holds the table, the modules spelling a run, and the flake app's advertised
+  word list to one another.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
