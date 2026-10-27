@@ -300,6 +300,23 @@ message. `nix run .#geometry-test` runs the project's own `flix test`, every rea
 being handed a fixture rather than a file — an Overpass answer written out in the test that
 reads it, two geometries laid together in the test that measures them.
 
+**A file that will not read is a failure, and not an absence.** A run of this project meets
+a file one of two ways. It *branches* — deciding a circuit was never surveyed, that nothing
+is kept beside its config, that no geometry stands to be compared against — or it only
+*reports*, printing what the filesystem said with the path beside it. `Cli/Errors.flix` is
+the reporting, and carries `{path, message}`; that is why nothing in `circuits/src` reaches
+past it for `Util.Files.read` at all. `Util/Files.flix` is the branching, and holds the two
+questions a branch may ask: `exists` and `isDirectory`, resolved through the same
+`GEOMETRY_FROM` a read is, a stat that answers nothing being a failure rather than a
+`false` — `false` being the answer that ends a walk quietly. Before either was askable,
+runs answered a read's failure by deciding there was nothing there, and the fence was among
+them: an unreadable kept answer was a circuit "not surveyed yet", and a served directory
+that would not list was a warning with nothing to say, both of them exit 0.
+`app/tests/failure-vocabulary.spec.ts` holds that shape — one `Err(_)` arm left in the
+project, and it on a parse refusal another reading said first — because the project's own
+tests hand their fixtures and ask nothing of the filesystem, so no test of this project has
+ever met a file that would not read.
+
 ## The atlas readings
 
 `nix run .#geometry -- atlas <circuit>` is the geometry project's own: `Track.flix`

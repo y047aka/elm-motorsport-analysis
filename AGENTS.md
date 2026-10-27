@@ -614,6 +614,17 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   `Report/Files.flix` reads and stats and writes nothing, which is a fact about
   a source no Flix test can see: the project's tests hand their fixtures and
   ask nothing of the file system.
+- **The failure, not thrown away** (`/app/tests/failure-vocabulary.spec.ts`) —
+  a run that decides a file is *absent* asks `Util.Files`' `exists` or
+  `isDirectory` first, and a run that only reports reads through
+  `Cli.Errors`, which keeps the path with what the filesystem said. A read's
+  failure cannot tell a missing file from one that would not read, and the
+  fence is the thing that used to answer an unreadable kept answer with "not
+  surveyed yet" and an unlistable served directory with silence, both exit 0.
+  The spec fails any project source that answers `Err(_)` by discarding it —
+  one arm is allowed, on a parse another reading refused first — and holds the
+  two stat questions resolved like a read is, since a `false` out of a failed
+  stat is the answer that ends a walk quietly.
 - **The sphere, spelled once** (`/app/tests/circuit-overpass.spec.ts`) — the
   survey chains its metres with `Apart.earthMetres` and the probe counts its
   laps through it, and the spec fails any second spelling of the radius inside

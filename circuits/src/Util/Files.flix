@@ -1,8 +1,9 @@
-/// Reading a file, and writing one: the commands these serve are run by hand, so a geometry
-/// is read to be laid against another and an overlay written to be looked at later. The
-/// globbing, the stat-ing and the CSV-walking the load and the export do are `flix/src`'s
-/// `Util.Files`. Two projects hold a module of this name — `flix/src`'s and this one, the
-/// report's reading being `Report.Files` — and neither can reach the other's.
+/// Reading a file, writing one, and asking whether a path holds one: the commands these
+/// serve are run by hand, so a geometry is read to be laid against another and an overlay
+/// written to be looked at later. The globbing and the CSV-walking the load and the export
+/// do are `flix/src`'s `Util.Files`. Two projects hold a module of this name — `flix/src`'s
+/// and this one — and neither can reach the other's; the report reads through
+/// `Report.Files`, which resolves nothing.
 pub mod Util.Files {
 
     use Sys.Env
@@ -45,6 +46,29 @@ pub mod Util.Files {
             () -> Fs.DirList.list(placed(dir))
         )
             |> Result.mapErr(e -> "${e}")
+
+    /// Whether there is a file at `path` to read. This is the question a run asks before
+    /// it decides that there is none, and `read` cannot answer it: its failure says only
+    /// that nothing came, which an unreadable file says too, and the decision on the other
+    /// side of the answer is that a circuit was never surveyed.
+    pub def exists(path: String): Result[String, Bool] \ IO =
+        let at = placed(path);
+        Fs.FileStat.runWithIO(() -> Fs.FileStat.exists(at))
+            |> Result.mapErr(e -> unstated(path, "is there anything", "${e}"))
+
+    /// Whether `dir` is a directory whose names can be listed — which a run walking one
+    /// asks before it lists it, since a plain file among the names it is walking is not a
+    /// directory that keeps nothing.
+    pub def isDirectory(dir: String): Result[String, Bool] \ IO =
+        let at = placed(dir);
+        Fs.FileStat.runWithIO(() -> Fs.FileStat.isDirectory(at))
+            |> Result.mapErr(e -> unstated(dir, "is a directory", "${e}"))
+
+    /// The sentence a stat that answered nothing is printed in: a failure, and not the
+    /// `false` that would answer that there is nothing there, which is the answer a walk
+    /// stops on quietly.
+    def unstated(path: String, asked: String, cause: String): String =
+        "cannot tell whether ${path} ${asked} (caused by: ${cause})"
 
     /// A path where the command was run from rather than where `flix` was started.
     /// The runner has to be in this project's own directory to find `flix.toml`, and a

@@ -789,22 +789,27 @@ pub mod Survey {
                 |> Result.mapErr(problem -> "${asked#circuit#word}: ${problem}")
                 |> Result.map(spelled -> Some(spelled))
         else
-            match Util.Files.read(asked#answer) {
-                case Ok(spelled) => Ok(Some(spelled))
-                case Err(_) =>
+            match Util.Files.exists(asked#answer) {
+                case Err(problem) => Err("${asked#answer}: ${problem}")
+                case Ok(false)    =>
                     if (asked#asked)
                         Err("${asked#answer}: no answer to read there")
                     else
                         unexamined(asked)
+                case Ok(true) =>
+                    Cli.Errors.readFile(asked#answer)
+                        |> Result.mapErr(problem -> "${problem}")
+                        |> Result.map(spelled -> Some(spelled))
             }
 
     /// Which of the two a circuit with no answer to read is. A served file says the
     /// bytes have no answer left to re-survey them from — which is what the fence
     /// exists to catch — and no served file says nobody has surveyed this circuit yet.
     def unexamined(asked: Args): Result[String, Option[String]] \ IO =
-        match Util.Files.read(asked#circuit#file) {
-            case Ok(_)  => Err("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from")
-            case Err(_) => Ok(None)
+        match Util.Files.exists(asked#circuit#file) {
+            case Err(problem) => Err("${asked#circuit#word}: ${problem}")
+            case Ok(true)     => Err("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from")
+            case Ok(false)    => Ok(None)
         }
 
     def neverSurveyed(asked: Args): String =
@@ -862,9 +867,14 @@ pub mod Survey {
         if (asked#write)
             laidDown(asked, written)
         else
-            match Util.Files.read(asked#circuit#file) {
-                case Err(_)    => Outcome.Failed("${asked#circuit#file}: no geometry to compare against — --write lays one")
-                case Ok(served) => against(asked, written, served)
+            match Util.Files.exists(asked#circuit#file) {
+                case Err(problem) => Outcome.Failed(problem)
+                case Ok(false)    => Outcome.Failed("${asked#circuit#file}: no geometry to compare against — --write lays one")
+                case Ok(true) =>
+                    match Cli.Errors.readFile(asked#circuit#file) {
+                        case Err(problem)  => Outcome.Failed("${problem}")
+                        case Ok(served)    => against(asked, written, served)
+                    }
             }
 
     def laidDown(asked: Args, written: String): Outcome \ IO =

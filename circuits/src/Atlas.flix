@@ -262,8 +262,7 @@ pub mod Atlas {
         Option.getWithDefault("", asked#circuit#atlas)
 
     /// The layer's text: from its home on `--fetch`, from the named file, or from the
-    /// line the circuit keeps. Nothing kept where the circuit's own line should stand
-    /// is `None`, which is a verdict and not a failure.
+    /// line the circuit keeps.
     def text(asked: Asking): Result[String, Option[String]] \ { IO, Https } =
         match asked#circuit#atlas {
             case None => Err("${asked#circuit#word}'s config names no atlas layer to read")
@@ -276,12 +275,23 @@ pub mod Atlas {
                             Cli.Errors.readFile(path) |>
                                 Result.mapErr(problem -> "${problem}") |>
                                 Result.map(spelled -> Some(spelled))
-                        case None =>
-                            match Cli.Errors.readFile(Circuit.keptAtlas(asked#circuit)) {
-                                case Err(_)      => Ok(None)
-                                case Ok(spelled) => Ok(Some(spelled))
-                            }
+                        case None => keptLine(asked#circuit)
                     }
+        }
+
+    /// Whether the circuit keeps a line at all, which is the reading's one `None`:
+    /// nothing kept where the circuit's own line should stand is a verdict, while a line
+    /// that is there and will not read is a failure — a read's own failure says only that
+    /// nothing came.
+    def keptLine(circuit: Circuit): Result[String, Option[String]] \ IO =
+        let at = Circuit.keptAtlas(circuit);
+        match Util.Files.exists(at) {
+            case Err(problem) => Err(problem)
+            case Ok(false)    => Ok(None)
+            case Ok(true) =>
+                Cli.Errors.readFile(at) |>
+                    Result.mapErr(problem -> "${problem}") |>
+                    Result.map(spelled -> Some(spelled))
         }
 
     /// The layer asked of its home: once, without retries — a dataset's repository is

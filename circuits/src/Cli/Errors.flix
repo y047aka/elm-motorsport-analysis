@@ -1,8 +1,15 @@
 /// What the commands say when a file goes wrong: the directory they were pointed
 /// at, the file they could not read or write, and what a feed said about itself.
 /// The read and the writing here are the reporting; a run that *branches* on a
-/// missing file — deciding a circuit was never surveyed, say — asks `Util.Files`
-/// itself, because the branch is a verdict and not a sentence.
+/// missing file — deciding a circuit was never surveyed, say — asks `Util.Files`'
+/// `exists` or `isDirectory` first, because the branch is a verdict and not a
+/// sentence, and a read's own failure cannot tell a missing file from one that
+/// would not read.
+///
+/// Two readings of a file fail in these words and neither wraps the other: `Read`
+/// carries a path resolved against `GEOMETRY_FROM`, which is what the geometry
+/// commands read, and `File` carries `Report.Files`' path, which reads where the
+/// reader stands. Wrapping one in the other would print a path twice.
 ///
 /// `flix/src` has a `Cli.Errors` of its own, a separate module of the same name in
 /// a separate project, carrying the failures of the commands that compute in a

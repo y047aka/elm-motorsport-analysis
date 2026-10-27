@@ -148,59 +148,78 @@ pub mod Regenerate {
     /// ask, survey or write ends the walk, since nothing about the run improved for
     /// the next circuit; a drawing that moved is a verdict and not a failure, so the
     /// circuits beside it have their own degrees to answer for.
-    def asking(asked: Args): Outcome \ { IO, Clock, Console } = {
-        warnUnlisted();
-        Result.traverse(circuit -> check(circuit, asked#mode), asked#circuits)
-            |> Result.map(verdictOf)
-            |> Cli.Args.outcomeOf
-    }
+    def asking(asked: Args): Outcome \ { IO, Clock, Console } =
+        match warnUnlisted() {
+            case Err(problem) => Outcome.Failed(problem)
+            case Ok(lines) =>
+                foreach (line <- lines)
+                    Console.eprintln(line);
+                Result.traverse(circuit -> check(circuit, asked#mode), asked#circuits)
+                    |> Result.map(verdictOf)
+                    |> Cli.Args.outcomeOf
+        }
 
-    /// Kept evidence and served geometry that answer to no config, printed as the
-    /// CLI prints its unlisted CSVs — a warning that changes no verdict. Which
-    /// circuits the run names changes nothing here: the disk holds what it holds.
-    def warnUnlisted(): Unit \ { IO, Console } = {
-        foreach (word <- unwordedEvidence())
-            Console.eprintln("${Circuit.evidenceDir()}/${word}: kept evidence for no circuit — is its word misspelled?");
-        foreach (file <- undrawn())
-            Console.eprintln("${Circuit.servedDir()}/${file}: geometry no config draws")
-    }
+    /// Kept evidence and served geometry that answer to no config, in the lines the CLI
+    /// prints its unlisted CSVs in — a warning that changes no verdict, and which
+    /// circuits the run names changes nothing here: the disk holds what it holds. The
+    /// looking is a `Result` because these lines' absence is what says there is nothing to
+    /// warn about: a directory this cannot look in fails the run rather than passing it.
+    def warnUnlisted(): Result[String, List[String]] \ IO =
+        forM(
+            evidence <- unwordedEvidence();
+            served   <- undrawn()
+        ) yield
+            List.map(word -> "${Circuit.evidenceDir()}/${word}: kept evidence for no circuit — is its word misspelled?", evidence)
+                ++ List.map(file -> "${Circuit.servedDir()}/${file}: geometry no config draws", served)
 
     /// Directories under the evidence directory that hold a kept answer or a kept
     /// atlas line under a name no config is authored for. A directory holding neither —
     /// the project's own sources among them — keeps no evidence, and says nothing.
-    def unwordedEvidence(): List[String] \ IO =
-        match Util.Files.list(Circuit.evidenceDir()) {
-            case Err(_)   => Nil
-            case Ok(names) =>
-                Regenerate.Unlisted.detect(
-                    Regenerate.Unlisted.words(Circuit.circuits()),
-                    List.filterMap(keepsEvidence, names)
-                )
-        }
+    def unwordedEvidence(): Result[String, List[String]] \ IO =
+        forM(
+            names <- listed(Circuit.evidenceDir());
+            keeps <- Result.traverse(keepsEvidence, names)
+        ) yield
+            Regenerate.Unlisted.detect(
+                Regenerate.Unlisted.words(Circuit.circuits()),
+                List.flatten(keeps)
+            )
 
-    def keepsEvidence(name: String): Option[String] \ IO =
+    /// The names inside one of this project's own directories, missed under the directory
+    /// they were asked of.
+    def listed(dir: String): Result[String, List[String]] \ IO =
+        Util.Files.list(dir) |> Result.mapErr(problem -> "${dir}: ${problem}")
+
+    /// The names under the evidence directory that keep a kept answer or a kept atlas
+    /// line, each in a list of its own. A plain file among them — this project's own
+    /// README, its config — keeps no evidence, which is what asking whether it is a
+    /// directory answers; listing it and reading the failure for an empty directory would
+    /// say the same thing for the wrong reason.
+    def keepsEvidence(name: String): Result[String, List[String]] \ IO =
+        let at = "${Circuit.evidenceDir()}/${name}";
         if (String.startsWith({prefix = "."}, name))
-            None
+            Ok(Nil)
         else
-            match Util.Files.list("${Circuit.evidenceDir()}/${name}") {
-                case Err(_)    => None
+            match forM(
+                holds <- Util.Files.isDirectory(at);
+                files <- if (holds) Util.Files.list(at) else Ok(Nil)
+            ) yield files {
+                case Err(problem) => Err("${at}: ${problem}")
                 case Ok(files) =>
                     if (List.exists(entry -> List.memberOf(entry, Circuit.keptNames()), files))
-                        Some(name)
+                        Ok(name :: Nil)
                     else
-                        None
+                        Ok(Nil)
             }
 
     /// Geometry files in the served directory whose name no config's `file` is.
-    def undrawn(): List[String] \ IO =
-        match Util.Files.list(Circuit.servedDir()) {
-            case Err(_)    => Nil
-            case Ok(files) =>
+    def undrawn(): Result[String, List[String]] \ IO =
+        listed(Circuit.servedDir())
+            |> Result.map(files ->
                 Regenerate.Unlisted.detect(
                     Regenerate.Unlisted.drawn(Circuit.circuits()),
                     List.filter(file -> String.endsWith({suffix = Geometry.extension()}, file), files)
-                )
-        }
+                ))
 
     /// One circuit's answer, as the walk leaves it, each one printed where it was
     /// found and none of them enough on its own for the exit code.
@@ -238,9 +257,13 @@ pub mod Regenerate {
                     case Ok(answer)   => surveyed(circuit, answer, mode)
                 }
             case _ =>
-                match Util.Files.read(Circuit.keptAnswer(circuit)) {
-                    case Err(_)     => skipped(circuit)
-                    case Ok(answer) => surveyed(circuit, answer, mode)
+                match Util.Files.exists(Circuit.keptAnswer(circuit)) {
+                    case Err(problem) => Err("${circuit#word}: ${problem}")
+                    case Ok(false)    => skipped(circuit)
+                    case Ok(true) =>
+                        Cli.Errors.readFile(Circuit.keptAnswer(circuit))
+                            |> Result.mapErr(problem -> "${circuit#word}: ${problem}")
+                            |> Result.flatMap(answer -> surveyed(circuit, answer, mode))
                 }
         }
 
@@ -284,21 +307,29 @@ pub mod Regenerate {
         }
 
     /// The question the fence answers: is the kept geometry what the kept answer
-    /// draws? Every drift is printed.
+    /// draws? Every drift is printed. Whether a geometry is served at all is asked before
+    /// either answer is given, since "nothing stands here to compare against" and "the
+    /// kept geometry would not read" are different answers, and a read's failure is
+    /// evidence only of the second.
     def fenced(circuit: Circuit, written: String): Result[String, Verdict] \ { IO, Console } =
-        match Util.Files.read(circuit#file) {
-            case Err(problem) => Err("${circuit#file}: no geometry to compare against: ${problem}")
-            case Ok(kept) =>
-                match driftOf(written, kept) {
-                    case Err(problem) => Err(problem)
-                    case Ok(Nil) =>
-                        Console.println("${circuit#word}: reproduces the kept geometry, every fenced property exactly");
-                        Ok(Verdict.Reproduced)
-                    case Ok(drift) =>
-                        Console.println("${circuit#word}: the kept geometry is not what the kept answer draws");
-                        foreach (line <- drift)
-                            Console.println("  ${line}");
-                        Ok(Verdict.Drifted)
+        match Util.Files.exists(circuit#file) {
+            case Err(problem) => Err("${circuit#word}: ${problem}")
+            case Ok(false)    => Err("${circuit#file}: no geometry to compare against — --write lays one")
+            case Ok(true) =>
+                match Cli.Errors.readFile(circuit#file) {
+                    case Err(problem) => Err("${circuit#word}: ${problem}")
+                    case Ok(kept) =>
+                        match driftOf(written, kept) {
+                            case Err(problem) => Err(problem)
+                            case Ok(Nil) =>
+                                Console.println("${circuit#word}: reproduces the kept geometry, every fenced property exactly");
+                                Ok(Verdict.Reproduced)
+                            case Ok(drift) =>
+                                Console.println("${circuit#word}: the kept geometry is not what the kept answer draws");
+                                foreach (line <- drift)
+                                    Console.println("  ${line}");
+                                Ok(Verdict.Drifted)
+                        }
                 }
         }
 
