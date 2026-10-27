@@ -16,6 +16,7 @@ pub mod Diff {
     use Apart.Apartness
     use Apart.Point
     use Cli.Args.ArgsError
+    use Cli.Args.Outcome
     use Geometry.Line
     use Geometry.Place
     use Sys.Console
@@ -127,22 +128,20 @@ pub mod Diff {
     /// it cannot read or that is not a geometry of this profile, and for an overlay it
     /// could not write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
-        Cli.Args.answer(
-            optionDescrs(),
-            usage(),
-            isHelp,
-            args,
-            completed,
-            laid
-        )
+        Cli.Args.comeTo(arguments(args), asking)
 
-    def laid(asked: Args): Int32 \ { IO, Console } =
-        match read(Nil, asked#paths) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
-            case Ok(lines) => report(lines, asked)
-        }
+    /// The arguments as far as the flag table reads them, before the report asks which
+    /// two files were named.
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Args] =
+        Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
+
+    /// Both files read as the lines they claim to be, and reported. The reading that
+    /// failed is the run that never got to a verdict; the diff itself only ever says
+    /// metres, leaving whether they are far to the reader.
+    def asking(asked: Args): Outcome \ { IO, Console } =
+        read(Nil, asked#paths)
+            |> Result.flatMap(lines -> reported(lines, asked))
+            |> Cli.Args.outcomeOf
 
     /// Each file read as the line it claims to be, under the name the file is known by —
     /// `le_mans` for `app/static/geometry/le_mans.geojson`, which is the name the drawing,
@@ -174,21 +173,28 @@ pub mod Diff {
 
     /// The report: what each file says it is, then each line sampled against the other,
     /// then the overlay if one was asked for.
-    def report(lines: List[Line], args: Args): Int32 \ { IO, Console } = {
+    def reported(lines: List[Line], asked: Args): Result[String, Outcome] \ { IO, Console } = {
         let projected = projectedOf(lines);
-        List.forEach(line -> Console.println(quoted(line)), lines);
-        match (compared(lines, projected, 0, 1, args#every), compared(lines, projected, 1, 0, args#every)) {
-            case (Ok(one), Ok(two)) =>
-                Console.println(said(0, lines, one, args#every));
-                Console.println(said(1, lines, two, args#every));
-                overlaid(lines, projected, args#svg)
-            case (Err(problem), _) =>
-                Console.eprintln("${problem}");
-                1
-            case (_, Err(problem)) =>
-                Console.eprintln("${problem}");
-                1
-        }
+        foreach (line <- lines)
+            Console.println(quoted(line));
+        forM(
+            one <- compared(lines, projected, 0, 1, asked#every);
+            two <- compared(lines, projected, 1, 0, asked#every)
+        ) yield spoken(lines, projected, one, two, asked)
+    }
+
+    /// Both directions said, each as far round the lap as the other, and the overlay
+    /// laid over them where the run asked for one.
+    def spoken(
+        lines: List[Line],
+        projected: List[List[Point]],
+        one: Apartness,
+        two: Apartness,
+        asked: Args
+    ): Outcome \ { IO, Console } = {
+        Console.println(said(0, lines, one, asked#every));
+        Console.println(said(1, lines, two, asked#every));
+        overlaid(lines, projected, asked#svg)
     }
 
     /// Both lines on one plane: the parallel they are projected about is the mean
@@ -198,17 +204,15 @@ pub mod Diff {
         List.map(line -> List.map(Apart.projectOn(parallel), line#coords), lines)
     }
 
-    def overlaid(lines: List[Line], projected: List[List[Point]], svg: Option[String]): Int32 \ { IO, Console } =
+    /// The overlay, written where it was asked for. A run that asked for none has
+    /// already said everything it came to say.
+    def overlaid(lines: List[Line], projected: List[List[Point]], svg: Option[String]): Outcome \ IO =
         match svg {
-            case None => 0
+            case None => Outcome.Done(Nil)
             case Some(path) =>
                 match Cli.Errors.writeFile(path, overlay(lines, projected)) {
-                    case Err(problem) =>
-                        Console.eprintln("${problem}");
-                        1
-                    case Ok(_) =>
-                        Console.println("overlay: ${path}");
-                        0
+                    case Err(problem) => Outcome.Failed("${problem}")
+                    case Ok(_)        => Outcome.Done("overlay: ${path}" :: Nil)
                 }
         }
 

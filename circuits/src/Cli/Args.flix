@@ -8,6 +8,13 @@
 /// named word answers to a circuit (`Circuit.byWord`) or to a round on the
 /// calendar (`Motorsport.Calendar`), and whether two flags raised together answer
 /// for one run at all (`--write` against `--freeze`).
+///
+/// A word is three steps over two values, and the two values are this module's:
+/// `Parsed`, the arguments as far as the flag table reads them, and `Outcome`, what
+/// the run came to. `comeTo` is the only thing in the project that turns either
+/// into an exit code, so a command's own code holds no printing of a refusal, no
+/// exit code and no answer to `--help` — only the readings, and the verdict one of
+/// them answers.
 pub mod Cli.Args {
 
     use Sys.Console
@@ -55,33 +62,84 @@ pub mod Cli.Args {
             explanation   = "print this usage and stop"
         }
 
-    /// The run every command is: scan, answer `--help` with the usage before the
-    /// command's own completing reads anything else, refuse a wrong argument with
-    /// the sentence and the usage, and hand a good one to `ask`.
-    pub def answer(
+    /// The arguments as far as the flag table reads them, which is as far as no
+    /// command's own reading is asked: `--help` and a wrong argument are both
+    /// answered out of the descriptors alone. `--help` is answered before
+    /// `complete` runs, since a run that asked for help asked for no circuit and no
+    /// `--csv` too; being a value rather than a printing, it is read by a test.
+    pub enum Parsed[args] {
+        case Help(String)
+        case Refused({problem = ArgsError, usage = String})
+        case Asked(args)
+    }
+
+    /// The walk, up to the point the command's own `complete` reads a word.
+    pub def prepare(
         descrs: List[OptionDescr[s]],
         usage: String,
         isHelp: s -> Bool,
-        args: List[String],
-        complete: Scanned[s] -> Result[ArgsError, a],
-        ask: a -> Int32 \ ef
-    ): Int32 \ (ef + Console) =
+        complete: Scanned[s] -> Result[ArgsError, args],
+        args: List[String]
+    ): Parsed[args] =
         match scan(descrs, args) {
-            case Err(problem) => refuseArgs("${problem}", usage)
+            case Err(problem) => Parsed.Refused({problem = problem, usage = usage})
             case Ok(scanned) =>
                 if (List.exists(isHelp, scanned#options))
-                    printHelp(usage)
+                    Parsed.Help(usage)
                 else
                     match complete(scanned) {
-                        case Err(problem) => refuseArgs("${problem}", usage)
-                        case Ok(asked)    => ask(asked)
+                        case Err(problem) => Parsed.Refused({problem = problem, usage = usage})
+                        case Ok(asked)    => Parsed.Asked(asked)
                     }
         }
 
-    /// A run that raised `--help` gets the usage on stdout and goes well.
-    pub def printHelp(usage: String): Int32 \ Console = {
-        Console.println(usage);
-        0
+    /// What a run came to, before anyone prints it or exits with it. The two nonzero
+    /// cases mean opposite things, which is why they are two cases and not a code:
+    /// `Verdict` is the negative answer the reader came for — the drawing moved, one
+    /// line moved a season later — said on stdout, since a fence that could not say it
+    /// failed would pass by construction; `Failed` is a run that never got to answer,
+    /// said on stderr under the same `Error: ` a wrong argument is.
+    ///
+    /// Each case holds the lines left to print, in order. A run that printed its report
+    /// while it walked it — the fence over several circuits, the atlas's table — leaves
+    /// the list empty, the exit code being all that is left to say.
+    pub enum Outcome {
+        case Done(List[String])
+        case Verdict(List[String])
+        case Failed(String)
+    }
+
+    /// The exit code a word comes to: the usage for `--help`, the sentence and the
+    /// usage for a wrong argument, and the run's outcome for arguments it can ask
+    /// with. Every command's `exitCode` is this over its own `arguments` and `asking`;
+    /// nothing else in the project makes an exit code.
+    pub def comeTo(args: Parsed[args], asking: args -> Outcome \ ef): Int32 \ (ef + Console) =
+        match args {
+            case Parsed.Help(usage) =>
+                Console.println(usage);
+                0
+            case Parsed.Refused({problem = problem, usage = usage}) => refuseArgs("${problem}", usage)
+            case Parsed.Asked(asked) => verdictOf(asking(asked))
+        }
+
+    /// The exit code an outcome comes to, and the stream its lines go to.
+    pub def verdictOf(outcome: Outcome): Int32 \ Console = match outcome {
+        case Outcome.Done(said)    => say(said); 0
+        case Outcome.Verdict(said) => say(said); 1
+        case Outcome.Failed(why)   =>
+            Console.eprintln("Error: ${why}");
+            1
+    }
+
+    def say(said: List[String]): Unit \ Console =
+        foreach (line <- said)
+            Console.println(line)
+
+    /// A run written as its readings: a reading that failed is a run that never got to
+    /// a verdict, and a run that read everything is the verdict its readings came to.
+    pub def outcomeOf(ran: Result[String, Outcome]): Outcome = match ran {
+        case Err(problem) => Outcome.Failed(problem)
+        case Ok(verdict)  => verdict
     }
 
     /// The answer a wrong argument comes to, as `flix/src`'s `main` answers it: the

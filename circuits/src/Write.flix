@@ -36,6 +36,7 @@ pub mod Write {
 
     use Circuit.Circuit
     use Cli.Args.ArgsError
+    use Cli.Args.Outcome
     use Geometry.Place
     use Sys.Console
     use Time.Clock
@@ -280,52 +281,109 @@ pub mod Write {
             optionDescrs()
         )
 
-    /// The exit code the survey comes to: 1 for a word no circuit answers to, an answer it
-    /// was pointed at and cannot read, a survey it could not chain, and a file it could not
-    /// write.
+    /// The exit code the survey comes to: `--help` and a wrong argument are answered
+    /// out of the flag table, and everything else by the readings below — an answer
+    /// that is not there, a survey that would not chain, a file that would not write.
     pub def exitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        Cli.Args.answer(
-            optionDescrs(),
-            usage(),
-            isHelp,
-            args,
-            completed,
-            asked -> if (asked#fetch) live(asked) else ask(asked)
-        )
+        Cli.Args.comeTo(arguments(args), asking)
 
-    /// The asking that keeps: OpenStreetMap now, the answer kept where `--answer`
-    /// points — the circuit's own directory when it names none — and the survey over
-    /// what came back, through exactly the `surveyed` a kept answer travels through.
-    ///
-    /// An answer is kept only once the survey can read it: an answer that surveys
-    /// nothing is evidence nobody can re-run. A runner's HTML page, a reply that
-    /// stopped half way through its JSON, and an answer whose relation will not chain
-    /// into a lap are all met here, in the same words the survey itself would say
-    /// them in, rather than in a file kept to be discovered later.
-    def live(asked: Args): Int32 \ { IO, Clock, Console } =
-        match Overpass.askRelation(asked#circuit#relation) {
+    /// The arguments as far as the flag table reads them, before this module asks
+    /// which circuit a word answers to.
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Args] =
+        Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
+
+    /// The asking: the answer read — from a runner, from the file `--answer` names,
+    /// or from the answer the circuit keeps — surveyed once, kept where a runner gave
+    /// it, and then laid or compared however `--write` says.
+    pub def asking(asked: Args): Outcome \ { IO, Clock, Console } =
+        match answerText(asked) {
+            case Err(problem)      => Outcome.Failed(problem)
+            case Ok(None)          => Outcome.Done(neverSurveyed(asked) :: Nil)
+            case Ok(Some(spelled)) =>
+                Cli.Args.outcomeOf(
+                    forM(
+                        read <- surveyed(asked, spelled);
+                        _    <- if (asked#fetch) kept(asked, read) else Ok(())
+                    ) yield laid(asked, Write.geoJson(asked#circuit, read#geometry))
+                )
+        }
+
+    /// Where a run's answer comes from. Finding nothing is the one reading with two
+    /// right answers, which is why it comes back as `None` and not as a failure:
+    /// `--answer` naming nothing is a mistake to report, while a circuit with no kept
+    /// answer and no served geometry has simply never been surveyed.
+    def answerText(asked: Args): Result[String, Option[String]] \ { IO, Clock } =
+        if (asked#fetch)
+            Overpass.askRelation(asked#circuit#relation)
+                |> Result.mapErr(problem -> "${asked#circuit#word}: ${problem}")
+                |> Result.map(spelled -> Some(spelled))
+        else
+            match Util.Files.read(asked#answer) {
+                case Ok(spelled) => Ok(Some(spelled))
+                case Err(_) =>
+                    if (asked#asked)
+                        Err("${asked#answer}: no answer to read there")
+                    else
+                        unexamined(asked)
+            }
+
+    /// Which of the two a circuit with no answer to read is. A served file says the
+    /// bytes have no answer left to re-survey them from — which is what the fence
+    /// exists to catch — and no served file says nobody has surveyed this circuit yet.
+    def unexamined(asked: Args): Result[String, Option[String]] \ IO =
+        match Util.Files.read(asked#circuit#file) {
+            case Ok(_)  => Err("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from")
+            case Err(_) => Ok(None)
+        }
+
+    def neverSurveyed(asked: Args): String =
+        "${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `--fetch`'s"
+
+    /// An answer read and surveyed: the text `--fetch` keeps, the answer it is kept
+    /// with, and the geometry the file is written from.
+    type alias Read = {
+        text     = String,
+        answer   = Survey.Answer,
+        geometry = Survey.Geometry
+    }
+
+    /// The survey every answer travels through, however its text arrived, which is
+    /// what makes a live survey and a comparison of a kept one fail and reproduce in
+    /// the same words. One reading of the text serves both the keeping and the
+    /// laying, so a runner's HTML page, a reply stopped half way through its JSON and
+    /// an answer whose relation will not chain into a lap are each met in the words
+    /// the survey itself would say them in, rather than in a file kept to be
+    /// discovered later.
+    def surveyed(asked: Args, spelled: String): Result[String, Read] =
+        match surveyable(spelled, asked#circuit) {
+            case Ok((answer, geometry)) => Ok({text = spelled, answer = answer, geometry = geometry})
             case Err(problem) =>
-                Console.eprintln("${asked#circuit#word}: ${problem}");
-                1
-            case Ok(text) =>
-                match surveyable(text, asked#circuit) {
-                    case Err(problem) =>
-                        Console.eprintln("${asked#answer}: the answer surveys nothing: ${problem}");
-                        1
-                    case Ok(reading) =>
-                        match Cli.Errors.writeFile(asked#answer, text) {
-                            case Err(problem) =>
-                                Console.eprintln("${problem}");
-                                1
-                            case Ok(_) =>
-                                Console.println(kept(asked, reading));
-                                surveyed(asked, text)
-                        }
-                }
+                if (asked#fetch)
+                    Err("${asked#answer}: the answer surveys nothing: ${problem}")
+                else
+                    Err("${asked#answer}: ${problem}")
+        }
+
+    /// Whether this text is an answer the survey can read: the JSON, the circuit's
+    /// relation, the chained lap and the line the circuit says that lap starts at —
+    /// everything the kept file will be re-read for, asked before a byte is kept.
+    pub def surveyable(spelled: String, circuit: Circuit): Result[String, (Survey.Answer, Survey.Geometry)] =
+        Survey.survey(spelled, circuit)
+
+    /// `--fetch`'s keeping: the answer where `--answer` points — the circuit's own
+    /// directory when it names none — and the line naming how big an answer it is. It
+    /// is asked once the survey has read the text and before anything is laid, since
+    /// an answer that surveys nothing is evidence nobody can re-run.
+    def kept(asked: Args, read: Read): Result[String, Unit] \ { IO, Console } =
+        match Cli.Errors.writeFile(asked#answer, read#text) {
+            case Err(problem) => Err("${problem}")
+            case Ok(_) =>
+                Console.println(keptLine(asked, read#answer));
+                Ok(())
         }
 
     /// What the asking left beside the circuit.
-    def kept(asked: Args, reading: Survey.Answer): String =
+    def keptLine(asked: Args, reading: Survey.Answer): String =
         let elements = Int32.toString(List.length(reading#elements));
         let stamp = match reading#surveyedAt {
             case None     => ""
@@ -333,98 +391,35 @@ pub mod Write {
         };
         "${asked#circuit#word}: kept an answer of ${elements} elements${stamp} at ${asked#answer}"
 
-    /// Whether this text is an answer the survey can read: the JSON, the circuit's
-    /// relation, the chained lap and the line the circuit says that lap starts at —
-    /// everything the kept file will be re-read for, asked before a byte is kept.
-    pub def surveyable(text: String, circuit: Circuit): Result[String, Survey.Answer] =
-        match Survey.survey(text, circuit) {
-            case Ok((reading, _)) => Ok(reading)
-            case Err(problem)     => Err(problem)
-        }
-
-    /// The answer read, then surveyed: the reading, the missing-file refusal and
-    /// the survey are one story however the answer came to stand where it stands.
-    def ask(asked: Args): Int32 \ { IO, Console } =
-        match Util.Files.read(asked#answer) {
-            case Err(_) =>
-                if (asked#asked)
-                    answerMissing(asked)
-                else
-                    noSurvey(asked)
-            case Ok(spelled) => surveyed(asked, spelled)
-        }
-
-    def answerMissing(asked: Args): Int32 \ Console = {
-        Console.eprintln("${asked#answer}: no answer to read there");
-        1
-    }
-
-    /// A kept answer is what makes a served file checkable, so the two ways a run ends
-    /// without a survey are told apart. A circuit with neither file has not been surveyed
-    /// yet and exits 0. A circuit served with no kept answer fails: the served bytes have
-    /// no evidence left to re-survey them from, which is what the fence exists to catch.
-    def noSurvey(asked: Args): Int32 \ { IO, Console } = {
-        match Util.Files.read(asked#circuit#file) {
-            case Ok(_) =>
-                Console.eprintln("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from");
-                1
-            case Err(_) =>
-                Console.println("${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `--fetch`'s");
-                0
-        }
-    }
-
-    /// An answer's text — from a kept file or from a runner — surveyed and laid. What
-    /// the asking hands over and what a fence reads back out of a kept file both come
-    /// to `surveyed`, so a live survey and a comparison of a kept one fail and
-    /// reproduce in the same words.
-    def surveyed(asked: Args, spelled: String): Int32 \ { IO, Console } =
-        match Survey.survey(spelled, asked#circuit) {
-            case Err(problem) =>
-                Console.eprintln("${asked#answer}: ${problem}");
-                1
-            case Ok((_, geometry)) => laid(asked, geoJson(asked#circuit, geometry))
-        }
-
     /// The file laid down, or the kept one asked for and laid against what the survey
     /// draws.
-    def laid(asked: Args, written: String): Int32 \ { IO, Console } =
+    def laid(asked: Args, written: String): Outcome \ IO =
         if (asked#write)
             laidDown(asked, written)
         else
             match Util.Files.read(asked#circuit#file) {
-                case Err(_) =>
-                    Console.eprintln("${asked#circuit#file}: no geometry to compare against — --write lays one");
-                    1
-                case Ok(kept) => against(asked, written, kept)
+                case Err(_)    => Outcome.Failed("${asked#circuit#file}: no geometry to compare against — --write lays one")
+                case Ok(served) => against(asked, written, served)
             }
 
-    def laidDown(asked: Args, written: String): Int32 \ { IO, Console } =
+    def laidDown(asked: Args, written: String): Outcome \ IO =
         match Cli.Errors.writeFile(asked#circuit#file, written) {
-            case Err(problem) =>
-                Console.eprintln("${problem}");
-                1
-            case Ok(_) =>
-                Console.println("${asked#circuit#word}: geometry written from ${asked#answer}");
-                0
+            case Err(problem) => Outcome.Failed("${problem}")
+            case Ok(_)        => Outcome.Done("${asked#circuit#word}: geometry written from ${asked#answer}" :: Nil)
         }
 
-    def against(asked: Args, written: String, kept: String): Int32 \ Console =
-        if (written == kept)
-            reproduces(asked)
+    /// Whether the bytes the survey draws are the bytes the app serves. That they are
+    /// not is the answer the run was asked for rather than a run that failed, so it is
+    /// said on stdout and exits 1.
+    def against(asked: Args, written: String, served: String): Outcome =
+        if (written == served)
+            Outcome.Done("${asked#circuit#word}: reproduces the kept geometry, every point and metre of it" :: Nil)
         else
-            drifted(asked, written, kept)
-
-    def reproduces(asked: Args): Int32 \ Console = {
-        Console.println("${asked#circuit#word}: reproduces the kept geometry, every point and metre of it");
-        0
-    }
-
-    def drifted(asked: Args, written: String, kept: String): Int32 \ Console = {
-        Console.println("${asked#circuit#word}: the kept geometry is not what the kept answer draws");
-        Console.println("  ${firstPart(written, kept)}");
-        1
-    }
+            Outcome.Verdict(
+                "${asked#circuit#word}: the kept geometry is not what the kept answer draws"
+                    :: "  ${firstPart(written, served)}"
+                    :: Nil
+            )
 
     /// Where two files part: the line they part at, and what each of them says there, cut
     /// short.

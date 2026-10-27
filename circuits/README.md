@@ -225,7 +225,7 @@ lap is the one reading a config is authored from.
 
 The geometry pipeline is the Flix package at `circuits/`, one module per reading
 named in the sections above, with `src/Main.flix` holding the words the commands go
-by and the exit code one comes to. It resolves no dependency and
+by and `src/Cli/Args.flix` the exit code each of them comes to. It resolves no dependency and
 links no source — it reads nothing `flix/src` holds, which is what the report's nine links
 are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
 
@@ -316,7 +316,16 @@ a kept answer and is held to the bytes the app serves rather than by a shared so
 file's shape checks and its two guards; and the comparison the fence makes is
 `Regenerate.flix`'s. Nothing asks OpenStreetMap from outside this project at all.
 Printing stays with the command — what a reading is worth is what it
-answers, not how its table is padded. The one test handed no fixture reads none on
+answers, not how its table is padded. The exit code is the one thing no reading
+decides for itself: every command is `arguments` over its own flag table and `asking`
+over its own readings, and `Cli.Args.comeTo` is the only place either of the two
+becomes a code. A reading hands back a `Result` and the run they add up to hands back
+an `Outcome`, of which `Verdict` — the drawing moved, one line moved a season later —
+is the negative answer the reader came for and is said on stdout at 1, while `Failed`
+is a run that never got to answer and is said on stderr. `--help` is a value in that
+`Parsed` rather than a printing, which is why `TestUsage.flix` can read the answering
+at all: which of its three answers a run of tokens comes to is asserted there, and
+nothing is run. The one test handed no fixture reads none on
 purpose: `TestTimingMap` lays the two authored copies of a circuit's timing figures
 together, and the real authors are what it is given. What is judged
 against the repository's real bytes stays this file's other sections': the fence,

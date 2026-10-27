@@ -31,6 +31,7 @@ pub mod Atlas {
 
     use Circuit.Circuit
     use Cli.Args.ArgsError
+    use Cli.Args.Outcome
     use Geometry.Place
     use Net.HttpRequest.HttpRequest
     use Net.Https.Https
@@ -93,6 +94,14 @@ pub mod Atlas {
         props  = Map[String, Json]
     }
 
+    /// The layer's three kinds of feature, read out of one file: the line the atlas
+    /// measured, its corner markers, and whichever pit markers it holds.
+    type alias Layer = {
+        outline = Track.Feature,
+        corners = List[Track.Feature],
+        pits    = List[Track.Feature]
+    }
+
     // ------------------------------------------------------------------- the command
 
     pub def usage(): String =
@@ -143,47 +152,32 @@ pub mod Atlas {
     /// guard, and 0 once the line is measured and kept — or when a run handed no
     /// `--fetch` has no kept line to measure yet.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
-        Net.Https.runWithIO(
-            () ->
-                Cli.Args.answer(
-                    optionDescrs(),
-                    usage(),
-                    isHelp,
-                    args,
-                    completed,
-                    measuredReport
-                )
-        )
+        Cli.Args.comeTo(arguments(args), asking)
 
-    def measuredReport(asked: Asking): Int32 \ { IO, Console, Https } =
-        if (noneKept(asked))
-            noLine(asked#circuit)
-        else
-            match measure(asked) {
-                case Err(problem) =>
-                    Console.eprintln(problem);
-                    1
-                case Ok(reading) =>
-                    report(reading);
-                    0
-            }
+    /// The arguments as far as the flag table reads them, before the reading asks
+    /// which circuit and which layer were named.
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Asking] =
+        Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
 
-    /// Whether this run would read the circuit's own kept line and none is there.
-    def noneKept(asked: Asking): Bool \ IO =
-        match (asked#file, asked#fetch) {
-            case (Some(_), _) => false
-            case (None, true) => false
-            case (None, false) =>
-                match Cli.Errors.readFile(Circuit.keptAtlas(asked#circuit)) {
-                    case Err(_) => true
-                    case Ok(_)  => false
-                }
+    /// The measuring, with the layer's home handled here and nowhere else: a run that
+    /// only asked for help, or asked with a wrong argument, asks a dataset's
+    /// repository for nothing.
+    def asking(asked: Asking): Outcome \ { IO, Console } =
+        Net.Https.runWithIO(() -> measured(asked))
+
+    /// What the reading comes to: a circuit that keeps no line and raised no
+    /// `--fetch` says so and goes well, since the kept atlas line is evidence a run has
+    /// yet to make and not a file a round needs; a line that was read is measured, kept
+    /// and printed.
+    def measured(asked: Asking): Outcome \ { IO, Console, Https } =
+        match text(asked) {
+            case Err(problem)      => Outcome.Failed(problem)
+            case Ok(None)          => Outcome.Done(noLine(asked#circuit) :: Nil)
+            case Ok(Some(spelled)) => Cli.Args.outcomeOf(measure(asked, spelled))
         }
 
-    def noLine(circuit: Circuit): Int32 \ Console = {
-        Console.println("${circuit#word}: no kept atlas line yet — `--fetch` asks the layer's home and keeps one");
-        0
-    }
+    def noLine(circuit: Circuit): String =
+        "${circuit#word}: no kept atlas line yet — `--fetch` asks the layer's home and keeps one"
 
     /// The circuit to read, and where its layer comes from.
     pub def parse(args: List[String]): Result[ArgsError, Asking] =
@@ -239,42 +233,54 @@ pub mod Atlas {
     /// the circuit keeps — measured against the geometry the app serves, and kept
     /// beside the config. The guards all answer before anything is written: a line
     /// that is another circuit's, or starts at another line, never reaches disk.
-    def measure(asked: Asking): Result[String, Reading] \ { IO, Https } =
-        match read(asked) {
-            case Err(problem) => Err(problem)
-            case Ok(text) =>
-                match layerOf(text, asked#circuit#word) {
-                    case Err(problem) => Err(problem)
-                    case Ok((outline, corners, pits)) =>
-                        match placesOf(corners ++ pits) {
-                            case Err(problem) => Err(problem)
-                            case Ok(markers) =>
-                                match kept(asked#circuit) {
-                                    case Err(problem) => Err(problem)
-                                    case Ok(ours) => measured(asked#circuit, Option.getWithDefault("", asked#circuit#atlas), outline, corners, pits, markers, ours)
-                                }
-                        }
-                }
-        }
+    def measure(asked: Asking, spelled: String): Result[String, Outcome] \ { IO, Console } =
+        forM(
+            layer   <- layerOf(spelled, asked#circuit#word);
+            markers <- placesOf(layer#corners ++ layer#pits);
+            ours    <- kept(asked#circuit);
+            reading <- measuredAgainst(asked, layer, markers, ours)
+        ) yield printed(reading)
+
+    /// The readings printed. The file was kept by the measuring, so a run that got
+    /// this far has something to show and goes well.
+    def printed(reading: Reading): Outcome \ Console = {
+        report(reading);
+        Outcome.Done(Nil)
+    }
+
+    /// The circuit's own line read out of the layer, and measured on the plane the
+    /// kept geometry is already drawn on.
+    def measuredAgainst(asked: Asking, layer: Layer, markers: List[Place], ours: Kept): Result[String, Reading] \ IO =
+        Track.lineOf(layer#outline)
+            |> Result.flatMap(coords -> laid(asked#circuit, sourceOf(asked), coords, layer#corners, layer#pits, markers, ours))
+
+    /// The source the kept file claims, which is the circuit's atlas URL whether the
+    /// line came from its home or from a kept file: a reading from a kept file re-keeps
+    /// the line that URL's survey measured, and a file path would credit the line to
+    /// whomever saved it last.
+    def sourceOf(asked: Asking): String =
+        Option.getWithDefault("", asked#circuit#atlas)
 
     /// The layer's text: from its home on `--fetch`, from the named file, or from the
-    /// line the circuit keeps. The source the kept file claims is the circuit's atlas
-    /// URL either way: a reading from a kept file re-keeps the line the URL's survey
-    /// measured, and a file path would credit the line to whomever saved it last.
-    def read(asked: Asking): Result[String, String] \ { IO, Https } =
+    /// line the circuit keeps. Nothing kept where the circuit's own line should stand
+    /// is `None`, which is a verdict and not a failure.
+    def text(asked: Asking): Result[String, Option[String]] \ { IO, Https } =
         match asked#circuit#atlas {
             case None => Err("${asked#circuit#word}'s config names no atlas layer to read")
             case Some(url) =>
                 if (asked#fetch)
-                    ask(url)
+                    ask(url) |> Result.map(spelled -> Some(spelled))
                 else
                     match asked#file {
                         case Some(path) =>
                             Cli.Errors.readFile(path) |>
-                                Result.mapErr(problem -> "${problem}")
+                                Result.mapErr(problem -> "${problem}") |>
+                                Result.map(spelled -> Some(spelled))
                         case None =>
-                            Cli.Errors.readFile(Circuit.keptAtlas(asked#circuit)) |>
-                                Result.mapErr(problem -> "${problem}")
+                            match Cli.Errors.readFile(Circuit.keptAtlas(asked#circuit)) {
+                                case Err(_)      => Ok(None)
+                                case Ok(spelled) => Ok(Some(spelled))
+                            }
                     }
         }
 
@@ -301,8 +307,8 @@ pub mod Atlas {
     /// the corners, and whichever pit markers the layer holds. The identity guard is
     /// asked here, at the first reading of the file: a file measured from another
     /// circuit replaces one circuit's kept evidence with another's, and does it quietly.
-    def layerOf(text: String, slug: String): Result[String, (Track.Feature, List[Track.Feature], List[Track.Feature])] =
-        match Util.Json.parse(text) {
+    def layerOf(spelled: String, slug: String): Result[String, Layer] =
+        match Util.Json.parse(spelled) {
             case Err(problem) => Err("the atlas file does not parse: ${problem}")
             case Ok(json) =>
                 let features = Track.featuresOf(json);
@@ -311,7 +317,7 @@ pub mod Atlas {
                     case Some(outline) =>
                         match Track.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug) {
                             case Err(problem) => Err(problem)
-                            case Ok(_)        => Ok((outline, cornersOf(features), pitsOf(features)))
+                            case Ok(_)        => Ok({outline = outline, corners = cornersOf(features), pits = pitsOf(features)})
                         }
                 }
         }
@@ -365,23 +371,6 @@ pub mod Atlas {
                     case Some(feature) => Geometry.propertiesOf(feature)
                     case None          => Map.empty()
                 }
-        }
-
-    /// The line measured: both lines laid on one parallel, the guards answered, every
-    /// marker placed on this app's line, and the whole kept at last — the file is the
-    /// only side effect of a run, and it happens once nothing has refused.
-    def measured(
-        circuit: Circuit,
-        source: String,
-        outline: Track.Feature,
-        corners: List[Track.Feature],
-        pits: List[Track.Feature],
-        markers: List[Place],
-        ours: Kept
-    ): Result[String, Reading] \ IO =
-        match Track.lineOf(outline) {
-            case Err(problem) => Err(problem)
-            case Ok(coords) => laid(circuit, source, coords, corners, pits, markers, ours)
         }
 
     /// Both lines on one plane, and every reading taken on it. The projection is laid

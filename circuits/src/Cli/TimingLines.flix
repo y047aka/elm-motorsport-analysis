@@ -24,6 +24,7 @@
 /// geometry.
 pub mod Cli.TimingLines {
 
+    use Cli.Args.Outcome
     use Cli.Errors.CliError
     use Cli.TimingLines.Feed.{
         CircuitMap, Column, Fastest, Line, Movement, Placement, decode, fastestSectors,
@@ -68,18 +69,17 @@ pub mod Cli.TimingLines {
         against = Option[Int32]
     }
 
-    /// The report printed, and the code to exit with: 1 where a line stands
+    /// The report read, printed and judged: `Err` is a reading that never happened,
+    /// and the outcome is the verdict the readings came to — 1 where a line stands
     /// further round the lap than the distance allowed, which is the answer that
     /// the two seasons were not run on one map. One reading alone is printed and
     /// exits 0: nothing was judged.
-    pub def runAll(csv: String, season: Int32, id: String, against: Option[Int32], tolerance: Float64): Int32 \ {IO, Console} =
+    pub def runAll(csv: String, season: Int32, id: String, against: Option[Int32], tolerance: Float64): Result[CliError, Outcome] \ {IO, Console} =
         match read(csv, season, id, against, tolerance) {
-            case Err(problem) =>
-                Console.eprintln("Error: ${problem}");
-                1
+            case Err(problem) => Err(problem)
             case Ok(report) =>
                 printReadings(report);
-                judge(report)
+                Ok(judge(report))
         }
 
     /// Where the circuit's own map puts its lines, and the two rounds' feeds read
@@ -235,7 +235,7 @@ pub mod Cli.TimingLines {
 
     /// The two seasons laid against each other, and the verdict the reader came
     /// for.
-    def judge(report: Report): Int32 \ Console =
+    def judge(report: Report): Outcome \ Console =
         match report#readings {
             case first :: second :: _ =>
                 let shift = movement(first#positions, second#positions);
@@ -254,31 +254,33 @@ pub mod Cli.TimingLines {
                 );
                 verdict(shift, report, first#season, second#season)
             case one :: Nil =>
-                Console.println("");
-                Console.println(
-                    "${one#season}/${one#id} is read against no other season: --against names one, and only two readings can be judged apart."
-                );
-                0
+                Outcome.Done(
+                    ""
+                        :: "${one#season}/${one#id} is read against no other season: --against names one, and only two readings can be judged apart."
+                        :: Nil
+                )
             case Nil =>
                 // Reached by no run: `read` traverses `seasonsOf`, which always
                 // holds the round's own season, and fails before printing if
                 // that feed cannot be read.
-                1
+                Outcome.Failed("no season was read, so no line was judged")
         }
 
-    def verdict(shift: Movement, report: Report, season: Int32, against: Int32): Int32 \ Console =
-        if (shift#furthest > report#tolerance) {
-            Console.println("");
-            Console.println(
-                "${metres(shift#furthest)} m is over the ${metres(report#tolerance)} m allowed: ${season} and ${against} are far enough apart to read a map of the later one and place the lines by season, as Le Mans's are."
-            );
-            1
-        } else {
-            Console.println("");
-            Console.println(
-                "Within the ${metres(report#tolerance)} m allowed -- ${percent(shift#furthest / report#lapLength)} of a lap: one set of lines answers for ${season} and ${against}."
-            );
-            0
-        }
+    /// Whether the two readings stand on one map of the circuit: the distance
+    /// allowed is what answers it, and the answer is printed rather than judged by
+    /// the reader.
+    def verdict(shift: Movement, report: Report, season: Int32, against: Int32): Outcome =
+        if (shift#furthest > report#tolerance)
+            Outcome.Verdict(
+                ""
+                    :: "${metres(shift#furthest)} m is over the ${metres(report#tolerance)} m allowed: ${season} and ${against} are far enough apart to read a map of the later one and place the lines by season, as Le Mans's are."
+                    :: Nil
+            )
+        else
+            Outcome.Done(
+                ""
+                    :: "Within the ${metres(report#tolerance)} m allowed -- ${percent(shift#furthest / report#lapLength)} of a lap: one set of lines answers for ${season} and ${against}."
+                    :: Nil
+            )
 
 }

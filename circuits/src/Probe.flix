@@ -19,6 +19,7 @@ pub mod Probe {
     use Candidates.{bboxOf, describe, looksLikeACircuit, measure}
     use Candidates.Box
     use Cli.Args.ArgsError
+    use Cli.Args.Outcome
     use Net.Https.Https
     use Overpass.Element
     use Sys.Console
@@ -110,29 +111,28 @@ pub mod Probe {
             optionDescrs()
         )
 
-    // ------------------------------------------------------------------- the run
+    // ------------------------------------------------------------------ the asking
 
     /// The exit code the probe comes to: 1 for arguments it cannot ask with, and
     /// for a question no runner answered.
     pub def exitCode(args: List[String]): Int32 \ { Clock, Console, IO } =
-        Cli.Args.answer(
-            optionDescrs(),
-            usage(),
-            isHelp,
-            args,
-            completed,
-            request -> Overpass.paced(() -> probeAll(request))
-        )
+        Cli.Args.comeTo(arguments(args), asking)
 
-    /// Every place named, probed in turn. The first question no runner answers ends
-    /// the run: the next place would be refused for the same reason.
-    def probeAll(request: Request): Int32 \ { Console, IO, Https } =
-        match Result.traverse(probePlace(request#radius), request#places) {
-            case Ok(_) => 0
-            case Err(problem) =>
-                Console.eprintln("Error: ${problem}");
-                1
-        }
+    /// The arguments as far as the flag table reads them, before the probe asks
+    /// which places its reader named.
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
+        Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
+
+    /// Every place named, probed in turn, paced over the runners as every asking of
+    /// OpenStreetMap is. The first question no runner answers ends the run: the next
+    /// place would be refused for the same reason.
+    def asking(request: Request): Outcome \ { Clock, Console, IO } =
+        Overpass.paced(
+            () ->
+                Result.traverse(probePlace(request#radius), request#places)
+                    |> Result.map(_ -> Outcome.Done(Nil))
+                    |> Cli.Args.outcomeOf
+        )
 
     /// One place: the box it opens to, the relations the box holds, and each of
     /// those described and -- if its tags could name a circuit -- measured.

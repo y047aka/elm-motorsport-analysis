@@ -24,6 +24,7 @@ pub mod Regenerate {
 
     use Circuit.Circuit
     use Cli.Args.ArgsError
+    use Cli.Args.Outcome
     use Sys.Console
     use Time.Clock
     use Util.GetOpt.ArgDescr
@@ -133,17 +134,26 @@ pub mod Regenerate {
     /// opposite flags, a run that could not ask, survey or write, and a drawing
     /// that moved.
     pub def exitCode(args: List[String]): Int32 \ { IO, Clock, Console } =
-        Cli.Args.answer(
-            optionDescrs(),
-            usage(),
-            isHelp,
-            args,
-            completed,
-            asked -> {
-                warnUnlisted();
-                walked(Nil, asked#circuits, asked#mode)
-            }
-        )
+        Cli.Args.comeTo(arguments(args), asking)
+
+    /// The arguments as far as the flag table reads them, before the fence asks which
+    /// words answer to circuits.
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Args] =
+        Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
+
+    /// Every circuit, in the order the reader named them — or every circuit this
+    /// project surveys, named in the order it surveys them — each read and judged as
+    /// it comes, so each verdict is printed while the circuits behind it are still
+    /// being asked rather than all of them at the end. A circuit the run could not
+    /// ask, survey or write ends the walk, since nothing about the run improved for
+    /// the next circuit; a drawing that moved is a verdict and not a failure, so the
+    /// circuits beside it have their own degrees to answer for.
+    def asking(asked: Args): Outcome \ { IO, Clock, Console } = {
+        warnUnlisted();
+        Result.traverse(circuit -> check(circuit, asked#mode), asked#circuits)
+            |> Result.map(verdictOf)
+            |> Cli.Args.outcomeOf
+    }
 
     /// Kept evidence and served geometry that answer to no config, printed as the
     /// CLI prints its unlisted CSVs — a warning that changes no verdict. Which
@@ -192,25 +202,35 @@ pub mod Regenerate {
                 )
         }
 
-    def walked(codes: List[Int32], rest: List[Circuit], mode: Mode): Int32 \ { IO, Clock, Console } =
-        match rest {
-            case Nil => if (List.memberOf(1, codes)) 1 else 0
-            case one :: more =>
-                match check(one, mode) {
-                    // A run that could not ask, survey or write stops the fence; a
-                    // moved drawing is the one verdict that leaves the run going, since
-                    // the other circuits have their own degrees to answer for.
-                    case Err(problem) =>
-                        Console.eprintln(problem);
-                        1
-                    case Ok(code) => walked(code :: codes, more, mode)
-                }
-        }
+    /// One circuit's answer, as the walk leaves it, each one printed where it was
+    /// found and none of them enough on its own for the exit code.
+    enum Verdict with Eq {
+        /// The kept geometry is what the kept answer draws.
+        case Reproduced
+        /// It is not: the verdict the fence is run in order to be able to say.
+        case Drifted
+        /// `--write` re-laid the file, which leaves nothing to judge.
+        case Rewritten
+        /// No kept answer to survey — a circuit never surveyed, not a failure.
+        case Unsurveyed
+    }
 
-    /// One circuit's verdict: 1 where the drawing has moved, 0 where the kept
-    /// geometry is what the kept answer draws, and a failure where the run itself
-    /// did not happen.
-    def check(circuit: Circuit, mode: Mode): Result[String, Int32] \ { IO, Clock, Console } =
+    def isDrifted(verdict: Verdict): Bool =
+        verdict == Verdict.Drifted
+
+    /// The walk over every circuit: a drawing that moved anywhere is the run's
+    /// answer, and each drift was printed where it was found, so the exit code is all
+    /// that is left to say.
+    def verdictOf(verdicts: List[Verdict]): Outcome =
+        if (List.exists(isDrifted, verdicts))
+            Outcome.Verdict(Nil)
+        else
+            Outcome.Done(Nil)
+
+    /// One circuit's verdict: `Drifted` where the drawing has moved,
+    /// `Reproduced` where the kept geometry is what the kept answer draws, and a
+    /// failure where the run itself did not happen.
+    def check(circuit: Circuit, mode: Mode): Result[String, Verdict] \ { IO, Clock, Console } =
         match mode {
             case Mode.Freeze =>
                 match Overpass.askRelation(circuit#relation) {
@@ -227,21 +247,21 @@ pub mod Regenerate {
     /// A circuit with no kept answer has not been surveyed yet, which is not a
     /// failure of a run over every circuit — the same reading `survey` makes of
     /// the same missing file, from the same reason.
-    def skipped(circuit: Circuit): Result[String, Int32] \ Console = {
+    def skipped(circuit: Circuit): Result[String, Verdict] \ Console = {
         Console.println("${circuit#word}: no kept answer yet — --freeze asks OpenStreetMap and keeps one.");
-        Ok(0)
+        Ok(Verdict.Unsurveyed)
     }
 
     /// The answer surveyed, then what the mode says to do with the survey. The
     /// reading is the survey command's own, so a live survey and a fence over a
     /// kept answer fail in the same words.
-    def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Int32] \ { IO, Console } =
+    def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
         match Survey.survey(answer, circuit) {
             case Err(problem)      => Err("${circuit#word}: ${problem}")
             case Ok((_, geometry)) => laid(circuit, Write.geoJson(circuit, geometry), answer, mode)
         }
 
-    def laid(circuit: Circuit, written: String, answer: String, mode: Mode): Result[String, Int32] \ { IO, Console } =
+    def laid(circuit: Circuit, written: String, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
         match mode {
             // The answer is kept before the geometry is laid: a freeze keeps one
             // reading of OpenStreetMap, and a geometry whose answer did not reach disk
@@ -255,17 +275,17 @@ pub mod Regenerate {
             case Mode.Compare => fenced(circuit, written)
         }
 
-    def writing(circuit: Circuit, written: String, source: String): Result[String, Int32] \ { IO, Console } =
+    def writing(circuit: Circuit, written: String, source: String): Result[String, Verdict] \ { IO, Console } =
         match Cli.Errors.writeFile(circuit#file, written) {
             case Err(problem) => Err("${problem}")
             case Ok(_) =>
                 Console.println("${circuit#word}: geometry written from ${source}");
-                Ok(0)
+                Ok(Verdict.Rewritten)
         }
 
     /// The question the fence answers: is the kept geometry what the kept answer
     /// draws? Every drift is printed.
-    def fenced(circuit: Circuit, written: String): Result[String, Int32] \ { IO, Console } =
+    def fenced(circuit: Circuit, written: String): Result[String, Verdict] \ { IO, Console } =
         match Util.Files.read(circuit#file) {
             case Err(problem) => Err("${circuit#file}: no geometry to compare against: ${problem}")
             case Ok(kept) =>
@@ -273,12 +293,12 @@ pub mod Regenerate {
                     case Err(problem) => Err(problem)
                     case Ok(Nil) =>
                         Console.println("${circuit#word}: reproduces the kept geometry, every fenced property exactly");
-                        Ok(0)
+                        Ok(Verdict.Reproduced)
                     case Ok(drift) =>
                         Console.println("${circuit#word}: the kept geometry is not what the kept answer draws");
                         foreach (line <- drift)
                             Console.println("  ${line}");
-                        Ok(1)
+                        Ok(Verdict.Drifted)
                 }
         }
 

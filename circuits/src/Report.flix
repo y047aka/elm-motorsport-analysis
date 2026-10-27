@@ -12,6 +12,7 @@ pub mod Report {
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
     use Cli.Args.ArgsError
+    use Cli.Args.Outcome
     use Cli.Errors.checkDirectory
     use Motorsport.Calendar
     use Sys.Console
@@ -36,29 +37,34 @@ pub mod Report {
     /// The exit code the arguments come to. 1 is an answer the report gives as
     /// well: a line standing further round the lap than the distance allowed.
     pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
-        Cli.Args.answer(
-            optionDescrs(),
-            usage(),
-            isHelp,
-            args,
-            completed,
-            feed
+        Cli.Args.comeTo(arguments(args), asking)
+
+    /// The arguments as far as the flag table reads them, before the report asks
+    /// which round on the calendar was named.
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
+        Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
+
+    /// The directory the feeds sit in, asked once, and then the two rounds read and
+    /// judged: a mistyped `--csv` is one mistake rather than every race missing.
+    def asking(request: Request): Outcome \ { IO, Console } =
+        Cli.Args.outcomeOf(
+            forM(
+                _       <- checkDirectory(request#csv) |> Result.mapErr(problem -> "${problem}");
+                verdict <- judged(request)
+            ) yield verdict
         )
 
-    def feed(request: Request): Int32 \ { IO, Console } =
-        match checkDirectory(request#csv) {
-            case Err(e) =>
-                Console.eprintln("Error: ${e}");
-                1
-            case Ok(()) =>
-                Cli.TimingLines.runAll(
-                    request#csv,
-                    request#season,
-                    request#id,
-                    request#against,
-                    request#tolerance
-                )
-        }
+    /// The report read, printed and judged, in the words the report says its own
+    /// readings failed in.
+    def judged(request: Request): Result[String, Outcome] \ { IO, Console } =
+        Cli.TimingLines.runAll(
+            request#csv,
+            request#season,
+            request#id,
+            request#against,
+            request#tolerance
+        )
+            |> Result.mapErr(problem -> "${problem}")
 
     def optionDescrs(): List[OptionDescr[Setting]] =
         Cli.Args.helpDescr(Setting.Help) ::
