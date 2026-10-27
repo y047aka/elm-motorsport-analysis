@@ -268,7 +268,21 @@ questions.** `-- survey` without `--write` compares bytes; the regeneration fenc
 compares parsed properties with `surveyed_at` exempt, because asking OpenStreetMap now takes a
 newer survey while every degree stands still. The byte comparison needs no such exemption — it
 reads the very answer whose stamp the property carries, so the stamp it would write is the stamp
-it reads — and a metre that lands on a different digit is a drawing that moved.
+it reads — and a metre that lands on a different digit is a drawing that moved. The
+fence's list of compared properties is the writer's own list (`Write.claims`) less that
+one exemption, so a claim added to the profile is asked of both files at its own place
+in a drift line rather than in the unordered tail everything unnamed falls into; the
+two directions — every claim the writer lays is fenced or exempt, and every name in
+the fence's list is a claim the writer lays — are `TestRegenerate`'s.
+
+**The layout of the repository is said once, in `Circuit.flix`.** The evidence
+directory, the served directory, and the names a circuit's own directory keeps its
+evidence under are functions there, and the warning that lists kept files answering
+no circuit reads them from those functions rather than naming the files again — a
+name spelled a second time beside the writer of one of those files is a directory the
+warning stops calling out, and a fence that stays green. A circuit's own geometry path
+stays authored in its config, the way its timing figures are authored twice; what
+holds it to the word the app reaches for is `TestCircuit`.
 
 **Its runner changes directory, and says so.** `flix` has to start inside the project to
 find its `flix.toml`, and a reader names `app/static/geometry/le_mans.geojson` from

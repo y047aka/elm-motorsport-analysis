@@ -160,16 +160,16 @@ pub mod Regenerate {
     /// circuits the run names changes nothing here: the disk holds what it holds.
     def warnUnlisted(): Unit \ { IO, Console } = {
         foreach (word <- unwordedEvidence())
-            Console.eprintln("circuits/${word}: kept evidence for no circuit — is its word misspelled?");
+            Console.eprintln("${Circuit.evidenceDir()}/${word}: kept evidence for no circuit — is its word misspelled?");
         foreach (file <- undrawn())
-            Console.eprintln("app/static/geometry/${file}: geometry no config draws")
+            Console.eprintln("${Circuit.servedDir()}/${file}: geometry no config draws")
     }
 
-    /// Directories under `circuits/` that hold a kept answer or a kept atlas line
-    /// under a name no config is authored for. A directory holding neither — the
-    /// project's own sources among them — keeps no evidence, and says nothing.
+    /// Directories under the evidence directory that hold a kept answer or a kept
+    /// atlas line under a name no config is authored for. A directory holding neither —
+    /// the project's own sources among them — keeps no evidence, and says nothing.
     def unwordedEvidence(): List[String] \ IO =
-        match Util.Files.list("circuits") {
+        match Util.Files.list(Circuit.evidenceDir()) {
             case Err(_)   => Nil
             case Ok(names) =>
                 Regenerate.Unlisted.detect(
@@ -182,10 +182,10 @@ pub mod Regenerate {
         if (String.startsWith({prefix = "."}, name))
             None
         else
-            match Util.Files.list("circuits/${name}") {
+            match Util.Files.list("${Circuit.evidenceDir()}/${name}") {
                 case Err(_)    => None
                 case Ok(files) =>
-                    if (List.exists(entry -> List.memberOf(entry, Regenerate.Unlisted.evidence()), files))
+                    if (List.exists(entry -> List.memberOf(entry, Circuit.keptNames()), files))
                         Some(name)
                     else
                         None
@@ -193,12 +193,12 @@ pub mod Regenerate {
 
     /// Geometry files in the served directory whose name no config's `file` is.
     def undrawn(): List[String] \ IO =
-        match Util.Files.list("app/static/geometry") {
+        match Util.Files.list(Circuit.servedDir()) {
             case Err(_)    => Nil
             case Ok(files) =>
                 Regenerate.Unlisted.detect(
                     Regenerate.Unlisted.drawn(Circuit.circuits()),
-                    List.filter(file -> String.endsWith({suffix = ".geojson"}, file), files)
+                    List.filter(file -> String.endsWith({suffix = Geometry.extension()}, file), files)
                 )
         }
 
@@ -304,13 +304,19 @@ pub mod Regenerate {
 
     // ---------------------------------------------------------- the comparison
 
-    /// The properties that answer for the drawing, in the order the writer lays
-    /// them. `surveyed_at` is outside this list and outside the comparison: the
-    /// fence's one exemption. A property a file carries that no writer claims is
-    /// still asked of it, by `askedOf`.
+    /// The properties that answer for the drawing: the writer's own list, in the
+    /// writer's own order, less the fence's one exemption. The order is not cosmetic —
+    /// a drift line is reported in it, and a claim the fence had to name for itself
+    /// would land in `askedOf`'s unordered tail instead. A property a file carries that
+    /// no writer claims is still asked of it, by `askedOf`.
     pub def compared(): List[String] =
-        "role" :: "circuit" :: "basis" :: "source" :: "license" :: "direction" ::
-        "lap_length_m" :: "surveyed_length_m" :: "sectors" :: "frame" :: "metres" :: Nil
+        List.filter(name -> name != exempt(), Write.claims())
+
+    /// The one property outside the comparison: it stamps which answer a file was
+    /// written from rather than what the drawing is made of, and it is the one property
+    /// a live regeneration must move while every degree stands still.
+    pub def exempt(): String =
+        "surveyed_at"
 
     /// How one geometry file's data answers to another's, feature by feature and
     /// property by property: the reading the fence judges, stated without opening
@@ -393,16 +399,15 @@ pub mod Regenerate {
             askedOf(mine, theirs)
         )
 
-    /// Which properties a pair is asked about. The claimed ones first, in the
-    /// order the writer lays them, so the report reads like the file; then any
-    /// other key either file carries, which is an added claim or one a writer left
-    /// behind. `surveyed_at` is asked of no pair — the exemption lives here, and
-    /// nowhere else.
+    /// Which properties a pair is asked about. The claimed ones first, in the order the
+    /// writer lays them, so the report reads like the file; then any other key either
+    /// file carries, which is an added claim or one a writer left behind. The exempt
+    /// property is asked of no pair.
     def askedOf(fresh: Map[String, Json], kept: Map[String, Json]): List[String] =
         let claimed = compared();
         let other =
             List.filter(
-                key -> key != "surveyed_at" and not List.memberOf(key, claimed),
+                key -> key != exempt() and not List.memberOf(key, claimed),
                 Set.toList(Set.union(Map.keysOf(fresh), Map.keysOf(kept)))
             );
         claimed ++ other

@@ -122,13 +122,56 @@ pub mod Circuit {
     /// The Overpass answer a kept geometry was drawn from, kept beside the config that
     /// surveyed it: evidence the regeneration fence reads, never bytes the app asks for.
     pub def keptAnswer(circuit: Circuit): String =
-        "circuits/${circuit#word}/overpass.json"
+        keptIn(circuit, keptAnswerName())
 
     /// The measured line kept beside the same config: the atlas reading's own file,
     /// in this repository's profile at the line's own length — kept beside the circuit
     /// and never served.
     pub def keptAtlas(circuit: Circuit): String =
-        "circuits/${circuit#word}/atlas.geojson"
+        keptIn(circuit, keptAtlasName())
+
+    def keptIn(circuit: Circuit, name: String): String =
+        "${evidenceDir()}/${circuit#word}/${name}"
+
+    // ------------------------------------------------------- where a circuit's files are
+
+    /// The directory a circuit keeps its evidence in: one per circuit, named by the
+    /// circuit's word.
+    pub def evidenceDir(): String =
+        "circuits"
+
+    /// The directory the app is served its geometries from, which is where the app
+    /// reaches for a circuit's file. A circuit's own file stays authored in its config
+    /// rather than derived from this — the way its timing figures are authored twice —
+    /// and `TestCircuit` holds it to the word.
+    pub def servedDir(): String =
+        "app/static/geometry"
+
+    /// The name the Overpass answer is kept under in a circuit's own directory.
+    pub def keptAnswerName(): String =
+        "overpass.json"
+
+    /// The name the measured atlas line is kept under beside it.
+    pub def keptAtlasName(): String =
+        "atlas.geojson"
+
+    /// The names that say a directory was made to keep a circuit's evidence — the ones
+    /// the two builders above write, and the ones the fence's warning looks for in a
+    /// directory it listed. The warning is the reading that can be wrong unnoticed: a
+    /// name spelled a third time somewhere is a directory it stops calling out, and a
+    /// fence that stays green.
+    pub def keptNames(): List[String] =
+        keptAnswerName() :: keptAtlasName() :: Nil
+
+    /// A path's last part: the name a file is known by where a directory has been
+    /// listed rather than a path authored. Everything above the name is dropped rather
+    /// than trusted to match, since the two sides of such a comparison are spelled by
+    /// different means.
+    pub def lastPart(path: String): String =
+        match String.splitOn({substr = "/"}, path) |> List.filter(part -> part != "") {
+            case Nil   => ""
+            case parts => Option.getWithDefault("", List.last(parts))
+        }
 
     /// The sentence for a word no circuit answers to, naming the words that do.
     pub def unknown(word: String): String =

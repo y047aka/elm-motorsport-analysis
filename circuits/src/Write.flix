@@ -54,28 +54,47 @@ pub mod Write {
         // ---------------------------------------------------------------- the properties
 
     /// What the outline says it is, in the order the file says it in. A kept geometry is
-    /// diffed by people as much as read by the app, so the order is the file's own.
+    /// diffed by people as much as read by the app, so the order is the file's own, and
+    /// `Regenerate` takes the order of its drift report from the same list below.
     def outlineOf(circuit: Circuit, geometry: Survey.Geometry): List[String] =
-        List.map(property, List.flatMap(present, authored(circuit, geometry)))
+        List.map(property, List.filterMap(name -> pair(name, circuit, geometry), claims()))
 
-    /// What the outline claims, in the order it claims it. A claim a circuit cannot make
-    /// — no stamp on the answer, no map of its own — writes no line at all in the file.
-    def authored(circuit: Circuit, geometry: Survey.Geometry): List[Option[(String, String)]] =
-        Some(("role", text("outline")))
-            :: Some(("circuit", text(circuit#word)))
-            :: Some(("basis", centreline()))
-            :: Some(("source", relation(circuit)))
-            :: Some(("license", licence()))
-            :: Option.map(stamped -> ("surveyed_at", text(stamped)), geometry#surveyedAt)
-            :: Some(("direction", text(geometry#direction)))
-            :: Some(("lap_length_m", number(circuit#lap)))
+    /// A property's name beside the value the outline claims for it, where it claims one.
+    def pair(name: String, circuit: Circuit, geometry: Survey.Geometry): Option[(String, String)] =
+        Option.map(value -> (name, value), claim(name, circuit, geometry))
+
+    /// The properties the outline is written with, in the order the file lays them.
+    /// Said once, here: the bytes are laid in this order, and the regeneration fence
+    /// compares in it, so a claim added to the profile is asked of both files at its own
+    /// place in a drift line rather than in the unordered tail everything unnamed falls
+    /// into.
+    pub def claims(): List[String] =
+        "role" :: "circuit" :: "basis" :: "source" :: "license" :: "surveyed_at" ::
+        "direction" :: "lap_length_m" :: "surveyed_length_m" :: "sectors" :: "frame" ::
+        "metres" :: Nil
+
+    /// What the outline claims for one of its properties, where this geometry can say
+    /// it. A claim a circuit cannot make — no stamp on the answer, no map of its own —
+    /// is `None` and writes no line at all in the file, rather than a null.
+    def claim(name: String, circuit: Circuit, geometry: Survey.Geometry): Option[String] =
+        match name {
+            case "role"              => Some(text("outline"))
+            case "circuit"           => Some(text(circuit#word))
+            case "basis"             => Some(centreline())
+            case "source"            => Some(relation(circuit))
+            case "license"           => Some(licence())
+            case "surveyed_at"       => Option.map(text, geometry#surveyedAt)
+            case "direction"         => Some(text(geometry#direction))
+            case "lap_length_m"      => Some(number(circuit#lap))
             // The survey's own length, as the double it summed to rather than a rounded
             // reading of it: it is the figure the stretching was done with.
-            :: Option.map(length -> ("surveyed_length_m", number(length)), geometry#surveyedLength)
-            :: Option.map(lines -> ("sectors", published(lines)), circuit#sectors#published)
-            :: Some(("frame", frame(geometry#frame)))
-            :: Some(("metres", metres(geometry#centreline)))
-            :: Nil
+            case "surveyed_length_m" => Option.map(number, geometry#surveyedLength)
+            case "sectors"           => Option.map(published, circuit#sectors#published)
+            case "frame"             => Some(frame(geometry#frame))
+            case "metres"            => Some(metres(geometry#centreline))
+            // A name no `claims` lays, so a property this profile is not written with.
+            case _                   => None
+        }
 
     /// The pit lane, which claims only what every centreline claims of itself.
     def pitOf(circuit: Circuit): List[String] =
@@ -141,9 +160,6 @@ pub mod Write {
         match pair {
             case (key, value) => "        ${text(key)}: ${value}"
         }
-
-    /// A property that is there. An absent one writes no line at all rather than a null.
-    def present(entry: Option[(String, String)]): List[(String, String)] = Option.toList(entry)
 
     // ------------------------------------------------------------------ the spelling
 

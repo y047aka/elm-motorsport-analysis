@@ -14,6 +14,12 @@ pub mod Geometry {
 
     use Util.Json.Json
 
+    /// The extension a geometry file of this profile is written with: how a directory
+    /// listing tells its geometries from anything else standing there, and how a line
+    /// is named after the file it was read from.
+    pub def extension(): String =
+        ".geojson"
+
     /// One geometry laid against the others: the name to quote in every failure,
     /// what a report should print beside the figures, the degrees as GeoJSON gives
     /// them, and the line's own metres.

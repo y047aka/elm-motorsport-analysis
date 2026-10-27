@@ -160,14 +160,14 @@ pub mod Diff {
                 }
         }
 
-    /// The name a file is quoted by: its last path part, without the extension the profile
-    /// writes it with.
+    /// The name a file is quoted by: its last path part, without the extension the
+    /// profile writes it with.
     pub def baseName(path: String): String =
-        Option.getWithDefault("", Option.map(withoutExtension, List.last(String.splitOn({substr = "/"}, path))))
+        withoutExtension(Circuit.lastPart(path))
 
     def withoutExtension(name: String): String =
-        if (String.endsWith({suffix = ".geojson"}, name))
-            String.dropRight(8, name)
+        if (String.endsWith({suffix = Geometry.extension()}, name))
+            String.dropRight(String.length(Geometry.extension()), name)
         else
             name
 

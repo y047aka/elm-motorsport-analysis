@@ -144,18 +144,22 @@ pub mod TestRegenerate {
 
     @Test
     def testComparedCoversEveryClaimTheWriterLays(): Unit \ Assert =
-        // What the fence asks of the outline is every claim the writer lays, the stamp
-        // alone exempt. The order of the report is the writer's own and is read off
-        // `compared`'s source; what a parsed file cannot say is the order its keys came
-        // in, so what this test holds is the coverage: a claim the writer one day adds
-        // and `compared` does not is caught here as a difference of two sorted lists —
-        // the claim order itself is `TestWrite`'s to hold against the bytes.
+        // The fence's list is the writer's own, less the stamp — so what is held here is
+        // the other direction: that every name the writer's list lays is actually laid in
+        // the bytes. A name in the list that the writer's reading of it does not answer
+        // for writes no line at all, and would show as a claim missing from this file
+        // rather than as a property the fence forgot to ask about. The order the report
+        // comes in is the order of `Write.claims`, which is `TestWrite`'s to hold against
+        // the bytes; a parsed file cannot say the order its keys came in.
         let written = writtenFile();
         match outlineKeys(written) {
             case None => Assert.assertTrueWithMsg(false, "the written file holds no outline to read")
-            case Some(keys) =>
-                Assert.assertTrue(List.sort(keys) == List.sort(Regenerate.compared() ++ ("surveyed_at" :: Nil)))
+            case Some(keys) => {
+                Assert.assertTrue(List.sort(keys) == List.sort(Write.claims()));
+                Assert.assertTrue(List.memberOf(Regenerate.exempt(), keys))
+            }
         };
+        Assert.assertTrue(List.length(Regenerate.compared()) == List.length(Write.claims()) - 1);
         Assert.assertTrue(drifted(written, written) == Ok(Nil))
 
     /// The file the writer would lay for COTA, from the survey a kept answer
