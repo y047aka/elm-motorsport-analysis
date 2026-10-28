@@ -167,37 +167,13 @@ pub mod Midline {
 
     // ---------------------------------------------------------- the published lines
 
-    /// The intermediate timing lines a circuit's published stretches imply: each
-    /// stretch ends where the next begins, and the last ends at the line the lap is
-    /// measured from — which is where it started, so it is not a line to place. A line
-    /// is named for the sector that begins at it, which is how the atlas reading and
-    /// `TimingLines.Feed`'s `publishedLines` spell the same line the same thing — that
-    /// reading is given a kept file's `sectors` and this one the map the report was
-    /// handed, and nothing compares the two spellings. Stretches are
-    /// trusted with the lap length they add up to and with nothing else, at
-    /// `Circuit.stretchTolerance()`.
-    pub type alias PublishedLine = {
-        id     = String,
-        metres = Float64
-    }
-
-    pub def sectorLines(sectors: Publishes, lap: Float64): Result[String, List[PublishedLine]] =
-        let total = List.foldLeft((sum, stretch) -> sum + stretch, 0.0, sectors#stretches);
-        if (Float64.abs(total - lap) > Circuit.stretchTolerance())
-            Err("the sectors add up to ${Util.Format.spelled(total)} m, not the published ${Util.Format.spelled(lap)} m")
-        else
-            Ok(implied(Option.getWithDefault(Nil, List.init(sectors#stretches)), 0.0, 2, Nil))
-
-    /// The lines the stretches imply, in order, each named for the sector that begins
-    /// at it — the second sector begins at `s2`, which is why the counting starts there
-    /// and not at one.
-    def implied(stretches: List[Float64], at: Float64, sector: Int32, lines: List[PublishedLine]): List[PublishedLine] =
-        match stretches {
-            case Nil => List.reverse(lines)
-            case one :: more =>
-                let standing = at + one;
-                implied(more, standing, sector + 1, {id = "s${sector}", metres = standing} :: lines)
-        }
+    /// The intermediate timing lines a circuit's published stretches imply, laid by
+    /// `Circuit.impliedLines` — the one spelling of the rule, which the timing report
+    /// reads the same way. This much of the atlas reading is given a kept file's
+    /// `sectors` where that one is given the map the report was handed; the lines
+    /// themselves, and their names, come from one function and cannot disagree.
+    pub def sectorLines(sectors: Publishes, lap: Float64): Result[String, List[Circuit.ImpliedLine]] =
+        Circuit.impliedLines(sectors#stretches, lap)
 
     /// The sectors a kept file's outline claims, or nothing at all when it claims
     /// none — the pair the circuit's config authors, read back out of the file. Half a

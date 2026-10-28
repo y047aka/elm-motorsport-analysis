@@ -41,6 +41,43 @@ pub mod Circuit {
         stretches = List[Float64]
     }
 
+    /// One intermediate timing line the published stretches imply, named as the
+    /// geometry names it: a line is `s2` because the second sector begins at it.
+    pub type alias ImpliedLine = {
+        id     = String,
+        metres = Float64
+    }
+
+    /// The intermediate lines one circuit's published stretches imply, in the order a
+    /// car drives them: each stretch ends where the next begins, and the last ends at
+    /// the line the lap is measured from — which is where the lap started, so it is
+    /// not a line to place. The stretches are trusted with the lap length they add up
+    /// to and nothing else, at `stretchTolerance`.
+    ///
+    /// This is the one spelling of the rule, in the one module both readers compile:
+    /// `Midline.sectorLines` lays these for the drawing and
+    /// `TimingLines.Feed.publishedLines` for the report, each wrapping the refusal in
+    /// its own error type. The naming — `s2` for the second sector's start — is the
+    /// rule the geometry is written under and the report prints by, and they cannot
+    /// now disagree about it.
+    pub def impliedLines(stretches: List[Float64], lap: Float64): Result[String, List[ImpliedLine]] =
+        let total = List.foldLeft((sum, stretch) -> sum + stretch, 0.0, stretches);
+        if (Float64.abs(total - lap) > stretchTolerance())
+            Err("the sectors add up to ${Util.Format.spelled(total)} m, not the published ${Util.Format.spelled(lap)} m")
+        else
+            Ok(implied(Option.getWithDefault(Nil, List.init(stretches)), 0.0, 2, Nil))
+
+    /// The lines the stretches imply, in order, each named for the sector that begins
+    /// at it — the second sector begins at `s2`, which is why the counting starts
+    /// there and not at one.
+    def implied(stretches: List[Float64], at: Float64, sector: Int32, lines: List[ImpliedLine]): List[ImpliedLine] =
+        match stretches {
+            case Nil => List.reverse(lines)
+            case one :: more =>
+                let standing = at + one;
+                implied(more, standing, sector + 1, {id = "s${sector}", metres = standing} :: lines)
+        }
+
     /// One circuit: what was surveyed, what the circuit says the survey is worth, and
     /// where the file it draws lands.
     pub type alias Circuit = {
@@ -70,9 +107,9 @@ pub mod Circuit {
     pub def nodeWithin(): Float64 = 10.0
 
     /// How far a circuit's published stretches may miss the lap they are trusted to
-    /// add up to. The one distance both readers of those stretches allow:
-    /// `Midline.sectorLines` when it lays the drawing's timing lines, and
-    /// `TimingLines.Feed.publishedLines` when it lays the report's.
+    /// add up to. Asked once, by `impliedLines`, which both readers of those stretches
+    /// lay through: `Midline.sectorLines` for the drawing's timing lines, and
+    /// `TimingLines.Feed.publishedLines` for the report's.
     pub def stretchTolerance(): Float64 = 0.15
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser

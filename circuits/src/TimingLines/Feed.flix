@@ -61,11 +61,9 @@ pub mod TimingLines.Feed {
     /// to say so.
     pub def sectors(): List[String] = List#{"S1", "S2", "S3"}
 
-    /// One line the circuit times to, named as the geometry names it.
-    pub type alias Line = {
-        id = String,
-        metres = Float64
-    }
+    /// One line the circuit times to, named as the geometry names it — the very type
+    /// the geometry is written with, `Circuit.ImpliedLine`.
+    pub type alias Line = Circuit.ImpliedLine
 
     /// What one circuit's own map of its timing lines amounts to: the lap length
     /// its stretches add up to -- the only claim of theirs a reading may compare
@@ -227,30 +225,16 @@ pub mod TimingLines.Feed {
 
     // -------------------------------------------------------- the circuit's map
 
-    /// The intermediate lines one circuit's published stretches imply, in the
-    /// order a car drives them: each stretch ends where the next begins, and the
-    /// last ends at the line the lap is measured from -- which is where the lap
-    /// started, so it is not a line to place.
+    /// The intermediate lines one circuit's published stretches imply, laid by
+    /// `Circuit.impliedLines` — the one spelling of the rule, in the one module the
+    /// atlas reading and this report both compile. A line is `s2` because the second
+    /// sector begins at it, and that naming is now shared rather than spelled twice
+    /// and compared by no compiler.
     ///
-    /// Naming a line is the rule the geometry is written under, which the
-    /// survey that writes the geometry follows as well: a line is `s2` because the
-    /// second sector begins at it. The atlas reading lays the same lines out of a
-    /// kept geometry's own `sectors` and this reading out of the map the report was
-    /// given; one rule names them, and no compiler lays the two spellings together.
-    ///
-    /// The only thing the stretches are trusted with is the lap length they add
-    /// up to; where the times place them is `TimingLines`'s question. That
-    /// trust is `Circuit.stretchTolerance()`, the same allowance `Midline.sectorLines`
-    /// holds them to.
+    /// The only thing the stretches are trusted with is the lap length they add up
+    /// to; where the times place them is `TimingLines`'s question.
     pub def publishedLines(stretches: List[Float64], lapLength: Float64): Result[CliError, List[Line]] =
-        let added = total(stretches);
-        if (Float64.abs(added - lapLength) > Circuit.stretchTolerance())
-            Err(CliError.Reading("the sectors add up to ${added} m, not the published ${lapLength} m."))
-        else
-            Ok(List.mapWithIndex(
-                (at, ended) -> { id = "s${at + 2}", metres = ended },
-                butLast(cumulative(stretches))
-            ))
+        Circuit.impliedLines(stretches, lapLength) |> Result.mapErr(CliError.Reading)
 
     /// Each sector as a share of the fastest lap the same class could make, in
     /// the order a car drives them: the same three quotients `Motorsport.Track`
@@ -374,15 +358,8 @@ pub mod TimingLines.Feed {
     /// every list of shares, positions and speeds is in.
     pub def sectorsOf(times: Times): List[Duration] = List#{times#s1, times#s2, times#s3}
 
-    def total(xs: List[Float64]): Float64 = List.foldLeft((acc, x) -> acc + x, 0.0, xs)
-
     /// Running totals, so each stretch ends where the next one begins.
     def cumulative(xs: List[Float64]): List[Float64] =
         List.drop(1, List.scanLeft((acc, x) -> acc + x, 0.0, xs))
-
-    /// Everything but the last, which is where the last stretch ends -- the line
-    /// the lap is measured from, and not a line to place.
-    def butLast(xs: List[Float64]): List[Float64] =
-        List.reverse(List.drop(1, List.reverse(xs)))
 
 }
