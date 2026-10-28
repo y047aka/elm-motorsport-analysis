@@ -7,14 +7,16 @@ pub mod TestApart {
 
     import java.lang.Math
 
-    use Apart.{apartness, interpolate, nearestOn, toSegment}
+    use Apart.{apartness, interpolate, line, nearestOn, toSegment}
     use Geodesy.Point
 
-    def along(y: Float64): List[Point] =
-        {x = 0.0, y = y} :: {x = 100.0, y = y} :: Nil
+    /// A line of the fixture's: `100.0` metres of drawing standing at height `y`, each
+    /// place with the metre it stands at.
+    def along(y: Float64): List[Apart.Metred] =
+        {point = {x = 0.0, y = y}, metre = 0.0} :: {point = {x = 100.0, y = y}, metre = 100.0} :: Nil
 
-    def metres(): List[Float64] =
-        0.0 :: 100.0 :: Nil
+    def twoPoints(): List[Point] =
+        {x = 0.0, y = 0.0} :: {x = 100.0, y = 0.0} :: Nil
 
     def hypot(a: Float64, b: Float64): Float64 = unsafe IO { Math.hypot(a, b) }
 
@@ -26,32 +28,56 @@ pub mod TestApart {
         }
 
     @Test
+    def testOnlyAMetrePerPointMakesALine(): Unit \ Assert =
+        match line(twoPoints(), 0.0 :: 100.0 :: Nil) {
+            case Ok(metred) =>
+                Assert.assertTrue(List.length(metred) == 2);
+                Assert.assertTrue(Option.map(each -> each#point#x == 100.0 and each#metre == 100.0, List.nth(1, metred)) == Some(true))
+            case Err(problem) => Assert.assertTrueWithMsg(false, "a metre per point is a line: ${problem}")
+        };
+        match line(twoPoints(), 0.0 :: Nil) {
+            case Ok(_) => Assert.fail("a line short of its metres")
+            case Err(problem) =>
+                Assert.assertTrueWithMsg(String.contains({substr = "1 metres for 2 points"}, problem), problem)
+        };
+        match line(twoPoints(), 0.0 :: 100.0 :: 200.0 :: Nil) {
+            case Ok(_) => Assert.fail("a line long of its metres")
+            case Err(_) => ()
+        }
+
+    @Test
     def testInterpolateWalksALineByItsOwnMetres(): Unit \ Assert =
-        let at = interpolate(along(0.0), metres(), 40.0);
+        let at = interpolate(along(0.0), 40.0);
         Assert.assertTrue(at#x == 40.0);
         Assert.assertTrue(at#y == 0.0);
-        let zero = interpolate(along(0.0), metres(), 0.0);
+        let zero = interpolate(along(0.0), 0.0);
         Assert.assertTrueWithMsg(zero#x == 0.0, "the lap's own zero");
         // A zero-length stretch is walked through, not divided by.
-        let still = {x = 0.0, y = 0.0} :: {x = 0.0, y = 0.0} :: {x = 5.0, y = 0.0} :: Nil;
-        let past = interpolate(still, 0.0 :: 0.0 :: 5.0 :: Nil, 2.5);
+        let still = {point = {x = 0.0, y = 0.0}, metre = 0.0}
+            :: {point = {x = 0.0, y = 0.0}, metre = 0.0}
+            :: {point = {x = 5.0, y = 0.0}, metre = 5.0}
+            :: Nil;
+        let past = interpolate(still, 2.5);
         Assert.assertTrue(past#x == 2.5);
         Assert.assertTrue(past#y == 0.0)
 
     @Test
     def testNearestOnProjectsAPlaceOntoALine(): Unit \ Assert =
-        let corner = {x = 0.0, y = 0.0} :: {x = 10.0, y = 0.0} :: {x = 10.0, y = 10.0} :: Nil;
-        let near = nearestOn(corner, 0.0 :: 10.0 :: 20.0 :: Nil, {x = 5.0, y = 3.0});
+        let corner = {point = {x = 0.0, y = 0.0}, metre = 0.0}
+            :: {point = {x = 10.0, y = 0.0}, metre = 10.0}
+            :: {point = {x = 10.0, y = 10.0}, metre = 20.0}
+            :: Nil;
+        let near = nearestOn(corner, {x = 5.0, y = 3.0});
         Assert.assertTrue(near#metres == 5.0);
         Assert.assertTrue(near#distance == 3.0);
         // Beyond the end it clamps to the corner, not beyond.
-        let past = nearestOn(corner, 0.0 :: 10.0 :: 20.0 :: Nil, {x = 12.0, y = 12.0});
+        let past = nearestOn(corner, {x = 12.0, y = 12.0});
         Assert.assertTrue(past#metres == 20.0);
         Assert.assertTrue(abs(past#distance - hypot(2.0, 2.0)) < 0.0000000001)
 
     @Test
     def testApartnessSamplesOneLineAgainstAnotherAtItsOwnSpacing(): Unit \ Assert =
-        match apartness(along(0.0), metres(), along(5.0), metres(), 25.0) {
+        match apartness(along(0.0), along(5.0), 25.0) {
             case Ok(read) =>
                 // 0, 25, 50, 75 — the lap's own end is not sampled twice.
                 Assert.assertTrue(read#count == 4);
@@ -67,8 +93,9 @@ pub mod TestApart {
     @Test
     def testApartnessRefusesALineWhoseOwnMetresNeverLeaveZero(): Unit \ Assert =
         let measured = "nothing is measured along the sampled line: its own metres end at 0 m";
-        Assert.assertTrue(complains(measured, apartness({x = 0.0, y = 0.0} :: Nil, 0.0 :: Nil, along(5.0), metres(), 25.0)));
-        Assert.assertTrue(complains("its own metres end at 0 m", apartness(Nil, Nil, along(5.0), metres(), 25.0)))
+        let standing = {point = {x = 0.0, y = 0.0}, metre = 0.0} :: Nil;
+        Assert.assertTrue(complains(measured, apartness(standing, along(5.0), 25.0)));
+        Assert.assertTrue(complains("its own metres end at 0 m", apartness(Nil, along(5.0), 25.0)))
 
     @Test
     def testToSegmentClampsToAStretchAndKnowsAPlaceThatIsOne(): Unit \ Assert =

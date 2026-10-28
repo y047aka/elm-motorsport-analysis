@@ -28,7 +28,6 @@ pub mod Atlas {
     use Cli.Args.ArgsError
     use Cli.Args.Outcome
     use Geodesy.Place
-    use Geodesy.Point
     use Geodesy.cumulative
     use Geodesy.parallelOf
     use Geodesy.projectOn
@@ -396,11 +395,14 @@ pub mod Atlas {
         let length = Option.getWithDefault(0.0, List.last(theirMetres));
         let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
         match forM(
-            origin       <- Midline.checkOrigin(first, circuit#timingLine);
-            deviation    <- Apart.apartness(theirPoints, theirMetres, ourPoints, ours#metres, Apart.defaultEvery());
-            whereCorners <- atCorners(corners, parallel, ourPoints, ours#metres, length);
-            published    <- atPublished(circuit, ours, theirPoints, theirMetres, ourPoints);
-            wherePits    <- atPits(pits, parallel, pitPoints, pitMetres, length)
+            theirLine      <- Apart.line(theirPoints, theirMetres);
+            ourLine        <- Apart.line(ourPoints, ours#metres);
+            pitLine        <- Apart.line(pitPoints, pitMetres);
+            origin         <- Midline.checkOrigin(first, circuit#timingLine);
+            deviation      <- Apart.apartness(theirLine, ourLine, Apart.defaultEvery());
+            whereCorners   <- atCorners(corners, parallel, ourLine, length);
+            published      <- atPublished(circuit, ours, theirLine, ourLine);
+            wherePits      <- atPits(pits, parallel, pitLine, length)
         ) yield (origin, deviation, whereCorners, published, wherePits) {
             case Ok((origin, deviation, whereCorners, (claim, lines), wherePits)) =>
                 keep(
@@ -429,16 +431,14 @@ pub mod Atlas {
     def atCorners(
         corners: List[Geometry.Feature],
         parallel: Float64,
-        ourPoints: List[Geodesy.Point],
-        ours: List[Float64],
+        ourLine: List[Apart.Metred],
         length: Float64
     ): Result[String, List[AtCorner]] =
-        corners |> Result.traverse(atCorner(parallel, ourPoints, ours, length))
+        corners |> Result.traverse(atCorner(parallel, ourLine, length))
 
     def atCorner(
         parallel: Float64,
-        ourPoints: List[Geodesy.Point],
-        ours: List[Float64],
+        ourLine: List[Apart.Metred],
         length: Float64,
         corner: Geometry.Feature
     ): Result[String, AtCorner] =
@@ -446,7 +446,7 @@ pub mod Atlas {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
-                let near = place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(ourPoints, ours);
+                let near = place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(ourLine);
                 let spelled = Option.getWithDefault("undefined", Geometry.word("id", Geometry.propertiesOf(corner)));
                 Ok({id = spelled, theirMetres = marker * length, ourMetres = near#metres, distance = near#distance})
         }
@@ -457,9 +457,8 @@ pub mod Atlas {
     def atPublished(
         circuit: Circuit,
         ours: Kept,
-        theirPoints: List[Geodesy.Point],
-        theirMetres: List[Float64],
-        ourPoints: List[Geodesy.Point]
+        theirLine: List[Apart.Metred],
+        ourLine: List[Apart.Metred]
     ): Result[String, (Option[Publishes], List[AtLine])] =
         match Midline.sectorsClaimed(ours#props) {
             case None => Ok((None, Nil))
@@ -472,7 +471,7 @@ pub mod Atlas {
                                 Some(sectors),
                                 List.map(
                                     line -> {
-                                        let near = line#metres |> Apart.interpolate(ourPoints, ours#metres) |> Apart.nearestOn(theirPoints, theirMetres);
+                                        let near = line#metres |> Apart.interpolate(ourLine) |> Apart.nearestOn(theirLine);
                                         {id = line#id, metres = line#metres, theirMetres = near#metres, distance = near#distance}
                                     },
                                     lines
@@ -487,16 +486,14 @@ pub mod Atlas {
     def atPits(
         pits: List[Geometry.Feature],
         parallel: Float64,
-        pitPoints: List[Geodesy.Point],
-        pitMetres: List[Float64],
+        pitLine: List[Apart.Metred],
         length: Float64
     ): Result[String, List[AtPit]] =
-        pits |> Result.traverse(atPit(parallel, pitPoints, pitMetres, length))
+        pits |> Result.traverse(atPit(parallel, pitLine, length))
 
     def atPit(
         parallel: Float64,
-        pitPoints: List[Geodesy.Point],
-        pitMetres: List[Float64],
+        pitLine: List[Apart.Metred],
         length: Float64,
         pit: Geometry.Feature
     ): Result[String, AtPit] =
@@ -504,7 +501,7 @@ pub mod Atlas {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
-                let near = place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(pitPoints, pitMetres);
+                let near = place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(pitLine);
                 Ok({role = Midline.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance})
         }
 

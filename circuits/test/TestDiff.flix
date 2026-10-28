@@ -98,7 +98,7 @@ pub mod TestDiff {
         let atlas = kept("atlas", "measured-midline", None);
         let drawing = Diff.overlay(
             survey :: atlas :: Nil,
-            ({x = 0.0, y = 0.0} :: {x = 100.0, y = 0.0} :: Nil) :: ({x = 0.0, y = 0.0} :: {x = 100.0, y = 50.0} :: Nil) :: Nil
+            sampled(0.0, 0.0, 100.0, 0.0) :: sampled(0.0, 0.0, 100.0, 50.0) :: Nil
         );
         Assert.assertTrue(String.startsWith({prefix = "<?xml"}, drawing));
         Assert.assertTrueWithMsg(String.contains({substr = "<path d=\"M 20.0,500.0 L 980.0,500.0\" fill=\"none\" stroke=\"#d43a3a\""}, drawing), "the first line in red, y flipped so north is up");
@@ -116,9 +116,14 @@ pub mod TestDiff {
     @Test
     def testTheCornerOfTheDrawingIsTheFirstPlaceMeasuredAndNotTheZeroOfThePlane(): Unit \ Assert =
         let survey = kept("survey", "osm-centreline", None);
-        let places = ({x = 1000.0, y = 1000.0} :: {x = 1200.0, y = 1100.0} :: Nil) :: Nil;
+        let places = sampled(1000.0, 1000.0, 1200.0, 1100.0) :: Nil;
         let drawing = Diff.overlay(survey :: survey :: Nil, places);
         // Framed on the places themselves, the line fills the page rather than sitting
         // in one corner of it.
         Assert.assertTrue(String.contains({substr = "M 20.0,500.0 L 980.0,20.0"}, drawing))
+
+    /// A drawn line as the sampling hands it to the overlay: two places, each with a
+    /// metre — the drawing reads the places and leaves the metres in the file.
+    def sampled(ax: Float64, ay: Float64, bx: Float64, by: Float64): List[Apart.Metred] =
+        {point = {x = ax, y = ay}, metre = 0.0} :: {point = {x = bx, y = by}, metre = 100.0} :: Nil
 }

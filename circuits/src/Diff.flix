@@ -166,21 +166,23 @@ pub mod Diff {
 
     /// The report: what each file says it is, then each line sampled against the other,
     /// then the overlay if one was asked for.
-    def reported(lines: List[Line], asked: Request): Result[String, Outcome] \ { IO, Console } = {
-        let projected = projectedOf(lines);
-        foreach (line <- lines)
-            Console.println(quoted(line));
-        forM(
-            one <- compared(lines, projected, 0, 1, asked#every);
-            two <- compared(lines, projected, 1, 0, asked#every)
-        ) yield spoken(lines, projected, one, two, asked)
-    }
+    def reported(lines: List[Line], asked: Request): Result[String, Outcome] \ { IO, Console } =
+        match projectedOf(lines) {
+            case Err(problem) => Err(problem)
+            case Ok(projected) =>
+                foreach (line <- lines)
+                    Console.println(quoted(line));
+                forM(
+                    one <- compared(projected, 0, 1, asked#every);
+                    two <- compared(projected, 1, 0, asked#every)
+                ) yield spoken(lines, projected, one, two, asked)
+        }
 
     /// Both directions said, each as far round the lap as the other, and the overlay
     /// laid over them where the run asked for one.
     def spoken(
         lines: List[Line],
-        projected: List[List[Point]],
+        projected: List[List[Apart.Metred]],
         one: Apartness,
         two: Apartness,
         asked: Request
@@ -191,15 +193,21 @@ pub mod Diff {
     }
 
     /// Both lines on one plane, projected about `Geodesy.parallelOf` — the mean
-    /// latitude of both lines together.
-    def projectedOf(lines: List[Line]): List[List[Point]] = {
+    /// latitude of both lines together — each place with the metre of its line's own
+    /// measure, which is all the sampling asks of a line. `Geometry` has refused any
+    /// file whose metres do not stand one per point before one reached here, so the
+    /// door below answers `Ok` for every line there is.
+    def projectedOf(lines: List[Line]): Result[String, List[List[Apart.Metred]]] = {
         let parallel = Geodesy.parallelOf(List.flatMap(line -> line#coords, lines));
-        List.map(line -> line#coords |> List.map(Geodesy.projectOn(parallel)), lines)
+        Result.traverse(
+            line -> Apart.line(List.map(Geodesy.projectOn(parallel), line#coords), line#metres),
+            lines
+        )
     }
 
     /// The overlay, written where it was asked for. A run that asked for none has
     /// already said everything it came to say.
-    def overlaid(lines: List[Line], projected: List[List[Point]], svg: Option[String]): Outcome \ IO =
+    def overlaid(lines: List[Line], projected: List[List[Apart.Metred]], svg: Option[String]): Outcome \ IO =
         match svg {
             case None => Outcome.Done(Nil)
             case Some(path) =>
@@ -223,20 +231,11 @@ pub mod Diff {
         Option.getWithDefault(0.0, List.last(line#metres))
 
     /// One direction of the comparison.
-    def compared(lines: List[Line], projected: List[List[Point]], along: Int32, against: Int32, every: Float64): Result[String, Apartness] =
-        Apart.apartness(
-            pointsOf(along, projected),
-            metresOf(along, lines),
-            pointsOf(against, projected),
-            metresOf(against, lines),
-            every
-        )
+    def compared(projected: List[List[Apart.Metred]], along: Int32, against: Int32, every: Float64): Result[String, Apartness] =
+        Apart.apartness(lineOf(along, projected), lineOf(against, projected), every)
 
-    def pointsOf(at: Int32, projected: List[List[Point]]): List[Point] =
+    def lineOf(at: Int32, projected: List[List[Apart.Metred]]): List[Apart.Metred] =
         Option.getWithDefault(Nil, List.nth(at, projected))
-
-    def metresOf(at: Int32, lines: List[Line]): List[Float64] =
-        Option.getWithDefault(Nil, Option.map(line -> line#metres, List.nth(at, lines)))
 
     /// One direction of the comparison as the sentence the report prints it in. Both
     /// directions are printed: they disagree when one line has places the other has not.
@@ -259,7 +258,7 @@ pub mod Diff {
         scale  = Float64
     }
 
-    def viewOf(projected: List[List[Point]]): View = {
+    def viewOf(projected: List[List[Apart.Metred]]): View = {
         let origin = cornerOf(projected);
         let reach = reachOf(origin, projected);
         {origin = origin, reach = reach, scale = (width() - (2.0 * margin())) / widest(reach)}
@@ -267,8 +266,8 @@ pub mod Diff {
 
     /// The north-west corner of both lines together — the first place they were
     /// measured at, not the zero of the plane.
-    def cornerOf(projected: List[List[Point]]): Point =
-        match List.flatten(projected) {
+    def cornerOf(projected: List[List[Apart.Metred]]): Point =
+        match List.flatMap(points, projected) {
             case Nil => {x = 0.0, y = 0.0}
             case first :: rest =>
                 List.foldLeft(
@@ -282,15 +281,20 @@ pub mod Diff {
         }
 
     /// How far the lines reach east and south from that corner.
-    def reachOf(origin: Point, projected: List[List[Point]]): Point =
+    def reachOf(origin: Point, projected: List[List[Apart.Metred]]): Point =
         List.foldLeft(
             (reach, place) -> {
                 x = if (place#x - origin#x > reach#x) place#x - origin#x else reach#x,
                 y = if (place#y - origin#y > reach#y) place#y - origin#y else reach#y
             },
             {x = 0.0, y = 0.0},
-            List.flatten(projected)
+            List.flatMap(points, projected)
         )
+
+    /// The places of a sampled line — the drawing reads the metres from the file, not
+    /// from the line's measure.
+    def points(line: List[Apart.Metred]): List[Point] =
+        List.map(each -> each#point, line)
 
     /// The axis the drawing is fitted to, which is the one that needs the most room:
     /// fitting the other would run the line off the page.
@@ -300,7 +304,7 @@ pub mod Diff {
     /// Both lines as one drawing, with the provenance each file carries written into it
     /// as its own comment: an overlay that outlives its files says what it was comparing,
     /// and what each of them was licensed under.
-    pub def overlay(lines: List[Line], projected: List[List[Point]]): String = {
+    pub def overlay(lines: List[Line], projected: List[List[Apart.Metred]]): String = {
         let view = viewOf(projected);
         let page = Util.Format.whole(width());
         let across = Util.Format.fixed(0, (2.0 * margin()) + (view#reach#y * view#scale));
@@ -324,20 +328,20 @@ pub mod Diff {
     /// gives it. The files, their places and the colours are walked together rather
     /// than mapped over: `List.map3` is a cross product to Flix's `Applicative` rather
     /// than a zip, and would draw every line in every colour it was handed.
-    def drawn(lines: List[Line], projected: List[List[Point]], view: View): String =
+    def drawn(lines: List[Line], projected: List[List[Apart.Metred]], view: View): String =
         strokes(Nil, lines, projected, colours(), view) |> String.intercalate("\n")
 
     def strokes(
         kept: List[String],
         lines: List[Line],
-        projected: List[List[Point]],
+        projected: List[List[Apart.Metred]],
         tints: List[String],
         view: View
     ): List[String] =
         match (lines, projected, tints) {
             case (_line :: more, places :: rest, colour :: further) =>
                 strokes(
-                    "  <path d=\"M ${String.intercalate(" L ", List.map(point -> placed(view, point), places))}\" fill=\"none\" stroke=\"${colour}\" stroke-width=\"2\" opacity=\"0.8\"/>"
+                    "  <path d=\"M ${String.intercalate(" L ", List.map(point -> placed(view, point), points(places)))}\" fill=\"none\" stroke=\"${colour}\" stroke-width=\"2\" opacity=\"0.8\"/>"
                         :: kept,
                     more,
                     rest,

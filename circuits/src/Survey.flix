@@ -339,11 +339,14 @@ pub mod Survey {
         let surveyed = cumulative(lapPoints);
         let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));
         let metres = List.map(each -> each * stretch, surveyed);
+        // The published metre each surveyed place stands at, in one list: the degrees
+        // and the metre are looked up together, at one index, and never apart.
+        let lapMetres = List.zipWith((place, metre) -> (place, metre), lapNodes, metres);
         let half = List.length(lapPoints) / 2;
         let kept = thinned(lapPoints, half);
         let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
         {
-            centreline = List.map(at -> metred(at, lapNodes, metres), kept),
+            centreline = List.map(at -> metred(at, lapMetres), kept),
             pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
             frame = {origin = northWest(both), parallel = parallel},
             direction = turnDirection(lapPoints),
@@ -352,11 +355,14 @@ pub mod Survey {
         }
     }
 
-    /// One kept point: the degrees it was surveyed at, and the published metre it stands at.
-    def metred(at: Int32, lapNodes: List[Place], metres: List[Float64]): MetredPlace = {
-        let place = Option.getWithDefault({lat = 0.0, lon = 0.0}, List.nth(at, lapNodes));
-        {lat = place#lat, lon = place#lon, metres = roundTenth(Option.getWithDefault(0.0, List.nth(at, metres)))}
-    }
+    /// One kept point: the degrees it was surveyed at, and the published metre it stands
+    /// at — both from the one place the lap's zipped metres are looked up at. A kept
+    /// index runs over `lapPoints`, which is `lapMetres` projected, so every index lands.
+    def metred(at: Int32, lap: List[(Place, Float64)]): MetredPlace =
+        match List.nth(at, lap) {
+            case Some((place, metre)) => {lat = place#lat, lon = place#lon, metres = roundTenth(metre)}
+            case None                 => {lat = 0.0, lon = 0.0, metres = 0.0}
+        }
 
     /// The lap thinned: split at its own middle, so that the place the lap starts and ends at
     /// is not the pivot of both halves at once, and the halves joined at their meeting point

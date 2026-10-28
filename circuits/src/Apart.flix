@@ -6,6 +6,11 @@
 /// metres travel with its points, so a line stretched to a published lap length and a
 /// line measured at its own are still compared place against place. The sphere, the
 /// projection and the metre are `Geodesy`'s; what is here is the sampling.
+///
+/// A line enters here as `Metred` — one place with the metre it stands at — and
+/// `line` is the one door: a `List[Point]` and a `List[Float64]` reach it as a line
+/// only if the metres stand one per point. Nothing below `line` can see the two
+/// lists apart, so nothing below it can walk a disagreement between them.
 pub mod Apart {
 
     use Geodesy.Point
@@ -14,10 +19,29 @@ pub mod Apart {
 
     // ------------------------------------------------- the line being sampled against
 
+    /// A place of a projected line with the metre of the line's own measure it stands
+    /// at.
+    pub type alias Metred = {
+        point = Point,
+        metre = Float64
+    }
+
+    /// The only way two lists become a line here: point for point, or nothing. A
+    /// disagreement between a line's metres and its points is what `Geometry` refuses
+    /// a file for; a caller that has already read the file through `Geometry` gets
+    /// `Ok`, and one that hasn't is answered rather than walked.
+    pub def line(points: List[Point], metres: List[Float64]): Result[String, List[Metred]] =
+        if (List.length(points) != List.length(metres))
+            Err("${List.length(metres)} metres for ${List.length(points)} points: a line is drawn point for point by its own measure")
+        else
+            Ok(List.zipWith(
+                (point, metre) -> {point = point, metre = metre},
+                points,
+                metres
+            ))
+
     /// A stretch of a projected line, and where on the line's own measure each end
-    /// stands. A line whose metres run shorter than its points is walked as the points
-    /// say, the missing metre being nought — the disagreement `Geometry` refuses a file
-    /// for before any of this is asked of it.
+    /// stands.
     pub type alias Stretch = {
         start  = Point,
         end    = Point,
@@ -25,15 +49,12 @@ pub mod Apart {
         after  = Float64
     }
 
-    def stretches(points: List[Point], metres: List[Float64]): List[Stretch] =
-        List.range(0, List.length(points) - 1) |> List.map(stretchAt(points, metres))
-
-    def stretchAt(points: List[Point], metres: List[Float64], at: Int32): Stretch = {
-        start  = Option.getWithDefault(zero(), List.nth(at, points)),
-        end    = Option.getWithDefault(zero(), List.nth(at + 1, points)),
-        metres = Option.getWithDefault(0.0, List.nth(at, metres)),
-        after  = Option.getWithDefault(0.0, List.nth(at + 1, metres))
-    }
+    def stretches(line: List[Metred]): List[Stretch] =
+        List.zipWith(
+            (ahead, behind) -> {start = ahead#point, end = behind#point, metres = ahead#metre, after = behind#metre},
+            line,
+            List.drop(1, line)
+        )
 
     /// A place onto a stretch: how far from it, and how far along the stretch the nearest
     /// place to it stands. A stretch of nought length is a place, and its nearest place
@@ -66,10 +87,10 @@ pub mod Apart {
         distance = Float64
     }
 
-    pub def nearestOn(points: List[Point], metres: List[Float64], point: Point): Near =
+    pub def nearestOn(line: List[Metred], point: Point): Near =
         Option.getWithDefault(
             {metres = 0.0, distance = Float64.maxValue()},
-            nearest(None, List.map(each -> stands(each, point |> toSegment(each#start, each#end)), stretches(points, metres)))
+            nearest(None, List.map(each -> stands(each, point |> toSegment(each#start, each#end)), stretches(line)))
         )
 
     /// The metre along the lap where the nearest place on a stretch stands.
@@ -114,36 +135,22 @@ pub mod Apart {
     /// The first line laid against the second, sampled every `every` metres along the
     /// first. The end of the sampled line is not itself sampled — the walk stops short
     /// of it, which is what `count` says.
-    pub def apartness(
-        aPoints: List[Point],
-        aMetres: List[Float64],
-        bPoints: List[Point],
-        bMetres: List[Float64],
-        every: Float64
-    ): Result[String, Apartness] =
-        let length = lastMetre(aMetres);
+    pub def apartness(a: List[Metred], b: List[Metred], every: Float64): Result[String, Apartness] =
+        let length = lastMetre(a);
         if (length <= 0.0)
             Err("nothing is measured along the sampled line: its own metres end at ${Util.Format.spelled(length)} m")
         else
-            Ok(readings(samples(0.0, length, every, aPoints, aMetres, bPoints, bMetres)))
+            Ok(readings(samples(0.0, length, every, a, b)))
 
-    def lastMetre(metres: List[Float64]): Float64 =
-        Option.getWithDefault(0.0, List.last(metres))
+    def lastMetre(line: List[Metred]): Float64 =
+        Option.getWithDefault(0.0, Option.map(each -> each#metre, List.last(line)))
 
-    def samples(
-        at: Float64,
-        length: Float64,
-        every: Float64,
-        aPoints: List[Point],
-        aMetres: List[Float64],
-        bPoints: List[Point],
-        bMetres: List[Float64]
-    ): List[Sample] =
+    def samples(at: Float64, length: Float64, every: Float64, a: List[Metred], b: List[Metred]): List[Sample] =
         if (at >= length)
             Nil
         else {
-            let near = at |> interpolate(aPoints, aMetres) |> nearestOn(bPoints, bMetres);
-            {aMetres = at, bMetres = near#metres, distance = near#distance} :: samples(at + every, length, every, aPoints, aMetres, bPoints, bMetres)
+            let near = at |> interpolate(a) |> nearestOn(b);
+            {aMetres = at, bMetres = near#metres, distance = near#distance} :: samples(at + every, length, every, a, b)
         }
 
     /// The mean, and the worst of what was sampled — the first place the readings tie at.
@@ -166,19 +173,19 @@ pub mod Apart {
     /// stretch whose end is no longer short of it, the last stretch excepted, which is
     /// where a place beyond the line's end falls. A stretch of nought length is walked
     /// through rather than divided by.
-    pub def interpolate(points: List[Point], metres: List[Float64], s: Float64): Point =
-        if (List.length(points) < 2)
+    pub def interpolate(line: List[Metred], s: Float64): Point =
+        if (List.length(line) < 2)
             zero()
         else
-            walk(points, metres, s, 1, List.length(metres) - 2)
+            walk(line, s, 1, List.length(line) - 2)
 
-    def walk(points: List[Point], metres: List[Float64], s: Float64, at: Int32, last: Int32): Point =
-        match (List.nth(at - 1, points), List.nth(at, points), List.nth(at - 1, metres), List.nth(at, metres)) {
-            case (Some(before), Some(after), Some(short), Some(far)) =>
-                if (at <= last and far < s)
-                    walk(points, metres, s, at + 1, last)
+    def walk(line: List[Metred], s: Float64, at: Int32, last: Int32): Point =
+        match (List.nth(at - 1, line), List.nth(at, line)) {
+            case (Some(before), Some(after)) =>
+                if (at <= last and after#metre < s)
+                    walk(line, s, at + 1, last)
                 else
-                    stretched(before, after, short, far, s)
+                    stretched(before#point, after#point, before#metre, after#metre, s)
             case _ => zero()
         }
 
