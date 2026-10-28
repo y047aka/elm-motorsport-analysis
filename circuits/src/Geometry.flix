@@ -57,19 +57,20 @@ pub mod Geometry {
 
     /// The outline of a kept file, read from its text.
     pub def outline(name: String, text: String): Result[String, Line] =
-        match found(text, name, "outline", "${name}: no outline feature") {
+        match found(text, name, "outline") {
             case Err(problem)       => Err(problem)
             case Ok((props, shape)) => outlineOf(props, shape, name)
         }
 
     /// The pit lane beside the outline: a line with no metres.
     pub def pitLane(name: String, text: String): Result[String, List[Place]] =
-        match found(text, name, "pit_lane", "${name}: the geometry holds no pit lane") {
+        match found(text, name, "pit_lane") {
             case Err(problem) => Err(problem)
             case Ok((_, shape)) =>
-                match coordinates(shape) {
-                    case Nil  => Err("${name}: the pit lane holds no coordinates")
-                    case line => Ok(line)
+                match placesOf("pit lane", shape) {
+                    case Ok(Nil)     => Err("${name}: the pit lane holds no coordinates")
+                    case Ok(line)    => Ok(line)
+                    case Err(problem) => Err("${name}: ${problem}")
                 }
         }
 
@@ -87,22 +88,25 @@ pub mod Geometry {
         }
 
     def measured(props: Map[String, Json], shape: Json, name: String): Result[String, Line] =
-        let coords = coordinates(shape);
-        if (List.isEmpty(coords))
-            Err("${name}: the outline holds no points to draw")
-        else
-            match numbersAt("metres", props) {
-                case None => Err("${name}: the outline publishes no metres")
-                case Some(metres) =>
-                    let points = List.length(coords);
-                    if (List.length(metres) != points)
-                        Err("${name}: ${List.length(metres)} metres for ${points} points")
-                    else
-                        match backwardsIn(metres) {
-                            case None     => Ok({name = name, props = quoted(props), coords = coords, metres = metres})
-                            case Some(at) => Err("${name}: metres go backwards at point ${at}")
-                        }
-            }
+        match placesOf("outline", shape) {
+            case Err(problem) => Err("${name}: ${problem}")
+            case Ok(coords) =>
+                if (List.isEmpty(coords))
+                    Err("${name}: the outline holds no points to draw")
+                else
+                    match numbersAt("metres", props) {
+                        case None => Err("${name}: the outline publishes no metres")
+                        case Some(metres) =>
+                            let points = List.length(coords);
+                            if (List.length(metres) != points)
+                                Err("${name}: ${List.length(metres)} metres for ${points} points")
+                            else
+                                match backwardsIn(metres) {
+                                    case None     => Ok({name = name, props = quoted(props), coords = coords, metres = metres})
+                                    case Some(at) => Err("${name}: metres go backwards at point ${at}")
+                                }
+                    }
+        }
 
     /// The sentence for a basis outside the kinds a reader knows, quoting what the
     /// file said — including when it said nothing at all, which is the edited file.
@@ -133,18 +137,24 @@ pub mod Geometry {
 
     // ------------------------------------------------------------------ the file
 
-    /// A file's feature of one role, with its properties and its geometry — a
-    /// geometry file's properties are what a line is claimed to be, and its
-    /// `geometry` member is where the coordinates stand.
-    def found(text: String, name: String, role: String, missing: String): Result[String, (Map[String, Json], Json)] =
+    /// A file's feature of one role: its properties and its geometry — a geometry
+    /// file's properties are what a line is claimed to be, and its `geometry` member
+    /// is where the coordinates stand. The sentence for a file holding no such feature
+    /// is made here, from the role: a caller that handed the sentence in could only
+    /// have written it by naming the same fact twice.
+    def found(text: String, name: String, role: String): Result[String, (Map[String, Json], Json)] =
         match Util.Json.parse(text) {
             case Err(problem) => Err("${name}: ${problem}")
             case Ok(json) =>
-                match featuresOf(json) {
-                    case Nil  => Err(missing)
-                    case some => byRole(role, some, missing)
+                match byRole(role, featuresOf(json)) {
+                    case Some(one) => Ok(one)
+                    case None      => Err("${name}: the geometry holds no ${called(role)} feature")
                 }
         }
+
+    /// A role as the sentence about a geometry lacking one calls it.
+    def called(role: String): String =
+        if (role == "pit_lane") "pit lane" else role
 
     /// All the file's features. The regeneration fence walks every one of two files
     /// rather than the one of each role a line is read out of.
@@ -159,11 +169,11 @@ pub mod Geometry {
             case _ => Nil
         }
 
-    def byRole(role: String, some: List[Feature], missing: String): Result[String, (Map[String, Json], Json)] =
-        match List.find(each -> word("role", propertiesOf(each)) == Some(role), some) {
-            case None      => Err(missing)
-            case Some(one) => Ok((propertiesOf(one), Option.getWithDefault(Json.JNull, Map.get("geometry", one))))
-        }
+    def byRole(role: String, some: List[Feature]): Option[(Map[String, Json], Json)] =
+        Option.map(
+            one -> (propertiesOf(one), Option.getWithDefault(Json.JNull, Map.get("geometry", one))),
+            List.find(each -> word("role", propertiesOf(each)) == Some(role), some)
+        )
 
     /// A feature's properties. A feature carrying none picks nothing.
     pub def propertiesOf(feature: Feature): Map[String, Json] =
@@ -174,29 +184,53 @@ pub mod Geometry {
 
     // ------------------------------------------------------------- the JSON, read
 
-    /// A line's coordinates: the pairs GeoJSON gives, lon first. A pair that is not
-    /// two numbers is no point, so a line that drops one is shorter — and a line is
-    /// what the metre count is checked against, which is where a dropped point
-    /// shows up as a disagreement between the two.
-    def coordinates(shape: Json): List[Place] =
+    /// The positions a geometry member lists, all-or-nothing: a line's coordinates read
+    /// as `Ok` hold a place for every position the file wrote.
+    def placesOf(role: String, shape: Json): Result[String, List[Place]] =
         match shape {
             case Json.JObject(members) =>
                 match Map.get("coordinates", members) {
-                    case Some(Json.JArray(items)) => List.filterMap(pair, Vector.toList(items))
-                    case _                        => Nil
+                    case Some(Json.JArray(items)) => places(role, Vector.toList(items))
+                    case _                        => Err("the ${role} holds no coordinates")
                 }
-            case _ => Nil
+            case _ => Err("the ${role} holds no coordinates")
         }
 
+    /// The positions a GeoJSON file lists as the places of a line: lon first, then lat,
+    /// then the elevation a file sometimes records — and nothing after that. One
+    /// position that is not a pair of degrees refuses the whole line, naming the
+    /// position it stumbled at: a line read with a hole dropped in it is a shorter
+    /// line, and a reader laying one against another could not tell a file surveyed
+    /// shorter from one a reading thinned. This is the project's one reading of
+    /// coordinates — `Midline` measures an atlas line with it too.
+    pub def places(role: String, positions: List[Json]): Result[String, List[Place]] =
+        walked(role, Nil, positions, 1)
+
+    def walked(role: String, kept: List[Place], rest: List[Json], at: Int32): Result[String, List[Place]] =
+        match rest {
+            case Nil => Ok(List.reverse(kept))
+            case one :: more =>
+                match pair(one) {
+                    case Some(place) => walked(role, place :: kept, more, at + 1)
+                    case None        => Err("the ${role} is not a pair of degrees at position ${at}")
+                }
+        }
+
+    /// One position: lon and lat, the elevation GeoJSON sometimes records after them
+    /// and nothing past it. A reading that took a pair out of a longer position would
+    /// be guessing at what the third number was.
     def pair(json: Json): Option[Place] =
         match json {
             case Json.JArray(items) =>
                 match Vector.toList(items) {
-                    case east :: north :: _ =>
-                        match (number(east), number(north)) {
-                            case (Some(lon), Some(lat)) => Some({lon = lon, lat = lat})
-                            case _                      => None
-                        }
+                    case east :: north :: rest =>
+                        if (List.length(rest) > 1)
+                            None
+                        else
+                            match (number(east), number(north)) {
+                                case (Some(lon), Some(lat)) => Some({lon = lon, lat = lat})
+                                case _                      => None
+                            }
                     case _ => None
                 }
             case _ => None

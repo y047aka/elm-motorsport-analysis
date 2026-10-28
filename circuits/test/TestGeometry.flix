@@ -115,8 +115,17 @@ pub mod TestGeometry {
 
     @Test
     def testOutlineRefusesAFileWithNoOutlineAtAll(): Unit \ Assert =
-        Assert.assertTrue(refused("cota: no outline feature", Geometry.outline("cota", file(feature("pit_lane", "", line("[0, 0]"))))));
-        Assert.assertTrue(refused("cota: no outline feature", Geometry.outline("cota", "{\"type\": \"FeatureCollection\"}")))
+        Assert.assertTrue(
+            refused(
+                "cota: the geometry holds no outline feature",
+                Geometry.outline("cota", file(feature("pit_lane", "", line("[0, 0]"))))
+            )
+        );
+        Assert.assertTrue(
+            refused(
+                "cota: the geometry holds no outline feature",
+                Geometry.outline("cota", "{\"type\": \"FeatureCollection\"}"))
+        )
 
     @Test
     def testPitLaneIsALineWithNoMetresBecauseNothingTimesAlongIt(): Unit \ Assert =
@@ -134,13 +143,14 @@ pub mod TestGeometry {
     def testPitLaneRefusesAGeometryWithNoneAndALineWithNoCoordinates(): Unit \ Assert =
         Assert.assertTrue(
             refused(
-                "cota: the geometry holds no pit lane",
+                "cota: the geometry holds no pit lane feature",
                 Geometry.pitLane("cota", file(outlineWith("\"basis\": \"osm-centreline\", \"metres\": [0, 100]", "[0, 0]")))
             )
         );
+        // An empty position is not a pair of degrees, and is refused where it stands.
         Assert.assertTrue(
             refused(
-                "cota: the pit lane holds no coordinates",
+                "cota: the pit lane is not a pair of degrees at position 1",
                 Geometry.pitLane("cota", file(feature("pit_lane", "", line("[]"))))
             )
         )
@@ -155,11 +165,12 @@ pub mod TestGeometry {
                 outlineRefusing("\"basis\": \"osm-centreline\", \"metres\": [0, \"far\"]", "[0, 0], [100, 0]")
             )
         );
-        // A coordinate that is not a pair of numbers is no point, so the line is shorter
-        // — which is where a dropped point shows up, as a disagreement with the metres.
+        // A coordinate that is not a pair of degrees refuses the line at the position it
+        // was written at — not a shorter line, and not a disagreement with the metres
+        // counted after the fact.
         Assert.assertTrue(
             refused(
-                "cota: 2 metres for 1 points",
+                "cota: the outline is not a pair of degrees at position 2",
                 outlineRefusing("\"basis\": \"osm-centreline\", \"metres\": [0, 100]", "[0, 0], [\"far\", 0]")
             )
         )

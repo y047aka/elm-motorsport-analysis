@@ -53,14 +53,20 @@ pub mod TestMidline {
                 Midline.lineOf(outlined("\"role\": \"outline\"", "[[-97.6, 30.1]]"))
             )
         );
-        // One point is not a line; a coordinate that is not a pair of degrees is no
-        // coordinate, and the file is refused whole rather than measured with a hole.
+        // One point is not a line; a coordinate that is not a pair of degrees refuses the
+        // line at its own position, and the file is refused whole rather than measured
+        // with a hole.
         Assert.assertTrue(
             complains(
-                "holds no line to measure",
+                "the atlas outline is not a pair of degrees at position 1",
                 Midline.lineOf(outlined("\"role\": \"outline\"", "[[\"far\", 30.1], [-97.61, 30.11]]"))
             )
-        )
+        );
+        // The elevation a file records after the pair is nothing to a line.
+        match Midline.lineOf(outlined("\"role\": \"outline\"", "[[-97.6, 30.1, 5.0], [-97.61, 30.11, 6.0]]")) {
+            case Ok(line)     => Assert.assertTrue(List.length(line) == 2)
+            case Err(problem) => Assert.assertTrueWithMsg(false, "an elevation is still a pair of degrees: ${problem}")
+        }
 
     @Test
     def testPlaceOfReadsAMarkersPointAndMarkerOfItsFraction(): Unit \ Assert =
@@ -69,6 +75,12 @@ pub mod TestMidline {
                 Assert.assertTrue(place#lon == -97.6);
                 Assert.assertTrue(place#lat == 30.1)
             case Err(problem) => Assert.assertTrueWithMsg(false, "a point was held: ${problem}")
+        };
+        // The elevation a file records after the pair changes nothing about where the
+        // marker stands.
+        match Midline.placeOf(pointed("\"role\": \"corner\"", "{ \"coordinates\": [-97.6, 30.1, 5.0] }")) {
+            case Ok(place)    => Assert.assertTrue(place#lon == -97.6)
+            case Err(problem) => Assert.assertTrueWithMsg(false, "an elevation is still a place: ${problem}")
         };
         Assert.assertTrue(
             complains(

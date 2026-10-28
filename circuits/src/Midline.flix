@@ -43,21 +43,24 @@ pub mod Midline {
 
     // ---------------------------------------------------------------- the shapes
 
-    /// An atlas outline as the line it measures: degrees, lon before lat. A line the
-    /// reading does not understand is refused whole rather than measured with a hole in it.
+    /// An atlas outline as the line it measures: degrees, lon before lat. The one
+    /// reading of GeoJSON coordinates, `Geometry.places`, is asked here too — a file
+    /// that is not a line is refused whole, with the position it stumbles at named.
     pub def lineOf(feature: Geometry.Feature): Result[String, List[Place]] =
-        match allPairs(positionsOf(feature)) {
-            case Some(places) if List.length(places) >= 2 => Ok(places)
-            case _                                        => Err("the atlas outline holds no line to measure")
+        match Geometry.places("atlas outline", positionsOf(feature)) {
+            case Ok(places) if List.length(places) >= 2 => Ok(places)
+            case Ok(_)                                  => Err("the atlas outline holds no line to measure")
+            case Err(problem)                           => Err(problem)
         }
 
     /// An atlas point feature — a corner or a pit marker — as the place it stands at:
     /// a Point's coordinates are that pair itself, not a list of them, unlike the
-    /// outline's LineString.
+    /// outline's LineString. The elevation a file records after the pair changes
+    /// nothing about where the marker stands.
     pub def placeOf(feature: Geometry.Feature): Result[String, Place] =
         match allNumbers(positionsOf(feature)) {
-            case Some(lon :: lat :: Nil) => Ok({lon = lon, lat = lat})
-            case _                       => Err("the atlas ${named(feature)} carries no point")
+            case Some(lon :: lat :: rest) if List.length(rest) <= 1 => Ok({lon = lon, lat = lat})
+            case _                                                  => Err("the atlas ${named(feature)} carries no point")
         }
 
     /// Where on the lap a corner or pit marker stands, as the atlas's fraction of it.
@@ -72,21 +75,6 @@ pub mod Midline {
         }
 
     // ---------------------------------------------------------------- the JSON, read
-
-    /// One position as a place, or nothing at all when it is not exactly two numbers.
-    def pair(json: Json): Option[Place] =
-        match json {
-            case Json.JArray(items) =>
-                match Vector.toList(items) {
-                    case east :: north :: Nil =>
-                        match (Geometry.number(east), Geometry.number(north)) {
-                            case (Some(lon), Some(lat)) => Some({lon = lon, lat = lat})
-                            case _                      => None
-                        }
-                    case _ => None
-                }
-            case _ => None
-        }
 
     /// A feature's `geometry` member, and the `coordinates` inside it, one JSON value
     /// per position — written back from what the layer spelled, not from a reading of
@@ -142,17 +130,6 @@ pub mod Midline {
             },
             Some(Nil),
             items
-        )
-
-    /// The places a list of JSON positions carries, read the same all-or-nothing way.
-    def allPairs(positions: List[Json]): Option[List[Place]] =
-        List.foldRight(
-            (position, rest) -> match (pair(position), rest) {
-                case (Some(one), Some(many)) => Some(one :: many)
-                case _                       => None
-            },
-            Some(Nil),
-            positions
         )
 
     // ------------------------------------------------------------------- the guards
