@@ -40,6 +40,14 @@ pub mod Cli.Args {
     /// names the step from these tokens to its own arguments `completed` and hands
     /// that one function to both its `parse` and to `answer` below, so a test can
     /// never read arguments the run does not.
+    ///
+    /// A flag's value is kept as the word the reader spelled it in — `Setting.Every(String)`,
+    /// `Setting.Radius(String)` — and each command's `completed` reads it. That is
+    /// the shape `ArgDescr.ReqArg` leaves: its argument function answers a value or
+    /// nothing, so reading a number there would answer "unreadable" and "absent"
+    /// with the same tokenless failure and leave the sentence that names the
+    /// misread value unsayable. The distance between the two readings is bought
+    /// back by the refusal each `completed` writes for its own flag.
     pub type alias Scanned[s] = {options = List[s], words = List[String]}
 
     pub def scan(descrs: List[OptionDescr[s]], args: List[String]): Result[ArgsError, Scanned[s]] =
