@@ -128,27 +128,30 @@ pub mod Survey {
         match circuit#timingLine {
             case None => Ok(0.0)
             case Some(line) =>
-                let distance = apart(nodeOf(nodes, start), line#place);
-                let limit = Option.getWithDefault(Circuit.nodeWithin(), line#within);
-                if (distance > limit)
-                    Err(
-                        "role=${circuit#timedFrom} is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.whole(limit)} m. ${relationLines(members, nodes, line)}"
-                    )
-                else
-                    Ok(distance)
+                match Map.get(start, nodes) {
+                    case None =>
+                        Err("role=${circuit#timedFrom} names node ${start}, which the answer holds no place for")
+                    case Some(at) =>
+                        let distance = apart(at, line#place);
+                        let limit = Option.getWithDefault(Circuit.nodeWithin(), line#within);
+                        if (distance > limit)
+                            Err(
+                                "role=${circuit#timedFrom} is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.whole(limit)} m. ${relationLines(members, nodes, line)}"
+                            )
+                        else
+                            Ok(distance)
+                }
         }
 
     def relationLines(members: List[Member], nodes: Map[Int64, Place], line: Circuit.TimingLine): String =
-        let distances = List.map(
-            member -> "role=${member#role} is ${Util.Format.fixed(1, apart(nodeOf(nodes, member#ref), line#place))} m from it",
+        let distances = List.filterMap(
+            member -> Option.map(
+                at -> "role=${member#role} is ${Util.Format.fixed(1, apart(at, line#place))} m from it",
+                Map.get(member#ref, nodes)
+            ),
             List.filter(member -> member#kind == "node", members)
         );
         "The relation's lines: ${String.intercalate("; ", distances)}."
-
-    /// A node the answer does not hold is the zero of the map, which is a sea no circuit is
-    /// at: the distance it makes is a refusal, where a silence would be a pass.
-    def nodeOf(nodes: Map[Int64, Place], id: Int64): Place =
-        Option.getWithDefault({lat = 0.0, lon = 0.0}, Map.get(id, nodes))
 
     // ---------------------------------------------------------------- chaining a lap
 
@@ -301,14 +304,13 @@ pub mod Survey {
         Map.get(Option.getWithDefault(-1i64, List.last(ids)), nodes)
 
     /// The distance between a lap's last place and its first, spelled for the sentence that
-    /// refuses a lap which does not come back to where it started.
+    /// refuses a lap which does not come back to where it started. A place the answer does
+    /// not hold is named as nothing rather than measured from the zero of the map.
     def unclosed(nodes: Map[Int64, Place], ids: List[Int64]): String =
-        let last = endPlace(nodes, ids);
-        let to = startPlace(nodes, ids);
-        if (not Option.nonEmpty(last) or not Option.nonEmpty(to))
-            "nothing"
-        else
-            Util.Format.fixed(1, apart(Option.getWithDefault({lat = 0.0, lon = 0.0}, last), Option.getWithDefault({lat = 0.0, lon = 0.0}, to)))
+        match (endPlace(nodes, ids), startPlace(nodes, ids)) {
+            case (Some(last), Some(to)) => Util.Format.fixed(1, apart(last, to))
+            case _                      => "nothing"
+        }
 
     /// The ids turned to start at the line the lap is measured from, which is where the lap's
     /// own zero stands.

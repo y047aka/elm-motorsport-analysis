@@ -446,9 +446,12 @@ pub mod Atlas {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
-                let near = place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(ourLine);
                 let spelled = Option.getWithDefault("undefined", Geometry.word("id", Geometry.propertiesOf(corner)));
-                Ok({id = spelled, theirMetres = marker * length, ourMetres = near#metres, distance = near#distance})
+                match place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(ourLine) {
+                    case None => Err("the line this app draws holds no places, so corner ${spelled} stands nowhere on it")
+                    case Some(near) =>
+                        Ok({id = spelled, theirMetres = marker * length, ourMetres = near#metres, distance = near#distance})
+                }
         }
 
     /// Where each line the kept geometry publishes stands on each line: this app's
@@ -466,18 +469,16 @@ pub mod Atlas {
                 match Midline.sectorLines(sectors, circuit#lap) {
                     case Err(problem) => Err(problem)
                     case Ok(lines) =>
-                        Ok(
-                            (
-                                Some(sectors),
-                                List.map(
-                                    line -> {
-                                        let near = line#metres |> Apart.interpolate(ourLine) |> Apart.nearestOn(theirLine);
-                                        {id = line#id, metres = line#metres, theirMetres = near#metres, distance = near#distance}
-                                    },
-                                    lines
-                                )
-                            )
+                        Result.traverse(
+                            line ->
+                                match line#metres |> Apart.interpolate(ourLine) |> Apart.nearestOn(theirLine) {
+                                    case None => Err("the atlas line holds no places, so ${line#id} stands nowhere on it")
+                                    case Some(near) =>
+                                        Ok({id = line#id, metres = line#metres, theirMetres = near#metres, distance = near#distance})
+                                },
+                            lines
                         )
+                        |> Result.map(atLines -> (Some(sectors), atLines))
                 }
         }
 
@@ -501,8 +502,11 @@ pub mod Atlas {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
-                let near = place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(pitLine);
-                Ok({role = Midline.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance})
+                match place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(pitLine) {
+                    case None => Err("this app's pit lane holds no places, so ${Midline.named(pit)} stands nowhere on it")
+                    case Some(near) =>
+                        Ok({role = Midline.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance})
+                }
         }
 
     /// The keeping — the only side effect of a run, made once every guard has answered.

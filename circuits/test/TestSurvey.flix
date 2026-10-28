@@ -171,6 +171,16 @@ pub mod TestSurvey {
         Assert.assertTrue(refused("which is not within 10 m", written("cota", asking)));
         Assert.assertTrue(refused("The relation's lines: role=finish is", written("cota", asking)))
 
+    @Test
+    def testSurveyRefusesALineWhoseNodeTheAnswerDoesNotHold(): Unit \ Assert =
+        // A node the answer does not hold has no place to be measured from: the refusal
+        // names the node, where measuring from the zero of the map would say how far the
+        // sea stands from COTA.
+        let asking = answer(List.append(relation(6537729, member("node", "finish", 999) :: Nil) :: Nil, places()));
+        Assert.assertTrue(
+            refused("role=finish names node 999, which the answer holds no place for", written("cota", asking))
+        )
+
     /// The `within` a circuit authors narrows the distance its node is held to, and one
     /// that names none leaves the ten metres every node is held to. COTA authors its
     /// crosshair at the same ten the fallback is, so one fixture read both ways is what

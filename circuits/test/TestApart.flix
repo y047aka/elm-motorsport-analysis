@@ -67,13 +67,21 @@ pub mod TestApart {
             :: {point = {x = 10.0, y = 0.0}, metre = 10.0}
             :: {point = {x = 10.0, y = 10.0}, metre = 20.0}
             :: Nil;
-        let near = nearestOn(corner, {x = 5.0, y = 3.0});
-        Assert.assertTrue(near#metres == 5.0);
-        Assert.assertTrue(near#distance == 3.0);
+        match nearestOn(corner, {x = 5.0, y = 3.0}) {
+            case Some(near) =>
+                Assert.assertTrue(near#metres == 5.0);
+                Assert.assertTrue(near#distance == 3.0)
+            case None => Assert.assertTrueWithMsg(false, "a line of stretches has a nearest place")
+        };
         // Beyond the end it clamps to the corner, not beyond.
-        let past = nearestOn(corner, {x = 12.0, y = 12.0});
-        Assert.assertTrue(past#metres == 20.0);
-        Assert.assertTrue(abs(past#distance - hypot(2.0, 2.0)) < 0.0000000001)
+        match nearestOn(corner, {x = 12.0, y = 12.0}) {
+            case Some(past) =>
+                Assert.assertTrue(past#metres == 20.0);
+                Assert.assertTrue(abs(past#distance - hypot(2.0, 2.0)) < 0.0000000001)
+            case None => Assert.assertTrueWithMsg(false, "a place beyond the end still stands near a stretch")
+        };
+        // Nothing stands near a line with no places: no reading, not a sentinel.
+        Assert.assertTrueWithMsg(Option.isEmpty(nearestOn(Nil, {x = 0.0, y = 0.0})), "a line with no places answers nothing")
 
     @Test
     def testApartnessSamplesOneLineAgainstAnotherAtItsOwnSpacing(): Unit \ Assert =
@@ -96,6 +104,15 @@ pub mod TestApart {
         let standing = {point = {x = 0.0, y = 0.0}, metre = 0.0} :: Nil;
         Assert.assertTrue(complains(measured, apartness(standing, along(5.0), 25.0)));
         Assert.assertTrue(complains("its own metres end at 0 m", apartness(Nil, along(5.0), 25.0)))
+
+    @Test
+    def testApartnessRefusesAComparisonWithNowhereToSampleAgainst(): Unit \ Assert =
+        Assert.assertTrue(
+            complains(
+                "the compared line holds no places to sample against",
+                apartness(along(0.0), Nil, 25.0)
+            )
+        )
 
     @Test
     def testToSegmentClampsToAStretchAndKnowsAPlaceThatIsOne(): Unit \ Assert =

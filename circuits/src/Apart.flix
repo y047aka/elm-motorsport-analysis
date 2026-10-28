@@ -81,17 +81,14 @@ pub mod Apart {
     /// The nearest place on a line, and the metre of the lap it stands at — interpolated
     /// between the stretch's metres, not its start's. Of two stretches equally near, the
     /// first is kept, so a run over the same files says the same thing twice. A line with
-    /// no stretch answers `Float64.maxValue()`.
+    /// no places answers `None`: nothing stands near a line that has nowhere on it.
     pub type alias Near = {
         metres   = Float64,
         distance = Float64
     }
 
-    pub def nearestOn(line: List[Metred], point: Point): Near =
-        Option.getWithDefault(
-            {metres = 0.0, distance = Float64.maxValue()},
-            nearest(None, List.map(each -> stands(each, point |> toSegment(each#start, each#end)), stretches(line)))
-        )
+    pub def nearestOn(line: List[Metred], point: Point): Option[Near] =
+        nearest(None, List.map(each -> stands(each, point |> toSegment(each#start, each#end)), stretches(line)))
 
     /// The metre along the lap where the nearest place on a stretch stands.
     def stands(stretch: Stretch, on: On): (On, Float64) =
@@ -139,18 +136,24 @@ pub mod Apart {
         let length = lastMetre(a);
         if (length <= 0.0)
             Err("nothing is measured along the sampled line: its own metres end at ${Util.Format.spelled(length)} m")
+        else if (List.isEmpty(b))
+            Err("the compared line holds no places to sample against")
         else
             Ok(readings(samples(0.0, length, every, a, b)))
 
     def lastMetre(line: List[Metred]): Float64 =
         Option.getWithDefault(0.0, Option.map(each -> each#metre, List.last(line)))
 
+    /// The walk along the sampled line. A sample stands where the nearest place on the
+    /// other line does; the comparison answers nothing against a line with no places,
+    /// which `apartness` has already refused, so nothing here falls between samples.
     def samples(at: Float64, length: Float64, every: Float64, a: List[Metred], b: List[Metred]): List[Sample] =
         if (at >= length)
             Nil
         else {
             let near = at |> interpolate(a) |> nearestOn(b);
-            {aMetres = at, bMetres = near#metres, distance = near#distance} :: samples(at + every, length, every, a, b)
+            List.map(each -> {aMetres = at, bMetres = each#metres, distance = each#distance}, Option.toList(near))
+                ++ samples(at + every, length, every, a, b)
         }
 
     /// The mean, and the worst of what was sampled — the first place the readings tie at.
