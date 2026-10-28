@@ -344,7 +344,7 @@ pub mod Survey {
         let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
         {
             centreline = List.map(at -> metred(at, lapNodes, metres), kept),
-            pitLane = List.filterMap(at -> nth(at, pitNodes), keptPit),
+            pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
             frame = {origin = northWest(both), parallel = parallel},
             direction = turnDirection(lapPoints),
             surveyedAt = reading#surveyedAt,
@@ -354,8 +354,8 @@ pub mod Survey {
 
     /// One kept point: the degrees it was surveyed at, and the published metre it stands at.
     def metred(at: Int32, lapNodes: List[Place], metres: List[Float64]): MetredPlace = {
-        let place = Option.getWithDefault({lat = 0.0, lon = 0.0}, nth(at, lapNodes));
-        {lat = place#lat, lon = place#lon, metres = roundTenth(Option.getWithDefault(0.0, nth(at, metres)))}
+        let place = Option.getWithDefault({lat = 0.0, lon = 0.0}, List.nth(at, lapNodes));
+        {lat = place#lat, lon = place#lon, metres = roundTenth(Option.getWithDefault(0.0, List.nth(at, metres)))}
     }
 
     /// The lap thinned: split at its own middle, so that the place the lap starts and ends at
@@ -368,7 +368,7 @@ pub mod Survey {
     /// surveyed at rather than the shorter one the thinned line would give it. Of two
     /// points equally far, the first is the one turned on.
     pub def simplify(points: List[Point], lo: Int32, hi: Int32): List[Int32] =
-        match (nth(lo, points), nth(hi, points)) {
+        match (List.nth(lo, points), List.nth(hi, points)) {
             case (Some(a), Some(b)) =>
                 let dx = b#x - a#x;
                 let dy = b#y - a#y;
@@ -399,7 +399,7 @@ pub mod Survey {
         if (every >= hi)
             (best, at)
         else
-            match nth(every, points) {
+            match List.nth(every, points) {
                 case None => (best, at)
                 case Some(p) =>
                     let distance = offLine(p, a, b, dx, dy, norm);
@@ -441,8 +441,6 @@ pub mod Survey {
 
     def lastIndex(points: List[a]): Int32 =
         Int32.max(0, List.length(points) - 1)
-
-    def nth(at: Int32, points: List[a]): Option[a] = List.nth(at, points)
 
     // --------------------------------------------------------------- the survey word
 

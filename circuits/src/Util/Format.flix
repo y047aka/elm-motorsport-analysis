@@ -12,7 +12,10 @@
 /// which of two infinities it runs toward.
 pub mod Util.Format {
 
-    /// A number with `digits` decimals, as `toFixed` writes it.
+    /// A number with `digits` decimals, as `toFixed` writes it. Worked out in Int64
+    /// because what `String.format` offers is the running machine's locale: a figure
+    /// whose decimal separator moves with the machine it was rendered on is no use to
+    /// a report that compares one season against another.
     pub def fixed(digits: Int32, metres: Float64): String =
         if (metres < 0.0) "-${unsigned(digits, 0.0 - metres)}" else unsigned(digits, metres)
 

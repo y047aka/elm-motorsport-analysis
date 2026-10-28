@@ -268,7 +268,7 @@ pub mod Diff {
     /// The north-west corner of both lines together — the first place they were
     /// measured at, not the zero of the plane.
     def cornerOf(projected: List[List[Point]]): Point =
-        match flatten(projected) {
+        match List.flatten(projected) {
             case Nil => {x = 0.0, y = 0.0}
             case first :: rest =>
                 List.foldLeft(
@@ -289,11 +289,8 @@ pub mod Diff {
                 y = if (place#y - origin#y > reach#y) place#y - origin#y else reach#y
             },
             {x = 0.0, y = 0.0},
-            flatten(projected)
+            List.flatten(projected)
         )
-
-    def flatten(projected: List[List[Point]]): List[Point] =
-        List.flatMap(places -> places, projected)
 
     /// The axis the drawing is fitted to, which is the one that needs the most room:
     /// fitting the other would run the line off the page.

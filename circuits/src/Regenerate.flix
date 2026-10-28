@@ -358,7 +358,7 @@ pub mod Regenerate {
             case (_, Err(problem)) => Err("the kept file does not parse: ${problem}")
             case (Ok(fromAnswer), Ok(fromFile)) =>
                 let roles = held(Nil, rolesOf(fromAnswer) ++ rolesOf(fromFile));
-                Ok(List.flatMap(role -> about(role, featuresOf(fromAnswer), featuresOf(fromFile)), roles))
+                Ok(List.flatMap(role -> about(role, Geometry.featuresOf(fromAnswer), Geometry.featuresOf(fromFile)), roles))
         }
 
     /// The roles the two files hold, each named once, in the order the files hold
@@ -370,10 +370,7 @@ pub mod Regenerate {
         }
 
     def rolesOf(file: Json): List[Option[String]] =
-        List.map(roleOf, featuresOf(file))
-
-    def featuresOf(file: Json): List[Feature] =
-        Geometry.featuresOf(file)
+        List.map(roleOf, Geometry.featuresOf(file))
 
     def roleOf(feature: Feature): Option[String] =
         Geometry.word("role", Geometry.propertiesOf(feature))

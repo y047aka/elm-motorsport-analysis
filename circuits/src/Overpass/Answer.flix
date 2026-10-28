@@ -87,7 +87,7 @@ pub mod Overpass.Answer {
     /// A node's place — a way has no latitude of its own, and an answer that carries one
     /// of the two degrees and not the other is not a place.
     def atOf(json: Json): Result[String, Option[Place]] =
-        match (latitude("lat", json), latitude("lon", json)) {
+        match (decodeAtKeyOpt("lat", json), decodeAtKeyOpt("lon", json)) {
             case (Ok(Some(lat)), Ok(Some(lon))) => Ok(Some({lat = lat, lon = lon}))
             case (Ok(None), Ok(None))           => Ok(None)
             case (Err(problem), _)              => Err(problem)
@@ -95,18 +95,15 @@ pub mod Overpass.Answer {
             case _                              => Err("an answer gives one of lat, lon and not the other")
         }
 
-    def latitude(key: String, json: Json): Result[String, Option[Float64]] =
-        decodeAtKeyOpt(key, json)
-
     /// A way's node refs. A reference that is no number is a line this reading cannot
     /// chain, so the whole answer is refused rather than the reference dropped.
     def nodesOf(json: Json): Result[String, List[Int64]] =
-        each(whole, arrayAt("nodes", json))
+        each(whole, decodeAtKeyOpt("nodes", json))
 
     /// A way's line, as `out geom` handed it inline. The node's id and tags travel with
     /// each point and are nothing to a length.
     def lineOf(json: Json): Result[String, List[Place]] =
-        each(placeOf, arrayAt("geometry", json))
+        each(placeOf, decodeAtKeyOpt("geometry", json))
 
     def placeOf(json: Json): Result[String, Place] =
         forM(
@@ -120,7 +117,7 @@ pub mod Overpass.Answer {
         decodeAtKeyOpt("tags", json) |> Result.map(tags -> Option.getWithDefault(Map.empty(), tags))
 
     def membersOf(json: Json): Result[String, List[Member]] =
-        each(memberOf, arrayAt("members", json))
+        each(memberOf, decodeAtKeyOpt("members", json))
 
     /// A relation's member: what kind of thing it is, which line it is on, and what it
     /// stands for. A role the answer does not spell is the empty one, which is the lap's.
@@ -154,11 +151,6 @@ pub mod Overpass.Answer {
             case Ok(None)     => Ok(Nil)
             case Ok(Some(js)) => Result.traverse(read, js)
         }
-
-    /// An array the answer need not carry at all: a relation has members and a node has
-    /// no geometry.
-    def arrayAt(key: String, json: Json): Result[String, Option[List[Json]]] =
-        decodeAtKeyOpt(key, json)
 
     // ------------------------------------------------------------------ the JSON, read
 

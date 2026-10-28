@@ -307,11 +307,15 @@ pub mod Atlas {
     /// asked here, at the first reading of the file: a file measured from another
     /// circuit replaces one circuit's kept evidence with another's, and does it quietly.
     def layerOf(spelled: String, slug: String): Result[String, Layer] =
-        forM(
-            json    <- Util.Json.parse(spelled) |> Result.mapErr(problem -> "the atlas file does not parse: ${problem}");
-            outline <- outlineOf(Midline.featuresOf(json));
-            _       <- Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug)
-        ) yield {outline = outline, corners = cornersOf(Midline.featuresOf(json)), pits = pitsOf(Midline.featuresOf(json))}
+        match Util.Json.parse(spelled) |> Result.mapErr(problem -> "the atlas file does not parse: ${problem}") {
+            case Err(problem) => Err(problem)
+            case Ok(json) =>
+                let features = Geometry.featuresOf(json);
+                forM(
+                    outline <- outlineOf(features);
+                    _       <- Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug)
+                ) yield {outline = outline, corners = cornersOf(features), pits = pitsOf(features)}
+        }
 
     def outlineOf(features: List[Midline.Feature]): Result[String, Midline.Feature] =
         match List.find(feature -> Midline.roleOf(feature) == Some("outline"), features) {

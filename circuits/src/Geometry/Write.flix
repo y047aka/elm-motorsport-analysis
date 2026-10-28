@@ -127,15 +127,16 @@ pub mod Geometry.Write {
     /// The lap: degrees, lon before lat as GeoJSON gives them, the last place being the
     /// first one again because the lap closed.
     def lineOf(places: List[Survey.MetredPlace]): String =
-        "{\"type\":\"LineString\",\"coordinates\":[${String.intercalate(",", List.map(each, places))}]}"
-
-    def each(place: Survey.MetredPlace): String = "[${number(place#lon)},${number(place#lat)}]"
+        "{\"type\":\"LineString\",\"coordinates\":[${String.intercalate(",", List.map(each -> coordinate(each#lon, each#lat), places))}]}"
 
     /// The pit lane: degrees and nothing else.
     def pitLineOf(places: List[Place]): String =
-        "{\"type\":\"LineString\",\"coordinates\":[${String.intercalate(",", List.map(eachAt, places))}]}"
+        "{\"type\":\"LineString\",\"coordinates\":[${String.intercalate(",", List.map(each -> coordinate(each#lon, each#lat), places))}]}"
 
-    def eachAt(place: Place): String = "[${number(place#lon)},${number(place#lat)}]"
+    /// One position as the file writes it: lon before lat, each spelled as this
+    /// repository spells every kept number.
+    pub def coordinate(lon: Float64, lat: Float64): String =
+        "[${number(lon)},${number(lat)}]"
 
     /// One property of a feature, written as the file writes it.
     def property(pair: (String, String)): String =

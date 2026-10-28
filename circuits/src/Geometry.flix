@@ -208,7 +208,7 @@ pub mod Geometry {
             case _                           => None
         }
 
-    def number(json: Json): Option[Float64] =
+    pub def number(json: Json): Option[Float64] =
         match json {
             case Json.JNumber(spelled) => Float64.fromString(BigDecimal.toPlainString(spelled))
             case _                     => None

@@ -37,10 +37,6 @@ pub mod Midline {
     /// every atlas lap to this one distance, not to a circuit's authored `within`.
     pub def measuredWithin(): Float64 = 25.0
 
-    /// The file's features, whatever any of them is tagged with.
-    pub def featuresOf(json: Json): List[Feature] =
-        Geometry.featuresOf(json)
-
     /// What a feature's properties say it is, and what to call it in a sentence when
     /// they say nothing.
     pub def roleOf(feature: Feature): Option[String] =
@@ -87,7 +83,7 @@ pub mod Midline {
             case Json.JArray(items) =>
                 match Vector.toList(items) {
                     case east :: north :: Nil =>
-                        match (number(east), number(north)) {
+                        match (Geometry.number(east), Geometry.number(north)) {
                             case (Some(lon), Some(lat)) => Some({lon = lon, lat = lat})
                             case _                      => None
                         }
@@ -140,17 +136,11 @@ pub mod Midline {
             case _ => "Point"
         }
 
-    def number(json: Json): Option[Float64] =
-        match json {
-            case Json.JNumber(spelled) => Float64.fromString(BigDecimal.toPlainString(spelled))
-            case _                     => None
-        }
-
     /// The numbers a list of JSON values carries, or nothing at all when any of them is
     /// not a number.
     def allNumbers(items: List[Json]): Option[List[Float64]] =
         List.foldRight(
-            (json, rest) -> match (number(json), rest) {
+            (json, rest) -> match (Geometry.number(json), rest) {
                 case (Some(one), Some(many)) => Some(one :: many)
                 case _                       => None
             },
@@ -327,8 +317,6 @@ pub mod Midline {
                 "{\"type\":${Geometry.Write.text(shapeWord(shape))},\"coordinates\":[${String.intercalate(",", laid)}]}"
         }
 
-    def scalar(json: Json): String = Util.Json.toCompactString(json)
-
     /// A distance shown with the sign that says which line is longer.
     pub def signed(metres: Float64): String =
         if (metres >= 0.0) "+${Util.Format.fixed(1, metres)}" else Util.Format.fixed(1, metres)
@@ -337,12 +325,12 @@ pub mod Midline {
     /// anything else as the JSON the file gives.
     def positionText(position: Json): String =
         match position {
-            case Json.JArray(items) => "[${String.intercalate(",", List.map(scalar, Vector.toList(items)))}]"
+            case Json.JArray(items) => "[${String.intercalate(",", List.map(Util.Json.toCompactString, Vector.toList(items)))}]"
             case other              => Util.Json.toCompactString(other)
         }
 
     /// A line's degrees, lon before lat, each written as this repository writes every
     /// kept number.
     def degrees(coords: List[Place]): String =
-        "[${String.intercalate(",", List.map(place -> "[${Geometry.Write.number(place#lon)},${Geometry.Write.number(place#lat)}]", coords))}]"
+        "[${String.intercalate(",", List.map(place -> Geometry.Write.coordinate(place#lon, place#lat), coords))}]"
 }

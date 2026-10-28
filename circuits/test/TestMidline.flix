@@ -14,7 +14,7 @@ pub mod TestMidline {
     /// refuses — a broken fixture fails loudly at the reading, not silently here.
     def feature(json: String): Midline.Feature =
         match Util.Json.parse("{\"type\": \"FeatureCollection\", \"features\": [ ${json} ]}") {
-            case Ok(file) => Option.getWithDefault(Map.empty(), List.head(Midline.featuresOf(file)))
+            case Ok(file) => Option.getWithDefault(Map.empty(), List.head(Geometry.featuresOf(file)))
             case Err(_)   => Map.empty()
         }
 

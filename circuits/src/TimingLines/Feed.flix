@@ -278,7 +278,7 @@ pub mod TimingLines.Feed {
         let ground = List.zipWith((begun, ended) -> ended - begun, edges, List.drop(1, edges));
         List.zipWith(
             (metres, time) ->
-                fixed(1, metres / (Int32.toFloat64(Util.Duration.millis(time)) / 1000.0) * 3.6),
+                Util.Format.fixed(1, metres / (Int32.toFloat64(Util.Duration.millis(time)) / 1000.0) * 3.6),
             ground,
             sectorsOf(times)
         )
@@ -334,11 +334,11 @@ pub mod TimingLines.Feed {
     /// `1:06.386`, not a number of seconds.
     pub def seconds(time: Duration): String = Util.Duration.format(time)
 
-    pub def percent(share: Float64): String = "${fixed(2, share * 100.0)}%"
+    pub def percent(share: Float64): String = "${Util.Format.fixed(2, share * 100.0)}%"
 
     /// A distance round the lap, to the tenth of a metre the survey is kept at,
     /// and grouped by the thousand as the circuit's own map writes one.
-    pub def metres(distance: Float64): String = grouped(fixed(1, distance))
+    pub def metres(distance: Float64): String = grouped(Util.Format.fixed(1, distance))
 
     /// How far round the lap one line moved, with the sign that says which way.
     pub def movedMetres(moved: Float64): String =
@@ -347,23 +347,6 @@ pub mod TimingLines.Feed {
     /// A count grouped by the thousand, which is how the five thousand laps of a
     /// round are read off a screen.
     pub def count(laps: Int32): String = grouped("${laps}")
-
-    /// `x` to `places` decimal places, worked out in Int64 because what
-    /// `String.format` offers is the running machine's locale: a table whose
-    /// decimal separator moves with the machine it was rendered on is no use to a
-    /// report that compares one season against another.
-    def fixed(places: Int32, x: Float64): String =
-        let scale = tenTo(places);
-        let scaled = Float64.truncateToInt64(Float64.floor(Float64.abs(x) * Int64.toFloat64(scale) + 0.5));
-        let units = Int64.remainder(scaled, scale);
-        let sign = if (x < 0.0) "-" else "";
-        if (places == 0)
-            "${sign}${scaled / scale}"
-        else
-            "${sign}${scaled / scale}.${String.padLeft(places, '0', Int64.toString(units))}"
-
-    def tenTo(places: Int32): Int64 =
-        if (places <= 0) 1i64 else 10i64 * tenTo(places - 1)
 
     /// The thousands separators in the integer part of a spelled number.
     def grouped(spelled: String): String =

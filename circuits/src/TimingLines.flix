@@ -119,7 +119,7 @@ pub mod TimingLines {
 
     def requestOf(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Request] =
         forM(
-            csv       <- required("csv", csvDir(settings));
+            csv       <- required("csv", Cli.Args.lastNamed(csvNamed, settings));
             named     <- namedRound(nonOptions);
             against   <- againstSeason(settings);
             tolerance <- distanceAllowed(settings)
@@ -134,11 +134,11 @@ pub mod TimingLines {
     def required(name: String, dir: Option[String]): Result[ArgsError, String] =
         Option.toOk(ArgsError.ParseErrors("--${name} is required: the feed sits in the season directories under it." :: Nil), dir)
 
-    def csvDir(settings: List[Setting]): Option[String] =
-        settings |> List.foldLeft((acc, setting) -> match setting {
+    def csvNamed(setting: Setting): Option[String] =
+        match setting {
             case Setting.Csv(dir) => Some(dir)
-            case _                => acc
-        }, None)
+            case _                => None
+        }
 
     /// One round named outright, and named as one on the calendar: the season
     /// directory a feed is read out of is a season the championship ran, not any
