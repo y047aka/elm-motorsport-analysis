@@ -1,73 +1,18 @@
 /// Laying one line against another: how far a place stands from a line, and the
 /// apartness of two such lines. The diff and the atlas reading both sample these.
 ///
-/// The sphere is the one every drawing in this repository is measured on — the one
-/// `Motorsport.Circuit.Geodesy` projects through. A second spelling of its radius
-/// is invisible to every compiler and visible only in the metres a lap measures.
-///
-/// Distances are ground distances on one equirectangular projection of the two lines together,
-/// and each line's own metres travel with its points — so a line stretched to a published lap
-/// length and a line measured at its own are still compared place against place.
+/// Both lines are drawn on one plane — `Geodesy.parallelOf` takes the mean latitude of
+/// the two together, so neither is scaled at a rate of its own — and each line's own
+/// metres travel with its points, so a line stretched to a published lap length and a
+/// line measured at its own are still compared place against place. The sphere, the
+/// projection and the metre are `Geodesy`'s; what is here is the sampling.
 pub mod Apart {
 
-    import java.lang.Math
+    use Geodesy.Point
+    use Geodesy.hypot
+    use Geodesy.zero
 
-    use Geometry.Place
-
-    /// The earth every drawing is measured on, in metres.
-    pub def earthMetres(): Float64 = 6371008.8
-
-    pub def radians(): Float64 = Math.PI / 180.0
-
-    /// Flix's effect checker asks a call into Java to be `IO` and has not been told
-    /// that these read nothing but their arguments; the cast says so to it.
-    pub def cos(degrees: Float64): Float64 = unsafe IO { Math.cos(degrees * radians()) }
-
-    pub def hypot(east: Float64, south: Float64): Float64 = unsafe IO { Math.hypot(east, south) }
-
-    /// A place of the plane both lines are drawn on: metres east and south of the
-    /// projection's own zero.
-    pub type alias Point = {
-        x = Float64,
-        y = Float64
-    }
-
-    /// What a reading with nothing to read answers with.
-    def zero(): Point = {x = 0.0, y = 0.0}
-
-    // ------------------------------------------------------------------ projection
-
-    /// The parallel both lines are laid on: the mean latitude of every place on
-    /// both lines together, so neither is drawn at a scale of its own.
-    pub def parallelOf(places: List[Place]): Float64 =
-        List.foldLeft((total, place) -> total + place#lat, 0.0, places) / Int32.toFloat64(List.length(places))
-
-    /// Equirectangular about that parallel: metres, and `y` running south as SVG's does
-    /// so that north is up. The origin is the zero of degrees, not a corner of either line.
-    pub def projectOn(parallel: Float64, place: Place): Point = {
-        x = place#lon * radians() * earthMetres() * cos(parallel),
-        y = 0.0 - (place#lat * radians() * earthMetres())
-    }
-
-    // ------------------------------------------------- the sphere at circuit scale
-
-    /// Metres between two places, east-west taken at the parallel of the second — the
-    /// one approximation asked of distances across a circuit's few kilometres, and the
-    /// one the survey measures a timing line with and the probe measures its candidate
-    /// lengths with.
-    pub def apart(a: Place, b: Place): Float64 =
-        hypot(b#lat - a#lat, (b#lon - a#lon) * cos(b#lat)) * degreesToMetres()
-
-    /// Metres along a line of places, each stretch taken at its own parallel.
-    pub def polylineMetres(points: List[Place]): Float64 =
-        List.zipWith((ahead, behind) -> apart(ahead, behind), points, List.drop(1, points))
-            |> List.foldLeft((total, metres) -> total + metres, 0.0)
-
-    /// The metres one degree of the sphere comes to, which is the sphere's own constant
-    /// and not a second one: `projectOn` spells the same two factors for the plane.
-    def degreesToMetres(): Float64 = radians() * earthMetres()
-
-    // ------------------------------------------------------------------- nearness
+    // ------------------------------------------------- the line being sampled against
 
     /// A stretch of a projected line, and where on the line's own measure each end
     /// stands. A line whose metres run shorter than its points is walked as the points

@@ -57,6 +57,7 @@ const cliErrors = 'circuits/src/Cli/Errors.flix';
 const reportFiles = 'circuits/src/Report/Files.flix';
 const regenerate = 'circuits/src/Regenerate.flix';
 const overpass = 'circuits/src/Overpass.flix';
+const geodesy = 'circuits/src/Geodesy.flix';
 const atlas = 'circuits/src/Atlas.flix';
 
 const checks = [];
@@ -75,12 +76,11 @@ function check(name, body) {
 // for the lap the survey measures at 13,612 — and the measured lap is the one
 // reading a config is authored from.
 check('the project spells its sphere once', () => {
-  const stated = ['Apart.flix', 'Candidates.flix', 'Probe.flix', 'Survey.flix']
-    .map(here)
-    .flatMap((source) => source.match(/63\d{5}/g) ?? []);
-  equal(stated.length, 1, 'the earth radius is not spelled exactly once across the project');
-  equal(stated[0], here('Apart.flix').match(/63\d{5}/)[0],
-    'the one spelling of the earth radius is not Apart.earthMetres');
+  deepStrictEqual(spelling(/63\d{5}/), [geodesy],
+    'the earth radius is not spelled in exactly one source');
+  const stated = here('Geodesy.flix').match(/63\d{5}/g) ?? [];
+  equal(stated.length, 1, 'the earth radius is spelled more than once even in Geodesy.flix');
+  match(here('Geodesy.flix'), /pub def earthMetres\(\): Float64 = 6371008\.8/);
 });
 
 // The response. What a service answered with is one reading, in one source: a

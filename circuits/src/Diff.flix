@@ -14,11 +14,11 @@
 pub mod Diff {
 
     use Apart.Apartness
-    use Apart.Point
+    use Geodesy.Point
     use Cli.Args.ArgsError
     use Cli.Args.Outcome
     use Geometry.Line
-    use Geometry.Place
+    use Geodesy.Place
     use Sys.Console
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
@@ -194,11 +194,11 @@ pub mod Diff {
         overlaid(lines, projected, asked#svg)
     }
 
-    /// Both lines on one plane, projected about `Apart.parallelOf` — the mean
+    /// Both lines on one plane, projected about `Geodesy.parallelOf` — the mean
     /// latitude of both lines together.
     def projectedOf(lines: List[Line]): List[List[Point]] = {
-        let parallel = Apart.parallelOf(List.flatMap(line -> line#coords, lines));
-        List.map(line -> List.map(Apart.projectOn(parallel), line#coords), lines)
+        let parallel = Geodesy.parallelOf(List.flatMap(line -> line#coords, lines));
+        List.map(line -> List.map(Geodesy.projectOn(parallel), line#coords), lines)
     }
 
     /// The overlay, written where it was asked for. A run that asked for none has

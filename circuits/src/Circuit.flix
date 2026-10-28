@@ -14,7 +14,7 @@
 /// the circuit — `Atlas.flix`'s, kept at `keptAtlas`.
 pub mod Circuit {
 
-    use Geometry.Place
+    use Geodesy.Place
 
     /// Where the line the lap is measured from is put by the circuit itself. A circuit that
     /// publishes no place tags nothing a survey could mistake for it, and is asked nothing.

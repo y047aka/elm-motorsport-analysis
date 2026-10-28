@@ -22,7 +22,8 @@
 pub mod Geometry.Write {
 
     use Circuit.Circuit
-    use Geometry.Place
+    use Geodesy.Frame
+    use Geodesy.Place
 
     /// The file as the app reads it: one FeatureCollection of the outline and the pit
     /// lane, in that order, the outline first because it is the line the drawing is
@@ -107,7 +108,7 @@ pub mod Geometry.Write {
     /// The frame the degrees project through, whole: the drawing re-runs this projection
     /// rather than choosing one of its own. The corner is written as the survey measured
     /// it, not as a rounded box around it.
-    def frame(laid: Survey.Frame): String =
+    def frame(laid: Frame): String =
         "{\"origin\":{\"lat\":${number(laid#origin#lat)},\"lon\":${number(laid#origin#lon)}},\"parallel\":${number(laid#parallel)}}"
 
     /// How far round the lap each place stands.

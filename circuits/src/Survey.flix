@@ -8,15 +8,25 @@
 /// the degrees it was surveyed at — the metres are this module's working, and the app
 /// re-derives them from the frame written beside them.
 ///
+/// The sphere, the projection and the tenth every metre here is measured on are
+/// `Geodesy`'s, spelled once where the survey, the probe and the report all read them.
+///
 /// The `survey` word is answered here, over an answer read from disk or asked of
 /// OpenStreetMap now; the bytes it lays or compares are `Geometry.Write`'s, which the
 /// regeneration fence and the atlas writer lay too.
 pub mod Survey {
 
-    use Geometry.Place
-    use Apart.Point
-    use Apart.apart
-    use Apart.polylineMetres
+    use Geodesy.Frame
+    use Geodesy.Place
+    use Geodesy.Point
+    use Geodesy.apart
+    use Geodesy.cumulative
+    use Geodesy.hypot
+    use Geodesy.northWest
+    use Geodesy.parallelOf
+    use Geodesy.polylineMetres
+    use Geodesy.projectOn
+    use Geodesy.roundTenth
     use Util.Json.Json
     use Circuit.Circuit
     use Cli.Args.ArgsError
@@ -134,15 +144,6 @@ pub mod Survey {
         metres = Float64
     }
 
-    /// The frame the degrees project through: its origin the north-west corner of the
-    /// survey, `parallel` the latitude the east-west is scaled at. The drawing's own
-    /// `Circuit.Geodesy` re-runs this projection, so what is written is a copy of the frame
-    /// the survey was measured on and never a re-derivation of one.
-    pub type alias Frame = {
-        origin   = Place,
-        parallel = Float64
-    }
-
     /// The lap, the pit lane and the frame, in the drawing's own metres.
     pub type alias Geometry = {
         centreline     = List[MetredPlace],
@@ -158,11 +159,8 @@ pub mod Survey {
 
     pub def counterClockwise(): String = "counter_clockwise"
 
-    /// Metres a thinned line may stray from the surveyed one, and the tenth of a metre a
-    /// survey is kept to — which is the tenth every baseline was rendered at.
+    /// Metres a thinned line may stray from the surveyed one.
     pub def tolerance(): Float64 = 1.0
-
-    pub def tenths(): Float64 = 10.0
 
     /// The lap, the pit lane and the frame, chained out of an answer.
     pub def lapOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
@@ -434,7 +432,7 @@ pub mod Survey {
             case one :: rest => if (matching(one)) Some(at) else indexWhere(matching, rest, at + 1)
         }
 
-    // --------------------------------------------------- metres, direction, thinning
+    // -------------------------------------------------- direction and thinning
 
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
@@ -443,9 +441,9 @@ pub mod Survey {
         let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
         let pitNodes = List.filterMap(id -> Map.get(id, nodes), pit);
         let both = List.append(lapNodes, pitNodes);
-        let parallel = Apart.parallelOf(both);
-        let lapPoints = List.map(Apart.projectOn(parallel), lapNodes);
-        let pitPoints = List.map(Apart.projectOn(parallel), pitNodes);
+        let parallel = parallelOf(both);
+        let lapPoints = List.map(projectOn(parallel), lapNodes);
+        let pitPoints = List.map(projectOn(parallel), pitNodes);
         let surveyed = cumulative(lapPoints);
         let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));
         let metres = List.map(each -> each * stretch, surveyed);
@@ -455,7 +453,7 @@ pub mod Survey {
         {
             centreline = List.map(at -> metred(at, lapNodes, metres), kept),
             pitLane = List.filterMap(at -> nth(at, pitNodes), keptPit),
-            frame = {origin = cornerOf(both), parallel = parallel},
+            frame = {origin = northWest(both), parallel = parallel},
             direction = turnDirection(lapPoints),
             surveyedAt = reading#surveyedAt,
             surveyedLength = Some(Option.getWithDefault(0.0, List.last(surveyed)))
@@ -482,7 +480,7 @@ pub mod Survey {
             case (Some(a), Some(b)) =>
                 let dx = b#x - a#x;
                 let dy = b#y - a#y;
-                let norm = Apart.hypot(dx, dy);
+                let norm = hypot(dx, dy);
                 match furthest(points, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
                     case (best, at) =>
                         if (best <= tolerance() or at < 0) lo :: hi :: Nil
@@ -521,26 +519,9 @@ pub mod Survey {
 
     def offLine(p: Point, a: Point, b: Point, dx: Float64, dy: Float64, norm: Float64): Float64 =
         if (norm == 0.0)
-            Apart.hypot(p#x - a#x, p#y - a#y)
+            hypot(p#x - a#x, p#y - a#y)
         else
             Float64.abs((dy * p#x) - (dx * p#y) + (b#x * a#y) - (b#y * a#x)) / norm
-
-    /// Metres round a line of drawing metres, each stretch its own hypotenuse, from the
-    /// line's own zero. The sum runs forwards, so the figure a file carries as its
-    /// surveyed length is reproducible.
-    pub def cumulative(points: List[Point]): List[Float64] =
-        match points {
-            case Nil           => Nil
-            case first :: rest => walkedBy(first, rest, 0.0, 0.0 :: Nil)
-        }
-
-    def walkedBy(ahead: Point, rest: List[Point], total: Float64, kept: List[Float64]): List[Float64] =
-        match rest {
-            case Nil => List.reverse(kept)
-            case one :: more =>
-                let step = total + Apart.hypot(one#x - ahead#x, one#y - ahead#y);
-                walkedBy(one, more, step, step :: kept)
-        }
 
     /// Which way the closed line runs, from the shoelace sum in the drawing's own metres:
     /// positive is clockwise, because this projection's `y` runs south.
@@ -555,27 +536,6 @@ pub mod Survey {
             0.0,
             List.zip(points, List.append(List.drop(1, points), List.take(1, points)))
         )
-
-    /// The north-west corner of the survey: the drawing's metres are measured from it, so a
-    /// line never falls below its own zero.
-    pub def cornerOf(points: List[Place]): Place =
-        match points {
-            case Nil => {lat = 0.0, lon = 0.0}
-            case first :: rest =>
-                List.foldLeft(
-                    (corner, place) -> {
-                        lat = if (place#lat > corner#lat) place#lat else corner#lat,
-                        lon = if (place#lon < corner#lon) place#lon else corner#lon
-                    },
-                    {lat = first#lat, lon = first#lon},
-                    rest
-                )
-        }
-
-    /// A distance kept to the tenth of a metre the survey is held at, and every baseline
-    /// rendered from: half goes up, which is the half JavaScript's `Math.round` sends up too.
-    pub def roundTenth(metres: Float64): Float64 =
-        Int64.toFloat64(Float64.truncateToInt64((metres * tenths()) + 0.5)) / tenths()
 
     // ------------------------------------------------------------------ the JSON read
 

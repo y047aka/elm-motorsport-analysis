@@ -5,7 +5,7 @@
 /// allowance a measured line is kept to.
 pub mod TestTrack {
 
-    use Geometry.Place
+    use Geodesy.Place
 
     /// A feature, from the JSON a layer file would hold it in. The one feature of a
     /// file with one feature is what every reading below is handed.

@@ -12,6 +12,7 @@
 /// it is this repository's.
 pub mod Geometry {
 
+    use Geodesy.Place
     use Util.Json.Json
 
     /// The extension a geometry file of this profile is written with: how a directory
@@ -28,13 +29,6 @@ pub mod Geometry {
         props  = Props,
         coords = List[Place],
         metres = List[Float64]
-    }
-
-    /// A place on earth as a geometry file writes it: degrees, lon before lat,
-    /// because that is the order GeoJSON's arrays give them in.
-    pub type alias Place = {
-        lon = Float64,
-        lat = Float64
     }
 
     /// The properties a report quotes about a line: which kind of line it is, and

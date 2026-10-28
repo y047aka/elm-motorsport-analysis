@@ -24,7 +24,7 @@ pub mod Atlas {
     use Circuit.Circuit
     use Cli.Args.ArgsError
     use Cli.Args.Outcome
-    use Geometry.Place
+    use Geodesy.Place
     use Net.HttpRequest.HttpRequest
     use Net.Https.Https
     use Sys.Console
@@ -377,13 +377,13 @@ pub mod Atlas {
         markers: List[Place],
         ours: Kept
     ): Result[String, Reading] \ IO = {
-        let parallel = Apart.parallelOf(coords ++ ours#coords ++ ours#pit ++ markers);
-        let onto = place -> Apart.projectOn(parallel, place);
+        let parallel = Geodesy.parallelOf(coords ++ ours#coords ++ ours#pit ++ markers);
+        let onto = place -> Geodesy.projectOn(parallel, place);
         let theirPoints = List.map(onto, coords);
         let ourPoints = List.map(onto, ours#coords);
-        let theirMetres = Survey.cumulative(theirPoints);
+        let theirMetres = Geodesy.cumulative(theirPoints);
         let pitPoints = List.map(onto, ours#pit);
-        let pitMetres = Survey.cumulative(pitPoints);
+        let pitMetres = Geodesy.cumulative(pitPoints);
         let length = Option.getWithDefault(0.0, List.last(theirMetres));
         let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
         match forM(
@@ -420,7 +420,7 @@ pub mod Atlas {
     def atCorners(
         corners: List[Track.Feature],
         parallel: Float64,
-        ourPoints: List[Apart.Point],
+        ourPoints: List[Geodesy.Point],
         ours: List[Float64],
         length: Float64
     ): Result[String, List[AtCorner]] =
@@ -429,7 +429,7 @@ pub mod Atlas {
     def atCorner(
         corner: Track.Feature,
         parallel: Float64,
-        ourPoints: List[Apart.Point],
+        ourPoints: List[Geodesy.Point],
         ours: List[Float64],
         length: Float64
     ): Result[String, AtCorner] =
@@ -437,7 +437,7 @@ pub mod Atlas {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
-                let near = Apart.nearestOn(Apart.projectOn(parallel, place), ourPoints, ours);
+                let near = Apart.nearestOn(Geodesy.projectOn(parallel, place), ourPoints, ours);
                 let spelled = Option.getWithDefault("undefined", Geometry.word("id", Geometry.propertiesOf(corner)));
                 Ok({id = spelled, theirMetres = marker * length, ourMetres = near#metres, distance = near#distance})
         }
@@ -448,9 +448,9 @@ pub mod Atlas {
     def atPublished(
         circuit: Circuit,
         ours: Kept,
-        theirPoints: List[Apart.Point],
+        theirPoints: List[Geodesy.Point],
         theirMetres: List[Float64],
-        ourPoints: List[Apart.Point]
+        ourPoints: List[Geodesy.Point]
     ): Result[String, (Option[Track.Sectors], List[AtLine])] =
         match Track.sectorsClaimed(ours#props) {
             case None => Ok((None, Nil))
@@ -478,7 +478,7 @@ pub mod Atlas {
     def atPits(
         pits: List[Track.Feature],
         parallel: Float64,
-        pitPoints: List[Apart.Point],
+        pitPoints: List[Geodesy.Point],
         pitMetres: List[Float64],
         length: Float64
     ): Result[String, List[AtPit]] =
@@ -487,7 +487,7 @@ pub mod Atlas {
     def atPit(
         pit: Track.Feature,
         parallel: Float64,
-        pitPoints: List[Apart.Point],
+        pitPoints: List[Geodesy.Point],
         pitMetres: List[Float64],
         length: Float64
     ): Result[String, AtPit] =
@@ -495,7 +495,7 @@ pub mod Atlas {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
-                let near = Apart.nearestOn(Apart.projectOn(parallel, place), pitPoints, pitMetres);
+                let near = Apart.nearestOn(Geodesy.projectOn(parallel, place), pitPoints, pitMetres);
                 Ok({role = Track.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance})
         }
 

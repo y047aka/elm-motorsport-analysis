@@ -16,7 +16,7 @@
 pub mod Track {
 
     use Circuit.TimingLine
-    use Geometry.Place
+    use Geodesy.Place
     use Util.Json.Json
 
     /// One feature of an atlas file: its members as the file's JSON gives them. The
@@ -186,7 +186,7 @@ pub mod Track {
         match line {
             case None => Ok(0.0)
             case Some(published) =>
-                let distance = Apart.apart(first, published#place);
+                let distance = Geodesy.apart(first, published#place);
                 if (distance > measuredWithin())
                     Err(
                         "the atlas lap is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.spelled(measuredWithin())} m. Its markers would be measured from the wrong line."
@@ -277,9 +277,9 @@ pub mod Track {
                 + "\"basis\":${Geometry.Write.text("measured-midline")},"
                 + "\"source\":${Geometry.Write.text(source)},"
                 + "\"license\":${Geometry.Write.text("ODbL")},"
-                + "\"lap_length_m\":${Geometry.Write.number(Survey.roundTenth(length))},"
+                + "\"lap_length_m\":${Geometry.Write.number(Geodesy.roundTenth(length))},"
                 + "\"stretched\":false,"
-                + "\"metres\":[${String.intercalate(",", List.map(metre -> Geometry.Write.number(Survey.roundTenth(metre)), metres))}]"
+                + "\"metres\":[${String.intercalate(",", List.map(metre -> Geometry.Write.number(Geodesy.roundTenth(metre)), metres))}]"
                 + "},"
                 + "\"geometry\":{\"type\":${Geometry.Write.text("LineString")},\"coordinates\":${degrees(coords)}}"
                 + "}";

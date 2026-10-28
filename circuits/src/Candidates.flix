@@ -12,9 +12,9 @@
 /// reading here prints is a derivative of their tags.
 pub mod Candidates {
 
+    use Geodesy.Place
     use Overpass.Element
     use Overpass.Member
-    use Overpass.Place
     use Overpass.Tags
 
     /// A box on the earth, degrees, as Overpass takes it: south, west, north, east.
@@ -25,7 +25,7 @@ pub mod Candidates {
         e = Float64
     }
 
-    /// The box's own rounding of a degree, which is not `Apart`'s metres-per-degree:
+    /// The box's own rounding of a degree, which is not `Geodesy`'s metres-per-degree:
     /// a box a tenth of a kilometre wide of the mark costs a relation standing in
     /// the next box over.
     def kilometresPerLatitudeDegree(): Float64 = 111.32
@@ -47,7 +47,7 @@ pub mod Candidates {
                     case lat :: lon :: Nil =>
                         let km = kilometresPerLatitudeDegree();
                         let north = radiusKm / km;
-                        let east = radiusKm / (km * Apart.cos(lat));
+                        let east = radiusKm / (km * Geodesy.cos(lat));
                         Ok({ s = lat - north, w = lon - east, n = lat + north, e = lon + east })
                     case _ => Err("neither a centre nor a box: ${place}")
                 }
@@ -157,7 +157,7 @@ pub mod Candidates {
                 if (member#kind != "way")
                     entries
                 else
-                    add(member#role, Apart.polylineMetres(wayOf(answer, member#ref)), entries),
+                    add(member#role, Geodesy.polylineMetres(wayOf(answer, member#ref)), entries),
             Nil,
             members
         )

@@ -1,15 +1,19 @@
-/// The survey between an Overpass answer and a geometry file: the answer read, the lap
-/// chained out of a relation's ways, the line stretched to the length the circuit publishes
+/// The survey between an Overpass answer and a geometry file: the lap chained out of a
+/// relation's ways, the line stretched to the length the circuit publishes
 /// and thinned to what a drawing can show. `nix run .#geometry -- survey` holds the whole of
 /// it to the bytes the app serves, over both kept answers.
 ///
+/// The answer these are handed is this module's own reading of one, so the fixture below
+/// spells an `out body` answer and checks the slots the chain walks.
+///
 /// The word's own arguments — which circuit, which answer, whether a file is laid down — are
-/// read here as well; those bytes, spelled and laid out, are `Geometry.TestWrite`'s.
+/// read here as well; those bytes, spelled and laid out, are `Geometry.TestWrite`'s, and the
+/// sphere, the projection and the tenth they are measured in are `TestGeodesy`'s.
 pub mod TestSurvey {
 
-    use Apart.Point
     use Circuit.Circuit
-    use Geometry.Place
+    use Geodesy.Place
+    use Geodesy.Point
 
     // ------------------------------------------------------------------ the fixtures
 
@@ -325,35 +329,12 @@ pub mod TestSurvey {
         Assert.assertTrue(Survey.simplify(line((0.0, 0.0) :: Nil), 0, 0) == 0 :: 0 :: Nil)
 
     @Test
-    def testCumulativeRunsALineFromItsOwnZero(): Unit \ Assert =
-        let metres = Survey.cumulative(line((0.0, 0.0) :: (3.0, 4.0) :: (3.0, 4.0) :: Nil));
-        // Each stretch is its own hypotenuse, the sum runs forwards, and a stretch of no
-        // length adds nothing rather than a NaN.
-        Assert.assertTrue(metres == 0.0 :: 5.0 :: 5.0 :: Nil)
-
-    @Test
     def testDirectionIsWhichWayTheSurveyRuns(): Unit \ Assert =
         // East, then south, then west, then north is clockwise on a drawing whose `y` runs
         // south; the same points in the other order are the race run backwards.
         let forth = line((0.0, 0.0) :: (100.0, 0.0) :: (100.0, 100.0) :: (0.0, 100.0) :: Nil);
         Assert.assertTrue(Survey.turnDirection(forth) == Survey.clockwise());
         Assert.assertTrue(Survey.turnDirection(List.reverse(forth)) == Survey.counterClockwise())
-
-    @Test
-    def testTenthsRoundUpAndHoldTheSurvey(): Unit \ Assert =
-        // The tenth is what every baseline was rendered at, and half goes up.
-        Assert.assertTrue(Survey.roundTenth(172.8) == 172.8);
-        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(1.05)) == "1.1");
-        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(1728.0)) == "1728");
-        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(0.0)) == "0")
-
-    @Test
-    def testTheCornerIsTheNorthWestOfEveryPlace(): Unit \ Assert =
-        // The drawing's metres are measured from this corner, so no line of the drawing
-        // falls below its own zero.
-        let corner = Survey.cornerOf({lat = 30.0, lon = -97.6} :: {lat = 30.2, lon = -97.4} :: {lat = 29.9, lon = -97.9} :: Nil);
-        Assert.assertTrue(corner#lat == 30.2);
-        Assert.assertTrue(corner#lon == -97.9)
 
     // ------------------------------------------------------------- the survey end to end
 

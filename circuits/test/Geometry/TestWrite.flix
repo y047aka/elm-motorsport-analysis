@@ -5,7 +5,7 @@
 pub mod Geometry.TestWrite {
 
     use Circuit.Circuit
-    use Geometry.Place
+    use Geodesy.Place
 
     // ------------------------------------------------------------------ the fixtures
 
@@ -24,7 +24,7 @@ pub mod Geometry.TestWrite {
     def pit(): List[Place] =
         {lat = 30.13, lon = -97.638} :: {lat = 30.13, lon = -97.637} :: Nil
 
-    def frame(): Survey.Frame = {
+    def frame(): Geodesy.Frame = {
         origin = {lat = 30.1394338, lon = -97.6434495},
         parallel = 30.135089049999973
     }

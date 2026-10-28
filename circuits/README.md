@@ -203,7 +203,7 @@ itself, and how long one that just failed is left alone are facts about
 OpenStreetMap, and `Overpass.flix` spells them once, walking the probe's
 question and the pipeline's through the same runners. What a service
 *answered with* is the same one reading for both, and that reading — beside
-the sphere `Apart.earthMetres` that every metre is measured on — is held to
+the sphere `Geodesy.earthMetres` that every metre is measured on — is held to
 one spelling by `test/check-sources.mjs`, since an `@Test` can build no
 `HttpResponse` and meets no source file. What nothing compares is the app's
 own number, in `Motorsport.Circuit.Geodesy`: neither compiler reaches into
@@ -229,7 +229,13 @@ guard a fetched answer passes before it is kept, and by the regeneration fence,
 so all three fail in one reading's words — and so is the asking of
 OpenStreetMap, `Overpass.flix` one spelling of the runners for the survey's
 question and the probe's alike, and of the sentence a transport failure is
-printed in. What is written twice is the timing
+printed in. The ground those readings are taken on is `Geodesy.flix` alone — the
+radius, the parallel two lines are laid on, the projection that keeps `y` south, the
+north-west corner a drawing is measured from, the metres a line accumulates from its
+own zero and the tenth a distance is kept to — which the survey, the probe, the atlas
+reading and the diff all read and none of them holds.
+
+What is written twice is the timing
 figures, authored in `src/Circuit.flix` for the drawing and held again in the linked
 `Motorsport.Circuit` for a run that reads no geometry, laid together by
 `test/TestTimingMap.flix`.
