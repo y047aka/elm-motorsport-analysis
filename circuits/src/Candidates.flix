@@ -4,7 +4,7 @@
 /// members carry. `Probe` is the command that asks; this is the reading of an
 /// answer already got, opening nothing and reaching no network.
 ///
-/// Every distance here is measured through `Apart.flix` -- the project's one
+/// Every distance here is measured through `Geodesy.flix` -- the project's one
 /// spelling of the sphere -- and the measured lap is the one reading a config is
 /// authored from.
 ///
@@ -13,9 +13,9 @@
 pub mod Candidates {
 
     use Geodesy.Place
-    use Overpass.Element
-    use Overpass.Member
-    use Overpass.Tags
+    use Overpass.Answer.Element
+    use Overpass.Answer.Member
+    use Overpass.Answer.Tags
 
     /// A box on the earth, degrees, as Overpass takes it: south, west, north, east.
     pub type alias Box = {
@@ -25,7 +25,7 @@ pub mod Candidates {
         e = Float64
     }
 
-    /// The box's own rounding of a degree, which is not `Geodesy`'s metres-per-degree:
+    /// The box's own rounding of a degree, which is not `Apart`'s metres-per-degree:
     /// a box a tenth of a kilometre wide of the mark costs a relation standing in
     /// the next box over.
     def kilometresPerLatitudeDegree(): Float64 = 111.32
@@ -52,6 +52,11 @@ pub mod Candidates {
                     case _ => Err("neither a centre nor a box: ${place}")
                 }
         }
+
+    /// A box as Overpass takes it in a query, and as the report echoes it back so that a
+    /// reader can tell what was asked of the ground.
+    pub def bounds(box: Box): String =
+        "${box#s},${box#w},${box#n},${box#e}"
 
     /// The numbers a place is made of, all of them or none. A part that is no
     /// number is not dropped: `north,east` reads as a place to whoever typed it,

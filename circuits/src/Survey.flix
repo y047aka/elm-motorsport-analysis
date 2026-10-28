@@ -8,14 +8,18 @@
 /// the degrees it was surveyed at — the metres are this module's working, and the app
 /// re-derives them from the frame written beside them.
 ///
-/// The sphere, the projection and the tenth every metre here is measured on are
-/// `Geodesy`'s, spelled once where the survey, the probe and the report all read them.
+/// An answer's text is `Overpass.Answer`'s to read and its question is `Overpass.Query`'s
+/// to spell; the metres are `Geodesy`'s to measure. What is here is the walking of a
+/// relation's ways into one line and the laying of that line out in the drawing's units.
 ///
-/// The `survey` word is answered here, over an answer read from disk or asked of
+/// The `survey` word is answered here too, over an answer read from disk or asked of
 /// OpenStreetMap now; the bytes it lays or compares are `Geometry.Write`'s, which the
 /// regeneration fence and the atlas writer lay too.
 pub mod Survey {
 
+    use Circuit.Circuit
+    use Cli.Args.ArgsError
+    use Cli.Args.Outcome
     use Geodesy.Frame
     use Geodesy.Place
     use Geodesy.Point
@@ -27,114 +31,15 @@ pub mod Survey {
     use Geodesy.polylineMetres
     use Geodesy.projectOn
     use Geodesy.roundTenth
-    use Util.Json.Json
-    use Circuit.Circuit
-    use Cli.Args.ArgsError
-    use Cli.Args.Outcome
+    use Overpass.Answer.Answer
+    use Overpass.Answer.Element
+    use Overpass.Answer.Member
     use Sys.Console
     use Time.Clock
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
 
-    // ------------------------------------------------------------------ the answer
-
-    /// Whatever a relation or a way is tagged, in OpenStreetMap's own spellings. Only
-    /// `oneway` is read out of these; the rest travels with the answer it came in.
-    pub type alias Tags = Map[String, String]
-
-    /// One member of a relation. The role is the empty string for the ways a lap is chained
-    /// from, which is the whole difference between the lap and the pit lane.
-    pub type alias Member = {
-        kind = String,
-        role = String,
-        ref  = Int64
-    }
-
-    /// One element of an answer, of whichever kind it was: a node carries a place and no
-    /// line, a way the node ids its line runs through, a relation its members. The answer is
-    /// `out body`, the one spelling that carries a way's node refs and a node's degrees at
-    /// once.
-    pub type alias Element = {
-        id      = Int64,
-        kind    = String,
-        tags    = Tags,
-        at      = Option[Place],
-        nodes   = List[Int64],
-        members = List[Member]
-    }
-
-    /// An answer, read. `surveyedAt` is the answer's own stamp — which moment of the map it
-    /// surveyed — and is the one property of a written geometry a live regeneration is
-    /// allowed to move while every degree stands still.
-    pub type alias Answer = {
-        elements   = List[Element],
-        surveyedAt = Option[String]
-    }
-
-    /// An answer's text, read. What is no JSON at all failed to answer, and says so with the
-    /// parser's own words.
-    pub def answer(text: String): Result[String, Answer] =
-        match Util.Json.parse(text) {
-            case Err(problem) => Err("${problem}")
-            case Ok(json) =>
-                let root = objectOf(json);
-                Ok({elements = List.filterMap(elementOf, array("elements", root)), surveyedAt = stamped(root)})
-        }
-
-    def elementOf(json: Json): Option[Element] =
-        let root = objectOf(json);
-        match (wordOf("type", root), wholeOf("id", root)) {
-            case (Some(kind), Some(id)) =>
-                Some({
-                    kind    = kind,
-                    id      = id,
-                    tags    = tagsOf(root),
-                    at      = placeOf(json),
-                    nodes   = wholeArray("nodes", root),
-                    members = List.filterMap(memberOf, array("members", root))
-                })
-            case _ => None
-        }
-
-    /// A relation's member: what kind of thing it is, which line it is on, and what it
-    /// stands for. A role the answer does not spell is the empty one, which is the lap's.
-    def memberOf(json: Json): Option[Member] =
-        let root = objectOf(json);
-        match wholeOf("ref", root) {
-            case None      => None
-            case Some(ref) => Some({kind = wordWith("type", root), role = wordWith("role", root), ref = ref})
-        }
-
-    /// A node's place — a way has no latitude of its own.
-    def placeOf(json: Json): Option[Place] =
-        let root = objectOf(json);
-        match (numberOf("lat", root), numberOf("lon", root)) {
-            case (Some(lat), Some(lon)) => Some({lat = lat, lon = lon})
-            case _                      => None
-        }
-
-    def tagsOf(root: Map[String, Json]): Tags =
-        match Map.get("tags", root) {
-            case Some(tags) => paired(List.filterMap(tagOf, Map.toList(objectOf(tags))))
-            case None       => Map.empty()
-        }
-
-    /// A tag whose value is not a word is no tag: OpenStreetMap tags by string, and a
-    /// number in a tag is a survey this reading does not know how to read.
-    def tagOf(pair: (String, Json)): Option[(String, String)] =
-        match pair {
-            case (key, Json.JString(value)) => Some((key, value))
-            case _                          => None
-        }
-
-    /// The moment the answer says the map was surveyed at.
-    def stamped(root: Map[String, Json]): Option[String] =
-        match Map.get("osm3s", root) {
-            case Some(osm) => wordOf("timestamp_osm_base", objectOf(osm))
-            case None      => None
-        }
-
-    // ------------------------------------------------------------------ the geometry
+    // ---------------------------------------------------------------- the geometry
 
     /// A place on the lap with how far round the lap it stands, in the circuit's published
     /// metres.
@@ -162,7 +67,18 @@ pub mod Survey {
     /// Metres a thinned line may stray from the surveyed one.
     pub def tolerance(): Float64 = 1.0
 
-    /// The lap, the pit lane and the frame, chained out of an answer.
+    /// An answer read and surveyed: the text a run was handed, the answer it reads as and
+    /// the geometry the file is written from. The live survey, the guard a fetched answer
+    /// passes before it is kept, and the regeneration fence all travel through here, so an
+    /// answer that fails for one of them fails for the other two for the same reason, in
+    /// the same words.
+    pub def geometry(text: String, circuit: Circuit): Result[String, (Answer, Geometry)] =
+        match Overpass.Answer.read(text) {
+            case Err(problem) => Err(problem)
+            case Ok(reading)  => Result.map(surveyed -> (reading, surveyed), lapOf(reading, circuit))
+        }
+
+    /// The lap, the pit lane and the frame, chained out of an answer already read.
     pub def lapOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
         match relationOf(reading, circuit#relation) {
             case Err(problem) => Err(problem)
@@ -182,19 +98,6 @@ pub mod Survey {
                                     )
                         }
                 }
-        }
-
-    /// An answer's text, read and surveyed in one go: the JSON, the circuit's relation,
-    /// the chained lap and the line the circuit says that lap starts at. The live
-    /// survey, the guard a fetched answer passes before it is kept, and the
-    /// regeneration fence all travel through here, so an answer that fails for one of
-    /// them fails for the other two for the same reason, in the same words. The reading
-    /// travels with the geometry: what keeps an answer counts its elements and quotes
-    /// the stamp the geometry will carry.
-    pub def survey(text: String, circuit: Circuit): Result[String, (Answer, Geometry)] =
-        match answer(text) {
-            case Err(problem) => Err(problem)
-            case Ok(reading)  => Result.map(geometry -> (reading, geometry), lapOf(reading, circuit))
         }
 
     def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
@@ -432,7 +335,7 @@ pub mod Survey {
             case one :: rest => if (matching(one)) Some(at) else indexWhere(matching, rest, at + 1)
         }
 
-    // -------------------------------------------------- direction and thinning
+    // --------------------------------------------------- metres, direction, thinning
 
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
@@ -537,59 +440,7 @@ pub mod Survey {
             List.zip(points, List.append(List.drop(1, points), List.take(1, points)))
         )
 
-    // ------------------------------------------------------------------ the JSON read
-
-    def objectOf(json: Json): Map[String, Json] =
-        match json {
-            case Json.JObject(members) => members
-            case _                     => Map.empty()
-        }
-
-    def array(key: String, root: Map[String, Json]): List[Json] =
-        match Map.get(key, root) {
-            case Some(Json.JArray(items)) => Vector.toList(items)
-            case _                        => Nil
-        }
-
-    /// A word the answer carries. An absent one and a member of another kind answer the same
-    /// nothing, which is what lets a member carry the empty role rather than a hole.
-    def wordOf(key: String, root: Map[String, Json]): Option[String] =
-        match Map.get(key, root) {
-            case Some(Json.JString(spelled)) => Some(spelled)
-            case _                           => None
-        }
-
-    def wordWith(key: String, root: Map[String, Json]): String =
-        Option.getWithDefault("", wordOf(key, root))
-
-    def numberOf(key: String, root: Map[String, Json]): Option[Float64] =
-        match Map.get(key, root) {
-            case Some(Json.JNumber(spelled)) => Float64.fromString(BigDecimal.toPlainString(spelled))
-            case _                           => None
-        }
-
-    /// A whole number: an id, a node reference. The answer's ids are far inside what a double
-    /// holds exactly, so a plain spelling is read as a float and cut to a whole rather than
-    /// looked for as an integer the answer never writes.
-    def wholeOf(key: String, root: Map[String, Json]): Option[Int64] =
-        Option.map(Float64.truncateToInt64, numberOf(key, root))
-
-    def wholeArray(key: String, root: Map[String, Json]): List[Int64] =
-        List.filterMap(wholeNumber, array(key, root))
-
-    def wholeNumber(json: Json): Option[Int64] =
-        match numberOfAt(json) {
-            case Some(spelled) => Some(Float64.truncateToInt64(spelled))
-            case None          => None
-        }
-
-    def numberOfAt(json: Json): Option[Float64] =
-        match json {
-            case Json.JNumber(spelled) => Float64.fromString(BigDecimal.toPlainString(spelled))
-            case _                     => None
-        }
-
-    // ---------------------------------------------------------------- the lists at hand
+    // --------------------------------------------------------------- the lists at hand
 
     def paired(pairs: List[(k, v)]): Map[k, v] with Order[k] =
         List.foldLeft((held, pair) -> match pair {case (key, value) => Map.insert(key, value, held)}, Map.empty(), pairs)
@@ -779,7 +630,7 @@ pub mod Survey {
     /// with, and the geometry the file is written from.
     type alias Read = {
         text     = String,
-        answer   = Survey.Answer,
+        answer   = Answer,
         geometry = Survey.Geometry
     }
 
@@ -791,7 +642,7 @@ pub mod Survey {
     /// the survey itself would say them in, rather than in a file kept to be
     /// discovered later.
     def surveyed(asked: Args, spelled: String): Result[String, Read] =
-        match survey(spelled, asked#circuit) {
+        match geometry(spelled, asked#circuit) {
             case Ok((answer, geometry)) => Ok({text = spelled, answer = answer, geometry = geometry})
             case Err(problem) =>
                 if (asked#fetch)
@@ -813,7 +664,7 @@ pub mod Survey {
         }
 
     /// What the asking left beside the circuit.
-    def keptLine(asked: Args, reading: Survey.Answer): String =
+    def keptLine(asked: Args, reading: Answer): String =
         let elements = Int32.toString(List.length(reading#elements));
         let stamp = match reading#surveyedAt {
             case None     => ""

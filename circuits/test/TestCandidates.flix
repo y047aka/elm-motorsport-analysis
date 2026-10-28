@@ -6,11 +6,11 @@ pub mod TestCandidates {
 
     import java.lang.Math
 
-    use Candidates.{bboxOf, describe, looksLikeACircuit, measure}
-    use Overpass.Element
-    use Overpass.Member
-    use Overpass.Place
-    use Overpass.Tags
+    use Candidates.{bboxOf, bounds, describe, looksLikeACircuit, measure}
+    use Geodesy.Place
+    use Overpass.Answer.Element
+    use Overpass.Answer.Member
+    use Overpass.Answer.Tags
 
     /// The same sphere `Candidates` measures on: a fixture's way is a length in
     /// degrees that can be counted, rather than a survey to keep beside it.
@@ -23,10 +23,18 @@ pub mod TestCandidates {
     /// A way whose line runs back to the equator and the prime meridian, so its
     /// length is the one number the fixture wrote it as.
     def way(id: Int64, metres: Float64): Element =
-        { id = id, kind = "way", tags = Map.empty(), members = Nil, line = List#{northOf(metres), atZero()} }
+        {
+            id = id,
+            kind = "way",
+            tags = Map.empty(),
+            at = None,
+            nodes = Nil,
+            line = List#{northOf(metres), atZero()},
+            members = Nil
+        }
 
     def node(id: Int64): Element =
-        { id = id, kind = "node", tags = Map.empty(), members = Nil, line = Nil }
+        { id = id, kind = "node", tags = Map.empty(), at = Some(atZero()), nodes = Nil, line = Nil, members = Nil }
 
     def member(kind: String, role: String, ref: Int64): Member = { kind = kind, role = role, ref = ref }
 
@@ -44,7 +52,7 @@ pub mod TestCandidates {
     /// beside it.
     def relationWith(members: List[Member], ways: List[Element]): List[Element] =
         List.append(
-            List#{ { id = 7i64, kind = "relation", tags = Map.empty(), members = members, line = Nil } },
+            List#{ { id = 7i64, kind = "relation", tags = Map.empty(), at = None, nodes = Nil, line = Nil, members = members } },
             ways
         )
 
@@ -83,6 +91,15 @@ pub mod TestCandidates {
                 Assert.assertTrue(box#n == 48.0);
                 Assert.assertTrue(box#e == 0.9)
             case Err(_) => Assert.assertTrue(false)
+        }
+
+    /// The box the probe asks the box question with is printed as Overpass takes it,
+    /// and echoed back in the same spelling so a reader can tell what ground was asked of.
+    @Test
+    def testBoundsPrintsTheBoxAsOverpassTakesIt(): Unit \ Assert =
+        match bboxOf("47.0,0.0,48.0,1.0", 5.0) {
+            case Ok(box) => Assert.assertTrue(bounds(box) == "47.0,0.0,48.0,1.0")
+            case Err(_)  => Assert.assertTrue(false)
         }
 
     @Test

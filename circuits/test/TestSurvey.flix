@@ -3,7 +3,7 @@
 /// and thinned to what a drawing can show. `nix run .#geometry -- survey` holds the whole of
 /// it to the bytes the app serves, over both kept answers.
 ///
-/// The answer these are handed is this module's own reading of one, so the fixture below
+/// The answer these are handed is `Overpass.Answer`'s reading of one, so the fixture below
 /// spells an `out body` answer and checks the slots the chain walks.
 ///
 /// The word's own arguments — which circuit, which answer, whether a file is laid down — are
@@ -87,7 +87,7 @@ pub mod TestSurvey {
         match Circuit.byWord(word) {
             case None => Err("the test names no circuit")
             case Some(circuit) =>
-                match Survey.answer(text) {
+                match Overpass.Answer.read(text) {
                     case Err(problem) => Err(problem)
                     case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, geometry), Survey.lapOf(reading, circuit))
                 }
@@ -117,7 +117,7 @@ pub mod TestSurvey {
 
     @Test
     def testAnswerReadsThePlacesTheWaysRunThrough(): Unit \ Assert =
-        match Survey.answer(square(2126739)) {
+        match Overpass.Answer.read(square(2126739)) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "read the answer: ${problem}")
             case Ok(reading) =>
                 // The stamp the answer carries is the geometry's own claim about when the
@@ -140,7 +140,7 @@ pub mod TestSurvey {
     def testAnswerRefusesTextThatIsNoAnswer(): Unit \ Assert =
         // What is no JSON at all failed to answer, and the parser's own words are the only
         // thing a run knows about it.
-        Assert.assertTrue(refusedIt(Survey.answer("<html>the gate is closed</html>")))
+        Assert.assertTrue(refusedIt(Overpass.Answer.read("<html>the gate is closed</html>")))
 
     @Test
     def testSurveyRefusesAnAnswerAboutAnotherRelation(): Unit \ Assert =
@@ -206,7 +206,7 @@ pub mod TestSurvey {
                     atlas = narrowed#atlas,
                     survey = narrowed#survey
                 };
-                match Survey.answer(asking) {
+                match Overpass.Answer.read(asking) {
                     case Err(problem) => Assert.assertTrueWithMsg(false, "read the answer: ${problem}")
                     case Ok(reading) =>
                         // Authored: the distance the circuit names is the distance kept.

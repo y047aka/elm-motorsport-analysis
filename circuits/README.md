@@ -191,10 +191,11 @@ sharing, the `flix.toml` and the flake's apps are reviewed by reading them.
 ## The probe is a word of the pipeline
 
 `-- probe` opens no file at all — it asks something of a network rather than of
-a database: `src/Probe.flix` reads the arguments and prints, `src/Overpass.flix`
-walks the runners and gives an answer its shape, and `src/Candidates.flix` reads
-an answer already got — which tags could name a circuit, and what a relation's
-roles measure. `nix run .#geometry-test` runs their `flix test`, which
+a database: `src/Probe.flix` reads the arguments and prints,
+`src/Overpass/Query.flix` spells the two questions it asks, `src/Overpass.flix`
+walks the runners, `src/Overpass/Answer.flix` gives what comes back the shape of
+an answer, and `src/Candidates.flix` reads an answer already got — which tags
+could name a circuit, and what a relation's roles measure. `nix run .#geometry-test` runs their `flix test`, which
 is the only way a probe is testable at all: the asking is one call
 and the reading is a fixture, and the tests are given fixtures.
 
@@ -224,7 +225,7 @@ lines is `Apart.flix`'s, which the diff samples and the atlas reading samples; t
 file's shapes and guards are `Track.flix`'s; the survey of an answer, the reading of a
 kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.flix` and
 `Geometry/Write.flix`, each one the only spelling; the chain from an answer's text to a
-surveyed geometry is `Survey.survey`'s, asked whole by the live survey, by the
+surveyed geometry is `Survey.geometry`'s, asked whole by the live survey, by the
 guard a fetched answer passes before it is kept, and by the regeneration fence,
 so all three fail in one reading's words — and so is the asking of
 OpenStreetMap, `Overpass.flix` one spelling of the runners for the survey's
@@ -233,7 +234,11 @@ printed in. The ground those readings are taken on is `Geodesy.flix` alone — t
 radius, the parallel two lines are laid on, the projection that keeps `y` south, the
 north-west corner a drawing is measured from, the metres a line accumulates from its
 own zero and the tenth a distance is kept to — which the survey, the probe, the atlas
-reading and the diff all read and none of them holds.
+reading and the diff all read and none of them holds. So are the three questions
+asked of OpenStreetMap, spelled one each in `Overpass/Query.flix`, and the answer
+they come back as, read in `Overpass/Answer.flix`: the shape of an element is known
+in one place, so the `--fetch`ed answer and the kept one are read alike and a
+question cannot drift from the reading that works it.
 
 What is written twice is the timing
 figures, authored in `src/Circuit.flix` for the drawing and held again in the linked

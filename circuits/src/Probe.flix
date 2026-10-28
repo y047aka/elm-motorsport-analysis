@@ -12,16 +12,15 @@
 ///
 /// Nothing here is written: the answer the report prints is what a circuit's
 /// config is authored from, and the pipeline that draws the geometry begins
-/// there. `Candidates` is the reading of an answer already got; this is the
-/// asking, the two questions and the printing.
+/// there. `Candidates` is the reading of an answer already got, `Overpass.Query`
+/// spells the two questions, and this is the asking and the printing.
 pub mod Probe {
 
-    use Candidates.{bboxOf, describe, looksLikeACircuit, measure}
-    use Candidates.Box
+    use Candidates.{bboxOf, bounds, describe, looksLikeACircuit, measure}
     use Cli.Args.ArgsError
     use Cli.Args.Outcome
     use Net.Https.Https
-    use Overpass.Element
+    use Overpass.Answer.Element
     use Sys.Console
     use Time.Clock
     use Util.GetOpt.ArgDescr
@@ -139,15 +138,15 @@ pub mod Probe {
     def probePlace(radius: Float64, place: String): Result[String, Unit] \ { Console, IO, Https } =
         match forM(
             box   <- bboxOf(place, radius);
-            found <- Overpass.askElements(candidatesOf(box))
+            found <- Overpass.read(Overpass.Query.candidates(bounds(box)))
         ) yield (box, found) {
             case Err(problem) => Err(problem)
             case Ok((box, found)) =>
                 Console.println("\n== ${place} (bbox ${bounds(box)})");
-                if (List.isEmpty(found))
+                if (List.isEmpty(found#elements))
                     Console.println(untagged())
                 else
-                    describeEach(found);
+                    describeEach(found#elements);
                 Ok(())
         }
 
@@ -182,30 +181,5 @@ pub mod Probe {
     /// The relation's ways, asked for and measured: the asking is here, the reading
     /// of the answer is `Candidates.measure`'s.
     def measured(element: Element): Result[String, String] \ { IO, Https } =
-        Result.flatMap(answer -> measure(answer, element#id), Overpass.askElements(waysOf(element#id)))
-
-    /// The first question: every relation the box holds that is tagged as a
-    /// circuit, a motor-sport route or a raceway, with its tags and nothing else.
-    /// Which of them is the circuit is the next question's answer.
-    def candidatesOf(box: Box): String =
-        let extent = bounds(box);
-        let selectors =
-            "relation[\"type\"=\"circuit\"](${extent});" ::
-            "relation[\"sport\"~\"^motor\"](${extent});" ::
-            "relation[\"motorsport\"](${extent});" ::
-            "relation[\"route\"~\"^(raceway|motorsport|racing)$\"](${extent});" ::
-            "relation[\"highway\"=\"raceway\"](${extent});" :: Nil;
-        "[out:json][timeout:90];(${String.intercalate("", selectors)});out tags;"
-
-    /// The second question: the relation whole and its ways with their geometry,
-    /// which is the only answer a role's length can be measured out of. It stops
-    /// at the geometry the runner hands inline — nodes are the survey's question,
-    /// the one that chains a lap.
-    pub def waysOf(relation: Int64): String =
-        "[out:json][timeout:90];relation(${relation});out body;way(r);out geom;"
-
-    /// A box as Overpass takes it in a query, and as the report echoes it back so
-    /// that a reader can tell what was asked of the ground.
-    def bounds(box: Box): String =
-        "${box#s},${box#w},${box#n},${box#e}"
+        Result.flatMap(answer -> measure(answer#elements, element#id), Overpass.read(Overpass.Query.ways(element#id)))
 }
