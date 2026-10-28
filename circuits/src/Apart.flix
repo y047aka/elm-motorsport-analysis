@@ -26,7 +26,7 @@ pub mod Apart {
     }
 
     def stretches(points: List[Point], metres: List[Float64]): List[Stretch] =
-        List.map(at -> stretchAt(points, metres, at), List.range(0, List.length(points) - 1))
+        List.range(0, List.length(points) - 1) |> List.map(stretchAt(points, metres))
 
     def stretchAt(points: List[Point], metres: List[Float64], at: Int32): Stretch = {
         start  = Option.getWithDefault(zero(), List.nth(at, points)),
@@ -43,7 +43,7 @@ pub mod Apart {
         at       = Float64
     }
 
-    pub def toSegment(away: Point, start: Point, end: Point): On = {
+    pub def toSegment(start: Point, end: Point, away: Point): On = {
         let dx = end#x - start#x;
         let dy = end#y - start#y;
         let span = (dx * dx) + (dy * dy);
@@ -66,10 +66,10 @@ pub mod Apart {
         distance = Float64
     }
 
-    pub def nearestOn(point: Point, points: List[Point], metres: List[Float64]): Near =
+    pub def nearestOn(points: List[Point], metres: List[Float64], point: Point): Near =
         Option.getWithDefault(
             {metres = 0.0, distance = Float64.maxValue()},
-            nearest(None, List.map(each -> stands(each, toSegment(point, each#start, each#end)), stretches(points, metres)))
+            nearest(None, List.map(each -> stands(each, point |> toSegment(each#start, each#end)), stretches(points, metres)))
         )
 
     /// The metre along the lap where the nearest place on a stretch stands.
@@ -142,7 +142,7 @@ pub mod Apart {
         if (at >= length)
             Nil
         else {
-            let near = nearestOn(interpolate(aPoints, aMetres, at), bPoints, bMetres);
+            let near = at |> interpolate(aPoints, aMetres) |> nearestOn(bPoints, bMetres);
             {aMetres = at, bMetres = near#metres, distance = near#distance} :: samples(at + every, length, every, aPoints, aMetres, bPoints, bMetres)
         }
 

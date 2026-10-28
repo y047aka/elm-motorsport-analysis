@@ -150,7 +150,8 @@ pub mod Regenerate {
             case Ok(lines) =>
                 foreach (line <- lines)
                     Console.eprintln(line);
-                Result.traverse(circuit -> check(circuit, asked#mode), asked#circuits)
+                asked#circuits
+                    |> Result.traverse(check(asked#mode))
                     |> Result.map(verdictOf)
                     |> Cli.Args.outcomeOf
         }
@@ -245,7 +246,7 @@ pub mod Regenerate {
     /// One circuit's verdict: `Drifted` where the drawing has moved,
     /// `Reproduced` where the kept geometry is what the kept answer draws, and a
     /// failure where the run itself did not happen.
-    def check(circuit: Circuit, mode: Mode): Result[String, Verdict] \ { IO, Clock, Console } =
+    def check(mode: Mode, circuit: Circuit): Result[String, Verdict] \ { IO, Clock, Console } =
         match mode {
             case Mode.Freeze =>
                 forM(

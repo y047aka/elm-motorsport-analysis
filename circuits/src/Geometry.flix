@@ -52,14 +52,14 @@ pub mod Geometry {
         "osm-centreline" :: "measured-midline" :: Nil
 
     /// The outline of a kept file, read from its text.
-    pub def outline(text: String, name: String): Result[String, Line] =
+    pub def outline(name: String, text: String): Result[String, Line] =
         match found(text, name, "outline", "${name}: no outline feature") {
             case Err(problem)       => Err(problem)
             case Ok((props, shape)) => outlineOf(props, shape, name)
         }
 
     /// The pit lane beside the outline: a line with no metres.
-    pub def pitLane(text: String, name: String): Result[String, List[Place]] =
+    pub def pitLane(name: String, text: String): Result[String, List[Place]] =
         match found(text, name, "pit_lane", "${name}: the geometry holds no pit lane") {
             case Err(problem) => Err(problem)
             case Ok((_, shape)) =>

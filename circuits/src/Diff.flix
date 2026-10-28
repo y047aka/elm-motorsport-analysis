@@ -147,14 +147,10 @@ pub mod Diff {
         match paths {
             case Nil => Ok(List.reverse(kept))
             case one :: more =>
-                match Cli.Errors.readFile(one) {
-                    case Err(problem) => Err("${problem}")
-                    case Ok(text) =>
-                        match Geometry.outline(text, baseName(one)) {
-                            case Err(problem) => Err(problem)
-                            case Ok(line)     => read(line :: kept, more)
-                        }
-                }
+                Cli.Errors.readFile(one)
+                    |> Result.mapErr(problem -> "${problem}")
+                    |> Result.flatMap(Geometry.outline(baseName(one)))
+                    |> Result.flatMap(line -> read(line :: kept, more))
         }
 
     /// The name a file is quoted by: its last path part, without the extension the

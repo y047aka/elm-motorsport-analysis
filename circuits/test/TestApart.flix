@@ -41,11 +41,11 @@ pub mod TestApart {
     @Test
     def testNearestOnProjectsAPlaceOntoALine(): Unit \ Assert =
         let corner = {x = 0.0, y = 0.0} :: {x = 10.0, y = 0.0} :: {x = 10.0, y = 10.0} :: Nil;
-        let near = nearestOn({x = 5.0, y = 3.0}, corner, 0.0 :: 10.0 :: 20.0 :: Nil);
+        let near = nearestOn(corner, 0.0 :: 10.0 :: 20.0 :: Nil, {x = 5.0, y = 3.0});
         Assert.assertTrue(near#metres == 5.0);
         Assert.assertTrue(near#distance == 3.0);
         // Beyond the end it clamps to the corner, not beyond.
-        let past = nearestOn({x = 12.0, y = 12.0}, corner, 0.0 :: 10.0 :: 20.0 :: Nil);
+        let past = nearestOn(corner, 0.0 :: 10.0 :: 20.0 :: Nil, {x = 12.0, y = 12.0});
         Assert.assertTrue(past#metres == 20.0);
         Assert.assertTrue(abs(past#distance - hypot(2.0, 2.0)) < 0.0000000001)
 
@@ -74,14 +74,14 @@ pub mod TestApart {
     def testToSegmentClampsToAStretchAndKnowsAPlaceThatIsOne(): Unit \ Assert =
         let start = {x = 0.0, y = 0.0};
         let end = {x = 10.0, y = 0.0};
-        let near = toSegment({x = 4.0, y = 3.0}, start, end);
+        let near = toSegment(start, end, {x = 4.0, y = 3.0});
         Assert.assertTrue(abs(near#distance - 3.0) < 0.0000000001);
         Assert.assertTrue(abs(near#at - 0.4) < 0.0000000001);
         // Before the start is at the start, and after the end at the end.
-        Assert.assertTrue(toSegment({x = -5.0, y = 0.0}, start, end)#at == 0.0);
-        Assert.assertTrue(toSegment({x = 15.0, y = 0.0}, start, end)#at == 1.0);
+        Assert.assertTrue(toSegment(start, end, {x = -5.0, y = 0.0})#at == 0.0);
+        Assert.assertTrue(toSegment(start, end, {x = 15.0, y = 0.0})#at == 1.0);
         // A stretch of nought length is a place rather than a stretch.
-        let standing = toSegment({x = 3.0, y = 4.0}, start, start);
+        let standing = toSegment(start, start, {x = 3.0, y = 4.0});
         Assert.assertTrue(standing#distance == 5.0);
         Assert.assertTrue(standing#at == 0.0)
 

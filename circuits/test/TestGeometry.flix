@@ -37,13 +37,13 @@ pub mod TestGeometry {
 
     def surveyed(name: String): Result[String, Line] =
         Geometry.outline(
+            name,
             file(
                 outlineWith(
                     "\"basis\": \"osm-centreline\", \"source\": \"https://www.openstreetmap.org/relation/999\", \"metres\": [0, 100]",
                     line("[0, 0], [100, 0]")
                 )
-            ),
-            name
+            )
         )
 
     /// A reading's failure, or the absence of one.
@@ -54,7 +54,7 @@ pub mod TestGeometry {
         }
 
     def outlineRefusing(properties: String, coordinates: String): Result[String, Line] =
-        Geometry.outline(file(outlineWith(properties, line(coordinates))), "cota")
+        Geometry.outline("cota", file(outlineWith(properties, line(coordinates))))
 
     @Test
     def testOutlineTakesTheLineAFileClaimsItIs(): Unit \ Assert =
@@ -115,8 +115,8 @@ pub mod TestGeometry {
 
     @Test
     def testOutlineRefusesAFileWithNoOutlineAtAll(): Unit \ Assert =
-        Assert.assertTrue(refused("cota: no outline feature", Geometry.outline(file(feature("pit_lane", "", line("[0, 0]"))), "cota")));
-        Assert.assertTrue(refused("cota: no outline feature", Geometry.outline("{\"type\": \"FeatureCollection\"}", "cota")))
+        Assert.assertTrue(refused("cota: no outline feature", Geometry.outline("cota", file(feature("pit_lane", "", line("[0, 0]"))))));
+        Assert.assertTrue(refused("cota: no outline feature", Geometry.outline("cota", "{\"type\": \"FeatureCollection\"}")))
 
     @Test
     def testPitLaneIsALineWithNoMetresBecauseNothingTimesAlongIt(): Unit \ Assert =
@@ -125,7 +125,7 @@ pub mod TestGeometry {
                 + ", "
                 + feature("pit_lane", "", line("[0, 0], [10, 0]"))
         );
-        match Geometry.pitLane(both, "cota") {
+        match Geometry.pitLane("cota", both) {
             case Ok(pit)      => Assert.assertTrue(List.length(pit) == 2)
             case Err(problem) => Assert.assertTrueWithMsg(false, "read the pit lane: ${problem}")
         }
@@ -135,13 +135,13 @@ pub mod TestGeometry {
         Assert.assertTrue(
             refused(
                 "cota: the geometry holds no pit lane",
-                Geometry.pitLane(file(outlineWith("\"basis\": \"osm-centreline\", \"metres\": [0, 100]", "[0, 0]")), "cota")
+                Geometry.pitLane("cota", file(outlineWith("\"basis\": \"osm-centreline\", \"metres\": [0, 100]", "[0, 0]")))
             )
         );
         Assert.assertTrue(
             refused(
                 "cota: the pit lane holds no coordinates",
-                Geometry.pitLane(file(feature("pit_lane", "", line("[]"))), "cota")
+                Geometry.pitLane("cota", file(feature("pit_lane", "", line("[]"))))
             )
         )
 
