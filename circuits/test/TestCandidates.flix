@@ -69,18 +69,16 @@ pub mod TestCandidates {
             List#{way(1i64, 100.0), way(2i64, 200.0), way(3i64, 55.0), node(4i64)}
         )
 
-    /// A reading's failure, or the absence of one.
     def complains(problem: String, asked: Result[String, Candidates.Box]): Bool =
         match asked {
             case Err(reading) => String.contains({substr = problem}, reading)
             case Ok(_)        => false
         }
 
-    def says(line: Result[String, String], phrase: String): Bool =
-        match line {
-            case Ok(measured) => String.contains({substr = phrase}, measured)
-            case Err(_)       => false
-        }
+    /// The metres and counts a measure came to, read off the measure itself — the
+    /// sentence the probe prints them in is display and no test's subject.
+    def tallies(read: Candidates.Measured): List[(String, Int32)] =
+        List.map(entry -> (entry#role, entry#ways), read#roles)
 
     @Test
     def testBboxTakesABoxAsGiven(): Unit \ Assert =
@@ -151,37 +149,52 @@ pub mod TestCandidates {
 
     @Test
     def testMeasureCountsTheRolesAndMeasuresTheUnroledWays(): Unit \ Assert =
-        let read = measure(answer(), 7i64);
-        Assert.assertTrue(says(read, "lap 300 m over 2 unroled ways"));
-        Assert.assertTrue(says(read, ", pit 55 m"));
-        Assert.assertTrue(says(read, "roles: (none): 2 ways, pit_lane: 1 way"));
-        Assert.assertTrue(says(read, "; nodes: start"))
+        match measure(answer(), 7i64) {
+            case Ok(read) =>
+                // 300 m of lap over the two unroled ways, 55 m of pit lane, and the
+                // roles a config is authored from.
+                Assert.assertTrue(Math.abs(read#lap#metres - 300.0) < 0.5);
+                Assert.assertTrue(read#lap#ways == 2);
+                Assert.assertTrue(Option.map(pit -> Math.abs(pit#metres - 55.0) < 0.5, read#pit) == Some(true));
+                Assert.assertTrue(tallies(read) == List#{("", 2), ("pit_lane", 1)});
+                Assert.assertTrue(read#nodeRoles == "start" :: Nil)
+            case Err(problem) => Assert.assertTrueWithMsg(false, "measured: ${problem}")
+        }
 
-    /// OpenStreetMap has been tagged the pit lane both ways, and a report reading
-    /// only one spelling would print a pit lane of nought metres.
+    /// OpenStreetMap has been tagged the pit lane both ways, and a reading that
+    /// looked for only one spelling would measure a pit lane of nought metres.
     @Test
     def testMeasureReadsThePitRoleWhicheverWayItIsTagged(): Unit \ Assert =
         let spelled = relationWith(
             List#{member("way", "", 1i64), member("way", "", 2i64), member("way", "pit", 3i64)},
             List#{way(1i64, 100.0), way(2i64, 200.0), way(3i64, 55.0)}
         );
-        Assert.assertTrue(says(measure(spelled, 7i64), ", pit 55 m"));
-        Assert.assertTrue(says(measure(answer(), 7i64), ", pit 55 m"))
+        match (measure(spelled, 7i64), measure(answer(), 7i64)) {
+            case (Ok(one), Ok(only)) =>
+                Assert.assertTrue(Option.map(pit -> Math.abs(pit#metres - 55.0) < 0.5, one#pit) == Some(true));
+                Assert.assertTrue(Option.map(pit -> Math.abs(pit#metres - 55.0) < 0.5, only#pit) == Some(true))
+            case _ => Assert.assertTrue(false)
+        }
 
     /// A way the relation carries under two roles is the same ground twice, and the
-    /// report says how many ways carry each of them.
+    /// reading counts the ways each role carries.
     @Test
     def testMeasureCountsOneWayTwiceWhenTheRelationCarriesItTwice(): Unit \ Assert =
         let carried = relationWith(
             List#{member("way", "", 1i64), member("way", "shortcut", 1i64)},
             List#{way(1i64, 100.0)}
         );
-        Assert.assertTrue(says(measure(carried, 7i64), "lap 100 m over 1 unroled way"));
-        Assert.assertTrue(says(measure(carried, 7i64), "roles: (none): 1 way, shortcut: 1 way"))
+        match measure(carried, 7i64) {
+            case Ok(read) =>
+                Assert.assertTrue(Math.abs(read#lap#metres - 100.0) < 0.5);
+                Assert.assertTrue(read#lap#ways == 1);
+                Assert.assertTrue(tallies(read) == List#{("", 1), ("shortcut", 1)})
+            case Err(problem) => Assert.assertTrueWithMsg(false, "measured: ${problem}")
+        }
 
     @Test
     def testMeasureSaysSoWhenTheAnswerHoldsNoRelation(): Unit \ Assert =
-        let asked: Result[String, String] = measure(Nil, 7i64);
+        let asked: Result[String, Candidates.Measured] = measure(Nil, 7i64);
         Assert.assertTrue(match asked {
             case Err(problem) => String.contains({substr = "the answer holds no relation 7"}, problem)
             case Ok(_)        => false

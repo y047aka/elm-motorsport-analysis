@@ -116,26 +116,22 @@ pub mod Candidates {
     /// and the length of the ones a lap would be chained from — ways with no
     /// role, which is the role the pipeline chains and the kept geometries carry.
     /// Ways may overlap or double back at a pit complex, so the sum is an estimate
-    /// beside the tags' own claim and not a second survey.
-    pub def measure(answer: List[Element], relation: Int64): Result[String, String] =
+    /// beside the tags' own claim and not a second survey. The measuring answers
+    /// what it measured; the sentence it is printed in is `Probe`'s.
+    pub type alias Measured = {
+        lap       = Tally,
+        pit       = Option[Tally],
+        roles     = List[Tally],
+        nodeRoles = List[String]
+    }
+
+    pub def measure(answer: List[Element], relation: Int64): Result[String, Measured] =
         match relationOf(answer, relation) {
             case None => Err("the answer holds no relation ${relation}")
             case Some(rel) =>
                 let tallies = tally(rel#members, answer);
                 let lap = Option.getWithDefault(unmeasured(""), held(tallies, ""));
-                let roles = List.map(tallyOf, tallies) |> String.intercalate(", ");
-                let pitNote = match pitOf(tallies) {
-                    case None    => ""
-                    case Some(p) => ", pit ${whole(p#metres)} m"
-                };
-                let nodes = nodeRoles(rel#members);
-                let nodeNote = match nodes {
-                    case Nil => ""
-                    case _   => "; nodes: ${String.intercalate(", ", nodes)}"
-                };
-                Ok(
-                    "lap ${whole(lap#metres)} m over ${lap#ways} unroled way${plural(lap#ways)}${pitNote}; roles: ${roles}${nodeNote}"
-                )
+                Ok({lap = lap, pit = pitOf(tallies), roles = tallies, nodeRoles = nodeRoles(rel#members)})
         }
 
     /// How many ways a role carries and how far they run. The roles are held in the
@@ -146,16 +142,9 @@ pub mod Candidates {
         metres = Float64
     }
 
-    /// One role as the report prints it. The role a lap is chained from prints as
-    /// `(none)`, since the empty string is not a thing a reader can see.
-    def tallyOf(entry: Tally): String =
-        let named = if (entry#role == "") "(none)" else entry#role;
-        "${named}: ${entry#ways} way${plural(entry#ways)}"
-
     /// A role the answer carries no ways under: the lap the report prints a length
     /// for may be a role the relation never uses.
     def unmeasured(role: String): Tally = { role = role, ways = 0, metres = 0.0 }
-
     def tally(members: List[Member], answer: List[Element]): List[Tally] =
         List.foldLeft(
             (entries, member) ->
@@ -217,11 +206,4 @@ pub mod Candidates {
 
     def held(tallies: List[Tally], role: String): Option[Tally] =
         List.find(entry -> entry#role == role, tallies)
-
-    /// A distance as the report prints it: whole metres, which is all a relation
-    /// measured off an answer is worth.
-    def whole(metres: Float64): String =
-        "${Float64.truncateToInt64(Float64.floor(metres + 0.5))}"
-
-    def plural(ways: Int32): String = if (ways == 1) "" else "s"
 }

@@ -180,8 +180,35 @@ pub mod Probe {
         }
 
     /// The relation's ways, asked for and measured: the asking is here, the reading
-    /// of the answer is `Candidates.measure`'s.
+    /// of the answer is `Candidates.measure`'s, and this is the sentence the measure
+    /// is printed in.
     def measured(element: Element): Result[String, String] \ { IO, Https } =
         Overpass.read(Overpass.Query.ways(element#id))
             |> Result.flatMap(answer -> measure(answer#elements, element#id))
+            |> Result.map(spelled)
+
+    /// What a relation measures to, in the one line the probe prints beside its id.
+    /// The role a lap is chained from prints as `(none)`, since the empty string is
+    /// not a thing a reader can see.
+    def spelled(read: Candidates.Measured): String =
+        let pitNote = match read#pit {
+            case None    => ""
+            case Some(p) => ", pit ${whole(p#metres)} m"
+        };
+        let nodeNote = match read#nodeRoles {
+            case Nil => ""
+            case _   => "; nodes: ${String.intercalate(", ", read#nodeRoles)}"
+        };
+        "lap ${whole(read#lap#metres)} m over ${read#lap#ways} unroled way${plural(read#lap#ways)}${pitNote}; roles: ${String.intercalate(", ", List.map(tallyOf, read#roles))}${nodeNote}"
+
+    def tallyOf(entry: Candidates.Tally): String =
+        let named = if (entry#role == "") "(none)" else entry#role;
+        "${named}: ${entry#ways} way${plural(entry#ways)}"
+
+    /// A distance as the probe prints it: whole metres, which is all a relation
+    /// measured off an answer is worth.
+    def whole(metres: Float64): String =
+        "${Float64.truncateToInt64(Float64.floor(metres + 0.5))}"
+
+    def plural(ways: Int32): String = if (ways == 1) "" else "s"
 }
