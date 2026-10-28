@@ -26,10 +26,6 @@ pub mod Midline {
     use Geodesy.roundTenth
     use Util.Json.Json
 
-    /// One feature of an atlas file: its members as the file's JSON gives them. The
-    /// role that picks a feature out of a file lives inside its properties.
-    pub type alias Feature = Map[String, Json]
-
     /// How far the start of a line measured off orthoimagery may stand from the
     /// published line and still be the same lap. Wider than `Circuit.nodeWithin`,
     /// which holds a relation's node: a relation tags the line itself, while where
@@ -39,17 +35,17 @@ pub mod Midline {
 
     /// What a feature's properties say it is, and what to call it in a sentence when
     /// they say nothing.
-    pub def roleOf(feature: Feature): Option[String] =
+    pub def roleOf(feature: Geometry.Feature): Option[String] =
         Geometry.word("role", Geometry.propertiesOf(feature))
 
-    pub def named(feature: Feature): String =
+    pub def named(feature: Geometry.Feature): String =
         Option.getWithDefault("feature", roleOf(feature))
 
     // ---------------------------------------------------------------- the shapes
 
     /// An atlas outline as the line it measures: degrees, lon before lat. A line the
     /// reading does not understand is refused whole rather than measured with a hole in it.
-    pub def lineOf(feature: Feature): Result[String, List[Place]] =
+    pub def lineOf(feature: Geometry.Feature): Result[String, List[Place]] =
         match allPairs(positionsOf(feature)) {
             case Some(places) if List.length(places) >= 2 => Ok(places)
             case _                                        => Err("the atlas outline holds no line to measure")
@@ -58,14 +54,14 @@ pub mod Midline {
     /// An atlas point feature — a corner or a pit marker — as the place it stands at:
     /// a Point's coordinates are that pair itself, not a list of them, unlike the
     /// outline's LineString.
-    pub def placeOf(feature: Feature): Result[String, Place] =
+    pub def placeOf(feature: Geometry.Feature): Result[String, Place] =
         match allNumbers(positionsOf(feature)) {
             case Some(lon :: lat :: Nil) => Ok({lon = lon, lat = lat})
             case _                       => Err("the atlas ${named(feature)} carries no point")
         }
 
     /// Where on the lap a corner or pit marker stands, as the atlas's fraction of it.
-    pub def markerOf(feature: Feature): Result[String, Float64] =
+    pub def markerOf(feature: Geometry.Feature): Result[String, Float64] =
         match Map.get("marker", Geometry.propertiesOf(feature)) {
             case Some(Json.JNumber(spelled)) =>
                 match Float64.fromString(BigDecimal.toPlainString(spelled)) {
@@ -97,7 +93,7 @@ pub mod Midline {
     /// it. What makes a geometry a shape is its coordinates and not the word `type`:
     /// a marker carrying a pair of degrees is a point even when its `geometry` names
     /// no type at all, which is how the layer's own files stand.
-    def shapeOf(feature: Feature): Option[Json] =
+    def shapeOf(feature: Geometry.Feature): Option[Json] =
         match Map.get("geometry", feature) {
             case Some(shape) =>
                 match shape {
@@ -111,7 +107,7 @@ pub mod Midline {
             case None => None
         }
 
-    def positionsOf(feature: Feature): List[Json] =
+    def positionsOf(feature: Geometry.Feature): List[Json] =
         match shapeOf(feature) {
             case Some(shape) =>
                 match shape {
@@ -165,14 +161,14 @@ pub mod Midline {
     /// was measured from: a mismatched pair replaces one circuit's kept evidence with
     /// another circuit's line. A file that names itself not at all is taken on the
     /// word's alone.
-    pub def checkIdentity(claim: Option[String], slug: String): Result[String, Unit] =
+    pub def checkIdentity(claim: Option[String], word: String): Result[String, Unit] =
         match claim {
             case None => Ok(())
             case Some(spelled) =>
-                if (spelled == slug)
+                if (spelled == word)
                     Ok(())
                 else
-                    Err("the atlas file names itself '${spelled}', not '${slug}' — it is not this circuit's line")
+                    Err("the atlas file names itself '${spelled}', not '${word}' — it is not this circuit's line")
         }
 
     /// The atlas reading's share of the one question both pipelines ask: how far the
@@ -252,10 +248,10 @@ pub mod Midline {
     /// geometry the layer spelled.
     pub def file(
         source: String,
-        slug: String,
+        word: String,
         coords: List[Place],
-        corners: List[Feature],
-        pits: List[Feature],
+        corners: List[Geometry.Feature],
+        pits: List[Geometry.Feature],
         metres: List[Float64]
     ): String = {
         let length = Option.getWithDefault(0.0, List.last(metres));
@@ -264,7 +260,7 @@ pub mod Midline {
                 + "\"type\":${Geometry.Write.text("Feature")},"
                 + "\"properties\":{"
                 + "\"role\":${Geometry.Write.text("outline")},"
-                + "\"circuit\":${Geometry.Write.text(slug)},"
+                + "\"circuit\":${Geometry.Write.text(word)},"
                 + "\"basis\":${Geometry.Write.text("measured-midline")},"
                 + "\"source\":${Geometry.Write.text(source)},"
                 + "\"license\":${Geometry.Write.text("ODbL")},"
@@ -280,14 +276,14 @@ pub mod Midline {
 
     /// A corner, as the file keeps it: its id, its place on the lap, and which way it
     /// turns — and nothing the layer did not carry.
-    def featureText(role: String, feature: Feature): String =
+    def featureText(role: String, feature: Geometry.Feature): String =
         laidOut(
             "\"role\":${Geometry.Write.text(role)}" :: carried("id", feature) :: carried("marker", feature) :: carried("direction", feature) :: Nil,
             feature
         )
 
     /// A pit entry or exit, under the role the layer gave it.
-    def pitText(feature: Feature): String =
+    def pitText(feature: Geometry.Feature): String =
         laidOut(
             "\"role\":${Geometry.Write.text(Option.getWithDefault("feature", roleOf(feature)))}" :: carried("name", feature) :: carried("marker", feature) :: Nil,
             feature
@@ -295,13 +291,13 @@ pub mod Midline {
 
     /// One feature, from the properties already spelled: type before properties before
     /// geometry, as every feature of this profile stands.
-    def laidOut(claims: List[String], feature: Feature): String =
+    def laidOut(claims: List[String], feature: Geometry.Feature): String =
         "{\"type\":${Geometry.Write.text("Feature")},\"properties\":{${String.intercalate("", claims)}},\"geometry\":${geometryText(feature)}}"
 
     /// One property as the layer carries it, comma and all, or nothing when the layer
     /// holds no such property. A property the layer holds as JSON null is written as
     /// the null the layer wrote.
-    def carried(key: String, feature: Feature): String =
+    def carried(key: String, feature: Geometry.Feature): String =
         match Map.get(key, Geometry.propertiesOf(feature)) {
             case None       => ""
             case Some(json) => ",\"${key}\":${Util.Json.toCompactString(json)}"
@@ -309,7 +305,7 @@ pub mod Midline {
 
     /// A marker's place, its numbers as the layer spelled them, in the order this
     /// repository writes a geometry: type before coordinates.
-    def geometryText(feature: Feature): String =
+    def geometryText(feature: Geometry.Feature): String =
         match shapeOf(feature) {
             case None => "null"
             case Some(shape) =>

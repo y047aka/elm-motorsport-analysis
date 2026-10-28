@@ -75,11 +75,11 @@ pub mod Survey {
     pub def geometry(text: String, circuit: Circuit): Result[String, (Answer, Geometry)] =
         forM(
             reading  <- Overpass.Answer.read(text);
-            surveyed <- lapOf(reading, circuit)
+            surveyed <- geometryOf(reading, circuit)
         ) yield (reading, surveyed)
 
     /// The lap, the pit lane and the frame, chained out of an answer already read.
-    pub def lapOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
+    pub def geometryOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
         let nodes = nodesOf(reading);
         let ways = waysOf(reading);
         forM(
@@ -445,35 +445,35 @@ pub mod Survey {
     // --------------------------------------------------------------- the survey word
 
     /// One circuit, the answer it is surveyed from, and whether the file is laid down.
-    /// `asked` says whether the answer was named on the command line or taken from the
+    /// `named` says whether the answer was named on the command line or taken from the
     /// circuit's directory, which is what tells a missing survey from an unreadable one.
-    pub type alias Args = {
+    pub type alias Request = {
         circuit = Circuit,
         answer  = String,
-        asked   = Bool,
+        named   = Bool,
         fetch   = Bool,
         write   = Bool
     }
 
-    pub def parse(args: List[String]): Result[ArgsError, Args] =
+    pub def parse(args: List[String]): Result[ArgsError, Request] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  => completed(scanned)
         }
 
-    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Args] =
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
         complete(
             scanned#words,
             Cli.Args.lastNamed(answerNamed, scanned#options),
             List.exists(isFetched, scanned#options),
-            List.exists(isWritten, scanned#options)
+            List.exists(isWriting, scanned#options)
         )
 
     enum Setting with Eq {
         case Answer(String)
         case Fetch
         case Help
-        case Written
+        case Writing
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
@@ -493,7 +493,7 @@ pub mod Survey {
         {
             optionIds     = Nil,
             optionNames   = "write" :: Nil,
-            argDescriptor = ArgDescr.NoArg(Setting.Written),
+            argDescriptor = ArgDescr.NoArg(Setting.Writing),
             explanation   = "lay the geometry file down instead of answering whether\nthe survey still draws the kept bytes"
         } :: Nil
 
@@ -504,7 +504,7 @@ pub mod Survey {
     /// and a survey that read it as a path would report a file that cannot be
     /// opened rather than an argument it was not given. GetOpt hands the argument
     /// over as it came; it is the completing that refuses one.
-    def complete(named: List[String], answer: Option[String], fetch: Bool, write: Bool): Result[ArgsError, Args] =
+    def complete(named: List[String], answer: Option[String], fetch: Bool, write: Bool): Result[ArgsError, Request] =
         match answer {
             case Some(path) if Cli.Args.isFlag(path) =>
                 Err(ArgsError.ParseErrors("--answer names no file to read" :: Nil))
@@ -518,7 +518,7 @@ pub mod Survey {
                                 Ok({
                                     circuit = circuit,
                                     answer = Option.getWithDefault(Circuit.keptAnswer(circuit), answer),
-                                    asked = Option.nonEmpty(answer),
+                                    named = Option.nonEmpty(answer),
                                     fetch = fetch,
                                     write = write
                                 })
@@ -538,9 +538,9 @@ pub mod Survey {
             case _             => false
         }
 
-    def isWritten(setting: Setting): Bool =
+    def isWriting(setting: Setting): Bool =
         match setting {
-            case Setting.Written => true
+            case Setting.Writing => true
             case _               => false
         }
 
@@ -558,13 +558,13 @@ pub mod Survey {
 
     /// The arguments as far as the flag table reads them, before this module asks
     /// which circuit a word answers to.
-    pub def arguments(args: List[String]): Cli.Args.Parsed[Args] =
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
         Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
 
     /// The asking: the answer read — from a runner, from the file `--answer` names,
     /// or from the answer the circuit keeps — surveyed once, kept where a runner gave
     /// it, and then laid or compared however `--write` says.
-    pub def asking(asked: Args): Outcome \ { IO, Clock, Console } =
+    pub def asking(asked: Request): Outcome \ { IO, Clock, Console } =
         match answerText(asked) {
             case Err(problem)      => Outcome.Failed(problem)
             case Ok(None)          => Outcome.Done(neverSurveyed(asked) :: Nil)
@@ -572,7 +572,7 @@ pub mod Survey {
                 Cli.Args.outcomeOf(
                     forM(
                         read <- surveyed(asked, spelled);
-                        _    <- if (asked#fetch) kept(asked, read) else Ok(())
+                        _    <- if (asked#fetch) keep(asked, read) else Ok(())
                     ) yield laid(asked, Geometry.Write.file(asked#circuit, read#geometry))
                 )
         }
@@ -581,7 +581,7 @@ pub mod Survey {
     /// right answers, which is why it comes back as `None` and not as a failure:
     /// `--answer` naming nothing is a mistake to report, while a circuit with no kept
     /// answer and no served geometry has simply never been surveyed.
-    def answerText(asked: Args): Result[String, Option[String]] \ { IO, Clock } =
+    def answerText(asked: Request): Result[String, Option[String]] \ { IO, Clock } =
         if (asked#fetch)
             Overpass.askRelation(asked#circuit#relation)
                 |> Result.mapErr(problem -> "${asked#circuit#word}: ${problem}")
@@ -590,7 +590,7 @@ pub mod Survey {
             match Util.Files.exists(asked#answer) {
                 case Err(problem) => Err("${asked#answer}: ${problem}")
                 case Ok(false)    =>
-                    if (asked#asked)
+                    if (asked#named)
                         Err("${asked#answer}: no answer to read there")
                     else
                         unexamined(asked)
@@ -603,14 +603,14 @@ pub mod Survey {
     /// Which of the two a circuit with no answer to read is. A served file says the
     /// bytes have no answer left to re-survey them from — which is what the fence
     /// exists to catch — and no served file says nobody has surveyed this circuit yet.
-    def unexamined(asked: Args): Result[String, Option[String]] \ IO =
+    def unexamined(asked: Request): Result[String, Option[String]] \ IO =
         match Util.Files.exists(asked#circuit#file) {
             case Err(problem) => Err("${asked#circuit#word}: ${problem}")
             case Ok(true)     => Err("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from")
             case Ok(false)    => Ok(None)
         }
 
-    def neverSurveyed(asked: Args): String =
+    def neverSurveyed(asked: Request): String =
         "${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `--fetch`'s"
 
     /// An answer read and surveyed: the text `--fetch` keeps, the answer it is kept
@@ -628,7 +628,7 @@ pub mod Survey {
     /// an answer whose relation will not chain into a lap are each met in the words
     /// the survey itself would say them in, rather than in a file kept to be
     /// discovered later.
-    def surveyed(asked: Args, spelled: String): Result[String, Read] =
+    def surveyed(asked: Request, spelled: String): Result[String, Read] =
         match geometry(spelled, asked#circuit) {
             case Ok((answer, geometry)) => Ok({text = spelled, answer = answer, geometry = geometry})
             case Err(problem) =>
@@ -642,7 +642,7 @@ pub mod Survey {
     /// directory when it names none — and the line naming how big an answer it is. It
     /// is asked once the survey has read the text and before anything is laid, since
     /// an answer that surveys nothing is evidence nobody can re-run.
-    def kept(asked: Args, read: Read): Result[String, Unit] \ { IO, Console } =
+    def keep(asked: Request, read: Read): Result[String, Unit] \ { IO, Console } =
         match Cli.Errors.writeFile(asked#answer, read#text) {
             case Err(problem) => Err("${problem}")
             case Ok(_) =>
@@ -651,7 +651,7 @@ pub mod Survey {
         }
 
     /// What the asking left beside the circuit.
-    def keptLine(asked: Args, reading: Answer): String =
+    def keptLine(asked: Request, reading: Answer): String =
         let elements = Int32.toString(List.length(reading#elements));
         let stamp = match reading#surveyedAt {
             case None     => ""
@@ -661,7 +661,7 @@ pub mod Survey {
 
     /// The file laid down, or the kept one asked for and laid against what the survey
     /// draws.
-    def laid(asked: Args, written: String): Outcome \ IO =
+    def laid(asked: Request, written: String): Outcome \ IO =
         if (asked#write)
             laidDown(asked, written)
         else
@@ -675,7 +675,7 @@ pub mod Survey {
                     }
             }
 
-    def laidDown(asked: Args, written: String): Outcome \ IO =
+    def laidDown(asked: Request, written: String): Outcome \ IO =
         match Cli.Errors.writeFile(asked#circuit#file, written) {
             case Err(problem) => Outcome.Failed("${problem}")
             case Ok(_)        => Outcome.Done("${asked#circuit#word}: geometry written from ${asked#answer}" :: Nil)
@@ -684,7 +684,7 @@ pub mod Survey {
     /// Whether the bytes the survey draws are the bytes the app serves. That they are
     /// not is the answer the run was asked for rather than a run that failed, so it is
     /// said on stdout and exits 1.
-    def against(asked: Args, written: String, served: String): Outcome =
+    def against(asked: Request, written: String, served: String): Outcome =
         if (written == served)
             Outcome.Done("${asked#circuit#word}: reproduces the kept geometry, every point and metre of it" :: Nil)
         else

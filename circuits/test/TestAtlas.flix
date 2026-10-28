@@ -44,7 +44,7 @@ pub mod TestAtlas {
         );
         Assert.assertTrue(refused("atlas reads one circuit", Atlas.parse(Nil)))
 
-    def refused(problem: String, asked: Result[Cli.Args.ArgsError, Atlas.Asking]): Bool =
+    def refused(problem: String, asked: Result[Cli.Args.ArgsError, Atlas.Request]): Bool =
         match asked {
             case Err(one) => String.contains({substr = problem}, "${one}")
             case Ok(_)    => false

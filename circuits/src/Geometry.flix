@@ -21,6 +21,10 @@ pub mod Geometry {
     pub def extension(): String =
         ".geojson"
 
+    /// One feature of a geometry file: its members as the file's JSON gives them. The
+    /// role that picks a feature out of a file lives inside its properties.
+    pub type alias Feature = Map[String, Json]
+
     /// One geometry laid against the others: the name to quote in every failure,
     /// what a report should print beside the figures, the degrees as GeoJSON gives
     /// them, and the line's own metres.
@@ -144,7 +148,7 @@ pub mod Geometry {
 
     /// All the file's features. The regeneration fence walks every one of two files
     /// rather than the one of each role a line is read out of.
-    pub def featuresOf(json: Json): List[Map[String, Json]] =
+    pub def featuresOf(json: Json): List[Feature] =
         match json {
             case Json.JObject(root) =>
                 match Map.get("features", root) {
@@ -155,14 +159,14 @@ pub mod Geometry {
             case _ => Nil
         }
 
-    def byRole(role: String, some: List[Map[String, Json]], missing: String): Result[String, (Map[String, Json], Json)] =
+    def byRole(role: String, some: List[Feature], missing: String): Result[String, (Map[String, Json], Json)] =
         match List.find(each -> word("role", propertiesOf(each)) == Some(role), some) {
             case None      => Err(missing)
             case Some(one) => Ok((propertiesOf(one), Option.getWithDefault(Json.JNull, Map.get("geometry", one))))
         }
 
     /// A feature's properties. A feature carrying none picks nothing.
-    pub def propertiesOf(feature: Map[String, Json]): Map[String, Json] =
+    pub def propertiesOf(feature: Feature): Map[String, Json] =
         match Map.get("properties", feature) {
             case Some(Json.JObject(props)) => props
             case _                         => Map.empty()

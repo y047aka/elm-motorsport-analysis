@@ -12,16 +12,16 @@ pub mod TestMidline {
     /// A feature, from the JSON a layer file would hold it in. A fixture that holds
     /// no feature reads as a feature that carries nothing, which every guard below
     /// refuses — a broken fixture fails loudly at the reading, not silently here.
-    def feature(json: String): Midline.Feature =
+    def feature(json: String): Geometry.Feature =
         match Util.Json.parse("{\"type\": \"FeatureCollection\", \"features\": [ ${json} ]}") {
             case Ok(file) => Option.getWithDefault(Map.empty(), List.head(Geometry.featuresOf(file)))
             case Err(_)   => Map.empty()
         }
 
-    def outlined(properties: String, coordinates: String): Midline.Feature =
+    def outlined(properties: String, coordinates: String): Geometry.Feature =
         feature("{ \"properties\": { ${properties} }, \"geometry\": { \"type\": \"LineString\", \"coordinates\": ${coordinates} } }")
 
-    def pointed(properties: String, coordinates: String): Midline.Feature =
+    def pointed(properties: String, coordinates: String): Geometry.Feature =
         feature("{ \"properties\": { ${properties} }, \"geometry\": ${coordinates} }")
 
     /// A reading's failure, or the absence of one.

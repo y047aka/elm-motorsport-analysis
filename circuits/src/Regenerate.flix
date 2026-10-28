@@ -39,24 +39,20 @@ pub mod Regenerate {
     }
 
     /// The circuits one run walks, and what it does with each.
-    pub type alias Args = {
+    pub type alias Request = {
         circuits = List[Circuit],
         mode     = Mode
     }
 
-    /// A feature of a geometry file: its members, JSON as the file's JSON gives them.
-    /// The role that picks a feature out of a file lives inside its properties.
-    type alias Feature = Map[String, Json]
-
     // ------------------------------------------------------------------- the command
 
-    pub def parse(args: List[String]): Result[ArgsError, Args] =
+    pub def parse(args: List[String]): Result[ArgsError, Request] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  => completed(scanned)
         }
 
-    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Args] =
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
         complete(scanned#words, List.exists(isWriting, scanned#options), List.exists(isFreeze, scanned#options))
 
     enum Setting with Eq {
@@ -89,7 +85,7 @@ pub mod Regenerate {
     def isFreeze(setting: Setting): Bool =
         setting == Setting.Freeze
 
-    def complete(named: List[String], write: Bool, freeze: Bool): Result[ArgsError, Args] =
+    def complete(named: List[String], write: Bool, freeze: Bool): Result[ArgsError, Request] =
         if (write and freeze)
             Err(ArgsError.ParseErrors("--write and --freeze ask for opposite things: the kept answer, and a fresh survey." :: Nil))
         else
@@ -136,7 +132,7 @@ pub mod Regenerate {
 
     /// The arguments as far as the flag table reads them, before the fence asks which
     /// words answer to circuits.
-    pub def arguments(args: List[String]): Cli.Args.Parsed[Args] =
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
         Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
 
     /// Every circuit, in the order the reader named them — or every circuit this
@@ -144,7 +140,7 @@ pub mod Regenerate {
     /// it comes. A circuit the run could not ask, survey or write ends the walk; a
     /// drawing that moved is a verdict and not a failure, so the circuits beside it
     /// are walked.
-    def asking(asked: Args): Outcome \ { IO, Clock, Console } =
+    def asking(asked: Request): Outcome \ { IO, Clock, Console } =
         match warnUnlisted() {
             case Err(problem) => Outcome.Failed(problem)
             case Ok(lines) =>
@@ -372,14 +368,14 @@ pub mod Regenerate {
     def rolesOf(file: Json): List[Option[String]] =
         List.map(roleOf, Geometry.featuresOf(file))
 
-    def roleOf(feature: Feature): Option[String] =
+    def roleOf(feature: Geometry.Feature): Option[String] =
         Geometry.word("role", Geometry.propertiesOf(feature))
 
     /// What a feature with no role is called in a drift line.
     def named(role: Option[String]): String =
         Option.getWithDefault("nothing", role)
 
-    def about(role: Option[String], fresh: List[Feature], kept: List[Feature]): List[String] =
+    def about(role: Option[String], fresh: List[Geometry.Feature], kept: List[Geometry.Feature]): List[String] =
         let mine = List.filter(hasRole(role), fresh);
         let theirs = List.filter(hasRole(role), kept);
         match (List.head(mine), List.head(theirs)) {
@@ -389,17 +385,17 @@ pub mod Regenerate {
             case (None, None)            => Nil
         }
 
-    def hasRole(role: Option[String], feature: Feature): Bool =
+    def hasRole(role: Option[String], feature: Geometry.Feature): Bool =
         roleOf(feature) == role
 
-    def feature(role: String, fresh: Feature, kept: Feature): List[String] =
+    def feature(role: String, fresh: Geometry.Feature, kept: Geometry.Feature): List[String] =
         points(role, fresh, kept) ++ properties(role, fresh, kept)
 
     /// The degrees first: a line whose points differ is reported at the point it
     /// differs at. A difference in anything else the geometry member holds — its
     /// type, a coordinate that is not a pair — is reported too, at the point its
     /// coordinates part, or at -1 where they do not and only the shape moved.
-    def points(role: String, fresh: Feature, kept: Feature): List[String] =
+    def points(role: String, fresh: Geometry.Feature, kept: Geometry.Feature): List[String] =
         if (same(geometryOf(fresh), geometryOf(kept)))
             Nil
         else
@@ -409,7 +405,7 @@ pub mod Regenerate {
     /// writer's claims in the writer's order, then whatever else either file
     /// carries. A property one side holds and the other does not is drift, quoted
     /// as `absent` on the side that holds nothing.
-    def properties(role: String, fresh: Feature, kept: Feature): List[String] =
+    def properties(role: String, fresh: Geometry.Feature, kept: Geometry.Feature): List[String] =
         let mine = Geometry.propertiesOf(fresh);
         let theirs = Geometry.propertiesOf(kept);
         List.foldLeft(
@@ -452,11 +448,11 @@ pub mod Regenerate {
         }
 
     /// What a feature's `geometry` member holds, JSON-null where it holds nothing.
-    def geometryOf(feature: Feature): Json =
+    def geometryOf(feature: Geometry.Feature): Json =
         Option.getWithDefault(Json.JNull, Map.get("geometry", feature))
 
     /// A feature's coordinates as the file gives them, one JSON pair per place.
-    def coordinatesOf(feature: Feature): List[Json] =
+    def coordinatesOf(feature: Geometry.Feature): List[Json] =
         match geometryOf(feature) {
             case Json.JObject(members) =>
                 match Map.get("coordinates", members) {

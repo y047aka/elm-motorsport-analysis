@@ -64,9 +64,9 @@ pub mod Probe {
         }
 
     def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
-        requestOf(scanned#options, scanned#words)
+        complete(scanned#options, scanned#words)
 
-    def requestOf(settings: List[Setting], places: List[String]): Result[ArgsError, Request] =
+    def complete(settings: List[Setting], places: List[String]): Result[ArgsError, Request] =
         match radiusOf(settings) {
             case Err(problem) => Err(problem)
             case Ok(radius)   =>

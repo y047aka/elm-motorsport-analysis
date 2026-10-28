@@ -49,8 +49,8 @@ pub mod Atlas {
         circuit     = Circuit,
         source      = String,
         coords      = List[Place],
-        corners     = List[Midline.Feature],
-        pits        = List[Midline.Feature],
+        corners     = List[Geometry.Feature],
+        pits        = List[Geometry.Feature],
         theirMetres = List[Float64],
         origin      = Float64,
         deviation   = Apart.Apartness,
@@ -96,9 +96,9 @@ pub mod Atlas {
     /// The layer's three kinds of feature, read out of one file: the line the atlas
     /// measured, its corner markers, and whichever pit markers it holds.
     type alias Layer = {
-        outline = Midline.Feature,
-        corners = List[Midline.Feature],
-        pits    = List[Midline.Feature]
+        outline = Geometry.Feature,
+        corners = List[Geometry.Feature],
+        pits    = List[Geometry.Feature]
     }
 
     // ------------------------------------------------------------------- the command
@@ -111,7 +111,7 @@ pub mod Atlas {
 
     /// What a run asks: the circuit, the layer named if one was, and whether the
     /// layer's home is asked now.
-    pub type alias Asking = {
+    pub type alias Request = {
         circuit = Circuit,
         file    = Option[String],
         fetch   = Bool
@@ -155,19 +155,19 @@ pub mod Atlas {
 
     /// The arguments as far as the flag table reads them, before the reading asks
     /// which circuit and which layer were named.
-    pub def arguments(args: List[String]): Cli.Args.Parsed[Asking] =
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
         Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
 
     /// The measuring, with the layer's home handled here and nowhere else: a run that
     /// only asked for help, or asked with a wrong argument, asks a dataset's
     /// repository for nothing.
-    def asking(asked: Asking): Outcome \ { IO, Console } =
+    def asking(asked: Request): Outcome \ { IO, Console } =
         Net.Https.runWithIO(() -> measured(asked))
 
     /// What the reading comes to: a circuit that keeps no line and raised no
     /// `--fetch` says so and exits 0; a line that was read is measured, kept
     /// and printed.
-    def measured(asked: Asking): Outcome \ { IO, Console, Https } =
+    def measured(asked: Request): Outcome \ { IO, Console, Https } =
         match text(asked) {
             case Err(problem)      => Outcome.Failed(problem)
             case Ok(None)          => Outcome.Done(noLine(asked#circuit) :: Nil)
@@ -178,14 +178,14 @@ pub mod Atlas {
         "${circuit#word}: no kept atlas line yet — `--fetch` asks the layer's home and keeps one"
 
     /// The circuit to read, and where its layer comes from.
-    pub def parse(args: List[String]): Result[ArgsError, Asking] =
+    pub def parse(args: List[String]): Result[ArgsError, Request] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  => completed(scanned)
         }
 
-    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Asking] =
-        readOf(
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
+        complete(
             scanned#words,
             Cli.Args.lastNamed(fileNamed, scanned#options),
             List.exists(isFetched, scanned#options)
@@ -193,7 +193,7 @@ pub mod Atlas {
 
     /// A flag is no file, as at the other commands; and `--file` beside `--fetch`
     /// is opposite answers for one layer.
-    def readOf(words: List[String], file: Option[String], fetch: Bool): Result[ArgsError, Asking] =
+    def complete(words: List[String], file: Option[String], fetch: Bool): Result[ArgsError, Request] =
         match words {
             case Nil => Err(ArgsError.ParseErrors("atlas reads one circuit." :: Nil))
             case one :: extra =>
@@ -229,11 +229,11 @@ pub mod Atlas {
     /// the circuit keeps — measured against the geometry the app serves, and kept
     /// beside the config. The guards all answer before anything is written: a line
     /// that is another circuit's, or starts at another line, never reaches disk.
-    def measure(asked: Asking, spelled: String): Result[String, Outcome] \ { IO, Console } =
+    def measure(asked: Request, spelled: String): Result[String, Outcome] \ { IO, Console } =
         forM(
             layer   <- layerOf(spelled, asked#circuit#word);
             markers <- placesOf(layer#corners ++ layer#pits);
-            ours    <- kept(asked#circuit);
+            ours    <- keptGeometry(asked#circuit);
             reading <- measuredAgainst(asked, layer, markers, ours)
         ) yield printed(reading)
 
@@ -246,7 +246,7 @@ pub mod Atlas {
 
     /// The circuit's own line read out of the layer, and measured on the plane the
     /// kept geometry is already drawn on.
-    def measuredAgainst(asked: Asking, layer: Layer, markers: List[Place], ours: Kept): Result[String, Reading] \ IO =
+    def measuredAgainst(asked: Request, layer: Layer, markers: List[Place], ours: Kept): Result[String, Reading] \ IO =
         Midline.lineOf(layer#outline)
             |> Result.flatMap(coords -> laid(asked#circuit, sourceOf(asked), coords, layer#corners, layer#pits, markers, ours))
 
@@ -254,12 +254,12 @@ pub mod Atlas {
     /// line came from its home or from a kept file: a reading from a kept file re-keeps
     /// the line that URL's survey measured, and a file path would credit the line to
     /// whomever saved it last.
-    def sourceOf(asked: Asking): String =
+    def sourceOf(asked: Request): String =
         Option.getWithDefault("", asked#circuit#atlas)
 
     /// The layer's text: from its home on `--fetch`, from the named file, or from the
     /// line the circuit keeps.
-    def text(asked: Asking): Result[String, Option[String]] \ { IO, Https } =
+    def text(asked: Request): Result[String, Option[String]] \ { IO, Https } =
         match asked#circuit#atlas {
             case None => Err("${asked#circuit#word}'s config names no atlas layer to read")
             case Some(url) =>
@@ -306,30 +306,30 @@ pub mod Atlas {
     /// the corners, and whichever pit markers the layer holds. The identity guard is
     /// asked here, at the first reading of the file: a file measured from another
     /// circuit replaces one circuit's kept evidence with another's, and does it quietly.
-    def layerOf(spelled: String, slug: String): Result[String, Layer] =
+    def layerOf(spelled: String, word: String): Result[String, Layer] =
         match Util.Json.parse(spelled) |> Result.mapErr(problem -> "the atlas file does not parse: ${problem}") {
             case Err(problem) => Err(problem)
             case Ok(json) =>
                 let features = Geometry.featuresOf(json);
                 forM(
                     outline <- outlineOf(features);
-                    _       <- Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug)
+                    _       <- Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), word)
                 ) yield {outline = outline, corners = cornersOf(features), pits = pitsOf(features)}
         }
 
-    def outlineOf(features: List[Midline.Feature]): Result[String, Midline.Feature] =
+    def outlineOf(features: List[Geometry.Feature]): Result[String, Geometry.Feature] =
         match List.find(feature -> Midline.roleOf(feature) == Some("outline"), features) {
             case Some(one) => Ok(one)
             case None      => Err("the atlas file holds no outline feature")
         }
 
-    def cornersOf(features: List[Midline.Feature]): List[Midline.Feature] =
+    def cornersOf(features: List[Geometry.Feature]): List[Geometry.Feature] =
         List.filter(feature -> Midline.roleOf(feature) == Some("corner"), features)
 
     /// The pit markers, one per role, entry before exit: what a layer holds under a
     /// role twice is one entry and one exit to this reading, in the order a pit lane
     /// is driven rather than the order a file happens to hold.
-    def pitsOf(features: List[Midline.Feature]): List[Midline.Feature] =
+    def pitsOf(features: List[Geometry.Feature]): List[Geometry.Feature] =
         List.filterMap(
             role -> List.find(feature -> Midline.roleOf(feature) == Some(role), features),
             "pit_entry" :: "pit_exit" :: Nil
@@ -337,7 +337,7 @@ pub mod Atlas {
 
     /// The markers' places, asked before any measuring: a marker that carries no point
     /// fails the run rather than joining the mean as a nought.
-    def placesOf(markers: List[Midline.Feature]): Result[String, List[Place]] =
+    def placesOf(markers: List[Geometry.Feature]): Result[String, List[Place]] =
         List.foldRight(
             (feature, places) -> match (Midline.placeOf(feature), places) {
                 case (Ok(one), Ok(many)) => Ok(one :: many)
@@ -349,7 +349,7 @@ pub mod Atlas {
         )
 
     /// The kept geometry read beside the config.
-    def kept(circuit: Circuit): Result[String, Kept] \ IO =
+    def keptGeometry(circuit: Circuit): Result[String, Kept] \ IO =
         match Cli.Errors.readFile(circuit#file) {
             case Err(problem) => Err("${problem}")
             case Ok(text) =>
@@ -381,8 +381,8 @@ pub mod Atlas {
         circuit: Circuit,
         source: String,
         coords: List[Place],
-        corners: List[Midline.Feature],
-        pits: List[Midline.Feature],
+        corners: List[Geometry.Feature],
+        pits: List[Geometry.Feature],
         markers: List[Place],
         ours: Kept
     ): Result[String, Reading] \ IO = {
@@ -427,7 +427,7 @@ pub mod Atlas {
     /// Each corner where it lands: the atlas's fraction of its own lap against the
     /// metre of this app's line that stands nearest the marker's place.
     def atCorners(
-        corners: List[Midline.Feature],
+        corners: List[Geometry.Feature],
         parallel: Float64,
         ourPoints: List[Geodesy.Point],
         ours: List[Float64],
@@ -440,7 +440,7 @@ pub mod Atlas {
         ourPoints: List[Geodesy.Point],
         ours: List[Float64],
         length: Float64,
-        corner: Midline.Feature
+        corner: Geometry.Feature
     ): Result[String, AtCorner] =
         match (Midline.placeOf(corner), Midline.markerOf(corner)) {
             case (Err(problem), _) => Err(problem)
@@ -485,7 +485,7 @@ pub mod Atlas {
     /// Each pit marker against the pit lane the survey chained: how far it stands from
     /// that lane, and how far along it.
     def atPits(
-        pits: List[Midline.Feature],
+        pits: List[Geometry.Feature],
         parallel: Float64,
         pitPoints: List[Geodesy.Point],
         pitMetres: List[Float64],
@@ -498,7 +498,7 @@ pub mod Atlas {
         pitPoints: List[Geodesy.Point],
         pitMetres: List[Float64],
         length: Float64,
-        pit: Midline.Feature
+        pit: Geometry.Feature
     ): Result[String, AtPit] =
         match (Midline.placeOf(pit), Midline.markerOf(pit)) {
             case (Err(problem), _) => Err(problem)

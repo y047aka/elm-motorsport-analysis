@@ -34,7 +34,7 @@ pub mod Diff {
         "#d43a3a" :: "#2a6df4" :: Nil
 
     /// Two files, a spacing, and an overlay to write.
-    pub type alias Args = {
+    pub type alias Request = {
         paths = List[String],
         every = Float64,
         svg   = Option[String]
@@ -42,13 +42,13 @@ pub mod Diff {
 
     /// What the command asks for: two files, a spacing over nought metres, and an
     /// overlay to write. Paths are used as they stand.
-    pub def parse(args: List[String]): Result[ArgsError, Args] =
+    pub def parse(args: List[String]): Result[ArgsError, Request] =
         match Cli.Args.scan(optionDescrs(), args) {
             case Err(problem) => Err(problem)
             case Ok(scanned)  => completed(scanned)
         }
 
-    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Args] =
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
         complete(
             scanned#words,
             Cli.Args.lastNamed(everyNamed, scanned#options),
@@ -79,7 +79,7 @@ pub mod Diff {
     def isHelp(setting: Setting): Bool =
         setting == Setting.Help
 
-    def complete(paths: List[String], every: Option[String], svg: Option[String]): Result[ArgsError, Args] =
+    def complete(paths: List[String], every: Option[String], svg: Option[String]): Result[ArgsError, Request] =
         if (List.length(paths) != 2)
             Err(ArgsError.ParseErrors("diff lays two files, and no more: ${List.length(paths)} named." :: Nil))
         else
@@ -129,13 +129,13 @@ pub mod Diff {
 
     /// The arguments as far as the flag table reads them, before the report asks which
     /// two files were named.
-    pub def arguments(args: List[String]): Cli.Args.Parsed[Args] =
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
         Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
 
     /// Both files read as the lines they claim to be, and reported. The reading that
     /// failed is the run that never got to a verdict; the diff itself only ever says
     /// metres, leaving whether they are far to the reader.
-    def asking(asked: Args): Outcome \ { IO, Console } =
+    def asking(asked: Request): Outcome \ { IO, Console } =
         read(Nil, asked#paths)
             |> Result.flatMap(lines -> reported(lines, asked))
             |> Cli.Args.outcomeOf
@@ -166,7 +166,7 @@ pub mod Diff {
 
     /// The report: what each file says it is, then each line sampled against the other,
     /// then the overlay if one was asked for.
-    def reported(lines: List[Line], asked: Args): Result[String, Outcome] \ { IO, Console } = {
+    def reported(lines: List[Line], asked: Request): Result[String, Outcome] \ { IO, Console } = {
         let projected = projectedOf(lines);
         foreach (line <- lines)
             Console.println(quoted(line));
@@ -183,7 +183,7 @@ pub mod Diff {
         projected: List[List[Point]],
         one: Apartness,
         two: Apartness,
-        asked: Args
+        asked: Request
     ): Outcome \ { IO, Console } = {
         Console.println(said(0, lines, one, asked#every));
         Console.println(said(1, lines, two, asked#every));

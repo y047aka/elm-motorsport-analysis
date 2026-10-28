@@ -125,12 +125,12 @@ pub mod Geodesy {
 
     // ----------------------------------------------------------- the tenth kept to
 
-    /// The tenth of a metre a survey is kept to — which is the tenth every baseline was
-    /// rendered at.
-    pub def tenths(): Float64 = 10.0
+    /// The tenths in a metre: the scale a distance is kept to — which is the tenth
+    /// every baseline was rendered at.
+    pub def tenthsPerMetre(): Float64 = 10.0
 
     /// A distance kept to that tenth: half goes up, which is the half JavaScript's
     /// `Math.round` sends up too.
     pub def roundTenth(metres: Float64): Float64 =
-        Int64.toFloat64(Float64.truncateToInt64((metres * tenths()) + 0.5)) / tenths()
+        Int64.toFloat64(Float64.truncateToInt64((metres * tenthsPerMetre()) + 0.5)) / tenthsPerMetre()
 }

@@ -89,7 +89,7 @@ pub mod TestSurvey {
             case Some(circuit) =>
                 match Overpass.Answer.read(text) {
                     case Err(problem) => Err(problem)
-                    case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, geometry), Survey.lapOf(reading, circuit))
+                    case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, geometry), Survey.geometryOf(reading, circuit))
                 }
         }
 
@@ -210,10 +210,10 @@ pub mod TestSurvey {
                     case Err(problem) => Assert.assertTrueWithMsg(false, "read the answer: ${problem}")
                     case Ok(reading) =>
                         // Authored: the distance the circuit names is the distance kept.
-                        Assert.assertTrue(refused("which is not within 5 m", Survey.lapOf(reading, narrowed)));
+                        Assert.assertTrue(refused("which is not within 5 m", Survey.geometryOf(reading, narrowed)));
                         // Named none: the ten metres every node is held to, quoted in
                         // the refusal and not the authored figure it leaves behind.
-                        Assert.assertTrue(refused("which is not within 10 m", Survey.lapOf(reading, unauthored)))
+                        Assert.assertTrue(refused("which is not within 10 m", Survey.geometryOf(reading, unauthored)))
                 }
         }
 
@@ -388,7 +388,7 @@ pub mod TestSurvey {
                 // The answer taken from the circuit's directory is not one the reader asked
                 // for, which is what tells a circuit nobody has surveyed from a file that
                 // cannot be read.
-                Assert.assertTrue(not asked#asked);
+                Assert.assertTrue(not asked#named);
                 // The default run reaches no network: it reads the kept answer.
                 Assert.assertTrue(not asked#fetch);
                 Assert.assertTrue(not asked#write)
@@ -412,7 +412,7 @@ pub mod TestSurvey {
                 Assert.assertTrue(asked#answer == "elsewhere/answer.json");
                 // A named answer is one the reader asked for: if it cannot be read, that is
                 // the failure, and not a circuit nobody has surveyed yet.
-                Assert.assertTrue(asked#asked);
+                Assert.assertTrue(asked#named);
                 Assert.assertTrue(asked#write)
         }
 
@@ -463,7 +463,7 @@ pub mod TestSurvey {
 
     /// A refusal that says what the reader asked for, which is the only thing a command can
     /// say to someone at a terminal.
-    def argumentRefused(problem: String, asked: Result[Cli.Args.ArgsError, Survey.Args]): Bool =
+    def argumentRefused(problem: String, asked: Result[Cli.Args.ArgsError, Survey.Request]): Bool =
         match asked {
             case Err(one) => String.contains({substr = problem}, "${one}")
             case Ok(_)    => false

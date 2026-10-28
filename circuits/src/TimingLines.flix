@@ -115,9 +115,9 @@ pub mod TimingLines {
         }
 
     def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
-        requestOf(scanned#options, scanned#words)
+        complete(scanned#options, scanned#words)
 
-    def requestOf(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Request] =
+    def complete(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Request] =
         forM(
             csv       <- required("csv", Cli.Args.lastNamed(csvNamed, settings));
             named     <- namedRound(nonOptions);
@@ -240,23 +240,18 @@ pub mod TimingLines {
         )
 
     /// The report read, printed and judged, in the words the report says its own
-    /// readings failed in.
+    /// readings failed in. `Err` is a reading that never happened, and the outcome
+    /// is the verdict the readings came to — 1 where a line stands further round
+    /// the lap than the distance allowed, which is the answer that the two seasons
+    /// were not run on one map. One reading alone is printed and exits 0: nothing
+    /// was judged.
     def judged(request: Request): Result[String, Outcome] \ { IO, Console } =
-        runAll(request)
+        read(request)
             |> Result.mapErr(problem -> "${problem}")
-
-    /// The report read, printed and judged: `Err` is a reading that never happened,
-    /// and the outcome is the verdict the readings came to — 1 where a line stands
-    /// further round the lap than the distance allowed, which is the answer that
-    /// the two seasons were not run on one map. One reading alone is printed and
-    /// exits 0: nothing was judged.
-    pub def runAll(asked: Request): Result[CliError, Outcome] \ { IO, Console } =
-        match read(asked) {
-            case Err(problem) => Err(problem)
-            case Ok(report) =>
+            |> Result.flatMap(report -> {
                 printReadings(report);
                 Ok(judge(report))
-        }
+            })
 
     // ------------------------------------------------------------------ the readings
 

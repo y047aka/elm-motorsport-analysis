@@ -114,11 +114,11 @@ pub mod Cli.Args {
                 Console.println(usage);
                 0
             case Parsed.Refused({problem = problem, usage = usage}) => refuseArgs("${problem}", usage)
-            case Parsed.Asked(asked) => verdictOf(asking(asked))
+            case Parsed.Asked(asked) => codeOf(asking(asked))
         }
 
     /// The exit code an outcome comes to, and the stream its lines go to.
-    pub def verdictOf(outcome: Outcome): Int32 \ Console = match outcome {
+    pub def codeOf(outcome: Outcome): Int32 \ Console = match outcome {
         case Outcome.Done(said)    => say(said); 0
         case Outcome.Verdict(said) => say(said); 1
         case Outcome.Failed(why)   =>

@@ -3,7 +3,7 @@
 /// `TestGeometry` the reading of a file.
 pub mod TestDiff {
 
-    use Diff.Args
+    use Diff.Request
     use Geometry.Line
 
     /// A line as a file says it is, with no places drawn: an overlay of two lines of two
@@ -12,7 +12,7 @@ pub mod TestDiff {
     def kept(name: String, basis: String, source: Option[String]): Line =
         {name = name, props = {basis = basis, source = source, license = Some("ODbL")}, coords = Nil, metres = Nil}
 
-    def asked(args: List[String]): Result[Cli.Args.ArgsError, Args] =
+    def asked(args: List[String]): Result[Cli.Args.ArgsError, Request] =
         Diff.parse(args)
 
     /// A refusal, and the phrase it refused with.
@@ -22,19 +22,19 @@ pub mod TestDiff {
             case Ok(_)        => false
         }
 
-    def pathsOf(result: Result[Cli.Args.ArgsError, Args]): List[String] =
+    def pathsOf(result: Result[Cli.Args.ArgsError, Request]): List[String] =
         match result {
             case Ok(ask) => ask#paths
             case Err(_)  => Nil
         }
 
-    def distanceOf(result: Result[Cli.Args.ArgsError, Args]): Float64 =
+    def distanceOf(result: Result[Cli.Args.ArgsError, Request]): Float64 =
         match result {
             case Ok(ask) => ask#every
             case Err(_)  => -1.0
         }
 
-    def overlayOf(result: Result[Cli.Args.ArgsError, Args]): Option[String] =
+    def overlayOf(result: Result[Cli.Args.ArgsError, Request]): Option[String] =
         match result {
             case Ok(ask) => ask#svg
             case Err(_)  => None
