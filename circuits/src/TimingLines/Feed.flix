@@ -2,7 +2,7 @@
 /// times, the shares those become, the lines those shares place round the lap, and
 /// one season's lines laid against another's -- with the columns spelled as the
 /// sport spells them. Nothing here reaches a file, a geometry or the network;
-/// `Cli.TimingLines` hands this the text and prints what it answers, and states
+/// `TimingLines` hands this the text and prints what it answers, and states
 /// the error of the method these readings are subject to.
 ///
 /// `sharesOf` divides a lap the way `Motorsport.Track.ratiosOver` does, written
@@ -10,7 +10,7 @@
 /// the rows and divided by `Motorsport.Track`, and this division stays
 /// independent of the one that wrote them, so a reading here can still report a
 /// disagreement with the export rather than only ever agreeing with it.
-pub mod Cli.TimingLines.Feed {
+pub mod TimingLines.Feed {
 
     use Cli.Errors.CliError
     use Util.Csv.Decode
@@ -234,14 +234,14 @@ pub mod Cli.TimingLines.Feed {
     ///
     /// Naming a line is the rule the geometry is written under, which the
     /// survey that writes the geometry follows as well: a line is `s2` because the
-    /// second sector begins at it. One circuit's two readers share only the
-    /// geometry file, so both have to name a line the same way or they call one
-    /// place by two names.
+    /// second sector begins at it. The atlas reading lays the same lines out of a
+    /// kept geometry's own `sectors` and this reading out of the map the report was
+    /// given; one rule names them, and no compiler lays the two spellings together.
     ///
     /// The only thing the stretches are trusted with is the lap length they add
-    /// up to; where the times place them is `Cli.TimingLines`'s question. That
-    /// trust is `Circuit.stretchTolerance()`, the same allowance the geometry
-    /// project's `Track.sectorLines` holds them to.
+    /// up to; where the times place them is `TimingLines`'s question. That
+    /// trust is `Circuit.stretchTolerance()`, the same allowance `Midline.sectorLines`
+    /// holds them to.
     pub def publishedLines(stretches: List[Float64], lapLength: Float64): Result[CliError, List[Line]] =
         let added = total(stretches);
         if (Float64.abs(added - lapLength) > Circuit.stretchTolerance())

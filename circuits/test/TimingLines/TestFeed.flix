@@ -2,10 +2,10 @@
 /// time, how a class's fastest is pooled, what the shares place where round the
 /// lap, and how two seasons' placements are laid against each other. The report
 /// that prints them, and the arguments it is given, are `Cli.TestTimingLines`'s.
-pub mod Cli.TestTimingFeed {
+pub mod TimingLines.TestFeed {
 
     use Cli.Errors.CliError
-    use Cli.TimingLines.Feed.{
+    use TimingLines.Feed.{
         CircuitMap, Column, Fastest, Line, Placement, Row, Times, count,
         decode, fastestSectors, metres, movedMetres, movement, percent, placesOf,
         publishedLines, seconds, sectorsOf, sharesOf, speeds, table, whole

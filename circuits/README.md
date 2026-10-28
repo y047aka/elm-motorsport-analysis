@@ -134,9 +134,9 @@ gives no distance for is app-side — `Tracker.Config.lapScale`, and the
 
 ## The report, and the nine links it reads through
 
-The report is a word of the pipeline, not a project: `src/Report.flix` reads the
-arguments and `Main.flix` hands the word over, and
-`src/Cli/TimingLines.flix` with its `Feed.flix` reads the two feeds and prints.
+The report is a word of the pipeline, not a project: `src/TimingLines.flix` reads
+the arguments and prints what the two readings come to, `Main.flix` hands the word
+over, and `src/TimingLines/Feed.flix` reads the feeds themselves.
 Nothing compiled here can name a database: no `Db` effect among the project's
 sources, no argument flag for one, and no JDBC driver resolved.
 
@@ -153,7 +153,7 @@ smaller. `Cli/Errors.flix` keeps four of the CLI's seven cases — a directory t
 not there, a directory that is not one, a file that would not open, and a feed that
 could not be decoded — beside a fifth the CLI holds no failure like: what a reading
 found wrong with the data it was handed, which no command that computes in a
-database fails into. `Report/Files.flix` is the report's own file reading: read and
+database fails into. `TimingLines/Files.flix` is the report's own file reading: read and
 stat, neither writing, making a directory nor globbing — the project's own
 `Util/Files.flix` resolves every path from `GEOMETRY_FROM` and writes, and the two
 are named apart because they resolve apart. Of the
@@ -222,7 +222,7 @@ are for — so no `Db` effect is compiled into it and no JDBC driver is resolved
 **What is written once, and what is written twice.** The pipeline is written once: the
 asking of two paths, the report and the overlay are `Diff.flix`'s; the comparison of two
 lines is `Apart.flix`'s, which the diff samples and the atlas reading samples; the atlas
-file's shapes and guards are `Track.flix`'s; the survey of an answer, the reading of a
+file's shapes and guards are `Midline.flix`'s; the survey of an answer, the reading of a
 kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.flix` and
 `Geometry/Write.flix`, each one the only spelling; the chain from an answer's text to a
 surveyed geometry is `Survey.geometry`'s, asked whole by the live survey, by the
@@ -238,7 +238,10 @@ reading and the diff all read and none of them holds. So are the three questions
 asked of OpenStreetMap, spelled one each in `Overpass/Query.flix`, and the answer
 they come back as, read in `Overpass/Answer.flix`: the shape of an element is known
 in one place, so the `--fetch`ed answer and the kept one are read alike and a
-question cannot drift from the reading that works it.
+question cannot drift from the reading that works it. Two modules read the two files
+a circuit's directory keeps, named for the two different things those files are:
+`Geometry.flix` the served outline, a survey stretched to a published length, and
+`Midline.flix` the atlas file's line, measured from imagery and stretched to nothing.
 
 What is written twice is the timing
 figures, authored in `src/Circuit.flix` for the drawing and held again in the linked
@@ -309,7 +312,7 @@ file.
 
 ## The atlas readings
 
-`nix run .#geometry -- atlas <circuit>` is the geometry project's own: `Track.flix`
+`nix run .#geometry -- atlas <circuit>` is the geometry project's own: `Midline.flix`
 reads the foreign file's shapes and refuses what they contradict, `Atlas.flix`
 reads the layer and asks its home only on `--fetch`, and the apartness is the
 diff's `Apart.flix` sampling the same pair of lines. It reads the track-atlas
@@ -335,7 +338,7 @@ this directory's root, and both sample `Apart.flix`.
 Every tool is two things: the asking, and the reading of an answer. The asking —
 Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the reading
 moved into a module beside it that opens nothing, so `nix run .#geometry-test` can
-hand it a fixture: `Cli.TimingLines.Feed` turns feed text into rows, fastest sectors,
+hand it a fixture: `TimingLines.Feed` turns feed text into rows, fastest sectors,
 shares and implied lines; `Candidates.flix` reads a probe answer; `Survey.flix` chains
 a kept answer and is held to the bytes the app serves rather than by a shared source, and
 is where the `survey` word asks — the asking of a circuit sits with the reading of one, as
@@ -344,7 +347,7 @@ it does for the atlas;
 writer of them — the outline's layout, the property list and the JSON spelling, with no
 asking in it at all, which is what lets the `survey` word, the regeneration fence and the
 atlas line be written by one profile rather than by whichever command got there first;
-`Track.flix` holds the atlas
+`Midline.flix` holds the atlas
 file's shape checks and its two guards; and the comparison the fence makes is
 `Regenerate.flix`'s. Nothing asks OpenStreetMap from outside this project at all.
 Printing stays with the command — what a reading is worth is what it

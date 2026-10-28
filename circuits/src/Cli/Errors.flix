@@ -8,7 +8,7 @@
 ///
 /// Two readings of a file fail in these words and neither wraps the other: `Read`
 /// carries a path resolved against `GEOMETRY_FROM`, which is what the geometry
-/// commands read, and `File` carries `Report.Files`' path, which reads where the
+/// commands read, and `File` carries `TimingLines.Files`' path, which reads where the
 /// reader stands. Wrapping one in the other would print a path twice.
 ///
 /// `flix/src` has a `Cli.Errors` of its own, a separate module of the same name in
@@ -19,8 +19,8 @@
 /// check answers with.
 pub mod Cli.Errors {
 
-    use Report.Files
-    use Report.Files.FileError
+    use TimingLines.Files
+    use TimingLines.Files.FileError
 
     pub enum CliError {
         case InputPathNotFound(String)

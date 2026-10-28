@@ -3,7 +3,7 @@
 /// written to be looked at later. The globbing and the CSV-walking the load and the export
 /// do are `flix/src`'s `Util.Files`. Two projects hold a module of this name — `flix/src`'s
 /// and this one — and neither can reach the other's; the report reads through
-/// `Report.Files`, which resolves nothing.
+/// `TimingLines.Files`, which resolves nothing.
 pub mod Util.Files {
 
     use Sys.Env

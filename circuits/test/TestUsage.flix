@@ -29,7 +29,7 @@ pub mod TestUsage {
         Assert.assertTrue(saysHelp(Diff.usage()));
         Assert.assertTrue(saysHelp(Regenerate.usage()));
         Assert.assertTrue(saysHelp(Probe.usage()));
-        Assert.assertTrue(saysHelp(Report.usage()))
+        Assert.assertTrue(saysHelp(TimingLines.usage()))
 
     /// The survey's and the atlas's usages are the one place a reader learns the
     /// flag that raises the network: a descriptor dropped from the flag table drops
@@ -52,7 +52,7 @@ pub mod TestUsage {
                     Diff.usage() ::
                     Probe.usage() ::
                     Regenerate.usage() ::
-                    Report.usage() ::
+                    TimingLines.usage() ::
                     Nil
         )
             Assert.assertTrue(String.startsWith({prefix = "usage: nix run .#geometry -- "}, usage))
@@ -68,7 +68,7 @@ pub mod TestUsage {
         Assert.assertTrue(saysUsage(Diff.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Probe.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Regenerate.arguments("--help" :: Nil)));
-        Assert.assertTrue(saysUsage(Report.arguments("--help" :: Nil)))
+        Assert.assertTrue(saysUsage(TimingLines.arguments("--help" :: Nil)))
 
     /// Two flags that cannot answer for one run are judged after `--help`, so a run
     /// that raised `--write` against `--freeze` and asked for help as well is
@@ -84,7 +84,7 @@ pub mod TestUsage {
     def testAWrongArgumentIsRefusedWithItsOwnUsage(): Unit \ Assert =
         Assert.assertTrue(refusedWith(Survey.usage(), Survey.arguments("cota" :: "--froze" :: Nil)));
         Assert.assertTrue(refusedWith(Atlas.usage(), Atlas.arguments("cota" :: "--file" :: "--fetch" :: Nil)));
-        Assert.assertTrue(refusedWith(Report.usage(), Report.arguments("--serve" :: "2026/cota_6h" :: Nil)))
+        Assert.assertTrue(refusedWith(TimingLines.usage(), TimingLines.arguments("--serve" :: "2026/cota_6h" :: Nil)))
 
     /// Arguments the command can ask with reach the run as the asking they are, which
     /// is the one case that is neither usage.

@@ -28,8 +28,8 @@ const here = (path) => readFileSync(new URL(`../src/${path}`, import.meta.url), 
 
 /** The project's own sources, by the path a message names them by. The nine links
  * into `flix/src` are left out — `Dirent.isFile()` is false for a symlink: they are
- * the report's, and the report reaches no file of the pipeline's and no HTTP at
- * all; it reads the feeds through `Report.Files`. */
+ * the timing report's, and that report reaches no file of the pipeline's and no HTTP
+ * at all; it reads the feeds through `TimingLines.Files`. */
 const sources = readdirSync(sourcesDir, { recursive: true, withFileTypes: true })
   .filter((entry) => entry.isFile() && entry.name.endsWith('.flix'))
   .map((entry) => relative(from, `${entry.parentPath ?? entry.path}/${entry.name}`))
@@ -54,7 +54,7 @@ function enclosingDef(source, needle) {
 
 const utilFiles = 'circuits/src/Util/Files.flix';
 const cliErrors = 'circuits/src/Cli/Errors.flix';
-const reportFiles = 'circuits/src/Report/Files.flix';
+const timingLinesFiles = 'circuits/src/TimingLines/Files.flix';
 const regenerate = 'circuits/src/Regenerate.flix';
 const overpass = 'circuits/src/Overpass.flix';
 const geodesy = 'circuits/src/Geodesy.flix';
@@ -139,13 +139,13 @@ check('a run asking whether a file is there asks the path it was given', () => {
 check('the two readings of a file resolve a path differently, on purpose', () => {
   // The geometry commands read through `Cli.Errors`, which carries the path
   // with the failure; reaching past it to `Util.Files.read` leaves the failure
-  // naming nothing. The report reads where the reader stands: the feeds'
+  // naming nothing. The timing report reads where the reader stands: the feeds'
   // directory is what a reader typed, and resolving it against `GEOMETRY_FROM`
   // would look beside the project instead.
   deepStrictEqual(spelling(/Util\.Files\.read\(/), [cliErrors]);
   deepStrictEqual(spelling(/Util\.Files\.write\(/), [cliErrors]);
-  doesNotMatch(text(reportFiles), /placed\(/);
-  match(text(reportFiles), /Fs\.FileStat\.exists\(path\)/);
+  doesNotMatch(text(timingLinesFiles), /placed\(/);
+  match(text(timingLinesFiles), /Fs\.FileStat\.exists\(path\)/);
 });
 
 check('a look the warning cannot make fails the run rather than passing it', () => {
@@ -159,11 +159,11 @@ check('a look the warning cannot make fails the run rather than passing it', () 
   match(fence, /Util\.Files\.isDirectory\(at\)/);
 });
 
-// The report's own file reading. The report's command computes in no database
+// The timing report's own file reading. That command computes in no database
 // and lays down no file; a future edit that gives its reading a `write` would
 // compile and be invisible to every Flix test.
-check('the report reads and stats a file, and never writes one', () => {
-  const files = text(reportFiles);
+check('the timing report reads and stats a file, and never writes one', () => {
+  const files = text(timingLinesFiles);
   doesNotMatch(files, /pub def (write|mkDirs|walkCsvFiles)/);
   doesNotMatch(files, /Glob/);
 });

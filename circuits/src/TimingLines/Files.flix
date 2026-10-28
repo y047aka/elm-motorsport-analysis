@@ -1,8 +1,8 @@
 /// Reading a file, and nothing else. The writing, the directory-making and the
 /// globbing the load and the export do are `flix/src`'s `Util.Files`, and this
 /// project's own `Util.Files` resolves every path from `GEOMETRY_FROM` — the
-/// report reads where the reader stands, from the feeds' directory alone.
-pub mod Report.Files {
+/// timing report reads where the reader stands, from the feeds' directory alone.
+pub mod TimingLines.Files {
 
     pub enum FileError {
         case ReadError(String, String)   // path, underlying message

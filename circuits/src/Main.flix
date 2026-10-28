@@ -35,7 +35,7 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
         case "survey" :: rest =>
             Exit.exit(Survey.exitCode(rest))
         case "timing-lines" :: rest =>
-            Exit.exit(Report.exitCode(rest))
+            Exit.exit(TimingLines.exitCode(rest))
         case word :: _ =>
             Console.eprintln("\"${word}\" is no command of these");
             Console.eprintln(usage());
@@ -44,4 +44,4 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
 
 /// Each command's own usage: the flake app a reader types, beside the arguments it takes.
 def usage(): String =
-    Atlas.usage() + "\n${Diff.usage()}" + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Survey.usage()}" + "\n${Report.usage()}"
+    Atlas.usage() + "\n${Diff.usage()}" + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Survey.usage()}" + "\n${TimingLines.usage()}"

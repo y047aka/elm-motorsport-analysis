@@ -15,16 +15,23 @@
 /// lane; and where the circuit's published sector lines stand on each line.
 ///
 /// The apartness math is `Apart`'s, shared with the diff; the feature shape checks,
-/// the guards and the written file are `Track`'s. This file adds only the measuring.
+/// the guards and the written file are `Midline`'s. This file adds only the measuring.
+/// and the plane they are all measured on is `Geodesy`'s, which is also where the
+/// atlas line's own metres come from — no reading of this one reaches into `Survey`.
 ///
 /// The atlas data is © its contributors under the ODbL, itself derived from OpenStreetMap
 /// and open orthoimagery; the written file carries the source URL beside the license.
 pub mod Atlas {
 
     use Circuit.Circuit
+    use Circuit.Publishes
     use Cli.Args.ArgsError
     use Cli.Args.Outcome
     use Geodesy.Place
+    use Geodesy.Point
+    use Geodesy.cumulative
+    use Geodesy.parallelOf
+    use Geodesy.projectOn
     use Net.HttpRequest.HttpRequest
     use Net.Https.Https
     use Sys.Console
@@ -42,8 +49,8 @@ pub mod Atlas {
         circuit     = Circuit,
         source      = String,
         coords      = List[Place],
-        corners     = List[Track.Feature],
-        pits        = List[Track.Feature],
+        corners     = List[Midline.Feature],
+        pits        = List[Midline.Feature],
         theirMetres = List[Float64],
         origin      = Float64,
         deviation   = Apart.Apartness,
@@ -51,7 +58,7 @@ pub mod Atlas {
         atPits      = List[AtPit],
         pitLength   = Float64,
         atLines     = List[AtLine],
-        sectors     = Option[Track.Sectors]
+        sectors     = Option[Publishes]
     }
 
     type alias AtCorner = {
@@ -78,7 +85,7 @@ pub mod Atlas {
     /// The kept geometry read beside the config: the line the app draws, its own
     /// metres, the pit lane the atlas pit markers are placed against, and the outline's
     /// properties as they stand — the sectors claim is read off them by
-    /// `Track.sectorsClaimed`, which is where a half-claim reads as no claim.
+    /// `Midline.sectorsClaimed`, which is where a half-claim reads as no claim.
     type alias Kept = {
         coords = List[Place],
         metres = List[Float64],
@@ -89,9 +96,9 @@ pub mod Atlas {
     /// The layer's three kinds of feature, read out of one file: the line the atlas
     /// measured, its corner markers, and whichever pit markers it holds.
     type alias Layer = {
-        outline = Track.Feature,
-        corners = List[Track.Feature],
-        pits    = List[Track.Feature]
+        outline = Midline.Feature,
+        corners = List[Midline.Feature],
+        pits    = List[Midline.Feature]
     }
 
     // ------------------------------------------------------------------- the command
@@ -240,7 +247,7 @@ pub mod Atlas {
     /// The circuit's own line read out of the layer, and measured on the plane the
     /// kept geometry is already drawn on.
     def measuredAgainst(asked: Asking, layer: Layer, markers: List[Place], ours: Kept): Result[String, Reading] \ IO =
-        Track.lineOf(layer#outline)
+        Midline.lineOf(layer#outline)
             |> Result.flatMap(coords -> laid(asked#circuit, sourceOf(asked), coords, layer#corners, layer#pits, markers, ours))
 
     /// The source the kept file claims, which is the circuit's atlas URL whether the
@@ -303,34 +310,34 @@ pub mod Atlas {
         match Util.Json.parse(spelled) {
             case Err(problem) => Err("the atlas file does not parse: ${problem}")
             case Ok(json) =>
-                let features = Track.featuresOf(json);
-                match List.find(feature -> Track.roleOf(feature) == Some("outline"), features) {
+                let features = Midline.featuresOf(json);
+                match List.find(feature -> Midline.roleOf(feature) == Some("outline"), features) {
                     case None => Err("the atlas file holds no outline feature")
                     case Some(outline) =>
-                        match Track.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug) {
+                        match Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug) {
                             case Err(problem) => Err(problem)
                             case Ok(_)        => Ok({outline = outline, corners = cornersOf(features), pits = pitsOf(features)})
                         }
                 }
         }
 
-    def cornersOf(features: List[Track.Feature]): List[Track.Feature] =
-        List.filter(feature -> Track.roleOf(feature) == Some("corner"), features)
+    def cornersOf(features: List[Midline.Feature]): List[Midline.Feature] =
+        List.filter(feature -> Midline.roleOf(feature) == Some("corner"), features)
 
     /// The pit markers, one per role, entry before exit: what a layer holds under a
     /// role twice is one entry and one exit to this reading, in the order a pit lane
     /// is driven rather than the order a file happens to hold.
-    def pitsOf(features: List[Track.Feature]): List[Track.Feature] =
+    def pitsOf(features: List[Midline.Feature]): List[Midline.Feature] =
         List.filterMap(
-            role -> List.find(feature -> Track.roleOf(feature) == Some(role), features),
+            role -> List.find(feature -> Midline.roleOf(feature) == Some(role), features),
             "pit_entry" :: "pit_exit" :: Nil
         )
 
     /// The markers' places, asked before any measuring: a marker that carries no point
     /// fails the run rather than joining the mean as a nought.
-    def placesOf(markers: List[Track.Feature]): Result[String, List[Place]] =
+    def placesOf(markers: List[Midline.Feature]): Result[String, List[Place]] =
         List.foldRight(
-            (feature, places) -> match (Track.placeOf(feature), places) {
+            (feature, places) -> match (Midline.placeOf(feature), places) {
                 case (Ok(one), Ok(many)) => Ok(one :: many)
                 case (Err(problem), _)   => Err(problem)
                 case (_, Err(problem))   => Err(problem)
@@ -372,8 +379,8 @@ pub mod Atlas {
         circuit: Circuit,
         source: String,
         coords: List[Place],
-        corners: List[Track.Feature],
-        pits: List[Track.Feature],
+        corners: List[Midline.Feature],
+        pits: List[Midline.Feature],
         markers: List[Place],
         ours: Kept
     ): Result[String, Reading] \ IO = {
@@ -387,7 +394,7 @@ pub mod Atlas {
         let length = Option.getWithDefault(0.0, List.last(theirMetres));
         let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
         match forM(
-            origin       <- Track.checkOrigin(first, circuit#timingLine);
+            origin       <- Midline.checkOrigin(first, circuit#timingLine);
             deviation    <- Apart.apartness(theirPoints, theirMetres, ourPoints, ours#metres, Apart.defaultEvery());
             whereCorners <- atCorners(corners, parallel, ourPoints, ours#metres, length);
             published    <- atPublished(circuit, ours, theirPoints, theirMetres, ourPoints);
@@ -418,7 +425,7 @@ pub mod Atlas {
     /// Each corner where it lands: the atlas's fraction of its own lap against the
     /// metre of this app's line that stands nearest the marker's place.
     def atCorners(
-        corners: List[Track.Feature],
+        corners: List[Midline.Feature],
         parallel: Float64,
         ourPoints: List[Geodesy.Point],
         ours: List[Float64],
@@ -427,13 +434,13 @@ pub mod Atlas {
         Result.traverse(corner -> atCorner(corner, parallel, ourPoints, ours, length), corners)
 
     def atCorner(
-        corner: Track.Feature,
+        corner: Midline.Feature,
         parallel: Float64,
         ourPoints: List[Geodesy.Point],
         ours: List[Float64],
         length: Float64
     ): Result[String, AtCorner] =
-        match (Track.placeOf(corner), Track.markerOf(corner)) {
+        match (Midline.placeOf(corner), Midline.markerOf(corner)) {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
@@ -451,11 +458,11 @@ pub mod Atlas {
         theirPoints: List[Geodesy.Point],
         theirMetres: List[Float64],
         ourPoints: List[Geodesy.Point]
-    ): Result[String, (Option[Track.Sectors], List[AtLine])] =
-        match Track.sectorsClaimed(ours#props) {
+    ): Result[String, (Option[Publishes], List[AtLine])] =
+        match Midline.sectorsClaimed(ours#props) {
             case None => Ok((None, Nil))
             case Some(sectors) =>
-                match Track.sectorLines(sectors, circuit#lap) {
+                match Midline.sectorLines(sectors, circuit#lap) {
                     case Err(problem) => Err(problem)
                     case Ok(lines) =>
                         Ok(
@@ -476,7 +483,7 @@ pub mod Atlas {
     /// Each pit marker against the pit lane the survey chained: how far it stands from
     /// that lane, and how far along it.
     def atPits(
-        pits: List[Track.Feature],
+        pits: List[Midline.Feature],
         parallel: Float64,
         pitPoints: List[Geodesy.Point],
         pitMetres: List[Float64],
@@ -485,23 +492,23 @@ pub mod Atlas {
         Result.traverse(pit -> atPit(pit, parallel, pitPoints, pitMetres, length), pits)
 
     def atPit(
-        pit: Track.Feature,
+        pit: Midline.Feature,
         parallel: Float64,
         pitPoints: List[Geodesy.Point],
         pitMetres: List[Float64],
         length: Float64
     ): Result[String, AtPit] =
-        match (Track.placeOf(pit), Track.markerOf(pit)) {
+        match (Midline.placeOf(pit), Midline.markerOf(pit)) {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
                 let near = Apart.nearestOn(Geodesy.projectOn(parallel, place), pitPoints, pitMetres);
-                Ok({role = Track.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance})
+                Ok({role = Midline.named(pit), theirMetres = marker * length, along = near#metres, distance = near#distance})
         }
 
     /// The keeping — the only side effect of a run, made once every guard has answered.
     def keep(reading: Reading): Result[String, Reading] \ IO =
-        let text = Track.fileText(reading#source, reading#circuit#word, reading#coords, reading#corners, reading#pits, reading#theirMetres);
+        let text = Midline.file(reading#source, reading#circuit#word, reading#coords, reading#corners, reading#pits, reading#theirMetres);
         match Cli.Errors.writeFile(Circuit.keptAtlas(reading#circuit), text) {
             case Err(problem) => Err("${problem}")
             case Ok(_)        => Ok(reading)
@@ -520,7 +527,7 @@ pub mod Atlas {
         Console.println("== ${circuit#word}: the atlas line against the geometry this app draws");
         Console.println(
             "length: measured ${Util.Format.fixed(1, length)} m against the published ${Util.Format.spelled(circuit#lap)} m "
-                + "(${Track.signed(length - circuit#lap)}); "
+                + "(${Midline.signed(length - circuit#lap)}); "
                 + originSentence(circuit, reading#origin)
         );
         Console.println(
@@ -531,7 +538,7 @@ pub mod Atlas {
         foreach (corner <- reading#atCorners)
             Console.println(
                 "  ${corner#id}: marker at ${Util.Format.fixed(1, corner#theirMetres)} m, our line has that place at "
-                    + "${Util.Format.fixed(1, corner#ourMetres)} m (${Track.signed(corner#ourMetres - corner#theirMetres)}), ${Util.Format.fixed(1, corner#distance)} m apart"
+                    + "${Util.Format.fixed(1, corner#ourMetres)} m (${Midline.signed(corner#ourMetres - corner#theirMetres)}), ${Util.Format.fixed(1, corner#distance)} m apart"
             );
         if (not List.isEmpty(reading#atPits)) {
             Console.println("pit markers (${List.length(reading#atPits)}), against our own pit lane of ${Util.Format.fixed(1, reading#pitLength)} m:");
@@ -556,7 +563,7 @@ pub mod Atlas {
             "corners (0): the atlas layer holds no corner markers, so nothing was laid against our line"
         else
             "corners (${List.length(distances)}): mean apart ${Util.Format.fixed(1, mean(distances))} m, max ${Util.Format.fixed(1, Option.getWithDefault(0.0, List.maximum(distances)))} m; "
-                + "lap distance differs by ${Util.Format.fixed(1, mean(List.map(Float64.abs, laps)))} m on average, worst ${Track.signed(worstLap)} m"
+                + "lap distance differs by ${Util.Format.fixed(1, mean(List.map(Float64.abs, laps)))} m on average, worst ${Midline.signed(worstLap)} m"
 
     /// The published lines' own paragraph, which a geometry that publishes no map
     /// simply does not have — and that a map publishing no intermediate line has no
@@ -568,7 +575,7 @@ pub mod Atlas {
                 foreach (line <- reading#atLines)
                     Console.println(
                         "  ${line#id} begins at our ${Util.Format.fixed(1, line#metres)} m; the atlas line has that place at "
-                            + "${Util.Format.fixed(1, line#theirMetres)} m (${Track.signed(line#theirMetres - line#metres)}), ${Util.Format.fixed(1, line#distance)} m apart"
+                            + "${Util.Format.fixed(1, line#theirMetres)} m (${Midline.signed(line#theirMetres - line#metres)}), ${Util.Format.fixed(1, line#distance)} m apart"
                     )
             case _ => ()
         }

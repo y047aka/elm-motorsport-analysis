@@ -1,11 +1,15 @@
-/// The track-atlas line as this repository reads it: the shape checks that turn an atlas
-/// feature into a line, a place or a fraction of a lap; the guards that keep a mismatched
-/// file from being kept as one circuit's evidence; and the file it is written back into.
-/// `Atlas` is the command; everything here opens nothing. The kept geometry the guards are
-/// measured against is `Geometry`'s reading, shared with every other reader of a served
-/// file, and the lap-origin guard asks the same question of a measured line's start that
-/// `Survey` asks of a relation's finish node — at `measuredWithin`, not a circuit's
-/// authored distance.
+/// The measured midline this repository keeps beside a circuit: the track-atlas file's
+/// shapes that turn a feature into a line, a place or a fraction of a lap; the guards that
+/// keep a mismatched file from being kept as one circuit's evidence; and the profile it is
+/// written back into. `Atlas` is the command; everything here opens nothing.
+///
+/// This is the other of the two geometry profiles the project keeps: a line measured off
+/// orthoimagery at its own length, `"stretched": false`, kept beside the circuit and never
+/// served. `Geometry` is the served one — the centreline stretched to a published lap — and
+/// the kept geometry the guards here are measured against is that reading, shared with
+/// every other reader of a kept file. The origin guard asks the same question of a
+/// measured line's start that `Survey` asks of a relation's finish node — at
+/// `measuredWithin`, not a circuit's authored distance.
 ///
 /// A geometry is written back in this repository's spelling — `type` before `coordinates` —
 /// and a number keeps the digits the layer spelled, so a point written here reads as the
@@ -13,10 +17,13 @@
 ///
 /// The atlas data is © its contributors under the ODbL, itself derived from OpenStreetMap
 /// and open orthoimagery.
-pub mod Track {
+pub mod Midline {
 
+    use Circuit.Publishes
     use Circuit.TimingLine
     use Geodesy.Place
+    use Geodesy.apart
+    use Geodesy.roundTenth
     use Util.Json.Json
 
     /// One feature of an atlas file: its members as the file's JSON gives them. The
@@ -186,7 +193,7 @@ pub mod Track {
         match line {
             case None => Ok(0.0)
             case Some(published) =>
-                let distance = Geodesy.apart(first, published#place);
+                let distance = apart(first, published#place);
                 if (distance > measuredWithin())
                     Err(
                         "the atlas lap is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.spelled(measuredWithin())} m. Its markers would be measured from the wrong line."
@@ -197,19 +204,13 @@ pub mod Track {
 
     // ---------------------------------------------------------- the published lines
 
-    /// The claim a kept geometry carries of the lines the lap is timed to: the map
-    /// they come from, and the stretches between them.
-    pub type alias Sectors = {
-        source    = String,
-        stretches = List[Float64]
-    }
-
     /// The intermediate timing lines a circuit's published stretches imply: each
     /// stretch ends where the next begins, and the last ends at the line the lap is
     /// measured from — which is where it started, so it is not a line to place. A line
     /// is named for the sector that begins at it, which is how the atlas reading and
-    /// `Cli.TimingLines.Feed`'s `publishedLines` — over in the timing project, sharing
-    /// only the geometry file — spell the same line the same thing. Stretches are
+    /// `TimingLines.Feed`'s `publishedLines` spell the same line the same thing — that
+    /// reading is given a kept file's `sectors` and this one the map the report was
+    /// handed, and nothing compares the two spellings. Stretches are
     /// trusted with the lap length they add up to and with nothing else, at
     /// `Circuit.stretchTolerance()`.
     pub type alias PublishedLine = {
@@ -217,7 +218,7 @@ pub mod Track {
         metres = Float64
     }
 
-    pub def sectorLines(sectors: Sectors, lap: Float64): Result[String, List[PublishedLine]] =
+    pub def sectorLines(sectors: Publishes, lap: Float64): Result[String, List[PublishedLine]] =
         let total = List.foldLeft((sum, stretch) -> sum + stretch, 0.0, sectors#stretches);
         if (Float64.abs(total - lap) > Circuit.stretchTolerance())
             Err("the sectors add up to ${Util.Format.spelled(total)} m, not the published ${Util.Format.spelled(lap)} m")
@@ -236,9 +237,9 @@ pub mod Track {
         }
 
     /// The sectors a kept file's outline claims, or nothing at all when it claims
-    /// none. Half a claim — a source with no stretches, stretches with no source — is
-    /// no claim either.
-    pub def sectorsClaimed(props: Map[String, Json]): Option[Sectors] =
+    /// none — the pair the circuit's config authors, read back out of the file. Half a
+    /// claim — a source with no stretches, stretches with no source — is no claim either.
+    pub def sectorsClaimed(props: Map[String, Json]): Option[Publishes] =
         match Map.get("sectors", props) {
             case Some(Json.JObject(claim)) =>
                 match (Map.get("source", claim), Map.get("stretches", claim)) {
@@ -259,7 +260,7 @@ pub mod Track {
     /// a reader sees first. The outline's metres are the line's own, rounded to the
     /// tenth like every kept metre; a marker keeps the layer's own fraction, and the
     /// geometry the layer spelled.
-    pub def fileText(
+    pub def file(
         source: String,
         slug: String,
         coords: List[Place],
@@ -277,9 +278,9 @@ pub mod Track {
                 + "\"basis\":${Geometry.Write.text("measured-midline")},"
                 + "\"source\":${Geometry.Write.text(source)},"
                 + "\"license\":${Geometry.Write.text("ODbL")},"
-                + "\"lap_length_m\":${Geometry.Write.number(Geodesy.roundTenth(length))},"
+                + "\"lap_length_m\":${Geometry.Write.number(roundTenth(length))},"
                 + "\"stretched\":false,"
-                + "\"metres\":[${String.intercalate(",", List.map(metre -> Geometry.Write.number(Geodesy.roundTenth(metre)), metres))}]"
+                + "\"metres\":[${String.intercalate(",", List.map(metre -> Geometry.Write.number(roundTenth(metre)), metres))}]"
                 + "},"
                 + "\"geometry\":{\"type\":${Geometry.Write.text("LineString")},\"coordinates\":${degrees(coords)}}"
                 + "}";

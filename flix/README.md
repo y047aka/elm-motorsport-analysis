@@ -13,7 +13,7 @@ a CSV, the durations, `Motorsport/Circuit.flix` among them — so editing one of
 files is compiled and tested twice, by `nix run .#flix-test` and by
 `nix run .#geometry-test`, and moving or renaming one breaks both until its
 link moves too. `Cli/Errors.flix` and `Util/Files.flix` are not among them: the
-report project holds its own of those two — `Report/Files.flix` for the second,
+report project holds its own of those two — `TimingLines/Files.flix` for the second,
 named apart because it resolves paths differently — smaller, they being the modules whose rest
 belongs to the commands that compute in a database. `circuits/README.md` keeps the
 list, says which modules are shared and which are held twice on purpose, why the

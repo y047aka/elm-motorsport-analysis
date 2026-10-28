@@ -1,5 +1,5 @@
 /// The atlas reading's asking of its arguments: which layer a run reads and from
-/// where. The measuring itself is `TestTrack`'s and the apartness `TestApart`'s; what
+/// where. The measuring itself is `TestMidline`'s and the apartness `TestApart`'s; what
 /// is met here is the half that opens nothing — a word no circuit answers to, a flag
 /// that names no file, and the two answers one layer cannot be given twice.
 pub mod TestAtlas {

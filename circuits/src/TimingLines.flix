@@ -1,5 +1,7 @@
-/// Whether a circuit's timing lines still stand where they were put a season
-/// earlier, read off the timing feed of two rounds run at the same circuit.
+/// Whether a circuit's timing lines still stand where they were put a season earlier,
+/// read off the timing feed of two rounds run at the same circuit: the word that
+/// `nix run .#geometry-timing-lines` is — its flags, its readings, its printing and the
+/// exit code they come to.
 ///
 ///     nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025
 ///
@@ -22,21 +24,33 @@
 /// and `circuits/README.md` holds why the reading stops short of it;
 /// `.#geometry -- regenerate` and `.#geometry -- diff` are the readers that measure the
 /// geometry.
-pub mod Cli.TimingLines {
+///
+/// The readings of the feed -- rows, shares, placements, the columns they print in --
+/// are `TimingLines.Feed`'s, and reach no file at all; the file is opened through
+/// `TimingLines.Files`, which resolves no path, since the directory a reader named is
+/// where the feeds sit. `--load`, `--export`, `--serve`, `--port` and `--database` are
+/// refused: they belong to the CLI's other words, which compute in a database. Nothing
+/// here computes in one, and nothing here lays a file down.
+pub mod TimingLines {
 
+    use Cli.Args.ArgsError
     use Cli.Args.Outcome
+    use Cli.Errors.checkDirectory
     use Cli.Errors.CliError
-    use Cli.TimingLines.Feed.{
-        CircuitMap, Column, Fastest, Line, Movement, Placement, decode, fastestSectors,
-        impliedLines, metres, movedMetres, movement, percent, placesOf, publishedLines,
-        count, seconds, sectors, sectorsOf, sharesOf, speeds, table
-    }
+    use Motorsport.Calendar
     use Motorsport.Circuit.Circuit
     use Motorsport.Circuit.PublishedMap
     use Motorsport.Circuit.TimingMap
     use Motorsport.Events
     use Sys.Console
-    use Report.Files
+    use TimingLines.Feed.{
+        CircuitMap, Column, Fastest, Line, Movement, Placement, decode, fastestSectors,
+        impliedLines, metres, movedMetres, movement, percent, placesOf, publishedLines,
+        count, seconds, sectors, sectorsOf, sharesOf, speeds, table
+    }
+    use TimingLines.Files
+    use Util.GetOpt.ArgDescr
+    use Util.GetOpt.OptionDescr
 
     /// How far round the lap one line implied one season may sit from the same
     /// line implied the season after before the two are said to stand on
@@ -48,8 +62,7 @@ pub mod Cli.TimingLines {
 
     /// What the report is asked for: the round to read, the season to read it against,
     /// how far round the lap one line may come to stand between the two readings, and the
-    /// directory the feeds are in. The `timing-lines` word parses it out of its flags --
-    /// see `Report` -- and hands it over whole.
+    /// directory the feeds are in.
     pub type alias Request = {
         csv       = String,
         season    = Int32,
@@ -57,6 +70,195 @@ pub mod Cli.TimingLines {
         against   = Option[Int32],
         tolerance = Float64
     }
+
+    enum Setting with Eq {
+        case Help
+        case Csv(String)
+        case Against(String)
+        case Tolerance(String)
+    }
+
+    pub def usage(): String =
+        Util.GetOpt.usageInfo(
+            "usage: nix run .#geometry -- timing-lines --csv <dir> <season>/<id> [--against <season>] [--tolerance <metres>]",
+            optionDescrs()
+        )
+
+    def optionDescrs(): List[OptionDescr[Setting]] =
+        Cli.Args.helpDescr(Setting.Help) ::
+        {
+            optionIds     = Nil,
+            optionNames   = "csv" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(dir -> Some(Setting.Csv(dir)), "DIR"),
+            explanation   = "the directory holding the season directories\nof CSV"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "against" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(season -> Some(Setting.Against(season)), "SEASON"),
+            explanation   = "read the round against this season as well"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "tolerance" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(metres -> Some(Setting.Tolerance(metres)), "METRES"),
+            explanation   = "how far round the lap one line may stand apart\nin the two readings (default ${defaultTolerance()} m)"
+        } :: Nil
+
+    def isHelp(setting: Setting): Bool =
+        setting == Setting.Help
+
+    pub def parse(args: List[String]): Result[ArgsError, Request] =
+        match Cli.Args.scan(optionDescrs(), args) {
+            case Err(problem) => Err(problem)
+            case Ok(scanned)  => completed(scanned)
+        }
+
+    def completed(scanned: Cli.Args.Scanned[Setting]): Result[ArgsError, Request] =
+        requestOf(scanned#options, scanned#words)
+
+    def requestOf(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Request] =
+        forM(
+            csv       <- required("csv", csvDir(settings));
+            named     <- namedRound(nonOptions);
+            against   <- againstSeason(settings);
+            tolerance <- distanceAllowed(settings)
+        ) yield {
+            csv = csv,
+            season = named#season,
+            id = named#id,
+            against = against,
+            tolerance = tolerance
+        }
+
+    def required(name: String, dir: Option[String]): Result[ArgsError, String] =
+        Option.toOk(ArgsError.ParseErrors("--${name} is required: the feed sits in the season directories under it." :: Nil), dir)
+
+    def csvDir(settings: List[Setting]): Option[String] =
+        settings |> List.foldLeft((acc, setting) -> match setting {
+            case Setting.Csv(dir) => Some(dir)
+            case _                => acc
+        }, None)
+
+    /// One round named outright, and named as one on the calendar: the season
+    /// directory a feed is read out of is a season the championship ran, not any
+    /// four digits a reader types.
+    type alias Named = {
+        season = Int32,
+        id = String
+    }
+
+    def namedRound(nonOptions: List[String]): Result[ArgsError, Named] =
+        match nonOptions {
+            case only :: Nil =>
+                match roundName(only) {
+                    case Some((season, id)) => Ok({ season = season, id = id })
+                    case None               =>
+                        Err(ArgsError.ParseErrors("\"${only}\" names no round: name one as <season>/<id>, like 2026/cota_6h." :: Nil))
+                }
+            case Nil    => Err(ArgsError.ParseErrors("the report reads one round, named as <season>/<id>." :: Nil))
+            case extras => Err(ArgsError.ParseErrors("${List.join(", ", extras)} are not arguments this report reads, which names one round as <season>/<id>." :: Nil))
+        }
+
+    def roundName(name: String): Option[(Int32, String)] =
+        match String.splitOn({substr = "/"}, name) {
+            case season :: id :: Nil =>
+                Int32.fromString(season)
+                    |> Option.flatMap(year -> Calendar.find(year, id))
+                    |> Option.map(entry -> (entry#season, entry#id))
+            case _ => None
+        }
+
+    /// The last `--against` wins, as a repeated option usually does.
+    def againstSeason(settings: List[Setting]): Result[ArgsError, Option[Int32]] =
+        match Cli.Args.lastNamed(seasonNamed, settings) {
+            case None       => Ok(None)
+            case Some(name) =>
+                // Four digits, because the calendar's seasons are spelled that
+                // way and a reader typing `24` means a season and not
+                // twenty-four AD.
+                match Int32.fromString(name) {
+                    case Some(season) =>
+                        if (String.length(name) == 4)
+                            Ok(Some(season))
+                        else
+                            Err(ArgsError.ParseErrors("\"${name}\" is not a season: --against names a year, like 2025." :: Nil))
+                    case None =>
+                        Err(ArgsError.ParseErrors("\"${name}\" is not a season: --against names a year, like 2025." :: Nil))
+                }
+        }
+
+    /// The distance allowed, defaulting to the report's own and refusing nought:
+    /// a run that allows no distance calls every two seasons run on different lines.
+    def distanceAllowed(settings: List[Setting]): Result[ArgsError, Float64] =
+        match Cli.Args.lastNamed(toleranceNamed, settings) {
+            case None          => Ok(defaultTolerance())
+            case Some(spelled) =>
+                match Float64.fromString(spelled) {
+                    case Some(metres) =>
+                        if (metres > 0.0)
+                            Ok(metres)
+                        else
+                            Err(ArgsError.ParseErrors("\"${spelled}\" is not a distance: --tolerance is metres, and more than nought." :: Nil))
+                    case None =>
+                        Err(ArgsError.ParseErrors("\"${spelled}\" is not a distance: --tolerance is metres, and more than nought." :: Nil))
+                }
+        }
+
+    def seasonNamed(setting: Setting): Option[String] =
+        match setting {
+            case Setting.Against(name) => Some(name)
+            case _                     => None
+        }
+
+    def toleranceNamed(setting: Setting): Option[String] =
+        match setting {
+            case Setting.Tolerance(metres) => Some(metres)
+            case _                         => None
+        }
+
+    // ------------------------------------------------------------------- the command
+
+    /// The exit code the arguments come to. 1 is an answer the report gives as
+    /// well: a line standing further round the lap than the distance allowed.
+    pub def exitCode(args: List[String]): Int32 \ { IO, Console } =
+        Cli.Args.comeTo(arguments(args), asking)
+
+    /// The arguments as far as the flag table reads them, before the report asks
+    /// which round on the calendar was named.
+    pub def arguments(args: List[String]): Cli.Args.Parsed[Request] =
+        Cli.Args.prepare(optionDescrs(), usage(), isHelp, completed, args)
+
+    /// The directory the feeds sit in, asked once, and then the two rounds read and
+    /// judged: a mistyped `--csv` is one mistake rather than every race missing.
+    def asking(request: Request): Outcome \ { IO, Console } =
+        Cli.Args.outcomeOf(
+            forM(
+                _       <- checkDirectory(request#csv) |> Result.mapErr(problem -> "${problem}");
+                verdict <- judged(request)
+            ) yield verdict
+        )
+
+    /// The report read, printed and judged, in the words the report says its own
+    /// readings failed in.
+    def judged(request: Request): Result[String, Outcome] \ { IO, Console } =
+        runAll(request)
+            |> Result.mapErr(problem -> "${problem}")
+
+    /// The report read, printed and judged: `Err` is a reading that never happened,
+    /// and the outcome is the verdict the readings came to — 1 where a line stands
+    /// further round the lap than the distance allowed, which is the answer that
+    /// the two seasons were not run on one map. One reading alone is printed and
+    /// exits 0: nothing was judged.
+    pub def runAll(asked: Request): Result[CliError, Outcome] \ { IO, Console } =
+        match read(asked) {
+            case Err(problem) => Err(problem)
+            case Ok(report) =>
+                printReadings(report);
+                Ok(judge(report))
+        }
+
+    // ------------------------------------------------------------------ the readings
 
     /// One season read: what each class was fastest at, and where round the lap
     /// that implies the lines stand.
@@ -82,19 +284,6 @@ pub mod Cli.TimingLines {
         asked = Request
     }
 
-    /// The report read, printed and judged: `Err` is a reading that never happened,
-    /// and the outcome is the verdict the readings came to — 1 where a line stands
-    /// further round the lap than the distance allowed, which is the answer that
-    /// the two seasons were not run on one map. One reading alone is printed and
-    /// exits 0: nothing was judged.
-    pub def runAll(asked: Request): Result[CliError, Outcome] \ {IO, Console} =
-        match read(asked) {
-            case Err(problem) => Err(problem)
-            case Ok(report) =>
-                printReadings(report);
-                Ok(judge(report))
-        }
-
     /// Where the circuit's own map puts its lines, and the two rounds' feeds read
     /// against it.
     def read(asked: Request): Result[CliError, Report] \ IO =
@@ -103,7 +292,7 @@ pub mod Cli.TimingLines {
             published <- publishedMap(asked, circuit);
             lines     <- linesOf(published)
         ) yield (circuit, published, lines) {
-            case Err(problem)                  => Err(problem)
+            case Err(problem)                    => Err(problem)
             case Ok((circuit, published, lines)) =>
                 let circuitMap = { lapLength = published#lapLength, lines = lines };
                 Result.map(
@@ -188,7 +377,7 @@ pub mod Cli.TimingLines {
                           Err(CliError.Reading("there is no ${path} to read: the feed sits under <csv>/<season>/<id>.csv."))
         ) yield lines
 
-    // ---------------------------------------------------------------- printing
+    // --------------------------------------------------------------------- printing
 
     /// The map's lines round the lap, then one table per season.
     def printReadings(report: Report): Unit \ Console = {
@@ -245,7 +434,7 @@ pub mod Cli.TimingLines {
             ++ List.map(metres, placesOf(times, circuitMap))
             ++ speeds(times, circuitMap)
 
-    // ---------------------------------------------------------------- judging
+    // -------------------------------------------------------------------- judging
 
     /// The two seasons laid against each other, and the verdict the reader came
     /// for.
@@ -297,5 +486,4 @@ pub mod Cli.TimingLines {
                     :: "Within the ${metres(allowed)} m allowed -- ${percent(shift#furthest / report#lapLength)} of a lap: one set of lines answers for ${season} and ${against}."
                     :: Nil
             )
-
 }

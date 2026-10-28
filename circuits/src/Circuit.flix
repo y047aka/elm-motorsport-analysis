@@ -33,7 +33,9 @@ pub mod Circuit {
         eachSeason = Option[String]
     }
 
-    /// The authored stretches, and the map they were copied from.
+    /// The authored stretches, and the map they were copied from. The same pair a kept
+    /// geometry carries of them, which is what `Midline.sectorsClaimed` reads back out of
+    /// the file and what the timing report names its lines from.
     pub type alias Publishes = {
         source    = String,
         stretches = List[Float64]
@@ -64,13 +66,13 @@ pub mod Circuit {
 
     /// How far a relation's node may stand from the published line and still be it: the
     /// relation tags the line itself, so the distance allowed is the map's own crosshair.
-    /// The atlas reading allows a wider distance — `Track.measuredWithin`.
+    /// The atlas reading allows a wider distance — `Midline.measuredWithin`.
     pub def nodeWithin(): Float64 = 10.0
 
     /// How far a circuit's published stretches may miss the lap they are trusted to
     /// add up to. The one distance both readers of those stretches allow:
-    /// `Track.sectorLines` when it lays the drawing's timing lines, and
-    /// `Cli.TimingLines.Feed.publishedLines` when it lays the report's.
+    /// `Midline.sectorLines` when it lays the drawing's timing lines, and
+    /// `TimingLines.Feed.publishedLines` when it lays the report's.
     pub def stretchTolerance(): Float64 = 0.15
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser
