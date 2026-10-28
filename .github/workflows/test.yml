@@ -45,7 +45,10 @@ jobs:
       # chained, the bytes a geometry is written in, and the timing report's
       # feed readings, which is also what proves the nine `flix/src` symlinks
       # survived the checkout. Every reading is handed a fixture, so nothing here
-      # can change a kept file.
+      # can change a kept file. Then `test/check-sources.mjs` reads the project's
+      # own sources — the one reading of a response, the one spelling of the
+      # sphere, the one way a filesystem failure is answered — which no `@Test`
+      # can make, a test computing in no IO.
       - name: Geometry command tests
         run: nix run .#geometry-test
       # Does the survey over a kept answer still draw the bytes the app serves?

@@ -90,6 +90,22 @@
             '';
           };
 
+        # The project's tests are two readings of it: `flix test`, every one handed
+        # a fixture, and `check-sources.mjs`, which reads the project's own sources
+        # — facts no `@Test` can reach, since a test computes in no IO and so meets
+        # no file, builds no `HttpResponse`, and cannot see what a second spelling
+        # of a constant would cost. Node joins for that reading alone, and the
+        # script needs nothing beyond `node:fs`.
+        geometryTestApp = pkgs.writeShellApplication {
+          name = "geometry-test";
+          runtimeInputs = [ flix pkgs.nodejs_26 ];
+          text = ''
+            export GEOMETRY_FROM="$PWD"
+            cd circuits
+            flix test && node test/check-sources.mjs
+          '';
+        };
+
         # Where the CLI and the server compute when the caller names nowhere
         # else. The file is in the working copy rather than under /tmp, so the
         # rows a run left there are still there to be queried; the path is
@@ -240,7 +256,7 @@
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
           geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: survey [--fetch] [--write] | atlas | diff | regenerate | probe | timing-lines (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
-          geometry-test        = { type = "app"; program = "${mkGeometryApp "geometry-test" "flix test"}/bin/geometry-test";                                                meta.description = "Run the circuits project's flix test — the survey's, the probe's and the timing report's readings, the last of which compile nine symlinked flix/src sources (no network, no database, no files written)"; };
+          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                            meta.description = "Run the circuits project's tests — its `flix test` (the survey's, the probe's and the timing report's readings, the last of which compile nine symlinked flix/src sources; no network, no database, no files written) and `test/check-sources.mjs`, the reading of the project's own sources no pure @Test can make"; };
           geometry-timing-lines = { type = "app"; program = "${mkGeometryApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits geometry project's timing-lines word, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };

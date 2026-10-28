@@ -57,7 +57,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
 | `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them; `--fetch` is the network raised as a flag — it asks OpenStreetMap now, keeps the answer beside the config once the survey can read it, and surveys that instead); `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both); `probe` asks which relations hold a place on earth, each candidate's ways measured, before a config is authored; `timing-lines` reads two rounds' feeds and prints whether a circuit's timing lines held where they stood a season earlier. Paths from where the command is run; the Flix main owns the word list |
-| `nix run .#geometry-test` | The project's `flix test` — the survey's and the probe's readings, and the timing report's, which compile the nine `flix/src` symlinks (no network, no database, no files written) |
+| `nix run .#geometry-test` | The project's `flix test` — the survey's and the probe's readings, and the timing report's, which compile the nine `flix/src` symlinks (no network, no database, no files written) — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the geometry project's `timing-lines` word, computing in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
@@ -611,24 +611,26 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   their paths from outside; a broken one fails `.#geometry-test` itself, as
   `Undefined use` in the module that needed it.
 - **What the geometry project cannot see from inside itself**
-  (`/app/tests/circuits-project.spec.ts`) — the project's tests hand their
-  fixtures, reach no network, build no `HttpResponse` and ask nothing of the
-  file system, so the project-wide facts are read out of its sources: one
-  reading of what a service answered with (`Overpass.answered` — a proxy
-  answers a timed-out request as 200 with an HTML page, so a second reading
-  that asked only the status would hand HTML on as a geometry), one spelling
-  of the earth radius (`Apart.earthMetres`; the measured lap is the reading a
-  config is authored from, 13.6 km or 13.7 km), one way a filesystem failure
-  is answered (a run that branches on absence asks `Util.Files`' `exists` or
+  (`circuits/test/check-sources.mjs`, run by `.#geometry-test`) — an `@Test`
+  computes in no IO, so the project's tests hand their fixtures, reach no
+  network, build no `HttpResponse` and ask nothing of the file system; the
+  project-wide facts are read out of its sources instead: one reading of
+  what a service answered with (`Overpass.answered` — a proxy answers a
+  timed-out request as 200 with an HTML page, so a second reading that asked
+  only the status would hand HTML on as a geometry), one spelling of the
+  earth radius (`Apart.earthMetres`; the measured lap is the reading a config
+  is authored from, 13.6 km or 13.7 km), one way a filesystem failure is
+  answered (a run that branches on absence asks `Util.Files`' `exists` or
   `isDirectory` first — a `false` out of a failed stat is the answer that
   ends a walk quietly — and a run that only reports reads through
   `Cli.Errors`, which keeps the path with what the filesystem said; any
   `Err(_)` that discards a failure fails, one arm excepted, on a parse
   another reading refused first), and `Report/Files.flix`'s reading never
-  writing. Both questions' shapes — each recursing to `way(r)`, and only the
-  survey asking for `node(w)`, the difference between drawing a lap and
-  lengthening one — are pinned by the project's own `flix test`,
-  `circuits/src/Overpass.flix` having written the asking once.
+  writing. It needs no browser, no Playwright and no `node_modules`: plain
+  `node` over `circuits/src`. Both questions' shapes — each recursing to
+  `way(r)`, and only the survey asking for `node(w)`, the difference between
+  drawing a lap and lengthening one — are pinned by the project's own `flix
+  test`, `circuits/src/Overpass.flix` having written the asking once.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
