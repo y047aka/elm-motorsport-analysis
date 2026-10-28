@@ -307,18 +307,16 @@ pub mod Atlas {
     /// asked here, at the first reading of the file: a file measured from another
     /// circuit replaces one circuit's kept evidence with another's, and does it quietly.
     def layerOf(spelled: String, slug: String): Result[String, Layer] =
-        match Util.Json.parse(spelled) {
-            case Err(problem) => Err("the atlas file does not parse: ${problem}")
-            case Ok(json) =>
-                let features = Midline.featuresOf(json);
-                match List.find(feature -> Midline.roleOf(feature) == Some("outline"), features) {
-                    case None => Err("the atlas file holds no outline feature")
-                    case Some(outline) =>
-                        match Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug) {
-                            case Err(problem) => Err(problem)
-                            case Ok(_)        => Ok({outline = outline, corners = cornersOf(features), pits = pitsOf(features)})
-                        }
-                }
+        forM(
+            json    <- Util.Json.parse(spelled) |> Result.mapErr(problem -> "the atlas file does not parse: ${problem}");
+            outline <- outlineOf(Midline.featuresOf(json));
+            _       <- Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), slug)
+        ) yield {outline = outline, corners = cornersOf(Midline.featuresOf(json)), pits = pitsOf(Midline.featuresOf(json))}
+
+    def outlineOf(features: List[Midline.Feature]): Result[String, Midline.Feature] =
+        match List.find(feature -> Midline.roleOf(feature) == Some("outline"), features) {
+            case Some(one) => Ok(one)
+            case None      => Err("the atlas file holds no outline feature")
         }
 
     def cornersOf(features: List[Midline.Feature]): List[Midline.Feature] =
@@ -509,10 +507,9 @@ pub mod Atlas {
     /// The keeping — the only side effect of a run, made once every guard has answered.
     def keep(reading: Reading): Result[String, Reading] \ IO =
         let text = Midline.file(reading#source, reading#circuit#word, reading#coords, reading#corners, reading#pits, reading#theirMetres);
-        match Cli.Errors.writeFile(Circuit.keptAtlas(reading#circuit), text) {
-            case Err(problem) => Err("${problem}")
-            case Ok(_)        => Ok(reading)
-        }
+        forM(
+            _ <- Cli.Errors.writeFile(Circuit.keptAtlas(reading#circuit), text) |> Result.mapErr(problem -> "${problem}")
+        ) yield reading
 
     // -------------------------------------------------------------------- the report
 

@@ -73,32 +73,22 @@ pub mod Survey {
     /// answer that fails for one of them fails for the other two for the same reason, in
     /// the same words.
     pub def geometry(text: String, circuit: Circuit): Result[String, (Answer, Geometry)] =
-        match Overpass.Answer.read(text) {
-            case Err(problem) => Err(problem)
-            case Ok(reading)  => Result.map(surveyed -> (reading, surveyed), lapOf(reading, circuit))
-        }
+        forM(
+            reading  <- Overpass.Answer.read(text);
+            surveyed <- lapOf(reading, circuit)
+        ) yield (reading, surveyed)
 
     /// The lap, the pit lane and the frame, chained out of an answer already read.
     pub def lapOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
-        match relationOf(reading, circuit#relation) {
-            case Err(problem) => Err(problem)
-            case Ok(relation) =>
-                let nodes = nodesOf(reading);
-                let ways = waysOf(reading);
-                match lineOf(relation, circuit) {
-                    case Err(problem) => Err(problem)
-                    case Ok(start) =>
-                        match standsAtLine(relation#members, nodes, start, circuit) {
-                            case Err(problem) => Err(problem)
-                            case Ok(_) =>
-                                chained(relation, ways, nodes, start)
-                                    |> Result.flatMap(lap ->
-                                        pitChained(relation, ways, nodes)
-                                            |> Result.map(pit -> laidOut(reading, nodes, lap, pit, circuit))
-                                    )
-                        }
-                }
-        }
+        let nodes = nodesOf(reading);
+        let ways = waysOf(reading);
+        forM(
+            relation <- relationOf(reading, circuit#relation);
+            start    <- lineOf(relation, circuit);
+            _        <- standsAtLine(relation#members, nodes, start, circuit);
+            lap      <- chained(relation, ways, nodes, start);
+            pit      <- pitChained(relation, ways, nodes)
+        ) yield laidOut(reading, nodes, lap, pit, circuit)
 
     def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
         match List.find(each -> each#kind == "relation" and each#id == relation, reading#elements) {
@@ -174,9 +164,10 @@ pub mod Survey {
     /// The lap: the ways the relation lists with no role, chained from the line the lap is
     /// measured from, turned to start there, and closed back onto it.
     def chained(relation: Element, ways: Map[Int64, Element], nodes: Map[Int64, Place], start: Int64): Result[String, List[Int64]] =
-        lapSegments(relation, ways)
-            |> Result.flatMap(segments -> chain(segments, nodes, Some(start)))
-            |> Result.map(track -> List.append(rotate(withoutLast(track), start), start :: Nil))
+        forM(
+            segments <- lapSegments(relation, ways);
+            track    <- chain(segments, nodes, Some(start))
+        ) yield List.append(rotate(withoutLast(track), start), start :: Nil)
 
     /// The pit lane, chained from whichever of its ways begins where no other way ends: a pit
     /// lane is drawn and never timed, so it has no line to start at and no expectation of

@@ -248,18 +248,19 @@ pub mod Regenerate {
     def check(circuit: Circuit, mode: Mode): Result[String, Verdict] \ { IO, Clock, Console } =
         match mode {
             case Mode.Freeze =>
-                match Overpass.askRelation(circuit#relation) {
-                    case Err(problem) => Err("${circuit#word}: ${problem}")
-                    case Ok(answer)   => surveyed(circuit, answer, mode)
-                }
+                forM(
+                    answer  <- Overpass.askRelation(circuit#relation) |> Result.mapErr(problem -> "${circuit#word}: ${problem}");
+                    verdict <- surveyed(circuit, answer, mode)
+                ) yield verdict
             case _ =>
                 match Util.Files.exists(Circuit.keptAnswer(circuit)) {
                     case Err(problem) => Err("${circuit#word}: ${problem}")
                     case Ok(false)    => skipped(circuit)
                     case Ok(true) =>
-                        Cli.Errors.readFile(Circuit.keptAnswer(circuit))
-                            |> Result.mapErr(problem -> "${circuit#word}: ${problem}")
-                            |> Result.flatMap(answer -> surveyed(circuit, answer, mode))
+                        forM(
+                            answer  <- Cli.Errors.readFile(Circuit.keptAnswer(circuit)) |> Result.mapErr(problem -> "${circuit#word}: ${problem}");
+                            verdict <- surveyed(circuit, answer, mode)
+                        ) yield verdict
                 }
         }
 
