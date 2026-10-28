@@ -71,10 +71,11 @@ pub mod Overpass {
     /// One query, asked and read: the walk, the pace and the fence a body passes before
     /// it is an answer are above; the shape an answer comes in is `Overpass.Answer`'s.
     pub def read(question: String): Result[String, Answer] \ { IO, Https } =
-        Result.flatMap(Overpass.Answer.read, ask(question))
+        ask(question) |> Result.flatMap(Overpass.Answer.read)
 
     def attempts(): List[(String, Int32)] =
-        List.flatMap(url -> List.map(attempt -> (url, attempt), List.range(1, tries() + 1)), runners())
+        runners()
+            |> List.flatMap(url -> List.map(attempt -> (url, attempt), List.range(1, tries() + 1)))
 
     def walk(tried: List[(String, Int32)], question: String, failure: String): Result[String, String] \ { IO, Https } =
         match tried {

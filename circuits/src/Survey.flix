@@ -178,18 +178,16 @@ pub mod Survey {
 
     /// The ways a lap is chained from are the ones the relation puts on no line at all.
     def lapSegments(relation: Element, ways: Map[Int64, Element]): Result[String, List[Segment]] =
-        Result.traverse(
-            member -> wayOf(relation, ways, member),
-            List.filter(member -> member#kind == "way" and member#role == "", relation#members)
-        )
+        relation#members
+            |> List.filter(member -> member#kind == "way" and member#role == "")
+            |> Result.traverse(member -> wayOf(relation, ways, member))
 
     /// A pit lane's members are named by their role alone: a relation may tag a node as part
     /// of a pit lane, and that is a member no line can be chained out of.
     def pitSegments(relation: Element, ways: Map[Int64, Element]): Result[String, List[Segment]] =
-        Result.traverse(
-            member -> wayOf(relation, ways, member),
-            List.filter(member -> member#role == "pit_lane", relation#members)
-        )
+        relation#members
+            |> List.filter(member -> member#role == "pit_lane")
+            |> Result.traverse(member -> wayOf(relation, ways, member))
 
     def wayOf(relation: Element, ways: Map[Int64, Element], member: Member): Result[String, Segment] =
         match Map.get(member#ref, ways) {

@@ -66,10 +66,9 @@ pub mod Overpass.Answer {
             case Err(problem) => Err("${problem}")
             case Ok(json) =>
                 let root = objectOf(json);
-                Result.map(
-                    elements -> {elements = elements, surveyedAt = stamped(root)},
-                    Result.traverse(elementOf, array("elements", root))
-                )
+                array("elements", root)
+                    |> Result.traverse(elementOf)
+                    |> Result.map(elements -> {elements = elements, surveyedAt = stamped(root)})
         }
 
     /// An element's kind and id are what makes it an element: an answer that names one

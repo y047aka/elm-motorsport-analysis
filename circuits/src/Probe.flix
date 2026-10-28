@@ -128,7 +128,8 @@ pub mod Probe {
     def asking(request: Request): Outcome \ { Clock, Console, IO } =
         Overpass.paced(
             () ->
-                Result.traverse(probePlace(request#radius), request#places)
+                request#places
+                    |> Result.traverse(probePlace(request#radius))
                     |> Result.map(_ -> Outcome.Done(Nil))
                     |> Cli.Args.outcomeOf
         )
@@ -181,5 +182,6 @@ pub mod Probe {
     /// The relation's ways, asked for and measured: the asking is here, the reading
     /// of the answer is `Candidates.measure`'s.
     def measured(element: Element): Result[String, String] \ { IO, Https } =
-        Result.flatMap(answer -> measure(answer#elements, element#id), Overpass.read(Overpass.Query.ways(element#id)))
+        Overpass.read(Overpass.Query.ways(element#id))
+            |> Result.flatMap(answer -> measure(answer#elements, element#id))
 }

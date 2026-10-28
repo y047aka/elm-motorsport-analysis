@@ -220,14 +220,16 @@ pub mod Geometry {
     def numbersAt(key: String, props: Map[String, Json]): Option[List[Float64]] =
         match Map.get(key, props) {
             case Some(Json.JArray(items)) =>
-                List.foldRight(
-                    (json, rest) -> match (json, rest) {
-                        case (Some(one), Some(many)) => Some(one :: many)
-                        case _                       => None
-                    },
-                    Some(Nil),
-                    List.map(number, Vector.toList(items))
-                )
+                items
+                    |> Vector.toList
+                    |> List.map(number)
+                    |> List.foldRight(
+                        (json, rest) -> match (json, rest) {
+                            case (Some(one), Some(many)) => Some(one :: many)
+                            case _                       => None
+                        },
+                        Some(Nil)
+                    )
             case _ => None
         }
 }

@@ -198,7 +198,7 @@ pub mod Diff {
     /// latitude of both lines together.
     def projectedOf(lines: List[Line]): List[List[Point]] = {
         let parallel = Geodesy.parallelOf(List.flatMap(line -> line#coords, lines));
-        List.map(line -> List.map(Geodesy.projectOn(parallel), line#coords), lines)
+        List.map(line -> line#coords |> List.map(Geodesy.projectOn(parallel)), lines)
     }
 
     /// The overlay, written where it was asked for. A run that asked for none has

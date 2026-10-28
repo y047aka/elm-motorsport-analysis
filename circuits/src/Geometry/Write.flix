@@ -39,7 +39,9 @@ pub mod Geometry.Write {
     /// diffed by people as much as read by the app, so the order is the file's own, and
     /// `Regenerate` takes the order of its drift report from the same list below.
     def outlineOf(circuit: Circuit, geometry: Survey.Geometry): List[String] =
-        List.map(property, List.filterMap(name -> pair(name, circuit, geometry), claims()))
+        claims()
+            |> List.filterMap(name -> pair(name, circuit, geometry))
+            |> List.map(property)
 
     /// A property's name beside the value the outline claims for it, where it claims one.
     def pair(name: String, circuit: Circuit, geometry: Survey.Geometry): Option[(String, String)] =

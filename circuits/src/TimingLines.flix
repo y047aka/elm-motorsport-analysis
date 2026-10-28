@@ -295,16 +295,15 @@ pub mod TimingLines {
             case Err(problem)                    => Err(problem)
             case Ok((circuit, published, lines)) =>
                 let circuitMap = { lapLength = published#lapLength, lines = lines };
-                Result.map(
-                    readings -> {
+                seasonsOf(asked)
+                    |> Result.traverse(readRound(circuitMap, asked))
+                    |> Result.map(readings -> {
                         circuit = circuit,
                         lines = circuitMap#lines,
                         lapLength = circuitMap#lapLength,
                         readings = readings,
                         asked = asked
-                    },
-                    Result.traverse(readRound(circuitMap, asked), seasonsOf(asked))
-                )
+                    })
         }
 
     def circuitOf(id: String): Result[CliError, Circuit] =
