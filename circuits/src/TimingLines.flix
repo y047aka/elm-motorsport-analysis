@@ -346,8 +346,8 @@ pub mod TimingLines {
     def readRound(circuitMap: CircuitMap, asked: Request, season: Int32): Result[CliError, Reading] \ IO =
         let path = "${asked#csv}/${season}/${asked#id}.csv";
         forM(
-            lines   <- readCsv(path);
-            rows    <- decode(path, List.join("\n", lines));
+            text    <- readCsv(path);
+            rows    <- decode(path, text);
             fastest <- fastestSectors(rows)
         ) yield {
             season = season,
@@ -358,17 +358,18 @@ pub mod TimingLines {
             positions = impliedLines(fastest, circuitMap)
         }
 
-    /// The feed's lines. A season that was never run at this circuit is a mistake
-    /// a reader makes by hand, and is answered as one rather than as a race that
-    /// ran no laps.
-    def readCsv(path: String): Result[CliError, List[String]] \ IO =
+    /// The feed's text, straight to the decoder: what the file holds is what is
+    /// decoded, line endings and all. A season that was never run at this circuit is
+    /// a mistake a reader makes by hand, and is answered as one rather than as a race
+    /// that ran no laps.
+    def readCsv(path: String): Result[CliError, String] \ IO =
         forM(
             exists <- Files.exists(path) |> Result.mapErr(CliError.File);
-            lines  <- if (exists)
-                          Files.readLines(path) |> Result.mapErr(CliError.File)
+            text   <- if (exists)
+                          Files.readText(path) |> Result.mapErr(CliError.File)
                       else
                           Err(CliError.Reading("there is no ${path} to read: the feed sits under <csv>/<season>/<id>.csv."))
-        ) yield lines
+        ) yield text
 
     // --------------------------------------------------------------------- printing
 

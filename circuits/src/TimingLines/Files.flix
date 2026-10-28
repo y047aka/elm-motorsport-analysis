@@ -16,11 +16,11 @@ pub mod TimingLines.Files {
         }
     }
 
-    pub def readLines(path: String): Result[FileError, List[String]] \ IO =
+    /// A feed as the text the CSV decoder reads — the lines the reader's file holds,
+    /// with the line endings it was written with left to the decoder to tell apart.
+    pub def readText(path: String): Result[FileError, String] \ IO =
         Fs.FileRead.runWithIO(() ->
-            Fs.ReadLines.runWithFileRead(() ->
-                Fs.ReadLines.readLines(path)
-            )
+            Fs.ReadFile.runWithFileRead(() -> Fs.ReadFile.read(path))
         ) |> Result.mapErr(e -> FileError.ReadError(path, "${e}"))
 
     pub def exists(path: String): Result[FileError, Bool] \ IO =
