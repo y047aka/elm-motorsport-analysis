@@ -18,8 +18,7 @@
 /// This is the writing only: which answer a file was surveyed from, where it is kept, and
 /// whether it is laid down at all are the `survey` word's, in `Survey.flix`. The atlas
 /// reading lays a different profile — a `measured-midline` that does not end at the
-/// published lap — out of this module's JSON spelling and none of its outline, which is
-/// the reason both writers come here rather than to each other.
+/// published lap — out of this module's JSON spelling and none of its outline.
 pub mod Geometry.Write {
 
     use Circuit.Circuit
@@ -46,10 +45,8 @@ pub mod Geometry.Write {
         Option.map(value -> (name, value), claim(name, circuit, geometry))
 
     /// The properties the outline is written with, in the order the file lays them.
-    /// Said once, here: the bytes are laid in this order, and the regeneration fence
-    /// compares in it, so a claim added to the profile is asked of both files at its own
-    /// place in a drift line rather than in the unordered tail everything unnamed falls
-    /// into.
+    /// The regeneration fence compares in this order, so a claim added to the profile
+    /// is asked at its own place in a drift line.
     pub def claims(): List[String] =
         "role" :: "circuit" :: "basis" :: "source" :: "license" :: "surveyed_at" ::
         "direction" :: "lap_length_m" :: "surveyed_length_m" :: "sectors" :: "frame" ::

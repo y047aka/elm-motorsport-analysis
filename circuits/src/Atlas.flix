@@ -3,27 +3,19 @@
 /// centreline fixing the lap order, origin and direction — and keeps it in this
 /// repository's geometry profile, at the atlas length and *not* stretched.
 ///
-///     nix run .#geometry -- atlas cota
-///     nix run .#geometry -- atlas cota --fetch
-///     nix run .#geometry -- atlas cota --file gp.geojson
+///     nix run .#geometry -- atlas cota [--file gp.geojson] [--fetch]
 ///
-/// The reading is offline by default: with no `--file` it measures the line the circuit
-/// already keeps, and `--fetch` is the one flag that asks the layer's home — the same
-/// convention the survey keeps, so the jar reaches no network a flag did not name.
-/// A circuit with no kept line answers the sentence saying so and exits 0: the kept
-/// atlas line is evidence a run has yet to make, not a file a round needs.
+/// The reading is offline by default, as the survey is: `--fetch` is the one flag
+/// that asks the layer's home. A circuit with no kept line answers the sentence
+/// saying so and exits 0. A circuit joins the reading by carrying an `atlas` entry
+/// naming the layer for the layout this app draws; a circuit without one is asked
+/// nothing. It prints four readings: how far the lines stand apart in metres;
+/// whether the atlas corner markers land at the lap distances this app's geometry
+/// puts them at; whether the atlas pit entry and exit stand on that geometry's pit
+/// lane; and where the circuit's published sector lines stand on each line.
 ///
-/// A circuit joins the reading by carrying an `atlas` entry naming the track-atlas layer
-/// for the layout this app draws; a circuit without one is asked nothing. It prints the
-/// four readings that matter before anyone draws on them: how far the lines stand apart
-/// in metres; whether the atlas corner markers land at the lap distances this app's
-/// geometry puts them at; whether the atlas pit entry and exit stand on the pit lane
-/// that geometry chains out of the relation; and where the circuit's own published
-/// sector lines stand on each of the two lines.
-///
-/// The lap-origin guard is asked of the measured line's start before anything is kept.
-/// The apartness math is `Apart`'s, shared with the diff; the feature shape checks, the
-/// guards and the written file are `Track`'s. This file adds only the measuring.
+/// The apartness math is `Apart`'s, shared with the diff; the feature shape checks,
+/// the guards and the written file are `Track`'s. This file adds only the measuring.
 ///
 /// The atlas data is © its contributors under the ODbL, itself derived from OpenStreetMap
 /// and open orthoimagery; the written file carries the source URL beside the license.
@@ -166,8 +158,7 @@ pub mod Atlas {
         Net.Https.runWithIO(() -> measured(asked))
 
     /// What the reading comes to: a circuit that keeps no line and raised no
-    /// `--fetch` says so and goes well, since the kept atlas line is evidence a run has
-    /// yet to make and not a file a round needs; a line that was read is measured, kept
+    /// `--fetch` says so and exits 0; a line that was read is measured, kept
     /// and printed.
     def measured(asked: Asking): Outcome \ { IO, Console, Https } =
         match text(asked) {
@@ -193,10 +184,8 @@ pub mod Atlas {
             List.exists(isFetched, scanned#options)
         )
 
-    /// A flag is no file, as at the other commands: a run that read `--file --fetch`
-    /// as a path would keep one circuit's evidence under a name no file can be
-    /// called. And `--file` beside `--fetch` names where to read and asks that the
-    /// run read nowhere — opposite answers for one layer.
+    /// A flag is no file, as at the other commands; and `--file` beside `--fetch`
+    /// is opposite answers for one layer.
     def readOf(words: List[String], file: Option[String], fetch: Bool): Result[ArgsError, Asking] =
         match words {
             case Nil => Err(ArgsError.ParseErrors("atlas reads one circuit." :: Nil))

@@ -4,11 +4,10 @@
 /// `Cli.TimingLines.Request`: this word parses it out of the flags, and the
 /// report is what reads it.
 ///
-/// Runs on the shared `Cli.Args` scan and answering, as every other word does,
-/// so a wrong flag is answered with one style of usage at either command.
+/// Runs on the shared `Cli.Args` scan and answering, as every other word does.
 /// `--load`, `--export`, `--serve`, `--port` and `--database` are refused: they
-/// belong to the CLI's other commands, which compute in a database. Nothing
-/// here opens a file.
+/// belong to the CLI's other commands, which compute in a database. Nothing here
+/// opens a file.
 pub mod Report {
 
     use Util.GetOpt.ArgDescr
@@ -137,7 +136,7 @@ pub mod Report {
             case _ => None
         }
 
-    /// The last `--against` wins, as the last `--database` does in the CLI.
+    /// The last `--against` wins, as a repeated option usually does.
     def againstSeason(settings: List[Setting]): Result[ArgsError, Option[Int32]] =
         match Cli.Args.lastNamed(seasonNamed, settings) {
             case None       => Ok(None)

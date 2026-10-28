@@ -36,10 +36,6 @@ bytes as they arrive, and the `Layout` module beside it holds what the file
 cannot know — the drawing's lengths and timing lines. Nothing generates Elm
 from the geometry.
 
-A run asks OpenStreetMap, which answers a busy runner with a 502, a 504 or
-something that is not JSON; a run walks a second runner before it fails, and a
-failure past both is a survey to repeat later — or to hand in as a file.
-
 ## The fence
 
 The Elm tests cannot hold a survey: the pipeline stretches whatever degrees it
@@ -48,9 +44,7 @@ moved 20 m passes every Elm test and leaves the tracker's pixels where they
 were. `.#geometry -- regenerate` holds it instead, re-running the pipeline over
 each circuit's kept Overpass answer — kept in the circuit's own directory —
 and failing unless it reproduces the kept geometry, every fenced property
-exactly. `surveyed_at` is the one exempt property: it stamps which answer a
-file was written from rather than what the drawing is made of, and it is the
-one property a live regeneration must move while every degree stands still.
+exactly and `surveyed_at` alone exempt.
 
 A regeneration is read as a diff of the geometry itself — `nix run
 .#geometry -- diff` lays the moved file against the kept one and prints the
@@ -204,31 +198,17 @@ roles measure. `nix run .#geometry-test` runs their `flix test`, which
 is the only way a probe is testable at all: the asking is one call
 and the reading is a fixture, and the tests are given fixtures.
 
-**One asking, two answers.** Which runners there are and
-in which order, what a run calls itself, how many times each runner is asked,
-and how long one that just failed is left alone — those are facts about
-OpenStreetMap, and `Overpass.flix` spells them once for the probe's question and
-the pipeline's alike, walking both through the same runners and handing the
-survey's answer back as text and the probe's as elements. What a service
-*answered with* is the same one reading, whether it was answered by a runner or
-by the atlas's repository: a status that is no success and a body that is no JSON
-are the two ways a body is no answer, and only the first of them is in the status,
-since a service behind a proxy answers a request it let time out as 200 with an HTML
-page. `test/check-sources.mjs` — run by `nix run .#geometry-test` after `flix
- test`, and plain `node` over `src/` — fails a second reading of a response
-anywhere in the project: the only way that fence can be read at all, since an
-`@Test` computes in no IO, can build no `HttpResponse`, and the asking is never
-run offline. The sphere the metres
-are measured on is spelled once inside the project — `Apart.earthMetres`, and
-with it the approximation across a circuit hung off it, `Apart.apart`, which
-the survey chains with and the probe counts its laps through — and
-`test/check-sources.mjs` fails a second spelling of the radius
-inside it by the way. The app's drawing projects through its own number, in
-`Motorsport.Circuit.Geodesy`, and nothing compares that one with the project's:
-neither compiler reaches into the other's sources, and a Geodesy on another
-sphere lays a drawing whose metres are not the survey's. Measuring on the equatorial radius instead of the
-mean one prints 13,627 m for the lap the survey measures at 13,612, and the measured
-lap is the one reading a config is authored from.
+**One asking, two answers.** Which runners there are, what a run calls
+itself, and how long one that just failed is left alone are facts about
+OpenStreetMap, and `Overpass.flix` spells them once, walking the probe's
+question and the pipeline's through the same runners. What a service
+*answered with* is the same one reading for both, and that reading — beside
+the sphere `Apart.earthMetres` that every metre is measured on — is held to
+one spelling by `test/check-sources.mjs`, since an `@Test` can build no
+`HttpResponse` and meets no source file. What nothing compares is the app's
+own number, in `Motorsport.Circuit.Geodesy`: neither compiler reaches into
+the other project's sources, and a Geodesy on another sphere lays a drawing
+whose metres are not the survey's.
 
 ## The pipeline is the project at this directory's root
 
@@ -303,37 +283,32 @@ being handed a fixture rather than a file — an Overpass answer written out in 
 reads it, two geometries laid together in the test that measures them.
 
 **A file that will not read is a failure, and not an absence.** A run of this project meets
-a file one of two ways. It *branches* — deciding a circuit was never surveyed, that nothing
-is kept beside its config, that no geometry stands to be compared against — or it only
-*reports*, printing what the filesystem said with the path beside it. `Cli/Errors.flix` is
-the reporting, and carries `{path, message}`; that is why nothing in `circuits/src` reaches
-past it for `Util.Files.read` at all. `Util/Files.flix` is the branching, and holds the two
-questions a branch may ask: `exists` and `isDirectory`, resolved through the same
-`GEOMETRY_FROM` a read is, a stat that answers nothing being a failure rather than a
-`false` — `false` being the answer that ends a walk quietly. Before either was askable,
-runs answered a read's failure by deciding there was nothing there, and the fence was among
-them: an unreadable kept answer was a circuit "not surveyed yet", and a served directory
-that would not list was a warning with nothing to say, both of them exit 0.
-`test/check-sources.mjs` holds that shape — one `Err(_)` arm left in the
-project, and it on a parse refusal another reading said first — because the project's own
-tests hand their fixtures and ask nothing of the filesystem, so no test of this project has
-ever met a file that would not read.
+a file one of two ways. It *branches* — deciding a circuit was never surveyed — or it
+only *reports*, printing what the filesystem said with the path beside it.
+`Cli/Errors.flix` is the reporting and `Util/Files.flix` holds the branching
+questions, `exists` and `isDirectory`, a stat that answers nothing being a
+failure rather than the `false` that ends a walk quietly. Before either was
+askable, runs answered a read's failure by deciding there was nothing there,
+and the fence was among them: an unreadable kept answer was a circuit "not
+surveyed yet", and a served directory that would not list was a warning with
+nothing to say, both of them exit 0. `test/check-sources.mjs` holds that
+shape — one discarded-failure arm left in the project, on a parse refusal
+another reading said first — because no test of this project ever meets a
+file.
 
 ## The atlas readings
 
 `nix run .#geometry -- atlas <circuit>` is the geometry project's own: `Track.flix`
 reads the foreign file's shapes and refuses what they contradict, `Atlas.flix`
-reads the layer — the circuit's kept line by default, its home only on `--fetch`,
-the same offline-by-default convention the survey keeps — and the apartness is the
-diff's `Apart.flix`
-sampling the same pair of lines. It reads the track-atlas line — a midline
-measured from orthoimagery, not a survey stretched to a published length, at
-5,500.2 m against the 5,515 m this app draws — and keeps it as
-`<circuit>/atlas.geojson` with `stretched: false`, beside the survey it is
-judged against rather than in what gets served. For a circuit this repository
-has not surveyed yet, the atlas's `start_finish` point is a surveyed
-coordinate to seed a config's `timingLine` with; whether the lines the
-times are read against stand where the seeded line puts them is `nix run
+reads the layer and asks its home only on `--fetch`, and the apartness is the
+diff's `Apart.flix` sampling the same pair of lines. It reads the track-atlas
+line — a midline measured from orthoimagery, not a survey stretched to a
+published length, at 5,500.2 m against the 5,515 m this app draws — and keeps
+it as `<circuit>/atlas.geojson` with `stretched: false`, beside the survey it
+is judged against rather than in what gets served. For a circuit this
+repository has not surveyed yet, the atlas's `start_finish` point is a
+surveyed coordinate to seed a config's `timingLine` with; whether the lines
+the times are read against stand where the seeded line puts them is `nix run
 .#geometry-timing-lines`'s to answer, once a round has been loaded.
 
 `nix run .#geometry -- diff` lays any two kept geometries against each other —

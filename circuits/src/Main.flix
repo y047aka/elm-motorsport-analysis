@@ -7,18 +7,10 @@
 //     nix run .#geometry -- probe     <lat>,<lon> [...] [--radius <km>]
 //     nix run .#geometry -- timing-lines --csv <dir> <season>/<id> [--against <season>] [--tolerance <metres>]
 //
-// Each subcommand is a module that reads files, asks OpenStreetMap or writes one, and
-// says what it found; this is the asking of a word, the usage a wrong word is answered
-// with, and the exit code one comes to. `survey` turns an answer into the file the
-// app serves and lays it down only with `--write`; `--fetch` is the network raised as
-// a flag rather than a word — it asks OpenStreetMap now, keeps the answer beside the
-// circuit once the survey can read it, and travels on through the survey over what
-// came back. The atlas reading stands beside the pipeline rather than in it: it
-// measures a foreign line against a kept geometry and keeps its own file, never a
-// served one. The probe asks before any of this: which relation a circuit is, asked
-// of OpenStreetMap straight and printed for a human to author a config from. The
-// timing-lines report reads two rounds' feeds through `flix/src`'s own CSV
-// decoding, which nine symlinks bring into this project for it.
+// Each word is a module — its readings, its asking if it asks one, and its
+// printing; this is the dispatch of a word, the usage a wrong one is answered
+// with, and the exit code one comes to. `flix/src`'s CSV decoding, brought in by
+// nine symlinks, serves the timing-lines word alone.
 use Sys.Console
 use Sys.Env
 use Sys.Exit

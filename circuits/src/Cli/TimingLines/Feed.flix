@@ -76,8 +76,7 @@ pub mod Cli.TimingLines.Feed {
     }
 
     /// Where one class's shares put the map's lines, in the order the map gives
-    /// them. The line the lap is measured from is not among them: it stands at
-    /// nought and at the end.
+    /// them -- the line the lap is measured from excepted.
     pub type alias Placement = {
         carClass = String,
         positions = List[Float64]
@@ -266,9 +265,7 @@ pub mod Cli.TimingLines.Feed {
         List.map(each -> { carClass = each#carClass, positions = placesOf(each#times, circuitMap) }, fastest)
 
     /// Where round the lap one reading's shares put the map's lines: cumulative
-    /// shares read as cumulative distance. A map of three sectors places two
-    /// lines, so the third cumulative share -- the whole lap -- is not one of
-    /// them.
+    /// shares read as cumulative distance, short of the whole lap.
     pub def placesOf(times: Times, circuitMap: CircuitMap): List[Float64] =
         let ends = List.take(List.length(circuitMap#lines), cumulative(sharesOf(times)));
         List.map(share -> share * circuitMap#lapLength, ends)

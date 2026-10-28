@@ -13,13 +13,11 @@
 /// silently answered itself from the frozen survey would stop meaning what it says.
 ///
 /// The comparison is of parsed properties and not of bytes — `-- survey`'s
-/// comparison is of bytes and has nothing to exempt. What the fence answers for is
-/// the drawing, and the writer's layout is allowed to change between the survey and
-/// this reading, so `surveyed_at` stands outside the comparison: it stamps which
-/// answer a file was written from rather than what the drawing is made of, and it
-/// is the one property a live regeneration must move while every degree stands
-/// still. Every other property is asked of both files, including ones no writer
-/// claims, so a fence over a smaller file is no weaker than the file.
+/// comparison is of bytes and has nothing to exempt. `surveyed_at` stands outside
+/// the comparison: it stamps which answer a file was written from rather than what
+/// the drawing is made of, and it is the one property a live regeneration must
+/// move while every degree stands still. Every other property is asked of both
+/// files, including ones no writer claims.
 pub mod Regenerate {
 
     use Circuit.Circuit
@@ -143,11 +141,9 @@ pub mod Regenerate {
 
     /// Every circuit, in the order the reader named them — or every circuit this
     /// project surveys, named in the order it surveys them — each read and judged as
-    /// it comes, so each verdict is printed while the circuits behind it are still
-    /// being asked rather than all of them at the end. A circuit the run could not
-    /// ask, survey or write ends the walk, since nothing about the run improved for
-    /// the next circuit; a drawing that moved is a verdict and not a failure, so the
-    /// circuits beside it have their own degrees to answer for.
+    /// it comes. A circuit the run could not ask, survey or write ends the walk; a
+    /// drawing that moved is a verdict and not a failure, so the circuits beside it
+    /// are walked.
     def asking(asked: Args): Outcome \ { IO, Clock, Console } =
         match warnUnlisted() {
             case Err(problem) => Outcome.Failed(problem)

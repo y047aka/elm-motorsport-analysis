@@ -4,8 +4,8 @@
 /// `Atlas` is the command; everything here opens nothing. The kept geometry the guards are
 /// measured against is `Geometry`'s reading, shared with every other reader of a served
 /// file, and the lap-origin guard asks the same question of a measured line's start that
-/// `Survey` asks of a relation's finish node — at a wider allowance, because where a line
-/// measured off orthoimagery begins is that survey's own choice.
+/// `Survey` asks of a relation's finish node — at `measuredWithin`, not a circuit's
+/// authored distance.
 ///
 /// A geometry is written back in this repository's spelling — `type` before `coordinates` —
 /// and a number keeps the digits the layer spelled, so a point written here reads as the

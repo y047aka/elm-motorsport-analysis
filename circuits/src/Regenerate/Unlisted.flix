@@ -1,10 +1,7 @@
 /// Kept files that answer to no config — the counterpart to the CLI's
 /// `Cli.Load.Unlisted`, which reports CSVs no calendar entry names. A circuit's
 /// word misspelled keeps its answer out of every fence quietly: the fence walks
-/// the configs, and a directory no config names is walked past. Kept apart from
-/// the walk that finds them because this is the half that can be wrong
-/// unnoticed — the fence still answers for every circuit it knows, and only
-/// these warnings are about what it does not.
+/// the configs, and a directory no config names is walked past.
 pub mod Regenerate.Unlisted {
 
     use Circuit.Circuit

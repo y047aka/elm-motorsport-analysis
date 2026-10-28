@@ -24,9 +24,7 @@ pub mod Diff {
     use Util.GetOpt.OptionDescr
 
     /// The width the overlay is drawn at and the margin it is drawn inside. Fixed,
-    /// so an overlay that outlives its files can be laid against the next run's;
-    /// one that resized itself to its contents would make a changed line look like
-    /// a moved one.
+    /// so an overlay that outlives its files can be laid against the next run's.
     pub def width(): Float64 = 1000.0
 
     def margin(): Float64 = 20.0
@@ -90,8 +88,7 @@ pub mod Diff {
                 case Ok(metres)   => Ok({paths = paths, every = metres, svg = svg})
             }
 
-    /// The word the reader typed is the word quoted back, which is what a reader can
-    /// correct: a coerced number echoes a value they never wrote.
+    /// The word the reader typed is the word quoted back.
     def spacing(every: Option[String]): Result[String, Float64] =
         match every {
             case None => Ok(Apart.defaultEvery())
@@ -197,8 +194,8 @@ pub mod Diff {
         overlaid(lines, projected, asked#svg)
     }
 
-    /// Both lines on one plane: the parallel they are projected about is the mean
-    /// latitude of every place of both, so neither line is drawn at a scale of its own.
+    /// Both lines on one plane, projected about `Apart.parallelOf` — the mean
+    /// latitude of both lines together.
     def projectedOf(lines: List[Line]): List[List[Point]] = {
         let parallel = Apart.parallelOf(List.flatMap(line -> line#coords, lines));
         List.map(line -> List.map(Apart.projectOn(parallel), line#coords), lines)
@@ -273,8 +270,7 @@ pub mod Diff {
     }
 
     /// The north-west corner of both lines together — the first place they were
-    /// measured at, not the zero of the plane, which is a place neither line passes
-    /// and a drawing framed by it would leave the lines in one corner of it.
+    /// measured at, not the zero of the plane.
     def cornerOf(projected: List[List[Point]]): Point =
         match flatten(projected) {
             case Nil => {x = 0.0, y = 0.0}

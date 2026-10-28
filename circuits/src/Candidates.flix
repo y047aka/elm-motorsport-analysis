@@ -5,9 +5,8 @@
 /// answer already got, opening nothing and reaching no network.
 ///
 /// Every distance here is measured through `Apart.flix` -- the project's one
-/// spelling of the sphere every drawing of a circuit is measured on, the one
-/// `Motorsport.Circuit.Geodesy` projects through -- and a probe has to agree with
-/// that sphere or its lengths mean nothing to the survey they are being read before.
+/// spelling of the sphere -- and the measured lap is the one reading a config is
+/// authored from.
 ///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; what a
 /// reading here prints is a derivative of their tags.

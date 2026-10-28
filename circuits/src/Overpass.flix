@@ -2,11 +2,9 @@
 /// which a kept geometry is drawn from, and the probe's, which decides — before a
 /// circuit has a config — which relation a circuit is.
 ///
-/// Two runners answer one query because a busy one answers 502 or 504 — and a runner
-/// behind a proxy answers 200 with an HTML error page, which is why an answer's text is
-/// looked at and not only its status. Each runner is asked twice, and a runner that
-/// failed is left alone longer each time, so that a run outlasts a runner's moment of
-/// being busy rather than its whole afternoon.
+/// Two runners answer one query because a busy one answers 502 or 504. Each runner
+/// is asked twice, and a runner that failed is left alone longer each time, so
+/// that a run outlasts a runner's moment of being busy.
 ///
 /// The two questions come back in different shapes. The survey's answer is
 /// handed on as text: `Survey.answer` reads it — `out body`, with a way's node refs

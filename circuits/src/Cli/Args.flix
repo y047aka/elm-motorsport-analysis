@@ -1,8 +1,7 @@
 /// The asking of arguments every word of this CLI is written over, as the CLI
 /// project's `Cli.Args` is: `Util.GetOpt` walks the tokens, each command declares
 /// its own flags in its own `Setting` enum, and a command's `usage()` prints the
-/// very descriptors it parsed with — so the flags a run accepts, the help that
-/// lists them and the refusal of a wrong one cannot come apart.
+/// very descriptors it parsed with.
 ///
 /// What GetOpt cannot say is said by the command whose flags they are: whether a
 /// named word answers to a circuit (`Circuit.byWord`) or to a round on the
@@ -12,9 +11,7 @@
 /// A word is three steps over two values, and the two values are this module's:
 /// `Parsed`, the arguments as far as the flag table reads them, and `Outcome`, what
 /// the run came to. `comeTo` is the only thing in the project that turns either
-/// into an exit code, so a command's own code holds no printing of a refusal, no
-/// exit code and no answer to `--help` — only the readings, and the verdict one of
-/// them answers.
+/// into an exit code.
 pub mod Cli.Args {
 
     use Sys.Console
@@ -94,15 +91,13 @@ pub mod Cli.Args {
         }
 
     /// What a run came to, before anyone prints it or exits with it. The two nonzero
-    /// cases mean opposite things, which is why they are two cases and not a code:
-    /// `Verdict` is the negative answer the reader came for — the drawing moved, one
-    /// line moved a season later — said on stdout, since a fence that could not say it
-    /// failed would pass by construction; `Failed` is a run that never got to answer,
-    /// said on stderr under the same `Error: ` a wrong argument is.
+    /// cases mean opposite things: `Verdict` is the negative answer the reader came
+    /// for — the drawing moved, one line moved a season later — said on stdout;
+    /// `Failed` is a run that never got to answer, said on stderr under the same
+    /// `Error: ` a wrong argument is.
     ///
-    /// Each case holds the lines left to print, in order. A run that printed its report
-    /// while it walked it — the fence over several circuits, the atlas's table — leaves
-    /// the list empty, the exit code being all that is left to say.
+    /// Each case holds the lines left to print, in order; a run that printed its
+    /// report while it walked it leaves the list empty.
     pub enum Outcome {
         case Done(List[String])
         case Verdict(List[String])
@@ -151,17 +146,13 @@ pub mod Cli.Args {
         1
     }
 
-    /// A flag is no file: `--out --write` is a reader who meant something else, and
-    /// a run that read it as a path would keep an answer under a name no file can
-    /// be called. GetOpt hands an argument over as it came; commands refuse one
-    /// that stands as another flag with this, in the sentence naming the flag that
-    /// wanted the file.
+    /// A flag is no file: a run that read `--out --write` as a path would keep an
+    /// answer under a name no file can be called. GetOpt hands an argument over as
+    /// it came; commands refuse one that stands as another flag with this.
     pub def isFlag(word: String): Bool =
         String.startsWith({prefix = "--"}, word)
 
-    /// The last named value wins, as a repeated option usually does — the reading
-    /// `flix/src`'s `--database` set, which the probe's `--radius` and the report's
-    /// `--against` and `--tolerance` follow.
+    /// The last named value wins, as a repeated option usually does.
     pub def lastNamed(asking: s -> Option[String], settings: List[s]): Option[String] =
         List.foldLeft(
             (held, setting) -> match asking(setting) {
