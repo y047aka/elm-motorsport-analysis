@@ -24,8 +24,9 @@ pub mod Motorsport.Circuit {
     /// The spelling the summary sends for it, which is the word the app matches
     /// on to choose a drawing. A circuit named here and not drawn app-side is a
     /// round drawn as a ring, and nothing minds; a drawing reached for by a word
-    /// no summary can send is the mistake that passes every compiler — no test
-    /// reaches across to the Elm side to catch a rename on either.
+    /// no summary can send is the mistake that passes every compiler, and
+    /// `app/tests/geometry-contract.spec.ts` reads this file and `Shared.elm`
+    /// to catch it.
     pub def jsonValue(circuit: Circuit): String =
         match circuit {
             case Circuit.Qatar    => "qatar"

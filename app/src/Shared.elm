@@ -619,9 +619,8 @@ awaiting summary cache =
 
 
 {-| Which circuits are drawn to their own shape: one word, one decoder.
-`trackOf` matches the same words, and a word either of them gains without the
-other is a round drawn as the ring with nothing red — nothing compares the
-two lists.
+`trackOf` matches the same words; `geometry-contract.spec.ts` keeps them in
+step, with the words Flix's `Circuit.jsonValue` can send.
 -}
 decoderFor : String -> Maybe (Decoder Geometry)
 decoderFor circuit =
