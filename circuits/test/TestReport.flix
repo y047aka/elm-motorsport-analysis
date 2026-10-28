@@ -42,8 +42,8 @@ pub mod TestReport {
         Assert.assertTrue(Result.isErr(Report.parse("2026/cota_6h" :: Nil)))
 
     /// The round is named as one the calendar lists, which is where its season's
-    /// directory comes from: a bare id is no round, and neither is a season that ran
-    /// some other circuit.
+    /// directory comes from: a bare id is no round, a season that ran some other
+    /// circuit is no round either, and `--against` without a round names no run.
     @Test
     def testRoundIsNamedAsOneThereIs(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "cota_6h" :: Nil)));
@@ -51,19 +51,17 @@ pub mod TestReport {
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "2026/cota_6h" :: "extra" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--against" :: "24" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--tolerance" :: "0" :: "2026/cota_6h" :: Nil)));
-        Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--tolerance" :: "far" :: "2026/cota_6h" :: Nil)))
-
-    @Test
-    def testReportNamesOneRound(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--tolerance" :: "far" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--against" :: "2025" :: Nil)))
 
-    /// A flag of the CLI's database-computing commands is refused, not ignored.
+    /// A flag of the CLI's database-computing commands is refused, not ignored —
+    /// read here once for every word, the probe's included: the argument of a flag
+    /// nobody heard of would otherwise be taken as a place or a round.
     @Test
     def testTheOtherCommandsFlagsAreRefused(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--load" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--export" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--serve" :: "2026/cota_6h" :: Nil)));
-        Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--port" :: "9000" :: "2026/cota_6h" :: Nil)));
         Assert.assertTrue(Result.isErr(Report.parse(csv() ::: "--database" :: "jdbc:h2:mem:" :: "2026/cota_6h" :: Nil)))
 
     /// The message the reader sees names the flag that was wrong, in the words

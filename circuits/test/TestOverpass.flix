@@ -31,12 +31,16 @@ pub mod TestOverpass {
         Assert.assertTrue(String.contains({substr = "way(r);out geom;"}, asked));
         Assert.assertTrue(String.contains({substr = "node(w)"}, asked) == false)
 
+    /// Which runners, in which order, over https — the `Https` effect refuses a URL
+    /// that is not https, so a runner spelled `http://` fails the walk rather than
+    /// sending a survey over the open.
     @Test
     def testBothRunnersAreWalkedInOrder(): Unit \ Assert =
         Assert.assertTrue(List.length(runners()) == 2);
         Assert.assertTrue(List.get(0, runners()) == "https://overpass-api.de/api/interpreter");
         Assert.assertTrue(List.get(1, runners()) == "https://overpass.kumi.systems/api/interpreter");
-        Assert.assertTrue(tries() == 2)
+        Assert.assertTrue(tries() == 2);
+        Assert.assertTrue(List.forAll(each -> String.startsWith({prefix = "https://"}, each), runners()))
 
     /// A run is not anonymous: a runner's operator reads a log.
     @Test
@@ -52,27 +56,20 @@ pub mod TestOverpass {
         Assert.assertTrue(Duration.toMillis(pace()) == 1500i64)
 
     /// An answer is kept as the runner spelled it, once it is JSON at all — and an
-    /// HTML page behind a 200 is not.
+    /// HTML page behind a 200 is not. The refusal names the service that said it,
+    /// because the survey's runner and the atlas's repository are two places to go
+    /// back to and the sentence is the only thing saying which one did not answer.
     @Test
     def testABodyIsKeptAsTheRunnerSpelledIt(): Unit \ Assert =
         let answer = "{\"elements\": []}";
         match Overpass.kept(answer, "Overpass") {
             case Ok(text) => Assert.assertTrue(text == answer)
             case Err(_)   => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testAnAnswerThatIsNotJsonIsRefused(): Unit \ Assert =
+        };
         match Overpass.kept("<html><body>504 Gateway Timeout</body></html>", "Overpass") {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(problem == "Overpass answered with something that is not JSON")
-        }
-
-    /// The refusal names the service that said it, because the survey's runner and the
-    /// atlas's repository are two places to go back to and the sentence is the only
-    /// thing saying which one did not answer.
-    @Test
-    def testTheRefusalNamesWhoWasAsked(): Unit \ Assert =
+        };
         let home = "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson";
         match Overpass.kept("<html>404: Not Found</html>", home) {
             case Ok(_)        => Assert.assertTrue(false)
@@ -162,27 +159,18 @@ pub mod TestOverpass {
             case Err(problem) => Assert.assertTrue(String.contains({substr = "not JSON"}, problem))
         }
 
+    /// An answer that stops half-way, or names an element with no id to quote, is
+    /// refused rather than read short: a report printing a relation whose id is
+    /// nought is worse than one that says what was wrong.
     @Test
     def testAnAnswerThatStopsHalfWaySaysWhatWasWrong(): Unit \ Assert =
         match answer(json("{'elements': [")) {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(String.length(problem) > 0)
-        }
-
-    /// An element the answer names without an id is not an element a report can
-    /// quote, so the reading refuses the answer rather than printing a relation
-    /// whose id is nought.
-    @Test
-    def testAnElementNamingNoIdIsRefused(): Unit \ Assert =
+        };
         match answer(json("{'elements': [{'type': 'relation'}]}")) {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(String.contains({substr = "id"}, problem))
         }
-
-    /// The `Https` effect refuses a URL that is not https, so a runner spelled
-    /// `http://` fails the walk rather than sending a survey over the open.
-    @Test
-    def testEveryRunnerIsAskedOverHttps(): Unit \ Assert =
-        Assert.assertTrue(List.length(runners()) == 2);
-        Assert.assertTrue(List.forAll(each -> String.startsWith({prefix = "https://"}, each), runners()))
 }
+

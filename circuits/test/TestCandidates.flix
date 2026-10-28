@@ -6,7 +6,6 @@ pub mod TestCandidates {
 
     import java.lang.Math
 
-    use Apart.{apart, polylineMetres}
     use Candidates.{bboxOf, describe, looksLikeACircuit, measure}
     use Overpass.Element
     use Overpass.Member
@@ -170,19 +169,4 @@ pub mod TestCandidates {
             case Err(problem) => String.contains({substr = "the answer holds no relation 7"}, problem)
             case Ok(_)        => false
         })
-
-    /// The lengths a probe reads are the ones the survey it is read before will be
-    /// measured with, so the sphere is not allowed to move between the two.
-    @Test
-    def testApartMeasuresTheGroundBetweenTwoPlaces(): Unit \ Assert =
-        Assert.assertTrue(Math.abs(apart(atZero(), northOf(1000.0)) - 1000.0) < 0.001);
-        // A thousandth of a degree of longitude at the equator is a thousandth of
-        // the 111.195 m a degree of this sphere comes to, and less north of it.
-        Assert.assertTrue(Math.abs(apart(atZero(), { lat = 0.0, lon = 0.001 }) - 111.195) < 0.01)
-
-    @Test
-    def testPolylineMetresWalksTheLineInOrder(): Unit \ Assert =
-        Assert.assertTrue(Math.abs(polylineMetres(Nil) - 0.0) < 0.000001);
-        Assert.assertTrue(Math.abs(polylineMetres(List#{atZero()}) - 0.0) < 0.000001);
-        Assert.assertTrue(Math.abs(polylineMetres(List#{atZero(), northOf(100.0), atZero()}) - 200.0) < 0.001)
 }

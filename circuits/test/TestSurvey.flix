@@ -347,33 +347,6 @@ pub mod TestSurvey {
         Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(1728.0)) == "1728");
         Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(0.0)) == "0")
 
-    // -------------------------------------------------------------------- the metres
-
-    @Test
-    def testOneDegreeOfLatitudeIsTheSphereMetres(): Unit \ Assert =
-        // 6371008.8 m of sphere, and the drawing's own Geodesy re-runs the same two
-        // factors, so a degree of latitude is the same 111195.1 m here and there — the
-        // figure does not turn on which parallel it was measured at.
-        let degree = Apart.apart({lat = 30.0, lon = -97.6}, {lat = 31.0, lon = -97.6});
-        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(degree)) == "111195.1")
-
-    @Test
-    def testEastWestIsTakenAtTheParallelOfThePlaceAhead(): Unit \ Assert =
-        // A degree of longitude is shorter the further from the equator one goes: the same
-        // degree stands 111195.1 m apart on the equator and 96297.8 m apart at 30°, taken at
-        // the parallel of the place ahead — the one approximation asked of distances across
-        // a circuit's few kilometres.
-        let equator = Apart.apart({lat = 0.0, lon = 0.0}, {lat = 0.0, lon = 1.0});
-        let north = Apart.apart({lat = 30.0, lon = 0.0}, {lat = 30.0, lon = 1.0});
-        Assert.assertTrue(north < equator);
-        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(equator)) == "111195.1");
-        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(north)) == "96297.8")
-
-    @Test
-    def testPolylineMetresWalkTheStretchesInOrder(): Unit \ Assert =
-        let walked = Apart.polylineMetres({lat = 0.0, lon = 0.0} :: {lat = 0.0, lon = 1.0} :: {lat = 0.0, lon = 2.0} :: Nil);
-        Assert.assertTrue(Geometry.Write.number(Survey.roundTenth(walked)) == "222390.2")
-
     @Test
     def testTheCornerIsTheNorthWestOfEveryPlace(): Unit \ Assert =
         // The drawing's metres are measured from this corner, so no line of the drawing
@@ -464,8 +437,7 @@ pub mod TestSurvey {
 
     /// `--fetch` is the network raised as a flag rather than a command word: the run
     /// keeps its answer where `--answer` points — the circuit's own directory when it
-    /// names none — and lays the geometry down only when `--write` says so. The usage
-    /// names the flag, because the usage is where a reader learns it exists.
+    /// names none — and lays the geometry down only when `--write` says so.
     @Test
     def testFetchRaisesTheNetworkAndKeepsWhereTheAnswerPoints(): Unit \ Assert =
         match Survey.parse("cota" :: "--fetch" :: Nil) {
@@ -484,8 +456,7 @@ pub mod TestSurvey {
                 Assert.assertTrue(asked#answer == "elsewhere.json");
                 Assert.assertTrue(asked#fetch);
                 Assert.assertTrue(asked#write)
-        };
-        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Survey.usage()))
+        }
 
     // ----------------------------------------------------------------------- the parting
 

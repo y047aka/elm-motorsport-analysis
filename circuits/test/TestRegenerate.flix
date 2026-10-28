@@ -231,6 +231,8 @@ pub mod TestRegenerate {
                 Assert.assertTrue(List.map(c -> c#word, asked#circuits) == List#{"le_mans", "cota"})
         }
 
+    /// Two flags that answer for opposite runs cannot answer for one; the words a
+    /// run can name are read once, in `TestSurvey`'s parsing.
     @Test
     def testParseRefusesWhatAnswersForNoRun(): Unit \ Assert =
         Assert.assertTrue(
@@ -238,11 +240,7 @@ pub mod TestRegenerate {
                 "--write and --freeze ask for opposite things",
                 Regenerate.parse("--write" :: "--freeze" :: Nil)
             )
-        );
-        Assert.assertTrue(
-            refused("no circuit is surveyed under 'monza': known are cota, le_mans", Regenerate.parse("monza" :: Nil))
-        );
-        Assert.assertTrue(refused("unrecognized option '--froze'", Regenerate.parse("--froze" :: Nil)))
+        )
 
     @Test
     def testParseReadsWhatAFenceDoesWithItsCircuits(): Unit \ Assert =

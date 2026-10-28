@@ -1,12 +1,14 @@
-/// The comparison both the diff command and the atlas reading run on: the sampling
-/// bound, the tie, the nought-length stretch and the walk to a place along a line, each
-/// held to its fixture. `TestDiff` drives the arguments and the drawing that one of
+/// The comparison both the diff command and the atlas reading run on: the sphere
+/// every metre in the project is measured on — held here once, where the survey,
+/// the probe and the report all read it through `Apart` — the sampling bound, the
+/// tie, the nought-length stretch and the walk to a place along a line, each held
+/// to its fixture. `TestDiff` drives the arguments and the drawing that one of
 /// these readings is printed with; `TestGeometry` the reading of a file.
 pub mod TestApart {
 
     import java.lang.Math
 
-    use Apart.{apartness, interpolate, nearestOn, projectOn, parallelOf, toSegment}
+    use Apart.{apart, apartness, interpolate, nearestOn, projectOn, parallelOf, polylineMetres, toSegment}
     use Apart.Point
     use Geometry.Place
 
@@ -95,6 +97,26 @@ pub mod TestApart {
         // north is up.
         Assert.assertTrue(abs(place#x - (1.0 * (Math.PI / 180.0) * 6371008.8)) < 0.01);
         Assert.assertTrue(place#y < 0.0)
+
+    /// The sphere, measured here once: the survey stretches its metres with, the
+    /// probe counts its laps through, and the report's implied lines place by is
+    /// one `Apart.apart`, read at one radius.
+    @Test
+    def testApartMeasuresTheGroundOnOneSphere(): Unit \ Assert =
+        // A degree of latitude is 111195.1 m at any parallel, and a degree of
+        // longitude that much only on the equator — 96297.8 m at 30° — the one
+        // approximation asked of distances across a circuit's few kilometres.
+        let degree = abs(apart({lat = 30.0, lon = -97.6}, {lat = 31.0, lon = -97.6}) - 111195.1);
+        Assert.assertTrue(degree < 0.1);
+        Assert.assertTrue(abs(apart({lat = 0.0, lon = 0.0}, {lat = 0.0, lon = 1.0}) - 111195.1) < 0.1);
+        let north = apart({lat = 30.0, lon = 0.0}, {lat = 30.0, lon = 1.0});
+        Assert.assertTrue(north < 96297.8 + 0.1 and north > 96297.8 - 0.1);
+        // A line is walked stretch by stretch, in order; nothing and one place are
+        // nought metres, not a failure.
+        Assert.assertTrue(abs(polylineMetres(Nil)) < 0.000001);
+        Assert.assertTrue(abs(polylineMetres({lat = 0.0, lon = 0.0} :: Nil)) < 0.000001);
+        let forth = polylineMetres({lat = 0.0, lon = 0.0} :: {lat = 0.0, lon = 1.0} :: {lat = 0.0, lon = 2.0} :: Nil);
+        Assert.assertTrue(abs(forth - 222390.2) < 0.2)
 
     def abs(x: Float64): Float64 = Math.abs(x)
 }

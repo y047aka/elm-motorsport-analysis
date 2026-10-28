@@ -42,10 +42,7 @@ pub mod TestAtlas {
                 Atlas.parse("cota" :: "--file" :: "kept.geojson" :: "--fetch" :: Nil)
             )
         );
-        Assert.assertTrue(refused("atlas reads one circuit", Atlas.parse(Nil)));
-        Assert.assertTrue(
-            refused("no circuit is surveyed under 'monza'", Atlas.parse("monza" :: Nil))
-        )
+        Assert.assertTrue(refused("atlas reads one circuit", Atlas.parse(Nil)))
 
     def refused(problem: String, asked: Result[Cli.Args.ArgsError, Atlas.Asking]): Bool =
         match asked {
