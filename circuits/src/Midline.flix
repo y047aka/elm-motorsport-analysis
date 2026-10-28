@@ -64,12 +64,19 @@ pub mod Midline {
         }
 
     /// Where on the lap a corner or pit marker stands, as the atlas's fraction of it.
+    /// The fraction is asked here, at the reading: a layer that wrote metres where a
+    /// fraction belongs is refused at the marker, rather than multiplied by the lap
+    /// length and reported as a place hundreds of kilometres round the next lap.
     pub def markerOf(feature: Geometry.Feature): Result[String, Float64] =
         match Map.get("marker", Geometry.propertiesOf(feature)) {
             case Some(Json.JNumber(spelled)) =>
                 match Float64.fromString(BigDecimal.toPlainString(spelled)) {
-                    case Some(fraction) => Ok(fraction)
-                    case None           => Err("the atlas ${named(feature)} carries no marker")
+                    case Some(fraction) if fraction >= 0.0 and fraction <= 1.0 => Ok(fraction)
+                    case Some(fraction) =>
+                        Err(
+                            "the atlas ${named(feature)} carries marker ${Util.Format.spelled(fraction)}, which is no fraction of a lap"
+                        )
+                    case None => Err("the atlas ${named(feature)} carries no marker")
                 }
             case _ => Err("the atlas ${named(feature)} carries no marker")
         }

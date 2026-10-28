@@ -123,6 +123,19 @@ pub mod TestMidline {
                 "carries no marker",
                 Midline.markerOf(pointed("\"role\": \"corner\", \"marker\": \"half\"", "{ \"coordinates\": [-97.6, 30.1] }"))
             )
+        );
+        // The end of the lap is as real a place as its start.
+        Assert.assertTrue(
+            Midline.markerOf(pointed("\"role\": \"corner\", \"marker\": 1", "{ \"coordinates\": [-97.6, 30.1] }"))
+                == Ok(1.0)
+        );
+        // A layer that wrote 49.5 metres where a fraction belongs is refused at the
+        // marker, not multiplied by the lap length into a place round the next lap.
+        Assert.assertTrue(
+            complains(
+                "which is no fraction of a lap",
+                Midline.markerOf(pointed("\"role\": \"corner\", \"marker\": 49.5", "{ \"coordinates\": [-97.6, 30.1] }"))
+            )
         )
 
     @Test
