@@ -7,36 +7,30 @@ import { test, expect } from '@playwright/test';
 import { readSource } from './helpers';
 
 /**
- * A failure is answered with a failure, and absence is asked for by name.
+ * What the geometry project cannot see from inside itself, read out of its sources.
  *
- * Nine runs of this project used to read a file, fail, and answer the failure by
- * deciding that nothing was there: a kept geometry that would not read was "no geometry
- * to compare against", a circuit whose kept answer would not read was one "not surveyed
- * yet", and a directory the unlisted-evidence warning could not look in was a warning with
- * nothing to say — which is the fence passing. A read cannot tell the two apart, since its
- * failure says only that nothing came. So `Util.Files` stats a path, and a run that
- * *branches* on absence asks it first, while a read that only reports keeps its path in
- * `Cli.Errors`, which puts that path beside what the filesystem said.
+ * The project's own tests hand their fixtures: they reach no network, build no
+ * `HttpResponse`, and ask nothing of the file system. So the project-wide facts —
+ * one reading of what a service answered with, one spelling of the sphere its
+ * metres are measured on, one way a filesystem failure is answered — are invisible
+ * to both Flix compilers and are read here. A failure they hide is quiet: a second
+ * reading of a response that asked only the status would hand a proxy's 200-with-
+ * HTML-page on as a geometry; a second spelling of the radius on the equatorial
+ * one prints 13,627 m for the lap the survey measures at 13,612, and the measured
+ * lap is the one reading a config is authored from; a read's failure decided as
+ * an absence exits 0.
  *
- * No Flix test can see this: the project's tests hand their fixtures and ask nothing of the
- * file system, so a file that will not read is a case no test reaches. What is read here is
- * that no run answers a filesystem failure by throwing it away.
- *
- * Nothing here needs a browser.
+ * Nothing here needs a browser. The asking's shapes — each question recursing to
+ * `way(r)`, and only the survey asking for `node(w)` — are pinned by the project's
+ * own `flix test`, `circuits/src/Overpass.flix` having written the asking once.
  */
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const sourcesDir = fileURLToPath(new URL('../../circuits/src', import.meta.url));
 
-const utilFiles = 'circuits/src/Util/Files.flix';
-const cliErrors = 'circuits/src/Cli/Errors.flix';
-const reportFiles = 'circuits/src/Report/Files.flix';
-const regenerate = 'circuits/src/Regenerate.flix';
-const atlas = 'circuits/src/Atlas.flix';
-
 /** The geometry project's own sources, by the path a message names them by. The nine links
  * into `flix/src` are left out: they are the report's, and the report reaches no file of
- * the pipeline's — it reads the feeds through `Report.Files`. */
+ * the pipeline's and no HTTP at all — it reads the feeds through `Report.Files`. */
 function projectSources(): string[] {
   return readdirSync(sourcesDir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith('.flix'))
@@ -58,6 +52,53 @@ function enclosingDef(path: string, needle: string): string {
   return defs[defs.length - 1] ?? '';
 }
 
+const utilFiles = 'circuits/src/Util/Files.flix';
+const cliErrors = 'circuits/src/Cli/Errors.flix';
+const reportFiles = 'circuits/src/Report/Files.flix';
+const regenerate = 'circuits/src/Regenerate.flix';
+const overpass = 'circuits/src/Overpass.flix';
+const atlas = 'circuits/src/Atlas.flix';
+
+// ---------------------------------------------------------------- the sphere
+
+test('the project spells its sphere once', () => {
+  const sources = ['Apart.flix', 'Candidates.flix', 'Probe.flix', 'Survey.flix'];
+  const stated = sources
+    .map((source) => readSource(`circuits/src/${source}`))
+    .flatMap((text) => text.match(/63\d{5}/g) ?? []);
+  expect(stated.length, 'the earth radius is not spelled exactly once across the project').toBe(1);
+  expect(
+    stated[0],
+    'the one spelling of the earth radius is not Apart.earthMetres',
+  ).toBe(readSource('circuits/src/Apart.flix').match(/63\d{5}/)![0]);
+});
+
+// ------------------------------------------------------------ the response
+
+test('one source reads what a service answered with', () => {
+  const reading = spelling(/Net\.HttpResponse\./);
+  expect(reading, `${reading.join(', ')} reads a response besides Overpass.flix`).toEqual([overpass]);
+});
+
+test('the services asked are the survey runners and the atlas home', () => {
+  const asking = spelling(/Https\.send\(/);
+  expect(asking).toEqual([atlas, overpass]);
+});
+
+test('the atlas reads its answer where the survey reads its own', () => {
+  expect(readSource(atlas), 'the atlas reading answers with its own reading of a response').toMatch(
+    /Overpass\.answered\(/,
+  );
+});
+
+test('the sentence a failed answer is printed in is spelled once', () => {
+  const failed = /answered( \$\{| with something that is not JSON)/;
+  const spelled = spelling(failed);
+  expect(spelled, `${spelled.join(', ')} spell a failed answer besides Overpass.flix`).toEqual([overpass]);
+});
+
+// -------------------------------------------------------------- the failure
+
 test('no run answers a failure by throwing it away', () => {
   const discarded = projectSources().flatMap((path) =>
     readSource(path)
@@ -70,7 +111,9 @@ test('no run answers a failure by throwing it away', () => {
   // another reading refused first: `claimed` reads an outline's properties out of the text
   // `Geometry.outline` was already asked to parse, so a file that will not parse claims
   // nothing for a reason `Geometry` said, in its own words.
-  expect(discarded, `${discarded.join('\n')} throw a failure away`).toEqual([`circuits/src/Atlas.flix: case Err(_)   => Map.empty()`]);
+  expect(discarded, `${discarded.join('\n')} throw a failure away`).toEqual([
+    `circuits/src/Atlas.flix: case Err(_)   => Map.empty()`,
+  ]);
   expect(enclosingDef(atlas, 'case Err(_)')).toBe('claimed');
 });
 
@@ -113,4 +156,14 @@ test('a look the warning cannot make fails the run rather than passing it', () =
   // A plain file among the directories is not a directory that keeps nothing, so the walk
   // asks which it is rather than listing it and reading the failure for an empty one.
   expect(fence).toMatch(/Util\.Files\.isDirectory\(at\)/);
+});
+
+test('the report reads and stats a file, and never writes one', () => {
+  // The report's command computes in no database and lays down no file; a future edit
+  // that gives its reading a `write` would compile and be invisible to every Flix test.
+  const files = readSource(reportFiles);
+  expect(files, 'the report holds a file reading that writes').not.toMatch(
+    /pub def (write|mkDirs|walkCsvFiles)/,
+  );
+  expect(files, 'the report globs a directory').not.toContain('Glob');
 });

@@ -214,13 +214,13 @@ survey's answer back as text and the probe's as elements. What a service
 by the atlas's repository: a status that is no success and a body that is no JSON
 are the two ways a body is no answer, and only the first of them is in the status,
 since a service behind a proxy answers a request it let time out as 200 with an HTML
-page. `app/tests/http-answer.spec.ts` fails a second reading of a response anywhere
+page. `app/tests/circuits-project.spec.ts` fails a second reading of a response anywhere
 else in the project — the only way that fence can be read from outside, since no
 Flix test can build an `HttpResponse` and the asking is never run offline. The sphere the metres
 are measured on is spelled once inside the project — `Apart.earthMetres`, and
 with it the approximation across a circuit hung off it, `Apart.apart`, which
 the survey chains with and the probe counts its laps through — and
-`app/tests/circuit-overpass.spec.ts` fails a second spelling of the radius
+`app/tests/circuits-project.spec.ts` fails a second spelling of the radius
 inside it by the way. The app's drawing projects through its own number, in
 `Motorsport.Circuit.Geodesy`, and nothing compares that one with the project's:
 neither compiler reaches into the other's sources, and a Geodesy on another
@@ -312,7 +312,7 @@ questions a branch may ask: `exists` and `isDirectory`, resolved through the sam
 runs answered a read's failure by deciding there was nothing there, and the fence was among
 them: an unreadable kept answer was a circuit "not surveyed yet", and a served directory
 that would not list was a warning with nothing to say, both of them exit 0.
-`app/tests/failure-vocabulary.spec.ts` holds that shape — one `Err(_)` arm left in the
+`app/tests/circuits-project.spec.ts` holds that shape — one `Err(_)` arm left in the
 project, and it on a parse refusal another reading said first — because the project's own
 tests hand their fixtures and ask nothing of the filesystem, so no test of this project has
 ever met a file that would not read.
@@ -382,9 +382,11 @@ datasets are measured against. A drawn circuit is two lists in `Shared` — the
 words `trackOf` matches and `decoderFor` decodes — and a geometry file at
 `app/static/geometry/<word>.geojson`, and `app/tests/geometry-contract.spec.ts`
 reads the served file against those words: that it stands where the app reaches
-for it, that its metres ascend and end at the lap it publishes, that its
-sectors add up to that lap, and that the circuit's directory under this one is
-named by that same word. Which words the two Elm lists hold, and which word
+for it, and that the circuit's directory under this one is named by that same
+word. Whether the file's own contents are honest — metres ascending and ending
+at the published lap, sectors adding up to it, a pit lane beside it — is a
+refusal of `Geometry.outline` and `Geometry.pitLane`, pinned by `TestGeometry`
+and re-asked of the real bytes by the byte fence on every CI run. Which words the two Elm lists hold, and which word
 the Flix summary sends, nothing compares — no compiler reaches from one side
 of that seam to the other, and a rename on one side alone is a round drawn as
 the ring with nothing red.
@@ -392,7 +394,7 @@ The figures the report reads — the published lap length and sector stretches �
 and the figures the drawing was laid from are laid together by
 `test/TestTimingMap.flix`, in the one project that compiles both. What of the
 sharing is left to read from outside it is the report's own file reading, and
-`app/tests/report-files.spec.ts` holds that to reading and stat: it writes
+`app/tests/circuits-project.spec.ts` holds that to reading and stat: it writes
 nothing. What the asking leaves outside the project's own readings — which sources
 read a response, and which sentences a failed answer is printed in — is
-`app/tests/http-answer.spec.ts`'s, held to one source.
+`app/tests/circuits-project.spec.ts`'s, held to one source.

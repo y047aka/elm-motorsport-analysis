@@ -610,37 +610,25 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   copies no compiler compares. Nothing holds the nine links into `flix/src` to
   their paths from outside; a broken one fails `.#geometry-test` itself, as
   `Undefined use` in the module that needed it.
-- **The report's own file reading** (`/app/tests/report-files.spec.ts`) —
-  `Report/Files.flix` reads and stats and writes nothing, which is a fact about
-  a source no Flix test can see: the project's tests hand their fixtures and
-  ask nothing of the file system.
-- **The failure, not thrown away** (`/app/tests/failure-vocabulary.spec.ts`) —
-  a run that decides a file is *absent* asks `Util.Files`' `exists` or
-  `isDirectory` first, and a run that only reports reads through
-  `Cli.Errors`, which keeps the path with what the filesystem said. A read's
-  failure cannot tell a missing file from one that would not read, and the
-  fence is the thing that used to answer an unreadable kept answer with "not
-  surveyed yet" and an unlistable served directory with silence, both exit 0.
-  The spec fails any project source that answers `Err(_)` by discarding it —
-  one arm is allowed, on a parse another reading refused first — and holds the
-  two stat questions resolved like a read is, since a `false` out of a failed
-  stat is the answer that ends a walk quietly.
-- **The sphere, spelled once** (`/app/tests/circuit-overpass.spec.ts`) — the
-  survey chains its metres with `Apart.earthMetres` and the probe counts its
-  laps through it, and the spec fails any second spelling of the radius inside
-  `circuits/src`, because no compiler sees another's number and the one reading
-  that decides a config is the measured lap: 13.6 km or 13.7 km. Both
-  questions' shapes — each recursing to `way(r)`, and only the survey asking
-  for `node(w)`, the difference between drawing a lap and lengthening one — are
-  pinned by the project's own `flix test`, `circuits/src/Overpass.flix` having
-  written the asking once.
-- **The response, read once** (`/app/tests/http-answer.spec.ts`) — the project asks
-  two services under two policies, and `Overpass.answered` is the one reading of what
-  either answered with, so the spec fails any second source that reads a response or
-  spells the sentence a failed answer is printed in. No Flix test can build an
-  `HttpResponse`, so a second reading that asked only the status — the fence's whole
-  reason, since a proxy answers a timed-out request as 200 with an HTML page — would
-  compile, pass offline and hand HTML on as a geometry.
+- **What the geometry project cannot see from inside itself**
+  (`/app/tests/circuits-project.spec.ts`) — the project's tests hand their
+  fixtures, reach no network, build no `HttpResponse` and ask nothing of the
+  file system, so the project-wide facts are read out of its sources: one
+  reading of what a service answered with (`Overpass.answered` — a proxy
+  answers a timed-out request as 200 with an HTML page, so a second reading
+  that asked only the status would hand HTML on as a geometry), one spelling
+  of the earth radius (`Apart.earthMetres`; the measured lap is the reading a
+  config is authored from, 13.6 km or 13.7 km), one way a filesystem failure
+  is answered (a run that branches on absence asks `Util.Files`' `exists` or
+  `isDirectory` first — a `false` out of a failed stat is the answer that
+  ends a walk quietly — and a run that only reports reads through
+  `Cli.Errors`, which keeps the path with what the filesystem said; any
+  `Err(_)` that discards a failure fails, one arm excepted, on a parse
+  another reading refused first), and `Report/Files.flix`'s reading never
+  writing. Both questions' shapes — each recursing to `way(r)`, and only the
+  survey asking for `node(w)`, the difference between drawing a lap and
+  lengthening one — are pinned by the project's own `flix test`,
+  `circuits/src/Overpass.flix` having written the asking once.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
@@ -654,7 +642,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   `expectSurveyedLap` asserts the tracker drew a polygon where the ring draws a
   circle. Local runs allow a 0.1%
   pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`, and 0.15% for
-  `position-tab`) for cross-platform diffs; CI is strict 0.
+  `position-tab`) for cross-platform diffs; CI is strict 0. The circuits'
+  tracker shots are pixel baselines no more — the bytes they rendered are
+  held by the geometry project's fences, and a circuit is strokes whose
+  pixels only follow those bytes — leaving one baseline-free polygon
+  assertion per circuit as the whole E2E of a drawing.
 
 The baselines are CI's: rendered on Linux, and what a merge is judged
 against. `nix run .#update-snapshots-ci` refreshes them — it dispatches the
@@ -671,15 +663,10 @@ budget while the gap does not shrink with it. The tightest is
 `position-tab`, the Comparison section alone at 328x162: it differs by 55
 pixels where 0.001 would allow it 53, which is why it alone is given 0.0015.
 Next is `selected-car-with-rivals`, the one shot of a panel whole, at 221
-against 246; `lap-180` has 738 against 1,296. The tracker's two shots answer
-with 14 pixels and with none: a circuit is strokes, and the pane's shot
-holds no text at all, so CoreText and FreeType have nothing there to
-disagree about. Eight runs gave the same counts but once, when `lap-180`
-fell to 102, so a count that moves is worth a second run before it is taken
-for a rendering that moved. Those two counts are from a run with one worker,
-as CI has: with several workers both tracker shots come out a level or two
-off across a percent of the frame, which is more than the pane's whole
-budget. What no tolerance can absorb is a change smaller than itself — a
+against 246; `lap-180` has 738 against 1,296. Eight runs gave the same
+counts but once, when `lap-180` fell to 102, so a count that moves is worth
+a second run before it is taken for a rendering that moved. Those counts
+are from a run with one worker, as CI has. What no tolerance can absorb is a change smaller than itself — a
 digit redrawn is tens of pixels — so a local pass is not a promise, and a
 local failure on `position-tab` or `selected-car-with-rivals` is worth
 measuring before it is believed. CI stays strict for both reasons.

@@ -1,13 +1,5 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { waitForPageReady, setLapCount, expectSurveyedLap, TRACKER_COLUMN, LE_MANS } from './helpers';
-
-/**
- * The tracker's column stands in the strip from page load and arrives on the
- * first frame that knows the field.
- */
-async function waitForTrackerColumn(page: Page) {
-  await expect(page.locator(TRACKER_COLUMN)).toHaveCount(1);
-}
 
 test.describe('Le Mans 2025 Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -26,12 +18,12 @@ test.describe('Le Mans 2025 Visual Tests', () => {
     });
   });
 
-  // The tracker's column: the circuit at full detail, the sector boundaries drawn
-  // across the line and the fifteen mini-sector names Le Mans is timed by.
-  test('should render the tracker at full detail', async ({ page }) => {
+  // The tracker drew the surveyed lap and not the ring it falls back to --
+  // asserted without a baseline, as the circuit's own drawing is held to its
+  // bytes by the geometry project's fences rather than by pixels.
+  test('should draw the surveyed lap and not the ring', async ({ page }) => {
     await setLapCount(page, LE_MANS, 180);
-    await waitForTrackerColumn(page);
+    await expect(page.locator(TRACKER_COLUMN)).toHaveCount(1);
     await expectSurveyedLap(page);
-    await expect(page.locator(TRACKER_COLUMN)).toHaveScreenshot('tracker-column-lap-180.png');
   });
 });
