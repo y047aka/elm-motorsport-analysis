@@ -403,25 +403,22 @@ pub mod Atlas {
             whereCorners   <- atCorners(corners, parallel, ourLine, length);
             published      <- atPublished(circuit, ours, theirLine, ourLine);
             wherePits      <- atPits(pits, parallel, pitLine, length)
-        ) yield (origin, deviation, whereCorners, published, wherePits) {
-            case Ok((origin, deviation, whereCorners, (claim, lines), wherePits)) =>
-                keep(
-                    {
-                        circuit = circuit,
-                        source = source,
-                        coords = coords,
-                        corners = corners,
-                        pits = pits,
-                        theirMetres = theirMetres,
-                        origin = origin,
-                        deviation = deviation,
-                        atCorners = whereCorners,
-                        atPits = wherePits,
-                        pitLength = Option.getWithDefault(0.0, List.last(pitMetres)),
-                        atLines = lines,
-                        sectors = claim
-                    }
-                )
+        ) yield {
+            circuit = circuit,
+            source = source,
+            coords = coords,
+            corners = corners,
+            pits = pits,
+            theirMetres = theirMetres,
+            origin = origin,
+            deviation = deviation,
+            atCorners = whereCorners,
+            atPits = wherePits,
+            pitLength = Option.getWithDefault(0.0, List.last(pitMetres)),
+            atLines = published#atLines,
+            sectors = published#sectors
+        } {
+            case Ok(reading) => keep(reading)
             case Err(problem) => Err(problem)
         }
     }
@@ -457,14 +454,19 @@ pub mod Atlas {
     /// Where each line the kept geometry publishes stands on each line: this app's
     /// metre first, and the atlas's answer to that place. The claim itself travels to
     /// the report, which quotes the map it names rather than re-asking the file.
+    type alias Published = {
+        sectors = Option[Publishes],
+        atLines = List[AtLine]
+    }
+
     def atPublished(
         circuit: Circuit,
         ours: Kept,
         theirLine: List[Apart.Metred],
         ourLine: List[Apart.Metred]
-    ): Result[String, (Option[Publishes], List[AtLine])] =
+    ): Result[String, Published] =
         match Midline.sectorsClaimed(ours#props) {
-            case None => Ok((None, Nil))
+            case None => Ok({sectors = None, atLines = Nil})
             case Some(sectors) =>
                 match Midline.sectorLines(sectors, circuit#lap) {
                     case Err(problem) => Err(problem)
@@ -478,7 +480,7 @@ pub mod Atlas {
                                 },
                             lines
                         )
-                        |> Result.map(atLines -> (Some(sectors), atLines))
+                        |> Result.map(atLines -> {sectors = Some(sectors), atLines = atLines})
                 }
         }
 
