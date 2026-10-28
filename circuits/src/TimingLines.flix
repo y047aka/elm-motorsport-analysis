@@ -234,7 +234,7 @@ pub mod TimingLines {
     def asking(request: Request): Outcome \ { IO, Console } =
         Cli.Args.outcomeOf(
             forM(
-                _       <- checkDirectory(request#csv) |> Result.mapErr(problem -> "${problem}");
+                _       <- checkDirectory(request#csv);
                 verdict <- judged(request)
             ) yield verdict
         )
@@ -245,9 +245,8 @@ pub mod TimingLines {
     /// the lap than the distance allowed, which is the answer that the two seasons
     /// were not run on one map. One reading alone is printed and exits 0: nothing
     /// was judged.
-    def judged(request: Request): Result[String, Outcome] \ { IO, Console } =
+    def judged(request: Request): Result[CliError, Outcome] \ { IO, Console } =
         read(request)
-            |> Result.mapErr(problem -> "${problem}")
             |> Result.flatMap(report -> {
                 printReadings(report);
                 Ok(judge(report))

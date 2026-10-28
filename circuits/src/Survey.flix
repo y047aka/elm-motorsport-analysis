@@ -20,6 +20,7 @@ pub mod Survey {
     use Circuit.Circuit
     use Cli.Args.ArgsError
     use Cli.Args.Outcome
+    use Cli.Errors.CliError
     use Geodesy.Frame
     use Geodesy.Place
     use Geodesy.Point
@@ -574,7 +575,7 @@ pub mod Survey {
     /// it, and then laid or compared however `--write` says.
     pub def asking(asked: Request): Outcome \ { IO, Clock, Console } =
         match answerText(asked) {
-            case Err(problem)      => Outcome.Failed(problem)
+            case Err(problem)      => Outcome.Failed("${problem}")
             case Ok(None)          => Outcome.Done(neverSurveyed(asked) :: Nil)
             case Ok(Some(spelled)) =>
                 Cli.Args.outcomeOf(
@@ -589,32 +590,31 @@ pub mod Survey {
     /// right answers, which is why it comes back as `None` and not as a failure:
     /// `--answer` naming nothing is a mistake to report, while a circuit with no kept
     /// answer and no served geometry has simply never been surveyed.
-    def answerText(asked: Request): Result[String, Option[String]] \ { IO, Clock } =
+    def answerText(asked: Request): Result[CliError, Option[String]] \ { IO, Clock } =
         if (asked#fetch)
             Overpass.askRelation(asked#circuit#relation)
-                |> Result.mapErr(problem -> "${asked#circuit#word}: ${problem}")
+                |> Result.mapErr(problem -> CliError.Reading("${asked#circuit#word}: ${problem}"))
                 |> Result.map(spelled -> Some(spelled))
         else
             match Util.Files.exists(asked#answer) {
-                case Err(problem) => Err("${asked#answer}: ${problem}")
+                case Err(problem) => Err(CliError.Reading("${asked#answer}: ${problem}"))
                 case Ok(false)    =>
                     if (asked#named)
-                        Err("${asked#answer}: no answer to read there")
+                        Err(CliError.Reading("${asked#answer}: no answer to read there"))
                     else
                         unexamined(asked)
                 case Ok(true) =>
                     Cli.Errors.readFile(asked#answer)
-                        |> Result.mapErr(problem -> "${problem}")
                         |> Result.map(spelled -> Some(spelled))
             }
 
     /// Which of the two a circuit with no answer to read is. A served file says the
     /// bytes have no answer left to re-survey them from — which is what the fence
     /// exists to catch — and no served file says nobody has surveyed this circuit yet.
-    def unexamined(asked: Request): Result[String, Option[String]] \ IO =
+    def unexamined(asked: Request): Result[CliError, Option[String]] \ IO =
         match Util.Files.exists(asked#circuit#file) {
-            case Err(problem) => Err("${asked#circuit#word}: ${problem}")
-            case Ok(true)     => Err("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from")
+            case Err(problem) => Err(CliError.Reading("${asked#circuit#word}: ${problem}"))
+            case Ok(true)     => Err(CliError.Reading("${asked#circuit#word}: ${asked#circuit#file} is served but ${asked#answer} is not kept — these bytes have no answer left to re-survey them from"))
             case Ok(false)    => Ok(None)
         }
 
@@ -636,27 +636,23 @@ pub mod Survey {
     /// an answer whose relation will not chain into a lap are each met in the words
     /// the survey itself would say them in, rather than in a file kept to be
     /// discovered later.
-    def surveyed(asked: Request, spelled: String): Result[String, Read] =
+    def surveyed(asked: Request, spelled: String): Result[CliError, Read] =
         match geometry(spelled, asked#circuit) {
             case Ok((answer, geometry)) => Ok({text = spelled, answer = answer, geometry = geometry})
             case Err(problem) =>
                 if (asked#fetch)
-                    Err("${asked#answer}: the answer surveys nothing: ${problem}")
+                    Err(CliError.Reading("${asked#answer}: the answer surveys nothing: ${problem}"))
                 else
-                    Err("${asked#answer}: ${problem}")
+                    Err(CliError.Reading("${asked#answer}: ${problem}"))
         }
 
     /// `--fetch`'s keeping: the answer where `--answer` points — the circuit's own
     /// directory when it names none — and the line naming how big an answer it is. It
     /// is asked once the survey has read the text and before anything is laid, since
     /// an answer that surveys nothing is evidence nobody can re-run.
-    def keep(asked: Request, read: Read): Result[String, Unit] \ { IO, Console } =
-        match Cli.Errors.writeFile(asked#answer, read#text) {
-            case Err(problem) => Err("${problem}")
-            case Ok(_) =>
-                Console.println(keptLine(asked, read#answer));
-                Ok(())
-        }
+    def keep(asked: Request, read: Read): Result[CliError, Unit] \ { IO, Console } =
+        Cli.Errors.writeFile(asked#answer, read#text)
+            |> Result.map(_ -> Console.println(keptLine(asked, read#answer)))
 
     /// What the asking left beside the circuit.
     def keptLine(asked: Request, reading: Answer): String =

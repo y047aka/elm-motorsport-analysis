@@ -132,10 +132,14 @@ pub mod Cli.Args {
 
     /// A run written as its readings: a reading that failed is a run that never got to
     /// a verdict, and a run that read everything is the verdict its readings came to.
-    pub def outcomeOf(ran: Result[String, Outcome]): Outcome = match ran {
-        case Err(problem) => Outcome.Failed(problem)
-        case Ok(verdict)  => verdict
-    }
+    /// The failure is printed and not re-wrapped, so a reading may keep its own error
+    /// type — a `CliError` carrying the path the filesystem said, an `ArgsError` — and
+    /// reach the reader in its own words rather than in a copy stripped on the way.
+    pub def outcomeOf[err: Type](ran: Result[err, Outcome]): Outcome with ToString[err] =
+        match ran {
+            case Err(problem) => Outcome.Failed("${problem}")
+            case Ok(verdict)  => verdict
+        }
 
     /// The answer a wrong argument comes to, as `flix/src`'s `main` answers it: the
     /// sentence naming what was wrong, the command's own usage under it, and exit
