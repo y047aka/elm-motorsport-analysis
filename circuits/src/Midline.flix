@@ -209,11 +209,11 @@ pub mod Midline {
     pub def file(
         source: String,
         word: String,
-        coords: List[Place],
+        line: List[Geodesy.Metred],
         corners: List[Geometry.Feature],
-        pits: List[Geometry.Feature],
-        metres: List[Float64]
+        pits: List[Geometry.Feature]
     ): String = {
+        let metres = List.map(each -> each#metre, line);
         let length = Option.getWithDefault(0.0, List.last(metres));
         let outline =
             "{"
@@ -228,7 +228,7 @@ pub mod Midline {
                 + "\"stretched\":false,"
                 + "\"metres\":[${String.intercalate(",", List.map(metre -> Geometry.Write.number(roundTenth(metre)), metres))}]"
                 + "},"
-                + "\"geometry\":{\"type\":${Geometry.Write.text("LineString")},\"coordinates\":${degrees(coords)}}"
+                + "\"geometry\":{\"type\":${Geometry.Write.text("LineString")},\"coordinates\":${degrees(List.map(each -> each#place, line))}}"
                 + "}";
         let features = outline :: List.map(corner -> featureText("corner", corner), corners) ++ List.map(pit -> pitText(pit), pits);
         "{\"type\": \"FeatureCollection\", \"features\": [\n${String.intercalate(",\n", List.map(each -> "    ${each}", features))}\n]}\n"

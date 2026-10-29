@@ -42,17 +42,9 @@ pub mod Survey {
 
     // ---------------------------------------------------------------- the geometry
 
-    /// A place on the lap with how far round the lap it stands, in the circuit's published
-    /// metres.
-    pub type alias MetredPlace = {
-        lat    = Float64,
-        lon    = Float64,
-        metres = Float64
-    }
-
     /// The lap, the pit lane and the frame, in the drawing's own metres.
     pub type alias Geometry = {
-        centreline     = List[MetredPlace],
+        centreline     = List[Geodesy.Metred],
         pitLane        = List[Place],
         frame          = Frame,
         direction      = String,
@@ -349,8 +341,8 @@ pub mod Survey {
         let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));
         let metres = List.map(each -> each * stretch, surveyed);
         // The published metre each surveyed place stands at, in one list: the degrees
-        // and the metre are looked up together, at one index, and never apart.
-        let lapMetres = List.zipWith((place, metre) -> (place, metre), lapNodes, metres);
+        // and the metre are one pair from here on, and never looked up apart.
+        let lapMetres = Geodesy.together(lapNodes, metres);
         let half = List.length(lapPoints) / 2;
         let kept = thinned(lapPoints, half);
         let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
@@ -367,10 +359,10 @@ pub mod Survey {
     /// One kept point: the degrees it was surveyed at, and the published metre it stands
     /// at — both from the one place the lap's zipped metres are looked up at. A kept
     /// index runs over `lapPoints`, which is `lapMetres` projected, so every index lands.
-    def metred(at: Int32, lap: List[(Place, Float64)]): MetredPlace =
+    def metred(at: Int32, lap: List[Geodesy.Metred]): Geodesy.Metred =
         match List.nth(at, lap) {
-            case Some((place, metre)) => {lat = place#lat, lon = place#lon, metres = roundTenth(metre)}
-            case None                 => {lat = 0.0, lon = 0.0, metres = 0.0}
+            case Some(each) => {place = each#place, metre = roundTenth(each#metre)}
+            case None       => {place = {lat = 0.0, lon = 0.0}, metre = 0.0}
         }
 
     /// The lap thinned: split at its own middle, so that the place the lap starts and ends at

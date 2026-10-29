@@ -33,6 +33,22 @@ pub mod Geodesy {
         y = Float64
     }
 
+    /// A place on earth with the metre of the line it stands on. A line is this list:
+    /// two lists — places here, metres there — are aligned by nothing but their
+    /// lengths, and every reading that walks one by index has to trust the other
+    /// walked with it.
+    pub type alias Metred = {
+        place = Place,
+        metre = Float64
+    }
+
+    /// A line's places stood at their own metres, one pair per place: the pairing a
+    /// geometry file's `coordinates` and `metres` arrays are read into, and `Geometry`
+    /// has already refused a file where the two counts disagree before this is given
+    /// them.
+    pub def together(places: List[Place], metres: List[Float64]): List[Metred] =
+        List.zipWith((place, metre) -> {place = place, metre = metre}, places, metres)
+
     /// What a reading with nothing to read answers with.
     pub def zero(): Point = {x = 0.0, y = 0.0}
 

@@ -114,8 +114,8 @@ pub mod Geometry.Write {
         "{\"origin\":{\"lat\":${number(laid#origin#lat)},\"lon\":${number(laid#origin#lon)}},\"parallel\":${number(laid#parallel)}}"
 
     /// How far round the lap each place stands.
-    def metres(places: List[Survey.MetredPlace]): String =
-        "[${String.intercalate(",", List.map(place -> number(place#metres), places))}]"
+    def metres(places: List[Geodesy.Metred]): String =
+        "[${String.intercalate(",", List.map(place -> number(place#metre), places))}]"
 
     // ---------------------------------------------------------------- the coordinates
 
@@ -126,8 +126,8 @@ pub mod Geometry.Write {
 
     /// The lap: degrees, lon before lat as GeoJSON gives them, the last place being the
     /// first one again because the lap closed.
-    def lineOf(places: List[Survey.MetredPlace]): String =
-        "{\"type\":\"LineString\",\"coordinates\":[${String.intercalate(",", List.map(each -> coordinate(each#lon, each#lat), places))}]}"
+    def lineOf(places: List[Geodesy.Metred]): String =
+        "{\"type\":\"LineString\",\"coordinates\":[${String.intercalate(",", List.map(each -> coordinate(each#place#lon, each#place#lat), places))}]}"
 
     /// The pit lane: degrees and nothing else.
     def pitLineOf(places: List[Place]): String =

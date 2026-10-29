@@ -238,7 +238,7 @@ let second = Option.getWithDefault({id = "", metres = -1.0}, List.nth(0, lines))
         let corners = pointed("\"role\": \"corner\", \"id\": \"T1\", \"marker\": 0.02, \"direction\": \"right\"", "{ \"type\": \"Point\", \"coordinates\": [-97.605, 30.105] }") :: Nil;
         let pits = pointed("\"role\": \"pit_entry\", \"name\": \"Pit Entry\", \"marker\": 0.95", "{ \"type\": \"Point\", \"coordinates\": [-97.615, 30.115] }") :: Nil;
         let coords = {lon = -97.6, lat = 30.1} :: {lon = -97.61, lat = 30.11} :: {lon = -97.62, lat = 30.12} :: Nil;
-        let written = Midline.file("https://example.org/cota.geojson", "cota", coords, corners, pits, 0.0 :: 2750.14 :: 5500.23 :: Nil);
+        let written = Midline.file("https://example.org/cota.geojson", "cota", Geodesy.together(coords, 0.0 :: 2750.14 :: 5500.23 :: Nil), corners, pits);
         // A measurement is not mistaken for a survey, and does not end at the
         // published lap length — the file says so at the properties a reader sees first.
         Assert.assertTrue(String.contains({substr = "\"basis\":\"measured-midline\""}, written));
@@ -259,7 +259,7 @@ let second = Option.getWithDefault({id = "", metres = -1.0}, List.nth(0, lines))
     @Test
     def testFileTextCarriesNoPropertyTheLayerDidNotHold(): Unit \ Assert =
         let bare = pointed("\"role\": \"corner\"", "{ \"type\": \"Point\", \"coordinates\": [-97.605, 30.105] }") :: Nil;
-        let written = Midline.file("https://example.org/cota.geojson", "cota", {lon = -97.6, lat = 30.1} :: {lon = -97.61, lat = 30.11} :: Nil, bare, Nil, 0.0 :: 100.0 :: Nil);
+        let written = Midline.file("https://example.org/cota.geojson", "cota", Geodesy.together({lon = -97.6, lat = 30.1} :: {lon = -97.61, lat = 30.11} :: Nil, 0.0 :: 100.0 :: Nil), bare, Nil);
         // An undefined property is no key at all — and the null the layer did hold
         // stays a null, which is what the reading that keeps a file never invents.
         Assert.assertTrue(not String.contains({substr = "\"id\""}, written));

@@ -47,10 +47,9 @@ pub mod Atlas {
     type alias Reading = {
         circuit     = Circuit,
         source      = String,
-        coords      = List[Place],
+        theirLine   = List[Geodesy.Metred],
         corners     = List[Geometry.Feature],
         pits        = List[Geometry.Feature],
-        theirMetres = List[Float64],
         origin      = Float64,
         deviation   = Apart.Apartness,
         atCorners   = List[AtCorner],
@@ -86,8 +85,7 @@ pub mod Atlas {
     /// properties as they stand — the sectors claim is read off them by
     /// `Midline.sectorsClaimed`, which is where a half-claim reads as no claim.
     type alias Kept = {
-        coords = List[Place],
-        metres = List[Float64],
+        line   = List[Geodesy.Metred],
         pit    = List[Place],
         props  = Map[String, Json]
     }
@@ -354,7 +352,7 @@ pub mod Atlas {
             case Ok(text) =>
                 match (Geometry.outline(circuit#word, text), Geometry.pitLane(circuit#word, text)) {
                     case (Ok(outline), Ok(pit)) =>
-                        Ok({coords = outline#coords, metres = outline#metres, pit = pit, props = claimed(text)})
+                        Ok({line = Geodesy.together(outline#coords, outline#metres), pit = pit, props = claimed(text)})
                     case (Err(problem), _) => Err(problem)
                     case (_, Err(problem)) => Err(problem)
                 }
@@ -385,10 +383,12 @@ pub mod Atlas {
         markers: List[Place],
         ours: Kept
     ): Result[String, Reading] \ IO = {
-        let parallel = Geodesy.parallelOf(coords ++ ours#coords ++ ours#pit ++ markers);
+        let ourPlaces = List.map(each -> each#place, ours#line);
+        let ourMetres = List.map(each -> each#metre, ours#line);
+        let parallel = Geodesy.parallelOf(coords ++ ourPlaces ++ ours#pit ++ markers);
         let onto = place -> Geodesy.projectOn(parallel, place);
         let theirPoints = List.map(onto, coords);
-        let ourPoints = List.map(onto, ours#coords);
+        let ourPoints = List.map(onto, ourPlaces);
         let theirMetres = Geodesy.cumulative(theirPoints);
         let pitPoints = List.map(onto, ours#pit);
         let pitMetres = Geodesy.cumulative(pitPoints);
@@ -396,7 +396,7 @@ pub mod Atlas {
         let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
         match forM(
             theirLine      <- Apart.line(theirPoints, theirMetres);
-            ourLine        <- Apart.line(ourPoints, ours#metres);
+            ourLine        <- Apart.line(ourPoints, ourMetres);
             pitLine        <- Apart.line(pitPoints, pitMetres);
             origin         <- Midline.checkOrigin(first, circuit#timingLine);
             deviation      <- Apart.apartness(theirLine, ourLine, Apart.defaultEvery());
@@ -406,10 +406,9 @@ pub mod Atlas {
         ) yield {
             circuit = circuit,
             source = source,
-            coords = coords,
+            theirLine = Geodesy.together(coords, theirMetres),
             corners = corners,
             pits = pits,
-            theirMetres = theirMetres,
             origin = origin,
             deviation = deviation,
             atCorners = whereCorners,
@@ -513,7 +512,7 @@ pub mod Atlas {
 
     /// The keeping — the only side effect of a run, made once every guard has answered.
     def keep(reading: Reading): Result[String, Reading] \ IO =
-        let text = Midline.file(reading#source, reading#circuit#word, reading#coords, reading#corners, reading#pits, reading#theirMetres);
+        let text = Midline.file(reading#source, reading#circuit#word, reading#theirLine, reading#corners, reading#pits);
         forM(
             _ <- Cli.Errors.writeFile(Circuit.keptAtlas(reading#circuit), text) |> Result.mapErr(problem -> "${problem}")
         ) yield reading
@@ -524,7 +523,7 @@ pub mod Atlas {
     /// marker — a corner, a pit, a published line — stands on this app's line.
     def report(reading: Reading): Unit \ Console = {
         let circuit = reading#circuit;
-        let length = Option.getWithDefault(0.0, List.last(reading#theirMetres));
+        let length = Option.getWithDefault(0.0, Option.map(each -> each#metre, List.last(reading#theirLine)));
         let distances = List.map(corner -> corner#distance, reading#atCorners);
         let laps = List.map(corner -> corner#ourMetres - corner#theirMetres, reading#atCorners);
         let worstLap = List.foldLeft((held, each) -> if (Float64.abs(each) > Float64.abs(held)) each else held, 0.0, laps);

@@ -170,12 +170,11 @@ pub mod TestRegenerate {
             case Some(circuit) => Geometry.Write.file(circuit, drawn())
         }
 
-    def lap(): List[Survey.MetredPlace] =
-        {lat = 30.1394338, lon = -97.6434495, metres = 0.0} :: {
-            lat = 30.1335278,
-            lon = -97.6422583,
-            metres = 27.8
-        } :: {lat = 30.1, lon = -97.6, metres = 5515.0} :: Nil
+    def lap(): List[Geodesy.Metred] =
+        {place = {lat = 30.1394338, lon = -97.6434495}, metre = 0.0} :: {
+            place = {lat = 30.1335278, lon = -97.6422583},
+            metre = 27.8
+        } :: {place = {lat = 30.1, lon = -97.6}, metre = 5515.0} :: Nil
 
     def pit(): List[Place] =
         {lat = 30.13, lon = -97.638} :: {lat = 30.13, lon = -97.637} :: Nil
