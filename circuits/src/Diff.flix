@@ -163,7 +163,7 @@ pub mod Diff {
 
     def withoutExtension(name: String): String =
         if (String.endsWith({suffix = Geometry.extension()}, name))
-            String.dropRight(String.length(Geometry.extension()), name)
+            name |> String.dropRight(String.length(Geometry.extension()))
         else
             name
 

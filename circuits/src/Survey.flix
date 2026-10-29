@@ -80,7 +80,7 @@ pub mod Survey {
     /// The lap, the pit lane and the frame, chained out of an answer already read.
     pub def geometryOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
-        let ways = Overpass.Answer.byKind(reading#elements, "way");
+        let ways = reading#elements |> Overpass.Answer.byKind("way");
         forM(
             relation <- relationOf(reading, circuit#relation);
             start    <- lineOf(relation, circuit);
@@ -91,7 +91,7 @@ pub mod Survey {
         ) yield laid
 
     def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
-        match Map.get(relation, Overpass.Answer.byKind(reading#elements, "relation")) {
+        match reading#elements |> Overpass.Answer.byKind("relation") |> Map.get(relation) {
             case Some(one) => Ok(one)
             case None      => Err("the answer holds no relation ${relation}")
         }
@@ -117,7 +117,7 @@ pub mod Survey {
                         Err("role=${circuit#timedFrom} names node ${start}, which the answer holds no place for")
                     case Some(at) =>
                         let distance = apart(at, line#place);
-                        let limit = Option.getWithDefault(Circuit.nodeWithin(), line#within);
+                        let limit = line#within |> Option.getWithDefault(Circuit.nodeWithin());
                         if (distance > limit)
                             Err(
                                 "role=${circuit#timedFrom} is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.whole(limit)} m. ${relationLines(members, nodes, line)}"
@@ -249,14 +249,14 @@ pub mod Survey {
         if (List.isEmpty(left))
             Ok(ids)
         else
-            match endPlace(nodes, ids) {
+            match ids |> endPlace(nodes) {
                 case None => Err("the chain ended at a node the answer does not hold")
                 case Some(stopped) =>
                     Err("ways left out of the chain: ${left |> List.map(segment -> straggled(segment, stopped, nodes)) |> String.intercalate("; ")}")
             }
 
     def straggled(segment: Segment, stopped: Place, nodes: Map[Int64, Place]): String = {
-        let points = List.filterMap(id -> Map.get(id, nodes), segment#nodes);
+        let points = segment#nodes |> List.filterMap(id -> Map.get(id, nodes));
         let gap = nearestGap(stopped, points);
         let near = gap < 0.5;
         let drive = if (not segment#oneway) "" else if (near) ", driven the other way" else ", oneway";
@@ -273,7 +273,7 @@ pub mod Survey {
 
     /// Whether the chained ids come back to the place they started from.
     def closes(nodes: Map[Int64, Place], ids: List[Int64]): Bool =
-        match (startPlace(nodes, ids), endPlace(nodes, ids)) {
+        match (ids |> startPlace(nodes), ids |> endPlace(nodes)) {
             case (Some(first), Some(last)) => samePlace(first, last)
             case _                         => false
         }
@@ -282,16 +282,16 @@ pub mod Survey {
     def samePlace(a: Place, b: Place): Bool = a#lat == b#lat and a#lon == b#lon
 
     def startPlace(nodes: Map[Int64, Place], ids: List[Int64]): Option[Place] =
-        Map.get(Option.getWithDefault(-1i64, List.head(ids)), nodes)
+        Map.get(ids |> List.head |> Option.getWithDefault(-1i64), nodes)
 
     def endPlace(nodes: Map[Int64, Place], ids: List[Int64]): Option[Place] =
-        Map.get(Option.getWithDefault(-1i64, List.last(ids)), nodes)
+        Map.get(ids |> List.last |> Option.getWithDefault(-1i64), nodes)
 
     /// The distance between a lap's last place and its first, spelled for the sentence that
     /// refuses a lap which does not come back to where it started. A place the answer does
     /// not hold is named as nothing rather than measured from the zero of the map.
     def unclosed(nodes: Map[Int64, Place], ids: List[Int64]): String =
-        match (endPlace(nodes, ids), startPlace(nodes, ids)) {
+        match (ids |> endPlace(nodes), ids |> startPlace(nodes)) {
             case (Some(last), Some(to)) => Util.Format.fixed(1, apart(last, to))
             case _                      => "nothing"
         }
@@ -510,7 +510,7 @@ pub mod Survey {
                             case Some(circuit) =>
                                 Ok({
                                     circuit = circuit,
-                                    answer = Option.getWithDefault(Circuit.keptAnswer(circuit), answer),
+                                    answer = answer |> Option.getWithDefault(Circuit.keptAnswer(circuit)),
                                     named = Option.nonEmpty(answer),
                                     fetch = fetch,
                                     write = write

@@ -114,7 +114,7 @@ pub mod Overpass.Answer {
     /// Tags the answer need not carry: a way is tagged and a relation's point is not, and
     /// neither is a failure to read the other.
     def tagsOf(json: Json): Result[String, Tags] =
-        decodeAtKeyOpt("tags", json) |> Result.map(tags -> Option.getWithDefault(Map.empty(), tags))
+        decodeAtKeyOpt("tags", json) |> Result.map(tags -> tags |> Option.getWithDefault(Map.empty()))
 
     def membersOf(json: Json): Result[String, List[Member]] =
         each(memberOf, decodeAtKeyOpt("members", json))
@@ -199,7 +199,7 @@ pub mod Overpass.Answer {
     /// lap through a way's node refs, a probe measuring each role's ways — walked
     /// the whole answer once per member; indexed once here, the answer is walked
     /// once.
-    pub def byKind(answers: List[Element], kind: String): Map[Int64, Element] =
+    pub def byKind(kind: String, answers: List[Element]): Map[Int64, Element] =
         answers |> List.filter(each -> each#kind == kind) |> stood(Map.empty())
 
     def stood(spots: Map[Int64, Element], rest: List[Element]): Map[Int64, Element] =

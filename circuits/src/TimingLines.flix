@@ -312,7 +312,7 @@ pub mod TimingLines {
     /// the question -- do one map's lines still stand a season later -- has no
     /// answer where there is no such thing as one map.
     def publishedMap(asked: Request, circuit: Motorsport.Circuit.Circuit): Result[CliError, PublishedMap] =
-        match Circuit.timingMap(Motorsport.Circuit.jsonValue(circuit)) {
+        match circuit |> Motorsport.Circuit.jsonValue |> Circuit.timingMap {
             case TimingMap.Published(published) => Ok(published)
             case TimingMap.PerSeason(reason)    =>
                 Err(CliError.Reading(

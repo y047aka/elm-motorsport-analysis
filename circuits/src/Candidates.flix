@@ -66,7 +66,7 @@ pub mod Candidates {
         if (List.exists(Option.isEmpty, spelled))
             None
         else
-            Some(List.map(each -> Option.getWithDefault(0.0, each), spelled))
+            Some(spelled |> List.map(each -> each |> Option.getWithDefault(0.0)))
 
     /// What the tags say, before any geometry is asked for: what kind of relation
     /// it is, what it is called, and the length the tags themselves claim -- the
@@ -126,8 +126,8 @@ pub mod Candidates {
     }
 
     pub def measure(answer: List[Element], relation: Int64): Result[String, Measured] =
-        let ways = Overpass.Answer.byKind(answer, "way");
-        match Map.get(relation, Overpass.Answer.byKind(answer, "relation")) {
+        let ways = answer |> Overpass.Answer.byKind("way");
+        match answer |> Overpass.Answer.byKind("relation") |> Map.get(relation) {
             case None => Err("the answer holds no relation ${relation}")
             case Some(rel) =>
                 let tallies = tally(rel#members, ways);

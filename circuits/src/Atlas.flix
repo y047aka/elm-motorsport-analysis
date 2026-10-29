@@ -252,7 +252,7 @@ pub mod Atlas {
     /// the line that URL's survey measured, and a file path would credit the line to
     /// whomever saved it last.
     def sourceOf(asked: Request): String =
-        Option.getWithDefault("", asked#circuit#atlas)
+        asked#circuit#atlas |> Option.getWithDefault("")
 
     /// The layer's text: from its home on `--fetch`, from the named file, or from the
     /// line the circuit keeps.
@@ -310,7 +310,7 @@ pub mod Atlas {
                 let features = Geometry.featuresOf(json);
                 forM(
                     outline <- outlineOf(features);
-                    _       <- Midline.checkIdentity(Geometry.word("circuit", Geometry.propertiesOf(outline)), word)
+                    _       <- Midline.checkIdentity(outline |> Geometry.propertiesOf |> Geometry.word("circuit"), word)
                 ) yield {outline = outline, corners = cornersOf(features), pits = pitsOf(features)}
         }
 
@@ -365,7 +365,7 @@ pub mod Atlas {
         match Util.Json.parse(text) {
             case Err(_)   => Map.empty()
             case Ok(json) =>
-                match List.find(feature -> Geometry.word("role", Geometry.propertiesOf(feature)) == Some("outline"), Geometry.featuresOf(json)) {
+                match List.find(feature -> Geometry.propertiesOf(feature) |> Geometry.word("role") == Some("outline"), Geometry.featuresOf(json)) {
                     case Some(feature) => Geometry.propertiesOf(feature)
                     case None          => Map.empty()
                 }
@@ -569,7 +569,7 @@ pub mod Atlas {
         if (List.isEmpty(distances))
             "corners (0): the atlas layer holds no corner markers, so nothing was laid against our line"
         else
-            "corners (${List.length(distances)}): mean apart ${Util.Format.fixed(1, mean(distances))} m, max ${Util.Format.fixed(1, Option.getWithDefault(0.0, List.maximum(distances)))} m; "
+            "corners (${List.length(distances)}): mean apart ${distances |> mean |> Util.Format.fixed(1)} m, max ${distances |> List.maximum |> Option.getWithDefault(0.0) |> Util.Format.fixed(1)} m; "
                 + "lap distance differs by ${laps |> List.map(Float64.abs) |> mean |> Util.Format.fixed(1)} m on average, worst ${Midline.signed(worstLap)} m"
 
     /// The published lines' own paragraph, which a geometry that publishes no map
