@@ -33,9 +33,12 @@ pub mod Diff {
     def colours(): List[String] =
         "#d43a3a" :: "#2a6df4" :: Nil
 
-    /// Two files, a spacing, and an overlay to write.
+    /// Two files, a spacing, and an overlay to write. The files are a pair because
+    /// the report compares one against the other and back: the order they are named
+    /// in is the order the report walks them.
     pub type alias Request = {
-        paths = List[String],
+        a     = String,
+        b     = String,
         every = Float64,
         svg   = Option[String]
     }
@@ -79,14 +82,16 @@ pub mod Diff {
     def isHelp(setting: Setting): Bool =
         setting == Setting.Help
 
+    /// The word the reader typed is the word quoted back.
     def complete(paths: List[String], every: Option[String], svg: Option[String]): Result[ArgsError, Request] =
-        if (List.length(paths) != 2)
-            Err(ArgsError.ParseErrors("diff lays two files, and no more: ${List.length(paths)} named." :: Nil))
-        else
-            match spacing(every) {
-                case Err(problem) => Err(ArgsError.ParseErrors(problem :: Nil))
-                case Ok(metres)   => Ok({paths = paths, every = metres, svg = svg})
-            }
+        match paths {
+            case one :: two :: Nil =>
+                match spacing(every) {
+                    case Err(problem) => Err(ArgsError.ParseErrors(problem :: Nil))
+                    case Ok(metres)   => Ok({a = one, b = two, every = metres, svg = svg})
+                }
+            case _ => Err(ArgsError.ParseErrors("diff lays two files, and no more: ${List.length(paths)} named." :: Nil))
+        }
 
     /// The word the reader typed is the word quoted back.
     def spacing(every: Option[String]): Result[String, Float64] =
@@ -136,22 +141,21 @@ pub mod Diff {
     /// failed is the run that never got to a verdict; the diff itself only ever says
     /// metres, leaving whether they are far to the reader.
     def asking(asked: Request): Outcome \ { IO, Console } =
-        read(Nil, asked#paths)
-            |> Result.flatMap(lines -> reported(lines, asked))
-            |> Cli.Args.outcomeOf
-
-    /// Each file read as the line it claims to be, under the name the file is known by —
-    /// `le_mans` for `app/static/geometry/le_mans.geojson`, which is the name the drawing,
-    /// the config and the kept Overpass answer all use for the circuit.
-    def read(kept: List[Line], paths: List[String]): Result[String, List[Line]] \ IO =
-        match paths {
-            case Nil => Ok(List.reverse(kept))
-            case one :: more =>
-                Cli.Errors.readFile(one)
-                    |> Result.mapErr(problem -> "${problem}")
-                    |> Result.flatMap(Geometry.outline(baseName(one)))
-                    |> Result.flatMap(line -> read(line :: kept, more))
+        match forM(
+            one <- read(asked#a);
+            two <- read(asked#b)
+        ) yield (one, two) {
+            case Err(problem) => Outcome.Failed(problem)
+            case Ok(lines)    => reported(lines, asked) |> Cli.Args.outcomeOf
         }
+
+    /// A file read as the line it claims to be, under the name the file is known by —
+    /// `le_mans` for `app/static/geometry/le_mans.geojson`, which is the name the
+    /// drawing, the config and the kept Overpass answer all use for the circuit.
+    def read(path: String): Result[String, Line] \ IO =
+        Cli.Errors.readFile(path)
+            |> Result.mapErr(problem -> "${problem}")
+            |> Result.flatMap(Geometry.outline(baseName(path)))
 
     /// The name a file is quoted by: its last path part, without the extension the
     /// profile writes it with.
@@ -166,29 +170,33 @@ pub mod Diff {
 
     /// The report: what each file says it is, then each line sampled against the other,
     /// then the overlay if one was asked for.
-    def reported(lines: List[Line], asked: Request): Result[String, Outcome] \ { IO, Console } =
+    def reported(lines: (Line, Line), asked: Request): Result[String, Outcome] \ { IO, Console } = {
+        let (first, second) = lines;
         match projectedOf(lines) {
             case Err(problem) => Err(problem)
             case Ok(projected) =>
-                foreach (line <- lines)
-                    Console.println(quoted(line));
+                let (downFirst, downSecond) = projected;
+                Console.println(quoted(first));
+                Console.println(quoted(second));
                 forM(
-                    one <- compared(projected, 0, 1, asked#every);
-                    two <- compared(projected, 1, 0, asked#every)
+                    one <- Apart.apartness(downFirst, downSecond, asked#every);
+                    two <- Apart.apartness(downSecond, downFirst, asked#every)
                 ) yield spoken(lines, projected, one, two, asked)
         }
+    }
 
     /// Both directions said, each as far round the lap as the other, and the overlay
     /// laid over them where the run asked for one.
     def spoken(
-        lines: List[Line],
-        projected: List[List[Apart.Metred]],
+        lines: (Line, Line),
+        projected: (List[Apart.Metred], List[Apart.Metred]),
         one: Apartness,
         two: Apartness,
         asked: Request
     ): Outcome \ { IO, Console } = {
-        Console.println(said(0, lines, one, asked#every));
-        Console.println(said(1, lines, two, asked#every));
+        let (first, second) = lines;
+        Console.println(said(first, one, asked#every));
+        Console.println(said(second, two, asked#every));
         overlaid(lines, projected, asked#svg)
     }
 
@@ -197,17 +205,26 @@ pub mod Diff {
     /// measure, which is all the sampling asks of a line. `Geometry` has refused any
     /// file whose metres do not stand one per point before one reached here, so the
     /// door below answers `Ok` for every line there is.
-    def projectedOf(lines: List[Line]): Result[String, List[List[Apart.Metred]]] = {
-        let parallel = Geodesy.parallelOf(List.flatMap(line -> line#coords, lines));
-        Result.traverse(
-            line -> Apart.line(List.map(Geodesy.projectOn(parallel), line#coords), line#metres),
-            lines
-        )
+    def projectedOf(lines: (Line, Line)): Result[String, (List[Apart.Metred], List[Apart.Metred])] = {
+        let (first, second) = lines;
+        let parallel = Geodesy.parallelOf(first#coords ++ second#coords);
+        let onto = line -> Apart.line(List.map(Geodesy.projectOn(parallel), line#coords), line#metres);
+        match forM(
+            one <- onto(first);
+            two <- onto(second)
+        ) yield (one, two) {
+            case Ok(pair)     => Ok(pair)
+            case Err(problem) => Err(problem)
+        }
     }
 
     /// The overlay, written where it was asked for. A run that asked for none has
     /// already said everything it came to say.
-    def overlaid(lines: List[Line], projected: List[List[Apart.Metred]], svg: Option[String]): Outcome \ IO =
+    def overlaid(
+        lines: (Line, Line),
+        projected: (List[Apart.Metred], List[Apart.Metred]),
+        svg: Option[String]
+    ): Outcome \ IO =
         match svg {
             case None => Outcome.Done(Nil)
             case Some(path) =>
@@ -230,23 +247,13 @@ pub mod Diff {
     def endsAt(line: Line): Float64 =
         Option.getWithDefault(0.0, List.last(line#metres))
 
-    /// One direction of the comparison.
-    def compared(projected: List[List[Apart.Metred]], along: Int32, against: Int32, every: Float64): Result[String, Apartness] =
-        Apart.apartness(lineOf(along, projected), lineOf(against, projected), every)
-
-    def lineOf(at: Int32, projected: List[List[Apart.Metred]]): List[Apart.Metred] =
-        Option.getWithDefault(Nil, List.nth(at, projected))
-
     /// One direction of the comparison as the sentence the report prints it in. Both
     /// directions are printed: they disagree when one line has places the other has not.
-    pub def said(at: Int32, lines: List[Line], apart: Apartness, every: Float64): String =
-        "sampled every ${Util.Format.spelled(every)} m along ${nameOf(at, lines)} (${apart#count}): "
+    pub def said(line: Line, apart: Apartness, every: Float64): String =
+        "sampled every ${Util.Format.spelled(every)} m along ${line#name} (${apart#count}): "
             + "mean apart ${Util.Format.fixed(1, apart#mean)} m, "
             + "max ${Util.Format.fixed(1, apart#worst#distance)} m at ${Util.Format.fixed(0, apart#worst#aMetres)} m, "
             + "our-side ${Util.Format.fixed(1, apart#worst#bMetres)} m"
-
-    def nameOf(at: Int32, lines: List[Line]): String =
-        Option.getWithDefault("nothing", Option.map(line -> line#name, List.nth(at, lines)))
 
     // ------------------------------------------------------------------- the overlay
 
@@ -304,19 +311,23 @@ pub mod Diff {
     /// Both lines as one drawing, with the provenance each file carries written into it
     /// as its own comment: an overlay that outlives its files says what it was comparing,
     /// and what each of them was licensed under.
-    pub def overlay(lines: List[Line], projected: List[List[Apart.Metred]]): String = {
-        let view = viewOf(projected);
+    pub def overlay(lines: (Line, Line), projected: (List[Apart.Metred], List[Apart.Metred])): String = {
+        let (first, second) = lines;
+        let (firstPlaces, secondPlaces) = projected;
+        let both = first :: second :: Nil;
+        let places = firstPlaces :: secondPlaces :: Nil;
+        let view = viewOf(places);
         let page = Util.Format.whole(width());
         let across = Util.Format.fixed(0, (2.0 * margin()) + (view#reach#y * view#scale));
         String.intercalate(
             "\n",
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                :: "<!-- Geometry overlay: ${nameOf(0, lines)} in red against ${nameOf(1, lines)} in blue."
-                :: "${licensed(lines)} -->"
-                :: provenance(lines)
+                :: "<!-- Geometry overlay: ${first#name} in red against ${second#name} in blue."
+                :: "${licensed(both)} -->"
+                :: provenance(both)
                 :: "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"${page}\" height=\"${across}\" viewBox=\"0 0 ${page} ${across}\">"
                 :: "  <rect width=\"100%\" height=\"100%\" fill=\"white\"/>"
-                :: drawn(lines, projected, view)
+                :: drawn(both, places, view)
                 :: "</svg>" ::
                     // An empty last line: the drawing ends with a newline, as every kept file does.
                     ""

@@ -24,7 +24,7 @@ pub mod TestDiff {
 
     def pathsOf(result: Result[Cli.Args.ArgsError, Request]): List[String] =
         match result {
-            case Ok(ask) => ask#paths
+            case Ok(ask) => ask#a :: ask#b :: Nil
             case Err(_)  => Nil
         }
 
@@ -87,7 +87,7 @@ pub mod TestDiff {
             worst = {aMetres = 450.0, bMetres = 450.3, distance = 2.8}
         };
         Assert.assertTrueWithMsg(
-            Diff.said(0, lines, apart, 50.0)
+            Diff.said(List.get(0, lines), apart, 50.0)
                 == "sampled every 50 m along survey (111): mean apart 0.6 m, max 2.8 m at 450 m, our-side 450.3 m",
             "the metre along the other line is the reading a report quotes, not the resolution the file was written at"
         )
@@ -97,8 +97,8 @@ pub mod TestDiff {
         let survey = kept("survey", "osm-centreline", Some("https://www.openstreetmap.org/relation/999"));
         let atlas = kept("atlas", "measured-midline", None);
         let drawing = Diff.overlay(
-            survey :: atlas :: Nil,
-            sampled(0.0, 0.0, 100.0, 0.0) :: sampled(0.0, 0.0, 100.0, 50.0) :: Nil
+            (survey, atlas),
+            (sampled(0.0, 0.0, 100.0, 0.0), sampled(0.0, 0.0, 100.0, 50.0))
         );
         Assert.assertTrue(String.startsWith({prefix = "<?xml"}, drawing));
         Assert.assertTrueWithMsg(String.contains({substr = "<path d=\"M 20.0,500.0 L 980.0,500.0\" fill=\"none\" stroke=\"#d43a3a\""}, drawing), "the first line in red, y flipped so north is up");
@@ -116,8 +116,8 @@ pub mod TestDiff {
     @Test
     def testTheCornerOfTheDrawingIsTheFirstPlaceMeasuredAndNotTheZeroOfThePlane(): Unit \ Assert =
         let survey = kept("survey", "osm-centreline", None);
-        let places = sampled(1000.0, 1000.0, 1200.0, 1100.0) :: Nil;
-        let drawing = Diff.overlay(survey :: survey :: Nil, places);
+        let stretch = sampled(1000.0, 1000.0, 1200.0, 1100.0);
+        let drawing = Diff.overlay((survey, survey), (stretch, stretch));
         // Framed on the places themselves, the line fills the page rather than sitting
         // in one corner of it.
         Assert.assertTrue(String.contains({substr = "M 20.0,500.0 L 980.0,20.0"}, drawing))

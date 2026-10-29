@@ -393,13 +393,16 @@ pub mod Regenerate {
 
     /// The degrees first: a line whose points differ is reported at the point it
     /// differs at. A difference in anything else the geometry member holds — its
-    /// type, a coordinate that is not a pair — is reported too, at the point its
-    /// coordinates part, or at -1 where they do not and only the shape moved.
+    /// type, a coordinate that is not a pair — is reported too, naming that the
+    /// coordinates themselves did not part.
     def points(role: String, fresh: Geometry.Feature, kept: Geometry.Feature): List[String] =
         if (same(geometryOf(fresh), geometryOf(kept)))
             Nil
         else
-            "${role}: the line's points differ at point ${firstDiff(coordinatesOf(fresh), coordinatesOf(kept))}" :: Nil
+            match firstDiff(coordinatesOf(fresh), coordinatesOf(kept)) {
+                case None => "${role}: the line's geometry differs where its points do not part" :: Nil
+                case Some(at) => "${role}: the line's points differ at point ${at}" :: Nil
+            }
 
     /// Each property the pair is asked about, in the order the fence asks — the
     /// writer's claims in the writer's order, then whatever else either file
@@ -436,15 +439,18 @@ pub mod Regenerate {
 
     /// The point two lines' coordinates part at, or -1 where they do not: one line
     /// shorter than the other differs where it stops.
-    pub def firstDiff(fresh: List[Json], kept: List[Json]): Int32 =
+    /// The point the two lines' coordinates first part at, or nothing where they walk
+    /// together to the end — which happens when the geometry members differ in shape
+    /// and not in position.
+    pub def firstDiff(fresh: List[Json], kept: List[Json]): Option[Int32] =
         parted(fresh, kept, 0)
 
-    def parted(fresh: List[Json], kept: List[Json], at: Int32): Int32 =
+    def parted(fresh: List[Json], kept: List[Json], at: Int32): Option[Int32] =
         match (fresh, kept) {
-            case (Nil, Nil) => -1
+            case (Nil, Nil) => None
             case (one :: more, only :: rest) =>
-                if (same(one, only)) parted(more, rest, at + 1) else at
-            case _ => at
+                if (same(one, only)) parted(more, rest, at + 1) else Some(at)
+            case _ => Some(at)
         }
 
     /// What a feature's `geometry` member holds, JSON-null where it holds nothing.
