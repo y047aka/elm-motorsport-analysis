@@ -1,10 +1,8 @@
 name: Tests
 
-# The checks that say the code is wrong: the Elm tests (elm-verify-examples +
-# elm-test), the Flix CLI's tests, the circuit tools' tests, and `tsc` over the
-# app's TypeScript. Kept apart from the VRT workflow because that one usually
-# fails for a different reason — stale snapshots — and a red check should tell
-# you which without being opened.
+# Kept apart from the VRT workflow because that one usually fails for a
+# different reason — stale snapshots — and a red check should tell you which
+# without being opened.
 
 on:
   push:
@@ -23,10 +21,9 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      # Coursier caches what a Flix project resolves under its own `lib`, not
-      # under ~/.cache/coursier — `flix/lib` for the CLI, `circuits/lib` for the
-      # geometry project. Uncached, every run asks Maven Central again, and
-      # Central answers a busy runner with a 429.
+      # Coursier caches what a Flix project resolves under that project's own
+      # `lib`, not under ~/.cache/coursier. Uncached, every run asks Maven
+      # Central again, and Central answers a busy runner with a 429.
       - uses: actions/cache@v6
         with:
           path: |
@@ -34,34 +31,20 @@ jobs:
             circuits/lib
           key: flix-deps-${{ runner.os }}-${{ hashFiles('flix/flix.toml', 'circuits/flix.toml') }}
           restore-keys: flix-deps-${{ runner.os }}-
-      # No `pnpm install`: none of these commands touches node_modules. The Elm
-      # tests need only the elm toolchain the flake supplies, and each Flix
-      # project — the CLI's and `circuits/` — resolves what it resolves
-      # through flix.
+      # No `pnpm install`: none of these commands touches node_modules.
       - name: Elm tests
         run: nix run .#test
       - name: CLI tests
         run: nix run .#flix-test
-      # The geometry project's own tests: a kept geometry file read, two lines laid
-      # together, an Overpass answer read and read into elements — the probe's
-      # readings ride with them, asked of fixtures rather than of a runner —, a lap
-      # chained, the bytes a geometry is written in, and the timing report's
-      # feed readings, which is also what proves the nine `flix/src` symlinks
-      # survived the checkout. Every reading is handed a fixture, so nothing here
-      # can change a kept file. Then `test/check-sources.mjs` reads the project's
-      # own sources — the one reading of a response, the one spelling of the
-      # sphere, the one way a filesystem failure is answered — which no `@Test`
-      # can make, a test computing in no IO.
       - name: Geometry command tests
         run: nix run .#geometry-test
-      # Does the survey over a kept answer still draw the bytes the app serves?
-      # The regeneration fence asks the same of a fresh asking of OpenStreetMap;
-      # this is the byte fence, over the two circuits a checkout keeps.
+      # The byte fence, over the two circuits a checkout keeps. A fresh asking
+      # of OpenStreetMap is the regeneration fence's.
       - name: Geometry survey reproduces the kept geometries
         run: nix run .#geometry -- survey cota && nix run .#geometry -- survey le_mans
 
-  # Its own job because it is the one check here that needs node_modules, and
-  # because a type error and a failing test should not share a red mark.
+  # Its own job: the one check here that needs node_modules, and a type error
+  # should not share a red mark with a failing test.
   typecheck:
     timeout-minutes: 30
     runs-on: ubuntu-24.04
