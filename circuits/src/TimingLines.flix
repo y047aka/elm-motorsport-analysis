@@ -347,7 +347,7 @@ pub mod TimingLines {
         let path = "${asked#csv}/${season}/${asked#id}.csv";
         forM(
             text    <- readCsv(path);
-            rows    <- decode(path, text);
+            rows    <- decode(text) |> Result.mapErr(problem -> CliError.Csv({path = path, message = problem}));
             fastest <- fastestSectors(rows)
         ) yield {
             season = season,

@@ -61,13 +61,18 @@ pub mod TimingLines.TestFeed {
             case Ok(_)  => false
         }
 
+    /// A feed read as the command reads it: the decoder's own words wrapped in the
+    /// name of the file it was reading, which is the one place both are known.
+    def decoded(path: String, text: String): Result[CliError, List[Row]] =
+        decode(text) |> Result.mapErr(problem -> CliError.Csv({path = path, message = problem}))
+
     def closeTo(expected: Float64, actual: Float64): Bool =
         Float64.abs(expected - actual) < 0.000001f64
 
     /// A feed's rows, or none. A fixture that fails to read makes the test using it
     /// fail by name, which is the message a test cannot print.
     def rowsOf(text: String): List[Row] =
-        match decode("x.csv", text) {
+        match decoded("x.csv", text) {
             case Ok(rows) => rows
             case Err(_)   => Nil
         }
@@ -84,7 +89,7 @@ pub mod TimingLines.TestFeed {
 
     @Test
     def testOneRowPerLap(): Unit \ Assert =
-        match decode("x.csv", feed()) {
+        match decoded("x.csv", feed()) {
             case Ok(rows) => Assert.assertTrue(List.length(rows) == 4)
             case Err(_)   => Assert.assertTrue(false)
         }
@@ -93,7 +98,7 @@ pub mod TimingLines.TestFeed {
     /// by its name.
     @Test
     def testByteOrderMarkIsStripped(): Unit \ Assert =
-        match decode("x.csv", "\uFEFF${feed()}\n") {
+        match decoded("x.csv", "\uFEFF${feed()}\n") {
             case Ok(rows) =>
                 Assert.assertTrue(List.length(rows) == 4);
                 Assert.assertTrue(List.get(0, rows)#carClass == "Hypercar")
@@ -104,7 +109,7 @@ pub mod TimingLines.TestFeed {
     /// row to guess at.
     @Test
     def testTornLineIsRefused(): Unit \ Assert =
-        Assert.assertTrue(complains("x.csv", decode("x.csv", "CLASS;S1\nHypercar;1;2")))
+        Assert.assertTrue(complains("x.csv", decoded("x.csv", "CLASS;S1\nHypercar;1;2")))
 
     // ------------------------------------------------------------ the fastest
 
@@ -131,7 +136,7 @@ pub mod TimingLines.TestFeed {
     /// no time, which would make it the fastest of the round.
     @Test
     def testUnreadableTimeIsRefused(): Unit \ Assert =
-        Assert.assertTrue(complains("abc", decode("x.csv", "CLASS;S1;S2;S3\nHypercar;abc;1.000;2.000")))
+        Assert.assertTrue(complains("abc", decoded("x.csv", "CLASS;S1;S2;S3\nHypercar;abc;1.000;2.000")))
 
     /// The field whole is the fastest of the classes, which is the reading the
     /// summary's shares are counted from. It comes last: the classes come in the
@@ -158,7 +163,7 @@ pub mod TimingLines.TestFeed {
 
     @Test
     def testLapWithoutClassIsRefused(): Unit \ Assert =
-        Assert.assertTrue(complains("names no class", decode("x.csv", "CLASS;S1;S2;S3\n;1.000;2.000;3.000")))
+        Assert.assertTrue(complains("names no class", decoded("x.csv", "CLASS;S1;S2;S3\n;1.000;2.000;3.000")))
 
     // --------------------------------------------------------------- the shares
 

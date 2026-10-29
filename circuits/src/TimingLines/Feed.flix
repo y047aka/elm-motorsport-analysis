@@ -92,15 +92,16 @@ pub mod TimingLines.Feed {
 
     // ----------------------------------------------------------------- the feed
 
-    /// The feed's rows, one per lap, from the file's text. `path` names the file
-    /// in the messages and is never opened.
-    pub def decode(path: String, text: String): Result[CliError, List[Row]] =
+    /// The feed's rows, one per lap, from the file's text — the decoder's own words
+    /// on failure, with no file named in them: which file this was read from is what
+    /// the reading that opened it knows, and where its error is wrapped.
+    pub def decode(text: String): Result[String, List[Row]] =
         Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
             decoder(),
             stripBom(text)
-        ) |> Result.mapErr(e -> CliError.Csv({ path = path, message = Decode.errorToString(e) }))
+        ) |> Result.mapErr(e -> Decode.errorToString(e))
 
     /// The byte-order mark the timing files lead with, which `Cli.Load.CsvDecode`
     /// strips too: these are two readings of one file, and both have to see the
