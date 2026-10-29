@@ -3,10 +3,9 @@ module Motorsport.Wec.Circuit.Barcelona.LayoutTest exposing (tests)
 {-| The Barcelona drawing, built from the geometry bytes the app serves, read
 through the app's own decoder.
 
-The layout is handed a round's sector shares to place its lines with, because
-this circuit publishes no line distances of its own; the shares here are the
-2026 round's, the only round this drawing has been opened with. They are the
-drawing's input, not its expectation: what is checked is the order and the
+The shares handed to `layout` are the 2026 round's: the circuit publishes no
+line distances, so a round's own divisions place its lines. They are the
+drawing's input, not its expectation -- what is checked is the order and the
 bounds of the lines, not where this season's times put them.
 -}
 

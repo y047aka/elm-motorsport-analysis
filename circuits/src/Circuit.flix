@@ -29,9 +29,9 @@ pub mod Circuit {
     /// itself publishes — its stretches add up to the lap, and it travels into the geometry as
     /// `sectors`, so a check of the lines reads the file rather than a config; `eachSeason`
     /// says why the organiser's map answers for one season only, and is what the timing report
-    /// quotes when it refuses a round here. Only one of the two is ever filled — or neither,
-    /// for a circuit whose map has never been read here: it writes no `sectors` and the
-    /// report reads it as publishing nothing.
+    /// quotes when it refuses a round here. Only one of the two is ever filled — or
+    /// neither, for a circuit whose map has never been read: it writes no `sectors` and
+    /// the report reads it as publishing nothing.
     pub type alias Lines = {
         published  = Option[Publishes],
         eachSeason = Option[String]
@@ -150,17 +150,16 @@ pub mod Circuit {
         survey = "The Circuit of the Americas"
     }
 
-    /// The Circuit de Barcelona-Catalunya, in its current chicane layout — the relation
-    /// `2049529` names itself "Grand Prix Circuit With Chicane" beside the older
-    /// no-chicane relation `284540`, and the chicane section's ways are the ones the two
-    /// relations do not share. The `finish` node is the line the lap is timed across,
-    /// standing 15 m from the track-atlas line's own `start_finish` marker; the circuit
-    /// publishes no distance for its own line, so that marker is the reading `within`
-    /// allows against, at the atlas's own `measuredWithin`.
+    /// The Circuit de Barcelona-Catalunya, in its current chicane layout: the relation
+    /// `2049529` names itself "Grand Prix Circuit With Chicane", and the chicane
+    /// section's ways are what parts it from the no-chicane relation `284540` standing
+    /// beside it. `finish` is the line the lap is timed across; the circuit publishes no
+    /// distance for it, so the line is seeded from the track-atlas line's `start_finish`
+    /// marker, at that reading's `measuredWithin`.
     ///
-    /// The map of distances the FIA issues round a lap here has never been read at
-    /// authoring: the geometry carries no `sectors`, and the timing report reads this
-    /// circuit as publishing no lines of its own.
+    /// The distances the FIA issues round a lap here were never read at authoring: no
+    /// stretches are authored, the geometry writes no `sectors`, and the timing report
+    /// reads this circuit as publishing no lines of its own.
     def barcelona(): Circuit = {
         relation = 2049529i64,
         word     = "barcelona",

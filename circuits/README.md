@@ -79,9 +79,12 @@ a human rather than to a name. The box a run opened is printed
 back, since a centre widened to 5 km holds Le Mans's Grand Prix circuit and not
 the 13.6 km one.
 
-OpenStreetMap holds a circuit however whoever mapped it tagged it, and the two
+OpenStreetMap holds a circuit however whoever mapped it tagged it, and the three
 here are tagged differently: Le Mans's relation names one node `start-finish`,
-and COTA's names two, 297 m apart along the lap. A circuit's config carries
+COTA's names two, 297 m apart along the lap, and Barcelona stands in two
+relations — a chicane layout beside the no-chicane one it grew from — whose
+line is checked against the atlas marker, the circuit publishing no distance of
+its own. A circuit's config carries
 the timing line's published coordinates, so a run that answers the wrong role
 fails before it writes anything rather than drawing every car early; how each
 relation is actually tagged is the circuit's own config comment to say.
@@ -92,8 +95,10 @@ Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
 map for that race, and differ by season; the maps are not to be redistributed,
 so they are not in the repository. COTA's are its own track sector map's, and
 are one set used for every season here, since no later map has been read. Which
-of the two a circuit's map is belongs to its config, as its `sectors` — one set
-`published` for every season, or `perSeason` — and `nix run
+of the kinds a circuit's map is belongs to its config, as its `sectors` — one set
+`published` for every season, `perSeason`, or neither where no map has been read
+at authoring, as at Barcelona: the geometry then writes no stretches and the
+report reads the circuit as publishing no lines. `nix run
 .#geometry-timing-lines` refuses a round on the second kind by quoting the
 circuit's own reason. Nothing in a
 round's own times picks one placement of those lines out of
@@ -262,7 +267,7 @@ on through exactly the survey a kept answer travels through. Keeping an answer i
 `--fetch`'s alone and laying the geometry is `--write`'s alone, so a `--fetch` with no
 `--write` keeps the fresh evidence and then answers, writing nothing else, whether the
 fresh survey moves the served bytes. CI runs the
-comparison for both circuits and never passes `--write`: a fence that rewrites
+comparison for every circuit and never passes `--write`: a fence that rewrites
 what it fences passes by construction. The wiring around the project — the
 sources it holds, what it resolves, the flake apps that reach it, the directory
 a reader's paths resolve against — is everything a Flix test run from inside

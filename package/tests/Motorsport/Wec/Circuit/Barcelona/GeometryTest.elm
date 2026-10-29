@@ -14,9 +14,8 @@ import Motorsport.Wec.Circuit.Barcelona.Layout as Layout
 import Test exposing (Test, test)
 
 
-{-| The round's sector shares, which is what places this circuit's lines --
-the circuit publishes no distances for them. The 2026 round's divisions; the
-suite checks the drawing, not the season.
+{-| The 2026 round's sector shares -- this circuit's lines are placed by a
+round's own divisions. The suite checks the drawing, not the season.
 -}
 shares : BySector Share
 shares =

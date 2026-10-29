@@ -56,23 +56,21 @@ layout geometry shares =
 {-| The lengths this drawing is measured at, in metres on the ground.
 
 `Full` is measured so that its furniture comes to the same pixels as Le Mans's,
-the same way COTA's is. The tracker draws every circuit in one portrait row and
-each box is narrower in proportion than that row is wide, so each is fitted by
-width: a length is drawn as large as Le Mans's when it stands at the ratio of
-the two boxes' widths -- Barcelona's box, margin included, is 1,379 m against
-Le Mans's 4,112 -- which is where these come from, rounded to a tenth of a
-metre. The margin is the one length not taken there: it is added to the box as
-well as to what stands in it, so it stands at three tenths of Le Mans's, as
-every circuit's does, and is the length the ratio above is taken over.
+the way COTA's is. The tracker draws every circuit in one portrait row and each
+box is narrower in proportion than that row is wide, so each is fitted by width:
+a length is drawn as large as Le Mans's when it stands at the ratio of the two
+boxes' widths -- Barcelona's box, margin included, is 1,379 m against Le Mans's
+4,112 -- rounded to a tenth of a metre. The margin is the one length not taken
+there: it is added to the box as well as to what stands in it, so it stands at
+three tenths of Le Mans's and is part of what every ratio is taken over. The
+mini-sector label lengths are in the record because `Lengths` holds them, at the
+same ratio as the rest, and not because this lap has mini-sectors to name: it
+has none.
 
-The mini-sector label lengths are in the record because `Lengths` holds them,
-at the same ratio as the rest, and not because this lap has mini-sectors to
-name: it has none.
-
-`Compact` is three tenths of Le Mans's and has no measurement behind it, the
-same set COTA authored compact with: nothing draws that detail, and the two
-circuits' compact boxes are fitted on different axes, so there is no one ratio
-to read it from. It is the set to measure when a compact tracker is drawn.
+`Compact` is three tenths of Le Mans's and has no measurement behind it -- the
+same set COTA authored compact with. Nothing draws that detail, and the
+compacts of these circuits are fitted on different axes, so there is no one
+ratio to read it from. It is the set to measure when a compact tracker is drawn.
 -}
 lengths : { compact : Circuit.Lengths, full : Circuit.Lengths }
 lengths =
@@ -121,23 +119,18 @@ pitLane geometry =
 
 {-| Where the lines the round is timed at stand on the surveyed lap.
 
-This circuit publishes no distances for them: the served geometry carries no
-`sectors`, because no map of the circuit's that gives them has been read --
-so there is nothing here to author line metres from, and inventing them would
-draw boundaries at a distance no one measured. What the round does say is how
-its laps divided between the three stretches, which is the reading the ring
-every undrawn round is put on already draws by: a line is placed where the
-round's own share of the lap puts it, and every car between two of them is
-placed by the share of the time between the lines it has run. The shape is
-surveyed; the lines are the round's, and would move with a season that divided
-its laps differently.
+This circuit publishes no distances for them -- the served geometry carries no
+`sectors` -- so there is nothing here to author line metres from, and inventing
+them would draw boundaries at a distance no one measured. What the round does
+say is how its laps divided between the three stretches, which is the reading
+the ring gives every undrawn round: a line stands where the round's own share
+puts it, and every car between two of them is placed by the share of the time
+between the lines it has run. The shape is surveyed; the lines are the round's,
+and would move with a season that divided its laps differently.
 
-COTA is the opposite case and shows what a published map buys: its lines stand
-at its own map's metres, which put the first of them some 170 m from where this
-round's shares would, and its [`geometry`](Motorsport-Wec-Circuit-Geometry)
-carries the stretches the circuit's config authors. If the circuit ever
-publishes the distances round its lap, they are authored in the geometry
-project's config, travel in the served file, and replace this derivation.
+If the circuit ever publishes the distances round its lap, they are authored in
+the geometry project's config, travel in the served file, and replace this
+derivation.
 
 Nothing here splits the lap finer: the feed carries no mini-sector times for
 this circuit, so a car between two of these lines is placed by the share of the
