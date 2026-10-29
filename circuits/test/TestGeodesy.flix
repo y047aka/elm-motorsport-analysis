@@ -47,7 +47,10 @@ pub mod TestGeodesy {
     def testTheProjectionIsOnePlaneAboutThePlacesOfBothLines(): Unit \ Assert =
         let places = {lon = 0.0, lat = 47.0} :: {lon = 0.0, lat = 48.0} :: Nil;
         // The mean latitude of both lines, not of the one being sampled along.
-        Assert.assertTrue(abs(parallelOf(places) - 47.5) < 0.0000000001);
+        Assert.assertTrue(abs(Option.getWithDefault(-1.0, parallelOf(places)) - 47.5) < 0.0000000001);
+        // Nothing to average is no parallel: the mean of nothing is a NaN that
+        // would walk through every projection and still say Ok.
+        Assert.assertTrue(parallelOf(Nil) == None);
         let place = projectOn(0.0, {lon = 1.0, lat = 1.0});
         // Metres, on the sphere every drawing is measured on, and `y` south so that
         // north is up.

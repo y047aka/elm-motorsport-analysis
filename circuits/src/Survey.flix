@@ -86,8 +86,9 @@ pub mod Survey {
             start    <- lineOf(relation, circuit);
             _        <- standsAtLine(relation#members, nodes, start, circuit);
             lap      <- chained(relation, ways, nodes, start);
-            pit      <- pitChained(relation, ways, nodes)
-        ) yield laidOut(reading, nodes, lap, pit, circuit)
+            pit      <- pitChained(relation, ways, nodes);
+            laid     <- laidOut(reading, nodes, lap, pit, circuit)
+        ) yield laid
 
     def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
         match List.find(each -> each#kind == "relation" and each#id == relation, reading#elements) {
@@ -330,29 +331,33 @@ pub mod Survey {
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
     /// line thinned to what a drawing at a tenth of a metre cannot show.
-    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit): Geometry = {
+    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit): Result[String, Geometry] = {
         let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
         let pitNodes = List.filterMap(id -> Map.get(id, nodes), pit);
         let both = List.append(lapNodes, pitNodes);
-        let parallel = parallelOf(both);
-        let lapPoints = List.map(projectOn(parallel), lapNodes);
-        let pitPoints = List.map(projectOn(parallel), pitNodes);
-        let surveyed = cumulative(lapPoints);
-        let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));
-        let metres = List.map(each -> each * stretch, surveyed);
-        // The published metre each surveyed place stands at, in one list: the degrees
-        // and the metre are one pair from here on, and never looked up apart.
-        let lapMetres = Geodesy.together(lapNodes, metres);
-        let half = List.length(lapPoints) / 2;
-        let kept = thinned(lapPoints, half);
-        let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
-        {
-            centreline = List.map(at -> metred(at, lapMetres), kept),
-            pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
-            frame = {origin = northWest(both), parallel = parallel},
-            direction = turnDirection(lapPoints),
-            surveyedAt = reading#surveyedAt,
-            surveyedLength = Some(Option.getWithDefault(0.0, List.last(surveyed)))
+        match parallelOf(both) {
+            case None =>
+                Err("the answer holds no place of this lap, so there is no parallel to lay either line on")
+            case Some(parallel) =>
+                let lapPoints = List.map(projectOn(parallel), lapNodes);
+                let pitPoints = List.map(projectOn(parallel), pitNodes);
+                let surveyed = cumulative(lapPoints);
+                let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));
+                let metres = List.map(each -> each * stretch, surveyed);
+                // The published metre each surveyed place stands at, in one list: the degrees
+                // and the metre are one pair from here on, and never looked up apart.
+                let lapMetres = Geodesy.together(lapNodes, metres);
+                let half = List.length(lapPoints) / 2;
+                let kept = thinned(lapPoints, half);
+                let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
+                Ok({
+                    centreline = List.map(at -> metred(at, lapMetres), kept),
+                    pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
+                    frame = {origin = northWest(both), parallel = parallel},
+                    direction = turnDirection(lapPoints),
+                    surveyedAt = reading#surveyedAt,
+                    surveyedLength = Some(Option.getWithDefault(0.0, List.last(surveyed)))
+                })
         }
     }
 

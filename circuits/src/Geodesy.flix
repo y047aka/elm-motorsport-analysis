@@ -93,9 +93,16 @@ pub mod Geodesy {
     // ---------------------------------------------------------------- projection
 
     /// The parallel both lines are laid on: the mean latitude of every place on
-    /// both lines together, so neither is drawn at a scale of its own.
-    pub def parallelOf(places: List[Place]): Float64 =
-        List.foldLeft((total, place) -> total + place#lat, 0.0, places) / Int32.toFloat64(List.length(places))
+    /// both lines together, so neither is drawn at a scale of its own. Nothing to
+    /// average has no mean — and the division that spells it answers `NaN`, a
+    /// number that walks through every projection of every place and still says
+    /// `Ok`, so the nothing is said here instead.
+    pub def parallelOf(places: List[Place]): Option[Float64] =
+        match places {
+            case Nil => None
+            case _ =>
+                Some(List.foldLeft((total, place) -> total + place#lat, 0.0, places) / Int32.toFloat64(List.length(places)))
+        }
 
     /// Equirectangular about that parallel: metres, and `y` running south as SVG's does
     /// so that north is up. The origin is the zero of degrees, not a corner of either line.

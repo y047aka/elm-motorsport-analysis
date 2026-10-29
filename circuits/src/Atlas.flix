@@ -385,40 +385,44 @@ pub mod Atlas {
     ): Result[String, Reading] \ IO = {
         let ourPlaces = List.map(each -> each#place, ours#line);
         let ourMetres = List.map(each -> each#metre, ours#line);
-        let parallel = Geodesy.parallelOf(coords ++ ourPlaces ++ ours#pit ++ markers);
-        let onto = place -> Geodesy.projectOn(parallel, place);
-        let theirPoints = List.map(onto, coords);
-        let ourPoints = List.map(onto, ourPlaces);
-        let theirMetres = Geodesy.cumulative(theirPoints);
-        let pitPoints = List.map(onto, ours#pit);
-        let pitMetres = Geodesy.cumulative(pitPoints);
-        let length = Option.getWithDefault(0.0, List.last(theirMetres));
-        let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
-        match forM(
-            theirLine      <- Apart.line(theirPoints, theirMetres);
-            ourLine        <- Apart.line(ourPoints, ourMetres);
-            pitLine        <- Apart.line(pitPoints, pitMetres);
-            origin         <- Midline.checkOrigin(first, circuit#timingLine);
-            deviation      <- Apart.apartness(theirLine, ourLine, Apart.defaultEvery());
-            whereCorners   <- atCorners(corners, parallel, ourLine, length);
-            published      <- atPublished(circuit, ours, theirLine, ourLine);
-            wherePits      <- atPits(pits, parallel, pitLine, length)
-        ) yield {
-            circuit = circuit,
-            source = source,
-            theirLine = Geodesy.together(coords, theirMetres),
-            corners = corners,
-            pits = pits,
-            origin = origin,
-            deviation = deviation,
-            atCorners = whereCorners,
-            atPits = wherePits,
-            pitLength = Option.getWithDefault(0.0, List.last(pitMetres)),
-            atLines = published#atLines,
-            sectors = published#sectors
-        } {
-            case Ok(reading) => keep(reading)
-            case Err(problem) => Err(problem)
+        match Geodesy.parallelOf(coords ++ ourPlaces ++ ours#pit ++ markers) {
+            case None => Err("neither line holds a place, so there is no plane to lay them on")
+            case Some(parallel) => {
+                let onto = place -> Geodesy.projectOn(parallel, place);
+                let theirPoints = List.map(onto, coords);
+                let ourPoints = List.map(onto, ourPlaces);
+                let theirMetres = Geodesy.cumulative(theirPoints);
+                let pitPoints = List.map(onto, ours#pit);
+                let pitMetres = Geodesy.cumulative(pitPoints);
+                let length = Option.getWithDefault(0.0, List.last(theirMetres));
+                let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
+                match forM(
+                    theirLine      <- Apart.line(theirPoints, theirMetres);
+                    ourLine        <- Apart.line(ourPoints, ourMetres);
+                    pitLine        <- Apart.line(pitPoints, pitMetres);
+                    origin         <- Midline.checkOrigin(first, circuit#timingLine);
+                    deviation      <- Apart.apartness(theirLine, ourLine, Apart.defaultEvery());
+                    whereCorners   <- atCorners(corners, parallel, ourLine, length);
+                    published      <- atPublished(circuit, ours, theirLine, ourLine);
+                    wherePits      <- atPits(pits, parallel, pitLine, length)
+                ) yield {
+                    circuit = circuit,
+                    source = source,
+                    theirLine = Geodesy.together(coords, theirMetres),
+                    corners = corners,
+                    pits = pits,
+                    origin = origin,
+                    deviation = deviation,
+                    atCorners = whereCorners,
+                    atPits = wherePits,
+                    pitLength = Option.getWithDefault(0.0, List.last(pitMetres)),
+                    atLines = published#atLines,
+                    sectors = published#sectors
+                } {
+                    case Ok(reading) => keep(reading)
+                    case Err(problem) => Err(problem)
+                }
+            }
         }
     }
 

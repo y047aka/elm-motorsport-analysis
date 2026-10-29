@@ -207,14 +207,17 @@ pub mod Diff {
     /// door below answers `Ok` for every line there is.
     def projectedOf(lines: (Line, Line)): Result[String, (List[Apart.Metred], List[Apart.Metred])] = {
         let (first, second) = lines;
-        let parallel = Geodesy.parallelOf(first#coords ++ second#coords);
-        let onto = line -> Apart.line(List.map(Geodesy.projectOn(parallel), line#coords), line#metres);
-        match forM(
-            one <- onto(first);
-            two <- onto(second)
-        ) yield (one, two) {
-            case Ok(pair)     => Ok(pair)
-            case Err(problem) => Err(problem)
+        match Geodesy.parallelOf(first#coords ++ second#coords) {
+            case None => Err("${first#name} and ${second#name} hold no places between them to project")
+            case Some(parallel) =>
+                let onto = line -> Apart.line(List.map(Geodesy.projectOn(parallel), line#coords), line#metres);
+                match forM(
+                    one <- onto(first);
+                    two <- onto(second)
+                ) yield (one, two) {
+                    case Ok(pair)     => Ok(pair)
+                    case Err(problem) => Err(problem)
+                }
         }
     }
 
