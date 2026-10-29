@@ -142,4 +142,21 @@ pub mod Overpass.TestAnswer {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(String.contains({substr = "lat"}, problem))
         }
+
+    /// An id is not a distance that may be rounded: a node ref with a fraction names
+    /// no element, and cutting it to a whole would chain the lap onto whatever way
+    /// wore the whole part of the number. A whole spelled with a decimal point is
+    /// still the whole it spells.
+    @Test
+    def testAFractionalRefIsRefusedAndNotCut(): Unit \ Assert =
+        match Overpass.Answer.read(json("{'elements': [ {'type': 'way', 'id': 1, 'nodes': [10, 10.5]} ]}")) {
+            case Ok(_)        => Assert.assertTrueWithMsg(false, "read a way whose node ref was a fraction")
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "fraction"}, problem))
+        };
+        match Overpass.Answer.read(json("{'elements': [ {'type': 'way', 'id': 1, 'nodes': [10, 11.0]} ]}")) {
+            case Ok(reading) =>
+                Assert.assertTrue(List.get(0, reading#elements)#nodes == 10i64 :: 11i64 :: Nil)
+            case Err(problem) =>
+                Assert.assertTrueWithMsg(false, "refused a whole spelled with a decimal point: ${problem}")
+        }
 }

@@ -167,13 +167,20 @@ pub mod Overpass.Answer {
         }
 
     /// A whole number: an id, a node reference. The answer's ids are far inside what a
-    /// double holds exactly, so a plain spelling is read as a float and cut to a whole
-    /// rather than looked for as an integer the answer never writes.
+    /// double holds exactly, so a plain spelling is read as a float rather than looked
+    /// for as an integer the answer never writes. A number with a fraction is no id:
+    /// cutting one to a whole would chain a lap onto a different way than the answer
+    /// named, so it is refused rather than rounded.
     def whole(json: Json): Result[String, Int64] =
         match json {
             case Json.JNumber(spelled) =>
                 match Float64.fromString(BigDecimal.toPlainString(spelled)) {
-                    case Some(spelledNumber) => Ok(Float64.truncateToInt64(spelledNumber))
+                    case Some(spelledNumber) =>
+                        let cut = Float64.truncateToInt64(spelledNumber);
+                        if (Int64.toFloat64(cut) == spelledNumber)
+                            Ok(cut)
+                        else
+                            Err("a number with a fraction where a whole one was named")
                     case None                => Err("a number no double reads")
                 }
             case _ => Err("a whole number the answer spelled as something else")
