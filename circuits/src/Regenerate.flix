@@ -434,10 +434,9 @@ pub mod Regenerate {
                 |> List.filter(key -> key != exempt() and not List.memberOf(key, claimed));
         claimed ++ other
 
-    /// The point two lines' coordinates part at, or -1 where they do not: one line
-    /// shorter than the other differs where it stops.
     /// The point the two lines' coordinates first part at, or nothing where they walk
-    /// together to the end — which happens when the geometry members differ in shape
+    /// together to the end — one line shorter than the other differs where it stops,
+    /// and they walk together to the end when the geometry members differ in shape
     /// and not in position.
     pub def firstDiff(fresh: List[Json], kept: List[Json]): Option[Int32] =
         parted(fresh, kept, 0)

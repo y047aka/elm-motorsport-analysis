@@ -129,9 +129,8 @@ pub mod Geometry {
         }
 
     /// What a report prints beside the figures: the kind of line and where it came
-    /// from. The basis is the one `outlineOf` read and recognised — a `Props` is
-    /// built from no other — so it is handed in rather than looked up and defaulted.
-    /// The file's other properties are left in the file.
+    /// from. The basis is the one `outlineOf` read and recognised. The file's other
+    /// properties are left in the file.
     def quoted(basis: String, props: Map[String, Json]): Props = {
         basis   = basis,
         source  = word("source", props),
@@ -142,9 +141,8 @@ pub mod Geometry {
 
     /// A file's feature of one role: its properties and its geometry — a geometry
     /// file's properties are what a line is claimed to be, and its `geometry` member
-    /// is where the coordinates stand. The sentence for a file holding no such feature
-    /// is made here, from the role: a caller that handed the sentence in could only
-    /// have written it by naming the same fact twice.
+    /// is where the coordinates stand. The sentence for a file holding no such
+    /// feature is made here, from the role.
     def found(text: String, name: String, role: String): Result[String, (Map[String, Json], Json)] =
         match Util.Json.parse(text) {
             case Err(problem) => Err("${name}: ${problem}")

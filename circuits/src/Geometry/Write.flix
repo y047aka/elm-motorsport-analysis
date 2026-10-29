@@ -33,11 +33,11 @@ pub mod Geometry.Write {
         let pit = feature(pitOf(circuit), pitLineOf(geometry#pitLane));
         "{\"type\": \"FeatureCollection\", \"features\": [\n${outline},\n${pit}\n]}\n"
 
-        // ---------------------------------------------------------------- the properties
+    // ---------------------------------------------------------------- the properties
 
     /// What the outline says it is, in the order the file says it in. A kept geometry is
     /// diffed by people as much as read by the app, so the order is the file's own, and
-    /// `Regenerate` takes the order of its drift report from the same list below.
+    /// `Regenerate` takes the order of its drift report from the same list.
     def outlineOf(circuit: Circuit, geometry: Survey.Geometry): List[String] =
         claims()
             |> List.filterMap(name -> pair(name, circuit, geometry))

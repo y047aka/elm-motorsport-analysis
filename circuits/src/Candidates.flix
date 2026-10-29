@@ -185,8 +185,7 @@ pub mod Candidates {
         )
 
     /// A way's line under the id a member refers to; a member naming no way in the
-    /// answer measures nought. The ways are the answer's, indexed once per
-    /// measuring rather than searched once per member.
+    /// answer measures nought.
     def wayOf(ways: Map[Int64, Element], ref: Int64): List[Place] =
         match Map.get(ref, ways) {
             case None      => Nil

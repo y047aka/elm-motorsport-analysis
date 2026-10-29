@@ -12,14 +12,13 @@
 /// This is the report's own copy of that vocabulary: the linked
 /// `Motorsport/Events.flix` names which ground a round was run on in these
 /// cases, and it compiles against whichever copy its project holds. The two
-/// copies still state one thing in common — the words — and
+/// copies state one thing in common — the words — and
 /// `test/check-sources.mjs` lays the two `jsonValue` bodies together, since no
-/// project compiles both anymore. What once made the copies one file, the
-/// timing figures, are not held here at all: the report's answer is derived by
-/// `Circuit.timingMap` from the config the drawing is laid from. This module
-/// cannot hold that derivation itself — its own `Circuit` shadows the config
-/// module of the same name, so `Circuit.byWord` reaches no further than the
-/// enum — which is the second reason the figures rest with their author.
+/// project compiles both. The timing figures are not held here at all: the
+/// report's answer is derived by `Circuit.timingMap` from the config the
+/// drawing is laid from. This module could not hold that derivation itself —
+/// its own `Circuit` shadows the config module of the same name, so
+/// `Circuit.byWord` reaches no further than the enum.
 pub mod Motorsport.Circuit {
 
     pub enum Circuit with Eq {

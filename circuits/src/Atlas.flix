@@ -15,8 +15,8 @@
 /// lane; and where the circuit's published sector lines stand on each line.
 ///
 /// The apartness math is `Apart`'s, shared with the diff; the feature shape checks,
-/// the guards and the written file are `Midline`'s. This file adds only the measuring.
-/// and the plane they are all measured on is `Geodesy`'s, which is also where the
+/// the guards and the written file are `Midline`'s. This file adds only the
+/// measuring; the plane it is done on is `Geodesy`'s, which is also where the
 /// atlas line's own metres come from — no reading of this one reaches into `Survey`.
 ///
 /// The atlas data is © its contributors under the ODbL, itself derived from OpenStreetMap

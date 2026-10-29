@@ -70,8 +70,7 @@ pub mod Circuit {
             Ok(implied(Option.getWithDefault(Nil, List.init(stretches)), 0.0, 2, Nil))
 
     /// The lines the stretches imply, in order, each named for the sector that begins
-    /// at it — the second sector begins at `s2`, which is why the counting starts
-    /// there and not at one.
+    /// at it.
     def implied(stretches: List[Float64], at: Float64, sector: Int32, lines: List[ImpliedLine]): List[ImpliedLine] =
         match stretches {
             case Nil => List.reverse(lines)
@@ -161,10 +160,7 @@ pub mod Circuit {
     /// What the timing report lays its sector shares against, derived from this
     /// config: the published stretches with the lap they add up to, a refusal
     /// quoting the circuit's own reason where its map is re-issued every season,
-    /// and `Unsurveyed` for a word no config authors. Held here rather than in
-    /// the report's `Motorsport.Circuit` because these are the figures the
-    /// drawing is laid from, and a report that reads its answers from the one
-    /// authorship needs no fence to tie two copies of them together.
+    /// and `Unsurveyed` for a word no config authors.
     pub def timingMap(word: String): TimingMap =
         match byWord(word) {
             case None => TimingMap.Unsurveyed

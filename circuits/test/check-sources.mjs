@@ -30,8 +30,8 @@ const here = (path) => readFileSync(new URL(`../src/${path}`, import.meta.url), 
  * into `flix/src` are left out — `Dirent.isFile()` is false for a symlink: they are
  * the timing report's, and that report reaches no file of the pipeline's and no HTTP
  * at all; it reads the feeds through `TimingLines.Files`. The report's own
- * `Motorsport/Circuit.flix` stands among the sources now, a real file rather than
- * a link — which is why the words it shares with the export are checked below. */
+ * `Motorsport/Circuit.flix` is one of those real files, and the words it shares with
+ * the export are checked below. */
 const sources = readdirSync(sourcesDir, { recursive: true, withFileTypes: true })
   .filter((entry) => entry.isFile() && entry.name.endsWith('.flix'))
   .map((entry) => relative(from, `${entry.parentPath ?? entry.path}/${entry.name}`))
@@ -173,12 +173,11 @@ check('the timing report reads and stats a file, and never writes one', () => {
 });
 
 // The words. The timing report shares one thing with the export: the enum of
-// circuits and the word each sends. They were one linked file, and the link
-// made a drift impossible; it is a real file on this side now, and no project
-// compiles both — the linked `Events.flix` compiles against whichever copy
-// names the cases, so a case name can only drift by failing to compile where
-// it drifted, while a *word* drifts quietly: the export's reaches a drawing in
-// `Shared.elm`, the report's prints its lines and matches a config's directory.
+// circuits and the word each sends. The linked `Events.flix` compiles against
+// whichever copy names the cases, and no project compiles both copies — so a
+// case name can only drift by failing to compile where it drifted, while a
+// *word* drifts quietly: the export's reaches a drawing in `Shared.elm`, the
+// report's prints its lines and matches a config's directory.
 // `app/tests/geometry-contract.spec.ts` reads the export's copy against the
 // app; this lays the two copies against each other.
 check("the report's and the export's circuit words are one list", () => {
