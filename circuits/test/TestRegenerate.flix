@@ -269,10 +269,10 @@ pub mod TestRegenerate {
     @Test
     def testDrawnGeometryIsNamedAsTheConfigNamesIt(): Unit \ Assert =
         Assert.assertTrue(
-            Regenerate.Unlisted.drawn(Circuit.circuits()) == "cota.geojson" :: "le_mans.geojson" :: Nil
+            Regenerate.Unlisted.drawn(Circuit.circuits()) == "cota.geojson" :: "le_mans.geojson" :: "barcelona.geojson" :: Nil
         );
         Assert.assertTrue(
-            Regenerate.Unlisted.words(Circuit.circuits()) == "cota" :: "le_mans" :: Nil
+            Regenerate.Unlisted.words(Circuit.circuits()) == "cota" :: "le_mans" :: "barcelona" :: Nil
         )
 
     /// A refusal that says what the reader asked for.

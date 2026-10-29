@@ -30,6 +30,7 @@ pub mod Motorsport.Circuit {
         case Fuji
         case Bahrain
         case SaoPaulo
+        case Barcelona
     }
 
     /// The spelling the summary sends for it, which is the word the app matches
@@ -49,6 +50,7 @@ pub mod Motorsport.Circuit {
             case Circuit.Fuji     => "fuji"
             case Circuit.Bahrain  => "bahrain"
             case Circuit.SaoPaulo => "sao_paulo"
+            case Circuit.Barcelona => "barcelona"
         }
 
     /// The stretches one circuit's map puts round its lap, and the lap length the
