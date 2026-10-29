@@ -7,8 +7,8 @@ pub mod TimingLines.TestFeed {
     use Cli.Errors.CliError
     use TimingLines.Feed.{
         CircuitMap, Column, Fastest, Line, Placement, Row, Times, count,
-        decode, fastestSectors, metres, movedMetres, movement, percent, placesOf,
-        publishedLines, seconds, sectorsOf, sharesOf, speeds, table, whole
+        decode, fastestSectors, inLinesOrder, metres, movedMetres, movement, percent,
+        placesOf, publishedLines, seconds, sectorsOf, sharesOf, speeds, table, whole
     }
     use Util.Duration.Duration
 
@@ -39,7 +39,18 @@ pub mod TimingLines.TestFeed {
         }
 
     def placed(name: String, at: List[Float64]): Placement =
-        { carClass = name, positions = at }
+        { carClass = name, positions = underLines(at) }
+
+    /// The fixture map's two lines' places, kept under the names `circuitMap()` gives
+    /// them — which is the whole point of a placement.
+    def underLines(at: List[Float64]): Map[String, Float64] =
+        stood(Map.empty(), List.zip(List#{"s2", "s3"}, at))
+
+    def stood(spots: Map[String, Float64], rest: List[(String, Float64)]): Map[String, Float64] =
+        match rest {
+            case Nil                    => spots
+            case (name, metresAt) :: more => stood(Map.insert(name, metresAt, spots), more)
+        }
 
     /// The three sectors of one reading, in milliseconds. A record carries no `Eq`,
     /// so a test compares the numbers one holds rather than the record.
@@ -190,7 +201,7 @@ pub mod TimingLines.TestFeed {
     /// which stands at nought and at the end.
     @Test
     def testImpliedLinesPlaceTheIntermediateLines(): Unit \ Assert =
-        let at = placesOf(times(60000, 60000, 60000), circuitMap());
+        let at = inLinesOrder(circuitMap()#lines, placesOf(times(60000, 60000, 60000), circuitMap()));
         Assert.assertTrue(List.length(at) == 2);
         Assert.assertTrue(closeTo(5515.0 / 3.0, List.get(0, at)));
         Assert.assertTrue(closeTo(2.0 * 5515.0 / 3.0, List.get(1, at)))
@@ -232,8 +243,8 @@ pub mod TimingLines.TestFeed {
         let against = placed("Hypercar", List#{990.0, 3020.0}) :: placed("LMGT3", List#{700.0, 2100.0}) :: Nil;
         let shift = movement(season, against);
         let moved = Option.map(each -> each#positions, List.find(each -> each#carClass == "Hypercar", shift#compared));
-        // Signed: which way round the lap the line moved.
-        Assert.assertTrue(moved == Some(List#{10.0, -20.0}));
+        // Signed: which way round the lap the line moved, each under its own name.
+        Assert.assertTrue(moved == Some(underLines(List#{10.0, -20.0})));
         // A class that ran one season only is named apart, from either side.
         Assert.assertTrue(shift#oneSeasonOnly == List#{"Algarve", "LMGT3"});
         // Judged on the widest move of the classes that ran both seasons.

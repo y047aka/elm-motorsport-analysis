@@ -55,10 +55,10 @@ pub mod TimingLines.Feed {
     pub def whole(): String = "the round"
 
     /// The three sectors as the feed spells its columns, which is how the report
-    /// names them. Everything below works positionally -- shares, positions and
-    /// speeds are each in the order a car drives them -- so only the print needs
-    /// the names, and a circuit timed finer than three sectors has nothing here
-    /// to say so.
+    /// names them. Shares and speeds below are in the order a car drives them, so
+    /// only the print needs the names, and a circuit timed finer than three sectors
+    /// has nothing here to say so; a timing line's place in the lap is kept under
+    /// that line's name, not under its list position.
     pub def sectors(): List[String] = List#{"S1", "S2", "S3"}
 
     /// One line the circuit times to, named as the geometry names it — the very type
@@ -75,9 +75,13 @@ pub mod TimingLines.Feed {
 
     /// Where one class's shares put the map's lines, in the order the map gives
     /// them -- the line the lap is measured from excepted.
+    /// Where one class's own fastest lap puts the circuit's timing lines: metres
+    /// round the lap, kept under each line's name. A place in a list would be a
+    /// place in the map's order, and a comparison would be a count of that order
+    /// rather than a matching of the lines themselves.
     pub type alias Placement = {
         carClass = String,
-        positions = List[Float64]
+        positions = Map[String, Float64]
     }
 
     /// How one season's placements stand against another's. `compared` is signed
@@ -251,9 +255,26 @@ pub mod TimingLines.Feed {
 
     /// Where round the lap one reading's shares put the map's lines: cumulative
     /// shares read as cumulative distance, short of the whole lap.
-    pub def placesOf(times: Times, circuitMap: CircuitMap): List[Float64] =
+    pub def placesOf(times: Times, circuitMap: CircuitMap): Map[String, Float64] =
         let ends = List.take(List.length(circuitMap#lines), cumulative(sharesOf(times)));
-        List.map(share -> share * circuitMap#lapLength, ends)
+        stood(
+            Map.empty(),
+            List.zip(circuitMap#lines, ends),
+            circuitMap#lapLength
+        )
+
+    def stood(spots: Map[String, Float64], rest: List[(Line, Float64)], lap: Float64): Map[String, Float64] =
+        match rest {
+            case Nil => spots
+            case (line, share) :: more =>
+                stood(Map.insert(line#id, share * lap, spots), more, lap)
+        }
+
+    /// The map's places in the order the map lists its lines — the order a table
+    /// whose columns are the lines prints them in. The one place a placement's
+    /// positions are read by position rather than by name, and it is the print's.
+    pub def inLinesOrder(lines: List[Line], positions: Map[String, Float64]): List[Float64] =
+        List.filterMap(line -> Map.get(line#id, positions), lines)
 
     /// The mean speed over each of the map's stretches, which is what a sector
     /// time taken for a share of the distance hides: km/h to one decimal, as the
@@ -274,10 +295,29 @@ pub mod TimingLines.Feed {
     pub def movement(season: List[Placement], against: List[Placement]): Movement = {
         def held(name: String): Option[Placement] = List.find(each -> each#carClass == name, against);
 
+        def walked(
+            spots: Map[String, Float64],
+            rest: List[(String, Float64)],
+            behind: Map[String, Float64]
+        ): Map[String, Float64] =
+            match rest {
+                case Nil => spots
+                case (line, ahead) :: more =>
+                    match Map.get(line, behind) {
+                        case None        => walked(spots, more, behind)
+                        case Some(was)   => walked(Map.insert(line, ahead - was, spots), more, behind)
+                    }
+            };
+
         def moved(each: Placement): Option[Placement] =
             Option.map(
-                ran -> { carClass = each#carClass,
-                         positions = List.zipWith((ahead, behind) -> ahead - behind, each#positions, ran#positions) },
+                ran ->
+                    {
+                        carClass = each#carClass,
+                        // A line one reading placed and the other did not is a line
+                        // nobody can say moved: the two are matched by name.
+                        positions = walked(Map.empty(), Map.toList(each#positions), ran#positions)
+                    },
                 held(each#carClass)
             );
 
@@ -295,7 +335,14 @@ pub mod TimingLines.Feed {
                 0.0,
                 // Absoluteness is what the distance allowed is compared against, and a
                 // line that moved backwards round the lap moved just as far.
-                List.maximum(List.map(Float64.abs, List.flatMap(each -> each#positions, compared)))
+                List.maximum(
+                    List.map(
+                        pair -> match pair {
+                            case (_, metres) => Float64.abs(metres)
+                        },
+                        List.flatMap(each -> Map.toList(each#positions), compared)
+                    )
+                )
             )
         }
     }

@@ -45,8 +45,8 @@ pub mod TimingLines {
     use Sys.Console
     use TimingLines.Feed.{
         CircuitMap, Column, Fastest, Line, Movement, Placement, decode, fastestSectors,
-        impliedLines, metres, movedMetres, movement, percent, placesOf, publishedLines,
-        count, seconds, sectors, sectorsOf, sharesOf, speeds, table
+        impliedLines, inLinesOrder, metres, movedMetres, movement, percent, placesOf,
+        publishedLines, count, seconds, sectors, sectorsOf, sharesOf, speeds, table
     }
     use TimingLines.Files
     use Util.GetOpt.ArgDescr
@@ -425,7 +425,7 @@ pub mod TimingLines {
         (each#carClass :: Nil)
             ++ List.map(seconds, sectorsOf(times))
             ++ List.map(percent, sharesOf(times))
-            ++ List.map(metres, placesOf(times, circuitMap))
+            ++ List.map(metres, inLinesOrder(circuitMap#lines, placesOf(times, circuitMap)))
             ++ speeds(times, circuitMap)
 
     // -------------------------------------------------------------------- judging
@@ -442,7 +442,10 @@ pub mod TimingLines {
                 Console.println("${first#season} against ${second#season}: how far round the lap one line stands");
                 Console.println(table(columns, List.map(column -> column#name, columns)));
                 List.forEach(
-                    each -> Console.println(table(columns, (each#carClass :: Nil) ++ List.map(movedMetres, each#positions))),
+                    each ->
+                        Console.println(
+                            table(columns, (each#carClass :: Nil) ++ List.map(movedMetres, inLinesOrder(report#lines, each#positions)))
+                        ),
                     shift#compared
                 );
                 List.forEach(
