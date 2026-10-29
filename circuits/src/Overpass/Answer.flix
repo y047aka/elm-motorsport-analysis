@@ -191,4 +191,36 @@ pub mod Overpass.Answer {
 
     def decodeAtKeyOpt(key: String, json: Json): Result[String, Option[a]] with FromJson[a] =
         FromJson.decodeAtKeyOpt(key, json) |> Result.mapErr(e -> "${e}")
+
+    // ------------------------------------------------------------------ the answer, indexed
+
+    /// The elements of one kind, each under its id. An answer lists its elements
+    /// flat, and a reading that asks it per relation member — a survey chaining a
+    /// lap through a way's node refs, a probe measuring each role's ways — walked
+    /// the whole answer once per member; indexed once here, the answer is walked
+    /// once.
+    pub def byKind(answers: List[Element], kind: String): Map[Int64, Element] =
+        stood(Map.empty(), List.filter(each -> each#kind == kind, answers))
+
+    def stood(spots: Map[Int64, Element], rest: List[Element]): Map[Int64, Element] =
+        match rest {
+            case Nil         => spots
+            case one :: more => stood(Map.insert(one#id, one, spots), more)
+        }
+
+    /// Every place the answer holds a node for, under its id. A node the answer
+    /// does not hold is dropped rather than guessed at, and shows up as a lap with
+    /// a place missing.
+    pub def nodePlaces(answers: List[Element]): Map[Int64, Place] =
+        heldPlaces(Map.empty(), List.filter(each -> each#kind == "node", answers))
+
+    def heldPlaces(spots: Map[Int64, Place], rest: List[Element]): Map[Int64, Place] =
+        match rest {
+            case Nil => spots
+            case one :: more =>
+                match one#at {
+                    case None     => heldPlaces(spots, more)
+                    case Some(at) => heldPlaces(Map.insert(one#id, at, spots), more)
+                }
+        }
 }

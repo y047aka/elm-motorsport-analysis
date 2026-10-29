@@ -126,10 +126,11 @@ pub mod Candidates {
     }
 
     pub def measure(answer: List[Element], relation: Int64): Result[String, Measured] =
-        match relationOf(answer, relation) {
+        let ways = Overpass.Answer.byKind(answer, "way");
+        match Map.get(relation, Overpass.Answer.byKind(answer, "relation")) {
             case None => Err("the answer holds no relation ${relation}")
             case Some(rel) =>
-                let tallies = tally(rel#members, answer);
+                let tallies = tally(rel#members, ways);
                 let lap = Option.getWithDefault(unmeasured(""), held(tallies, ""));
                 Ok({lap = lap, pit = pitOf(tallies), roles = tallies, nodeRoles = nodeRoles(rel#members)})
         }
@@ -145,13 +146,13 @@ pub mod Candidates {
     /// A role the answer carries no ways under: the lap the report prints a length
     /// for may be a role the relation never uses.
     def unmeasured(role: String): Tally = { role = role, ways = 0, metres = 0.0 }
-    def tally(members: List[Member], answer: List[Element]): List[Tally] =
+    def tally(members: List[Member], ways: Map[Int64, Element]): List[Tally] =
         List.foldLeft(
             (entries, member) ->
                 if (member#kind != "way")
                     entries
                 else
-                    add(member#role, Geodesy.polylineMetres(wayOf(answer, member#ref)), entries),
+                    add(member#role, Geodesy.polylineMetres(wayOf(ways, member#ref)), entries),
             Nil,
             members
         )
@@ -183,18 +184,14 @@ pub mod Candidates {
             members
         )
 
-    /// A way's line by the id a member refers to. An answer lists its elements
-    /// flat, so the ways are looked for in it rather than gathered first.
-    def wayOf(answer: List[Element], ref: Int64): List[Place] =
-        match List.find(element -> element#kind == "way" and element#id == ref, answer) {
-            case None       => Nil
-            case Some(way)  => way#line
+    /// A way's line under the id a member refers to; a member naming no way in the
+    /// answer measures nought. The ways are the answer's, indexed once per
+    /// measuring rather than searched once per member.
+    def wayOf(ways: Map[Int64, Element], ref: Int64): List[Place] =
+        match Map.get(ref, ways) {
+            case None      => Nil
+            case Some(way) => way#line
         }
-
-    /// The relation the answer was asked for. An answer holding some other relation
-    /// is a runner that answered a different question.
-    def relationOf(answer: List[Element], relation: Int64): Option[Element] =
-        List.find(element -> element#kind == "relation" and element#id == relation, answer)
 
     /// The pit lane's role, which OpenStreetMap has been tagged both ways: Le
     /// Mans's relation says `pit_lane` and plenty say `pit`.

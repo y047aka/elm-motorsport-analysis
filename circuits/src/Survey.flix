@@ -79,8 +79,8 @@ pub mod Survey {
 
     /// The lap, the pit lane and the frame, chained out of an answer already read.
     pub def geometryOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
-        let nodes = nodesOf(reading);
-        let ways = waysOf(reading);
+        let nodes = Overpass.Answer.nodePlaces(reading#elements);
+        let ways = Overpass.Answer.byKind(reading#elements, "way");
         forM(
             relation <- relationOf(reading, circuit#relation);
             start    <- lineOf(relation, circuit);
@@ -91,26 +91,10 @@ pub mod Survey {
         ) yield laid
 
     def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
-        match List.find(each -> each#kind == "relation" and each#id == relation, reading#elements) {
+        match Map.get(relation, Overpass.Answer.byKind(reading#elements, "relation")) {
             case Some(one) => Ok(one)
             case None      => Err("the answer holds no relation ${relation}")
         }
-
-    /// Every place the answer holds a node for, by its id. A node the answer does not hold
-    /// is dropped rather than guessed at, and shows up as a lap with a place missing.
-    def nodesOf(reading: Answer): Map[Int64, Place] =
-        paired(
-            List.filterMap(
-                each -> match each#at {
-                    case Some(at) => Some((each#id, at))
-                    case None     => None
-                },
-                List.filter(each -> each#kind == "node", reading#elements)
-            )
-        )
-
-    def waysOf(reading: Answer): Map[Int64, Element] =
-        paired(List.map(each -> (each#id, each), List.filter(each -> each#kind == "way", reading#elements)))
 
     /// The relation member the lap is measured from. A circuit says which role tags it, and
     /// getting it wrong moves the whole field down the lap by the distance between two tagged
@@ -442,9 +426,6 @@ pub mod Survey {
         )
 
     // --------------------------------------------------------------- the lists at hand
-
-    def paired(pairs: List[(k, v)]): Map[k, v] with Order[k] =
-        List.foldLeft((held, pair) -> match pair {case (key, value) => Map.insert(key, value, held)}, Map.empty(), pairs)
 
     /// Everything but the last of a list, so a line joined to another at their meeting
     /// point holds that point once.
