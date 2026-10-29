@@ -200,7 +200,7 @@ pub mod Overpass.Answer {
     /// the whole answer once per member; indexed once here, the answer is walked
     /// once.
     pub def byKind(answers: List[Element], kind: String): Map[Int64, Element] =
-        stood(Map.empty(), List.filter(each -> each#kind == kind, answers))
+        answers |> List.filter(each -> each#kind == kind) |> stood(Map.empty())
 
     def stood(spots: Map[Int64, Element], rest: List[Element]): Map[Int64, Element] =
         match rest {
@@ -212,7 +212,7 @@ pub mod Overpass.Answer {
     /// does not hold is dropped rather than guessed at, and shows up as a lap with
     /// a place missing.
     pub def nodePlaces(answers: List[Element]): Map[Int64, Place] =
-        heldPlaces(Map.empty(), List.filter(each -> each#kind == "node", answers))
+        answers |> List.filter(each -> each#kind == "node") |> heldPlaces(Map.empty())
 
     def heldPlaces(spots: Map[Int64, Place], rest: List[Element]): Map[Int64, Place] =
         match rest {

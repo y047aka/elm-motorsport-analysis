@@ -62,7 +62,7 @@ pub mod Candidates {
     /// number is not dropped: `north,east` reads as a place to whoever typed it,
     /// and the answer it gets has to say that it is neither.
     def numbers(place: String): Option[List[Float64]] =
-        let spelled = List.map(Float64.fromString, String.splitOn({substr = ","}, place));
+        let spelled = place |> String.splitOn({substr = ","}) |> List.map(Float64.fromString);
         if (List.exists(Option.isEmpty, spelled))
             None
         else
@@ -110,7 +110,7 @@ pub mod Candidates {
             false
 
     def spelled(key: String, tags: Tags): String =
-        Option.getWithDefault("", Map.get(key, tags))
+        Map.get(key, tags) |> Option.getWithDefault("")
 
     /// The relation's ways, measured: how many there are and under which roles,
     /// and the length of the ones a lap would be chained from — ways with no
@@ -131,7 +131,7 @@ pub mod Candidates {
             case None => Err("the answer holds no relation ${relation}")
             case Some(rel) =>
                 let tallies = tally(rel#members, ways);
-                let lap = Option.getWithDefault(unmeasured(""), held(tallies, ""));
+                let lap = held(tallies, "") |> Option.getWithDefault(unmeasured(""));
                 Ok({lap = lap, pit = pitOf(tallies), roles = tallies, nodeRoles = nodeRoles(rel#members)})
         }
 

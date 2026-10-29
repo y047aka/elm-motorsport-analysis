@@ -159,7 +159,7 @@ pub mod Diff {
     /// The name a file is quoted by: its last path part, without the extension the
     /// profile writes it with.
     pub def baseName(path: String): String =
-        withoutExtension(Circuit.lastPart(path))
+        path |> Circuit.lastPart |> withoutExtension
 
     def withoutExtension(name: String): String =
         if (String.endsWith({suffix = Geometry.extension()}, name))
@@ -243,11 +243,11 @@ pub mod Diff {
             case None      => ""
             case Some(one) => " — ${one}"
         };
-        "${line#name}: basis ${line#props#basis}, ${Util.Format.fixed(1, endsAt(line))} m${cameFrom}"
+        "${line#name}: basis ${line#props#basis}, ${line |> endsAt |> Util.Format.fixed(1)} m${cameFrom}"
     }
 
     def endsAt(line: Line): Float64 =
-        Option.getWithDefault(0.0, List.last(line#metres))
+        line#metres |> List.last |> Option.getWithDefault(0.0)
 
     /// One direction of the comparison as the sentence the report prints it in. Both
     /// directions are printed: they disagree when one line has places the other has not.

@@ -429,10 +429,9 @@ pub mod Regenerate {
     def askedOf(fresh: Map[String, Json], kept: Map[String, Json]): List[String] =
         let claimed = compared();
         let other =
-            List.filter(
-                key -> key != exempt() and not List.memberOf(key, claimed),
-                Set.toList(Set.union(Map.keysOf(fresh), Map.keysOf(kept)))
-            );
+            Set.union(Map.keysOf(fresh), Map.keysOf(kept))
+                |> Set.toList
+                |> List.filter(key -> key != exempt() and not List.memberOf(key, claimed));
         claimed ++ other
 
     /// The point two lines' coordinates part at, or -1 where they do not: one line
@@ -453,7 +452,7 @@ pub mod Regenerate {
 
     /// What a feature's `geometry` member holds, JSON-null where it holds nothing.
     def geometryOf(feature: Geometry.Feature): Json =
-        Option.getWithDefault(Json.JNull, Map.get("geometry", feature))
+        Map.get("geometry", feature) |> Option.getWithDefault(Json.JNull)
 
     /// A feature's coordinates as the file gives them, one JSON pair per place.
     def coordinatesOf(feature: Geometry.Feature): List[Json] =

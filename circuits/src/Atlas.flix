@@ -297,7 +297,7 @@ pub mod Atlas {
         }
 
     def getting(url: String): HttpRequest =
-        HttpRequest.withHeader("User-Agent", userAgent(), HttpRequest.get(url))
+        url |> HttpRequest.get |> HttpRequest.withHeader("User-Agent", userAgent())
 
     /// The layer read down to its three kinds of feature: the outline that is the line,
     /// the corners, and whichever pit markers the layer holds. The identity guard is
@@ -394,8 +394,8 @@ pub mod Atlas {
                 let theirMetres = Geodesy.cumulative(theirPoints);
                 let pitPoints = List.map(onto, ours#pit);
                 let pitMetres = Geodesy.cumulative(pitPoints);
-                let length = Option.getWithDefault(0.0, List.last(theirMetres));
-                let first = Option.getWithDefault({lon = 0.0, lat = 0.0}, List.head(coords));
+                let length = theirMetres |> List.last |> Option.getWithDefault(0.0);
+                let first = coords |> List.head |> Option.getWithDefault({lon = 0.0, lat = 0.0});
                 match forM(
                     theirLine      <- Apart.line(theirPoints, theirMetres);
                     ourLine        <- Apart.line(ourPoints, ourMetres);
@@ -415,7 +415,7 @@ pub mod Atlas {
                     deviation = deviation,
                     atCorners = whereCorners,
                     atPits = wherePits,
-                    pitLength = Option.getWithDefault(0.0, List.last(pitMetres)),
+                    pitLength = pitMetres |> List.last |> Option.getWithDefault(0.0),
                     atLines = published#atLines,
                     sectors = published#sectors
                 } {
@@ -446,7 +446,7 @@ pub mod Atlas {
             case (Err(problem), _) => Err(problem)
             case (_, Err(problem)) => Err(problem)
             case (Ok(place), Ok(marker)) =>
-                let spelled = Option.getWithDefault("undefined", Geometry.word("id", Geometry.propertiesOf(corner)));
+                let spelled = corner |> Geometry.propertiesOf |> Geometry.word("id") |> Option.getWithDefault("undefined");
                 match place |> Geodesy.projectOn(parallel) |> Apart.nearestOn(ourLine) {
                     case None => Err("the line this app draws holds no places, so corner ${spelled} stands nowhere on it")
                     case Some(near) =>
@@ -527,7 +527,7 @@ pub mod Atlas {
     /// marker — a corner, a pit, a published line — stands on this app's line.
     def report(reading: Reading): Unit \ Console = {
         let circuit = reading#circuit;
-        let length = Option.getWithDefault(0.0, Option.map(each -> each#metre, List.last(reading#theirLine)));
+        let length = reading#theirLine |> List.last |> Option.map(each -> each#metre) |> Option.getWithDefault(0.0);
         let distances = List.map(corner -> corner#distance, reading#atCorners);
         let laps = List.map(corner -> corner#ourMetres - corner#theirMetres, reading#atCorners);
         let worstLap = List.foldLeft((held, each) -> if (Float64.abs(each) > Float64.abs(held)) each else held, 0.0, laps);
@@ -570,7 +570,7 @@ pub mod Atlas {
             "corners (0): the atlas layer holds no corner markers, so nothing was laid against our line"
         else
             "corners (${List.length(distances)}): mean apart ${Util.Format.fixed(1, mean(distances))} m, max ${Util.Format.fixed(1, Option.getWithDefault(0.0, List.maximum(distances)))} m; "
-                + "lap distance differs by ${Util.Format.fixed(1, mean(List.map(Float64.abs, laps)))} m on average, worst ${Midline.signed(worstLap)} m"
+                + "lap distance differs by ${laps |> List.map(Float64.abs) |> mean |> Util.Format.fixed(1)} m on average, worst ${Midline.signed(worstLap)} m"
 
     /// The published lines' own paragraph, which a geometry that publishes no map
     /// simply does not have — and that a map publishing no intermediate line has no

@@ -423,7 +423,7 @@ pub mod TimingLines {
         (each#carClass :: Nil)
             ++ List.map(seconds, sectorsOf(times))
             ++ List.map(percent, sharesOf(times))
-            ++ List.map(metres, inLinesOrder(circuitMap#lines, placesOf(times, circuitMap)))
+            ++ List.map(metres, placesOf(times, circuitMap) |> inLinesOrder(circuitMap#lines))
             ++ speeds(times, circuitMap)
 
     // -------------------------------------------------------------------- judging
@@ -442,7 +442,7 @@ pub mod TimingLines {
                 List.forEach(
                     each ->
                         Console.println(
-                            table(columns, (each#carClass :: Nil) ++ List.map(movedMetres, inLinesOrder(report#lines, each#positions)))
+                            table(columns, (each#carClass :: Nil) ++ (each#positions |> inLinesOrder(report#lines) |> List.map(movedMetres)))
                         ),
                     shift#compared
                 );

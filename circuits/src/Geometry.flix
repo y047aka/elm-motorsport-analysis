@@ -173,10 +173,9 @@ pub mod Geometry {
         }
 
     def byRole(role: String, some: List[Feature]): Option[(Map[String, Json], Json)] =
-        Option.map(
-            one -> (propertiesOf(one), Option.getWithDefault(Json.JNull, Map.get("geometry", one))),
-            List.find(each -> word("role", propertiesOf(each)) == Some(role), some)
-        )
+        some
+            |> List.find(each -> word("role", propertiesOf(each)) == Some(role))
+            |> Option.map(one -> (propertiesOf(one), Map.get("geometry", one) |> Option.getWithDefault(Json.JNull)))
 
     /// A feature's properties. A feature carrying none picks nothing.
     pub def propertiesOf(feature: Feature): Map[String, Json] =

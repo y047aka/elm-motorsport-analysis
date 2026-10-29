@@ -88,7 +88,10 @@ pub mod Apart {
     }
 
     pub def nearestOn(line: List[Metred], point: Point): Option[Near] =
-        nearest(None, List.map(each -> stands(each, point |> toSegment(each#start, each#end)), stretches(line)))
+        line
+            |> stretches
+            |> List.map(each -> stands(each, point |> toSegment(each#start, each#end)))
+            |> nearest(None)
 
     /// The metre along the lap where the nearest place on a stretch stands.
     def stands(stretch: Stretch, on: On): (On, Float64) =
@@ -142,7 +145,7 @@ pub mod Apart {
             Ok(readings(samples(0.0, length, every, a, b)))
 
     def lastMetre(line: List[Metred]): Float64 =
-        Option.getWithDefault(0.0, Option.map(each -> each#metre, List.last(line)))
+        line |> List.last |> Option.map(each -> each#metre) |> Option.getWithDefault(0.0)
 
     /// The walk along the sampled line. A sample stands where the nearest place on the
     /// other line does; the comparison answers nothing against a line with no places,

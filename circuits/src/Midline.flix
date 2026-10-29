@@ -213,7 +213,7 @@ pub mod Midline {
         pits: List[Geometry.Feature]
     ): String = {
         let metres = List.map(each -> each#metre, line);
-        let length = Option.getWithDefault(0.0, List.last(metres));
+        let length = metres |> List.last |> Option.getWithDefault(0.0);
         let outline =
             "{"
                 + "\"type\":${Geometry.Write.text("Feature")},"
@@ -244,7 +244,7 @@ pub mod Midline {
     /// A pit entry or exit, under the role the layer gave it.
     def pitText(feature: Geometry.Feature): String =
         laidOut(
-            "\"role\":${Geometry.Write.text(Option.getWithDefault("feature", roleOf(feature)))}" :: carried("name", feature) :: carried("marker", feature) :: Nil,
+            "\"role\":${Geometry.Write.text(roleOf(feature) |> Option.getWithDefault("feature"))}" :: carried("name", feature) :: carried("marker", feature) :: Nil,
             feature
         )
 

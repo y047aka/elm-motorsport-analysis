@@ -252,7 +252,7 @@ pub mod Survey {
             match endPlace(nodes, ids) {
                 case None => Err("the chain ended at a node the answer does not hold")
                 case Some(stopped) =>
-                    Err("ways left out of the chain: ${String.intercalate("; ", List.map(segment -> straggled(segment, stopped, nodes), left))}")
+                    Err("ways left out of the chain: ${left |> List.map(segment -> straggled(segment, stopped, nodes)) |> String.intercalate("; ")}")
             }
 
     def straggled(segment: Segment, stopped: Place, nodes: Map[Int64, Place]): String = {
@@ -261,7 +261,7 @@ pub mod Survey {
         let near = gap < 0.5;
         let drive = if (not segment#oneway) "" else if (near) ", driven the other way" else ", oneway";
         let stands = if (near) "at" else "${Util.Format.fixed(1, gap)} m from";
-        "${segment#id} is ${Util.Format.whole(Float64.round(polylineMetres(points)))} m, nearest end ${stands} where the chain stopped${drive}"
+        "${segment#id} is ${points |> polylineMetres |> Float64.round |> Util.Format.whole} m, nearest end ${stands} where the chain stopped${drive}"
     }
 
     /// How far the nearer end of a way stands from where the chain stopped.
@@ -323,10 +323,10 @@ pub mod Survey {
             case None =>
                 Err("the answer holds no place of this lap, so there is no parallel to lay either line on")
             case Some(parallel) =>
-                let lapPoints = List.map(projectOn(parallel), lapNodes);
-                let pitPoints = List.map(projectOn(parallel), pitNodes);
+                let lapPoints = lapNodes |> List.map(projectOn(parallel));
+                let pitPoints = pitNodes |> List.map(projectOn(parallel));
                 let surveyed = cumulative(lapPoints);
-                let stretch = circuit#lap / Option.getWithDefault(0.0, List.last(surveyed));
+                let stretch = circuit#lap / (surveyed |> List.last |> Option.getWithDefault(0.0));
                 let metres = List.map(each -> each * stretch, surveyed);
                 // The published metre each surveyed place stands at, in one list: the degrees
                 // and the metre are one pair from here on, and never looked up apart.
@@ -340,7 +340,7 @@ pub mod Survey {
                     frame = {origin = northWest(both), parallel = parallel},
                     direction = turnDirection(lapPoints),
                     surveyedAt = reading#surveyedAt,
-                    surveyedLength = Some(Option.getWithDefault(0.0, List.last(surveyed)))
+                    surveyedLength = Some(surveyed |> List.last |> Option.getWithDefault(0.0))
                 })
         }
     }
@@ -430,7 +430,7 @@ pub mod Survey {
     /// Everything but the last of a list, so a line joined to another at their meeting
     /// point holds that point once.
     def withoutLast(points: List[a]): List[a] =
-        Option.getWithDefault(Nil, List.init(points))
+        points |> List.init |> Option.getWithDefault(Nil)
 
     def lastIndex(points: List[a]): Int32 =
         Int32.max(0, List.length(points) - 1)
@@ -631,7 +631,7 @@ pub mod Survey {
 
     /// What the asking left beside the circuit.
     def keptLine(asked: Request, reading: Answer): String =
-        let elements = Int32.toString(List.length(reading#elements));
+        let elements = reading#elements |> List.length |> Int32.toString;
         let stamp = match reading#surveyedAt {
             case None     => ""
             case Some(at) => ", surveyed at ${at}"

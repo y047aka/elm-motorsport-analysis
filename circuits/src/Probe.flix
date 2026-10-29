@@ -208,7 +208,7 @@ pub mod Probe {
     /// A distance as the probe prints it: whole metres, which is all a relation
     /// measured off an answer is worth.
     def whole(metres: Float64): String =
-        "${Float64.truncateToInt64(Float64.floor(metres + 0.5))}"
+        "${(metres + 0.5) |> Float64.floor |> Float64.truncateToInt64}"
 
     def plural(ways: Int32): String = if (ways == 1) "" else "s"
 }

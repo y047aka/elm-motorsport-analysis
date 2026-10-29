@@ -127,19 +127,22 @@ pub mod TimingLines.Feed {
 
     def classField(): Decoder[String] =
         Decode.field("CLASS", Decode.string())
-            |> Decode.andThen(spelled -> Decode.fromResult(
-                if (String.isEmpty(String.trim(spelled)))
-                    Err("a lap names no class, so its sectors cannot be the fastest of any.")
-                else
-                    Ok(String.trim(spelled))
-            ))
+            |> Decode.andThen(spelled ->
+                let trimmed = spelled |> String.trim;
+                Decode.fromResult(
+                    if (String.isEmpty(trimmed))
+                        Err("a lap names no class, so its sectors cannot be the fastest of any.")
+                    else
+                        Ok(trimmed)
+                )
+            )
 
     def sectorField(name: String): Decoder[Option[Duration]] =
         Decode.field(name, Decode.blank(Decode.string()))
             |> Decode.andThen(spelled -> Decode.fromResult(
                 match spelled {
                     case None       => Ok(None)
-                    case Some(cell) => readSectorTime(String.trim(cell))
+                    case Some(cell) => cell |> String.trim |> readSectorTime
                 }
             ))
 
@@ -218,7 +221,7 @@ pub mod TimingLines.Feed {
         }
 
     def fastestOfSector(sector: Times -> Duration, classes: List[Fastest]): Option[Duration] =
-        List.minimum(List.map(each -> sector(each#times), classes))
+        classes |> List.map(each -> sector(each#times)) |> List.minimum
 
     def firstSector(times: Times): Duration = times#s1
 
@@ -243,7 +246,7 @@ pub mod TimingLines.Feed {
     /// divides, written again for the reason in this module's header.
     pub def sharesOf(times: Times): List[Float64] =
         let ran = sectorsOf(times);
-        let over = Int32.toFloat64(List.sum(List.map(Util.Duration.millis, ran)));
+        let over = ran |> List.map(Util.Duration.millis) |> List.sum |> Int32.toFloat64;
         List.map(time -> Int32.toFloat64(Util.Duration.millis(time)) / over, ran)
 
     /// Where round the lap each class's shares put the map's lines.
@@ -253,7 +256,7 @@ pub mod TimingLines.Feed {
     /// Where round the lap one reading's shares put the map's lines: cumulative
     /// shares read as cumulative distance, short of the whole lap.
     pub def placesOf(times: Times, circuitMap: CircuitMap): Map[String, Float64] =
-        let ends = List.take(List.length(circuitMap#lines), cumulative(sharesOf(times)));
+        let ends = times |> sharesOf |> cumulative |> List.take(List.length(circuitMap#lines));
         stood(
             Map.empty(),
             List.zip(circuitMap#lines, ends),
@@ -281,7 +284,7 @@ pub mod TimingLines.Feed {
         let ground = List.zipWith((begun, ended) -> ended - begun, edges, List.drop(1, edges));
         List.zipWith(
             (metres, time) ->
-                Util.Format.fixed(1, metres / (Int32.toFloat64(Util.Duration.millis(time)) / 1000.0) * 3.6),
+                Util.Format.fixed(1, metres / ((time |> Util.Duration.millis |> Int32.toFloat64) / 1000.0) * 3.6),
             ground,
             sectorsOf(times)
         )
@@ -328,19 +331,15 @@ pub mod TimingLines.Feed {
         {
             compared = compared,
             oneSeasonOnly = List.filterMap(apartFrom(against), season) ++ List.filterMap(apartFrom(season), against),
-            furthest = Option.getWithDefault(
-                0.0,
-                // Absoluteness is what the distance allowed is compared against, and a
-                // line that moved backwards round the lap moved just as far.
-                List.maximum(
-                    List.map(
-                        pair -> match pair {
-                            case (_, metres) => Float64.abs(metres)
-                        },
-                        List.flatMap(each -> Map.toList(each#positions), compared)
-                    )
-                )
-            )
+            // Absoluteness is what the distance allowed is compared against, and a
+            // line that moved backwards round the lap moved just as far.
+            furthest = compared
+                |> List.flatMap(each -> Map.toList(each#positions))
+                |> List.map(pair -> match pair {
+                    case (_, metres) => Float64.abs(metres)
+                })
+                |> List.maximum
+                |> Option.getWithDefault(0.0)
         }
     }
 
@@ -367,11 +366,11 @@ pub mod TimingLines.Feed {
 
     /// A distance round the lap, to the tenth of a metre the survey is kept at,
     /// and grouped by the thousand as the circuit's own map writes one.
-    pub def metres(distance: Float64): String = grouped(Util.Format.fixed(1, distance))
+    pub def metres(distance: Float64): String = distance |> Util.Format.fixed(1) |> grouped
 
     /// How far round the lap one line moved, with the sign that says which way.
     pub def movedMetres(moved: Float64): String =
-        "${if (moved < 0.0) "-" else "+"}${metres(Float64.abs(moved))} m"
+        "${if (moved < 0.0) "-" else "+"}${moved |> Float64.abs |> metres} m"
 
     /// A count grouped by the thousand, which is how the five thousand laps of a
     /// round are read off a screen.

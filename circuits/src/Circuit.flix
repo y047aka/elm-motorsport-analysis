@@ -235,5 +235,5 @@ pub mod Circuit {
 
     /// The sentence for a word no circuit answers to, naming the words that do.
     pub def unknown(word: String): String =
-        "no circuit is surveyed under '${word}': known are ${String.intercalate(", ", List.map(circuit -> circuit#word, circuits()))}"
+        "no circuit is surveyed under '${word}': known are ${circuits() |> List.map(circuit -> circuit#word) |> String.intercalate(", ")}"
 }
