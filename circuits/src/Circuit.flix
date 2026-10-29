@@ -4,10 +4,11 @@
 /// A circuit's config is authored once, here: the relation surveyed, the length the lap
 /// is stretched to, where the circuit puts its own timing line, whose map the lines come
 /// from. The directory named by the circuit's word keeps the evidence — the kept Overpass
-/// answer and the kept atlas line — and no code. `circuits/test/TestTimingMap.flix`
-/// lays these figures against the report's own copy in `Motorsport.Circuit`,
-/// which compiles beside them; the byte fence — `nix run .#geometry -- survey
-/// <word>` — lays them against the bytes the app is served.
+/// answer and the kept atlas line — and no code. The timing report reads these
+/// same figures through this module's own `timingMap`, which derives the
+/// report's answer from them rather than restating them; the byte fence — `nix
+/// run .#geometry -- survey <word>` — lays them against the bytes the app is
+/// served.
 ///
 /// A circuit's atlas layer is here as the URL of the layer itself: the track-atlas line
 /// is authored in no config, and the reading that measures it writes its own file beside
@@ -15,6 +16,7 @@
 pub mod Circuit {
 
     use Geodesy.Place
+    use Motorsport.Circuit.TimingMap
 
     /// Where the line the lap is measured from is put by the circuit itself. A circuit that
     /// publishes no place tags nothing a survey could mistake for it, and is asked nothing.
@@ -156,6 +158,28 @@ pub mod Circuit {
     pub def byWord(word: String): Option[Circuit] =
         List.find(circuit -> circuit#word == word, circuits())
 
+    /// What the timing report lays its sector shares against, derived from this
+    /// config: the published stretches with the lap they add up to, a refusal
+    /// quoting the circuit's own reason where its map is re-issued every season,
+    /// and `Unsurveyed` for a word no config authors. Held here rather than in
+    /// the report's `Motorsport.Circuit` because these are the figures the
+    /// drawing is laid from, and a report that reads its answers from the one
+    /// authorship needs no fence to tie two copies of them together.
+    pub def timingMap(word: String): TimingMap =
+        match byWord(word) {
+            case None => TimingMap.Unsurveyed
+            case Some(circuit) =>
+                match circuit#sectors#published {
+                    case Some(publishes) =>
+                        TimingMap.Published({lapLength = circuit#lap, stretches = publishes#stretches})
+                    case None =>
+                        match circuit#sectors#eachSeason {
+                            case Some(reason) => TimingMap.PerSeason(reason)
+                            case None         => TimingMap.Unsurveyed
+                        }
+                }
+        }
+
     /// The Overpass answer a kept geometry was drawn from, kept beside the config that
     /// surveyed it: evidence the regeneration fence reads, never bytes the app asks for.
     pub def keptAnswer(circuit: Circuit): String =
@@ -179,8 +203,7 @@ pub mod Circuit {
 
     /// The directory the app is served its geometries from, which is where the app
     /// reaches for a circuit's file. A circuit's own file stays authored in its config
-    /// rather than derived from this — the way its timing figures are authored twice —
-    /// and `TestCircuit` holds it to the word.
+    /// rather than derived from this, and `TestCircuit` holds it to the word.
     pub def servedDir(): String =
         "app/static/geometry"
 

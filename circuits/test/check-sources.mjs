@@ -26,10 +26,12 @@ const sourcesDir = new URL('../src/', import.meta.url);
 const from = fileURLToPath(root);
 const here = (path) => readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8');
 
-/** The project's own sources, by the path a message names them by. The nine links
+/** The project's own sources, by the path a message names them by. The eight links
  * into `flix/src` are left out — `Dirent.isFile()` is false for a symlink: they are
  * the timing report's, and that report reaches no file of the pipeline's and no HTTP
- * at all; it reads the feeds through `TimingLines.Files`. */
+ * at all; it reads the feeds through `TimingLines.Files`. The report's own
+ * `Motorsport/Circuit.flix` stands among the sources now, a real file rather than
+ * a link — which is why the words it shares with the export are checked below. */
 const sources = readdirSync(sourcesDir, { recursive: true, withFileTypes: true })
   .filter((entry) => entry.isFile() && entry.name.endsWith('.flix'))
   .map((entry) => relative(from, `${entry.parentPath ?? entry.path}/${entry.name}`))
@@ -59,6 +61,8 @@ const regenerate = 'circuits/src/Regenerate.flix';
 const overpass = 'circuits/src/Overpass.flix';
 const geodesy = 'circuits/src/Geodesy.flix';
 const atlas = 'circuits/src/Atlas.flix';
+const flixCircuit = 'flix/src/Motorsport/Circuit.flix';
+const circuitsCircuit = 'circuits/src/Motorsport/Circuit.flix';
 
 const checks = [];
 function check(name, body) {
@@ -167,6 +171,33 @@ check('the timing report reads and stats a file, and never writes one', () => {
   doesNotMatch(files, /pub def (write|mkDirs|walkCsvFiles)/);
   doesNotMatch(files, /Glob/);
 });
+
+// The words. The timing report shares one thing with the export: the enum of
+// circuits and the word each sends. They were one linked file, and the link
+// made a drift impossible; it is a real file on this side now, and no project
+// compiles both — the linked `Events.flix` compiles against whichever copy
+// names the cases, so a case name can only drift by failing to compile where
+// it drifted, while a *word* drifts quietly: the export's reaches a drawing in
+// `Shared.elm`, the report's prints its lines and matches a config's directory.
+// `app/tests/geometry-contract.spec.ts` reads the export's copy against the
+// app; this lays the two copies against each other.
+check("the report's and the export's circuit words are one list", () => {
+  deepStrictEqual(wordsSentBy(circuitsCircuit), wordsSentBy(flixCircuit),
+    'the report and the export answer different words for their circuits');
+});
+
+/** The cases and words of a module's `jsonValue`, paired: `Cota=cota`. Flix
+ * closes the module's last definition with a `}` at column nought, which is
+ * where the body ends; a `jsonValue` this reading cannot parse fails the
+ * check by name rather than comparing two empty lists. */
+function wordsSentBy(path) {
+  const source = text(path);
+  const body = source.split('pub def jsonValue')[1]?.split('\n}')[0] ?? '';
+  const words = [...body.matchAll(/case Circuit\.(\w+)\s*=>\s*"([a-z_]+)"/g)]
+    .map((found) => `${found[1]}=${found[2]}`);
+  if (words.length === 0) throw new Error(`${path}: no jsonValue body was read`);
+  return words;
+}
 
 if (checks.length > 0) {
   console.error(`\n${checks.length} of these readings failed.`);

@@ -113,15 +113,20 @@ it wrote the export from.
 
 The geometry publishes what the circuit itself publishes about its lines: the
 authored stretches travel in the geometry as `sectors`, which is what the
-drawing places its cars between. The report reads the same figures from
-`Motorsport.Circuit.timingMap` rather than from the geometry, because what the
-report answers is a season against another season, which no geometry file
-holds — reading the served bytes would make the report's input whatever a
-survey happened to lay down. So a circuit's published lap length and stretches are held twice, in
-the circuit's config and in `Motorsport.Circuit`, one for the drawing and one
-for the report, and `test/TestTimingMap.flix` lays the two copies together —
-it runs under `nix run .#geometry-test`, in the one project that compiles both,
-and fails a stretch moved on either side by name. What is not answerable this
+drawing places its cars between. The report reads the same figures rather than
+the geometry, because what the report answers is a season against another
+season, which no geometry file holds — reading the served bytes would make the
+report's input whatever a survey happened to lay down. And the report reads
+them as a derivation, not as a copy: `Circuit.timingMap` — the config's own
+reading, beside the figures themselves — lays the report's `TimingMap` out of
+the authored `sectors`, so a lap length and its stretches are authored once,
+in the circuit's config, and `test/TestTimingMap.flix` reads that derivation:
+the published stretches carried whole, a re-issued map refused with the
+config's own reason, a word no config authors publishing nothing. The one
+figure-list two projects still each hold is the circuit words — this project's
+enum and the export's copy in `flix/src/Motorsport/Circuit.flix` — and
+`test/check-sources.mjs` lays the two bodies together, a reading no `@Test`
+can make now that no project compiles both. What is not answerable this
 way is where a place the shares imply stands against the drawn line itself —
 that is `.#geometry -- regenerate`'s and `-- diff`'s to say, measuring the
 geometry rather than a season. It is how COTA's second line was found standing
@@ -130,7 +135,7 @@ to within 40 m can still be drawn wrong by. How the drawing places a line the ma
 gives no distance for is app-side — `Tracker.Config.lapScale`, and the
 `ConfigTest` combinations that hold it.
 
-## The report, and the nine links it reads through
+## The report, and the eight links it reads through
 
 The report is a word of the pipeline, not a project: `src/TimingLines.flix` reads
 the arguments and prints what the two readings come to, `Main.flix` hands the word
@@ -138,11 +143,15 @@ over, and `src/TimingLines/Feed.flix` reads the feeds themselves.
 Nothing compiled here can name a database: no `Db` effect among the project's
 sources, no argument flag for one, and no JDBC driver resolved.
 
-Nine sources are symlinks into `flix/src`: the decoding of a CSV
-(`Util/Csv/`), the durations, `Motorsport/`'s `Circuit.flix`, `Events.flix` and
-`Calendar.flix`, and the parent stubs `Cli.flix`, `Motorsport.flix` and
-`Util/Csv.flix`, which are compiled because Flix will not enter a module whose
-parent it has never seen. Compiled twice, held once.
+Eight sources are symlinks into `flix/src`: the decoding of a CSV
+(`Util/Csv/`), the durations, `Motorsport/`'s `Events.flix` and `Calendar.flix`,
+and the parent stubs `Cli.flix`, `Motorsport.flix` and `Util/Csv.flix`, which
+are compiled because Flix will not enter a module whose parent it has never
+seen. Compiled twice, held once. `Motorsport/`'s `Circuit.flix` is not among
+them: the report holds its own file, the enum the linked `Events.flix` names a
+round's circuit with and nothing of the timing figures — those the config
+derives. What no compiler can see across the two copies of the words is
+`test/check-sources.mjs`'s to read from outside both.
 
 **A link compiles every function a module holds for the few one command calls,**
 and the links are held to that rate. What the report reads through is linked; what
@@ -179,7 +188,7 @@ format error, and `flix build` takes no source directory as an argument — so a
 links also leave each shared source visible in `git ls-files -s` as mode `120000`.
 
 `nix run .#geometry-test` runs the project's own `flix test`, and `.#flix-test`
-compiles the same nine files on the link's other side, which is what proves the
+compiles the same eight files on the link's other side, which is what proves the
 links survived the checkout as well as
 that the readings are right. Nothing walks the
 links, or the full set of sources the project compiles, from outside it; the
@@ -213,7 +222,7 @@ whose metres are not the survey's.
 The geometry pipeline is the Flix package at `circuits/`, one module per reading
 named in the sections above, with `src/Main.flix` holding the words the commands go
 by and `src/Cli/Args.flix` the exit code each of them comes to. It resolves no dependency and
-links no source — it reads nothing `flix/src` holds, which is what the report's nine links
+links no source — it reads nothing `flix/src` holds, which is what the report's eight links
 are for.
 
 **What is written once, and what is written twice.** The pipeline is written once: the
@@ -239,12 +248,9 @@ question cannot drift from the reading that works it. Two modules read the two f
 a circuit's directory keeps, named for the two different things those files are:
 `Geometry.flix` the served outline, a survey stretched to a published length, and
 `Midline.flix` the atlas file's line, measured from imagery and stretched to nothing.
-
-What is written twice is the timing
-figures, authored in `src/Circuit.flix` for the drawing and held again in the linked
-`Motorsport.Circuit` for a run that reads no geometry, laid together by
-`test/TestTimingMap.flix`.
-
+And the timing figures are authored once, in `src/Circuit.flix`, the report's
+answer derived from them by that module's own `timingMap` — which
+`test/TestTimingMap.flix` reads as the derivation it is.
 `nix run .#geometry -- survey cota` reads `circuits/cota/overpass.json`, finds the relation by
 the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
 lane, stretches the surveyed length to the published one, thins it at a metre, and answers
@@ -354,8 +360,9 @@ is a run that never got to answer and is said on stderr. `--help` is a value in 
 `Parsed` rather than a printing, which is why `TestUsage.flix` can read the answering
 at all: which of its three answers a run of tokens comes to is asserted there, and
 nothing is run. The one test handed no fixture reads none on
-purpose: `TestTimingMap` lays the two authored copies of a circuit's timing figures
-together, and the real authors are what it is given. What is judged
+purpose: `TestTimingMap` reads the derivation of the report's timing answer
+from the config that authors its figures, and the real authors are what it is
+given. What is judged
 against the repository's real bytes stays this file's other sections': the fence,
 the contract specs, the VRT.
 

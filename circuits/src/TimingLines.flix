@@ -16,9 +16,9 @@
 /// error of the method -- a line the organisers moved would show as hundreds of
 /// metres, and a changed Balance of Performance or a new tyre costs tens.
 ///
-/// The map's lines are `Motorsport.Circuit`'s, and the reading of the feed is the
-/// summary's: `Round.Summary`'s `fastestSectors` asks the database the same
-/// question of the same rows.
+/// The map's lines are the config's, derived by its own `Circuit.timingMap`,
+/// and the reading of the feed is the summary's: `Round.Summary`'s
+/// `fastestSectors` asks the database the same question of the same rows.
 ///
 /// Where a share places a line against the drawn shape itself is not asked here,
 /// and `circuits/README.md` holds why the reading stops short of it;
@@ -37,7 +37,6 @@ pub mod TimingLines {
     use Cli.Errors.checkDirectory
     use Cli.Errors.CliError
     use Motorsport.Calendar
-    use Motorsport.Circuit.Circuit
     use Motorsport.Circuit.PublishedMap
     use Motorsport.Circuit.TimingMap
     use Motorsport.Events
@@ -270,7 +269,7 @@ pub mod TimingLines {
     /// readings, since the distance allowed is a reader's flag and no figure the readings
     /// say for themselves.
     type alias Report = {
-        circuit = Circuit,
+        circuit = Motorsport.Circuit.Circuit,
         lines = List[Line],
         lapLength = Float64,
         readings = List[Reading],
@@ -299,7 +298,7 @@ pub mod TimingLines {
                     })
         }
 
-    def circuitOf(id: String): Result[CliError, Circuit] =
+    def circuitOf(id: String): Result[CliError, Motorsport.Circuit.Circuit] =
         Option.toOk(
             CliError.Reading(
                 "${id} is run on no circuit this knows: Motorsport.Events.circuit says which ground a round was run on."
@@ -312,8 +311,8 @@ pub mod TimingLines {
     /// A circuit the organiser re-maps every year is refused rather than read:
     /// the question -- do one map's lines still stand a season later -- has no
     /// answer where there is no such thing as one map.
-    def publishedMap(asked: Request, circuit: Circuit): Result[CliError, PublishedMap] =
-        match Motorsport.Circuit.timingMap(circuit) {
+    def publishedMap(asked: Request, circuit: Motorsport.Circuit.Circuit): Result[CliError, PublishedMap] =
+        match Circuit.timingMap(Motorsport.Circuit.jsonValue(circuit)) {
             case TimingMap.Published(published) => Ok(published)
             case TimingMap.PerSeason(reason)    =>
                 Err(CliError.Reading(

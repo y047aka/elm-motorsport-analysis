@@ -71,7 +71,7 @@
         # it asks OpenStreetMap for an answer, surveys a circuit out of one, lays two
         # kept geometries together, writes the file the app serves, probes a place
         # for a circuit, and reads two rounds' feeds for the timing-lines report —
-        # `flix/src`'s own CSV decoding, which nine symlinks bring into the project.
+        # `flix/src`'s own CSV decoding, which eight symlinks bring into the project.
         # It reaches no database, and no network until a `--fetch` — the survey's or
         # the atlas's — asks one; which command runs where is `circuits/README.md`'s
         # to say.
@@ -256,7 +256,7 @@
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
           geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: survey [--fetch] [--write] | atlas | diff | regenerate | probe | timing-lines (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
-          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                            meta.description = "Run the circuits project's tests — its `flix test` (the survey's, the probe's and the timing report's readings, the last of which compile nine symlinked flix/src sources; no network, no database, no files written) and `test/check-sources.mjs`, the reading of the project's own sources no pure @Test can make"; };
+          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                            meta.description = "Run the circuits project's tests — its `flix test` (the survey's, the probe's and the timing report's readings, the last of which compile eight symlinked flix/src sources; no network, no database, no files written) and `test/check-sources.mjs`, the reading of the project's own sources no pure @Test can make"; };
           geometry-timing-lines = { type = "app"; program = "${mkGeometryApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits geometry project's timing-lines word, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };

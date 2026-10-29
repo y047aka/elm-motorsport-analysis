@@ -1,56 +1,43 @@
-/// The two copies of a circuit's timing figures, laid together where both are
-/// compiled. This project's `Circuit.flix` authors the figures the drawing is
-/// laid from; the linked `Motorsport.Circuit` holds them again for the report,
-/// which reads no geometry file. One project compiles both and no compiler
-/// compares what they state: a stretch moved on one side alone leaves a report
-/// measuring one lap while the drawing shows another. The bytes the figures
-/// were written into are the byte fence's to judge; these are the copies' own
-/// reading, handed no fixture because they read the real authors.
+/// The report's timing map, read as the derivation it is. `circuits/src/Circuit.flix`
+/// authors a circuit's timing figures once, for the drawing, and derives the
+/// report's answer from them with its own `timingMap`; the report's
+/// `Motorsport.Circuit` holds only the shapes of that answer — so what is
+/// tested here is the derivation itself: that a config's published stretches
+/// reach the report unchanged, that a re-issued map is refused with the
+/// config's own words, and that the enum and the config answer to one
+/// another's names. The two word lists no compiler compares — this project's
+/// enum and the export's copy in `flix/src/Motorsport/Circuit.flix` — are laid
+/// together by `test/check-sources.mjs`, the reading no `@Test` can make from
+/// inside one project.
 pub mod TestTimingMap {
 
-    use Circuit.Circuit
     use Motorsport.Circuit.TimingMap
 
     /// Every case the summaries can be sent for, whether or not this project
     /// surveys it. A new case of the enum has to join this list, and then be
-    /// answered `Unsurveyed` until a config authors it.
+    /// answered `Unsurveyed` — which, the map being derived, it is until a
+    /// config authors its word.
     def cases(): List[Motorsport.Circuit.Circuit] =
         Motorsport.Circuit.Circuit.Qatar ::
-        Motorsport.Circuit.Circuit.Imola ::
-        Motorsport.Circuit.Circuit.Spa ::
-        Motorsport.Circuit.Circuit.LeMans ::
-        Motorsport.Circuit.Circuit.Cota ::
-        Motorsport.Circuit.Circuit.Fuji ::
-        Motorsport.Circuit.Circuit.Bahrain ::
+        Motorsport.Circuit.Circuit.Imola    ::
+        Motorsport.Circuit.Circuit.Spa      ::
+        Motorsport.Circuit.Circuit.LeMans   ::
+        Motorsport.Circuit.Circuit.Cota     ::
+        Motorsport.Circuit.Circuit.Fuji     ::
+        Motorsport.Circuit.Circuit.Bahrain  ::
         Motorsport.Circuit.Circuit.SaoPaulo ::
         Nil
 
     /// The report's answer for the case whose word a config's word is, if any
     /// case answers to that word at all.
     def mapOf(word: String): Option[TimingMap] =
-        Option.flatMap(
-            circuit -> Some(Motorsport.Circuit.timingMap(circuit)),
+        Option.map(
+            _ -> Circuit.timingMap(word),
             List.find(circuit -> Motorsport.Circuit.jsonValue(circuit) == word, cases())
         )
 
-    /// The stretches a config publishes, and the ones a report publishes, in one
-    /// comparable shape: nothing for either side's kinds that publish none.
-    def authoredStretches(circuit: Circuit): Option[List[Float64]] =
-        Option.map(publishes -> publishes#stretches, circuit#sectors#published)
-
-    /// Which kind of answer a config's sectors claim for their circuit: one map
-    /// published for every season, a map the organiser re-issues, or nothing
-    /// surveyed. The report spells the same three answers, and a circuit whose
-    /// two answers are different kinds is a report measuring a lap no drawing
-    /// shows.
-    def kindOf(circuit: Circuit): String =
-        if (not Option.isEmpty(circuit#sectors#published))
-            "published"
-        else if (not Option.isEmpty(circuit#sectors#eachSeason))
-            "perSeason"
-        else
-            "unsurveyed"
-
+    /// A circuit's answer, said as a kind. The derivation spells the config's
+    /// three sector answers as its own three.
     def kindOfMap(map: TimingMap): String =
         match map {
             case TimingMap.Published(_) => "published"
@@ -58,48 +45,52 @@ pub mod TestTimingMap {
             case TimingMap.Unsurveyed   => "unsurveyed"
         }
 
-    /// The report's figures for a circuit are the config's figures: the same lap,
-    /// the same stretches in the same order, and the word the config names its
-    /// directory by — which is the word its kept answer and its served file are
-    /// named by too.
+    /// The derivation carries COTA's authored figures whole: the lap the survey
+    /// is stretched to and the stretches the circuit's own map gives, in order.
+    /// These are the numbers the drawing was laid from and the report places its
+    /// shares against — one reading authors both, so equality here is the
+    /// derivation keeping what it was handed, not two authors agreeing.
     @Test
-    def testTheReportLaysCotaOnTheAuthoredLap(): Unit \ Assert =
+    def testTheDerivedMapCarriesCotasAuthoredFigures(): Unit \ Assert =
         match (Circuit.byWord("cota"), mapOf("cota")) {
             case (Some(cota), Some(TimingMap.Published(map))) =>
                 Assert.assertTrueWithMsg(
                     map#lapLength == cota#lap,
-                    "the report and the drawing are given different laps"
+                    "the derivation lost the lap the config stretches its survey to"
                 );
-                Assert.assertTrueWithMsg(
-                    Some(map#stretches) == authoredStretches(cota),
-                    "the report and the drawing divide the lap differently"
-                );
-                Assert.assertTrue(Motorsport.Circuit.jsonValue(Motorsport.Circuit.Circuit.Cota) == cota#word)
+                match cota#sectors#published {
+                    case Some(publishes) =>
+                        Assert.assertTrueWithMsg(
+                            map#stretches == publishes#stretches,
+                            "the derivation lost a stretch, or reordered them"
+                        )
+                    case None =>
+                        Assert.assertTrueWithMsg(
+                            false,
+                            "COTA's config publishes no stretches for the derivation to carry"
+                        )
+                }
             case (Some(_), Some(_)) =>
                 Assert.assertTrueWithMsg(
                     false,
-                    "Circuit.timingMap holds no published map for a circuit whose config publishes one"
+                    "the derivation answers a circuit whose config publishes a map with something other than that map"
                 )
             case _ =>
                 Assert.assertTrueWithMsg(false, "no COTA is authored, or no case answers the word it authors")
         }
 
-    /// A re-issued map is refused in both copies, and in one reason: the report
-    /// quotes the config's own words, which is what makes the refusal readable
-    /// as the circuit's claim rather than the report's invention.
+    /// A re-issued map is refused with the config's own reason: the report
+    /// quotes it, which is what makes the refusal readable as the circuit's
+    /// claim rather than the report's invention.
     @Test
-    def testTheReportRefusesLeMansWithTheAuthoredReason(): Unit \ Assert =
+    def testTheDerivedMapRefusesLeMansWithTheAuthoredReason(): Unit \ Assert =
         match (Circuit.byWord("le_mans"), mapOf("le_mans")) {
             case (Some(leMans), Some(TimingMap.PerSeason(reason))) =>
                 match leMans#sectors#eachSeason {
                     case Some(authored) =>
                         Assert.assertTrueWithMsg(
                             reason == authored,
-                            "the report quotes a different refusal from the one the config states"
-                        );
-                        Assert.assertTrueWithMsg(
-                            Option.isEmpty(authoredStretches(leMans)),
-                            "a circuit whose map is re-issued every season publishes no stretches to quote"
+                            "the derivation quotes a different refusal from the one the config states"
                         )
                     case None =>
                         Assert.assertTrueWithMsg(false, "Le Mans's config names no reason for re-issuing")
@@ -107,26 +98,19 @@ pub mod TestTimingMap {
             case (Some(_), Some(_)) =>
                 Assert.assertTrueWithMsg(
                     false,
-                    "Circuit.timingMap answers Le Mans with something other than a refusal"
+                    "the derivation answers Le Mans with something other than a refusal"
                 )
             case _ =>
                 Assert.assertTrueWithMsg(false, "no Le Mans is authored, or no case answers the word it authors")
         }
 
-    /// The words a config authors and the cases a report answers for are two
-    /// lists, and the ones between them are circuits nothing is surveyed for —
-    /// which the report has to say, rather than stand for a map that was never
-    /// authored.
+    /// The words a config authors and the cases a report answers for name each
+    /// other exactly: a word with no case behind it is a circuit the export can
+    /// send a summary for that this project surveys in silence, and a case
+    /// answering a word no config authors must publish nothing — the derivation
+    /// has nothing to derive, and saying so is the whole of its duty there.
     @Test
-    def testEveryConfiguredCircuitIsAnsweredTheKindItsConfigClaims(): Unit \ Assert =
-        let disagreements = List.filter(circuit -> not kindsAgree(circuit), Circuit.circuits());
-        Assert.assertTrueWithMsg(
-            List.isEmpty(disagreements),
-            "a circuit's config and the report's answer for it are not the same kind of answer"
-        )
-
-    @Test
-    def testEveryCircuitWithoutAConfigPublishesNothing(): Unit \ Assert =
+    def testEveryAuthoredWordIsAnsweredAndEveryUnauthoredCasePublishesNothing(): Unit \ Assert =
         let authoredWords = List.map(circuit -> circuit#word, Circuit.circuits());
         let answered = List.filter(
             circuit -> List.memberOf(Motorsport.Circuit.jsonValue(circuit), authoredWords),
@@ -141,27 +125,44 @@ pub mod TestTimingMap {
             cases()
         );
         let wrong = List.filter(
-            circuit -> kindOfMap(Motorsport.Circuit.timingMap(circuit)) != "unsurveyed",
+            circuit -> kindOfMap(Circuit.timingMap(Motorsport.Circuit.jsonValue(circuit))) != "unsurveyed",
             unsurveyed
         );
         Assert.assertTrueWithMsg(
             List.isEmpty(wrong),
-            "a circuit with no config here is answered with a map no config authored"
+            "a circuit with no config here is derived into a map no config authored"
         )
 
-    /// A circuit's two answers, said as kinds. Configs and reports disagree by
-    /// kind before they disagree by figures, and no caller reads which one a
-    /// round was drawn from.
-    def kindsAgree(circuit: Circuit): Bool =
+    /// A config's answer and the derivation's are the same kind of answer for
+    /// every circuit this project surveys — which the derivation gives by
+    /// construction, and which fails the day an edit gives it a branch that
+    /// reads one side of a config's sectors alone.
+    @Test
+    def testEveryConfiguredCircuitIsAnsweredTheKindItsConfigClaims(): Unit \ Assert =
+        let disagreements = List.filter(circuit -> not kindsAgree(circuit), Circuit.circuits());
+        Assert.assertTrueWithMsg(
+            List.isEmpty(disagreements),
+            "a circuit's config and the derivation's answer for it are not the same kind of answer"
+        )
+
+    def kindsAgree(circuit: Circuit.Circuit): Bool =
         match mapOf(circuit#word) {
             case None        => false
-            case Some(map)   => kindOfMap(map) == kindOf(circuit)
+            case Some(map)   =>
+                let claimed =
+                    if (not Option.isEmpty(circuit#sectors#published))
+                        "published"
+                    else if (not Option.isEmpty(circuit#sectors#eachSeason))
+                        "perSeason"
+                    else
+                        "unsurveyed";
+                kindOfMap(map) == claimed
         }
 
-    /// `timingMap` is total by its own match, so a new case fails to compile
-    /// there; what nothing catches is a new case missing from *this* file's
-    /// list, which would leave the checks above reading a smaller enum than
-    /// `Motorsport.Circuit` holds.
+    /// `timingMap` answers every word, its enum side by construction; what nothing
+    /// else catches is a new case missing from *this* file's list, which would
+    /// leave the checks above reading a smaller enum than the module holds — and
+    /// the export's copy of the enum has no project left that compiles both.
     @Test
     def testEveryCaseOfTheEnumIsListedHere(): Unit \ Assert =
         Assert.assertTrueWithMsg(
