@@ -10,7 +10,7 @@
 // Each word is a module — its readings, its asking if it asks one, and its
 // printing; this is the dispatch of a word, the usage a wrong one is answered
 // with, and the exit code one comes to. `flix/src`'s CSV decoding, brought in by
-// nine symlinks, serves the timing-lines word alone.
+// eight symlinks, serves the timing-lines word alone.
 use Sys.Console
 use Sys.Env
 use Sys.Exit
