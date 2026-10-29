@@ -48,7 +48,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
-| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript (the circuit tools are the geometry project's and compile with it) |
+| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript (the circuit tools are Flix now and compile under `.#geometry-test`) |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
 | `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
