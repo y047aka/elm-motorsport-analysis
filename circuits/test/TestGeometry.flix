@@ -157,11 +157,12 @@ pub mod TestGeometry {
 
     @Test
     def testAMissingNumberIsNotALineWithAHoleInIt(): Unit \ Assert =
-        // A `metres` array holding something that is not a number is a file the reading
-        // does not understand, which is a different thing from a line with a hole in it.
+        // A `metres` array holding something that is not a number published a metre
+        // the reading could not read — which is not the same file as one that
+        // published no metres at all, and is refused with the entry it stumbled at.
         Assert.assertTrue(
             refused(
-                "cota: the outline publishes no metres",
+                "cota: metres entry 1 is not a number",
                 outlineRefusing("\"basis\": \"osm-centreline\", \"metres\": [0, \"far\"]", "[0, 0], [100, 0]")
             )
         );

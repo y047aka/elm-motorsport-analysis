@@ -83,11 +83,11 @@ pub mod Geometry {
                 if (not List.memberOf(spelled, bases()))
                     Err(basisRefused(Some(spelled), name))
                 else
-                    measured(props, shape, name)
+                    measured(spelled, props, shape, name)
             case None => Err(basisRefused(None, name))
         }
 
-    def measured(props: Map[String, Json], shape: Json, name: String): Result[String, Line] =
+    def measured(basis: String, props: Map[String, Json], shape: Json, name: String): Result[String, Line] =
         match placesOf("outline", shape) {
             case Err(problem) => Err("${name}: ${problem}")
             case Ok(coords) =>
@@ -95,14 +95,15 @@ pub mod Geometry {
                     Err("${name}: the outline holds no points to draw")
                 else
                     match numbersAt("metres", props) {
-                        case None => Err("${name}: the outline publishes no metres")
-                        case Some(metres) =>
+                        case Err(problem) => Err("${name}: ${problem}")
+                        case Ok(None)     => Err("${name}: the outline publishes no metres")
+                        case Ok(Some(metres)) =>
                             let points = List.length(coords);
                             if (List.length(metres) != points)
                                 Err("${name}: ${List.length(metres)} metres for ${points} points")
                             else
                                 match backwardsIn(metres) {
-                                    case None     => Ok({name = name, props = quoted(props), coords = coords, metres = metres})
+                                    case None     => Ok({name = name, props = quoted(basis, props), coords = coords, metres = metres})
                                     case Some(at) => Err("${name}: metres go backwards at point ${at}")
                                 }
                     }
@@ -128,9 +129,11 @@ pub mod Geometry {
         }
 
     /// What a report prints beside the figures: the kind of line and where it came
-    /// from. The file's other properties are left in the file.
-    def quoted(props: Map[String, Json]): Props = {
-        basis   = Option.getWithDefault("", word("basis", props)),
+    /// from. The basis is the one `outlineOf` read and recognised — a `Props` is
+    /// built from no other — so it is handed in rather than looked up and defaulted.
+    /// The file's other properties are left in the file.
+    def quoted(basis: String, props: Map[String, Json]): Props = {
+        basis   = basis,
         source  = word("source", props),
         license = word("license", props)
     }
@@ -252,22 +255,27 @@ pub mod Geometry {
             case _                     => None
         }
 
-    /// The numbers a file carries under one key, or nothing at all when any of them
-    /// is not a number: a `metres` array holding a string is not a line with a hole
-    /// in it, it is a file the reading does not understand.
-    def numbersAt(key: String, props: Map[String, Json]): Option[List[Float64]] =
+    /// The numbers a file carries under one key: `Ok(None)` where it carries no such
+    /// key, and an `Err` naming the entry where the key holds something that is not a
+    /// number. A `metres` array holding a string is not a file that published no
+    /// metres — it published a metre the reading could not read, and says so.
+    def numbersAt(key: String, props: Map[String, Json]): Result[String, Option[List[Float64]]] =
         match Map.get(key, props) {
             case Some(Json.JArray(items)) =>
-                items
-                    |> Vector.toList
-                    |> List.map(number)
-                    |> List.foldRight(
-                        (json, rest) -> match (json, rest) {
-                            case (Some(one), Some(many)) => Some(one :: many)
-                            case _                       => None
-                        },
-                        Some(Nil)
-                    )
-            case _ => None
+                match counted(key, Nil, Vector.toList(items), 0) {
+                    case Err(problem) => Err(problem)
+                    case Ok(numbers)  => Ok(Some(numbers))
+                }
+            case _ => Ok(None)
+        }
+
+    def counted(key: String, kept: List[Float64], rest: List[Json], at: Int32): Result[String, List[Float64]] =
+        match rest {
+            case Nil => Ok(List.reverse(kept))
+            case one :: more =>
+                match number(one) {
+                    case Some(value) => counted(key, value :: kept, more, at + 1)
+                    case None        => Err("${key} entry ${at} is not a number")
+                }
         }
 }
