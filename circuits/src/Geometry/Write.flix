@@ -107,9 +107,8 @@ pub mod Geometry.Write {
     def stretches(distances: List[Float64]): String =
         "[${String.intercalate(",", List.map(number, distances))}]"
 
-    /// The frame the degrees project through, whole: the drawing re-runs this projection
-    /// rather than choosing one of its own. The corner is written as the survey measured
-    /// it, not as a rounded box around it.
+    /// The frame the degrees project through, whole. The corner is written as the
+    /// survey measured it, not as a rounded box around it.
     def frame(laid: Frame): String =
         "{\"origin\":{\"lat\":${number(laid#origin#lat)},\"lon\":${number(laid#origin#lon)}},\"parallel\":${number(laid#parallel)}}"
 

@@ -610,8 +610,7 @@ pub mod Survey {
     /// the same words. One reading of the text serves both the keeping and the
     /// laying, so a runner's HTML page, a reply stopped half way through its JSON and
     /// an answer whose relation will not chain into a lap are each met in the words
-    /// the survey itself would say them in, rather than in a file kept to be
-    /// discovered later.
+    /// the survey itself would say them in.
     def surveyed(asked: Request, spelled: String): Result[CliError, Read] =
         match geometry(spelled, asked#circuit) {
             case Ok(read) => Ok(read)

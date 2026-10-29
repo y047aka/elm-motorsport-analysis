@@ -78,10 +78,9 @@ pub mod Geodesy {
 
     // ---------------------------------------------------------------- the sphere
 
-    /// Metres between two places, east-west taken at the parallel of the second — the
-    /// one approximation asked of distances across a circuit's few kilometres, and the
-    /// one the survey measures a timing line with and the probe measures its candidate
-    /// lengths with.
+    /// Metres between two places, east-west taken at the parallel of the second —
+    /// the approximation the survey measures a timing line with and the probe
+    /// measures its candidate lengths with.
     pub def apart(a: Place, b: Place): Float64 =
         hypot(b#lat - a#lat, (b#lon - a#lon) * cos(b#lat)) * degreesToMetres()
 

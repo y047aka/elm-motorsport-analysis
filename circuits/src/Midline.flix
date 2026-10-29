@@ -175,10 +175,9 @@ pub mod Midline {
     // ---------------------------------------------------------- the published lines
 
     /// The intermediate timing lines a circuit's published stretches imply, laid by
-    /// `Circuit.impliedLines` — the one spelling of the rule, which the timing report
-    /// reads the same way. This much of the atlas reading is given a kept file's
-    /// `sectors` where that one is given the map the report was handed; the lines
-    /// themselves, and their names, come from one function and cannot disagree.
+    /// `Circuit.impliedLines`. This much of the atlas reading is given a kept file's
+    /// `sectors` where the report is given the map it was handed; the lines
+    /// themselves, and their names, come from that one function.
     pub def sectorLines(sectors: Publishes, lap: Float64): Result[String, List[Circuit.ImpliedLine]] =
         Circuit.impliedLines(sectors#stretches, lap)
 

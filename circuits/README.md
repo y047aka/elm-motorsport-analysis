@@ -74,10 +74,8 @@ nothing to `Circuit/`.
 Which relation a circuit is before any config says is `nix run
 .#geometry -- probe`, which prints the circuit relations at a place on earth with
 each one's unroled ways measured — the length is what tells the full Sarthe
-circuit from the Grand Prix circuit standing beside it. It asks two questions:
-which relations the box holds and how each is tagged, then, for the ones whose
-tags could name a circuit, its ways with their geometry, which is the only
-answer a role's length can be measured out of. The box a run opened is printed
+circuit from the Grand Prix circuit standing beside it, and the report goes to
+a human rather than to a name. The box a run opened is printed
 back, since a centre widened to 5 km holds Le Mans's Grand Prix circuit and not
 the 13.6 km one.
 
@@ -183,8 +181,7 @@ links also leave each shared source visible in `git ls-files -s` as mode `120000
 `nix run .#geometry-test` runs the project's own `flix test`, and `.#flix-test`
 compiles the same nine files on the link's other side, which is what proves the
 links survived the checkout as well as
-that the readings are right — a link that broke fails the run that reads
-through it, as `Undefined use` in the module that needed it. Nothing walks the
+that the readings are right. Nothing walks the
 links, or the full set of sources the project compiles, from outside it; the
 sharing, the `flix.toml` and the flake's apps are reviewed by reading them.
 
@@ -195,9 +192,9 @@ a database: `src/Probe.flix` reads the arguments and prints,
 `src/Overpass/Query.flix` spells the two questions it asks, `src/Overpass.flix`
 walks the runners, `src/Overpass/Answer.flix` gives what comes back the shape of
 an answer, and `src/Candidates.flix` reads an answer already got — which tags
-could name a circuit, and what a relation's roles measure. `nix run .#geometry-test` runs their `flix test`, which
-is the only way a probe is testable at all: the asking is one call
-and the reading is a fixture, and the tests are given fixtures.
+could name a circuit, and what a relation's roles measure. Their `flix test`
+runs under `nix run .#geometry-test`: the asking is one call and the reading is
+a fixture.
 
 **One asking, two answers.** Which runners there are, what a run calls
 itself, and how long one that just failed is left alone are facts about
@@ -217,7 +214,7 @@ The geometry pipeline is the Flix package at `circuits/`, one module per reading
 named in the sections above, with `src/Main.flix` holding the words the commands go
 by and `src/Cli/Args.flix` the exit code each of them comes to. It resolves no dependency and
 links no source — it reads nothing `flix/src` holds, which is what the report's nine links
-are for — so no `Db` effect is compiled into it and no JDBC driver is resolved for it.
+are for.
 
 **What is written once, and what is written twice.** The pipeline is written once: the
 asking of two paths, the report and the overlay are `Diff.flix`'s; the comparison of two
@@ -292,20 +289,17 @@ find its `flix.toml`, and a reader names `app/static/geometry/le_mans.geojson` f
 outside it, so the flake exports `GEOMETRY_FROM` as the directory the command was asked
 from and `Util/Files.flix` resolves every path there. Rename the variable in either
 place and every path a reader types is a file not found, with the name they typed in the
-message. `nix run .#geometry-test` runs the project's own `flix test`, every reading
-being handed a fixture rather than a file — an Overpass answer written out in the test that
-reads it, two geometries laid together in the test that measures them.
+message.
 
 **A file that will not read is a failure, and not an absence.** A run of this project meets
 a file one of two ways. It *branches* — deciding a circuit was never surveyed — or it
 only *reports*, printing what the filesystem said with the path beside it.
 `Cli/Errors.flix` is the reporting and `Util/Files.flix` holds the branching
 questions, `exists` and `isDirectory`, a stat that answers nothing being a
-failure rather than the `false` that ends a walk quietly. Before either was
-askable, runs answered a read's failure by deciding there was nothing there,
-and the fence was among them: an unreadable kept answer was a circuit "not
-surveyed yet", and a served directory that would not list was a warning with
-nothing to say, both of them exit 0. `test/check-sources.mjs` holds that
+failure rather than the `false` that ends a walk quietly. An unreadable kept
+answer must not read as a circuit "not surveyed yet", and a served directory
+that will not list must not read as a warning with nothing to say — both would
+answer as silence and exit 0. `test/check-sources.mjs` holds that
 shape — one discarded-failure arm left in the project, on a parse refusal
 another reading said first — because no test of this project ever meets a
 file.
@@ -330,8 +324,7 @@ mean and maximum apartness, and an SVG overlay on request — so a fresh survey
 is read against the old one, or the atlas line against either, with no script
 in between. Neither writes Elm: drawing on a measured line would move every
 tracker baseline and re-open where the timing lines stand, which is its own
-change judged on that report. The diff and the atlas reading are the project at
-this directory's root, and both sample `Apart.flix`.
+change judged on that report.
 
 ## The readings, and their tests
 
@@ -380,12 +373,7 @@ refusal of `Geometry.outline` and `Geometry.pitLane`, pinned by `TestGeometry`
 and re-asked of the real bytes by the byte fence on every CI run. Which words the two Elm lists hold, and which word
 the Flix summary sends, nothing compares — no compiler reaches from one side
 of that seam to the other, and a rename on one side alone is a round drawn as
-the ring with nothing red.
-The figures the report reads — the published lap length and sector stretches —
-and the figures the drawing was laid from are laid together by
-`test/TestTimingMap.flix`, in the one project that compiles both. What of the
-sharing is left to read from outside it is the report's own file reading, and
-`test/check-sources.mjs` holds that to reading and stat: it writes
-nothing. What the asking leaves outside the project's own readings — which sources
-read a response, and which sentences a failed answer is printed in — is
-`test/check-sources.mjs`'s, held to one source.
+the ring with nothing red. What neither project can see from inside itself —
+the report's own file reading, which sources read a response, and the sentence
+a failed answer is printed in — is `test/check-sources.mjs`'s, held to one
+source each.

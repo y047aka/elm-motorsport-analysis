@@ -107,9 +107,7 @@ pub mod Circuit {
     pub def nodeWithin(): Float64 = 10.0
 
     /// How far a circuit's published stretches may miss the lap they are trusted to
-    /// add up to. Asked once, by `impliedLines`, which both readers of those stretches
-    /// lay through: `Midline.sectorLines` for the drawing's timing lines, and
-    /// `TimingLines.Feed.publishedLines` for the report's.
+    /// add up to. Asked once, by `impliedLines`.
     pub def stretchTolerance(): Float64 = 0.15
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser

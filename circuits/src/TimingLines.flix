@@ -29,8 +29,7 @@
 /// are `TimingLines.Feed`'s, and reach no file at all; the file is opened through
 /// `TimingLines.Files`, which resolves no path, since the directory a reader named is
 /// where the feeds sit. `--load`, `--export`, `--serve`, `--port` and `--database` are
-/// refused: they belong to the CLI's other words, which compute in a database. Nothing
-/// here computes in one, and nothing here lays a file down.
+/// refused: they belong to the CLI's other words, which compute in a database.
 pub mod TimingLines {
 
     use Cli.Args.ArgsError

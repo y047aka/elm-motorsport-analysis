@@ -93,7 +93,6 @@ pub mod Diff {
             case _ => Err(ArgsError.ParseErrors("diff lays two files, and no more: ${List.length(paths)} named." :: Nil))
         }
 
-    /// The word the reader typed is the word quoted back.
     def spacing(every: Option[String]): Result[String, Float64] =
         match every {
             case None => Ok(Apart.defaultEvery())

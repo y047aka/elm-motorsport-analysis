@@ -124,11 +124,9 @@ pub mod Overpass {
         case IoError(kind, message) => "${kind}: ${message}"
     }
 
-    /// A body as it is kept, if it is an answer at all. That it is JSON is the first
-    /// thing asked of it, since a proxy answers a query that timed out with an HTML
-    /// page whose status is 200; what it says is read by `Overpass.Answer.read`, which is
-    /// where a JSON text that stopped half way through is met. The refusal names whoever
-    /// was asked.
+    /// A body as it is kept, if it is an answer at all: that it opens as JSON is the
+    /// first thing asked of it, before its contents; what it says is read by
+    /// `Overpass.Answer.read`. The refusal names whoever was asked.
     pub def kept(text: String, asked: String): Result[String, String] =
         if (String.startsWith({prefix = "{"}, text) or String.startsWith({prefix = "["}, text))
             Ok(text)

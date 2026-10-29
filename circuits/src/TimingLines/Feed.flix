@@ -73,8 +73,6 @@ pub mod TimingLines.Feed {
         lines = List[Line]
     }
 
-    /// Where one class's shares put the map's lines, in the order the map gives
-    /// them -- the line the lap is measured from excepted.
     /// Where one class's own fastest lap puts the circuit's timing lines: metres
     /// round the lap, kept under each line's name. A place in a list would be a
     /// place in the map's order, and a comparison would be a count of that order
@@ -233,8 +231,7 @@ pub mod TimingLines.Feed {
     /// The intermediate lines one circuit's published stretches imply, laid by
     /// `Circuit.impliedLines` — the one spelling of the rule, in the one module the
     /// atlas reading and this report both compile. A line is `s2` because the second
-    /// sector begins at it, and that naming is now shared rather than spelled twice
-    /// and compared by no compiler.
+    /// sector begins at it.
     ///
     /// The only thing the stretches are trusted with is the lap length they add up
     /// to; where the times place them is `TimingLines`'s question.

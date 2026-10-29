@@ -13,11 +13,9 @@
 /// silently answered itself from the frozen survey would stop meaning what it says.
 ///
 /// The comparison is of parsed properties and not of bytes — `-- survey`'s
-/// comparison is of bytes and has nothing to exempt. `surveyed_at` stands outside
-/// the comparison: it stamps which answer a file was written from rather than what
-/// the drawing is made of, and it is the one property a live regeneration must
-/// move while every degree stands still. Every other property is asked of both
-/// files, including ones no writer claims.
+/// comparison is of bytes and has nothing to exempt. One property stands outside the
+/// comparison, `exempt`; every other is asked of both files, including ones no writer
+/// claims.
 pub mod Regenerate {
 
     use Circuit.Circuit
