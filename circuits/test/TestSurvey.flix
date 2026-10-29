@@ -3,8 +3,9 @@
 /// and thinned to what a drawing can show. `nix run .#geometry -- survey` holds the whole of
 /// it to the bytes the app serves, over both kept answers.
 ///
-/// The answer these are handed is `Overpass.Answer`'s reading of one, so the fixture below
-/// spells an `out body` answer and checks the slots the chain walks.
+/// The answer these are handed is `Overpass.Answer`'s reading of one — that reading is
+/// `Overpass.TestAnswer`'s; the fixture below just spells an `out body` answer the slots of
+/// a chain can be walked out of.
 ///
 /// The word's own arguments — which circuit, which answer, whether a file is laid down — are
 /// read here as well; those bytes, spelled and laid out, are `Geometry.TestWrite`'s, and the
@@ -107,40 +108,7 @@ pub mod TestSurvey {
             case Err(problem) => Assert.assertTrueWithMsg(false, "the survey refused: ${problem}")
         }
 
-    def refusedIt(read: Result[String, a]): Bool =
-        match read {
-            case Err(_) => true
-            case Ok(_)  => false
-        }
-
     // -------------------------------------------------------------------- the answer
-
-    @Test
-    def testAnswerReadsThePlacesTheWaysRunThrough(): Unit \ Assert =
-        match Overpass.Answer.read(square(2126739)) {
-            case Err(problem) => Assert.assertTrueWithMsg(false, "read the answer: ${problem}")
-            case Ok(reading) =>
-                // The stamp the answer carries is the geometry's own claim about when the
-                // map was surveyed, and nothing else's.
-                Assert.assertTrue(reading#surveyedAt == Some("2026-04-01T10:00:00Z"));
-                // One relation, six nodes and five ways.
-                Assert.assertTrue(List.length(reading#elements) == 12);
-                let nodes = List.filter(each -> each#kind == "node", reading#elements);
-                let ways = List.filter(each -> each#kind == "way", reading#elements);
-                Assert.assertTrue(List.length(nodes) == 6);
-                Assert.assertTrue(List.length(ways) == 5);
-                // A node carries a place and no line; a way the ids of its line and no
-                // place of its own.
-                Assert.assertTrue(Option.map(at -> at#lon, Option.flatMap(each -> each#at, List.head(nodes))) == Some(-97.6));
-                Assert.assertTrue(List.isEmpty(List.flatMap(each -> each#nodes, nodes)));
-                Assert.assertTrue(Option.map(each -> List.length(each#members), List.head(reading#elements)) == Some(6))
-        }
-
-    @Test
-    def testAnswerRefusesTextThatIsNoAnswer(): Unit \ Assert =
-        // What is no JSON at all failed to answer, and the parser's own words are the only
-        // thing a run knows about it.
-        Assert.assertTrue(refusedIt(Overpass.Answer.read("<html>the gate is closed</html>")))
 
     @Test
     def testSurveyRefusesAnAnswerAboutAnotherRelation(): Unit \ Assert =

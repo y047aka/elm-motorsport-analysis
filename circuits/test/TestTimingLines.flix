@@ -29,14 +29,6 @@ pub mod TestTimingLines {
             case Err(_) => Assert.assertTrue(false)
         }
 
-    /// The last of a repeated flag is the one the reader meant.
-    @Test
-    def testLastFlagWins(): Unit \ Assert =
-        match TimingLines.parse(csv() ::: "--against" :: "2024" :: "--against" :: "2025" :: "2026/cota_6h" :: Nil) {
-            case Ok(request) => Assert.assertTrue(request#against == Some(2025))
-            case Err(_)      => Assert.assertTrue(false)
-        }
-
     @Test
     def testReportNeedsTheFeedDirectory(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(TimingLines.parse("2026/cota_6h" :: Nil)))

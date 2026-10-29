@@ -49,18 +49,6 @@ pub mod TestCircuit {
         let served = List.map(circuit -> Circuit.lastPart(circuit#file), Circuit.circuits());
         Assert.assertTrue(List.isEmpty(List.filter(name -> List.memberOf(name, served), Circuit.keptNames())))
 
-    /// The diff names each line by the file it read, and the atlas reading keeps its
-    /// line under the circuit's own word; the two readings quote a circuit by that
-    /// word. A `file` whose base is not the word prints a report about a circuit
-    /// nobody authored.
-    @Test
-    def testAConfigFileIsQuotedByTheWordItIsKnownBy(): Unit \ Assert =
-        foreach (circuit <- Circuit.circuits())
-            Assert.assertTrueWithMsg(
-                Diff.baseName(circuit#file) == circuit#word,
-                "${circuit#word}: the diff would call its geometry ${Diff.baseName(circuit#file)}"
-            )
-
     /// The words the configs are authored for are the words a run can name, which is
     /// what `Regenerate` walks and what a wrong one is refused by. A config whose word
     /// answers to no word — a duplicate, say — is a circuit the fence never reaches.

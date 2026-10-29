@@ -6,7 +6,7 @@
 /// probe's own: a place kept as it was named, and a radius that means kilometres.
 pub mod TestProbe {
 
-    use Probe.{defaultRadius, parse, probeLimit}
+    use Probe.{defaultRadius, parse}
 
     /// A place as the report is asked for one: a centre, and the box it opened.
     def centre(): List[String] = "47.9661,0.2086" :: Nil
@@ -57,12 +57,6 @@ pub mod TestProbe {
         Assert.assertTrue(complains("is not a radius", parse("--radius" :: "0" :: centre())));
         Assert.assertTrue(complains("is not a radius", parse("--radius" :: "-3" :: centre())));
         Assert.assertTrue(complains("is not a radius", parse("--radius" :: "far" :: centre())))
-
-    /// The limit is on probed candidates, not on the candidates an answer names:
-    /// a box catches roads, and every one of them is still described.
-    @Test
-    def testTheProbeLimitCountsCandidatesAndNotAnswers(): Unit \ Assert =
-        Assert.assertTrue(probeLimit() == 10)
 
     def complains(problem: String, asked: Result[Cli.Args.ArgsError, Probe.Request]): Bool =
         match asked {

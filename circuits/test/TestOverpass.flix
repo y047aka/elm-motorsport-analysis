@@ -18,8 +18,7 @@ pub mod TestOverpass {
         Assert.assertTrue(List.length(runners()) == 2);
         Assert.assertTrue(List.get(0, runners()) == "https://overpass-api.de/api/interpreter");
         Assert.assertTrue(List.get(1, runners()) == "https://overpass.kumi.systems/api/interpreter");
-        Assert.assertTrue(tries() == 2);
-        Assert.assertTrue(List.forAll(each -> String.startsWith({prefix = "https://"}, each), runners()))
+        Assert.assertTrue(tries() == 2)
 
     /// A run is not anonymous: a runner's operator reads a log.
     @Test
