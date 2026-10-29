@@ -1,57 +1,59 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readdirSync } from 'node:fs';
-import { circuit as cota } from '../../circuits/cota/circuit.ts';
-import { circuit as leMans } from '../../circuits/le_mans/circuit.ts';
-import { geometryFromGeoJson } from '../../circuits/circuit-geometry.ts';
+import { existsSync } from 'node:fs';
+
 import { drawnNames, readSource } from './helpers';
 
 /**
- * The served half of the circuit seam. A drawn circuit is two lists in
- * `Shared` -- the words `trackOf` matches and the words `decoderFor` decodes --
- * and a geometry file at
- * `app/static/geometry/<word>.geojson` behind them. None of it compiles: a file
- * missing is a round that fails to load, a file gone stale is pixels nobody
- * chose, and a decoder given the wrong lap length reads every honest geometry
- * as a lie. The words come out of the sources and the geometry out of the
- * kept files; nothing needs a browser.
+ * The circuit seam: the served bytes stand where the app reaches for them.
  *
- * The flake's geometry apps are the one list here that nothing else reads:
- * the `nix run` name, the script it runs and the script's own header are
- * three spellings of one command, and a rename of any of them fails at run
- * time with a Node message rather than at check time with a test name.
+ * A drawn circuit is two lists in `Shared` — the words `trackOf` matches and the
+ * words `decoderFor` decodes — a third list in Flix — the words
+ * `Circuit.jsonValue` can send in a summary — and a geometry file at
+ * `app/static/geometry/<word>.geojson` behind them. None of it compiles: a rename
+ * on one side alone is a round drawn as the ring with nothing red, and a file
+ * missing is a round that fails to load. The words come out of the sources and
+ * the geometry out of the kept files; nothing needs a browser.
+ *
+ * The three word lists are compared here, one file's reading of the other two;
+ * what is not compared is a geometry's contents. Whether those are internally
+ * honest — a known basis, a direction, metres ascending that end at the
+ * published lap, sectors adding up to it, a pit lane beside it — is a refusal of
+ * `Geometry.outline` and `Geometry.pitLane`, pinned by
+ * `circuits/test/TestGeometry.flix` and re-asked of the repository's real bytes
+ * by every run of the byte fence (`nix run .#geometry -- survey <word>`), which
+ * reproduces the served file from the kept Overpass answer. The figures the
+ * geometry was authored from are a Flix-to-Flix reading —
+ * `circuits/test/TestTimingMap.flix`.
  */
 
-const authored: Record<string, typeof cota> = { cota, le_mans: leMans };
+type Features = { features: { properties?: Record<string, unknown> }[] };
 
-const layouts: Record<string, string> = {
-  cota: 'package/src/Motorsport/Wec/Circuit/Cota/Layout.elm',
-  le_mans: 'package/src/Motorsport/Wec/Circuit/LeMans/Layout.elm',
-};
+function outlineOf(served: Features): Record<string, unknown> | undefined {
+  return served.features.find((feature) => feature.properties?.role === 'outline')
+    ?.properties;
+}
 
-test('every circuit Shared draws has its geometry where the app reaches for it', async () => {
-  const names = drawnNames();
-  for (const name of names) {
-    const script = authored[name];
-    expect(script, `${name} is drawn, but no script authors its geometry to check it against`).toBeTruthy();
-    // The same checks the generator ran on the way out, run on the file as it is kept.
-    const file = JSON.parse(readSource(`app/static/geometry/${name}.geojson`));
-    geometryFromGeoJson(file, script);
-    const outline = file.features.find((f: { properties?: { role?: string } }) => f.properties?.role === 'outline');
-    expect(outline.properties.circuit, `${name}: the kept file is not the geometry the script writes`).toBe(name);
+function served(word: string): Features {
+  return JSON.parse(readSource(`app/static/geometry/${word}.geojson`));
+}
+
+test('every circuit Shared draws has its geometry where the app reaches for it', () => {
+  for (const name of drawnNames()) {
+    const outline = outlineOf(served(name));
+    expect(outline, `${name}: the served file holds no outline`).toBeTruthy();
+    expect(
+      outline!.circuit,
+      `${name}: the served file is not the geometry the app reaches for`,
+    ).toBe(name);
   }
 });
 
 test("a circuit's directory is named by the word the app draws it by", () => {
   for (const name of drawnNames()) {
-    expect(authored[name].script, `${name}'s config does not live in circuits/${name}/`).toBe(`circuits/${name}/circuit.ts`);
-  }
-});
-
-test('the Elm decoder is given the lap length the script was given', () => {
-  for (const name of drawnNames()) {
-    const given = readSource(layouts[name]).match(/Geometry\.decoder \{ lapLength = ([0-9.]+) \}/);
-    expect(given, `${name}'s Layout gives no lap length to the decoder`).toBeTruthy();
-    expect(Number(given![1]), `${name}: the decoder and the script are given different laps`).toBeCloseTo(authored[name].lapLength, 5);
+    expect(
+      existsSync(new URL(`../../circuits/${name}/overpass.json`, import.meta.url)),
+      `${name} is drawn, but no kept Overpass answer stands in circuits/${name}/`,
+    ).toBe(true);
   }
 });
 
@@ -62,22 +64,28 @@ test('the circuits drawn and decoded are one list', () => {
   expect(decoded.sort(), 'decoderFor decodes something other than what trackOf draws').toEqual(drawnNames().sort());
 });
 
-test('the flake commands and the circuit tools are one list', () => {
-  const registered = [...readSource('flake.nix').matchAll(/geometryApp "([\w-]+)" "([\w-]+)"/g)]
-    .map(([, app, script]) => ({ app, script }));
-  expect(registered.length, 'the flake registers no geometry commands').toBeGreaterThan(0);
+/** The words `Circuit.jsonValue` can send, which are the words a summary can
+ * carry. Flix closes the module's last definition with a `}` at column nought,
+ * which is where the body ends. */
+function sentNames(): string[] {
+  const flixSource = readSource('flix/src/Motorsport/Circuit.flix');
+  const body = flixSource.split('pub def jsonValue')[1]?.split('\n}')[0] ?? '';
+  const names = [...body.matchAll(/=>\s*"([a-z_]+)"/g)].map((m) => m[1]);
+  expect(names.length, 'Circuit.jsonValue sends no circuit name').toBeGreaterThan(0);
+  return names;
+}
 
-  for (const { app, script } of registered) {
-    expect(existsSync(new URL(`../../circuits/${script}.ts`, import.meta.url)), `nix run .#${app} would fail: circuits/${script}.ts is not here`).toBe(true);
+test('every circuit Shared draws is one Flix can name', () => {
+  const sent = sentNames();
+  const drawn = drawnNames();
+  expect(drawn.length, 'Shared.trackOf matches no circuit name').toBeGreaterThan(0);
+  for (const name of drawn) {
+    expect(sent, `Shared.elm draws "${name}", a circuit no summary can name`).toContain(name);
   }
+});
 
-  // A tool is a script whose own header runs itself by its own filename;
-  // library modules cite other tools' usage but never their own name.
-  const unwrapped = readdirSync(new URL('../../circuits/', import.meta.url))
-    .filter((file) => file.endsWith('.ts'))
-    .filter((file) => readSource(`circuits/${file}`).includes(`node circuits/${file}`))
-    .filter((file) => !registered.some((each) => each.script === file.replace(/\.ts$/, '')));
-  expect(unwrapped, `these tools name themselves commands but no geometry app registers them: ${unwrapped.join(', ')}`).toEqual([]);
+test('the circuits with drawings here are drawn', () => {
+  expect(drawnNames().sort()).toEqual(['cota', 'le_mans']);
 });
 
 /** The body of a top-level definition, up to the next one. */

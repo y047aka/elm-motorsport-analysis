@@ -6,6 +6,31 @@ of the same jar. They are run through the repository's Nix flake, which the
 root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
 `.#cli-run`, `.#cli-load`, `.#cli-export`, `.#serve-api`.
 
+The timing-lines report is not a command of this jar. It is a word of the
+`circuits/` project, which resolves no Maven dependency and compiles no `Db`
+effect. Eight sources under its `src` are symlinks into this `src` — the decoding of
+a CSV, the durations, `Motorsport/Events.flix` and `Calendar.flix` among them — so editing one of those
+files is compiled and tested twice, by `nix run .#flix-test` and by
+`nix run .#geometry-test`, and moving or renaming one breaks both until its
+link moves too. This `src`'s `Motorsport/Circuit.flix` is not among them: the
+report holds its own copy of the circuit words — the enum's cases, which the
+linked `Events.flix` compiles against on either side, and its `jsonValue`
+words, which `circuits/test/check-sources.mjs` lays against the ones here —
+and none of its timing figures, which the circuits project's own config
+derives. `Cli/Errors.flix` and `Util/Files.flix` are not among the links either: the
+report project holds its own of those two — `TimingLines/Files.flix` for the second,
+named apart because it resolves paths differently — smaller, they being the modules whose rest
+belongs to the commands that compute in a database. `circuits/README.md` keeps the
+list, says which modules are shared and which are held twice on purpose, why the
+links are one per file, and holds where the report's timings come from and what it
+cannot answer.
+
+The probe is a word of the pipeline at the `circuits/` root, not a project of its
+own, and the pipeline links none of this `src`:
+every distance in the probe comes off an answer about OpenStreetMap, which nothing here has a
+reason to hold. It is the repository's only Flix code that asks a network, and
+editing a file under this `src` compiles once for it rather than twice.
+
 What follows is what the code cannot say for itself.
 
 ## The server
@@ -480,6 +505,15 @@ paying for the same split.
   how the lap divides) and needs no database; `test/Round/` and
   `test/Server/TestApi.flix` drive the reading, and need one. A subject with
   both has a file in each, named for the module it drives.
+- **A reading with no database** — what a circuit publishes about the lines
+  its lap is timed to is held in no test here: the report is the `circuits/`
+  project's, and it derives those figures from the config the drawing is laid
+  from. What this `src` keeps of a circuit is the word its summary sends;
+  `circuits/test/check-sources.mjs` — run by `nix run .#geometry-test` — lays
+  it against the report's own copy of the word list.
+  The feed's own readings, and an Overpass answer's, are driven under `circuits/`, by
+  `nix run .#geometry-test` — which compiles eight sources from this `src` through
+  symlinks and tests nothing else of it.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`
   is removed. `rm -rf flix/build` before believing a green run.

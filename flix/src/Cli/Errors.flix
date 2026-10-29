@@ -1,5 +1,6 @@
 pub mod Cli.Errors {
 
+    use Util.Files
     use Util.Files.FileError
 
     pub enum CliError {
@@ -23,5 +24,18 @@ pub mod Cli.Errors {
             case CliError.RoundNotLoaded       => "No rows loaded. Convert the round before exporting it."
         }
     }
+
+    /// A directory the run is about to read out of or write into, checked once
+    /// rather than once per round, so a mistyped one reads as one mistake instead
+    /// of as every race being missing. `--out` is checked as `--csv` is, though the
+    /// season directories under it are made as they are needed: a mistyped one would
+    /// otherwise be made too.
+    pub def checkDirectory(dir: String): Result[CliError, Unit] \ IO =
+        forM(
+            exists <- Files.exists(dir) |> Result.mapErr(CliError.File);
+            _      <- if (exists) Ok(()) else Err(CliError.InputPathNotFound(dir));
+            isDir  <- Files.isDirectory(dir) |> Result.mapErr(CliError.File);
+            _      <- if (isDir) Ok(()) else Err(CliError.RootNotADirectory(dir))
+        ) yield ()
 
 }

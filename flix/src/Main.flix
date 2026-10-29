@@ -6,6 +6,7 @@ use Cli.Args
 use Cli.Args.Command
 use Db.Jdbc
 use Cli.Errors.CliError
+use Cli.Errors.checkDirectory
 use Cli.Load
 use Cli.Export
 
@@ -81,14 +82,3 @@ def databaseUrl(database: Option[String]): Option[String] \ Env =
         case None      => Env.getVar("DATABASE_URL")
     }
 
-/// Checked once here rather than once per round, so a mistyped directory reads
-/// as one mistake instead of as every race being missing. `--out` is checked as
-/// `--csv` is, though the season directories under it are made as they are
-/// needed: a mistyped one would otherwise be made too.
-def checkDirectory(dir: String): Result[CliError, Unit] \ IO =
-    forM(
-        exists <- Files.exists(dir) |> Result.mapErr(CliError.File);
-        _      <- if (exists) Ok(()) else Err(CliError.InputPathNotFound(dir));
-        isDir  <- Files.isDirectory(dir) |> Result.mapErr(CliError.File);
-        _      <- if (isDir) Ok(()) else Err(CliError.RootNotADirectory(dir))
-    ) yield ()

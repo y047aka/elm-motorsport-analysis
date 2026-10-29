@@ -12,20 +12,29 @@ SQLite → HTTP or a JSON export → Elm visualization.
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
   the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`.
+  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`. The timing-lines report is not in this jar: it is a `-- timing-lines` word of the `circuits/` project, which compiles eight of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `TimingLines/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the same project's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and that project asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links nothing beyond those eight, because nothing else in `flix/src` asks OpenStreetMap anything or reads a GeoJSON.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
 - **`/circuits`** — the geometry pipeline: OpenStreetMap relations through
-  `circuits/circuit-geometry.ts` into the served `app/static/geometry/*.geojson`,
-  with one directory per circuit — its config, its kept Overpass answer
-  and its atlas reading — named by the word the summaries send for the circuit.
+  the Flix project at `circuits/src` into the served `app/static/geometry/*.geojson`,
+  with one directory per circuit — its kept Overpass answer
+  and its kept atlas line — named by the word the summaries send for the circuit,
+  and its figures authored in the project's own `Circuit.flix`.
   It sits outside `/app` because nothing it writes but the geometry files is
   ever served, and nothing in the bundle reads the pipeline itself.
   `circuits/README.md` describes it — the fence that keeps a geometry an
   answer to its survey, what a circuit's config is authored from, and where
   the timing lines' distances come from — and is the thing to read before
-  changing anything under `/circuits`.
+  changing anything under `/circuits`. It holds one of the repository's two Flix
+  projects, the geometry pipeline at the `circuits/` root — the other is `/flix`: it resolves nothing
+  and shares `flix/src` only by the eight symlinks the timing report reads
+  through — one per file, because a linked
+  directory is walked as nothing — asks OpenStreetMap the probe's question and its own,
+  writes the served file — the diff's overlay, the
+  fetched answer, and, over a
+  circuit's kept answer, the served geometry itself — and prints the timing-lines
+  report off two rounds' feeds.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -39,7 +48,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
-| `nix run .#typecheck` | `tsc --noEmit` over each TypeScript project: the app's, then the circuit tools' |
+| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript (the circuit tools are Flix now and compile under `.#geometry-test`) |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
 | `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
@@ -47,13 +56,9 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry-write -- <circuit>` | Write a circuit's geometry out of OpenStreetMap (`[overpass.json]` writes it out of an answer you kept; `--from-geojson` re-checks the geometry kept in the tree, with no network) |
-| `nix run .#geometry-atlas` | Measure another dataset's line against a circuit's kept geometry, keeping the answer as `circuits/<circuit>/atlas.geojson` — beside the survey that wrote it, not in what gets served (`<circuit> [--file gp.geojson]`) |
-| `nix run .#geometry-diff` | Lay two kept geometries against each other in metres, optionally as an SVG overlay (paths from `app/`, `[--every <m>] [--svg <out.svg>]`) |
-| `nix run .#geometry-probe` | Ask OpenStreetMap which relations hold a circuit at a place before authoring its config, printing each candidate's unroled ways measured (`<lat>,<lon> [...] [--radius <km>]`, or a `s,w,n,e` box) |
-| `nix run .#geometry-test` | The circuit tools' unit tests: their side-effect-free readings, run by Node's own runner over fixtures (`circuits/tests/`, no network, nothing written) |
-| `nix run .#geometry-regenerate` | Re-run each circuit's pipeline over its kept Overpass answer and fail unless it reproduces the kept geometry (`[<circuit> ...]`; `--write` re-lays the kept files from the kept answer, `--freeze` asks OpenStreetMap now and keeps both) |
-| `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (`<season>/<id> [--against <season>] [--tolerance <metres>]`) |
+| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them; `--fetch` is the network raised as a flag — it asks OpenStreetMap now, keeps the answer beside the config once the survey can read it, and surveys that instead); `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both); `probe` asks which relations hold a place on earth, each candidate's ways measured, before a config is authored; `timing-lines` reads two rounds' feeds and prints whether a circuit's timing lines held where they stood a season earlier. Paths from where the command is run; the Flix main owns the word list |
+| `nix run .#geometry-test` | The project's `flix test` — the survey's and the probe's readings, and the timing report's, which compile the eight `flix/src` symlinks (no network, no database, no files written) — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
+| `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the geometry project's `timing-lines` word, computing in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -504,9 +509,11 @@ moment of it).
 ### The circuits side
 
 `circuits/README.md` is the other end of a drawing: how a geometry is surveyed
-out of OpenStreetMap, what the kept file is checked against — `--from-geojson`
-at a regeneration being nothing, the fence over the kept Overpass answer, the
-contract spec against the app's lists — where the timing lines' distances come
+out of OpenStreetMap, what the kept file is checked against — the byte fence
+over a kept answer exempting nothing, the regeneration fence over every
+circuit exempting the stamp alone, the contract spec over the bytes the app
+is served —
+where the timing lines' distances come
 from, and how far an atlas line stands from the one drawn.
 
 ### The Flix side
@@ -569,24 +576,23 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   hand-written `test-dependencies` read fine to elm-test but make every
   `elm make` fail with "dependencies edited by hand", which is a build break
   the test runner does not see.
-- **TypeScript** — two projects, one command. The app's `tsc --noEmit` covers
-  `index.ts`, `vite.config.ts` and `src/`; `/app/tests/` is outside the TS
-  project on purpose: Playwright comes from the flake rather than from
-  `node_modules`, so `@playwright/test` does not resolve for `tsc`.
-  `circuits/tsconfig.json` is the circuit tools' own: Node and no DOM, with
-  `nodenext` resolution and `allowImportingTsExtensions` because Node runs
-  those files by stripping types and rewriting no import specifier, and
-  `verbatimModuleSyntax` because stripping leaves a value import of a type in
-  place. Its compiler and `@types/node` are the app's, reached by `typeRoots`
-  — the directory installs nothing, which is also why it holds a dependency-
-  free `package.json` only to say its modules are ESM.
-- **Circuit tools** (`circuits/tests/`) — `nix run .#geometry-test`, Node's built-in
-  runner; the directory installs nothing. Each command kept its own I/O and moved
-  its reading of an answer into a module that opens nothing — `timing-feed.ts` (the
-  CSV's text), `circuit-candidates.ts` (an Overpass answer already got),
-  `atlas-line.ts` (a foreign file's shapes and guards), `geometry-drift.ts` (two
-  geometries laid together) — and the tests hand those fixtures. Judging this
-  repository's real bytes stays the fence's and the contract specs'.
+- **TypeScript** — the app's `tsc --noEmit` covers `index.ts`, `vite.config.ts`
+  and `src/`; `/app/tests/` is outside the TS project on purpose: Playwright
+  comes from the flake rather than from `node_modules`, so `@playwright/test`
+  does not resolve for `tsc`.
+- **The geometry project** (`circuits/`) — a Flix project of its own, tested by
+  `nix run .#geometry-test`: every reading — the survey of an
+  answer, the reading of a kept file, the comparison of two lines, the atlas
+  file's shapes and guards, the regeneration fence's comparison, and the timing
+  report's feed readings — is handed a
+  fixture rather than a survey, in one language; the one test handed no fixture
+  is `TestTimingMap`, which reads the report's timing answer as the derivation
+  from the project's own authored figures that it is, where the real authors
+  are the fixture. What a Flix test cannot see
+  from inside the project — the sources it holds, what it resolves, the flake
+  apps that reach it, the CI fence — is held by no test: `flake.nix` and the
+  workflow are read, and read fairly, to judge it.
+  Judging this repository's real bytes stays the fence's and the contract specs'.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources
@@ -597,12 +603,37 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   that moves modules must take its pattern with it; `readConstant` fails the
   spec load by name when a pattern misses, rather than letting the constant
   become `NaN` and every assertion expect `NaNpx`.
-- **Circuit names** (`/app/tests/circuit-contract.spec.ts`) — the word Flix's
-  `Circuit.jsonValue` sends and the word `Shared.trackOf` picks a drawing by,
-  read out of both sources and compared. Neither compiler sees the other, the
-  kept summaries are frozen at whichever word was current when they were
-  written, and a rename on one side is a round drawn as the ring with nothing
-  red.
+- **Timing figures** (`circuits/test/TestTimingMap.flix`) — the timing-lines
+  report holds no copy of a circuit's lap length or sector stretches: it
+  derives its answer from the ones the circuit's config authors, and
+  `.#geometry-test` reads that derivation — the stretches carried whole, the
+  re-issued map refused with the config's own reason. What the two projects do
+  each hold is the circuit word list, and no project compiles both anymore:
+  `check-sources.mjs` lays the two `jsonValue` bodies together. Nothing holds
+  the eight links into `flix/src` to
+  their paths from outside; a broken one fails `.#geometry-test` itself, as
+  `Undefined use` in the module that needed it.
+- **What the geometry project cannot see from inside itself**
+  (`circuits/test/check-sources.mjs`, run by `.#geometry-test`) — an `@Test`
+  computes in no IO, so the project's tests hand their fixtures, reach no
+  network, build no `HttpResponse` and ask nothing of the file system; the
+  project-wide facts are read out of its sources instead: one reading of
+  what a service answered with (`Overpass.answered` — a proxy answers a
+  timed-out request as 200 with an HTML page, so a second reading that asked
+  only the status would hand HTML on as a geometry), one spelling of the
+  earth radius (`Geodesy.earthMetres`; the measured lap is the reading a config
+  is authored from, 13.6 km or 13.7 km), one way a filesystem failure is
+  answered (a run that branches on absence asks `Util.Files`' `exists` or
+  `isDirectory` first — a `false` out of a failed stat is the answer that
+  ends a walk quietly — and a run that only reports reads through
+  `Cli.Errors`, which keeps the path with what the filesystem said; any
+  `Err(_)` that discards a failure fails, one arm excepted, on a parse
+  another reading refused first), and `TimingLines/Files.flix`'s reading never
+  writing. It needs no browser, no Playwright and no `node_modules`: plain
+  `node` over `circuits/src`. Both questions' shapes — each recursing to
+  `way(r)`, and only the survey asking for `node(w)`, the difference between
+  drawing a lap and lengthening one — are pinned by the project's own `flix
+  test`, `circuits/src/Overpass.flix` having written the asking once.
 - **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
@@ -616,7 +647,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   `expectSurveyedLap` asserts the tracker drew a polygon where the ring draws a
   circle. Local runs allow a 0.1%
   pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`, and 0.15% for
-  `position-tab`) for cross-platform diffs; CI is strict 0.
+  `position-tab`) for cross-platform diffs; CI is strict 0. The circuits'
+  tracker shots are pixel baselines no more — the bytes they rendered are
+  held by the geometry project's fences, and a circuit is strokes whose
+  pixels only follow those bytes — leaving one baseline-free polygon
+  assertion per circuit as the whole E2E of a drawing.
 
 The baselines are CI's: rendered on Linux, and what a merge is judged
 against. `nix run .#update-snapshots-ci` refreshes them — it dispatches the
@@ -633,15 +668,10 @@ budget while the gap does not shrink with it. The tightest is
 `position-tab`, the Comparison section alone at 328x162: it differs by 55
 pixels where 0.001 would allow it 53, which is why it alone is given 0.0015.
 Next is `selected-car-with-rivals`, the one shot of a panel whole, at 221
-against 246; `lap-180` has 738 against 1,296. The tracker's two shots answer
-with 14 pixels and with none: a circuit is strokes, and the pane's shot
-holds no text at all, so CoreText and FreeType have nothing there to
-disagree about. Eight runs gave the same counts but once, when `lap-180`
-fell to 102, so a count that moves is worth a second run before it is taken
-for a rendering that moved. Those two counts are from a run with one worker,
-as CI has: with several workers both tracker shots come out a level or two
-off across a percent of the frame, which is more than the pane's whole
-budget. What no tolerance can absorb is a change smaller than itself — a
+against 246; `lap-180` has 738 against 1,296. Eight runs gave the same
+counts but once, when `lap-180` fell to 102, so a count that moves is worth
+a second run before it is taken for a rendering that moved. Those counts
+are from a run with one worker, as CI has. What no tolerance can absorb is a change smaller than itself — a
 digit redrawn is tens of pixels — so a local pass is not a promise, and a
 local failure on `position-tab` or `selected-car-with-rivals` is worth
 measuring before it is believed. CI stays strict for both reasons.

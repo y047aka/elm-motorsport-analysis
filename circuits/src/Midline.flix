@@ -1,0 +1,291 @@
+/// The measured midline this repository keeps beside a circuit: the track-atlas file's
+/// shapes that turn a feature into a line, a place or a fraction of a lap; the guards that
+/// keep a mismatched file from being kept as one circuit's evidence; and the profile it is
+/// written back into. `Atlas` is the command; everything here opens nothing.
+///
+/// This is the other of the two geometry profiles the project keeps: a line measured off
+/// orthoimagery at its own length, `"stretched": false`, kept beside the circuit and never
+/// served. `Geometry` is the served one — the centreline stretched to a published lap — and
+/// the kept geometry the guards here are measured against is that reading, shared with
+/// every other reader of a kept file. The origin guard asks the same question of a
+/// measured line's start that `Survey` asks of a relation's finish node — at
+/// `measuredWithin`, not a circuit's authored distance.
+///
+/// A geometry is written back in this repository's spelling — `type` before `coordinates` —
+/// and a number keeps the digits the layer spelled, so a point written here reads as the
+/// layer wrote it.
+///
+/// The atlas data is © its contributors under the ODbL, itself derived from OpenStreetMap
+/// and open orthoimagery.
+pub mod Midline {
+
+    use Circuit.Publishes
+    use Circuit.TimingLine
+    use Geodesy.Place
+    use Geodesy.apart
+    use Geodesy.roundTenth
+    use Util.Json.Json
+
+    /// How far the start of a line measured off orthoimagery may stand from the
+    /// published line and still be the same lap. Wider than `Circuit.nodeWithin`,
+    /// which holds a relation's node: a relation tags the line itself, while where
+    /// a measured line begins is that survey's own choice. `checkOrigin` holds
+    /// every atlas lap to this one distance, not to a circuit's authored `within`.
+    pub def measuredWithin(): Float64 = 25.0
+
+    /// What a feature's properties say it is, and what to call it in a sentence when
+    /// they say nothing.
+    pub def roleOf(feature: Geometry.Feature): Option[String] =
+        Geometry.word("role", Geometry.propertiesOf(feature))
+
+    pub def named(feature: Geometry.Feature): String =
+        Option.getWithDefault("feature", roleOf(feature))
+
+    // ---------------------------------------------------------------- the shapes
+
+    /// An atlas outline as the line it measures: degrees, lon before lat. The one
+    /// reading of GeoJSON coordinates, `Geometry.places`, is asked here too — a file
+    /// that is not a line is refused whole, with the position it stumbles at named.
+    pub def lineOf(feature: Geometry.Feature): Result[String, List[Place]] =
+        match Geometry.places("atlas outline", positionsOf(feature)) {
+            case Ok(places) if List.length(places) >= 2 => Ok(places)
+            case Ok(_)                                  => Err("the atlas outline holds no line to measure")
+            case Err(problem)                           => Err(problem)
+        }
+
+    /// An atlas point feature — a corner or a pit marker — as the place it stands at:
+    /// a Point's coordinates are that pair itself, not a list of them, unlike the
+    /// outline's LineString. The elevation a file records after the pair changes
+    /// nothing about where the marker stands.
+    pub def placeOf(feature: Geometry.Feature): Result[String, Place] =
+        match allNumbers(positionsOf(feature)) {
+            case Some(lon :: lat :: rest) if List.length(rest) <= 1 => Ok({lon = lon, lat = lat})
+            case _                                                  => Err("the atlas ${named(feature)} carries no point")
+        }
+
+    /// Where on the lap a corner or pit marker stands, as the atlas's fraction of it.
+    /// The fraction is asked here, at the reading: a layer that wrote metres where a
+    /// fraction belongs is refused at the marker, rather than multiplied by the lap
+    /// length and reported as a place hundreds of kilometres round the next lap.
+    pub def markerOf(feature: Geometry.Feature): Result[String, Float64] =
+        match Map.get("marker", Geometry.propertiesOf(feature)) {
+            case Some(Json.JNumber(spelled)) =>
+                match Float64.fromString(BigDecimal.toPlainString(spelled)) {
+                    case Some(fraction) if fraction >= 0.0 and fraction <= 1.0 => Ok(fraction)
+                    case Some(fraction) =>
+                        Err(
+                            "the atlas ${named(feature)} carries marker ${Util.Format.spelled(fraction)}, which is no fraction of a lap"
+                        )
+                    case None => Err("the atlas ${named(feature)} carries no marker")
+                }
+            case _ => Err("the atlas ${named(feature)} carries no marker")
+        }
+
+    // ---------------------------------------------------------------- the JSON, read
+
+    /// A feature's `geometry` member, and the `coordinates` inside it, one JSON value
+    /// per position — written back from what the layer spelled, not from a reading of
+    /// it. What makes a geometry a shape is its coordinates and not the word `type`:
+    /// a marker carrying a pair of degrees is a point even when its `geometry` names
+    /// no type at all, which is how the layer's own files stand.
+    def shapeOf(feature: Geometry.Feature): Option[Json] =
+        match Map.get("geometry", feature) {
+            case Some(shape) =>
+                match shape {
+                    case Json.JObject(members) =>
+                        match Map.get("coordinates", members) {
+                            case Some(Json.JArray(_)) => Some(shape)
+                            case _                    => None
+                        }
+                    case _ => None
+                }
+            case None => None
+        }
+
+    def positionsOf(feature: Geometry.Feature): List[Json] =
+        match shapeOf(feature) {
+            case Some(shape) =>
+                match shape {
+                    case Json.JObject(members) =>
+                        match Map.get("coordinates", members) {
+                            case Some(Json.JArray(items)) => Vector.toList(items)
+                            case _                        => Nil
+                        }
+                    case _ => Nil
+                }
+            case None => Nil
+        }
+
+    /// The word a shape calls itself, which is `Point` for a marker that forgot to say.
+    def shapeWord(shape: Json): String =
+        match shape {
+            case Json.JObject(members) =>
+                match Map.get("type", members) {
+                    case Some(Json.JString(spelled)) => spelled
+                    case _                           => "Point"
+                }
+            case _ => "Point"
+        }
+
+    /// The numbers a list of JSON values carries, or nothing at all when any of them is
+    /// not a number.
+    def allNumbers(items: List[Json]): Option[List[Float64]] =
+        List.foldRight(
+            (json, rest) -> match (Geometry.number(json), rest) {
+                case (Some(one), Some(many)) => Some(one :: many)
+                case _                       => None
+            },
+            Some(Nil),
+            items
+        )
+
+    // ------------------------------------------------------------------- the guards
+
+    /// The reading is kept under the word given on the command line, whatever the file
+    /// was measured from: a mismatched pair replaces one circuit's kept evidence with
+    /// another circuit's line. A file that names itself not at all is taken on the
+    /// word's alone.
+    pub def checkIdentity(claim: Option[String], word: String): Result[String, Unit] =
+        match claim {
+            case None => Ok(())
+            case Some(spelled) =>
+                if (spelled == word)
+                    Ok(())
+                else
+                    Err("the atlas file names itself '${spelled}', not '${word}' — it is not this circuit's line")
+        }
+
+    /// The atlas reading's share of the one question both pipelines ask: how far the
+    /// measured lap's first point stands from the published line, and the failure when
+    /// it starts another line over. A circuit that publishes no line asks nothing.
+    /// The distance allowed is `measuredWithin`, not the line's `within`.
+    pub def checkOrigin(first: Place, line: Option[TimingLine]): Result[String, Float64] =
+        match line {
+            case None => Ok(0.0)
+            case Some(published) =>
+                let distance = apart(first, published#place);
+                if (distance > measuredWithin())
+                    Err(
+                        "the atlas lap is ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.spelled(measuredWithin())} m. Its markers would be measured from the wrong line."
+                    )
+                else
+                    Ok(distance)
+        }
+
+    // ---------------------------------------------------------- the published lines
+
+    /// The intermediate timing lines a circuit's published stretches imply, laid by
+    /// `Circuit.impliedLines`. This much of the atlas reading is given a kept file's
+    /// `sectors` where the report is given the map it was handed; the lines
+    /// themselves, and their names, come from that one function.
+    pub def sectorLines(sectors: Publishes, lap: Float64): Result[String, List[Circuit.ImpliedLine]] =
+        Circuit.impliedLines(sectors#stretches, lap)
+
+    /// The sectors a kept file's outline claims, or nothing at all when it claims
+    /// none — the pair the circuit's config authors, read back out of the file. Half a
+    /// claim — a source with no stretches, stretches with no source — is no claim either.
+    pub def sectorsClaimed(props: Map[String, Json]): Option[Publishes] =
+        match Map.get("sectors", props) {
+            case Some(Json.JObject(claim)) =>
+                match (Map.get("source", claim), Map.get("stretches", claim)) {
+                    case (Some(Json.JString(source)), Some(Json.JArray(items))) =>
+                        match allNumbers(Vector.toList(items)) {
+                            case Some(stretches) => Some({source = source, stretches = stretches})
+                            case None            => None
+                        }
+                    case _ => None
+                }
+            case _ => None
+        }
+
+    // ---------------------------------------------------------------- the file out
+
+    /// The atlas line in this repository's own profile, at its own length: it does not
+    /// end at the published lap length, and `"stretched":false` says so at the properties
+    /// a reader sees first. The outline's metres are the line's own, rounded to the
+    /// tenth like every kept metre; a marker keeps the layer's own fraction, and the
+    /// geometry the layer spelled.
+    pub def file(
+        source: String,
+        word: String,
+        line: List[Geodesy.Metred],
+        corners: List[Geometry.Feature],
+        pits: List[Geometry.Feature]
+    ): String = {
+        let metres = List.map(each -> each#metre, line);
+        let length = metres |> List.last |> Option.getWithDefault(0.0);
+        let outline =
+            "{"
+                + "\"type\":${Geometry.Write.text("Feature")},"
+                + "\"properties\":{"
+                + "\"role\":${Geometry.Write.text("outline")},"
+                + "\"circuit\":${Geometry.Write.text(word)},"
+                + "\"basis\":${Geometry.Write.text("measured-midline")},"
+                + "\"source\":${Geometry.Write.text(source)},"
+                + "\"license\":${Geometry.Write.text("ODbL")},"
+                + "\"lap_length_m\":${Geometry.Write.number(roundTenth(length))},"
+                + "\"stretched\":false,"
+                + "\"metres\":[${String.intercalate(",", List.map(metre -> Geometry.Write.number(roundTenth(metre)), metres))}]"
+                + "},"
+                + "\"geometry\":{\"type\":${Geometry.Write.text("LineString")},\"coordinates\":${degrees(List.map(each -> each#place, line))}}"
+                + "}";
+        let features = outline :: List.map(corner -> featureText("corner", corner), corners) ++ List.map(pit -> pitText(pit), pits);
+        "{\"type\": \"FeatureCollection\", \"features\": [\n${String.intercalate(",\n", List.map(each -> "    ${each}", features))}\n]}\n"
+    }
+
+    /// A corner, as the file keeps it: its id, its place on the lap, and which way it
+    /// turns — and nothing the layer did not carry.
+    def featureText(role: String, feature: Geometry.Feature): String =
+        laidOut(
+            "\"role\":${Geometry.Write.text(role)}" :: carried("id", feature) :: carried("marker", feature) :: carried("direction", feature) :: Nil,
+            feature
+        )
+
+    /// A pit entry or exit, under the role the layer gave it.
+    def pitText(feature: Geometry.Feature): String =
+        laidOut(
+            "\"role\":${Geometry.Write.text(roleOf(feature) |> Option.getWithDefault("feature"))}" :: carried("name", feature) :: carried("marker", feature) :: Nil,
+            feature
+        )
+
+    /// One feature, from the properties already spelled: type before properties before
+    /// geometry, as every feature of this profile stands.
+    def laidOut(claims: List[String], feature: Geometry.Feature): String =
+        "{\"type\":${Geometry.Write.text("Feature")},\"properties\":{${String.intercalate("", claims)}},\"geometry\":${geometryText(feature)}}"
+
+    /// One property as the layer carries it, comma and all, or nothing when the layer
+    /// holds no such property. A property the layer holds as JSON null is written as
+    /// the null the layer wrote.
+    def carried(key: String, feature: Geometry.Feature): String =
+        match Map.get(key, Geometry.propertiesOf(feature)) {
+            case None       => ""
+            case Some(json) => ",\"${key}\":${Util.Json.toCompactString(json)}"
+        }
+
+    /// A marker's place, its numbers as the layer spelled them, in the order this
+    /// repository writes a geometry: type before coordinates.
+    def geometryText(feature: Geometry.Feature): String =
+        match shapeOf(feature) {
+            case None => "null"
+            case Some(shape) =>
+                let laid = List.map(positionText, positionsOf(feature));
+                "{\"type\":${Geometry.Write.text(shapeWord(shape))},\"coordinates\":[${String.intercalate(",", laid)}]}"
+        }
+
+    /// A distance shown with the sign that says which line is longer.
+    pub def signed(metres: Float64): String =
+        if (metres >= 0.0) "+${Util.Format.fixed(1, metres)}" else Util.Format.fixed(1, metres)
+
+    /// One position of a marker's geometry: a pair spelled as the layer spelled it,
+    /// anything else as the JSON the file gives.
+    def positionText(position: Json): String =
+        match position {
+            case Json.JArray(items) => "[${String.intercalate(",", List.map(Util.Json.toCompactString, Vector.toList(items)))}]"
+            case other              => Util.Json.toCompactString(other)
+        }
+
+    /// A line's degrees, lon before lat, each written as this repository writes every
+    /// kept number.
+    def degrees(coords: List[Place]): String =
+        "[${String.intercalate(",", List.map(place -> Geometry.Write.coordinate(place#lon, place#lat), coords))}]"
+}

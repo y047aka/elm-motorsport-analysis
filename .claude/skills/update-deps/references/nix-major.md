@@ -34,8 +34,15 @@ nix flake update
 ```bash
 nix run .#test
 nix run .#flix-test
+nix run .#geometry-test
 nix run .#build
 ```
+
+The pipeline at `circuits/` — the probe and the timing report are its own words
+there — is a Flix project too,
+with its own `flix.toml`: bumping the `flix` version in `flake.nix` is a run of both
+projects, and one
+left behind fails as its own red rather than as the flake not evaluating.
 
 A new nixpkgs can move `playwright-test`, which the VRT renders with, so run
 `nix run .#test-vrt` as well; baselines that move are refreshed with
