@@ -73,11 +73,17 @@ pub mod Survey {
     /// passes before it is kept, and the regeneration fence all travel through here, so an
     /// answer that fails for one of them fails for the other two for the same reason, in
     /// the same words.
-    pub def geometry(text: String, circuit: Circuit): Result[String, (Answer, Geometry)] =
+    pub type alias Read = {
+        text     = String,
+        answer   = Answer,
+        geometry = Survey.Geometry
+    }
+
+    pub def geometry(text: String, circuit: Circuit): Result[String, Read] =
         forM(
             reading  <- Overpass.Answer.read(text);
             surveyed <- geometryOf(reading, circuit)
-        ) yield (reading, surveyed)
+        ) yield {text = text, answer = reading, geometry = surveyed}
 
     /// The lap, the pit lane and the frame, chained out of an answer already read.
     pub def geometryOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
@@ -621,14 +627,6 @@ pub mod Survey {
     def neverSurveyed(asked: Request): String =
         "${asked#circuit#word}: no kept answer yet — asking OpenStreetMap is `--fetch`'s"
 
-    /// An answer read and surveyed: the text `--fetch` keeps, the answer it is kept
-    /// with, and the geometry the file is written from.
-    type alias Read = {
-        text     = String,
-        answer   = Answer,
-        geometry = Survey.Geometry
-    }
-
     /// The survey every answer travels through, however its text arrived, which is
     /// what makes a live survey and a comparison of a kept one fail and reproduce in
     /// the same words. One reading of the text serves both the keeping and the
@@ -638,7 +636,7 @@ pub mod Survey {
     /// discovered later.
     def surveyed(asked: Request, spelled: String): Result[CliError, Read] =
         match geometry(spelled, asked#circuit) {
-            case Ok((answer, geometry)) => Ok({text = spelled, answer = answer, geometry = geometry})
+            case Ok(read) => Ok(read)
             case Err(problem) =>
                 if (asked#fetch)
                     Err(CliError.Reading("${asked#answer}: the answer surveys nothing: ${problem}"))

@@ -274,8 +274,8 @@ pub mod Regenerate {
     /// kept answer fail in the same words.
     def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
         match Survey.geometry(answer, circuit) {
-            case Err(problem)      => Err("${circuit#word}: ${problem}")
-            case Ok((_, geometry)) => laid(circuit, Geometry.Write.file(circuit, geometry), answer, mode)
+            case Err(problem)  => Err("${circuit#word}: ${problem}")
+            case Ok(read)      => laid(circuit, Geometry.Write.file(circuit, read#geometry), answer, mode)
         }
 
     def laid(circuit: Circuit, written: String, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
