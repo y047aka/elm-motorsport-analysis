@@ -17,6 +17,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "../../package/tests/Motorsport/TestHelpers/Survey");
 
 const fixtures = [
+  { module: "Barcelona", file: "barcelona.geojson" },
   { module: "Cota", file: "cota.geojson" },
   { module: "LeMans", file: "le_mans.geojson" },
 ];

@@ -28,6 +28,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
@@ -566,6 +567,14 @@ trackOf id track geometry =
                 _ ->
                     Tracker.fromConfig track.config
 
+        Just "barcelona" ->
+            case geometry of
+                Decoded lap ->
+                    Tracker.onCircuit (BarcelonaLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
+
+                _ ->
+                    Tracker.fromConfig track.config
+
         _ ->
             Tracker.fromConfig track.config
 
@@ -625,6 +634,9 @@ step, with the words Flix's `Circuit.jsonValue` can send.
 decoderFor : String -> Maybe (Decoder Geometry)
 decoderFor circuit =
     case circuit of
+        "barcelona" ->
+            Just BarcelonaLayout.decoder
+
         "cota" ->
             Just CotaLayout.decoder
 
