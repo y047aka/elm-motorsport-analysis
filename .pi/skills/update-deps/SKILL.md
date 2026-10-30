@@ -6,70 +6,29 @@ disable-model-invocation: true
 
 # Update Dependencies
 
-Audit and update project dependencies across all ecosystems in this monorepo.
+One reference per ecosystem. Read it before touching that ecosystem:
 
-## Ecosystem references
+| Ecosystem | Reference |
+|---|---|
+| npm | `references/npm.md` |
+| Rust | `references/rust.md` |
+| Nix | `references/nix.md` |
+| Elm | `references/elm.md` |
 
-Each ecosystem's audit, update, and verify procedures are documented in `references/`.
+Arguments name an ecosystem, optionally with a scope (`npm minor`, `rust
+major`). No arguments means every ecosystem audited at minor scope; a bare
+ecosystem is audited at both scopes and the user picks one to apply — one
+scope per run. Elm has no scopes.
 
-| Ecosystem | minor | major |
-|---|---|---|
-| npm | `references/npm-minor.md` | `references/npm-major.md` |
-| Rust | `references/rust-minor.md` | `references/rust-major.md` |
-| Nix | `references/nix-minor.md` | `references/nix-major.md` |
-| Elm | `references/elm.md` | — |
+Rules the references do not repeat:
 
-Read the relevant reference file(s) before executing each phase.
-
-## Instructions
-
-### Phase 0: Pre-flight
-
-Run `git status --short`. If there are uncommitted changes, warn the user and suggest committing or stashing first.
-
-Parse `$ARGUMENTS`:
-- **No arguments**: Process all ecosystems. Only minor scope (major requires explicit specification).
-- **Ecosystem only** (e.g., `npm`): Process that ecosystem. For npm/rust/nix, audit both minor and major, then ask the user which to apply.
-- **Ecosystem + scope** (e.g., `npm minor` or `rust major`): Process only that specific scope. Read only the corresponding reference file.
-- `elm` ignores the minor/major qualifier (it has a single reference file).
-
-### Phase 1: Audit
-
-For each target ecosystem:
-- **Scope specified** (`minor` or `major`): Read only the corresponding reference file and run its Audit steps.
-- **Ecosystem only** (no scope, npm/rust/nix): Read both minor and major reference files and run both Audit steps.
-- **No arguments**: Read only the minor reference files and run their Audit steps.
-- **Elm**: Read the single reference file and run its Audit steps.
-
-If multiple reference files share the same audit command (e.g., `npm outdated`), run it once and interpret the output from both perspectives.
-
-Do NOT make any changes yet. Present the results as a consolidated report.
-
-### Phase 2: Update
-
-- **Scope specified**: Ask confirmation, then run the Update steps from the corresponding reference file.
-- **Ecosystem only** (no scope): Based on the audit results, ask the user whether to apply minor updates or major updates. Only one can be chosen per run.
-- **No arguments**: Ask which ecosystems to update. Accept: `all`, comma-separated list, or `skip`. Run the minor Update steps from each confirmed ecosystem's reference file.
-
-### Phase 3: Verify
-
-Collect **Verify** commands from each updated ecosystem's reference file and deduplicate before running. Reference table:
-
-| Command | npm | Elm | Rust | Nix |
-|---|:---:|:---:|:---:|:---:|
-| `nix run .#test` | x | x | | x |
-| `nix run .#build` | x | x | | x |
-| `nix run .#flix-test` | | | | x |
-| `nix run .#geometry-test` | | | | x |
-| `cargo check --manifest-path app/src-tauri/Cargo.toml` | | | x | |
-
-Show `git diff --stat` so the user can see what changed.
-
-### Phase 4: Commit (optional)
-
-Ask the user if they want to commit. If yes, follow the repository's commit message conventions (check `git log --oneline`).
-
-## General notes
-
-- **Network errors**: If any audit command fails, report the error and continue with the remaining ecosystems.
-- **No python3**: `python3` is not available in this Nix environment.
+- Start from `git status --short`; suggest committing or stashing before
+  anything is updated.
+- Audit everything asked for before changing anything, and present one
+  consolidated report. Where two audits share a command, run it once and read
+  it twice.
+- After updating, run the Verify commands of every updated ecosystem —
+  deduplicated across ecosystems — then show `git diff --stat`. Commit only
+  when asked, following the repository's conventions (`git log --oneline`).
+- A network error in one audit: report it and continue with the rest.
+- `python3` is not available in this Nix environment.
