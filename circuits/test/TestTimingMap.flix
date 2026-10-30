@@ -6,7 +6,7 @@
 /// reach the report unchanged, that a re-issued map is refused with the
 /// config's own words, and that the enum and the config answer to one
 /// another's names. The two word lists no compiler compares — this project's
-/// enum and the export's copy in `flix/src/Motorsport/Circuit.flix` — are laid
+/// enum and the export's copy in `backend/src/Motorsport/Circuit.flix` — are laid
 /// together by `test/check-sources.mjs`, the reading no `@Test` can make from
 /// inside one project.
 pub mod TestTimingMap {

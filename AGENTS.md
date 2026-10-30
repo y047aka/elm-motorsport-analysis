@@ -522,7 +522,7 @@ is served —
 where the timing lines' distances come
 from, and how far an atlas line stands from the one drawn.
 
-### The Flix side
+### The backend side
 
 `backend/README.md` is the other half of the trip: the server that answers `/api`,
 the tables it reads a round out of, and the `SqlRead` / `SqlWrite` / `DbErr`
