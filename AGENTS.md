@@ -698,19 +698,3 @@ which so far is only the VRT (`nix/vrt.nix`, and the shell it reads).
 
 `gh` is in the dev shell, so it is reached as `nix develop --command gh ...`.
 Authentication is the user's own step (`gh auth login`); no agent performs it.
-
-## Permissions
-
-The gate is `.pi/extensions/permission-gate.ts`, and it follows one rule:
-**allow broadly, then stop the destructive ones** — a rule keyed to
-`git branch` stays allowed while `-D` still confirms. A narrow allow list is
-worse: it leaves read-only flags (`--show-current`, `-r`, ...) confirming too.
-`deny` is reserved for the irreversible: force push, publish, `sudo`, secret
-files.
-
-`gh` is the exception, since its subcommands reach outside the repository, so
-each is judged on its own: reads and `pr create` / `pr edit` run; `api`
-confirms; `release create|delete`, `repo delete` and `secret` are denied.
-
-The `read` tool is preferred over `cat` in Bash — only the gate's tool-level
-rules enforce the secret-file denials, and Bash bypasses them.
