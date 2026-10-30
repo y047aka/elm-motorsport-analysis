@@ -50,6 +50,19 @@ const ASK: Rule[] = [
 	// Anchored at the segment start: `command -v chmod` asks whether chmod
 	// exists and stays allowed.
 	{ why: "chmod/chown", re: /^\s*(chmod|chown)\b/ },
+	// gh's other writes: reads and pr create/edit run, but merging, closing,
+	// commenting or deleting a thing outside the repository confirms.
+	{
+		why: "gh write",
+		re: /\bgh\s+\w+\s+(merge|close|reopen|comment|review|lock|unlock|ready|archive|delete)\b/,
+	},
+	// Recursive removes confirm. `git rm` does not: it only ever unpaths
+	// tracked files, which a checkout undoes.
+	{
+		why: "recursive rm",
+		// Anchored like chmod: `echo rm -rf x` prints, it does not delete.
+		re: /^\s*rm\s+(-\w*r\w*|-fr\b|--recursive|--force)/,
+	},
 ];
 
 // Deny reading/editing secrets, whatever the tool.

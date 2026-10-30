@@ -1,19 +1,6 @@
 ---
 name: flix
 description: "Diagnose Flix compile errors and write Flix the way this repository does. Use when a `nix run .#flix-build` / `.#flix-test` fails — or the third Flix project does, `.#geometry-test` — when an error code appears (E6217 unused effect, E6218 mismatched effects, E6289 misplaced doc-comment, E6629 expected, E2136 undefined name, E0237 not accessible, E6794 unable to unify, E6469 effect formulas, E7685 unexpected argument, E8752 unexpected effect in a pure function, E7027 equality not defined), when a parse error has no obvious cause, when adding or changing an effect, handler or signature under /backend, and before believing a green build."
-allowed-tools:
-  - Read
-  - Grep
-  - Glob
-  - Bash(nix run .#flix-build*)
-  - Bash(nix run .#flix-test*)
-  - Bash(nix run .#geometry-test*)
-  - Bash(nix shell nixpkgs#jdk21_headless*)
-  - Bash(rm -rf backend/build*)
-  - Bash(mkdir -p backend/build*)
-  - Bash(ls *)
-  - Bash(cat /nix/store/*)
-  - Bash(find /nix/store*)
 ---
 
 # Flix in this repository

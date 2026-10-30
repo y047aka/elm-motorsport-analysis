@@ -1,32 +1,7 @@
 ---
 name: update-deps
-description: Audit and update all project dependencies (npm, Elm, Rust/Cargo, Nix flake).
-argument-hint: "[npm|elm|rust|nix] [minor|major]"
+description: Audit and update all project dependencies (npm, Elm, Rust/Cargo, Nix flake). Takes an area (npm, elm, rust, nix) and optionally minor or major.
 disable-model-invocation: true
-allowed-tools:
-  - Bash(pnpm -C app audit *)
-  - Bash(pnpm -C app outdated *)
-  - Bash(pnpm -C app update *)
-  - Bash(pnpm -C app install *)
-  - Bash(pnpm -C app add *)
-  - Bash(elm-json *)
-  - Bash(cargo update *)
-  - Bash(cargo search *)
-  - Bash(nix flake update *)
-  - Bash(nix run *)
-  - Bash(git diff *)
-  - Bash(git status *)
-  - Bash(git add *)
-  - Bash(git commit *)
-  - Bash(which *)
-  - Bash(cat app/node_modules/*)
-  - Bash(pnpm view *)
-  - Bash(*| nix run .#deps-audit -- **)
-  - Read
-  - Edit
-  - Write
-  - Grep
-  - Glob
 ---
 
 # Update Dependencies

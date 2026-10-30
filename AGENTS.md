@@ -712,6 +712,5 @@ files.
 each is judged on its own: reads and `pr create` / `pr edit` run; `api`
 confirms; `release create|delete`, `repo delete` and `secret` are denied.
 
-Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the
-gate's tool-level rules enforce the secret-file denials, and Bash bypasses
-them.
+The `read` tool is preferred over `cat` in Bash — only the gate's tool-level
+rules enforce the secret-file denials, and Bash bypasses them.
