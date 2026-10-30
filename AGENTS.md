@@ -707,6 +707,10 @@ read-only flags (`--show-current`, `-r`, ...) falling through to a prompt.
 `deny` is reserved for the irreversible: force push, publish, `sudo`, secret
 files.
 
+The pi coding agent is gated by `.pi/extensions/permission-gate.ts`, which is
+this rule set restated in its `tool_call` hook — pi has no declarative
+permissions setting. A rule changed here has to change there too.
+
 `gh` is the exception, since its subcommands reach outside the repository, so
 each is listed rather than inherited. Reads and `pr create` / `pr edit` are
 allowed; everything else prompts, including `pr merge` and any comment.
