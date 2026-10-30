@@ -18,15 +18,16 @@ One reference per ecosystem. Read it before touching that ecosystem:
 Arguments name an ecosystem, optionally with a scope (`npm minor`, `rust
 major`). No arguments means every ecosystem audited at minor scope; a bare
 ecosystem is audited at both scopes and the user picks one to apply — one
-scope per run. Elm has no scopes.
+scope per run. Elm has no scopes: its flow installs majors too, so a no-args
+run that updates Elm updates majors.
 
 Rules the references do not repeat:
 
 - Start from `git status --short`; suggest committing or stashing before
   anything is updated.
 - Audit everything asked for before changing anything, and present one
-  consolidated report. Where two audits share a command, run it once and read
-  it twice.
+  consolidated report; update nothing until the user has confirmed it. Where
+  two audits share a command, run it once and read it twice.
 - After updating, run the Verify commands of every updated ecosystem —
   deduplicated across ecosystems — then show `git diff --stat`. Commit only
   when asked, following the repository's conventions (`git log --oneline`).
