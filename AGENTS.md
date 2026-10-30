@@ -64,7 +64,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
 | `nix run .#serve-api` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`); the build writes every round out first |
-| `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
+| `nix run .#deps-audit` | Dependency audit helper for `/skill:update-deps` |
 
 Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
 the toolchain and sets the working directory. `/backend` is reached by three
@@ -147,9 +147,10 @@ and the server's does not return. `flix build-jar` leaves the Maven
 dependencies out of what it writes, so the JDBC driver is named on the class
 path beside the jar rather than bundled in it.
 
-`/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
+Project skills live in `.pi/skills/` — `/skill:update-deps [npm|elm|rust|nix]`
+audits and updates dependencies.
 
-`flix` (Claude skill) carries what the compiler does rather than what the code
+`flix` carries what the compiler does rather than what the code
 is: the errors this tree has actually produced, what each one meant, and how a
 change is verified cold and against CI's smaller stack. Reach for it before
 diagnosing a Flix build failure by reading code.
@@ -697,20 +698,3 @@ which so far is only the VRT (`nix/vrt.nix`, and the shell it reads).
 
 `gh` is in the dev shell, so it is reached as `nix develop --command gh ...`.
 Authentication is the user's own step (`gh auth login`); no agent performs it.
-
-## Permissions
-
-`.claude/settings.json` follows one rule: **allow broadly, then carve out the
-destructive flags with `ask`** — `ask` wins over `allow`, so `Bash(git branch:*)`
-can stay open while `-D` still prompts. A narrow `allow` is worse: it leaves
-read-only flags (`--show-current`, `-r`, ...) falling through to a prompt.
-`deny` is reserved for the irreversible: force push, publish, `sudo`, secret
-files.
-
-`gh` is the exception, since its subcommands reach outside the repository, so
-each is listed rather than inherited. Reads and `pr create` / `pr edit` are
-allowed; everything else prompts, including `pr merge` and any comment.
-`release create|delete`, `repo delete` and `secret` are denied.
-
-Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the tool-level
-rules can enforce the secret-file `deny` entries, which Bash bypasses.
