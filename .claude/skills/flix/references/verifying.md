@@ -1,9 +1,9 @@
-# Verifying a change to /flix
+# Verifying a change to /backend
 
 ## The two commands
 
 ```bash
-rm -rf flix/build && nix run .#flix-test
+rm -rf backend/build && nix run .#flix-test
 ```
 
 `flix build` and `flix test` are incremental and CI is not. A cold run is the
@@ -18,13 +18,13 @@ its own `flix.toml`, and nothing about a green `.#flix-test` says anything about
 
 ```bash
 nix run .#geometry-test    # the geometry project's `flix test`: survey, probe and
-                           # report readings, the last through nine symlinks
+                           # report readings, the last through eight symlinks
 ```
 
 The run starts inside the project,
 which is the only place `flix` finds its `flix.toml`.
 
-The report compiles nine sources *out of* `flix/src` by symlink, so a change to one of
+The report compiles eight sources *out of* `backend/src` by symlink, so a change to one of
 those is compiled twice and tested twice, once on each side of the link — and a symlink
 that did not
 survive a checkout fails as `Undefined use`, reported in the module that needed it
@@ -59,9 +59,9 @@ overflows in CI. Run the compiler directly with the stack cut down:
 # the compiler the flake app uses -- see below, the obvious find is wrong
 cat "$(nix eval --raw .#apps.aarch64-darwin.flix-build.program)"
 
-rm -rf flix/build && mkdir -p flix/build
+rm -rf backend/build && mkdir -p backend/build
 nix shell nixpkgs#jdk21_headless --command bash -c \
-  'cd flix && java -Xss704k -jar /nix/store/<flix-0.79.0>/share/java/flix/flix.jar build'
+  'cd backend && java -Xss704k -jar /nix/store/<flix-0.79.0>/share/java/flix/flix.jar build'
 ```
 
 704k is where the tree as it stands builds and 672k where it does not, so a
@@ -70,10 +70,10 @@ change that raises that number is the one to look at. What sets it today is
 
 Two things that waste time here:
 
-- **`mkdir -p flix/build` is required.** Invoked as a bare jar the compiler does
+- **`mkdir -p backend/build` is required.** Invoked as a bare jar the compiler does
   not create its own build directory, and answers `Error: Path not found: build`.
 - **Finding the jar.** `find /nix/store -name 'flix*.jar' | head -1` finds this
-  repository's own `flix/artifact/flix.jar` — the built server, not the
+  repository's own `backend/artifact/backend.jar` — the built server, not the
   compiler — and running `build` with it prints an error from *this application*
   (`Error: no database ...`), which reads like a broken checkout. The compiler
   is the one the flake app puts on `PATH`: read the wrapper the command above

@@ -1,4 +1,4 @@
-# flix
+# backend
 
 Two things rather than one: the CLI that moves CSV through SQLite into
 JSON/JSONL, and the server that answers `/api` out of the same rows, both out
@@ -515,13 +515,13 @@ paying for the same split.
   `nix run .#geometry-test` — which compiles eight sources from this `src` through
   symlinks and tests nothing else of it.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
-  not: a compile that only fails from cold passes locally until `flix/build`
-  is removed. `rm -rf flix/build` before believing a green run.
+  not: a compile that only fails from cold passes locally until `backend/build`
+  is removed. `rm -rf backend/build` before believing a green run.
 - **The type checker's stack** — it recurses once per expression, and the
   thread it runs on gets a smaller stack on Linux than on macOS, so a chain
   deep enough compiles here and overflows in CI. `flix` is a jar, so the check
   is to run it with the stack cut down: `java -Xss704k -jar <flix.jar> build`
-  from `flix/`. 704k is where the tree as it stands builds and 672k where it
+  from `backend/`. 704k is where the tree as it stands builds and 672k where it
   does not, so a change that raises that number is the one to look at. What
   sets it is `Motorsport.Wec.decoder`, whose sixteen fields are a curried
   lambda, a record literal and a pipeline apiece: stubbing it out takes the

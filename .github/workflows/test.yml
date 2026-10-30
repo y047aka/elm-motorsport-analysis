@@ -27,9 +27,9 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: |
-            flix/lib
+            backend/lib
             circuits/lib
-          key: flix-deps-${{ runner.os }}-${{ hashFiles('flix/flix.toml', 'circuits/flix.toml') }}
+          key: flix-deps-${{ runner.os }}-${{ hashFiles('backend/flix.toml', 'circuits/flix.toml') }}
           restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: none of these commands touches node_modules.
       - name: Elm tests

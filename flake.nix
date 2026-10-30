@@ -62,7 +62,7 @@
             inherit name;
             runtimeInputs = [ flix ];
             text = ''
-              cd flix
+              cd backend
               ${cmd}
             '';
           };
@@ -71,7 +71,7 @@
         # it asks OpenStreetMap for an answer, surveys a circuit out of one, lays two
         # kept geometries together, writes the file the app serves, probes a place
         # for a circuit, and reads two rounds' feeds for the timing-lines report —
-        # `flix/src`'s own CSV decoding, which eight symlinks bring into the project.
+        # `backend/src`'s own CSV decoding, which eight symlinks bring into the project.
         # It reaches no database, and no network until a `--fetch` — the survey's or
         # the atlas's — asks one; which command runs where is `circuits/README.md`'s
         # to say.
@@ -109,7 +109,7 @@
         # Where the CLI and the server compute when the caller names nowhere
         # else. The file is in the working copy rather than under /tmp, so the
         # rows a run left there are still there to be queried; the path is
-        # relative to `flix`, which every command below changes to.
+        # relative to `backend`, which every command below changes to.
         dbUrl = "jdbc:sqlite:.db/motorsport.sqlite";
 
         # A caller who has already named a database is left alone, and
@@ -124,7 +124,7 @@
             runtimeInputs = [ flix ];
             text = ''
               ${dbEnv}
-              cd flix
+              cd backend
               ${cmd}
             '';
           };
@@ -142,8 +142,8 @@
             runtimeInputs = [ flix pkgs.jdk21_headless ];
             text = ''
               ${dbEnv}
-              cd flix
-              jar=artifact/flix.jar
+              cd backend
+              jar=artifact/backend.jar
               # The marker, not the jar: an interrupted `build-jar` leaves a jar
               # with no central directory in it, and one newer than every source
               # it was made from, which reads as built and runs as a missing
@@ -163,7 +163,7 @@
         # server. Passed before "$@", so a run can name another round as well.
         exportedRound = "--export-only 2025/le_mans_24h";
 
-        # Relative to `flix`, which every command below changes to.
+        # Relative to `backend`, which every command below changes to.
         csvDir = "--csv ../data/wec";
         outDir = "--out ../app/static/wec";
 
@@ -173,7 +173,7 @@
         # since a checkout has the CSV and an empty database.
         exportEveryRound = ''
           ${dbEnv}
-          (cd flix && flix run -- ${csvDir} ${outDir})
+          (cd backend && flix run -- ${csvDir} ${outDir})
         '';
 
         # Where its timings come from, and what they cannot answer, is
@@ -256,7 +256,7 @@
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
           geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: survey [--fetch] [--write] | atlas | diff | regenerate | probe | timing-lines (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
-          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                            meta.description = "Run the circuits project's tests — its `flix test` (the survey's, the probe's and the timing report's readings, the last of which compile eight symlinked flix/src sources; no network, no database, no files written) and `test/check-sources.mjs`, the reading of the project's own sources no pure @Test can make"; };
+          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                            meta.description = "Run the circuits project's tests — its `flix test` (the survey's, the probe's and the timing report's readings, the last of which compile eight symlinked backend/src sources; no network, no database, no files written) and `test/check-sources.mjs`, the reading of the project's own sources no pure @Test can make"; };
           geometry-timing-lines = { type = "app"; program = "${mkGeometryApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits geometry project's timing-lines word, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };

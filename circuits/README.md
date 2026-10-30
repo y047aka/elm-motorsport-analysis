@@ -129,7 +129,7 @@ in the circuit's config, and `test/TestTimingMap.flix` reads that derivation:
 the published stretches carried whole, a re-issued map refused with the
 config's own reason, a word no config authors publishing nothing. The one
 figure-list two projects still each hold is the circuit words — this project's
-enum and the export's copy in `flix/src/Motorsport/Circuit.flix` — and
+enum and the export's copy in `backend/src/Motorsport/Circuit.flix` — and
 `test/check-sources.mjs` lays the two bodies together, a reading no `@Test`
 can make now that no project compiles both. What is not answerable this
 way is where a place the shares imply stands against the drawn line itself —
@@ -148,7 +148,7 @@ over, and `src/TimingLines/Feed.flix` reads the feeds themselves.
 Nothing compiled here can name a database: no `Db` effect among the project's
 sources, no argument flag for one, and no JDBC driver resolved.
 
-Eight sources are symlinks into `flix/src`: the decoding of a CSV
+Eight sources are symlinks into `backend/src`: the decoding of a CSV
 (`Util/Csv/`), the durations, `Motorsport/`'s `Events.flix` and `Calendar.flix`,
 and the parent stubs `Cli.flix`, `Motorsport.flix` and `Util/Csv.flix`, which
 are compiled because Flix will not enter a module whose parent it has never
@@ -227,7 +227,7 @@ whose metres are not the survey's.
 The geometry pipeline is the Flix package at `circuits/`, one module per reading
 named in the sections above, with `src/Main.flix` holding the words the commands go
 by and `src/Cli/Args.flix` the exit code each of them comes to. It resolves no dependency and
-links no source — it reads nothing `flix/src` holds, which is what the report's eight links
+links no source — it reads nothing `backend/src` holds, which is what the report's eight links
 are for.
 
 **What is written once, and what is written twice.** The pipeline is written once: the
