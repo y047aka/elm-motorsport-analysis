@@ -147,9 +147,10 @@ and the server's does not return. `flix build-jar` leaves the Maven
 dependencies out of what it writes, so the JDBC driver is named on the class
 path beside the jar rather than bundled in it.
 
-`/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
+Project skills live in `.pi/skills/` — `/skill:update-deps` (also written
+`/update-deps [npm|elm|rust|nix]`) audits and updates dependencies.
 
-`flix` (Claude skill) carries what the compiler does rather than what the code
+`flix` carries what the compiler does rather than what the code
 is: the errors this tree has actually produced, what each one meant, and how a
 change is verified cold and against CI's smaller stack. Reach for it before
 diagnosing a Flix build failure by reading code.
@@ -700,21 +701,17 @@ Authentication is the user's own step (`gh auth login`); no agent performs it.
 
 ## Permissions
 
-`.claude/settings.json` follows one rule: **allow broadly, then carve out the
-destructive flags with `ask`** — `ask` wins over `allow`, so `Bash(git branch:*)`
-can stay open while `-D` still prompts. A narrow `allow` is worse: it leaves
-read-only flags (`--show-current`, `-r`, ...) falling through to a prompt.
+The gate is `.pi/extensions/permission-gate.ts`, and it follows one rule:
+**allow broadly, then stop the destructive ones** — a rule keyed to
+`git branch` stays allowed while `-D` still confirms. A narrow allow list is
+worse: it leaves read-only flags (`--show-current`, `-r`, ...) confirming too.
 `deny` is reserved for the irreversible: force push, publish, `sudo`, secret
 files.
 
-The pi coding agent is gated by `.pi/extensions/permission-gate.ts`, which is
-this rule set restated in its `tool_call` hook — pi has no declarative
-permissions setting. A rule changed here has to change there too.
-
 `gh` is the exception, since its subcommands reach outside the repository, so
-each is listed rather than inherited. Reads and `pr create` / `pr edit` are
-allowed; everything else prompts, including `pr merge` and any comment.
-`release create|delete`, `repo delete` and `secret` are denied.
+each is judged on its own: reads and `pr create` / `pr edit` run; `api`
+confirms; `release create|delete`, `repo delete` and `secret` are denied.
 
-Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the tool-level
-rules can enforce the secret-file `deny` entries, which Bash bypasses.
+Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the
+gate's tool-level rules enforce the secret-file denials, and Bash bypasses
+them.

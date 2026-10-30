@@ -221,7 +221,7 @@
           runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
           text = ''
             root=$(git rev-parse --show-toplevel)
-            dir=$root/.claude/skills/update-deps/scripts-flix
+            dir=$root/.pi/skills/update-deps/scripts-flix
             jar=$dir/artifact/scripts-flix.jar
             if [ ! -f "$jar.ok" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar.ok" 2>/dev/null)" ]; then
               rm -f "$jar" "$jar.ok"

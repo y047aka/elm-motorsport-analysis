@@ -1,9 +1,7 @@
 /**
- * Permission gate — the project's `.claude/settings.json` permissions ported
- * to pi's `tool_call` hook.
+ * The project's permission gate.
  *
- * Claude Code's `permissions` block is declarative; pi has no equivalent
- * setting, so the same three tiers are enforced here:
+ * Pi has no declarative permissions setting, so the three tiers live here:
  *   deny > ask > allow. `allow` needs no rule: pi runs tool calls without
  *   asking, so anything that matches neither list behaves as allowed.
  *
@@ -49,8 +47,8 @@ const ASK: Rule[] = [
 	{ why: "npm install", re: /\bnpm\s+install\b/ },
 	{ why: "cargo add/remove/install", re: /\bcargo\s+(add|remove|install)\b/ },
 	{ why: "gh api", re: /\bgh\s+api\b/ },
-	// Anchored at the segment start, as Claude's `Bash(chmod:*)` was:
-	// `command -v chmod` asks whether chmod exists and stays allowed.
+	// Anchored at the segment start: `command -v chmod` asks whether chmod
+	// exists and stays allowed.
 	{ why: "chmod/chown", re: /^\s*(chmod|chown)\b/ },
 ];
 
