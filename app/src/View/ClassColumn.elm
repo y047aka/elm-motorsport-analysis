@@ -37,6 +37,7 @@ import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status exposing (Status)
@@ -131,6 +132,12 @@ view config snapshot class_ =
         counted =
             count cars
 
+        -- One lap-time axis for the whole column.
+        paceBounds =
+            LapTimeDistribution.sharedBounds
+                (Snapshot.lapHistory snapshot)
+                (List.map (\car -> { range = paceRange car, car = car }) cars)
+
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
 
@@ -151,7 +158,7 @@ view config snapshot class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted field)
+                        (rows config snapshot counted paceBounds field)
                      ]
                         ++ foot
                     )
@@ -296,8 +303,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot ( ahead, item ) =
+row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot paceBounds ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -317,7 +324,7 @@ row config snapshot ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
-        , rowTrace config.trace snapshot item
+        , rowTrace config.trace paceBounds snapshot item
         ]
     )
 
@@ -328,11 +335,13 @@ band as an outlier rather than flattening it.
 
 Pace: the range spans the whole race the car has run -- `Pace` clips its
 outliers against the range it is given, so a recent window would measure the
-fence against the stretch it is supposed to filter.
+fence against the stretch it is supposed to filter. The bounds are the
+class's, taken once for the column: two class-mates' curves put the same lap
+time at the same place.
 
 -}
-rowTrace : Trace -> Snapshot -> CarAt -> Html msg
-rowTrace trace snapshot item =
+rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Snapshot -> CarAt -> Html msg
+rowTrace trace paceBounds snapshot item =
     let
         currentLap =
             item.standing.lapsCompleted
@@ -349,14 +358,23 @@ rowTrace trace snapshot item =
                     (Rivals.around (Snapshot.toList snapshot) item)
 
             PaceTrace ->
-                LapTimeDistribution.sparkline
-                    { first = 1, last = currentLap }
-                    history
-                    item
+                case paceBounds of
+                    Just bounds ->
+                        LapTimeDistribution.sparklineOn bounds (paceRange item) history item
+
+                    Nothing ->
+                        text ""
 
             LapsTrace ->
                 SectorAndLaps.view item
         ]
+
+
+{-| The laps a row reads: the whole race this car has run.
+-}
+paceRange : CarAt -> LapRange
+paceRange car =
+    { first = 1, last = car.standing.lapsCompleted }
 
 
 {-| The value `data-row-trace` carries, which the visual tests locate a row's
@@ -438,8 +456,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted field =
+rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted paceBounds field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -447,7 +465,7 @@ rows config snapshot counted field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot pair :: acc
+                    row config snapshot paceBounds pair :: acc
             in
             if back == behind then
                 ( behind, lines )

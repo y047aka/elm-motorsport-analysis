@@ -1,4 +1,4 @@
-module Motorsport.Chart.LapTimeDistribution exposing (view, sparkline)
+module Motorsport.Chart.LapTimeDistribution exposing (view, sparklineOn, sharedBounds, Bounds)
 
 {-| The lap-time distribution chart: each car's racing laps as a kernel density
 estimate, which says what a time-series line cannot -- the pace a car holds, and
@@ -6,9 +6,10 @@ how tightly it holds it.
 
 The cars are laid over one another on a shared scale, drawn full-width with an
 axis ([`view`](#view)) or one car at card size without one
-([`sparkline`](#sparkline)).
+([`sparklineOn`](#sparklineOn)); the card-size curves drawn beside one another
+take their scale from [`sharedBounds`](#sharedBounds).
 
-@docs view, sparkline
+@docs view, sparklineOn, sharedBounds, Bounds
 
 -}
 
@@ -79,28 +80,19 @@ view range snapshot rivals =
             )
 
 
-{-| One car's own laps at card size, on a scale of its own: the cards beside it
-are the overall order rather than one class, and two classes on one lap-time
-axis flatten both. A car with no laps to describe gets no chart rather than an
+{-| One car's own laps at card size, on bounds the cars drawn beside it share
+([`sharedBounds`](#sharedBounds)) -- so a time reads at the same place on every
+curve of the set. A car with no laps to describe gets no chart rather than an
 empty one.
 -}
-sparkline : LapRange -> LapHistory -> CarAt -> Html msg
-sparkline range lapHistory item =
-    let
-        series =
-            seriesOf range lapHistory item
-    in
-    case boundsOf [ series ] of
-        Just { domain, maxDensity } ->
-            chart
-                { width = 220, height = 50, domain = domain, maxDensity = maxDensity }
-                [ series ]
-
-        Nothing ->
-            text ""
+sparklineOn : Bounds -> LapRange -> LapHistory -> CarAt -> Html msg
+sparklineOn bounds range lapHistory item =
+    chart
+        { width = 220, height = 50, domain = bounds.domain, maxDensity = bounds.maxDensity }
+        [ seriesOf range lapHistory item ]
 
 
-{-| Shared bounds for the chart. Aligns the X axis (domain) and the Y axis
+{-| The bounds several `Series` share. Aligns the X axis (domain) and the Y axis
 (max density) across several cars so they are drawn on the same scale in both
 directions.
 -}
@@ -119,6 +111,25 @@ boundsOf series =
                 , maxDensity = maxDensityOf domain series
                 }
             )
+
+
+{-| The bounds a set of cars drawn beside one another shares: each car's curve
+is built over the range that car has run, and the two axes are drawn over the
+lot of them.
+
+The range stays each car's own because `Pace` measures its outlier fence
+against the range it is given -- what the fence exempts is a fact about that
+car's race, and only the axes are shared here.
+
+`Nothing` where none of the cars has a time at all, which is the one case in
+which no car of the set has a curve to draw.
+
+-}
+sharedBounds : LapHistory -> List { range : LapRange, car : CarAt } -> Maybe Bounds
+sharedBounds lapHistory cars =
+    cars
+        |> List.map (\{ range, car } -> seriesOf range lapHistory car)
+        |> boundsOf
 
 
 {-| One car's curve: the pace it held inside the range, and the lap it is on
