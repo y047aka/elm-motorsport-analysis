@@ -26,6 +26,7 @@ pub mod TestTimingMap {
         Motorsport.Circuit.Circuit.Fuji     ::
         Motorsport.Circuit.Circuit.Bahrain  ::
         Motorsport.Circuit.Circuit.SaoPaulo ::
+        Motorsport.Circuit.Circuit.Barcelona ::
         Nil
 
     /// The report's answer for the case whose word a config's word is, if any
@@ -166,7 +167,7 @@ pub mod TestTimingMap {
     @Test
     def testEveryCaseOfTheEnumIsListedHere(): Unit \ Assert =
         Assert.assertTrueWithMsg(
-            List.length(cases()) == 8,
+            List.length(cases()) == 9,
             "cases() no longer names every case Motorsport.Circuit.Circuit has"
         )
 

@@ -29,7 +29,9 @@ pub mod Circuit {
     /// itself publishes — its stretches add up to the lap, and it travels into the geometry as
     /// `sectors`, so a check of the lines reads the file rather than a config; `eachSeason`
     /// says why the organiser's map answers for one season only, and is what the timing report
-    /// quotes when it refuses a round here. Only one of the two is ever filled.
+    /// quotes when it refuses a round here. Only one of the two is ever filled — or
+    /// neither, for a circuit whose map has never been read: it writes no `sectors` and
+    /// the report reads it as publishing nothing.
     pub type alias Lines = {
         published  = Option[Publishes],
         eachSeason = Option[String]
@@ -148,9 +150,31 @@ pub mod Circuit {
         survey = "The Circuit of the Americas"
     }
 
+    /// The Circuit de Barcelona-Catalunya, in its current chicane layout: the relation
+    /// `2049529` names itself "Grand Prix Circuit With Chicane", and the chicane
+    /// section's ways are what parts it from the no-chicane relation `284540` standing
+    /// beside it. `finish` is the line the lap is timed across; the circuit publishes no
+    /// distance for it, so the line is seeded from the track-atlas line's `start_finish`
+    /// marker, at that reading's `measuredWithin`.
+    ///
+    /// The distances the FIA issues round a lap here were never read at authoring: no
+    /// stretches are authored, the geometry writes no `sectors`, and the timing report
+    /// reads this circuit as publishing no lines of its own.
+    def barcelona(): Circuit = {
+        relation = 2049529i64,
+        word     = "barcelona",
+        timedFrom = "finish",
+        timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
+        lap      = 4657.0,
+        sectors  = {published = None, eachSeason = None},
+        file   = "app/static/geometry/barcelona.geojson",
+        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/barcelona/raw/layers/gp.geojson"),
+        survey = "The Circuit de Barcelona-Catalunya"
+    }
+
     /// The circuits there are, in the order a run over all of them walks them.
     pub def circuits(): List[Circuit] =
-        cota() :: leMans() :: Nil
+        cota() :: leMans() :: barcelona() :: Nil
 
     /// A circuit by the word the app draws it by — the word its directory and its kept
     /// files are named by too.
