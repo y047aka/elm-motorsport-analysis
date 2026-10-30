@@ -1,8 +1,9 @@
 # Project instructions
 
-- 利用者への応答は日本語で行う。
-- コミットメッセージに `Co-Authored-By:` トレーラーを付けない。
-- bash コマンドの許可/確認/拒否は `.pi/extensions/permission-gate.ts` が enforcing する。
-  それ以外の bash は確認なく実行してよい。秘密ファイル（`.env*`, `*.key`, `*.pem`）は
-  `read` / `edit` / `write` ツールがゲートで遮断されるが、**bash は遮断されない**:
-  `cat .env` のような読み書きをコマンドでしてはならない。
+- Respond to the user in Japanese.
+- Do not add a `Co-Authored-By:` trailer to commit messages.
+- `.pi/extensions/permission-gate.ts` enforces allow/confirm/deny for bash
+  commands; any other bash may run without confirmation. Secret files
+  (`.env*`, `*.key`, `*.pem`) are blocked by the gate in the `read`, `edit`
+  and `write` tools, but **bash is not blocked**: never read or write them
+  through commands like `cat .env`.
