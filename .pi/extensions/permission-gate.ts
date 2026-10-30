@@ -5,9 +5,10 @@
  *   deny > ask > allow. `allow` needs no rule: pi runs tool calls without
  *   asking, so anything that matches neither list behaves as allowed.
  *
- * A command matches per shell segment (&&, ||, ;, |, newline), so a guarded
- * command smuggled behind `&&` still matches. `nix develop --command` is
- * stripped before matching, since the flake wraps `gh` in it.
+ * A command matches per shell segment (&&, ||, ;, &, |, newline, subshell
+ * parentheses, and command substitutions), so a guarded command smuggled
+ * behind `&&` or `&` still matches. `nix develop --command` is stripped
+ * before matching, since the flake wraps `gh` in it.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
@@ -20,10 +21,10 @@ interface Rule {
 // Deny: irreversible or reaching outside the repository.
 const DENY: Rule[] = [
 	{ why: "sudo", re: /\bsudo\b/ },
-	{ why: "find -exec / -delete", re: /\bfind\b.*\s(-exec|-delete)\b/ },
+	{ why: "find -exec / -delete", re: /\bfind\b.*\s(-exec\w*|-delete)\b/ },
 	{
 		why: "git push --force / -f / --force-with-lease",
-		re: /\bgit\b.*\bpush\b.*(\s--force(-with-lease)?\b|\s-f(\s|$))/,
+		re: /\bgit\b.*\bpush\b.*(?:\s--force(-with-lease)?\b|\s-\w*f\w*(?:\s|$))/,
 	},
 	{ why: "publish", re: /\b(cargo|pnpm|npm)\s+publish\b/ },
 	{ why: "gh release create/delete", re: /\bgh\s+release\s+(create|delete)\b/ },
@@ -32,7 +33,6 @@ const DENY: Rule[] = [
 ];
 
 // Ask: destructive or state-changing enough to warrant a confirmation.
-// These win over any allow, exactly as Claude's `ask` wins over `allow`.
 const ASK: Rule[] = [
 	{ why: "git push", re: /\bgit\b.*\bpush\b/ },
 	{
@@ -44,7 +44,7 @@ const ASK: Rule[] = [
 	{ why: "git stash drop/clear", re: /\bgit\b.*\bstash\b.*\b(drop|clear)\b/ },
 	{ why: "git worktree remove/prune", re: /\bgit\b.*\bworktree\b.*\b(remove|prune)\b/ },
 	{ why: "pnpm add/remove", re: /\bpnpm\b.*\b(add|remove)\b/ },
-	{ why: "npm install", re: /\bnpm\s+install\b/ },
+	{ why: "npm install", re: /\bnpm\s+(install|i)\b/ },
 	{ why: "cargo add/remove/install", re: /\bcargo\s+(add|remove|install)\b/ },
 	{ why: "gh api", re: /\bgh\s+api\b/ },
 	// Anchored at the segment start: `command -v chmod` asks whether chmod
@@ -61,17 +61,27 @@ const ASK: Rule[] = [
 	{
 		why: "recursive rm",
 		// Anchored like chmod: `echo rm -rf x` prints, it does not delete.
-		re: /^\s*rm\s+(-\w*r\w*|-fr\b|--recursive|--force)/,
+		// A path-prefixed or wrapped `rm` deletes the same: `/bin/rm`,
+		// `nohup rm`, `env FOO=1 rm`. A flag before the recursive one is
+		// still recursive: `rm -v -rf`.
+		re: /^\s*(?:(?:command|nohup|exec|time)\s+|env(?:\s+\w+=\S+)*\s+)*(?:[\w./-]*\/)?rm\s+(?:-\S+\s+)*(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)(?:\s|$)/,
 	},
 ];
 
-// Deny reading/editing secrets, whatever the tool.
-const SECRET_FILE = /(^|[\\/])\.env(\.|$)|\.key$|\.pem$/i;
+// Deny reading/editing secrets, whatever the tool. `.env` templates are not
+// secrets; `deploy.env` ones are.
+const SECRET_FILE =
+	/(?:^|[\\/])\.env(?:$|\.(?!example\b|sample\b|template\b|dist\b)[a-z]+)|[\w-]\.env$|\.key$|\.pem$/i;
 
 function segments(command: string): string[] {
 	// The flake wraps gh in `nix develop --command`; match the wrapped tool.
-	const normalized = command.replace(/\bnix\s+develop\s+--command\s+/g, " ");
-	return normalized.split(/&&|\|\||;|\||\n|\$\(|`/);
+	let normalized = command.replace(/\bnix\s+develop\s+(?:--command|-c)\s+/g, " ");
+	// `gh -R org/repo pr merge` is a gh write past a global flag.
+	normalized = normalized.replace(
+		/\bgh(\s+(?:-[Rq]|--(?:repo|jq))\s+(?:"[^"]*"|\S+))\s+/g,
+		"gh ",
+	);
+	return normalized.split(/&&|\|\||;|&|\||\n|\$\(|`|[()]/);
 }
 
 function match(rules: Rule[], command: string): Rule | undefined {

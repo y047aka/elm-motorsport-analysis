@@ -64,7 +64,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
 | `nix run .#serve-api` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`); the build writes every round out first |
-| `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
+| `nix run .#deps-audit` | Dependency audit helper for `/skill:update-deps` |
 
 Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
 the toolchain and sets the working directory. `/backend` is reached by three
@@ -147,8 +147,8 @@ and the server's does not return. `flix build-jar` leaves the Maven
 dependencies out of what it writes, so the JDBC driver is named on the class
 path beside the jar rather than bundled in it.
 
-Project skills live in `.pi/skills/` — `/skill:update-deps` (also written
-`/update-deps [npm|elm|rust|nix]`) audits and updates dependencies.
+Project skills live in `.pi/skills/` — `/skill:update-deps [npm|elm|rust|nix]`
+audits and updates dependencies.
 
 `flix` carries what the compiler does rather than what the code
 is: the errors this tree has actually produced, what each one meant, and how a
