@@ -68,8 +68,8 @@ test('the circuits drawn and decoded are one list', () => {
  * carry. Flix closes the module's last definition with a `}` at column nought,
  * which is where the body ends. */
 function sentNames(): string[] {
-  const flixSource = readSource('flix/src/Motorsport/Circuit.flix');
-  const body = flixSource.split('pub def jsonValue')[1]?.split('\n}')[0] ?? '';
+  const backendSource = readSource('backend/src/Motorsport/Circuit.flix');
+  const body = backendSource.split('pub def jsonValue')[1]?.split('\n}')[0] ?? '';
   const names = [...body.matchAll(/=>\s*"([a-z_]+)"/g)].map((m) => m[1]);
   expect(names.length, 'Circuit.jsonValue sends no circuit name').toBeGreaterThan(0);
   return names;

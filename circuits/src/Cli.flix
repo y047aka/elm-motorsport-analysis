@@ -1,1 +1,1 @@
-../../flix/src/Cli.flix
+../../backend/src/Cli.flix

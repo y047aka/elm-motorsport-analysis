@@ -1,1 +1,1 @@
-../../../flix/src/Util/Duration.flix
+../../../backend/src/Util/Duration.flix

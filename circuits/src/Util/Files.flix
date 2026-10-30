@@ -1,7 +1,7 @@
 /// Reading a file, writing one, and asking whether a path holds one: the commands these
 /// serve are run by hand, so a geometry is read to be laid against another and an overlay
 /// written to be looked at later. The globbing and the CSV-walking the load and the export
-/// do are `flix/src`'s `Util.Files`. Two projects hold a module of this name — `flix/src`'s
+/// do are `backend/src`'s `Util.Files`. Two projects hold a module of this name — `backend/src`'s
 /// and this one — and neither can reach the other's; the report reads through
 /// `TimingLines.Files`, which resolves nothing.
 pub mod Util.Files {

@@ -149,7 +149,7 @@ pub mod Cli.Args {
             case Ok(verdict)  => verdict
         }
 
-    /// The answer a wrong argument comes to, as `flix/src`'s `main` answers it: the
+    /// The answer a wrong argument comes to, as `backend/src`'s `main` answers it: the
     /// sentence naming what was wrong, the command's own usage under it, and exit
     /// code 1. A command reaches a wrong argument through this and nothing else.
     pub def refuseArgs(problem: String, usage: String): Int32 \ Console = {

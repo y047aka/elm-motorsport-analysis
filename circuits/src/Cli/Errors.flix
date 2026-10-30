@@ -11,7 +11,7 @@
 /// commands read, and `File` carries `TimingLines.Files`' path, which reads where the
 /// reader stands. Wrapping one in the other would print a path twice.
 ///
-/// `flix/src` has a `Cli.Errors` of its own, a separate module of the same name in
+/// `backend/src` has a `Cli.Errors` of its own, a separate module of the same name in
 /// a separate project, carrying the failures of the commands that compute in a
 /// database. Writing one here would need a `Db` source linked in first.
 ///

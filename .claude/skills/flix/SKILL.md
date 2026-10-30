@@ -1,6 +1,6 @@
 ---
 name: flix
-description: "Diagnose Flix compile errors and write Flix the way this repository does. Use when a `nix run .#flix-build` / `.#flix-test` fails — or the third Flix project does, `.#geometry-test` — when an error code appears (E6217 unused effect, E6218 mismatched effects, E6289 misplaced doc-comment, E6629 expected, E2136 undefined name, E0237 not accessible, E6794 unable to unify, E6469 effect formulas, E7685 unexpected argument, E8752 unexpected effect in a pure function, E7027 equality not defined), when a parse error has no obvious cause, when adding or changing an effect, handler or signature under /flix, and before believing a green build."
+description: "Diagnose Flix compile errors and write Flix the way this repository does. Use when a `nix run .#flix-build` / `.#flix-test` fails — or the third Flix project does, `.#geometry-test` — when an error code appears (E6217 unused effect, E6218 mismatched effects, E6289 misplaced doc-comment, E6629 expected, E2136 undefined name, E0237 not accessible, E6794 unable to unify, E6469 effect formulas, E7685 unexpected argument, E8752 unexpected effect in a pure function, E7027 equality not defined), when a parse error has no obvious cause, when adding or changing an effect, handler or signature under /backend, and before believing a green build."
 allowed-tools:
   - Read
   - Grep
@@ -9,8 +9,8 @@ allowed-tools:
   - Bash(nix run .#flix-test*)
   - Bash(nix run .#geometry-test*)
   - Bash(nix shell nixpkgs#jdk21_headless*)
-  - Bash(rm -rf flix/build*)
-  - Bash(mkdir -p flix/build*)
+  - Bash(rm -rf backend/build*)
+  - Bash(mkdir -p backend/build*)
   - Bash(ls *)
   - Bash(cat /nix/store/*)
   - Bash(find /nix/store*)
@@ -18,7 +18,7 @@ allowed-tools:
 
 # Flix in this repository
 
-Flix 0.79.0, via the flake. `flix/README.md` says what the code under `/flix`
+Flix 0.79.0, via the flake. `backend/README.md` says what the code under `/backend`
 *is*; this says what the compiler does when you change it.
 
 ## Checking
@@ -28,7 +28,7 @@ nix run .#flix-build     # compile src/ and test/
 nix run .#flix-test      # compile and run the tests
 ```
 
-Both are incremental and CI is not, so **`rm -rf flix/build` before believing a
+Both are incremental and CI is not, so **`rm -rf backend/build` before believing a
 green run** — a compile that only fails from cold passes locally otherwise.
 
 The geometry pipeline at the `circuits/` root — which holds the probe as its
