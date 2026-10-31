@@ -117,7 +117,7 @@ tests =
                             { lap | lap = 2, elapsed = instant 16000, crossing = Lap.ExitAtStart 63000 }
                     in
                     Expect.equal (Lap.pitEntryAt cameOut) (Lap.pitEntryAt cameIn)
-            , test "the lap carrying the lane time enters at its own head" <|
+                        , test "the lap carrying the lane time enters at its own head" <|
                 \_ ->
                     [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 63000, Lap.ExitAndEntry 63000 ]
                         |> List.map (\crossing -> Lap.pitEntryAt { lap | crossing = crossing })
@@ -136,6 +136,19 @@ tests =
                                 , laneTime = 46857
                                 }
                             )
+            ]
+        , describe "the flag a lap is read under"
+            [ test "only a flag that lets the field go leaves a reading of pace" <|
+                -- The chequered flag is the odd one of the five: a procedure
+                -- holds the field to a posted time, a finish does not.
+                \_ ->
+                    [ Lap.Green, Lap.FullCourseYellow, Lap.SlowZone, Lap.Finish, Lap.Red ]
+                        |> List.map (\flag -> Lap.atRacePace { empty | flag = flag })
+                        |> Expect.equal [ True, False, False, True, False ]
+            , test "a lap the pit lane took is no one's pace whatever the flag was" <|
+                \_ ->
+                    Lap.atRacePace { empty | crossing = Lap.EntryAtEnd }
+                        |> Expect.equal False
             ]
         , describe "segments"
             [ test "starts each sector where the one before it ended" <|

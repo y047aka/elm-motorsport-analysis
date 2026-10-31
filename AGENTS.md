@@ -373,10 +373,11 @@ not a value the race holds.
 A reading of the laps is handed them whole, with a `LapRange` beside them, and
 does its own cutting. Cut laps and whole ones are both `List Lap` at a call
 site, so a module taking one and a module taking the other are
-indistinguishable, and the wrong pairing compiles. The rule earns itself on
-`Pace`, whose outlier fence has to come off the whole race the car ran: there
-the range and the laps are deliberately not the same stretch, and any other
-convention would make that read as a bug.
+indistinguishable, and the wrong pairing compiles. The rule earns itself on the
+lap-time distribution, which cuts the same laps twice over: `Pace` takes one
+car's whole history and its range, and `Chart.LapTimeDistribution` fences the
+laps of every car that shares the axis. One cut is per car, the other per
+drawing, and only the two arguments say which is which.
 
 The three charts the car detail panel tabs between take one shape --
 `LapRange -> Snapshot -> Rivals` -- because they are interchangeable to

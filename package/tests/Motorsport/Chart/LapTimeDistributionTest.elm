@@ -19,9 +19,9 @@ import Test exposing (Test, describe, test)
 
 
 {-| `sharedBounds` draws one lap-time axis over the cars of a class. What is
-owed to the reader is that the axis spans every car's times, that it spans
-each car's own range and no more, and that a car with nothing to describe
-neither gets an axis of its own nor costs the class one.
+owed to the reader is that the axis spans every lap of the set the fence leaves,
+that it spans each car's own range and no more, and that a car with nothing to
+describe neither gets an axis of its own nor costs the class one.
 -}
 suite : Test
 suite =
@@ -74,6 +74,31 @@ suite =
                 \_ ->
                     Expect.equal Nothing (boundsOf [ ( "10", { first = 1, last = 0 } ) ])
             ]
+        , describe "the fence the shared axis is drawn over"
+            [ test "one car's wide race does not set the axis the class is drawn on" <|
+                \_ ->
+                    -- #11 ran three laps at the class's pace and three half a
+                    -- minute down it, and its own fence is wide enough to let all
+                    -- six through. The class's fence is drawn over both cars, and
+                    -- the axis ends with the laps that survive it.
+                    case boundsOfOn wideRaced [ ( "10", twelve ), ( "11", six ) ] of
+                        Just { domain } ->
+                            Expect.lessThan 130000 (Tuple.second domain)
+
+                        Nothing ->
+                            Expect.fail "both cars have timed laps"
+            , test "the axis still spans every lap the fence leaves" <|
+                -- The fence is not there to trim the field's own spread: the
+                -- slowest lap it keeps is inside the axis, not just off the end
+                -- of a curve nobody can read to.
+                \_ ->
+                    case boundsOfOn wideRaced [ ( "10", twelve ), ( "11", six ) ] of
+                        Just { domain } ->
+                            Expect.atLeast 101100 (Tuple.second domain)
+
+                        Nothing ->
+                            Expect.fail "both cars have timed laps"
+            ]
         ]
 
 
@@ -93,12 +118,17 @@ full =
 
 boundsOf : List ( String, LapRange ) -> Maybe LapTimeDistribution.Bounds
 boundsOf entries =
+    boundsOfOn snapshot entries
+
+
+boundsOfOn : Snapshot -> List ( String, LapRange ) -> Maybe LapTimeDistribution.Bounds
+boundsOfOn race entries =
     entries
         |> List.filterMap
             (\( carNumber, range ) ->
-                Maybe.map (\car -> { range = range, car = car }) (Snapshot.get carNumber snapshot)
+                Maybe.map (\car -> { range = range, car = car }) (Snapshot.get carNumber race)
             )
-        |> LapTimeDistribution.sharedBounds (Snapshot.lapHistory snapshot)
+        |> LapTimeDistribution.sharedBounds (Snapshot.lapHistory race)
 
 
 snapshot : Snapshot
@@ -109,6 +139,28 @@ snapshot =
         , carOf "99" 500000 [ 120000 ]
         ]
         |> Snapshot.at { elapsed = Instant.fromDuration 400000 }
+
+
+{-| Two cars of one class over the opening of a race: #10 held one pace for
+ twelve laps, #11 ran three at that pace and three some half a minute down it.
+-}
+wideRaced : Snapshot
+wideRaced =
+    Race.fromCars { timeLimit = Instant.raceStart, index = noIndex }
+        [ carOf "10" 20000 (List.range 0 11 |> List.map (\i -> 100000 + i * 100))
+        , carOf "11" 40000 [ 100050, 100150, 100250, 130000, 131000, 132000 ]
+        ]
+        |> Snapshot.at { elapsed = Instant.fromDuration 400000 }
+
+
+twelve : LapRange
+twelve =
+    { first = 1, last = 12 }
+
+
+six : LapRange
+six =
+    { first = 1, last = 6 }
 
 
 carOf : String -> Duration -> List Duration -> Car

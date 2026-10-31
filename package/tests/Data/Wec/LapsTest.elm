@@ -50,6 +50,19 @@ suite =
                     Laps.fromJsonl twoLaps
                         |> Result.map (List.map .lapNumber)
                         |> Expect.equal (Ok [ 1, 2 ])
+            , test "reads which flag was out at the line" <|
+                -- The reading of a pace turns on these five codes: a lap held
+                -- behind a procedure is not a lap the car drove.
+                \_ ->
+                    String.replace "\"flagAtFl\":\"GF\"" "\"flagAtFl\":\"SF\"" twoLaps
+                        |> Laps.fromJsonl
+                        |> Result.map (List.map .flagAtFl)
+                        |> Expect.equal (Ok [ Lap.SlowZone, Lap.SlowZone ])
+            , test "a flag the feed has never sent fails the file rather than reading as green" <|
+                \_ ->
+                    String.replace "\"flagAtFl\":\"GF\"" "\"flagAtFl\":\"XX\"" twoLaps
+                        |> Laps.fromJsonl
+                        |> Expect.err
             , test "ignores the blank line a trailing newline leaves behind" <|
                 \_ ->
                     Laps.fromJsonl twoLaps
@@ -57,7 +70,7 @@ suite =
                         |> Expect.equal (Ok 2)
             , test "fails a lap that arrives with no place in the field" <|
                 \_ ->
-                    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":""}
+                    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
                         |> Laps.fromJsonl
                         |> Result.mapError (String.left 8)
@@ -219,8 +232,8 @@ suite =
 
 twoLaps : String
 twoLaps =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":""}
-{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","crossingFinishLineInPit":"","pitTime":"1:09.953"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
+{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","crossingFinishLineInPit":"","pitTime":"1:09.953","flagAtFl":"GF"}
 """
 
 
@@ -229,9 +242,9 @@ on -- the shape every stop in a round has.
 -}
 aStop : String
 aStop =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":""}
-{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"1:41.000","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"49.000"}},"elapsed":"3:16.365","crossingFinishLineInPit":"B","pitTime":""}
-{"carNumber":"1","lapNumber":3,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"1:38.953"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"6:26.318","crossingFinishLineInPit":"","pitTime":"1:09.953"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
+{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"1:41.000","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"49.000"}},"elapsed":"3:16.365","crossingFinishLineInPit":"B","pitTime":"","flagAtFl":"GF"}
+{"carNumber":"1","lapNumber":3,"position":0,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"1:38.953"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"6:26.318","crossingFinishLineInPit":"","pitTime":"1:09.953","flagAtFl":"GF"}
 """
 
 
@@ -240,9 +253,9 @@ as one lap carrying both ends of a stop.
 -}
 aDoubleStop : String
 aDoubleStop =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:41.000","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"49.000"}},"elapsed":"1:41.000","crossingFinishLineInPit":"B","pitTime":""}
-{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"2:46.857","improvement":0},"sectors":{"s1":{"time":"1:15.857"},"s2":{"time":"29.000"},"s3":{"time":"1:02.000"}},"elapsed":"4:27.857","crossingFinishLineInPit":"B","pitTime":"46.857"}
-{"carNumber":"1","lapNumber":3,"position":0,"driverName":"D","lap":{"time":"3:09.107","improvement":0},"sectors":{"s1":{"time":"1:38.107"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"7:36.964","crossingFinishLineInPit":"","pitTime":"1:09.107"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"1:41.000","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"49.000"}},"elapsed":"1:41.000","crossingFinishLineInPit":"B","pitTime":"","flagAtFl":"GF"}
+{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"2:46.857","improvement":0},"sectors":{"s1":{"time":"1:15.857"},"s2":{"time":"29.000"},"s3":{"time":"1:02.000"}},"elapsed":"4:27.857","crossingFinishLineInPit":"B","pitTime":"46.857","flagAtFl":"GF"}
+{"carNumber":"1","lapNumber":3,"position":0,"driverName":"D","lap":{"time":"3:09.107","improvement":0},"sectors":{"s1":{"time":"1:38.107"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"7:36.964","crossingFinishLineInPit":"","pitTime":"1:09.107","flagAtFl":"GF"}
 """
 
 
@@ -251,7 +264,7 @@ own time, and the running total from the line that places it.
 -}
 lapWithMiniSectors : String
 lapWithMiniSectors =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","crossingFinishLineInPit":"","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 
@@ -260,7 +273,7 @@ lapWithMiniSectors =
 -}
 lapMissingAMiniSector : String
 lapMissingAMiniSector =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","crossingFinishLineInPit":"","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 
@@ -269,7 +282,7 @@ and its mini-sectors all the same. Its SCL2 is quicker than any real one here.
 -}
 lapWithoutALapTime : String
 lapWithoutALapTime =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","crossingFinishLineInPit":"","pitTime":""}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 
@@ -277,7 +290,7 @@ lapWithoutALapTime =
 -}
 slowerSecondLap : String
 slowerSecondLap =
-    """{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","crossingFinishLineInPit":"","pitTime":""}
+    """{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 
@@ -293,6 +306,7 @@ rawLap carNumber lapNumber lapTime elapsed =
     , elapsed = Instant.fromDuration elapsed
     , crossingFinishLineInPit = False
     , pitTime = Nothing
+    , flagAtFl = Lap.Green
     }
 
 

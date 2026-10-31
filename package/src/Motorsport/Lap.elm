@@ -4,6 +4,7 @@ module Motorsport.Lap exposing
     , MiniSectors, MiniSectorTime
     , recorded
     , Crossing(..), isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt, pitStopOf
+    , Flag(..), atRacePace
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -19,6 +20,7 @@ module Motorsport.Lap exposing
 @docs MiniSectors, MiniSectorTime
 @docs recorded
 @docs Crossing, isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt, pitStopOf
+@docs Flag, atRacePace
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -61,6 +63,7 @@ type alias Lap =
     , sectors : SectorTimes
     , elapsed : Instant
     , crossing : Crossing
+    , flag : Flag
     , miniSectors : Maybe MiniSectors
     }
 
@@ -114,6 +117,7 @@ empty =
     , best = Nothing
     , elapsed = Instant.raceStart
     , crossing = NoCrossing
+    , flag = Green
     , miniSectors = Nothing
     }
 
@@ -184,10 +188,56 @@ isInLap lap =
 {-| Whether the lap touched the pit lane at neither end -- not that it is a
 representative one. A lap behind a safety car and a lap spent in traffic both
 pass.
+
+A reading of a car's pace wants [`atRacePace`](#atRacePace), which asks this too
+and then asks the flag.
+
 -}
 isRacingLap : Lap -> Bool
 isRacingLap lap =
     lap.crossing == NoCrossing
+
+
+{-| Which flag the field was under as the lap crossed the line.
+
+The five are what the feed spells at the finish line, and the names are the
+backend's `Motorsport.Wec.Flag`, which reads the same five codes out of the
+timing sheet: `GF`, `FCY`, `SF`, `FF`, `RF`. `SlowZone` is the procedure the WEC
+runs in place of a safety car -- the whole field held to a posted lap time with
+the leaders controlling the pace.
+
+-}
+type Flag
+    = Green
+    | FullCourseYellow
+    | SlowZone
+    | Finish
+    | Red
+
+
+{-| Whether this lap is a reading of how fast the car goes: driven the length of
+the lap, and with nobody holding the field down.
+
+A procedure lap is not one. Every car runs it at the posted delta rather than at
+its own pace, so it says what the procedure was and not what the car is -- which
+matters most in a race with a lot of them: over a third of the laps of the 2025
+Circuit of the Americas round crossed the line under a slow zone or a red flag,
+and a distribution of those laps describes the cautions and not the field.
+
+The chequered flag is counted as pace: the last lap of the race is run flat out,
+and a field that has one lap to describe would get no curve at all.
+
+A lap partly under a procedure is flagged by whichever flag was out at the line,
+so a lap begun behind one and finished after the restart passes here. The
+fence of [`LapTimeDistribution`](Motorsport-Chart-LapTimeDistribution) is left to
+rule on those, as it does on the incident lap and the stint that came to
+nothing.
+
+-}
+atRacePace : Lap -> Bool
+atRacePace lap =
+    isRacingLap lap
+        && (lap.flag == Green || lap.flag == Finish)
 
 
 {-| When the car crossed the finish line in the pit lane, on its way into the
