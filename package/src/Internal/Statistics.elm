@@ -52,8 +52,8 @@ upperFence values =
     in
     -- Four is where nearest-rank quartiles stop collapsing: below it `Q3` is
     -- drawn from the lower half of the set, so the fence lands on or under the
-    -- smallest value and rules out everything above it -- [ 100, 101 ] fences
-    -- at 100, [ 100, 101, 104 ] at 102.5.
+    -- smallest value and rules out everything above it -- [ 100, 101 ] fences at
+    -- 100. Below four the maximum is the only honest upper bound.
     case
         if List.length sorted < 4 then
             Nothing

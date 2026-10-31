@@ -200,16 +200,11 @@ isRacingLap lap =
 
 {-| Which flag the field was under as the lap crossed the line.
 
-The five are what the feed spells at the finish line, and the names are the
-backend's `Motorsport.Wec.Flag`, which reads the same five codes out of the
-timing sheet: `GF`, `FCY`, `SF`, `FF`, `RF`.
-
-These are not [`Flag`](Motorsport-Flag#Flag), which is what the _timeline_ shows:
-that one reads `SF` as `SafetyCar` -- the whole field crosses under it at a crawl,
-which no local slow zone would do -- and drops `FF`, since the finish is no flag
-on the field and each car's is its own `Finished`. This one keeps all five
-unreduced, because what a lap's own time measures depends on the code the feed
-wrote at that crossing and on nothing else.
+The five codes are the feed's -- `GF`, `FCY`, `SF`, `FF`, `RF` -- named as the
+backend's `Motorsport.Wec.Flag` names them, and kept as the feed wrote them. The
+timeline's own enum, [`Flag`](Motorsport-Flag#Flag), reads `SF` as `SafetyCar` and
+has no state for `FF`; a lap needs all five, since it is the code at its own
+line crossing that says what its time measured.
 
 -}
 type Flag
@@ -223,22 +218,17 @@ type Flag
 {-| Whether this lap is a reading of how fast the car goes: driven the length of
 the lap, and with nobody holding the field down.
 
-A procedure lap is not one. Every car runs it at the procedure's pace rather than
-at its own, so it says what the procedure was and not what the car is -- which
-matters most in a race with a lot of them: one lap in three of the 2025 Circuit
-of the Americas round crossed the line under a procedure, and a
-distribution of those laps describes the cautions and not the field.
+A held lap is not one, and in some races there are a lot of them -- a third of the
+laps of the 2025 Circuit of the Americas round crossed the line under a procedure
+-- so a distribution that took them would describe the cautions and not the field.
 
-The chequered flag is counted as pace: the last lap is run flat out, and every
-car that is classified crosses under it once. A race that ended behind a
-procedure would leave this reading one held lap per car, which is the fence's to
-rule out -- the one case where the flag at the line is not enough on its own.
-
-A lap partly under a procedure is flagged by whichever flag was out at the line,
-so a lap begun behind one and finished after the restart passes here. The
-fence of [`LapTimeDistribution`](Motorsport-Chart-LapTimeDistribution) is left to
-rule on those, as it does on the incident lap and the stint that came to
-nothing.
+`Finish` counts as pace. The residual is the race that comes home behind a
+procedure, which leaves one held lap per car here: the flag at the line is all
+this can see, and the fence of
+[`LapTimeDistribution`](Motorsport-Chart-LapTimeDistribution) is what rules such a
+lap out. It rules out the other thing this reading cannot see either -- a lap
+begun behind a procedure and finished after the restart, which is flagged by
+whichever flag was out at the line.
 
 -}
 atRacePace : Lap -> Bool

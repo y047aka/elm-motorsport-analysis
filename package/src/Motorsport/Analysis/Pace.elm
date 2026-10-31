@@ -15,14 +15,9 @@ import Motorsport.Sector as Sector exposing (BySector)
 {-| The car's laps on the road at race pace inside the range -- the whole laps,
 for a drawing that wants more off a lap than its time.
 
-Which laps those are is [`Lap.atRacePace`](Motorsport-Lap#atRacePace): the lap
-the car drove the length of, under a flag that let it drive.
-
-The slow laps among them are still here. How slow a lap has to be to stop being
-a reading of the pace is a question about the cars drawn together, not about one
-car and not about one stretch of the race -- so the fence is drawn by
-[`LapTimeDistribution`](Motorsport-Chart-LapTimeDistribution) over the set it
-lays on one axis, and takes these laps as given.
+[`Lap.atRacePace`](Motorsport-Lap#atRacePace) is what sorts them, and nothing
+here trims the slow ones: the fence is drawn over the cars that share an axis, in
+[`LapTimeDistribution`](Motorsport-Chart-LapTimeDistribution).
 
 -}
 racingLaps : LapRange -> List Lap -> List Lap
@@ -44,11 +39,10 @@ racingTimes range history =
 {-| The best each sector of the lap has been driven in, over the laps inside the
 range.
 
-Laps the car pitted on and laps the field was held on are left out, as they are
-wherever a pace is read -- see
-[`Lap.atRacePace`](Motorsport-Lap#atRacePace). A sector time driven at a posted
-delta is no car's best sector, and a reference drawn from one rates every green
-lap against a time nobody drove.
+Laps the car pitted on and laps the field was held on are left out
+([`Lap.atRacePace`](Motorsport-Lap#atRacePace)), so a reference is always a sector
+somebody drove at pace. A stint's or a gap's own best lap is not this reading --
+those still count laps by [`Lap.isRacingLap`](Motorsport-Lap#isRacingLap) alone.
 
 -}
 bestSectors : LapRange -> List Lap -> BySector (Maybe Duration)

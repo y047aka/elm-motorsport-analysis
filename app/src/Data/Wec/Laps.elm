@@ -86,12 +86,13 @@ flagDecoder =
     Decode.map (String.isEmpty >> not) string
 
 
-{-| Which flag was out as the lap crossed the line -- the five the CLI writes,
-which are the five the loader will put in the database at all
-(`Schema.checkedText` over `Motorsport.Wec.flags()`). An unknown code is a
-truncated or hand-edited file, and is failed rather than read as a green flag:
-a round whose laps do not decode is a round that does not open, where a round
-whose cautions read as green quietly draws a pace it never ran.
+{-| Which flag was out as the lap crossed the line.
+
+The five codes are all the loader will have put in the database at all
+(`Schema.checkedText` over `Motorsport.Wec.flags()`), so a sixth is a truncated or
+hand-edited file. This fails the round rather than defaulting to `Green`, which
+would draw a held field as pace.
+
 -}
 flagAtFlDecoder : Decoder Lap.Flag
 flagAtFlDecoder =

@@ -83,8 +83,8 @@ view range snapshot rivals =
 
 {-| One car's own laps at card size, on bounds the cars drawn beside it share
 ([`sharedBounds`](#sharedBounds)) -- so a time reads at the same place on every
-curve of the set, and every curve of it is cut to the same laps. A car with no
-laps to describe gets no chart rather than an empty one.
+curve of the set, and every curve of it is cut to the same laps. A car with
+nothing inside the fence gets an empty box.
 -}
 sparklineOn : Bounds -> LapRange -> LapHistory -> CarAt -> Html msg
 sparklineOn bounds range lapHistory item =
@@ -104,9 +104,8 @@ type alias Bounds =
     }
 
 
-{-| The bounds of a set of curves: the extent of every lap of the set the fence
-leaves ([`pooledFence`](#pooledFence)), and the greatest density of the curves
-those laps make.
+{-| The bounds of a set of curves: the extent of every lap the fence leaves, and
+the greatest density of the curves those laps make.
 -}
 boundsOf : List Series -> Maybe Bounds
 boundsOf series =
@@ -114,8 +113,8 @@ boundsOf series =
         |> Maybe.map .bounds
 
 
-{-| The same reading with the laps it kept beside it, so a drawing that goes on
-to plot the set need not cut it a second time.
+{-| The bounds with the kept laps beside them, which is what a drawing goes on to
+plot.
 -}
 measure : List Series -> Maybe { bounds : Bounds, kept : List Series }
 measure series =
@@ -140,22 +139,20 @@ measure series =
 
 
 {-| The lap times a set of curves keeps, drawn together: the upper IQR fence over
-every lap the set has to show, rather than one fence per car.
+every lap the set has to show.
 
 Slow is slow _for the cars a lap is lined up against_, and those cars are already
-on one axis. Measured per car the fence reads a wide race -- one driver quick,
-one slow -- as a wide fence, and that one car then sets the top of the axis for
-its whole class.
+on one axis, so the fence is drawn over the set and not per car: a fence measured
+on one car's own spread is wide exactly when that car's race was wide, and that
+car then sets the top of the axis for its whole class.
 
 The held laps are already gone ([`Lap.atRacePace`](Motorsport-Lap#atRacePace)), so
 what this fence rules on is the incident lap, the lap begun behind a procedure and
 finished after the restart, and the stint that came to nothing.
 
-A car the fence leaves with nothing to draw gets no curve and a blank row. That
-is a loss and not an absence: the car ran, and what it ran is slower than every
-lap the class showed at pace, which is the reading the axis is drawn to hold. It
-is what a shared axis costs -- a curve of its own would draw that car's slow as
-another car's quick.
+A car the fence leaves with nothing to draw gets no curve and a blank row. That is
+a loss and not an absence -- the car ran -- and it is what one axis costs: a curve
+of its own would draw that car's slow as another car's quick.
 
 -}
 pooledFence : List Series -> Duration
@@ -163,21 +160,18 @@ pooledFence series =
     upperFence (List.concatMap .times series)
 
 
-{-| The series with the laps its bounds fence out dropped. This decides how wide
-a kernel the curve smooths with as well as what it covers: a car's slowest laps
-left in smear its curve across an axis that drew itself without them.
+{-| The series with the laps its bounds fence out dropped. This decides how wide a
+kernel the curve smooths with as well as what it covers: laps left in widen the
+bandwidth and smear a curve across an axis that drew itself without them.
 -}
 withinFence : Duration -> Series -> Series
 withinFence fence series =
     { series | times = List.filter (\time -> time <= fence) series.times }
 
 
-{-| The bounds a set of cars drawn beside one another shares: each car's curve
-is built over the range that car has run, and the two axes are drawn over the
-lot of them.
-
-The range stays each car's own because a car has run the race it has run; the
-fence is the set's, drawn over every lap the set has
+{-| The bounds a set of cars drawn beside one another shares: each car's curve is
+built over the range that car has run, and the two axes are drawn over the lot of
+them -- each range the car's own, the fence the set's
 ([`pooledFence`](#pooledFence)).
 
 `Nothing` where none of the cars has a time at all, which is the one case in

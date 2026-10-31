@@ -132,7 +132,6 @@ view config snapshot class_ =
         counted =
             count cars
 
-        -- One lap-time axis for the whole column.
         paceBounds =
             LapTimeDistribution.sharedBounds
                 (Snapshot.lapHistory snapshot)
@@ -333,9 +332,8 @@ row config snapshot paceBounds ( ahead, item ) =
 of cumulative time away at the same lap number and is clipped outside the
 band as an outlier rather than flattening it.
 
-Pace: the laps this car has run so far, drawn on the class's bounds, which are
-taken once for the column -- two class-mates' curves put the same lap time at
-the same place.
+Pace: the laps this car has run so far, on bounds taken once for the column, so
+the same lap time sits at the same place on every row.
 
 -}
 rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Snapshot -> CarAt -> Html msg
@@ -368,8 +366,6 @@ rowTrace trace paceBounds snapshot item =
         ]
 
 
-{-| The laps a row reads: the whole race this car has run.
--}
 paceRange : CarAt -> LapRange
 paceRange car =
     { first = 1, last = car.standing.lapsCompleted }

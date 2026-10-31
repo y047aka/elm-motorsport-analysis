@@ -78,9 +78,8 @@ suite =
             [ test "one car's wide race does not set the axis the class is drawn on" <|
                 \_ ->
                     -- #11 ran three laps at the class's pace and three half a
-                    -- minute down it, and its own fence is wide enough to let all
-                    -- six through. The class's fence is drawn over both cars, and
-                    -- the axis ends with the laps that survive it.
+                    -- minute down it. The fence is drawn over both cars, so the
+                    -- axis ends with the laps that survive it.
                     case boundsOfOn wideRaced [ ( "10", twelve ), ( "11", six ) ] of
                         Just { domain } ->
                             Expect.lessThan 130000 (Tuple.second domain)
@@ -89,8 +88,7 @@ suite =
                             Expect.fail "both cars have timed laps"
             , test "the axis still spans every lap the fence leaves" <|
                 -- The fence is not there to trim the field's own spread: the
-                -- slowest lap it keeps is inside the axis, not just off the end
-                -- of a curve nobody can read to.
+                -- slowest lap it keeps is inside the axis.
                 \_ ->
                     case boundsOfOn wideRaced [ ( "10", twelve ), ( "11", six ) ] of
                         Just { domain } ->
@@ -117,12 +115,10 @@ suite =
         , describe "the kernel a curve is smoothed with"
             [ test "a lap the fence rules out is kept out of that kernel as well" <|
                 \_ ->
-                    -- The cut is what decides how wide a kernel each curve smooths
-                    -- with, so the ten laps the fence leaves are drawn exactly as
-                    -- they would have been had the three held laps never run: the
-                    -- same axis and the same peak. Were the kernel measured over a
-                    -- car's raw times instead, every caution between its green laps
-                    -- would flatten the curve of the green ones.
+                    -- The ten laps the fence leaves must draw exactly as they would
+                    -- have had the three held ones never run: same axis, same peak.
+                    -- A kernel measured over the raw times instead answers every
+                    -- caution between the green laps by flattening the green ones.
                     Expect.equal (shape tenLaps ten) (shape tenWithHeld thirteen)
             ]
         ]
@@ -239,8 +235,7 @@ oneCar times =
         |> Snapshot.at { elapsed = Instant.fromDuration 2000000 }
 
 
-{-| The axis a set is drawn on, and the highest curve it holds: what a kernel
-wider than the laps themselves would move.
+{-| The axis a set is drawn on and the highest curve it holds.
 -}
 shape : Snapshot -> LapRange -> Maybe ( ( Float, Float ), Float )
 shape race range =

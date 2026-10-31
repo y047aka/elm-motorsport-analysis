@@ -28,17 +28,15 @@ suite =
         , describe "which flag a pace is read from"
             [ test "a lap the field was held on is not a reading of the car's pace" <|
                 \_ ->
-                    -- Every held lap of the race goes, including where they are
-                    -- most of what there is to read: a held lap says what the
-                    -- procedure was, and no stretch of it is the car's pace.
+                    -- Every held lap of the round goes, including the ones that
+                    -- are most of what this round has to show.
                     Pace.racingTimes { first = 1, last = 20 } heldLate
                         |> Expect.equal (List.repeat 16 100000)
             , test "the last lap of the race is run flat out" <|
                 \_ ->
-                    -- The chequered flag is the quickest lap of the race for every
-                    -- car that took it at COTA: 29 of 29 ran theirs under their own
-                    -- median green lap, a median of 6.9s under it and 58s under
-                    -- their held ones.
+                    -- Every one of the 29 cars that took the chequered flag at COTA
+                    -- ran it under its own median green lap: 6.9s under it on the
+                    -- median, and 58s under its held laps.
                     Pace.racingTimes { first = 1, last = 1 } chequered
                         |> Expect.equal [ 100000 ]
             , test "a race that has not gone green yet has no pace to read" <|
