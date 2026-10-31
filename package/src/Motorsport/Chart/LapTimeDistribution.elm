@@ -68,16 +68,16 @@ view range snapshot rivals =
                             { own | emphasis = Related }
                     )
     in
-    boundsOf series
+    measure series
         |> Maybe.map
-            (\bounds ->
+            (\{ bounds, kept } ->
                 chart
                     { width = consolidated.width
                     , height = consolidated.height
                     , domain = bounds.domain
                     , maxDensity = bounds.maxDensity
                     }
-                    (List.map (withinFence bounds.fence) series)
+                    kept
             )
 
 
@@ -110,6 +110,15 @@ those laps make.
 -}
 boundsOf : List Series -> Maybe Bounds
 boundsOf series =
+    measure series
+        |> Maybe.map .bounds
+
+
+{-| The same reading with the laps it kept beside it, so a drawing that goes on
+to plot the set need not cut it a second time.
+-}
+measure : List Series -> Maybe { bounds : Bounds, kept : List Series }
+measure series =
     let
         fence =
             pooledFence series
@@ -120,9 +129,12 @@ boundsOf series =
     domainOf kept
         |> Maybe.map
             (\domain ->
-                { domain = domain
-                , maxDensity = maxDensityOf domain kept
-                , fence = fence
+                { bounds =
+                    { domain = domain
+                    , maxDensity = maxDensityOf domain kept
+                    , fence = fence
+                    }
+                , kept = kept
                 }
             )
 
@@ -139,8 +151,11 @@ The held laps are already gone ([`Lap.atRacePace`](Motorsport-Lap#atRacePace)), 
 what this fence rules on is the incident lap, the lap begun behind a procedure and
 finished after the restart, and the stint that came to nothing.
 
-A car the fence leaves with nothing to draw gets no curve, which is what a car
-with no pace to describe gets everywhere else in this chart.
+A car the fence leaves with nothing to draw gets no curve and a blank row. That
+is a loss and not an absence: the car ran, and what it ran is slower than every
+lap the class showed at pace, which is the reading the axis is drawn to hold. It
+is what a shared axis costs -- a curve of its own would draw that car's slow as
+another car's quick.
 
 -}
 pooledFence : List Series -> Duration

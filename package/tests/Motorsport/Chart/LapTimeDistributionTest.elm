@@ -114,6 +114,17 @@ suite =
                         Nothing ->
                             Expect.fail "both cars have a timed lap"
             ]
+        , describe "the kernel a curve is smoothed with"
+            [ test "a lap the fence rules out is kept out of that kernel as well" <|
+                \_ ->
+                    -- The cut is what decides how wide a kernel each curve smooths
+                    -- with, so the ten laps the fence leaves are drawn exactly as
+                    -- they would have been had the three held laps never run: the
+                    -- same axis and the same peak. Were the kernel measured over a
+                    -- car's raw times instead, every caution between its green laps
+                    -- would flatten the curve of the green ones.
+                    Expect.equal (shape tenLaps ten) (shape tenWithHeld thirteen)
+            ]
         ]
 
 
@@ -192,6 +203,53 @@ opening =
 one : LapRange
 one =
     { first = 1, last = 1 }
+
+
+{-| One car that ran ten laps at its own pace, and the same ten with three more
+ some half a minute down it -- held, and the fence's to rule out.
+-}
+greenTen : List Duration
+greenTen =
+    List.range 0 9 |> List.map (\i -> 100000 + i * 100)
+
+
+ten : LapRange
+ten =
+    { first = 1, last = 10 }
+
+
+thirteen : LapRange
+thirteen =
+    { first = 1, last = 13 }
+
+
+tenLaps : Snapshot
+tenLaps =
+    oneCar greenTen
+
+
+tenWithHeld : Snapshot
+tenWithHeld =
+    oneCar (greenTen ++ [ 130000, 131000, 132000 ])
+
+
+oneCar : List Duration -> Snapshot
+oneCar times =
+    Race.fromCars { timeLimit = Instant.raceStart, index = noIndex } [ carOf "40" 20000 times ]
+        |> Snapshot.at { elapsed = Instant.fromDuration 2000000 }
+
+
+{-| The axis a set is drawn on, and the highest curve it holds: what a kernel
+ wider than the laps themselves would move.
+-}
+shape : Snapshot -> LapRange -> Maybe ( ( Float, Float ), Float )
+shape race range =
+    case boundsOfOn race [ ( "40", range ) ] of
+        Just { domain, maxDensity } ->
+            Just ( domain, maxDensity )
+
+        Nothing ->
+            Nothing
 
 
 carOf : String -> Duration -> List Duration -> Car

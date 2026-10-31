@@ -117,7 +117,7 @@ tests =
                             { lap | lap = 2, elapsed = instant 16000, crossing = Lap.ExitAtStart 63000 }
                     in
                     Expect.equal (Lap.pitEntryAt cameOut) (Lap.pitEntryAt cameIn)
-                        , test "the lap carrying the lane time enters at its own head" <|
+            , test "the lap carrying the lane time enters at its own head" <|
                 \_ ->
                     [ Lap.NoCrossing, Lap.EntryAtEnd, Lap.ExitAtStart 63000, Lap.ExitAndEntry 63000 ]
                         |> List.map (\crossing -> Lap.pitEntryAt { lap | crossing = crossing })

@@ -202,9 +202,14 @@ isRacingLap lap =
 
 The five are what the feed spells at the finish line, and the names are the
 backend's `Motorsport.Wec.Flag`, which reads the same five codes out of the
-timing sheet: `GF`, `FCY`, `SF`, `FF`, `RF`. `SlowZone` is the procedure the WEC
-runs in place of a safety car -- the whole field held to a posted lap time with
-the leaders controlling the pace.
+timing sheet: `GF`, `FCY`, `SF`, `FF`, `RF`.
+
+These are not [`Flag`](Motorsport-Flag#Flag), which is what the _timeline_ shows:
+that one reads `SF` as `SafetyCar` -- the whole field crosses under it at a crawl,
+which no local slow zone would do -- and drops `FF`, since the finish is no flag
+on the field and each car's is its own `Finished`. This one keeps all five
+unreduced, because what a lap's own time measures depends on the code the feed
+wrote at that crossing and on nothing else.
 
 -}
 type Flag
@@ -218,14 +223,16 @@ type Flag
 {-| Whether this lap is a reading of how fast the car goes: driven the length of
 the lap, and with nobody holding the field down.
 
-A procedure lap is not one. Every car runs it at the posted delta rather than at
-its own pace, so it says what the procedure was and not what the car is -- which
+A procedure lap is not one. Every car runs it at the procedure's pace rather than
+at its own, so it says what the procedure was and not what the car is -- which
 matters most in a race with a lot of them: nearly a third of the laps of the
 2025 Circuit of the Americas round crossed the line under a procedure, and a
 distribution of those laps describes the cautions and not the field.
 
-The chequered flag is counted as pace: the last lap of the race is run flat out,
-and a field that has one lap to describe would get no curve at all.
+The chequered flag is counted as pace: the last lap is run flat out, and every
+car that is classified crosses under it once. A race that ended behind a
+procedure would leave this reading one held lap per car, which is the fence's to
+rule out -- the one case where the flag at the line is not enough on its own.
 
 A lap partly under a procedure is flagged by whichever flag was out at the line,
 so a lap begun behind one and finished after the restart passes here. The

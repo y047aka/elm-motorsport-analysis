@@ -2,6 +2,10 @@ module Motorsport.Flag exposing (Flag(..), fromString, toString)
 
 {-| A flag the whole field is shown, as the line first reads it.
 
+`Lap.Flag` is the other reading of the same column in the feed: every code the
+feed spells, including the chequered flag, which is no flag on the field and so
+comes to this one as `Nothing`.
+
 @docs Flag, fromString, toString
 
 -}
