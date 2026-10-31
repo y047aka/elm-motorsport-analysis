@@ -50,14 +50,19 @@ suite =
                     Laps.fromJsonl twoLaps
                         |> Result.map (List.map .lapNumber)
                         |> Expect.equal (Ok [ 1, 2 ])
-            , test "reads which flag was out at the line" <|
-                -- The reading of a pace turns on these five codes: a lap held
-                -- behind a procedure is not a lap the car drove.
+            , test "reads which flag was out at the line, each of the five" <|
+                -- The reading of a pace turns on this table, and two arms
+                -- swapped would relabel which real laps count while every other
+                -- test here went on passing.
                 \_ ->
-                    String.replace "\"flagAtFl\":\"GF\"" "\"flagAtFl\":\"SF\"" twoLaps
-                        |> Laps.fromJsonl
-                        |> Result.map (List.map .flagAtFl)
-                        |> Expect.equal (Ok [ Lap.SlowZone, Lap.SlowZone ])
+                    decodeFlags [ "GF", "FCY", "SF", "FF", "RF" ]
+                        |> Expect.equal
+                            [ Ok [ Lap.Green ]
+                            , Ok [ Lap.FullCourseYellow ]
+                            , Ok [ Lap.SlowZone ]
+                            , Ok [ Lap.Finish ]
+                            , Ok [ Lap.Red ]
+                            ]
             , test "a flag the feed has never sent fails the file rather than reading as green" <|
                 \_ ->
                     String.replace "\"flagAtFl\":\"GF\"" "\"flagAtFl\":\"XX\"" twoLaps
@@ -266,6 +271,19 @@ lapWithMiniSectors : String
 lapWithMiniSectors =
     """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
+
+
+{-| The one lap line, asked under each flag the feed spells.
+-}
+decodeFlags : List String -> List (Result String (List Lap.Flag))
+decodeFlags codes =
+    codes
+        |> List.map
+            (\code ->
+                String.replace "\"flagAtFl\":\"GF\"" ("\"flagAtFl\":\"" ++ code ++ "\"") lapWithMiniSectors
+                    |> Laps.fromJsonl
+                    |> Result.map (List.map .flagAtFl)
+            )
 
 
 {-| The same lap as the file spells one it is a mini-sector short of: no

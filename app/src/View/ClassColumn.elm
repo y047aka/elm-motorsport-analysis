@@ -333,11 +333,9 @@ row config snapshot paceBounds ( ahead, item ) =
 of cumulative time away at the same lap number and is clipped outside the
 band as an outlier rather than flattening it.
 
-Pace: the range spans the whole race the car has run -- `Pace` clips its
-outliers against the range it is given, so a recent window would measure the
-fence against the stretch it is supposed to filter. The bounds are the
-class's, taken once for the column: two class-mates' curves put the same lap
-time at the same place.
+Pace: the laps this car has run so far, drawn on the class's bounds, which are
+taken once for the column -- two class-mates' curves put the same lap time at
+the same place.
 
 -}
 rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Snapshot -> CarAt -> Html msg

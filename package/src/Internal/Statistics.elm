@@ -40,12 +40,32 @@ sorted.
     upperFence [ 1, 2, 3, 4, 5, 6, 7, 8 ]
     --> 12
 
+    upperFence [ 1, 2, 3 ]
+    --> 3
+
 -}
 upperFence : List Int -> Int
 upperFence values =
-    iqrFences (List.sort values)
-        |> Maybe.map .upper
-        |> Maybe.withDefault (List.maximum values |> Maybe.withDefault 0)
+    let
+        sorted =
+            List.sort values
+    in
+    -- Four is where nearest-rank quartiles stop collapsing: below it `Q3` is
+    -- drawn from the lower half of the set, so the fence lands on or under the
+    -- smallest value and rules out everything above it -- [ 100, 101 ] fences
+    -- at 100, [ 100, 101, 104 ] at 102.5.
+    case
+        if List.length sorted < 4 then
+            Nothing
+
+        else
+            iqrFences sorted
+    of
+        Just fences ->
+            fences.upper
+
+        Nothing ->
+            List.maximum sorted |> Maybe.withDefault 0
 
 
 {-| The middle value, by nearest rank -- for an even count the lower of the two

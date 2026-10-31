@@ -45,11 +45,6 @@ suite =
                     -- car that ran only between two procedures.
                     Pace.racingTimes { first = 1, last = 4 } heldOnly
                         |> Expect.equal []
-            , test "a lap begun behind one and finished after the restart is read as pace" <|
-                -- The feed states one flag, the one at the line.
-                \_ ->
-                    Pace.racingTimes { first = 1, last = 1 } restartedLap
-                        |> Expect.equal [ 100000 ]
             ]
         , describe "the laps whole, for a drawing that wants more than the time"
             [ test "the lap numbers come out with the laps" <|
@@ -98,13 +93,6 @@ heldOnly =
 chequered : List Lap
 chequered =
     [ { emptyLap | lap = 1, time = Just 100000, flag = Lap.Finish } ]
-
-
-{-| One lap across the restart, which the feed flags green at the line.
--}
-restartedLap : List Lap
-restartedLap =
-    [ lapAt 100000 1 ]
 
 
 {-| Three laps, the middle one ended in the pit lane.

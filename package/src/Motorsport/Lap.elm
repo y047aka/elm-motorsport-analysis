@@ -220,9 +220,9 @@ the lap, and with nobody holding the field down.
 
 A procedure lap is not one. Every car runs it at the posted delta rather than at
 its own pace, so it says what the procedure was and not what the car is -- which
-matters most in a race with a lot of them: over a third of the laps of the 2025
-Circuit of the Americas round crossed the line under a slow zone or a red flag,
-and a distribution of those laps describes the cautions and not the field.
+matters most in a race with a lot of them: nearly a third of the laps of the
+2025 Circuit of the Americas round crossed the line under a procedure, and a
+distribution of those laps describes the cautions and not the field.
 
 The chequered flag is counted as pace: the last lap of the race is run flat out,
 and a field that has one lap to describe would get no curve at all.

@@ -130,7 +130,7 @@ boundsOf series =
 {-| The lap times a set of curves keeps, drawn together: the upper IQR fence over
 every lap the set has to show, rather than one fence per car.
 
-Slow is slow *for the cars a lap is lined up against*, and those cars are already
+Slow is slow _for the cars a lap is lined up against_, and those cars are already
 on one axis. Measured per car the fence reads a wide race -- one driver quick,
 one slow -- as a wide fence, and that one car then sets the top of the axis for
 its whole class.

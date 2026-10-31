@@ -99,6 +99,21 @@ suite =
                         Nothing ->
                             Expect.fail "both cars have timed laps"
             ]
+        , describe "a set too small to hold an outlier"
+            [ test "the slower of two opening laps is not its own outlier" <|
+                -- Two cars with one lap each is the whole of the set at the end
+                -- of lap 1. Four laps is where quartiles separate anything at
+                -- all, so below that the fence is the maximum and both cars
+                -- draw; were it not, the slower car's row would be blank at the
+                -- moment the column is read most.
+                \_ ->
+                    case boundsOfOn opening [ ( "30", one ), ( "31", one ) ] of
+                        Just { domain } ->
+                            Expect.atLeast 104000 (Tuple.second domain)
+
+                        Nothing ->
+                            Expect.fail "both cars have a timed lap"
+            ]
         ]
 
 
@@ -161,6 +176,22 @@ twelve =
 six : LapRange
 six =
     { first = 1, last = 6 }
+
+
+{-| The end of the first lap of a class of two.
+-}
+opening : Snapshot
+opening =
+    Race.fromCars { timeLimit = Instant.raceStart, index = noIndex }
+        [ carOf "30" 60000 [ 100000 ]
+        , carOf "31" 60000 [ 104000 ]
+        ]
+        |> Snapshot.at { elapsed = Instant.fromDuration 400000 }
+
+
+one : LapRange
+one =
+    { first = 1, last = 1 }
 
 
 carOf : String -> Duration -> List Duration -> Car
