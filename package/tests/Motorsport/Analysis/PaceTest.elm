@@ -56,12 +56,14 @@ suite =
                     Pace.racingLaps { first = 1, last = 3 } withAStop
                         |> List.map .lap
                         |> Expect.equal [ 1, 3 ]
-            , test "the same laps, the same dropped laps" <| -- racingTimes and racingLaps must never disagree about which laps count
+            , test "the same laps, the same dropped laps" <|
+                -- racingTimes and racingLaps must never disagree about which laps count
                 \_ ->
                     Pace.racingLaps { first = 15, last = 20 } heldLate
                         |> List.map .time
                         |> Expect.equal [ Just 100000, Just 100000 ]
-            , test "a dropped lap leaves its gap in the laps, not a stand-in" <| -- what the strip draws as an empty place on the lap scale
+            , test "a dropped lap leaves its gap in the laps, not a stand-in" <|
+                -- what the strip draws as an empty place on the lap scale
                 \_ ->
                     Pace.racingLaps { first = 1, last = 3 } withNoTimeForLapTwo
                         |> List.map .lap

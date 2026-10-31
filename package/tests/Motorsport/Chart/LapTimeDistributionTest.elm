@@ -168,7 +168,7 @@ snapshot =
 
 
 {-| Two cars of one class over the opening of a race: #10 held one pace for
- twelve laps, #11 ran three at that pace and three some half a minute down it.
+twelve laps, #11 ran three at that pace and three some half a minute down it.
 -}
 wideRaced : Snapshot
 wideRaced =
@@ -206,7 +206,7 @@ one =
 
 
 {-| One car that ran ten laps at its own pace, and the same ten with three more
- some half a minute down it -- held, and the fence's to rule out.
+some half a minute down it -- held, and the fence's to rule out.
 -}
 greenTen : List Duration
 greenTen =
@@ -240,7 +240,7 @@ oneCar times =
 
 
 {-| The axis a set is drawn on, and the highest curve it holds: what a kernel
- wider than the laps themselves would move.
+wider than the laps themselves would move.
 -}
 shape : Snapshot -> LapRange -> Maybe ( ( Float, Float ), Float )
 shape race range =
