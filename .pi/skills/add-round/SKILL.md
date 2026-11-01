@@ -70,7 +70,9 @@ and unwritable at the export; `Round.loaded` is where both ask.
 
 The export writes `app/static/wec/<season>/<id>.json` (summary, carries
 `track.circuit`), `_laps.jsonl`, `_timeline.jsonl`, and `index.json` — the
-calendar the app reads as its only knowledge of which rounds exist. Nothing
+calendar the app reads as its only knowledge of which rounds exist. Of those,
+**`index.json` is tracked**: every export rewrites it, and its diff belongs in
+the commit even when the round's own three files stay ignored. Nothing
 app-side is edited for a new round at a circuit the app already draws.
 
 ## 4. Read the rows back
@@ -109,7 +111,8 @@ site for.
 
 **Only two rounds' export files are committed** — 2025's `le_mans_24h` and
 `cota_6h` — because the other rounds are ~50 MB of what the rows already say.
-A new round's files stay ignored; the dev server answers `/api` from `static/`
+A new round's files stay ignored (save for `index.json`, which is tracked and
+rewritten by the export — step 3); the dev server answers `/api` from `static/`
 only for what is written there, and 502s (or `/api`-404s) for the rest, which
 is quiet, not broken. Promoting a round to kept is its own decision: un-ignore
 and commit its three files, and it joins the VRT — `app/tests/helpers.ts`
@@ -120,6 +123,11 @@ If a change grew the summary with a key the drawing chooses by, re-export the
 kept rounds (`.#cli-export -- --export-only 2025/le_mans_24h --export-only
 2025/cota_6h`) or the VRT keeps drawing an old summary.
 
+**A new round moves the top page's baseline even when nothing else is kept.**
+The top page lists every round the calendar has, so its snapshot
+(`top.spec.ts-snapshots/top-page.png`) differs the moment `index.json` gains a
+card — a registered round is a VRT change whether or not its files are.
+
 ## 6. Verify
 
 | Command | What it catches |
@@ -128,7 +136,7 @@ kept rounds (`.#cli-export -- --export-only 2025/le_mans_24h --export-only
 | `nix run .#cli-run` | the round loads and exports with the rest; the integrity checks answer out of the rows |
 | `nix run .#serve-api` + `curl localhost:8080/api/wec/<season>/<id>.json` | the round is served, `track.circuit` names the word; `index.json` lists it |
 | `nix run .#test` | the app decodes the new feed — classes, eras, mini-sectors |
-| `nix run .#test-vrt` | only if a round was promoted to kept or a summary re-exported |
+| `nix run .#test-vrt` | the top page lists the new round, so `top-page.png` needs a re-baseline on `nix run .#update-snapshots-ci` for any registered round — and for promoted or re-exported ones |
 
 ## Hazards
 

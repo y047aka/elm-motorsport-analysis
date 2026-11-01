@@ -98,6 +98,9 @@ project compiles together:
   Measure `Full` against Le Mans's reference set as COTA's doc-comment does
   (the width-fit ratio), and hold it with a
   `package/tests/Motorsport/Wec/Circuit/<Word>/LayoutTest.elm` at that ratio.
+  Pair it with `GeometryTest.elm` beside it — the served bytes read through
+  the drawing, handed `TestHelpers/Survey/<Word>` (which `test-fixtures.mjs`
+  writes, step 7) and driven through `SurveySuite`.
   A lap with no mini-sectors still fills those fields; nothing draws them.
 - `app/src/Shared.elm` — add the word's arm to **both** `decoderFor` and
   `trackOf`. One list without the other is invisible to both compilers.
@@ -105,7 +108,27 @@ project compiles together:
   `Tracker.Config.lapScale` covers the combination (the `ConfigTest` cases
   name the ones the catch-all holds).
 
-## 6. Verify — in this order
+## 6. The lists that name every circuit
+
+These hold the circuits as written-down inventories rather than readings, so a
+new circuit fails each of them by name until it joins:
+
+- `circuits/test/TestSurvey.flix` — the refusal-message test carries the known
+  words (`"no circuit is surveyed under 'monza': known are cota, le_mans"`).
+- `circuits/test/TestRegenerate.flix` — the expected `drawn`/`words` lists over
+  `Circuit.circuits()`.
+- `circuits/test/TestTimingMap.flix` — `cases()` must name every case of the
+  report's enum, and a test counts them.
+- `app/tests/geometry-contract.spec.ts` — it reads the words out of the sources
+  for the cross-checks, but one assertion freezes the whole inventory:
+  `expect(drawnNames().sort()).toEqual([...])`.
+- `AGENTS.md` and `circuits/README.md` state the count and the kinds as fact —
+  "the three here are tagged differently", "Three circuits are drawn to their
+  own shape". A new circuit changes those sentences and often adds a sentence
+  of its own about the kind of timing map it authors. These files are the
+  repository's written facts; leaving a count stale is leaving a wrong fact.
+
+## 7. Verify — in this order
 
 | Command | What it catches |
 | --- | --- |
@@ -113,14 +136,14 @@ project compiles together:
 | `nix run .#geometry -- survey <word>` | byte fence: the served file must come back identical, run with **no** `--write` — a metre on a different digit is a drawing that moved |
 | `nix run .#geometry -- regenerate` | property fence over *every* kept answer — a new config must not move another circuit |
 | `nix run .#test` | add `{ module: "<Word>", file: "<word>.geojson" }` to `app/scripts/test-fixtures.mjs`'s list first, or the package's tests fail to compile by name; then Elm tests + verify-examples |
-| `nix run .#test-vrt` | `geometry-contract.spec.ts` reads the words out of `Shared.elm`, `backend/src/Motorsport/Circuit.flix` and the served file — three lists, one word |
+| `nix run .#test-vrt` | `geometry-contract.spec.ts` reads the words out of `Shared.elm`, `backend/src/Motorsport/Circuit.flix` and the served file — three lists, one word — plus the inventory assertion of step 6 |
 | `nix run .#update-snapshots-ci` | only once a new drawing is in: every tracker baseline stands on these degrees. Never land a macOS baseline with `.#update-snapshots-vrt` |
 
 A survey that moved an *existing* circuit's bytes is its own change: it takes a
 VRT re-baseline with it, and the move is measured in metres by `-- diff` before
 anyone reads the pixels.
 
-## 7. If a round joins with it
+## 8. If a round joins with it
 
 - Add the round to `Motorsport.Calendar` first, put the CSV at
   `data/wec/<season>/<id>.csv`, then `nix run .#cli-run` (or `.#cli-load` /
