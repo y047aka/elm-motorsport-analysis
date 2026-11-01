@@ -493,7 +493,7 @@ xAxis height xScale =
     g [ transform [ Translate 0 (height - padding.bottom) ], Common.axisStyle ]
         [ Axis.bottom
             [ Axis.tickCount 4
-            , Axis.tickFormat (round >> Duration.toString)
+            , Axis.tickFormat (round >> Duration.toStringToSeconds)
             , Axis.tickSizeOuter 0
             ]
             xScale
