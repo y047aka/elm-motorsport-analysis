@@ -11,7 +11,8 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/backend`** — written in Flix, and two things rather than one: the CLI that
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `backend/README.md` describes it — the server,
-  the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
+  the two stages and the one database they compute in, the tables a round is
+  held in, and the `SqlRead` / `SqlWrite` / `DbErr`
   effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/backend`. The timing-lines report is not in this jar: it is a `-- timing-lines` word of the `circuits/` project, which compiles eight of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `TimingLines/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the same project's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and that project asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links nothing beyond those eight, because nothing else in `backend/src` asks OpenStreetMap anything or reads a GeoJSON.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
@@ -72,19 +73,15 @@ prefixes, and which one says what is being run rather than what is being built:
 `flix-*` builds and tests the project, `cli-*` moves the data through it, and
 `serve-api` is the server. All of them come out of the same jar.
 
-`.#cli-run` converts every round `Motorsport.Calendar` lists, in two stages: the
-CSV under `--csv` (`data/wec`) goes into the tables, and a round's summary
-`.json`, its laps `.jsonl` one lap per line, its timeline `.jsonl` one event per
-line, and `index.json` beside them are written back out of the rows under
-`--out` (`app/static/wec`), in the same season directories. The run converts
-nothing the calendar does not list, reports any CSV no round names, and fails
-any round whose CSV is missing — so a round joins `Motorsport.Calendar`
-before anything runs, and the whole trip from a CSV to a drawn round is
-`/skill:add-round`.
-
-Every round is loaded and every round is written. `--export-only <season>/<id>`
-narrows the writing stage alone, repeated to name more than one, and a name no
-round on the calendar answers to fails the run before anything is written.
+`.#cli-run` converts every round `Motorsport.Calendar` lists: the CSV under
+`--csv` (`data/wec`) goes into the tables, and the round's files and
+`index.json` are written back out of the rows under `--out`
+(`app/static/wec`), in the same season directories — what each stage reads
+and writes, and the database all of them compute in, are
+`backend/README.md`'s. The run converts nothing the calendar does not list,
+reports any CSV no round names, and fails any round whose CSV is missing —
+so a round joins `Motorsport.Calendar` before anything runs, and the whole
+trip from a CSV to a drawn round is `/skill:add-round`.
 
 **A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le
 Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work
@@ -98,29 +95,11 @@ export like any other, so a summary that grows a key the drawing is chosen by ha
 to be written out again over the kept rounds: `track.circuit` missing reads as a
 circuit with no drawing.
 
-`.#cli-load` and `.#cli-export` are those two stages singly. The stage that
-writes reads none of the CSV, so the files are an image of the rows and of
-nothing else: a row corrected in SQL is exported, and re-exporting after a
-change to a renderer costs no decoding. **The timeline is rows too**: the load
-counts it off the laps into `timeline_events`, so a lap corrected in SQL reaches
-the summary and the laps on the next export and the timeline not at all — and
-not on the next load either, which rebuilds every table off the CSV and takes
-the correction with it. Correct `timeline_events` beside `laps`. **A round no
-run has loaded fails the export** rather than being written out as a race that
-never ran — the rows read back as one, which is the one thing they cannot say
-for themselves — and the files it would have replaced are left alone. `/api`
-answers such a round with a 404 for the same reason, off the same reading:
-`Round.loaded` is where the two of them ask, and it asks `laps` and `cars` — a
-round with laps and no cars is half in the database rather than loaded.
-
-Both stages compute in SQLite, and so does the server, so all three need one:
-`--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made
-in a shell, and the commands name `backend/.db/motorsport.sqlite` when neither
-does. One that reaches none does nothing rather than opening an empty database
-of its own. The file is in the working copy rather than under /tmp, so what a
-run left there is still there to be queried. The integrity checks are read back
-out of the rows a round was just loaded into, and so is everything the export
-writes and `.#serve-api` answers with.
+**The timeline is rows too**: the load counts it off the laps into
+`timeline_events`, so a lap corrected in SQL reaches the summary and the laps
+on the next export and the timeline not at all — and not on the next load
+either, which rebuilds every table off the CSV and takes the correction with
+it. Correct `timeline_events` beside `laps`.
 
 `/api` is how the app reads a round, and the export is the same archive written
 out to files. The calendar is written either way and lists every round there
@@ -135,18 +114,10 @@ decodes HTML. A bundle behind a server
 never reaches that copy: the calendar it gets names `/api/wec` and every round
 opens.
 
-Passing the flag goes through `nix run .#cli-run -- --database ...`, since the
-flake forwards what follows.
-
-`.#serve-api` answers `/api` out of the rows a run loaded: `/api/health`,
-`/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json`,
-`_laps.jsonl` and `_timeline.jsonl`. The Vite dev server forwards `/api` to
-port 8080, and answers it from `static/` when nothing is listening.
-
-Its operating form is the jar, since `flix run` takes the JVM down with `main`
-and the server's does not return. `flix build-jar` leaves the Maven
-dependencies out of what it writes, so the JDBC driver is named on the class
-path beside the jar rather than bundled in it.
+`.#serve-api` answers `/api` out of the rows a run loaded; the endpoints and
+the jar the server runs as are `backend/README.md`'s. The Vite dev server
+forwards `/api` to port 8080, and answers it from `static/` when nothing is
+listening.
 
 Project skills live in `.pi/skills/`. `/skill:update-deps [npm|elm|rust|nix]`
 audits and updates dependencies. `/skill:add-round` takes a timing CSV and its
