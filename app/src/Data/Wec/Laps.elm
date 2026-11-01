@@ -37,6 +37,7 @@ type alias RawLap =
     , elapsed : Instant
     , crossingFinishLineInPit : Bool
     , pitTime : Maybe Duration
+    , flagAtFl : Lap.Flag
     }
 
 
@@ -74,6 +75,7 @@ rawLapDecoder =
         |> required "elapsed" Instant.decoder
         |> required "crossingFinishLineInPit" flagDecoder
         |> required "pitTime" optionalDurationDecoder
+        |> required "flagAtFl" flagAtFlDecoder
 
 
 {-| `crossingFinishLineInPit` is `B` where the lap finished in the pit lane and
@@ -82,6 +84,40 @@ blank where it did not; no other value appears in a round.
 flagDecoder : Decoder Bool
 flagDecoder =
     Decode.map (String.isEmpty >> not) string
+
+
+{-| Which flag was out as the lap crossed the line.
+
+The five codes are all the loader will have put in the database at all
+(`Schema.checkedText` over `Motorsport.Wec.flags()`), so a sixth is a truncated or
+hand-edited file. This fails the round rather than defaulting to `Green`, which
+would draw a held field as pace.
+
+-}
+flagAtFlDecoder : Decoder Lap.Flag
+flagAtFlDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\code ->
+                case code of
+                    "GF" ->
+                        Decode.succeed Lap.Green
+
+                    "FCY" ->
+                        Decode.succeed Lap.FullCourseYellow
+
+                    "SF" ->
+                        Decode.succeed Lap.SlowZone
+
+                    "FF" ->
+                        Decode.succeed Lap.Finish
+
+                    "RF" ->
+                        Decode.succeed Lap.Red
+
+                    _ ->
+                        Decode.fail ("unknown flag at the finish line: " ++ code)
+            )
 
 
 sectorsDecoder : Decoder (BySector (Maybe Duration))
@@ -286,6 +322,7 @@ accumulate raw ( bests, acc ) =
                     newBests.sectors
             , elapsed = raw.elapsed
             , crossing = crossingOf raw
+            , flag = raw.flagAtFl
             , miniSectors =
                 raw.miniSectors
                     |> Maybe.map

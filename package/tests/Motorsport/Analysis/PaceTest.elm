@@ -13,7 +13,7 @@ suite =
         [ describe "which laps the range reports"
             [ test "the laps inside it, both ends drawn" <|
                 \_ ->
-                    Pace.racingTimes { first = 1, last = 3 } safetyCarLate
+                    Pace.racingTimes { first = 1, last = 3 } heldLate
                         |> Expect.equal [ 100000, 100000, 100000 ]
             , test "a lap that ended in the pit lane is not a reading of the pace" <|
                 \_ ->
@@ -25,19 +25,26 @@ suite =
                     Pace.racingTimes { first = 1, last = 3 } withNoTimeForLapTwo
                         |> Expect.equal [ 100000, 100000 ]
             ]
-        , describe "where the outlier fence is drawn from"
-            [ test "the safety-car laps are outliers even where they are most of the range" <|
+        , describe "which flag a pace is read from"
+            [ test "a lap the field was held on is not a reading of the car's pace" <|
                 \_ ->
-                    -- Read over laps 15-20 alone, four of those six are 200.000
-                    -- and the fence sits above every one of them. Read over the
-                    -- race the car ran, it sits at 100.000.
-                    Pace.racingTimes { first = 15, last = 20 } safetyCarLate
-                        |> Expect.equal [ 100000, 100000 ]
-            , test "a race run at one pace throughout has no outlier to drop" <|
+                    -- Every held lap of the round goes, including the ones that
+                    -- are most of what this round has to show.
+                    Pace.racingTimes { first = 1, last = 20 } heldLate
+                        |> Expect.equal (List.repeat 16 100000)
+            , test "the last lap of the race is run flat out" <|
                 \_ ->
-                    Pace.racingTimes { first = 1, last = 20 } (List.map (lapAt 100000) (List.range 1 20))
-                        |> List.length
-                        |> Expect.equal 20
+                    -- Every one of the 29 cars that took the chequered flag at COTA
+                    -- ran it under its own median green lap: 6.9s under it on the
+                    -- median, and 58s under its held laps.
+                    Pace.racingTimes { first = 1, last = 1 } chequered
+                        |> Expect.equal [ 100000 ]
+            , test "a race that has not gone green yet has no pace to read" <|
+                \_ ->
+                    -- The first laps of a rolling start, and the whole race of a
+                    -- car that ran only between two procedures.
+                    Pace.racingTimes { first = 1, last = 4 } heldOnly
+                        |> Expect.equal []
             ]
         , describe "the laps whole, for a drawing that wants more than the time"
             [ test "the lap numbers come out with the laps" <|
@@ -47,12 +54,14 @@ suite =
                     Pace.racingLaps { first = 1, last = 3 } withAStop
                         |> List.map .lap
                         |> Expect.equal [ 1, 3 ]
-            , test "the same fence, the same dropped laps" <| -- racingTimes and racingLaps must never disagree about which laps count
+            , test "the same laps, the same dropped laps" <|
+                -- racingTimes and racingLaps must never disagree about which laps count
                 \_ ->
-                    Pace.racingLaps { first = 15, last = 20 } safetyCarLate
+                    Pace.racingLaps { first = 15, last = 20 } heldLate
                         |> List.map .time
                         |> Expect.equal [ Just 100000, Just 100000 ]
-            , test "a dropped lap leaves its gap in the laps, not a stand-in" <| -- what the strip draws as an empty place on the lap scale
+            , test "a dropped lap leaves its gap in the laps, not a stand-in" <|
+                -- what the strip draws as an empty place on the lap scale
                 \_ ->
                     Pace.racingLaps { first = 1, last = 3 } withNoTimeForLapTwo
                         |> List.map .lap
@@ -65,13 +74,27 @@ suite =
 -- FIXTURE
 
 
-{-| Sixteen laps at the car's own pace and then four behind a safety car: the
-shape the fence has to be read over the whole of rather than over a range.
+{-| Sixteen laps at the car's own pace and then four held behind a slow zone:
+the shape a race with a lot of procedures in it has.
 -}
-safetyCarLate : List Lap
-safetyCarLate =
+heldLate : List Lap
+heldLate =
     List.map (lapAt 100000) (List.range 1 16)
-        ++ List.map (lapAt 200000) (List.range 17 20)
+        ++ List.map (heldAt 200000) (List.range 17 20)
+
+
+{-| Four laps, none of them run under a green flag.
+-}
+heldOnly : List Lap
+heldOnly =
+    List.map (heldAt 200000) (List.range 1 4)
+
+
+{-| One lap, the last of the race.
+-}
+chequered : List Lap
+chequered =
+    [ { emptyLap | lap = 1, time = Just 100000, flag = Lap.Finish } ]
 
 
 {-| Three laps, the middle one ended in the pit lane.
@@ -91,6 +114,11 @@ withNoTimeForLapTwo =
 lapAt : Duration -> Int -> Lap
 lapAt time lapNumber =
     { emptyLap | lap = lapNumber, time = Just time }
+
+
+heldAt : Duration -> Int -> Lap
+heldAt time lapNumber =
+    { emptyLap | lap = lapNumber, time = Just time, flag = Lap.SlowZone }
 
 
 pitLapAt : Duration -> Int -> Lap

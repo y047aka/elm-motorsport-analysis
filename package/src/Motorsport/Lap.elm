@@ -4,6 +4,7 @@ module Motorsport.Lap exposing
     , MiniSectors, MiniSectorTime
     , recorded
     , Crossing(..), isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt, pitStopOf
+    , Flag(..), atRacePace
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -19,6 +20,7 @@ module Motorsport.Lap exposing
 @docs MiniSectors, MiniSectorTime
 @docs recorded
 @docs Crossing, isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt, pitStopOf
+@docs Flag, atRacePace
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -61,6 +63,7 @@ type alias Lap =
     , sectors : SectorTimes
     , elapsed : Instant
     , crossing : Crossing
+    , flag : Flag
     , miniSectors : Maybe MiniSectors
     }
 
@@ -114,6 +117,7 @@ empty =
     , best = Nothing
     , elapsed = Instant.raceStart
     , crossing = NoCrossing
+    , flag = Green
     , miniSectors = Nothing
     }
 
@@ -184,10 +188,53 @@ isInLap lap =
 {-| Whether the lap touched the pit lane at neither end -- not that it is a
 representative one. A lap behind a safety car and a lap spent in traffic both
 pass.
+
+A reading of a car's pace wants [`atRacePace`](#atRacePace), which asks this too
+and then asks the flag.
+
 -}
 isRacingLap : Lap -> Bool
 isRacingLap lap =
     lap.crossing == NoCrossing
+
+
+{-| Which flag the field was under as the lap crossed the line.
+
+The five codes are the feed's -- `GF`, `FCY`, `SF`, `FF`, `RF` -- named as the
+backend's `Motorsport.Wec.Flag` names them, and kept as the feed wrote them. The
+timeline's own enum, [`Flag`](Motorsport-Flag#Flag), reads `SF` as `SafetyCar` and
+has no state for `FF`; a lap needs all five, since it is the code at its own
+line crossing that says what its time measured.
+
+-}
+type Flag
+    = Green
+    | FullCourseYellow
+    | SlowZone
+    | Finish
+    | Red
+
+
+{-| Whether this lap is a reading of how fast the car goes: driven the length of
+the lap, and with nobody holding the field down.
+
+A held lap is not one, and in some races there are a lot of them -- a third of the
+laps of the 2025 Circuit of the Americas round crossed the line under a procedure
+-- so a distribution that took them would describe the cautions and not the field.
+
+`Finish` counts as pace. The residual is the race that comes home behind a
+procedure, which leaves one held lap per car here: the flag at the line is all
+this can see, and the fence of
+[`LapTimeDistribution`](Motorsport-Chart-LapTimeDistribution) is what rules such a
+lap out. It rules out the other thing this reading cannot see either -- a lap
+begun behind a procedure and finished after the restart, which is flagged by
+whichever flag was out at the line.
+
+-}
+atRacePace : Lap -> Bool
+atRacePace lap =
+    isRacingLap lap
+        && (lap.flag == Green || lap.flag == Finish)
 
 
 {-| When the car crossed the finish line in the pit lane, on its way into the

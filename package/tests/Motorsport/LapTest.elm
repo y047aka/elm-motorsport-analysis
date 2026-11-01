@@ -2,10 +2,10 @@ module Motorsport.LapTest exposing (tests)
 
 import Expect
 import List.Extra
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (..)
 
 
@@ -136,6 +136,19 @@ tests =
                                 , laneTime = 46857
                                 }
                             )
+            ]
+        , describe "the flag a lap is read under"
+            [ test "only a flag that lets the field go leaves a reading of pace" <|
+                -- The chequered flag is the odd one of the five: a procedure
+                -- holds the field to a posted time, a finish does not.
+                \_ ->
+                    [ Lap.Green, Lap.FullCourseYellow, Lap.SlowZone, Lap.Finish, Lap.Red ]
+                        |> List.map (\flag -> Lap.atRacePace { empty | flag = flag })
+                        |> Expect.equal [ True, False, False, True, False ]
+            , test "a lap the pit lane took is no one's pace whatever the flag was" <|
+                \_ ->
+                    Lap.atRacePace { empty | crossing = Lap.EntryAtEnd }
+                        |> Expect.equal False
             ]
         , describe "segments"
             [ test "starts each sector where the one before it ended" <|

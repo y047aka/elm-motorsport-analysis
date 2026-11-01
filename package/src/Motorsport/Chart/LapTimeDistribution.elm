@@ -1,4 +1,4 @@
-module Motorsport.Chart.LapTimeDistribution exposing (view, sparkline)
+module Motorsport.Chart.LapTimeDistribution exposing (view, sparklineOn, sharedBounds, Bounds)
 
 {-| The lap-time distribution chart: each car's racing laps as a kernel density
 estimate, which says what a time-series line cannot -- the pace a car holds, and
@@ -6,18 +6,20 @@ how tightly it holds it.
 
 The cars are laid over one another on a shared scale, drawn full-width with an
 axis ([`view`](#view)) or one car at card size without one
-([`sparkline`](#sparkline)).
+([`sparklineOn`](#sparklineOn)); the card-size curves drawn beside one another
+take their scale from [`sharedBounds`](#sharedBounds).
 
-@docs view, sparkline
+@docs view, sparklineOn, sharedBounds, Bounds
 
 -}
 
 import Axis
 import Html exposing (Html, text)
+import Internal.Statistics exposing (upperFence)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Analysis.Rivals as Rivals exposing (Rivals)
 import Motorsport.Chart.Common as Common exposing (Emphasis(..), consolidated)
-import Motorsport.Duration as Duration
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
@@ -66,59 +68,121 @@ view range snapshot rivals =
                             { own | emphasis = Related }
                     )
     in
-    boundsOf series
+    measure series
         |> Maybe.map
-            (\{ domain, maxDensity } ->
+            (\{ bounds, kept } ->
                 chart
                     { width = consolidated.width
                     , height = consolidated.height
-                    , domain = domain
-                    , maxDensity = maxDensity
+                    , domain = bounds.domain
+                    , maxDensity = bounds.maxDensity
                     }
-                    series
+                    kept
             )
 
 
-{-| One car's own laps at card size, on a scale of its own: the cards beside it
-are the overall order rather than one class, and two classes on one lap-time
-axis flatten both. A car with no laps to describe gets no chart rather than an
-empty one.
+{-| One car's own laps at card size, on bounds the cars drawn beside it share
+([`sharedBounds`](#sharedBounds)) -- so a time reads at the same place on every
+curve of the set, and every curve of it is cut to the same laps. A car with
+nothing inside the fence gets an empty box.
 -}
-sparkline : LapRange -> LapHistory -> CarAt -> Html msg
-sparkline range lapHistory item =
-    let
-        series =
-            seriesOf range lapHistory item
-    in
-    case boundsOf [ series ] of
-        Just { domain, maxDensity } ->
-            chart
-                { width = 220, height = 50, domain = domain, maxDensity = maxDensity }
-                [ series ]
-
-        Nothing ->
-            text ""
+sparklineOn : Bounds -> LapRange -> LapHistory -> CarAt -> Html msg
+sparklineOn bounds range lapHistory item =
+    chart
+        { width = 220, height = 50, domain = bounds.domain, maxDensity = bounds.maxDensity }
+        [ withinFence bounds.fence (seriesOf range lapHistory item) ]
 
 
-{-| Shared bounds for the chart. Aligns the X axis (domain) and the Y axis
-(max density) across several cars so they are drawn on the same scale in both
-directions.
+{-| The bounds several `Series` share. Aligns the X axis (domain), the lap times
+every curve is cut to (fence) and the Y axis (max density) across several cars,
+so they are drawn on the same scale in both directions.
 -}
 type alias Bounds =
     { domain : ( Float, Float )
     , maxDensity : Float
+    , fence : Duration
     }
 
 
+{-| The bounds of a set of curves: the extent of every lap the fence leaves, and
+the greatest density of the curves those laps make.
+-}
 boundsOf : List Series -> Maybe Bounds
 boundsOf series =
-    domainOf series
+    measure series
+        |> Maybe.map .bounds
+
+
+{-| The bounds with the kept laps beside them, which is what a drawing goes on to
+plot.
+-}
+measure : List Series -> Maybe { bounds : Bounds, kept : List Series }
+measure series =
+    let
+        fence =
+            pooledFence series
+
+        kept =
+            List.map (withinFence fence) series
+    in
+    domainOf kept
         |> Maybe.map
             (\domain ->
-                { domain = domain
-                , maxDensity = maxDensityOf domain series
+                { bounds =
+                    { domain = domain
+                    , maxDensity = maxDensityOf domain kept
+                    , fence = fence
+                    }
+                , kept = kept
                 }
             )
+
+
+{-| The lap times a set of curves keeps, drawn together: the upper IQR fence over
+every lap the set has to show.
+
+Slow is slow _for the cars a lap is lined up against_, and those cars are already
+on one axis, so the fence is drawn over the set and not per car: a fence measured
+on one car's own spread is wide exactly when that car's race was wide, and that
+car then sets the top of the axis for its whole class.
+
+The held laps are already gone ([`Lap.atRacePace`](Motorsport-Lap#atRacePace)), so
+what this fence rules on is the incident lap, the lap begun behind a procedure and
+finished after the restart, and the stint that came to nothing.
+
+A car the fence leaves with nothing to draw gets no curve and a blank row. That is
+a loss and not an absence -- the car ran -- and it is what one axis costs: a curve
+of its own would draw that car's slow as another car's quick.
+
+-}
+pooledFence : List Series -> Duration
+pooledFence series =
+    upperFence (List.concatMap .times series)
+
+
+{-| The series with the laps its bounds fence out dropped. This decides how wide a
+kernel the curve smooths with as well as what it covers: laps left in widen the
+bandwidth and smear a curve across an axis that drew itself without them.
+-}
+withinFence : Duration -> Series -> Series
+withinFence fence series =
+    { series | times = List.filter (\time -> time <= fence) series.times }
+
+
+{-| The bounds a set of cars drawn beside one another shares: each car's curve is
+built over the range that car has run, and the two axes are drawn over the lot of
+them -- each range the car's own, the fence the set's
+([`pooledFence`](#pooledFence)).
+
+`Nothing` where none of the cars has a time at all, which is the one case in
+which no car of the set has a curve to draw.
+
+-}
+sharedBounds : LapHistory -> List { range : LapRange, car : CarAt } -> Maybe Bounds
+sharedBounds lapHistory cars =
+    cars
+        |> List.map (\{ range, car } -> seriesOf range lapHistory car)
+        |> boundsOf
 
 
 {-| One car's curve: the pace it held inside the range, and the lap it is on
@@ -163,8 +227,9 @@ type alias Series =
     }
 
 
-{-| The shared lap-time domain aligning several `Series`: their whole extent
-plus a margin, or `Nothing` when there are no times at all.
+{-| The shared lap-time domain of a set of `Series`: their whole extent plus a
+margin, or `Nothing` when there are no times at all. Given the laps the fence
+left, so that the axis ends where the laps that read as pace end.
 -}
 domainOf : List Series -> Maybe ( Float, Float )
 domainOf seriesList =
@@ -360,17 +425,46 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
 
 {-| Where the latest lap falls on the curve: a dot and its lap time, at the
 opacity its curve is stroked at.
+
+A lap beyond the shared axis gets its time at the end it lies past, on the
+baseline, rather than nothing at all. The axis is drawn over the laps that read
+as pace, and the lap a car is on now need not be one of them -- a field that has
+just been held shows every car a lap no curve describes.
+
 -}
 lastLapMarker : ContinuousScale Float -> ContinuousScale Float -> Series -> Maybe ( Float, Float ) -> Svg msg
 lastLapMarker xScale yScale series lastLapPoint =
     case lastLapPoint of
         Just ( x, d ) ->
             let
+                ( lo, hi ) =
+                    Scale.domain xScale
+
+                clamped =
+                    clamp lo hi x
+
+                beyond =
+                    clamped /= x
+
                 px =
-                    Scale.convert xScale x
+                    Scale.convert xScale clamped
 
                 py =
-                    Scale.convert yScale d
+                    if beyond then
+                        Scale.convert yScale 0
+
+                    else
+                        Scale.convert yScale d
+
+                ( labelX, anchor ) =
+                    if x > hi then
+                        ( px - 5, "end" )
+
+                    else if x < lo then
+                        ( px + 5, "start" )
+
+                    else
+                        ( px, "middle" )
             in
             g [ SvgAttr.opacity (Common.strokeStyleOf series.emphasis).opacity ]
                 [ circle
@@ -381,9 +475,9 @@ lastLapMarker xScale yScale series lastLapPoint =
                     ]
                     []
                 , text_
-                    [ InPx.x px
+                    [ InPx.x labelX
                     , InPx.y (py - 6)
-                    , SvgAttr.textAnchor "middle"
+                    , SvgAttr.textAnchor anchor
                     , SvgAttr.fill series.color
                     , SvgAttr.class "text-[9px]"
                     ]
@@ -399,7 +493,7 @@ xAxis height xScale =
     g [ transform [ Translate 0 (height - padding.bottom) ], Common.axisStyle ]
         [ Axis.bottom
             [ Axis.tickCount 4
-            , Axis.tickFormat (round >> Duration.toString)
+            , Axis.tickFormat (round >> Duration.toStringToSeconds)
             , Axis.tickSizeOuter 0
             ]
             xScale
