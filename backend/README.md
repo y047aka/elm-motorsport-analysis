@@ -31,7 +31,9 @@ every distance in the probe comes off an answer about OpenStreetMap, which nothi
 reason to hold. It is the repository's only Flix code that asks a network, and
 editing a file under this `src` compiles once for it rather than twice.
 
-What follows is what the code cannot say for itself.
+Adding a round — a timing CSV through the calendar and the CLI into the rows
+and the files — is `/skill:add-round`'s to say, step by step. What follows is
+what the code cannot say for itself.
 
 ## The server
 

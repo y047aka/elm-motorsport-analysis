@@ -109,10 +109,10 @@ nix run .#car-images --season <year>   # fetches and registers static/car-images
 Already-kept originals are never re-asked; the run prints how many it asked the
 site for.
 
-**Only two rounds' export files are committed** — 2025's `le_mans_24h` and
-`cota_6h` — because the other rounds are ~50 MB of what the rows already say.
-A new round's files stay ignored (save for `index.json`, which is tracked and
-rewritten by the export — step 3); the dev server answers `/api` from `static/`
+**Only two rounds' export files are committed** — which ones, and why the
+rest are ignored, `AGENTS.md` says. A new round's files stay ignored (save for
+`index.json`, which the export rewrites — step 3); the dev server answers
+`/api` from `static/`
 only for what is written there, and 502s (or `/api`-404s) for the rest, which
 is quiet, not broken. Promoting a round to kept is its own decision: un-ignore
 and commit its three files, and it joins the VRT — `app/tests/helpers.ts`
@@ -120,8 +120,9 @@ refuses a kept summary naming no `track.circuit`, and new shots go in through
 `nix run .#update-snapshots-ci`, never `.#update-snapshots-vrt`.
 
 If a change grew the summary with a key the drawing chooses by, re-export the
-kept rounds (`.#cli-export -- --export-only 2025/le_mans_24h --export-only
-2025/cota_6h`) or the VRT keeps drawing an old summary.
+kept rounds (`.#cli-export -- --export-only <season>/<id>`, repeated for each —
+`AGENTS.md` names which rounds a checkout keeps) or the VRT keeps drawing an
+old summary.
 
 **A new round moves the top page's baseline even when nothing else is kept.**
 The top page lists every round the calendar has, so its snapshot
@@ -140,10 +141,11 @@ card — a registered round is a VRT change whether or not its files are.
 
 ## Hazards
 
-- **The load rebuilds every table off the CSV.** A row corrected in SQL reaches
-  the next export's summary and laps, the timeline not at all — and the next
-  load takes the correction away. Correct `timeline_events` beside `laps`; the
-  timeline is counted at load, not at export.
+- **The load rebuilds every table off the CSV, and the timeline is counted at
+  load, not at export** — `AGENTS.md` holds the hazard whole: a row corrected
+  in SQL reaches the next export's summary and laps, the timeline not at all,
+  and the next load takes the correction away. Correct `timeline_events`
+  beside `laps`.
 - **`--export-only` narrows the writing stage alone** and is repeated for more
   than one round; a name no calendar entry answers to fails the run *before*
   anything is written.

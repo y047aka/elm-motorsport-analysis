@@ -71,13 +71,10 @@ nothing to `Circuit/`.
 
 ## Authoring a circuit
 
-Which relation a circuit is before any config says is `nix run
-.#geometry -- probe`, which prints the circuit relations at a place on earth with
-each one's unroled ways measured — the length is what tells the full Sarthe
-circuit from the Grand Prix circuit standing beside it, and the report goes to
-a human rather than to a name. The box a run opened is printed
-back, since a centre widened to 5 km holds Le Mans's Grand Prix circuit and not
-the 13.6 km one.
+The steps are `/skill:add-circuit`'s — the probe that finds the relation,
+the config's fields, keeping the answer and the atlas line, laying the
+geometry, the lists that name every circuit, and the order the fences are
+verified in. What belongs here is what those steps rest on.
 
 OpenStreetMap holds a circuit however whoever mapped it tagged it, and the three
 here are tagged differently: Le Mans's relation names one node `start-finish`,

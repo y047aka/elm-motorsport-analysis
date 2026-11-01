@@ -76,10 +76,11 @@ prefixes, and which one says what is being run rather than what is being built:
 CSV under `--csv` (`data/wec`) goes into the tables, and a round's summary
 `.json`, its laps `.jsonl` one lap per line, its timeline `.jsonl` one event per
 line, and `index.json` beside them are written back out of the rows under
-`--out` (`app/static/wec`), in the same season directories.
-**A new round is added to `Motorsport.Calendar` first** — the run converts
+`--out` (`app/static/wec`), in the same season directories. The run converts
 nothing the calendar does not list, reports any CSV no round names, and fails
-any round whose CSV is missing.
+any round whose CSV is missing — so a round joins `Motorsport.Calendar`
+before anything runs, and the whole trip from a CSV to a drawn round is
+`/skill:add-round`.
 
 Every round is loaded and every round is written. `--export-only <season>/<id>`
 narrows the writing stage alone, repeated to name more than one, and a name no
@@ -147,8 +148,13 @@ and the server's does not return. `flix build-jar` leaves the Maven
 dependencies out of what it writes, so the JDBC driver is named on the class
 path beside the jar rather than bundled in it.
 
-Project skills live in `.pi/skills/` — `/skill:update-deps [npm|elm|rust|nix]`
-audits and updates dependencies.
+Project skills live in `.pi/skills/`. `/skill:update-deps [npm|elm|rust|nix]`
+audits and updates dependencies. `/skill:add-round` takes a timing CSV and its
+clues through the calendar, the CLI and the checks into a served round;
+`/skill:add-circuit` takes a circuit from an OpenStreetMap probe through the
+config, the kept answer and the geometry to a drawing. Adding a round or a
+circuit is those skills' — the sections below say what things *are*, and the
+skills hold what to *do*, in order, and which frozen lists a new name joins.
 
 `flix` carries what the compiler does rather than what the code
 is: the errors this tree has actually produced, what each one meant, and how a
