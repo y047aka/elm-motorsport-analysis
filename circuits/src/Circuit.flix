@@ -14,8 +14,7 @@
 /// is authored in no config, and the reading that measures it writes its own file beside
 /// the circuit — `Atlas.flix`'s, kept at `keptAtlas`.
 ///
-/// The steps a circuit joins by — the probe, the kept answer, the geometry, and the
-/// frozen lists a new word enters — are the repository's `/skill:add-circuit` to say.
+/// The steps a circuit joins by are the repository's `/skill:add-circuit` to say.
 pub mod Circuit {
 
     use Geodesy.Place

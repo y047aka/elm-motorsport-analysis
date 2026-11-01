@@ -239,10 +239,9 @@ vendored file.
 
 `shadcn` carries what touching them obliges: the CLI's `add` and `--diff`
 workflow and the drift discipline, the four things the Elm↔element property
-boundary will not carry — all found by running it rather than by building it
-—, which elements mount React and which only lend class strings, and what a
-mount costs measured. Reach for it before changing anything under
-`app/src/shadcn/` or `app/src/UI/Shadcn/`.
+boundary will not carry, which elements mount React and which only lend class
+strings, and what a mount costs measured. Reach for it before changing
+anything under `app/src/shadcn/` or `app/src/UI/Shadcn/`.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment

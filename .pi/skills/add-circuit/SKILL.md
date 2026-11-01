@@ -125,8 +125,7 @@ new circuit fails each of them by name until it joins:
 - `AGENTS.md` and `circuits/README.md` state the count and the kinds as fact —
   "the three here are tagged differently", "Three circuits are drawn to their
   own shape". A new circuit changes those sentences and often adds a sentence
-  of its own about the kind of timing map it authors. These files are the
-  repository's written facts; leaving a count stale is leaving a wrong fact.
+  of its own about the kind of timing map it authors.
 
 ## 7. Verify — in this order
 

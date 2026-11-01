@@ -63,9 +63,7 @@ or point.
 **After finishing a change** (this is also `AGENTS.md`'s Committing pass):
 re-read every line of comment and doc the change added, against the list
 above, and cut what it forbids. Then ask of each survivor: *what wrong thing
-would the next reader do without this line?* No answer — cut. A comment that
-survives because "it's useful context" is the case for the code by another
-name; the commit message is where that reasoning lives.
+would the next reader do without this line?* No answer — cut.
 
 **When pruning a tree:**
 
@@ -90,9 +88,6 @@ git show --stat <the merge that did it>   # every file the real trip touched
 Every file that change touched is a step, a frozen list, or a fact. Each one
 must be *named* somewhere the runner will read, or the runbook has a hole; each
 named step that the real change never touched is a step to re-verify or cut.
-This is how a frozen inventory in a *test* — which no compiler ties to the
-prose — gets caught: the prose says "read out of the sources", and the spec
-actually freezes the list, and only the lay-against finds it.
 
 **Reading a surviving comment fairly before believing it.** A long comment is
 not a wrong comment — `AGENTS.md`'s `optional`/`oneOf` note runs sixteen lines
@@ -129,5 +124,5 @@ thing:
 - **A pointer must point at something that exists.** After any rename of a
   skill, section, or file, `rg` the pointers to the old name —
   `/skill:` references, section titles, file paths in prose.
-- **Don't move a fact downward to quiet a warning.** If `AGENTS.md` says it and
-  a README repeats it, decide which owns it; do not repeat harder.
+- **Don't repeat harder.** If `AGENTS.md` says it and a README repeats it,
+  decide which owns it.

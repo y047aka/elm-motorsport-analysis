@@ -77,9 +77,8 @@ the shadow root's tree, so the element carries the vendored class string and
 Elm fills it directly. Nothing may pass one of those a `class`: the element
 owns that attribute, and layout belongs on a wrapper around it.
 
-What enforces this boundary is `/app/tests/custom-elements.spec.ts` — the Elm
-tests, the typecheck and `tsc` each miss a quarter of it; `AGENTS.md`'s Testing
-section says what that spec reads and when it fails.
+What enforces this boundary is `/app/tests/custom-elements.spec.ts`;
+`AGENTS.md`'s Testing section says what it reads and when it fails.
 
 ## What one costs, measured
 
