@@ -90,6 +90,13 @@ differs, which distillation each one asks for.
 - **A skill that re-lectures.** A step that explains its *why* at length.
   Condense to the imperative and, when the why is load-bearing, a clause
   pointing at the document that owns it.
+- **A skill that scripts defaults.** Steps an agent takes unprompted — read
+  the log for voice, stage by path, report the hash — are instructions only
+  in appearance: the model does them anyway, so the line teaches nothing.
+  A skill earns a line where it contradicts or amends a default: the remote
+  here offers a pull request on every push, so `/skill:commit-push` keeps
+  "never open it" and dropped fifty lines around it. Auditing a skill, ask of
+  each step *would the model do this anyway?* — yes, prune it.
 - **The same sentence on both sides of a call.** Caller and callee each
   carrying it — one home applies inside the file too: keep the copy beside
   the code that decides, cut the echo. Where the behavior is fully shown by
