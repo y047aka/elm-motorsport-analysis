@@ -1,6 +1,6 @@
 ---
 name: distill-docs
-description: "Distill documentation and comments down to what survives: find where a fact is written down twice, cut what over-documents, leave a pointer where prose was removed, and verify what remains against the code. Use when asked to distill, prune, tidy or audit documentation, when re-reading the comments and docstrings a change added, and when the same fact appears to be written down twice. This skill only takes documentation down — writing new documentation, restructuring it, or moving knowledge into a new skill is the job of the document being written."
+description: "Distill documentation and comments down to what survives: find where a fact is written down twice, cut what over-documents, leave a pointer where prose was removed, and verify what remains against the code. Use when asked to distill, trim, prune, condense, tidy or audit documentation, when re-reading the comments and docstrings a change added, and when the same fact appears to be written down twice. This skill only takes documentation down — writing new documentation, restructuring it, or moving knowledge into a new skill is the job of the document being written."
 ---
 
 # Distilling documentation
@@ -8,8 +8,8 @@ description: "Distill documentation and comments down to what survives: find whe
 Agentic coding over-documents: every agent writes the reasoning for its
 change into the file it touched, the reasoning goes stale first, and the next
 agent trusts the stale prose. Distillation is the discipline of taking that
-down: what to cut, what to shorten, and what a cut leaves behind as a
-pointer. The
+down: prune what should not stand, condense what must be said in fewer
+words, trim what is left so the cut reads as design. The
 per-comment rules of what may be written at all are `AGENTS.md`'s (*Never
 write / Write only what the code cannot say*), and nothing here restates
 them.
@@ -29,6 +29,32 @@ move twice, and a fact that must move twice will not.
 - **A cut is only a cut when the fact still lives somewhere.** Find where the
   removed sentence lives now before removing it; if nowhere does, that is a
   relocation someone else decides, not a distillation.
+
+## The three distillations, and when each applies
+
+Every act of taking a document down is one of three, and choosing wrong is
+the commonest failure of a distillation pass:
+
+- **Prune — the sentence does not stand.** The test is *does any reader do
+  the wrong thing without it?* A stale duplicate, a changelog voice, a
+  comment about last Tuesday's spec change: nothing is lost, so nothing is
+  rewritten — remove it whole.
+- **Condense — the fact stands in fewer words.** The test per clause is
+  *does this change what the reader does?* Clauses that defend, narrate or
+  restate do not; drop them and let the surviving sentence speak. Condense
+  is not decimate: `AGENTS.md`'s sixteen-line `optional`/`oneOf` note is
+  condensed at sixteen lines, because every clause there stops a different
+  mistake. Short is not the goal; every clause earning its place is.
+- **Trim — the cut seam reads as design.** What a pruned document must not
+  show is loss: the removed sentence leaves a one-line pointer to where it
+  lives, a pruned section leaves its heading's subject claimed by the
+  document that now owns it, a list points at the inventory instead of
+  restating it.
+
+Order them: prune before condense — a sentence that does not stand cannot
+be condensed; condense before trim — nothing earns a pointer as poorly as
+a fact that was never worth standing. The shapes below name, where it
+differs, which distillation each one asks for.
 
 ## What over-documents (cut on sight)
 
@@ -55,14 +81,16 @@ move twice, and a fact that must move twice will not.
   here?* A hazard comment that does not answer the next question it provokes
   is a tease: finish it or cut it.
 - **A section per thought.** A README heading over one paragraph that the
-  module's own header already heads.
+  module's own header already heads — prune the heading.
 - **Defense paragraphs.** Three sentences explaining why a short docstring is
-  short. Cut the defense, keep the docstring.
+  short — the one shape that asks for condensing: drop the defense, let the
+  docstring stand.
 - **Procedure in a comment.** "when adding X, also edit Y" next to one of the
   places X joins — the trip belongs elsewhere; cut down to the hazard that
   stays true outside it, or to nothing.
 - **A skill that re-lectures.** A step that explains its *why* at length.
-  Steps are imperative; the why is a clause and a pointer.
+  Condense to the imperative and, when the why is load-bearing, a clause
+  pointing at the document that owns it.
 - **The same sentence on both sides of a call.** Caller and callee each
   carrying it — one home applies inside the file too: keep the copy beside
   the code that decides, cut the echo. Where the behavior is fully shown by
@@ -86,8 +114,8 @@ slower reading catches.
 **When distilling a tree.** Inventory the prose (`AGENTS.md`, each `README.md`,
 each skill, each module header worth more than three lines); for each fact
 asked to shrink, `rg` its distinctive phrase, its numbers ("three", "two
-rounds"), and any frozen list it mirrors; then distill to the owner plus
-pointers.
+rounds"), and any frozen list it mirrors; then prune the copies to the one
+owner, and trim a pointer where each copy stood.
 
 **Auditing a doc against reality — lay it against a real change.** Diff the
 runbook's file list against the last merge that did the work:
@@ -100,11 +128,10 @@ Every file the real change touched must be *named* somewhere the runner will
 read, or the runbook has a hole; every named step the real change never
 touched is one to re-verify or cut.
 
-**Before believing a long comment.** A long comment is not a wrong comment —
-`AGENTS.md`'s `optional`/`oneOf` note runs sixteen lines and earns them. Test
-it: what wrong thing does it stop, and is that still possible? If a type or a
-fence has since made the hazard impossible, the comment is history — cut it
-or rewrite it to the hazard that is left.
+**Before believing a long comment.** A long comment is not a wrong comment,
+and condensing one may still leave it long. Test it: what wrong thing does
+it stop, and is that still possible? If a type or a fence has since made
+the hazard impossible, prune it — or condense it to the hazard that is left.
 
 ## Verification
 
