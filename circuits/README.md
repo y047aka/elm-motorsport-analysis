@@ -205,13 +205,18 @@ walks the runners, `src/Overpass/Answer.flix` gives what comes back the shape of
 an answer, and `src/Candidates.flix` reads an answer already got — which tags
 could name a circuit, and what a relation's roles measure. Their `flix test`
 runs under `nix run .#geometry-test`: the asking is one call and the reading is
-a fixture.
+a fixture. Both questions' shapes — each recursing to `way(r)`, and only the
+survey asking for `node(w)`, the difference between drawing a lap and
+lengthening one — are pinned by that test, `Overpass.flix` having written the
+asking once.
 
 **One asking, two answers.** Which runners there are, what a run calls
 itself, and how long one that just failed is left alone are facts about
 OpenStreetMap, and `Overpass.flix` spells them once, walking the probe's
 question and the pipeline's through the same runners. What a service
-*answered with* is the same one reading for both, and that reading — beside
+*answered with* is the same one reading for both — a proxy answers a
+timed-out request as 200 with an HTML page, so a second reading that asked
+only the status would hand HTML on as a geometry — and that reading — beside
 the sphere `Geodesy.earthMetres` that every metre is measured on — is held to
 one spelling by `test/check-sources.mjs`, since an `@Test` can build no
 `HttpResponse` and meets no source file. What nothing compares is the app's

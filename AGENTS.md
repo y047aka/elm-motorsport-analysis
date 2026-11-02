@@ -502,18 +502,14 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   comes from the flake rather than from `node_modules`, so `@playwright/test`
   does not resolve for `tsc`.
 - **The geometry project** (`circuits/`) — a Flix project of its own, tested by
-  `nix run .#geometry-test`: every reading — the survey of an
-  answer, the reading of a kept file, the comparison of two lines, the atlas
-  file's shapes and guards, the regeneration fence's comparison, and the timing
-  report's feed readings — is handed a
-  fixture rather than a survey, in one language; the one test handed no fixture
-  is `TestTimingMap`, which reads the report's timing answer as the derivation
-  from the project's own authored figures that it is, where the real authors
-  are the fixture. What a Flix test cannot see
-  from inside the project — the sources it holds, what it resolves, the flake
-  apps that reach it, the CI fence — is held by no test: `flake.nix` and the
-  workflow are read, and read fairly, to judge it.
-  Judging this repository's real bytes stays the fence's and the contract specs'.
+  `nix run .#geometry-test`: every reading is handed a fixture rather than a
+  survey, the one test handed none is the timing map's derivation, and
+  `check-sources.mjs` holds to one spelling the project-wide facts an `@Test`
+  cannot reach — no browser, no `node_modules`, plain `node` over
+  `circuits/src`. Which readings exist and what each check reads and why, and
+  what stays the fences' and the contract specs' rather than any test's, is
+  `circuits/README.md`'s — the thing to read before changing anything under
+  `/circuits` anyway.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources
@@ -527,34 +523,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **Timing figures** (`circuits/test/TestTimingMap.flix`) — the timing-lines
   report holds no copy of a circuit's lap length or sector stretches: it
   derives its answer from the ones the circuit's config authors, and
-  `.#geometry-test` reads that derivation — the stretches carried whole, the
-  re-issued map refused with the config's own reason. What the two projects do
-  each hold is the circuit word list, and no project compiles both anymore:
-  `check-sources.mjs` lays the two `jsonValue` bodies together. Nothing holds
-  the eight links into `backend/src` to
-  their paths from outside; a broken one fails `.#geometry-test` itself, as
-  `Undefined use` in the module that needed it.
-- **What the geometry project cannot see from inside itself**
-  (`circuits/test/check-sources.mjs`, run by `.#geometry-test`) — an `@Test`
-  computes in no IO, so the project's tests hand their fixtures, reach no
-  network, build no `HttpResponse` and ask nothing of the file system; the
-  project-wide facts are read out of its sources instead: one reading of
-  what a service answered with (`Overpass.answered` — a proxy answers a
-  timed-out request as 200 with an HTML page, so a second reading that asked
-  only the status would hand HTML on as a geometry), one spelling of the
-  earth radius (`Geodesy.earthMetres`; the measured lap is the reading a config
-  is authored from, 13.6 km or 13.7 km), one way a filesystem failure is
-  answered (a run that branches on absence asks `Util.Files`' `exists` or
-  `isDirectory` first — a `false` out of a failed stat is the answer that
-  ends a walk quietly — and a run that only reports reads through
-  `Cli.Errors`, which keeps the path with what the filesystem said; any
-  `Err(_)` that discards a failure fails, one arm excepted, on a parse
-  another reading refused first), and `TimingLines/Files.flix`'s reading never
-  writing. It needs no browser, no Playwright and no `node_modules`: plain
-  `node` over `circuits/src`. Both questions' shapes — each recursing to
-  `way(r)`, and only the survey asking for `node(w)`, the difference between
-  drawing a lap and lengthening one — are pinned by the project's own `flix
-  test`, `circuits/src/Overpass.flix` having written the asking once.
+  `.#geometry-test` reads that derivation. The one figure-list the two
+  projects each hold — the circuit words — and what fails by name when a link
+  or a list moves, is `circuits/README.md`'s.
 - **Flix** — `backend/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
