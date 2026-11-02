@@ -178,18 +178,9 @@ season of it; `app/scripts/fetch-car-images.mjs` says which two sources it reads
 and why. A season the grid page is not showing is reached through its season
 filter, which takes the ids `/evo/1/seasons` publishes and answers for seasons
 the page itself no longer offers: 2024 is reached that way and nowhere else,
-`/en/car/2024` being a redirect to the current season.
-
-The photographs are kept as WebP at `-q 75 -sharp_yuv`, at the width they are
-published rather than a narrower one — measured as the card draws them, bytes
-spent on resolution beat bytes spent on quality.
-
-**A photograph already here is never asked for again.** Comparing needs the
-original and not the WebP written from it, so `app/scripts/car-image-origins.json`
-holds each original's digest — every one a run fetched and not only the ones it
-kept, each written as it arrives. A run says how many images it asked the site
-for, which is the number to read rather than how many it kept. Requests are a
-second apart and nothing is retried.
+`/en/car/2024` being a redirect to the current season. How the photographs are
+encoded, and the digest that keeps one already here from being asked for
+again, are that script's own header to say.
 
 Both tables are read where the cars decode rather than where they are drawn:
 `Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
@@ -569,42 +560,14 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   reaches.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
-  answers `/api` from `static/`, and those are the same bytes. It drives the two
-  rounds a checkout keeps; a test reaching for a third needs `.#serve-api` behind
-  it. Two ways a round loses its drawing without failing anything are told apart
-  there without a baseline to compare pixels to: `helpers.ts` reads a kept round's
-  summary for the moment to stop at and refuses one naming no `track.circuit`, and
-  `expectSurveyedLap` asserts the tracker drew a polygon where the ring draws a
-  circle. Local runs allow a 0.1%
-  pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`, and 0.15% for
-  `position-tab`) for cross-platform diffs; CI is strict 0. The circuits'
-  tracker shots are pixel baselines no more — the bytes they rendered are
-  held by the geometry project's fences, and a circuit is strokes whose
-  pixels only follow those bytes — leaving one baseline-free polygon
-  assertion per circuit as the whole E2E of a drawing.
-
-The baselines are CI's: rendered on Linux, and what a merge is judged
-against. `nix run .#update-snapshots-ci` refreshes them — it dispatches the
-workflow on the branch you have checked out, waits for it, pulls the commit
-it pushes back, and approves the runs GitHub holds because a bot pushed them.
-`.#update-snapshots-vrt` writes macOS renderings, which CI rejects: reach for
-it to see what a change did, never to land a baseline.
-
-What separates the two platforms is the rasteriser (CoreText against
-FreeType), which no Chromium flag touches. `tests/screenshot.css` narrows it
-by asking for greyscale antialiasing and the tolerance absorbs the rest, but
-barely. The tolerance is a ratio, so a smaller snapshot gets a smaller
-budget while the gap does not shrink with it. The tightest is
-`position-tab`, the Comparison section alone at 328x162: it differs by 55
-pixels where 0.001 would allow it 53, which is why it alone is given 0.0015.
-Next is `selected-car-with-rivals`, the one shot of a panel whole, at 221
-against 246; `lap-180` has 738 against 1,296. Eight runs gave the same
-counts but once, when `lap-180` fell to 102, so a count that moves is worth
-a second run before it is taken for a rendering that moved. Those counts
-are from a run with one worker, as CI has. What no tolerance can absorb is a change smaller than itself — a
-digit redrawn is tens of pixels — so a local pass is not a promise, and a
-local failure on `position-tab` or `selected-car-with-rivals` is worth
-measuring before it is believed. CI stays strict for both reasons.
+  answers `/api` from `static/`, and those are the same bytes. It drives the
+  two rounds a checkout keeps. A circuit's E2E is one baseline-free polygon
+  assertion — the bytes a tracker shot rendered are held by the geometry
+  project's fences — and `helpers.ts` refuses a kept summary naming no
+  `track.circuit`, so a drawing can be lost loudly without a pixel diff.
+  The `vrt` skill carries how a shot is judged, what the platforms differ by
+  and by how many pixels, and how a baseline is landed. Reach for it before
+  touching a baseline.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.
