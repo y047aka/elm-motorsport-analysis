@@ -10,16 +10,11 @@
 // picture again under another name. A round is registered for the picture
 // differing and not the file, so they are compared by what they hold.
 //
-// Photographs are kept as WebP at `-q 75 -sharp_yuv`, at the width they are
-// published rather than a narrower one — measured as the card draws them, bytes
-// spent on resolution beat bytes spent on quality.
+// Photographs are kept as WebP at `-q 75 -sharp_yuv`, at the width they are published rather than a narrower one — measured as the card draws them, bytes spent on resolution beat bytes spent on quality.
 //
-// A photograph already here is never asked for again: comparing needs the
-// original and not the WebP written from it, so `scripts/car-image-origins.json`
-// holds each original's digest — every one a run fetched and not only the ones
-// it kept, each written as it arrives. A run says how many images it asked the
-// site for, which is the number to read rather than how many it kept. Requests
-// are a second apart and nothing is retried.
+// A photograph already here is never asked for again: comparing needs the original and not the WebP written from it, so `scripts/car-image-origins.json` holds each original's digest — every one a run fetched and not only the ones it kept, each written as it arrives.
+// A run says how many images it asked the site for, which is the number to read rather than how many it kept.
+// Requests are a second apart and nothing is retried.
 //
 //     node scripts/fetch-car-images.mjs [--season 2026] [--dry-run]
 

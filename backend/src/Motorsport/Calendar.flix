@@ -1,5 +1,5 @@
-/// Which rounds there are, and the days they ran. A round joins here before it joins
-/// anywhere — `/skill:add-round` says the trip from a CSV to a served round.
+/// Which rounds there are, and the days they ran.
+/// A round joins here before it joins anywhere — `/skill:add-round` says the trip from a CSV to a served round.
 pub mod Motorsport.Calendar {
 
     pub type alias Round = {

@@ -8,12 +8,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
-- **`/backend`** — written in Flix, and two things rather than one: the CLI that
-  moves CSV through SQLite into JSON/JSONL, and the server that answers
-  `/api` out of the same rows. `backend/README.md` describes it — the server,
-  the two stages and the one database they compute in, the tables a round is
-  held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/backend`. The timing-lines report is not in this jar: it is a `-- timing-lines` word of the `circuits/` project, which compiles eight of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `TimingLines/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the same project's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and that project asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links nothing beyond those eight, because nothing else in `backend/src` asks OpenStreetMap anything or reads a GeoJSON.
+- **`/backend`** — written in Flix, and two things rather than one: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. `backend/README.md` describes it — the server, the two stages and the one database they compute in, the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr` effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/backend`. The timing-lines report is not in this jar: it is a `-- timing-lines` word of the `circuits/` project, which compiles eight of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `TimingLines/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the same project's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and that project asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links nothing beyond those eight, because nothing else in `backend/src` asks OpenStreetMap anything or reads a GeoJSON.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -73,63 +68,26 @@ prefixes, and which one says what is being run rather than what is being built:
 `flix-*` builds and tests the project, `cli-*` moves the data through it, and
 `serve-api` is the server. All of them come out of the same jar.
 
-`.#cli-run` converts every round `Motorsport.Calendar` lists: the CSV under
-`--csv` (`data/wec`) goes into the tables, and the round's files and
-`index.json` are written back out of the rows under `--out`
-(`app/static/wec`), in the same season directories — what each stage reads
-and writes, and the database all of them compute in, are
-`backend/README.md`'s. The run converts nothing the calendar does not list,
-reports any CSV no round names, and fails any round whose CSV is missing —
-so a round joins `Motorsport.Calendar` before anything runs, and the whole
-trip from a CSV to a drawn round is `/skill:add-round`.
+`.#cli-run` converts every round `Motorsport.Calendar` lists: the CSV under `--csv` (`data/wec`) goes into the tables, and the round's files and `index.json` are written back out of the rows under `--out` (`app/static/wec`), in the same season directories — what each stage reads and writes, and the database all of them compute in, are `backend/README.md`'s. The run converts nothing the calendar does not list, reports any CSV no round names, and fails any round whose CSV is missing — so a round joins `Motorsport.Calendar` before anything runs, and the whole trip from a CSV to a drawn round is `/skill:add-round`.
 
-**A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le
-Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work
-with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB
-against Le Mans's 25MB of laps. The other fourteen are tens of megabytes of
-what the rows already say, so they are ignored rather than committed, and
-`.#tauri-build` is the one command that writes them — a bundle carries the
-files it opens, and nothing else needs all of
-them at once. A round left unwritten is quiet: the dev server answers `/api` for it
-with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an
-export like any other, so a summary that grows a key the drawing is chosen by has
-to be written out again over the kept rounds: `track.circuit` missing reads as a
-circuit with no drawing.
+**A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB against Le Mans's 25MB of laps.
+The other fourteen are tens of megabytes of what the rows already say, so they are ignored rather than committed, and `.#tauri-build` is the one command that writes them — a bundle carries the files it opens, and nothing else needs all of them at once.
+A round left unwritten is quiet: the dev server answers `/api` for it with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an export like any other, so a summary that grows a key the drawing is chosen by has to be written out again over the kept rounds: `track.circuit` missing reads as a circuit with no drawing.
 
-**The timeline is rows too**: the load counts it off the laps into
-`timeline_events`, so a lap corrected in SQL reaches the summary and the laps
-on the next export and the timeline not at all — and not on the next load
-either, which rebuilds every table off the CSV and takes the correction with
-it. Correct `timeline_events` beside `laps`.
+**The timeline is rows too**: the load counts it off the laps into `timeline_events`, so a lap corrected in SQL reaches the summary and the laps on the next export and the timeline not at all — and not on the next load either, which rebuilds every table off the CSV and takes the correction with it.
+Correct `timeline_events` beside `laps`.
 
-`/api` is how the app reads a round, and the export is the same archive written
-out to files. The calendar is written either way and lists every round there
-is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL
-the app asks for before it knows anything — is reached only by a bundle with
-nothing listening on `/api`. Such a bundle opens whichever rounds were written
-before it was built, which is why `.#tauri-build` converts every one of them
-first — sixteen rounds' files, which Tauri compresses into the `.app`. A round the run did not write fails there rather than 404ing —
-Tauri's asset resolver answers a path it does not know with `index.html`, so it
-decodes HTML. A bundle behind a server
-never reaches that copy: the calendar it gets names `/api/wec` and every round
-opens.
+`/api` is how the app reads a round, and the export is the same archive written out to files.
+The calendar is written either way and lists every round there is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL the app asks for before it knows anything — is reached only by a bundle with nothing listening on `/api`. Such a bundle opens whichever rounds were written before it was built, which is why `.#tauri-build` converts every one of them first — sixteen rounds' files, which Tauri compresses into the `.app`. A round the run did not write fails there rather than 404ing — Tauri's asset resolver answers a path it does not know with `index.html`, so it decodes HTML.
+A bundle behind a server never reaches that copy: the calendar it gets names `/api/wec` and every round opens.
 
-`.#serve-api` answers `/api` out of the rows a run loaded; the endpoints and
-the jar the server runs as are `backend/README.md`'s. The Vite dev server
-forwards `/api` to port 8080, and answers it from `static/` when nothing is
-listening.
+`.#serve-api` answers `/api` out of the rows a run loaded; the endpoints and the jar the server runs as are `backend/README.md`'s. The Vite dev server forwards `/api` to port 8080, and answers it from `static/` when nothing is listening.
 
-Project skills live in `.pi/skills/`. `/skill:update-deps [npm|elm|rust|nix]`
-audits and updates dependencies. `/skill:add-round` takes a timing CSV and its
-clues through the calendar, the CLI and the checks into a served round;
-`/skill:add-circuit` takes a circuit from an OpenStreetMap probe through the
-config, the kept answer and the geometry to a drawing. Adding a round or a
-circuit is those skills' — the sections below say what things *are*, and the
-skills hold what to *do*, in order, and which frozen lists a new name joins.
-`/skill:distill-docs` keeps that division true: which layer owns a fact,
-what over-documentation looks like, and how to prune and audit without
-losing a hazard. `/skill:commit-push` does the commit and push a user asks
-for, and only that — never a pull request.
+Project skills live in `.pi/skills/`. `/skill:update-deps [npm|elm|rust|nix]` audits and updates dependencies.
+`/skill:add-round` takes a timing CSV and its clues through the calendar, the CLI and the checks into a served round; `/skill:add-circuit` takes a circuit from an OpenStreetMap probe through the config, the kept answer and the geometry to a drawing.
+Adding a round or a circuit is those skills' — the sections below say what things *are*, and the skills hold what to *do*, in order, and which frozen lists a new name joins.
+`/skill:distill-docs` keeps that division true: which layer owns a fact, what over-documentation looks like, and how to prune and audit without losing a hazard.
+`/skill:commit-push` does the commit and push a user asks for, and only that — never a pull request.
 
 `flix` carries what the compiler does rather than what the code
 is: the errors this tree has actually produced, what each one meant, and how a
@@ -172,16 +130,10 @@ takes a colour from its number. What the feed spells is
 `SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
 them the file has no row for is one query rather than a reading of the cars.
 
-`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the
-manufacturer table is, which names each season's photographs and the directory
-under `static/images/wec` they sit in. `.#car-images --season <year>` writes one
-season of it; `app/scripts/fetch-car-images.mjs` says which two sources it reads
-and why. A season the grid page is not showing is reached through its season
-filter, which takes the ids `/evo/1/seasons` publishes and answers for seasons
-the page itself no longer offers: 2024 is reached that way and nowhere else,
-`/en/car/2024` being a redirect to the current season. How the photographs are
-encoded, and the digest that keeps one already here from being asked for
-again, are that script's own header to say.
+`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the manufacturer table is, which names each season's photographs and the directory under `static/images/wec` they sit in.
+`.#car-images --season <year>` writes one season of it; `app/scripts/fetch-car-images.mjs` says which two sources it reads and why.
+A season the grid page is not showing is reached through its season filter, which takes the ids `/evo/1/seasons` publishes and answers for seasons the page itself no longer offers: 2024 is reached that way and nowhere else, `/en/car/2024` being a redirect to the current season.
+How the photographs are encoded, and the digest that keeps one already here from being asked for again, are that script's own header to say.
 
 Both tables are read where the cars decode rather than where they are drawn:
 `Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
@@ -221,19 +173,12 @@ scrolls -- is done in that one width and `pitch`.
 
 ### The shadcn components
 
-`app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
-UI, not Radix. Each `app/src/shadcn/<name>-element.ts` puts one of them behind
-a custom element, `index.ts` registers them all, and
-`app/src/UI/Shadcn/<Name>.elm` is the Elm side. The Elm wrappers hold no
-Tailwind classes; the class strings are the vendored file's. `UI.Notice` is
-what sits beside them: Elm that writes its own Tailwind and answers to no
-vendored file.
+`app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base UI, not Radix.
+Each `app/src/shadcn/<name>-element.ts` puts one of them behind a custom element, `index.ts` registers them all, and `app/src/UI/Shadcn/<Name>.elm` is the Elm side.
+The Elm wrappers hold no Tailwind classes; the class strings are the vendored file's. `UI.Notice` is what sits beside them: Elm that writes its own Tailwind and answers to no vendored file.
 
-`shadcn` carries what touching them obliges: the CLI's `add` and `--diff`
-workflow and the drift discipline, the four things the Elm↔element property
-boundary will not carry, which elements mount React and which only lend class
-strings, and what a mount costs measured. Reach for it before changing
-anything under `app/src/shadcn/` or `app/src/UI/Shadcn/`.
+`shadcn` carries what touching them obliges: the CLI's `add` and `--diff` workflow and the drift discipline, the four things the Elm↔element property boundary will not carry, which elements mount React and which only lend class strings, and what a mount costs measured.
+Reach for it before changing anything under `app/src/shadcn/` or `app/src/UI/Shadcn/`.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
@@ -476,6 +421,12 @@ them; every cut listed above was shorter than it. Placement is the test.
 This file holds what cannot be read off the code; anything derivable from it is
 noise, for the next agent as much as the next person.
 
+**Break prose only at sentence ends.** Prose written now — documentation, comments, skills — puts its line breaks where sentences end and never inside a sentence: a sentence stands on one line, however long.
+A mid-sentence break is a character an editor that changes text by exact match must reproduce to touch the lines around it, and cannot know without re-reading; a break guessed wrong turns every edit into a failed call and a retry, and a cut that re-wraps its neighbourhood turns a small change into a diff of lines no one wrote.
+One-sentence-per-line gives the editor a sentence-sized anchor, takes re-wrapping out of every change, and keeps a diff hunk exactly as local as fixed-width wrapping did.
+This is the reason the rule is layout and not taste: the terminal width fixed wrapping optimized for is read far less than these files are edited.
+Existing fixed-width prose stays as it stands — the rule reaches prose being written, not a re-lay of what is; tables keep a row per line, and bullets keep an item per line.
+
 ## Committing
 
 Re-read the comments and docstrings the change added, against the list above,
@@ -502,15 +453,7 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   and `src/`; `/app/tests/` is outside the TS project on purpose: Playwright
   comes from the flake rather than from `node_modules`, so `@playwright/test`
   does not resolve for `tsc`.
-- **The geometry project** (`circuits/`) — a Flix project of its own, tested by
-  `nix run .#geometry-test`: every reading is handed a fixture rather than a
-  survey, the one test handed none is the timing map's derivation, and
-  `check-sources.mjs` holds to one spelling the project-wide facts an `@Test`
-  cannot reach — no browser, no `node_modules`, plain `node` over
-  `circuits/src`. Which readings exist and what each check reads and why, and
-  what stays the fences' and the contract specs' rather than any test's, is
-  `circuits/README.md`'s — the thing to read before changing anything under
-  `/circuits` anyway.
+- **The geometry project** (`circuits/`) — a Flix project of its own, tested by `nix run .#geometry-test`: every reading is handed a fixture rather than a survey, the one test handed none is the timing map's derivation, and `check-sources.mjs` holds to one spelling the project-wide facts an `@Test` cannot reach — no browser, no `node_modules`, plain `node` over `circuits/src`. Which readings exist and what each check reads and why, and what stays the fences' and the contract specs' rather than any test's, is `circuits/README.md`'s — the thing to read before changing anything under `/circuits` anyway.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources
@@ -521,21 +464,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   that moves modules must take its pattern with it; `readConstant` fails the
   spec load by name when a pattern misses, rather than letting the constant
   become `NaN` and every assertion expect `NaNpx`.
-- **Timing figures** (`circuits/test/TestTimingMap.flix`) — the timing-lines
-  report holds no copy of a circuit's lap length or sector stretches: it
-  derives its answer from the ones the circuit's config authors, and
-  `.#geometry-test` reads that derivation. The one figure-list the two
-  projects each hold — the circuit words — and what fails by name when a link
-  or a list moves, is `circuits/README.md`'s.
+- **Timing figures** (`circuits/test/TestTimingMap.flix`) — the timing-lines report holds no copy of a circuit's lap length or sector stretches: it derives its answer from the ones the circuit's config authors, and `.#geometry-test` reads that derivation. The one figure-list the two projects each hold — the circuit words — and what fails by name when a link or a list moves, is `circuits/README.md`'s.
 - **Flix** — `backend/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
-- **VRT** (`/app/tests/`) — runs against the export rather than the server, so
-  it needs nothing set up, and drives the two rounds a checkout keeps. The
-  `vrt` skill carries how a shot is judged, what a round losing its drawing
-  looks like when no baseline can see it, what the platforms differ by and by
-  how many pixels, and how a baseline is landed. Reach for it before touching
-  a baseline.
+- **VRT** (`/app/tests/`) — runs against the export rather than the server, so it needs nothing set up, and drives the two rounds a checkout keeps. The `vrt` skill carries how a shot is judged, what a round losing its drawing looks like when no baseline can see it, what the platforms differ by and by how many pixels, and how a baseline is landed. Reach for it before touching a baseline.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.
