@@ -35,6 +35,24 @@ move twice, and a fact that must move twice will not.
   round" — `git log`'s voice, and the first sentence to go stale.
 - **Restated structure.** "The Model holds the race and the columns" above a
   record that names the race and the columns.
+- **The call-site chronicle.** "Called from X when Y, before Z" above the
+  called function — every new caller must update it, and none will. The
+  account of why a call is made belongs at the call site, beside the code
+  that makes it.
+- **A reach past the boundary.** A domain module's comment about the page or
+  command that uses it — the far side changes and the comment drifts with it,
+  and it reads as coupling the code does not have. Each side's story belongs
+  on its own side of the seam.
+- **A misplaced explanation.** A method's doc that describes one line inside
+  the method — the explanation belongs above that line, or nowhere. A reader
+  who meets the code first never meets the comment.
+- **Unanchored vocabulary.** A comment whose nouns belong to no identifier in
+  the code below it — the reader cannot find the thing it names, and a rename
+  of that thing leaves no trace to follow. Say it in the words the code uses.
+- **The half-truth that deepens the mystery.** "this class is no longer used
+  by the screen" — and the reader asks *then where, and why is it still
+  here?* A hazard comment that does not answer the next question it provokes
+  is a tease: finish it or cut it.
 - **A section per thought.** A README heading over one paragraph that the
   module's own header already heads.
 - **Defense paragraphs.** Three sentences explaining why a short docstring is
@@ -44,6 +62,10 @@ move twice, and a fact that must move twice will not.
   stays true outside it, or to nothing.
 - **A skill that re-lectures.** A step that explains its *why* at length.
   Steps are imperative; the why is a clause and a pointer.
+- **The same sentence on both sides of a call.** Caller and callee each
+  carrying it — one home applies inside the file too: keep the copy beside
+  the code that decides, cut the echo. Where the behavior is fully shown by
+  a test's name, both copies are optional.
 - **Counts and inventories left standing.** "the three here are tagged
   differently", "all fourteen rounds", `known are cota, le_mans, barcelona` —
   real facts with an expiry date stamped by the next change. They survive,
@@ -54,7 +76,11 @@ move twice, and a fact that must move twice will not.
 
 **After a change.** Re-read every comment and doc line the change added, cut
 what `AGENTS.md`'s list forbids, then ask of each survivor: *what wrong thing
-would the next reader do without this line?* No answer — cut.
+would the next reader do without this line?* No answer — cut. Then read it
+once as prose, not as a scan: does the sentence actually parse, is the
+reference unambiguous, do its terms appear in the code beneath it? A comment
+that reads as "probably fine" at a glance is exactly the failure a second,
+slower reading catches.
 
 **When pruning a tree.** Inventory the prose (`AGENTS.md`, each `README.md`,
 each skill, each module header worth more than three lines); for each fact
