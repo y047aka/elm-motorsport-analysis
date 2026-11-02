@@ -22,7 +22,7 @@ Decide the owner before writing anything, narrowest layer that can hold it:
 | A code comment | the constraint, hazard, or equal-alternatives decision at that call site — `AGENTS.md`'s list | procedure; the case for the code; history |
 | A module's header / a README | why the thing is shaped so; fences and what they answer | the steps to change it |
 | `AGENTS.md` | repository facts unreadable off the code: checkout state, command behaviour, seams no compiler reaches | the same fact a README already says |
-| A skill (`.pi/skills/`) | the steps: what to run and edit, in order, and which frozen lists a new name joins | facts the READMEs hold |
+| A skill (`.pi/skills/`) | the steps: what to run and edit, in order, and which frozen lists a new name joins | a long re-lecture of what a README holds — a step may carry a clause and a pointer |
 
 **One fact rests in one place; every other mention is at most a one-line
 pointer to it.** A fact restated in prose in two places must move twice, and a
@@ -53,10 +53,10 @@ or point.
   instead of pointing to the README that holds it. Steps are imperative; the
   why is a clause and a pointer.
 - **Counts and inventories left standing.** "the three here are tagged
-  differently", "all fourteen rounds", `known are cota, le_mans` — these are
-  facts with an expiry date stamped by the next change. They are allowed (they
-  are real facts) but they join the audit below, and code that freezes them in
-  a test must fail by name when they move.
+  differently", "all fourteen rounds", `known are cota, le_mans, barcelona` —
+  these are facts with an expiry date stamped by the next change. They are
+  allowed (they are real facts) but they join the audit below, and code that
+  freezes them in a test must fail by name when they move.
 
 ## The passes
 
@@ -110,8 +110,8 @@ thing:
   added to a source the `circuits/` project symlinks compiles in both
   projects: verify with `.#flix-build` *and* `.#geometry-test`.
 - Elm docstrings: `.#test` runs elm-verify-examples over them — an example in
-  a docstring is a test, and a stale docstring example fails the build, which
-  is the one documentation failure this repository can actually see.
+  a docstring is a test, and a stale example fails the build; with Flix's
+  E6289, these are the few documentation failures a compiler can actually see.
 
 ## Hazards
 
@@ -126,3 +126,7 @@ thing:
   `/skill:` references, section titles, file paths in prose.
 - **Don't repeat harder.** If `AGENTS.md` says it and a README repeats it,
   decide which owns it.
+- **A skill's description is its only reach.** The frontmatter `description`
+  is what makes a skill get loaded at all; prune bodies freely, but cutting a
+  trigger phrase from a description hides the skill while its body still reads
+  as maintained.
