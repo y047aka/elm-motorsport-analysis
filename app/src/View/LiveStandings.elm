@@ -189,8 +189,7 @@ visible panelWidth =
 
 
 {-| The row's tracks as a `grid-template-columns` value: the position, the
-badge, one per visible column, and — once the time columns arrive — a gutter
-at the end for the pit mark, which floats there over the row's right edge.
+badge, and one per visible column.
 The header stands on the same value, which is what keeps a label over its
 column and keeps every row's columns lined up whether or not its car is in
 the pit.
@@ -205,13 +204,6 @@ gridTracks : Float -> String
 gridTracks panelWidth =
     "20px auto"
         ++ String.concat (List.map (\column -> " " ++ (columnSpec column).track) (visible panelWidth))
-        ++ (if fits panelWidth Ahead then
-                -- w-4 plus right-1, in px: the mark it reserves room for is measured in px.
-                " 24px"
-
-            else
-                ""
-           )
 
 
 px : Float -> String
@@ -402,7 +394,7 @@ carRow onSelect r =
                  else
                     "false"
                 )
-             , class "relative w-full p-0.5 grid items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
+             , class "w-full p-0.5 grid items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
              , style "grid-template-columns" (gridTracks r.width)
              ]
                 ++ (if r.hasColumn then
@@ -417,20 +409,26 @@ carRow onSelect r =
                         ]
                    )
             )
-            ([ div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
+            ([ positionCell r
              , CarNumberBadge.viewRow r.metadata
              ]
                 ++ List.map (cell r) (visible r.width)
-                ++ [ if r.isInPit then
-                        div
-                            [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
-                            [ text "P" ]
-
-                     else
-                        text ""
-                   ]
             )
         ]
+
+
+{-| What stands in the number's track at the row's head: the pit mark for a car
+in the pit lane, the place it holds for every other car.
+-}
+positionCell : Row -> Html msg
+positionCell r =
+    if r.isInPit then
+        div
+            [ class "mx-auto w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
+            [ text "P" ]
+
+    else
+        div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
 
 
 {-| One visible column's cell, aligned as its label is.
