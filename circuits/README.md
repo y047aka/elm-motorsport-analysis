@@ -214,12 +214,12 @@ asking once.
 itself, and how long one that just failed is left alone are facts about
 OpenStreetMap, and `Overpass.flix` spells them once, walking the probe's
 question and the pipeline's through the same runners. What a service
-*answered with* is the same one reading for both — a proxy answers a
-timed-out request as 200 with an HTML page, so a second reading that asked
-only the status would hand HTML on as a geometry — and that reading — beside
+*answered with* is the same one reading for both, and that reading — beside
 the sphere `Geodesy.earthMetres` that every metre is measured on — is held to
 one spelling by `test/check-sources.mjs`, since an `@Test` can build no
-`HttpResponse` and meets no source file. What nothing compares is the app's
+`HttpResponse` and meets no source file: a proxy answers a timed-out request
+as 200 with an HTML page, so a second reading that asked only the status
+would hand HTML on as a geometry. What nothing compares is the app's
 own number, in `Motorsport.Circuit.Geodesy`: neither compiler reaches into
 the other project's sources, and a Geodesy on another sphere lays a drawing
 whose metres are not the survey's.

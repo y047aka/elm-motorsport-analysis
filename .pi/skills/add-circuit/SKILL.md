@@ -136,7 +136,7 @@ new circuit fails each of them by name until it joins:
 | `nix run .#geometry -- regenerate` | property fence over *every* kept answer — a new config must not move another circuit |
 | `nix run .#test` | add `{ module: "<Word>", file: "<word>.geojson" }` to `app/scripts/test-fixtures.mjs`'s list first, or the package's tests fail to compile by name; then Elm tests + verify-examples |
 | `nix run .#test-vrt` | `geometry-contract.spec.ts` reads the words out of `Shared.elm`, `backend/src/Motorsport/Circuit.flix` and the served file — three lists, one word — plus the inventory assertion of step 6 |
-| `nix run .#update-snapshots-ci` | only once a new drawing is in: every tracker baseline stands on these degrees. Never land a macOS baseline with `.#update-snapshots-vrt` |
+| `nix run .#update-snapshots-ci` | only once a new drawing is in: every tracker baseline stands on these degrees — the `vrt` skill says how a baseline lands |
 
 A survey that moved an *existing* circuit's bytes is its own change: it takes a
 VRT re-baseline with it, and the move is measured in metres by `-- diff` before

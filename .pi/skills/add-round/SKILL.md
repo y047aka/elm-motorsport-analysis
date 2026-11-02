@@ -115,9 +115,8 @@ rest are ignored, `AGENTS.md` says. A new round's files stay ignored (save for
 `/api` from `static/`
 only for what is written there, and 502s (or `/api`-404s) for the rest, which
 is quiet, not broken. Promoting a round to kept is its own decision: un-ignore
-and commit its three files, and it joins the VRT — `app/tests/helpers.ts`
-refuses a kept summary naming no `track.circuit`, and new shots go in through
-`nix run .#update-snapshots-ci`, never `.#update-snapshots-vrt`.
+and commit its three files, and it joins the VRT — what the suite then
+insists of it, and how the shots land, is the `vrt` skill's.
 
 If a change grew the summary with a key the drawing chooses by, re-export the
 kept rounds (`.#cli-export -- --export-only <season>/<id>`, repeated for each —

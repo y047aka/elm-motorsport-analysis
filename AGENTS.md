@@ -530,15 +530,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   build is worth, the stack the type checker gets, and the database a test
   reaches.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
-  it needs nothing set up: with nothing listening on 8080 the dev server
-  answers `/api` from `static/`, and those are the same bytes. It drives the
-  two rounds a checkout keeps. A circuit's E2E is one baseline-free polygon
-  assertion — the bytes a tracker shot rendered are held by the geometry
-  project's fences — and `helpers.ts` refuses a kept summary naming no
-  `track.circuit`, so a drawing can be lost loudly without a pixel diff.
-  The `vrt` skill carries how a shot is judged, what the platforms differ by
-  and by how many pixels, and how a baseline is landed. Reach for it before
-  touching a baseline.
+  it needs nothing set up, and drives the two rounds a checkout keeps. The
+  `vrt` skill carries how a shot is judged, what a round losing its drawing
+  looks like when no baseline can see it, what the platforms differ by and by
+  how many pixels, and how a baseline is landed. Reach for it before touching
+  a baseline.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.

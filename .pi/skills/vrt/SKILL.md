@@ -9,7 +9,7 @@ The snapshots in `/app/tests/` are the rendering's fence. `AGENTS.md`'s
 Testing section names the suite; this says how a shot is run, judged, and
 landed.
 
-## Running and judging a run
+## Running and judging
 
 The suite runs against the export rather than the server: with nothing
 listening on 8080 the dev server answers `/api` from `static/`, and those are
@@ -45,8 +45,7 @@ where the ring draws a circle.
 
 ## Landing a baseline
 
-The baselines are CI's: rendered on Linux (the workflows are the repository's,
-and `AGENTS.md` says which runs what), and what a merge is judged against.
+The baselines are CI's: rendered on Linux, and what a merge is judged against.
 
 `nix run .#update-snapshots-ci` refreshes them: it dispatches the workflow on
 the checked-out branch, waits for it, pulls the commit it pushes back, and
