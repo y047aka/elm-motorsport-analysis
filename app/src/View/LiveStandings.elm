@@ -95,8 +95,8 @@ view config snapshot =
         ]
 
 
-{-| The width the panel arrives at: the row with its surname, the badge and
-the position, plus the card's padding.
+{-| The width the panel arrives at: the row with its initial and surname,
+the badge and the position, plus the card's padding.
 -}
 width : Float
 width =
@@ -362,7 +362,7 @@ row config item =
     , position = item.standing.position
     , isInPit = item.status == Status.InPit
     , hasColumn = List.member item.metadata.carNumber config.withColumns
-    , driver = Driver.toSurname item.currentDriver
+    , driver = Driver.toInitialAndSurname item.currentDriver
     , ahead = Gap.toString item.standing.intervalToAhead
     , last = lastLapTime.text
     , lastColor = lastLapTime.color
