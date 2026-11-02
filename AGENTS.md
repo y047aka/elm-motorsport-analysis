@@ -129,7 +129,7 @@ skills hold what to *do*, in order, and which frozen lists a new name joins.
 `/skill:distill-docs` keeps that division true: which layer owns a fact,
 what over-documentation looks like, and how to prune and audit without
 losing a hazard. `/skill:commit-push` does the commit and push a user asks
-for, and only that — never a pull request, never a force-push.
+for, and only that — never a pull request.
 
 `flix` carries what the compiler does rather than what the code
 is: the errors this tree has actually produced, what each one meant, and how a
