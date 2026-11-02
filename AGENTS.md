@@ -8,11 +8,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
-- **`/backend`** — written in Flix, and two things rather than one: the CLI that
-  moves CSV through SQLite into JSON/JSONL, and the server that answers
-  `/api` out of the same rows. `backend/README.md` describes it — the server,
-  the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr`
-  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/backend`. The timing-lines report is not in this jar: it is a `-- timing-lines` word of the `circuits/` project, which compiles eight of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `TimingLines/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the same project's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and that project asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links nothing beyond those eight, because nothing else in `backend/src` asks OpenStreetMap anything or reads a GeoJSON.
+- **`/backend`** — written in Flix, and two things rather than one: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. `backend/README.md` describes it — the server, the two stages and the one database they compute in, the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr` effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/backend`. The timing-lines report is not in this jar: it is a `-- timing-lines` word of the `circuits/` project, which compiles eight of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `TimingLines/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the same project's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and that project asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links nothing beyond those eight, because nothing else in `backend/src` asks OpenStreetMap anything or reads a GeoJSON.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -72,83 +68,26 @@ prefixes, and which one says what is being run rather than what is being built:
 `flix-*` builds and tests the project, `cli-*` moves the data through it, and
 `serve-api` is the server. All of them come out of the same jar.
 
-`.#cli-run` converts every round `Motorsport.Calendar` lists, in two stages: the
-CSV under `--csv` (`data/wec`) goes into the tables, and a round's summary
-`.json`, its laps `.jsonl` one lap per line, its timeline `.jsonl` one event per
-line, and `index.json` beside them are written back out of the rows under
-`--out` (`app/static/wec`), in the same season directories.
-**A new round is added to `Motorsport.Calendar` first** — the run converts
-nothing the calendar does not list, reports any CSV no round names, and fails
-any round whose CSV is missing.
+`.#cli-run` converts every round `Motorsport.Calendar` lists: the CSV under `--csv` (`data/wec`) goes into the tables, and the round's files and `index.json` are written back out of the rows under `--out` (`app/static/wec`), in the same season directories — what each stage reads and writes, and the database all of them compute in, are `backend/README.md`'s. The run converts nothing the calendar does not list, reports any CSV no round names, and fails any round whose CSV is missing — so a round joins `Motorsport.Calendar` before anything runs, and the whole trip from a CSV to a drawn round is `/skill:add-round`.
 
-Every round is loaded and every round is written. `--export-only <season>/<id>`
-narrows the writing stage alone, repeated to name more than one, and a name no
-round on the calendar answers to fails the run before anything is written.
+**A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB against Le Mans's 25MB of laps.
+The other fourteen are tens of megabytes of what the rows already say, so they are ignored rather than committed, and `.#tauri-build` is the one command that writes them — a bundle carries the files it opens, and nothing else needs all of them at once.
+A round left unwritten is quiet: the dev server answers `/api` for it with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an export like any other, so a summary that grows a key the drawing is chosen by has to be written out again over the kept rounds: `track.circuit` missing reads as a circuit with no drawing.
 
-**A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le
-Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work
-with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB
-against Le Mans's 25MB of laps. The other twelve are 50MB the rows already say, so
-they are ignored rather than committed, and `.#tauri-build` is the one command that
-writes them — a bundle carries the files it opens, and nothing else needs all of
-them at once. A round left unwritten is quiet: the dev server answers `/api` for it
-with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an
-export like any other, so a summary that grows a key the drawing is chosen by has
-to be written out again over the kept rounds: `track.circuit` missing reads as a
-circuit with no drawing.
+**The timeline is rows too**: the load counts it off the laps into `timeline_events`, so a lap corrected in SQL reaches the summary and the laps on the next export and the timeline not at all — and not on the next load either, which rebuilds every table off the CSV and takes the correction with it.
+Correct `timeline_events` beside `laps`.
 
-`.#cli-load` and `.#cli-export` are those two stages singly. The stage that
-writes reads none of the CSV, so the files are an image of the rows and of
-nothing else: a row corrected in SQL is exported, and re-exporting after a
-change to a renderer costs no decoding. **The timeline is rows too**: the load
-counts it off the laps into `timeline_events`, so a lap corrected in SQL reaches
-the summary and the laps on the next export and the timeline not at all — and
-not on the next load either, which rebuilds every table off the CSV and takes
-the correction with it. Correct `timeline_events` beside `laps`. **A round no
-run has loaded fails the export** rather than being written out as a race that
-never ran — the rows read back as one, which is the one thing they cannot say
-for themselves — and the files it would have replaced are left alone. `/api`
-answers such a round with a 404 for the same reason, off the same reading:
-`Round.loaded` is where the two of them ask, and it asks `laps` and `cars` — a
-round with laps and no cars is half in the database rather than loaded.
+`/api` is how the app reads a round, and the export is the same archive written out to files.
+The calendar is written either way and lists every round there is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL the app asks for before it knows anything — is reached only by a bundle with nothing listening on `/api`. Such a bundle opens whichever rounds were written before it was built, which is why `.#tauri-build` converts every one of them first — sixteen rounds' files, which Tauri compresses into the `.app`. A round the run did not write fails there rather than 404ing — Tauri's asset resolver answers a path it does not know with `index.html`, so it decodes HTML.
+A bundle behind a server never reaches that copy: the calendar it gets names `/api/wec` and every round opens.
 
-Both stages compute in SQLite, and so does the server, so all three need one:
-`--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made
-in a shell, and the commands name `backend/.db/motorsport.sqlite` when neither
-does. One that reaches none does nothing rather than opening an empty database
-of its own. The file is in the working copy rather than under /tmp, so what a
-run left there is still there to be queried. The integrity checks are read back
-out of the rows a round was just loaded into, and so is everything the export
-writes and `.#serve-api` answers with.
+`.#serve-api` answers `/api` out of the rows a run loaded; the endpoints and the jar the server runs as are `backend/README.md`'s. The Vite dev server forwards `/api` to port 8080, and answers it from `static/` when nothing is listening.
 
-`/api` is how the app reads a round, and the export is the same archive written
-out to files. The calendar is written either way and lists every round there
-is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL
-the app asks for before it knows anything — is reached only by a bundle with
-nothing listening on `/api`. Such a bundle opens whichever rounds were written
-before it was built, which is why `.#tauri-build` converts every one of them
-first: all fourteen come to 76MB of files and 3MiB in the `.app`, since Tauri
-compresses what it embeds. A round the run did not write fails there rather than 404ing —
-Tauri's asset resolver answers a path it does not know with `index.html`, so it
-decodes HTML. A bundle behind a server
-never reaches that copy: the calendar it gets names `/api/wec` and every round
-opens.
-
-Passing the flag goes through `nix run .#cli-run -- --database ...`, since the
-flake forwards what follows.
-
-`.#serve-api` answers `/api` out of the rows a run loaded: `/api/health`,
-`/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json`,
-`_laps.jsonl` and `_timeline.jsonl`. The Vite dev server forwards `/api` to
-port 8080, and answers it from `static/` when nothing is listening.
-
-Its operating form is the jar, since `flix run` takes the JVM down with `main`
-and the server's does not return. `flix build-jar` leaves the Maven
-dependencies out of what it writes, so the JDBC driver is named on the class
-path beside the jar rather than bundled in it.
-
-Project skills live in `.pi/skills/` — `/skill:update-deps [npm|elm|rust|nix]`
-audits and updates dependencies.
+Project skills live in `.pi/skills/`. `/skill:update-deps [npm|elm|rust|nix]` audits and updates dependencies.
+`/skill:add-round` takes a timing CSV and its clues through the calendar, the CLI and the checks into a served round; `/skill:add-circuit` takes a circuit from an OpenStreetMap probe through the config, the kept answer and the geometry to a drawing.
+Adding a round or a circuit is those skills' — the sections below say what things *are*, and the skills hold what to *do*, in order, and which frozen lists a new name joins.
+`/skill:distill-docs` keeps that division true: which layer owns a fact, what over-documentation looks like, and how to prune and audit without losing a hazard.
+`/skill:commit-push` does the commit and push a user asks for, and only that — never a pull request.
 
 `flix` carries what the compiler does rather than what the code
 is: the errors this tree has actually produced, what each one meant, and how a
@@ -191,25 +130,10 @@ takes a colour from its number. What the feed spells is
 `SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
 them the file has no row for is one query rather than a reading of the cars.
 
-`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the
-manufacturer table is, which names each season's photographs and the directory
-under `static/images/wec` they sit in. `.#car-images --season <year>` writes one
-season of it; `app/scripts/fetch-car-images.mjs` says which two sources it reads
-and why. A season the grid page is not showing is reached through its season
-filter, which takes the ids `/evo/1/seasons` publishes and answers for seasons
-the page itself no longer offers: 2024 is reached that way and nowhere else,
-`/en/car/2024` being a redirect to the current season.
-
-The photographs are kept as WebP at `-q 75 -sharp_yuv`, at the width they are
-published rather than a narrower one — measured as the card draws them, bytes
-spent on resolution beat bytes spent on quality.
-
-**A photograph already here is never asked for again.** Comparing needs the
-original and not the WebP written from it, so `app/scripts/car-image-origins.json`
-holds each original's digest — every one a run fetched and not only the ones it
-kept, each written as it arrives. A run says how many images it asked the site
-for, which is the number to read rather than how many it kept. Requests are a
-second apart and nothing is retried.
+`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the manufacturer table is, which names each season's photographs and the directory under `static/images/wec` they sit in.
+`.#car-images --season <year>` writes one season of it; `app/scripts/fetch-car-images.mjs` says which two sources it reads and why.
+A season the grid page is not showing is reached through its season filter, which takes the ids `/evo/1/seasons` publishes and answers for seasons the page itself no longer offers: 2024 is reached that way and nowhere else, `/en/car/2024` being a redirect to the current season.
+How the photographs are encoded, and the digest that keeps one already here from being asked for again, are that script's own header to say.
 
 Both tables are read where the cars decode rather than where they are drawn:
 `Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
@@ -249,76 +173,12 @@ scrolls -- is done in that one width and `pitch`.
 
 ### The shadcn components
 
-`app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
-UI, not Radix. Each `app/src/shadcn/<name>-element.ts` puts one of them behind
-a custom element, `index.ts` registers them all, and
-`app/src/UI/Shadcn/<Name>.elm` is the Elm side. The Elm wrappers hold no
-Tailwind classes; the class strings are the vendored file's. `UI.Notice` is what
-sits beside them: Elm that writes its own Tailwind and answers to no vendored
-file.
+`app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base UI, not Radix.
+Each `app/src/shadcn/<name>-element.ts` puts one of them behind a custom element, `index.ts` registers them all, and `app/src/UI/Shadcn/<Name>.elm` is the Elm side.
+The Elm wrappers hold no Tailwind classes; the class strings are the vendored file's. `UI.Notice` is what sits beside them: Elm that writes its own Tailwind and answers to no vendored file.
 
-`components.json` configures the CLI, so `shadcn add <name>` writes these files
-and `shadcn add <name> --diff` reports how far one has drifted from upstream.
-That holds only while the `@/*` alias resolves the same way in `tsconfig.json`
-and in `vite.config.ts` — the CLI writes `@/shadcn/...` imports, and neither
-file alone makes them build.
-
-Anything this app adds to a vendored component carries a
-`Not in upstream base-nova:` comment. `--diff` should report those lines and
-nothing else: a line it reports without one is drift to fold back in, since
-`add` overwrites the file. A single class the registry has no variant for does
-not need to be added there at all — `cn` puts it last, so the element can pass
-it and win, which is how a circular button gets `rounded-full`.
-
-Every prop is set as a JS property, so what crosses the boundary is JSON and
-Elm holds the state. Four things that boundary will not carry, all found by
-running it rather than by building it:
-
-- A property that arrives as `undefined` reads to React as "leave this
-  uncontrolled", and the component then keeps a value beside the one Elm
-  holds. Elm clears the value, the component goes on showing the old one, and
-  nothing fails — so an element always passes a value, never a hole.
-- React's synthetic events never reach a custom element's slotted children, so
-  a component Elm passes children to cannot report its own clicks. No element
-  takes children at all: the ones that mount nothing render their own node,
-  and children Elm rendered would land beside it rather than inside it.
-- A `Html.Keyed` reorder removes and re-inserts a node within one task, so a
-  teardown queued by `disconnectedCallback` has to be cancelled when the node
-  comes back, or every reorder destroys a React root. `ReactElement` guards
-  that with its `leaving` flag, and nothing exercises the guard: no element of
-  this kind sits in a keyed list today.
-- A directory whose name differs from an Elm one only in case is folded into
-  it on macOS and only fails on Linux CI. The React sources are laid out as
-  the registry expects, so `src/shadcn/` and `src/shadcn/ui/` are both taken:
-  the Elm side is `UI.Shadcn.*`, and no top-level Elm module may be named
-  `Shadcn` or `Ui`. `src/elements/` takes `Elements` the same way.
-
-Two of the elements mount React: the slider and the toggle-group, which are
-the two that borrow behaviour — a drag, and a row that answers the arrow keys.
-The rest are class strings, and the registry hands those out without React:
-`badgeVariants` and `buttonVariants` are both exported, so the badge and button
-elements build their own DOM from them with nothing vendored changed. A class the registry has no variant for goes on
-through `cn`, which is also what drops a base class a variant contradicts.
-
-`card-elements.ts` has a second reason to mount nothing. Card's classes read
-the tree its content sits in — `has-data-[slot=card-footer]`,
-`has-[>img:first-child]` — and content projected through a `<slot>` is not in
-the shadow root's tree, so the element carries the vendored class string and
-Elm fills it directly. Nothing may pass one of those a `class`: the element
-owns that attribute, and layout belongs on a wrapper around it.
-
-What one of these costs, measured: mounting sixty-two of them takes ~26ms
-against ~2ms for the same number of plain Elm nodes, about ten times, paid once
-when the list appears. A reorder costs nothing. Ten times a node it only lends
-class strings to is the reason nothing mounts React for class strings alone.
-
-An unrelated re-render costs nothing only where the property is a primitive.
-Elm compares a property against the last one by reference, so a re-encoded list
-or record arrives as a write however little it has changed, and a view that
-runs every animation frame then renders React every animation frame. Measured
-on the event page: the two elements taking an `items` array rendered on 181 of
-181 frames of playback, showing nothing new. `changed` in `react-element.ts` is
-what an object-valued setter compares with.
+`shadcn` carries what touching them obliges: the CLI's `add` and `--diff` workflow and the drift discipline, the four things the Elm↔element property boundary will not carry, which elements mount React and which only lend class strings, and what a mount costs measured.
+Reach for it before changing anything under `app/src/shadcn/` or `app/src/UI/Shadcn/`.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
@@ -561,6 +421,12 @@ them; every cut listed above was shorter than it. Placement is the test.
 This file holds what cannot be read off the code; anything derivable from it is
 noise, for the next agent as much as the next person.
 
+**Break prose only at sentence ends.** Prose written now — documentation, comments, skills — puts its line breaks where sentences end and never inside a sentence: a sentence stands on one line, however long.
+A mid-sentence break is a character an editor that changes text by exact match must reproduce to touch the lines around it, and cannot know without re-reading; a break guessed wrong turns every edit into a failed call and a retry, and a cut that re-wraps its neighbourhood turns a small change into a diff of lines no one wrote.
+One-sentence-per-line gives the editor a sentence-sized anchor, takes re-wrapping out of every change, and keeps a diff hunk exactly as local as fixed-width wrapping did.
+This is the reason the rule is layout and not taste: the terminal width fixed wrapping optimized for is read far less than these files are edited.
+Existing fixed-width prose stays as it stands — the rule reaches prose being written, not a re-lay of what is; tables keep a row per line, and bullets keep an item per line.
+
 ## Committing
 
 Re-read the comments and docstrings the change added, against the list above,
@@ -587,19 +453,7 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   and `src/`; `/app/tests/` is outside the TS project on purpose: Playwright
   comes from the flake rather than from `node_modules`, so `@playwright/test`
   does not resolve for `tsc`.
-- **The geometry project** (`circuits/`) — a Flix project of its own, tested by
-  `nix run .#geometry-test`: every reading — the survey of an
-  answer, the reading of a kept file, the comparison of two lines, the atlas
-  file's shapes and guards, the regeneration fence's comparison, and the timing
-  report's feed readings — is handed a
-  fixture rather than a survey, in one language; the one test handed no fixture
-  is `TestTimingMap`, which reads the report's timing answer as the derivation
-  from the project's own authored figures that it is, where the real authors
-  are the fixture. What a Flix test cannot see
-  from inside the project — the sources it holds, what it resolves, the flake
-  apps that reach it, the CI fence — is held by no test: `flake.nix` and the
-  workflow are read, and read fairly, to judge it.
-  Judging this repository's real bytes stays the fence's and the contract specs'.
+- **The geometry project** (`circuits/`) — a Flix project of its own, tested by `nix run .#geometry-test`: every reading is handed a fixture rather than a survey, the one test handed none is the timing map's derivation, and `check-sources.mjs` holds to one spelling the project-wide facts an `@Test` cannot reach — no browser, no `node_modules`, plain `node` over `circuits/src`. Which readings exist and what each check reads and why, and what stays the fences' and the contract specs' rather than any test's, is `circuits/README.md`'s — the thing to read before changing anything under `/circuits` anyway.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources
@@ -610,78 +464,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   that moves modules must take its pattern with it; `readConstant` fails the
   spec load by name when a pattern misses, rather than letting the constant
   become `NaN` and every assertion expect `NaNpx`.
-- **Timing figures** (`circuits/test/TestTimingMap.flix`) — the timing-lines
-  report holds no copy of a circuit's lap length or sector stretches: it
-  derives its answer from the ones the circuit's config authors, and
-  `.#geometry-test` reads that derivation — the stretches carried whole, the
-  re-issued map refused with the config's own reason. What the two projects do
-  each hold is the circuit word list, and no project compiles both anymore:
-  `check-sources.mjs` lays the two `jsonValue` bodies together. Nothing holds
-  the eight links into `backend/src` to
-  their paths from outside; a broken one fails `.#geometry-test` itself, as
-  `Undefined use` in the module that needed it.
-- **What the geometry project cannot see from inside itself**
-  (`circuits/test/check-sources.mjs`, run by `.#geometry-test`) — an `@Test`
-  computes in no IO, so the project's tests hand their fixtures, reach no
-  network, build no `HttpResponse` and ask nothing of the file system; the
-  project-wide facts are read out of its sources instead: one reading of
-  what a service answered with (`Overpass.answered` — a proxy answers a
-  timed-out request as 200 with an HTML page, so a second reading that asked
-  only the status would hand HTML on as a geometry), one spelling of the
-  earth radius (`Geodesy.earthMetres`; the measured lap is the reading a config
-  is authored from, 13.6 km or 13.7 km), one way a filesystem failure is
-  answered (a run that branches on absence asks `Util.Files`' `exists` or
-  `isDirectory` first — a `false` out of a failed stat is the answer that
-  ends a walk quietly — and a run that only reports reads through
-  `Cli.Errors`, which keeps the path with what the filesystem said; any
-  `Err(_)` that discards a failure fails, one arm excepted, on a parse
-  another reading refused first), and `TimingLines/Files.flix`'s reading never
-  writing. It needs no browser, no Playwright and no `node_modules`: plain
-  `node` over `circuits/src`. Both questions' shapes — each recursing to
-  `way(r)`, and only the survey asking for `node(w)`, the difference between
-  drawing a lap and lengthening one — are pinned by the project's own `flix
-  test`, `circuits/src/Overpass.flix` having written the asking once.
+- **Timing figures** (`circuits/test/TestTimingMap.flix`) — the timing-lines report holds no copy of a circuit's lap length or sector stretches: it derives its answer from the ones the circuit's config authors, and `.#geometry-test` reads that derivation. The one figure-list the two projects each hold — the circuit words — and what fails by name when a link or a list moves, is `circuits/README.md`'s.
 - **Flix** — `backend/README.md` holds the rest: where a test lives, what a clean
   build is worth, the stack the type checker gets, and the database a test
   reaches.
-- **VRT** (`/app/tests/`) — runs against the export rather than the server, so
-  it needs nothing set up: with nothing listening on 8080 the dev server
-  answers `/api` from `static/`, and those are the same bytes. It drives the two
-  rounds a checkout keeps; a test reaching for a third needs `.#serve-api` behind
-  it. Two ways a round loses its drawing without failing anything are told apart
-  there without a baseline to compare pixels to: `helpers.ts` reads a kept round's
-  summary for the moment to stop at and refuses one naming no `track.circuit`, and
-  `expectSurveyedLap` asserts the tracker drew a polygon where the ring draws a
-  circle. Local runs allow a 0.1%
-  pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`, and 0.15% for
-  `position-tab`) for cross-platform diffs; CI is strict 0. The circuits'
-  tracker shots are pixel baselines no more — the bytes they rendered are
-  held by the geometry project's fences, and a circuit is strokes whose
-  pixels only follow those bytes — leaving one baseline-free polygon
-  assertion per circuit as the whole E2E of a drawing.
-
-The baselines are CI's: rendered on Linux, and what a merge is judged
-against. `nix run .#update-snapshots-ci` refreshes them — it dispatches the
-workflow on the branch you have checked out, waits for it, pulls the commit
-it pushes back, and approves the runs GitHub holds because a bot pushed them.
-`.#update-snapshots-vrt` writes macOS renderings, which CI rejects: reach for
-it to see what a change did, never to land a baseline.
-
-What separates the two platforms is the rasteriser (CoreText against
-FreeType), which no Chromium flag touches. `tests/screenshot.css` narrows it
-by asking for greyscale antialiasing and the tolerance absorbs the rest, but
-barely. The tolerance is a ratio, so a smaller snapshot gets a smaller
-budget while the gap does not shrink with it. The tightest is
-`position-tab`, the Comparison section alone at 328x162: it differs by 55
-pixels where 0.001 would allow it 53, which is why it alone is given 0.0015.
-Next is `selected-car-with-rivals`, the one shot of a panel whole, at 221
-against 246; `lap-180` has 738 against 1,296. Eight runs gave the same
-counts but once, when `lap-180` fell to 102, so a count that moves is worth
-a second run before it is taken for a rendering that moved. Those counts
-are from a run with one worker, as CI has. What no tolerance can absorb is a change smaller than itself — a
-digit redrawn is tens of pixels — so a local pass is not a promise, and a
-local failure on `position-tab` or `selected-car-with-rivals` is worth
-measuring before it is believed. CI stays strict for both reasons.
+- **VRT** (`/app/tests/`) — runs against the export rather than the server, so it needs nothing set up, and drives the two rounds a checkout keeps. The `vrt` skill carries how a shot is judged, what a round losing its drawing looks like when no baseline can see it, what the platforms differ by and by how many pixels, and how a baseline is landed. Reach for it before touching a baseline.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.

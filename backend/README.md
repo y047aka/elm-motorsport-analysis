@@ -31,6 +31,7 @@ every distance in the probe comes off an answer about OpenStreetMap, which nothi
 reason to hold. It is the repository's only Flix code that asks a network, and
 editing a file under this `src` compiles once for it rather than twice.
 
+Adding a round — a timing CSV through the calendar and the CLI into the rows and the files — is `/skill:add-round`'s to say, step by step.
 What follows is what the code cannot say for itself.
 
 ## The server
@@ -256,6 +257,24 @@ each seat -- read once for the round rather than once a lap, and the two that
 say when a round is loaded by halves: a car with laps and no row in `cars`, or a
 lap from a seat with none in `car_drivers`, is said so rather than written out
 as a car with no name.
+
+## Two stages, one database, and the jar
+
+`Cli` runs in two stages: the load reads each round's CSV — of every round `Motorsport.Calendar` lists, under `--csv` — and rebuilds every table off it, and the export writes out of the rows alone, under `--out`, a round's summary `.json`, its laps `_laps.jsonl` one lap per line, its timeline `_timeline.jsonl` one event per line, and `index.json` beside them, in the same season directories.
+`--load` and `--export` are those stages singly, and `--export-only <season>/<id>` narrows the writing stage alone, repeated to name more than one; a name no round on the calendar answers to fails the run before anything is written.
+
+That the writing stage reads no CSV is the point: the files are an image of the rows and of nothing else, a row corrected in SQL is exported, and re-exporting after a change to a renderer costs no decoding.
+A round no run has loaded fails the export rather than being written out as a race that never ran — the rows read back as one, which is the one thing they cannot say for themselves — and the files it would have replaced are left alone.
+`/api` answers such a round with a 404 off the same reading: the `Round.loaded` the server section names is what both ask.
+
+Both stages and the server compute in SQLite, so all three need one database: `--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made in a shell, and the flake's commands name `backend/.db/motorsport.sqlite` when neither does.
+One that reaches none does nothing rather than opening an empty database of its own.
+The file is in the working copy rather than under /tmp, so what a run left there is still there to be queried — and the flag is reached as `nix run .#cli-run -- --database ...`, since the flake forwards what follows.
+The integrity checks are read back out of the rows a round was just loaded into, and so is everything the export writes and the server answers with.
+
+The server's operating form is the jar: `flix run` takes the JVM down with `main` and the server's `main` does not return.
+`flix build-jar` leaves the Maven dependencies out of what it writes, so the JDBC driver is named on the class path beside the jar rather than bundled in it.
+`.#serve-api` answers `/api/health`, `/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json`, `_laps.jsonl` and `_timeline.jsonl`.
 
 ## Why SQLite
 

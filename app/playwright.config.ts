@@ -25,7 +25,8 @@ export default defineConfig({
       // baselines with room to spare. See tests/screenshot.css.
       //
       // The room a shot needs grows with how much text and how many chart
-      // strokes it holds. AGENTS.md has the counts each shot sits at.
+      // The room a shot needs grows with how much text and how many chart strokes it holds.
+      // The vrt skill has the counts each shot sits at.
       stylePath: './tests/screenshot.css',
       ...(process.env.CI
         ? { maxDiffPixels: 0 }
