@@ -33,6 +33,7 @@ import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
+import View.SectorAndLaps as SectorAndLaps
 
 
 {-| What the panel is given: the tag for picking a car, the cars that already
@@ -116,7 +117,7 @@ strip out of the page before the reader could drag it back.
 -}
 maxWidth : Float
 maxWidth =
-    620
+    680
 
 
 {-| A data column of the row, in the order they stand after the position and
@@ -128,6 +129,7 @@ type Column
     | Move
     | Ahead
     | Last
+    | Pie
     | Current
     | Best
     | Laps
@@ -156,14 +158,17 @@ columnSpec column =
         Last ->
             { label = "Last", at = 355, track = "5em", align = "text-right" }
 
+        Pie ->
+            { label = "Lap", at = 435, track = String.fromFloat SectorAndLaps.pieSize ++ "px", align = "" }
+
         Current ->
-            { label = "Current", at = 435, track = "5em", align = "text-right" }
+            { label = "Current", at = 475, track = "5em", align = "text-right" }
 
         Best ->
-            { label = "Best", at = 515, track = "5em", align = "text-right" }
+            { label = "Best", at = 555, track = "5em", align = "text-right" }
 
         Laps ->
-            { label = "Laps", at = 565, track = "3em", align = "text-right" }
+            { label = "Laps", at = 635, track = "3em", align = "text-right" }
 
 
 {-| Every column, in row order.
@@ -173,7 +178,7 @@ thresholds shows a column after one that stands to its right.
 -}
 columns : List Column
 columns =
-    [ Driver, Move, Ahead, Last, Current, Best, Laps ]
+    [ Driver, Move, Ahead, Last, Pie, Current, Best, Laps ]
 
 
 {-| Does this column fit a panel of this width?
@@ -324,6 +329,7 @@ type alias Row =
     , best : String
     , bestColor : String
     , laps : String
+    , sectorSlots : List ( String, Float )
     , move : { startPosition : Maybe Position, position : Position }
     }
 
@@ -363,6 +369,7 @@ row config item =
     , best = bestTime.text
     , bestColor = bestTime.color
     , laps = String.fromInt item.standing.lapsCompleted
+    , sectorSlots = SectorAndLaps.slots item
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
@@ -463,6 +470,9 @@ cell r column =
 
         Laps ->
             div [ class numeral ] [ text r.laps ]
+
+        Pie ->
+            div [ class "justify-self-center" ] [ SectorAndLaps.pie r.sectorSlots ]
 
         Move ->
             div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]

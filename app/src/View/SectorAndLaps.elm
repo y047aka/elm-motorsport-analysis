@@ -1,8 +1,11 @@
-module View.SectorAndLaps exposing (view)
+module View.SectorAndLaps exposing (view, slots, pie, pieSize)
 
 {-| Per-car "sector progress pie + Current lap + Last lap" row.
 
-@docs view
+The pie is also drawn on its own, by the live standings: `slots` is the
+current lap's sector results in the form `pie` draws.
+
+@docs view, slots, pie, pieSize
 
 -}
 
@@ -29,7 +32,7 @@ view item =
         [ class "grid grid-cols-[1fr_1fr] place-items-center gap-x-2" ]
         [ div
             [ class "grid w-fit grid-cols-[auto_auto] items-center gap-x-2" ]
-            [ currentSectorPie item
+            [ pie (slots item)
             , currentLapBlock item
             ]
         , lastLapBlock item
@@ -89,17 +92,16 @@ lastLapTimeCell item =
         [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
 
-{-| Small three-slot donut showing sector results of the current lap.
-The in-progress sector is filled white up to its progress; completed
-sectors are filled with their performance color.
+{-| The current lap's sector results as the slots `pie` draws. A retired car is
+a blank donut: three transparent slots, the track and nothing filled.
 -}
-currentSectorPie : CarAt -> Html msg
-currentSectorPie item =
+slots : CarAt -> List ( String, Float )
+slots item =
     if Status.hasRetired item.status then
-        emptyPie
+        [ ( "transparent", 0 ), ( "transparent", 0 ), ( "transparent", 0 ) ]
 
     else
-        sectorPie (List.map currentSectorSlot (Sector.values item.currentLap.sectorStates))
+        List.map currentSectorSlot (Sector.values item.currentLap.sectorStates)
 
 
 {-| Convert one sector into `(fill color, fill fraction 0..1)`:
@@ -123,8 +125,8 @@ currentSectorSlot state =
 `(fill color, fill fraction 0..1)`; the fill grows from the slot start,
 over a faint full-length track.
 -}
-sectorPie : List ( String, Float ) -> Html msg
-sectorPie slots =
+pie : List ( String, Float ) -> Html msg
+pie filled =
     svg
         [ SvgAttr.width (String.fromFloat pieSize ++ "px")
         , SvgAttr.height (String.fromFloat pieSize ++ "px")
@@ -135,13 +137,8 @@ sectorPie slots =
             [ SvgAttr.transform
                 ("translate(" ++ String.fromFloat (pieSize / 2) ++ " " ++ String.fromFloat (pieSize / 2) ++ ")")
             ]
-            (slots |> List.indexedMap sectorSlot |> List.concat)
+            (filled |> List.indexedMap sectorSlot |> List.concat)
         ]
-
-
-emptyPie : Html msg
-emptyPie =
-    sectorPie [ ( "transparent", 0 ), ( "transparent", 0 ), ( "transparent", 0 ) ]
 
 
 sectorSlot : Int -> ( String, Float ) -> List (Svg msg)
