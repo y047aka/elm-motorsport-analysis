@@ -333,10 +333,13 @@ gridOf cars =
 
 
 {-| The live standings, standing to the left of the strip rather than as one
-of its columns, and a grip along their right edge to drag them wider or
-narrower. The grip is drawn over the card's edge -- the card's own `class`
-is the custom element's -- and the column track is `auto`, so the strip
-gains and loses the width as the drag goes on.
+of its columns, and a grip to drag them wider or narrower.
+The grip stands in the gap between the two tracks rather than over the
+card's edge -- the card's own `class` is the custom element's -- and its
+container's `w-2.5` and `-right-2.5` are `mainGrid`'s `gap-2.5`, so a change
+to one without the other leaves the grip off the gap.
+The column track is `auto`, so the strip gains and loses the width as the
+drag goes on.
 -}
 standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html Msg
 standingsCell keys m snapshot cars =
@@ -354,7 +357,7 @@ standingsCell keys m snapshot cars =
             , startPosition = \number -> Dict.get number startPositions
             }
             snapshot
-        , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]
+        , div [ Attributes.class "absolute -right-2.5 top-0 h-full z-10 grid w-2.5 place-items-center" ]
             [ Html.map ResizeMsg (Resize.grip m.standings) ]
         ]
 
