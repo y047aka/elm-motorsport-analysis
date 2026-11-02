@@ -125,12 +125,12 @@ both the label and the cells, which is what keeps them lined up.
 -}
 type Column
     = Driver
+    | Move
     | Ahead
     | Last
     | Current
     | Best
     | Laps
-    | Move
 
 
 type alias Spec =
@@ -147,30 +147,33 @@ columnSpec column =
         Driver ->
             { label = "Driver", at = 170, track = "1fr", align = "" }
 
+        Move ->
+            { label = "Move", at = 215, track = "2.5em", align = "text-center" }
+
         Ahead ->
-            { label = "Ahead", at = 230, track = "4.5em", align = "text-right" }
+            { label = "Ahead", at = 270, track = "4.5em", align = "text-right" }
 
         Last ->
-            { label = "Last", at = 315, track = "5em", align = "text-right" }
+            { label = "Last", at = 355, track = "5em", align = "text-right" }
 
         Current ->
-            { label = "Current", at = 395, track = "5em", align = "text-right" }
+            { label = "Current", at = 435, track = "5em", align = "text-right" }
 
         Best ->
-            { label = "Best", at = 475, track = "5em", align = "text-right" }
+            { label = "Best", at = 515, track = "5em", align = "text-right" }
 
         Laps ->
-            { label = "Laps", at = 525, track = "3em", align = "text-right" }
-
-        Move ->
-            { label = "Move", at = 570, track = "2.5em", align = "text-center" }
+            { label = "Laps", at = 565, track = "3em", align = "text-right" }
 
 
 {-| Every column, in row order.
+A column's `at` is measured along this order -- each one stands its track and
+a gap beyond the column before it -- so joining the list without moving the
+thresholds shows a column after one that stands to its right.
 -}
 columns : List Column
 columns =
-    [ Driver, Ahead, Last, Current, Best, Laps, Move ]
+    [ Driver, Move, Ahead, Last, Current, Best, Laps ]
 
 
 {-| Does this column fit a panel of this width?
