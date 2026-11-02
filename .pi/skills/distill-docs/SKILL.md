@@ -1,14 +1,15 @@
 ---
-name: docs-hygiene
-description: "Prune, shorten and audit documentation and comments: find where a fact is written down twice, cut what over-documents, leave a pointer where prose was removed, and verify what remains against the code. Use when asked to prune, tidy or audit documentation, when re-reading the comments and docstrings a change added, and when the same fact appears to be written down twice. This skill trims documentation only — writing new documentation, restructuring it, or moving knowledge into a new skill is the job of the document being written."
+name: distill-docs
+description: "Distill documentation and comments down to what survives: find where a fact is written down twice, cut what over-documents, leave a pointer where prose was removed, and verify what remains against the code. Use when asked to distill, prune, tidy or audit documentation, when re-reading the comments and docstrings a change added, and when the same fact appears to be written down twice. This skill only takes documentation down — writing new documentation, restructuring it, or moving knowledge into a new skill is the job of the document being written."
 ---
 
-# Documentation hygiene
+# Distilling documentation
 
 Agentic coding over-documents: every agent writes the reasoning for its
 change into the file it touched, the reasoning goes stale first, and the next
-agent trusts the stale prose. This skill is the trimming discipline only —
-what to cut, what to shorten, what a cut leaves behind as a pointer. The
+agent trusts the stale prose. Distillation is the discipline of taking that
+down: what to cut, what to shorten, and what a cut leaves behind as a
+pointer. The
 per-comment rules of what may be written at all are `AGENTS.md`'s (*Never
 write / Write only what the code cannot say*), and nothing here restates
 them.
@@ -27,7 +28,7 @@ move twice, and a fact that must move twice will not.
   rest". Prose moves; pointers hold.
 - **A cut is only a cut when the fact still lives somewhere.** Find where the
   removed sentence lives now before removing it; if nowhere does, that is a
-  relocation someone else decides, not a trim.
+  relocation someone else decides, not a distillation.
 
 ## What over-documents (cut on sight)
 
@@ -82,10 +83,10 @@ reference unambiguous, do its terms appear in the code beneath it? A comment
 that reads as "probably fine" at a glance is exactly the failure a second,
 slower reading catches.
 
-**When pruning a tree.** Inventory the prose (`AGENTS.md`, each `README.md`,
+**When distilling a tree.** Inventory the prose (`AGENTS.md`, each `README.md`,
 each skill, each module header worth more than three lines); for each fact
 asked to shrink, `rg` its distinctive phrase, its numbers ("three", "two
-rounds"), and any frozen list it mirrors; then trim to the owner plus
+rounds"), and any frozen list it mirrors; then distill to the owner plus
 pointers.
 
 **Auditing a doc against reality — lay it against a real change.** Diff the
@@ -135,6 +136,6 @@ against the thing:
 - **Don't repeat harder.** If two documents disagree on who owns a fact,
   decide the owner; do not add a third copy.
 - **A skill's description is its only reach.** The frontmatter `description`
-  is what makes a skill load at all; prune bodies freely, but cutting a
+  is what makes a skill load at all; distil bodies freely, but cutting a
   trigger phrase from a description hides a skill whose body still reads as
   maintained.

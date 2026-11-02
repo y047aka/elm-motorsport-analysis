@@ -126,7 +126,7 @@ clues through the calendar, the CLI and the checks into a served round;
 config, the kept answer and the geometry to a drawing. Adding a round or a
 circuit is those skills' — the sections below say what things *are*, and the
 skills hold what to *do*, in order, and which frozen lists a new name joins.
-`/skill:docs-hygiene` keeps that division true: which layer owns a fact,
+`/skill:distill-docs` keeps that division true: which layer owns a fact,
 what over-documentation looks like, and how to prune and audit without
 losing a hazard.
 
