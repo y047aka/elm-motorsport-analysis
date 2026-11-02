@@ -240,8 +240,6 @@ pub mod Round.Summary {
             ))
             |> Sql.selectOne("the round's fastest sectors")
 
-    /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
-    /// of such a lap are not a lap of the circuit either.
     def recorded(c: Laps.Columns): Sql.Expr[Bool] =
         Sql.ne(Schema.expr(c#lapTimeMs), Sql.i32(0))
 

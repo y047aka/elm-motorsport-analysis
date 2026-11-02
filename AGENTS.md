@@ -8,7 +8,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
-- **`/backend`** — written in Flix, and two things rather than one: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. `backend/README.md` describes it — the server, the two stages and the one database they compute in, the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr` effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/backend`. The timing-lines report is not in this jar: it is a `-- timing-lines` word of the `circuits/` project, which compiles eight of this `src`'s files through symlinks and holds its own smaller `Cli/Errors.flix` and `TimingLines/Files.flix` rather than linking those two — they are the modules whose rest computes in a database. Nor is the probe — the same project's `-- probe` word, which asks the one question asked of OpenStreetMap rather than of a row — and that project asks OpenStreetMap the pipeline's own question, lays two kept geometry files together and re-lays a served one out of the answer it was written from; it links nothing beyond those eight, because nothing else in `backend/src` asks OpenStreetMap anything or reads a GeoJSON.
+- **`/backend`** — written in Flix, and two things rather than one: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. `backend/README.md` describes it — the server, the two stages and the one database they compute in, the tables a round is held in, and the `SqlRead` / `SqlWrite` / `DbErr` effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/backend`. Neither the timing-lines report nor the probe is in this jar: both are words of the `circuits/` project, which reads some of this `src` through symlinks — `backend/README.md` holds the double compile that reaches a change here, and `circuits/README.md` which files are read that way.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
@@ -23,14 +23,9 @@ SQLite → HTTP or a JSON export → Elm visualization.
   answer to its survey, what a circuit's config is authored from, and where
   the timing lines' distances come from — and is the thing to read before
   changing anything under `/circuits`. It holds one of the repository's two Flix
-  projects, the geometry pipeline at the `circuits/` root — the other is `/backend`: it resolves nothing
-  and shares `backend/src` only by the eight symlinks the timing report reads
-  through — one per file, because a linked
-  directory is walked as nothing — asks OpenStreetMap the probe's question and its own,
-  writes the served file — the diff's overlay, the
-  fetched answer, and, over a
-  circuit's kept answer, the served geometry itself — and prints the timing-lines
-  report off two rounds' feeds.
+  projects, the geometry pipeline at the `circuits/` root — the other is `/backend`: the pipeline
+  resolves nothing of that one's and reads nothing of it either; only the timing report does,
+  through the links `circuits/README.md` lists.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -52,8 +47,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey` re-surveys a kept answer and fails unless it lays the served bytes (`--write` lays them; `--fetch` is the network raised as a flag — it asks OpenStreetMap now, keeps the answer beside the config once the survey can read it, and surveys that instead); `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence — re-runs the pipeline over every kept answer and fails unless it reproduces the kept geometry, the stamp alone exempt (`--write` re-lays, `--freeze` asks now and keeps both); `probe` asks which relations hold a place on earth, each candidate's ways measured, before a config is authored; `timing-lines` reads two rounds' feeds and prints whether a circuit's timing lines held where they stood a season earlier. Paths from where the command is run; the Flix main owns the word list |
-| `nix run .#geometry-test` | The project's `flix test` — the survey's and the probe's readings, and the timing report's, which compile the eight `backend/src` symlinks (no network, no database, no files written) — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
+| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey` re-surveys a kept answer and answers whether it lays the served bytes (`--write` lays them, `--fetch` asks OpenStreetMap now); `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence over every kept answer (`--write` re-lays, `--freeze` asks now); `probe` asks which relations hold a place on earth, each candidate's ways measured; `timing-lines` prints whether a circuit's timing lines held where they stood a season earlier. Paths resolve from where the command is run; what each word keeps, and what each fence answers, is `circuits/README.md`'s |
+| `nix run .#geometry-test` | The project's `flix test` — readings off fixtures, no network, no database, no files written — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
 | `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the geometry project's `timing-lines` word, computing in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/backend`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
@@ -68,7 +63,7 @@ prefixes, and which one says what is being run rather than what is being built:
 `flix-*` builds and tests the project, `cli-*` moves the data through it, and
 `serve-api` is the server. All of them come out of the same jar.
 
-`.#cli-run` converts every round `Motorsport.Calendar` lists: the CSV under `--csv` (`data/wec`) goes into the tables, and the round's files and `index.json` are written back out of the rows under `--out` (`app/static/wec`), in the same season directories — what each stage reads and writes, and the database all of them compute in, are `backend/README.md`'s. The run converts nothing the calendar does not list, reports any CSV no round names, and fails any round whose CSV is missing — so a round joins `Motorsport.Calendar` before anything runs, and the whole trip from a CSV to a drawn round is `/skill:add-round`.
+`.#cli-run` converts every round `Motorsport.Calendar` lists, reports any CSV no round names, and fails any round whose CSV is missing — the calendar is the gate a round joins before anything runs. What each stage reads and writes, and the database all of them compute in, are `backend/README.md`'s; the whole trip from a CSV to a drawn round is `/skill:add-round`.
 
 **A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB against Le Mans's 25MB of laps.
 The other fourteen are tens of megabytes of what the rows already say, so they are ignored rather than committed, and `.#tauri-build` is the one command that writes them — a bundle carries the files it opens, and nothing else needs all of them at once.
@@ -315,12 +310,9 @@ in — so a set is measured against a rendered drawing, and one circuit's set is
 another's multiplied by a scale. `Circuit/Layout`'s `Lengths` holds one set per
 circuit per detail, and `Compact` carries no names because it draws none. Le Mans's
 set is the reference the tracker was measured at, and a test freezes it: those are
-the numbers every Le Mans snapshot was rendered with. In the tracker's portrait row
-every circuit here is fitted by width, so COTA's `Full` stands at 2245/4112 — the
-ratio of the two boxes' widths, which is what draws a car, a number and a line the
-same size at both — with its margin the one length left at three tenths of Le
-Mans's, since that is added to the width every ratio is taken over. `LayoutTest`
-holds each length at the ratio. Tuning a length of Le Mans's set moves every
+the numbers every Le Mans snapshot was rendered with. How another circuit's set is
+measured against it — and which one length is left off the ratio — is each
+circuit's own `Layout` header and its `LayoutTest`. Tuning a length of Le Mans's set moves every
 baseline it has, and any length moved anywhere goes through `update-snapshots-ci`.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
@@ -453,7 +445,7 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   and `src/`; `/app/tests/` is outside the TS project on purpose: Playwright
   comes from the flake rather than from `node_modules`, so `@playwright/test`
   does not resolve for `tsc`.
-- **The geometry project** (`circuits/`) — a Flix project of its own, tested by `nix run .#geometry-test`: every reading is handed a fixture rather than a survey, the one test handed none is the timing map's derivation, and `check-sources.mjs` holds to one spelling the project-wide facts an `@Test` cannot reach — no browser, no `node_modules`, plain `node` over `circuits/src`. Which readings exist and what each check reads and why, and what stays the fences' and the contract specs' rather than any test's, is `circuits/README.md`'s — the thing to read before changing anything under `/circuits` anyway.
+- **The geometry project** (`circuits/`) — a Flix project of its own, tested by `nix run .#geometry-test`: every reading is handed a fixture rather than a survey, the one test handed none is the timing map's derivation, and `check-sources.mjs` holds to one spelling the project-wide facts an `@Test` cannot reach — no browser, no `node_modules`, plain `node` over `circuits/src`. Which readings exist and what each check reads and why, and what stays the fences' and the contract specs' rather than any test's, is `circuits/README.md`'s.
 - **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
   half of the boundary neither compiler sees. It drives the elements from a
   page directly, and reads the values Elm can send out of the wrapper sources

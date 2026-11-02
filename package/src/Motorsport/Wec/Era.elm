@@ -24,8 +24,8 @@ An era ends when a category is added, dropped, or moves in the order:
   - `Gt3AsThirdClass` -- 2025 onwards. With no GTE field left, LMGT3 moved up
     to third.
 
-Only eras the app has data for are named. The LMP1 era, before 2021, is not
-one.
+The naming begins at 2021: the LMP1 era before it is not named, and
+`fromSeason` is `Nothing` for any season earlier than it.
 
 -}
 type Era
@@ -35,7 +35,7 @@ type Era
     | Gt3AsThirdClass
 
 
-{-| The era a season belongs to, if the app knows that season's grid.
+{-| The era a season belongs to; `Nothing` for a season no era is authored over.
 
     fromSeason 2020
     --> Nothing

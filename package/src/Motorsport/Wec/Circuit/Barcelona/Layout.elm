@@ -56,8 +56,8 @@ layout geometry shares =
 {-| The lengths this drawing is measured at, in metres on the ground.
 
 `Full` is measured so that its furniture comes to the same pixels as Le Mans's,
-the way COTA's is. The tracker draws every circuit in one portrait row and each
-box is narrower in proportion than that row is wide, so each is fitted by width:
+the way COTA's is. The tracker draws every circuit in one portrait row, and the row
+is narrower in proportion than either box, so each box is fitted by width:
 a length is drawn as large as Le Mans's when it stands at the ratio of the two
 boxes' widths -- Barcelona's box, margin included, is 1,379 m against Le Mans's
 4,112 -- rounded to a tenth of a metre. The margin is the one length not taken

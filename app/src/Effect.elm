@@ -65,8 +65,7 @@ map fn effect =
             SendSharedMsg msg
 
 
-{-| Interpret an `Effect` into a real `Cmd`. Called from `Main`, which owns the
-top-level `Msg` type.
+{-| Interpret an `Effect` into a real `Cmd`.
 -}
 toCmd :
     { fromPageMsg : pageMsg -> mainMsg

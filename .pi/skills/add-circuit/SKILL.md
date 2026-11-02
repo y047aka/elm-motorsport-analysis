@@ -97,7 +97,7 @@ A survey that moved an *existing* circuit's bytes is its own change: it takes a 
 
 ## 8. If a round joins with it
 
-- Add the round to `Motorsport.Calendar` first, put the CSV at `data/wec/<season>/<id>.csv`, then `nix run .#cli-run` (or `.#cli-load` / `.#cli-export`). The summary carries `track.circuit`; a kept round's files are committed, the rest are ignored.
+- Registering the round is `/skill:add-round`'s — the calendar, `Events.displayName` and `Events.circuit`, where the CSV sits, and the two CLI stages. The summary then carries `track.circuit`, and of what the export writes only `index.json` is committed by default.
 - `nix run .#geometry-timing-lines -- <season>/<id> [--against <season>]` answers whether the lines stand where they stood. It refuses an `eachSeason` circuit by quoting the config's own reason — that is the expected answer there, not a failure.
 - A round whose geometry was never laid reads as unnamed and draws as the ring; a `track.circuit` no `decoderFor` arm knows is the rename-on-one-side mistake the contract spec exists to catch.
 

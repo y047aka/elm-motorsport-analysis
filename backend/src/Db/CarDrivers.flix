@@ -3,7 +3,7 @@
 /// The feed repeats a driver's name on every lap that driver ran, and names
 /// the seat beside it -- `DRIVER_NUMBER`, which is 1, 2 or 3 through the whole
 /// archive. `(round_id, car_number, driver_number)` names a seat and the name
-/// is the same on every lap of it, in all 1,674 seats the archive has, so the
+/// is the same on every lap of it, in every seat the archive holds, so the
 /// name is here and the lap carries the seat alone.
 pub mod Db.CarDrivers {
 

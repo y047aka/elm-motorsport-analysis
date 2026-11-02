@@ -6,30 +6,9 @@ of the same jar. They are run through the repository's Nix flake, which the
 root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
 `.#cli-run`, `.#cli-load`, `.#cli-export`, `.#serve-api`.
 
-The timing-lines report is not a command of this jar. It is a word of the
-`circuits/` project, which resolves no Maven dependency and compiles no `Db`
-effect. Eight sources under its `src` are symlinks into this `src` — the decoding of
-a CSV, the durations, `Motorsport/Events.flix` and `Calendar.flix` among them — so editing one of those
-files is compiled and tested twice, by `nix run .#flix-test` and by
-`nix run .#geometry-test`, and moving or renaming one breaks both until its
-link moves too. This `src`'s `Motorsport/Circuit.flix` is not among them: the
-report holds its own copy of the circuit words — the enum's cases, which the
-linked `Events.flix` compiles against on either side, and its `jsonValue`
-words, which `circuits/test/check-sources.mjs` lays against the ones here —
-and none of its timing figures, which the circuits project's own config
-derives. `Cli/Errors.flix` and `Util/Files.flix` are not among the links either: the
-report project holds its own of those two — `TimingLines/Files.flix` for the second,
-named apart because it resolves paths differently — smaller, they being the modules whose rest
-belongs to the commands that compute in a database. `circuits/README.md` keeps the
-list, says which modules are shared and which are held twice on purpose, why the
-links are one per file, and holds where the report's timings come from and what it
-cannot answer.
-
-The probe is a word of the pipeline at the `circuits/` root, not a project of its
-own, and the pipeline links none of this `src`:
-every distance in the probe comes off an answer about OpenStreetMap, which nothing here has a
-reason to hold. It is the repository's only Flix code that asks a network, and
-editing a file under this `src` compiles once for it rather than twice.
+The timing-lines report is not a command of this jar, nor is the probe: both are words of the `circuits/` project, which links some sources here rather than resolving them.
+Editing one of those linked files is compiled and tested twice, by `nix run .#flix-test` and by `nix run .#geometry-test`, and moving or renaming one breaks both until its link moves too.
+Which files the links reach, which modules the report holds its own of and why, why a link is never a directory, and where the report's timings come from are `circuits/README.md`'s.
 
 Adding a round — a timing CSV through the calendar and the CLI into the rows and the files — is `/skill:add-round`'s to say, step by step.
 What follows is what the code cannot say for itself.
@@ -109,11 +88,9 @@ and `Db.Rounds.scope` reads a round's id back inside the scope it builds, so a
 database written under another calendar scopes to no rows rather than to another
 round's.
 
-A car number is an entry within its season and a different one across seasons --
-number 12 was three teams' over the three the archive holds -- so `entries` is
-keyed by the season and the number together, and the class, group, team and
-manufacturer the feed repeats on every lap of every round are written there
-once.
+A car number is an entry within its season and a different one across seasons, so
+`entries` is keyed by the season and the number together. What such an entry
+is, and why the number alone will not name one, is `Db.Entries`'s to say.
 
 `cars` holds no fact the other tables do not. Its rows are `DISTINCT round_id,
 car_number` over `laps`, by construction as much as in the archive, and the
@@ -264,8 +241,7 @@ as a car with no name.
 `--load` and `--export` are those stages singly, and `--export-only <season>/<id>` narrows the writing stage alone, repeated to name more than one; a name no round on the calendar answers to fails the run before anything is written.
 
 That the writing stage reads no CSV is the point: the files are an image of the rows and of nothing else, a row corrected in SQL is exported, and re-exporting after a change to a renderer costs no decoding.
-A round no run has loaded fails the export rather than being written out as a race that never ran — the rows read back as one, which is the one thing they cannot say for themselves — and the files it would have replaced are left alone.
-`/api` answers such a round with a 404 off the same reading: the `Round.loaded` the server section names is what both ask.
+A round no run has loaded fails the export rather than being written out as a race that never ran, the files it would have replaced are left alone, and `/api` answers it with a 404: `Round.loaded` is what both ask.
 
 Both stages and the server compute in SQLite, so all three need one database: `--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made in a shell, and the flake's commands name `backend/.db/motorsport.sqlite` when neither does.
 One that reaches none does nothing rather than opening an empty database of its own.
@@ -524,15 +500,8 @@ paying for the same split.
   how the lap divides) and needs no database; `test/Round/` and
   `test/Server/TestApi.flix` drive the reading, and need one. A subject with
   both has a file in each, named for the module it drives.
-- **A reading with no database** — what a circuit publishes about the lines
-  its lap is timed to is held in no test here: the report is the `circuits/`
-  project's, and it derives those figures from the config the drawing is laid
-  from. What this `src` keeps of a circuit is the word its summary sends;
-  `circuits/test/check-sources.mjs` — run by `nix run .#geometry-test` — lays
-  it against the report's own copy of the word list.
-  The feed's own readings, and an Overpass answer's, are driven under `circuits/`, by
-  `nix run .#geometry-test` — which compiles eight sources from this `src` through
-  symlinks and tests nothing else of it.
+- **A reading with no database** — the readings that are not this project's — a CSV feed, an Overpass answer, what a circuit publishes about the lines its lap is timed to — are driven under `circuits/`, by `nix run .#geometry-test`, which compiles its links to this `src` and tests nothing else of it.
+  What this `src` keeps of a circuit is the word its summary sends, and that word is the one figure-list the two projects each hold; `circuits/test/check-sources.mjs` lays the two copies together.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `backend/build`
   is removed. `rm -rf backend/build` before believing a green run.

@@ -10,30 +10,19 @@
 ///   3. HourElapsedOffset          — across the round, `(hour - elapsed) mod 24h` is
 ///                                   constant
 ///   4. MiniSectorSum              — when mini-sectors present, `sum(time) == lapTime`
-///                                   (blank `time` counted as zero).
-///                                   Skipped on pit laps and Ford-chicane track-limits
-///                                   signatures.
+///                                   (blank `time` counted as zero), except on the
+///                                   laps whose sum the feed cannot complete: a pit
+///                                   entry bypasses the main-line markers, and running
+///                                   off the Ford chicanes leaves a blank pattern the
+///                                   publishers leave again: the two signatures in
+///                                   `Motorsport.MiniSector.trackLimitsSignatures`.
 ///   5. MiniSectorElapsedMonotonic — when mini-sectors present, `elapsed` values are
 ///                                   strictly increasing in track order. Equality is
 ///                                   reported (two timing loops cannot fire at the
 ///                                   same millisecond). Always run, even on pit laps.
 ///
-/// Design notes:
-///   - HourElapsedOffset's baseline is the **first row of the whole file**
-///     (round-wide, not per-car), which is what `source_row` is in the table
-///     for. A bad lap 1 on one car does not cascade across the rest of that car.
-///   - 24h wrap is folded into the offset expression, so the rule compares
-///     offsets with `=`.
-///   - Report order follows the file's order within each rule, and the rules
-///     follow the order above -- except that a lap's mini-sector violations are
-///     reported together, its sum before its monotonic breaks.
-///   - **MiniSectorSum pit-lap skip** — pit-entry laps bypass main-line
-///     markers (typically FORDOUT and FL_time) so the sum can never reach
-///     lapTime. Identified by `crossing_finish_line_in_pit` or a `pit_time_ms`.
-///   - **MiniSectorSum track-limits skip** — running off the Ford chicanes
-///     leaves a known blank pattern, `Motorsport.MiniSector.trackLimitsSignatures`.
-///     These are the dominant non-pit cause of residual sum mismatches in
-///     Le Mans 2025.
+/// HourElapsedOffset's baseline is the **first row of the whole file** (round-wide,
+/// not per-car): a bad lap 1 on one car does not cascade across the rest of that car.
 pub mod Cli.Load.Validation {
 
     use Db.Laps

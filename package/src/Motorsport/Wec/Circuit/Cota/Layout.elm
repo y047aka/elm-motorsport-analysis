@@ -57,17 +57,16 @@ layout geometry =
 
 `Full` is measured so that its furniture comes to the same pixels as Le Mans's.
 The tracker draws every circuit in one portrait row -- 286x525 where the visual
-tests put it -- and both boxes are narrower in proportion than that row is wide, so
-each is fitted by width: 0.127 px to the metre here, Le Mans's 0.070. A length is
+tests put it -- and the row is narrower in proportion than either box, so
+each box is fitted by width: 0.127 px to the metre here, Le Mans's 0.070. A length is
 then drawn as large as Le Mans's when it stands at 2245/4112, the ratio of the two
 boxes' widths, which is where these come from, rounded to a tenth of a metre: a car
 marked at 53 m, a car's number at 76.5 m, the lap stroked at 8.7 m.
 
-The margin is the length that cannot be taken there with the rest, because it is
-added to the box as well as to what stands in it: six tenths of Le Mans's
-everything, margin included, and the lap comes back down to 189 px wide against the
-232 it is drawn at now. `LayoutTest` holds every length but this one at the
-ratio, since the margin is added to the box every ratio is taken over. The
+The margin is the one length not taken there: it is added to the box as well as to
+what stands in it, so a margin at the ratio would widen the box and shrink every
+other length with it. It stands at three tenths of Le Mans's -- 210 m against 700 --
+and `LayoutTest` holds every length but this one at the ratio. The
 mini-sector lengths are in the record because `Lengths` holds them, at the same
 ratio as the rest, and not because this lap has mini-sectors to name: it has
 none.

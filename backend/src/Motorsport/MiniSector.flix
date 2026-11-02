@@ -1,9 +1,7 @@
-/// Le Mans 24h mini-sectors. The 15 named segments live alongside the
-/// standard S1/S2/S3 split and only appear in the Le Mans CSV; other WEC
-/// rounds omit these columns entirely. This module is the single source of
-/// truth for the IDs, their CSV column prefixes, and their JSON object
-/// keys, mirroring `Motorsport.Wec.Circuit.LeMans.all` on the Elm
-/// side.
+/// The fifteen mini-sectors Le Mans's feed measures a lap in, which ride beside
+/// the standard S1/S2/S3 split and come in that round's feed alone. Their ids,
+/// their CSV column names and their JSON keys are spelled here and nowhere else
+/// on this side of the seam.
 pub mod Motorsport.MiniSector {
 
     use Motorsport.Sector.Sector
@@ -26,8 +24,9 @@ pub mod Motorsport.MiniSector {
         case FL
     }
 
-    /// Track-order list — must match Motorsport.Wec.Circuit.LeMans.all.
-    /// Line groups correspond to S1 / S2 / S3.
+    /// In track order. `Motorsport.Wec.Circuit.LeMans.all` is the same list
+    /// Elm-side, and nothing reads the two against each other: a reordering here
+    /// is a marker misplaced there.
     pub def all(): List[MiniSectorId] =
         List#{
             MiniSectorId.SCL2, MiniSectorId.Z4, MiniSectorId.IP1,
@@ -100,9 +99,10 @@ pub mod Motorsport.MiniSector {
             case MiniSectorId.FL      => "fl"
         }
 
-    /// True when `blanks` matches one of the known Ford-chicane track-limits
-    /// signatures observed at Le Mans 2025: `SCL1+FORDOUT` (second chicane)
-    /// or `PITREF+SCL1` (first chicane). Assumes the input is in track order.
+    /// The blank patterns a car running off the Ford chicanes leaves: the second
+    /// chicane misses `SCL1` and `FORDOUT`, the first `PITREF` and `SCL1`, so a
+    /// match is a lap cut short rather than a timing fault. The input is in track
+    /// order.
     pub def trackLimitsSignatures(): List[List[MiniSectorId]] =
         List#{MiniSectorId.SCL1, MiniSectorId.FORDOUT} ::
         List#{MiniSectorId.PITREF, MiniSectorId.SCL1} ::
