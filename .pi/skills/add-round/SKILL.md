@@ -157,4 +157,4 @@ card — a registered round is a VRT change whether or not its files are.
 - **An empty feed cell for a lap the publisher did not record is `0.000`**, and
   the index reads it as unrecorded — do not "fix" those to nulls or blanks.
 - Nothing needs `.#tauri-build` for this; that command is the only one that
-  writes all fourteen rounds, for a bundle.
+  writes every round on the calendar, for a bundle.

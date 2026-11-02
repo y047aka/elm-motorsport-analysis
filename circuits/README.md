@@ -71,10 +71,8 @@ nothing to `Circuit/`.
 
 ## Authoring a circuit
 
-The steps are `/skill:add-circuit`'s — the probe that finds the relation,
-the config's fields, keeping the answer and the atlas line, laying the
-geometry, the lists that name every circuit, and the order the fences are
-verified in. What belongs here is what those steps rest on.
+The steps are `/skill:add-circuit`'s. What belongs here is what those steps
+rest on.
 
 OpenStreetMap holds a circuit however whoever mapped it tagged it, and the three
 here are tagged differently: Le Mans's relation names one node `start-finish`,

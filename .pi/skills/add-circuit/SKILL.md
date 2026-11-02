@@ -27,8 +27,8 @@ Prints each candidate relation with its roles' ways measured. The length is
 what tells the full circuit from the GP circuit standing beside it; the default
 5 km box holds COTA and not a 13.6 km one — widen it for long circuits. The
 report is for a human, not for a name: read it before writing a config, and
-note how the relation tags its start/finish line (the three kept circuits are
-tagged three different ways).
+note how the relation tags its start/finish line — no two of the kept
+circuits tag it alike.
 
 Optionally measure the atlas line first — for a circuit that publishes no
 start/finish coordinate, its `start_finish` marker is the surveyed place a
@@ -113,8 +113,9 @@ project compiles together:
 These hold the circuits as written-down inventories rather than readings, so a
 new circuit fails each of them by name until it joins:
 
-- `circuits/test/TestSurvey.flix` — the refusal-message test carries the known
-  words (`"no circuit is surveyed under 'monza': known are cota, le_mans"`).
+- `circuits/test/TestSurvey.flix` — the refusal-message test carries the
+  known words in its `"no circuit is surveyed under 'monza': known are …"`
+  assertion; a new word that joins unheralded fails there by name.
 - `circuits/test/TestRegenerate.flix` — the expected `drawn`/`words` lists over
   `Circuit.circuits()`.
 - `circuits/test/TestTimingMap.flix` — `cases()` must name every case of the

@@ -32,8 +32,7 @@ move twice, and a fact that must move twice will not.
 
 ## The three distillations, and when each applies
 
-Every act of taking a document down is one of three, and choosing wrong is
-the commonest failure of a distillation pass:
+Every act of taking a document down is one of three:
 
 - **Prune — the sentence does not stand.** The test is *does any reader do
   the wrong thing without it?* A stale duplicate, a changelog voice, a
@@ -96,10 +95,10 @@ differs, which distillation each one asks for.
   the code that decides, cut the echo. Where the behavior is fully shown by
   a test's name, both copies are optional.
 - **Counts and inventories left standing.** "the three here are tagged
-  differently", "all fourteen rounds", `known are cota, le_mans, barcelona` —
-  real facts with an expiry date stamped by the next change. They survive,
-  but they join the audit below; code that freezes them in a test must fail
-  by name when they move.
+  differently", `known are cota, le_mans, barcelona` — real facts with an
+  expiry date stamped by the next change. They survive, but they join the
+  audit below; code that freezes them in a test must fail by name when they
+  move.
 
 ## The passes
 

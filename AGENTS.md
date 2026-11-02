@@ -86,9 +86,10 @@ trip from a CSV to a drawn round is `/skill:add-round`.
 **A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le
 Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work
 with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB
-against Le Mans's 25MB of laps. The other twelve are 50MB the rows already say, so
-they are ignored rather than committed, and `.#tauri-build` is the one command that
-writes them — a bundle carries the files it opens, and nothing else needs all of
+against Le Mans's 25MB of laps. The other fourteen are tens of megabytes of
+what the rows already say, so they are ignored rather than committed, and
+`.#tauri-build` is the one command that writes them — a bundle carries the
+files it opens, and nothing else needs all of
 them at once. A round left unwritten is quiet: the dev server answers `/api` for it
 with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an
 export like any other, so a summary that grows a key the drawing is chosen by has
@@ -107,8 +108,7 @@ is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL
 the app asks for before it knows anything — is reached only by a bundle with
 nothing listening on `/api`. Such a bundle opens whichever rounds were written
 before it was built, which is why `.#tauri-build` converts every one of them
-first: all fourteen come to 76MB of files and 3MiB in the `.app`, since Tauri
-compresses what it embeds. A round the run did not write fails there rather than 404ing —
+first — sixteen rounds' files, which Tauri compresses into the `.app`. A round the run did not write fails there rather than 404ing —
 Tauri's asset resolver answers a path it does not know with `index.html`, so it
 decodes HTML. A bundle behind a server
 never reaches that copy: the calendar it gets names `/api/wec` and every round
