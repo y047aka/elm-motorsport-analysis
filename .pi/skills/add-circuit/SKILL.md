@@ -68,9 +68,9 @@ nix run .#geometry -- survey <word> --fetch            # asks OSM, keeps circuit
 nix run .#geometry -- survey <word> --fetch --write    # additionally lays app/static/geometry/<word>.geojson
 ```
 
-`--fetch` keeps the answer only once the survey can read it, so a kept
-`overpass.json` is always re-runnable evidence — commit it beside the atlas
-file. The `.geojson` is a served file, not a build artifact: commit it too.
+Commit the kept answer beside the atlas file — a kept `overpass.json` is
+always re-runnable evidence. The `.geojson` is a served file, not a build
+artifact: commit it too.
 
 To read a fresh survey against the old one, or the atlas line against either:
 

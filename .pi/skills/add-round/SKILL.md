@@ -86,11 +86,9 @@ SELECT DISTINCT manufacturer FROM entries;  -- against app/static/manufacturers.
 SELECT DISTINCT class FROM entries;          -- against the era's grid
 ```
 
-- **A manufacturer the hand-written table has no row for stops nothing** — the
-  car keeps the feed's name and takes a colour from its number. Add a row to
-  `manufacturers.json` so it is badged and coloured; the file is in no
-  compiler's way, so a wrong entry shows as cars drawn by number, never as a
-  red build.
+- **A manufacturer the hand-written table has no row for stops nothing** —
+  the car keeps the feed's name and takes a colour from its number, and no
+  build fails. Add a row to `manufacturers.json`.
 - **A Le Mans feed split other than fifteen mini-sectors** reads as
   `NoMiniSectors` (`byMiniSectorDecoder` requires all fifteen keys) — check the
   mini-sector columns of a new-season Le Mans CSV before believing a round
@@ -105,9 +103,6 @@ SELECT DISTINCT class FROM entries;          -- against the era's grid
 ```bash
 nix run .#car-images --season <year>   # fetches and registers static/car-images.json
 ```
-
-Already-kept originals are never re-asked; the run prints how many it asked the
-site for.
 
 **Only two rounds' export files are committed** — which ones, and why the
 rest are ignored, `AGENTS.md` says. A new round's files stay ignored (save for
