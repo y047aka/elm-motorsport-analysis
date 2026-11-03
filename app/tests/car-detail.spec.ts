@@ -682,16 +682,16 @@ test.describe('Class columns', () => {
         .evaluateAll((els) => [...new Set(els.map((el) => el.getAttribute('data-row-trace')))]);
     // Pace is what the rows come up showing, whatever the class.
     await expect.poll(() => traces('HYPERCAR')).toEqual(['pace']);
-    await classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Gap', exact: true }).click();
+    const picker = (className: string) =>
+      classColumn(page, className).getByRole('combobox', { name: 'Curve under the cars' });
+    await picker('HYPERCAR').selectOption('gap');
     await expect.poll(() => traces('HYPERCAR')).toEqual(['gap']);
     // The class beside it keeps its own: the pick is the column's.
     await expect.poll(() => traces('LMP2')).toEqual(['pace']);
-    await classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Laps', exact: true }).click();
+    await picker('HYPERCAR').selectOption('laps');
     await expect.poll(() => traces('HYPERCAR')).toEqual(['laps']);
-    // The picker says on itself which curve the rows are drawn with.
-    await expect(
-      classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Laps', exact: true }),
-    ).toHaveAttribute('aria-pressed', 'true');
+    // The picker says by its own value which curve the rows are drawn with.
+    await expect(picker('HYPERCAR')).toHaveValue('laps');
   });
 
   test('should stand the round\'s events in a column of their own', async ({ page }) => {

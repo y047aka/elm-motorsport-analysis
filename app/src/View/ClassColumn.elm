@@ -28,9 +28,10 @@ served, who is driving away, and who climbed into the car.
 -}
 
 import Html exposing (Html, button, div, img, text)
-import Html.Attributes exposing (alt, attribute, class, src, style, title)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (alt, attribute, class, src, style, title, value)
+import Html.Events exposing (onClick, on)
 import Html.Keyed as Keyed
+import Json.Decode as Decode
 import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
@@ -43,7 +44,6 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
-import UI.Shadcn.ToggleGroup as ToggleGroup
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
@@ -207,28 +207,48 @@ head config class_ cars =
         ]
 
 
+{-| The three curves and the words that name what each holds.
+-}
+allTraces : List ( Trace, String )
+allTraces =
+    [ ( GapTrace, "Gap to rivals" )
+    , ( PaceTrace, "Lap time spread" )
+    , ( LapsTrace, "Sectors & last laps" )
+    ]
+
+
 traceChoice : Config msg -> Html msg
 traceChoice config =
-    ToggleGroup.view
-        { items =
-            [ { label = "Gap"
-              , active = config.trace == GapTrace
-              , disabled = False
-              , onSelect = config.onTrace GapTrace
-              }
-            , { label = "Pace"
-              , active = config.trace == PaceTrace
-              , disabled = False
-              , onSelect = config.onTrace PaceTrace
-              }
-            , { label = "Laps"
-              , active = config.trace == LapsTrace
-              , disabled = False
-              , onSelect = config.onTrace LapsTrace
-              }
-            ]
-        }
-        [ class "shrink-0" ]
+    Html.select
+        [ class "shrink-0 rounded-md border border-border bg-transparent px-1 py-px text-[10px] text-muted-foreground"
+        , attribute "aria-label" "Curve under the cars"
+        , on "change" (Decode.andThen (traceMsg config) (Decode.at [ "target", "value" ] Decode.string))
+        ]
+        (List.map (traceOption config.trace) allTraces)
+
+
+traceMsg : Config msg -> String -> Decode.Decoder msg
+traceMsg config word =
+    traceOf word
+        |> Maybe.map (config.onTrace >> Decode.succeed)
+        |> Maybe.withDefault (Decode.fail ("no trace named " ++ word))
+
+
+traceOf : String -> Maybe Trace
+traceOf word =
+    allTraces
+        |> List.filter (\( trace, _ ) -> traceName trace == word)
+        |> List.head
+        |> Maybe.map Tuple.first
+
+
+traceOption : Trace -> ( Trace, String ) -> Html msg
+traceOption current ( trace, word ) =
+    Html.option
+        [ value (traceName trace)
+        , attribute "selected" (if current == trace then "selected" else "")
+        ]
+        [ text word ]
 
 
 carCount : List CarAt -> String
