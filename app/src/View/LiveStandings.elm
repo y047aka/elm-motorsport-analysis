@@ -150,25 +150,25 @@ columnSpec column =
             { label = "Driver", at = 170, track = "1fr", align = "" }
 
         Move ->
-            { label = "Move", at = 215, track = "2.5em", align = "text-center" }
+            { label = "Move", at = 150, track = "2.5em", align = "text-center" }
 
         Ahead ->
-            { label = "Ahead", at = 270, track = "4.5em", align = "text-right" }
+            { label = "Ahead", at = 270, track = "5em", align = "text-right" }
 
         Last ->
-            { label = "Last", at = 355, track = "5em", align = "text-right" }
+            { label = "Last", at = 390, track = "5em", align = "text-right" }
 
         Pie ->
-            { label = "Lap", at = 435, track = String.fromFloat SectorAndLaps.pieSize ++ "px", align = "" }
+            { label = "Lap", at = 340, track = String.fromFloat SectorAndLaps.pieSize ++ "px", align = "" }
 
         Current ->
-            { label = "Current", at = 475, track = "5em", align = "text-right" }
+            { label = "Current", at = 470, track = "5em", align = "text-right" }
 
         Best ->
-            { label = "Best", at = 555, track = "5em", align = "text-right" }
+            { label = "Best", at = 560, track = "5em", align = "text-right" }
 
         Laps ->
-            { label = "Laps", at = 635, track = "3em", align = "text-right" }
+            { label = "Laps", at = 620, track = "3em", align = "text-right" }
 
 
 {-| Every column, in row order.
@@ -178,7 +178,7 @@ than one that stands to its right.
 -}
 columns : List Column
 columns =
-    [ Driver, Move, Ahead, Last, Pie, Current, Best, Laps ]
+    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Move ]
 
 
 {-| Does this column fit a panel of this width?
