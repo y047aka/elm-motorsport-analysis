@@ -31,12 +31,10 @@ import Svg.Attributes as SvgAttr
 
 
 {-| The scale the curves of a set share: the lap times every fence-kept lap of
-the set reached, padded, and the fence those laps were kept by.
+the set reached, padded.
 -}
 type alias Bounds =
-    { domain : ( Float, Float )
-    , fence : Duration
-    }
+    { domain : ( Float, Float ) }
 
 
 {-| The bounds the cars drawn beside one another share: the fence pooled over
@@ -63,10 +61,10 @@ sharedBounds lapHistory cars =
             List.filter (\time -> time <= fence) allTimes
     in
     Statistics.extent (List.map toFloat kept)
-        |> Maybe.map (\( lo, hi ) -> Bounds (padded ( lo, hi )) fence)
+        |> Maybe.map (\( lo, hi ) -> Bounds (padded ( lo, hi )))
 
 
-{-| The fence-kept racing times of one car inside its range.
+{-| The racing times of one car inside its range.
 -}
 timesOf : LapHistory -> { range : LapRange, car : CarAt } -> List Duration
 timesOf lapHistory { range, car } =
@@ -76,12 +74,14 @@ timesOf lapHistory { range, car } =
 
 {-| One car's laps and the changes between them on the bounds the set shares
 ([`sharedBounds`](#sharedBounds)) -- so a time reads at the same place on every
-curve, and every curve cuts to the laps the set's fence leaves. A car the fence
-leaves with nothing to draw gets a blank row.
+curve. The fence cuts the axis and not the series: a lap the axis leaves out
+stands beyond the top of the drawing, and its line is clipped by the frame. A
+lap the axis leaves out below the bottom cannot happen -- the fence is an upper
+bound, the quickest laps always stand inside.
 -}
 sparklineOn : Bounds -> LapRange -> LapHistory -> CarAt -> Html msg
 sparklineOn bounds range lapHistory item =
-    case changesOf (keptLaps bounds lapHistory item range) of
+    case changesOf (racingLaps lapHistory item range) of
         [] ->
             text ""
 
@@ -106,7 +106,7 @@ sparklineOn bounds range lapHistory item =
 {-| One lap's change: its time and the time of the lap before it, which are the
 two ends the line is drawn between.
 
-The change is measured against the car's own previous kept lap rather than the
+The change is measured against the car's own previous racing lap rather than the
 lap before it on the track: a lap begun in the lane or behind a procedure is no
 pace to measure the next one against, and it leaves the series the way the
 distribution chart beside drops it.
@@ -119,23 +119,9 @@ type alias Change =
     }
 
 
-{-| The car's laps to draw: on the road at race pace inside the range and inside
-the set's fence, in running order. The history hands laps back as the round
-stored them; the changes are read down the race, so the order is taken here and
-not assumed.
--}
-keptLaps : Bounds -> LapHistory -> CarAt -> LapRange -> List Lap
-keptLaps bounds lapHistory item range =
-    racingLaps lapHistory item range
-        |> List.filter (\lap -> insideFence bounds.fence lap)
-
-
-insideFence : Duration -> Lap -> Bool
-insideFence fence lap =
-    Maybe.withDefault False (Maybe.map (\time -> time <= fence) lap.time)
-
-
-{-| The car's racing laps in running order.
+{-| The car's racing laps in running order. The history hands laps back as the
+round stored them; the changes are read down the race, so the order is taken here
+and not assumed.
 -}
 racingLaps : LapHistory -> CarAt -> LapRange -> List Lap
 racingLaps lapHistory item range =
