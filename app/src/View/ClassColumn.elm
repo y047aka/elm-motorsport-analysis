@@ -17,7 +17,7 @@ A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
 Each row carries a curve of how the car is running underneath it, and the
-reader picks which of three from the column's head.
+reader picks which from the column's head.
 
 The foot is the class's own pit board, and only when the lane has one of the
 class: the tracker's board ruled with just these cars, saying who is being
@@ -34,6 +34,7 @@ import Html.Keyed as Keyed
 import Json.Decode as Decode
 import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Chart.LapDelta as LapDelta
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
@@ -72,12 +73,13 @@ type alias Config msg =
 
 
 {-| The curve drawn under every car of the column: the gap out to the rivals
-either side, the spread of the car's own lap times, or the lap times
-themselves.
+either side, the spread of the car's own lap times, the change from each of its
+laps to the next, or the lap times themselves.
 -}
 type Trace
     = GapTrace
     | PaceTrace
+    | DeltaTrace
     | LapsTrace
 
 
@@ -213,6 +215,7 @@ allTraces : List ( Trace, String )
 allTraces =
     [ ( GapTrace, "Gap to rivals" )
     , ( PaceTrace, "Lap time spread" )
+    , ( DeltaTrace, "Lap-to-lap change" )
     , ( LapsTrace, "Sectors & last laps" )
     ]
 
@@ -381,6 +384,9 @@ rowTrace trace paceBounds snapshot item =
                     Nothing ->
                         text ""
 
+            DeltaTrace ->
+                LapDelta.sparkline (paceRange item) history item
+
             LapsTrace ->
                 SectorAndLaps.view item
         ]
@@ -402,6 +408,9 @@ traceName trace =
 
         PaceTrace ->
             "pace"
+
+        DeltaTrace ->
+            "delta"
 
         LapsTrace ->
             "laps"
