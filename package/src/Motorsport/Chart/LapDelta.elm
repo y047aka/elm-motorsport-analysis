@@ -41,7 +41,7 @@ type alias Bounds =
 
 {-| The bounds the cars drawn beside one another share: the fence pooled over
 every lap the set has to show and the axis drawn over the laps that survive it.
-The fence is drawn tighter than the distribution chart's -- `Q3 + 0.5×IQR`
+The fence is drawn tighter than the distribution chart's -- `Q3 + 0.25×IQR`
 against its `Q3 + 1.5×IQR` -- because this axis is read for the run of laps
 inside the class's holding pace, and every lap kept far above it costs the axis
 the resolution the fine changes are seen in.
@@ -57,7 +57,7 @@ sharedBounds lapHistory cars =
             List.concatMap (timesOf lapHistory) cars
 
         fence =
-            upperFenceBy 0.5 allTimes
+            upperFenceBy 0.25 allTimes
 
         kept =
             List.filter (\time -> time <= fence) allTimes
