@@ -229,8 +229,8 @@ padding =
 {-| The room a lap's line may take: the drawing's width divided by the laps
 standing in the window, of which the line claims most -- one drawn at the full
 stride would weld the laps into one band, and one thinner than a pixel reads as
-nothing, so the share is held between those, and under a tenth of the drawing
-where it would be a wall rather than a line.
+nothing, so the share is held between those, and under a twentieth of the
+drawing where it would be a wall rather than a line.
 -}
 barWidth : ( Float, Float ) -> Float
 barWidth ( first, last ) =
@@ -238,7 +238,7 @@ barWidth ( first, last ) =
         stride =
             (width - padding.left - padding.right) / (last - first)
     in
-    clamp 1 (width / 10) (stride * 0.75)
+    clamp 1 (width / 20) (stride * 0.75)
 
 {-| One change: a line from the time of the lap before down to this lap's where
 the time came down, up where it went up, in the colours the move arrow wears.
