@@ -400,7 +400,7 @@ carRow onSelect r =
                  else
                     "false"
                 )
-             , class "w-full p-0.5 grid items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
+             , class "w-full p-0.5 grid items-center gap-2 text-left rounded transition-colors"
              , style "grid-template-columns" (gridTracks r.width)
              ]
                 ++ (if r.hasColumn then
@@ -450,7 +450,7 @@ cell r column =
     in
     case column of
         Driver ->
-            div [ class "text-xs" ] [ text r.driver ]
+            div [ class "truncate text-xs", title r.driver ] [ text r.driver ]
 
         Ahead ->
             div [ class (numeral ++ " text-muted-foreground") ] [ text r.ahead ]
