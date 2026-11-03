@@ -1,12 +1,12 @@
 module Internal.Statistics exposing
-    ( iqrFences, upperFence
+    ( iqrFences, upperFence, upperFenceBy
     , median
     )
 
 {-| The plain statistics a reading of the race is taken with: the outlier
 fences a chart bounds itself by, and the middle of a set of values.
 
-@docs iqrFences, upperFence
+@docs iqrFences, upperFence, upperFenceBy
 @docs median
 
 -}
@@ -45,7 +45,19 @@ sorted.
 
 -}
 upperFence : List Int -> Int
-upperFence values =
+upperFence =
+    upperFenceBy 1.5
+
+
+{-| Upper outlier fence `Q3 + k×IQR`, for a chart that wants the outlier cut
+tighter or looser than the classic `1.5`.
+
+    upperFenceBy 0.5 [ 1, 2, 3, 4, 5, 6, 7, 8 ]
+    --> 8
+
+-}
+upperFenceBy : Float -> List Int -> Int
+upperFenceBy k values =
     let
         sorted =
             List.sort values
@@ -59,10 +71,10 @@ upperFence values =
             Nothing
 
         else
-            iqrFences sorted
+            Maybe.map2 Tuple.pair (quantile 0.25 sorted) (quantile 0.75 sorted)
     of
-        Just fences ->
-            fences.upper
+        Just ( q1, q3 ) ->
+            q3 + round (k * toFloat (q3 - q1))
 
         Nothing ->
             List.maximum sorted |> Maybe.withDefault 0

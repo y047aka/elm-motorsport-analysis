@@ -16,7 +16,7 @@ for the same reason.
 -}
 
 import Html exposing (Html, text)
-import Internal.Statistics exposing (upperFence)
+import Internal.Statistics exposing (upperFenceBy)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Chart.Common as Common
 import Motorsport.Duration exposing (Duration)
@@ -41,6 +41,10 @@ type alias Bounds =
 
 {-| The bounds the cars drawn beside one another share: the fence pooled over
 every lap the set has to show and the axis drawn over the laps that survive it.
+The fence is drawn tighter than the distribution chart's -- `Q3 + 0.5×IQR`
+against its `Q3 + 1.5×IQR` -- because this axis is read for the run of laps
+inside the class's holding pace, and every lap kept far above it costs the axis
+the resolution the fine changes are seen in.
 [`pooledFence`](Motorsport-Chart-LapTimeDistribution#pooledFence) is the reading
 of why the fence belongs to the set and not to the car.
 
@@ -53,7 +57,7 @@ sharedBounds lapHistory cars =
             List.concatMap (timesOf lapHistory) cars
 
         fence =
-            upperFence allTimes
+            upperFenceBy 0.5 allTimes
 
         kept =
             List.filter (\time -> time <= fence) allTimes
