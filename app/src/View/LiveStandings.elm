@@ -172,9 +172,10 @@ columnSpec column =
 
 
 {-| Every column, in row order.
-Each `at` is the previous one plus that column's track and a gap, so joining
-or reordering this list without moving the thresholds can show a column later
-than one that stands to its right.
+A column's `at` is the panel width from which it stands, in its own place in
+the row. The thresholds follow the readings' worth and not this order, so a
+widening panel may bring a left column in after one that stands to its
+right -- that is the design, not an oversight to fix.
 -}
 columns : List Column
 columns =
