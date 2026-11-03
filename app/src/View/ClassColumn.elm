@@ -134,10 +134,17 @@ view config snapshot class_ =
         counted =
             count cars
 
+        history =
+            Snapshot.lapHistory snapshot
+
+        paced =
+            List.map (\car -> { range = paceRange car, car = car }) cars
+
         paceBounds =
-            LapTimeDistribution.sharedBounds
-                (Snapshot.lapHistory snapshot)
-                (List.map (\car -> { range = paceRange car, car = car }) cars)
+            LapTimeDistribution.sharedBounds history paced
+
+        deltaBounds =
+            LapDelta.sharedBounds history paced
 
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
@@ -159,7 +166,7 @@ view config snapshot class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted paceBounds field)
+                        (rows config snapshot counted paceBounds deltaBounds field)
                      ]
                         ++ foot
                     )
@@ -325,8 +332,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot paceBounds ( ahead, item ) =
+row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot paceBounds deltaBounds ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -346,7 +353,7 @@ row config snapshot paceBounds ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
-        , rowTrace config.trace paceBounds snapshot item
+        , rowTrace config.trace paceBounds deltaBounds snapshot item
         ]
     )
 
@@ -359,8 +366,8 @@ Pace: the laps this car has run so far, on bounds taken once for the column, so
 the same lap time sits at the same place on every row.
 
 -}
-rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Snapshot -> CarAt -> Html msg
-rowTrace trace paceBounds snapshot item =
+rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Snapshot -> CarAt -> Html msg
+rowTrace trace paceBounds deltaBounds snapshot item =
     let
         currentLap =
             item.standing.lapsCompleted
@@ -385,7 +392,12 @@ rowTrace trace paceBounds snapshot item =
                         text ""
 
             DeltaTrace ->
-                LapDelta.sparkline (paceRange item) history item
+                case deltaBounds of
+                    Just bounds ->
+                        LapDelta.sparklineOn bounds (paceRange item) history item
+
+                    Nothing ->
+                        text ""
 
             LapsTrace ->
                 SectorAndLaps.view item
@@ -479,8 +491,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted paceBounds field =
+rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted paceBounds deltaBounds field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -488,7 +500,7 @@ rows config snapshot counted paceBounds field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot paceBounds pair :: acc
+                    row config snapshot paceBounds deltaBounds pair :: acc
             in
             if back == behind then
                 ( behind, lines )

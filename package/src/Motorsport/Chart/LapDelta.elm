@@ -1,4 +1,4 @@
-module Motorsport.Chart.LapDelta exposing (sparkline)
+module Motorsport.Chart.LapDelta exposing (sparklineOn, sharedBounds, Bounds)
 
 {-| The lap-to-lap change chart: each of the car's racing laps standing at its
 own lap time on the vertical axis, joined to the lap before by a line -- green
@@ -6,15 +6,17 @@ where the time came down and red where it went up. The shape is the run of laps,
 the height is where that run sits on the clock, and the way a stint unfolded --
 building, holding, falling away -- reads at once.
 
-The change is measured against the car's own previous racing lap rather than the
-lap before it on the track: a lap begun in the lane or behind a procedure is no
-pace to measure the next one against, and it leaves the series the way the
-distribution chart beside drops it.
+The curves drawn beside one another take their scale from
+[`sharedBounds`](#sharedBounds), so the same time stands at the same place on
+every row of the column -- the way
+[`sparklineOn`](Motorsport-Chart-LapTimeDistribution#sparklineOn) curves do, and
+for the same reason.
 
-@docs sparkline
+@docs sparklineOn, sharedBounds, Bounds
 -}
 
 import Html exposing (Html, text)
+import Internal.Statistics exposing (upperFence)
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Chart.Common as Common
 import Motorsport.Duration exposing (Duration)
@@ -28,45 +30,77 @@ import Svg exposing (Svg, line)
 import Svg.Attributes as SvgAttr
 
 
-{-| One car's laps and the changes between them at card size: each lap stands
-where its time stands, a line reaching to the time of the racing lap before it.
-Nothing where the window holds fewer than two timed laps to have a change
-between.
+{-| The scale the curves of a set share: the lap times every fence-kept lap of
+the set reached, padded, and the fence those laps were kept by.
 -}
-sparkline : LapRange -> LapHistory -> CarAt -> Html msg
-sparkline range lapHistory item =
+type alias Bounds =
+    { domain : ( Float, Float )
+    , fence : Duration
+    }
+
+
+{-| The bounds the cars drawn beside one another share: the fence pooled over
+every lap the set has to show and the axis drawn over the laps that survive it.
+[`pooledFence`](Motorsport-Chart-LapTimeDistribution#pooledFence) is the reading
+of why the fence belongs to the set and not to the car.
+
+`Nothing` where none of the cars has a time at all.
+-}
+sharedBounds : LapHistory -> List { range : LapRange, car : CarAt } -> Maybe Bounds
+sharedBounds lapHistory cars =
     let
-        changes =
-            changesOf (laps range lapHistory item)
+        allTimes =
+            List.concatMap (timesOf lapHistory) cars
+
+        fence =
+            upperFence allTimes
+
+        kept =
+            List.filter (\time -> time <= fence) allTimes
     in
-    case ( timeDomain changes, lapExtent changes ) of
-        ( Just domain, Just ( first, last ) ) ->
-            let
-                xScale =
-                    Scale.linear ( padding.left, width - padding.right ) ( toFloat first, toFloat last )
+    Statistics.extent (List.map toFloat kept)
+        |> Maybe.map (\( lo, hi ) -> Bounds (padded ( lo, hi )) fence)
 
-                yScale =
-                    Scale.linear ( height - padding.topBottom, padding.topBottom ) domain
-            in
-            Common.svg { width = width, height = height }
-                (List.map (changeLine xScale yScale) changes)
 
-        _ ->
+{-| The fence-kept racing times of one car inside its range.
+-}
+timesOf : LapHistory -> { range : LapRange, car : CarAt } -> List Duration
+timesOf lapHistory { range, car } =
+    racingLaps lapHistory car range
+        |> List.filterMap .time
+
+
+{-| One car's laps and the changes between them on the bounds the set shares
+([`sharedBounds`](#sharedBounds)) -- so a time reads at the same place on every
+curve, and every curve cuts to the laps the set's fence leaves. A car the fence
+leaves with nothing to draw gets a blank row.
+-}
+sparklineOn : Bounds -> LapRange -> LapHistory -> CarAt -> Html msg
+sparklineOn bounds range lapHistory item =
+    case changesOf (keptLaps bounds lapHistory item range) of
+        [] ->
             text ""
 
-
-{-| The car's racing laps in running order. The history hands them back as the
-round stored them; the changes are read down the race, so the order is taken
-here and not assumed.
--}
-laps : LapRange -> LapHistory -> CarAt -> List Lap
-laps range lapHistory item =
-    Pace.racingLaps range (LapHistory.get item.metadata.carNumber lapHistory)
-        |> List.sortBy .lap
+        changes ->
+            let
+                xScale =
+                    Scale.linear ( padding.left, width - padding.right ) (extentOf changes)
+            in
+            Common.svg { width = width, height = height }
+                (List.map (changeLine xScale (yScale bounds)) changes)
 
 
-{-| One lap's change: its time and the time of the racing lap before it, which
-are the two ends the line is drawn between.
+-- SERIES
+
+
+{-| One lap's change: its time and the time of the lap before it, which are the
+two ends the line is drawn between.
+
+The change is measured against the car's own previous kept lap rather than the
+lap before it on the track: a lap begun in the lane or behind a procedure is no
+pace to measure the next one against, and it leaves the series the way the
+distribution chart beside drops it.
+
 -}
 type alias Change =
     { lap : Int
@@ -75,62 +109,93 @@ type alias Change =
     }
 
 
-{-| Each lap with the change against the racing lap before it. A lap that
-matched its predecessor to the millisecond changed nothing and gets no line.
+{-| The car's laps to draw: on the road at race pace inside the range and inside
+the set's fence, in running order. The history hands laps back as the round
+stored them; the changes are read down the race, so the order is taken here and
+not assumed.
+-}
+keptLaps : Bounds -> LapHistory -> CarAt -> LapRange -> List Lap
+keptLaps bounds lapHistory item range =
+    racingLaps lapHistory item range
+        |> List.filter (\lap -> insideFence bounds.fence lap)
+
+
+insideFence : Duration -> Lap -> Bool
+insideFence fence lap =
+    Maybe.withDefault False (Maybe.map (\time -> time <= fence) lap.time)
+
+
+{-| The car's racing laps in running order.
+-}
+racingLaps : LapHistory -> CarAt -> LapRange -> List Lap
+racingLaps lapHistory item range =
+    Pace.racingLaps range (LapHistory.get item.metadata.carNumber lapHistory)
+        |> List.sortBy .lap
+
+
+{-| Each lap with the change against the lap before it. A lap that matched its
+predecessor to the millisecond changed nothing and gets no line.
 -}
 changesOf : List Lap -> List Change
 changesOf ordered =
     case ordered of
         before :: ((after :: _) as rest) ->
-            List.append (change before after) (changesOf rest)
+            Maybe.withDefault [] (Maybe.map List.singleton (change before after))
+                ++ changesOf rest
 
         _ ->
             []
 
 
-change : Lap -> Lap -> List Change
+change : Lap -> Lap -> Maybe Change
 change before after =
-    Maybe.map2
-        (\from to ->
-            if to == from then
-                []
+    Maybe.map2 Tuple.pair before.time after.time
+        |> Maybe.andThen
+            (\( from, to ) ->
+                if to == from then
+                    Nothing
 
-            else
-                [ Change after.lap from to ]
-        )
-        before.time
-        after.time
-        |> Maybe.withDefault []
-
-
-{-| The vertical domain: every time the lines touch, padded, so the quickest
-lap of the window stands at the bottom and the slowest at the top.
--}
-timeDomain : List Change -> Maybe ( Float, Float )
-timeDomain changes =
-    List.concatMap (\c -> [ toFloat c.from, toFloat c.to ]) changes
-        |> Statistics.extent
-        |> Maybe.map
-            (\( lo, hi ) ->
-                let
-                    margin =
-                        (hi - lo) * 0.1 + 1
-                in
-                ( lo - margin, hi + margin )
+                else
+                    Just (Change after.lap from to)
             )
 
 
 {-| The first and last lap plotted, held at least a lap apart so a single
 change still has a scale to stand on.
 -}
-lapExtent : List Change -> Maybe ( Int, Int )
-lapExtent changes =
-    case ( List.map .lap changes |> List.minimum, List.map .lap changes |> List.maximum ) of
-        ( Just first, Just last ) ->
-            Just ( first, max last (first + 1) )
+extentOf : List Change -> ( Float, Float )
+extentOf changes =
+    let
+        laps =
+            List.map .lap changes
 
-        _ ->
-            Nothing
+        first =
+            List.minimum laps |> Maybe.withDefault 0
+
+        last =
+            List.maximum laps |> Maybe.withDefault 1
+    in
+    ( toFloat first, toFloat (max last (first + 1)) )
+
+
+{-| The shared time axis, padded so the quickest lap of the set stands above
+the bottom and the slowest below the top.
+-}
+yScale : Bounds -> Scale.ContinuousScale Float
+yScale bounds =
+    Scale.linear ( height - padding.topBottom, padding.topBottom ) bounds.domain
+
+
+{-| The room a padded axis stands in: a tenth of the span and a millisecond, so
+a set with no spread at all still has an axis.
+-}
+padded : ( Float, Float ) -> ( Float, Float )
+padded ( lo, hi ) =
+    let
+        margin =
+            (hi - lo) * 0.1 + 1
+    in
+    ( lo - margin, hi + margin )
 
 
 -- RENDER
@@ -155,7 +220,7 @@ padding =
 the time came down, up where it went up, in the colours the move arrow wears.
 -}
 changeLine : Scale.ContinuousScale Float -> Scale.ContinuousScale Float -> Change -> Svg msg
-changeLine xScale yScale { lap, from, to } =
+changeLine xScale ys { lap, from, to } =
     let
         x =
             String.fromFloat (Scale.convert xScale (toFloat lap))
@@ -163,8 +228,8 @@ changeLine xScale yScale { lap, from, to } =
     line
         [ SvgAttr.x1 x
         , SvgAttr.x2 x
-        , SvgAttr.y1 (String.fromFloat (Scale.convert yScale (toFloat from)))
-        , SvgAttr.y2 (String.fromFloat (Scale.convert yScale (toFloat to)))
+        , SvgAttr.y1 (String.fromFloat (Scale.convert ys (toFloat from)))
+        , SvgAttr.y2 (String.fromFloat (Scale.convert ys (toFloat to)))
         , SvgAttr.class (if to < from then "stroke-green-500" else "stroke-red-500")
         , SvgAttr.strokeWidth "2"
         ]
