@@ -88,7 +88,7 @@ sparklineOn bounds range lapHistory item =
         changes ->
             let
                 extent =
-                    extentOf changes
+                    xExtent changes
 
                 xScale =
                     Scale.linear ( padding.left, width - padding.right ) extent
@@ -170,11 +170,13 @@ change before after =
             )
 
 
-{-| The first and last lap plotted, held at least a lap apart so a single
-change still has a scale to stand on.
+{-| The horizontal domain: the laps plotted, held at least `earlyWindow` laps
+wide. A car at the start of its race then stands at the stride it will run at,
+packed at the left of the drawing, rather than stretched over an axis twenty
+times the laps it has.
 -}
-extentOf : List Change -> ( Float, Float )
-extentOf changes =
+xExtent : List Change -> ( Float, Float )
+xExtent changes =
     let
         laps =
             List.map .lap changes
@@ -185,7 +187,14 @@ extentOf changes =
         last =
             List.maximum laps |> Maybe.withDefault 1
     in
-    ( toFloat first, toFloat (max last (first + 1)) )
+    ( toFloat first, toFloat (max last (first + earlyWindow)) )
+
+
+{-| How many laps the axis is at least this wide.
+-}
+earlyWindow : Int
+earlyWindow =
+    20
 
 
 {-| The shared time axis, padded so the quickest lap of the set stands above
