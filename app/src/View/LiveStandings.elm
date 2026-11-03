@@ -172,9 +172,9 @@ columnSpec column =
 
 
 {-| Every column, in row order.
-A column's `at` is measured along this order -- each one stands its track and
-a gap beyond the column before it -- so joining the list without moving the
-thresholds shows a column after one that stands to its right.
+Each `at` is the previous one plus that column's track and a gap, so joining
+or reordering this list without moving the thresholds can show a column later
+than one that stands to its right.
 -}
 columns : List Column
 columns =
@@ -196,8 +196,7 @@ visible panelWidth =
 {-| The row's tracks as a `grid-template-columns` value: the position, the
 badge, and one per visible column.
 The header stands on the same value, which is what keeps a label over its
-column and keeps every row's columns lined up whether or not its car is in
-the pit.
+column and every row's columns lined up.
 
 The tracks go on as a style attribute rather than as a `grid-cols-[...]`
 class: Tailwind extracts class names from source text only, so a class
@@ -424,9 +423,6 @@ carRow onSelect r =
         ]
 
 
-{-| What stands in the number's track at the row's head: the pit mark for a car
-in the pit lane, the place it holds for every other car.
--}
 positionCell : Row -> Html msg
 positionCell r =
     if r.isInPit then

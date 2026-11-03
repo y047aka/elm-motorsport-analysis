@@ -334,10 +334,9 @@ gridOf cars =
 
 {-| The live standings, standing to the left of the strip rather than as one
 of its columns, and a grip to drag them wider or narrower.
-The grip stands in the gap between the two tracks rather than over the
-card's edge -- the card's own `class` is the custom element's -- and its
-container's `w-2.5` and `-right-2.5` are `mainGrid`'s `gap-2.5`, so a change
-to one without the other leaves the grip off the gap.
+The grip stands in the gap between the two tracks: its container's `w-2.5`
+and `-right-2.5` are `mainGrid`'s `gap-2.5`, so a change to one without the
+other leaves the grip off the gap.
 The column track is `auto`, so the strip gains and loses the width as the
 drag goes on.
 -}

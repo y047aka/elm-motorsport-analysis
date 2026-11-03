@@ -2,8 +2,8 @@ module View.SectorAndLaps exposing (view, slots, pie, pieSize)
 
 {-| Per-car "sector progress pie + Current lap + Last lap" row.
 
-The pie is also drawn on its own, by the live standings: `slots` is the
-current lap's sector results in the form `pie` draws.
+The pie is also drawn on its own: `slots` is the current lap's sector
+results in the form `pie` draws.
 
 @docs view, slots, pie, pieSize
 
