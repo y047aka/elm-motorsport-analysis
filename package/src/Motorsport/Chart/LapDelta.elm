@@ -87,11 +87,17 @@ sparklineOn bounds range lapHistory item =
 
         changes ->
             let
+                extent =
+                    extentOf changes
+
                 xScale =
-                    Scale.linear ( padding.left, width - padding.right ) (extentOf changes)
+                    Scale.linear ( padding.left, width - padding.right ) extent
+
+                stroke =
+                    String.fromFloat (barWidth extent)
             in
             Common.svg { width = width, height = height }
-                (List.map (changeLine xScale (yScale bounds)) changes)
+                (List.map (changeLine xScale (yScale bounds) stroke) changes)
 
 
 -- SERIES
@@ -220,11 +226,24 @@ padding =
     { left = 4, right = 4, topBottom = 6 }
 
 
+{-| The room a lap's line may take: the drawing's width divided by the laps
+standing in the window, of which the line claims most -- one drawn at the full
+stride would weld the laps into one band, and one thinner than a pixel reads as
+nothing, so the share is held inside what the svg can show.
+-}
+barWidth : ( Float, Float ) -> Float
+barWidth ( first, last ) =
+    let
+        stride =
+            (width - padding.left - padding.right) / (last - first)
+    in
+    clamp 1 3 (stride * 0.75)
+
 {-| One change: a line from the time of the lap before down to this lap's where
 the time came down, up where it went up, in the colours the move arrow wears.
 -}
-changeLine : Scale.ContinuousScale Float -> Scale.ContinuousScale Float -> Change -> Svg msg
-changeLine xScale ys { lap, from, to } =
+changeLine : Scale.ContinuousScale Float -> Scale.ContinuousScale Float -> String -> Change -> Svg msg
+changeLine xScale ys stroke { lap, from, to } =
     let
         x =
             String.fromFloat (Scale.convert xScale (toFloat lap))
@@ -235,6 +254,6 @@ changeLine xScale ys { lap, from, to } =
         , SvgAttr.y1 (String.fromFloat (Scale.convert ys (toFloat from)))
         , SvgAttr.y2 (String.fromFloat (Scale.convert ys (toFloat to)))
         , SvgAttr.class (if to < from then "stroke-green-500" else "stroke-red-500")
-        , SvgAttr.strokeWidth "2"
+        , SvgAttr.strokeWidth stroke
         ]
         []
