@@ -28,7 +28,7 @@ served, who is driving away, and who climbed into the car.
 -}
 
 import Html exposing (Html, button, div, img, text)
-import Html.Attributes exposing (alt, attribute, class, src, style, title, value)
+import Html.Attributes exposing (alt, attribute, class, selected, src, style, title, value)
 import Html.Events exposing (onClick, on)
 import Html.Keyed as Keyed
 import Json.Decode as Decode
@@ -246,7 +246,7 @@ traceOption : Trace -> ( Trace, String ) -> Html msg
 traceOption current ( trace, word ) =
     Html.option
         [ value (traceName trace)
-        , attribute "selected" (if current == trace then "selected" else "")
+        , selected (current == trace)
         ]
         [ text word ]
 
