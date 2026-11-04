@@ -150,6 +150,15 @@ view config snapshot class_ =
         deltaBounds =
             LapDelta.sharedBounds history paced
 
+        -- How far the longest race in the class came, off every car's whole
+        -- history rather than the laps counted at the clock, so the scale is
+        -- the finished race's from the first lap and never moves.
+        distance =
+            cars
+                |> List.map (\car -> List.length (LapHistory.get car.metadata.carNumber history))
+                |> List.maximum
+                |> Maybe.withDefault 0
+
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
 
@@ -170,7 +179,7 @@ view config snapshot class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted paceBounds deltaBounds field)
+                        (rows config snapshot counted paceBounds deltaBounds distance field)
                      ]
                         ++ foot
                     )
@@ -371,8 +380,9 @@ Pace: the laps this car has run so far, on bounds taken once for the column, so
 the same lap time sits at the same place on every row.
 
 Strategy: the runs between the stops, one bar per car, its segments measured in
-laps on the class leader's distance -- so a bar that ends short of the right
-edge is a car that has run fewer laps, and every break in it is a stop.
+laps on the distance the class leader came to at the end of the race -- the
+scale is the finished race's from the first lap, a bar that ends short is a car
+that ran fewer laps than the leader did, and every break in it is a stop.
 
 -}
 rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Int -> Snapshot -> CarAt -> Html msg
@@ -506,8 +516,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted paceBounds deltaBounds field =
+rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Int -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted paceBounds deltaBounds distance field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -515,7 +525,7 @@ rows config snapshot counted paceBounds deltaBounds field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot paceBounds deltaBounds counted.lead pair :: acc
+                    row config snapshot paceBounds deltaBounds distance pair :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -677,10 +687,10 @@ gapTo inFront chasing snapshot =
 
 
 {-| The car's runs as one bar, the same readings the car's own panel lays out,
-shrunk to what a column of cars compares: where each run ends and how long it
-was. The segments are coloured alike because nothing here is told apart by who
-was driving; a break between two of them is the stop between the runs, and
-hovering one says what it cost.
+shrunk to what a column of cars compares: where each run ends, how long it was,
+and the laps of it written in the segment. The segments are coloured alike in
+one grey because nothing here is told apart by who was driving; a break between
+two of them is the stop between the runs, and hovering one says what it cost.
 -}
 stintTrace : Int -> LapHistory -> CarAt -> Html msg
 stintTrace lapsMax history item =
@@ -701,20 +711,11 @@ stintTrace lapsMax history item =
 stintSegment : Int -> Stint -> Html msg
 stintSegment lapsMax stint =
     div
-        [ class "min-w-[2px] rounded-[1px] bg-primary/70"
-        , class
-            (if stint.end == RaceStint.Running then
-                -- The run still going is open on its right-hand edge, as it is
-                -- in the panel, and grows with the race.
-                "rounded-r-none outline outline-1 -outline-offset-1 outline-foreground/40"
-
-             else
-                ""
-            )
+        [ class "grid place-items-center min-w-[2px] rounded-[1px] bg-muted-foreground/40 text-[9px] leading-none tabular-nums"
         , style "width" (String.fromFloat (100 * toFloat stint.lapCount / toFloat lapsMax) ++ "%")
         , title (stintNote stint)
         ]
-        []
+        [ text (String.fromInt stint.lapCount) ]
 
 
 {-| Which run, over which laps, whose, and what the stop at its end cost.
