@@ -31,6 +31,7 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, selected, src, style, title, value)
 import Html.Events exposing (onClick, on)
 import Html.Keyed as Keyed
+import Internal.Statistics as Statistics
 import Json.Decode as Decode
 import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Analysis.Stint as AnalysisStint
@@ -165,6 +166,14 @@ view config snapshot raceCars class_ =
                 |> List.maximum
                 |> Maybe.withDefault 0
 
+        -- And how often the class actually stopped across the whole race, the
+        -- same finished-race reading, so the forecast a row is measured
+        -- against is one the race itself wrote and never moves either.
+        strategy =
+            { distance = distance
+            , mode = Statistics.mode (classStintLengths raceCars class_)
+            }
+
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
 
@@ -185,7 +194,7 @@ view config snapshot raceCars class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted paceBounds deltaBounds distance field)
+                        (rows config snapshot counted paceBounds deltaBounds strategy field)
                      ]
                         ++ foot
                     )
@@ -352,8 +361,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Int -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot paceBounds deltaBounds lapsMax ( ahead, item ) =
+row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Strategy -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot paceBounds deltaBounds strategy ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -373,7 +382,7 @@ row config snapshot paceBounds deltaBounds lapsMax ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
-        , rowTrace config.trace paceBounds deltaBounds lapsMax snapshot item
+        , rowTrace config.trace paceBounds deltaBounds strategy snapshot item
         ]
     )
 
@@ -388,11 +397,13 @@ the same lap time sits at the same place on every row.
 Strategy: the runs between the stops, one bar per car, its segments measured in
 laps on the distance the class leader came to at the end of the race -- the
 scale is the finished race's from the first lap, a bar that ends short is a car
-that ran fewer laps than the leader did, and every break in it is a stop.
+that ran fewer laps than the leader did, and every break in it is a stop. The
+run a car is still on wears a dashed ghost to the lap the class's own stop
+spacing forecasts.
 
 -}
-rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Int -> Snapshot -> CarAt -> Html msg
-rowTrace trace paceBounds deltaBounds lapsMax snapshot item =
+rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Strategy -> Snapshot -> CarAt -> Html msg
+rowTrace trace paceBounds deltaBounds strategy snapshot item =
     let
         currentLap =
             item.standing.lapsCompleted
@@ -425,7 +436,7 @@ rowTrace trace paceBounds deltaBounds lapsMax snapshot item =
                         text ""
 
             StintTrace ->
-                stintTrace lapsMax history item
+                stintTrace strategy history item
 
             LapsTrace ->
                 SectorAndLaps.view item
@@ -522,8 +533,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Int -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted paceBounds deltaBounds distance field =
+rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Strategy -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted paceBounds deltaBounds strategy field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -531,7 +542,7 @@ rows config snapshot counted paceBounds deltaBounds distance field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot paceBounds deltaBounds distance pair :: acc
+                    row config snapshot paceBounds deltaBounds strategy pair :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -692,26 +703,96 @@ gapTo inFront chasing snapshot =
 -- PIT STRATEGY
 
 
+{-| The finished race's two readings the strategy bars are drawn against: how
+far its longest race came, and the lap spacing its class actually stopped on.
+-}
+type alias Strategy =
+    { distance : Int
+    , mode : Maybe Int
+    }
+
+
+{-| Every run of the class that a stop actually ended, in laps. A car's last
+run is not one of them even after the flag: nothing stopped it, the race did.
+
+Rain and safety cars are in the sample as the stops they really brought, which
+is why the spacing is read off the finished race rather than forecast from the
+laps the clock has seen -- a spacing taken mid-race is whichever incident the
+last hour happened to be.
+
+-}
+classStintLengths : List Car -> Class -> List Int
+classStintLengths raceCars class_ =
+    raceCars
+        |> List.filter (\car -> car.metadata.class == class_)
+        |> List.concatMap (\car -> car.laps |> AnalysisStint.summarize |> .stints)
+        |> List.filterMap stoppedLength
+
+
+stoppedLength : Stint -> Maybe Int
+stoppedLength stint =
+    case stint.end of
+        RaceStint.Ended _ ->
+            Just stint.lapCount
+
+        _ ->
+            Nothing
+
+
 {-| The car's runs as one bar, the same readings the car's own panel lays out,
 shrunk to what a column of cars compares: where each run ends, how long it was,
 and the laps of it written in the segment. The segments are coloured alike in
 one grey because nothing here is told apart by who was driving; a break between
 two of them is the stop between the runs, and hovering one says what it cost.
+
+The run still going is drawn against the class's `mode` -- see `stintSegments`
+-- and nothing else is. The forecast says nothing the laps do not hold: no fuel
+load, no plan, and no yellow flag in the car's future.
 -}
-stintTrace : Int -> LapHistory -> CarAt -> Html msg
-stintTrace lapsMax history item =
+stintTrace : Strategy -> LapHistory -> CarAt -> Html msg
+stintTrace strategy history item =
     let
         stints =
             LapHistory.get item.metadata.carNumber history
                 |> AnalysisStint.summarize
                 |> .stints
     in
-    if lapsMax <= 0 || List.isEmpty stints then
+    if strategy.distance <= 0 || List.isEmpty stints then
         text ""
 
     else
         div [ class "flex h-3.5 items-stretch gap-x-px" ]
-            (List.map (stintSegment lapsMax) stints)
+            (List.concatMap (stintSegments strategy) stints)
+
+
+{-| The ended runs draw as themselves. The run a car is still on, short of the
+class's expected length, adds a dashed ghost of the laps still forecast, so the
+ghost's right edge is where this crew is due to stop and the ghosts of the
+column line up or don't.
+-}
+stintSegments : Strategy -> Stint -> List (Html msg)
+stintSegments strategy stint =
+    let
+        forecast =
+            case ( stint.end, strategy.mode ) of
+                ( RaceStint.Running, Just expected ) ->
+                    if stint.lapCount < expected then
+                        Just (ghostSegment strategy.distance expected stint)
+
+                    else
+                        Nothing
+
+                _ ->
+                    Nothing
+    in
+    stintSegment strategy.distance stint
+        :: (case forecast of
+                Just ghost ->
+                    [ ghost ]
+
+                Nothing ->
+                    []
+           )
 
 
 stintSegment : Int -> Stint -> Html msg
@@ -722,6 +803,27 @@ stintSegment lapsMax stint =
         , title (stintNote stint)
         ]
         [ text (String.fromInt stint.lapCount) ]
+
+
+{-| The forecast as an empty square of the run: the laps this class's spacing
+says the crew still has before it stops, with the stop's own lap named -- the
+last lap of a stint of the expected length, counted from where this run began.
+-}
+ghostSegment : Int -> Int -> Stint -> Html msg
+ghostSegment lapsMax expected stint =
+    let
+        remaining =
+            expected - stint.lapCount
+
+        stopLap =
+            stint.firstLap + expected - 1
+    in
+    div
+        [ class "rounded-r-[1px] border border-dashed border-muted-foreground/50"
+        , style "width" (String.fromFloat (100 * toFloat remaining / toFloat lapsMax) ++ "%")
+        , title ("expected stop ~L" ++ String.fromInt stopLap ++ " · in " ++ String.fromInt remaining ++ " laps")
+        ]
+        []
 
 
 {-| Which run, over which laps, whose, and what the stop at its end cost.

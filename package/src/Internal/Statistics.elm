@@ -1,6 +1,7 @@
 module Internal.Statistics exposing
     ( iqrFences, upperFence, upperFenceBy
     , median
+    , mode
     )
 
 {-| The plain statistics a reading of the race is taken with: the outlier
@@ -8,8 +9,11 @@ fences a chart bounds itself by, and the middle of a set of values.
 
 @docs iqrFences, upperFence, upperFenceBy
 @docs median
+@docs mode
 
 -}
+
+import Dict exposing (Dict)
 
 
 {-| IQR outlier fences `[Q1 − 1.5×IQR, Q3 + 1.5×IQR]` for an ascending-sorted
@@ -94,6 +98,44 @@ values given.
 median : List Int -> Maybe Int
 median =
     List.sort >> quantile 0.5
+
+
+{-| The most frequent value, the smallest on a tie -- a forecast on the low
+side errs early rather than late. `Nothing` when empty.
+
+    mode [ 18, 22, 22, 25 ]
+    --> Just 22
+
+    mode [ 18, 22, 25 ]
+    --> Just 18
+
+    mode []
+    --> Nothing
+
+-}
+mode : List Int -> Maybe Int
+mode values =
+    values
+        |> List.foldl
+            (\value counts ->
+                Dict.update value (\count -> Just (Maybe.withDefault 0 count + 1)) counts
+            )
+            Dict.empty
+        |> Dict.foldl
+            (\value count best ->
+                case best of
+                    Nothing ->
+                        Just ( count, value )
+
+                    Just ( bestCount, bestValue ) ->
+                        if count > bestCount || (count == bestCount && value < bestValue) then
+                            Just ( count, value )
+
+                        else
+                            best
+            )
+            Nothing
+        |> Maybe.map Tuple.second
 
 
 {-| The q-quantile (0–1) of an ascending-sorted list, by nearest rank.
