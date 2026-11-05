@@ -13,7 +13,7 @@ fences a chart bounds itself by, and the middle of a set of values.
 
 -}
 
-import Dict exposing (Dict)
+import Dict
 
 
 {-| IQR outlier fences `[Q1 − 1.5×IQR, Q3 + 1.5×IQR]` for an ascending-sorted

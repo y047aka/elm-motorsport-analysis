@@ -31,10 +31,10 @@ import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, selected, src, style, title, value)
 import Html.Events exposing (onClick, on)
 import Html.Keyed as Keyed
-import Internal.Statistics as Statistics
 import Json.Decode as Decode
 import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Analysis.Stint as AnalysisStint
+import Motorsport.Analysis.Strategy as Strategy exposing (Strategy)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapDelta as LapDelta
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
@@ -155,27 +155,8 @@ view config snapshot raceCars class_ =
         deltaBounds =
             LapDelta.sharedBounds history paced
 
-        -- How far the longest race in the class came, read off the whole race
-        -- rather than the rows' histories, which are themselves cut at the
-        -- clock: the scale is the finished race's from the first lap and never
-        -- moves.
-        distance =
-            raceCars
-                |> List.filter (\car -> car.metadata.class == class_)
-                |> List.map (\car -> List.length car.laps)
-                |> List.maximum
-                |> Maybe.withDefault 0
-
-        -- And how often the class actually stopped across the whole race, the
-        -- same finished-race reading, so the spacing a row is measured against
-        -- is one the race itself wrote. `lead` is the one reading taken at the
-        -- clock, because how much race a car has left depends on how far the
-        -- leader has got by now.
         strategy =
-            { distance = distance
-            , mode = Statistics.mode (classStintLengths raceCars class_)
-            , lead = counted.lead
-            }
+            Strategy.ofRace class_ counted.lead raceCars
 
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
@@ -706,52 +687,13 @@ gapTo inFront chasing snapshot =
 -- PIT STRATEGY
 
 
-{-| The finished race's readings the strategy bars are drawn against: how far
-its longest race came, the lap spacing its class actually stopped on, and how
-far the leader has come at the clock -- which is what tells a car's laps down,
-and so how much of the race is left for it to run at all.
--}
-type alias Strategy =
-    { distance : Int
-    , mode : Maybe Int
-    , lead : Int
-    }
-
-
-{-| Every run of the class that a stop actually ended, in laps. A car's last
-run is not one of them even after the flag: nothing stopped it, the race did.
-
-Rain and safety cars are in the sample as the stops they really brought, which
-is why the spacing is read off the finished race rather than forecast from the
-laps the clock has seen -- a spacing taken mid-race is whichever incident the
-last hour happened to be.
-
--}
-classStintLengths : List Car -> Class -> List Int
-classStintLengths raceCars class_ =
-    raceCars
-        |> List.filter (\car -> car.metadata.class == class_)
-        |> List.concatMap (\car -> car.laps |> AnalysisStint.summarize |> .stints)
-        |> List.filterMap stoppedLength
-
-
-stoppedLength : Stint -> Maybe Int
-stoppedLength stint =
-    case stint.end of
-        RaceStint.Ended _ ->
-            Just stint.lapCount
-
-        _ ->
-            Nothing
-
-
 {-| The car's runs as one bar, the same readings the car's own panel lays out,
 shrunk to what a column of cars compares: where each run ends, how long it was,
 and the laps of it written in the segment. The segments are coloured alike in
 one grey because nothing here is told apart by who was driving; a break between
 two of them is the stop between the runs, and hovering one says what it cost.
 
-The run still going is measured against the class's `mode` and the rest of the
+The run still going is measured against the class's `spacing` and the rest of the
 race is written past it -- see `forecast`. The forecast says nothing the laps
 do not hold: no fuel load, no plan, and no yellow flag in the car's future.
 -}
@@ -788,11 +730,10 @@ stintSegment lapsMax stint =
 
 
 {-| The rest of the race written in the class's own spacing: a dashed ghost of
-every forecast run between where the car stands and the distance still left to
-run, the last one cut short by that distance the way a real last stint is by
-the flag. The distance left is the leader's total less the laps the car is
-already down -- a car five laps down has five laps less of race ahead of it,
-and its ghosts stop short of the right edge by just that.
+every forecast run between where the car stands and [`horizon`](Motorsport-Analysis-Strategy#horizon),
+the last one cut short by that distance the way a real last stint is by the
+flag -- a car five laps down has five laps less of race ahead of it, and its
+ghosts stop short of the right edge by just that.
 
 The forecast starts from the run still going: short of the class's length,
 the first ghost is the laps still left of it and its right edge is where this
@@ -803,7 +744,7 @@ spacing.
 -}
 forecast : Strategy -> Status -> Int -> List Stint -> List (Html msg)
 forecast strategy status lapsSoFar stints =
-    case ( Status.hasRetired status, strategy.mode ) of
+    case ( Status.hasRetired status, strategy.spacing ) of
         ( False, Just expected ) ->
             let
                 first =
@@ -819,7 +760,7 @@ forecast strategy status lapsSoFar stints =
                             expected
 
                 horizon =
-                    strategy.distance - max 0 (strategy.lead - lapsSoFar)
+                    Strategy.horizon strategy lapsSoFar
             in
             ghostChain strategy.distance horizon expected lapsSoFar first True
 
