@@ -725,7 +725,7 @@ stintSegment lapsMax stint =
         [ text (String.fromInt stint.lapCount) ]
 
 
-{-| Each [`Prediction`](Motorsport-Analysis-Strategy#Prediction) as a dashed
+{-| Each [`PredictedStint`](Motorsport-Analysis-Strategy#PredictedStint) as a dashed
 ghost, wide as its `laps` on the race's scale, so the right edge of a car's
 last ghost is where its crew is due to stop and the columns of ghosts line up
 or don't. The first carries how far off that stop is in laps; the rest name it.
@@ -743,7 +743,7 @@ ghosts strategy status stints =
             |> List.indexedMap (ghostBar strategy.distance)
 
 
-ghostBar : Int -> Int -> Strategy.Prediction -> Html msg
+ghostBar : Int -> Int -> Strategy.PredictedStint -> Html msg
 ghostBar scale index prediction =
     div
         [ class "rounded-[1px] border border-dashed border-muted-foreground/50"

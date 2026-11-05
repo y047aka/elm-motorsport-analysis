@@ -1,6 +1,6 @@
 module Motorsport.Analysis.Strategy exposing
     ( Strategy, ofRace
-    , Prediction, forecast
+    , PredictedStint, forecast
     )
 
 {-| How a class pits, and what that says is left of a car's race.
@@ -14,7 +14,7 @@ it says what this race was run on.
 depends on how far the leader has got by now.
 
 @docs Strategy, ofRace
-@docs Prediction, forecast
+@docs PredictedStint, forecast
 
 -}
 
@@ -63,7 +63,7 @@ ofRace class_ lead raceCars =
 the rest: it is cut by the end of the race, as a real last stint is cut by the
 flag.
 -}
-type alias Prediction =
+type alias PredictedStint =
     { laps : Int
     , stop : Int
     }
@@ -85,7 +85,7 @@ this reading's to know, as always with a stint's `end`; the caller decides by
 `Status` whether to ask.
 
 -}
-forecast : Strategy -> List Stint -> List Prediction
+forecast : Strategy -> List Stint -> List PredictedStint
 forecast strategy stints =
     case strategy.spacing of
         Nothing ->
@@ -114,7 +114,7 @@ forecast strategy stints =
             predict spacing first lapsSoFar limit []
 
 
-predict : Int -> Int -> Int -> Int -> List Prediction -> List Prediction
+predict : Int -> Int -> Int -> Int -> List PredictedStint -> List PredictedStint
 predict spacing width pos limit acc =
     if pos >= limit then
         List.reverse acc
