@@ -167,11 +167,14 @@ view config snapshot raceCars class_ =
                 |> Maybe.withDefault 0
 
         -- And how often the class actually stopped across the whole race, the
-        -- same finished-race reading, so the forecast a row is measured
-        -- against is one the race itself wrote and never moves either.
+        -- same finished-race reading, so the spacing a row is measured against
+        -- is one the race itself wrote. `lead` is the one reading taken at the
+        -- clock, because how much race a car has left depends on how far the
+        -- leader has got by now.
         strategy =
             { distance = distance
             , mode = Statistics.mode (classStintLengths raceCars class_)
+            , lead = counted.lead
             }
 
         lane =
@@ -703,12 +706,15 @@ gapTo inFront chasing snapshot =
 -- PIT STRATEGY
 
 
-{-| The finished race's two readings the strategy bars are drawn against: how
-far its longest race came, and the lap spacing its class actually stopped on.
+{-| The finished race's readings the strategy bars are drawn against: how far
+its longest race came, the lap spacing its class actually stopped on, and how
+far the leader has come at the clock -- which is what tells a car's laps down,
+and so how much of the race is left for it to run at all.
 -}
 type alias Strategy =
     { distance : Int
     , mode : Maybe Int
+    , lead : Int
     }
 
 
@@ -782,8 +788,12 @@ stintSegment lapsMax stint =
 
 
 {-| The rest of the race written in the class's own spacing: a dashed ghost of
-every forecast run between where the car stands and the leader's distance, the
-last one cut short by that distance the way a real last stint is by the flag.
+every forecast run between where the car stands and the distance still left to
+run, the last one cut short by that distance the way a real last stint is by
+the flag. The distance left is the leader's total less the laps the car is
+already down -- a car five laps down has five laps less of race ahead of it,
+and its ghosts stop short of the right edge by just that.
+
 The forecast starts from the run still going: short of the class's length,
 the first ghost is the laps still left of it and its right edge is where this
 crew is due to stop, so the columns of ghosts line up or don't; a car already
@@ -807,22 +817,25 @@ forecast strategy status lapsSoFar stints =
 
                         [] ->
                             expected
+
+                horizon =
+                    strategy.distance - max 0 (strategy.lead - lapsSoFar)
             in
-            ghostChain strategy.distance expected lapsSoFar first True
+            ghostChain strategy.distance horizon expected lapsSoFar first True
 
         _ ->
             []
 
 
-ghostChain : Int -> Int -> Int -> Int -> Bool -> List (Html msg)
-ghostChain lapsMax expected pos width isFirst =
-    if pos >= lapsMax then
+ghostChain : Int -> Int -> Int -> Int -> Int -> Bool -> List (Html msg)
+ghostChain scale horizon expected pos width isFirst =
+    if pos >= horizon then
         []
 
     else
         let
             run =
-                min width (lapsMax - pos)
+                min width (horizon - pos)
 
             stop =
                 pos + run
@@ -837,15 +850,15 @@ ghostChain lapsMax expected pos width isFirst =
                             ""
                        )
         in
-        ghostBar lapsMax run note
-            :: ghostChain lapsMax expected stop expected False
+        ghostBar scale run note
+            :: ghostChain scale horizon expected stop expected False
 
 
 ghostBar : Int -> Int -> String -> Html msg
-ghostBar lapsMax run note =
+ghostBar scale run note =
     div
         [ class "rounded-[1px] border border-dashed border-muted-foreground/50"
-        , style "width" (String.fromFloat (100 * toFloat run / toFloat lapsMax) ++ "%")
+        , style "width" (String.fromFloat (100 * toFloat run / toFloat scale) ++ "%")
         , title note
         ]
         []
