@@ -1,20 +1,25 @@
 module Motorsport.Analysis.Strategy exposing
-    ( Strategy, ofRace
-    , PredictedStint, forecast
+    ( PitCycle, pitCycleOf
+    , PredictedStint, Strategy, forecast
     )
 
-{-| How a class pits, and what that says is left of a car's race.
+{-| What a race says about how it is run, and what that gives a car to plan
+with.
 
-`distance` and `spacing` are read off the finished race. A spacing taken
-mid-race is whichever incident the last hour happened to be -- rain and safety
-cars are in the sample as the stops they really brought, and only the whole of
-it says what this race was run on.
+A *pit cycle* is a stint and the stop that ends it: what a class's race is run
+on is its cycle length -- the laps between stops it actually stopped at -- and
+the distance the race comes to. Both are read off the finished race, because a
+cycle length taken mid-race is whichever incident the last hour happened to be
+-- rain and safety cars are in the sample as the stops they really brought,
+and only the whole of a race says what it was run on. `lead` rides along as
+the clock's one reading, since how much race a car has left depends on how far
+the leader has got by now.
 
-`lead` is read at the clock, because how much race a car has left to run
-depends on how far the leader has got by now.
+A *strategy* is a plan: the runs a car still has before it, stint by stint.
+It is what `forecast` makes of a pit cycle and one car's place in the race.
 
-@docs Strategy, ofRace
-@docs PredictedStint, forecast
+@docs PitCycle, pitCycleOf
+@docs PredictedStint, Strategy, forecast
 
 -}
 
@@ -25,12 +30,12 @@ import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Wec.Class exposing (Class)
 
 
-{-| `spacing` is `Nothing` before the race has taught its class any stop
-spacing at all -- no stops, no spacing.
+{-| `cycle` is `Nothing` before the race has taught its class any stop length
+at all -- no stops, no cycle.
 -}
-type alias Strategy =
+type alias PitCycle =
     { distance : Int
-    , spacing : Maybe Int
+    , cycle : Maybe Int
     , lead : Int
     }
 
@@ -38,8 +43,8 @@ type alias Strategy =
 {-| Read the class off the whole race. `lead` is how far its leader has come
 at the clock.
 -}
-ofRace : Class -> Int -> List Car -> Strategy
-ofRace class_ lead raceCars =
+pitCycleOf : Class -> Int -> List Car -> PitCycle
+pitCycleOf class_ lead raceCars =
     let
         inClass =
             List.filter (\car -> car.metadata.class == class_) raceCars
@@ -52,16 +57,16 @@ ofRace class_ lead raceCars =
             |> List.map (\car -> List.length car.laps)
             |> List.maximum
             |> Maybe.withDefault 0
-    , spacing =
+    , cycle =
         stints |> List.filterMap stoppedLength |> Statistics.mode
     , lead = lead
     }
 
 
 {-| One of the runs still to come for a car: `laps` long, ending on the `stop`
--- the lap the crew is expected to come in on. The last one may be shorter than
-the rest: it is cut by the end of the race, as a real last stint is cut by the
-flag.
+-- the lap the crew is expected to come in on. The last one may be shorter
+than the rest: it is cut by the end of the race, as a real last stint is cut
+by the flag.
 -}
 type alias PredictedStint =
     { laps : Int
@@ -69,53 +74,56 @@ type alias PredictedStint =
     }
 
 
-{-| The rest of a car's race read as its class's rhythm: repeated runs of the
-`spacing`, each ending on a predicted stop, up to the laps it still has to run
--- the leader's distance, less the laps the car is already down, since a car
-five laps down has five laps less of race ahead of it.
+{-| A car's plan for the rest of its race, in order. The laps of its stints
+sum to just how much race the car has left to run -- the leader's distance,
+less the laps it is already down.
+-}
+type alias Strategy =
+    List PredictedStint
 
-The rhythm starts from the run still going: where a car is short of the
-class's length, the first prediction is the laps left of that run rather than
-a whole one from where it stands. `stints` is the car's own, as
+
+{-| The class's pit cycle run out against one car's race: repeated runs of the
+`cycle` length, the first starting from the run still going where the car is
+short of it and from where it stands where it is past it.
+
+`stints` is the car's own, as
 [`Analysis.Stint`](Motorsport-Analysis-Stint) hands them, and their sum is
-where it stands.
-
-Whether the car will run at all -- retired, or sitting in the lane -- is not
-this reading's to know, as always with a stint's `end`; the caller decides by
-`Status` whether to ask.
+where it stands. Whether the car will run at all -- retired, or sitting in the
+lane -- is not this reading's to know, as always with a stint's `end`; the
+caller decides by `Status` and simply draws no plan.
 
 -}
-forecast : Strategy -> List Stint -> List PredictedStint
-forecast strategy stints =
-    case strategy.spacing of
+forecast : PitCycle -> List Stint -> Strategy
+forecast pitCycle stints =
+    case pitCycle.cycle of
         Nothing ->
             []
 
-        Just spacing ->
+        Just cycleLength ->
             let
                 lapsSoFar =
                     List.sum (List.map .lapCount stints)
 
                 limit =
-                    strategy.distance - max 0 (strategy.lead - lapsSoFar)
+                    pitCycle.distance - max 0 (pitCycle.lead - lapsSoFar)
 
                 first =
                     case List.reverse stints of
                         last :: _ ->
-                            if last.end == RaceStint.Running && last.lapCount < spacing then
-                                spacing - last.lapCount
+                            if last.end == RaceStint.Running && last.lapCount < cycleLength then
+                                cycleLength - last.lapCount
 
                             else
-                                spacing
+                                cycleLength
 
                         [] ->
-                            spacing
+                            cycleLength
             in
-            predict spacing first lapsSoFar limit []
+            predict cycleLength first lapsSoFar limit []
 
 
-predict : Int -> Int -> Int -> Int -> List PredictedStint -> List PredictedStint
-predict spacing width pos limit acc =
+predict : Int -> Int -> Int -> Int -> Strategy -> Strategy
+predict cycleLength width pos limit acc =
     if pos >= limit then
         List.reverse acc
 
@@ -124,7 +132,7 @@ predict spacing width pos limit acc =
             laps =
                 min width (limit - pos)
         in
-        predict spacing spacing (pos + laps) limit ({ laps = laps, stop = pos + laps } :: acc)
+        predict cycleLength cycleLength (pos + laps) limit ({ laps = laps, stop = pos + laps } :: acc)
 
 
 {-| Every run that a stop actually ended, in laps. A car's last run is not one

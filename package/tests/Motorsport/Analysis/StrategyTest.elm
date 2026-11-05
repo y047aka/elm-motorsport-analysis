@@ -16,27 +16,27 @@ import Test exposing (Test, describe, test)
 suite : Test
 suite =
     describe "Motorsport.Analysis.Strategy"
-        [ describe "ofRace"
+        [ describe "pitCycleOf"
             [ test "the distance is how far the class came, and says nothing of other classes" <|
                 \_ ->
-                    Strategy.ofRace (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, longGt3 ]
+                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, longGt3 ]
                         |> .distance
                         |> Expect.equal 12
-            , test "the spacing is the mode of the runs a stop ended" <|
+            , test "the cycle length is the mode of the runs a stop ended" <|
                 \_ ->
                     -- Runs of 5 and 5 from one car, 6 from another, and the
                     -- flag-cut tails of neither: five is what this race stopped on.
-                    Strategy.ofRace (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, longGt3 ]
-                        |> .spacing
+                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, longGt3 ]
+                        |> .cycle
                         |> Expect.equal (Just 5)
-            , test "no spacing before the class has stopped" <|
+            , test "no cycle length before the class has stopped" <|
                 \_ ->
-                    Strategy.ofRace (classOf "HYPERCAR") 12 [ neverStopped ]
-                        |> .spacing
+                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ neverStopped ]
+                        |> .cycle
                         |> Expect.equal Nothing
             ]
         , describe "forecast"
-            [ test "the rhythm repeats to the end of the race, the first run the laps left of the one going" <|
+            [ test "the cycle repeats to the end of the race, the first run the laps left of the one going" <|
                 \_ ->
                     -- Five on the clock: a stop due in the 1 lap left of the run
                     -- this car is on, then one whole run to the flag at 20.
@@ -45,7 +45,7 @@ suite =
                             [ { laps = 1, stop = 15 }
                             , { laps = 5, stop = 20 }
                             ]
-            , test "a past its length, the rhythm counts from where the car stands" <|
+            , test "a past its length, the cycle counts from where the car stands" <|
                 \_ ->
                     -- Seven laps out and no stop yet: the next whole run of five
                     -- is all that stands, cut to the two laps of its own race left.
@@ -62,18 +62,25 @@ suite =
                 \_ ->
                     Strategy.forecast (onClock 20 5 20) (stints [ 5, 10, 15, 20 ] 20)
                         |> Expect.equal []
-            , test "no spacing, no forecast" <|
+            , test "the plan's laps sum to the race the car has left" <|
                 \_ ->
-                    Strategy.forecast { distance = 20, spacing = Nothing, lead = 20 } (stints [] 14)
+                    -- Four laps of race left for a car four down at 12 of 20;
+                    -- the plan holds four laps, no more and no less.
+                    Strategy.forecast (onClock 20 5 16) (stints [ 5, 10 ] 12)
+                        |> sumByLaps
+                        |> Expect.equal (20 - (16 - 12) - 12)
+            , test "no cycle length, no forecast" <|
+                \_ ->
+                    Strategy.forecast { distance = 20, cycle = Nothing, lead = 20 } (stints [] 14)
                         |> Expect.equal []
             ]
         ]
 
 
-onClock : Int -> Int -> Int -> Strategy.Strategy
-onClock distance spacing lead =
+onClock : Int -> Int -> Int -> Strategy.PitCycle
+onClock distance cycleLength lead =
     { distance = distance
-    , spacing = Just spacing
+    , cycle = Just cycleLength
     , lead = lead
     }
 
@@ -143,6 +150,11 @@ lapsOf stops lapCount =
                             Lap.NoCrossing
                 }
             )
+
+
+sumByLaps : Strategy.Strategy -> Int
+sumByLaps =
+    List.sum << List.map .laps
 
 
 emptyLap : Lap
