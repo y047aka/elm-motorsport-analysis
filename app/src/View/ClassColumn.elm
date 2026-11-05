@@ -693,8 +693,8 @@ and the laps of it written in the segment. The segments are coloured alike in
 one grey because nothing here is told apart by who was driving; a break between
 two of them is the stop between the runs, and hovering one says what it cost.
 
-The run still going is measured against the class's `spacing` and the rest of the
-race is written past it -- see `forecast`. The forecast says nothing the laps
+The run still going is measured against the class's `spacing` and the rest of
+the race is written past it -- see `ghosts`. The forecast says nothing the laps
 do not hold: no fuel load, no plan, and no yellow flag in the car's future.
 -}
 stintTrace : Strategy -> LapHistory -> CarAt -> Html msg
@@ -709,13 +709,9 @@ stintTrace strategy history item =
         text ""
 
     else
-        let
-            lapsSoFar =
-                List.sum (List.map .lapCount stints)
-        in
         div [ class "flex h-3.5 items-stretch gap-x-px" ]
             (List.map (stintSegment strategy.distance) stints
-                ++ forecast strategy item.status lapsSoFar stints
+                ++ ghosts strategy item.status stints
             )
 
 
@@ -729,78 +725,38 @@ stintSegment lapsMax stint =
         [ text (String.fromInt stint.lapCount) ]
 
 
-{-| The rest of the race written in the class's own spacing: a dashed ghost of
-every forecast run between where the car stands and [`horizon`](Motorsport-Analysis-Strategy#horizon),
-the last one cut short by that distance the way a real last stint is by the
-flag -- a car five laps down has five laps less of race ahead of it, and its
-ghosts stop short of the right edge by just that.
+{-| Each [`Prediction`](Motorsport-Analysis-Strategy#Prediction) as a dashed
+ghost, wide as its `laps` on the race's scale, so the right edge of a car's
+last ghost is where its crew is due to stop and the columns of ghosts line up
+or don't. The first carries how far off that stop is in laps; the rest name it.
 
-The forecast starts from the run still going: short of the class's length,
-the first ghost is the laps still left of it and its right edge is where this
-crew is due to stop, so the columns of ghosts line up or don't; a car already
-past that length counts again from where it stands. Nothing is written for a
-car that has stopped for good, nor before the race has taught its class any
-spacing.
+Nothing is written for a car that has stopped for good -- `Strategy.forecast`
+knows no `Status`, and this is where the caller's decision is made.
 -}
-forecast : Strategy -> Status -> Int -> List Stint -> List (Html msg)
-forecast strategy status lapsSoFar stints =
-    case ( Status.hasRetired status, strategy.spacing ) of
-        ( False, Just expected ) ->
-            let
-                first =
-                    case List.reverse stints of
-                        last :: _ ->
-                            if last.end == RaceStint.Running && last.lapCount < expected then
-                                expected - last.lapCount
-
-                            else
-                                expected
-
-                        [] ->
-                            expected
-
-                horizon =
-                    Strategy.horizon strategy lapsSoFar
-            in
-            ghostChain strategy.distance horizon expected lapsSoFar first True
-
-        _ ->
-            []
-
-
-ghostChain : Int -> Int -> Int -> Int -> Int -> Bool -> List (Html msg)
-ghostChain scale horizon expected pos width isFirst =
-    if pos >= horizon then
+ghosts : Strategy -> Status -> List Stint -> List (Html msg)
+ghosts strategy status stints =
+    if Status.hasRetired status then
         []
 
     else
-        let
-            run =
-                min width (horizon - pos)
-
-            stop =
-                pos + run
-
-            note =
-                "expected stop ~L"
-                    ++ String.fromInt stop
-                    ++ (if isFirst then
-                            " · in " ++ String.fromInt run ++ " laps"
-
-                        else
-                            ""
-                       )
-        in
-        ghostBar scale run note
-            :: ghostChain scale horizon expected stop expected False
+        Strategy.forecast strategy stints
+            |> List.indexedMap (ghostBar strategy.distance)
 
 
-ghostBar : Int -> Int -> String -> Html msg
-ghostBar scale run note =
+ghostBar : Int -> Int -> Strategy.Prediction -> Html msg
+ghostBar scale index prediction =
     div
         [ class "rounded-[1px] border border-dashed border-muted-foreground/50"
-        , style "width" (String.fromFloat (100 * toFloat run / toFloat scale) ++ "%")
-        , title note
+        , style "width" (String.fromFloat (100 * toFloat prediction.laps / toFloat scale) ++ "%")
+        , title
+            (("expected stop ~L" ++ String.fromInt prediction.stop)
+                ++ (if index == 0 then
+                        " · in " ++ String.fromInt prediction.laps ++ " laps"
+
+                    else
+                        ""
+                   )
+            )
         ]
         []
 
