@@ -397,9 +397,9 @@ the same lap time sits at the same place on every row.
 Strategy: the runs between the stops, one bar per car, its segments measured in
 laps on the distance the class leader came to at the end of the race -- the
 scale is the finished race's from the first lap, a bar that ends short is a car
-that ran fewer laps than the leader did, and every break in it is a stop. The
-run a car is still on wears a dashed ghost to the lap the class's own stop
-spacing forecasts.
+that ran fewer laps than the leader did, and every break in it is a stop. Past
+where the car stands, the rest of the race is written in dashed ghosts, one per
+run of the class's own stop spacing.
 
 -}
 rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> Strategy -> Snapshot -> CarAt -> Html msg
@@ -745,9 +745,9 @@ and the laps of it written in the segment. The segments are coloured alike in
 one grey because nothing here is told apart by who was driving; a break between
 two of them is the stop between the runs, and hovering one says what it cost.
 
-The run still going is drawn against the class's `mode` -- see `stintSegments`
--- and nothing else is. The forecast says nothing the laps do not hold: no fuel
-load, no plan, and no yellow flag in the car's future.
+The run still going is measured against the class's `mode` and the rest of the
+race is written past it -- see `forecast`. The forecast says nothing the laps
+do not hold: no fuel load, no plan, and no yellow flag in the car's future.
 -}
 stintTrace : Strategy -> LapHistory -> CarAt -> Html msg
 stintTrace strategy history item =
@@ -761,38 +761,14 @@ stintTrace strategy history item =
         text ""
 
     else
+        let
+            lapsSoFar =
+                List.sum (List.map .lapCount stints)
+        in
         div [ class "flex h-3.5 items-stretch gap-x-px" ]
-            (List.concatMap (stintSegments strategy) stints)
-
-
-{-| The ended runs draw as themselves. The run a car is still on, short of the
-class's expected length, adds a dashed ghost of the laps still forecast, so the
-ghost's right edge is where this crew is due to stop and the ghosts of the
-column line up or don't.
--}
-stintSegments : Strategy -> Stint -> List (Html msg)
-stintSegments strategy stint =
-    let
-        forecast =
-            case ( stint.end, strategy.mode ) of
-                ( RaceStint.Running, Just expected ) ->
-                    if stint.lapCount < expected then
-                        Just (ghostSegment strategy.distance expected stint)
-
-                    else
-                        Nothing
-
-                _ ->
-                    Nothing
-    in
-    stintSegment strategy.distance stint
-        :: (case forecast of
-                Just ghost ->
-                    [ ghost ]
-
-                Nothing ->
-                    []
-           )
+            (List.map (stintSegment strategy.distance) stints
+                ++ forecast strategy item.status lapsSoFar stints
+            )
 
 
 stintSegment : Int -> Stint -> Html msg
@@ -805,23 +781,72 @@ stintSegment lapsMax stint =
         [ text (String.fromInt stint.lapCount) ]
 
 
-{-| The forecast as an empty square of the run: the laps this class's spacing
-says the crew still has before it stops, with the stop's own lap named -- the
-last lap of a stint of the expected length, counted from where this run began.
+{-| The rest of the race written in the class's own spacing: a dashed ghost of
+every forecast run between where the car stands and the leader's distance, the
+last one cut short by that distance the way a real last stint is by the flag.
+The forecast starts from the run still going: short of the class's length,
+the first ghost is the laps still left of it and its right edge is where this
+crew is due to stop, so the columns of ghosts line up or don't; a car already
+past that length counts again from where it stands. Nothing is written for a
+car that has stopped for good, nor before the race has taught its class any
+spacing.
 -}
-ghostSegment : Int -> Int -> Stint -> Html msg
-ghostSegment lapsMax expected stint =
-    let
-        remaining =
-            expected - stint.lapCount
+forecast : Strategy -> Status -> Int -> List Stint -> List (Html msg)
+forecast strategy status lapsSoFar stints =
+    case ( Status.hasRetired status, strategy.mode ) of
+        ( False, Just expected ) ->
+            let
+                first =
+                    case List.reverse stints of
+                        last :: _ ->
+                            if last.end == RaceStint.Running && last.lapCount < expected then
+                                expected - last.lapCount
 
-        stopLap =
-            stint.firstLap + expected - 1
-    in
+                            else
+                                expected
+
+                        [] ->
+                            expected
+            in
+            ghostChain strategy.distance expected lapsSoFar first True
+
+        _ ->
+            []
+
+
+ghostChain : Int -> Int -> Int -> Int -> Bool -> List (Html msg)
+ghostChain lapsMax expected pos width isFirst =
+    if pos >= lapsMax then
+        []
+
+    else
+        let
+            run =
+                min width (lapsMax - pos)
+
+            stop =
+                pos + run
+
+            note =
+                "expected stop ~L"
+                    ++ String.fromInt stop
+                    ++ (if isFirst then
+                            " · in " ++ String.fromInt run ++ " laps"
+
+                        else
+                            ""
+                       )
+        in
+        ghostBar lapsMax run note
+            :: ghostChain lapsMax expected stop expected False
+
+
+ghostBar : Int -> Int -> String -> Html msg
+ghostBar lapsMax run note =
     div
-        [ class "rounded-r-[1px] border border-dashed border-muted-foreground/50"
-        , style "width" (String.fromFloat (100 * toFloat remaining / toFloat lapsMax) ++ "%")
-        , title ("expected stop ~L" ++ String.fromInt stopLap ++ " · in " ++ String.fromInt remaining ++ " laps")
+        [ class "rounded-[1px] border border-dashed border-muted-foreground/50"
+        , style "width" (String.fromFloat (100 * toFloat run / toFloat lapsMax) ++ "%")
+        , title note
         ]
         []
 
