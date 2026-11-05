@@ -461,7 +461,7 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
                             |> Maybe.withDefault (text "")
 
                     Columns.ClassColumn class_ ->
-                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot class_
+                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot replay.race.cars class_
 
                     Columns.Tracker ->
                         trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
@@ -541,8 +541,8 @@ cornerControls controls =
 {-| One class of the field, which is what the strip opens with: `View.ClassColumn`
 draws its cars each against the class-mate ahead of it.
 -}
-classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> Class -> Html Msg
-classColumn several standing held trace snapshot class_ =
+classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> List Car -> Class -> Html Msg
+classColumn several standing held trace snapshot raceCars class_ =
     let
         controls =
             corner several held (Columns.ClassColumn class_)
@@ -557,6 +557,7 @@ classColumn several standing held trace snapshot class_ =
         , grip = controls.grip
         }
         snapshot
+        raceCars
         class_
 
 

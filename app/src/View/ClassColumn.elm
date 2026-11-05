@@ -41,7 +41,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.LapRange exposing (LapRange)
-import Motorsport.Race.Car exposing (CarNumber)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
@@ -113,9 +113,13 @@ nameplate.
 The visual tests locate the column by `data-class-column`, which carries the
 class's name.
 
+`raceCars` is the whole race, not the field at the clock: the strategy bars are
+measured on the distance the class leader came to by the flag, which nothing
+sampled at the clock can know before the flag.
+
 -}
-view : Config msg -> Snapshot -> Class -> Html msg
-view config snapshot class_ =
+view : Config msg -> Snapshot -> List Car -> Class -> Html msg
+view config snapshot raceCars class_ =
     let
         cars =
             Snapshot.inClass class_ snapshot
@@ -150,12 +154,14 @@ view config snapshot class_ =
         deltaBounds =
             LapDelta.sharedBounds history paced
 
-        -- How far the longest race in the class came, off every car's whole
-        -- history rather than the laps counted at the clock, so the scale is
-        -- the finished race's from the first lap and never moves.
+        -- How far the longest race in the class came, read off the whole race
+        -- rather than the rows' histories, which are themselves cut at the
+        -- clock: the scale is the finished race's from the first lap and never
+        -- moves.
         distance =
-            cars
-                |> List.map (\car -> List.length (LapHistory.get car.metadata.carNumber history))
+            raceCars
+                |> List.filter (\car -> car.metadata.class == class_)
+                |> List.map (\car -> List.length car.laps)
                 |> List.maximum
                 |> Maybe.withDefault 0
 
