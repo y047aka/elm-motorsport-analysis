@@ -1,6 +1,6 @@
 module Motorsport.Analysis.Strategy exposing
     ( PitCycle, pitCycleOf
-    , PredictedStint, Strategy, forecast
+    , PredictedStint, Strategy, plan
     )
 
 {-| What a race says about how it is run, and what that gives a car to plan
@@ -15,11 +15,13 @@ and only the whole of a race says what it was run on. `lead` rides along as
 the clock's one reading, since how much race a car has left depends on how far
 the leader has got by now.
 
-A *strategy* is a plan: the runs a car still has before it, stint by stint.
-It is what `forecast` makes of a pit cycle and one car's place in the race.
+A *strategy* is one car's whole race read as a plan: what it has run, the run
+it is on, and what `plan` forecasts it has left. It is one car's, class-wide
+that the pit cycle is and laps-down that the forecast is trimmed by, so the
+plan is where the general race finally says something about one crew.
 
 @docs PitCycle, pitCycleOf
-@docs PredictedStint, Strategy, forecast
+@docs PredictedStint, Strategy, plan
 
 -}
 
@@ -27,6 +29,7 @@ import Internal.Statistics as Statistics
 import Motorsport.Analysis.Stint as Stint
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
+import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
 
 
@@ -74,28 +77,56 @@ type alias PredictedStint =
     }
 
 
-{-| A car's plan for the rest of its race, in order. The laps of its stints
-sum to just how much race the car has left to run -- the leader's distance,
-less the laps it is already down.
+{-| A car's whole race as a plan.
+
+- `runs` is every run so far, in order, as
+  [`Analysis.Stint`](Motorsport-Analysis-Stint) reads them -- the running
+  record, ends and all.
+- `current` is the run in progress: `Nothing` for a car sitting in the lane,
+  which is on no run, and for one that has yet to finish a lap. The current
+  run is the last of `runs` when there is one -- the two fields are the same
+  fact read for two questions, what has been run and what is being run.
+- `planned` is the forecast: `[]` for a car that has stopped for good, since
+  its future holds no stops, and `[]` before the class has taught the race any
+  cycle to plan with.
+
+The `planned` laps sum to just how much race the car has left to run -- the
+leader's distance, less the laps it is already down.
 -}
 type alias Strategy =
-    List PredictedStint
+    { runs : List Stint
+    , current : Maybe Stint
+    , planned : List PredictedStint
+    }
 
 
-{-| The class's pit cycle run out against one car's race: repeated runs of the
-`cycle` length, the first starting from the run still going where the car is
-short of it and from where it stands where it is past it.
-
-`stints` is the car's own, as
-[`Analysis.Stint`](Motorsport-Analysis-Stint) hands them, and their sum is
-where it stands. Whether the car will run at all -- retired, or sitting in the
-lane -- is not this reading's to know, as always with a stint's `end`; the
-caller decides by `Status` and simply draws no plan.
-
+{-| The car's race as a plan, read at the clock off its own stints and the
+whole race's cycle. `summary` is
+[`Analysis.Stint.summarize`](Motorsport-Analysis-Stint#summarize) of the
+laps the clock has seen.
 -}
-forecast : PitCycle -> List Stint -> Strategy
-forecast pitCycle stints =
-    case pitCycle.cycle of
+plan : PitCycle -> Status -> Stint.Summary -> Strategy
+plan cycleOfRace status summary =
+    { runs = summary.stints
+    , current = summary.current
+    , planned =
+        if Status.hasRetired status then
+            []
+
+        else
+            forecast cycleOfRace summary.stints
+    }
+
+
+{-| The class's cycle run out against one car's race: repeated runs of the
+`cycle` length, the first starting from the run still going where the car is
+short of it and from where it stands where it is past it. The first runs from
+where `Analysis.Stint` says the car stands, which for a car in the lane is the
+lap it came in on -- the forecast counts it back out onto the track.
+-}
+forecast : PitCycle -> List Stint -> List PredictedStint
+forecast cycleOfRace stints =
+    case cycleOfRace.cycle of
         Nothing ->
             []
 
@@ -105,7 +136,7 @@ forecast pitCycle stints =
                     List.sum (List.map .lapCount stints)
 
                 limit =
-                    pitCycle.distance - max 0 (pitCycle.lead - lapsSoFar)
+                    cycleOfRace.distance - max 0 (cycleOfRace.lead - lapsSoFar)
 
                 first =
                     case List.reverse stints of
@@ -122,7 +153,7 @@ forecast pitCycle stints =
             predict cycleLength first lapsSoFar limit []
 
 
-predict : Int -> Int -> Int -> Int -> Strategy -> Strategy
+predict : Int -> Int -> Int -> Int -> List PredictedStint -> List PredictedStint
 predict cycleLength width pos limit acc =
     if pos >= limit then
         List.reverse acc

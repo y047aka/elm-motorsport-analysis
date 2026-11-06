@@ -8,6 +8,7 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Stint exposing (Stint)
+import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
@@ -35,12 +36,12 @@ suite =
                         |> .cycle
                         |> Expect.equal Nothing
             ]
-        , describe "forecast"
+        , describe "plan"
             [ test "the cycle repeats to the end of the race, the first run the laps left of the one going" <|
                 \_ ->
                     -- Five on the clock: a stop due in the 1 lap left of the run
                     -- this car is on, then one whole run to the flag at 20.
-                    Strategy.forecast (onClock 20 5 14) (stints [ 5, 10 ] 14)
+                    plannedOn (onClock 20 5 14) [ 5, 10 ] 14
                         |> Expect.equal
                             [ { laps = 1, stop = 15 }
                             , { laps = 5, stop = 20 }
@@ -49,29 +50,29 @@ suite =
                 \_ ->
                     -- Seven laps out and no stop yet: the next whole run of five
                     -- is all that stands, cut to the two laps of its own race left.
-                    Strategy.forecast (onClock 20 5 17) (stints [ 5, 10 ] 17)
+                    plannedOn (onClock 20 5 17) [ 5, 10 ] 17
                         |> Expect.equal [ { laps = 3, stop = 20 } ]
             , test "a car five laps down has five laps less of race to forecast" <|
                 \_ ->
-                    Strategy.forecast (onClock 20 5 16) (stints [ 5, 10 ] 12)
+                    plannedOn (onClock 20 5 16) [ 5, 10 ] 12
                         |> Expect.equal
                             [ { laps = 3, stop = 15 }
                             , { laps = 1, stop = 16 }
                             ]
             , test "the whole race left, nothing is forecast" <|
                 \_ ->
-                    Strategy.forecast (onClock 20 5 20) (stints [ 5, 10, 15, 20 ] 20)
+                    plannedOn (onClock 20 5 20) [ 5, 10, 15, 20 ] 20
                         |> Expect.equal []
             , test "the plan's laps sum to the race the car has left" <|
                 \_ ->
                     -- Four laps of race left for a car four down at 12 of 20;
                     -- the plan holds four laps, no more and no less.
-                    Strategy.forecast (onClock 20 5 16) (stints [ 5, 10 ] 12)
+                    plannedOn (onClock 20 5 16) [ 5, 10 ] 12
                         |> sumByLaps
                         |> Expect.equal (20 - (16 - 12) - 12)
             , test "no cycle length, no forecast" <|
                 \_ ->
-                    Strategy.forecast { distance = 20, cycle = Nothing, lead = 20 } (stints [] 14)
+                    plannedOn { distance = 20, cycle = Nothing, lead = 20 } [] 14
                         |> Expect.equal []
             ]
         ]
@@ -87,7 +88,18 @@ onClock distance cycleLength lead =
 
 stints : List Int -> Int -> List Stint
 stints stops lapCount =
-    lapsOf stops lapCount |> Stint.summarize |> .stints
+    summary stops lapCount |> .stints
+
+
+summary : List Int -> Int -> Stint.Summary
+summary stops lapCount =
+    lapsOf stops lapCount |> Stint.summarize
+
+
+plannedOn : Strategy.PitCycle -> List Int -> Int -> List Strategy.PredictedStint
+plannedOn cycle stops lapCount =
+    Strategy.plan cycle Status.Racing (summary stops lapCount)
+        |> .planned
 
 
 stoppedTwice : Car
@@ -152,7 +164,7 @@ lapsOf stops lapCount =
             )
 
 
-sumByLaps : Strategy.Strategy -> Int
+sumByLaps : List Strategy.PredictedStint -> Int
 sumByLaps =
     List.sum << List.map .laps
 

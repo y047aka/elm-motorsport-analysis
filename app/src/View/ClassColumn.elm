@@ -34,7 +34,7 @@ import Html.Keyed as Keyed
 import Json.Decode as Decode
 import Motorsport.Analysis.Rivals as Rivals
 import Motorsport.Analysis.Stint as AnalysisStint
-import Motorsport.Analysis.Strategy as Strategy exposing (PitCycle, Strategy)
+import Motorsport.Analysis.Strategy as Strategy exposing (PitCycle, PredictedStint)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapDelta as LapDelta
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
@@ -700,27 +700,19 @@ do not hold: no fuel load, no plan, and no yellow flag in the car's future.
 stintTrace : PitCycle -> LapHistory -> CarAt -> Html msg
 stintTrace pitCycle history item =
     let
-        stints =
-            LapHistory.get item.metadata.carNumber history
-                |> AnalysisStint.summarize
-                |> .stints
-
-        -- A car that has stopped for good has no plan left to draw; the rest
-        -- get the pitCycle run out against their own race.
-        plan =
-            if Status.hasRetired item.status then
-                []
-
-            else
-                Strategy.forecast pitCycle stints
+        strategy =
+            Strategy.plan pitCycle item.status
+                (LapHistory.get item.metadata.carNumber history
+                    |> AnalysisStint.summarize
+                )
     in
-    if pitCycle.distance <= 0 || List.isEmpty stints then
+    if pitCycle.distance <= 0 || List.isEmpty strategy.runs then
         text ""
 
     else
         div [ class "flex h-3.5 items-stretch gap-x-px" ]
-            (List.map (stintSegment pitCycle.distance) stints
-                ++ ghosts pitCycle.distance plan
+            (List.map (stintSegment pitCycle.distance) strategy.runs
+                ++ ghosts pitCycle.distance strategy.planned
             )
 
 
@@ -740,9 +732,9 @@ edge of a car's last ghost is where its crew is due to stop and the columns of
 ghosts line up or don't. The first carries how far off that stop is in laps;
 the rest name it.
 -}
-ghosts : Int -> Strategy -> List (Html msg)
-ghosts scale plan =
-    List.indexedMap (ghostBar scale) plan
+ghosts : Int -> List PredictedStint -> List (Html msg)
+ghosts scale planned =
+    List.indexedMap (ghostBar scale) planned
 
 
 ghostBar : Int -> Int -> Strategy.PredictedStint -> Html msg
