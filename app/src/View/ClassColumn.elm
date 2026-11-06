@@ -383,7 +383,7 @@ laps on the distance the class leader came to at the end of the race -- the
 scale is the finished race's from the first lap, a bar that ends short is a car
 that ran fewer laps than the leader did, and every break in it is a stop. Past
 where the car stands, the rest of the race is written in dashed ghosts, one per
-run of the class's own pit cycle.
+fuel window of the class; a car still running past its window wears amber.
 
 -}
 rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Snapshot -> CarAt -> Html msg
@@ -693,7 +693,7 @@ and the laps of it written in the segment. The segments are coloured alike in
 one grey because nothing here is told apart by who was driving; a break between
 two of them is the stop between the runs, and hovering one says what it cost.
 
-The run still going is measured against the class's own cycle length and the rest of
+The run still going is measured against the class's fuel window and the rest of
 the race is written past it -- see `ghosts`. The forecast says nothing the laps
 do not hold: no fuel load, no plan, and no yellow flag in the car's future.
 -}
@@ -711,15 +711,37 @@ stintTrace pitCycle history item =
 
     else
         div [ class "flex h-3.5 items-stretch gap-x-px" ]
-            (List.map (stintSegment pitCycle.distance) strategy.runs
+            (List.map (stintSegment pitCycle.distance pitCycle.cycle) strategy.runs
                 ++ ghosts pitCycle.distance strategy.planned
             )
 
 
-stintSegment : Int -> Stint -> Html msg
-stintSegment lapsMax stint =
+{-| A segment of the car's own race, in laps on the race's scale. The run
+still going turns amber once it has run past the class's window: that one is
+no longer a reading of what happened but of a deadline gone unmet. A run that
+ended at a stop is never amber however long it was -- it stopped, which is
+what the window asks for.
+-}
+stintSegment : Int -> Maybe Int -> Stint -> Html msg
+stintSegment lapsMax window stint =
+    let
+        overrun =
+            case window of
+                Just w ->
+                    stint.end == RaceStint.Running && stint.lapCount >= w
+
+                Nothing ->
+                    False
+
+        shade =
+            if overrun then
+                "bg-amber-500/70"
+
+            else
+                "bg-muted-foreground/40"
+    in
     div
-        [ class "grid place-items-center min-w-[2px] rounded-[1px] bg-muted-foreground/40 text-[9px] leading-none tabular-nums"
+        [ class (shade ++ " grid place-items-center min-w-[2px] rounded-[1px] text-[9px] leading-none tabular-nums")
         , style "width" (String.fromFloat (100 * toFloat stint.lapCount / toFloat lapsMax) ++ "%")
         , title (stintNote stint)
         ]
@@ -727,25 +749,25 @@ stintSegment lapsMax stint =
 
 
 {-| Each [`PredictedStint`](Motorsport-Analysis-Strategy#PredictedStint) of the
-plan as a dashed ghost, wide as its `laps` on the race's scale, so the right
-edge of a car's last ghost is where its crew is due to stop and the columns of
-ghosts line up or don't. The first carries how far off that stop is in laps;
-the rest name it.
+plan as a dashed ghost, wide as its `laps` on the race's scale: the fuel
+windows still open to the car. The right edge of a car's first ghost is where
+its tank is out, so the columns of ghosts line up or don't. The first carries
+how many laps that leaves; the rest name their lap.
 -}
 ghosts : Int -> List PredictedStint -> List (Html msg)
 ghosts scale planned =
     List.indexedMap (ghostBar scale) planned
 
 
-ghostBar : Int -> Int -> Strategy.PredictedStint -> Html msg
+ghostBar : Int -> Int -> PredictedStint -> Html msg
 ghostBar scale index prediction =
     div
         [ class "rounded-[1px] border border-dashed border-muted-foreground/50"
         , style "width" (String.fromFloat (100 * toFloat prediction.laps / toFloat scale) ++ "%")
         , title
-            (("expected stop ~L" ++ String.fromInt prediction.stop)
+            (("fuel window ~L" ++ String.fromInt prediction.stop)
                 ++ (if index == 0 then
-                        " · in " ++ String.fromInt prediction.laps ++ " laps"
+                        " · " ++ String.fromInt prediction.laps ++ " laps of tank left"
 
                     else
                         ""

@@ -50,6 +50,10 @@ lines. The stop's own cost is the drop from one run's `lastPlace` to the
 next run's `firstPlace`. A crossing the feed left unranked is no place, and
 each end then reads the nearest place the run knows.
 
+`heldLaps` counts the laps of the run the field was held down for -- a
+procedure eats the lap without the car spending what the lap would cost at
+pace, so a run that held is not a reading of how far the car can go.
+
 -}
 type alias Stint =
     { number : Int
@@ -60,6 +64,7 @@ type alias Stint =
     , bestLapTime : Maybe Duration
     , firstPlace : Maybe Position
     , lastPlace : Maybe Position
+    , heldLaps : Int
     , end : End
     }
 
@@ -117,6 +122,11 @@ toStint index ( laps, endedBy ) =
 
                 places =
                     List.filterMap .position laps
+
+                held =
+                    laps
+                        |> List.filter (\lap -> Lap.isRacingLap lap && not (Lap.atRacePace lap))
+                        |> List.length
             in
             Just
                 { number = index + 1
@@ -127,6 +137,7 @@ toStint index ( laps, endedBy ) =
                 , bestLapTime = List.minimum racingTimes
                 , firstPlace = List.head places
                 , lastPlace = List.Extra.last places
+                , heldLaps = held
                 , end =
                     case ( Lap.isInLap last, endedBy ) of
                         ( False, _ ) ->

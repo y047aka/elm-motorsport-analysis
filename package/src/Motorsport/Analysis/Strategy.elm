@@ -6,14 +6,16 @@ module Motorsport.Analysis.Strategy exposing
 {-| What a race says about how it is run, and what that gives a car to plan
 with.
 
-A *pit cycle* is a stint and the stop that ends it: what a class's race is run
-on is its cycle length -- the laps between stops it actually stopped at -- and
-the distance the race comes to. Both are read off the finished race, because a
-cycle length taken mid-race is whichever incident the last hour happened to be
--- rain and safety cars are in the sample as the stops they really brought,
-and only the whole of a race says what it was run on. `lead` rides along as
-the clock's one reading, since how much race a car has left depends on how far
-the leader has got by now.
+A *pit cycle* is a stint and the stop that ends it, and the cycle length is
+the class's fuel window: the laps a full tank covers at race pace. It is the
+ninetieth percentile of the class's stopped runs, read off the finished race,
+because the question is how far a tank can go and not where most cars happen
+to stop -- a window is the top of the distribution, not its middle. Runs the
+field was held down for are no reading of a tank at all, and neither is a
+spacing taken mid-race, which is whichever incident the last hour happened to
+be; only the whole of a clean race says what it was run on. `lead` rides along
+as the clock's one reading, since how much race a car has left depends on how
+far the leader has got by now.
 
 A *strategy* is one car's whole race read as a plan: what it has run, the run
 it is on, and what `plan` forecasts it has left. It is one car's, class-wide
@@ -33,8 +35,8 @@ import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
 
 
-{-| `cycle` is `Nothing` before the race has taught its class any stop length
-at all -- no stops, no cycle.
+{-| The class's fuel window, in laps: `Nothing` before the race has taught its
+class any stopped run at all -- no stops, no window.
 -}
 type alias PitCycle =
     { distance : Int
@@ -61,15 +63,18 @@ pitCycleOf class_ lead raceCars =
             |> List.maximum
             |> Maybe.withDefault 0
     , cycle =
-        stints |> List.filterMap stoppedLength |> Statistics.mode
+        stints
+            |> List.filterMap cleanStoppedLength
+            |> List.sort
+            |> Statistics.quantile 0.9
     , lead = lead
     }
 
 
-{-| One of the runs still to come for a car: `laps` long, ending on the `stop`
--- the lap the crew is expected to come in on. The last one may be shorter
-than the rest: it is cut by the end of the race, as a real last stint is cut
-by the flag.
+{-| One of the fuel windows still to come for a car: `laps` of running left
+before the tank is out, ending on the `stop` -- the lap past which a full tank
+should not stretch. The last one may be shorter than the rest: it is cut by
+the end of the race, as a real last stint is cut by the flag.
 -}
 type alias PredictedStint =
     { laps : Int
@@ -118,11 +123,11 @@ plan cycleOfRace status summary =
     }
 
 
-{-| The class's cycle run out against one car's race: repeated runs of the
-`cycle` length, the first starting from the run still going where the car is
-short of it and from where it stands where it is past it. The first runs from
-where `Analysis.Stint` says the car stands, which for a car in the lane is the
-lap it came in on -- the forecast counts it back out onto the track.
+{-| The class's window run out against one car's race: repeated runs of the
+`cycle` laps, the first ending where the run still going runs out of tank --
+or, for a car already past the window, a full one from where it stands. The
+first ends where `Analysis.Stint` says the car stands plus the laps left of
+the window, which for a car in the lane counts it back out onto the track.
 -}
 forecast : PitCycle -> List Stint -> List PredictedStint
 forecast cycleOfRace stints =
@@ -166,14 +171,24 @@ predict cycleLength width pos limit acc =
         predict cycleLength cycleLength (pos + laps) limit ({ laps = laps, stop = pos + laps } :: acc)
 
 
-{-| Every run that a stop actually ended, in laps. A car's last run is not one
-of them even after the flag: nothing stopped it, the race did.
+{-| Every stopped run that was clean -- the field held down for no lap of it
+-- in laps. A car's last run is not one of them even after the flag: nothing
+stopped it, the race did. Held runs are out because a tank under a procedure
+reaches further than the same tank at pace, and it is the pace window the
+forecast is asked for: a round's held hundred percent could sit two window
+lengths out and say nothing about the tank. The ninetieth percentile rather
+than the median because the window is the top of the distribution; the class
+supplies the hundred-odd runs that make the percentile mean something.
 -}
-stoppedLength : Stint -> Maybe Int
-stoppedLength stint =
+cleanStoppedLength : Stint -> Maybe Int
+cleanStoppedLength stint =
     case stint.end of
         RaceStint.Ended _ ->
-            Just stint.lapCount
+            if stint.heldLaps == 0 then
+                Just stint.lapCount
+
+            else
+                Nothing
 
         _ ->
             Nothing

@@ -23,14 +23,21 @@ suite =
                     Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, longGt3 ]
                         |> .distance
                         |> Expect.equal 12
-            , test "the cycle length is the mode of the runs a stop ended" <|
+            , test "the cycle is the ninetieth percentile of the clean stopped runs" <|
                 \_ ->
-                    -- Runs of 5 and 5 from one car, 6 from another, and the
-                    -- flag-cut tails of neither: five is what this race stopped on.
-                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, longGt3 ]
+                    -- Runs of 5 and 5 from one car, 6 and 6 and 6 from two
+                    -- more: the window sits at the top of that, not its middle.
+                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, alsoSix ]
                         |> .cycle
-                        |> Expect.equal (Just 5)
-            , test "no cycle length before the class has stopped" <|
+                        |> Expect.equal (Just 6)
+            , test "a run the field was held down for is no reading of a tank" <|
+                \_ ->
+                    -- The held car reached 9 on its tank, but four of those
+                    -- laps were under a procedure: the window is the clean 6.
+                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ heldLong, stoppedOnce ]
+                        |> .cycle
+                        |> Expect.equal (Just 6)
+            , test "no cycle before the class has stopped" <|
                 \_ ->
                     Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ neverStopped ]
                         |> .cycle
@@ -70,7 +77,7 @@ suite =
                     plannedOn (onClock 20 5 16) [ 5, 10 ] 12
                         |> sumByLaps
                         |> Expect.equal (20 - (16 - 12) - 12)
-            , test "no cycle length, no forecast" <|
+            , test "no cycle, no forecast" <|
                 \_ ->
                     plannedOn { distance = 20, cycle = Nothing, lead = 20 } [] 14
                         |> Expect.equal []
@@ -112,6 +119,16 @@ stoppedOnce =
     carOf "3" "HYPERCAR" [ 6 ] 12
 
 
+alsoSix : Car
+alsoSix =
+    carOf "5" "HYPERCAR" [ 6 ] 12
+
+
+heldLong : Car
+heldLong =
+    carHeld "9" "HYPERCAR" [ 9 ] [ 5, 6, 7, 8 ] 12
+
+
 neverStopped : Car
 neverStopped =
     carOf "7" "HYPERCAR" [] 12
@@ -124,6 +141,16 @@ longGt3 =
 
 carOf : String -> String -> List Int -> Int -> Car
 carOf carNumber class stops lapCount =
+    carAt carNumber class stops [] lapCount
+
+
+carHeld : String -> String -> List Int -> List Int -> Int -> Car
+carHeld carNumber class stops held lapCount =
+    carAt carNumber class stops held lapCount
+
+
+carAt : String -> String -> List Int -> List Int -> Int -> Car
+carAt carNumber class stops held lapCount =
     { metadata =
         { carNumber = carNumber
         , drivers = [ Driver.fromName ("Driver " ++ carNumber) ]
@@ -134,15 +161,15 @@ carOf carNumber class stops lapCount =
         , imageUrl = Nothing
         }
     , startPosition = 1
-    , laps = lapsOf stops lapCount
+    , laps = lapsOfWith stops held lapCount
     }
 
 
 {-| A race of `lapCount` laps with a stop on each of `stops` -- entry and exit
-the pair `Race.Stint` reads a stop as.
+the pair `Race.Stint` reads a stop as -- and a procedure over each of `held`.
 -}
-lapsOf : List Int -> Int -> List Lap
-lapsOf stops lapCount =
+lapsOfWith : List Int -> List Int -> Int -> List Lap
+lapsOfWith stops held lapCount =
     List.range 1 lapCount
         |> List.map
             (\lapNumber ->
@@ -151,6 +178,12 @@ lapsOf stops lapCount =
                     , driver = Driver.fromName "Driver"
                     , lap = lapNumber
                     , time = Just 5000
+                    , flag =
+                        if List.member lapNumber held then
+                            Lap.SlowZone
+
+                        else
+                            Lap.Green
                     , crossing =
                         if List.member lapNumber stops then
                             Lap.EntryAtEnd
@@ -162,6 +195,11 @@ lapsOf stops lapCount =
                             Lap.NoCrossing
                 }
             )
+
+
+lapsOf : List Int -> Int -> List Lap
+lapsOf stops =
+    lapsOfWith stops []
 
 
 sumByLaps : List Strategy.PredictedStint -> Int
