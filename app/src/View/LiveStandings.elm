@@ -33,7 +33,7 @@ import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
-import View.SectorAndLaps as SectorAndLaps
+import View.SectorPie as SectorPie
 
 
 {-| What the panel is given: the tag for picking a car, the cars that already
@@ -159,7 +159,7 @@ columnSpec column =
             { label = "Last", at = 390, track = "5em", align = "text-right" }
 
         Pie ->
-            { label = "Lap", at = 340, track = String.fromFloat SectorAndLaps.pieSize ++ "px", align = "" }
+            { label = "Lap", at = 340, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
 
         Current ->
             { label = "Current", at = 470, track = "5em", align = "text-right" }
@@ -369,7 +369,7 @@ row config item =
     , best = bestTime.text
     , bestColor = bestTime.color
     , laps = String.fromInt item.standing.lapsCompleted
-    , sectorSlots = SectorAndLaps.slots item
+    , sectorSlots = SectorPie.slots item
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
@@ -469,7 +469,7 @@ cell r column =
             div [ class numeral ] [ text r.laps ]
 
         Pie ->
-            div [ class "justify-self-center" ] [ SectorAndLaps.pie r.sectorSlots ]
+            div [ class "justify-self-center" ] [ SectorPie.pie r.sectorSlots ]
 
         Move ->
             div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]

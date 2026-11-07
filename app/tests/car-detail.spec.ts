@@ -50,7 +50,7 @@ const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsF
 const TRACES = [
   ...classColumnSource.matchAll(/\n\s{8}\w+Trace ->\n\s{12}"(\w+)"\n/g),
 ].map((m) => m[1]);
-if (TRACES.length !== 5) {
+if (TRACES.length !== 4) {
   throw new Error(`traceName words not found -- did the curve list move?`);
 }
 

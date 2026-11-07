@@ -53,7 +53,6 @@ import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.PitLane as PitLane
-import View.SectorAndLaps as SectorAndLaps
 
 
 {-| What the column is given: the two ways a row answers a press -- the car has
@@ -78,14 +77,13 @@ type alias Config msg =
 
 {-| The curve drawn under every car of the column: the gap out to the rivals
 either side, the spread of the car's own lap times, the change from each of its
-laps to the next, the runs between its stops, or the lap times themselves.
+laps to the next, or the runs between its stops.
 -}
 type Trace
     = GapTrace
     | PaceTrace
     | DeltaTrace
     | StintTrace
-    | LapsTrace
 
 
 {-| The laps the class leader has completed, which is what every car's distance
@@ -243,7 +241,7 @@ head config class_ cars =
         ]
 
 
-{-| The five curves and the words that name what each holds.
+{-| The four curves and the words that name what each holds.
 -}
 allTraces : List ( Trace, String )
 allTraces =
@@ -251,7 +249,6 @@ allTraces =
     , ( PaceTrace, "Lap time spread" )
     , ( DeltaTrace, "Lap-to-lap change" )
     , ( StintTrace, "Pit strategy" )
-    , ( LapsTrace, "Sectors & last laps" )
     ]
 
 
@@ -436,9 +433,6 @@ rowTrace trace paceBounds deltaBounds pitCycle lead snapshot item =
 
             StintTrace ->
                 stintTrace pitCycle lead history item
-
-            LapsTrace ->
-                SectorAndLaps.view item
         ]
 
 
@@ -464,9 +458,6 @@ traceName trace =
 
         StintTrace ->
             "stint"
-
-        LapsTrace ->
-            "laps"
 
 
 recentLapCount : Int
