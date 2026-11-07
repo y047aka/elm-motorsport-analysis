@@ -1,9 +1,10 @@
 module View.SectorAndLaps exposing (view, slots, pie, pieSize)
 
-{-| Per-car "sector progress pie + Current lap + Last lap" row.
+{-| Per-car "last lap and current lap, each with its sectors filled above the
+time" row.
 
-The pie is also drawn on its own: `slots` is the current lap's sector
-results in the form `pie` draws.
+The pie is still the standings' own Lap column's: `slots` is the current
+lap's sector results in the form `pie` draws.
 
 @docs view, slots, pie, pieSize
 
@@ -23,37 +24,24 @@ import Svg.Attributes as SvgAttr
 import TypedSvg.Attributes exposing (viewBox)
 
 
-{-| The pie shows sector progress of the current lap, so it shares a column
-with Current; the layout is a balanced 50/50 grid of `pie + Current` | `Last`.
+{-| Two blocks, one per lap, in the order the race runs: last behind, current
+ahead. Each stands label, sector bar, time -- the bars share a shape, so a
+lap the car has just done reads against the one it is doing.
 -}
 view : CarAt -> Html msg
 view item =
-    div
-        [ class "grid grid-cols-[1fr_1fr] place-items-center gap-x-2" ]
-        [ div
-            [ class "grid w-fit grid-cols-[auto_auto] items-center gap-x-2" ]
-            [ pie (slots item)
-            , currentLapBlock item
-            ]
-        , lastLapBlock item
+    div [ class "grid w-full grid-cols-2 gap-x-3" ]
+        [ lapBlock "Last" (bar (lastSlots item)) (lastLapTimeCell item)
+        , lapBlock "Current" (bar (slots item)) (currentLapTimeCell item)
         ]
 
 
-currentLapBlock : CarAt -> Html msg
-currentLapBlock item =
-    lapBlock "Current" (currentLapTimeCell item)
-
-
-lastLapBlock : CarAt -> Html msg
-lastLapBlock item =
-    lapBlock "Last" (lastLapTimeCell item)
-
-
-lapBlock : String -> Html msg -> Html msg
-lapBlock label timeCell =
+lapBlock : String -> Html msg -> Html msg -> Html msg
+lapBlock label sectorBar timeCell =
     div
-        [ class "grid place-items-center gap-y-px" ]
+        [ class "grid justify-items-center gap-y-px" ]
         [ labelText label
+        , sectorBar
         , timeCell
         ]
 
@@ -92,16 +80,39 @@ lastLapTimeCell item =
         [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
 
-{-| The current lap's sector results as the slots `pie` draws. A retired car is
-a blank donut: three transparent slots, the track and nothing filled.
+{-| The current lap's sector results as the slots `pie` and `bar` draw. A
+retired car is blank: three transparent slots, the track and nothing filled.
 -}
 slots : CarAt -> List ( String, Float )
 slots item =
     if Status.hasRetired item.status then
-        [ ( "transparent", 0 ), ( "transparent", 0 ), ( "transparent", 0 ) ]
+        blankSlots
 
     else
         List.map currentSectorSlot (Sector.values item.currentLap.sectorStates)
+
+
+{-| The last lap's sector results in the same slots, every one of them
+complete -- the lap is run. A lap not yet turned, or a sector the feed left
+blank, fills nothing.
+-}
+lastSlots : CarAt -> List ( String, Float )
+lastSlots item =
+    case item.lastLap of
+        Snapshot.Completed completed ->
+            List.map
+                (Maybe.map (\rated -> ( Performance.toColorVariable rated.performance, 1 ))
+                    >> Maybe.withDefault ( "transparent", 0 )
+                )
+                (Sector.values completed.sectors)
+
+        Snapshot.NoLapYet ->
+            blankSlots
+
+
+blankSlots : List ( String, Float )
+blankSlots =
+    [ ( "transparent", 0 ), ( "transparent", 0 ), ( "transparent", 0 ) ]
 
 
 {-| Convert one sector into `(fill color, fill fraction 0..1)`:
@@ -119,6 +130,32 @@ currentSectorSlot state =
 
         Performance.Completed rated ->
             ( Performance.colorOf (Maybe.map .performance rated), 1 )
+
+
+{-| The same three slots drawn straight: three equal segments side by side,
+the fill grown from the left of each over a faint full-length track -- the
+pie unrolled, so the two are read by the same eye.
+-}
+bar : List ( String, Float ) -> Html msg
+bar filled =
+    div [ class "flex h-2 w-full gap-px" ]
+        (List.map barSegment filled)
+
+
+barSegment : ( String, Float ) -> Html msg
+barSegment ( color, fraction ) =
+    div [ class "relative flex-1 rounded-[1px] bg-white/10" ]
+        [ if fraction > 0 then
+            div
+                [ class "absolute inset-y-0 left-0 rounded-[1px]"
+                , style "width" (String.fromFloat (fraction * 100) ++ "%")
+                , style "background-color" color
+                ]
+                []
+
+          else
+            text ""
+        ]
 
 
 {-| Draw three slots as 120° donut arcs. Each element is
