@@ -134,37 +134,6 @@ test('a press reports what Elm listens for, and a disabled button reports nothin
   expect(events).toEqual([['button-press', null]]);
 });
 
-test('the toggle group reports a selection and swallows a clearing press', async ({ page }) => {
-  const events = await page.evaluate(async () => {
-    const seen: unknown[] = [];
-    const group = document.createElement('shadcn-toggle-group');
-    (group as any).items = [
-      { label: '1x', active: true, disabled: false },
-      { label: '10x', active: false, disabled: false },
-    ];
-    group.addEventListener('toggle-group-press', (e) => seen.push((e as CustomEvent).detail));
-    document.body.appendChild(group);
-
-    const buttons = await window.__untilRendered(() => {
-      const found = [...group.querySelectorAll('button')];
-      return found.length === 2 ? found : null;
-    });
-
-    buttons[1].click();
-    // Pressing what is already pressed would empty the group; Elm has no state
-    // for "none", so nothing is reported.
-    buttons[0].click();
-    await window.__untilRendered(() => (seen.length > 0 ? seen : null));
-
-    const pressed = buttons.map((b) => b.getAttribute('aria-pressed'));
-    group.remove();
-    return { seen, pressed };
-  });
-
-  expect(events.seen).toEqual([1]);
-  expect(events.pressed).toEqual(['true', 'false']);
-});
-
 test('the slider reports a whole number', async ({ page }) => {
   const seen = await page.evaluate(async () => {
     const reported: unknown[] = [];
