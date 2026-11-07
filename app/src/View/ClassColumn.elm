@@ -725,15 +725,18 @@ stintTrace pitCycle lead history item =
         text ""
 
     else
-        div [ class "flex h-3.5 items-stretch gap-x-px" ]
+        div [ class "flex h-3.5 items-stretch overflow-hidden" ]
             (List.map (stintSegment pitCycle.distance pitCycle.cycle) strategy.runs
                 ++ ghosts pitCycle.distance strategy.planned
             )
 
 
-{-| A segment of the car's own race, in laps on the race's scale. The run
-still going turns amber once it has run past the class's window: that one is
-no longer a reading of what happened but of a deadline gone unmet. A run that
+{-| A segment of the car's own race, in laps on the race's scale -- its width
+is the percentage of the race, with the gaps left out so the row sums to the
+bar it is drawn on. The run still going turns amber once its own clean laps
+pass the class's window -- the same count the window is read from, so a stint
+held for half its length is not called an unmet deadline: that one is no
+longer a reading of what happened but of a deadline gone unmet. A run that
 ended at a stop is never amber however long it was -- it stopped, which is
 what the window asks for.
 -}
@@ -743,7 +746,7 @@ stintSegment lapsMax window stint =
         overrun =
             case window of
                 Just w ->
-                    stint.end == RaceStint.Running && stint.lapCount >= w
+                    stint.end == RaceStint.Running && stint.lapCount - stint.heldLaps >= w
 
                 Nothing ->
                     False
@@ -756,7 +759,7 @@ stintSegment lapsMax window stint =
                 "bg-muted-foreground/40"
     in
     div
-        [ class (shade ++ " grid place-items-center min-w-[2px] rounded-[1px] text-[9px] leading-none tabular-nums")
+        [ class (shade ++ " grid place-items-center rounded-[1px] text-[9px] leading-none tabular-nums border-r border-background/50 last:border-r-0")
         , style "width" (String.fromFloat (100 * toFloat stint.lapCount / toFloat lapsMax) ++ "%")
         , title (stintNote stint)
         ]

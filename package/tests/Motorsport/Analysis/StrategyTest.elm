@@ -25,18 +25,25 @@ suite =
                         |> Expect.equal 12
             , test "the cycle is the ninetieth percentile of the clean stopped runs" <|
                 \_ ->
-                    -- Runs of 5 and 5 from one car, 6 and 6 and 6 from two
-                    -- more: the window sits at the top of that, not its middle.
-                    Strategy.pitCycleOf (classOf "HYPERCAR") [ stoppedTwice, stoppedOnce, alsoSix ]
+                    -- Ten runs of 6 and two of 5: the window sits at the top
+                    -- of that, not its middle.
+                    Strategy.pitCycleOf (classOf "HYPERCAR") (stoppedTwice :: fleetOf 10)
                         |> .cycle
                         |> Expect.equal (Just 6)
             , test "a run the field was held down for is no reading of a tank" <|
                 \_ ->
                     -- The held car reached 9 on its tank, but four of those
-                    -- laps were under a procedure: the window is the clean 6.
-                    Strategy.pitCycleOf (classOf "HYPERCAR") [ heldLong, stoppedOnce ]
+                    -- laps were under a procedure. Nine clean runs and one
+                    -- held one do not make a pool of ten: the class answers
+                    -- nothing rather than answering from the held run.
+                    Strategy.pitCycleOf (classOf "HYPERCAR") (heldLong :: fleetOf 9)
                         |> .cycle
-                        |> Expect.equal (Just 6)
+                        |> Expect.equal Nothing
+            , test "a handful of runs is one fuel run wearing the class's name" <|
+                \_ ->
+                    Strategy.pitCycleOf (classOf "HYPERCAR") (fleetOf 3)
+                        |> .cycle
+                        |> Expect.equal Nothing
             , test "no cycle before the class has stopped" <|
                 \_ ->
                     Strategy.pitCycleOf (classOf "HYPERCAR") [ neverStopped ]
@@ -81,6 +88,10 @@ suite =
                 \_ ->
                     plannedOn { distance = 20, cycle = Nothing } 20 [] 14
                         |> Expect.equal []
+            , test "a window of no laps cannot be repeated forever" <|
+                \_ ->
+                    plannedOn (onClock 20 0) 20 [ 5 ] 5
+                        |> Expect.equal []
             ]
         ]
 
@@ -118,14 +129,17 @@ stoppedOnce =
     carOf "3" "HYPERCAR" [ 6 ] 12
 
 
-alsoSix : Car
-alsoSix =
-    carOf "5" "HYPERCAR" [ 6 ] 12
-
-
 heldLong : Car
 heldLong =
     carHeld "9" "HYPERCAR" [ 9 ] [ 5, 6, 7, 8 ] 12
+
+
+{-| `n` cars of the class, each stopping once at 6 on a 12-lap race: a pool of
+`n` clean runs of 6.
+-}
+fleetOf : Int -> List Car
+fleetOf n =
+    List.map (\i -> carOf (String.fromInt (100 + i)) "HYPERCAR" [ 6 ] 12) (List.range 1 n)
 
 
 neverStopped : Car

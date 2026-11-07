@@ -11,17 +11,20 @@ the class's fuel window: the laps a full tank covers at race pace. It is the
 ninetieth percentile of the class's stopped runs, read off the finished race,
 because the question is how far a tank can go and not where most cars happen
 to stop -- a window is the top of the distribution, not its middle. Runs the
-field was held down for are no reading of a tank at all, and neither is a
+field was held down for are no reading of a tank at all -- a tank under a
+procedure reaches further than the same tank at pace -- and neither is a
 spacing taken mid-race, which is whichever incident the last hour happened to
-be; only the whole of a clean race says what it was run on. Both readings are
-therefore the finished race's, and a `PitCycle` is a constant of its class and
-round: the clock enters at `plan`, where how much race a car has left depends
-on how far the leader has got by now.
+be; only the whole of a clean race says what it was run on. The pool those
+runs make is what makes a percentile mean something: a Le Mans class answers
+with several hundred of them, a six-hour class held often with five, and at a
+handful the class has not shown its tank, so it answers `Nothing`. Both
+readings are therefore the finished race's, and a `PitCycle` is a constant of
+its class and round: the clock enters at `plan`, where how much race a car has
+left depends on how far the leader has got by now.
 
 A *strategy* is one car's whole race read as a plan: what it has run, the run
-it is on, and what `plan` forecasts it has left. It is one car's, class-wide
-that the pit cycle is and laps-down that the forecast is trimmed by, so the
-plan is where the general race finally says something about one crew.
+it is on, and what `plan` forecasts it has left. It is one car's, though the
+pit cycle is class-wide and the forecast is trimmed by laps-down.
 
 @docs PitCycle, pitCycleOf
 @docs PredictedStint, Strategy, plan
@@ -65,8 +68,26 @@ pitCycleOf class_ raceCars =
         stints
             |> List.filterMap cleanStoppedLength
             |> List.sort
-            |> Statistics.quantile 0.9
+            |> windowFrom
     }
+
+
+{-| Below this many clean stopped runs the percentile is one long fuel run
+wearing the class's name, so the class gets no window rather than a false
+one. A Le Mans class clears it tenfold; a held six-hour class can fall short.
+-}
+minCleanRuns : Int
+minCleanRuns =
+    10
+
+
+windowFrom : List Int -> Maybe Int
+windowFrom cleanLengths =
+    if List.length cleanLengths >= minCleanRuns then
+        Statistics.quantile 0.9 cleanLengths
+
+    else
+        Nothing
 
 
 {-| One of the fuel windows still to come for a car: `laps` of running left
@@ -140,26 +161,30 @@ forecast cycleOfRace lead stints =
             []
 
         Just cycleLength ->
-            let
-                lapsSoFar =
-                    List.sum (List.map .lapCount stints)
+            if cycleLength <= 0 then
+                []
 
-                limit =
-                    cycleOfRace.distance - max 0 (lead - lapsSoFar)
+            else
+                let
+                    lapsSoFar =
+                        List.sum (List.map .lapCount stints)
 
-                first =
-                    case List.reverse stints of
-                        last :: _ ->
-                            if last.end == RaceStint.Running && last.lapCount < cycleLength then
-                                cycleLength - last.lapCount
+                    limit =
+                        cycleOfRace.distance - max 0 (lead - lapsSoFar)
 
-                            else
+                    first =
+                        case List.reverse stints of
+                            last :: _ ->
+                                if last.end == RaceStint.Running && last.lapCount < cycleLength then
+                                    cycleLength - last.lapCount
+
+                                else
+                                    cycleLength
+
+                            [] ->
                                 cycleLength
-
-                        [] ->
-                            cycleLength
-            in
-            predict cycleLength first lapsSoFar limit []
+                in
+                predict cycleLength first lapsSoFar limit []
 
 
 predict : Int -> Int -> Int -> Int -> List PredictedStint -> List PredictedStint
@@ -175,14 +200,9 @@ predict cycleLength width pos limit acc =
         predict cycleLength cycleLength (pos + laps) limit ({ laps = laps, stop = pos + laps } :: acc)
 
 
-{-| Every stopped run that was clean -- the field held down for no lap of it
--- in laps. A car's last run is not one of them even after the flag: nothing
-stopped it, the race did. Held runs are out because a tank under a procedure
-reaches further than the same tank at pace, and it is the pace window the
-forecast is asked for: a round's held hundred percent could sit two window
-lengths out and say nothing about the tank. The ninetieth percentile rather
-than the median because the window is the top of the distribution; the class
-supplies the hundred-odd runs that make the percentile mean something.
+{-| Every stopped run that was clean -- held for no lap of it -- in laps. A
+car's last run is not one of them even after the flag: nothing stopped it,
+the race did. Why held runs are out of the window stands with the module.
 -}
 cleanStoppedLength : Stint -> Maybe Int
 cleanStoppedLength stint =
