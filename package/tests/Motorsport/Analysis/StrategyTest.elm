@@ -73,6 +73,14 @@ suite =
                             [ { laps = 3, stop = 15 }
                             , { laps = 1, stop = 16 }
                             ]
+            , test "a car in the lane is forecast from back out onto the track" <|
+                \_ ->
+                    -- Twelve run, in the lane at the head of the race: the
+                    -- forecast counts the next window from the line the car
+                    -- will cross back out on.
+                    plannedOn (onClock 30 5) 12 [ 5, 10 ] 12
+                        |> List.map .stop
+                        |> Expect.equal [ 15, 20, 25, 30 ]
             , test "the whole race left, nothing is forecast" <|
                 \_ ->
                     plannedOn (onClock 20 5) 20 [ 5, 10, 15, 20 ] 20
@@ -92,6 +100,21 @@ suite =
                 \_ ->
                     plannedOn (onClock 20 0) 20 [ 5 ] 5
                         |> Expect.equal []
+            , test "a car that has stopped for good has no stops to forecast" <|
+                \_ ->
+                    -- Retired and flag-finished both: mid-race and on the
+                    -- leader's distance, neither has a future stop.
+                    Expect.equal
+                        ( plannedOnWhen Status.Retired (onClock 20 5) 20 [ 5 ] 10
+                            , plannedOnWhen Status.Checkered (onClock 20 5) 20 [ 5, 10, 15 ] 15
+                        )
+                    <|
+                        ( [], [] )
+            , test "a class with no cars has neither distance nor cycle" <|
+                \_ ->
+                    Expect.equal
+                        (Strategy.pitCycleOf (classOf "HYPERCAR") [])
+                        { distance = 0, cycle = Nothing }
             ]
         ]
 
@@ -115,7 +138,12 @@ summary stops lapCount =
 
 plannedOn : Strategy.PitCycle -> Int -> List Int -> Int -> List Strategy.PredictedStint
 plannedOn cycle lead stops lapCount =
-    Strategy.plan cycle lead Status.Racing (summary stops lapCount)
+    plannedOnWhen Status.Racing cycle lead stops lapCount
+
+
+plannedOnWhen : Status.Status -> Strategy.PitCycle -> Int -> List Int -> Int -> List Strategy.PredictedStint
+plannedOnWhen status cycle lead stops lapCount =
+    Strategy.plan cycle lead status (summary stops lapCount)
         |> .planned
 
 
