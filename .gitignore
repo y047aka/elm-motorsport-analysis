@@ -22,3 +22,4 @@ app/public/style.css
 # Generated benchmark fixtures (run `nix run .#benchmark`)
 package/benchmark/Fixture/Generated.elm
 package/benchmark/Fixture/Positions.elm
+test-results/
