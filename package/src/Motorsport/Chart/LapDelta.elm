@@ -13,6 +13,7 @@ every row of the column -- the way
 for the same reason.
 
 @docs sparklineOn, sharedBounds, Bounds
+
 -}
 
 import Html exposing (Html, text)
@@ -42,11 +43,12 @@ every lap the set has to show and the axis drawn over the laps that survive it.
 The fence is drawn tighter than the distribution chart's -- `Q3 + 0.25×IQR`
 against its `Q3 + 1.5×IQR` -- because this axis is read for the run of laps
 inside the class's holding pace, and every lap kept far above it costs the axis
-the resolution the fine changes are seen in.
-[`pooledFence`](Motorsport-Chart-LapTimeDistribution#pooledFence) is the reading
-of why the fence belongs to the set and not to the car.
+the resolution the fine changes are seen in. LapTimeDistribution's
+`pooledFence` is the reading of why the fence belongs to the set and not to
+the car.
 
 `Nothing` where none of the cars has a time at all.
+
 -}
 sharedBounds : LapHistory -> List { range : LapRange, car : CarAt } -> Maybe Bounds
 sharedBounds lapHistory cars =
@@ -98,6 +100,7 @@ sparklineOn bounds range lapHistory item =
             in
             Common.svg { width = width, height = height }
                 (List.map (changeLine xScale (yScale bounds) stroke) changes)
+
 
 
 -- SERIES
@@ -203,6 +206,7 @@ padded ( lo, hi ) =
     ( lo - margin, hi + margin )
 
 
+
 -- RENDER
 
 
@@ -235,7 +239,8 @@ barWidth ( first, last ) =
     in
     clamp 1 (width / 20) (stride * 0.75)
 
-{-| One change: a line from the time of the lap before down to this lap's where
+
+{-| One change: a line from the previous lap's time down to this lap's where
 the time came down, up where it went up, in the colours the move arrow wears.
 -}
 changeLine : Scale.ContinuousScale Float -> Scale.ContinuousScale Float -> String -> Change -> Svg msg
@@ -249,7 +254,13 @@ changeLine xScale ys stroke { lap, from, to } =
         , SvgAttr.x2 x
         , SvgAttr.y1 (String.fromFloat (Scale.convert ys (toFloat from)))
         , SvgAttr.y2 (String.fromFloat (Scale.convert ys (toFloat to)))
-        , SvgAttr.class (if to < from then "stroke-green-500" else "stroke-red-500")
+        , SvgAttr.class
+            (if to < from then
+                "stroke-green-500"
+
+             else
+                "stroke-red-500"
+            )
         , SvgAttr.strokeWidth stroke
         ]
         []

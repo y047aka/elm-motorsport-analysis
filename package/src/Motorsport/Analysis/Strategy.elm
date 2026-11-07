@@ -6,7 +6,7 @@ module Motorsport.Analysis.Strategy exposing
 {-| What a race says about how it is run, and what that gives a car to plan
 with.
 
-A *pit cycle* is a stint and the stop that ends it, and the cycle length is
+A _pit cycle_ is a stint and the stop that ends it, and the cycle length is
 the class's fuel window: the laps a full tank covers at race pace. It is the
 ninetieth percentile of the class's stopped runs, read off the finished race,
 because the question is how far a tank can go and not where most cars happen
@@ -22,7 +22,7 @@ readings are therefore the finished race's, and a `PitCycle` is a constant of
 its class and round: the clock enters at `plan`, where how much race a car has
 left depends on how far the leader has got by now.
 
-A *strategy* is one car's whole race read as a plan: what it has run, the run
+A _strategy_ is one car's whole race read as a plan: what it has run, the run
 it is on, and what `plan` forecasts it has left. It is one car's, though the
 pit cycle is class-wide and the forecast is trimmed by laps-down.
 
@@ -103,19 +103,20 @@ type alias PredictedStint =
 
 {-| A car's whole race as a plan.
 
-- `runs` is every run so far, in order, as
-  [`Analysis.Stint`](Motorsport-Analysis-Stint) reads them -- the running
-  record, ends and all.
-- `current` is the run in progress: `Nothing` for a car sitting in the lane,
-  which is on no run, and for one that has yet to finish a lap. The current
-  run is the last of `runs` when there is one -- the two fields are the same
-  fact read for two questions, what has been run and what is being run.
-- `planned` is the forecast: `[]` for a car that has stopped for good, since
-  its future holds no stops, and `[]` before the class has taught the race any
-  cycle to plan with.
+  - `runs` is every run so far, in order, as
+    [`Analysis.Stint`](Motorsport-Analysis-Stint) reads them -- the running
+    record, ends and all.
+  - `current` is the run in progress: `Nothing` for a car sitting in the lane,
+    which is on no run, and for one that has yet to finish a lap. The current
+    run is the last of `runs` when there is one -- the two fields are the same
+    fact read for two questions, what has been run and what is being run.
+  - `planned` is the forecast: `[]` for a car that has stopped for good, since
+    its future holds no stops, and `[]` before the class has taught the race any
+    cycle to plan with.
 
 The `planned` laps sum to just how much race the car has left to run -- the
 leader's distance, less the laps it is already down.
+
 -}
 type alias Strategy =
     { runs : List Stint
@@ -145,14 +146,15 @@ plan cycleOfRace lead status summary =
 
 {-| The class's window run out against one car's race, three readings:
 
-- a car short of the window still standing: the first prediction is the laps
-  left of it, ending where the tank is out;
-- a car already past it -- including one sitting in the lane, whose forecast
-  counts it back out onto the track: a full window from where it stands;
-- a car whose race is run -- at the flag the limit lands on where it stands:
-  nothing.
+  - a car short of the window still standing: the first prediction is the laps
+    left of it, ending where the tank is out;
+  - a car already past it -- including one sitting in the lane, whose forecast
+    counts it back out onto the track: a full window from where it stands;
+  - a car whose race is run -- at the flag the limit lands on where it stands:
+    nothing.
 
 Each later prediction is a full window from the stop before it.
+
 -}
 forecast : PitCycle -> Int -> List Stint -> List PredictedStint
 forecast cycleOfRace lead stints =

@@ -120,9 +120,9 @@ maxWidth =
     680
 
 
-{-| A data column of the row, in the order they stand after the position and
-the badge — which are not columns and are always drawn. `align` is read by
-both the label and the cells, which is what keeps them lined up.
+{-| A data column of the row. `columns` is the order they are drawn in; the
+thresholds stand in `columnSpec`. `align` is read by both the label and the
+cells, which is what keeps them lined up.
 -}
 type Column
     = Driver

@@ -12,7 +12,6 @@ fences a chart bounds itself by, and the middle of a set of values.
 -}
 
 
-
 {-| IQR outlier fences `[Q1 − 1.5×IQR, Q3 + 1.5×IQR]` for an ascending-sorted
 list. `Nothing` when empty.
 
@@ -97,7 +96,10 @@ median =
     List.sort >> quantile 0.5
 
 
-{-| The q-quantile (0–1) of an ascending-sorted list, by nearest rank.
+{-| The q-quantile (0–1) of an ascending-sorted list, by lower rank: the
+largest element at or below `q` of the span, so the example below is the
+second of three, not the third. `median` is this at 0.5. A forecast built on
+this estimator moves if the estimator does -- see `Motorsport.Analysis.Strategy`.
 
     quantile 0.9 [ 1, 2, 3 ]
     --> Just 2

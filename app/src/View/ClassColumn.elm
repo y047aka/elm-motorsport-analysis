@@ -29,7 +29,7 @@ served, who is driving away, and who climbed into the car.
 
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, selected, src, style, title, value)
-import Html.Events exposing (onClick, on)
+import Html.Events exposing (on, onClick)
 import Html.Keyed as Keyed
 import Json.Decode as Decode
 import Motorsport.Analysis.Rivals as Rivals
@@ -243,7 +243,7 @@ head config class_ cars =
         ]
 
 
-{-| The three curves and the words that name what each holds.
+{-| The five curves and the words that name what each holds.
 -}
 allTraces : List ( Trace, String )
 allTraces =
@@ -699,6 +699,7 @@ gapTo inFront chasing snapshot =
         |> Maybe.withDefault (Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted))
 
 
+
 -- PIT STRATEGY
 
 
@@ -711,12 +712,15 @@ two of them is the stop between the runs, and hovering one says what it cost.
 The run still going is measured against the class's fuel window and the rest of
 the race is written past it -- see `ghosts`. The forecast says nothing the laps
 do not hold: no fuel load, no plan, and no yellow flag in the car's future.
+
 -}
 stintTrace : PitCycle -> Int -> LapHistory -> CarAt -> Html msg
 stintTrace pitCycle lead history item =
     let
         strategy =
-            Strategy.plan pitCycle lead item.status
+            Strategy.plan pitCycle
+                lead
+                item.status
                 (LapHistory.get item.metadata.carNumber history
                     |> AnalysisStint.summarize
                 )
