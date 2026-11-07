@@ -150,13 +150,28 @@ view config snapshot raceCars class_ =
             List.map (\car -> { range = paceRange car, car = car }) cars
 
         paceBounds =
-            LapTimeDistribution.sharedBounds history paced
+            case config.trace of
+                PaceTrace ->
+                    LapTimeDistribution.sharedBounds history paced
+
+                _ ->
+                    Nothing
 
         deltaBounds =
-            LapDelta.sharedBounds history paced
+            case config.trace of
+                DeltaTrace ->
+                    LapDelta.sharedBounds history paced
+
+                _ ->
+                    Nothing
 
         pitCycle =
-            Strategy.pitCycleOf class_ counted.lead raceCars
+            case config.trace of
+                StintTrace ->
+                    Strategy.pitCycleOf class_ raceCars
+
+                _ ->
+                    { distance = 0, cycle = Nothing }
 
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
@@ -345,8 +360,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot paceBounds deltaBounds pitCycle ( ahead, item ) =
+row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Int -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot paceBounds deltaBounds pitCycle lead ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -366,7 +381,7 @@ row config snapshot paceBounds deltaBounds pitCycle ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
-        , rowTrace config.trace paceBounds deltaBounds pitCycle snapshot item
+        , rowTrace config.trace paceBounds deltaBounds pitCycle lead snapshot item
         ]
     )
 
@@ -386,8 +401,8 @@ where the car stands, the rest of the race is written in dashed ghosts, one per
 fuel window of the class; a car still running past its window wears amber.
 
 -}
-rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Snapshot -> CarAt -> Html msg
-rowTrace trace paceBounds deltaBounds pitCycle snapshot item =
+rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Int -> Snapshot -> CarAt -> Html msg
+rowTrace trace paceBounds deltaBounds pitCycle lead snapshot item =
     let
         currentLap =
             item.standing.lapsCompleted
@@ -420,7 +435,7 @@ rowTrace trace paceBounds deltaBounds pitCycle snapshot item =
                         text ""
 
             StintTrace ->
-                stintTrace pitCycle history item
+                stintTrace pitCycle lead history item
 
             LapsTrace ->
                 SectorAndLaps.view item
@@ -526,7 +541,7 @@ rows config snapshot counted paceBounds deltaBounds pitCycle field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot paceBounds deltaBounds pitCycle pair :: acc
+                    row config snapshot paceBounds deltaBounds pitCycle counted.lead pair :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -697,11 +712,11 @@ The run still going is measured against the class's fuel window and the rest of
 the race is written past it -- see `ghosts`. The forecast says nothing the laps
 do not hold: no fuel load, no plan, and no yellow flag in the car's future.
 -}
-stintTrace : PitCycle -> LapHistory -> CarAt -> Html msg
-stintTrace pitCycle history item =
+stintTrace : PitCycle -> Int -> LapHistory -> CarAt -> Html msg
+stintTrace pitCycle lead history item =
     let
         strategy =
-            Strategy.plan pitCycle item.status
+            Strategy.plan pitCycle lead item.status
                 (LapHistory.get item.metadata.carNumber history
                     |> AnalysisStint.summarize
                 )

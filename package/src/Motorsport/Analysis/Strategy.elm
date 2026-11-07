@@ -13,9 +13,10 @@ because the question is how far a tank can go and not where most cars happen
 to stop -- a window is the top of the distribution, not its middle. Runs the
 field was held down for are no reading of a tank at all, and neither is a
 spacing taken mid-race, which is whichever incident the last hour happened to
-be; only the whole of a clean race says what it was run on. `lead` rides along
-as the clock's one reading, since how much race a car has left depends on how
-far the leader has got by now.
+be; only the whole of a clean race says what it was run on. Both readings are
+therefore the finished race's, and a `PitCycle` is a constant of its class and
+round: the clock enters at `plan`, where how much race a car has left depends
+on how far the leader has got by now.
 
 A *strategy* is one car's whole race read as a plan: what it has run, the run
 it is on, and what `plan` forecasts it has left. It is one car's, class-wide
@@ -41,15 +42,13 @@ class any stopped run at all -- no stops, no window.
 type alias PitCycle =
     { distance : Int
     , cycle : Maybe Int
-    , lead : Int
     }
 
 
-{-| Read the class off the whole race. `lead` is how far its leader has come
-at the clock.
+{-| Read the class off the whole race.
 -}
-pitCycleOf : Class -> Int -> List Car -> PitCycle
-pitCycleOf class_ lead raceCars =
+pitCycleOf : Class -> List Car -> PitCycle
+pitCycleOf class_ raceCars =
     let
         inClass =
             List.filter (\car -> car.metadata.class == class_) raceCars
@@ -67,7 +66,6 @@ pitCycleOf class_ lead raceCars =
             |> List.filterMap cleanStoppedLength
             |> List.sort
             |> Statistics.quantile 0.9
-    , lead = lead
     }
 
 
@@ -108,10 +106,11 @@ type alias Strategy =
 {-| The car's race as a plan, read at the clock off its own stints and the
 whole race's cycle. `summary` is
 [`Analysis.Stint.summarize`](Motorsport-Analysis-Stint#summarize) of the
-laps the clock has seen.
+laps the clock has seen, and `lead` is how far the class leader has come at
+that same clock -- a car's race left is measured against the leader now.
 -}
-plan : PitCycle -> Status -> Stint.Summary -> Strategy
-plan cycleOfRace status summary =
+plan : PitCycle -> Int -> Status -> Stint.Summary -> Strategy
+plan cycleOfRace lead status summary =
     { runs = summary.stints
     , current = summary.current
     , planned =
@@ -119,18 +118,23 @@ plan cycleOfRace status summary =
             []
 
         else
-            forecast cycleOfRace summary.stints
+            forecast cycleOfRace lead summary.stints
     }
 
 
-{-| The class's window run out against one car's race: repeated runs of the
-`cycle` laps, the first ending where the run still going runs out of tank --
-or, for a car already past the window, a full one from where it stands. The
-first ends where `Analysis.Stint` says the car stands plus the laps left of
-the window, which for a car in the lane counts it back out onto the track.
+{-| The class's window run out against one car's race, three readings:
+
+- a car short of the window still standing: the first prediction is the laps
+  left of it, ending where the tank is out;
+- a car already past it -- including one sitting in the lane, whose forecast
+  counts it back out onto the track: a full window from where it stands;
+- a car whose race is run -- at the flag the limit lands on where it stands:
+  nothing.
+
+Each later prediction is a full window from the stop before it.
 -}
-forecast : PitCycle -> List Stint -> List PredictedStint
-forecast cycleOfRace stints =
+forecast : PitCycle -> Int -> List Stint -> List PredictedStint
+forecast cycleOfRace lead stints =
     case cycleOfRace.cycle of
         Nothing ->
             []
@@ -141,7 +145,7 @@ forecast cycleOfRace stints =
                     List.sum (List.map .lapCount stints)
 
                 limit =
-                    cycleOfRace.distance - max 0 (cycleOfRace.lead - lapsSoFar)
+                    cycleOfRace.distance - max 0 (lead - lapsSoFar)
 
                 first =
                     case List.reverse stints of

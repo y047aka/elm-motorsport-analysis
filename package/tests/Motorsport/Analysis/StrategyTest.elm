@@ -20,26 +20,26 @@ suite =
         [ describe "pitCycleOf"
             [ test "the distance is how far the class came, and says nothing of other classes" <|
                 \_ ->
-                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, longGt3 ]
+                    Strategy.pitCycleOf (classOf "HYPERCAR") [ stoppedTwice, stoppedOnce, longGt3 ]
                         |> .distance
                         |> Expect.equal 12
             , test "the cycle is the ninetieth percentile of the clean stopped runs" <|
                 \_ ->
                     -- Runs of 5 and 5 from one car, 6 and 6 and 6 from two
                     -- more: the window sits at the top of that, not its middle.
-                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ stoppedTwice, stoppedOnce, alsoSix ]
+                    Strategy.pitCycleOf (classOf "HYPERCAR") [ stoppedTwice, stoppedOnce, alsoSix ]
                         |> .cycle
                         |> Expect.equal (Just 6)
             , test "a run the field was held down for is no reading of a tank" <|
                 \_ ->
                     -- The held car reached 9 on its tank, but four of those
                     -- laps were under a procedure: the window is the clean 6.
-                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ heldLong, stoppedOnce ]
+                    Strategy.pitCycleOf (classOf "HYPERCAR") [ heldLong, stoppedOnce ]
                         |> .cycle
                         |> Expect.equal (Just 6)
             , test "no cycle before the class has stopped" <|
                 \_ ->
-                    Strategy.pitCycleOf (classOf "HYPERCAR") 12 [ neverStopped ]
+                    Strategy.pitCycleOf (classOf "HYPERCAR") [ neverStopped ]
                         |> .cycle
                         |> Expect.equal Nothing
             ]
@@ -48,7 +48,7 @@ suite =
                 \_ ->
                     -- Five on the clock: a stop due in the 1 lap left of the run
                     -- this car is on, then one whole run to the flag at 20.
-                    plannedOn (onClock 20 5 14) [ 5, 10 ] 14
+                    plannedOn (onClock 20 5) 14 [ 5, 10 ] 14
                         |> Expect.equal
                             [ { laps = 1, stop = 15 }
                             , { laps = 5, stop = 20 }
@@ -57,39 +57,38 @@ suite =
                 \_ ->
                     -- Seven laps out and no stop yet: the next whole run of five
                     -- is all that stands, cut to the two laps of its own race left.
-                    plannedOn (onClock 20 5 17) [ 5, 10 ] 17
+                    plannedOn (onClock 20 5) 17 [ 5, 10 ] 17
                         |> Expect.equal [ { laps = 3, stop = 20 } ]
-            , test "a car five laps down has five laps less of race to forecast" <|
+            , test "a car four laps down has four laps less of race to forecast" <|
                 \_ ->
-                    plannedOn (onClock 20 5 16) [ 5, 10 ] 12
+                    plannedOn (onClock 20 5) 16 [ 5, 10 ] 12
                         |> Expect.equal
                             [ { laps = 3, stop = 15 }
                             , { laps = 1, stop = 16 }
                             ]
             , test "the whole race left, nothing is forecast" <|
                 \_ ->
-                    plannedOn (onClock 20 5 20) [ 5, 10, 15, 20 ] 20
+                    plannedOn (onClock 20 5) 20 [ 5, 10, 15, 20 ] 20
                         |> Expect.equal []
             , test "the plan's laps sum to the race the car has left" <|
                 \_ ->
                     -- Four laps of race left for a car four down at 12 of 20;
                     -- the plan holds four laps, no more and no less.
-                    plannedOn (onClock 20 5 16) [ 5, 10 ] 12
+                    plannedOn (onClock 20 5) 16 [ 5, 10 ] 12
                         |> sumByLaps
                         |> Expect.equal (20 - (16 - 12) - 12)
             , test "no cycle, no forecast" <|
                 \_ ->
-                    plannedOn { distance = 20, cycle = Nothing, lead = 20 } [] 14
+                    plannedOn { distance = 20, cycle = Nothing } 20 [] 14
                         |> Expect.equal []
             ]
         ]
 
 
-onClock : Int -> Int -> Int -> Strategy.PitCycle
-onClock distance cycleLength lead =
+onClock : Int -> Int -> Strategy.PitCycle
+onClock distance cycleLength =
     { distance = distance
     , cycle = Just cycleLength
-    , lead = lead
     }
 
 
@@ -103,9 +102,9 @@ summary stops lapCount =
     lapsOf stops lapCount |> Stint.summarize
 
 
-plannedOn : Strategy.PitCycle -> List Int -> Int -> List Strategy.PredictedStint
-plannedOn cycle stops lapCount =
-    Strategy.plan cycle Status.Racing (summary stops lapCount)
+plannedOn : Strategy.PitCycle -> Int -> List Int -> Int -> List Strategy.PredictedStint
+plannedOn cycle lead stops lapCount =
+    Strategy.plan cycle lead Status.Racing (summary stops lapCount)
         |> .planned
 
 
