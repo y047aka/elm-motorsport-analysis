@@ -398,7 +398,7 @@ laps on the distance the class leader came to at the end of the race -- the
 scale is the finished race's from the first lap, a bar that ends short is a car
 that ran fewer laps than the leader did, and every break in it is a stop. Past
 where the car stands, the rest of the race is written in dashed ghosts, one per
-fuel window of the class; a car still running past its window wears amber.
+fuel window of the class.
 
 -}
 rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Int -> Snapshot -> CarAt -> Html msg
@@ -709,9 +709,9 @@ and the laps of it written in the segment. The segments are coloured alike in
 one grey because nothing here is told apart by who was driving; a break between
 two of them is the stop between the runs, and hovering one says what it cost.
 
-The run still going is measured against the class's fuel window and the rest of
-the race is written past it -- see `ghosts`. The forecast says nothing the laps
-do not hold: no fuel load, no plan, and no yellow flag in the car's future.
+The run still going ends the bar like the rest, and the rest of the race is
+written past it -- see `ghosts`. The forecast says nothing the laps do not
+hold: no fuel load, no plan, and no yellow flag in the car's future.
 
 -}
 stintTrace : PitCycle -> Int -> LapHistory -> CarAt -> Html msg
@@ -729,41 +729,20 @@ stintTrace pitCycle lead history item =
         text ""
 
     else
-        div [ class "flex h-3.5 items-stretch overflow-hidden" ]
-            (List.map (stintSegment pitCycle.distance pitCycle.cycle) strategy.runs
+        div [ class "flex h-7 items-stretch overflow-hidden" ]
+            (List.map (stintSegment pitCycle.distance) strategy.runs
                 ++ ghosts pitCycle.distance strategy.planned
             )
 
 
 {-| A segment of the car's own race, in laps on the race's scale -- its width
 is the percentage of the race, with the gaps left out so the row sums to the
-bar it is drawn on. The run still going turns amber once its own clean laps
-pass the class's window -- the same count the window is read from, so a stint
-held for half its length is not called an unmet deadline: that one is no
-longer a reading of what happened but of a deadline gone unmet. A run that
-ended at a stop is never amber however long it was -- it stopped, which is
-what the window asks for.
+bar it is drawn on.
 -}
-stintSegment : Int -> Maybe Int -> Stint -> Html msg
-stintSegment lapsMax window stint =
-    let
-        overrun =
-            case window of
-                Just w ->
-                    stint.end == RaceStint.Running && stint.lapCount - stint.heldLaps >= w
-
-                Nothing ->
-                    False
-
-        shade =
-            if overrun then
-                "bg-amber-500/70"
-
-            else
-                "bg-muted-foreground/40"
-    in
+stintSegment : Int -> Stint -> Html msg
+stintSegment lapsMax stint =
     div
-        [ class (shade ++ " grid place-items-center rounded-[1px] text-[9px] leading-none tabular-nums border-r border-background/50 last:border-r-0")
+        [ class "grid place-items-center rounded-[1px] bg-muted-foreground/40 text-[9px] leading-none tabular-nums border-r border-background/50 last:border-r-0"
         , style "width" (String.fromFloat (100 * toFloat stint.lapCount / toFloat lapsMax) ++ "%")
         , title (stintNote stint)
         ]
