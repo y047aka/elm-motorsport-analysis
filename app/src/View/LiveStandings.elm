@@ -21,6 +21,7 @@ import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
 import Motorsport.Analysis.Deployment as Deployment exposing (Deployment)
+import Motorsport.Analysis.Tank as Tank exposing (Tank)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -36,6 +37,7 @@ import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.DeploymentBar as DeploymentBar
+import View.EnergyBar as EnergyBar
 import View.SectorPie as SectorPie
 
 
@@ -61,6 +63,7 @@ type alias Config msg =
     , width : Float
     , startPosition : CarNumber -> Maybe Position
     , deployments : Deployment.Table
+    , tanks : Tank.Table
     }
 
 
@@ -126,7 +129,7 @@ strip out of the page before the reader could drag it back.
 -}
 maxWidth : Float
 maxWidth =
-    780
+    860
 
 
 {-| A data column of the row. `columns` is the order they are drawn in; the
@@ -143,6 +146,7 @@ type Column
     | Best
     | Laps
     | Deploy
+    | Energy
 
 
 type alias Spec =
@@ -183,6 +187,9 @@ columnSpec column =
         Deploy ->
             { label = "Deploy", at = 700, track = String.fromFloat DeploymentBar.width ++ "px", align = "" }
 
+        Energy ->
+            { label = "Energy", at = 780, track = String.fromFloat EnergyBar.width ++ "px", align = "" }
+
 
 {-| Every column, in row order.
 A column's `at` is the panel width from which it stands, in its own place in
@@ -192,7 +199,7 @@ right -- that is the design, not an oversight to fix.
 -}
 columns : List Column
 columns =
-    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Deploy, Move ]
+    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Deploy, Energy, Move ]
 
 
 {-| Does this column fit a panel of this width?
@@ -345,6 +352,7 @@ type alias Row =
     , sectorSlots : List ( String, Float )
     , deployment : Maybe Deployment
     , deploymentScale : Maybe Speed
+    , tank : Maybe Tank
     , move : { startPosition : Maybe Position, position : Position }
     }
 
@@ -389,6 +397,8 @@ row config item =
         Deployment.lookup item.metadata.carNumber item.standing.lapsCompleted config.deployments
     , deploymentScale =
         Deployment.spread item.metadata.class item.standing.lapsCompleted config.deployments
+    , tank =
+        Tank.level item.metadata.carNumber item.standing.lapsCompleted config.tanks
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
@@ -495,3 +505,6 @@ cell r column =
 
         Deploy ->
             DeploymentBar.bar r.deployment r.deploymentScale
+
+        Energy ->
+            EnergyBar.bar r.tank

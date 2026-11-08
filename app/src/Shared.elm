@@ -23,6 +23,7 @@ import Http
 import Json.Decode exposing (Decoder)
 import Motorsport.Analysis.Deployment as Deployment
 import Motorsport.Analysis.Strategy as Strategy
+import Motorsport.Analysis.Tank as Tank
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race as Race
@@ -166,6 +167,7 @@ type alias LoadedRound =
     , snapshot : Snapshot
     , pitCycles : Dict String Strategy.PitCycle
     , deployments : Deployment.Table
+    , tanks : Tank.Table
     , track : Tracker.Track
     , timeline : Timeline
     , fieldEvents : Timeline
@@ -539,11 +541,15 @@ roundFrom id summary rawLaps timelineEvents geometry =
 
         deployments =
             Deployment.tableOf replay.race.cars
+
+        tanks =
+            Tank.tableOf replay.race.cars
     in
     { replay = replay
     , snapshot = snapshotOf replay
     , pitCycles = pitCycles
     , deployments = deployments
+    , tanks = tanks
     , track = trackOf id summary.track geometry
     , timeline = Timeline.fromList timelineEvents
     , fieldEvents = fieldEventsOf timelineEvents

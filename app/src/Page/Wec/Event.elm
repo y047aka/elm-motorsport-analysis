@@ -24,6 +24,7 @@ import Json.Decode as Decode
 import List.Extra
 import Motorsport.Analysis.Deployment as Deployment
 import Motorsport.Analysis.Strategy exposing (PitCycle)
+import Motorsport.Analysis.Tank as Tank
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
@@ -315,7 +316,7 @@ mainGrid round keys m =
         [ Attributes.class
             "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         ]
-        [ standingsCell keys m round.deployments snapshot replay.race.cars
+        [ standingsCell keys m round.deployments round.tanks snapshot replay.race.cars
         , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
@@ -342,8 +343,15 @@ other leaves the grip off the gap.
 The column track is `auto`, so the strip gains and loses the width as the
 drag goes on.
 -}
-standingsCell : List Columns.StripKey -> Model -> Deployment.Table -> Snapshot -> List Car -> Html Msg
-standingsCell keys m deployments snapshot cars =
+standingsCell :
+    List Columns.StripKey
+    -> Model
+    -> Deployment.Table
+    -> Tank.Table
+    -> Snapshot
+    -> List Car
+    -> Html Msg
+standingsCell keys m deployments tanks snapshot cars =
     let
         startPositions =
             gridOf cars
@@ -357,6 +365,7 @@ standingsCell keys m deployments snapshot cars =
             , width = m.standings.width
             , startPosition = \number -> Dict.get number startPositions
             , deployments = deployments
+            , tanks = tanks
             }
             snapshot
         , div [ Attributes.class "absolute -right-2.5 top-0 h-full z-10 grid w-2.5 place-items-center" ]
