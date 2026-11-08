@@ -1,13 +1,13 @@
 module Internal.Statistics exposing
-    ( iqrFences, upperFence
-    , median
+    ( iqrFences, upperFence, upperFenceBy
+    , median, quantile
     )
 
 {-| The plain statistics a reading of the race is taken with: the outlier
 fences a chart bounds itself by, and the middle of a set of values.
 
-@docs iqrFences, upperFence
-@docs median
+@docs iqrFences, upperFence, upperFenceBy
+@docs median, quantile
 
 -}
 
@@ -45,7 +45,19 @@ sorted.
 
 -}
 upperFence : List Int -> Int
-upperFence values =
+upperFence =
+    upperFenceBy 1.5
+
+
+{-| Upper outlier fence `Q3 + k×IQR`, for a chart that wants the outlier cut
+tighter or looser than the classic `1.5`.
+
+    upperFenceBy 0.5 [ 1, 2, 3, 4, 5, 6, 7, 8 ]
+    --> 8
+
+-}
+upperFenceBy : Float -> List Int -> Int
+upperFenceBy k values =
     let
         sorted =
             List.sort values
@@ -59,18 +71,18 @@ upperFence values =
             Nothing
 
         else
-            iqrFences sorted
+            Maybe.map2 Tuple.pair (quantile 0.25 sorted) (quantile 0.75 sorted)
     of
-        Just fences ->
-            fences.upper
+        Just ( q1, q3 ) ->
+            q3 + round (k * toFloat (q3 - q1))
 
         Nothing ->
             List.maximum sorted |> Maybe.withDefault 0
 
 
-{-| The middle value, by nearest rank -- for an even count the lower of the two
-middles rather than the mean of them, so what comes back is always one of the
-values given.
+{-| The middle value -- `quantile` at 0.5, so for an even count the lower of
+the two middles rather than the mean of them, and what comes back is always
+one of the values given.
 
     median [ 3, 1, 2 ]
     --> Just 2
@@ -84,7 +96,13 @@ median =
     List.sort >> quantile 0.5
 
 
-{-| The q-quantile (0–1) of an ascending-sorted list, by nearest rank.
+{-| The q-quantile (0–1) of an ascending-sorted list, by lower rank -- the
+largest element at or below `q` of the span, not the nearest rank. `median`
+is this at 0.5.
+
+    quantile 0.9 [ 1, 2, 3 ]
+    --> Just 2
+
 -}
 quantile : Float -> List Int -> Maybe Int
 quantile q sorted =

@@ -22,6 +22,7 @@ import Internal.DataView as DataView
 import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
+import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
@@ -314,7 +315,7 @@ mainGrid round keys m =
             "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         ]
         [ standingsCell keys m snapshot replay.race.cars
-        , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
+        , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -333,10 +334,12 @@ gridOf cars =
 
 
 {-| The live standings, standing to the left of the strip rather than as one
-of its columns, and a grip along their right edge to drag them wider or
-narrower. The grip is drawn over the card's edge -- the card's own `class`
-is the custom element's -- and the column track is `auto`, so the strip
-gains and loses the width as the drag goes on.
+of its columns, and a grip to drag them wider or narrower.
+The grip stands in the gap between the two tracks: its container's `w-2.5`
+and `-right-2.5` are `mainGrid`'s `gap-2.5`, so a change to one without the
+other leaves the grip off the gap.
+The column track is `auto`, so the strip gains and loses the width as the
+drag goes on.
 -}
 standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html Msg
 standingsCell keys m snapshot cars =
@@ -354,7 +357,7 @@ standingsCell keys m snapshot cars =
             , startPosition = \number -> Dict.get number startPositions
             }
             snapshot
-        , div [ Attributes.class "absolute right-0 top-0 h-full z-10" ]
+        , div [ Attributes.class "absolute -right-2.5 top-0 h-full z-10 grid w-2.5 place-items-center" ]
             [ Html.map ResizeMsg (Resize.grip m.standings) ]
         ]
 
@@ -433,8 +436,8 @@ stripColumn key width placement content =
     )
 
 
-columnStrip : String -> TrackerChart.Track -> Timeline -> Timeline -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
-columnStrip cell track timeline fieldEvents keys m replay snapshot =
+columnStrip : String -> TrackerChart.Track -> Timeline -> Timeline -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
     let
         several =
             List.length keys > 1
@@ -459,7 +462,9 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
                             |> Maybe.withDefault (text "")
 
                     Columns.ClassColumn class_ ->
-                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot class_
+                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot
+                            (Maybe.withDefault pitCycleNone (Dict.get (Class.toString class_) pitCycles))
+                            class_
 
                     Columns.Tracker ->
                         trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
@@ -539,8 +544,8 @@ cornerControls controls =
 {-| One class of the field, which is what the strip opens with: `View.ClassColumn`
 draws its cars each against the class-mate ahead of it.
 -}
-classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> Class -> Html Msg
-classColumn several standing held trace snapshot class_ =
+classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> PitCycle -> Class -> Html Msg
+classColumn several standing held trace snapshot pitCycle class_ =
     let
         controls =
             corner several held (Columns.ClassColumn class_)
@@ -555,7 +560,16 @@ classColumn several standing held trace snapshot class_ =
         , grip = controls.grip
         }
         snapshot
+        pitCycle
         class_
+
+
+{-| The answer for a class the race holds none of -- no scale, no window, and
+the strategy trace draws nothing on it.
+-}
+pitCycleNone : PitCycle
+pitCycleNone =
+    { distance = 0, cycle = Nothing }
 
 
 {-| `Class` carries a record, so each column's curve choice is kept under the

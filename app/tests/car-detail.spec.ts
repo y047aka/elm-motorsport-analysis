@@ -45,10 +45,29 @@ const STANDINGS_MAX = readConstant('LiveStandings.maxWidth', standingsSource, /\
 const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
 const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsFence =\n\s*\{[\s\S]*?step = (\d+)/);
 
+/** The row curves the picker offers, read off the Elm that names them --
+ * `data-row-trace` and the `value` of each option are both `traceName`. */
+const classColumnSource = readFileSync(new URL('../src/View/ClassColumn.elm', import.meta.url), 'utf8');
+const TRACES = [
+  ...classColumnSource.matchAll(/\n\s{8}\w+Trace ->\n\s{12}"(\w+)"\n/g),
+].map((m) => m[1]);
+if (TRACES.length !== 4) {
+  throw new Error(`traceName words not found -- did the curve list move?`);
+}
+
+/** Each data column's threshold, read off `columnSpec`. */
+function readColumnThresholds(): number[] {
+  const spec = /\{\s*label = "[^"]*",\s*at = (\d+)/g;
+  const found = [...standingsSource.matchAll(spec)].map((m) => Number(m[1]));
+  if (found.length < 4) {
+    throw new Error(`columnSpec thresholds not found -- did the Spec shape move?`);
+  }
+  return found;
+}
+
 /** How `rowButton` opens every class row's label. The head's curve picker
  * carries `aria-pressed` too, so the rows are the pressed buttons whose label
  * begins this way -- and this is the label that says so, not a copy. */
-const classColumnSource = readFileSync(new URL('../src/View/ClassColumn.elm', import.meta.url), 'utf8');
 const ROW_LABEL = readString(
   'rowButton aria-label',
   classColumnSource,
@@ -682,16 +701,26 @@ test.describe('Class columns', () => {
         .evaluateAll((els) => [...new Set(els.map((el) => el.getAttribute('data-row-trace')))]);
     // Pace is what the rows come up showing, whatever the class.
     await expect.poll(() => traces('HYPERCAR')).toEqual(['pace']);
-    await classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Gap', exact: true }).click();
+    const picker = (className: string) =>
+      classColumn(page, className).getByRole('combobox', { name: 'Curve under the cars' });
+    await picker('HYPERCAR').selectOption('gap');
     await expect.poll(() => traces('HYPERCAR')).toEqual(['gap']);
     // The class beside it keeps its own: the pick is the column's.
     await expect.poll(() => traces('LMP2')).toEqual(['pace']);
-    await classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Laps', exact: true }).click();
-    await expect.poll(() => traces('HYPERCAR')).toEqual(['laps']);
-    // The picker says on itself which curve the rows are drawn with.
-    await expect(
-      classColumn(page, 'HYPERCAR').getByRole('button', { name: 'Laps', exact: true }),
-    ).toHaveAttribute('aria-pressed', 'true');
+    for (const trace of TRACES.filter((t) => t !== 'pace')) {
+      await picker('HYPERCAR').selectOption(trace);
+      await expect.poll(() => traces('HYPERCAR')).toEqual([trace]);
+    }
+    // The picker says by its own value which curve the rows are drawn with.
+    await expect(picker('HYPERCAR')).toHaveValue(TRACES[TRACES.length - 1]);
+  });
+
+  test('every column a panel can show has a width the widest panel fits', () => {
+    // A threshold above maxWidth is a column that can never be shown, and
+    // nothing but this says so: the fence is `at <= width`, and no panel
+    // grows past the cap.
+    const maxAt = Math.max(...readColumnThresholds());
+    expect(maxAt).toBeLessThanOrEqual(STANDINGS_MAX);
   });
 
   test('should stand the round\'s events in a column of their own', async ({ page }) => {

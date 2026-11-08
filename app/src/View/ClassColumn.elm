@@ -17,7 +17,7 @@ A row picks the car it names, whose own column opens beside this one, so a class
 can be followed from its order here and from a car's detail at the same time.
 
 Each row carries a curve of how the car is running underneath it, and the
-reader picks which of three from the column's head.
+reader picks which from the column's head.
 
 The foot is the class's own pit board, and only when the lane has one of the
 class: the tracker's board ruled with just these cars, saying who is being
@@ -28,27 +28,31 @@ served, who is driving away, and who climbed into the car.
 -}
 
 import Html exposing (Html, button, div, img, text)
-import Html.Attributes exposing (alt, attribute, class, src, style, title)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (alt, attribute, class, selected, src, style, title, value)
+import Html.Events exposing (on, onClick)
 import Html.Keyed as Keyed
+import Json.Decode as Decode
 import Motorsport.Analysis.Rivals as Rivals
+import Motorsport.Analysis.Stint as AnalysisStint
+import Motorsport.Analysis.Strategy as Strategy exposing (PitCycle, PredictedStint)
 import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Chart.LapDelta as LapDelta
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.Car exposing (CarNumber)
+import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
-import UI.Shadcn.ToggleGroup as ToggleGroup
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.PitLane as PitLane
-import View.SectorAndLaps as SectorAndLaps
 
 
 {-| What the column is given: the two ways a row answers a press -- the car has
@@ -72,13 +76,14 @@ type alias Config msg =
 
 
 {-| The curve drawn under every car of the column: the gap out to the rivals
-either side, the spread of the car's own lap times, or the lap times
-themselves.
+either side, the spread of the car's own lap times, the change from each of its
+laps to the next, or the runs between its stops.
 -}
 type Trace
     = GapTrace
     | PaceTrace
-    | LapsTrace
+    | DeltaTrace
+    | StintTrace
 
 
 {-| The laps the class leader has completed, which is what every car's distance
@@ -107,9 +112,14 @@ nameplate.
 The visual tests locate the column by `data-class-column`, which carries the
 class's name.
 
+`pitCycle` is what the finished race says of the class -- the whole race's
+reading, not the field at the clock: the strategy bars are measured on the
+distance the class leader came to by the flag, which nothing sampled at the
+clock can know before the flag.
+
 -}
-view : Config msg -> Snapshot -> Class -> Html msg
-view config snapshot class_ =
+view : Config msg -> Snapshot -> PitCycle -> Class -> Html msg
+view config snapshot pitCycle class_ =
     let
         cars =
             Snapshot.inClass class_ snapshot
@@ -132,10 +142,27 @@ view config snapshot class_ =
         counted =
             count cars
 
+        history =
+            Snapshot.lapHistory snapshot
+
+        paced =
+            List.map (\car -> { range = paceRange car, car = car }) cars
+
         paceBounds =
-            LapTimeDistribution.sharedBounds
-                (Snapshot.lapHistory snapshot)
-                (List.map (\car -> { range = paceRange car, car = car }) cars)
+            case config.trace of
+                PaceTrace ->
+                    LapTimeDistribution.sharedBounds history paced
+
+                _ ->
+                    Nothing
+
+        deltaBounds =
+            case config.trace of
+                DeltaTrace ->
+                    LapDelta.sharedBounds history paced
+
+                _ ->
+                    Nothing
 
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars
@@ -157,7 +184,7 @@ view config snapshot class_ =
                         [ class "min-h-0 overflow-y-auto grid auto-rows-min content-start gap-y-px"
                         , attribute "data-class-rows" ""
                         ]
-                        (rows config snapshot counted paceBounds field)
+                        (rows config snapshot counted paceBounds deltaBounds pitCycle field)
                      ]
                         ++ foot
                     )
@@ -207,28 +234,49 @@ head config class_ cars =
         ]
 
 
+{-| The four curves and the words that name what each holds.
+-}
+allTraces : List ( Trace, String )
+allTraces =
+    [ ( GapTrace, "Gap to rivals" )
+    , ( PaceTrace, "Lap time spread" )
+    , ( DeltaTrace, "Lap-to-lap change" )
+    , ( StintTrace, "Pit strategy" )
+    ]
+
+
 traceChoice : Config msg -> Html msg
 traceChoice config =
-    ToggleGroup.view
-        { items =
-            [ { label = "Gap"
-              , active = config.trace == GapTrace
-              , disabled = False
-              , onSelect = config.onTrace GapTrace
-              }
-            , { label = "Pace"
-              , active = config.trace == PaceTrace
-              , disabled = False
-              , onSelect = config.onTrace PaceTrace
-              }
-            , { label = "Laps"
-              , active = config.trace == LapsTrace
-              , disabled = False
-              , onSelect = config.onTrace LapsTrace
-              }
-            ]
-        }
-        [ class "shrink-0" ]
+    Html.select
+        [ class "shrink-0 rounded-md border border-border bg-transparent px-1 py-px text-[10px] text-muted-foreground"
+        , attribute "aria-label" "Curve under the cars"
+        , on "change" (Decode.andThen (traceMsg config) (Decode.at [ "target", "value" ] Decode.string))
+        ]
+        (List.map (traceOption config.trace) allTraces)
+
+
+traceMsg : Config msg -> String -> Decode.Decoder msg
+traceMsg config word =
+    traceOf word
+        |> Maybe.map (config.onTrace >> Decode.succeed)
+        |> Maybe.withDefault (Decode.fail ("no trace named " ++ word))
+
+
+traceOf : String -> Maybe Trace
+traceOf word =
+    allTraces
+        |> List.filter (\( trace, _ ) -> traceName trace == word)
+        |> List.head
+        |> Maybe.map Tuple.first
+
+
+traceOption : Trace -> ( Trace, String ) -> Html msg
+traceOption current ( trace, word ) =
+    Html.option
+        [ value (traceName trace)
+        , selected (current == trace)
+        ]
+        [ text word ]
 
 
 carCount : List CarAt -> String
@@ -302,8 +350,8 @@ The ordinal is the class's, which is what this column is for: a car is 1st here
 and 41st on the standings beside it, and both are true.
 
 -}
-row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
-row config snapshot paceBounds ( ahead, item ) =
+row : Config msg -> Snapshot -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Int -> ( Maybe CarAt, CarAt ) -> ( String, Html msg )
+row config snapshot paceBounds deltaBounds pitCycle lead ( ahead, item ) =
     let
         metadata =
             item.metadata
@@ -323,7 +371,7 @@ row config snapshot paceBounds ( ahead, item ) =
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
             [ text metadata.team ]
         , portrait item
-        , rowTrace config.trace paceBounds snapshot item
+        , rowTrace config.trace paceBounds deltaBounds pitCycle lead snapshot item
         ]
     )
 
@@ -335,9 +383,16 @@ band as an outlier rather than flattening it.
 Pace: the laps this car has run so far, on bounds taken once for the column, so
 the same lap time sits at the same place on every row.
 
+Strategy: the runs between the stops, one bar per car, its segments measured in
+laps on the distance the class leader came to at the end of the race -- the
+scale is the finished race's from the first lap, a bar that ends short is a car
+that ran fewer laps than the leader did, and every break in it is a stop. Past
+where the car stands, the rest of the race is written in dashed ghosts, one per
+fuel window of the class.
+
 -}
-rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Snapshot -> CarAt -> Html msg
-rowTrace trace paceBounds snapshot item =
+rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Int -> Snapshot -> CarAt -> Html msg
+rowTrace trace paceBounds deltaBounds pitCycle lead snapshot item =
     let
         currentLap =
             item.standing.lapsCompleted
@@ -361,8 +416,16 @@ rowTrace trace paceBounds snapshot item =
                     Nothing ->
                         text ""
 
-            LapsTrace ->
-                SectorAndLaps.view item
+            DeltaTrace ->
+                case deltaBounds of
+                    Just bounds ->
+                        LapDelta.sparklineOn bounds (paceRange item) history item
+
+                    Nothing ->
+                        text ""
+
+            StintTrace ->
+                stintTrace pitCycle lead history item
         ]
 
 
@@ -383,8 +446,11 @@ traceName trace =
         PaceTrace ->
             "pace"
 
-        LapsTrace ->
-            "laps"
+        DeltaTrace ->
+            "delta"
+
+        StintTrace ->
+            "stint"
 
 
 recentLapCount : Int
@@ -450,8 +516,8 @@ their own.
 Keyed by the car a rule starts at, which no other row can claim.
 
 -}
-rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
-rows config snapshot counted paceBounds field =
+rows : Config msg -> Snapshot -> Count -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> List ( Maybe CarAt, CarAt ) -> List ( String, Html msg )
+rows config snapshot counted paceBounds deltaBounds pitCycle field =
     let
         add (( _, item ) as pair) ( behind, acc ) =
             let
@@ -459,7 +525,7 @@ rows config snapshot counted paceBounds field =
                     group counted.lead item
 
                 lines =
-                    row config snapshot paceBounds pair :: acc
+                    row config snapshot paceBounds deltaBounds pitCycle counted.lead pair :: acc
             in
             if back == behind then
                 ( behind, lines )
@@ -615,3 +681,102 @@ gapTo inFront chasing snapshot =
     Snapshot.gapBetween inFront chasing snapshot
         |> Maybe.map Gap.seconds
         |> Maybe.withDefault (Gap.laps (inFront.standing.lapsCompleted - chasing.standing.lapsCompleted))
+
+
+
+-- PIT STRATEGY
+
+
+{-| The car's runs as one bar, shrunk to what a column of cars compares:
+where each run ends, how long it was, and the laps of it written in the
+segment. The segments are coloured alike in one grey because nothing here is
+told apart by who was driving; a break between two of them is the stop between
+the runs, and hovering one says what it cost.
+
+The rest of the race is written past the bar -- see `ghosts`. The forecast
+says nothing the laps do not hold: no fuel load, no plan, and no yellow flag
+in the car's future.
+
+-}
+stintTrace : PitCycle -> Int -> LapHistory -> CarAt -> Html msg
+stintTrace pitCycle lead history item =
+    let
+        strategy =
+            Strategy.plan pitCycle
+                lead
+                item.status
+                (LapHistory.get item.metadata.carNumber history
+                    |> AnalysisStint.summarize
+                )
+    in
+    if pitCycle.distance <= 0 || List.isEmpty strategy.runs then
+        text ""
+
+    else
+        div [ class "flex h-7 items-stretch overflow-hidden" ]
+            (List.map (stintSegment pitCycle.distance) strategy.runs
+                ++ ghosts pitCycle.distance strategy.planned
+            )
+
+
+{-| A segment of the car's own race, in laps on the race's scale -- its width
+is the percentage of the race, with the gaps left out so the row sums to the
+bar it is drawn on.
+-}
+stintSegment : Int -> Stint -> Html msg
+stintSegment lapsMax stint =
+    div
+        [ class "grid place-items-center rounded-[1px] bg-muted-foreground/40 text-[9px] leading-none tabular-nums border-r border-background/50 last:border-r-0"
+        , style "width" (String.fromFloat (100 * toFloat stint.lapCount / toFloat lapsMax) ++ "%")
+        , title (stintNote stint)
+        ]
+        [ text (String.fromInt stint.lapCount) ]
+
+
+{-| Each [`PredictedStint`](Motorsport-Analysis-Strategy#PredictedStint) of the
+plan as a dashed ghost, wide as its `laps` on the race's scale: the fuel
+windows still open to the car. The right edge of a car's first ghost is where
+its tank is out, so the columns of ghosts line up or don't.
+-}
+ghosts : Int -> List PredictedStint -> List (Html msg)
+ghosts scale planned =
+    List.indexedMap (ghostBar scale) planned
+
+
+ghostBar : Int -> Int -> PredictedStint -> Html msg
+ghostBar scale index prediction =
+    div
+        [ class "rounded-[1px] border border-dashed border-muted-foreground/50"
+        , style "width" (String.fromFloat (100 * toFloat prediction.laps / toFloat scale) ++ "%")
+        , title
+            (("fuel window ~L" ++ String.fromInt prediction.stop)
+                ++ (if index == 0 then
+                        " · " ++ String.fromInt prediction.laps ++ " laps of tank left"
+
+                    else
+                        ""
+                   )
+            )
+        ]
+        []
+
+
+{-| Which run, over which laps, whose, and what the stop at its end cost.
+-}
+stintNote : Stint -> String
+stintNote stint =
+    [ "S" ++ String.fromInt stint.number
+    , "L" ++ String.fromInt stint.firstLap ++ "-L" ++ String.fromInt stint.lastLap
+    , String.fromInt stint.lapCount ++ " laps"
+    , Driver.toInitialAndSurname stint.driver
+    , case stint.end of
+        RaceStint.Ended pit ->
+            "pit " ++ Duration.toStringToTenths pit.laneTime
+
+        RaceStint.InPit ->
+            "pit -"
+
+        RaceStint.Running ->
+            "running"
+    ]
+        |> String.join " · "

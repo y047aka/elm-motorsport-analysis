@@ -33,6 +33,7 @@ import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
+import View.SectorPie as SectorPie
 
 
 {-| What the panel is given: the tag for picking a car, the cars that already
@@ -95,8 +96,8 @@ view config snapshot =
         ]
 
 
-{-| The width the panel arrives at: the row with its surname, the badge and
-the position, plus the card's padding.
+{-| The width the panel arrives at: the row with its initial and surname,
+the badge and the position, plus the card's padding.
 -}
 width : Float
 width =
@@ -116,21 +117,22 @@ strip out of the page before the reader could drag it back.
 -}
 maxWidth : Float
 maxWidth =
-    620
+    680
 
 
-{-| A data column of the row, in the order they stand after the position and
-the badge — which are not columns and are always drawn. `align` is read by
-both the label and the cells, which is what keeps them lined up.
+{-| A data column of the row. `columns` is the order they are drawn in; the
+thresholds stand in `columnSpec`. `align` is read by both the label and the
+cells, which is what keeps them lined up.
 -}
 type Column
     = Driver
+    | Move
     | Ahead
     | Last
+    | Pie
     | Current
     | Best
     | Laps
-    | Move
 
 
 type alias Spec =
@@ -147,30 +149,37 @@ columnSpec column =
         Driver ->
             { label = "Driver", at = 170, track = "1fr", align = "" }
 
+        Move ->
+            { label = "Move", at = 150, track = "2.5em", align = "text-center" }
+
         Ahead ->
-            { label = "Ahead", at = 230, track = "4.5em", align = "text-right" }
+            { label = "Ahead", at = 270, track = "5em", align = "text-right" }
 
         Last ->
-            { label = "Last", at = 315, track = "5em", align = "text-right" }
+            { label = "Last", at = 390, track = "5em", align = "text-right" }
+
+        Pie ->
+            { label = "Lap", at = 340, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
 
         Current ->
-            { label = "Current", at = 395, track = "5em", align = "text-right" }
+            { label = "Current", at = 470, track = "5em", align = "text-right" }
 
         Best ->
-            { label = "Best", at = 475, track = "5em", align = "text-right" }
+            { label = "Best", at = 560, track = "5em", align = "text-right" }
 
         Laps ->
-            { label = "Laps", at = 525, track = "3em", align = "text-right" }
-
-        Move ->
-            { label = "Move", at = 570, track = "2.5em", align = "text-center" }
+            { label = "Laps", at = 620, track = "3em", align = "text-right" }
 
 
 {-| Every column, in row order.
+A column's `at` is the panel width from which it stands, in its own place in
+the row. The thresholds follow the readings' worth and not this order, so a
+widening panel may bring a left column in after one that stands to its
+right -- that is the design, not an oversight to fix.
 -}
 columns : List Column
 columns =
-    [ Driver, Ahead, Last, Current, Best, Laps, Move ]
+    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Move ]
 
 
 {-| Does this column fit a panel of this width?
@@ -186,11 +195,9 @@ visible panelWidth =
 
 
 {-| The row's tracks as a `grid-template-columns` value: the position, the
-badge, one per visible column, and — once the time columns arrive — a gutter
-at the end for the pit mark, which floats there over the row's right edge.
+badge, and one per visible column.
 The header stands on the same value, which is what keeps a label over its
-column and keeps every row's columns lined up whether or not its car is in
-the pit.
+column and every row's columns lined up.
 
 The tracks go on as a style attribute rather than as a `grid-cols-[...]`
 class: Tailwind extracts class names from source text only, so a class
@@ -202,13 +209,6 @@ gridTracks : Float -> String
 gridTracks panelWidth =
     "20px auto"
         ++ String.concat (List.map (\column -> " " ++ (columnSpec column).track) (visible panelWidth))
-        ++ (if fits panelWidth Ahead then
-                -- w-4 plus right-1, in px: the mark it reserves room for is measured in px.
-                " 24px"
-
-            else
-                ""
-           )
 
 
 px : Float -> String
@@ -329,6 +329,7 @@ type alias Row =
     , best : String
     , bestColor : String
     , laps : String
+    , sectorSlots : List ( String, Float )
     , move : { startPosition : Maybe Position, position : Position }
     }
 
@@ -359,7 +360,7 @@ row config item =
     , position = item.standing.position
     , isInPit = item.status == Status.InPit
     , hasColumn = List.member item.metadata.carNumber config.withColumns
-    , driver = Driver.toSurname item.currentDriver
+    , driver = Driver.toInitialAndSurname item.currentDriver
     , ahead = Gap.toString item.standing.intervalToAhead
     , last = lastLapTime.text
     , lastColor = lastLapTime.color
@@ -368,6 +369,7 @@ row config item =
     , best = bestTime.text
     , bestColor = bestTime.color
     , laps = String.fromInt item.standing.lapsCompleted
+    , sectorSlots = SectorPie.slots item
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
@@ -399,7 +401,7 @@ carRow onSelect r =
                  else
                     "false"
                 )
-             , class "relative w-full p-0.5 grid items-center gap-2 text-left [word-break:break-word] rounded transition-colors"
+             , class "w-full p-0.5 grid items-center gap-2 text-left rounded transition-colors"
              , style "grid-template-columns" (gridTracks r.width)
              ]
                 ++ (if r.hasColumn then
@@ -414,20 +416,23 @@ carRow onSelect r =
                         ]
                    )
             )
-            ([ div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
+            ([ positionCell r
              , CarNumberBadge.viewRow r.metadata
              ]
                 ++ List.map (cell r) (visible r.width)
-                ++ [ if r.isInPit then
-                        div
-                            [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
-                            [ text "P" ]
-
-                     else
-                        text ""
-                   ]
             )
         ]
+
+
+positionCell : Row -> Html msg
+positionCell r =
+    if r.isInPit then
+        div
+            [ class "mx-auto w-4 h-4 rounded-full border border-border flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
+            [ text "P" ]
+
+    else
+        div [ class "text-center text-xs" ] [ text (String.fromInt r.position) ]
 
 
 {-| One visible column's cell, aligned as its label is.
@@ -446,7 +451,7 @@ cell r column =
     in
     case column of
         Driver ->
-            div [ class "text-xs" ] [ text r.driver ]
+            div [ class "truncate text-xs", title r.driver ] [ text r.driver ]
 
         Ahead ->
             div [ class (numeral ++ " text-muted-foreground") ] [ text r.ahead ]
@@ -462,6 +467,9 @@ cell r column =
 
         Laps ->
             div [ class numeral ] [ text r.laps ]
+
+        Pie ->
+            div [ class "justify-self-center" ] [ SectorPie.pie r.sectorSlots ]
 
         Move ->
             div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]

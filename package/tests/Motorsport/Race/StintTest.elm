@@ -85,6 +85,27 @@ suite =
                     []
                         |> Stint.fromLaps
                         |> Expect.equal []
+            , test "a run under green was held for no lap of it" <|
+                \_ ->
+                    [ lap 1 95000, lap 2 96000 ]
+                        |> Stint.fromLaps
+                        |> List.map .heldLaps
+                        |> Expect.equal [ 0 ]
+            , test "heldLaps counts a procedure lap and neither the lane nor the flag" <|
+                \_ ->
+                    -- Out on FCY and in under red are lane crossings, no lap
+                    -- of their own to hold; the finish-flag lap ran the field
+                    --'s pace: only the lap through the slow zone is held.
+                    [ outLap 1 160000 63000 |> under Lap.FullCourseYellow
+                    , lap 2 95000
+                    , lap 3 96000
+                    , lap 4 101000 |> under Lap.SlowZone
+                    , lap 5 97000 |> under Lap.Finish
+                    , inLap 6 150000 |> under Lap.Red
+                    ]
+                        |> Stint.fromLaps
+                        |> List.map .heldLaps
+                        |> Expect.equal [ 1 ]
             ]
         , describe "stopsAt"
             [ test "a car that has not stopped has stopped never" <|
@@ -150,6 +171,11 @@ lap lapNumber time =
 atPlace : Int -> Lap -> Lap
 atPlace place each =
     { each | position = Just place }
+
+
+under : Lap.Flag -> Lap -> Lap
+under flag each =
+    { each | flag = flag }
 
 
 {-| The lap the car came in on, which carries no stop of its own.
