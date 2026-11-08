@@ -22,8 +22,8 @@ import Internal.DataView as DataView
 import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
+import Motorsport.Chart.LapTimeBoxes as LapTimeBoxes
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Position exposing (Position)
@@ -264,12 +264,8 @@ outnumber it; a press on them opens a popover.
 It carries `data-tracker-column`, which the visual tests locate it by.
 
 -}
-trackerCard : Bool -> Bool -> TrackerChart.Track -> Replay.Model -> Timeline -> Snapshot -> Html Msg
-trackerCard several held track replay fieldEvents snapshot =
-    let
-        occurredCount =
-            Timeline.countUpTo (Clock.getElapsed replay.playback) fieldEvents
-    in
+trackerCard : Bool -> Bool -> TrackerChart.Track -> Replay.Model -> Snapshot -> Html Msg
+trackerCard several held track replay snapshot =
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
             [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)]"
@@ -281,15 +277,9 @@ trackerCard several held track replay fieldEvents snapshot =
                         (cornerControls (corner several held Columns.Tracker))
                     ]
                 ]
-            , button
-                [ attribute "popovertarget" standingsPopoverId
-                , attribute "popovertargetaction" "show"
-                , Attributes.class "min-h-0 grid cursor-pointer text-left"
-                ]
-                [ div [ Attributes.class "min-h-0 overflow-y-auto" ]
-                    [ Card.content []
-                        [ Html.Lazy.lazy3 eventRows replay.race.cars fieldEvents occurredCount ]
-                    ]
+            , Card.content []
+                [ div [ Attributes.class "min-h-0 h-full grid place-items-center" ]
+                    [ Html.Lazy.lazy2 LapTimeBoxes.view (Snapshot.lapCount snapshot) replay.race.cars ]
                 ]
             ]
         ]
@@ -464,7 +454,7 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
                         classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot replay.race.cars class_
 
                     Columns.Tracker ->
-                        trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
+                        trackerCard several (Columns.isCarried placement) track replay snapshot
 
                     Columns.Events ->
                         eventsColumn several (Columns.isCarried placement) m.timelineTable replay.race.cars timeline
@@ -616,8 +606,8 @@ timelineTableOptions =
 
 {-| The events table, configured on the DataView directly rather than through
 the `Leaderboard`: these are events, not the field, and what the `Leaderboard`
-draws belongs to a lap. The car column is the tracker column's own
-`carBadge`, so a number reads the same in both event lists.
+draws belongs to a lap. The car column is `carBadge`: a car's
+number in its badge, a bare number where no car of the field answers to it.
 
 Rows are keyed by their place in the timeline — a number no two events share,
 where a moment's milliseconds and its words are the same for any two events
@@ -685,41 +675,9 @@ timelineTableConfig cars =
     }
 
 
-{-| The most recent events the field draws, newest first: when each happened,
-whose it was, and what kind of thing it was.
-
-`recentEventLimit` counts the events read, so the rows come out fewer than it
-by the fastest laps among them; see `isFastestLap`.
-
-The rows are rebuilt only when an event arrives. A thunk's arguments are
-compared by `===`, so every one of these is held to something that survives a
-frame: the cars and the timeline never move under playback, and the count is a
-number. Anything frame-made passed instead -- a snapshot, or the cut list itself
--- is a fresh reference on every frame and misses.
-
--}
-eventRows : List Car -> Timeline -> Int -> Html Msg
-eventRows cars timeline occurredCount =
-    let
-        carsByNumber =
-            cars
-                |> List.map (\car -> ( car.metadata.carNumber, car ))
-                |> Dict.fromList
-    in
-    Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
-        |> List.filter (not << isFastestLap)
-        |> List.map (eventRow carsByNumber)
-        |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
-
-
-recentEventLimit : Int
-recentEventLimit =
-    100
-
-
-{-| Fastest-lap events are kept out of both event lists -- the recent rows in
-the tracker's column, and the events column's table; their news is the
-reference lap at the head of a class's column and the records on a car's panel.
+{-| Fastest-lap events are kept out of the events column's table; their news
+is the reference lap at the head of a class's column and the records on a
+car's panel.
 -}
 isFastestLap : TimelineEvent -> Bool
 isFastestLap event =
@@ -729,35 +687,6 @@ isFastestLap event =
 
         _ ->
             False
-
-
-{-| A row is one line as tall as the badge: the `1.375rem` is
-`CarNumberBadge.viewRow`'s height, and moves with it.
--}
-eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
-eventRow carsByNumber event =
-    let
-        car =
-            case event.eventType of
-                CarEvent carNumber _ ->
-                    Dict.get carNumber carsByNumber
-
-                _ ->
-                    Nothing
-
-        cell classes children =
-            div [ Attributes.class classes ] children
-
-        name =
-            TimelineEvent.describe event.eventType
-    in
-    div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
-        [ cell "" [ car |> Maybe.map (.metadata >> ClassMark.view) |> Maybe.withDefault (text "") ]
-        , cell "" [ carBadge car event.eventType ]
-        , cell "" [ text name ]
-        , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
-            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
-        ]
 
 
 {-| An event of the whole field's has no badge, and a number no car of the field
