@@ -42,7 +42,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.LapRange exposing (LapRange)
-import Motorsport.Race.Car exposing (Car, CarNumber)
+import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
@@ -112,13 +112,14 @@ nameplate.
 The visual tests locate the column by `data-class-column`, which carries the
 class's name.
 
-`raceCars` is the whole race, not the field at the clock: the strategy bars are
-measured on the distance the class leader came to by the flag, which nothing
-sampled at the clock can know before the flag.
+`pitCycle` is what the finished race says of the class -- the whole race's
+reading, not the field at the clock: the strategy bars are measured on the
+distance the class leader came to by the flag, which nothing sampled at the
+clock can know before the flag.
 
 -}
-view : Config msg -> Snapshot -> List Car -> Class -> Html msg
-view config snapshot raceCars class_ =
+view : Config msg -> Snapshot -> PitCycle -> Class -> Html msg
+view config snapshot pitCycle class_ =
     let
         cars =
             Snapshot.inClass class_ snapshot
@@ -162,14 +163,6 @@ view config snapshot raceCars class_ =
 
                 _ ->
                     Nothing
-
-        pitCycle =
-            case config.trace of
-                StintTrace ->
-                    Strategy.pitCycleOf class_ raceCars
-
-                _ ->
-                    { distance = 0, cycle = Nothing }
 
         lane =
             List.filter (\car -> car.inLane /= Nothing) cars

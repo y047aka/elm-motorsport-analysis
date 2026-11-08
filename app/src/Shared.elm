@@ -17,17 +17,20 @@ import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.CarImage as CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
-import Dict
+import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Http
 import Json.Decode exposing (Decoder)
+import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
+import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
@@ -160,6 +163,7 @@ thunk, and a timeline made afresh on a frame is a new reference on every one.
 type alias LoadedRound =
     { replay : Replay.Model
     , snapshot : Snapshot
+    , pitCycles : Dict String Strategy.PitCycle
     , track : Tracker.Track
     , timeline : Timeline
     , fieldEvents : Timeline
@@ -527,13 +531,40 @@ roundFrom id summary rawLaps timelineEvents geometry =
                     , finishedAt = summary.finishedAt
                     , index = summary.index
                     }
+
+        pitCycles =
+            pitCyclesOf replay.race
     in
     { replay = replay
     , snapshot = snapshotOf replay
+    , pitCycles = pitCycles
     , track = trackOf id summary.track geometry
     , timeline = Timeline.fromList timelineEvents
     , fieldEvents = fieldEventsOf timelineEvents
     }
+
+
+{-| Each running class's pit cycle, read once off the whole race. It is a
+constant of class and round -- which is why the round holds it rather than
+every column re-deriving it from every lap every frame -- keyed by the word
+`Class.toString` gives.
+-}
+pitCyclesOf : Race.Race -> Dict String Strategy.PitCycle
+pitCyclesOf race =
+    race.cars
+        |> List.foldr
+            (\car cycles ->
+                let
+                    name =
+                        Class.toString car.metadata.class
+                in
+                if Dict.member name cycles then
+                    cycles
+
+                else
+                    Dict.insert name (Strategy.pitCycleOf car.metadata.class race.cars) cycles
+            )
+            Dict.empty
 
 
 {-| Which drawing of a circuit the round is put in, by the circuit the summary

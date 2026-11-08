@@ -22,6 +22,7 @@ import Internal.DataView as DataView
 import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
+import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
@@ -314,7 +315,7 @@ mainGrid round keys m =
             "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         ]
         [ standingsCell keys m snapshot replay.race.cars
-        , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m replay snapshot
+        , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -435,8 +436,8 @@ stripColumn key width placement content =
     )
 
 
-columnStrip : String -> TrackerChart.Track -> Timeline -> Timeline -> List Columns.StripKey -> Model -> Replay.Model -> Snapshot -> Html Msg
-columnStrip cell track timeline fieldEvents keys m replay snapshot =
+columnStrip : String -> TrackerChart.Track -> Timeline -> Timeline -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
     let
         several =
             List.length keys > 1
@@ -461,7 +462,9 @@ columnStrip cell track timeline fieldEvents keys m replay snapshot =
                             |> Maybe.withDefault (text "")
 
                     Columns.ClassColumn class_ ->
-                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot replay.race.cars class_
+                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot
+                            (Maybe.withDefault pitCycleNone (Dict.get (Class.toString class_) pitCycles))
+                            class_
 
                     Columns.Tracker ->
                         trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
@@ -541,8 +544,8 @@ cornerControls controls =
 {-| One class of the field, which is what the strip opens with: `View.ClassColumn`
 draws its cars each against the class-mate ahead of it.
 -}
-classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> List Car -> Class -> Html Msg
-classColumn several standing held trace snapshot raceCars class_ =
+classColumn : Bool -> List CarNumber -> Bool -> ClassColumn.Trace -> Snapshot -> PitCycle -> Class -> Html Msg
+classColumn several standing held trace snapshot pitCycle class_ =
     let
         controls =
             corner several held (Columns.ClassColumn class_)
@@ -557,8 +560,16 @@ classColumn several standing held trace snapshot raceCars class_ =
         , grip = controls.grip
         }
         snapshot
-        raceCars
+        pitCycle
         class_
+
+
+{-| The answer for a class the race holds none of -- no scale, no window, and
+the strategy trace draws nothing on it.
+-}
+pitCycleNone : PitCycle
+pitCycleNone =
+    { distance = 0, cycle = Nothing }
 
 
 {-| `Class` carries a record, so each column's curve choice is kept under the
