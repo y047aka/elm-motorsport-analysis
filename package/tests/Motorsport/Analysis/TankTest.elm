@@ -16,9 +16,7 @@ reading is a subtraction a test can do in its head: wherever a test says nothing
 the contrary the class's window is 10 laps, and the car being read has run a first
 stint of 10 and stopped, which is the eleventh clean run the pool is read from.
 
-The clock matters to every one of them: a class has a window only once its own stops
-stand behind the lap being asked about, so the car being read always runs a stint of
-its own before the clock the test asks for.
+The clock asks one question -- where the car stands on the tank it is on -- and never the window: a class's window is the finished race's, so a test may ask about any lap it likes and read the subtraction off the same ten laps.
 -}
 suite : Test
 suite =
@@ -33,7 +31,7 @@ suite =
                     tankOf (slowFleet ++ [ runner [ run 13, stint 3 ] ]) 18
                         |> Maybe.map windowOf
                         |> Expect.equal (Just 13)
-            , test "and no window before the class has stopped ten times" <|
+            , test "and no window while the class has fewer than ten clean stopped runs" <|
                 \_ ->
                     -- Eight cars and the reading car's own first stint: nine clean
                     -- runs, one short of a decile that means anything.
@@ -48,14 +46,19 @@ suite =
                     tankOf (fleet ++ heldFleet ++ [ runner [ run 10, stint 33 ] ]) 45
                         |> Maybe.map windowOf
                         |> Expect.equal (Just 10)
-            , test "answers nothing while procedures hold most of the class's runs" <|
+            , test "is the same window at the first lap as at the flag" <|
                 \_ ->
-                    -- Eleven clean runs -- the fleet's ten and the reading car's own
-                    -- -- against twelve that met a procedure. A window read from the
-                    -- survivors describes the runs that happened to be quick, and
-                    -- this is where that starts to lie.
-                    tankOf (fleet ++ manyHeldFleet ++ [ runner [ run 10, stint 33 ] ]) 45
-                        |> Expect.equal (Just (Unreadable Tank.NoWindow))
+                    -- The class's word is the whole race's, which is what lets a
+                    -- column of cars be drawn from one reading of it; the clock moves
+                    -- the car along its tank and never moves the tank.
+                    let
+                        cars =
+                            fleet ++ [ runner [ run 10, stint 3 ] ]
+                    in
+                    ( tankOf cars 3 |> Maybe.map windowOf
+                    , tankOf cars 15 |> Maybe.map windowOf
+                    )
+                        |> Expect.equal ( Just 10, Just 10 )
             , test "says nothing when the class's own runs disagree past a quarter of it" <|
                 \_ ->
                     -- 10, 15 and 22 laps, and the top decile 22 of them: the class
@@ -179,17 +182,11 @@ fleet =
     fleetOf 10 10
 
 
-{-| Cars whose 40-lap runs met a procedure: long, and no reading of a tank. Nine of
-them leave a class of eleven clean runs readable, twelve do not.
+{-| Cars whose 40-lap runs met a procedure: long, and no reading of a tank.
 -}
 heldFleet : List Car
 heldFleet =
     heldFleetFrom 51 9
-
-
-manyHeldFleet : List Car
-manyHeldFleet =
-    heldFleetFrom 51 12
 
 
 heldFleetFrom : Int -> Int -> List Car
@@ -212,8 +209,8 @@ wideFleet =
     fleetOf 4 10 ++ fleetFrom 21 4 15 ++ fleetFrom 31 5 22
 
 
-{-| The car the tests read: it runs a stint of its own, which is what puts the
-class's stops behind the clock the test asks about.
+{-| The car the tests read: it runs a stint of its own, which is what puts a lap at
+pace behind the clock the test asks about.
 -}
 runner : List RunSpec -> Car
 runner =
