@@ -21,6 +21,7 @@ import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Http
 import Json.Decode exposing (Decoder)
+import Motorsport.Analysis.Deployment as Deployment
 import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
@@ -30,11 +31,11 @@ import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
+import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Msg(..))
 
@@ -164,6 +165,7 @@ type alias LoadedRound =
     { replay : Replay.Model
     , snapshot : Snapshot
     , pitCycles : Dict String Strategy.PitCycle
+    , deployments : Deployment.Table
     , track : Tracker.Track
     , timeline : Timeline
     , fieldEvents : Timeline
@@ -534,10 +536,14 @@ roundFrom id summary rawLaps timelineEvents geometry =
 
         pitCycles =
             pitCyclesOf replay.race
+
+        deployments =
+            Deployment.tableOf replay.race.cars
     in
     { replay = replay
     , snapshot = snapshotOf replay
     , pitCycles = pitCycles
+    , deployments = deployments
     , track = trackOf id summary.track geometry
     , timeline = Timeline.fromList timelineEvents
     , fieldEvents = fieldEventsOf timelineEvents
