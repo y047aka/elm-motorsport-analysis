@@ -20,7 +20,6 @@ import Html.Attributes exposing (attribute, class, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
-import Motorsport.Analysis.Deployment as Deployment exposing (Deployment)
 import Motorsport.Analysis.Tank as Tank exposing (Tank)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
@@ -30,13 +29,11 @@ import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Speed exposing (Speed)
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
-import View.DeploymentBar as DeploymentBar
 import View.EnergyBar as EnergyBar
 import View.SectorPie as SectorPie
 
@@ -50,10 +47,10 @@ does not hold and only the round's entries know.
 the strip has none, and nothing where the column is standing. See
 [`View.ClassColumn`](View-ClassColumn).
 
-`deployments` is the round's own reading of what each car is doing with its speed,
-taken once as the round loads; the row looks its car up in it at however far the
-clock has got, which is why the standings can show a reading that says what the car
-has done so far rather than what it does later.
+`tanks` is the round's own reading of how far each car has run on its tank, taken
+once as the round loads; the row looks its car up in it at however far the clock has
+got, which is why the standings can show a reading that says what the car has done so
+far rather than what it does later.
 
 -}
 type alias Config msg =
@@ -62,7 +59,6 @@ type alias Config msg =
     , openColumn : Class -> Maybe msg
     , width : Float
     , startPosition : CarNumber -> Maybe Position
-    , deployments : Deployment.Table
     , tanks : Tank.Table
     }
 
@@ -129,7 +125,7 @@ strip out of the page before the reader could drag it back.
 -}
 maxWidth : Float
 maxWidth =
-    860
+    780
 
 
 {-| A data column of the row. `columns` is the order they are drawn in; the
@@ -145,7 +141,6 @@ type Column
     | Current
     | Best
     | Laps
-    | Deploy
     | Energy
 
 
@@ -184,9 +179,6 @@ columnSpec column =
         Laps ->
             { label = "Laps", at = 620, track = "3em", align = "text-right" }
 
-        Deploy ->
-            { label = "Deploy", at = 700, track = String.fromFloat DeploymentBar.width ++ "px", align = "" }
-
         Energy ->
             { label = "Energy", at = 780, track = String.fromFloat EnergyBar.width ++ "px", align = "" }
 
@@ -199,7 +191,7 @@ right -- that is the design, not an oversight to fix.
 -}
 columns : List Column
 columns =
-    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Deploy, Energy, Move ]
+    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Energy, Move ]
 
 
 {-| Does this column fit a panel of this width?
@@ -350,8 +342,6 @@ type alias Row =
     , bestColor : String
     , laps : String
     , sectorSlots : List ( String, Float )
-    , deployment : Maybe Deployment
-    , deploymentScale : Maybe Speed
     , tank : Maybe Tank
     , move : { startPosition : Maybe Position, position : Position }
     }
@@ -393,10 +383,6 @@ row config item =
     , bestColor = bestTime.color
     , laps = String.fromInt item.standing.lapsCompleted
     , sectorSlots = SectorPie.slots item
-    , deployment =
-        Deployment.lookup item.metadata.carNumber item.standing.lapsCompleted config.deployments
-    , deploymentScale =
-        Deployment.spread item.metadata.class item.standing.lapsCompleted config.deployments
     , tank =
         Tank.level item.metadata.carNumber item.standing.lapsCompleted config.tanks
     , move =
@@ -502,9 +488,6 @@ cell r column =
 
         Move ->
             div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]
-
-        Deploy ->
-            DeploymentBar.bar r.deployment r.deploymentScale
 
         Energy ->
             EnergyBar.bar r.tank

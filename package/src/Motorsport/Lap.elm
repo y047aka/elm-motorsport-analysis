@@ -50,7 +50,6 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.PitStop exposing (PitStop)
 import Motorsport.Position exposing (Position)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
-import Motorsport.Speed exposing (Speed)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 
 
@@ -66,14 +65,6 @@ type alias Lap =
     , crossing : Crossing
     , flag : Flag
     , miniSectors : Maybe MiniSectors
-
-    {- The fastest point of this lap, which the feed measures. Its lap *average*
-       speed is deliberately absent: that is this lap's length over its time, so
-       a field for it would be a second name for one fact, and a reader of the
-       record would have two of them to keep in step. See
-       `Motorsport.Analysis.Deployment`, which is where the two are told apart.
-    -}
-    , topSpeed : Maybe Speed
     }
 
 
@@ -128,7 +119,6 @@ empty =
     , crossing = NoCrossing
     , flag = Green
     , miniSectors = Nothing
-    , topSpeed = Nothing
     }
 
 

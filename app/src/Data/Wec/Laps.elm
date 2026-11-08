@@ -23,7 +23,6 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Speed as Speed exposing (Speed)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
@@ -39,7 +38,6 @@ type alias RawLap =
     , crossingFinishLineInPit : Bool
     , pitTime : Maybe Duration
     , flagAtFl : Lap.Flag
-    , topSpeed : Maybe Speed
     }
 
 
@@ -78,35 +76,6 @@ rawLapDecoder =
         |> required "crossingFinishLineInPit" flagDecoder
         |> required "pitTime" optionalDurationDecoder
         |> required "flagAtFl" flagAtFlDecoder
-        |> required "topSpeed" speedDecoder
-
-
-{-| The lap's fastest point, in tenths of a kilometre an hour.
-
-The CLI writes the cell out as it read it -- `"328.8"`, or blank on the laps the
-feed timed without measuring a speed -- so a blank is the only spelling that
-means no reading, and anything else this cannot read as a number is a file
-truncated or hand-edited. It fails the round on that, as `flagAtFlDecoder` does,
-rather than drawing a lap that measured nothing as one that measured nothing at
-all.
-
--}
-speedDecoder : Decoder (Maybe Speed)
-speedDecoder =
-    Decode.string
-        |> Decode.andThen
-            (\str ->
-                if String.isEmpty str then
-                    Decode.succeed Nothing
-
-                else
-                    case String.toFloat str of
-                        Just kmh ->
-                            Decode.succeed (Just (Speed.ofKmh kmh))
-
-                        Nothing ->
-                            Decode.fail ("Expected a speed in tenths of a kilometre an hour, got \"" ++ str ++ "\"")
-            )
 
 
 {-| `crossingFinishLineInPit` is `B` where the lap finished in the pit lane and
@@ -368,7 +337,6 @@ accumulate raw ( bests, acc ) =
                                 miniSectors
                                 newBests.miniSectors
                         )
-            , topSpeed = raw.topSpeed
             }
     in
     ( newBests, lap :: acc )
