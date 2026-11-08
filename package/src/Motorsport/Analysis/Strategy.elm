@@ -36,8 +36,11 @@ import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class exposing (Class)
 
 
-{-| The class's fuel window, in laps: `Nothing` before the race has taught its
-class any stopped run at all -- no stops, no window.
+{-| What the finished race says of a class. `distance` is how far the class
+leader came by the flag -- the scale a race is drawn on, which a car short of
+the flag reads as a bar ending short. `cycle` is the class's fuel window in
+laps, `Nothing` before the race has taught its class any stopped run at all --
+no stops, no window.
 -}
 type alias PitCycle =
     { distance : Int
