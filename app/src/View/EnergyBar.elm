@@ -1,21 +1,26 @@
-module View.EnergyBar exposing (bar, width)
+module View.EnergyBar exposing (Stage(..), bar, stageOf, width)
 
 {-| The standings' Energy column: how much of its tank a car has left, in the units
 the race is run in -- laps of the window its class runs on.
 
 The fill runs from the left rather than from a centre, because this is a level and
-not a difference: what is left is what is drawn. Over the fill sits a band, which is
-the class's own disagreement between its runs -- the error the reading admits to,
-drawn rather than hidden. A car past its window is marked at the right edge instead
-of drawn over it: an overrun is a fact about the car, not a bar that has outgrown its
-track.
+not a difference: what is left is what is drawn. Its colour says how to read the
+length, in the four hues the flag bands are already drawn in -- see
+[`View.PlaybackControls.bandColor`](View-PlaybackControls#bandColor). Over the fill
+sits a band, which is the class's own disagreement between its runs -- the error the
+reading admits to, drawn rather than hidden. It is drawn in the foreground and not
+the fill's hue: a band matched to the fill cannot be seen on the fill.
+
+A car past its window has nothing left to fill, so the track itself takes the level
+an empty one takes. Nothing in this column is anchored to the right edge; the bar, its
+colour and its band all read from the same end.
 
 Where the reading says nothing, the cell says which of its reasons it is. A class
 that has not stopped ten times yet, a class whose race is not run on a window, and a
 car that has yet to run a lap at pace are three different silences, and the reader is
 owed the difference.
 
-@docs bar, width
+@docs Stage, bar, stageOf, width
 
 -}
 
@@ -29,6 +34,41 @@ import Motorsport.Analysis.Tank as Tank exposing (Tank)
 width : Float
 width =
     64
+
+
+{-| How much of the window is left, in the four levels the fill is drawn in.
+-}
+type Stage
+    = Ample
+    | Steady
+    | Low
+    | Critical
+
+
+{-| Which level a car's fill is drawn in: quarters of the window left, counted in
+whole laps so the boundaries land where the pit wall counts them.
+
+An [`Overrun`](Motorsport-Analysis-Tank#Tank) never reaches this -- it has no fill to
+colour, and is drawn as the whole track in the level an empty one takes.
+
+-}
+stageOf : Tank.Level -> Stage
+stageOf level =
+    let
+        quarters =
+            level.laps * 4
+    in
+    if quarters >= level.window * 3 then
+        Ample
+
+    else if quarters >= level.window * 2 then
+        Steady
+
+    else if quarters >= level.window then
+        Low
+
+    else
+        Critical
 
 
 {-| The tank, filled to the share of the window the car has left.
@@ -51,16 +91,19 @@ bar reading =
                 [ div [ class "w-3 h-px bg-muted-foreground" ] [] ]
 
         Just (Tank.Running level) ->
-            tank level [ fill level, band level ] (runningTitle level)
+            track "bg-muted" [ fill (stageOf level) level, band level ] (runningTitle level)
 
         Just (Tank.Overrun level) ->
-            tank level [ full, mark ] (overrunTitle level)
+            track "bg-red-600/20" [] (overrunTitle level)
 
 
-tank : Tank.Level -> List (Html msg) -> String -> Html msg
-tank level drawn labelled =
+{-| The whole window, drawn as the bar is. `trackClass` is the level the track itself
+takes, which only an overrun paints.
+-}
+track : String -> List (Html msg) -> String -> Html msg
+track trackClass drawn labelled =
     div
-        [ class "relative h-3 rounded-[2px] bg-muted overflow-hidden"
+        [ class ("relative h-3 overflow-hidden rounded-[2px] " ++ trackClass)
         , title labelled
         ]
         drawn
@@ -68,10 +111,10 @@ tank level drawn labelled =
 
 {-| What is left, from the left edge.
 -}
-fill : Tank.Level -> Html msg
-fill level =
+fill : Stage -> Tank.Level -> Html msg
+fill stage level =
     div
-        [ class "absolute top-0 left-0 h-full bg-primary/80"
+        [ class ("absolute top-0 left-0 h-full " ++ colorOf stage)
         , style "width" (percent (100 * level.fraction))
         ]
         []
@@ -93,24 +136,27 @@ band level =
             100 * level.fraction - share / 2
     in
     div
-        [ class "absolute top-0 h-full bg-primary/30"
+        [ class "absolute top-0 h-full bg-foreground/25"
         , style "left" (percent (clampShare edge))
         , style "width" (percent (clampShare share))
         ]
         []
 
 
-{-| An overrun: the tank is gone, and so the fill would be the whole bar; what is
-drawn is the mark at the end, which is the part that is news.
--}
-full : Html msg
-full =
-    div [ class "absolute top-0 left-0 h-full w-full bg-muted" ] []
+colorOf : Stage -> String
+colorOf stage =
+    case stage of
+        Ample ->
+            "bg-green-600"
 
+        Steady ->
+            "bg-yellow-400"
 
-mark : Html msg
-mark =
-    div [ class "absolute top-0 right-0 h-full w-1 bg-destructive" ] []
+        Low ->
+            "bg-orange-500"
+
+        Critical ->
+            "bg-red-600"
 
 
 clampShare : Float -> Float
