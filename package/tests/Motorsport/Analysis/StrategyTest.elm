@@ -25,11 +25,12 @@ suite =
                         |> Expect.equal 12
             , test "the cycle is the ninetieth percentile of the clean stopped runs" <|
                 \_ ->
-                    -- Ten runs of 6 and two of 5: the window sits at the top
-                    -- of that, not its middle.
-                    Strategy.pitCycleOf (classOf "HYPERCAR") (stoppedTwice :: fleetOf 10)
+                    -- Eight runs of 6, one of 9 and one of 10: the median of
+                    -- that pool is 6 and its top decile is 9 -- the fixture
+                    -- is built so the two answers cannot be confused.
+                    Strategy.pitCycleOf (classOf "HYPERCAR") (fleetOf 8 ++ [ stoppedNine, stoppedTen ])
                         |> .cycle
-                        |> Expect.equal (Just 6)
+                        |> Expect.equal (Just 9)
             , test "a run the field was held down for is no reading of a tank" <|
                 \_ ->
                     -- The held car reached 9 on its tank, but four of those
@@ -160,6 +161,16 @@ stoppedOnce =
 heldLong : Car
 heldLong =
     carHeld "9" "HYPERCAR" [ 9 ] [ 5, 6, 7, 8 ] 12
+
+
+stoppedNine : Car
+stoppedNine =
+    carOf "91" "HYPERCAR" [ 9 ] 12
+
+
+stoppedTen : Car
+stoppedTen =
+    carOf "92" "HYPERCAR" [ 10 ] 12
 
 
 {-| `n` cars of the class, each stopping once at 6 on a 12-lap race: a pool of
