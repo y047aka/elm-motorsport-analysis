@@ -159,28 +159,28 @@ columnSpec column =
             { label = "Driver", at = 170, track = "1fr", align = "" }
 
         Move ->
-            { label = "Move", at = 150, track = "2.5em", align = "text-center" }
+            { label = "Move", at = 214, track = "2.5em", align = "text-center" }
 
         Ahead ->
             { label = "Ahead", at = 270, track = "5em", align = "text-right" }
 
         Last ->
-            { label = "Last", at = 390, track = "5em", align = "text-right" }
+            { label = "Last", at = 454, track = "5em", align = "text-right" }
 
         Pie ->
-            { label = "Lap", at = 340, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
+            { label = "Lap", at = 404, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
 
         Current ->
-            { label = "Current", at = 470, track = "5em", align = "text-right" }
+            { label = "Current", at = 534, track = "5em", align = "text-right" }
 
         Best ->
-            { label = "Best", at = 560, track = "5em", align = "text-right" }
+            { label = "Best", at = 624, track = "5em", align = "text-right" }
 
         Laps ->
             { label = "Laps", at = 620, track = "3em", align = "text-right" }
 
         Energy ->
-            { label = "Energy", at = 780, track = String.fromFloat EnergyBar.width ++ "px", align = "" }
+            { label = "Energy", at = 470, track = String.fromFloat EnergyBar.width ++ "px", align = "" }
 
 
 {-| Every column, in row order.
@@ -188,10 +188,11 @@ A column's `at` is the panel width from which it stands, in its own place in
 the row. The thresholds follow the readings' worth and not this order, so a
 widening panel may bring a left column in after one that stands to its
 right -- that is the design, not an oversight to fix.
+A threshold is counted against the room a panel has left, so a column that comes in earlier pays its own width into every threshold of the columns that stand after it in the row.
 -}
 columns : List Column
 columns =
-    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Energy, Move ]
+    [ Driver, Ahead, Laps, Energy, Pie, Current, Last, Best, Move ]
 
 
 {-| Does this column fit a panel of this width?
