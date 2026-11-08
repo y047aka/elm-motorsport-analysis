@@ -1,36 +1,41 @@
 module Motorsport.Chart.LapTimeBoxes exposing (view)
 
-{-| The field's lap times as they ran over the race: one box-and-whisker per
-block of race laps, the box the quartiles of every car's timed laps in that
-block, the whiskers the furthest laps within a whisker's reach of it -- a
-`Q3 + 1.5×IQR` reach, the usual one -- and a dot for every lap beyond that.
+{-| The field's lap times as they ran over the race, one chart per class:
+each chart stands one box-and-whisker per block of race laps, the box the
+quartiles of that class's timed laps in the block, the whiskers the furthest
+laps within a `Q3 + 1.5×IQR` reach -- a dot for every lap beyond that.
 
-Two readings the box carries are worth naming: the whole field shares each one,
-classes and all, so the interquartile range holds the classes apart as well as
-the field's own spread; and no lap is left out of its block for running under
-a procedure -- a caution bunches the field and the blocks of the race say so.
+A box is green where its median came down from the block before and red where
+it went up: the reading is the class's pace trend, lap block to lap block. The
+first block has no before and stands grey, so does one that repeated its
+median to the millisecond.
 
-The boxes grow with the leader: `lapsRun` is how far the leader has come at
-the clock, and a lap joins a block when the leader has completed its own.
+`lapsRun` is how far the leader has come at the clock, and a lap joins a
+block when the leader has completed its own; the blocks stand in race order
+from the left. Every class shares the horizontal -- the same block of laps
+lines up from chart to chart -- while each chart scales its own vertical, a
+class being no position against another's pace.
 
 Dots beyond the axis stand outside the drawing and are clipped by the frame --
 the reading the lap-delta sparkline beside shares.
 
 -}
 
-import Html exposing (Html, text)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class)
 import Internal.Statistics as Statistics
 import Motorsport.Chart.Common as Common
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.Race.Car exposing (Car)
+import Motorsport.Wec.Class as Class exposing (Class)
 import Scale exposing (defaultBandConfig)
 import Svg exposing (Svg)
 import Svg.Attributes as SvgAttr
 
 
-{-| One block's reading: the quartiles, the whisker ends -- which are laps,
-not fences -- and the laps neither whisker reaches.
+{-| One block's reading: the quartiles and the whisker ends -- which are
+laps, not fences.
 -}
 type alias Box =
     { q1 : Duration
@@ -42,7 +47,8 @@ type alias Box =
     }
 
 
-{-| The field's race so far, in blocks of at most `maxBlocks` boxes.
+{-| The field's race so far: the classes that are running, each with its
+chart, in the order a classification lists them.
 -}
 view : Int -> List Car -> Html msg
 view lapsRun raceCars =
@@ -50,12 +56,36 @@ view lapsRun raceCars =
         blockSize =
             max 1 (ceilingDivide lapsRun maxBlocks)
 
+        running =
+            raceCars
+                |> List.map (.metadata >> .class)
+                |> List.foldl
+                    (\class classes ->
+                        if List.member class classes then
+                            classes
+
+                        else
+                            class :: classes
+                    )
+                    []
+                |> List.sortWith Class.compare
+    in
+    if List.isEmpty running then
+        text ""
+
+    else
+        div [ class "grid w-full gap-y-1" ]
+            (List.map (classChart lapsRun blockSize raceCars) running)
+
+
+classChart : Int -> Int -> List Car -> Class -> Html msg
+classChart lapsRun blockSize raceCars class =
+    let
         boxes =
             raceCars
-                |> timedLapsTo lapsRun
-                |> List.map (\( lapNumber, time ) -> ( (lapNumber - 1) // blockSize, time ))
-                |> List.sortBy Tuple.first
-                |> blocksOf
+                |> List.filter (\car -> car.metadata.class == class)
+                |> timedLapsTo lapsRun blockSize
+                |> blocks (ceilingDivide lapsRun blockSize)
                 |> List.map boxOf
     in
     case boxes of
@@ -63,41 +93,42 @@ view lapsRun raceCars =
             text ""
 
         _ ->
-            draw boxes
+            drawChart class boxes
 
 
-{-| Every timed racing lap of the field up to the leader's, newest blocks
-first not being the point -- in race order, which is the block order.
--}
-timedLapsTo : Int -> List Car -> List ( Int, Duration )
-timedLapsTo lapsRun raceCars =
+timedLapsTo : Int -> Int -> List Car -> List ( Int, Duration )
+timedLapsTo lapsRun blockSize raceCars =
     raceCars
         |> List.concatMap
             (\car ->
                 car.laps
                     |> List.filter (\lap -> lap.lap <= lapsRun && Lap.isRacingLap lap)
-                    |> List.filterMap (\lap -> Maybe.map (\time -> ( lap.lap, time )) lap.time)
+                    |> List.filterMap
+                        (\lap ->
+                            Maybe.map (\time -> ( (lap.lap - 1) // blockSize, time )) lap.time
+                        )
             )
 
 
-blocksOf : List ( Int, Duration ) -> List (List Duration)
-blocksOf byBlock =
-    List.foldl
-        (\( block, time ) acc ->
-            case acc of
-                ( thisBlock, times ) :: rest ->
-                    if thisBlock == block then
-                        ( block, time :: times ) :: rest
+{-| The blocks in race order, empty blocks left out -- a class that made no
+timed lap of a block has no box to draw for it.
+-}
+blocks : Int -> List ( Int, Duration ) -> List (List Duration)
+blocks numBlocks byBlock =
+    List.filterMap
+        (\block ->
+            byBlock
+                |> List.filter (\( b, _ ) -> b == block)
+                |> List.map Tuple.second
+                |> (\times ->
+                        if List.isEmpty times then
+                            Nothing
 
-                    else
-                        ( block, [ time ] ) :: acc
-
-                [] ->
-                    [ ( block, [ time ] ) ]
+                        else
+                            Just times
+                   )
         )
-        []
-        byBlock
-        |> List.map Tuple.second
+        (List.range 0 (numBlocks - 1))
 
 
 boxOf : List Duration -> Box
@@ -136,8 +167,11 @@ boxOf times =
     }
 
 
-draw : List Box -> Html msg
-draw boxes =
+{-| The box, its whiskers and the laps they miss, in the colour the median
+toward the block before earned; and beside it, how many the axis left out.
+-}
+drawChart : Class -> List Box -> Html msg
+drawChart class boxes =
     let
         n =
             List.length boxes
@@ -160,7 +194,7 @@ draw boxes =
                 )
 
         yScale =
-            Scale.linear ( height - padding.bottom, padding.top ) ( toFloat (Tuple.first domain), toFloat (Tuple.second domain) )
+            Scale.linear ( height - padding.bottom, label.bottom ) ( toFloat (Tuple.first domain), toFloat (Tuple.second domain) )
 
         centre i =
             Scale.convert xScale i + band / 2
@@ -169,7 +203,42 @@ draw boxes =
             Scale.convert yScale (toFloat t)
     in
     Common.svg { width = width, height = height }
-        (List.indexedMap (box yScale centre boxWidth y) boxes)
+        ([ Svg.text_
+            [ SvgAttr.x (String.fromFloat padding.left)
+            , SvgAttr.y "9"
+            , SvgAttr.fill (Class.toColor class)
+            , SvgAttr.fontSize "8"
+            , SvgAttr.fontWeight "bold"
+            ]
+            [ Svg.text (Class.toString class) ]
+         ]
+            ++ List.indexedMap (box yScale centre boxWidth y) (List.map2 Tuple.pair (Nothing :: List.map Just (List.map .median boxes)) boxes)
+        )
+
+
+{-| Whether this box's median came down, went up, or held -- the block before
+having nothing to have come from.
+-}
+tone : Maybe Duration -> Duration -> { fill : String, median : String }
+tone previous median =
+    case previous of
+        Nothing ->
+            muted
+
+        Just before ->
+            if median < before then
+                { fill = "fill-green-500/25", median = "stroke-green-500" }
+
+            else if median > before then
+                { fill = "fill-red-500/25", median = "stroke-red-500" }
+
+            else
+                muted
+
+
+muted : { fill : String, median : String }
+muted =
+    { fill = "fill-muted-foreground/25", median = "stroke-muted-foreground" }
 
 
 box :
@@ -178,29 +247,40 @@ box :
     -> Float
     -> (Duration -> Float)
     -> Int
-    -> Box
+    -> ( Maybe Duration, Box )
     -> Svg msg
-box yScale centre boxWidth y index b =
+box yScale centre boxWidth y index ( previous, b ) =
     let
         x =
             centre index
 
         half =
             boxWidth / 2
+
+        shade =
+            tone previous b.median
     in
-    Svg.g []
-        ([ segment x (y b.low) x (y b.high) "hsl(0 0% 100% / 0.55)" 1
-         , segment (x - half * 0.6) (y b.high) (x + half * 0.6) (y b.high) "hsl(0 0% 100% / 0.55)" 1
-         , segment (x - half * 0.6) (y b.low) (x + half * 0.6) (y b.low) "hsl(0 0% 100% / 0.55)" 1
+    Svg.g [ SvgAttr.class "stroke-muted-foreground" ]
+        ([ segment x (y b.low) x (y b.high)
+         , segment (x - half * 0.6) (y b.high) (x + half * 0.6) (y b.high)
+         , segment (x - half * 0.6) (y b.low) (x + half * 0.6) (y b.low)
          , Svg.rect
-            [ SvgAttr.x (String.fromFloat (x - half))
+            [ SvgAttr.class shade.fill
+            , SvgAttr.x (String.fromFloat (x - half))
             , SvgAttr.y (String.fromFloat (y b.q3))
             , SvgAttr.width (String.fromFloat boxWidth)
             , SvgAttr.height (String.fromFloat (max 1 (y b.q1 - y b.q3)))
-            , SvgAttr.fill "hsl(0 0% 100% / 0.16)"
             ]
             []
-         , segment (x - half) (y b.median) (x + half) (y b.median) "hsl(0 0% 100% / 0.9)" 1.5
+         , Svg.line
+            [ SvgAttr.class shade.median
+            , SvgAttr.x1 (String.fromFloat (x - half))
+            , SvgAttr.y1 (String.fromFloat (y b.median))
+            , SvgAttr.x2 (String.fromFloat (x + half))
+            , SvgAttr.y2 (String.fromFloat (y b.median))
+            , SvgAttr.strokeWidth "1.5"
+            ]
+            []
          ]
             ++ List.map (dot x y) b.outliers
         )
@@ -212,20 +292,19 @@ dot x y time =
         [ SvgAttr.cx (String.fromFloat x)
         , SvgAttr.cy (String.fromFloat (y time))
         , SvgAttr.r "1"
-        , SvgAttr.fill "hsl(0 0% 100% / 0.45)"
+        , SvgAttr.class "fill-muted-foreground/50"
         ]
         []
 
 
-segment : Float -> Float -> Float -> Float -> String -> Float -> Svg msg
-segment x1 y1 x2 y2 color thickness =
+segment : Float -> Float -> Float -> Float -> Svg msg
+segment x1 y1 x2 y2 =
     Svg.line
         [ SvgAttr.x1 (String.fromFloat x1)
         , SvgAttr.y1 (String.fromFloat y1)
         , SvgAttr.x2 (String.fromFloat x2)
         , SvgAttr.y2 (String.fromFloat y2)
-        , SvgAttr.stroke color
-        , SvgAttr.strokeWidth (String.fromFloat thickness)
+        , SvgAttr.strokeWidth "1"
         ]
         []
 
@@ -267,9 +346,14 @@ width =
 
 height : Float
 height =
-    110
+    66
 
 
-padding : { left : Float, right : Float, top : Float, bottom : Float }
+padding : { left : Float, right : Float, bottom : Float }
 padding =
-    { left = 3, right = 3, top = 5, bottom = 5 }
+    { left = 3, right = 3, bottom = 5 }
+
+
+label : { bottom : Float }
+label =
+    { bottom = 14 }
