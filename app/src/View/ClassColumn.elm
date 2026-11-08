@@ -694,15 +694,15 @@ gapTo inFront chasing snapshot =
 -- PIT STRATEGY
 
 
-{-| The car's runs as one bar, the same readings the car's own panel lays out,
-shrunk to what a column of cars compares: where each run ends, how long it was,
-and the laps of it written in the segment. The segments are coloured alike in
-one grey because nothing here is told apart by who was driving; a break between
-two of them is the stop between the runs, and hovering one says what it cost.
+{-| The car's runs as one bar, shrunk to what a column of cars compares:
+where each run ends, how long it was, and the laps of it written in the
+segment. The segments are coloured alike in one grey because nothing here is
+told apart by who was driving; a break between two of them is the stop between
+the runs, and hovering one says what it cost.
 
-The run still going ends the bar like the rest, and the rest of the race is
-written past it -- see `ghosts`. The forecast says nothing the laps do not
-hold: no fuel load, no plan, and no yellow flag in the car's future.
+The rest of the race is written past the bar -- see `ghosts`. The forecast
+says nothing the laps do not hold: no fuel load, no plan, and no yellow flag
+in the car's future.
 
 -}
 stintTrace : PitCycle -> Int -> LapHistory -> CarAt -> Html msg
@@ -743,8 +743,7 @@ stintSegment lapsMax stint =
 {-| Each [`PredictedStint`](Motorsport-Analysis-Strategy#PredictedStint) of the
 plan as a dashed ghost, wide as its `laps` on the race's scale: the fuel
 windows still open to the car. The right edge of a car's first ghost is where
-its tank is out, so the columns of ghosts line up or don't. The first carries
-how many laps that leaves; the rest name their lap.
+its tank is out, so the columns of ghosts line up or don't.
 -}
 ghosts : Int -> List PredictedStint -> List (Html msg)
 ghosts scale planned =

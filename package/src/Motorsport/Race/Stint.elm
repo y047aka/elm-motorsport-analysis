@@ -50,8 +50,7 @@ lines. The stop's own cost is the drop from one run's `lastPlace` to the
 next run's `firstPlace`. A crossing the feed left unranked is no place, and
 each end then reads the nearest place the run knows.
 
-`heldLaps` counts the laps of the run the field was held down for -- racing
-laps the procedure rather than the tank paid for.
+`heldLaps` counts the racing laps of the run that were run under a procedure.
 
 -}
 type alias Stint =

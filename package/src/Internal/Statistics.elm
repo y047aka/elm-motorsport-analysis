@@ -80,9 +80,9 @@ upperFenceBy k values =
             List.maximum sorted |> Maybe.withDefault 0
 
 
-{-| The middle value, by nearest rank -- for an even count the lower of the two
-middles rather than the mean of them, so what comes back is always one of the
-values given.
+{-| The middle value -- `quantile` at 0.5, so for an even count the lower of
+the two middles rather than the mean of them, and what comes back is always
+one of the values given.
 
     median [ 3, 1, 2 ]
     --> Just 2
@@ -96,10 +96,9 @@ median =
     List.sort >> quantile 0.5
 
 
-{-| The q-quantile (0–1) of an ascending-sorted list, by lower rank: the
-largest element at or below `q` of the span, so the example below is the
-second of three, not the third. `median` is this at 0.5. A forecast built on
-this estimator moves if the estimator does -- see `Motorsport.Analysis.Strategy`.
+{-| The q-quantile (0–1) of an ascending-sorted list, by lower rank -- the
+largest element at or below `q` of the span, not the nearest rank. `median`
+is this at 0.5.
 
     quantile 0.9 [ 1, 2, 3 ]
     --> Just 2

@@ -15,16 +15,13 @@ field was held down for are no reading of a tank at all -- a tank under a
 procedure reaches further than the same tank at pace -- and neither is a
 spacing taken mid-race, which is whichever incident the last hour happened to
 be; only the whole of a clean race says what it was run on. The pool those
-runs make is what makes a percentile mean something: a Le Mans class answers
-with several hundred of them, a six-hour class held often with five, and at a
-handful the class has not shown its tank, so it answers `Nothing`. Both
-readings are therefore the finished race's, and a `PitCycle` is a constant of
-its class and round: the clock enters at `plan`, where how much race a car has
-left depends on how far the leader has got by now.
+runs make is what makes a percentile mean something, and `minCleanRuns` is
+where how small is too small stands. Both readings are therefore the finished
+race's, and a `PitCycle` is a constant of its class and round; the clock
+enters at `plan`.
 
 A _strategy_ is one car's whole race read as a plan: what it has run, the run
-it is on, and what `plan` forecasts it has left. It is one car's, though the
-pit cycle is class-wide and the forecast is trimmed by laps-down.
+it is on, and what `plan` forecasts it has left.
 
 @docs PitCycle, pitCycleOf
 @docs PredictedStint, Strategy, plan
