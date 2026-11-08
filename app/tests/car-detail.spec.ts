@@ -47,6 +47,7 @@ const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsF
 
 /** The row curves the picker offers, read off the Elm that names them --
  * `data-row-trace` and the `value` of each option are both `traceName`. */
+const classColumnSource = readFileSync(new URL('../src/View/ClassColumn.elm', import.meta.url), 'utf8');
 const TRACES = [
   ...classColumnSource.matchAll(/\n\s{8}\w+Trace ->\n\s{12}"(\w+)"\n/g),
 ].map((m) => m[1]);
@@ -67,7 +68,6 @@ function readColumnThresholds(): number[] {
 /** How `rowButton` opens every class row's label. The head's curve picker
  * carries `aria-pressed` too, so the rows are the pressed buttons whose label
  * begins this way -- and this is the label that says so, not a copy. */
-const classColumnSource = readFileSync(new URL('../src/View/ClassColumn.elm', import.meta.url), 'utf8');
 const ROW_LABEL = readString(
   'rowButton aria-label',
   classColumnSource,
