@@ -15,10 +15,9 @@ A car past its window has nothing left to fill, so the track itself takes the le
 an empty one takes. Nothing in this column is anchored to the right edge; the bar, its
 colour and its band all read from the same end.
 
-Where the reading says nothing, the cell says which of its reasons it is. A class
-that has not stopped ten times yet, a class whose race is not run on a window, and a
-car that has yet to run a lap at pace are three different silences, and the reader is
-owed the difference.
+A class that is not run on a window is drawn as the one thing it does say: the laps its middle half came in on, marked at its middle stop. That is drawn in the hue a level's uncertainty band is drawn in, at the same scale, and it fills no part of the tank -- the two drawings differ by whether they answer about a car at all.
+
+Where the reading says nothing, the cell says which of its reasons it is. A class that has not stopped ten times with the field unheld, and a car that has yet to run a lap at pace, are two different silences, and the reader is owed the difference.
 
 @docs Stage, bar, stageOf, width
 
@@ -76,6 +75,8 @@ stageOf level =
 `Nothing` is a car this round's field does not hold: an empty cell keeps the row's
 columns lined up and says nothing, which is what is known.
 
+A [`Spread`](Motorsport-Analysis-Tank#Tank) is drawn on the same track and fills none of it, since it says where the class stops and not where a car is.
+
 -}
 bar : Maybe Tank -> Html msg
 bar reading =
@@ -95,6 +96,9 @@ bar reading =
 
         Just (Tank.Overrun level) ->
             track "bg-red-600/20" [] (overrunTitle level)
+
+        Just (Tank.Spread spread) ->
+            track "bg-muted" [ quartiles spread, middle spread ] (spreadTitle spread)
 
 
 {-| The whole window, drawn as the bar is. `trackClass` is the level the track itself
@@ -143,6 +147,39 @@ band level =
         []
 
 
+{-| The laps a class's middle half came in on, on the track the window fills.
+
+A spread takes no stage colour and fills no part of the tank; it is drawn in the hue a level's own band is drawn in, which is the same fact about the same runs.
+
+-}
+quartiles : Tank.Stops -> Html msg
+quartiles spread =
+    div
+        [ class "absolute top-0 h-full bg-foreground/25"
+        , style "left" (percent (across spread spread.low))
+        , style "width" (percent (clampShare (across spread spread.high - across spread spread.low)))
+        ]
+        []
+
+
+{-| The lap the class's middle stop fell on.
+-}
+middle : Tank.Stops -> Html msg
+middle spread =
+    div
+        [ class "absolute top-0 h-full w-px bg-muted-foreground"
+        , style "left" (percent (across spread spread.median))
+        ]
+        []
+
+
+{-| How far along the track a lap of the class's window stands.
+-}
+across : Tank.Stops -> Int -> Float
+across spread lap =
+    100 * toFloat lap / toFloat spread.window
+
+
 colorOf : Stage -> String
 colorOf stage =
     case stage of
@@ -179,6 +216,16 @@ overrunTitle level =
     laps level.laps ++ " past its " ++ windowOf level
 
 
+spreadTitle : Tank.Stops -> String
+spreadTitle spread =
+    "Not a race run on a window: half this class's stops fall between "
+        ++ String.fromInt spread.low
+        ++ " and "
+        ++ laps spread.high
+        ++ ", its middle stop on lap "
+        ++ String.fromInt spread.median
+
+
 windowOf : Tank.Level -> String
 windowOf level =
     String.fromInt level.window ++ "-lap window"
@@ -198,9 +245,6 @@ reasonOf reason =
     case reason of
         Tank.NoWindow ->
             "No window yet: this class has not stopped ten times with the field unheld"
-
-        Tank.NotOnWindow ->
-            "Not a race run on a window: this class's runs disagree by more than a quarter of their own top decile"
 
         Tank.NoRun ->
             "No lap at pace yet on the tank it is running"

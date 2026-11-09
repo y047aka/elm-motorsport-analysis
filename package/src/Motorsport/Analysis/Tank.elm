@@ -1,5 +1,5 @@
 module Motorsport.Analysis.Tank exposing
-    ( Tank(..), Level, Reason(..), Table
+    ( Tank(..), Level, Stops, Reason(..), Table
     , tableOf, level
     )
 
@@ -19,12 +19,12 @@ Nothing here knows a joule, a litre, or a car's mass.
 The level is a share of the window the class runs on, and the number beside it is laps -- the unit the pit wall counts in.
 
 **The error is measured, and shown.** Over the sixteen rounds kept here a drawn reading came within two laps of the lap the car actually came in on on 81% of the cells it was drawn on, and claimed a car was past its window while the car was still out on the road on 0.5% of them; the classes of the 2025 Le Mans came within 0.5 to 1.5 laps.
-So the class's own disagreement is carried out as `band` and drawn as a band rather than hidden, and where that disagreement passes a quarter of the window the reading is [`NotOnWindow`](#Reason) -- that race is not being run on a window, and a bar would be a guess wearing the shape of a meter.
+So the class's own disagreement is carried out as `band` and drawn as a band rather than hidden, and where it passes a quarter of the window this answers with [`Spread`](#Tank) -- the laps the class's stops actually fall on -- rather than with a level, since a level drawn on a race that is not run on a window is a guess wearing the shape of a meter.
 
 [`Strategy`](Motorsport-Analysis-Strategy) reads its cycle off the same pool, the same decile and the same bar of ten runs, for its own question: how many still stand in the race.
 Its cycle counts the lap into the pits and this does not, a lap run coasting down the lane being no lap of the ground a tank is measured over; that is the whole of the difference between the two, and `TankTest` holds them within a lap of one another on a class that ran clean.
 
-@docs Tank, Level, Reason, Table
+@docs Tank, Level, Stops, Reason, Table
 @docs tableOf, level
 
 -}
@@ -45,10 +45,13 @@ window the car stands on. An overrun is not an empty tank: it is a car still out
 past the lap a full tank should have reached, which is its own telling --
 short-fuelling, or a stint its team means to stretch to the flag.
 
+`Spread` is not a level at all. It is what a class whose runs disagree by more than a quarter of their own window answers with, and it says where the class stops rather than where one car is; see [`Stops`](#Stops).
+
 -}
 type Tank
     = Running Level
     | Overrun Level
+    | Spread Stops
     | Unreadable Reason
 
 
@@ -68,17 +71,27 @@ type alias Level =
     }
 
 
+{-| What a class that is not run on a window does say: the laps its stops fall on.
+
+`low` and `high` are the laps its middle half came in on, `median` the lap its middle stop fell on, and `window` its top decile -- the same count of laps the levels are drawn against, which is what lets one track hold both.
+Every car in the class is given the same spread: what a class like that says is about the class, and no car's tank is in it.
+
+-}
+type alias Stops =
+    { low : Int
+    , high : Int
+    , median : Int
+    , window : Int
+    }
+
+
 {-| Why a car has no level.
 
-`NoWindow` is the class having too few clean stopped runs in the whole race for a top
-decile to mean anything; `NotOnWindow` is a class whose runs disagree by more than a
-quarter of their own top decile, so the race is not being run on fuel; `NoRun` is a
-car that has yet to complete a lap at pace.
+`NoWindow` is the class having too few clean stopped runs in the whole race for a top decile to mean anything; `NoRun` is a car that has yet to complete a lap at pace.
 
 -}
 type Reason
     = NoWindow
-    | NotOnWindow
     | NoRun
 
 
@@ -114,11 +127,14 @@ type alias Gauge =
     }
 
 
-{-| A class's window in laps, and the disagreement between its runs.
+{-| A class's window in laps: its top decile, its middle, and its quarters.
 -}
 type alias Window =
     { laps : Int
     , band : Int
+    , low : Int
+    , high : Int
+    , median : Int
     }
 
 
@@ -181,10 +197,9 @@ tableOf cars =
     Table { cars = readings, windows = windows }
 
 
-{-| What a class's clean stopped runs say over the whole race: the top decile as the
-window, and the interquartile range as the disagreement between its cars.
+{-| What a class's clean stopped runs say over the whole race: the top decile as the window, the distance between its quarters as the disagreement between its cars, and the quarters themselves for a class that disagrees too much to be read as a tank.
 
-Runs the field was held down for join neither side of that.
+Runs the field was held down for join none of that.
 A tank measured over procedure laps is a different tank, and the meter's own unit is
 the lap the race was run at.
 
@@ -197,30 +212,30 @@ windowOf class runs =
         |> List.filter (\run -> not run.held)
         |> List.map .paceLaps
         |> List.sort
-        |> decileAndBand
+        |> windowFrom
 
 
-{-| The top decile of a sorted pool and the distance between its quarters -- a window,
-where the pool is big enough for either to mean something.
+{-| The top decile of a sorted pool, its middle, and the distance between its quarters -- a window, where the pool is big enough for any of them to mean something.
 -}
-decileAndBand : List Int -> Maybe Window
-decileAndBand lengths =
+windowFrom : List Int -> Maybe Window
+windowFrom lengths =
     if List.length lengths < minRuns then
         Nothing
 
     else
-        case
-            ( Statistics.quantile 0.9 lengths
-            , Maybe.map2 (-)
-                (Statistics.quantile 0.75 lengths)
-                (Statistics.quantile 0.25 lengths)
+        Maybe.map4
+            (\laps high median low ->
+                { laps = laps
+                , band = high - low
+                , low = low
+                , high = high
+                , median = median
+                }
             )
-        of
-            ( Just laps, Just band ) ->
-                Just { laps = laps, band = band }
-
-            _ ->
-                Nothing
+            (Statistics.quantile 0.9 lengths)
+            (Statistics.quantile 0.75 lengths)
+            (Statistics.quantile 0.5 lengths)
+            (Statistics.quantile 0.25 lengths)
 
 
 {-| The runs a window is read from: those that ended in a stop. A run still running
@@ -285,9 +300,7 @@ level carNumber clock table =
         |> Maybe.map (onItsTank clock t.windows)
 
 
-{-| What the class's window has to say about one car at the clock -- its own silence
-if the class has no window, or runs on nothing so steady as a window, and the car's
-level otherwise.
+{-| What the class's window has to say about one car at the clock -- the class's own spread if it has no window or runs on nothing so steady as a window, and the car's level otherwise.
 -}
 onItsTank : Int -> Dict String Window -> CarTank -> Tank
 onItsTank clock windows car =
@@ -297,7 +310,12 @@ onItsTank clock windows car =
 
         Just window ->
             if bandTooWide window then
-                Unreadable NotOnWindow
+                Spread
+                    { low = window.low
+                    , high = window.high
+                    , median = window.median
+                    , window = window.laps
+                    }
 
             else
                 case atOrBefore .lap clock car.gauges of
@@ -340,6 +358,11 @@ window itself.
 A class that runs 10 to 12 laps disagrees by nothing, and its bar is worth a column's
 width. A class that runs 10 to 30 is a class of teams choosing when to stop, and no
 share of a tank is in that.
+
+The quarter is measured and not a taste for tightness: over the sixteen rounds kept
+here the classes within it read to 1.98 laps of the lap the car came in on, and every
+looser class reads some four laps out, so widening this gate buys cells at the cost of
+the reading rather than at the cost of nothing.
 
 -}
 bandTooWide : Window -> Bool

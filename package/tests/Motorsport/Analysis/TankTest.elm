@@ -59,13 +59,24 @@ suite =
                     , tankOf cars 15 |> Maybe.map windowOf
                     )
                         |> Expect.equal ( Just 10, Just 10 )
-            , test "says nothing when the class's own runs disagree past a quarter of it" <|
+            , test "is read to a quarter of the window itself, and past it as the class's own stops" <|
                 \_ ->
-                    -- 10, 15 and 22 laps, and the top decile 22 of them: the class
-                    -- disagrees by 12 laps of its own 22, which is a class of teams
-                    -- choosing when to stop rather than a class running on fuel.
-                    tankOf (wideFleet ++ [ runner [ run 22, stint 1 ] ]) 25
-                        |> Expect.equal (Just (Unreadable Tank.NotOnWindow))
+                    -- Four laps of disagreement out of a 16-lap window is the gate standing at exactly a quarter, and the first class is read as a level.
+                    -- Five of the same 16 is past the gate, and the answer becomes the class's own stops: its quarters at 11 and 16, its middle stop on 11, drawn against its 16-lap window.
+                    -- The last class is tri-modal at 10, 15 and 22 laps and disagrees by 12 of its own 22, which is a class of teams choosing when to stop rather than a class running on fuel.
+                    let
+                        quarter =
+                            fleetFrom 2 9 12 ++ fleetFrom 21 4 16
+
+                        past =
+                            fleetFrom 2 8 11 ++ fleetFrom 21 5 16
+                    in
+                    ( tankOf (quarter ++ [ runner [ run 16 ] ]) 20 |> Maybe.map windowOf
+                    , tankOf (past ++ [ runner [ run 16 ] ]) 20 |> Maybe.map spreadOf
+                    , tankOf (wideFleet ++ [ runner [ run 22, stint 1 ] ]) 25 |> Maybe.map spreadOf
+                    )
+                        |> Expect.equal
+                                ( Just 16, Just { low = 11, high = 16, median = 11, window = 16 }, Just { low = 10, high = 22, median = 15, window = 22 } )
             , test "stands within a lap of the cycle Strategy reads off the same stops" <|
                 \_ ->
                     -- Strategy counts the lap into the pits and Tank does not, which
@@ -202,11 +213,12 @@ slowFleet =
     fleetOf 9 10 ++ [ car "41" [ run 13 ], car "42" [ run 13 ] ]
 
 
-{-| A class that disagrees with itself: four runs of 10, four of 15, five of 22.
+{-| A class that disagrees with itself: four runs of 10, four of 15 and five of 22,
+the reading car itself coming in on one of the 22.
 -}
 wideFleet : List Car
 wideFleet =
-    fleetOf 4 10 ++ fleetFrom 21 4 15 ++ fleetFrom 31 5 22
+    fleetFrom 2 4 10 ++ fleetFrom 21 4 15 ++ fleetFrom 31 5 22
 
 
 {-| The car the tests read: it runs a stint of its own, which is what puts a lap at
@@ -323,6 +335,9 @@ windowOf tank =
         Overrun level ->
             level.window
 
+        Spread _ ->
+            -1
+
         Unreadable _ ->
             -1
 
@@ -336,8 +351,23 @@ lapsLeft tank =
         Overrun level ->
             -level.laps
 
+        Spread _ ->
+            -1
+
         Unreadable _ ->
             -1
+
+
+{-| The laps a class's quarters and its middle stop fell on, and the window the bar is drawn against. A level answers none of that.
+-}
+spreadOf : Tank -> Tank.Stops
+spreadOf tank =
+    case tank of
+        Tank.Spread stops ->
+            stops
+
+        _ ->
+            { low = -1, high = -1, median = -1, window = -1 }
 
 
 fractionOf : Tank -> Float
