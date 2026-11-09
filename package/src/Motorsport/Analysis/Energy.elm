@@ -12,12 +12,13 @@ A wall says nothing about when a car is due, and the plan does, which is why the
 
 The unit is the **pace lap**, both sides of the division: a lap run under a procedure is not a lap of energy spent at race rate, so it neither runs the load down nor joins the pool the plan is read from.
 [`Lap.atRacePace`](Motorsport-Lap#atRacePace) is the predicate on both sides, which is what keeps a car held behind a procedure from reading empty.
+The two sides are not the same correction, and that is a decision rather than an oversight: a held run is kept out of the pool whole, while a car's own held laps are only not counted, so a car that spent five laps behind a procedure is charged nothing for them and its bar runs optimistic exactly while the field is held down. What a slow zone burns is not in the feed, so no rate is invented for it, and the laps a reader gets are laps at pace.
 
 Nothing here knows a joule, a litre, or a car's mass.
 The level is a share of the plan its class is running, and the number beside it is laps -- the unit the pit wall counts in.
 
-**The error is measured, and shown.** Over the sixteen rounds kept here the column drew a level on 84% of the car-laps it was asked about, and a drawn level came within two laps of the lap the car actually came in on on 82% of them; the classes of the 2025 Le Mans read to between 0.6 and 0.8 laps.
-So the class's own disagreement is carried out as `band` and drawn as a band rather than hidden, and where a class runs no one plan this answers with [`Spread`](#Energy) -- the laps its stops actually fall on.
+**The error is measured, and shown.** Over the sixteen rounds kept here the column drew a level on 84% of the car-laps it was asked about, and a drawn level came within two laps of the lap the car actually came in on on 82% of them; the classes of the 2025 Le Mans came down to a mean error of 0.6 to 0.8 laps.
+The band carries the class's own disagreement, drawn rather than hidden, and where a class runs no one plan this answers with [`Spread`](#Energy) -- the laps its stops actually fall on. It is that disagreement and not the whole of the error, which has the plan's hindsight and a car's free held laps in it besides.
 
 [`Strategy`](Motorsport-Analysis-Strategy) reads its cycle off the same pool as this module's ceiling, the same decile and the same bar of ten runs, for its own question: how many still stand in the race.
 What differs is what each counts a lap: its cycle is the ground the stint covered, the lap in and the lap out that follows a stop, and this counts neither, a lap run coasting down the lane being no lap of the ground energy is measured over. The two therefore stand a lap apart over a class's first stints and two apart wherever a run is led by a lap out, and `EnergyTest` pins both.
@@ -59,8 +60,8 @@ type Energy
 
 `laps` is laps of the class's plan left (`Running`) or laps run past it (`Overrun`), and
 never both. `fraction` is the share of the plan left, held between 0 and 1 for the bar to
-be drawn at. `band` is the class's own disagreement within its plan -- the error this
-meter can, and does, admit to. `ceiling` is the lap nine in ten of the class's stopped runs
+be drawn at. `band` is the class's own disagreement within its plan, which is what
+the drawn band is. `ceiling` is the lap nine in ten of the class's stopped runs
 came in by, and is further than the plan wherever the class brings some of its cars in early.
 
 -}
@@ -468,7 +469,7 @@ asEnergy clock classes car =
 
 {-| How many pace laps the car has run on its energy, at the clock.
 
-None, when every lap it has run since its last stop was run under a procedure -- which is a full load and not an unreadable one, the meter's unit excluding those laps on both sides of the division.
+None, when every lap it has run since its last stop was run under a procedure -- which is a full load and not an unreadable one, the unit excluding those laps.
 
 -}
 usedAt : Int -> CarGauges -> Int

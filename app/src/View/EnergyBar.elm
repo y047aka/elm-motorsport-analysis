@@ -7,8 +7,8 @@ The fill runs from the left rather than from a centre, because this is a level a
 not a difference: what is left is what is drawn. Its colour says how to read the
 length, in the four hues the flag bands are already drawn in -- see
 [`View.PlaybackControls.bandColor`](View-PlaybackControls#bandColor). Over the fill
-sits a band, which is the class's own disagreement within its plan -- the error the
-reading admits to, drawn rather than hidden. It is drawn in the foreground and not
+sits a band, which is the class's own disagreement within its plan, drawn rather than
+hidden. It is drawn in the foreground and not
 the fill's hue: a band matched to the fill cannot be seen on the fill.
 
 A car past its plan has nothing left to fill, so the track itself takes the level
