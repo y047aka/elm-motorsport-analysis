@@ -11,27 +11,29 @@ import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
 
 
-{-| The fixtures are built so the window comes out of a whole number of laps and the
+{-| The fixtures are built so the plan comes out of a whole number of laps and the
 reading is a subtraction a test can do in its head: wherever a test says nothing to
-the contrary the class's window is 10 laps, and the car being read has run a first
-stint of 10 and stopped, which is the eleventh clean run the pool is read from.
+the contrary the class's plan is 10 laps, its ceiling 10 with it -- every car coming in
+on the same lap -- and the car being read has run a first stint of 10 and stopped,
+which is the eleventh clean run the pool is read from.
 
-The clock asks one question -- where the car stands on its energy -- and never the window: a class's window is the finished race's, so a test may ask about any lap it likes and read the subtraction off the same ten laps.
+The clock asks one question -- where the car stands on its energy -- and never the plan: a class's plan is the finished race's, so a test may ask about any lap it likes and read the subtraction off the same ten laps.
 -}
 suite : Test
 suite =
     describe "Motorsport.Analysis.Energy"
-        [ describe "the class's window"
-            [ test "is the top of its stopped runs, not their middle" <|
+        [ describe "the class's plan"
+            [ test "is the block its stops mostly fell in, and its top is kept apart from it" <|
                 \_ ->
-                    -- Nine cars ran 10 laps and two ran 13, the reading car's own
-                    -- first stint a thirteenth: the decile is 13, and a meter that
-                    -- read the middle of that class would say 10 and call every
-                    -- 13-lap run an overrun.
+                    -- Nine cars ran 10 laps and three ran 13, the reading car's own
+                    -- first stint one of the thirteens: the plan is the ten the class
+                    -- mostly ran and the thirteen is the ceiling carried beside it, so
+                    -- the cars that went thirteen are read as overruns rather than as
+                    -- the plan the whole class is held to.
                     energyOf (slowFleet ++ [ runner [ run 13, stint 3 ] ]) 18
-                        |> Maybe.map windowOf
-                        |> Expect.equal (Just 13)
-            , test "and no window while the class has fewer than ten clean stopped runs" <|
+                        |> Maybe.map (\reading -> ( planOf reading, ceilingOf reading ))
+                        |> Expect.equal (Just ( 10, 13))
+            , test "and no reading while the class has fewer than ten clean stopped runs" <|
                 \_ ->
                     -- Eight cars and the reading car's own first stint: nine clean
                     -- runs, one short of a decile that means anything.
@@ -42,41 +44,53 @@ suite =
                     -- Ten clean runs of 10, and nine of 40 that met a procedure on
                     -- the way, all of them in the past by the lap asked about: the
                     -- long runs are what a caution is worth, not what the energy is
-                    -- worth, so the window stays 10.
+                    -- worth, so the plan stays 10.
                     energyOf (fleet ++ heldFleet ++ [ runner [ run 10, stint 33 ] ]) 45
-                        |> Maybe.map windowOf
+                        |> Maybe.map planOf
                         |> Expect.equal (Just 10)
-            , test "is the same window at the first lap as at the flag" <|
+            , test "is the same plan at the first lap as at the flag" <|
                 \_ ->
                     -- The class's word is the whole race's, which is what lets a
                     -- column of cars be drawn from one reading of it; the clock moves
-                    -- the car along its energy and never moves the window.
+                    -- the car along its energy and never moves the plan.
                     let
                         cars =
                             fleet ++ [ runner [ run 10, stint 3 ] ]
                     in
-                    ( energyOf cars 3 |> Maybe.map windowOf
-                    , energyOf cars 15 |> Maybe.map windowOf
+                    ( energyOf cars 3 |> Maybe.map planOf
+                    , energyOf cars 15 |> Maybe.map planOf
                     )
                         |> Expect.equal ( Just 10, Just 10 )
-            , test "is read to a quarter of the window itself, and past it as the class's own stops" <|
+            , test "is a block a quarter of itself wide, and no plan past that" <|
                 \_ ->
-                    -- Four laps of disagreement out of a 16-lap window is the gate standing at exactly a quarter, and the first class is read as a level.
-                    -- Five of the same 16 is past the gate, and the answer becomes the class's own stops: its quarters at 11 and 16, its middle stop on 11, drawn against its 16-lap window.
-                    -- The last class is tri-modal at 10, 15 and 22 laps and disagrees by 12 of its own 22, which is a class of teams choosing when to stop rather than a class running to one energy plan.
+                    -- A class that comes in on 9, 10 and 11 disagrees by one lap of a ten-lap plan, which is inside the gate, and is read as a level with a one-lap band.
+                    -- A class spreading from 6 to 15 disagrees by two laps of the same plan, which is past it: the answer becomes the class's own stops -- quarters at 8 and 12, middle stop on 10, longest run 14.
                     let
-                        quarter =
-                            fleetFrom 2 9 12 ++ fleetFrom 21 4 16
+                        tight =
+                            fleetRunning [ 9, 9, 9, 10, 10, 10, 11, 11, 11 ]
 
-                        past =
-                            fleetFrom 2 8 11 ++ fleetFrom 21 5 16
+                        wide =
+                            fleetRunning [ 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ]
                     in
-                    ( energyOf (quarter ++ [ runner [ run 16 ] ]) 20 |> Maybe.map windowOf
-                    , energyOf (past ++ [ runner [ run 16 ] ]) 20 |> Maybe.map spreadOf
-                    , energyOf (wideFleet ++ [ runner [ run 22, stint 1 ] ]) 25 |> Maybe.map spreadOf
+                    ( energyOf (tight ++ [ runner [ run 10, stint 3 ] ]) 15 |> Maybe.map (\reading -> ( planOf reading, bandOf reading ))
+                    , energyOf (wide ++ [ runner [ run 10, stint 3 ] ]) 15 |> Maybe.map spreadOf
                     )
                         |> Expect.equal
-                                ( Just 16, Just { low = 11, high = 16, median = 11, window = 16 }, Just { low = 10, high = 22, median = 15, window = 22 } )
+                            ( Just ( 10, 1 )
+                            , Just { low = 8, high = 12, median = 10, ceiling = 14 }
+                            )
+            , test "is not a block that does not carry the class" <|
+                \_ ->
+                    -- Four blocks of stops, at 8, 12, 16 and 20 laps, none holding two fifths of the class: that is a class running three plans at once, and the largest block is not its plan however tight the block itself is.
+                    energyOf (fleetRunning [ 8, 8, 8, 12, 12, 12, 16, 16, 16, 20 ] ++ [ runner [ run 20, stint 1 ] ]) 25
+                        |> Maybe.map spreadOf
+                        |> Expect.equal (Just { low = 8, high = 16, median = 12, ceiling = 20 })
+            , test "is no plan at all where the class stopped in a scramble" <|
+                \_ ->
+                    -- A class that comes in on three laps every time has a plan shorter than the band this column draws around its reading, and a bar over three laps says nothing a stop does not.
+                    energyOf (fleetRunning (List.repeat 10 3) ++ [ runner [ run 3, stint 1 ] ]) 5
+                        |> Maybe.map spreadOf
+                        |> Expect.equal (Just { low = 3, high = 3, median = 3, ceiling = 3 })
             , test "stands within a lap of the cycle Strategy reads off the same stops" <|
                 \_ ->
                     -- Strategy counts the lap into the pits and Energy does not, which
@@ -86,7 +100,7 @@ suite =
                             slowFleet ++ [ runner [ run 13, stint 3 ] ]
                     in
                     ( Strategy.pitCycleOf hypercar cars |> .cycle
-                    , energyOf cars 18 |> Maybe.map windowOf
+                    , energyOf cars 18 |> Maybe.map ceilingOf
                     )
                         |> Expect.equal ( Just 14, Just 13 )
             ]
@@ -111,35 +125,51 @@ suite =
                     energyOf (fleet ++ [ runner [ run 10, run 10, stint 3 ] ]) 27
                         |> Maybe.map lapsLeft
                         |> Expect.equal (Just 7)
-            , test "reads past its window as an overrun, in laps past" <|
+            , test "reads past its plan as an overrun, in laps past" <|
                 \_ ->
                     -- Thirteen laps run on its energy since its last stop, in a class
-                    -- that runs 10: short-fuelling, which is a different telling
-                    -- from a car on the ninth lap of the same window.
+                    -- that comes in on 10: short-fuelling, which is a different telling
+                    -- from a car on the ninth lap of the same plan.
                     energyOf (fleet ++ [ runner [ run 10, stint 13 ] ]) 25
                         |> Expect.equal
                             (Just
                                 (Overrun
                                     { laps = 3
-                                    , window = 10
+                                    , plan = 10
                                     , band = 0
+                                    , ceiling = 10
+                                    , fraction = 0
+                                    }
+                                )
+                            )
+            , test "and says how far the class got when it went further than that" <|
+                \_ ->
+                    -- The class on the ten-lap plan with a thirteen-lap ceiling: a car on its thirteenth lap is three past the plan, and the class's own longest run was thirteen, which is where the overrun stops being a guess.
+                    energyOf (slowFleet ++ [ runner [ run 13, stint 13 ] ]) 30
+                        |> Expect.equal
+                            (Just
+                                (Overrun
+                                    { laps = 3
+                                    , plan = 10
+                                    , band = 0
+                                    , ceiling = 13
                                     , fraction = 0
                                     }
                                 )
                             )
             , test "is full while every lap it has run was run under a procedure" <|
                 \_ ->
-                    -- Its class has a window, and it has one lap under a procedure and nothing else.
-                    -- The meter's unit excludes a held lap on both sides of the division, so none of the window it stands on is spent: a car that has yet to run a lap at pace is drawn full, and not as a second kind of silence.
+                    -- Its class has a plan, and it has one lap under a procedure and nothing else.
+                    -- The meter's unit excludes a held lap on both sides of the division, so none of the plan it stands on is spent: a car that has yet to run a lap at pace is drawn full, and not as a second kind of silence.
                     energyOf (fleet ++ [ runner [ held 0 1 ] ]) 11
-                        |> Expect.equal (Just (Running { laps = 10, window = 10, band = 0, fraction = 1 }))
+                        |> Expect.equal (Just (Running { laps = 10, plan = 10, band = 0, ceiling = 10, fraction = 1 }))
             , test "and no level at all for a car the field does not hold" <|
                 \_ ->
                     fleet
                         |> Energy.tableOf
                         |> Energy.level "99" 13
                         |> Expect.equal Nothing
-            , test "is a share of the window, which is what a bar is drawn at" <|
+            , test "is a share of the plan, which is what a bar is drawn at" <|
                 \_ ->
                     energyOf (fleet ++ [ runner [ run 10, stint 3 ] ]) 15
                         |> Maybe.map fractionOf
@@ -214,12 +244,13 @@ slowFleet =
     fleetOf 9 10 ++ [ car "41" [ run 13 ], car "42" [ run 13 ] ]
 
 
-{-| A class that disagrees with itself: four runs of 10, four of 15 and five of 22,
-the reading car itself coming in on one of the 22.
+{-| Cars that each ran their own number of laps and stopped, numbered from two so the
+car the tests read stays number one.
 -}
-wideFleet : List Car
-wideFleet =
-    fleetFrom 2 4 10 ++ fleetFrom 21 4 15 ++ fleetFrom 31 5 22
+fleetRunning : List Int -> List Car
+fleetRunning paces =
+    paces
+        |> List.indexedMap (\i pace -> car (String.fromInt (i + 2)) [ run pace ])
 
 
 {-| The car the tests read: it runs a stint of its own, which is what puts a lap at
@@ -327,14 +358,46 @@ energyOf cars clock =
     cars |> Energy.tableOf |> Energy.level "1" clock
 
 
-windowOf : Energy -> Int
-windowOf reading =
+planOf : Energy -> Int
+planOf reading =
     case reading of
         Running level ->
-            level.window
+            level.plan
 
         Overrun level ->
-            level.window
+            level.plan
+
+        Spread _ ->
+            -1
+
+        Unreadable ->
+            -1
+
+
+ceilingOf : Energy -> Int
+ceilingOf reading =
+    case reading of
+        Running level ->
+            level.ceiling
+
+        Overrun level ->
+            level.ceiling
+
+        Spread _ ->
+            -1
+
+        Unreadable ->
+            -1
+
+
+bandOf : Energy -> Int
+bandOf reading =
+    case reading of
+        Running level ->
+            level.band
+
+        Overrun level ->
+            level.band
 
         Spread _ ->
             -1
@@ -359,7 +422,7 @@ lapsLeft reading =
             -1
 
 
-{-| The laps a class's quarters and its middle stop fell on, and the window the bar is drawn against. A level answers none of that.
+{-| The laps a class's quarters, its middle stop and its longest run fell on. A level answers none of that.
 -}
 spreadOf : Energy -> Energy.Stops
 spreadOf reading =
@@ -368,7 +431,7 @@ spreadOf reading =
             stops
 
         _ ->
-            { low = -1, high = -1, median = -1, window = -1 }
+            { low = -1, high = -1, median = -1, ceiling = -1 }
 
 
 fractionOf : Energy -> Float

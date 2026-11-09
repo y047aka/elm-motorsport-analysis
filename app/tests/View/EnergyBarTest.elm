@@ -7,34 +7,35 @@ import View.EnergyBar as EnergyBar exposing (Stage(..))
 
 
 level : Int -> Int -> Energy.Level
-level laps window =
+level laps plan =
     { laps = laps
-    , window = window
+    , plan = plan
     , band = 1
-    , fraction = toFloat laps / toFloat window
+    , ceiling = plan
+    , fraction = toFloat laps / toFloat plan
     }
 
 
 suite : Test
 suite =
     describe "View.EnergyBar"
-        [ describe "the level the fill is drawn in, counted in quarters of the window"
-            [ test "a whole window left is the fullest level" <|
+        [ describe "the level the fill is drawn in, counted in quarters of the plan"
+            [ test "a whole plan left is the fullest level" <|
                 \_ ->
                     EnergyBar.stageOf (level 14 14) |> Expect.equal Ample
-            , test "three quarters of the window is that level" <|
+            , test "three quarters of the plan is that level" <|
                 \_ ->
                     EnergyBar.stageOf (level 11 14) |> Expect.equal Ample
             , test "the lap under three quarters is the next level down" <|
                 \_ ->
                     EnergyBar.stageOf (level 10 14) |> Expect.equal Steady
-            , test "half the window is that level" <|
+            , test "half the plan is that level" <|
                 \_ ->
                     EnergyBar.stageOf (level 7 14) |> Expect.equal Steady
             , test "the lap under half is the next level down" <|
                 \_ ->
                     EnergyBar.stageOf (level 6 14) |> Expect.equal Low
-            , test "a quarter of the window is that level" <|
+            , test "a quarter of the plan is that level" <|
                 \_ ->
                     EnergyBar.stageOf (level 4 14) |> Expect.equal Low
             , test "the lap inside the last quarter is the last level" <|
@@ -44,11 +45,11 @@ suite =
                 \_ ->
                     EnergyBar.stageOf (level 0 14) |> Expect.equal Critical
             ]
-        , describe "the window the quarters are of"
-            [ test "twelve laps of a twelve-lap window is the fullest level" <|
+        , describe "the plan the quarters are of"
+            [ test "twelve laps of a twelve-lap plan is the fullest level" <|
                 \_ ->
                     EnergyBar.stageOf (level 12 12) |> Expect.equal Ample
-            , test "twelve laps of a twenty-four-lap window is half, whatever the lap count" <|
+            , test "twelve laps of a twenty-four-lap plan is half, whatever the lap count" <|
                 \_ ->
                     EnergyBar.stageOf (level 12 24) |> Expect.equal Steady
             ]

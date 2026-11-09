@@ -1,23 +1,25 @@
 module View.EnergyBar exposing (Stage(..), bar, stageOf, width)
 
 {-| The standings' Energy column: how much of its energy a car has left, in the units
-the race is run in -- laps of the window its class runs on.
+the race is run in -- laps of the plan its class is running.
 
 The fill runs from the left rather than from a centre, because this is a level and
 not a difference: what is left is what is drawn. Its colour says how to read the
 length, in the four hues the flag bands are already drawn in -- see
 [`View.PlaybackControls.bandColor`](View-PlaybackControls#bandColor). Over the fill
-sits a band, which is the class's own disagreement between its runs -- the error the
+sits a band, which is the class's own disagreement within its plan -- the error the
 reading admits to, drawn rather than hidden. It is drawn in the foreground and not
-the fill's hue: a band matched to the fill cannot be seen on the fill.
+the fill's hue: a band matched to the fill cannot be seen on the fill. Where the class
+ran further than its plan the tooltip says how far, which is the reading's ceiling and
+the end of an overrun's story.
 
-A car past its window has nothing left to fill, so the track itself takes the level
+A car past its plan has nothing left to fill, so the track itself takes the level
 an empty one takes. Nothing in this column is anchored to the right edge; the bar, its
 colour and its band all read from the same end.
 
-A class that is not run on a window is drawn as the one thing it does say: the laps its middle half came in on, marked at its middle stop. That is drawn in the hue a level's uncertainty band is drawn in, at the same scale, and it fills none of the bar -- the two drawings differ by whether they answer about a car at all.
+A class that runs no one plan is drawn as the one thing it does say: the laps its middle half came in on, marked at its middle stop. That is drawn in the hue a level's uncertainty band is drawn in, against the class's longest run, and it fills none of the bar -- the two drawings differ by whether they answer about a car at all.
 
-Where there is no window at all -- a class that has not stopped ten times with the field unheld -- the cell says so, which is a different fact from a spread: that class stopped often enough to describe itself, and this one did not stop often enough to be described.
+Where there is nothing to say at all -- a class that has not stopped ten times with the field unheld -- the cell says so, which is a different fact from a spread: that class stopped often enough to describe itself, and this one did not stop often enough to be described.
 
 @docs Stage, bar, stageOf, width
 
@@ -35,7 +37,7 @@ width =
     64
 
 
-{-| How much of the window is left, in the four levels the fill is drawn in.
+{-| How much of the plan is left, in the four levels the fill is drawn in.
 -}
 type Stage
     = Ample
@@ -44,7 +46,7 @@ type Stage
     | Critical
 
 
-{-| Which level a car's fill is drawn in: quarters of the window left, counted in
+{-| Which level a car's fill is drawn in: quarters of the plan left, counted in
 whole laps so the boundaries land where the pit wall counts them.
 
 An [`Overrun`](Motorsport-Analysis-Energy#Energy) never reaches this -- it has no fill to
@@ -57,20 +59,20 @@ stageOf level =
         quarters =
             level.laps * 4
     in
-    if quarters >= level.window * 3 then
+    if quarters >= level.plan * 3 then
         Ample
 
-    else if quarters >= level.window * 2 then
+    else if quarters >= level.plan * 2 then
         Steady
 
-    else if quarters >= level.window then
+    else if quarters >= level.plan then
         Low
 
     else
         Critical
 
 
-{-| The bar, filled to the share of the window the car has left.
+{-| The bar, filled to the share of the class's plan the car has left.
 
 `Nothing` is a car this round's field does not hold: an empty cell keeps the row's
 columns lined up and says nothing, which is what is known.
@@ -101,7 +103,7 @@ bar reading =
             track "bg-muted" [ quartiles spread, middle spread ] (spreadTitle spread)
 
 
-{-| The whole window, drawn as the bar is. `trackClass` is the level the track itself
+{-| The whole plan, drawn as the bar is. `trackClass` is the level the track itself
 takes, which only an overrun paints.
 -}
 track : String -> List (Html msg) -> String -> Html msg
@@ -127,14 +129,14 @@ fill stage level =
 {-| The class's disagreement, straddling the edge of what is left.
 
 A band that runs off either end is cut at the end rather than drawn as a wider bar:
-the window is the whole track, and the uncertainty lives inside it.
+the plan is the whole track, and the uncertainty lives inside it.
 
 -}
 band : Energy.Level -> Html msg
 band level =
     let
         share =
-            100 * toFloat level.band / toFloat level.window
+            100 * toFloat level.band / toFloat level.plan
 
         edge =
             100 * level.fraction - share / 2
@@ -147,7 +149,7 @@ band level =
         []
 
 
-{-| The laps a class's middle half came in on, on the track the window fills.
+{-| The laps a class's middle half came in on, on the track its longest run fills.
 
 A spread takes no stage colour and fills none of the bar; it is drawn in the hue a level's own band is drawn in, which is the same fact about the same runs.
 
@@ -173,11 +175,11 @@ middle spread =
         []
 
 
-{-| How far along the track a lap of the class's window stands.
+{-| How far along the track a lap of the class's longest run stands.
 -}
 across : Energy.Stops -> Int -> Float
 across spread lap =
-    100 * toFloat lap / toFloat spread.window
+    100 * toFloat lap / toFloat spread.ceiling
 
 
 colorOf : Stage -> String
@@ -208,27 +210,41 @@ percent value =
 
 runningTitle : Energy.Level -> String
 runningTitle level =
-    laps level.laps ++ " left on a " ++ windowOf level ++ " (±" ++ laps level.band ++ ")"
+    laps level.laps ++ " left of the class's " ++ planOf level ++ " (±" ++ laps level.band ++ ")" ++ reached level
 
 
 overrunTitle : Energy.Level -> String
 overrunTitle level =
-    laps level.laps ++ " past its " ++ windowOf level
+    laps level.laps ++ " past the class's " ++ planOf level ++ reached level
+
+
+{-| How far the class did get on one load, which is worth saying only where it got further
+than its plan -- and worth saying there because it is where an overrun stops being a guess.
+-}
+reached : Energy.Level -> String
+reached level =
+    if level.ceiling > level.plan then
+        " Â· its longest run " ++ laps level.ceiling
+
+    else
+        ""
 
 
 spreadTitle : Energy.Stops -> String
 spreadTitle spread =
-    "Not a race run on a window: half this class's stops fall between "
+    "No plan here: half this class's stops fall between "
         ++ String.fromInt spread.low
         ++ " and "
         ++ laps spread.high
         ++ ", its middle stop on lap "
         ++ String.fromInt spread.median
+        ++ ", its longest run "
+        ++ laps spread.ceiling
 
 
-windowOf : Energy.Level -> String
-windowOf level =
-    String.fromInt level.window ++ "-lap window"
+planOf : Energy.Level -> String
+planOf level =
+    String.fromInt level.plan ++ "-lap plan"
 
 
 laps : Int -> String
@@ -241,8 +257,9 @@ laps count =
 
 
 {-| The one silence this column keeps: a class that has not stopped ten times with the
-field unheld, which is too few runs for a top decile to say how far its energy goes.
+field unheld, which is too few stops for its stops to say anything -- a plan, a spread, or
+anything else.
 -}
 noWindowTitle : String
 noWindowTitle =
-    "No window: this class has not stopped ten times with the field unheld"
+    "No reading: this class has not stopped ten times with the field unheld"
