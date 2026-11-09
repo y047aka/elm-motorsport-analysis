@@ -222,7 +222,7 @@ the point past which an overrun stops being a guess.
 reached : Energy.Level -> String
 reached level =
     if level.ceiling > level.plan then
-        " Â· its longest run " ++ laps level.ceiling
+        " · its longest run " ++ laps level.ceiling
 
     else
         ""
