@@ -76,7 +76,7 @@ The word a summary sends and the word the report prints are two files that no pr
 
 These hold the circuits as written-down inventories rather than readings, so a new circuit fails each of them by name until it joins:
 
-- `circuits/test/TestSurvey.flix` — the refusal-message test carries the known words in its `"no circuit is surveyed under 'monza': known are …"` assertion; a new word that joins unheralded fails there by name.
+- `circuits/test/TestSurvey.flix` — the refusal-message test carries the known words in its `"no circuit is surveyed under 'qatar': known are cota, le_mans, barcelona, monza"` assertion; a new word that joins unheralded fails there by name.
 - `circuits/test/TestRegenerate.flix` — the expected `drawn`/`words` lists over `Circuit.circuits()`.
 - `circuits/test/TestTimingMap.flix` — `cases()` must name every case of the report's enum, and a test counts them.
 - `app/tests/geometry-contract.spec.ts` — it reads the words out of the sources for the cross-checks, but one assertion freezes the whole inventory: `expect(drawnNames().sort()).toEqual([...])`.

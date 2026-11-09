@@ -174,9 +174,35 @@ pub mod Circuit {
         survey = "The Circuit de Barcelona-Catalunya"
     }
 
+    /// Monza. The relation `284565` carries its 20 lap ways under no role at all
+    /// and names its pit under `pit_lane`. Its `start` and `finish` roles both name
+    /// one node — and that node is a `highway=traffic_signals` point: the pit-exit
+    /// light, 197 m after the line the track-atlas reading measures off imagery and
+    /// calls `start_finish`. OSM holds no node where that line stands, so no role a
+    /// survey could answer does, and no `timingLine` can be authored without the
+    /// byte fence refusing every survey of the relation; the drawn zero and start
+    /// line of this circuit therefore stand at the pit-exit light. A node joined to
+    /// the relation at the atlas marker's place would fix the drawing without
+    /// moving a metre of the survey.
+    ///
+    /// The distances the FIA issues round a lap here were never read at authoring:
+    /// no stretches are authored, the geometry writes no `sectors`, and the timing
+    /// report reads this circuit as publishing no lines of its own.
+    def monza(): Circuit = {
+        relation = 284565i64,
+        word     = "monza",
+        timedFrom = "finish",
+        timingLine = None,
+        lap      = 5793.0,
+        sectors  = {published = None, eachSeason = None},
+        file   = "app/static/geometry/monza.geojson",
+        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/monza/raw/layers/gp.geojson"),
+        survey = "The Autodromo Nazionale di Monza"
+    }
+
     /// The circuits there are, in the order a run over all of them walks them.
     pub def circuits(): List[Circuit] =
-        cota() :: leMans() :: barcelona() :: Nil
+        cota() :: leMans() :: barcelona() :: monza() :: Nil
 
     /// A circuit by the word the app draws it by — the word its directory and its kept
     /// files are named by too.

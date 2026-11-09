@@ -20,6 +20,7 @@ const fixtures = [
   { module: "Barcelona", file: "barcelona.geojson" },
   { module: "Cota", file: "cota.geojson" },
   { module: "LeMans", file: "le_mans.geojson" },
+  { module: "Monza", file: "monza.geojson" },
 ];
 
 mkdirSync(out, { recursive: true });

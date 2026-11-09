@@ -35,6 +35,7 @@ import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
+import Motorsport.Wec.Circuit.Monza.Layout as MonzaLayout
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Msg(..))
@@ -612,6 +613,14 @@ trackOf id track geometry =
                 _ ->
                     Tracker.fromConfig track.config
 
+        Just "monza" ->
+            case geometry of
+                Decoded lap ->
+                    Tracker.onCircuit (MonzaLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
+
+                _ ->
+                    Tracker.fromConfig track.config
+
         _ ->
             Tracker.fromConfig track.config
 
@@ -679,6 +688,9 @@ decoderFor circuit =
 
         "le_mans" ->
             Just LeMansLayout.decoder
+
+        "monza" ->
+            Just MonzaLayout.decoder
 
         _ ->
             Nothing

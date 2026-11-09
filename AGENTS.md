@@ -254,8 +254,8 @@ application's assets. Neither holds any of it itself — each decodes the table
 that does, and what reaches `Car.Metadata` is the resolved colour, badge and
 photograph rather than the tables.
 
-Three circuits are drawn to their own shape rather than as a ring: Le Mans, the
-Circuit of the Americas, and the Circuit de Barcelona-Catalunya. `Circuit/Layout` is what
+Four circuits are drawn to their own shape rather than as a ring: Le Mans, the
+Circuit of the Americas, the Circuit de Barcelona-Catalunya, and Monza. `Circuit/Layout` is what
 `Tracker.onCircuit` is handed — the lap, the pit lane, the lines the lap is
 timed at, and the metres the tracker draws at — and it is where the surveyed
 degrees are projected into drawing metres, once, whichever circuit they came
@@ -285,7 +285,7 @@ map leaves no distance for, so it is a sum rather than a record of nothings, and
 is drawn less finely too: between two of its lines a COTA car is placed by the time
 it has run between them, where a Le Mans car is placed by a mini-sector.
 
-A circuit whose map has never been read at authoring — Barcelona's — has no
+A circuit whose map has never been read at authoring — Barcelona's and Monza's — has no
 line distances to place anything by: its layout puts each line where the
 round's own sector share ends, and places every car between two of them by the
 time it has run between them, which is the reading the ring gives an undrawn

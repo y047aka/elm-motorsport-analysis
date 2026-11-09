@@ -70,12 +70,14 @@ nothing to `Circuit/`.
 
 The steps are `/skill:add-circuit`'s. What belongs here is what those steps rest on.
 
-OpenStreetMap holds a circuit however whoever mapped it tagged it, and the three
+OpenStreetMap holds a circuit however whoever mapped it tagged it, and the four
 here are tagged differently: Le Mans's relation names one node `start-finish`,
-COTA's names two, 297 m apart along the lap, and Barcelona stands in two
+COTA's names two, 297 m apart along the lap, Barcelona stands in two
 relations — a chicane layout beside the no-chicane one it grew from — whose
 line is checked against the atlas marker, the circuit publishing no distance of
-its own. A circuit's config carries
+its own, and Monza's roles name a traffic-signal node instead of its line, so
+no `timingLine` can be authored for it at all and its drawn zero stands where
+the pit exit light stands. A circuit's config carries
 the timing line's published coordinates, so a run that answers the wrong role
 fails before it writes anything rather than drawing every car early; how each
 relation is actually tagged is the circuit's own config comment to say.
@@ -88,7 +90,7 @@ so they are not in the repository. COTA's are its own track sector map's, and
 are one set used for every season here, since no later map has been read. Which
 of the kinds a circuit's map is belongs to its config, as its `sectors` — one set
 `published` for every season, `perSeason`, or neither where no map has been read
-at authoring, as at Barcelona: the geometry then writes no stretches and the
+at authoring, as at Barcelona and Monza: the geometry then writes no stretches and the
 report reads the circuit as publishing no lines. `nix run
 .#geometry-timing-lines` refuses a round on the second kind by quoting the
 circuit's own reason. Nothing in a
