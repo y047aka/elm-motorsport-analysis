@@ -669,7 +669,8 @@
           "default": "2026-wec-32-bmw-m4-gt3-droit-v2-6aaa401a5d9ca502826207.webp",
           "rounds": {
             "le_mans_24h": "2026-lm-32-bmw-m4-gt3-droite-6a23f4306836a616386880.webp",
-            "sao_paulo_6h": "2026-wec-32-bmw-m4-gt3-sao-paulo-droite-6aa7b58d90a37397528238.webp"
+            "sao_paulo_6h": "2026-wec-32-bmw-m4-gt3-sao-paulo-droite-6aa7b58d90a37397528238.webp",
+            "monza_6h": "2026-wec-32-bmw-m4-gt3-monza-droite-6ae8b93b40b56022888470.webp"
           }
         },
         "33": {
@@ -745,7 +746,10 @@
             "imola_6h": "2026-wec-69-bmw-m4-gt3-imola-droite-69de8a50dd147687949933.webp",
             "le_mans_24h": "2026-lm-69-bmw-m4-gt3-droite-6a23f4321cc92396438838.webp",
             "sao_paulo_6h": "2026-wec-69-bmw-m4-gt3-sao-paolo-droite-6aa7b58d61e70575163728.webp",
-            "cota_6h": "2026-wec-69-bmw-m4-gt3-cota-droite-6a8d9f1306ea9131211008.webp"
+            "cota_6h": "2026-wec-69-bmw-m4-gt3-cota-droite-6a8d9f1306ea9131211008.webp",
+            "fuji_6h": "2026-wec-69-bmw-m4-gt3-fuji-droite-6aa7e289374dc833338015.webp",
+            "barcelona_6h": "2026-wec-69-bmw-m4-gt3-barcelona-droit-6ac399d5310fe458189208.webp",
+            "monza_6h": "2026-wec-69-bmw-m4-gt3-monza-droite-6adf505e98367498747790.webp"
           }
         },
         "74": "2026-lm-74-ferrari-296-droite-6a23f4324c257979740144.webp",
@@ -769,7 +773,10 @@
           "rounds": {
             "imola_6h": "2026-wec-79-mercedes-droit-69de580f61096494073058.webp",
             "le_mans_24h": "2026-lm-79-mercedes-droite-6a26fd96381b3880699968.webp",
-            "cota_6h": "2026-wec-79-mercedes-droit-6a8d9f13b53da398375115.webp"
+            "cota_6h": "2026-wec-79-mercedes-droit-6a8d9f13b53da398375115.webp",
+            "fuji_6h": "2026-wec-79-mercedes-droit-6aa7e28a528da781343009.webp",
+            "barcelona_6h": "2026-wec-79-mercedes-droit-6ac399d63d853179538315.webp",
+            "monza_6h": "2026-wec-79-mercedes-droit-6adf505f93af5363873550.webp"
           }
         },
         "83": {

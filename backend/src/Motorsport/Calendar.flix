@@ -43,7 +43,9 @@ pub mod Motorsport.Calendar {
                 { id = "le_mans_24h",  date = "2026-06-13" } ::
                 { id = "sao_paulo_6h", date = "2026-07-12" } ::
                 { id = "cota_6h", date = "2026-09-06" } ::
+                { id = "fuji_6h", date = "2026-09-27" } ::
                 { id = "barcelona_6h", date = "2026-10-18" } ::
+                { id = "monza_6h", date = "2026-11-08" } ::
                 Nil
         } ::
         {

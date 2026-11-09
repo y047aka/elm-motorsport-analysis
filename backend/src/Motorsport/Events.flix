@@ -13,6 +13,7 @@ pub mod Motorsport.Events {
             case "bahrain_8h"    => "8 Hours of Bahrain"
             case "sao_paulo_6h"  => "6 Hours of São Paulo"
             case "barcelona_6h"  => "6 Hours of Barcelona"
+            case "monza_6h"      => "6 Hours of Monza"
             case other           => other
         }
 
@@ -37,6 +38,7 @@ pub mod Motorsport.Events {
             case "bahrain_8h"    => Some(Circuit.Bahrain)
             case "sao_paulo_6h"  => Some(Circuit.SaoPaulo)
             case "barcelona_6h"  => Some(Circuit.Barcelona)
+            case "monza_6h"      => Some(Circuit.Monza)
             case _               => None
         }
 

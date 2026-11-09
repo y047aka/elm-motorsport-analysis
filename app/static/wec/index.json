@@ -44,12 +44,28 @@
           "timeline": "/static/wec/2026/cota_6h_timeline.jsonl"
         },
         {
+          "id": "fuji_6h",
+          "name": "6 Hours of Fuji",
+          "date": "2026-09-27",
+          "summary": "/static/wec/2026/fuji_6h.json",
+          "laps": "/static/wec/2026/fuji_6h_laps.jsonl",
+          "timeline": "/static/wec/2026/fuji_6h_timeline.jsonl"
+        },
+        {
           "id": "barcelona_6h",
           "name": "6 Hours of Barcelona",
           "date": "2026-10-18",
           "summary": "/static/wec/2026/barcelona_6h.json",
           "laps": "/static/wec/2026/barcelona_6h_laps.jsonl",
           "timeline": "/static/wec/2026/barcelona_6h_timeline.jsonl"
+        },
+        {
+          "id": "monza_6h",
+          "name": "6 Hours of Monza",
+          "date": "2026-11-08",
+          "summary": "/static/wec/2026/monza_6h.json",
+          "laps": "/static/wec/2026/monza_6h_laps.jsonl",
+          "timeline": "/static/wec/2026/monza_6h_timeline.jsonl"
         }
       ]
     },
