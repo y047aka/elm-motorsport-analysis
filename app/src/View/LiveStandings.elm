@@ -20,6 +20,7 @@ import Html.Attributes exposing (attribute, class, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
+import Motorsport.Analysis.Energy as Energy exposing (Energy)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -33,6 +34,7 @@ import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
+import View.EnergyBar as EnergyBar
 import View.SectorPie as SectorPie
 
 
@@ -45,6 +47,12 @@ does not hold and only the round's entries know.
 the strip has none, and nothing where the column is standing. See
 [`View.ClassColumn`](View-ClassColumn).
 
+`energy` is the round's own reading of how much of its energy each car has spent, taken once as
+the round loads; the row looks its car up in it at that car's own last completed lap. The laps
+spent are the car's so far; the plan they are counted against is the finished race's, which is
+what a class's reading is -- see
+[`Motorsport.Analysis.Energy`](Motorsport-Analysis-Energy).
+
 -}
 type alias Config msg =
     { onSelect : CarNumber -> msg
@@ -52,6 +60,7 @@ type alias Config msg =
     , openColumn : Class -> Maybe msg
     , width : Float
     , startPosition : CarNumber -> Maybe Position
+    , energy : Energy.Table
     }
 
 
@@ -133,6 +142,7 @@ type Column
     | Current
     | Best
     | Laps
+    | Energy
 
 
 type alias Spec =
@@ -156,19 +166,22 @@ columnSpec column =
             { label = "Ahead", at = 270, track = "5em", align = "text-right" }
 
         Last ->
-            { label = "Last", at = 390, track = "5em", align = "text-right" }
+            { label = "Last", at = 470, track = "5em", align = "text-right" }
 
         Pie ->
             { label = "Lap", at = 340, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
 
         Current ->
-            { label = "Current", at = 470, track = "5em", align = "text-right" }
+            { label = "Current", at = 542, track = "5em", align = "text-right" }
 
         Best ->
-            { label = "Best", at = 560, track = "5em", align = "text-right" }
+            { label = "Best", at = 660, track = "5em", align = "text-right" }
 
         Laps ->
             { label = "Laps", at = 620, track = "3em", align = "text-right" }
+
+        Energy ->
+            { label = "Energy", at = 390, track = String.fromFloat EnergyBar.width ++ "px", align = "" }
 
 
 {-| Every column, in row order.
@@ -176,10 +189,11 @@ A column's `at` is the panel width from which it stands, in its own place in
 the row. The thresholds follow the readings' worth and not this order, so a
 widening panel may bring a left column in after one that stands to its
 right -- that is the design, not an oversight to fix.
+A threshold is counted against the room a panel has left, so a column pays its own width and one gap into every threshold above its own -- and into none below it, since a panel that narrow has nothing of its room to take. The last threshold is the row's whole cost, and nothing should stand between it and `maxWidth`.
 -}
 columns : List Column
 columns =
-    [ Driver, Ahead, Laps, Current, Pie, Last, Best, Move ]
+    [ Driver, Ahead, Laps, Energy, Current, Pie, Last, Best, Move ]
 
 
 {-| Does this column fit a panel of this width?
@@ -330,6 +344,7 @@ type alias Row =
     , bestColor : String
     , laps : String
     , sectorSlots : List ( String, Float )
+    , energy : Maybe Energy
     , move : { startPosition : Maybe Position, position : Position }
     }
 
@@ -370,6 +385,8 @@ row config item =
     , bestColor = bestTime.color
     , laps = String.fromInt item.standing.lapsCompleted
     , sectorSlots = SectorPie.slots item
+    , energy =
+        Energy.level item.metadata.carNumber item.standing.lapsCompleted config.energy
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
@@ -473,3 +490,6 @@ cell r column =
 
         Move ->
             div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]
+
+        Energy ->
+            EnergyBar.bar r.energy

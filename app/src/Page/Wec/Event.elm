@@ -22,6 +22,7 @@ import Internal.DataView as DataView
 import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
+import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
@@ -314,7 +315,7 @@ mainGrid round keys m =
         [ Attributes.class
             "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         ]
-        [ standingsCell keys m snapshot replay.race.cars
+        [ standingsCell keys m round.energy snapshot replay.race.cars
         , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
@@ -341,8 +342,8 @@ other leaves the grip off the gap.
 The column track is `auto`, so the strip gains and loses the width as the
 drag goes on.
 -}
-standingsCell : List Columns.StripKey -> Model -> Snapshot -> List Car -> Html Msg
-standingsCell keys m snapshot cars =
+standingsCell : List Columns.StripKey -> Model -> Energy.Table -> Snapshot -> List Car -> Html Msg
+standingsCell keys m energy snapshot cars =
     let
         startPositions =
             gridOf cars
@@ -355,6 +356,7 @@ standingsCell keys m snapshot cars =
             , openColumn = openColumn keys
             , width = m.standings.width
             , startPosition = \number -> Dict.get number startPositions
+            , energy = energy
             }
             snapshot
         , div [ Attributes.class "absolute -right-2.5 top-0 h-full z-10 grid w-2.5 place-items-center" ]
@@ -462,7 +464,11 @@ columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
                             |> Maybe.withDefault (text "")
 
                     Columns.ClassColumn class_ ->
-                        classColumn several standing (Columns.isCarried placement) (rowTrace m class_) snapshot
+                        classColumn several
+                            standing
+                            (Columns.isCarried placement)
+                            (rowTrace m class_)
+                            snapshot
                             (Maybe.withDefault pitCycleNone (Dict.get (Class.toString class_) pitCycles))
                             class_
 
