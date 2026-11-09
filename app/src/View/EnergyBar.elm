@@ -124,6 +124,8 @@ fill stage level =
 
 {-| The class's disagreement, straddling the edge of what is left.
 
+Twice the band, since the band is a middle distance reaching one way and the drawing is the two of them together -- which is the ± the tooltip states.
+
 A band that runs off either end is cut at the end rather than drawn as a wider bar:
 the plan is the whole track, and the uncertainty lives inside it.
 
@@ -132,15 +134,21 @@ band : Energy.Level -> Html msg
 band level =
     let
         share =
-            100 * toFloat level.band / toFloat level.plan
+            100 * toFloat (level.band * 2) / toFloat level.plan
 
         edge =
             100 * level.fraction - share / 2
+
+        left =
+            clampShare edge
+
+        right =
+            clampShare (edge + share)
     in
     div
         [ class "absolute top-0 h-full bg-foreground/25"
-        , style "left" (percent (clampShare edge))
-        , style "width" (percent (clampShare share))
+        , style "left" (percent left)
+        , style "width" (percent (right - left))
         ]
         []
 
