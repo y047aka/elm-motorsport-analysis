@@ -273,7 +273,7 @@ stintLine { isRunning } stint trailing =
 
 {-| How the run in progress stands against the ones that ended, which is as far
 as this data reaches towards when the car stops next: nothing in it says how
-much fuel is left or what the plan is.
+much energy is left or what the plan is.
 -}
 againstMedian : Summary -> Stint -> String
 againstMedian summary stint =

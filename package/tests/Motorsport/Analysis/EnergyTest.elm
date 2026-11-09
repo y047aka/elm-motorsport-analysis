@@ -1,7 +1,7 @@
 module Motorsport.Analysis.EnergyTest exposing (suite)
 
 import Expect
-import Motorsport.Analysis.Energy as Energy exposing (Tank(..))
+import Motorsport.Analysis.Energy as Energy exposing (Energy(..))
 import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
@@ -16,7 +16,7 @@ reading is a subtraction a test can do in its head: wherever a test says nothing
 the contrary the class's window is 10 laps, and the car being read has run a first
 stint of 10 and stopped, which is the eleventh clean run the pool is read from.
 
-The clock asks one question -- where the car stands on the tank it is on -- and never the window: a class's window is the finished race's, so a test may ask about any lap it likes and read the subtraction off the same ten laps.
+The clock asks one question -- where the car stands on its energy -- and never the window: a class's window is the finished race's, so a test may ask about any lap it likes and read the subtraction off the same ten laps.
 -}
 suite : Test
 suite =
@@ -28,42 +28,42 @@ suite =
                     -- first stint a thirteenth: the decile is 13, and a meter that
                     -- read the middle of that class would say 10 and call every
                     -- 13-lap run an overrun.
-                    tankOf (slowFleet ++ [ runner [ run 13, stint 3 ] ]) 18
+                    energyOf (slowFleet ++ [ runner [ run 13, stint 3 ] ]) 18
                         |> Maybe.map windowOf
                         |> Expect.equal (Just 13)
             , test "and no window while the class has fewer than ten clean stopped runs" <|
                 \_ ->
                     -- Eight cars and the reading car's own first stint: nine clean
                     -- runs, one short of a decile that means anything.
-                    tankOf (fleetOf 8 10 ++ [ runner [ run 10, stint 3 ] ]) 15
+                    energyOf (fleetOf 8 10 ++ [ runner [ run 10, stint 3 ] ]) 15
                         |> Expect.equal (Just Unreadable)
             , test "is not read from a run the field was held down for" <|
                 \_ ->
                     -- Ten clean runs of 10, and nine of 40 that met a procedure on
                     -- the way, all of them in the past by the lap asked about: the
-                    -- long runs are what a caution is worth, not what a tank is
+                    -- long runs are what a caution is worth, not what the energy is
                     -- worth, so the window stays 10.
-                    tankOf (fleet ++ heldFleet ++ [ runner [ run 10, stint 33 ] ]) 45
+                    energyOf (fleet ++ heldFleet ++ [ runner [ run 10, stint 33 ] ]) 45
                         |> Maybe.map windowOf
                         |> Expect.equal (Just 10)
             , test "is the same window at the first lap as at the flag" <|
                 \_ ->
                     -- The class's word is the whole race's, which is what lets a
                     -- column of cars be drawn from one reading of it; the clock moves
-                    -- the car along its tank and never moves the tank.
+                    -- the car along its energy and never moves the window.
                     let
                         cars =
                             fleet ++ [ runner [ run 10, stint 3 ] ]
                     in
-                    ( tankOf cars 3 |> Maybe.map windowOf
-                    , tankOf cars 15 |> Maybe.map windowOf
+                    ( energyOf cars 3 |> Maybe.map windowOf
+                    , energyOf cars 15 |> Maybe.map windowOf
                     )
                         |> Expect.equal ( Just 10, Just 10 )
             , test "is read to a quarter of the window itself, and past it as the class's own stops" <|
                 \_ ->
                     -- Four laps of disagreement out of a 16-lap window is the gate standing at exactly a quarter, and the first class is read as a level.
                     -- Five of the same 16 is past the gate, and the answer becomes the class's own stops: its quarters at 11 and 16, its middle stop on 11, drawn against its 16-lap window.
-                    -- The last class is tri-modal at 10, 15 and 22 laps and disagrees by 12 of its own 22, which is a class of teams choosing when to stop rather than a class running on fuel.
+                    -- The last class is tri-modal at 10, 15 and 22 laps and disagrees by 12 of its own 22, which is a class of teams choosing when to stop rather than a class running to one energy plan.
                     let
                         quarter =
                             fleetFrom 2 9 12 ++ fleetFrom 21 4 16
@@ -71,9 +71,9 @@ suite =
                         past =
                             fleetFrom 2 8 11 ++ fleetFrom 21 5 16
                     in
-                    ( tankOf (quarter ++ [ runner [ run 16 ] ]) 20 |> Maybe.map windowOf
-                    , tankOf (past ++ [ runner [ run 16 ] ]) 20 |> Maybe.map spreadOf
-                    , tankOf (wideFleet ++ [ runner [ run 22, stint 1 ] ]) 25 |> Maybe.map spreadOf
+                    ( energyOf (quarter ++ [ runner [ run 16 ] ]) 20 |> Maybe.map windowOf
+                    , energyOf (past ++ [ runner [ run 16 ] ]) 20 |> Maybe.map spreadOf
+                    , energyOf (wideFleet ++ [ runner [ run 22, stint 1 ] ]) 25 |> Maybe.map spreadOf
                     )
                         |> Expect.equal
                                 ( Just 16, Just { low = 11, high = 16, median = 11, window = 16 }, Just { low = 10, high = 22, median = 15, window = 22 } )
@@ -86,37 +86,37 @@ suite =
                             slowFleet ++ [ runner [ run 13, stint 3 ] ]
                     in
                     ( Strategy.pitCycleOf hypercar cars |> .cycle
-                    , tankOf cars 18 |> Maybe.map windowOf
+                    , energyOf cars 18 |> Maybe.map windowOf
                     )
                         |> Expect.equal ( Just 14, Just 13 )
             ]
         , describe "a car's level"
-            [ test "counts the laps it has run since it last refuelled" <|
+            [ test "counts the laps it has run since it last stopped" <|
                 \_ ->
-                    tankOf (fleet ++ [ runner [ run 10, stint 3 ] ]) 15
+                    energyOf (fleet ++ [ runner [ run 10, stint 3 ] ]) 15
                         |> Maybe.map lapsLeft
                         |> Expect.equal (Just 7)
-            , test "burns nothing on a lap the field was held down for" <|
+            , test "spends nothing on a lap the field was held down for" <|
                 \_ ->
                     -- Three laps at pace and two under a procedure: five laps of
-                    -- ground, three laps of fuel.
-                    tankOf (fleet ++ [ runner [ run 10, held 3 2 ] ]) 15
+                    -- ground, three laps of energy.
+                    energyOf (fleet ++ [ runner [ run 10, held 3 2 ] ]) 15
                         |> Maybe.map lapsLeft
                         |> Expect.equal (Just 7)
             , test "starts again at one on the stint after a stop" <|
                 \_ ->
                     -- Two full stints behind it and three laps of the third: the
-                    -- reading is of the tank the car is on, and no history of twenty
+                    -- reading is of the energy the car is on, and no history of twenty
                     -- laps is in it.
-                    tankOf (fleet ++ [ runner [ run 10, run 10, stint 3 ] ]) 27
+                    energyOf (fleet ++ [ runner [ run 10, run 10, stint 3 ] ]) 27
                         |> Maybe.map lapsLeft
                         |> Expect.equal (Just 7)
             , test "reads past its window as an overrun, in laps past" <|
                 \_ ->
-                    -- Thirteen laps run on the tank since its last stop, in a class
+                    -- Thirteen laps run on its energy since its last stop, in a class
                     -- that runs 10: short-fuelling, which is a different telling
-                    -- from a car on the ninth lap of the same tank.
-                    tankOf (fleet ++ [ runner [ run 10, stint 13 ] ]) 25
+                    -- from a car on the ninth lap of the same window.
+                    energyOf (fleet ++ [ runner [ run 10, stint 13 ] ]) 25
                         |> Expect.equal
                             (Just
                                 (Overrun
@@ -130,8 +130,8 @@ suite =
             , test "is full while every lap it has run was run under a procedure" <|
                 \_ ->
                     -- Its class has a window, and it has one lap under a procedure and nothing else.
-                    -- The meter's unit excludes a held lap on both sides of the division, so none of the window it stands on is burnt: a car that has yet to run a lap at pace is drawn full, and not as a second kind of silence.
-                    tankOf (fleet ++ [ runner [ held 0 1 ] ]) 11
+                    -- The meter's unit excludes a held lap on both sides of the division, so none of the window it stands on is spent: a car that has yet to run a lap at pace is drawn full, and not as a second kind of silence.
+                    energyOf (fleet ++ [ runner [ held 0 1 ] ]) 11
                         |> Expect.equal (Just (Running { laps = 10, window = 10, band = 0, fraction = 1 }))
             , test "and no level at all for a car the field does not hold" <|
                 \_ ->
@@ -141,7 +141,7 @@ suite =
                         |> Expect.equal Nothing
             , test "is a share of the window, which is what a bar is drawn at" <|
                 \_ ->
-                    tankOf (fleet ++ [ runner [ run 10, stint 3 ] ]) 15
+                    energyOf (fleet ++ [ runner [ run 10, stint 3 ] ]) 15
                         |> Maybe.map fractionOf
                         |> Maybe.withDefault -1
                         |> Expect.within (Expect.Absolute 0.0001) 0.7
@@ -193,7 +193,8 @@ fleet =
     fleetOf 10 10
 
 
-{-| Cars whose 40-lap runs met a procedure: long, and no reading of a tank.
+{-| Cars whose 40-lap runs met a procedure: long, and no reading of how far the
+energy goes.
 -}
 heldFleet : List Car
 heldFleet =
@@ -321,14 +322,14 @@ lapAt flag number crossing =
 -- READINGS
 
 
-tankOf : List Car -> Int -> Maybe Tank
-tankOf cars clock =
+energyOf : List Car -> Int -> Maybe Energy
+energyOf cars clock =
     cars |> Energy.tableOf |> Energy.level "1" clock
 
 
-windowOf : Tank -> Int
-windowOf tank =
-    case tank of
+windowOf : Energy -> Int
+windowOf reading =
+    case reading of
         Running level ->
             level.window
 
@@ -342,9 +343,9 @@ windowOf tank =
             -1
 
 
-lapsLeft : Tank -> Int
-lapsLeft tank =
-    case tank of
+lapsLeft : Energy -> Int
+lapsLeft reading =
+    case reading of
         Running level ->
             level.laps
 
@@ -360,9 +361,9 @@ lapsLeft tank =
 
 {-| The laps a class's quarters and its middle stop fell on, and the window the bar is drawn against. A level answers none of that.
 -}
-spreadOf : Tank -> Energy.Stops
-spreadOf tank =
-    case tank of
+spreadOf : Energy -> Energy.Stops
+spreadOf reading =
+    case reading of
         Spread stops ->
             stops
 
@@ -370,9 +371,9 @@ spreadOf tank =
             { low = -1, high = -1, median = -1, window = -1 }
 
 
-fractionOf : Tank -> Float
-fractionOf tank =
-    case tank of
+fractionOf : Energy -> Float
+fractionOf reading =
+    case reading of
         Running level ->
             level.fraction
 

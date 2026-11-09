@@ -165,7 +165,7 @@ type alias LoadedRound =
     { replay : Replay.Model
     , snapshot : Snapshot
     , pitCycles : Dict String Strategy.PitCycle
-    , tanks : Energy.Table
+    , energy : Energy.Table
     , track : Tracker.Track
     , timeline : Timeline
     , fieldEvents : Timeline
@@ -537,13 +537,13 @@ roundFrom id summary rawLaps timelineEvents geometry =
         pitCycles =
             pitCyclesOf replay.race
 
-        tanks =
+        energy =
             Energy.tableOf replay.race.cars
     in
     { replay = replay
     , snapshot = snapshotOf replay
     , pitCycles = pitCycles
-    , tanks = tanks
+    , energy = energy
     , track = trackOf id summary.track geometry
     , timeline = Timeline.fromList timelineEvents
     , fieldEvents = fieldEventsOf timelineEvents

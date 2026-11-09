@@ -1,6 +1,6 @@
 module View.EnergyBar exposing (Stage(..), bar, stageOf, width)
 
-{-| The standings' Energy column: how much of its tank a car has left, in the units
+{-| The standings' Energy column: how much of its energy a car has left, in the units
 the race is run in -- laps of the window its class runs on.
 
 The fill runs from the left rather than from a centre, because this is a level and
@@ -15,7 +15,7 @@ A car past its window has nothing left to fill, so the track itself takes the le
 an empty one takes. Nothing in this column is anchored to the right edge; the bar, its
 colour and its band all read from the same end.
 
-A class that is not run on a window is drawn as the one thing it does say: the laps its middle half came in on, marked at its middle stop. That is drawn in the hue a level's uncertainty band is drawn in, at the same scale, and it fills no part of the tank -- the two drawings differ by whether they answer about a car at all.
+A class that is not run on a window is drawn as the one thing it does say: the laps its middle half came in on, marked at its middle stop. That is drawn in the hue a level's uncertainty band is drawn in, at the same scale, and it fills none of the bar -- the two drawings differ by whether they answer about a car at all.
 
 Where there is no window at all -- a class that has not stopped ten times with the field unheld -- the cell says so, which is a different fact from a spread: that class stopped often enough to describe itself, and this one did not stop often enough to be described.
 
@@ -25,7 +25,7 @@ Where there is no window at all -- a class that has not stopped ten times with t
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, style, title)
-import Motorsport.Analysis.Energy as Energy exposing (Tank(..))
+import Motorsport.Analysis.Energy as Energy exposing (Energy(..))
 
 
 {-| How wide the column is, in pixels -- the track `columnSpec` gives it.
@@ -47,7 +47,7 @@ type Stage
 {-| Which level a car's fill is drawn in: quarters of the window left, counted in
 whole laps so the boundaries land where the pit wall counts them.
 
-An [`Overrun`](Motorsport-Analysis-Energy#Tank) never reaches this -- it has no fill to
+An [`Overrun`](Motorsport-Analysis-Energy#Energy) never reaches this -- it has no fill to
 colour, and is drawn as the whole track in the level an empty one takes.
 
 -}
@@ -70,15 +70,15 @@ stageOf level =
         Critical
 
 
-{-| The tank, filled to the share of the window the car has left.
+{-| The bar, filled to the share of the window the car has left.
 
 `Nothing` is a car this round's field does not hold: an empty cell keeps the row's
 columns lined up and says nothing, which is what is known.
 
-A [`Spread`](Motorsport-Analysis-Energy#Tank) is drawn on the same track and fills none of it, since it says where the class stops and not where a car is.
+A [`Spread`](Motorsport-Analysis-Energy#Energy) is drawn on the same track and fills none of it, since it says where the class stops and not where a car is.
 
 -}
-bar : Maybe Tank -> Html msg
+bar : Maybe Energy -> Html msg
 bar reading =
     case reading of
         Nothing ->
@@ -149,7 +149,7 @@ band level =
 
 {-| The laps a class's middle half came in on, on the track the window fills.
 
-A spread takes no stage colour and fills no part of the tank; it is drawn in the hue a level's own band is drawn in, which is the same fact about the same runs.
+A spread takes no stage colour and fills none of the bar; it is drawn in the hue a level's own band is drawn in, which is the same fact about the same runs.
 
 -}
 quartiles : Energy.Stops -> Html msg
@@ -241,7 +241,7 @@ laps count =
 
 
 {-| The one silence this column keeps: a class that has not stopped ten times with the
-field unheld, which is too few runs for a top decile to say how far a tank goes.
+field unheld, which is too few runs for a top decile to say how far its energy goes.
 -}
 noWindowTitle : String
 noWindowTitle =

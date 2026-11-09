@@ -315,7 +315,7 @@ mainGrid round keys m =
         [ Attributes.class
             "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         ]
-        [ standingsCell keys m round.tanks snapshot replay.race.cars
+        [ standingsCell keys m round.energy snapshot replay.race.cars
         , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
@@ -343,7 +343,7 @@ The column track is `auto`, so the strip gains and loses the width as the
 drag goes on.
 -}
 standingsCell : List Columns.StripKey -> Model -> Energy.Table -> Snapshot -> List Car -> Html Msg
-standingsCell keys m tanks snapshot cars =
+standingsCell keys m energy snapshot cars =
     let
         startPositions =
             gridOf cars
@@ -356,7 +356,7 @@ standingsCell keys m tanks snapshot cars =
             , openColumn = openColumn keys
             , width = m.standings.width
             , startPosition = \number -> Dict.get number startPositions
-            , tanks = tanks
+            , energy = energy
             }
             snapshot
         , div [ Attributes.class "absolute -right-2.5 top-0 h-full z-10 grid w-2.5 place-items-center" ]

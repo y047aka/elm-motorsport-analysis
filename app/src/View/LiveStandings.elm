@@ -20,7 +20,7 @@ import Html.Attributes exposing (attribute, class, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
-import Motorsport.Analysis.Energy as Energy exposing (Tank)
+import Motorsport.Analysis.Energy as Energy exposing (Energy)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -47,7 +47,7 @@ does not hold and only the round's entries know.
 the strip has none, and nothing where the column is standing. See
 [`View.ClassColumn`](View-ClassColumn).
 
-`tanks` is the round's own reading of how far each car has run on its tank, taken
+`energy` is the round's own reading of how much of its energy each car has spent, taken
 once as the round loads; the row looks its car up in it at however far the clock has
 got, which is why the standings can show a reading that says what the car has done so
 far rather than what it does later.
@@ -59,7 +59,7 @@ type alias Config msg =
     , openColumn : Class -> Maybe msg
     , width : Float
     , startPosition : CarNumber -> Maybe Position
-    , tanks : Energy.Table
+    , energy : Energy.Table
     }
 
 
@@ -343,7 +343,7 @@ type alias Row =
     , bestColor : String
     , laps : String
     , sectorSlots : List ( String, Float )
-    , tank : Maybe Tank
+    , energy : Maybe Energy
     , move : { startPosition : Maybe Position, position : Position }
     }
 
@@ -384,8 +384,8 @@ row config item =
     , bestColor = bestTime.color
     , laps = String.fromInt item.standing.lapsCompleted
     , sectorSlots = SectorPie.slots item
-    , tank =
-        Energy.level item.metadata.carNumber item.standing.lapsCompleted config.tanks
+    , energy =
+        Energy.level item.metadata.carNumber item.standing.lapsCompleted config.energy
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.
@@ -491,4 +491,4 @@ cell r column =
             div [ class numeral ] [ Leaderboard.viewPositionChangeInline r.move ]
 
         Energy ->
-            EnergyBar.bar r.tank
+            EnergyBar.bar r.energy

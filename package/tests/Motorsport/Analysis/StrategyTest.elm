@@ -31,16 +31,16 @@ suite =
                     Strategy.pitCycleOf (classOf "HYPERCAR") (fleetOf 8 ++ [ stoppedNine, stoppedTen ])
                         |> .cycle
                         |> Expect.equal (Just 9)
-            , test "a run the field was held down for is no reading of a tank" <|
+            , test "a run the field was held down for is no reading of energy" <|
                 \_ ->
-                    -- The held car reached 9 on its tank, but four of those
+                    -- The held car reached 9 on its energy, but four of those
                     -- laps were under a procedure. Nine clean runs and one
                     -- held one do not make a pool of ten: the class answers
                     -- nothing rather than answering from the held run.
                     Strategy.pitCycleOf (classOf "HYPERCAR") (heldLong :: fleetOf 9)
                         |> .cycle
                         |> Expect.equal Nothing
-            , test "a handful of runs is one fuel run wearing the class's name" <|
+            , test "a handful of runs is one long stint wearing the class's name" <|
                 \_ ->
                     Strategy.pitCycleOf (classOf "HYPERCAR") (fleetOf 3)
                         |> .cycle
