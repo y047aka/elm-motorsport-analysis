@@ -30,6 +30,7 @@ What differs is what each counts a lap: its cycle is the ground the stint covere
 
 import Dict exposing (Dict)
 import Internal.Statistics as Statistics
+import List.Extra
 import Motorsport.Analysis.Stint as Stint
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
@@ -373,13 +374,22 @@ The runs themselves are [`Race.Stint`](Motorsport-Race-Stint)'s, which is where 
 between stops is decided; what is added here is the count of the laps among them that
 spent energy.
 
+The laps are put in race order first. `Race.Stint` cuts the same runs whatever order a list
+arrives in, and says so; the gauges built here number the laps they are given, so a list
+arriving backwards would count a car's run down instead of up, with nothing downstream to
+notice.
+
 -}
 runsOf : Car -> List Run
 runsOf car =
-    car.laps
+    let
+        laps =
+            List.sortBy .lap car.laps
+    in
+    laps
         |> Stint.summarize
         |> .stints
-        |> List.map (runOf car.laps)
+        |> List.map (runOf laps)
 
 
 runOf : List Lap -> Stint -> Run
@@ -510,9 +520,9 @@ levelAt plan ceiling used =
 
 {-| Whether a block of stops is the class's plan, and not a few cars doing their own thing.
 
-The band's six is the quarter this gate started as, restated for the count it reads now:
-the band is a middle distance rather than a distance between quarters, so six bands to the
-plan is a quarter of the plan.
+The band is a middle distance and not a distance between quarters, so six bands to the plan
+is a quarter of it: a class whose stops disagree by more than that is running two plans at
+once, and there is no single countdown left for the bar to be drawn against.
 
 It is a mild gate: over the sixteen rounds kept here, a third of the plan instead of a quarter would have bought four more points of the column for a tenth of a lap of error.
 
@@ -528,6 +538,4 @@ runsTheClass plan blockRuns poolRuns =
 -}
 atOrBefore : (entry -> Int) -> Int -> List entry -> Maybe entry
 atOrBefore key clock entries =
-    entries
-        |> List.filter (\entry -> key entry <= clock)
-        |> List.head
+    List.Extra.find (\entry -> key entry <= clock) entries

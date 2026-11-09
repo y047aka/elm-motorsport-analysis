@@ -40,6 +40,28 @@ suite =
                     -- anything at all.
                     energyOf (fleetOf 8 10 ++ [ runner [ run 10, stint 3 ] ]) 15
                         |> Expect.equal (Just Unreadable)
+            , test "goes quiet on the same class as `Strategy`'s cycle does" <|
+                \_ ->
+                    -- One pool, two modules, two constants that prose says are equal. What the
+                    -- reader gets is one column beside one forecast, so the pair has to go quiet
+                    -- on the same class and speak on the next one up: nine clean runs and
+                    -- neither says a thing, ten and both do -- the cycle by 11, which is the ten
+                    -- laps at pace and the lap in, the offset its own module doc names.
+                    let
+                        few =
+                            fleetOf 8 10 ++ [ runner [ run 10, stint 3 ] ]
+
+                        enough =
+                            fleetOf 9 10 ++ [ runner [ run 10, stint 3 ] ]
+                    in
+                    ( ( energyOf few 15 |> Maybe.map isUnreadable
+                      , Strategy.pitCycleOf hypercar few |> .cycle
+                      )
+                    , ( energyOf enough 15 |> Maybe.map isUnreadable
+                      , Strategy.pitCycleOf hypercar enough |> .cycle
+                      )
+                    )
+                        |> Expect.equal ( ( Just True, Nothing ), ( Just False, Just 11 ) )
             , test "is not read from a run the field was held down for" <|
                 \_ ->
                     -- Ten clean runs of 10, and nine of 40 that met a procedure on
