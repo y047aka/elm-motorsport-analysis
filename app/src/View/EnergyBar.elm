@@ -17,7 +17,7 @@ colour and its band all read from the same end.
 
 A class that is not run on a window is drawn as the one thing it does say: the laps its middle half came in on, marked at its middle stop. That is drawn in the hue a level's uncertainty band is drawn in, at the same scale, and it fills no part of the tank -- the two drawings differ by whether they answer about a car at all.
 
-Where the reading says nothing, the cell says which of its reasons it is. A class that has not stopped ten times with the field unheld, and a car that has yet to run a lap at pace, are two different silences, and the reader is owed the difference.
+Where there is no window at all -- a class that has not stopped ten times with the field unheld -- the cell says so, which is a different fact from a spread: that class stopped often enough to describe itself, and this one did not stop often enough to be described.
 
 @docs Stage, bar, stageOf, width
 
@@ -84,10 +84,10 @@ bar reading =
         Nothing ->
             div [ class "h-3" ] []
 
-        Just (Tank.Unreadable reason) ->
+        Just Tank.Unreadable ->
             div
                 [ class "h-3 grid place-items-center text-[10px] leading-none text-muted-foreground"
-                , title (reasonOf reason)
+                , title noWindowTitle
                 ]
                 [ div [ class "w-3 h-px bg-muted-foreground" ] [] ]
 
@@ -240,11 +240,9 @@ laps count =
         String.fromInt count ++ " laps"
 
 
-reasonOf : Tank.Reason -> String
-reasonOf reason =
-    case reason of
-        Tank.NoWindow ->
-            "No window yet: this class has not stopped ten times with the field unheld"
-
-        Tank.NoRun ->
-            "No lap at pace yet on the tank it is running"
+{-| The one silence this column keeps: a class that has not stopped ten times with the
+field unheld, which is too few runs for a top decile to say how far a tank goes.
+-}
+noWindowTitle : String
+noWindowTitle =
+    "No window: this class has not stopped ten times with the field unheld"

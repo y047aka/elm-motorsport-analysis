@@ -1,5 +1,5 @@
 module Motorsport.Analysis.Tank exposing
-    ( Tank(..), Level, Stops, Reason(..), Table
+    ( Tank(..), Level, Stops, Table
     , tableOf, level
     )
 
@@ -24,7 +24,7 @@ So the class's own disagreement is carried out as `band` and drawn as a band rat
 [`Strategy`](Motorsport-Analysis-Strategy) reads its cycle off the same pool, the same decile and the same bar of ten runs, for its own question: how many still stand in the race.
 Its cycle counts the lap into the pits and this does not, a lap run coasting down the lane being no lap of the ground a tank is measured over; that is the whole of the difference between the two, and `TankTest` holds them within a lap of one another on a class that ran clean.
 
-@docs Tank, Level, Stops, Reason, Table
+@docs Tank, Level, Stops, Table
 @docs tableOf, level
 
 -}
@@ -47,12 +47,14 @@ short-fuelling, or a stint its team means to stretch to the flag.
 
 `Spread` is not a level at all. It is what a class whose runs disagree by more than a quarter of their own window answers with, and it says where the class stops rather than where one car is; see [`Stops`](#Stops).
 
+`Unreadable` is the one silence this keeps: a class with too few clean stopped runs in the whole race for its top decile to mean anything.
+
 -}
 type Tank
     = Running Level
     | Overrun Level
     | Spread Stops
-    | Unreadable Reason
+    | Unreadable
 
 
 {-| The reading, in laps.
@@ -85,21 +87,9 @@ type alias Stops =
     }
 
 
-{-| Why a car has no level.
-
-`NoWindow` is the class having too few clean stopped runs in the whole race for a top decile to mean anything; `NoRun` is a car that has yet to complete a lap at pace.
-
--}
-type Reason
-    = NoWindow
-    | NoRun
-
-
 {-| Every car's laps against every class's window, taken once off a race.
 
-A window is a constant of its class, and a class that has none is absent from the
-table -- which is [`NoWindow`](#Reason) for every car in it alike. What moves with the
-clock is the car's own gauge.
+A window is a constant of its class, and a class that has none is absent from the table -- which is [`Unreadable`](#Tank) for every car in it alike. What moves with the clock is the car's own gauge.
 
 -}
 type Table
@@ -306,7 +296,7 @@ onItsTank : Int -> Dict String Window -> CarTank -> Tank
 onItsTank clock windows car =
     case Dict.get (Class.toString car.class) windows of
         Nothing ->
-            Unreadable NoWindow
+            Unreadable
 
         Just window ->
             if bandTooWide window then
@@ -318,22 +308,30 @@ onItsTank clock windows car =
                     }
 
             else
-                case atOrBefore .lap clock car.gauges of
-                    Nothing ->
-                        Unreadable NoRun
+                reading window (usedAt clock car)
 
-                    Just gauge ->
-                        reading window gauge
+
+{-| How many pace laps the car has run on the tank it is on, at the clock.
+
+None, when every lap it has run since its last stop was run under a procedure -- which is a full tank and not an unreadable one, the meter's unit excluding those laps on both sides of the division.
+
+-}
+usedAt : Int -> CarTank -> Int
+usedAt clock car =
+    car.gauges
+        |> atOrBefore .lap clock
+        |> Maybe.map .used
+        |> Maybe.withDefault 0
 
 
 {-| The reading itself: how much of the window the car has left, and which side of
 it it stands on.
 -}
-reading : Window -> Gauge -> Tank
-reading window gauge =
+reading : Window -> Int -> Tank
+reading window used =
     let
         left =
-            window.laps - gauge.used
+            window.laps - used
     in
     if left < 0 then
         Overrun

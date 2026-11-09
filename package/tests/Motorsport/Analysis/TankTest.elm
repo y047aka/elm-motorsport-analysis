@@ -36,7 +36,7 @@ suite =
                     -- Eight cars and the reading car's own first stint: nine clean
                     -- runs, one short of a decile that means anything.
                     tankOf (fleetOf 8 10 ++ [ runner [ run 10, stint 3 ] ]) 15
-                        |> Expect.equal (Just (Unreadable Tank.NoWindow))
+                        |> Expect.equal (Just Unreadable)
             , test "is not read from a run the field was held down for" <|
                 \_ ->
                     -- Ten clean runs of 10, and nine of 40 that met a procedure on
@@ -127,12 +127,12 @@ suite =
                                     }
                                 )
                             )
-            , test "has no level for a car that has yet to run a lap at pace" <|
+            , test "is full while every lap it has run was run under a procedure" <|
                 \_ ->
-                    -- Its class has a window; it has one lap under a procedure and
-                    -- nothing else, which is not a tank of ten laps.
+                    -- Its class has a window, and it has one lap under a procedure and nothing else.
+                    -- The meter's unit excludes a held lap on both sides of the division, so none of the window it stands on is burnt: a car that has yet to run a lap at pace is drawn full, and not as a second kind of silence.
                     tankOf (fleet ++ [ runner [ held 0 1 ] ]) 11
-                        |> Expect.equal (Just (Unreadable Tank.NoRun))
+                        |> Expect.equal (Just (Running { laps = 10, window = 10, band = 0, fraction = 1 }))
             , test "and no level at all for a car the field does not hold" <|
                 \_ ->
                     fleet
@@ -338,7 +338,7 @@ windowOf tank =
         Spread _ ->
             -1
 
-        Unreadable _ ->
+        Unreadable ->
             -1
 
 
@@ -354,7 +354,7 @@ lapsLeft tank =
         Spread _ ->
             -1
 
-        Unreadable _ ->
+        Unreadable ->
             -1
 
 
