@@ -10,7 +10,7 @@ A _pit cycle_ is a stint and the stop that ends it, and its length is the laps a
 full load covers at race pace. It is the
 ninetieth percentile of the class's stopped runs, read off the finished race,
 because the question is how far its energy can go and not where most cars happen
-to stop -- a window is the top of the distribution, not its middle. Runs the
+to stop -- the top of the distribution, and not its middle. Runs the
 field was held down for are no reading of energy at all -- the same energy spent
 under a procedure reaches further than at pace -- and neither is a
 spacing taken mid-race, which is whichever incident the last hour happened to
@@ -19,6 +19,8 @@ runs make is what makes a percentile mean something, and `minCleanRuns` is
 where how small is too small stands. Both readings are therefore the finished
 race's, and a `PitCycle` is a constant of its class and round; the clock
 enters at `plan`.
+
+The class column calls this length an `energy window ~L`, which is the same figure in a reader's words. The standings' Energy column reads the same decile of the same runs, calls it a ceiling, and counts down something else it finds in them -- see [`Motorsport.Analysis.Energy`](Motorsport-Analysis-Energy).
 
 A _strategy_ is one car's whole race read as a plan: what it has run, the run
 it is on, and what `plan` forecasts it has left.
@@ -38,8 +40,7 @@ import Motorsport.Wec.Class exposing (Class)
 
 {-| What the finished race says of a class. `distance` is how far the class
 leader came by the flag -- the scale a race is drawn on, which a car short of
-the flag reads as a bar ending short. `cycle` is that length in laps, `Nothing` before the race has taught its class any stopped run at all --
-no stops, no window.
+the flag reads as a bar ending short. `cycle` is that length in laps, `Nothing` before the race has taught its class any stopped run at all -- no stops, no cycle.
 -}
 type alias PitCycle =
     { distance : Int
@@ -67,12 +68,12 @@ pitCycleOf class_ raceCars =
         stints
             |> List.filterMap cleanStoppedLength
             |> List.sort
-            |> windowFrom
+            |> cycleFrom
     }
 
 
 {-| Below this many clean stopped runs the percentile is one long stint
-wearing the class's name, so the class gets no window rather than a false
+wearing the class's name, so the class gets no cycle rather than a false
 one. A Le Mans class clears it tenfold; a held six-hour class can fall short.
 -}
 minCleanRuns : Int
@@ -80,8 +81,8 @@ minCleanRuns =
     10
 
 
-windowFrom : List Int -> Maybe Int
-windowFrom cleanLengths =
+cycleFrom : List Int -> Maybe Int
+cycleFrom cleanLengths =
     if List.length cleanLengths >= minCleanRuns then
         Statistics.quantile 0.9 cleanLengths
 
@@ -143,16 +144,17 @@ plan cycleOfRace lead status summary =
     }
 
 
-{-| The class's window run out against one car's race, three readings:
+{-| The class's cycle run out against one car's race, three readings:
 
-  - a car short of the window still standing: the first prediction is the laps
+  - a car short of the cycle still standing: the first prediction is the laps
     left of it, ending where the energy is out;
   - a car already past it -- including one sitting in the lane, whose forecast
-    counts it back out onto the track: a full window from where it stands;
+    counts it back out onto the track: a full cycle's length from where it
+    stands;
   - a car whose race is run -- at the flag the limit lands on where it stands:
     nothing.
 
-Each later prediction is a full window from the stop before it.
+Each later prediction is a full cycle's length from the stop before it.
 
 -}
 forecast : PitCycle -> Int -> List Stint -> List PredictedStint
@@ -203,7 +205,7 @@ predict cycleLength width pos limit acc =
 
 {-| Every stopped run that was clean -- held for no lap of it -- in laps. A
 car's last run is not one of them even after the flag: nothing stopped it,
-the race did. Why held runs are out of the window stands with the module.
+the race did. Why held runs are out of the cycle stands with the module.
 -}
 cleanStoppedLength : Stint -> Maybe Int
 cleanStoppedLength stint =
