@@ -7,10 +7,8 @@ module Motorsport.Analysis.Energy exposing
 
 A stop takes on what the stint ran down -- fuel, and in a hybrid the charge with it -- and the regulations give every car in a class the same of both, so the laps a class runs between stops say two things at once: how far one load can be pushed, and where the class brings its cars in.
 This meter reads the second, called the class's **plan**, and carries the first -- its **ceiling** -- beside it.
-The ceiling is the farthest the class was seen to go on a load, and it very nearly holds: of 6,096 clean stops over the sixteen rounds kept here, 13 -- a fifth of one percent -- ran more than two laps past their class's ceiling, and each of those 13 is one car running a stretch no one else in the class ran.
-A wall though says nothing about when a car is due, and the plan does, which is why the bar counts down the plan and the ceiling stands at the end of the story rather than at the top of the distribution.
-
-A class's stops are cut into blocks wherever two of them stand two laps apart, and the block holding most of them is the plan; a class whose stops fall in no such block is answered differently -- see [`Spread`](#Energy).
+The ceiling is the farthest the class was seen to go on a load, and it very nearly holds: of 6,096 clean stops over the sixteen rounds kept here, 13 ran more than two laps past their class's ceiling, every one of them a car running a stretch nobody else in the class ran.
+A wall says nothing about when a car is due, and the plan does, which is why the bar counts down the plan.
 
 The unit is the **pace lap**, both sides of the division: a lap run under a procedure is not a lap of energy spent at race rate, so it neither runs the load down nor joins the pool the plan is read from.
 [`Lap.atRacePace`](Motorsport-Lap#atRacePace) is the predicate on both sides, which is what keeps a car held behind a procedure from reading empty.
@@ -19,7 +17,7 @@ Nothing here knows a joule, a litre, or a car's mass.
 The level is a share of the plan its class is running, and the number beside it is laps -- the unit the pit wall counts in.
 
 **The error is measured, and shown.** Over the sixteen rounds kept here the column drew a level on 84% of the car-laps it was asked about, and a drawn level came within two laps of the lap the car actually came in on on 82% of them; the classes of the 2025 Le Mans read to between 0.6 and 0.8 laps.
-So the class's own disagreement is carried out as `band` and drawn as a band rather than hidden, and where a class runs no one plan this answers with [`Spread`](#Energy) -- the laps its stops actually fall on -- since a level drawn on a class that runs no plan is a guess wearing the shape of a meter.
+So the class's own disagreement is carried out as `band` and drawn as a band rather than hidden, and where a class runs no one plan this answers with [`Spread`](#Energy) -- the laps its stops actually fall on.
 
 [`Strategy`](Motorsport-Analysis-Strategy) reads its cycle off the same pool as this module's ceiling, the same decile and the same bar of ten runs, for its own question: how many still stand in the race.
 Its cycle counts the lap into the pits and this does not, a lap run coasting down the lane being no lap of the ground energy is measured over; that is the whole of the difference between the two, and `EnergyTest` holds them within a lap of one another on a class that ran clean.
@@ -43,12 +41,11 @@ import Motorsport.Wec.Class as Class exposing (Class)
 `Running` and `Overrun` carry the same reading and differ by which side of the plan the
 car stands on. An overrun is not an empty car: it is a car still out past the lap its
 class's plan brings cars in, which is its own telling -- short-fuelling, or a stint its
-team means to stretch to the flag. The class's ceiling rides along in the level, which is
-where an overrun's story ends.
+team means to stretch to the flag.
 
-`Spread` is not a level at all. It is what a class whose stops fall in no one block answers with, and it says where the class stops rather than where one car is; see [`Stops`](#Stops).
+`Spread` is not a level at all. It is what a class whose stops fall in no one block answers with; see [`Stops`](#Stops).
 
-`Unreadable` is the one silence this keeps: a class with too few clean stopped runs in the whole race for its stops to mean anything.
+`Unreadable` is the one silence this keeps: a class whose clean stopped runs are too few in the whole race to read at all.
 
 -}
 type Energy
@@ -64,8 +61,7 @@ type Energy
 never both. `fraction` is the share of the plan left, held between 0 and 1 for the bar to
 be drawn at. `band` is the class's own disagreement within its plan -- the error this
 meter can, and does, admit to. `ceiling` is how far any car in the class was seen to go on
-one load, which is further than the plan whenever the class has cars choosing to come in
-early.
+one load, and is further than the plan wherever the class brings some of its cars in early.
 
 -}
 type alias Level =
@@ -169,8 +165,7 @@ minRuns =
 is a class that stopped in a scramble, and a bar over three laps tells a reader nothing a
 stop does not.
 
-The gate is also what keeps the level's fraction a division by a plan: nothing counted here
-runs a plan of zero laps.
+Four is also what keeps a level's fraction from dividing by a plan of nothing.
 
 -}
 minPlan : Int
@@ -215,12 +210,8 @@ tableOf cars =
     Table { cars = readings, classes = classes }
 
 
-{-| What a class's clean stopped runs say over the whole race.
-
-Runs the field was held down for join none of that.
-Energy spent under a procedure is a different spend, and the meter's own unit is
-the lap the race was run at.
-
+{-| What a class's clean stopped runs say over the whole race -- runs the field was held
+down for join none of that.
 -}
 classReadingOf : Class -> List ( Car, List Run ) -> Maybe ClassReading
 classReadingOf class runs =
@@ -262,10 +253,6 @@ stopsOf pool =
 
 {-| The class's plan, where it runs one: the middle of the block its stops mostly fell in,
 and the disagreement inside that block.
-
-A block that is not the class's plan leaves the class with a [`Spread`](#Energy) instead of a
-level.
-
 -}
 planOf : List Int -> Maybe Plan
 planOf pool =
@@ -291,7 +278,7 @@ planOf pool =
 
 {-| The stops cut into blocks: two laps apart is two different plans, since no load gives a
 car 11 laps on one stint and 13 on the next. Each block is kept newest first, which is all
-a block is asked for -- how many stops it holds, and its middle.
+a block is asked for.
 -}
 blocksOf : List Int -> List (List Int)
 blocksOf sorted =
@@ -342,8 +329,8 @@ largestBlock blocks =
 
 {-| How far the cars inside a block disagree: the middle of their distance from its middle.
 
-A block whose cars all come in together disagrees by nothing, and one whose cars are two
-laps apart on half its stops disagrees by two.
+A middle distance and not a range: half a block's stops standing two laps from its middle is
+a band of two.
 
 -}
 bandOf : Int -> List Int -> Int
@@ -355,9 +342,9 @@ bandOf laps block =
 {-| Two fifths of a class's stops is enough for a block to be called the class's plan, and
 not one team's.
 
-Measured over the sixteen rounds kept here: the two classes whose largest block held under
-that share are races where a class ran two or three plans at once, and a level drawn on
-either of them read six laps out or worse.
+Measured over the sixteen rounds kept here, a class whose largest block holds under that
+share ran two or three plans at once, and a level drawn on such a block read six laps out or
+worse.
 
 -}
 carriesTheClass : Int -> Int -> Bool
@@ -427,8 +414,8 @@ level carNumber clock table =
         |> Maybe.map (asEnergy clock t.classes)
 
 
-{-| What the class has to say about one car at the clock -- its own spread where it runs no
-plan, and the car's level where it does.
+{-| What the class has to say about one car at the clock -- the class's spread where it runs
+no plan, and the car's level where it does.
 -}
 asEnergy : Int -> Dict String ClassReading -> CarGauges -> Energy
 asEnergy clock classes car =
@@ -488,24 +475,18 @@ levelAt plan ceiling used =
 
 {-| Whether a block of stops is the class's plan, and not a few cars doing their own thing.
 
-It has to carry the class, stand at a plan long enough to count down, and disagree by less
-than a quarter of itself.
+The band's six is the quarter this gate started as, restated for the count it reads now:
+the band is a middle distance rather than a distance between quarters, so six bands to the
+plan is a quarter of the plan.
 
-The quarter is the one this gate started with, restated for the count it now reads: the band
-is a middle distance rather than a distance between quarters, and six bands is a quarter of
-the plan. The quarter itself is measured and not a taste for tightness -- every looser gate
-tried over the sixteen rounds kept here bought cells at between two and a half and three
-laps of error, against the two this one reads.
+It is a mild gate: over the sixteen rounds kept here, a third of the plan instead of a quarter would have bought four more points of the column for a tenth of a lap of error.
 
 -}
 runsTheClass : Plan -> Int -> Int -> Bool
 runsTheClass plan blockRuns poolRuns =
     carriesTheClass blockRuns poolRuns
-        && plan.laps
-        >= minPlan
-        && plan.band
-        * 6
-        <= plan.laps
+        && (minPlan <= plan.laps)
+        && (plan.band * 6 <= plan.laps)
 
 
 {-| The newest entry at or before the clock, out of a list kept newest first.

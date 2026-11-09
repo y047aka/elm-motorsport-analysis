@@ -9,15 +9,13 @@ length, in the four hues the flag bands are already drawn in -- see
 [`View.PlaybackControls.bandColor`](View-PlaybackControls#bandColor). Over the fill
 sits a band, which is the class's own disagreement within its plan -- the error the
 reading admits to, drawn rather than hidden. It is drawn in the foreground and not
-the fill's hue: a band matched to the fill cannot be seen on the fill. Where the class
-ran further than its plan the tooltip says how far, which is the reading's ceiling and
-the end of an overrun's story.
+the fill's hue: a band matched to the fill cannot be seen on the fill.
 
 A car past its plan has nothing left to fill, so the track itself takes the level
 an empty one takes. Nothing in this column is anchored to the right edge; the bar, its
 colour and its band all read from the same end.
 
-A class that runs no one plan is drawn as the one thing it does say: the laps its middle half came in on, marked at its middle stop. That is drawn in the hue a level's uncertainty band is drawn in, against the class's longest run, and it fills none of the bar -- the two drawings differ by whether they answer about a car at all.
+A class that runs no one plan is drawn as the one thing it does say -- the laps its middle half came in on, marked at its middle stop -- and it fills none of the bar: the two drawings differ by whether they answer about a car at all.
 
 Where there is nothing to say at all -- a class that has not stopped ten times with the field unheld -- the cell says so, which is a different fact from a spread: that class stopped often enough to describe itself, and this one did not stop often enough to be described.
 
@@ -50,7 +48,7 @@ type Stage
 whole laps so the boundaries land where the pit wall counts them.
 
 An [`Overrun`](Motorsport-Analysis-Energy#Energy) never reaches this -- it has no fill to
-colour, and is drawn as the whole track in the level an empty one takes.
+colour.
 
 -}
 stageOf : Energy.Level -> Stage
@@ -76,8 +74,6 @@ stageOf level =
 
 `Nothing` is a car this round's field does not hold: an empty cell keeps the row's
 columns lined up and says nothing, which is what is known.
-
-A [`Spread`](Motorsport-Analysis-Energy#Energy) is drawn on the same track and fills none of it, since it says where the class stops and not where a car is.
 
 -}
 bar : Maybe Energy -> Html msg
@@ -151,7 +147,9 @@ band level =
 
 {-| The laps a class's middle half came in on, on the track its longest run fills.
 
-A spread takes no stage colour and fills none of the bar; it is drawn in the hue a level's own band is drawn in, which is the same fact about the same runs.
+The hue is the one a level's own band is drawn in, which is the same fact about the same runs.
+
+It is drawn where a level's fill would be, because a cell with nothing in it is read as a car that has not started.
 
 -}
 quartiles : Energy.Stops -> Html msg
@@ -218,8 +216,8 @@ overrunTitle level =
     laps level.laps ++ " past the class's " ++ planOf level ++ reached level
 
 
-{-| How far the class did get on one load, which is worth saying only where it got further
-than its plan -- and worth saying there because it is where an overrun stops being a guess.
+{-| How far the class did get on one load, said only where it got further than its plan --
+the point past which an overrun stops being a guess.
 -}
 reached : Energy.Level -> String
 reached level =
@@ -256,9 +254,8 @@ laps count =
         String.fromInt count ++ " laps"
 
 
-{-| The one silence this column keeps: a class that has not stopped ten times with the
-field unheld, which is too few stops for its stops to say anything -- a plan, a spread, or
-anything else.
+{-| `Unreadable`, in a reader's words: the class has not stopped often enough to be read at
+all.
 -}
 noWindowTitle : String
 noWindowTitle =

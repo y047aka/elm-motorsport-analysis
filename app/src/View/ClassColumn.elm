@@ -388,7 +388,7 @@ laps on the distance the class leader came to at the end of the race -- the
 scale is the finished race's from the first lap, a bar that ends short is a car
 that ran fewer laps than the leader did, and every break in it is a stop. Past
 where the car stands, the rest of the race is written in dashed ghosts, one per
-energy window of the class.
+cycle of the class.
 
 -}
 rowTrace : Trace -> Maybe LapTimeDistribution.Bounds -> Maybe LapDelta.Bounds -> PitCycle -> Int -> Snapshot -> CarAt -> Html msg
@@ -734,8 +734,8 @@ stintSegment lapsMax stint =
 
 
 {-| Each [`PredictedStint`](Motorsport-Analysis-Strategy#PredictedStint) of the
-plan as a dashed ghost, wide as its `laps` on the race's scale: the energy
-windows still open to the car. The right edge of a car's first ghost is where
+plan as a dashed ghost, wide as its `laps` on the race's scale: the cycles
+still open to the car. The right edge of a car's first ghost is where
 its energy is out, so the columns of ghosts line up or don't.
 -}
 ghosts : Int -> List PredictedStint -> List (Html msg)

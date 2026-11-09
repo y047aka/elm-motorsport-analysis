@@ -6,8 +6,8 @@ module Motorsport.Analysis.Strategy exposing
 {-| What a race says about how it is run, and what that gives a car to plan
 with.
 
-A _pit cycle_ is a stint and the stop that ends it, and the cycle length is
-the class's energy window: the laps a full load covers at race pace. It is the
+A _pit cycle_ is a stint and the stop that ends it, and its length is the laps a
+full load covers at race pace. It is the
 ninetieth percentile of the class's stopped runs, read off the finished race,
 because the question is how far its energy can go and not where most cars happen
 to stop -- a window is the top of the distribution, not its middle. Runs the
@@ -38,8 +38,7 @@ import Motorsport.Wec.Class exposing (Class)
 
 {-| What the finished race says of a class. `distance` is how far the class
 leader came by the flag -- the scale a race is drawn on, which a car short of
-the flag reads as a bar ending short. `cycle` is the class's energy window in
-laps, `Nothing` before the race has taught its class any stopped run at all --
+the flag reads as a bar ending short. `cycle` is that length in laps, `Nothing` before the race has taught its class any stopped run at all --
 no stops, no window.
 -}
 type alias PitCycle =
@@ -90,7 +89,7 @@ windowFrom cleanLengths =
         Nothing
 
 
-{-| One of the energy windows still to come for a car: `laps` of running left
+{-| One of the cycles still to come for a car: `laps` of running left
 before the energy is out, ending on the `stop` -- the lap past which a full
 load should not stretch. The last one may be shorter than the rest: it is cut by
 the end of the race, as a real last stint is cut by the flag.

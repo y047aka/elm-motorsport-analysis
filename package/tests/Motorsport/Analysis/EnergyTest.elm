@@ -27,16 +27,16 @@ suite =
                 \_ ->
                     -- Nine cars ran 10 laps and three ran 13, the reading car's own
                     -- first stint one of the thirteens: the plan is the ten the class
-                    -- mostly ran and the thirteen is the ceiling carried beside it, so
-                    -- the cars that went thirteen are read as overruns rather than as
-                    -- the plan the whole class is held to.
+                    -- mostly ran, the thirteen the ceiling carried beside it, and the
+                    -- cars that went thirteen are read as overruns.
                     energyOf (slowFleet ++ [ runner [ run 13, stint 3 ] ]) 18
                         |> Maybe.map (\reading -> ( planOf reading, ceilingOf reading ))
                         |> Expect.equal (Just ( 10, 13))
             , test "and no reading while the class has fewer than ten clean stopped runs" <|
                 \_ ->
                     -- Eight cars and the reading car's own first stint: nine clean
-                    -- runs, one short of a decile that means anything.
+                    -- runs, one short of the ten a class needs before its stops say
+                    -- anything at all.
                     energyOf (fleetOf 8 10 ++ [ runner [ run 10, stint 3 ] ]) 15
                         |> Expect.equal (Just Unreadable)
             , test "is not read from a run the field was held down for" <|
@@ -87,7 +87,7 @@ suite =
                         |> Expect.equal (Just { low = 8, high = 16, median = 12, ceiling = 20 })
             , test "is no plan at all where the class stopped in a scramble" <|
                 \_ ->
-                    -- A class that comes in on three laps every time has a plan shorter than the band this column draws around its reading, and a bar over three laps says nothing a stop does not.
+                    -- A class that comes in on three laps every time has a plan shorter than the shortest this column counts down.
                     energyOf (fleetRunning (List.repeat 10 3) ++ [ runner [ run 3, stint 1 ] ]) 5
                         |> Maybe.map spreadOf
                         |> Expect.equal (Just { low = 3, high = 3, median = 3, ceiling = 3 })
@@ -144,7 +144,7 @@ suite =
                             )
             , test "and says how far the class got when it went further than that" <|
                 \_ ->
-                    -- The class on the ten-lap plan with a thirteen-lap ceiling: a car on its thirteenth lap is three past the plan, and the class's own longest run was thirteen, which is where the overrun stops being a guess.
+                    -- The class on the ten-lap plan with a thirteen-lap ceiling: a car on its thirteenth lap is three past the plan, and the class's own longest run was thirteen, so the reading says the class itself never did better.
                     energyOf (slowFleet ++ [ runner [ run 13, stint 13 ] ]) 30
                         |> Expect.equal
                             (Just
