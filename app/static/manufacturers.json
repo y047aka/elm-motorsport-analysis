@@ -56,6 +56,11 @@
       "logo": "/assets/manufacturer-logos/mercedes.png"
     },
     {
+      "name": "Mercedes-AMG",
+      "color": "oklch(0.7 0 0)",
+      "logo": "/assets/manufacturer-logos/mercedes.png"
+    },
+    {
       "name": "Peugeot",
       "color": "oklch(0.7 0.25 120)",
       "logo": "/assets/manufacturer-logos/peugeot.png"
