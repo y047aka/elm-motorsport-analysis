@@ -189,7 +189,7 @@ A column's `at` is the panel width from which it stands, in its own place in
 the row. The thresholds follow the readings' worth and not this order, so a
 widening panel may bring a left column in after one that stands to its
 right -- that is the design, not an oversight to fix.
-A threshold is counted against the room a panel has left, so a column pays its own width and one gap into every threshold above its own -- and into none below it, since a panel that narrow has nothing of its room to take. The row's whole cost at the last threshold is 636, which is what `Best` stands above.
+A threshold is counted against the room a panel has left, so a column pays its own width and one gap into every threshold above its own -- and into none below it, since a panel that narrow has nothing of its room to take. The last threshold is the row's whole cost, and nothing should stand between it and `maxWidth`.
 -}
 columns : List Column
 columns =

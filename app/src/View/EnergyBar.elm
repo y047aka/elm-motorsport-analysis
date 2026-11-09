@@ -5,8 +5,7 @@ the race is run in -- laps of the plan its class is running.
 
 The fill runs from the left rather than from a centre, because this is a level and not a difference: what is left is what is drawn.
 Its colour says how to read the length, in the four hues the flag bands are already drawn in -- see [`View.PlaybackControls`](View-PlaybackControls).
-Over the fill sits a band, which is the class's own disagreement within its plan, drawn rather than hidden.
-It is drawn in the foreground and not the fill's hue: a band matched to the fill cannot be seen on the fill.
+Over the fill sits the band, in the foreground and not the fill's hue: a band matched to the fill cannot be seen on the fill.
 
 A car past its plan has nothing left to fill, so the track itself takes the level an empty one takes.
 
@@ -118,7 +117,7 @@ fill stage level =
 
 {-| The class's disagreement, straddling the edge of what is left.
 
-Twice the band, since the band is a middle distance reaching one way and the drawing is the two of them together -- which is the ± the tooltip states.
+Twice the band, which is what the tooltip's plus-or-minus reaches to.
 
 A band that runs off either end is cut at the end rather than drawn as a wider bar: the plan is the whole track, and the uncertainty lives inside it.
 
@@ -165,7 +164,7 @@ quartiles spread =
 
 {-| The lap the class's middle stop fell on.
 
-It is a pixel wide, so its own width comes off the far end of the track: a class whose middle stop and decile fall on the same lap would otherwise stand the mark past the end, where the track's own overflow cuts it away and the cell says nothing about the middle of its stops.
+It is a pixel wide, so a pixel comes off the far end: a class whose middle stop and decile fall on one lap would else stand the mark past the end, where the track's own overflow cuts it away and the middle of its stops goes unsaid.
 
 -}
 middle : Energy.Stops -> Html msg
@@ -179,7 +178,7 @@ middle spread =
 
 {-| How far along the track a lap of the class's ninth decile stands.
 
-A class whose stopped runs had no pace lap in them has a decile of nothing to measure over, and its cell is drawn at the end of the track rather than at a NaN -- which `clampShare` cannot catch, both of its comparisons reading false against a NaN.
+A class whose stopped runs had no pace lap in them has a decile of nothing to measure over, and is drawn at the end of the track rather than at a NaN -- which `clampShare` cannot catch, its comparisons both reading false against one.
 
 -}
 across : Energy.Stops -> Int -> Float
@@ -251,15 +250,11 @@ spreadTitle spread =
         ++ nineInTen spread.ceiling
 
 
-{-| The class's ninth decile, in a reader's words.
-
-A decile is a rank and not a maximum: the class's longest run stands above it in all but the
-rarest class, so it is not said as how far the class got.
-
+{-| The class's ninth decile, in a reader's words -- a rank, never how far the class got.
 -}
 nineInTen : Int -> String
 nineInTen by =
-    "nine of its ten stops by lap " ++ String.fromInt by
+    "nine in ten of its class came in by lap " ++ String.fromInt by
 
 
 planOf : Energy.Level -> String

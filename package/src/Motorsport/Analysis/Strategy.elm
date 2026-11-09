@@ -20,7 +20,7 @@ where how small is too small stands. Both readings are therefore the finished
 race's, and a `PitCycle` is a constant of its class and round; the clock
 enters at `plan`.
 
-The class column calls this length an `energy window ~L`, which is the same figure in a reader's words. The standings' Energy column reads the same decile of the same runs, calls it a ceiling, and counts down something else it finds in them -- see [`Motorsport.Analysis.Energy`](Motorsport-Analysis-Energy).
+The class column's `energy window ~L` is this length in a reader's words; what the same runs are read as for the energy bar is [`Motorsport.Analysis.Energy`](Motorsport-Analysis-Energy)'s to say.
 
 A _strategy_ is one car's whole race read as a plan: what it has run, the run
 it is on, and what `plan` forecasts it has left.
