@@ -751,7 +751,15 @@
           }
         },
         "74": "2026-lm-74-ferrari-296-droite-6a23f4324c257979740144.webp",
-        "77": "2026-wec-77-ford-mustang-droit-v2-6a8d9df850ac4232285542.webp",
+        "77": {
+          "default": "2026-wec-77-ford-mustang-droit-v2-6a8d9df850ac4232285542.webp",
+          "rounds": {
+            "imola_6h": "2026-wec-77-ford-mustang-droit-69e08c1fa1b2e019672521.webp",
+            "spa_6h": "2026-wec-77-ford-mustang-droit-69faf16cf4230479188427.webp",
+            "le_mans_24h": "2026-lm-77-ford-mustang-droite-6a23f4327e178870621692.webp",
+            "sao_paulo_6h": "2026-wec-77-ford-mustang-droit-6a425a291d9c1446606869.webp"
+          }
+        },
         "78": {
           "default": "2026-wec-78-lexus-rc-f-lmgt3-droit-69ef59a4b9726258267872.webp",
           "rounds": {
@@ -780,7 +788,15 @@
             "le_mans_24h": "2026-lm-87-lexus-rc-f-lmgt3-droite-6a23f46b1adc5624934961.webp"
           }
         },
-        "88": "2026-wec-88-ford-mustang-droit-v2-6a8d9df8d444d186302672.webp",
+        "88": {
+          "default": "2026-wec-88-ford-mustang-droit-v2-6a8d9df8d444d186302672.webp",
+          "rounds": {
+            "imola_6h": "2026-wec-88-ford-mustang-droit-69e08c2038d11322351238.webp",
+            "spa_6h": "2026-wec-88-ford-mustang-droit-69faf16d7efa9999939549.webp",
+            "le_mans_24h": "2026-lm-88-ford-mustang-droite-6a23f46b5d822247327577.webp",
+            "sao_paulo_6h": "2026-wec-88-ford-mustang-droit-6a425a2a10849315209482.webp"
+          }
+        },
         "91": {
           "default": "2026-wec-91-porsche-911-gt3-r-droit-69d6115bd7e17864774223.webp",
           "rounds": {
