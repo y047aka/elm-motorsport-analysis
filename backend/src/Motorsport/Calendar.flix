@@ -45,6 +45,7 @@ pub mod Motorsport.Calendar {
                 { id = "cota_6h", date = "2026-09-06" } ::
                 { id = "fuji_6h", date = "2026-09-27" } ::
                 { id = "barcelona_6h", date = "2026-10-18" } ::
+                { id = "monza_6h", date = "2026-11-08" } ::
                 Nil
         } ::
         {

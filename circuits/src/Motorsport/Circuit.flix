@@ -30,6 +30,7 @@ pub mod Motorsport.Circuit {
         case Fuji
         case Bahrain
         case SaoPaulo
+        case Monza
         case Barcelona
     }
 
@@ -50,6 +51,7 @@ pub mod Motorsport.Circuit {
             case Circuit.Fuji     => "fuji"
             case Circuit.Bahrain  => "bahrain"
             case Circuit.SaoPaulo => "sao_paulo"
+            case Circuit.Monza => "monza"
             case Circuit.Barcelona => "barcelona"
         }
 

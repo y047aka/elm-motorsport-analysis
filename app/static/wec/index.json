@@ -58,6 +58,14 @@
           "summary": "/static/wec/2026/barcelona_6h.json",
           "laps": "/static/wec/2026/barcelona_6h_laps.jsonl",
           "timeline": "/static/wec/2026/barcelona_6h_timeline.jsonl"
+        },
+        {
+          "id": "monza_6h",
+          "name": "6 Hours of Monza",
+          "date": "2026-11-08",
+          "summary": "/static/wec/2026/monza_6h.json",
+          "laps": "/static/wec/2026/monza_6h_laps.jsonl",
+          "timeline": "/static/wec/2026/monza_6h_timeline.jsonl"
         }
       ]
     },
