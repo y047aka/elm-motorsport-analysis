@@ -20,7 +20,7 @@ The level is a share of the plan its class is running, and the number beside it 
 So the class's own disagreement is carried out as `band` and drawn as a band rather than hidden, and where a class runs no one plan this answers with [`Spread`](#Energy) -- the laps its stops actually fall on.
 
 [`Strategy`](Motorsport-Analysis-Strategy) reads its cycle off the same pool as this module's ceiling, the same decile and the same bar of ten runs, for its own question: how many still stand in the race.
-Its cycle counts the lap into the pits and this does not, a lap run coasting down the lane being no lap of the ground energy is measured over; that is the whole of the difference between the two, and `EnergyTest` holds them within a lap of one another on a class that ran clean.
+What differs is what each counts a lap: its cycle is the ground the stint covered, the lap in and the lap out that follows a stop, and this counts neither, a lap run coasting down the lane being no lap of the ground energy is measured over. The two therefore stand a lap apart over a class's first stints and two apart wherever a run is led by a lap out, and `EnergyTest` pins both.
 
 @docs Energy, Level, Stops, Table
 @docs tableOf, level

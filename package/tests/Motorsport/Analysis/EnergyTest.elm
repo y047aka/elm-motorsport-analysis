@@ -61,6 +61,21 @@ suite =
                     , energyOf cars 15 |> Maybe.map planOf
                     )
                         |> Expect.equal ( Just 10, Just 10 )
+            , test "is one lap off the cycle on a first stint, and two on a run behind a stop" <|
+                \_ ->
+                    -- Both read the same stops and the same decile of them; what they count as
+                    -- a lap is the whole difference. A first stint is laps at pace and the lap
+                    -- in, so the two stand a lap apart -- and the test above holds that pair.
+                    -- A run behind a stop is led by the lap out as well, which is ground the
+                    -- cycle counts and energy is not, so the two stand two laps apart there.
+                    let
+                        cars =
+                            twiceFleet 10 10 ++ [ runner [ run 10, run 10 ] ]
+                    in
+                    ( Strategy.pitCycleOf hypercar cars |> .cycle
+                    , energyOf cars 40 |> Maybe.map ceilingOf
+                    )
+                        |> Expect.equal ( Just 12, Just 10 )
             , test "is a block a quarter of itself wide, and no plan past that" <|
                 \_ ->
                     -- A class that comes in on 9, 10 and 11 disagrees by one lap of a ten-lap plan, which is inside the gate, and is read as a level with a one-lap band.
@@ -93,8 +108,8 @@ suite =
                         |> Expect.equal (Just { low = 3, high = 3, median = 3, ceiling = 3 })
             , test "stands within a lap of the cycle Strategy reads off the same stops" <|
                 \_ ->
-                    -- Strategy counts the lap into the pits and Energy does not, which
-                    -- is the whole of the difference between the two, and no more.
+                    -- First stints only, so no lap out leads any run: the cycle counts the
+                    -- lap in and this counts neither, which is the one lap between 14 and 13.
                     let
                         cars =
                             slowFleet ++ [ runner [ run 13, stint 3 ] ]
@@ -264,6 +279,15 @@ fleetRunning : List Int -> List Car
 fleetRunning paces =
     paces
         |> List.indexedMap (\i pace -> car (String.fromInt (i + 2)) [ run pace ])
+
+
+{-| Cars that each ran twice and stopped twice, which is the only way a fixture puts a lap out
+in front of a run.
+-}
+twiceFleet : Int -> Int -> List Car
+twiceFleet count pace =
+    List.range 2 (count + 1)
+        |> List.map (\n -> car (String.fromInt n) [ run pace, run pace ])
 
 
 {-| The car the tests read: it runs a stint of its own, which is what puts a lap at
