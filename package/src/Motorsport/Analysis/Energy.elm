@@ -7,7 +7,7 @@ module Motorsport.Analysis.Energy exposing
 
 A stop takes on what the stint ran down -- fuel, and in a hybrid the charge with it -- and the regulations give every car in a class the same of both, so the laps a class runs between stops say two things at once: how far one load can be pushed, and where the class brings its cars in.
 This meter reads the second, called the class's **plan**, and carries the first -- its **ceiling** -- beside it.
-The ceiling is the farthest the class was seen to go on a load, and it very nearly holds: of 6,096 clean stops over the sixteen rounds kept here, 13 ran more than two laps past their class's ceiling, every one of them a car running a stretch nobody else in the class ran.
+The ceiling is the rank nine in ten of its stops came in by, and it very nearly is a wall: of 6,096 clean stops over the sixteen rounds kept here, 13 ran more than two laps past their class's ceiling, every one of them a car running a stretch nobody else in the class ran. It is a rank and no maximum: over those rounds it stood below its class's longest run in 32 classes of 34, by one lap in half of them and by ten at the widest.
 A wall says nothing about when a car is due, and the plan does, which is why the bar counts down the plan.
 
 The unit is the **pace lap**, both sides of the division: a lap run under a procedure is not a lap of energy spent at race rate, so it neither runs the load down nor joins the pool the plan is read from.
@@ -60,8 +60,8 @@ type Energy
 `laps` is laps of the class's plan left (`Running`) or laps run past it (`Overrun`), and
 never both. `fraction` is the share of the plan left, held between 0 and 1 for the bar to
 be drawn at. `band` is the class's own disagreement within its plan -- the error this
-meter can, and does, admit to. `ceiling` is how far any car in the class was seen to go on
-one load, and is further than the plan wherever the class brings some of its cars in early.
+meter can, and does, admit to. `ceiling` is the lap nine in ten of the class's stopped runs
+came in by, and is further than the plan wherever the class brings some of its cars in early.
 
 -}
 type alias Level =
@@ -76,8 +76,8 @@ type alias Level =
 {-| What a class that runs no one plan does say: the laps its stops fall on.
 
 `low` and `high` are the laps its middle half came in on, `median` the lap its middle stop
-fell on, and `ceiling` the farthest the class got -- the longest of these laps, and so the
-span one track can hold both drawings on.
+fell on, and `ceiling` the lap nine in ten of its stops came in by -- above all but a tenth
+of them, and so the span a drawing of these laps is measured over.
 Every car in the class is given the same spread: what a class like that says is about the
 class, and no car's energy is in it.
 
@@ -229,8 +229,8 @@ classReadingOf class runs =
         |> Maybe.map (\stops -> { stops = stops, plan = planOf pool })
 
 
-{-| The laps a class's stops fell on: its quarters, its middle stop, and the farthest it
-got -- where the pool is big enough for any of them to mean something.
+{-| The laps a class's stops fell on: its quarters, its middle stop, and the lap nine in ten
+of them came in by -- where the pool is big enough for any of them to mean something.
 -}
 stopsOf : List Int -> Maybe Stops
 stopsOf pool =

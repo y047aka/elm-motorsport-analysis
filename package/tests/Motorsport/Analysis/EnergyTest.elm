@@ -64,7 +64,7 @@ suite =
             , test "is a block a quarter of itself wide, and no plan past that" <|
                 \_ ->
                     -- A class that comes in on 9, 10 and 11 disagrees by one lap of a ten-lap plan, which is inside the gate, and is read as a level with a one-lap band.
-                    -- A class spreading from 6 to 15 disagrees by two laps of the same plan, which is past it: the answer becomes the class's own stops -- quarters at 8 and 12, middle stop on 10, longest run 14.
+                    -- A class that spreading from 6 to 15 disagrees by two laps of the same plan, which is past it: the answer becomes the class's own stops -- quarters at 8 and 12, middle stop on 10, and its ninth decile on 14, which is where nine in ten of its stops came in by and not its longest run, that being 15.
                     let
                         tight =
                             fleetRunning [ 9, 9, 9, 10, 10, 10, 11, 11, 11 ]

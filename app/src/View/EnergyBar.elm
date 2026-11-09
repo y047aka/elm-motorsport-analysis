@@ -153,7 +153,7 @@ band level =
         []
 
 
-{-| The laps a class's middle half came in on, on the track its longest run fills.
+{-| The laps a class's middle half came in on, on the track its ninth decile fills.
 
 The hue is the one a level's own band is drawn in, which is the same fact about the same runs.
 
@@ -181,7 +181,7 @@ middle spread =
         []
 
 
-{-| How far along the track a lap of the class's longest run stands.
+{-| How far along the track a lap of the class's ninth decile stands.
 -}
 across : Energy.Stops -> Int -> Float
 across spread lap =
@@ -224,13 +224,13 @@ overrunTitle level =
     laps level.laps ++ " past the class's " ++ planOf level ++ reached level
 
 
-{-| How far the class did get on one load, said only where it got further than its plan --
-the point past which an overrun stops being a guess.
+{-| Where nine in ten of the class's stops came in by, said only where that is further than
+its plan -- how far past the plan a car can be before its own class has hardly been there.
 -}
 reached : Energy.Level -> String
 reached level =
     if level.ceiling > level.plan then
-        " · its longest run " ++ laps level.ceiling
+        " · " ++ nineInTen level.ceiling
 
     else
         ""
@@ -244,8 +244,19 @@ spreadTitle spread =
         ++ laps spread.high
         ++ ", its middle stop on lap "
         ++ String.fromInt spread.median
-        ++ ", its longest run "
-        ++ laps spread.ceiling
+        ++ ", "
+        ++ nineInTen spread.ceiling
+
+
+{-| The class's ninth decile, in a reader's words.
+
+A decile is a rank and not a maximum: the class's longest run stands above it in all but the
+rarest class, so it is not said as how far the class got.
+
+-}
+nineInTen : Int -> String
+nineInTen by =
+    "nine of its ten stops by lap " ++ String.fromInt by
 
 
 planOf : Energy.Level -> String
