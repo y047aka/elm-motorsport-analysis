@@ -14,8 +14,9 @@ import Test exposing (Test, describe, test)
 {-| The fixtures are built so the plan comes out of a whole number of laps and the
 reading is a subtraction a test can do in its head: wherever a test says nothing to
 the contrary the class's plan is 10 laps, its ceiling 10 with it -- every car coming in
-on the same lap -- and the car being read has run a first stint of 10 and stopped,
-which is the eleventh clean run the pool is read from.
+on the same lap -- and the car being read has run a first stint of 10 and stopped, which is
+the eleventh clean run where the class is `fleet` and twelve where it is `slowFleet`. Its own
+run joins the pool of its class, which is what the numbers here are counted from.
 
 The clock asks one question -- where the car stands on its energy -- and never the plan: a class's plan is the finished race's, so a test may ask about any lap it likes and read the subtraction off the same ten laps.
 -}
@@ -44,10 +45,11 @@ suite =
                     -- Ten clean runs of 10, and nine of 40 that met a procedure on
                     -- the way, all of them in the past by the lap asked about: the
                     -- long runs are what a caution is worth, not what the energy is
-                    -- worth, so the plan stays 10.
+                    -- worth, so the plan stays 10 -- and the decile stays 10 with it, which
+                    -- is the half that moves when the held runs are let into the pool.
                     energyOf (fleet ++ heldFleet ++ [ runner [ run 10, stint 33 ] ]) 45
-                        |> Maybe.map planOf
-                        |> Expect.equal (Just 10)
+                        |> Maybe.map (\reading -> ( planOf reading, ceilingOf reading ))
+                        |> Expect.equal (Just ( 10, 10 ))
             , test "is the same plan at the first lap as at the flag" <|
                 \_ ->
                     -- The class's word is the whole race's, which is what lets a
@@ -94,6 +96,39 @@ suite =
                             ( Just ( 10, 1 )
                             , Just { low = 8, high = 12, median = 10, ceiling = 14 }
                             )
+            , test "is cut at the gap of two laps, and not carried over it" <|
+                \_ ->
+                    -- Four cars on 10, one on 12 and five on 14, with the reading car's own run
+                    -- held for so it joins none of them: the lone 12 is its own block because
+                    -- two laps is the gap the rule cuts at, and the five 14s are the plan.
+                    -- Leave a two-lap gap uncut and the same ten stops are one block whose
+                    -- middle lands on the 12s, which is where the plan would read 12.
+                    energyOf (fleetRunning [ 10, 10, 10, 10, 12, 14, 14, 14, 14, 14 ] ++ [ runner [ heldRun 14 1, stint 3 ] ]) 20
+                        |> Maybe.map (\reading -> ( planOf reading, bandOf reading ))
+                        |> Expect.equal (Just ( 14, 0 ))
+            , test "takes the earlier block where two hold the same number of stops" <|
+                \_ ->
+                    -- Five stops on 10 and five on 15, and the reading car's own run held for,
+                    -- so it joins neither block: a tie, which the earlier block wins because it
+                    -- is the one that sends a car out first. The later block would put the
+                    -- class on 15 and every car in it three laps early.
+                    energyOf (fleetRunning [ 10, 10, 10, 10, 10, 15, 15, 15, 15, 15 ] ++ [ runner [ heldRun 10 1, stint 3 ] ]) 20
+                        |> Maybe.map planOf
+                        |> Expect.equal (Just 10)
+            , test "is each class's own, and nothing at all for a class that stopped too seldom" <|
+                \_ ->
+                    -- The class the fixtures read has ten clean stops and a plan; five LMP2
+                    -- cars in the same race have five between them, which is under the bar a
+                    -- class needs, so one table holds a number for one class and a silence for
+                    -- the other -- and the partition is the only thing that keeps them apart.
+                    let
+                        cars =
+                            fleet ++ [ runner [ run 10, stint 3 ] ] ++ lmp2Fleet
+                    in
+                    ( energyOf cars 15 |> Maybe.map planOf
+                    , cars |> Energy.tableOf |> Energy.level "21" 15 |> Maybe.map isUnreadable
+                    )
+                        |> Expect.equal ( Just 10, Just True )
             , test "is not a block that does not carry the class" <|
                 \_ ->
                     -- Four blocks of stops, at 8, 12, 16 and 20 laps, none holding two fifths of the class: that is a class running three plans at once, and the largest block is not its plan however tight the block itself is.
@@ -127,9 +162,9 @@ suite =
                         |> Expect.equal (Just 7)
             , test "spends nothing on a lap the field was held down for" <|
                 \_ ->
-                    -- Three laps at pace and two under a procedure: five laps of
-                    -- ground, three laps of energy.
-                    energyOf (fleet ++ [ runner [ run 10, held 3 2 ] ]) 15
+                    -- Three laps at pace and two under a procedure, asked at the last of
+                    -- them: five laps of ground behind the clock, three laps of energy.
+                    energyOf (fleet ++ [ runner [ run 10, held 3 2 ] ]) 17
                         |> Maybe.map lapsLeft
                         |> Expect.equal (Just 7)
             , test "starts again at one on the stint after a stop" <|
@@ -300,7 +335,7 @@ runner =
 
 fleetOf : Int -> Int -> List Car
 fleetOf count pace =
-    fleetFrom 1 count pace
+    fleetFrom 2 count pace
 
 
 fleetFrom : Int -> Int -> Int -> List Car
@@ -310,11 +345,16 @@ fleetFrom first count pace =
 
 
 car : String -> List RunSpec -> Car
-car number runs =
+car number =
+    carIn hypercar number
+
+
+carIn : Class -> String -> List RunSpec -> Car
+carIn class number runs =
     { metadata =
         { carNumber = number
         , drivers = []
-        , class = hypercar
+        , class = class
         , group = "H"
         , team = "Team " ++ number
         , manufacturer = Manufacturer.unknown
@@ -471,6 +511,18 @@ spreadOf reading =
             { low = -1, high = -1, median = -1, ceiling = -1 }
 
 
+{-| The class said nothing at all, which is not the same silence as a spread.
+-}
+isUnreadable : Energy -> Bool
+isUnreadable reading =
+    case reading of
+        Unreadable ->
+            True
+
+        _ ->
+            False
+
+
 fractionOf : Energy -> Float
 fractionOf reading =
     case reading of
@@ -484,3 +536,17 @@ fractionOf reading =
 hypercar : Class
 hypercar =
     Class.fromString Era.Gt3AsThirdClass "HYPERCAR"
+
+
+lmp2 : Class
+lmp2 =
+    Class.fromString Era.Gt3AsThirdClass "LMP2"
+
+
+{-| Five cars of another class in the same race: enough to race, fewer than a class needs to
+say a plan.
+-}
+lmp2Fleet : List Car
+lmp2Fleet =
+    List.range 21 25
+        |> List.map (\n -> carIn lmp2 (String.fromInt n) [ run 10 ])

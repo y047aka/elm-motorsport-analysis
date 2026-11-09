@@ -52,5 +52,14 @@ suite =
             , test "twelve laps of a twenty-four-lap plan is half, whatever the lap count" <|
                 \_ ->
                     EnergyBar.stageOf (level 12 24) |> Expect.equal Steady
+            , test "exactly three quarters of a plan whose quarter is a whole lap is the fullest level" <|
+                \_ ->
+                    -- Plan 14 puts three quarters between laps, so no case above lands on the
+                    -- boundary; twelve of sixteen is the same share on a boundary the drawing
+                    -- has to choose a side of.
+                    EnergyBar.stageOf (level 12 16) |> Expect.equal Ample
+            , test "exactly a quarter of such a plan is that level and not the last one" <|
+                \_ ->
+                    EnergyBar.stageOf (level 3 12) |> Expect.equal Low
             ]
         ]
