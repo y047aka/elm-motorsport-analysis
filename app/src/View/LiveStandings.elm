@@ -166,7 +166,7 @@ columnSpec column =
             { label = "Ahead", at = 270, track = "5em", align = "text-right" }
 
         Last ->
-            { label = "Last", at = 390, track = "5em", align = "text-right" }
+            { label = "Last", at = 470, track = "5em", align = "text-right" }
 
         Pie ->
             { label = "Lap", at = 340, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
@@ -181,7 +181,7 @@ columnSpec column =
             { label = "Laps", at = 620, track = "3em", align = "text-right" }
 
         Energy ->
-            { label = "Energy", at = 470, track = String.fromFloat EnergyBar.width ++ "px", align = "" }
+            { label = "Energy", at = 390, track = String.fromFloat EnergyBar.width ++ "px", align = "" }
 
 
 {-| Every column, in row order.
@@ -193,7 +193,7 @@ A threshold is counted against the room a panel has left, so a column pays its o
 -}
 columns : List Column
 columns =
-    [ Driver, Ahead, Laps, Energy, Pie, Current, Last, Best, Move ]
+    [ Driver, Ahead, Laps, Energy, Current, Pie, Last, Best, Move ]
 
 
 {-| Does this column fit a panel of this width?
