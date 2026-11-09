@@ -23,12 +23,13 @@ import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 
 
-{-| Reading the served geometry against the 4,657 m the circuit's current
-chicane layout measures, which is what the survey was stretched to.
+{-| Reading the served geometry against the 4,655 m the circuit measures its
+chicane-less lap at -- the layout the WEC races -- which is what the survey was
+stretched to.
 -}
 decoder : Decoder Geometry
 decoder =
-    Geometry.decoder { lapLength = 4657.0 }
+    Geometry.decoder { lapLength = 4655.0 }
 
 
 {-| The circuit, on lines the round itself puts round the lap -- see

@@ -152,22 +152,30 @@ pub mod Circuit {
         survey = "The Circuit of the Americas"
     }
 
-    /// The Circuit de Barcelona-Catalunya, in its current chicane layout: the relation
-    /// `2049529` names itself "Grand Prix Circuit With Chicane", and the chicane
-    /// section's ways are what parts it from the no-chicane relation `284540` standing
-    /// beside it. `finish` is the line the lap is timed across; the circuit publishes no
-    /// distance for it, so the line is seeded from the track-atlas line's `start_finish`
-    /// marker, at that reading's `measuredWithin`.
+    /// The Circuit de Barcelona-Catalunya, in the layout the WEC races here: the
+    /// relation `284540` names itself "Grand Prix Circuit Without Chicane", the lap
+    /// the 2023 chicane grew out of and the one kept for racing series the chicane
+    /// was built for F1 alone. The chicane relation `2049529` stands beside it in
+    /// OpenStreetMap and is the one this app surveyed until the WEC round came; the
+    /// two share little more than four ways, so the two drawings differ wherever a
+    /// mapper split them apart and the diff measures how far.
+    ///
+    /// The relation tags `start` and `finish` as two nodes carrying
+    /// `raceway=start`/`raceway=finish`; the lap is timed across `finish`. The
+    /// circuit publishes no distance for the line, so its place is seeded from the
+    /// track-atlas line's `start_finish` marker, at that reading's
+    /// `measuredWithin` — the node stands about 15 m from the marker, which is
+    /// within it.
     ///
     /// The distances the FIA issues round a lap here were never read at authoring: no
     /// stretches are authored, the geometry writes no `sectors`, and the timing report
     /// reads this circuit as publishing no lines of its own.
     def barcelona(): Circuit = {
-        relation = 2049529i64,
+        relation = 284540i64,
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        lap      = 4657.0,
+        lap      = 4655.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/barcelona.geojson",
         atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/barcelona/raw/layers/gp.geojson"),

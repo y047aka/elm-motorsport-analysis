@@ -73,9 +73,9 @@ The steps are `/skill:add-circuit`'s. What belongs here is what those steps rest
 OpenStreetMap holds a circuit however whoever mapped it tagged it, and the four
 here are tagged differently: Le Mans's relation names one node `start-finish`,
 COTA's names two, 297 m apart along the lap, Barcelona stands in two
-relations — a chicane layout beside the no-chicane one it grew from — whose
-line is checked against the atlas marker, the circuit publishing no distance of
-its own, and Monza's roles name a traffic-signal node instead of its line, so
+relations — the no-chicane layout the WEC races, surveyed here, beside the
+chicane layout it grew and F1 kept — whose line is checked against the atlas
+marker, the circuit publishing no distance of its own, and Monza's roles name a traffic-signal node instead of its line, so
 no `timingLine` can be authored for it at all and its drawn zero stands where
 the pit exit light stands. A circuit's config carries
 the timing line's published coordinates, so a run that answers the wrong role
