@@ -21,8 +21,8 @@ import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Http
 import Json.Decode exposing (Decoder)
+import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy as Strategy
-import Motorsport.Analysis.Tank as Tank
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race as Race
@@ -165,7 +165,7 @@ type alias LoadedRound =
     { replay : Replay.Model
     , snapshot : Snapshot
     , pitCycles : Dict String Strategy.PitCycle
-    , tanks : Tank.Table
+    , tanks : Energy.Table
     , track : Tracker.Track
     , timeline : Timeline
     , fieldEvents : Timeline
@@ -538,7 +538,7 @@ roundFrom id summary rawLaps timelineEvents geometry =
             pitCyclesOf replay.race
 
         tanks =
-            Tank.tableOf replay.race.cars
+            Energy.tableOf replay.race.cars
     in
     { replay = replay
     , snapshot = snapshotOf replay

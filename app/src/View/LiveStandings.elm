@@ -20,7 +20,7 @@ import Html.Attributes exposing (attribute, class, style, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
-import Motorsport.Analysis.Tank as Tank exposing (Tank)
+import Motorsport.Analysis.Energy as Energy exposing (Tank)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -59,7 +59,7 @@ type alias Config msg =
     , openColumn : Class -> Maybe msg
     , width : Float
     , startPosition : CarNumber -> Maybe Position
-    , tanks : Tank.Table
+    , tanks : Energy.Table
     }
 
 
@@ -385,7 +385,7 @@ row config item =
     , laps = String.fromInt item.standing.lapsCompleted
     , sectorSlots = SectorPie.slots item
     , tank =
-        Tank.level item.metadata.carNumber item.standing.lapsCompleted config.tanks
+        Energy.level item.metadata.carNumber item.standing.lapsCompleted config.tanks
     , move =
         -- The grid place arrives by car number rather than from the `CarAt`,
         -- which does not hold one; unknown reads as a place held.

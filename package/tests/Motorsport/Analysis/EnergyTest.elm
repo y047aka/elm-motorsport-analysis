@@ -1,8 +1,8 @@
-module Motorsport.Analysis.TankTest exposing (suite)
+module Motorsport.Analysis.EnergyTest exposing (suite)
 
 import Expect
+import Motorsport.Analysis.Energy as Energy exposing (Tank(..))
 import Motorsport.Analysis.Strategy as Strategy
-import Motorsport.Analysis.Tank as Tank exposing (Tank(..))
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
@@ -20,7 +20,7 @@ The clock asks one question -- where the car stands on the tank it is on -- and 
 -}
 suite : Test
 suite =
-    describe "Motorsport.Analysis.Tank"
+    describe "Motorsport.Analysis.Energy"
         [ describe "the class's window"
             [ test "is the top of its stopped runs, not their middle" <|
                 \_ ->
@@ -79,7 +79,7 @@ suite =
                                 ( Just 16, Just { low = 11, high = 16, median = 11, window = 16 }, Just { low = 10, high = 22, median = 15, window = 22 } )
             , test "stands within a lap of the cycle Strategy reads off the same stops" <|
                 \_ ->
-                    -- Strategy counts the lap into the pits and Tank does not, which
+                    -- Strategy counts the lap into the pits and Energy does not, which
                     -- is the whole of the difference between the two, and no more.
                     let
                         cars =
@@ -136,8 +136,8 @@ suite =
             , test "and no level at all for a car the field does not hold" <|
                 \_ ->
                     fleet
-                        |> Tank.tableOf
-                        |> Tank.level "99" 13
+                        |> Energy.tableOf
+                        |> Energy.level "99" 13
                         |> Expect.equal Nothing
             , test "is a share of the window, which is what a bar is drawn at" <|
                 \_ ->
@@ -323,7 +323,7 @@ lapAt flag number crossing =
 
 tankOf : List Car -> Int -> Maybe Tank
 tankOf cars clock =
-    cars |> Tank.tableOf |> Tank.level "1" clock
+    cars |> Energy.tableOf |> Energy.level "1" clock
 
 
 windowOf : Tank -> Int
@@ -360,10 +360,10 @@ lapsLeft tank =
 
 {-| The laps a class's quarters and its middle stop fell on, and the window the bar is drawn against. A level answers none of that.
 -}
-spreadOf : Tank -> Tank.Stops
+spreadOf : Tank -> Energy.Stops
 spreadOf tank =
     case tank of
-        Tank.Spread stops ->
+        Spread stops ->
             stops
 
         _ ->

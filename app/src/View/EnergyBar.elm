@@ -25,7 +25,7 @@ Where there is no window at all -- a class that has not stopped ten times with t
 
 import Html exposing (Html, div)
 import Html.Attributes exposing (class, style, title)
-import Motorsport.Analysis.Tank as Tank exposing (Tank)
+import Motorsport.Analysis.Energy as Energy exposing (Tank(..))
 
 
 {-| How wide the column is, in pixels -- the track `columnSpec` gives it.
@@ -47,11 +47,11 @@ type Stage
 {-| Which level a car's fill is drawn in: quarters of the window left, counted in
 whole laps so the boundaries land where the pit wall counts them.
 
-An [`Overrun`](Motorsport-Analysis-Tank#Tank) never reaches this -- it has no fill to
+An [`Overrun`](Motorsport-Analysis-Energy#Tank) never reaches this -- it has no fill to
 colour, and is drawn as the whole track in the level an empty one takes.
 
 -}
-stageOf : Tank.Level -> Stage
+stageOf : Energy.Level -> Stage
 stageOf level =
     let
         quarters =
@@ -75,7 +75,7 @@ stageOf level =
 `Nothing` is a car this round's field does not hold: an empty cell keeps the row's
 columns lined up and says nothing, which is what is known.
 
-A [`Spread`](Motorsport-Analysis-Tank#Tank) is drawn on the same track and fills none of it, since it says where the class stops and not where a car is.
+A [`Spread`](Motorsport-Analysis-Energy#Tank) is drawn on the same track and fills none of it, since it says where the class stops and not where a car is.
 
 -}
 bar : Maybe Tank -> Html msg
@@ -84,20 +84,20 @@ bar reading =
         Nothing ->
             div [ class "h-3" ] []
 
-        Just Tank.Unreadable ->
+        Just Unreadable ->
             div
                 [ class "h-3 grid place-items-center text-[10px] leading-none text-muted-foreground"
                 , title noWindowTitle
                 ]
                 [ div [ class "w-3 h-px bg-muted-foreground" ] [] ]
 
-        Just (Tank.Running level) ->
+        Just (Running level) ->
             track "bg-muted" [ fill (stageOf level) level, band level ] (runningTitle level)
 
-        Just (Tank.Overrun level) ->
+        Just (Overrun level) ->
             track "bg-red-600/20" [] (overrunTitle level)
 
-        Just (Tank.Spread spread) ->
+        Just (Spread spread) ->
             track "bg-muted" [ quartiles spread, middle spread ] (spreadTitle spread)
 
 
@@ -115,7 +115,7 @@ track trackClass drawn labelled =
 
 {-| What is left, from the left edge.
 -}
-fill : Stage -> Tank.Level -> Html msg
+fill : Stage -> Energy.Level -> Html msg
 fill stage level =
     div
         [ class ("absolute top-0 left-0 h-full " ++ colorOf stage)
@@ -130,7 +130,7 @@ A band that runs off either end is cut at the end rather than drawn as a wider b
 the window is the whole track, and the uncertainty lives inside it.
 
 -}
-band : Tank.Level -> Html msg
+band : Energy.Level -> Html msg
 band level =
     let
         share =
@@ -152,7 +152,7 @@ band level =
 A spread takes no stage colour and fills no part of the tank; it is drawn in the hue a level's own band is drawn in, which is the same fact about the same runs.
 
 -}
-quartiles : Tank.Stops -> Html msg
+quartiles : Energy.Stops -> Html msg
 quartiles spread =
     div
         [ class "absolute top-0 h-full bg-foreground/25"
@@ -164,7 +164,7 @@ quartiles spread =
 
 {-| The lap the class's middle stop fell on.
 -}
-middle : Tank.Stops -> Html msg
+middle : Energy.Stops -> Html msg
 middle spread =
     div
         [ class "absolute top-0 h-full w-px bg-muted-foreground"
@@ -175,7 +175,7 @@ middle spread =
 
 {-| How far along the track a lap of the class's window stands.
 -}
-across : Tank.Stops -> Int -> Float
+across : Energy.Stops -> Int -> Float
 across spread lap =
     100 * toFloat lap / toFloat spread.window
 
@@ -206,17 +206,17 @@ percent value =
     String.fromFloat value ++ "%"
 
 
-runningTitle : Tank.Level -> String
+runningTitle : Energy.Level -> String
 runningTitle level =
     laps level.laps ++ " left on a " ++ windowOf level ++ " (±" ++ laps level.band ++ ")"
 
 
-overrunTitle : Tank.Level -> String
+overrunTitle : Energy.Level -> String
 overrunTitle level =
     laps level.laps ++ " past its " ++ windowOf level
 
 
-spreadTitle : Tank.Stops -> String
+spreadTitle : Energy.Stops -> String
 spreadTitle spread =
     "Not a race run on a window: half this class's stops fall between "
         ++ String.fromInt spread.low
@@ -226,7 +226,7 @@ spreadTitle spread =
         ++ String.fromInt spread.median
 
 
-windowOf : Tank.Level -> String
+windowOf : Energy.Level -> String
 windowOf level =
     String.fromInt level.window ++ "-lap window"
 

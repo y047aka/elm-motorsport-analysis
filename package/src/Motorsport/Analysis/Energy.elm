@@ -1,4 +1,4 @@
-module Motorsport.Analysis.Tank exposing
+module Motorsport.Analysis.Energy exposing
     ( Tank(..), Level, Stops, Table
     , tableOf, level
     )
@@ -22,7 +22,7 @@ The level is a share of the window the class runs on, and the number beside it i
 So the class's own disagreement is carried out as `band` and drawn as a band rather than hidden, and where it passes a quarter of the window this answers with [`Spread`](#Tank) -- the laps the class's stops actually fall on -- rather than with a level, since a level drawn on a race that is not run on a window is a guess wearing the shape of a meter.
 
 [`Strategy`](Motorsport-Analysis-Strategy) reads its cycle off the same pool, the same decile and the same bar of ten runs, for its own question: how many still stand in the race.
-Its cycle counts the lap into the pits and this does not, a lap run coasting down the lane being no lap of the ground a tank is measured over; that is the whole of the difference between the two, and `TankTest` holds them within a lap of one another on a class that ran clean.
+Its cycle counts the lap into the pits and this does not, a lap run coasting down the lane being no lap of the ground a tank is measured over; that is the whole of the difference between the two, and `EnergyTest` holds them within a lap of one another on a class that ran clean.
 
 @docs Tank, Level, Stops, Table
 @docs tableOf, level

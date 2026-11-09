@@ -22,8 +22,8 @@ import Internal.DataView as DataView
 import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
+import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy exposing (PitCycle)
-import Motorsport.Analysis.Tank as Tank
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
@@ -342,7 +342,7 @@ other leaves the grip off the gap.
 The column track is `auto`, so the strip gains and loses the width as the
 drag goes on.
 -}
-standingsCell : List Columns.StripKey -> Model -> Tank.Table -> Snapshot -> List Car -> Html Msg
+standingsCell : List Columns.StripKey -> Model -> Energy.Table -> Snapshot -> List Car -> Html Msg
 standingsCell keys m tanks snapshot cars =
     let
         startPositions =

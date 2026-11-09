@@ -1,12 +1,12 @@
 module View.EnergyBarTest exposing (suite)
 
 import Expect
-import Motorsport.Analysis.Tank as Tank
+import Motorsport.Analysis.Energy as Energy
 import Test exposing (Test, describe, test)
 import View.EnergyBar as EnergyBar exposing (Stage(..))
 
 
-level : Int -> Int -> Tank.Level
+level : Int -> Int -> Energy.Level
 level laps window =
     { laps = laps
     , window = window
