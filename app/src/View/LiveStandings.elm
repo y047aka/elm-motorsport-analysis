@@ -47,10 +47,11 @@ does not hold and only the round's entries know.
 the strip has none, and nothing where the column is standing. See
 [`View.ClassColumn`](View-ClassColumn).
 
-`energy` is the round's own reading of how much of its energy each car has spent, taken
-once as the round loads; the row looks its car up in it at however far the clock has
-got, which is why the standings can show a reading that says what the car has done so
-far rather than what it does later.
+`energy` is the round's own reading of how much of its energy each car has spent, taken once as
+the round loads; the row looks its car up in it at that car's own last completed lap. The laps
+spent are the car's so far; the plan they are counted against is the finished race's, which is
+what a class's reading is -- see
+[`Motorsport.Analysis.Energy`](Motorsport-Analysis-Energy).
 
 -}
 type alias Config msg =

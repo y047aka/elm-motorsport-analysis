@@ -175,6 +175,11 @@ minPlan =
 
 
 {-| Read the race once: each class's plan, and every car's laps against it.
+
+The plan is read off every stop the class makes, so one table stands for the whole race and
+no clock reaches this function. What moves with the clock is a car's own laps, and the cost of
+that split is said at [`level`](#level).
+
 -}
 tableOf : List Car -> Table
 tableOf cars =
@@ -420,10 +425,17 @@ fullAfterTheStop endLap =
             [ { lap = lapIn + 1, used = 0 } ]
 
 
-{-| Where a car stands on its energy at the clock.
+{-| Where a car stands on its energy at the clock -- the car's own last completed lap, which is
+what the standings count with.
 
-`Nothing` is a car this race's field does not hold, which is not the same fact as a
-car it does hold and has nothing to say about.
+Only one side of the subtraction moves with it. The other is the class's plan, read off the
+finished race, so at the third lap of a six-hour race this knows every stop the class will
+make; that is why the column can say how far a car has left rather than guess at it, and it is
+the reader's business to know whose knowledge the bar is. The cell says which it is: a plan the
+class ran, and laps this car has spent.
+
+`Nothing` is a car this race's field does not hold, which is not the same fact as a car it does
+hold and has nothing to say about.
 
 -}
 level : CarNumber -> Int -> Table -> Maybe Energy
