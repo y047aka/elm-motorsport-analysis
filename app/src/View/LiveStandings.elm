@@ -125,7 +125,7 @@ strip out of the page before the reader could drag it back.
 -}
 maxWidth : Float
 maxWidth =
-    780
+    680
 
 
 {-| A data column of the row. `columns` is the order they are drawn in; the
@@ -159,22 +159,22 @@ columnSpec column =
             { label = "Driver", at = 170, track = "1fr", align = "" }
 
         Move ->
-            { label = "Move", at = 214, track = "2.5em", align = "text-center" }
+            { label = "Move", at = 150, track = "2.5em", align = "text-center" }
 
         Ahead ->
             { label = "Ahead", at = 270, track = "5em", align = "text-right" }
 
         Last ->
-            { label = "Last", at = 454, track = "5em", align = "text-right" }
+            { label = "Last", at = 390, track = "5em", align = "text-right" }
 
         Pie ->
-            { label = "Lap", at = 404, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
+            { label = "Lap", at = 340, track = String.fromFloat SectorPie.pieSize ++ "px", align = "" }
 
         Current ->
-            { label = "Current", at = 534, track = "5em", align = "text-right" }
+            { label = "Current", at = 542, track = "5em", align = "text-right" }
 
         Best ->
-            { label = "Best", at = 624, track = "5em", align = "text-right" }
+            { label = "Best", at = 660, track = "5em", align = "text-right" }
 
         Laps ->
             { label = "Laps", at = 620, track = "3em", align = "text-right" }
@@ -188,7 +188,7 @@ A column's `at` is the panel width from which it stands, in its own place in
 the row. The thresholds follow the readings' worth and not this order, so a
 widening panel may bring a left column in after one that stands to its
 right -- that is the design, not an oversight to fix.
-A threshold is counted against the room a panel has left, so a column that comes in earlier pays its own width into every threshold of the columns that stand after it in the row.
+A threshold is counted against the room a panel has left, so a column pays its own width and one gap into every threshold above its own -- and into none below it, since a panel that narrow has nothing of its room to take. The row's whole cost at the last threshold is 636, which is what `Best` stands above.
 -}
 columns : List Column
 columns =
