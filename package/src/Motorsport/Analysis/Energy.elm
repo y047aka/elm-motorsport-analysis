@@ -112,8 +112,9 @@ type alias CarGauges =
 
 {-| How many pace laps the car had run on its run, at one of its own laps.
 
-One entry per lap at pace, newest first, so a clock finds its reading at the front --
-and a stop means no more than the next entry starting again at one.
+One entry per lap at pace, newest first, so a clock finds its reading at the front, plus one
+entry at the lap a stop costs the car -- which is where the load it took on starts being
+spent.
 
 -}
 type alias Gauge =
@@ -390,12 +391,33 @@ runOf laps stint =
 
                 _ ->
                     Nothing
+
+        gauges =
+            List.indexedMap (\i lap -> { lap = lap.lap, used = i + 1 }) paced
+                ++ fullAfterTheStop endLap
     in
     { endLap = endLap
     , held = stint.heldLaps > 0
     , paceLaps = List.length paced
-    , gauges = List.indexedMap (\i lap -> { lap = lap.lap, used = i + 1 }) paced
+    , gauges = gauges
     }
+
+
+{-| The load a stop takes on, written at the first lap the stop costs the car.
+
+Without it the clock finds the stopped run's last reading until the car's next lap at pace,
+which the pit lane puts two laps after the lap in and a procedure puts further than that: the
+car is drawn out of energy the moment after taking on a full load.
+
+-}
+fullAfterTheStop : Maybe Int -> List Gauge
+fullAfterTheStop endLap =
+    case endLap of
+        Nothing ->
+            []
+
+        Just lapIn ->
+            [ { lap = lapIn + 1, used = 0 } ]
 
 
 {-| Where a car stands on its energy at the clock.

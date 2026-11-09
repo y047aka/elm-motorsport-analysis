@@ -125,6 +125,19 @@ suite =
                     energyOf (fleet ++ [ runner [ run 10, run 10, stint 3 ] ]) 27
                         |> Maybe.map lapsLeft
                         |> Expect.equal (Just 7)
+            , test "and at full again on the lap the stop costs it" <|
+                \_ ->
+                    -- The lap in, then the lap out with its lane time: on the lap out the car
+                    -- has taken on a load and spent no pace lap of it, so the cell is full and
+                    -- not the emptied one the stint behind it reads.
+                    let
+                        justOut =
+                            fleet ++ [ runner [ run 10, run 10, stint 3 ] ]
+                    in
+                    ( energyOf justOut 24 |> Maybe.map lapsLeft
+                    , energyOf justOut 24 |> Maybe.map fractionOf
+                    )
+                        |> Expect.equal ( Just 10, Just 1 )
             , test "reads past its plan as an overrun, in laps past" <|
                 \_ ->
                     -- Thirteen laps run on its energy since its last stop, in a class
