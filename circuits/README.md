@@ -87,21 +87,16 @@ the timing line's published coordinates, so a run that answers the wrong role
 fails before it writes anything rather than drawing every car early; how each
 relation is actually tagged is the circuit's own config comment to say.
 
-A circuit OpenStreetMap holds as loose ways rather than a relation — Fuji, whose
-complex no mapper has ever joined into one — authors a `box` instead, and the
-survey then reads the ground where a relation's roles would have said it: the
-lap is the one *closed* raceway way that passes the authored `timingLine`'s
-place within its crosshair, and the zero turns not at a node but at the
-projection of that place onto the lap, which the two surveyed places either side
-interpolate in degrees. Fuji's line falls 207 m from the nearest surveyed node,
-and that projection is why a box can be authored from a published line at all.
-The pit is the way that hangs off the lap at both ends; where a complex hangs
-more than one, the config names the pit's ways by id, as a relation's members do
-— Fuji names its pit lane and leaves the 123 m connector beside it unchained.
-Ways standing off the lap at both ends are another course's ground, as untouched
-as a way outside the box, and one that hangs at one end alone is half a pit lane
-and is refused by name. The geometry's `source` claim is the search bbox rather
-than a relation, and the same byte fence holds all of it.
+A circuit OpenStreetMap holds as loose raceway ways rather than a relation — Fuji
+is mapped that way — authors a `box` instead, and the survey then reads the ground
+where a relation's roles would have said it.
+Which way is the lap, which hanging lines are the pit and where the zero turns —
+the projection of the authored line's place onto the lap, which no surveyed node
+need stand under — is `Survey.flix`'s `surveying a box` section to say.
+Where a complex hangs more than one line off the lap the config names the pit's
+ways by id, as a relation's members do.
+The geometry's `source` claim is the search bbox rather than a relation, and the
+same byte fence holds all of it.
 
 ## The timing lines, and where their distances come from
 
@@ -111,7 +106,7 @@ so they are not in the repository. COTA's are its own track sector map's, and
 are one set used for every season here, since no later map has been read. Which
 of the kinds a circuit's map is belongs to its config, as its `sectors` — one set
 `published` for every season, `perSeason`, or neither where no map has been read
-at authoring, as at Barcelona and Monza: the geometry then writes no stretches and the
+at authoring, as at Barcelona, Monza and Fuji: the geometry then writes no stretches and the
 report reads the circuit as publishing no lines. `nix run
 .#geometry-timing-lines` refuses a round on the second kind by quoting the
 circuit's own reason. Nothing in a

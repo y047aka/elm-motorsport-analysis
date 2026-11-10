@@ -11,7 +11,7 @@ are drawn through are
 [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-Fuji is the one surveyed here from a box of raceway ways rather than a relation;
+Fuji is surveyed from a box of raceway ways rather than a relation;
 its drawn zero stands at the published start/finish, which falls between two
 surveyed nodes rather than on one. The circuit project's config and README hold
 the whole of that authoring.
@@ -29,8 +29,8 @@ import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLine
 
 
 {-| Reading the served geometry against the 4,563 m the championship measures its
-lap at — the 2023 6 Hours of Fuji ran 1,044.927 km over 229 laps — which is what
-the survey was stretched to.
+lap at, which is what the survey was stretched to; the geometry project's config
+holds the race's arithmetic behind that figure.
 -}
 decoder : Decoder Geometry
 decoder =
@@ -127,20 +127,12 @@ pitLane geometry =
 {-| Where the lines the round is timed at stand on the surveyed lap.
 
 This circuit publishes no distances for them -- the served geometry carries no
-`sectors` -- so there is nothing here to author line metres from, and inventing
-them would draw boundaries at a distance no one measured. What the round does
-say is how its laps divided between the three stretches, which is the reading
-the ring gives every undrawn round: a line stands where the round's own share
-puts it, and every car between two of them is placed by the share of the time
-between the lines it has run. The shape is surveyed; the lines are the round's,
-and would move with a season that divided its laps differently.
-
-If the circuit ever publishes the distances round its lap, they are authored in
-the geometry project's config, travel in the served file, and replace this
-derivation.
-
-Nothing here splits the lap finer: the feed carries no mini-sector times for
-this circuit, and there are no finer lines to place a car by.
+`sectors` -- so a line stands where the round's own share of its laps puts it,
+and a car between two of them is placed by the share of the time between the
+lines it has run: the reading the ring gives every undrawn round, on surveyed
+degrees. The shape is surveyed; the lines are the round's, and would move with
+a season that divided its laps differently. The reading, and which circuits are
+drawn on it, is the circuits section of `AGENTS.md`'s.
 -}
 timingLines : Shape -> BySector Share -> TimingLines
 timingLines lap shares =

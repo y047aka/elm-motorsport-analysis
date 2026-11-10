@@ -247,17 +247,15 @@ pub mod Circuit {
     }
 
     /// Fuji. OpenStreetMap holds no relation for this circuit at all — the probe of its
-    /// ground answers nothing — so it is the first circuit surveyed from a box: every
-    /// `highway=raceway` way the ground holds, of which the lap is the one closed line
-    /// that passes where the line stands, the pit is the open line hanging off that
-    /// loop — named by id, because a 123 m unnamed connector hangs off it too and the
-    /// lane's own `name` is prose this survey does not read — and the drift course, short
-    /// circuit, kart track and abandoned stubs are
-    /// what no line passes and a box survey therefore leaves out. No node stands at
-    /// the line — the lap's nearest is 207 m down it — so the zero of a box survey is
-    /// not a node but the projection of the authored place onto the lap, and the place
-    /// is the track-atlas layer's `start_finish` marker: the claim of the very layer
-    /// whose outline was stitched from these ways.
+    /// ground answers nothing — so it is surveyed from a box: every `highway=raceway`
+    /// way the ground holds, of which one closed line is the lap, `Pit lane` is the pit
+    /// the `pit` field names — the other hanger is a 123 m unnamed connector — and the
+    /// drift course, short circuit, kart track and abandoned stubs are what no line
+    /// passes and a box survey therefore leaves out.
+    /// No node stands at the line — the lap's nearest is 207 m down it — so the authored
+    /// place is all the zero has to stand on; it is the track-atlas layer's
+    /// `start_finish` marker, the claim of the very layer whose outline was stitched
+    /// from these ways.
     ///
     /// The distances the series issue round a lap here were never read at authoring:
     /// no stretches are authored, the geometry writes no `sectors`, and the timing

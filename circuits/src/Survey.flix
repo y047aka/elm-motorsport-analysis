@@ -428,8 +428,9 @@ pub mod Survey {
     /// The pit lane of a box is what hangs off the lap: the ways that are not it, with
     /// both ends standing on it. A way with one end on the lap and the other in the
     /// fields is half a pit lane and is named and refused, for that is the shape a
-    /// chain breaks on. Two lines hang off one lap at a racing complex and no tag tells
-    /// them apart, so the config may name the pit's ways outright, as a relation's
+    /// chain breaks on. Two lines may hang off one lap at a racing complex, and the
+    /// survey reads geometry and one-way tags rather than any way's `name`, so the
+    /// config may name the pit's ways outright, as a relation's
     /// members do; unnamed, exactly one hanging line is the pit and more than one is
     /// refused by name.
     def pitOff(circuit: Circuit, segments: List[Segment], nodes: Map[Int64, Place], lap: Segment): Result[String, List[Segment]] =

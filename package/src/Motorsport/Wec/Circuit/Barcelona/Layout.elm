@@ -121,21 +121,12 @@ pitLane geometry =
 {-| Where the lines the round is timed at stand on the surveyed lap.
 
 This circuit publishes no distances for them -- the served geometry carries no
-`sectors` -- so there is nothing here to author line metres from, and inventing
-them would draw boundaries at a distance no one measured. What the round does
-say is how its laps divided between the three stretches, which is the reading
-the ring gives every undrawn round: a line stands where the round's own share
-puts it, and every car between two of them is placed by the share of the time
-between the lines it has run. The shape is surveyed; the lines are the round's,
-and would move with a season that divided its laps differently.
-
-If the circuit ever publishes the distances round its lap, they are authored in
-the geometry project's config, travel in the served file, and replace this
-derivation.
-
-Nothing here splits the lap finer: the feed carries no mini-sector times for
-this circuit, so a car between two of these lines is placed by the share of the
-time between them it has run.
+`sectors` -- so a line stands where the round's own share of its laps puts it,
+and a car between two of them is placed by the share of the time between the
+lines it has run: the reading the ring gives every undrawn round, on surveyed
+degrees. The shape is surveyed; the lines are the round's, and would move with
+a season that divided its laps differently. The reading, and which circuits are
+drawn on it, is the circuits section of `AGENTS.md`'s.
 -}
 timingLines : Shape -> BySector Share -> TimingLines
 timingLines lap shares =
