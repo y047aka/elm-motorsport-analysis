@@ -107,7 +107,8 @@ pub mod Circuit {
         box      = Option[Box],
         // The ways the pit lane is, named by id. Only a box needs it: a relation tags
         // its pit members, and a box's ground may hold more than one line hanging off
-        // the lap, which no tag tells apart.
+        // the lap — which of them is the pit is a reading of names and turns, and the
+        // survey reads geometry and one-way tags alone.
         pit      = Option[List[Int64]],
         // The word the summaries send for the circuit, which names its directory, its
         // kept answer and the file the app reads.
@@ -137,6 +138,12 @@ pub mod Circuit {
     /// How far a circuit's published stretches may miss the lap they are trusted to
     /// add up to. Asked once, by `impliedLines`.
     pub def stretchTolerance(): Float64 = 0.15
+
+    /// How far a box's surveyed lap may miss the published one, as a share of it. Every
+    /// kept survey lands within a quarter percent of the length it was stretched to; a
+    /// box picks its lap by standing near the line alone, and this is what refuses a
+    /// shorter course silently inflated to the published figure.
+    pub def lengthTolerance(): Float64 = 0.02
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser
     /// measures from and so where the lap's zero stands; its map is re-issued every season
@@ -243,8 +250,9 @@ pub mod Circuit {
     /// ground answers nothing — so it is the first circuit surveyed from a box: every
     /// `highway=raceway` way the ground holds, of which the lap is the one closed line
     /// that passes where the line stands, the pit is the open line hanging off that
-    /// loop — named by id, because a 123 m connector hangs off it too and no tag tells
-    /// the two apart — and the drift course, short circuit, kart track and abandoned stubs are
+    /// loop — named by id, because a 123 m unnamed connector hangs off it too and the
+    /// lane's own `name` is prose this survey does not read — and the drift course, short
+    /// circuit, kart track and abandoned stubs are
     /// what no line passes and a box survey therefore leaves out. No node stands at
     /// the line — the lap's nearest is 207 m down it — so the zero of a box survey is
     /// not a node but the projection of the authored place onto the lap, and the place
@@ -261,7 +269,12 @@ pub mod Circuit {
         word     = "fuji",
         timedFrom = "",
         timingLine = Some({place = {lon = 138.927423, lat = 35.372405}, within = Some(25.0)}),
-        lap      = 4549.0,
+        // The grand prix lap as the championship measures it: the 2023 6 Hours of Fuji
+        // ran 1,044.927 km over 229 laps, which divides to exactly 4,563 m. The surveyed
+        // centreline measures 4,553.6 m, 0.2 percent short of it — within what `laidOut`
+        // lets a box miss by. Track atlases print 4,549; the race's own arithmetic is
+        // the figure kept here, and it is this one the drawing is measured in.
+        lap      = 4563.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/fuji.geojson",
         atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/fuji/raw/layers/gp.geojson"),

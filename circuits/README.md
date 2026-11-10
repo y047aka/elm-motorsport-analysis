@@ -71,14 +71,18 @@ nothing to `Circuit/`.
 
 The steps are `/skill:add-circuit`'s. What belongs here is what those steps rest on.
 
-OpenStreetMap holds a circuit however whoever mapped it tagged it, and the four
-here are tagged differently: Le Mans's relation names one node `start-finish`,
+OpenStreetMap holds a circuit however whoever mapped it tagged it, and the five
+here are grounded two ways. The four relations are tagged differently: Le Mans's
+relation names one node `start-finish`,
 COTA's names two, 297 m apart along the lap, Barcelona stands in two
 relations — the no-chicane layout the WEC races, surveyed here, beside the
 chicane layout it grew and F1 kept — whose line is checked against the atlas
 marker, the circuit publishing no distance of its own, and Monza's roles name a traffic-signal node instead of its line, so
 no `timingLine` can be authored for it at all and its drawn zero stands where
-the pit exit light stands. A circuit's config carries
+the pit exit light stands. Fuji has no relation for anyone to tag at all, so it
+stands outside that list: its ground is a box of `highway=raceway` ways, and its
+line is authored from a track atlas because OpenStreetMap marks no line there.
+A circuit's config carries
 the timing line's published coordinates, so a run that answers the wrong role
 fails before it writes anything rather than drawing every car early; how each
 relation is actually tagged is the circuit's own config comment to say.

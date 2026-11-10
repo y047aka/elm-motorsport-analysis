@@ -195,7 +195,11 @@ pub mod Survey {
     /// what closes a lap out of ways each mapper drew in the direction they happened to walk.
     pub def chain(segments: List[Segment], nodes: Map[Int64, Place], start: Option[Int64]): Result[String, List[Int64]] =
         match openedAt(segments, start) {
-            case None => Err("the relation holds no way the lap can start from")
+            case None =>
+                if (List.isEmpty(segments))
+                    Err("nothing is chained: the line the survey picked holds no way at all")
+                else
+                    Err("no way opens the line: the chain walks from a way driven one way (oneway=yes), and needs one that runs into no other")
             case Some(first) =>
                 let walked = walked(segments, Set.insert(first#id, Set.empty()), first#nodes);
                 match leftOver(segments, walked#used, walked#ids, nodes) {
@@ -430,7 +434,9 @@ pub mod Survey {
     /// refused by name.
     def pitOff(circuit: Circuit, segments: List[Segment], nodes: Map[Int64, Place], lap: Segment): Result[String, List[Segment]] =
         let lapPlaces = lap#nodes |> List.filterMap(id -> Map.get(id, nodes));
-        let others = List.filter(segment -> segment#id != lap#id, segments);
+        // A closed ring touching the lap at one node hangs off it at *both* its ends and
+        // would chain as a pit lane closing on itself; a kart ring is ground, not a line.
+        let others = List.filter(segment -> segment#id != lap#id and not loopsItself(segment), segments);
         let hanging = List.filter(segment -> hangsOn(segment, nodes, lapPlaces), others);
         match List.filter(segment -> halfHangs(segment, nodes, lapPlaces), others) {
             case Nil =>
@@ -490,7 +496,8 @@ pub mod Survey {
         List.foldLeft((least, other) -> Float64.min(least, apart(at, other)), beyond(), places)
 
     /// The surveyed place of the lap nearest the line: the node the chain opens at. Any
-    /// node would close the lap; the nearest keeps the turn a short walk from the line.
+    /// node would close the lap; this choice only says where the walk begins, and the
+    /// nearest begins it nearest the line the lap will be spun to stand at.
     def nearestTo(ids: List[Int64], nodes: Map[Int64, Place], place: Place): Int64 =
         match ids {
             case Nil => turnedId()
@@ -585,22 +592,31 @@ pub mod Survey {
                 let lapPoints = lapNodes |> List.map(projectOn(parallel));
                 let pitPoints = pitNodes |> List.map(projectOn(parallel));
                 let surveyed = cumulative(lapPoints);
-                let stretch = circuit#lap / (surveyed |> List.last |> Option.getWithDefault(0.0));
-                let metres = List.map(each -> each * stretch, surveyed);
-                // The published metre each surveyed place stands at, in one list: the degrees
-                // and the metre are one pair from here on, and never looked up apart.
-                let lapMetres = Geodesy.together(lapNodes, metres);
-                let half = List.length(lapPoints) / 2;
-                let kept = thinned(lapPoints, half);
-                let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
-                Ok({
-                    centreline = List.map(at -> metred(at, lapMetres), kept),
-                    pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
-                    frame = {origin = northWest(both), parallel = parallel},
-                    direction = turnDirection(lapPoints),
-                    surveyedAt = reading#surveyedAt,
-                    surveyedLength = Some(surveyed |> List.last |> Option.getWithDefault(0.0))
-                })
+                let measured = surveyed |> List.last |> Option.getWithDefault(0.0);
+                // Only a box picks its lap by standing near the line alone, so only a
+                // box is held to what its pick measures; a relation's roles picked its
+                // lap before anything was measured.
+                if (circuit#relation == None and Float64.abs(measured - circuit#lap) > circuit#lap * Circuit.lengthTolerance())
+                    Err(
+                        "the lap the line stands on measures ${Util.Format.whole(measured)} m, which is not within ${Util.Format.whole(Circuit.lengthTolerance() * 100.0)} percent of the ${Util.Format.whole(circuit#lap)} m the circuit publishes"
+                    )
+                else
+                    let stretch = circuit#lap / measured;
+                    let metres = List.map(each -> each * stretch, surveyed);
+                    // The published metre each surveyed place stands at, in one list: the degrees
+                    // and the metre are one pair from here on, and never looked up apart.
+                    let lapMetres = Geodesy.together(lapNodes, metres);
+                    let half = List.length(lapPoints) / 2;
+                    let kept = thinned(lapPoints, half);
+                    let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
+                    Ok({
+                        centreline = List.map(at -> metred(at, lapMetres), kept),
+                        pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
+                        frame = {origin = northWest(both), parallel = parallel},
+                        direction = turnDirection(lapPoints),
+                        surveyedAt = reading#surveyedAt,
+                        surveyedLength = Some(measured)
+                    })
         }
     }
 

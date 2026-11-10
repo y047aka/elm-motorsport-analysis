@@ -28,12 +28,13 @@ import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 
 
-{-| Reading the served geometry against the 4,549 m the circuit measures its
-lap at, which is what the survey was stretched to.
+{-| Reading the served geometry against the 4,563 m the championship measures its
+lap at — the 2023 6 Hours of Fuji ran 1,044.927 km over 229 laps — which is what
+the survey was stretched to.
 -}
 decoder : Decoder Geometry
 decoder =
-    Geometry.decoder { lapLength = 4549.0 }
+    Geometry.decoder { lapLength = 4563.0 }
 
 
 {-| The circuit, on lines the round itself puts round the lap -- see
@@ -139,8 +140,7 @@ the geometry project's config, travel in the served file, and replace this
 derivation.
 
 Nothing here splits the lap finer: the feed carries no mini-sector times for
-this circuit, so a car between two of these lines is placed by the share of the
-time between the lines it has run.
+this circuit, and there are no finer lines to place a car by.
 -}
 timingLines : Shape -> BySector Share -> TimingLines
 timingLines lap shares =

@@ -259,7 +259,7 @@ pub mod TestSurvey {
     @Test
     def testChainRefusesAStartNoWayCarries(): Unit \ Assert =
         let chained = Survey.chain(part(10, true, 2 :: 3 :: Nil) :: Nil, corners(), Some(1i64));
-        Assert.assertTrue(refused("the relation holds no way the lap can start from", chained))
+        Assert.assertTrue(refused("no way opens the line", chained))
 
     @Test
     def testChainOpensALineWithNothingToTimeFromWhereNoOtherEnds(): Unit \ Assert =
@@ -420,6 +420,164 @@ pub mod TestSurvey {
                 Assert.assertTrue(asked#fetch);
                 Assert.assertTrue(asked#write)
         }
+
+    // ------------------------------------------------------------------ the box
+
+    /// A raceway way: the only thing a box answer holds, and the tag `boxSegments` reads.
+    /// The relation fixtures' `way` carries no `highway` because a chain never asks; a box
+    /// survey asks nothing else.
+    def raceway(id: Int32, oneway: Bool, ids: List[Int32]): String =
+        let driven = if (oneway) "yes" else "no";
+        "{\"type\":\"way\",\"id\":${id},\"tags\":{\"highway\":\"raceway\",\"oneway\":\"${driven}\"},\"nodes\":${numbers(ids)}}"
+
+    /// The square as a box holds it: the one closed raceway the line stands on, the pit
+    /// lane hanging off it at nodes 2 and 3, and whatever a test adds to be refused.
+    def boxGround(extra: List[String]): List[String] =
+        List.append(
+            places(),
+            raceway(30, true, 1 :: 2 :: 3 :: 4 :: 1 :: Nil) :: raceway(31, false, 2 :: 5 :: 6 :: 3 :: Nil) :: extra
+        )
+
+    /// A circuit surveyed from a box over the square's ground. The line stands on the
+    /// lap's first stretch, four tenths from node 1 to node 2 — where no node stands, so
+    /// the survey must project and spin, not just find a node. The published lap is the
+    /// square's measured 4,149.7 m rounded, which is what the length guard lets stand.
+    def boxCircuit(
+        pit: Option[List[Int64]],
+        timingLine: Option[{place = Place, within = Option[Float64]}],
+        lap: Float64
+    ): Circuit = {
+        relation = None,
+        box = Some({south = 29.98, west = -97.62, north = 30.06, east = -97.53}),
+        pit = pit,
+        word = "boxy",
+        timedFrom = "",
+        timingLine = timingLine,
+        lap = lap,
+        sectors = {published = None, eachSeason = None},
+        file = "nowhere.geojson",
+        atlas = None,
+        survey = "A square"
+    }
+
+    /// The line the square authors: on the first stretch, within the map's crosshair.
+    def boxLine(): {place = Place, within = Option[Float64]} =
+        {place = {lat = 30.0, lon = -97.596}, within = Some(25.0)}
+
+    /// A given config over a given answer: the file it writes, or the sentence it refuses.
+    def writtenOf(circuit: Circuit, text: String): Result[String, String] =
+        match Overpass.Answer.read(text) {
+            case Err(problem) => Err(problem)
+            case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, geometry), Survey.geometryOf(reading, circuit))
+        }
+
+    def boxWritten(pit: Option[List[Int64]], extra: List[String]): Result[String, String] =
+        writtenOf(boxCircuit(pit, Some(boxLine()), 4150.0), answer(boxGround(extra)))
+
+    @Test
+    def testABoxSurveysTheClosedWayItsLineStandsOn(): Unit \ Assert =
+        match boxWritten(None, Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the box refused its own square: ${problem}")
+            case Ok(file) =>
+                // The projection spins the lap to the fall's place between nodes 1 and 2,
+                // four tenths along a stretch no node stands on.
+                Assert.assertTrue(String.contains({substr = "-97.596"}, file));
+                // The way runs east, south, west and home: clockwise, said by the line.
+                Assert.assertTrue(String.contains({substr = "\"direction\": \"clockwise\""}, file));
+                Assert.assertTrue(String.contains({substr = "pit_lane"}, file))
+        }
+
+    @Test
+    def testALineWithNoLapUnderItIsRefused(): Unit \ Assert =
+        let off = {place = {lat = 29.8, lon = -97.596}, within = Some(25.0)};
+        Assert.assertTrue(
+            refused(
+                "no closed raceway way",
+                writtenOf(boxCircuit(None, Some(off), 4150.0), answer(boxGround(Nil)))
+            )
+        )
+
+    @Test
+    def testTwoClosedWaysUnderTheLineRefuseTheChoice(): Unit \ Assert =
+        Assert.assertTrue(
+            refused(
+                "cannot say which lap is timed on it",
+                boxWritten(None, raceway(33, true, 1 :: 2 :: 3 :: 4 :: 1 :: Nil) :: Nil)
+            )
+        )
+
+    @Test
+    def testAWayHangingAtOneEndAloneIsRefusedByName(): Unit \ Assert =
+        // A stub to the fields: half a pit lane, whatever the pit names say.
+        Assert.assertTrue(
+            refused(
+                "hang off the lap at one end and not the other",
+                writtenOf(
+                    boxCircuit(Some(31i64 :: Nil), Some(boxLine()), 4150.0),
+                    answer(boxGround(node(7, 29.9, -97.5) :: raceway(34, true, 3 :: 7 :: Nil) :: Nil))
+                )
+            )
+        )
+
+    @Test
+    def testTwoHangingLinesAndNoNameRefuse(): Unit \ Assert =
+        Assert.assertTrue(
+            refused(
+                "no one says which is the pit lane",
+                boxWritten(None, raceway(35, true, 4 :: 5 :: 6 :: 1 :: Nil) :: Nil)
+            )
+        )
+
+    @Test
+    def testAPitWayTheConfigNamesMustHang(): Unit \ Assert =
+        Assert.assertTrue(refused("does not hang off the lap", boxWritten(Some(404i64 :: Nil), Nil)))
+
+    @Test
+    def testANamedPitChainsAloneAndLeavesTheOtherHangerOut(): Unit \ Assert =
+        // Fuji's ground in miniature: a connector hangs at both ends beside the named
+        // pit. It is another line, not half of this one, and the chain takes none of it.
+        match boxWritten(Some(31i64 :: Nil), raceway(36, true, 2 :: 5 :: 1 :: Nil) :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the named pit refused: ${problem}")
+            case Ok(file) => Assert.assertTrue(String.contains({substr = "pit_lane"}, file))
+        }
+
+    @Test
+    def testABoxAuthorsNothingWithoutATimingLine(): Unit \ Assert =
+        Assert.assertTrue(
+            refused(
+                "authors no timing line",
+                writtenOf(boxCircuit(None, None, 4150.0), answer(boxGround(Nil)))
+            )
+        )
+
+    @Test
+    def testAClosedRingIsGroundAndNeverAPitLane(): Unit \ Assert =
+        // A kart ring touching the lap at node 1 hangs off it at both its ends — and is
+        // still a ring. What is left of a pit after the rings are set aside is nothing,
+        // and nothing chains: the survey says so rather than drawing the ring as a pit.
+        let ground = List.append(
+            places(),
+            raceway(30, true, 1 :: 2 :: 3 :: 4 :: 1 :: Nil)
+                :: node(8, 30.005, -97.61)
+                :: node(9, 30.01, -97.615)
+                :: raceway(37, true, 1 :: 8 :: 9 :: 1 :: Nil)
+                :: Nil
+        );
+        match writtenOf(boxCircuit(None, Some(boxLine()), 4150.0), answer(ground)) {
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "holds no way at all"}, problem))
+            case Ok(file) => Assert.assertTrueWithMsg(false, "wrote a file: ${String.take(200, file)}")
+        }
+
+    @Test
+    def testALapInflatedToThePublishedLengthIsRefused(): Unit \ Assert =
+        // The square measures 4,149.7 m round; a config that published 6,000 for it
+        // would draw every metre 45 percent long, and only this guard says so.
+        Assert.assertTrue(
+            refused(
+                "is not within 2 percent of the 6000 m the circuit publishes",
+                writtenOf(boxCircuit(None, Some(boxLine()), 6000.0), answer(boxGround(Nil)))
+            )
+        )
 
     // ----------------------------------------------------------------------- the parting
 

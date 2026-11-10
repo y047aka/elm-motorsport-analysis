@@ -38,10 +38,15 @@ jobs:
         run: nix run .#flix-test
       - name: Geometry command tests
         run: nix run .#geometry-test
-      # The byte fence, over the two circuits a checkout keeps. A fresh asking
+      # The byte fence, over every kept answer. A fresh asking
       # of OpenStreetMap is the regeneration fence's.
       - name: Geometry survey reproduces the kept geometries
-        run: nix run .#geometry -- survey cota && nix run .#geometry -- survey le_mans
+        run: |
+          nix run .#geometry -- survey cota
+          nix run .#geometry -- survey le_mans
+          nix run .#geometry -- survey barcelona
+          nix run .#geometry -- survey monza
+          nix run .#geometry -- survey fuji
 
   # Its own job: the one check here that needs node_modules, and a type error
   # should not share a red mark with a failing test.

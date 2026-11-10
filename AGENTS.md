@@ -286,8 +286,7 @@ map leaves no distance for, so it is a sum rather than a record of nothings, and
 is drawn less finely too: between two of its lines a COTA car is placed by the time
 it has run between them, where a Le Mans car is placed by a mini-sector.
 
-A circuit whose map has never been read at authoring — Barcelona's and Monza's — has no
-line distances to place anything by: its layout puts each line where the
+A circuit whose map has never been read at authoring — Barcelona's, Monza's and Fuji's — has no line distances to place anything by: its layout puts each line where the
 round's own sector share ends, and places every car between two of them by the
 time it has run between them, which is the reading the ring gives an undrawn
 round, on surveyed degrees.

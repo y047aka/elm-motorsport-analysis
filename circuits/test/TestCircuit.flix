@@ -61,4 +61,22 @@ pub mod TestCircuit {
         Assert.assertTrue(
             List.length(Circuit.circuits()) == List.length(List.map(c -> c#word, Circuit.circuits()) |> List.distinct)
         )
+
+    /// Exactly one grounding, and a box's two extras come with it: the readers each
+    /// dispatch on one of the pair, and a config authoring both or neither is an
+    /// ambiguity those readers each resolve a different way. A box names no member to
+    /// time from, so its `timingLine` is the only thing its zero can stand on.
+    @Test
+    def testEveryCircuitAuthorsExactlyOneGrounding(): Unit \ Assert =
+        foreach (circuit <- Circuit.circuits()) {
+            let grounded = match (circuit#relation, circuit#box) {
+                case (Some(_), None) => true
+                case (None, Some(_)) => Option.nonEmpty(circuit#timingLine)
+                case _               => false
+            };
+            Assert.assertTrueWithMsg(
+                grounded,
+                "${circuit#word}: relation and box are not exactly one, or a box authors no line"
+            )
+        }
 }
