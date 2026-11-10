@@ -17,6 +17,7 @@
 pub mod Overpass {
 
     use IoError.IoError
+    use Circuit.Circuit
     use Net.HttpRequest.HttpRequest
     use Net.HttpResponse.HttpResponse
     use Net.Https.Https
@@ -67,6 +68,20 @@ pub mod Overpass {
     /// keeps those bytes as the runner spelled them.
     pub def askRelation(relation: Int64): Result[String, String] \ { IO, Clock } =
         paced(() -> ask(Overpass.Query.survey(relation)))
+
+    /// One box's raceway ground, asked on the same pace as a relation's survey.
+    pub def askBox(extent: String): Result[String, String] \ { IO, Clock } =
+        paced(() -> ask(Overpass.Query.box(extent)))
+
+    /// One circuit's survey, asked of whichever ground its config names — the relation
+    /// it chains from, or the box whose raceway ways it reads. Asked once from here so
+    /// the live survey, `--fetch`'s guard and the freeze fence ask the same question.
+    pub def askSurvey(circuit: Circuit): Result[String, String] \ { IO, Clock } =
+        match (circuit#relation, circuit#box) {
+            case (Some(id), _)    => askRelation(id)
+            case (None, Some(at)) => askBox(Circuit.extent(at))
+            case (None, None)     => Err("no ground was authored for '${circuit#word}': a circuit surveys from a relation or from a box")
+        }
 
     /// One query, asked and read: the walk, the pace and the fence a body passes before
     /// it is an answer are above; the shape an answer comes in is `Overpass.Answer`'s.

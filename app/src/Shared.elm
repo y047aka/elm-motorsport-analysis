@@ -33,6 +33,7 @@ import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
+import Motorsport.Wec.Circuit.Fuji.Layout as FujiLayout
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Circuit.Monza.Layout as MonzaLayout
@@ -621,6 +622,14 @@ trackOf id track geometry =
                 _ ->
                     Tracker.fromConfig track.config
 
+        Just "fuji" ->
+            case geometry of
+                Decoded lap ->
+                    Tracker.onCircuit (FujiLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
+
+                _ ->
+                    Tracker.fromConfig track.config
+
         _ ->
             Tracker.fromConfig track.config
 
@@ -691,6 +700,9 @@ decoderFor circuit =
 
         "monza" ->
             Just MonzaLayout.decoder
+
+        "fuji" ->
+            Just FujiLayout.decoder
 
         _ ->
             Nothing

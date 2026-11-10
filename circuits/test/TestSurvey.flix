@@ -164,6 +164,8 @@ pub mod TestSurvey {
                 let place = Option.getWithDefault({lat = 0.0, lon = 0.0}, Option.map(line -> line#place, cota#timingLine));
                 let narrowed = {
                     relation = cota#relation,
+                    box = cota#box,
+                    pit = cota#pit,
                     word = cota#word,
                     timedFrom = cota#timedFrom,
                     timingLine = Some({place = place, within = Some(5.0)}),
@@ -175,6 +177,8 @@ pub mod TestSurvey {
                 };
                 let unauthored = {
                     relation = narrowed#relation,
+                    box = narrowed#box,
+                    pit = narrowed#pit,
                     word = narrowed#word,
                     timedFrom = narrowed#timedFrom,
                     timingLine = Some({place = place, within = None}),
@@ -375,7 +379,7 @@ pub mod TestSurvey {
     @Test
     def testParseRefusesWhatItCannotSurvey(): Unit \ Assert =
         Assert.assertTrue(argumentRefused("survey reads one circuit", Survey.parse(Nil)));
-        Assert.assertTrue(argumentRefused("no circuit is surveyed under 'qatar': known are cota, le_mans, barcelona, monza", Survey.parse("qatar" :: Nil)));
+        Assert.assertTrue(argumentRefused("no circuit is surveyed under 'qatar': known are cota, le_mans, barcelona, monza, fuji", Survey.parse("qatar" :: Nil)));
         Assert.assertTrue(argumentRefused("option '--answer' requires an argument", Survey.parse("--answer" :: Nil)));
         // A flag is no file: `--answer --write` is a reader who meant something else, and
         // the survey that read it as a path would report a file that cannot be opened.

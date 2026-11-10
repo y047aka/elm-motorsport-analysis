@@ -12,7 +12,8 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`: what the CLI reads
   and nothing else does. It sits outside `/app` because the build copies all of
   `app/static` into the bundle.
-- **`/circuits`** — the geometry pipeline: OpenStreetMap relations through
+- **`/circuits`** — the geometry pipeline: OpenStreetMap relations — or, where
+  OpenStreetMap holds only loose raceway ways, a surveyed box of them — through
   the Flix project at `circuits/src` into the served `app/static/geometry/*.geojson`,
   with one directory per circuit — its kept Overpass answer
   and its kept atlas line — named by the word the summaries send for the circuit,
@@ -254,8 +255,8 @@ application's assets. Neither holds any of it itself — each decodes the table
 that does, and what reaches `Car.Metadata` is the resolved colour, badge and
 photograph rather than the tables.
 
-Four circuits are drawn to their own shape rather than as a ring: Le Mans, the
-Circuit of the Americas, the Circuit de Barcelona-Catalunya, and Monza. `Circuit/Layout` is what
+Five circuits are drawn to their own shape rather than as a ring: Le Mans, the
+Circuit of the Americas, the Circuit de Barcelona-Catalunya, Monza, and Fuji. `Circuit/Layout` is what
 `Tracker.onCircuit` is handed — the lap, the pit lane, the lines the lap is
 timed at, and the metres the tracker draws at — and it is where the surveyed
 degrees are projected into drawing metres, once, whichever circuit they came

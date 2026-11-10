@@ -21,9 +21,10 @@ source relation and the license in their own properties.
 
 ## One pipeline, one thin config per circuit
 
-A circuit joins as a record in `src/Circuit.flix` — the relation, the member
-role naming the line the lap is measured from, the published length the
-surveyed line is stretched to, the prose the geometry file is documented with —
+A circuit joins as a record in `src/Circuit.flix` — the relation, or the box of
+raceway ground where OpenStreetMap tags no relation, the member role naming the
+line the lap is measured from, the published length the surveyed line is
+stretched to, the prose the geometry file is documented with —
 and as a directory named by the word the summaries send for it, which keeps
 only the evidence: the kept Overpass answer and, where one has been measured,
 the kept atlas line. What it writes is not a build artifact but a served
@@ -81,6 +82,22 @@ the pit exit light stands. A circuit's config carries
 the timing line's published coordinates, so a run that answers the wrong role
 fails before it writes anything rather than drawing every car early; how each
 relation is actually tagged is the circuit's own config comment to say.
+
+A circuit OpenStreetMap holds as loose ways rather than a relation — Fuji, whose
+complex no mapper has ever joined into one — authors a `box` instead, and the
+survey then reads the ground where a relation's roles would have said it: the
+lap is the one *closed* raceway way that passes the authored `timingLine`'s
+place within its crosshair, and the zero turns not at a node but at the
+projection of that place onto the lap, which the two surveyed places either side
+interpolate in degrees. Fuji's line falls 207 m from the nearest surveyed node,
+and that projection is why a box can be authored from a published line at all.
+The pit is the way that hangs off the lap at both ends; where a complex hangs
+more than one, the config names the pit's ways by id, as a relation's members do
+— Fuji names its pit lane and leaves the 123 m connector beside it unchained.
+Ways standing off the lap at both ends are another course's ground, as untouched
+as a way outside the box, and one that hangs at one end alone is half a pit lane
+and is refused by name. The geometry's `source` claim is the search bbox rather
+than a relation, and the same byte fence holds all of it.
 
 ## The timing lines, and where their distances come from
 

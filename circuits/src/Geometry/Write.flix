@@ -63,7 +63,7 @@ pub mod Geometry.Write {
             case "role"              => Some(text("outline"))
             case "circuit"           => Some(text(circuit#word))
             case "basis"             => Some(centreline())
-            case "source"            => Some(relation(circuit))
+            case "source"            => Some(source(circuit))
             case "license"           => Some(licence())
             case "surveyed_at"       => Option.map(text, geometry#surveyedAt)
             case "direction"         => Some(text(geometry#direction))
@@ -93,8 +93,15 @@ pub mod Geometry.Write {
     /// lap — the claim a line measured off orthoimagery must not borrow.
     def centreline(): String = text("osm-centreline")
 
-    def relation(circuit: Circuit): String =
-        text("https://www.openstreetmap.org/relation/${circuit#relation}")
+    /// Where the survey came from: the relation it was chained from, or the ground a
+    /// box surveyed — named by the extent that was asked, since no relation names the
+    /// ways.
+    def source(circuit: Circuit): String =
+        match (circuit#relation, circuit#box) {
+            case (Some(id), None)    => text("https://www.openstreetmap.org/relation/${id}")
+            case (None, Some(at))    => text("https://www.openstreetmap.org/search?bbox=${at#west},${at#south},${at#east},${at#north}")
+            case _                   => text("no ground was authored for '${circuit#word}': a circuit surveys from a relation or from a box")
+        }
 
     /// The copyright the survey came with; ODbL requires every drawing of it to say so too.
     def licence(): String = text("ODbL")

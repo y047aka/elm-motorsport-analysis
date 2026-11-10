@@ -1,9 +1,12 @@
 /// The questions this project asks OpenStreetMap, spelled once each.
 ///
-/// Three are asked, and each is the shortest answer its reader can work with:
+/// Four are asked, two of a relation and two of a box, and each is the shortest answer
+/// its reader can work with:
 ///
 ///   * `survey` is the one a geometry is drawn from: the relation, then the ways that
 ///     hold its line with their tags, then the nodes those ways name.
+///   * `box` is the same answer asked of ground that holds no relation: every way in
+///     the extent tagged as a raceway, with its tags, and the nodes those ways name.
 ///   * `candidates` is the one asked before a circuit has a config: every relation a box
 ///     holds that is tagged as a circuit, a motor-sport route or a raceway, with its tags
 ///     and nothing else. Which of them is the circuit is the next question's answer.
@@ -23,6 +26,13 @@ pub mod Overpass.Query {
     /// `Survey` chains a lap out of; `out skel` is enough of a node to chain from.
     pub def survey(relation: Int64): String =
         "[out:json][timeout:120];relation(${relation});out body;way(r);out body;node(w);out skel;"
+
+    /// The question one box-surveyed circuit is answered with: the raceway ways the
+    /// ground holds, with their tags — the chain's permission to turn a way is in them —
+    /// and the nodes they name, which is the same answer shape a relation's survey
+    /// returns and the same one `Survey` chains from.
+    pub def box(extent: String): String =
+        "[out:json][timeout:120];way[\"highway\"=\"raceway\"](${extent});out body;node(w);out skel;"
 
     /// Every relation a box holds that could be a circuit, tags only. A road tagged as a
     /// route catches the box too, so the tags are what the reader picks from.
