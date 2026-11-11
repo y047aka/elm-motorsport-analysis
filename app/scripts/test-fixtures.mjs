@@ -19,7 +19,9 @@ const out = join(here, "../../package/tests/Motorsport/TestHelpers/Survey");
 const fixtures = [
   { module: "Barcelona", file: "barcelona.geojson" },
   { module: "Cota", file: "cota.geojson" },
+  { module: "Fuji", file: "fuji.geojson" },
   { module: "LeMans", file: "le_mans.geojson" },
+  { module: "Monza", file: "monza.geojson" },
 ];
 
 mkdirSync(out, { recursive: true });

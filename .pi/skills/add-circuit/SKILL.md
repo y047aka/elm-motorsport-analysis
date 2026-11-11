@@ -30,11 +30,15 @@ Optionally measure the atlas line first — for a circuit that publishes no star
 nix run .#geometry -- atlas <word> --fetch   # keeps circuits/<word>/atlas.geojson
 ```
 
+**When the probe comes back empty,** OpenStreetMap holds that circuit as loose `highway=raceway` ways rather than a relation — Fuji is mapped that way. Author the box grounding instead: `relation = None`, a `box` around the ground, and a `timingLine` seeded from the atlas's `start_finish` marker — the zero is the projection of that place onto the lap, so no surveyed node need stand there.
+`survey <word> --fetch` reads the ground and names every refusal by way id: author the box loosely and let the refusals tell you what else the box holds.
+
 ## 2. Author the config — `circuits/src/Circuit.flix`
 
 Add one `def <word>(): Circuit` and append it to `circuits()`. Its doc-comment is where *how the relation is actually tagged* belongs.
 Fields worth a decision:
 
+- `relation` / `box` / `pit` — exactly one grounding: the relation the ways are named by, or the box whose raceway ways are chained by standing at the line. A box at a racing complex may hang more than one line off the lap, and the survey reads geometry and one-way tags rather than any way's `name`; `pit` names the pit lane's ways by id then, as a relation's members do.
 - `timedFrom` — the relation member naming the line the lap is timed across. Every metre is measured from whichever one was answered to.
 - `timingLine` — the published place (and the `within` the survey may allow), or the atlas seed, or `None` where the circuit tags nothing mistakable. A run that answers the wrong role fails before writing only when this is set; without it a wrong line just draws every car early.
 - `lap` — the published length the surveyed line is stretched to.
@@ -76,7 +80,7 @@ The word a summary sends and the word the report prints are two files that no pr
 
 These hold the circuits as written-down inventories rather than readings, so a new circuit fails each of them by name until it joins:
 
-- `circuits/test/TestSurvey.flix` — the refusal-message test carries the known words in its `"no circuit is surveyed under 'monza': known are …"` assertion; a new word that joins unheralded fails there by name.
+- `circuits/test/TestSurvey.flix` — the refusal-message test carries the known words in its `"no circuit is surveyed under 'qatar': known are …"` assertion; a new word that joins unheralded fails there by name.
 - `circuits/test/TestRegenerate.flix` — the expected `drawn`/`words` lists over `Circuit.circuits()`.
 - `circuits/test/TestTimingMap.flix` — `cases()` must name every case of the report's enum, and a test counts them.
 - `app/tests/geometry-contract.spec.ts` — it reads the words out of the sources for the cross-checks, but one assertion freezes the whole inventory: `expect(drawnNames().sort()).toEqual([...])`.

@@ -21,9 +21,10 @@ source relation and the license in their own properties.
 
 ## One pipeline, one thin config per circuit
 
-A circuit joins as a record in `src/Circuit.flix` — the relation, the member
-role naming the line the lap is measured from, the published length the
-surveyed line is stretched to, the prose the geometry file is documented with —
+A circuit joins as a record in `src/Circuit.flix` — the relation, or the box of
+raceway ground where OpenStreetMap tags no relation, the member role naming the
+line the lap is measured from, the published length the surveyed line is
+stretched to, the prose the geometry file is documented with —
 and as a directory named by the word the summaries send for it, which keeps
 only the evidence: the kept Overpass answer and, where one has been measured,
 the kept atlas line. What it writes is not a build artifact but a served
@@ -70,15 +71,32 @@ nothing to `Circuit/`.
 
 The steps are `/skill:add-circuit`'s. What belongs here is what those steps rest on.
 
-OpenStreetMap holds a circuit however whoever mapped it tagged it, and the three
-here are tagged differently: Le Mans's relation names one node `start-finish`,
-COTA's names two, 297 m apart along the lap, and Barcelona stands in two
-relations — a chicane layout beside the no-chicane one it grew from — whose
-line is checked against the atlas marker, the circuit publishing no distance of
-its own. A circuit's config carries
+OpenStreetMap holds a circuit however whoever mapped it tagged it, and the five
+here are grounded two ways. The four relations are tagged differently: Le Mans's
+relation names one node `start-finish`,
+COTA's names two, 297 m apart along the lap, Barcelona stands in two
+relations — the no-chicane layout the WEC races, surveyed here, beside the
+chicane layout it grew and F1 kept — whose line is checked against the atlas
+marker, the circuit publishing no distance of its own, and Monza's roles name a traffic-signal node instead of its line, so
+no `timingLine` can be authored for it at all and its drawn zero stands where
+the pit exit light stands. Fuji has no relation for anyone to tag at all, so it
+stands outside that list: its ground is a box of `highway=raceway` ways, and its
+line is authored from a track atlas because OpenStreetMap marks no line there.
+A circuit's config carries
 the timing line's published coordinates, so a run that answers the wrong role
 fails before it writes anything rather than drawing every car early; how each
 relation is actually tagged is the circuit's own config comment to say.
+
+A circuit OpenStreetMap holds as loose raceway ways rather than a relation — Fuji
+is mapped that way — authors a `box` instead, and the survey then reads the ground
+where a relation's roles would have said it.
+Which way is the lap, which hanging lines are the pit and where the zero turns —
+the projection of the authored line's place onto the lap, which no surveyed node
+need stand under — is `Survey.flix`'s `surveying a box` section to say.
+Where a complex hangs more than one line off the lap the config names the pit's
+ways by id, as a relation's members do.
+The geometry's `source` claim is the search bbox rather than a relation, and the
+same byte fence holds all of it.
 
 ## The timing lines, and where their distances come from
 
@@ -88,7 +106,7 @@ so they are not in the repository. COTA's are its own track sector map's, and
 are one set used for every season here, since no later map has been read. Which
 of the kinds a circuit's map is belongs to its config, as its `sectors` — one set
 `published` for every season, `perSeason`, or neither where no map has been read
-at authoring, as at Barcelona: the geometry then writes no stretches and the
+at authoring, as at Barcelona, Monza and Fuji: the geometry then writes no stretches and the
 report reads the circuit as publishing no lines. `nix run
 .#geometry-timing-lines` refuses a round on the second kind by quoting the
 circuit's own reason. Nothing in a

@@ -1,13 +1,14 @@
-/// The three questions asked of OpenStreetMap, held to what each reader can work with:
-/// the survey's relation with its ways' node refs and their nodes, the probe's box of
-/// candidate relations tags only, and the candidate's ways with their geometry.
+/// The four questions asked of OpenStreetMap, held to what each reader can work with:
+/// the survey's relation with its ways' node refs and their nodes, the box of raceway
+/// ways asked where no relation stands, the probe's box of candidate relations tags
+/// only, and the candidate's ways with their geometry.
 ///
 /// Both questions that walk a relation recurse through `way(r)` — the difference between
 /// drawing a lap and lengthening one is that only the survey asks the nodes themselves.
 /// What the answers come back as is `Overpass.TestAnswer`'s.
 pub mod Overpass.TestQuery {
 
-    use Overpass.Query.{candidates, survey, ways}
+    use Overpass.Query.{box, candidates, survey, ways}
 
     @Test
     def testTheSurveyNamesTheRelationAndTheBodySpelling(): Unit \ Assert =
@@ -18,6 +19,16 @@ pub mod Overpass.TestQuery {
         Assert.assertTrue(String.contains({substr = "way(r);out body;"}, asked));
         Assert.assertTrue(String.contains({substr = "node(w);out skel;"}, asked));
         Assert.assertTrue(String.contains({substr = "relation(6537729);"}, asked))
+
+    /// The box's question is the one asked where no relation stands: the same answer
+    /// shape the survey returns — body for the ways, skel for the nodes — walked from a
+    /// selector instead of a relation. Only `--fetch` asks it live, so this pin is the
+    /// only run that ever sees the question's text.
+    @Test
+    def testTheBoxAsksRacewayWaysWithTheirNodes(): Unit \ Assert =
+        let asked = box("35.3397,138.8927,35.3997,138.9527");
+        Assert.assertTrue(String.contains({substr = "way[\"highway\"=\"raceway\"](35.3397,138.8927,35.3997,138.9527);"}, asked));
+        Assert.assertTrue(String.contains({substr = "out body;node(w);out skel;"}, asked))
 
     /// The probe's second question recurses to the relation's ways the way the
     /// survey's does — `way(r)` is what brings the ways a role's length is

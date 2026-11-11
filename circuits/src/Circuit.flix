@@ -1,8 +1,10 @@
 /// The circuits this project writes, and the figures every drawing and report is laid
 /// from.
 ///
-/// A circuit's config is authored once, here: the relation surveyed, the length the lap
-/// is stretched to, where the circuit puts its own timing line, whose map the lines come
+/// A circuit's config is authored once, here: the relation surveyed — or, where
+/// OpenStreetMap holds no relation, the box whose raceway ways are chained by standing
+/// at the authored line — the length the lap is stretched to, where the circuit puts its
+/// own timing line, whose map the lines come
 /// from. The directory named by the circuit's word keeps the evidence — the kept Overpass
 /// answer and the kept atlas line — and no code. The timing report reads these
 /// same figures through this module's own `timingMap`, which derives the
@@ -83,15 +85,37 @@ pub mod Circuit {
                 implied(more, standing, sector + 1, {id = "s${sector}", metres = standing} :: lines)
         }
 
+    /// The ground a box-surveyed circuit is asked of: OpenStreetMap's own
+    /// south,west,north,east extent.
+    pub type alias Box = {
+        south  = Float64,
+        west   = Float64,
+        north  = Float64,
+        east   = Float64
+    }
+
+    /// The extent a box is asked and echoed with, in the order Overpass takes it.
+    pub def extent(box: Box): String =
+        "${box#south},${box#west},${box#north},${box#east}"
+
     /// One circuit: what was surveyed, what the circuit says the survey is worth, and
     /// where the file it draws lands.
     pub type alias Circuit = {
-        relation = Int64,
+        // The two groundings, exactly one of them filled: the relation the ways are
+        // named by, or the box whose raceway ways are chained by standing at the line.
+        relation = Option[Int64],
+        box      = Option[Box],
+        // The ways the pit lane is, named by id. Only a box needs it: a relation tags
+        // its pit members, and a box's ground may hold more than one line hanging off
+        // the lap — which of them is the pit is a reading of names and turns, and the
+        // survey reads geometry and one-way tags alone.
+        pit      = Option[List[Int64]],
         // The word the summaries send for the circuit, which names its directory, its
         // kept answer and the file the app reads.
         word     = String,
         // The relation member the lap is measured from. A relation may tag more than one
-        // line, and every metre is measured from whichever one was answered to.
+        // line, and every metre is measured from whichever one was answered to. A box
+        // names no members, and its line is the `timingLine`'s place itself.
         timedFrom = String,
         timingLine = Option[TimingLine],
         // The length the surveyed line is stretched to, in the circuit's own metres.
@@ -115,11 +139,19 @@ pub mod Circuit {
     /// add up to. Asked once, by `impliedLines`.
     pub def stretchTolerance(): Float64 = 0.15
 
+    /// How far a box's surveyed lap may miss the published one, as a share of it. Every
+    /// kept survey lands within a quarter percent of the length it was stretched to; a
+    /// box picks its lap by standing near the line alone, and this is what refuses a
+    /// shorter course silently inflated to the published figure.
+    pub def lengthTolerance(): Float64 = 0.02
+
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser
     /// measures from and so where the lap's zero stands; its map is re-issued every season
     /// and its lines differ between them, so no `sectors` travel in the geometry.
     def leMans(): Circuit = {
-        relation = 2126739i64,
+        relation = Some(2126739i64),
+        box      = None,
+        pit      = None,
         word     = "le_mans",
         timedFrom = "start-finish",
         timingLine = None,
@@ -135,7 +167,9 @@ pub mod Circuit {
     /// that line at the place below, and its three stretches — which add up to the lap
     /// exactly — travel in the geometry because one map serves every season here.
     def cota(): Circuit = {
-        relation = 6537729i64,
+        relation = Some(6537729i64),
+        box      = None,
+        pit      = None,
         word     = "cota",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -97.6422583, lat = 30.1335278}, within = Some(10.0)}),
@@ -152,31 +186,102 @@ pub mod Circuit {
         survey = "The Circuit of the Americas"
     }
 
-    /// The Circuit de Barcelona-Catalunya, in its current chicane layout: the relation
-    /// `2049529` names itself "Grand Prix Circuit With Chicane", and the chicane
-    /// section's ways are what parts it from the no-chicane relation `284540` standing
-    /// beside it. `finish` is the line the lap is timed across; the circuit publishes no
-    /// distance for it, so the line is seeded from the track-atlas line's `start_finish`
-    /// marker, at that reading's `measuredWithin`.
+    /// The Circuit de Barcelona-Catalunya, in the layout the WEC races here: the
+    /// relation `284540` names itself "Grand Prix Circuit Without Chicane", the lap
+    /// the 2023 chicane grew out of and the one kept for racing series the chicane
+    /// was built for F1 alone. The chicane relation `2049529` stands beside it in
+    /// OpenStreetMap and is the one this app surveyed until the WEC round came; the
+    /// two share little more than four ways, so the two drawings differ wherever a
+    /// mapper split them apart and the diff measures how far.
+    ///
+    /// The relation tags `start` and `finish` as two nodes carrying
+    /// `raceway=start`/`raceway=finish`; the lap is timed across `finish`. The
+    /// circuit publishes no distance for the line, so its place is seeded from the
+    /// track-atlas line's `start_finish` marker, at that reading's
+    /// `measuredWithin` — the node stands about 15 m from the marker, which is
+    /// within it.
     ///
     /// The distances the FIA issues round a lap here were never read at authoring: no
     /// stretches are authored, the geometry writes no `sectors`, and the timing report
     /// reads this circuit as publishing no lines of its own.
     def barcelona(): Circuit = {
-        relation = 2049529i64,
+        relation = Some(284540i64),
+        box      = None,
+        pit      = None,
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        lap      = 4657.0,
+        lap      = 4655.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/barcelona.geojson",
         atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/barcelona/raw/layers/gp.geojson"),
         survey = "The Circuit de Barcelona-Catalunya"
     }
 
+    /// Monza. The relation `284565` carries its 20 lap ways under no role at all
+    /// and names its pit under `pit_lane`. Its `start` and `finish` roles both name
+    /// one node — and that node is a `highway=traffic_signals` point: the pit-exit
+    /// light, 197 m after the line the track-atlas reading measures off imagery and
+    /// calls `start_finish`. OSM holds no node where that line stands, so no role a
+    /// survey could answer does, and no `timingLine` can be authored without the
+    /// byte fence refusing every survey of the relation; the drawn zero and start
+    /// line of this circuit therefore stand at the pit-exit light. A node joined to
+    /// the relation at the atlas marker's place would fix the drawing without
+    /// moving a metre of the survey.
+    ///
+    /// The distances the FIA issues round a lap here were never read at authoring:
+    /// no stretches are authored, the geometry writes no `sectors`, and the timing
+    /// report reads this circuit as publishing no lines of its own.
+    def monza(): Circuit = {
+        relation = Some(284565i64),
+        box      = None,
+        pit      = None,
+        word     = "monza",
+        timedFrom = "finish",
+        timingLine = None,
+        lap      = 5793.0,
+        sectors  = {published = None, eachSeason = None},
+        file   = "app/static/geometry/monza.geojson",
+        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/monza/raw/layers/gp.geojson"),
+        survey = "The Autodromo Nazionale di Monza"
+    }
+
+    /// Fuji. OpenStreetMap holds no relation for this circuit at all — the probe of its
+    /// ground answers nothing — so it is surveyed from a box: every `highway=raceway`
+    /// way the ground holds, of which one closed line is the lap, `Pit lane` is the pit
+    /// the `pit` field names — the other hanger is a 123 m unnamed connector — and the
+    /// drift course, short circuit, kart track and abandoned stubs are what no line
+    /// passes and a box survey therefore leaves out.
+    /// No node stands at the line — the lap's nearest is 207 m down it — so the authored
+    /// place is all the zero has to stand on; it is the track-atlas layer's
+    /// `start_finish` marker, the claim of the very layer whose outline was stitched
+    /// from these ways.
+    ///
+    /// The distances the series issue round a lap here were never read at authoring:
+    /// no stretches are authored, the geometry writes no `sectors`, and the timing
+    /// report reads this circuit as publishing no lines of its own.
+    def fuji(): Circuit = {
+        relation = None,
+        box      = Some({south = 35.3397, west = 138.8927, north = 35.3997, east = 138.9527}),
+        pit      = Some(148621414i64 :: Nil),
+        word     = "fuji",
+        timedFrom = "",
+        timingLine = Some({place = {lon = 138.927423, lat = 35.372405}, within = Some(25.0)}),
+        // The grand prix lap as the championship measures it: the 2023 6 Hours of Fuji
+        // ran 1,044.927 km over 229 laps, which divides to exactly 4,563 m. The surveyed
+        // centreline measures 4,553.6 m, 0.2 percent short of it — within what `laidOut`
+        // lets a box miss by. Track atlases print 4,549; the race's own arithmetic is
+        // the figure kept here, and it is this one the drawing is measured in.
+        lap      = 4563.0,
+        sectors  = {published = None, eachSeason = None},
+        file   = "app/static/geometry/fuji.geojson",
+        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/fuji/raw/layers/gp.geojson"),
+        survey = "The Fuji Speedway"
+    }
+
     /// The circuits there are, in the order a run over all of them walks them.
     pub def circuits(): List[Circuit] =
-        cota() :: leMans() :: barcelona() :: Nil
+        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: Nil
 
     /// A circuit by the word the app draws it by — the word its directory and its kept
     /// files are named by too.

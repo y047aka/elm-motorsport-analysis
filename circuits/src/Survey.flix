@@ -77,16 +77,23 @@ pub mod Survey {
             surveyed <- geometryOf(reading, circuit)
         ) yield {text = text, answer = reading, geometry = surveyed}
 
-    /// The lap, the pit lane and the frame, chained out of an answer already read.
+    /// The lap, the pit lane and the frame, chained out of an answer already read. Two
+    /// groundings arrive here: a relation's members, and a box's raceway ways.
     pub def geometryOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
+        match circuit#relation {
+            case Some(id) => fromRelation(reading, circuit, id)
+            case None     => fromBox(reading, circuit)
+        }
+
+    def fromRelation(reading: Answer, circuit: Circuit, relation: Int64): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
         forM(
-            relation <- relationOf(reading, circuit#relation);
-            start    <- lineOf(relation, circuit);
-            _        <- standsAtLine(relation#members, nodes, start, circuit);
-            lap      <- chained(relation, ways, nodes, start);
-            pit      <- pitChained(relation, ways, nodes);
+            rel        <- relationOf(reading, relation);
+            start      <- lineOf(rel, circuit);
+            _          <- standsAtLine(rel#members, nodes, start, circuit);
+            lap        <- chained(rel, ways, nodes, start);
+            pit        <- pitChained(rel, ways, nodes);
             laid     <- laidOut(reading, nodes, lap, pit, circuit)
         ) yield laid
 
@@ -102,7 +109,7 @@ pub mod Survey {
     def lineOf(relation: Element, circuit: Circuit): Result[String, Int64] =
         match List.find(member -> member#role == circuit#timedFrom, relation#members) {
             case Some(member) => Ok(member#ref)
-            case None         => Err("relation ${circuit#relation} tags no member with role '${circuit#timedFrom}'")
+            case None         => Err("relation ${relation#id} tags no member with role '${circuit#timedFrom}'")
         }
 
     /// The line the lap is measured from, checked against where the circuit says it stands.
@@ -188,7 +195,11 @@ pub mod Survey {
     /// what closes a lap out of ways each mapper drew in the direction they happened to walk.
     pub def chain(segments: List[Segment], nodes: Map[Int64, Place], start: Option[Int64]): Result[String, List[Int64]] =
         match openedAt(segments, start) {
-            case None => Err("the relation holds no way the lap can start from")
+            case None =>
+                if (List.isEmpty(segments))
+                    Err("nothing is chained: the line the survey picked holds no way at all")
+                else
+                    Err("no way opens the line: the chain walks from a way driven one way (oneway=yes), and needs one that runs into no other")
             case Some(first) =>
                 let walked = walked(segments, Set.insert(first#id, Set.empty()), first#nodes);
                 match leftOver(segments, walked#used, walked#ids, nodes) {
@@ -310,6 +321,262 @@ pub mod Survey {
             case one :: rest => if (matching(one)) Some(at) else indexWhere(matching, rest, at + 1)
         }
 
+    // ------------------------------------------------------------- surveying a box
+
+    /// The id a box survey gives the place it turns the lap at, which no OpenStreetMap
+    /// element carries: the answer's ids are positive.
+    def turnedId(): Int64 = -1i64
+
+    /// The ceiling of a least distance. `Float64.max` is Flix's two-way maximum, so the
+    /// seed of a scan is a distance no survey could measure.
+    def beyond(): Float64 = 1.0e12
+
+    /// The lap turned to start and end at the place the line stands on. Nothing in the
+    /// survey need stand there: the place is interpolated in degrees between the two
+    /// surveyed places it falls between.
+    type alias Turn = {
+        ids   = List[Int64],
+        place = Place
+    }
+
+    /// The lap, the pit lane and the frame chained out of a box's raceway ways. A box
+    /// names no members, so what a relation's roles would carry — which way is a lap,
+    /// which a pit, where the line stands — is read off the ground: the lap is the one
+    /// closed way that passes the authored line, the pit is the open ways hanging off
+    /// that loop, and what hangs at neither end is another course's ground and stays
+    /// out. The zero
+    /// turns at the projection of the authored place onto the lap rather than at a
+    /// node, because a circuit may cross its own line between two nodes.
+    def fromBox(reading: Answer, circuit: Circuit): Result[String, Geometry] =
+        let nodes = Overpass.Answer.nodePlaces(reading#elements);
+        let ways = reading#elements |> Overpass.Answer.byKind("way");
+        match circuit#timingLine {
+            case None =>
+                Err("'${circuit#word}' is surveyed from a box and authors no timing line: a box names nothing to measure from, so the line's place is all the zero has to stand on")
+            case Some(line) =>
+                forM(
+                    segments <- boxSegments(ways);
+                    lapWay   <- lapOn(segments, nodes, line);
+                    pitSegs  <- pitOff(circuit, segments, nodes, lapWay);
+                    walked   <- chain(lapWay :: Nil, nodes, Some(nearestTo(lapWay#nodes, nodes, line#place)));
+                    turned   <- turnAt(walked, nodes, line);
+                    pit      <- chain(pitSegs, nodes, None);
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit)
+                ) yield laid
+        }
+
+    /// Every raceway way of the answer is a segment: the question asked only raceways,
+    /// and the tags carry the chain's one permission, which is the way round a way may
+    /// be driven.
+    def boxSegments(ways: Map[Int64, Element]): Result[String, List[Segment]] =
+        Ok(
+            Map.toList(ways)
+                |> List.map(pair -> match pair {
+                    case (_, way) => way
+                })
+                |> List.filter(way -> Map.get("highway", way#tags) == Some("raceway"))
+                |> List.map(way -> {id = way#id, nodes = way#nodes, oneway = Map.get("oneway", way#tags) == Some("yes")})
+        )
+
+    /// The lap is the one closed way that passes the authored place within that place's
+    /// crosshair. None is a box that holds no lap; more than one is a line two laps
+    /// could ride, which no reading should pick between.
+    def lapOn(segments: List[Segment], nodes: Map[Int64, Place], line: Circuit.TimingLine): Result[String, Segment] =
+        let limit = line#within |> Option.getWithDefault(Circuit.nodeWithin());
+        match List.filter(segment -> loopsItself(segment) and distanceTo(segment, nodes, line#place) <= limit, segments) {
+            case one :: Nil => Ok(one)
+            case Nil        => Err("no closed raceway way in the box passes within ${Util.Format.whole(limit)} m of the published timing line")
+            case many       => Err("${List.length(many)} closed raceway ways in the box pass the published timing line; the line cannot say which lap is timed on it")
+        }
+
+    def loopsItself(segment: Segment): Bool =
+        match (List.head(segment#nodes), List.last(segment#nodes)) {
+            case (Some(first), Some(last)) => first == last
+            case _                         => false
+        }
+
+    /// How far a place stands from a way's line: the least distance to its stretches,
+    /// measured on the plane the way lies on. Distance to the nodes will not do, since
+    /// the line may stand between two of them.
+    def distanceTo(segment: Segment, nodes: Map[Int64, Place], place: Place): Float64 =
+        let points = segment#nodes |> List.filterMap(id -> Map.get(id, nodes));
+        match parallelOf(points) {
+            case None => beyond()
+            case Some(parallel) =>
+                let drawn = List.map(projectOn(parallel), points);
+                let there = projectOn(parallel, place);
+                List.foldLeft(
+                    (least, stretch) -> match stretch {
+                        case (a, b) => Float64.min(least, toStretch(there, a, b))
+                    },
+                    beyond(),
+                    List.zip(drawn, List.drop(1, drawn))
+                )
+        }
+
+    def toStretch(there: Point, a: Point, b: Point): Float64 =
+        let dx = b#x - a#x;
+        let dy = b#y - a#y;
+        let square = dx * dx + dy * dy;
+        let fall =
+            if (square == 0.0)
+                0.0
+            else
+                Float64.min(1.0, Float64.max(0.0, (((there#x - a#x) * dx + (there#y - a#y) * dy) / square)));
+        hypot(there#x - (a#x + fall * dx), there#y - (a#y + fall * dy))
+
+    /// The pit lane of a box is what hangs off the lap: the ways that are not it, with
+    /// both ends standing on it. A way with one end on the lap and the other in the
+    /// fields is half a pit lane and is named and refused, for that is the shape a
+    /// chain breaks on. Two lines may hang off one lap at a racing complex, and the
+    /// survey reads geometry and one-way tags rather than any way's `name`, so the
+    /// config may name the pit's ways outright, as a relation's
+    /// members do; unnamed, exactly one hanging line is the pit and more than one is
+    /// refused by name.
+    def pitOff(circuit: Circuit, segments: List[Segment], nodes: Map[Int64, Place], lap: Segment): Result[String, List[Segment]] =
+        let lapPlaces = lap#nodes |> List.filterMap(id -> Map.get(id, nodes));
+        // A closed ring touching the lap at one node hangs off it at *both* its ends and
+        // would chain as a pit lane closing on itself; a kart ring is ground, not a line.
+        let others = List.filter(segment -> segment#id != lap#id and not loopsItself(segment), segments);
+        let hanging = List.filter(segment -> hangsOn(segment, nodes, lapPlaces), others);
+        match List.filter(segment -> halfHangs(segment, nodes, lapPlaces), others) {
+            case Nil =>
+                match circuit#pit {
+                    case None =>
+                        if (List.length(hanging) <= 1)
+                            Ok(hanging)
+                        else
+                            Err("${List.length(hanging)} lines hang off the lap and no one says which is the pit lane: ${hanging |> List.map(s -> Int64.toString(s#id)) |> String.intercalate(", ")}; name the pit's ways in the config")
+                    case Some(names) =>
+                        List.foldLeft(
+                            (chosen, id) -> Result.flatMap(
+                                picked -> match List.find(s -> s#id == id, hanging) {
+                                    case None    => Err("the pit way ${id} the config names does not hang off the lap")
+                                    case Some(one) => Ok(List.append(picked, one :: Nil))
+                                },
+                                chosen
+                            ),
+                            Ok(Nil),
+                            names
+                        )
+                }
+            case broken => Err("ways that hang off the lap at one end and not the other: ${List.map(segment -> standApart(segment, nodes, lapPlaces), broken) |> String.intercalate("; ")}")
+        }
+
+    def hangsOn(segment: Segment, nodes: Map[Int64, Place], lapPlaces: List[Place]): Bool =
+        endsOn(segment, nodes, lapPlaces) == 2
+
+    def halfHangs(segment: Segment, nodes: Map[Int64, Place], lapPlaces: List[Place]): Bool =
+        endsOn(segment, nodes, lapPlaces) == 1
+
+    /// How many of a way's ends stand on the lap.
+    def endsOn(segment: Segment, nodes: Map[Int64, Place], lapPlaces: List[Place]): Int32 =
+        match (List.head(segment#nodes), List.last(segment#nodes)) {
+            case (Some(first), Some(last)) =>
+                (if (onTheLap(Map.get(first, nodes), lapPlaces)) 1 else 0) + (if (onTheLap(Map.get(last, nodes), lapPlaces)) 1 else 0)
+            case _ => 0
+        }
+
+    def onTheLap(at: Option[Place], lapPlaces: List[Place]): Bool =
+        match at {
+            case None        => false
+            case Some(place) => List.exists(other -> apart(place, other) <= Circuit.nodeWithin(), lapPlaces)
+        }
+
+    /// How a stray way is named: its length, and how far its nearest end stands from
+    /// the lap.
+    def standApart(segment: Segment, nodes: Map[Int64, Place], lapPlaces: List[Place]): String =
+        let points = segment#nodes |> List.filterMap(id -> Map.get(id, nodes));
+        let gap = match (List.head(points), List.last(points)) {
+            case (Some(first), Some(last)) => Float64.min(nearestTo_away(first, lapPlaces), nearestTo_away(last, lapPlaces))
+            case _                         => 0.0
+        };
+        "${segment#id} is ${polylineMetres(points) |> Float64.round |> Util.Format.whole} m, nearest end ${Util.Format.fixed(1, gap)} m from the lap"
+
+    def nearestTo_away(at: Place, places: List[Place]): Float64 =
+        List.foldLeft((least, other) -> Float64.min(least, apart(at, other)), beyond(), places)
+
+    /// The surveyed place of the lap nearest the line: the node the chain opens at. Any
+    /// node would close the lap; this choice only says where the walk begins, and the
+    /// nearest begins it nearest the line the lap will be spun to stand at.
+    def nearestTo(ids: List[Int64], nodes: Map[Int64, Place], place: Place): Int64 =
+        match ids {
+            case Nil => turnedId()
+            case first :: more =>
+                List.foldLeft(
+                    (best, id) ->
+                        match (Map.get(best, nodes), Map.get(id, nodes)) {
+                            case (Some(at), Some(other)) => if (apart(place, other) < apart(place, at)) id else best
+                            case _                       => best
+                        },
+                    first,
+                    more
+                )
+        }
+
+    /// The closed lap turned to start and end at the line's place: the stretch the place
+    /// falls on is found on the lap's own plane, the fall is required to stand within
+    /// the line's crosshair, and the lap is spun to open there. The place itself is the
+    /// two surveyed places either side interpolated at the fall's fraction — degrees
+    /// the survey did not hold are never invented, only asked between.
+    def turnAt(ids: List[Int64], nodes: Map[Int64, Place], line: Circuit.TimingLine): Result[String, Turn] =
+        let limit = line#within |> Option.getWithDefault(Circuit.nodeWithin());
+        let closed = withoutLast(ids);
+        let places = List.filterMap(id -> Map.get(id, nodes), closed);
+        if (List.length(places) != List.length(closed))
+            Err("the chain ran through a node the answer holds no place for")
+        else
+            match parallelOf(places) {
+                case None => Err("the lap holds no place to lay a parallel on")
+                case Some(parallel) =>
+                    let drawn = List.map(projectOn(parallel), places);
+                    let there = projectOn(parallel, line#place);
+                    let heads = List.append(drawn, List.take(1, drawn));
+                    let tails = List.append(List.drop(1, drawn), List.take(1, drawn));
+                    let froms = List.append(places, List.take(1, places));
+                    let tos = List.append(List.drop(1, places), List.take(1, places));
+                    match scanFor(there, heads, tails, froms, tos, 0, (beyond(), 0, 0.0, line#place)) {
+                        case (distance, at, _, dropped) =>
+                            if (distance > limit)
+                                Err("the lap passes ${Util.Format.fixed(1, distance)} m from the published timing line, which is not within ${Util.Format.whole(limit)} m")
+                            else
+                                Ok({
+                                    ids = List.append(turnedId() :: List.append(List.drop(at + 1, closed), List.take(at + 1, closed)), turnedId() :: Nil),
+                                    place = dropped
+                                })
+                    }
+            }
+
+    /// The stretch of the lap the place falls nearest, with how far and where it falls:
+    /// heads and tails walk the closed line once round, and froms and tos name the
+    /// degrees each end was surveyed at.
+    def scanFor(
+        there: Point,
+        heads: List[Point],
+        tails: List[Point],
+        froms: List[Place],
+        tos: List[Place],
+        at: Int32,
+        best: (Float64, Int32, Float64, Place)
+    ): (Float64, Int32, Float64, Place) =
+        match (heads, tails, froms, tos) {
+            case (a :: hs, b :: ts, f :: fs, t :: os) =>
+                let dx = b#x - a#x;
+                let dy = b#y - a#y;
+                let square = dx * dx + dy * dy;
+                let fall =
+                    if (square == 0.0)
+                        0.0
+                    else
+                        Float64.min(1.0, Float64.max(0.0, (((there#x - a#x) * dx + (there#y - a#y) * dy) / square)));
+                let distance = hypot(there#x - (a#x + fall * dx), there#y - (a#y + fall * dy));
+                let dropped = {lat = f#lat + fall * (t#lat - f#lat), lon = f#lon + fall * (t#lon - f#lon)};
+                let was = match best { case (w, _, _, _) => w };
+                let next = if (distance < was) (distance, at, fall, dropped) else best;
+                scanFor(there, hs, ts, fs, os, at + 1, next)
+            case _ => best
+        }
+
     // --------------------------------------------------- metres, direction, thinning
 
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
@@ -326,22 +593,31 @@ pub mod Survey {
                 let lapPoints = lapNodes |> List.map(projectOn(parallel));
                 let pitPoints = pitNodes |> List.map(projectOn(parallel));
                 let surveyed = cumulative(lapPoints);
-                let stretch = circuit#lap / (surveyed |> List.last |> Option.getWithDefault(0.0));
-                let metres = List.map(each -> each * stretch, surveyed);
-                // The published metre each surveyed place stands at, in one list: the degrees
-                // and the metre are one pair from here on, and never looked up apart.
-                let lapMetres = Geodesy.together(lapNodes, metres);
-                let half = List.length(lapPoints) / 2;
-                let kept = thinned(lapPoints, half);
-                let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
-                Ok({
-                    centreline = List.map(at -> metred(at, lapMetres), kept),
-                    pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
-                    frame = {origin = northWest(both), parallel = parallel},
-                    direction = turnDirection(lapPoints),
-                    surveyedAt = reading#surveyedAt,
-                    surveyedLength = Some(surveyed |> List.last |> Option.getWithDefault(0.0))
-                })
+                let measured = surveyed |> List.last |> Option.getWithDefault(0.0);
+                // Only a box picks its lap by standing near the line alone, so only a
+                // box is held to what its pick measures; a relation's roles picked its
+                // lap before anything was measured.
+                if (circuit#relation == None and Float64.abs(measured - circuit#lap) > circuit#lap * Circuit.lengthTolerance())
+                    Err(
+                        "the lap the line stands on measures ${Util.Format.whole(measured)} m, which is not within ${Util.Format.whole(Circuit.lengthTolerance() * 100.0)} percent of the ${Util.Format.whole(circuit#lap)} m the circuit publishes"
+                    )
+                else
+                    let stretch = circuit#lap / measured;
+                    let metres = List.map(each -> each * stretch, surveyed);
+                    // The published metre each surveyed place stands at, in one list: the degrees
+                    // and the metre are one pair from here on, and never looked up apart.
+                    let lapMetres = Geodesy.together(lapNodes, metres);
+                    let half = List.length(lapPoints) / 2;
+                    let kept = thinned(lapPoints, half);
+                    let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
+                    Ok({
+                        centreline = List.map(at -> metred(at, lapMetres), kept),
+                        pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
+                        frame = {origin = northWest(both), parallel = parallel},
+                        direction = turnDirection(lapPoints),
+                        surveyedAt = reading#surveyedAt,
+                        surveyedLength = Some(measured)
+                    })
         }
     }
 
@@ -576,7 +852,7 @@ pub mod Survey {
     /// answer and no served geometry has simply never been surveyed.
     def answerText(asked: Request): Result[CliError, Option[String]] \ { IO, Clock } =
         if (asked#fetch)
-            Overpass.askRelation(asked#circuit#relation)
+            Overpass.askSurvey(asked#circuit)
                 |> Result.mapErr(problem -> CliError.Reading("${asked#circuit#word}: ${problem}"))
                 |> Result.map(spelled -> Some(spelled))
         else

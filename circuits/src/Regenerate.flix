@@ -244,7 +244,7 @@ pub mod Regenerate {
         match mode {
             case Mode.Freeze =>
                 forM(
-                    answer  <- Overpass.askRelation(circuit#relation) |> Result.mapErr(problem -> "${circuit#word}: ${problem}");
+                    answer  <- Overpass.askSurvey(circuit) |> Result.mapErr(problem -> "${circuit#word}: ${problem}");
                     verdict <- surveyed(circuit, answer, mode)
                 ) yield verdict
             case _ =>
