@@ -125,8 +125,9 @@ This circuit publishes no distances for them -- the served geometry carries no
 and a car between two of them is placed by the share of the time between the
 lines it has run: the reading the ring gives every undrawn round, on surveyed
 degrees. The shape is surveyed; the lines are the round's, and would move with
-a season that divided its laps differently. The reading, and which circuits are
-drawn on it, is the circuits section of `AGENTS.md`'s.
+a season that divided its laps differently.
+How the drawing places a car between two of these lines is `AGENTS.md`'s tracker section's;
+which circuits are drawn this way is `circuits/README.md`'s timing lines section.
 -}
 timingLines : Shape -> BySector Share -> TimingLines
 timingLines lap shares =

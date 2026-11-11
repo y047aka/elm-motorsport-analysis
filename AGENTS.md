@@ -24,9 +24,8 @@ SQLite → HTTP or a JSON export → Elm visualization.
   answer to its survey, what a circuit's config is authored from, and where
   the timing lines' distances come from — and is the thing to read before
   changing anything under `/circuits`. It holds one of the repository's two Flix
-  projects, the geometry pipeline at the `circuits/` root — the other is `/backend`: the pipeline
-  resolves nothing of that one's and reads nothing of it either; only the timing report does,
-  through the links `circuits/README.md` lists.
+  projects, the geometry pipeline at the `circuits/` root — the other is `/backend`, of which
+  the pipeline reads nothing but the files `circuits/README.md` lists.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -40,7 +39,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
-| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript (the circuit tools are Flix now and compile under `.#geometry-test`) |
+| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript (the circuit tools compile under `.#geometry-test`) |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
 | `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
@@ -48,9 +47,9 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey` re-surveys a kept answer and answers whether it lays the served bytes (`--write` lays them, `--fetch` asks OpenStreetMap now); `atlas` measures another dataset's line and keeps it beside the survey; `diff` lays two kept geometries in metres, optionally as an SVG overlay; `regenerate` is the fence over every kept answer (`--write` re-lays, `--freeze` asks now); `probe` asks which relations hold a place on earth, each candidate's ways measured; `timing-lines` prints whether a circuit's timing lines held where they stood a season earlier. Paths resolve from where the command is run; what each word keeps, and what each fence answers, is `circuits/README.md`'s |
+| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey`, `atlas`, `diff`, `regenerate`, `probe`, `timing-lines`. Paths resolve from where the command is run; what each word keeps, what each fence answers, and which flags each takes is `circuits/README.md`'s |
 | `nix run .#geometry-test` | The project's `flix test` — readings off fixtures, no network, no database, no files written — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
-| `nix run .#geometry-timing-lines` | Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the geometry project's `timing-lines` word, computing in no database; `<season>/<id> [--against <season>] [--tolerance <metres>]`) |
+| `nix run .#geometry-timing-lines` | The `timing-lines` word on its own, computing in no database: `<season>/<id> [--against <season>] [--tolerance <metres>]` |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/backend`, both the CLI and the server |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
@@ -67,14 +66,14 @@ prefixes, and which one says what is being run rather than what is being built:
 `.#cli-run` converts every round `Motorsport.Calendar` lists, reports any CSV no round names, and fails any round whose CSV is missing — the calendar is the gate a round joins before anything runs. What each stage reads and writes, and the database all of them compute in, are `backend/README.md`'s; the whole trip from a CSV to a drawn round is `/skill:add-round`.
 
 **A checkout holds the CSV, the calendar and two rounds' files.** 2025's Le Mans and 2025's Circuit of the Americas are kept, so the VRT and a dev server work with nothing run first — COTA is kept on the strength of one tracker shot, at 1.8MB against Le Mans's 25MB of laps.
-The other fourteen are tens of megabytes of what the rows already say, so they are ignored rather than committed, and `.#tauri-build` is the one command that writes them — a bundle carries the files it opens, and nothing else needs all of them at once.
+Every other round is tens of megabytes of what the rows already say, so its files are ignored rather than committed, and `.#tauri-build` is the one command that writes them all — a bundle carries the files it opens, and nothing else needs all of them at once.
 A round left unwritten is quiet: the dev server answers `/api` for it with a 502, and a Tauri bundle hands back its own `index.html`. A kept file is an export like any other, so a summary that grows a key the drawing is chosen by has to be written out again over the kept rounds: `track.circuit` missing reads as a circuit with no drawing.
 
 **The timeline is rows too**: the load counts it off the laps into `timeline_events`, so a lap corrected in SQL reaches the summary and the laps on the next export and the timeline not at all — and not on the next load either, which rebuilds every table off the CSV and takes the correction with it.
 Correct `timeline_events` beside `laps`.
 
 `/api` is how the app reads a round, and the export is the same archive written out to files.
-The calendar is written either way and lists every round there is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL the app asks for before it knows anything — is reached only by a bundle with nothing listening on `/api`. Such a bundle opens whichever rounds were written before it was built, which is why `.#tauri-build` converts every one of them first — sixteen rounds' files, which Tauri compresses into the `.app`. A round the run did not write fails there rather than 404ing — Tauri's asset resolver answers a path it does not know with `index.html`, so it decodes HTML.
+The calendar is written either way and lists every round there is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL the app asks for before it knows anything — is reached only by a bundle with nothing listening on `/api`. Such a bundle opens whichever rounds were written before it was built, which is why `.#tauri-build` converts every one of them first. A round the run did not write fails there rather than 404ing — Tauri's asset resolver answers a path it does not know with `index.html`, so it decodes HTML.
 A bundle behind a server never reaches that copy: the calendar it gets names `/api/wec` and every round opens.
 
 `.#serve-api` answers `/api` out of the rows a run loaded; the endpoints and the jar the server runs as are `backend/README.md`'s. The Vite dev server forwards `/api` to port 8080, and answers it from `static/` when nothing is listening.
@@ -92,80 +91,34 @@ diagnosing a Flix build failure by reading code.
 
 ## Architecture
 
-**`/app/src/`** — hand-written multi-page SPA on `Browser.application`
-(framework-less; no elm-pages). `index.ts` boots `Elm.Main.init`; data is
-fetched at runtime via `Http`.
+**`/app/src/`** — hand-written multi-page SPA on `Browser.application` (framework-less; no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via `Http`.
 
-- `Main.elm` — top-level Model/Msg, URL handling, page dispatch
-- `Route.elm` — `Url.Parser` routes: `/`, `/debug`, `/wec/:season/:event`
+- `Main.elm` — top-level Model/Msg, URL handling, page dispatch; `Route.elm` the `Url.Parser` routes `/`, `/debug`, `/wec/:season/:event`
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
-- `Page/` — one module per page, plain TEA
-- `Data/` (feed decoding), `UI/` (Notice and `Shadcn/` for the wrappers),
-  `Drag`/`Drag.Handle` for carrying a thing by a pointer (the state machine
-  and the grip that reports it), and `elements/` for the one custom element
-  that is not shadcn's: `<drag-handle>`, which does the one thing Elm cannot,
-  `setPointerCapture`
-- `View/` — what a page is laid out of: the car detail panel and its sections,
-  the live standings, a class's own column with its pit lane list, and the
-  badge and class mark those share
+- `Page/` one module per page, plain TEA · `View/` what a page is laid out of · `Data/` the shape of the feed · `UI/` `Notice` and the `Shadcn/` wrappers
+- `Drag`/`Drag.Handle` — carrying a thing by a pointer: the state machine and the grip that reports it. `elements/` holds the one custom element that is not shadcn's, `<drag-handle>`, which does the one thing Elm cannot, `setPointerCapture`
 
-`Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
-`/api/wec/index.json`. It is the app's only source for which rounds exist, what
-they are called and where their files are — nothing app-side builds those paths,
-and a round it does not list cannot be opened. That one URL is the whole of
-what the app knows about where its data comes from: the calendar names each
-round's summary and laps, and nothing else does.
+A table the cars are decoded against is read where the cars decode rather than where they are drawn — `Data.Wec.eventDecoder` hands `Car.Metadata` the resolved colour, badge and photograph — so a widget handed a car has everything it draws and asks nothing a second time.
 
-`Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json` the same way,
-also once, and a round waits on it as it waits on the calendar. That file is
-written by hand and no compiler reads it, so a mistake in it shows as cars drawn
-by their numbers rather than as a build that fails. Unlike an unlisted round, an
-unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
-takes a colour from its number. What the feed spells is
-`SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
-them the file has no row for is one query rather than a reading of the cars.
+`Data/Wec/Calendar.elm` decodes `/api/wec/index.json` once and is the app's only source for which rounds exist, what they are called and where their files are — nothing app-side builds those paths, and a round it does not list cannot be opened.
 
-`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, waited on as the manufacturer table is, which names each season's photographs and the directory under `static/images/wec` they sit in.
-`.#car-images --season <year>` writes one season of it; `app/scripts/fetch-car-images.mjs` says which two sources it reads and why.
+`Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json`, which is written by hand and read by no compiler, so a mistake in it shows as cars drawn by their numbers rather than as a build that fails. An unnamed manufacturer stops nothing, unlike an unlisted round: the car keeps the feed's name and takes a colour from its number, so which of them the file has no row for is one `SELECT DISTINCT manufacturer FROM entries` rather than a reading of the cars.
+
+`Data/Wec/CarImage.elm` decodes `/static/car-images.json`, which names each season's photographs and the directory under `static/images/wec` they sit in.
+`.#car-images --season <year>` writes one season of it; which two sources it reads and why, how the photographs are encoded, and the digest that keeps one already here from being asked for again are that script's own header to say.
 A season the grid page is not showing is reached through its season filter, which takes the ids `/evo/1/seasons` publishes and answers for seasons the page itself no longer offers: 2024 is reached that way and nowhere else, `/en/car/2024` being a redirect to the current season.
-How the photographs are encoded, and the digest that keeps one already here from being asked for again, are that script's own header to say.
-
-Both tables are read where the cars decode rather than where they are drawn:
-`Data.Wec.eventDecoder` is given the manufacturers and a lookup closed over the
-round, and `Car.Metadata` comes out of it carrying the colour, the badge and the
-photograph. Nothing downstream asks a second time, so a widget handed a car has
-everything it draws.
 
 ### The car column strip
 
-`Page/Wec/Columns.elm` is the strip's own model, messages and update: the
-order, the one column a pointer carries, and how far
-down each car's panel was scrolled. The page holds one `Columns.Model`,
-forwards through `ColumnsMsg`, and hands the field in per call.
+`Page/Wec/Columns.elm` is the strip's own model, messages and update — the order, the one column a pointer carries, and how far down each car's panel was scrolled — and the page holds one `Columns.Model`, forwards through `ColumnsMsg`, and hands the field in per call.
+A column is keyed by `StripKey`: a class's, a car's, the tracker's or the events table's. A car's column joins at the back when the reader picks one, and from the first open, close or move the order is the reader's.
 
-A column is keyed by `StripKey` -- a class's, a car's, the tracker's or the
-events table's. The strip opens with one column per class the field has cars
-out in, in the order a classification lists them and not the order their
-leaders run in, the tracker's column and the events table behind them; a
-car's column joins at the back when the reader picks one, and from the first
-open, close or move the order is the reader's.
+The strip opens with one column per class the field has cars out in, in the order a classification lists them and not the order their leaders run in.
+A class's column (`View/ClassColumn.elm`) is the standings read down one class instead of the field: class place first, the interval to the class-mate ahead rather than to whoever is ahead, and the class's own fastest lap as the reference rather than the race's.
+A class's column is drawn in classification order, so it comes in blocks with a rule between them — nothing is measured between a car that stopped and one that did not.
 
-A class's column (`View/ClassColumn.elm`) is how a race is followed while it is
-still sorting itself out, and is the standings read down one class instead of the
-field: every car the class has, class place first, the interval to the class-mate
-ahead rather than to whoever is ahead, and the class's own fastest lap as the
-reference rather than the race's. A row picks that car, whose panel opens beside
-the class's column; a row whose car is up already is marked and scrolls the
-strip to that column rather than opening a second. Where a class's column has
-been closed, its name in the standings is the press that calls it back. The
-class is drawn in classification order, so a column comes in blocks with a rule
-between them -- nothing is measured between a car that stopped and one that
-did not.
-
-Every column is drawn `Columns.width` wide, and everything that measures the
-strip -- where a column stands, how far a carry moves one, how far a press
-scrolls -- is done in that one width and `pitch`.
+Every column is drawn `Columns.width` wide, and everything that measures the strip — where a column stands, how far a carry moves one, how far a press scrolls — is done in that one width and `pitch`.
 
 ### The shadcn components
 
@@ -176,210 +129,51 @@ The Elm wrappers hold no Tailwind classes; the class strings are the vendored fi
 `shadcn` carries what touching them obliges: the CLI's `add` and `--diff` workflow and the drift discipline, the four things the Elm↔element property boundary will not carry, which elements mount React and which only lend class strings, and what a mount costs measured.
 Reach for it before changing anything under `app/src/shadcn/` or `app/src/UI/Shadcn/`.
 
-**`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
-`Race/` for the loaded race, its indices, and readings of it at a moment
-(`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those
-(`Rivals`, `Pace`), `Chart/` for the charts drawn off them (`GapChart`,
-`LapTimeDistribution`), `Leaderboard` for how a timing screen draws a single
-reading (a rated time, a moved arrow, a lap with its sector strip), and
-`Lap/SegmentStrip` for a lap drawn the way this sport prints it.
+### The library
 
-What is drawn here is a reading of the race in a form the sport is read in: a
-lap as the segments the circuit times it in, the charts. The field as a
-timing tower is the app's `View/LiveStandings.elm`, arranged out of the
-`Leaderboard`'s readings. How a page is laid out of those -- which panels, in
-which boxes, what the reader has picked and what they have open -- is
-`/app/src/View/`'s. Both sides are written in the Tailwind `app/style.css`
-defines, which is why that file scans `/package` too.
+**`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`), `Race/` for the loaded race, its indices, and readings of it at a moment (`Snapshot`, `LapHistory`), `Analysis/` for what a view asks of one of those (`Rivals`, `Pace`), `Chart/` for the charts drawn off them, `Leaderboard` for how a timing screen draws a single reading, and `Lap/SegmentStrip` for a lap drawn the way this sport prints it. What is drawn here is a reading of the race in a form the sport is read in; the field as a timing tower is the app's `View/LiveStandings.elm`, and how a page is laid out of those is `/app/src/View/`'s. Both sides are written in the Tailwind `app/style.css` defines, which is why that file scans `/package` too.
 
-**`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport
-has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings
-are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`,
-the sortable, filterable, paginated table the app's Events column configures
-directly, with the `Table` it draws its rows with.
+**`/package/src/Internal/`** sits outside `Motorsport/` and holds what the sport has no word for: `Statistics` and `ChangePoints`, the arithmetic the readings are built on; `Jsonl`, which decodes a file a line at a time; and `DataView`, the sortable, filterable, paginated table the app's Events column configures directly.
 
-Directly under `Motorsport/` are the primitives the rest is written in.
-`Analysis/` is what a view asks of a snapshot rather than what a race is made
-of: a module belongs there when it holds no state of its own and it draws
-nothing -- which is what keeps it out of `Race/`, where nothing owns it, and
-out of `Chart/`. Drawing is the test that does the work. A
-colour, an emphasis or an axis domain in what a module hands back puts it with
-the chart whatever else it computes, which is why `GapChart` keeps `carLine`
-and `LapTimeDistribution` keeps `seriesOf` while the arithmetic under both of them
-sits here. How many views read a module is not a test: the shelf is organised
-by the reading and not by the reader, so `Rivals` is asked by every view that
-draws a car among its rivals, and a chart's own sample by that chart alone.
+A module belongs in `Analysis/` when it holds no state of its own and it draws nothing — which is what keeps it out of `Race/`, where nothing owns it, and out of `Chart/`. Drawing is the test that does the work: a colour, an emphasis or an axis domain in what a module hands back puts it with the chart whatever else it computes. How many views read a module is not a test; the shelf is organised by the reading and not by the reader.
+A module serving both sides sits directly under `Motorsport/` rather than in a subdirectory, so neither side owns it: `BestTimes` is held by `Race` and read back by `Race.Snapshot`, and `Lap.Performance` rates a lap for either.
 
-The shelf holds two kinds, and which kind a module is says what its arguments
-look like.
+The shelf holds two kinds, and which kind a module is says what its arguments look like: one takes the reader's choice — how wide a ring, how long a stretch — and answers in the snapshot's own `CarAt`s and numbers rather than a record per car (`Rivals`, `LapWindow`); the other derives from a `Race.Snapshot` and the primitives and is given an answer of the first kind to say how much of it to read (`ClassPositions`, `RelativeGap`, `Pace`, `Stint`). `CarLog` is read off the field's events instead: `Line`s of its own, since what happened to a car is a telling and not a value the race holds.
 
-**What to read.** `Rivals` answers who a car is racing and `LapWindow` which
-laps a stretch of the race covers. Each takes the reader's choice -- how wide a
-ring, how long a stretch -- and answers in the snapshot's own `CarAt`s and
-numbers rather than a record per car. `Rivals.fight` is the ring every view
-comparing cars draws, named here so that the charts and the legend beside them
-cannot disagree about how wide it is; the wider rings stay the reader's.
+A reading of the laps is handed them whole, with a `LapRange` beside them, and does its own cutting. Cut laps and whole ones are both `List Lap` at a call site, so a module taking one and a module taking the other are indistinguishable, and the wrong pairing compiles.
 
-**What it comes to.** `ClassPositions`, `RelativeGap`, `Pace` and `Stint`
-derive from a `Race.Snapshot` and the primitives, and are given an answer of
-the first kind to say how much of it to read. `CarLog` is read off the field's
-events instead: `Line`s of its own, since what happened to a car is a telling and
-not a value the race holds.
+`ClassPositions` is given the class and the snapshot rather than reading the population off `Rivals`, which holds the whole class already: `around` is only handed the whole field by convention, and a caller handing it less would leave the position chart drawn against a class with cars missing, with nothing to say so.
 
-A reading of the laps is handed them whole, with a `LapRange` beside them, and
-does its own cutting. Cut laps and whole ones are both `List Lap` at a call
-site, so a module taking one and a module taking the other are
-indistinguishable, and the wrong pairing compiles. Two cuts sit side by side in
-the lap-time distribution -- `Pace` cuts each car's laps to the range that car has
-run, `Chart.LapTimeDistribution` fences the laps of every car that shares the axis
--- and only the two arguments say which is which.
+`Wec/` holds the WEC-specific knowledge: the class grid and the eras it has passed through (`Class`, `Era`), Le Mans's mini-sectors (`Circuit/LeMans`), and the shape of the circuits the tracker draws (`Circuit/Layout`, and one directory per circuit). Decoding the timing feed stays app-side in `Data.Wec` / `Data.Wec.Laps` — the shape of one publisher's files, not of the domain — and `Data.Wec.Manufacturer` and `Data.Wec.CarImage` for the same reason, since each decodes a table of one series' entry list and this application's assets rather than holding it.
 
-The three charts the car detail panel tabs between take one shape --
-`LapRange -> Snapshot -> Rivals` -- because they are interchangeable to
-`ChartTabs`, which holds them side by side. The two wanting only the laps read
-`Snapshot.lapHistory` themselves. `ClassPositions` is still given the class and
-the snapshot rather than reading the population off `Rivals`, which holds the
-whole class already: `around` is only handed the whole field by convention, and
-a caller handing it less would leave the position chart drawn against a class
-with cars missing, with nothing to say so.
+### The tracker, its geometry, and its lines
 
-`Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
-passed through (`Class`, `Era`), Le Mans's mini-sectors (`Circuit/LeMans`), and
-the shape of the circuits the tracker draws (`Circuit/Layout`, and one directory
-per circuit). Decoding the timing feed stays app-side in `Data.Wec` /
-`Data.Wec.Laps` — the shape of one publisher's files, not of the domain.
-`Data.Wec.Manufacturer` and `Data.Wec.CarImage` are app-side for the same
-reason: which manufacturers there are, how each is coloured and badged, and
-which photograph a car carries at a round, is one series' entry list and this
-application's assets. Neither holds any of it itself — each decodes the table
-that does, and what reaches `Car.Metadata` is the resolved colour, badge and
-photograph rather than the tables.
+A round is drawn either on surveyed degrees or as a ring. `Shared` picks the layout by the circuit the summary names (`track.circuit`, cross-checked against the calendar) rather than by the round id — which is still asked for, because which lines Le Mans is drawn with turns on the season. A circuit with no directory of its own, and a round exported before the summary named its circuit, is drawn as the ring.
+The degrees are no Elm module: they are a GeoJSON file at `static/geometry/<circuit>.geojson` written by the pipeline, and `Circuit/Geometry.elm` says what those bytes record and what its decoder refuses, which is what a stale or absent geometry fails as.
 
-Five circuits are drawn to their own shape rather than as a ring: Le Mans, the
-Circuit of the Americas, the Circuit de Barcelona-Catalunya, Monza, and Fuji. `Circuit/Layout` is what
-`Tracker.onCircuit` is handed — the lap, the pit lane, the lines the lap is
-timed at, and the metres the tracker draws at — and it is where the surveyed
-degrees are projected into drawing metres, once, whichever circuit they came
-from. Each circuit's `Layout` holds its distances and its lengths; the degrees
-themselves are no Elm module: each circuit's geometry is a GeoJSON file at
-`static/geometry/<circuit>.geojson`, written out of OpenStreetMap's map
-data (ODbL, © OpenStreetMap contributors) into a file that records its own
-survey time, and `Motorsport.Wec.Circuit.Geometry` reads it back as a round
-loads. Which circuit a round was
-run on comes in with the summary (`Motorsport.Events.circuit`, keyed by round id
-and tested against the calendar), and `Shared` picks the
-layout by that word rather than by the round id — which is still asked for,
-because which lines Le Mans is drawn with turns on the season. A circuit with no
-directory of its own, and a round exported before the summary named its circuit,
-is drawn as the ring.
+The lines a drawing times to come from the circuit's own published map of them, and where those distances come from is `circuits/README.md`'s to say; what is decided here is how a car is placed between them. A line a map gives no distance for is placed by the time between the lines either side of it (`Tracker.Config.lapScale`), and a circuit whose feed never measures the lap finer than three sectors has no finer lines to place a car by either, so it is drawn less finely too: between two of its lines a COTA car is placed by the time it has run between them, where a Le Mans car is placed by a mini-sector.
 
-The lines a drawing times to come from the circuit’s own published map of
-them — where those distances come from and how the times are read against
-them is `circuits/README.md`’s to say; what is decided here is how a car is
-placed between them.
-A line a map gives no distance for is
-placed by the time between the lines either side of it
-(`Tracker.Config.lapScale`), and a circuit whose feed never measures the lap finer
-than three sectors — every circuit here but Le Mans's — has no finer lines to place
-a car by either. That is a different answer from fifteen lines most of which the
-map leaves no distance for, so it is a sum rather than a record of nothings, and it
-is drawn less finely too: between two of its lines a COTA car is placed by the time
-it has run between them, where a Le Mans car is placed by a mini-sector.
+That finer split is named `LeMansMiniSectors`, holds Le Mans's fifteen by name, and is load-bearing in three places at once: the sum, `Data.Wec`'s `byMiniSectorDecoder`, which requires all fifteen keys and so reads a differently-split lap as `NoMiniSectors`, and `Tracker.Config.lapScale`, which matches the pair of constructors. The first circuit after Le Mans whose feed carries mini-sector shares has to generalize all three together — a named list at both ends, joined by name — and re-make the decoder's `optional` decision rather than copy it, because what catches a missing line today is the record's totality and a list has nothing else.
+`ConfigTest` names the two combinations the `lapScale` catch-all holds — a round timed finer than its circuit places lines, and lines the circuit places that no round was timed across — which is what stops a future edit "simplifying" that branch into reading one side alone.
 
-A circuit whose map has never been read at authoring — Barcelona's, Monza's and Fuji's — has no line distances to place anything by: its layout puts each line where the
-round's own sector share ends, and places every car between two of them by the
-time it has run between them, which is the reading the ring gives an undrawn
-round, on surveyed degrees.
+`Circuit/Layout`'s `Lengths` holds one set of drawn metres per circuit per detail, and `Compact` carries no names because it draws none. Le Mans's set is the reference the tracker was measured at, and a test freezes it: those are the numbers every Le Mans snapshot was rendered with; how another circuit's set is measured against it is each circuit's own `Layout` header and its `LayoutTest`. Tuning a length of Le Mans's set moves every baseline it has, and any length moved anywhere goes through `update-snapshots-ci`.
 
-That sum is named `LeMansMiniSectors`, holds Le Mans's fifteen by name, and is
-load-bearing in three places at once: the sum, `Data.Wec`'s `byMiniSectorDecoder`,
-which requires all fifteen keys and so reads a differently-split lap as
-`NoMiniSectors`, and `Tracker.Config.lapScale`, which matches the pair of
-constructors. The first circuit after Le Mans whose feed carries mini-sector shares
-has to generalize all three together — a named list at both ends, joined by name —
-and re-make the decoder's `optional` decision rather than copy it, because what
-catches a missing line today is the record's totality and a list has nothing else.
-`ConfigTest` names the two combinations the `lapScale` catch-all holds — a round
-timed finer than its circuit places lines, and lines the circuit places that no
-round was timed across — which is what stops a future edit "simplifying" that branch
-into reading one side alone.
+The names are sorted; the dependencies are not: the core imports out of `Wec/` in four places, and reversing that arrow is its own change.
 
-The tracker's cars, labels and lines are metres on the ground, and the svg divides
-every one of them by whichever axis the circuit's box binds in the card it stands
-in — so a set is measured against a rendered drawing, and one circuit's set is not
-another's multiplied by a scale. `Circuit/Layout`'s `Lengths` holds one set per
-circuit per detail, and `Compact` carries no names because it draws none. Le Mans's
-set is the reference the tracker was measured at, and a test freezes it: those are
-the numbers every Le Mans snapshot was rendered with. How another circuit's set is
-measured against it — and which one length is left off the ratio — is each
-circuit's own `Layout` header and its `LayoutTest`. Tuning a length of Le Mans's set moves every
-baseline it has, and any length moved anywhere goes through `update-snapshots-ci`.
+There is no view-model layer above `Race.Snapshot`: it is the whole per-frame derivation — sampling the cars at the clock, ordering the field, measuring the gaps, rating the times against the records as they stood — and views read a `CarAt` straight off it. Colours and geometry are the view's own, so a widget that wants a class's colour calls `Class.toColor` itself. `Snapshot.at` runs once per frame and every view shares that result, which is the only reason the type exists; a record per car on top of it cost under 2% of the frame (`benchmark/PerFrameBenchmark.elm`), so nothing sits above it.
 
-The names are sorted; the dependencies are not. The core imports out of `Wec/`
-in four places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
-`Circuit/LeMans`'s type, `Leaderboard` carries `*_Wec` and `*_LeMans24h`
-views beside the generic ones, and `Chart/Tracker` draws `Wec/Circuit/Layout`,
-whose finer lines are Le Mans's. Reversing that arrow is its own change.
-
-There is no view-model layer between the two. `Race.Snapshot` is the whole
-per-frame derivation — sampling the cars at the clock, ordering the field,
-measuring the gaps, rating the times against the records as they stood — and
-views read a `CarAt` straight off it. Colours and geometry are the view's own: a
-widget that wants a class's colour calls `Class.toColor` itself, and a
-`Manufacturer` is read for the colour and logo it was built with. `Snapshot.at`
-runs once per frame and every view shares that result, which is the only reason
-the type exists; a record per car on top of it cost under 2% of the frame
-(`benchmark/PerFrameBenchmark.elm`), so nothing sits above it. What `Analysis/`
-holds is not that layer: those modules pick out and count what a snapshot
-already holds, and hand its own values back.
-
-Modules serving both sides sit directly under `Motorsport/` rather than in a
-subdirectory — `BestTimes` is held by `Race` and read back by `Race.Snapshot`,
-and `Lap.Performance` rates a lap for either side, so neither owns them.
-Neither walks a lap of the race. Which lap took which record is counted in
-`Round.Index` and arrives with the round's summary, as `Race.lapCompletions`
-and the field's flags do, so `Race.fromCars` is given a `Race.Index` rather
-than building one.
-`Race.TimelineEvent` is read the same way, off `Round.Timeline` — the race as a
-list of what happened, which the round's report is drawn from — though it
-arrives in a file of its own rather than in the summary. Nothing a `Race` holds is counted
-off it: a car's status is its own laps read against the time limit, so a round
-draws without it and `Shared` does not wait for it.
+Which lap took which record is counted in `Round.Index` and arrives with the round's summary, as `Race.lapCompletions` and the field's flags do, so `Race.fromCars` is given a `Race.Index` rather than building one. `Race.TimelineEvent` arrives off `Round.Timeline` in a file of its own, and nothing a `Race` holds is counted off it: a car's status is its own laps read against the time limit, so a round draws without it and `Shared` does not wait for it.
 
 ### Reading the race at a moment
 
 Nothing in a `Race` moves; a clock is applied to it to get what is true then.
 Three spellings, used consistently:
 
-- **`at`** — the module's own subject at that moment: `Gap.at`, `BestTimes.at`,
-  `Snapshot.at`, `LapHistory.at`.
-- **`xAt`** — one named aspect of *someone else's* subject: `Race.statusAt`,
-  `Race.lapCountAt`, `Lap.findLastLapAt`.
-- **`Snapshot`** — the type `at` returns when the whole subject is frozen: every
-  value in it read at the same instant, and that instant baked in.
+- **`at`** — the module's own subject at that moment: `Gap.at`, `BestTimes.at`, `Snapshot.at`, `LapHistory.at`.
+- **`xAt`** — one named aspect of *someone else's* subject: `Race.statusAt`, `Race.lapCountAt`, `Lap.findLastLapAt`.
+- **`Snapshot`** — the type `at` returns when the whole subject is frozen: every value in it read at the same instant, and that instant baked in.
 
-`BestTimes.Snapshot` and `Race.Snapshot` are the same idea applied twice — the
-records at a moment, and the field at a moment — always written qualified, which
-keeps them apart at the call site. A module handing out only the frozen form may
-name it for what it holds instead (`LapHistory`); one holding both names them for
-the difference (`BestTimes.Changes` spans the race, `BestTimes.Snapshot` is one
-moment of it).
-
-### The circuits side
-
-`circuits/README.md` is the other end of a drawing: how a geometry is surveyed
-out of OpenStreetMap, what the kept file is checked against — the byte fence
-over a kept answer exempting nothing, the regeneration fence over every
-circuit exempting the stamp alone, the contract spec over the bytes the app
-is served —
-where the timing lines' distances come
-from, and how far an atlas line stands from the one drawn.
-
-### The backend side
-
-`backend/README.md` is the other half of the trip: the server that answers `/api`,
-the tables it reads a round out of, and the `SqlRead` / `SqlWrite` / `DbErr`
-effects and `Sql` query builder the two stages reach it through.
+`BestTimes.Snapshot` and `Race.Snapshot` are the same idea applied twice — the records at a moment, and the field at a moment — always written qualified, which keeps them apart at the call site. A module handing out only the frozen form may name it for what it holds instead (`LapHistory`); one holding both names them for the difference (`BestTimes.Changes` spans the race, `BestTimes.Snapshot` is one moment of it).
 
 ## Comments and documentation
 

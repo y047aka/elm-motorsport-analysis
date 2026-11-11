@@ -576,7 +576,7 @@ pitCyclesOf race =
 
 
 {-| Which drawing of a circuit the round is put in, by the circuit the summary
-names for it -- `Motorsport.Events.circuit`. The round id is still asked for,
+names for it -- `track.circuit`. The round id is still asked for,
 because which lines Le Mans is drawn with turns on the season.
 
 A circuit this app has no drawing of is drawn as the ring -- the shape the
