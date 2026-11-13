@@ -2,6 +2,7 @@
 /// records is `Round.Summary`'s to find and `Round.TestTrack`'s to check.
 pub mod Motorsport.TestTrack {
 
+    use oj::OrderedJson
     use Motorsport.Circuit.Circuit
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
@@ -10,7 +11,6 @@ pub mod Motorsport.TestTrack {
     use Motorsport.Track.Share
     use Util.Duration
     use Util.Duration.Duration
-    use Util.Json.Encode
 
     def sectors(s1: Option[Int32], s2: Option[Int32], s3: Option[Int32]): Sector -> Option[Duration] =
         sector -> Option.map(Duration.fromMillis, match sector {
@@ -86,7 +86,7 @@ pub mod Motorsport.TestTrack {
             sectors(Some(20000), Some(30000), Some(50000)),
             None
         );
-        let json = Encode.render(Track.toJson(track));
+        let json = OrderedJson.toPrettyString(2, Track.toJson(track));
         Assert.assertTrue(String.contains({substr = "\"circuit\": \"cota\""}, json))
 
     /// A round `Motorsport.Events` has never been told about states no circuit.
@@ -97,6 +97,6 @@ pub mod Motorsport.TestTrack {
             sectors(Some(20000), Some(30000), Some(50000)),
             None
         );
-        Assert.assertTrue(not String.contains({substr = "\"circuit\""}, Encode.render(Track.toJson(track))))
+        Assert.assertTrue(not String.contains({substr = "\"circuit\""}, OrderedJson.toPrettyString(2, Track.toJson(track))))
 
 }

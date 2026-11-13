@@ -10,7 +10,7 @@ pub mod Server.Api {
     use Motorsport.Calendar
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
-    use Util.Json.Encode.Extra
+    use Util.Json.Extra
 
     /// `cause` is what went wrong, for the log rather than for the answer: a
     /// failure says what it says in the database's words, which name tables

@@ -1,13 +1,13 @@
 pub mod Motorsport.Wec {
 
+    use oj::OrderedJson
+    use oj::OrderedJson.Json.{JObject, JString, JNumber}
     use Util.Csv.Decode
     use Util.Csv.Decode.Decoder
     use Util.Csv.Decode.Extra
     use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
-    use Util.Json.Encode
-    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
 
@@ -129,11 +129,11 @@ pub mod Motorsport.Wec {
             |> Decode.pipeline(flagField("FLAG_AT_FL"))
             |> Decode.pipeline(miniSectorsDecoder())
 
-    pub def toJson(rawLap: RawLap): Encode.JsonValue =
+    pub def toJson(rawLap: RawLap): OrderedJson.Json =
         let leadingFields =
-            ("carNumber",  JsonString(rawLap#car#carNumber)) ::
-            ("lapNumber",  JsonInt(rawLap#lapNumber)) ::
-            ("driverName", JsonString(rawLap#driver#name)) ::
+            ("carNumber",  JString(rawLap#car#carNumber)) ::
+            ("lapNumber",  JNumber(Int32.toBigDecimal(rawLap#lapNumber))) ::
+            ("driverName", JString(rawLap#driver#name)) ::
             ("lap",        lapToJson(rawLap)) ::
             ("sectors",    sectorsToJson(rawLap)) ::
             Nil;
@@ -142,35 +142,35 @@ pub mod Motorsport.Wec {
             case Some(list) => ("miniSectors", miniSectorsToJson(list)) :: Nil
         };
         let trailingFields =
-            ("elapsed",                 JsonString(Util.Duration.format(rawLap#elapsed))) ::
-            ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
-            ("kph",                     JsonString(rawLap#kph)) ::
-            ("topSpeed",                JsonString(rawLap#topSpeed)) ::
-            ("crossingFinishLineInPit", JsonString(boxToString(rawLap#crossingFinishLineInPit))) ::
+            ("elapsed",                 JString(Util.Duration.format(rawLap#elapsed))) ::
+            ("hour",                    JString(HourClock.format(rawLap#hour))) ::
+            ("kph",                     JString(rawLap#kph)) ::
+            ("topSpeed",                JString(rawLap#topSpeed)) ::
+            ("crossingFinishLineInPit", JString(boxToString(rawLap#crossingFinishLineInPit))) ::
             ("pitTime",                 optionalDurationJson(rawLap#pitTime)) ::
-            ("flagAtFl",                JsonString(flagToString(rawLap#flagAtFl))) ::
+            ("flagAtFl",                JString(flagToString(rawLap#flagAtFl))) ::
             Nil;
-        JsonObject(List.append(leadingFields, List.append(miniFields, trailingFields)))
+        JObject(List.append(leadingFields, List.append(miniFields, trailingFields)))
 
-    def lapToJson(rawLap: RawLap): Encode.JsonValue =
-        JsonObject(
-            ("time",        JsonString(Util.Duration.format(rawLap#lapTime))) ::
-            ("improvement", JsonInt(improvementToInt(rawLap#lapImprovement))) ::
+    def lapToJson(rawLap: RawLap): OrderedJson.Json =
+        JObject(
+            ("time",        JString(Util.Duration.format(rawLap#lapTime))) ::
+            ("improvement", JNumber(Int32.toBigDecimal(improvementToInt(rawLap#lapImprovement)))) ::
             Nil
         )
 
-    def sectorsToJson(rawLap: RawLap): Encode.JsonValue =
-        JsonObject(
+    def sectorsToJson(rawLap: RawLap): OrderedJson.Json =
+        JObject(
             ("s1", sectorToJson(rawLap#s1)) ::
             ("s2", sectorToJson(rawLap#s2)) ::
             ("s3", sectorToJson(rawLap#s3)) ::
             Nil
         )
 
-    def sectorToJson(sector: RawSector): Encode.JsonValue =
-        JsonObject(
+    def sectorToJson(sector: RawSector): OrderedJson.Json =
+        JObject(
             ("time",        optionalDurationJson(sector#value)) ::
-            ("improvement", JsonInt(improvementToInt(sector#improvement))) ::
+            ("improvement", JNumber(Int32.toBigDecimal(improvementToInt(sector#improvement)))) ::
             Nil
         )
 
@@ -358,10 +358,10 @@ pub mod Motorsport.Wec {
             case Flag.Red              => "RF"
         }
 
-    def optionalDurationJson(d: Option[Duration]): Encode.JsonValue =
+    def optionalDurationJson(d: Option[Duration]): OrderedJson.Json =
         match d {
-            case Some(ms) => JsonString(Util.Duration.format(ms))
-            case None     => JsonString("")
+            case Some(ms) => JString(Util.Duration.format(ms))
+            case None     => JString("")
         }
 
     /// Decodes the 15 Le Mans mini-sectors. Missing columns (non-Le Mans
@@ -395,17 +395,17 @@ pub mod Motorsport.Wec {
         );
         if (hasAny) Some(list) else None
 
-    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Encode.JsonValue =
+    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): OrderedJson.Json =
         let entries = list |> List.filterMap(match (id, sector) ->
             if (sector#time == None and sector#elapsed == None)
                 None
             else
                 Some((MiniSector.jsonKey(id), miniSectorToJson(sector)))
         );
-        JsonObject(entries)
+        JObject(entries)
 
-    def miniSectorToJson(sector: RawMiniSector): Encode.JsonValue =
-        JsonObject(
+    def miniSectorToJson(sector: RawMiniSector): OrderedJson.Json =
+        JObject(
             ("time",    optionalDurationJson(sector#time)) ::
             ("elapsed", optionalDurationJson(sector#elapsed)) ::
             Nil

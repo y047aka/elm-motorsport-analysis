@@ -6,7 +6,7 @@ pub mod Round.TestLaps {
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
-    use Util.Json.Encode.Extra
+    use Util.Json.Extra
 
     def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
 

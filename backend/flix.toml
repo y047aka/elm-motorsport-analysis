@@ -2,5 +2,8 @@
 version     = "0.1.0"
 flix        = "0.79.0"
 
+[dependencies]
+"github:y047aka/ordered-json" = { version = "0.1.0", mount = "oj" }
+
 [mvn-dependencies]
 "org.xerial:sqlite-jdbc" = "3.53.4.0"

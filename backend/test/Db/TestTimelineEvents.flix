@@ -8,7 +8,7 @@ pub mod Db.TestTimelineEvents {
     use Motorsport.Timeline.Event
     use Motorsport.Timeline.EventType
     use Motorsport.Flag.Flag
-    use Util.Json.Encode.Extra
+    use Util.Json.Extra
 
     def at(ms: Int32, eventType: EventType): Event =
         { elapsed = Util.Duration.fromMillis(ms), eventType = eventType }

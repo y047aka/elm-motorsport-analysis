@@ -7,7 +7,7 @@ pub mod Motorsport.TestIndex {
     use Motorsport.MiniSector
     use Motorsport.Sector
     use Motorsport.Sector.Sector
-    use Util.Json.Encode.Extra
+    use Util.Json.Extra
 
     def change(): Change =
         {

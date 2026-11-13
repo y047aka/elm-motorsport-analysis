@@ -1,10 +1,10 @@
 pub mod Motorsport.TestWec {
 
+    use oj::OrderedJson
     use Util.Csv.Decode
     use Util.Csv.Decode.{FieldNames, Error}
     use Util.Duration
     use Util.HourClock.Hour
-    use Util.Json.Encode
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Wec
@@ -77,7 +77,7 @@ pub mod Motorsport.TestWec {
         // KPH is rendered as a JSON string, preserving the CSV value.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;86.0;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
-                let json = Encode.render(Wec.toJson(r));
+                let json = OrderedJson.toPrettyString(2, Wec.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"kph\": \"86.0\""}, json))
             case Err(_) => Assert.assertTrue(false)
         }
@@ -86,7 +86,7 @@ pub mod Motorsport.TestWec {
     def testToJsonGroupsLapAndSectors(): Unit \ Assert =
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
-                let json = Encode.render(Wec.toJson(r));
+                let json = OrderedJson.toPrettyString(2, Wec.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"lap\": {"}, json));
                 Assert.assertTrue(String.contains({substr = "\"sectors\": {"}, json));
                 Assert.assertTrue(not String.contains({substr = "\"lapImprovement\""}, json));
@@ -99,7 +99,7 @@ pub mod Motorsport.TestWec {
     def testToJsonCarriesCarNumberAlone(): Unit \ Assert =
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
-                let json = Encode.render(Wec.toJson(r));
+                let json = OrderedJson.toPrettyString(2, Wec.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json));
                 Assert.assertTrue(not String.contains({substr = "HYPERCAR"}, json));
                 Assert.assertTrue(not String.contains({substr = "Hertz Team JOTA"}, json));
@@ -175,7 +175,7 @@ pub mod Motorsport.TestWec {
                     case Some(_) => false
                 };
                 Assert.assertTrue(isNone);
-                let json = Encode.render(Wec.toJson(r));
+                let json = OrderedJson.toPrettyString(2, Wec.toJson(r));
                 Assert.assertTrue(not String.contains({substr = "miniSectors"}, json))
             case Err(_) => Assert.assertTrue(false)
         }
@@ -233,7 +233,7 @@ pub mod Motorsport.TestWec {
         // `Data.Wec.Laps` decodes on the Elm side.
         match decodeLeMansOne(realLeMansLapRow()) {
             case Ok(r) =>
-                let json = Encode.render(Wec.toJson(r));
+                let json = OrderedJson.toPrettyString(2, Wec.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));
                 Assert.assertTrue(String.contains({substr = "\"a7_1\""}, json));
                 Assert.assertTrue(String.contains({substr = "\"a8_1\""}, json));
@@ -259,7 +259,7 @@ pub mod Motorsport.TestWec {
                     case Some(_) => false
                 };
                 Assert.assertTrue(isNone);
-                let json = Encode.render(Wec.toJson(r));
+                let json = OrderedJson.toPrettyString(2, Wec.toJson(r));
                 Assert.assertTrue(not String.contains({substr = "miniSectors"}, json))
             case Err(_) => Assert.assertTrue(false)
         }

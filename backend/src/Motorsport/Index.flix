@@ -6,14 +6,14 @@
 /// back out of the summary.
 pub mod Motorsport.Index {
 
+    use oj::OrderedJson
+    use oj::OrderedJson.Json.{JObject, JString, JNumber, JArray}
     use Motorsport.Flag.FlagShown
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Sector
     use Motorsport.Sector.Sector
     use Util.Duration.Duration
-    use Util.Json.Encode
-    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
 
     /// A record and the lap that set it. `time` is the record itself -- the lap
     /// time, the sector time, the mini-sector time -- not the time of the lap
@@ -60,51 +60,51 @@ pub mod Motorsport.Index {
             |> List.filterMap(match (r, changes) -> if (r == record) Some(changes) else None)
             |> List.flatten
 
-    pub def toJson(index: Index): Encode.JsonValue =
-        JsonObject(
-            ("lapCompletions",  JsonArray(index#lapCompletions |> List.map(completionToJson))) ::
+    pub def toJson(index: Index): OrderedJson.Json =
+        JObject(
+            ("lapCompletions",  JArray(index#lapCompletions |> List.map(completionToJson) |> List.toVector)) ::
             ("bestTimeChanges", bestTimesToJson(index)) ::
-            ("flagChanges",     JsonArray(index#flags |> List.map(flagToJson))) ::
+            ("flagChanges",     JArray(index#flags |> List.map(flagToJson) |> List.toVector)) ::
             Nil
         )
 
-    def flagToJson(shown: FlagShown): Encode.JsonValue =
-        JsonObject(
-            ("elapsed", JsonString(Util.Duration.format(shown#elapsed))) ::
-            ("flag",    JsonString(Motorsport.Flag.toString(shown#flag))) ::
+    def flagToJson(shown: FlagShown): OrderedJson.Json =
+        JObject(
+            ("elapsed", JString(Util.Duration.format(shown#elapsed))) ::
+            ("flag",    JString(Motorsport.Flag.toString(shown#flag))) ::
             Nil
         )
 
-    def completionToJson(completion: (Int32, Duration)): Encode.JsonValue =
+    def completionToJson(completion: (Int32, Duration)): OrderedJson.Json =
         match completion {
             case (lap, elapsed) =>
-                JsonObject(
-                    ("lap",     JsonInt(lap)) ::
-                    ("elapsed", JsonString(Util.Duration.format(elapsed))) ::
+                JObject(
+                    ("lap",     JNumber(Int32.toBigDecimal(lap))) ::
+                    ("elapsed", JString(Util.Duration.format(elapsed))) ::
                     Nil
                 )
         }
 
-    def bestTimesToJson(index: Index): Encode.JsonValue =
-        JsonObject(
+    def bestTimesToJson(index: Index): OrderedJson.Json =
+        JObject(
             ("fastestLapTime", changesToJson(Record.FastestLap, index)) ::
-            ("sectors", JsonObject(Sector.all() |> List.map(s ->
+            ("sectors", JObject(Sector.all() |> List.map(s ->
                 (Sector.jsonKey(s), changesToJson(Record.FastestSector(s), index))))) ::
-            ("miniSectors", JsonObject(MiniSector.all() |> List.map(m ->
+            ("miniSectors", JObject(MiniSector.all() |> List.map(m ->
                 (MiniSector.jsonKey(m), changesToJson(Record.FastestMiniSector(m), index))))) ::
             Nil
         )
 
-    def changesToJson(record: Record, index: Index): Encode.JsonValue =
-        JsonArray(changesOf(record, index) |> List.map(changeToJson))
+    def changesToJson(record: Record, index: Index): OrderedJson.Json =
+        JArray(changesOf(record, index) |> List.map(changeToJson) |> List.toVector)
 
-    def changeToJson(change: Change): Encode.JsonValue =
-        JsonObject(
-            ("elapsed",   JsonString(Util.Duration.format(change#elapsed))) ::
-            ("time",      JsonString(Util.Duration.format(change#time))) ::
-            ("carNumber", JsonString(change#carNumber)) ::
-            ("lap",       JsonInt(change#lap)) ::
-            ("driver",    JsonString(change#driver)) ::
+    def changeToJson(change: Change): OrderedJson.Json =
+        JObject(
+            ("elapsed",   JString(Util.Duration.format(change#elapsed))) ::
+            ("time",      JString(Util.Duration.format(change#time))) ::
+            ("carNumber", JString(change#carNumber)) ::
+            ("lap",       JNumber(Int32.toBigDecimal(change#lap))) ::
+            ("driver",    JString(change#driver)) ::
             Nil
         )
 

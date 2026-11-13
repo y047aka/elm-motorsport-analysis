@@ -1,5 +1,6 @@
 pub mod Round.TestTrack {
 
+    use oj::OrderedJson
     use Round.TestSupport
     use Round.Summary
     use Motorsport.Calendar.Entry
@@ -14,7 +15,6 @@ pub mod Round.TestTrack {
     use Motorsport.Wec.RawMiniSector
     use Util.Duration
     use Util.HourClock.Hour
-    use Util.Json.Encode
 
     /// Rounds whose ids the tests fall back on; written out rather than looked
     /// up, so a change to the real calendar cannot quietly rewrite what a test
@@ -147,7 +147,7 @@ pub mod Round.TestTrack {
     @Test
     def testToJsonRendersExpectedKeys(): Unit \ {Assert, IO} =
         let laps = withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) :: Nil;
-        let json = Encode.render(Track.toJson(track(spa(), laps)));
+        let json = OrderedJson.toPrettyString(2, Track.toJson(track(spa(), laps)));
         Assert.assertTrue(String.contains({substr = "\"sectors\""}, json));
         Assert.assertTrue(String.contains({substr = "\"s1\""}, json));
         Assert.assertTrue(String.contains({substr = "\"start\""}, json));
@@ -159,7 +159,7 @@ pub mod Round.TestTrack {
     @Test
     def testRoundWithoutMiniSectorsOmitsThem(): Unit \ {Assert, IO} =
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let json = Encode.render(Track.toJson(track(spa(), laps)));
+        let json = OrderedJson.toPrettyString(2, Track.toJson(track(spa(), laps)));
         Assert.assertTrue(not String.contains({substr = "\"miniSectors\""}, json))
 
     /// The summary's circuit comes off the round's id; which way round the

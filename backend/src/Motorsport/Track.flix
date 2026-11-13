@@ -8,9 +8,9 @@
 /// at its quickest, and mid-race that answer is still moving.
 pub mod Motorsport.Track {
 
+    use oj::OrderedJson
+    use oj::OrderedJson.Json.{JObject, JString, JNumber}
     use Util.Duration.Duration
-    use Util.Json.Encode
-    use Util.Json.Encode.JsonValue.{JsonObject, JsonFloat, JsonString}
     use Motorsport.Circuit.Circuit
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
@@ -96,25 +96,35 @@ pub mod Motorsport.Track {
     def sum(xs: List[Float64]): Float64 =
         List.foldLeft((acc, x) -> acc + x, 0.0f64, xs)
 
-    pub def toJson(track: Track): Encode.JsonValue =
+    pub def toJson(track: Track): OrderedJson.Json =
         let circuit = match track#circuit {
             case None     => Nil
-            case Some(c)  => ("circuit", JsonString(Circuit.jsonValue(c))) :: Nil
+            case Some(c)  => ("circuit", JString(Circuit.jsonValue(c))) :: Nil
         };
         let sectors = track#sectors |> List.map(match (sector, share) -> (Sector.jsonKey(sector), shareToJson(share)));
         let miniSectors = match track#miniSectors {
             case None       => Nil
             case Some(list) =>
                 let entries = list |> List.map(match (id, share) -> (MiniSector.jsonKey(id), shareToJson(share)));
-                ("miniSectors", JsonObject(entries)) :: Nil
+                ("miniSectors", JObject(entries)) :: Nil
         };
-        JsonObject(List.append(circuit, ("sectors", JsonObject(sectors)) :: miniSectors))
+        JObject(List.append(circuit, ("sectors", JObject(sectors)) :: miniSectors))
 
-    def shareToJson(share: Share): Encode.JsonValue =
-        JsonObject(
-            ("start", JsonFloat(share#start)) ::
-            ("share", JsonFloat(share#share)) ::
+    def shareToJson(share: Share): OrderedJson.Json =
+        JObject(
+            ("start", ratio(share#start)) ::
+            ("share", ratio(share#share)) ::
             Nil
         )
+
+    /// `Float64.tryToBigDecimal` is `new BigDecimal(x)`, which spells `0.20739060549440685` as `0.207390605494406854436562070986838079988956451416015625`.
+    /// `Float64.toString` is `Double.toString`, and every finite value it prints `new BigDecimal` parses, which is what leaves the `None` branch unreachable.
+    /// `NaN` and `Infinity` are the two it prints that `new BigDecimal` refuses, and no share is one: `ratiosOver` divides only where the total is non-zero.
+    /// The number reaches the file spelled by `BigDecimal.toPlainString`, so a share small enough for `Double.toString` to write `9.0E-4` arrives as `0.0009` instead.
+    def ratio(x: Float64): OrderedJson.Json =
+        match BigDecimal.fromString("${Float64.toString(x)}") {
+            case Some(d) => JNumber(d)
+            case None    => unreachable!()
+        }
 
 }

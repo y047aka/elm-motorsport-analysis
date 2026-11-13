@@ -1,5 +1,6 @@
 pub mod Round.TestSummary {
 
+    use oj::OrderedJson
     use Round.TestSupport
     use Round.Summary
     use Motorsport.Calendar.Entry
@@ -9,7 +10,6 @@ pub mod Round.TestSummary {
     use Motorsport.Wec.RawLap
     use Util.Duration
     use Util.HourClock.Hour
-    use Util.Json.Encode
 
     def metadata(entry: Entry, laps: List[RawLap]): Metadata.Metadata \ IO =
         TestSupport.onRound(entry, laps, () -> Summary.read(entry, Round.Drivers.read(entry)))
@@ -214,7 +214,7 @@ pub mod Round.TestSummary {
 
     @Test
     def testUnreadStartIsOmittedRatherThanMidnight(): Unit \ {Assert, IO} =
-        let json = Encode.render(Metadata.toJson(metadata(fuji(), Nil)));
+        let json = OrderedJson.toPrettyString(2, Metadata.toJson(metadata(fuji(), Nil)));
         Assert.assertTrue(not String.contains({substr = "\"startedAt\""}, json))
 
     /// The name still falls back to the id, because an entry can name a round
@@ -231,7 +231,7 @@ pub mod Round.TestSummary {
     def testToJsonRendersExpectedKeys(): Unit \ {Assert, IO} =
         let laps = withHour("16:01:33.291", withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota"))) :: Nil;
         let meta = metadata(leMans(), laps);
-        let json = Encode.render(Metadata.toJson(meta));
+        let json = OrderedJson.toPrettyString(2, Metadata.toJson(meta));
         // Asserts the shape: that the keys are present.
         Assert.assertTrue(String.contains({substr = "\"name\""}, json));
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));

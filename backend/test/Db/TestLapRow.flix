@@ -245,7 +245,7 @@ pub mod Db.TestLapRow {
     /// What the reading gives back is what the writing was handed.
     @Test
     def aRowMakesTheLapItWasMadeFrom(): Unit \ Assert =
-        let rendered = lap -> Util.Json.Encode.Extra.renderOnOneLine(Wec.toJson(lap));
+        let rendered = lap -> Util.Json.Extra.renderOnOneLine(Wec.toJson(lap));
         let roundTrip = lap ->
             LapRow.toRawLap(lap#car, lap#driver#name, LapRow.fromRawLap(fujiId(), 1, lap))
                 |> Result.map(rendered);

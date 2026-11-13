@@ -6,11 +6,11 @@
 /// counting that finds each event is `Round.Timeline`'s.
 pub mod Motorsport.Timeline {
 
+    use oj::OrderedJson
+    use oj::OrderedJson.Json.{JObject, JString, JNumber}
     use Motorsport.Flag.Flag
     use Motorsport.Flag.FlagShown
     use Util.Duration.Duration
-    use Util.Json.Encode
-    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt}
 
     /// What one car did. The lead is the car's class's. `OvertakeForLead` is about
     /// the car that came in front of its class; `LeaderInPit` is about the car that
@@ -203,17 +203,17 @@ pub mod Motorsport.Timeline {
             case _                 => None
         }
 
-    pub def toJson(event: Event): Encode.JsonValue =
+    pub def toJson(event: Event): OrderedJson.Json =
         let p = parts(event#eventType);
-        JsonObject(
-            ("elapsed", JsonString(Util.Duration.format(event#elapsed))) ::
-            ("event", JsonString(p#event)) ::
+        JObject(
+            ("elapsed", JString(Util.Duration.format(event#elapsed))) ::
+            ("event", JString(p#event)) ::
             carNumberField(p)
         )
 
-    def carNumberField(p: Parts): List[(String, Encode.JsonValue)] =
+    def carNumberField(p: Parts): List[(String, OrderedJson.Json)] =
         match p#carNumber {
-            case Some(carNumber) => ("carNumber", JsonString(carNumber)) :: Nil
+            case Some(carNumber) => ("carNumber", JString(carNumber)) :: Nil
             case None            => Nil
         }
 

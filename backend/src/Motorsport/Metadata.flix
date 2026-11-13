@@ -1,10 +1,10 @@
 pub mod Motorsport.Metadata {
 
+    use oj::OrderedJson
+    use oj::OrderedJson.Json.{JObject, JString, JNumber, JArray}
     use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
-    use Util.Json.Encode
-    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Calendar
     use Motorsport.Car.Car
     use Motorsport.Events
@@ -152,33 +152,33 @@ pub mod Motorsport.Metadata {
             case None          => (1, Util.Duration.zero(), Util.Duration.zero(), cn)
         }
 
-    pub def toJson(meta: Metadata): Encode.JsonValue =
-        JsonObject(
-            ("name",         JsonString(meta#name)) ::
-            ("season",       JsonInt(meta#season)) ::
-            ("date",         JsonString(meta#date)) ::
+    pub def toJson(meta: Metadata): OrderedJson.Json =
+        JObject(
+            ("name",         JString(meta#name)) ::
+            ("season",       JNumber(Int32.toBigDecimal(meta#season))) ::
+            ("date",         JString(meta#date)) ::
             ("race",         particularsToJson(meta#race)) ::
             ("track",        Track.toJson(meta#track)) ::
             ("startingGrid", gridToJson(meta#startingGrid)) ::
             Nil
         )
 
-    def particularsToJson(p: Particulars): Encode.JsonValue =
+    def particularsToJson(p: Particulars): OrderedJson.Json =
         let startedAt = match p#startedAt {
             case None    => Nil
-            case Some(h) => ("startedAt", JsonString(HourClock.format(h))) :: Nil
+            case Some(h) => ("startedAt", JString(HourClock.format(h))) :: Nil
         };
-        JsonObject(List.append(startedAt,
-            ("duration",  JsonString(Util.Duration.format(p#duration))) ::
-            ("timeLimit", JsonString(Util.Duration.format(p#timeLimit))) ::
-            ("lapTotal",  JsonInt(p#lapTotal)) ::
+        JObject(List.append(startedAt,
+            ("duration",  JString(Util.Duration.format(p#duration))) ::
+            ("timeLimit", JString(Util.Duration.format(p#timeLimit))) ::
+            ("lapTotal",  JNumber(Int32.toBigDecimal(p#lapTotal))) ::
             Nil
         ))
 
-    def gridToJson(grid: StartingGrid): Encode.JsonValue =
-        JsonObject(
-            ("basis",   JsonString(basisToString(grid#basis))) ::
-            ("entries", JsonArray(grid#entries |> List.map(toGridEntryJson))) ::
+    def gridToJson(grid: StartingGrid): OrderedJson.Json =
+        JObject(
+            ("basis",   JString(basisToString(grid#basis))) ::
+            ("entries", JArray(grid#entries |> List.map(toGridEntryJson) |> List.toVector)) ::
             Nil
         )
 
@@ -189,25 +189,25 @@ pub mod Motorsport.Metadata {
             case Basis.Unknown     => "unknown"
         }
 
-    def toGridEntryJson(entry: StartingGridEntry): Encode.JsonValue =
-        JsonObject(
-            ("position", JsonInt(entry#position)) ::
+    def toGridEntryJson(entry: StartingGridEntry): OrderedJson.Json =
+        JObject(
+            ("position", JNumber(Int32.toBigDecimal(entry#position))) ::
             ("car",      carToJson(entry#car)) ::
             Nil
         )
 
-    def carToJson(car: Car): Encode.JsonValue =
-        JsonObject(
-            ("carNumber",    JsonString(car#carNumber)) ::
-            ("drivers",      JsonArray(car#drivers |> List.map(driverToJson))) ::
-            ("class",        JsonString(car#class)) ::
-            ("group",        JsonString(car#group)) ::
-            ("team",         JsonString(car#team)) ::
-            ("manufacturer", JsonString(car#manufacturer)) ::
+    def carToJson(car: Car): OrderedJson.Json =
+        JObject(
+            ("carNumber",    JString(car#carNumber)) ::
+            ("drivers",      JArray(car#drivers |> List.map(driverToJson) |> List.toVector)) ::
+            ("class",        JString(car#class)) ::
+            ("group",        JString(car#group)) ::
+            ("team",         JString(car#team)) ::
+            ("manufacturer", JString(car#manufacturer)) ::
             Nil
         )
 
-    def driverToJson(name: String): Encode.JsonValue =
-        JsonObject(("name", JsonString(name)) :: Nil)
+    def driverToJson(name: String): OrderedJson.Json =
+        JObject(("name", JString(name)) :: Nil)
 
 }

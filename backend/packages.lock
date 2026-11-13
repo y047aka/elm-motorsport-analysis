@@ -1,2 +1,6 @@
 [lock]
 version = 1
+
+[packages."github:y047aka/ordered-json"."0.1.0"]
+toml    = "sha256:dcbcfbf15fb66aeb21c8a620f7dae1e325bb0056ca1c3d43a6a7ad31332dae8c"
+fpkg    = "sha256:e859faf4d4c67383389581f3f3e1a66a57e578928d786ce463d13447e69a53a1"

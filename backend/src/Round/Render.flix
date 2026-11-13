@@ -1,7 +1,8 @@
 pub mod Round.Render {
 
-    use Util.Json.Encode.Extra
-    use Util.Json.Encode.JsonValue
+    use oj::OrderedJson.Json
+    use oj::OrderedJson.Json.{JObject, JNumber}
+    use Util.Json.Extra
     use Motorsport.Index
     use Motorsport.Metadata
     use Motorsport.Timeline
@@ -13,10 +14,10 @@ pub mod Round.Render {
     pub def renderSummary(metadata: Metadata.Metadata, index: Index.Index): String =
         Extra.render(withIndex(Metadata.toJson(metadata), Index.toJson(index)))
 
-    def withIndex(metadata: JsonValue, index: JsonValue): JsonValue =
+    def withIndex(metadata: Json, index: Json): Json =
         match metadata {
-            case JsonValue.JsonObject(fields) =>
-                JsonValue.JsonObject(List.append(fields, ("index", index) :: Nil))
+            case JObject(fields) =>
+                JObject(List.append(fields, ("index", index) :: Nil))
             case other => other
         }
 
@@ -30,10 +31,10 @@ pub mod Round.Render {
             |> List.map(lap -> "${Extra.renderOnOneLine(withPosition(Wec.toJson(lap#lap), lap#position))}\n")
             |> List.join("")
 
-    def withPosition(lap: JsonValue, position: Int32): JsonValue =
+    def withPosition(lap: Json, position: Int32): Json =
         match lap {
-            case JsonValue.JsonObject(fields) =>
-                JsonValue.JsonObject(List.append(fields, ("position", JsonValue.JsonInt(position)) :: Nil))
+            case JObject(fields) =>
+                JObject(List.append(fields, ("position", JNumber(Int32.toBigDecimal(position))) :: Nil))
             case other => other
         }
 

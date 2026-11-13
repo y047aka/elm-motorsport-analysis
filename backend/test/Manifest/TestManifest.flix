@@ -1,10 +1,10 @@
 pub mod Manifest.TestManifest {
 
-    use Util.Json.Encode
-        use Motorsport.Calendar
+    use oj::OrderedJson
+    use Motorsport.Calendar
 
     def rendered(urlRoot: String): String =
-        Encode.render(Manifest.toJson(urlRoot, Calendar.seasons()))
+        OrderedJson.toPrettyString(2, Manifest.toJson(urlRoot, Calendar.seasons()))
 
     @Test
     def testTheCalendarJsonCarriesEverySeasonWithItsRoundsNamed(): Unit \ Assert =
@@ -34,7 +34,7 @@ pub mod Manifest.TestManifest {
     /// calendar the CLI happens to hold.
     @Test
     def testAnEmptyCalendarRendersAnEmptyManifest(): Unit \ Assert =
-        let json = Encode.render(Manifest.toJson("/static/wec", Nil));
+        let json = OrderedJson.toPrettyString(2, Manifest.toJson("/static/wec", Nil));
         Assert.assertTrue(String.contains({substr = "\"seasons\""}, json));
         Assert.assertTrue(not String.contains({substr = "\"season\":"}, json))
 
