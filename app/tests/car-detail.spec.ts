@@ -731,8 +731,10 @@ test.describe('Class columns', () => {
     await expect(
       page.getByRole('button', { name: 'Scroll to the events column' }),
     ).toBeVisible();
-    // The race has run 180 laps by now, and the table holds its events.
-    await expect(page.locator('[data-events-column] tbody tr').first()).not.toBeEmpty();
+    // The race has run 180 laps by now, and the feed holds its events.
+    await expect(page.locator('[data-events-column] [data-event-row]').first()).not.toBeEmpty();
+    // The head carries the race clock the feed is cut at.
+    await expect(page.locator('[data-events-column]').first()).toContainText('Race Timeline');
     // It is the strip's last column, so it scrolls into view like any other.
     await page.getByRole('button', { name: 'Scroll to the events column' }).click();
     await expect.poll(() => inView(page, page.locator('[data-events-column]'))).toBe(true);

@@ -5,7 +5,7 @@ module Internal.DataView exposing
     , stringColumn, intColumn, floatColumn
     , customColumn, veryCustomColumn
     , noFiltering, noSorting
-    , view
+    , view, feedView
     )
 
 {-| A sortable, filterable, paginated table over rows the caller keeps in its
@@ -36,7 +36,7 @@ own shape.
 
 # View
 
-@docs view
+@docs view, feedView
 
 -}
 
@@ -397,6 +397,40 @@ view ({ columns } as config) model dataList =
     div []
         [ table config model dataArray displayIndexes
         , pagination config.toMsg model.page totalPages
+        ]
+
+
+{-| The rows `view` would show, drawn one under another by the caller rather than
+in a table's rows.
+
+A feed has no head to sort by and no field to filter in, so it reads the model's
+`page` alone -- and the pages _up to_ that one, shown together: a reader who
+scrolls to what came before expects what they had passed to stay. `foot` is
+handed how many rows the page has not reached, which is what a control asking
+for the next ones needs to say.
+
+-}
+feedView :
+    { key : data -> String
+    , row : data -> Html msg
+    , foot : Int -> Html msg
+    }
+    -> Model
+    -> List data
+    -> Html msg
+feedView { key, row, foot } model dataList =
+    let
+        shown =
+            case model.options.pagination of
+                Pagination pageSize ->
+                    List.take (pageSize * model.page) dataList
+
+                NoPagination ->
+                    dataList
+    in
+    div []
+        [ Keyed.node "div" [] (List.map (\d -> ( key d, row d )) shown)
+        , foot (List.length dataList - List.length shown)
         ]
 
 
