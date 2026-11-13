@@ -1,8 +1,8 @@
 pub mod Motorsport.TestWec {
 
     use oj::OrderedJson
-    use Util.Csv.Decode
-    use Util.Csv.Decode.{FieldNames, Error}
+    use csv::Csv.Decode
+    use csv::Csv.Decode.{FieldNames, Error}
     use Util.Duration
     use Util.HourClock.Hour
     use Motorsport.MiniSector

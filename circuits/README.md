@@ -144,7 +144,7 @@ to within 40 m can still be drawn wrong by. How the drawing places a line the ma
 gives no distance for is app-side — `Tracker.Config.lapScale`, and the
 `ConfigTest` combinations that hold it.
 
-## The report, and the eight links it reads through
+## The report, and the links it reads through
 
 The report is a word of the pipeline, not a project: `src/TimingLines.flix` reads
 the arguments and prints what the two readings come to, `Main.flix` hands the word
@@ -152,12 +152,12 @@ over, and `src/TimingLines/Feed.flix` reads the feeds themselves.
 Nothing compiled here can name a database: no `Db` effect among the project's
 sources, no argument flag for one, and no JDBC driver resolved.
 
-Eight sources are symlinks into `backend/src`: the decoding of a CSV
-(`Util/Csv/`), the durations, `Motorsport/`'s `Events.flix` and `Calendar.flix`,
-and the parent stubs `Cli.flix`, `Motorsport.flix` and `Util/Csv.flix`, which
+Five sources are symlinks into `backend/src`: the durations, `Motorsport/`'s `Events.flix` and `Calendar.flix`,
+and the parent stubs `Cli.flix` and `Motorsport.flix`, which
 are compiled because Flix will not enter a module whose parent it has never
-seen. Compiled twice, held once. `Motorsport/`'s `Circuit.flix` is not among
-them: the report holds its own file — the same enum and `jsonValue` body the export sends,
+seen. Compiled twice, held once. The CSV decoding is not among them: it is
+`github:y047aka/csv`, named by both projects' `flix.toml`. `Motorsport/`'s `Circuit.flix` is not
+among them either: the report holds its own file — the same enum and `jsonValue` body the export sends,
 and nothing of the timing figures, which the config derives. What no compiler can see
 across those two copies, and no `@Test` can reach now that no project compiles both, is
 `test/check-sources.mjs`'s to read from outside both.
@@ -180,16 +180,16 @@ compiled from their own file. What they keep in common is a
 wording: one bad `--csv` is answered in the same words at either command.
 
 **A symlink per file, never one per directory.** Flix's source walker does not
-descend a symlinked directory: one link at `src/Util` compiles as nothing and fails
-as `Undefined use 'Util.Csv.Decode'`, reported in the module that needed the link
-rather than in the link itself. Copies are no easier for what is shared: Flix has no
+descend a symlinked directory: one link at `src/Util` compiles as nothing and fails as
+an undefined name in the module that needed the link, reported there rather than in the
+link itself. Copies are no easier for what is shared: Flix has no
 local path dependency, answering anything but `github:username/projectname` with a
-format error, and `flix build` takes no source directory as an argument — so a shared
-`Util.Csv.Decode` is a shared file, not a second copy of its 552 lines. Per-file
+format error, and `flix build` takes no source directory as an argument — so what the
+two projects share is a symlinked file or a released package, never a second copy. Per-file
 links also leave each shared source visible in `git ls-files -s` as mode `120000`.
 
 `nix run .#geometry-test` runs the project's own `flix test`, and `.#flix-test`
-compiles the same eight files on the link's other side, which is what proves the
+compiles the same files on the link's other side, which is what proves the
 links survived the checkout as well as
 that the readings are right. Nothing walks the
 links, or the full set of sources the project compiles, from outside it; the

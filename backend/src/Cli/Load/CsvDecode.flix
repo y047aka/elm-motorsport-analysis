@@ -1,7 +1,7 @@
 pub mod Cli.Load.CsvDecode {
 
-    use Util.Csv.Decode
-    use Util.Csv.Decode.FieldNames
+    use csv::Csv.Decode
+    use csv::Csv.Decode.FieldNames
     use Cli.Errors.CliError
     use Motorsport.Wec
     use Motorsport.Wec.RawLap

@@ -2,8 +2,8 @@ pub mod Round.TestIndex {
 
     use Round.Index
     use Round.TestSupport
-    use Util.Csv.Decode
-    use Util.Csv.Decode.FieldNames
+    use csv::Csv.Decode
+    use csv::Csv.Decode.FieldNames
     use Motorsport.Calendar.Entry
     use Motorsport.Flag.Flag
     use Motorsport.Index.Change

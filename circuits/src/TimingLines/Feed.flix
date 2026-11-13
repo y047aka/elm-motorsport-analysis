@@ -13,9 +13,9 @@
 pub mod TimingLines.Feed {
 
     use Cli.Errors.CliError
-    use Util.Csv.Decode
-    use Util.Csv.Decode.Decoder
-    use Util.Csv.Decode.FieldNames
+    use csv::Csv.Decode
+    use csv::Csv.Decode.Decoder
+    use csv::Csv.Decode.FieldNames
     use Util.Duration.Duration
 
     /// One lap as these readings need it: the class it was run in, and the three

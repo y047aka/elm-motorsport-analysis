@@ -1,2 +1,6 @@
 [lock]
 version = 1
+
+[packages."github:y047aka/csv"."0.1.0"]
+toml    = "sha256:c716d295e03689787675e28f0873fb1c4815f947ebca3324c55fa134c7666145"
+fpkg    = "sha256:bb7b2fd988f47d5181d9584881f62b6e940dd503bfb5073d51862307ef79555a"

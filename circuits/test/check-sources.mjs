@@ -26,7 +26,7 @@ const sourcesDir = new URL('../src/', import.meta.url);
 const from = fileURLToPath(root);
 const here = (path) => readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8');
 
-/** The project's own sources, by the path a message names them by. The eight links
+/** The project's own sources, by the path a message names them by. The links
  * into `backend/src` are left out — `Dirent.isFile()` is false for a symlink: they are
  * the timing report's, and that report reaches no file of the pipeline's and no HTTP
  * at all; it reads the feeds through `TimingLines.Files`. The report's own

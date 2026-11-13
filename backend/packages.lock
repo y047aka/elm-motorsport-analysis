@@ -1,6 +1,10 @@
 [lock]
 version = 1
 
+[packages."github:y047aka/csv"."0.1.0"]
+toml    = "sha256:c716d295e03689787675e28f0873fb1c4815f947ebca3324c55fa134c7666145"
+fpkg    = "sha256:bb7b2fd988f47d5181d9584881f62b6e940dd503bfb5073d51862307ef79555a"
+
 [packages."github:y047aka/ordered-json"."0.1.0"]
 toml    = "sha256:dcbcfbf15fb66aeb21c8a620f7dae1e325bb0056ca1c3d43a6a7ad31332dae8c"
 fpkg    = "sha256:e859faf4d4c67383389581f3f3e1a66a57e578928d786ce463d13447e69a53a1"

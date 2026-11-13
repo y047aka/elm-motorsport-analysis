@@ -1,7 +1,7 @@
 pub mod Cli.Load.TestValidation {
 
-    use Util.Csv.Decode
-    use Util.Csv.Decode.FieldNames
+    use csv::Csv.Decode
+    use csv::Csv.Decode.FieldNames
     use Util.Duration
     use Round.TestSupport
     use Cli.Load.Validation

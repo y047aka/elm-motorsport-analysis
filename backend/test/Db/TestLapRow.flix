@@ -5,8 +5,8 @@ pub mod Db.TestLapRow {
     use Db.Value
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
-    use Util.Csv.Decode
-    use Util.Csv.Decode.FieldNames
+    use csv::Csv.Decode
+    use csv::Csv.Decode.FieldNames
 
     /// The id a run gave the round, which is all a row carries of it: the
     /// name it goes by is `rounds`'.

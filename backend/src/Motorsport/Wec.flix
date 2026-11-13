@@ -2,9 +2,8 @@ pub mod Motorsport.Wec {
 
     use oj::OrderedJson
     use oj::OrderedJson.Json.{JObject, JString, JNumber}
-    use Util.Csv.Decode
-    use Util.Csv.Decode.Decoder
-    use Util.Csv.Decode.Extra
+    use csv::Csv.Decode
+    use csv::Csv.Decode.Decoder
     use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
@@ -371,8 +370,14 @@ pub mod Motorsport.Wec {
         Decode.map(collapseIfAllNone, decodeMiniSectorList(MiniSector.all()))
 
     def decodeMiniSectorList(ids: List[MiniSectorId]): Decoder[List[(MiniSectorId, RawMiniSector)]] =
-        Extra.traverse(
-            id -> Decode.map(sector -> (id, sector), miniSectorDecoder(id)),
+        List.foldRight(
+            (id, rest) ->
+                Decode.map2(
+                    (entry, entries) -> entry :: entries,
+                    Decode.map(sector -> (id, sector), miniSectorDecoder(id)),
+                    rest
+                ),
+            Decode.succeed(Nil),
             ids
         )
 

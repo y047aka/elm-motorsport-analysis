@@ -2,8 +2,8 @@ pub mod Round.TestTimeline {
 
     use Round.TestSupport
     use Round.Timeline
-    use Util.Csv.Decode
-    use Util.Csv.Decode.FieldNames
+    use csv::Csv.Decode
+    use csv::Csv.Decode.FieldNames
     use Util.Duration.Duration
     use Motorsport.Calendar.Entry
     use Motorsport.Timeline.CarEvent
