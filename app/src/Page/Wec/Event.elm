@@ -13,7 +13,7 @@ import Dict exposing (Dict)
 import Drag
 import Drag.Handle as Handle
 import Effect exposing (Effect)
-import Html exposing (Html, a, button, div, main_, nav, span, text)
+import Html exposing (Html, a, button, div, img, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
@@ -417,7 +417,7 @@ eventsColumn several held table cars timeline clock =
     in
     Card.card [ attribute "data-events-column" "" ]
         [ div [ Attributes.class "relative flex-1 min-h-0 grid grid-rows-[auto_minmax(0,1fr)]" ]
-            [ feedHead clock
+            [ feedHead
             , div [ Attributes.class "min-h-0 overflow-y-auto" ]
                 [ Card.content []
                     [ Html.Lazy.lazy5 feedBody table cars timeline occurred (clockMinute clock) ]
@@ -437,19 +437,14 @@ clockMinute clock =
     Instant.toDuration clock // 60000
 
 
-{-| The feed's head: what the column is, and how far the race has run to say so.
-It stands above the scroller and not inside it: Card's own ground is translucent,
-so a head within the scroller lets the posts show through it.
+{-| The feed's head: what the column is. It stands above the scroller and not
+inside it: Card's own ground is translucent, so a head within the scroller lets
+the posts show through it.
 -}
-feedHead : Instant -> Html Msg
-feedHead clock =
-    div
-        [ Attributes.class "flex items-baseline gap-x-2 px-4 pb-1 pr-14"
-        ]
-        [ span [ Attributes.class "text-sm font-semibold leading-none" ] [ text "Race Timeline" ]
-        , span [ Attributes.class "text-[11px] leading-none tabular-nums text-muted-foreground" ]
-            [ text (clock |> Instant.toDuration |> Duration.toStringToSeconds) ]
-        ]
+feedHead : Html Msg
+feedHead =
+    div [ Attributes.class "px-4 pb-1 pr-14" ]
+        [ span [ Attributes.class "text-sm font-semibold leading-none" ] [ text "Race Timeline" ] ]
 
 
 {-| The posts, and the control that asks for the ones behind them.
@@ -562,9 +557,9 @@ postRow clock post_ =
         )
 
 
-{-| The post's avatar: the car's number on its maker's colour, and for an event of
-the field's own -- a flag, the start -- race control's mark wearing that flag's
-colour.
+{-| The post's avatar: the car's number on its maker's colour -- the maker's own
+mark where the table has one -- and for an event of the field's own -- a flag, the
+start -- race control's mark wearing that flag's colour.
 -}
 postAvatar : Post -> Html Msg
 postAvatar post_ =
@@ -574,7 +569,18 @@ postAvatar post_ =
                 [ Attributes.class "size-8 shrink-0 rounded-full grid place-items-center text-[11px] font-bold leading-none"
                 , Attributes.style "background-color" metadata.manufacturer.color
                 ]
-                [ text metadata.carNumber ]
+                [ case metadata.manufacturer.logoUrl of
+                    Just url ->
+                        img
+                            [ Attributes.src url
+                            , Attributes.alt metadata.manufacturer.name
+                            , Attributes.class "max-h-[19px] max-w-[24px] object-contain"
+                            ]
+                            []
+
+                    Nothing ->
+                        text metadata.carNumber
+                ]
 
         Nothing ->
             div
@@ -605,6 +611,9 @@ flagColor eventType =
             "bg-muted text-muted-foreground"
 
 
+{-| The post's text: the number and class, the team beneath them, the event, and
+the elapsed time and lap.
+-}
 postText : Duration -> Post -> Html Msg
 postText clock post_ =
     let
@@ -613,12 +622,13 @@ postText clock post_ =
     in
     div [ Attributes.class "min-w-0" ]
         [ div [ Attributes.class "flex items-baseline gap-x-1.5" ]
-            [ span [ Attributes.class "text-xs font-semibold truncate" ] [ text (author post_) ]
+            [ div [ Attributes.class "flex items-center gap-x-1.5 text-[11px] leading-none text-muted-foreground" ]
+                [ handle post_ ]
             , span [ Attributes.class "ms-auto shrink-0 text-[11px] tabular-nums text-muted-foreground" ]
                 [ text (ago clock elapsed) ]
             ]
-        , div [ Attributes.class "flex items-center gap-x-1.5 text-[11px] leading-none text-muted-foreground" ]
-            [ handle post_ ]
+        , div [ Attributes.class "truncate text-xs font-semibold" ]
+            [ text (author post_) ]
         , div [ Attributes.class "pt-1 text-sm leading-snug" ]
             [ text (TimelineEvent.describe post_.event.eventType) ]
         , div [ Attributes.class "pt-1 text-[11px] tabular-nums text-muted-foreground" ]
