@@ -24,13 +24,10 @@ import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
-import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Class as Class exposing (Class)
 import Page.Wec.Columns as Columns
@@ -47,7 +44,6 @@ import View.CarDetail as CarDetail
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassColumn as ClassColumn
-import View.ClassMark as ClassMark
 import View.EventsColumn as EventsColumn
 import View.Feed as Feed
 import View.LiveStandings as LiveStandings
@@ -257,40 +253,23 @@ headerTitle shared =
 
 
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
-the one thing that takes it away.
-
-The card splits two-to-one: the drawing fills the top two thirds, and the
-most recent events of the round fill the bottom third, scrolling once they
-outnumber it; a press on them opens a popover.
+the one thing that takes it away, and the press that opens the standings popover
+stands in its corner.
 
 It carries `data-tracker-column`, which the visual tests locate it by.
 
 -}
-trackerCard : Bool -> Bool -> TrackerChart.Track -> Replay.Model -> Timeline -> Snapshot -> Html Msg
-trackerCard several held track replay fieldEvents snapshot =
-    let
-        occurredCount =
-            Timeline.countUpTo (Clock.getElapsed replay.playback) fieldEvents
-    in
+trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
+trackerCard several held track snapshot =
     Card.card [ attribute "data-tracker-column" "" ]
         [ div
-            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,2fr)_minmax(0,1fr)]"
+            [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
             ]
             [ Card.content []
                 [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
                     [ TrackerChart.view TrackerChart.Full track snapshot
                     , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
-                        (cornerControls (corner several held Columns.Tracker))
-                    ]
-                ]
-            , button
-                [ attribute "popovertarget" standingsPopoverId
-                , attribute "popovertargetaction" "show"
-                , Attributes.class "min-h-0 grid cursor-pointer text-left"
-                ]
-                [ div [ Attributes.class "min-h-0 overflow-y-auto" ]
-                    [ Card.content []
-                        [ Html.Lazy.lazy3 eventRows replay.race.cars fieldEvents occurredCount ]
+                        (standingsTrigger :: cornerControls (corner several held Columns.Tracker))
                     ]
                 ]
             ]
@@ -316,7 +295,7 @@ mainGrid round keys m =
             "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         ]
         [ standingsCell keys m round.energy snapshot replay.race.cars
-        , columnStrip "col-start-2" round.track round.timeline round.fieldEvents keys m round.pitCycles replay snapshot
+        , columnStrip "col-start-2" round.track round.timeline keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -417,8 +396,8 @@ stripColumn key width placement content =
     )
 
 
-columnStrip : String -> TrackerChart.Track -> Timeline -> Timeline -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
-columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
+columnStrip : String -> TrackerChart.Track -> Timeline -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track timeline keys m pitCycles replay snapshot =
     let
         several =
             List.length keys > 1
@@ -452,7 +431,7 @@ columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
                             class_
 
                     Columns.Tracker ->
-                        trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
+                        trackerCard several (Columns.isCarried placement) track snapshot
 
                     Columns.Events ->
                         EventsColumn.view
@@ -608,84 +587,22 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-{-| The most recent events the field draws, newest first: when each happened,
-whose it was, and what kind of thing it was.
+{-| The press that opens the standings popover, standing in the tracker's corner
+before its grip and ✕.
 
-`recentEventLimit` counts the events read, so the rows come out fewer than it
-by the fastest laps among them. Their news is told twice over without them: the
-reference lap a class's column heads itself with, and the records on the car's own
-panel. The events column posts every one, being the race's record rather than its
-news.
-
-The rows are rebuilt only when an event arrives. A thunk's arguments are
-compared by `===`, so every one of these is held to something that survives a
-frame: the cars and the timeline never move under playback, and the count is a
-number. Anything frame-made passed instead -- a snapshot, or the cut list itself
--- is a fresh reference on every frame and misses.
+`popovertarget` names an id and resolves across the document, so the press
+reaches the popover from whatever corner it is drawn in.
 
 -}
-eventRows : List Car -> Timeline -> Int -> Html Msg
-eventRows cars timeline occurredCount =
-    let
-        carsByNumber =
-            cars
-                |> List.map (\car -> ( car.metadata.carNumber, car ))
-                |> Dict.fromList
-    in
-    Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
-        |> List.filter (not << TimelineEvent.isFastestLap << .eventType)
-        |> List.map (eventRow carsByNumber)
-        |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
-
-
-recentEventLimit : Int
-recentEventLimit =
-    100
-
-
-{-| A row is one line as tall as the badge: the `1.375rem` is
-`CarNumberBadge.viewRow`'s height, and moves with it.
--}
-eventRow : Dict CarNumber Car -> TimelineEvent -> Html Msg
-eventRow carsByNumber event =
-    let
-        car =
-            case event.eventType of
-                CarEvent carNumber _ ->
-                    Dict.get carNumber carsByNumber
-
-                _ ->
-                    Nothing
-
-        cell classes children =
-            div [ Attributes.class classes ] children
-
-        name =
-            TimelineEvent.describe event.eventType
-    in
-    div [ Attributes.class "col-span-4 grid grid-cols-subgrid items-center py-0.5" ]
-        [ cell "" [ car |> Maybe.map (.metadata >> ClassMark.view) |> Maybe.withDefault (text "") ]
-        , cell "" [ carBadge car event.eventType ]
-        , cell "" [ text name ]
-        , cell "whitespace-nowrap text-right tabular-nums text-muted-foreground"
-            [ text (event.elapsed |> Instant.toDuration |> Duration.toStringToSeconds) ]
+standingsTrigger : Html Msg
+standingsTrigger =
+    button
+        [ attribute "popovertarget" standingsPopoverId
+        , attribute "popovertargetaction" "show"
+        , Attributes.attribute "aria-label" "Open the standings"
+        , Attributes.class "inline-flex items-center justify-center size-8 rounded-full text-sm cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
         ]
-
-
-{-| An event of the whole field's has no badge, and a number no car of the field
-answers to keeps its bare digits rather than vanishing.
--}
-carBadge : Maybe Car -> EventType -> Html Msg
-carBadge car eventType =
-    case ( car, eventType ) of
-        ( Just { metadata }, _ ) ->
-            CarNumberBadge.viewRow metadata
-
-        ( Nothing, CarEvent carNumber _ ) ->
-            span [] [ text carNumber ]
-
-        ( Nothing, _ ) ->
-            text ""
+        [ text "⤢" ]
 
 
 standingsPopoverId : String
