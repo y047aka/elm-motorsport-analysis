@@ -469,7 +469,7 @@ feedBody table cars timeline occurred minute =
         DataView.feedView
             { key = .id >> String.fromInt
             , row = postRow (minute * 60000)
-            , foot = feedFoot table.page
+            , foot = feedFoot
             }
             table
             posts
@@ -479,8 +479,6 @@ type alias Post =
     { id : Int
     , event : TimelineEvent
     , car : Maybe Car
-    , hour : String
-    , opensHour : Bool
     }
 
 
@@ -512,29 +510,8 @@ feedPosts cars timeline occurred =
 
                         _ ->
                             Nothing
-                , hour = hourOf event
-                , opensHour = False
                 }
             )
-        |> hourly
-
-
-hourOf : TimelineEvent -> String
-hourOf event =
-    "Hour " ++ String.fromInt (Instant.toDuration event.elapsed // 3600000 + 1)
-
-
-{-| Which posts open an hour block: a post opens one where the post above it --
-the newer one, the feed running newest first -- stands in another.
--}
-hourly : List Post -> List Post
-hourly posts =
-    List.map2
-        (\post above ->
-            { post | opensHour = above /= Just post.hour }
-        )
-        posts
-        (Nothing :: List.map (.hour >> Just) posts)
 
 
 postRow : Duration -> Post -> Html Msg
@@ -543,23 +520,16 @@ postRow clock post_ =
         [ Attributes.class "grid border-t border-border/70 first:border-t-0"
         , attribute "data-event-row" ""
         ]
-        ((if post_.opensHour then
-            [ hourRule post_.hour ]
-
-          else
-            []
-         )
-            ++ [ div [ Attributes.class "grid grid-cols-[auto_1fr] gap-x-2.5 py-2" ]
-                    [ postAvatar post_
-                    , postText clock post_
-                    ]
-               ]
-        )
+        [ div [ Attributes.class "grid grid-cols-[auto_1fr] gap-x-2.5 py-2" ]
+            [ postAvatar post_
+            , postText clock post_
+            ]
+        ]
 
 
-{-| The post's avatar: the car's number on its maker's colour -- the maker's own
-mark where the table has one -- and for an event of the field's own -- a flag, the
-start -- race control's mark wearing that flag's colour.
+{-| The post's avatar: the maker's mark and the car's number on its maker's
+colour, or the number alone where the table has no mark -- and for an event of the
+field's own -- a flag, the start -- race control's mark wearing that flag's colour.
 -}
 postAvatar : Post -> Html Msg
 postAvatar post_ =
@@ -571,12 +541,15 @@ postAvatar post_ =
                 ]
                 [ case metadata.manufacturer.logoUrl of
                     Just url ->
-                        img
-                            [ Attributes.src url
-                            , Attributes.alt metadata.manufacturer.name
-                            , Attributes.class "max-h-[19px] max-w-[24px] object-contain"
+                        div [ Attributes.class "flex flex-col items-center gap-y-0.5" ]
+                            [ img
+                                [ Attributes.src url
+                                , Attributes.alt metadata.manufacturer.name
+                                , Attributes.class "max-h-[14px] max-w-[22px] object-contain"
+                                ]
+                                []
+                            , span [ Attributes.class "text-[9px] leading-none" ] [ text metadata.carNumber ]
                             ]
-                            []
 
                     Nothing ->
                         text metadata.carNumber
@@ -684,15 +657,9 @@ ago clock elapsed =
         String.fromInt (minutes // 60) ++ "h"
 
 
-hourRule : String -> Html Msg
-hourRule label =
-    div [ Attributes.class "pt-2 text-[10px] uppercase tracking-[0.08em] text-muted-foreground" ]
-        [ text label ]
-
-
-feedFoot : Int -> Int -> Html Msg
-feedFoot page remaining =
-    div [ Attributes.class "grid gap-y-2 pt-3" ]
+feedFoot : Int -> Html Msg
+feedFoot remaining =
+    div [ Attributes.class "grid pt-3" ]
         [ if remaining > 0 then
             button
                 [ onClick (TimelineTableMsg DataView.NextPage)
@@ -703,15 +670,6 @@ feedFoot page remaining =
           else
             div [ Attributes.class "py-1 text-center text-[11px] italic text-muted-foreground" ]
                 [ text "You have reached the start of the race" ]
-        , if page > 1 then
-            button
-                [ onClick (TimelineTableMsg (DataView.SetPage 1))
-                , Attributes.class "cursor-pointer text-[11px] text-muted-foreground transition-colors hover:text-accent-foreground"
-                ]
-                [ text "Back to the newest events" ]
-
-          else
-            text ""
         ]
 
 
