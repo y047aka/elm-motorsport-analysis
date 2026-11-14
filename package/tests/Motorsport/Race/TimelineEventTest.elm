@@ -2,14 +2,27 @@ module Motorsport.Race.TimelineEventTest exposing (suite)
 
 import Expect
 import Json.Decode as Decode
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..))
+import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
 
 suite : Test
 suite =
+    describe "TimelineEvent"
+        [ decoder
+        , handover
+        ]
+
+
+decoder : Test
+decoder =
     describe "TimelineEvent.decoder"
         [ test "the race's own start is nobody's" <|
             \_ ->
@@ -69,3 +82,82 @@ decoded : String -> Result Decode.Error ( Instant, EventType )
 decoded json =
     Decode.decodeString TimelineEvent.decoder json
         |> Result.map (\event -> ( event.elapsed, event.eventType ))
+
+
+{-| The handover reads the laps either side of the event, so these are the two
+lap boundaries an event can fall between.
+-}
+handover : Test
+handover =
+    describe "TimelineEvent.handover"
+        [ test "the pair the event falls between" <|
+            \_ ->
+                TimelineEvent.handover (car [ lapOf 1 kobayashi 60000, lapOf 2 conway 120000 ]) (changeAt 90000)
+                    |> Expect.equal (Just ( kobayashi, conway ))
+        , test "a three-driver car hands over twice, and each event reads its own pair" <|
+            \_ ->
+                let
+                    theCar =
+                        car [ lapOf 1 kobayashi 60000, lapOf 2 conway 120000, lapOf 3 buemi 180000 ]
+                in
+                [ changeAt 90000, changeAt 150000 ]
+                    |> List.map (TimelineEvent.handover theCar)
+                    |> Expect.equal [ Just ( kobayashi, conway ), Just ( conway, buemi ) ]
+        , test "an event before the car's first lap names nobody" <|
+            \_ ->
+                TimelineEvent.handover (car [ lapOf 1 kobayashi 60000, lapOf 2 conway 120000 ]) (changeAt 30000)
+                    |> Expect.equal Nothing
+        , test "no handover where the laps either side name one driver" <|
+            \_ ->
+                TimelineEvent.handover (car [ lapOf 1 kobayashi 60000, lapOf 2 kobayashi 120000 ]) (changeAt 90000)
+                    |> Expect.equal Nothing
+        , test "an event after the car's last lap names nobody" <|
+            \_ ->
+                TimelineEvent.handover (car [ lapOf 1 kobayashi 60000, lapOf 2 conway 120000 ]) (changeAt 300000)
+                    |> Expect.equal Nothing
+        ]
+
+
+kobayashi : Driver
+kobayashi =
+    Driver.fromName "Kamui KOBAYASHI"
+
+
+conway : Driver
+conway =
+    Driver.fromName "Mike CONWAY"
+
+
+buemi : Driver
+buemi =
+    Driver.fromName "Sebastian BUEMI"
+
+
+lapOf : Int -> Driver -> Int -> Lap
+lapOf lapNumber driver elapsed =
+    let
+        base =
+            Lap.empty
+    in
+    { base | lap = lapNumber, driver = driver, elapsed = Instant.fromDuration elapsed }
+
+
+changeAt : Int -> TimelineEvent.TimelineEvent
+changeAt ms =
+    { elapsed = Instant.fromDuration ms, eventType = CarEvent "7" DriverChange }
+
+
+car : List Lap -> Car
+car laps =
+    { metadata =
+        { carNumber = "7"
+        , drivers = []
+        , class = Class.none
+        , group = "H"
+        , team = "Toyota Racing"
+        , manufacturer = Manufacturer.unknown
+        , imageUrl = Nothing
+        }
+    , startPosition = 1
+    , laps = laps
+    }
