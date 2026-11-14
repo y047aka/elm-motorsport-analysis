@@ -138,7 +138,7 @@ postText post_ =
             ]
         , div [ Attributes.class "truncate text-xs font-semibold" ]
             [ text post_.author ]
-        , div [ Attributes.class "pt-1 text-sm leading-snug" ]
+        , div [ Attributes.class "pt-1 text-xs leading-snug" ]
             [ text post_.body ]
         , div [ Attributes.class "pt-1 text-[11px] tabular-nums text-muted-foreground" ]
             [ text post_.stamp ]
