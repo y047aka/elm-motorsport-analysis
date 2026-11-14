@@ -47,8 +47,12 @@ viewCompact metadata =
 
 {-| The circle a feed posts a car with, at the ratio the two plates set between
 them: `view` carries `text-xs` on `w-[35px]` and `viewCompact` carries
-`text-[10px]` on `w-[26px]`, so 32px takes `text-[11px]` for the number, and the
-mark keeps the 14px `viewRow` gives it.
+`text-[10px]` on `w-[26px]`, so 32px takes `text-[11px]` for the number.
+
+The mark is a hair under the 14px `viewRow` gives it, and the circle keeps 3px of
+padding: a plate's content reaches its corners, a circle's reaches its curve, and
+the same figure reads tighter in the round.
+
 -}
 viewAvatar : Car.Metadata -> Html msg
 viewAvatar metadata =
@@ -103,12 +107,12 @@ circle { ground, colour, label, mark } =
                 |> Maybe.withDefault []
     in
     div
-        ([ class ("flex flex-col items-center justify-center gap-[3px] size-8 shrink-0 rounded-full leading-none " ++ ground) ]
+        ([ class ("flex flex-col items-center justify-center gap-[2px] size-8 shrink-0 rounded-full p-[3px] leading-none " ++ ground) ]
             ++ background
         )
         [ case mark of
             Just drawn ->
-                img [ src drawn.src, alt drawn.alt, class "max-h-[14px] max-w-[24px] object-contain" ] []
+                img [ src drawn.src, alt drawn.alt, class "max-h-[13px] max-w-[21px] object-contain" ] []
 
             Nothing ->
                 text ""
