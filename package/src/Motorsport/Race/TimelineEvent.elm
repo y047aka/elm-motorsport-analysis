@@ -2,7 +2,7 @@ module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
     , fromJsonl, decoder
     , describe, forField, forCar, isFastestLap
-    , runningLap
+    , runningLap, handover
     )
 
 {-| The race as a list of things that happened, in the order they happened.
@@ -12,12 +12,13 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 @docs TimelineEvent, EventType, CarEventType
 @docs fromJsonl, decoder
 @docs describe, forField, forCar, isFastestLap
-@docs runningLap
+@docs runningLap, handover
 
 -}
 
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -176,6 +177,28 @@ far the clock has run.
 runningLap : Car -> TimelineEvent -> Maybe Lap
 runningLap car event =
     Lap.findLastLapAt { elapsed = event.elapsed } car.laps
+
+
+{-| The handover the event marks: who brought the car in, and who took it on.
+
+Read off the laps either side of the event -- the last one completed, and the one
+running -- since that is where a driver change is stamped: the feed puts it as the
+car goes back out. `Nothing` where the two laps name the same driver, or where the
+car has no lap on one side of the event or the other.
+
+-}
+handover : Car -> TimelineEvent -> Maybe ( Driver, Driver )
+handover car event =
+    case
+        ( Lap.findLastLapAt { elapsed = event.elapsed } car.laps
+        , Lap.findCurrentLap { elapsed = event.elapsed } car.laps
+        )
+    of
+        ( Just handedOver, Just tookOver ) ->
+            Driver.changeBetween handedOver.driver tookOver.driver
+
+        _ ->
+            Nothing
 
 
 

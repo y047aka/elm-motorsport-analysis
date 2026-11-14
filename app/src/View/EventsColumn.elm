@@ -15,12 +15,13 @@ import Dict exposing (Dict)
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Lazy
+import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Flag as Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.Feed as Feed
@@ -128,7 +129,7 @@ post id event theCar minute =
     , headline = headline theCar
     , time = Feed.ago { now = minute * 60000, at = Instant.toDuration event.elapsed }
     , author = author theCar
-    , body = TimelineEvent.describe event.eventType
+    , body = body event theCar
     , stamp = stamp event theCar
     }
 
@@ -189,6 +190,26 @@ author : Maybe Car -> String
 author theCar =
     Maybe.map (.metadata >> .team) theCar
         |> Maybe.withDefault "Race Control"
+
+
+{-| What happened. A driver change names the two drivers rather than the kind of
+stop.
+-}
+body : TimelineEvent -> Maybe Car -> String
+body event theCar =
+    case event.eventType of
+        CarEvent _ DriverChange ->
+            Maybe.andThen (handoverWords event) theCar
+                |> Maybe.withDefault (TimelineEvent.describe event.eventType)
+
+        _ ->
+            TimelineEvent.describe event.eventType
+
+
+handoverWords : TimelineEvent -> Car -> Maybe String
+handoverWords event car =
+    TimelineEvent.handover car event
+        |> Maybe.map (\( handedOver, tookOver ) -> Driver.toHandover handedOver tookOver)
 
 
 {-| The moment the event fell, and the lap it fell on -- the lap the car was
