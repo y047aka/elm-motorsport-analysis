@@ -41,8 +41,7 @@ init =
 The corner belongs to the strip rather than to the column: the same controls close
 and carry every other column, and they answer to the page's own message. `earlier`
 is what the foot answers to when the reader asks for the posts behind the ones
-shown. The fastest-lap events are not among the posts; see
-`TimelineEvent.isFastestLap`.
+shown.
 
 -}
 view :
@@ -89,10 +88,11 @@ posts earlier table cars timeline occurred minute =
         (feedPosts cars timeline occurred minute)
 
 
-{-| The posts, newest first, cut where the race clock stands.
+{-| The posts, newest first, cut where the race clock stands. Every event the
+timeline holds is a post, the fastest laps among them.
 
-The key is the event's place in the timeline, taken before the fastest laps are
-dropped: it is asked to be stable, not consecutive.
+The key is the event's place in the timeline, so a post keeps its key however far
+the clock has run.
 
 -}
 feedPosts : List Car -> Timeline -> Int -> Int -> List (Feed.Post msg)
@@ -104,7 +104,6 @@ feedPosts cars timeline occurred minute =
     Timeline.toList timeline
         |> List.take occurred
         |> List.indexedMap Tuple.pair
-        |> List.filter (not << TimelineEvent.isFastestLap << .eventType << Tuple.second)
         |> List.reverse
         |> List.map (\( id, event ) -> post id event (named event carsByNumber) minute)
 

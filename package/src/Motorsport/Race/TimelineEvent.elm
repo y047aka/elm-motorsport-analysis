@@ -139,9 +139,9 @@ forCar carNumber eventType =
             False
 
 
-{-| Whether the event is a fastest lap, which neither of the app's event lists
-keeps: its news is the reference lap at the head of a class's column and the
-records on a car's panel.
+{-| Whether the event is a fastest lap, which the recent rows the tracker's column
+draws keep out: its news is the reference lap at the head of a class's column and
+the records on a car's panel.
 
     isFastestLap (CarEvent "51" FastestLap)
     --> True
