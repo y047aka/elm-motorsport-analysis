@@ -1,7 +1,7 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
     , fromJsonl, decoder
-    , describe, forField, forCar, isFastestLap
+    , describe, forCar
     , runningLap, handover
     )
 
@@ -11,7 +11,7 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
 @docs fromJsonl, decoder
-@docs describe, forField, forCar, isFastestLap
+@docs describe, forCar
 @docs runningLap, handover
 
 -}
@@ -85,32 +85,6 @@ describe eventType =
             "Finished"
 
 
-{-| Whether the event is the field's own, which is what its list of events
-keeps.
-
-    forField (CarEvent "51" FastestLap)
-    --> True
-
-    forField (CarEvent "51" DriverChange)
-    --> False
-
-    forField (CarEvent "83" LeaderInPit)
-    --> False
-
--}
-forField : EventType -> Bool
-forField eventType =
-    case eventType of
-        CarEvent _ DriverChange ->
-            False
-
-        CarEvent _ LeaderInPit ->
-            False
-
-        _ ->
-            True
-
-
 {-| Whether the event is one car's own, which is what that car's Log keeps.
 
 A leader-in-pit event answers to no car: it is the field's leader crossing a
@@ -137,29 +111,6 @@ forCar carNumber eventType =
 
         _ ->
             False
-
-
-{-| Whether the event is a fastest lap.
-
-    isFastestLap (CarEvent "51" FastestLap)
-    --> True
-
-    isFastestLap (CarEvent "51" DriverChange)
-    --> False
-
-    isFastestLap RaceStart
-    --> False
-
--}
-isFastestLap : EventType -> Bool
-isFastestLap eventType =
-    case eventType of
-        CarEvent _ FastestLap ->
-            True
-
-        _ ->
-            False
-
 
 
 -- THE LAP AN EVENT FELL ON
