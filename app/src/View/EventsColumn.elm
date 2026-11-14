@@ -45,7 +45,6 @@ and carry every other column, and they answer to the page's own message.
 view :
     { corner : List (Html msg)
     , earlier : msg
-    , fewer : msg
     }
     -> Model
     -> List Car
@@ -58,7 +57,7 @@ view controls model cars timeline clock =
         , corner = controls.corner
         , head = text "Race Timeline"
         , body =
-            Html.Lazy.lazy5 (posts controls.earlier controls.fewer)
+            Html.Lazy.lazy5 (posts controls.earlier)
                 model
                 cars
                 timeline
@@ -81,11 +80,10 @@ clockStep clock =
     Instant.toDuration clock // Feed.step
 
 
-posts : msg -> msg -> Model -> List Car -> Timeline -> Int -> Int -> Html msg
-posts earlier fewer model cars timeline occurred bucket =
+posts : msg -> Model -> List Car -> Timeline -> Int -> Int -> Html msg
+posts earlier model cars timeline occurred bucket =
     Feed.posts
         { earlier = earlier
-        , fewer = fewer
         , empty = "Nothing has happened yet"
         , end = "You have reached the start of the race"
         }
