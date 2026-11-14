@@ -155,7 +155,7 @@ avatar event theCar =
                 }
 
 
-{-| The same colours the playback controls' flag chips are worn in.
+{-| The colours the app already wears the flags in: `PlaybackControls`'s chips, except green, whose chip is a translucent one.
 -}
 flagColor : EventType -> String
 flagColor eventType =
@@ -197,13 +197,9 @@ author theCar =
         |> Maybe.withDefault "Race Control"
 
 
-{-| What happened. A driver change names the two drivers; a fastest lap is the
-class's, and names who set it and how fast -- the time in the colour the strip under
-it rates a fastest segment in.
+{-| What happened. A fastest lap is the class's, whether or not it is also the field's -- which is why the post says `Class Fastest Lap`.
 
-The strip is rated against the records as they stood when the lap was set, not as
-they stand at the clock: a post two hours old would otherwise be recoloured by a
-sector beaten since.
+The strip under it is rated against the records as they stood when the lap was set, not as they stand at the clock: a post two hours old would otherwise be recoloured by a sector beaten since.
 
 -}
 body : TimelineEvent -> Maybe Car -> BestTimes.Changes -> Html msg

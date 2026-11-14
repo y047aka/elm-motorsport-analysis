@@ -253,8 +253,7 @@ headerTitle shared =
 
 
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
-the one thing that takes it away, and the press that opens the standings popover
-stands in its corner.
+the one thing that takes it away.
 
 It carries `data-tracker-column`, which the visual tests locate it by.
 
@@ -588,11 +587,9 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-{-| The press that opens the standings popover, standing in the tracker's corner
-before its grip and ✕.
+{-| The press that opens the standings popover.
 
-`popovertarget` names an id and resolves across the document, so the press
-reaches the popover from whatever corner it is drawn in.
+`popovertarget` resolves by id across the document, so the press need not stand near the popover it opens.
 
 -}
 standingsTrigger : Html Msg

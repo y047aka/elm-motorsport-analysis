@@ -117,7 +117,7 @@ A column is keyed by `StripKey`: a class's, a car's, the tracker's or the events
 The strip opens with one column per class the field has cars out in, in the order a classification lists them and not the order their leaders run in.
 A class's column (`View/ClassColumn.elm`) is the standings read down one class instead of the field: class place first, the interval to the class-mate ahead rather than to whoever is ahead, and the class's own fastest lap as the reference rather than the race's.
 A class's column is drawn in classification order, so it comes in blocks with a rule between them — nothing is measured between a car that stopped and one that did not.
-The events column (`View/EventsColumn.elm`) reads the round's timeline into a feed (`View/Feed.elm`): newest post first, cut at the race clock, older posts asked for a page at a time. `View/Feed` imports no `Motorsport` module and knows nothing of the sport; which events become posts, and what each of them is called, is `View/EventsColumn`'s.
+The events column (`View/EventsColumn.elm`) reads the round's timeline into a feed (`View/Feed.elm`): newest post first, cut at the race clock, older posts asked for a page at a time. Which events become posts, and what each of them is called, is `View/EventsColumn`'s.
 
 Every column is drawn `Columns.width` wide, and everything that measures the strip — where a column stands, how far a carry moves one, how far a press scrolls — is done in that one width and `pitch`.
 

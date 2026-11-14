@@ -47,8 +47,8 @@ init { perPage } =
     }
 
 
-{-| A post: an avatar, the line that leads and the time beside it, the name the
-post stands under, what happened, and the stamp under it.
+{-| The parts a post is built from.
+`time` is how long ago it happened; `stamp` is the moment itself.
 -}
 type alias Post msg =
     { key : String

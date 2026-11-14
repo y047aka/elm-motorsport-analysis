@@ -154,9 +154,7 @@ nothingYet =
 clock, cached because every view of a frame shares it, and the one of them
 rebuilt as playback runs.
 
-`timeline` is the events themselves, kept for the events column to read the
-clock against, and the only one of them a round can go without: nothing playback reads
-is counted off them.
+`timeline` is the events themselves, kept for the events column to read the clock against, and the one field a round can go without: nothing playback reads is counted off them.
 
 -}
 type alias LoadedRound =
