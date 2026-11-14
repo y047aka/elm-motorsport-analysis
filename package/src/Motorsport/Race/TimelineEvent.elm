@@ -1,7 +1,7 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
     , fromJsonl, decoder
-    , describe, forField, forCar
+    , describe, forField, forCar, isFastestLap
     , runningLap
     )
 
@@ -11,7 +11,7 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
 @docs fromJsonl, decoder
-@docs describe, forField, forCar
+@docs describe, forField, forCar, isFastestLap
 @docs runningLap
 
 -}
@@ -133,6 +133,30 @@ forCar carNumber eventType =
 
         CarEvent number _ ->
             number == carNumber
+
+        _ ->
+            False
+
+
+{-| Whether the event is a fastest lap, which neither of the app's event lists
+keeps: its news is the reference lap at the head of a class's column and the
+records on a car's panel.
+
+    isFastestLap (CarEvent "51" FastestLap)
+    --> True
+
+    isFastestLap (CarEvent "51" DriverChange)
+    --> False
+
+    isFastestLap RaceStart
+    --> False
+
+-}
+isFastestLap : EventType -> Bool
+isFastestLap eventType =
+    case eventType of
+        CarEvent _ FastestLap ->
+            True
 
         _ ->
             False

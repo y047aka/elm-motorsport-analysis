@@ -13,13 +13,12 @@ import Dict exposing (Dict)
 import Drag
 import Drag.Handle as Handle
 import Effect exposing (Effect)
-import Html exposing (Html, a, button, div, img, main_, nav, span, text)
+import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
 import Internal.DataView as DataView
-import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Json.Decode as Decode
 import List.Extra
 import Motorsport.Analysis.Energy as Energy
@@ -27,13 +26,12 @@ import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Flag as Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Class as Class exposing (Class)
 import Page.Wec.Columns as Columns
@@ -51,6 +49,7 @@ import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassColumn as ClassColumn
 import View.ClassMark as ClassMark
+import View.EventsColumn as EventsColumn
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
 
@@ -62,7 +61,7 @@ import View.PlaybackControls as PlaybackControls
 type alias Model =
     { strip : Columns.Model
     , rowTrace : Dict String ClassColumn.Trace
-    , timelineTable : DataView.Model
+    , timelineTable : EventsColumn.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
     }
@@ -80,7 +79,7 @@ init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { strip = Columns.init
       , rowTrace = Dict.empty
-      , timelineTable = DataView.init "timeline-events" timelineTableOptions
+      , timelineTable = EventsColumn.init
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
       }
@@ -402,277 +401,6 @@ openColumn keys class_ =
         Just (ColumnsMsg (Columns.Open key))
 
 
-{-| The round's events as a column of the strip: what has happened by the race
-clock, newest first, one post per event, and the race's hours ruled across the
-feed. The visual tests locate it by `data-events-column`.
-
-The fastest-lap events are not among the posts; see `isFastestLap`.
-
--}
-eventsColumn : Bool -> Bool -> DataView.Model -> List Car -> Timeline -> Instant -> Html Msg
-eventsColumn several held table cars timeline clock =
-    let
-        occurred =
-            Timeline.countUpTo clock timeline
-    in
-    Card.card [ attribute "data-events-column" "" ]
-        [ div [ Attributes.class "relative flex-1 min-h-0 grid grid-rows-[auto_minmax(0,1fr)]" ]
-            [ feedHead
-            , div [ Attributes.class "min-h-0 overflow-y-auto" ]
-                [ Card.content []
-                    [ Html.Lazy.lazy5 feedBody table cars timeline occurred (clockMinute clock) ]
-                ]
-            , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
-                (cornerControls (corner several held Columns.Events))
-            ]
-        ]
-
-
-{-| The minute of the race the posts are stamped against. The clock moves every
-frame; the minute it is bucketed to does not, which is what lets the feed be a
-thunk's argument.
--}
-clockMinute : Instant -> Int
-clockMinute clock =
-    Instant.toDuration clock // 60000
-
-
-{-| The feed's head: what the column is. It stands above the scroller and not
-inside it: Card's own ground is translucent, so a head within the scroller lets
-the posts show through it.
--}
-feedHead : Html Msg
-feedHead =
-    div [ Attributes.class "px-4 pb-1 pr-14" ]
-        [ span [ Attributes.class "text-sm font-semibold leading-none" ] [ text "Race Timeline" ] ]
-
-
-{-| The posts, and the control that asks for the ones behind them.
-
-The rows are rebuilt only when an event arrives or a minute of the race passes.
-The cars and the timeline never move under playback, and the count and the
-minute are numbers -- anything frame-made passed instead is a fresh reference
-every frame and misses.
-
--}
-feedBody : DataView.Model -> List Car -> Timeline -> Int -> Int -> Html Msg
-feedBody table cars timeline occurred minute =
-    let
-        posts =
-            feedPosts cars timeline occurred
-    in
-    if List.isEmpty posts then
-        div [ Attributes.class "p-5 text-center italic text-muted-foreground" ]
-            [ text "Nothing has happened yet" ]
-
-    else
-        DataView.feedView
-            { key = .id >> String.fromInt
-            , row = postRow (minute * 60000)
-            , foot = feedFoot
-            }
-            table
-            posts
-
-
-type alias Post =
-    { id : Int
-    , event : TimelineEvent
-    , car : Maybe Car
-    }
-
-
-{-| The posts, newest first, cut where the race clock stands.
-
-The key is the event's place in the timeline, taken before the fastest laps are
-dropped: it is asked to be stable, not consecutive.
-
--}
-feedPosts : List Car -> Timeline -> Int -> List Post
-feedPosts cars timeline occurred =
-    let
-        carsByNumber =
-            List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
-    in
-    Timeline.toList timeline
-        |> List.take occurred
-        |> List.indexedMap Tuple.pair
-        |> List.filter (not << isFastestLap << Tuple.second)
-        |> List.reverse
-        |> List.map
-            (\( id, event ) ->
-                { id = id
-                , event = event
-                , car =
-                    case event.eventType of
-                        CarEvent carNumber _ ->
-                            Dict.get carNumber carsByNumber
-
-                        _ ->
-                            Nothing
-                }
-            )
-
-
-postRow : Duration -> Post -> Html Msg
-postRow clock post_ =
-    div
-        [ Attributes.class "grid border-t border-border/70 first:border-t-0"
-        , attribute "data-event-row" ""
-        ]
-        [ div [ Attributes.class "grid grid-cols-[auto_1fr] gap-x-2.5 py-2" ]
-            [ postAvatar post_
-            , postText clock post_
-            ]
-        ]
-
-
-{-| The post's avatar: the maker's mark and the car's number on its maker's
-colour, or the number alone where the table has no mark -- and for an event of the
-field's own -- a flag, the start -- race control's mark wearing that flag's colour.
--}
-postAvatar : Post -> Html Msg
-postAvatar post_ =
-    case post_.car of
-        Just { metadata } ->
-            div
-                [ Attributes.class "size-8 shrink-0 rounded-full grid place-items-center text-[11px] font-bold leading-none"
-                , Attributes.style "background-color" metadata.manufacturer.color
-                ]
-                [ case metadata.manufacturer.logoUrl of
-                    Just url ->
-                        div [ Attributes.class "flex flex-col items-center gap-y-0.5" ]
-                            [ img
-                                [ Attributes.src url
-                                , Attributes.alt metadata.manufacturer.name
-                                , Attributes.class "max-h-[14px] max-w-[22px] object-contain"
-                                ]
-                                []
-                            , span [ Attributes.class "text-[9px] leading-none" ] [ text metadata.carNumber ]
-                            ]
-
-                    Nothing ->
-                        text metadata.carNumber
-                ]
-
-        Nothing ->
-            div
-                [ Attributes.class "size-8 shrink-0 rounded-full grid place-items-center text-[9px] font-bold leading-none"
-                , Attributes.class (flagColor post_.event.eventType)
-                ]
-                [ text "RC" ]
-
-
-{-| The same colours the playback controls' flag chips are worn in.
--}
-flagColor : EventType -> String
-flagColor eventType =
-    case eventType of
-        Flag FullCourseYellow ->
-            "bg-yellow-400 text-yellow-950"
-
-        Flag SafetyCar ->
-            "bg-orange-500 text-orange-950"
-
-        Flag RedFlag ->
-            "bg-red-600 text-white"
-
-        Flag GreenFlag ->
-            "bg-green-500 text-green-950"
-
-        _ ->
-            "bg-muted text-muted-foreground"
-
-
-{-| The post's text: the number and class, the team beneath them, the event, and
-the elapsed time and lap.
--}
-postText : Duration -> Post -> Html Msg
-postText clock post_ =
-    let
-        elapsed =
-            Instant.toDuration post_.event.elapsed
-    in
-    div [ Attributes.class "min-w-0" ]
-        [ div [ Attributes.class "flex items-baseline gap-x-1.5" ]
-            [ div [ Attributes.class "flex items-center gap-x-1.5 text-[11px] leading-none text-muted-foreground" ]
-                [ handle post_ ]
-            , span [ Attributes.class "ms-auto shrink-0 text-[11px] tabular-nums text-muted-foreground" ]
-                [ text (ago clock elapsed) ]
-            ]
-        , div [ Attributes.class "truncate text-xs font-semibold" ]
-            [ text (author post_) ]
-        , div [ Attributes.class "pt-1 text-sm leading-snug" ]
-            [ text (TimelineEvent.describe post_.event.eventType) ]
-        , div [ Attributes.class "pt-1 text-[11px] tabular-nums text-muted-foreground" ]
-            [ text (stamp post_) ]
-        ]
-
-
-author : Post -> String
-author post_ =
-    Maybe.map (.metadata >> .team) post_.car
-        |> Maybe.withDefault "Race Control"
-
-
-handle : Post -> Html Msg
-handle post_ =
-    case post_.car of
-        Just { metadata } ->
-            div [ Attributes.class "flex items-center gap-x-1.5" ]
-                [ text ("#" ++ metadata.carNumber)
-                , ClassMark.name metadata.class
-                ]
-
-        Nothing ->
-            text "Field"
-
-
-stamp : Post -> String
-stamp post_ =
-    Duration.toStringToSeconds (Instant.toDuration post_.event.elapsed)
-        ++ (post_.car
-                |> Maybe.andThen (\car -> TimelineEvent.runningLap car post_.event)
-                |> Maybe.map (\lap_ -> " · Lap " ++ String.fromInt lap_.lap)
-                |> Maybe.withDefault ""
-           )
-
-
-{-| How far behind the race clock the event stands, in the compact spelling a
-timeline stamps its posts with.
--}
-ago : Duration -> Duration -> String
-ago clock elapsed =
-    let
-        minutes =
-            (clock - elapsed) // 60000
-    in
-    if minutes < 1 then
-        "now"
-
-    else if minutes < 60 then
-        String.fromInt minutes ++ "m"
-
-    else
-        String.fromInt (minutes // 60) ++ "h"
-
-
-feedFoot : Int -> Html Msg
-feedFoot remaining =
-    div [ Attributes.class "grid pt-3" ]
-        [ if remaining > 0 then
-            button
-                [ onClick (TimelineTableMsg DataView.NextPage)
-                , Attributes.class "cursor-pointer rounded-lg border border-border py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                ]
-                [ text ("Show " ++ String.fromInt (min remaining eventsPage) ++ " earlier events") ]
-
-          else
-            div [ Attributes.class "py-1 text-center text-[11px] italic text-muted-foreground" ]
-                [ text "You have reached the start of the race" ]
-        ]
-
-
 {-| One keyed child of the strip: a grid of the width the column stands at,
 whatever is drawn in it, standing as its placement says -- flush for a
 resting one, an offset and a shadow for a carried one.
@@ -727,7 +455,14 @@ columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
                         trackerCard several (Columns.isCarried placement) track replay fieldEvents snapshot
 
                     Columns.Events ->
-                        eventsColumn several (Columns.isCarried placement) m.timelineTable replay.race.cars timeline (Clock.getElapsed replay.playback)
+                        EventsColumn.view
+                            { corner = cornerControls (corner several (Columns.isCarried placement) Columns.Events)
+                            , earlier = TimelineTableMsg DataView.NextPage
+                            }
+                            m.timelineTable
+                            replay.race.cars
+                            timeline
+                            (Clock.getElapsed replay.playback)
                 )
     in
     case keys of
@@ -873,28 +608,11 @@ carCard several timeline held comparison cars snapshot car =
         ]
 
 
-timelineTableOptions : Options
-timelineTableOptions =
-    { sorting = NoSorting
-    , filtering = NoFiltering
-    , selecting = NoSelecting
-    , pagination = Pagination eventsPage
-    }
-
-
-{-| How many posts the feed opens with, and how many more each pull back asks
-for.
--}
-eventsPage : Int
-eventsPage =
-    30
-
-
 {-| The most recent events the field draws, newest first: when each happened,
 whose it was, and what kind of thing it was.
 
 `recentEventLimit` counts the events read, so the rows come out fewer than it
-by the fastest laps among them; see `isFastestLap`.
+by the fastest laps among them; see `TimelineEvent.isFastestLap`.
 
 The rows are rebuilt only when an event arrives. A thunk's arguments are
 compared by `===`, so every one of these is held to something that survives a
@@ -912,7 +630,7 @@ eventRows cars timeline occurredCount =
                 |> Dict.fromList
     in
     Timeline.latest { upTo = occurredCount, limit = recentEventLimit } timeline
-        |> List.filter (not << isFastestLap)
+        |> List.filter (not << TimelineEvent.isFastestLap << .eventType)
         |> List.map (eventRow carsByNumber)
         |> div [ Attributes.class "grid grid-cols-[auto_auto_1fr_auto] gap-x-2 text-xs" ]
 
@@ -920,20 +638,6 @@ eventRows cars timeline occurredCount =
 recentEventLimit : Int
 recentEventLimit =
     100
-
-
-{-| Fastest-lap events are kept out of both event lists -- the recent rows in
-the tracker's column, and the events column's table; their news is the
-reference lap at the head of a class's column and the records on a car's panel.
--}
-isFastestLap : TimelineEvent -> Bool
-isFastestLap event =
-    case event.eventType of
-        CarEvent _ FastestLap ->
-            True
-
-        _ ->
-            False
 
 
 {-| A row is one line as tall as the badge: the `1.375rem` is
