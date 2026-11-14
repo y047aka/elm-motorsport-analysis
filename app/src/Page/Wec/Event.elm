@@ -612,7 +612,10 @@ carCard several timeline held comparison cars snapshot car =
 whose it was, and what kind of thing it was.
 
 `recentEventLimit` counts the events read, so the rows come out fewer than it
-by the fastest laps among them; see `TimelineEvent.isFastestLap`.
+by the fastest laps among them. Their news is told twice over without them: the
+reference lap a class's column heads itself with, and the records on the car's own
+panel. The events column posts every one, being the race's record rather than its
+news.
 
 The rows are rebuilt only when an event arrives. A thunk's arguments are
 compared by `===`, so every one of these is held to something that survives a
