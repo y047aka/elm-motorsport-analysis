@@ -1,4 +1,4 @@
-module View.Feed exposing (Model, Post, ago, disc, init, posts, view)
+module View.Feed exposing (Model, Post, ago, init, posts, view)
 
 {-| A timeline of posts, newest first, the way a social feed shows them: an avatar
 on a rail, four lines beside it, a hairline between posts, and older posts asked
@@ -15,7 +15,7 @@ than once per frame.
 
 -}
 
-import Html exposing (Html, button, div, img, span, text)
+import Html exposing (Html, button, div, span, text)
 import Html.Attributes as Attributes
 import Html.Events exposing (onClick)
 import Internal.DataView as DataView
@@ -158,28 +158,6 @@ foot earlier end pageSize_ remaining =
           else
             div [ Attributes.class "py-1 text-center text-[11px] italic text-muted-foreground" ]
                 [ text end ]
-        ]
-
-
-{-| The round avatar: a label on a ground the caller names, under a mark where
-there is one. The caller's attributes carry the ground's colour and the label's
-size, which are the two a feed cannot know.
--}
-disc : List (Html.Attribute msg) -> { label : String, mark : Maybe { src : String, alt : String } } -> Html msg
-disc ground { label, mark } =
-    div
-        ([ Attributes.class "size-8 shrink-0 rounded-full grid place-items-center leading-none" ]
-            ++ ground
-        )
-        [ case mark of
-            Just { src, alt } ->
-                div [ Attributes.class "flex flex-col items-center gap-y-0.5" ]
-                    [ img [ Attributes.src src, Attributes.alt alt, Attributes.class "max-h-[14px] max-w-[22px] object-contain" ] []
-                    , span [ Attributes.class "text-[9px] leading-none" ] [ text label ]
-                    ]
-
-            Nothing ->
-                text label
         ]
 
 

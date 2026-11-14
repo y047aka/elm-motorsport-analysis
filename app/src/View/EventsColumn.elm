@@ -21,6 +21,7 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (EventType(..), TimelineEvent)
+import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.Feed as Feed
 
@@ -135,21 +136,16 @@ post id event theCar minute =
 avatar : TimelineEvent -> Maybe Car -> Html msg
 avatar event theCar =
     case theCar of
-        Just { metadata } ->
-            Feed.disc
-                [ Attributes.class "text-[11px] font-bold"
-                , Attributes.style "background-color" metadata.manufacturer.color
-                ]
-                { label = metadata.carNumber
-                , mark =
-                    Maybe.map (\url -> { src = url, alt = metadata.manufacturer.name })
-                        metadata.manufacturer.logoUrl
-                }
+        Just car ->
+            CarNumberBadge.viewAvatar car.metadata
 
         Nothing ->
-            Feed.disc
-                [ Attributes.class ("text-[9px] font-bold " ++ flagColor event.eventType) ]
-                { label = "RC", mark = Nothing }
+            CarNumberBadge.circle
+                { ground = "text-[9px] font-bold " ++ flagColor event.eventType
+                , colour = Nothing
+                , label = "RC"
+                , mark = Nothing
+                }
 
 
 {-| The same colours the playback controls' flag chips are worn in.
