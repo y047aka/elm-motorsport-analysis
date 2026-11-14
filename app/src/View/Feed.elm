@@ -1,4 +1,4 @@
-module View.Feed exposing (Model, Post, ago, init, posts, step, view)
+module View.Feed exposing (Model, Msg(..), Post, ago, init, posts, shown, step, update, view)
 
 {-| A timeline of posts, newest first, the way a social feed shows them, with older
 posts asked for a page at a time.
@@ -14,28 +14,37 @@ at different rates.
 import Html exposing (Html, button, div, span, text)
 import Html.Attributes as Attributes
 import Html.Events exposing (onClick)
-import Internal.DataView as DataView
-import Internal.DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
+import Html.Keyed
 import UI.Shadcn.Card as Card
 
 
-{-| How far the reader has pulled the feed back.
+{-| How far the reader has pulled the feed back: which page of the older posts they
+have asked for, and how many one page holds.
 -}
 type alias Model =
-    DataView.Model
+    { page : Int
+    , perPage : Int
+    }
 
 
-{-| The feed has no head to sort by and no field to filter in; it is paginated,
-and the page it is on is the only thing a reader sets in it.
+{-| The one thing a reader does to a feed: ask for the posts behind the ones shown.
 -}
-init : { key : String, page : Int } -> Model
-init { key, page } =
-    DataView.init key
-        { sorting = NoSorting
-        , filtering = NoFiltering
-        , selecting = NoSelecting
-        , pagination = Pagination page
-        }
+type Msg
+    = ShowEarlierEvents
+
+
+update : Msg -> Model -> Model
+update _ model =
+    { model | page = model.page + 1 }
+
+
+{-| The feed opens on one page of `perPage` posts.
+-}
+init : { perPage : Int } -> Model
+init { perPage } =
+    { page = 1
+    , perPage = perPage
+    }
 
 
 {-| A post: an avatar, the line that leads and the time beside it, the name the
@@ -79,32 +88,31 @@ view feed =
 {-| The posts, and the foot that asks for the ones behind them.
 -}
 posts : { earlier : msg, empty : String, end : String } -> Model -> List (Post msg) -> Html msg
-posts feed table thePosts =
-    if List.isEmpty thePosts then
+posts feed model thePosts =
+    let
+        visible =
+            shown model thePosts
+
+        remaining =
+            List.length thePosts - List.length visible
+    in
+    if List.isEmpty visible then
         div [ Attributes.class "p-5 text-center italic text-muted-foreground" ]
             [ text feed.empty ]
 
     else
-        DataView.feedView
-            { key = .key
-            , row = row
-            , foot = foot feed.earlier feed.end (pageSize table)
-            }
-            table
-            thePosts
+        div []
+            [ Html.Keyed.node "div" [] (List.map (\post_ -> ( post_.key, row post_ )) visible)
+            , foot feed.earlier feed.end model.perPage remaining
+            ]
 
 
-{-| How many posts one pull back asks for. A feed that is not paginated shows every
-post at once, so no pull back is ever asked for.
+{-| The posts shown: every one up to the page the reader has reached, not that page
+alone -- a reader who pulled the feed back expects what they passed to stay.
 -}
-pageSize : Model -> Int
-pageSize table =
-    case table.options.pagination of
-        Pagination page ->
-            page
-
-        NoPagination ->
-            0
+shown : Model -> List post -> List post
+shown model =
+    List.take (model.page * model.perPage)
 
 
 row : Post msg -> Html msg

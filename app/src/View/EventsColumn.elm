@@ -33,7 +33,7 @@ type alias Model =
 
 init : Model
 init =
-    Feed.init { key = "timeline-events", page = 30 }
+    Feed.init { perPage = 30 }
 
 
 {-| The column, and the corner it is held and closed by.
@@ -51,14 +51,14 @@ view :
     -> Timeline
     -> Instant
     -> Html msg
-view controls table cars timeline clock =
+view controls model cars timeline clock =
     Feed.view
         { attributes = [ attribute "data-events-column" "" ]
         , corner = controls.corner
         , head = text "Race Timeline"
         , body =
             Html.Lazy.lazy5 (posts controls.earlier)
-                table
+                model
                 cars
                 timeline
                 (Timeline.countUpTo clock timeline)
@@ -81,13 +81,13 @@ clockStep clock =
 
 
 posts : msg -> Model -> List Car -> Timeline -> Int -> Int -> Html msg
-posts earlier table cars timeline occurred bucket =
+posts earlier model cars timeline occurred bucket =
     Feed.posts
         { earlier = earlier
         , empty = "Nothing has happened yet"
         , end = "You have reached the start of the race"
         }
-        table
+        model
         (feedPosts cars timeline occurred bucket)
 
 

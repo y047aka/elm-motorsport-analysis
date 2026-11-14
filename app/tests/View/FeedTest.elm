@@ -5,12 +5,20 @@ import Test exposing (Test, describe, test)
 import View.Feed as Feed
 
 
-{-| The stamp a post carries, and where its bands change. The app's docstring
-examples are run by no compiler -- `.#test` verifies the package's only -- so the
-spellings `ago` claims are asserted here.
+{-| The stamp a post carries, and how far the reader has pulled the feed back. The
+app's docstring examples are run by no compiler -- `.#test` verifies the package's
+only -- so the spellings `ago` claims are asserted here.
 -}
 suite : Test
 suite =
+    describe "View.Feed"
+        [ ago
+        , shown
+        ]
+
+
+ago : Test
+ago =
     describe "Feed.ago"
         [ test "under a step is `now`" <|
             \_ ->
@@ -42,4 +50,31 @@ suite =
                 -- post nearly half a minute old still stamps `now`.
                 Feed.ago { now = 15000, at = 1 }
                     |> Expect.equal "now"
+        ]
+
+
+{-| Paging is cumulative: the page the reader reached is how far the feed is shown
+to, not the only posts it shows.
+-}
+shown : Test
+shown =
+    describe "Feed.shown"
+        [ test "the second page shows sixty posts, not the second thirty" <|
+            \_ ->
+                List.range 1 100
+                    |> Feed.shown { page = 2, perPage = 30 }
+                    |> List.length
+                    |> Expect.equal 60
+        , test "a page past the last post stops at what there is" <|
+            \_ ->
+                List.range 1 45
+                    |> Feed.shown { page = 3, perPage = 30 }
+                    |> List.length
+                    |> Expect.equal 45
+        , test "the opening page shows one page" <|
+            \_ ->
+                List.range 1 100
+                    |> Feed.shown (Feed.init { perPage = 30 })
+                    |> List.length
+                    |> Expect.equal 30
         ]

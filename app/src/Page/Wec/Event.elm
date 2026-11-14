@@ -18,7 +18,6 @@ import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Html.Keyed
 import Html.Lazy
-import Internal.DataView as DataView
 import Json.Decode as Decode
 import List.Extra
 import Motorsport.Analysis.Energy as Energy
@@ -50,6 +49,7 @@ import View.CarNumberBadge as CarNumberBadge
 import View.ClassColumn as ClassColumn
 import View.ClassMark as ClassMark
 import View.EventsColumn as EventsColumn
+import View.Feed as Feed
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
 
@@ -61,7 +61,7 @@ import View.PlaybackControls as PlaybackControls
 type alias Model =
     { strip : Columns.Model
     , rowTrace : Dict String ClassColumn.Trace
-    , timelineTable : EventsColumn.Model
+    , eventsColumn : EventsColumn.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
     }
@@ -79,7 +79,7 @@ init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { strip = Columns.init
       , rowTrace = Dict.empty
-      , timelineTable = EventsColumn.init
+      , eventsColumn = EventsColumn.init
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
       }
@@ -98,7 +98,7 @@ type Msg
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
     | RowTraceChosen Class ClassColumn.Trace
-    | TimelineTableMsg DataView.Msg
+    | EventsColumnMsg Feed.Msg
     | ReplayMsg Replay.Msg
     | CarDetailMsg CarDetail.Msg
 
@@ -144,8 +144,8 @@ update shared msg m =
         RowTraceChosen class_ trace ->
             ( { m | rowTrace = Dict.insert (Class.toString class_) trace m.rowTrace }, Effect.none )
 
-        TimelineTableMsg timelineMsg ->
-            ( { m | timelineTable = DataView.update timelineMsg m.timelineTable }, Effect.none )
+        EventsColumnMsg feedMsg ->
+            ( { m | eventsColumn = Feed.update feedMsg m.eventsColumn }, Effect.none )
 
         ReplayMsg replayMsg ->
             ( m, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
@@ -457,9 +457,9 @@ columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
                     Columns.Events ->
                         EventsColumn.view
                             { corner = cornerControls (corner several (Columns.isCarried placement) Columns.Events)
-                            , earlier = TimelineTableMsg DataView.NextPage
+                            , earlier = EventsColumnMsg Feed.ShowEarlierEvents
                             }
-                            m.timelineTable
+                            m.eventsColumn
                             replay.race.cars
                             timeline
                             (Clock.getElapsed replay.playback)
