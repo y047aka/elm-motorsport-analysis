@@ -1,8 +1,12 @@
-module View.CarNumberBadge exposing (view, viewCompact, viewRow)
+module View.CarNumberBadge exposing (circle, view, viewAvatar, viewCompact, viewRow)
 
-{-| Car number badge on a manufacturer-coloured background.
+{-| The maker's mark over the car's number, on the maker's colour.
 
-@docs view, viewCompact, viewRow
+What differs between these shapes is the box, and the ratio between the mark, the
+number and the space left between them -- so a ratio here is read against the
+others, not invented.
+
+@docs circle, view, viewAvatar, viewCompact, viewRow
 
 -}
 
@@ -16,11 +20,11 @@ import Motorsport.Race.Car as Car
 -}
 view : Car.Metadata -> Html msg
 view metadata =
-    badge "flex flex-col items-center justify-center gap-1.5 p-1 rounded w-[35px]"
-        [ manufacturerLogo "max-w-[28px] h-4 object-contain opacity-90" metadata.manufacturer
-        , div [ class "text-xs font-bold leading-none" ]
-            [ text metadata.carNumber ]
-        ]
+    stacked
+        { box = "gap-1.5 p-1 rounded w-[35px]"
+        , logo = "max-w-[28px] h-4 object-contain opacity-90"
+        , label = "text-xs font-bold leading-none"
+        }
         metadata
 
 
@@ -31,12 +35,31 @@ not a thinner wash of it.
 -}
 viewCompact : Car.Metadata -> Html msg
 viewCompact metadata =
-    badge "flex flex-col items-center justify-center gap-[2px] p-[3px] rounded-[3px] w-[26px]"
-        [ manufacturerLogo "max-w-[18px] h-[11px] object-contain" metadata.manufacturer
-        , div [ class "text-[10px] font-bold leading-none" ]
-            [ text metadata.carNumber ]
-        ]
+    stacked
+        { box = "gap-[2px] p-[3px] rounded-[3px] w-[26px]"
+        , logo = "max-w-[18px] h-[11px] object-contain"
+        , label = "text-[10px] font-bold leading-none"
+        }
         metadata
+
+
+{-| The circle a feed posts a car with, at the ratio the plates set.
+
+The padding is wider than a plate's: content reaches a circle's curve where a
+plate's reaches its corners, and the same figure reads tighter in the round.
+
+-}
+viewAvatar : Car.Metadata -> Html msg
+viewAvatar metadata =
+    circle
+        { ground = "text-[11px] font-bold"
+        , colour = Just metadata.manufacturer.color
+        , label = metadata.carNumber
+        , mark =
+            Maybe.map
+                (\url -> { src = url, alt = metadata.manufacturer.name })
+                metadata.manufacturer.logoUrl
+        }
 
 
 {-| Horizontal badge: the maker's logo on their colour, and the car number
@@ -56,13 +79,51 @@ viewRow metadata =
         ]
 
 
-badge : String -> List (Html msg) -> Car.Metadata -> Html msg
-badge containerClass children metadata =
+{-| The circle: a label on a ground the caller names, under a mark where there is
+one.
+
+Where there is no mark the number centres on its own; the plates keep the empty box
+instead, which is what holds their height.
+
+-}
+circle :
+    { ground : String
+    , colour : Maybe String
+    , label : String
+    , mark : Maybe { src : String, alt : String }
+    }
+    -> Html msg
+circle { ground, colour, label, mark } =
+    let
+        background =
+            Maybe.map (\back -> [ style "background-color" back ]) colour
+                |> Maybe.withDefault []
+    in
     div
-        [ class containerClass
+        ([ class ("flex flex-col items-center justify-center gap-[2px] size-8 shrink-0 rounded-full p-[3px] leading-none " ++ ground) ]
+            ++ background
+        )
+        [ case mark of
+            Just drawn ->
+                img [ src drawn.src, alt drawn.alt, class "max-h-[13px] max-w-[21px] object-contain" ] []
+
+            Nothing ->
+                text ""
+        , div [ class "leading-none" ] [ text label ]
+        ]
+
+
+{-| The mark over the number, in the box a plate is.
+-}
+stacked : { box : String, logo : String, label : String } -> Car.Metadata -> Html msg
+stacked { box, logo, label } metadata =
+    div
+        [ class ("flex flex-col items-center justify-center " ++ box)
         , style "background-color" metadata.manufacturer.color
         ]
-        children
+        [ manufacturerLogo logo metadata.manufacturer
+        , div [ class label ] [ text metadata.carNumber ]
+        ]
 
 
 manufacturerLogo : String -> Manufacturer -> Html msg

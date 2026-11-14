@@ -154,13 +154,7 @@ nothingYet =
 clock, cached because every view of a frame shares it, and the one of them
 rebuilt as playback runs.
 
-`timeline` is the events themselves, kept for the events table to read the clock
-against, and the only one of them a round can go without: nothing playback reads
-is counted off them.
-
-`fieldEvents` is those of them the tracker's column draws, held apart rather
-than read off `timeline` on the way: those rows are built behind a `Html.Lazy`
-thunk, and a timeline made afresh on a frame is a new reference on every one.
+`timeline` is the events themselves, kept for the events column to read the clock against, and the one field a round can go without: nothing playback reads is counted off them.
 
 -}
 type alias LoadedRound =
@@ -170,7 +164,6 @@ type alias LoadedRound =
     , energy : Energy.Table
     , track : Tracker.Track
     , timeline : Timeline
-    , fieldEvents : Timeline
     }
 
 
@@ -308,7 +301,7 @@ update msg m =
             ( { m | round = timelineArrived key events m.round }, Effect.none )
 
         TimelineLoaded_Wec _ (Err _) ->
-            -- The events table goes without rather than the round: a page draws
+            -- The events column goes without rather than the round: a page draws
             -- every other part of one from the summary and the laps.
             ( m, Effect.none )
 
@@ -497,7 +490,7 @@ timelineArrived key events round =
 
         Loaded id loaded ->
             if keyOf id == key then
-                Loaded id { loaded | timeline = Timeline.fromList events, fieldEvents = fieldEventsOf events }
+                Loaded id { loaded | timeline = Timeline.fromList events }
 
             else
                 round
@@ -514,13 +507,6 @@ didNotArrive key error round =
     forRound key
         (\id _ -> Unavailable { season = String.fromInt id.season, event = id.id } (LoadFailed error))
         round
-
-
-fieldEventsOf : List TimelineEvent -> Timeline
-fieldEventsOf events =
-    events
-        |> List.filter (\event -> TimelineEvent.forField event.eventType)
-        |> Timeline.fromList
 
 
 roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
@@ -548,7 +534,6 @@ roundFrom id summary rawLaps timelineEvents geometry =
     , energy = energy
     , track = trackOf id summary.track geometry
     , timeline = Timeline.fromList timelineEvents
-    , fieldEvents = fieldEventsOf timelineEvents
     }
 
 

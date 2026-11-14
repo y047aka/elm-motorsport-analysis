@@ -1,8 +1,8 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
     , fromJsonl, decoder
-    , describe, forField, forCar
-    , runningLap
+    , describe, forCar
+    , runningLap, handover
     )
 
 {-| The race as a list of things that happened, in the order they happened.
@@ -11,13 +11,14 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
 @docs fromJsonl, decoder
-@docs describe, forField, forCar
-@docs runningLap
+@docs describe, forCar
+@docs runningLap, handover
 
 -}
 
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -84,32 +85,6 @@ describe eventType =
             "Finished"
 
 
-{-| Whether the event is the field's own, which is what its list of events
-keeps.
-
-    forField (CarEvent "51" FastestLap)
-    --> True
-
-    forField (CarEvent "51" DriverChange)
-    --> False
-
-    forField (CarEvent "83" LeaderInPit)
-    --> False
-
--}
-forField : EventType -> Bool
-forField eventType =
-    case eventType of
-        CarEvent _ DriverChange ->
-            False
-
-        CarEvent _ LeaderInPit ->
-            False
-
-        _ ->
-            True
-
-
 {-| Whether the event is one car's own, which is what that car's Log keeps.
 
 A leader-in-pit event answers to no car: it is the field's leader crossing a
@@ -152,6 +127,27 @@ far the clock has run.
 runningLap : Car -> TimelineEvent -> Maybe Lap
 runningLap car event =
     Lap.findLastLapAt { elapsed = event.elapsed } car.laps
+
+
+{-| The handover the event marks: who brought the car in, and who took it on.
+
+Read off the laps either side of the event -- the last one completed, and the one
+running -- since that is where a timing feed stamps a driver change: as the car
+goes back out.
+
+-}
+handover : Car -> TimelineEvent -> Maybe ( Driver, Driver )
+handover car event =
+    case
+        ( Lap.findLastLapAt { elapsed = event.elapsed } car.laps
+        , Lap.findCurrentLap { elapsed = event.elapsed } car.laps
+        )
+    of
+        ( Just handedOver, Just tookOver ) ->
+            Driver.changeBetween handedOver.driver tookOver.driver
+
+        _ ->
+            Nothing
 
 
 
