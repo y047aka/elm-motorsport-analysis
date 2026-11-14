@@ -62,28 +62,33 @@ view controls table cars timeline clock =
                 cars
                 timeline
                 (Timeline.countUpTo clock timeline)
-                (clockMinute clock)
+                (clockStep clock)
         }
 
 
-{-| The minute of the race the posts are stamped against. The clock moves every
-frame; the minute it is bucketed to does not, which is what lets the posts be a
-thunk's argument.
+{-| The race clock, bucketed to the stamp's step. The clock moves every frame; the
+bucket it is floored to does not, which is what lets the posts be a thunk's
+argument.
+
+The stamps are printed against this rather than the clock, which costs the accuracy
+they can claim: a stamp is never ahead of the truth and never two steps behind it,
+so `now` covers a post under half a minute old.
+
 -}
-clockMinute : Instant -> Int
-clockMinute clock =
-    Instant.toDuration clock // 60000
+clockStep : Instant -> Int
+clockStep clock =
+    Instant.toDuration clock // Feed.step
 
 
 posts : msg -> Model -> List Car -> Timeline -> Int -> Int -> Html msg
-posts earlier table cars timeline occurred minute =
+posts earlier table cars timeline occurred bucket =
     Feed.posts
         { earlier = earlier
         , empty = "Nothing has happened yet"
         , end = "You have reached the start of the race"
         }
         table
-        (feedPosts cars timeline occurred minute)
+        (feedPosts cars timeline occurred bucket)
 
 
 {-| The posts, newest first, cut where the race clock stands.
@@ -93,7 +98,7 @@ the clock has run.
 
 -}
 feedPosts : List Car -> Timeline -> Int -> Int -> List (Feed.Post msg)
-feedPosts cars timeline occurred minute =
+feedPosts cars timeline occurred bucket =
     let
         carsByNumber =
             List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
@@ -102,7 +107,7 @@ feedPosts cars timeline occurred minute =
         |> List.take occurred
         |> List.indexedMap Tuple.pair
         |> List.reverse
-        |> List.map (\( id, event ) -> post id event (named event carsByNumber) minute)
+        |> List.map (\( id, event ) -> post id event (named event carsByNumber) bucket)
 
 
 {-| Which car the event names. The field's own events -- a flag, the start -- name
@@ -119,11 +124,11 @@ named event carsByNumber =
 
 
 post : Int -> TimelineEvent -> Maybe Car -> Int -> Feed.Post msg
-post id event theCar minute =
+post id event theCar bucket =
     { key = String.fromInt id
     , avatar = avatar event theCar
     , headline = headline theCar
-    , time = Feed.ago { now = minute * 60000, at = Instant.toDuration event.elapsed }
+    , time = Feed.ago { now = bucket * Feed.step, at = Instant.toDuration event.elapsed }
     , author = author theCar
     , body = body event theCar
     , stamp = stamp event theCar

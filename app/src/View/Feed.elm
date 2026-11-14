@@ -1,4 +1,4 @@
-module View.Feed exposing (Model, Post, ago, init, posts, view)
+module View.Feed exposing (Model, Post, ago, init, posts, step, view)
 
 {-| A timeline of posts, newest first, the way a social feed shows them, with older
 posts asked for a page at a time.
@@ -153,20 +153,57 @@ foot earlier end pageSize_ remaining =
         ]
 
 
+{-| The stamp's finest step, in milliseconds: fifteen seconds. `ago` prints nothing
+finer, and the clock a caller rebuilds the posts on is bucketed to it -- a bucket
+coarser than this is what makes a post read `now` when it is not new.
+-}
+step : Int
+step =
+    15000
+
+
 {-| How far behind one moment another stands, in the compact spelling a timeline
-stamps its posts with: `now`, `12m`, `3h`.
+stamps its posts with: `now`, `45s`, `12m`, `3h`. The count is floored to `step`.
+
+    ago { now = 0, at = 0 }
+    --> "now"
+
+    ago { now = 20000, at = 0 }
+    --> "15s"
+
+    ago { now = 45000, at = 0 }
+    --> "45s"
+
+    ago { now = 75000, at = 0 }
+    --> "1m"
+
+    ago { now = 750000, at = 0 }
+    --> "12m"
+
+    ago { now = 10800000, at = 0 }
+    --> "3h"
+
 -}
 ago : { now : Int, at : Int } -> String
 ago { now, at } =
     let
-        minutes =
-            (now - at) // 60000
+        steps =
+            (now - at) // step
+
+        stepsPerMinute =
+            60000 // step
+
+        stepsPerHour =
+            3600000 // step
     in
-    if minutes < 1 then
+    if steps < 1 then
         "now"
 
-    else if minutes < 60 then
-        String.fromInt minutes ++ "m"
+    else if steps < stepsPerMinute then
+        String.fromInt (steps * (step // 1000)) ++ "s"
+
+    else if steps < stepsPerHour then
+        String.fromInt (steps // stepsPerMinute) ++ "m"
 
     else
-        String.fromInt (minutes // 60) ++ "h"
+        String.fromInt (steps // stepsPerHour) ++ "h"
