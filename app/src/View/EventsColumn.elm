@@ -225,7 +225,8 @@ body event theCar =
             described
 
 
-{-| The moment the event fell, and the lap the car was running then.
+{-| The moment the event fell, and the last lap the car had completed -- one behind
+the lap a timing sheet has the car on.
 -}
 stamp : TimelineEvent -> Maybe Car -> String
 stamp event theCar =
