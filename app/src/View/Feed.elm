@@ -27,15 +27,22 @@ type alias Model =
     }
 
 
-{-| The one thing a reader does to a feed: ask for the posts behind the ones shown.
+{-| The one thing a reader does to a feed: ask for the posts behind the ones shown,
+and give them back again.
 -}
 type Msg
     = ShowEarlierEvents
+    | ShowFewerEvents
 
 
 update : Msg -> Model -> Model
-update _ model =
-    { model | page = model.page + 1 }
+update msg model =
+    case msg of
+        ShowEarlierEvents ->
+            { model | page = model.page + 1 }
+
+        ShowFewerEvents ->
+            { model | page = max 1 (model.page - 1) }
 
 
 {-| The feed opens on one page of `perPage` posts.
@@ -85,9 +92,10 @@ view feed =
         ]
 
 
-{-| The posts, and the foot that asks for the ones behind them.
+{-| The posts, with the foot that asks for the ones behind them and hands the ones
+asked for back.
 -}
-posts : { earlier : msg, empty : String, end : String } -> Model -> List (Post msg) -> Html msg
+posts : { earlier : msg, fewer : msg, empty : String, end : String } -> Model -> List (Post msg) -> Html msg
 posts feed model thePosts =
     let
         visible =
@@ -103,8 +111,37 @@ posts feed model thePosts =
     else
         div []
             [ Html.Keyed.node "div" [] (List.map (\post_ -> ( post_.key, row post_ )) visible)
-            , foot feed.earlier feed.end model.perPage remaining
+            , div [ Attributes.class "grid pt-3 gap-y-1" ]
+                [ if remaining > 0 then
+                    button
+                        [ onClick feed.earlier
+                        , Attributes.class "cursor-pointer rounded-lg border border-border py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        ]
+                        [ text ("Show " ++ String.fromInt (min remaining model.perPage) ++ " earlier events") ]
+
+                  else
+                    div [ Attributes.class "py-1 text-center text-[11px] italic text-muted-foreground" ]
+                        [ text feed.end ]
+                , back feed.fewer model
+                ]
             ]
+
+
+{-| The way back. Every post asked for stays shown under the newest, so a reader who
+pulled the feed to the start of the race has all of it above the foot and nothing to
+shrink it with.
+-}
+back : msg -> Model -> Html msg
+back fewer model =
+    if model.page > 1 then
+        button
+            [ onClick fewer
+            , Attributes.class "cursor-pointer py-1 text-center text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            ]
+            [ text ("Show " ++ String.fromInt model.perPage ++ " fewer events") ]
+
+    else
+        text ""
 
 
 {-| The posts shown: every one up to the page the reader has reached, not that page
@@ -142,22 +179,6 @@ postText post_ =
             [ text post_.body ]
         , div [ Attributes.class "pt-1 text-[11px] tabular-nums text-muted-foreground" ]
             [ text post_.stamp ]
-        ]
-
-
-foot : msg -> String -> Int -> Int -> Html msg
-foot earlier end pageSize_ remaining =
-    div [ Attributes.class "grid pt-3" ]
-        [ if remaining > 0 then
-            button
-                [ onClick earlier
-                , Attributes.class "cursor-pointer rounded-lg border border-border py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                ]
-                [ text ("Show " ++ String.fromInt (min remaining pageSize_) ++ " earlier events") ]
-
-          else
-            div [ Attributes.class "py-1 text-center text-[11px] italic text-muted-foreground" ]
-                [ text end ]
         ]
 
 

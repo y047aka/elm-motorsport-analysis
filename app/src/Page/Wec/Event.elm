@@ -458,6 +458,7 @@ columnStrip cell track timeline fieldEvents keys m pitCycles replay snapshot =
                         EventsColumn.view
                             { corner = cornerControls (corner several (Columns.isCarried placement) Columns.Events)
                             , earlier = EventsColumnMsg Feed.ShowEarlierEvents
+                            , fewer = EventsColumnMsg Feed.ShowFewerEvents
                             }
                             m.eventsColumn
                             replay.race.cars
