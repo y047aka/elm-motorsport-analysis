@@ -198,8 +198,8 @@ author theCar =
 
 
 {-| What happened. A driver change names the two drivers; a fastest lap is the
-class's, and names who set it and how fast -- the time worn in the purple a timing
-sheet sets fastest laps in -- over a strip of the lap's own segments.
+class's, and names who set it and how fast -- the time in the colour the strip under
+it rates a fastest segment in.
 
 The strip is rated against the records as they stood when the lap was set, not as
 they stand at the clock: a post two hours old would otherwise be recoloured by a
@@ -242,7 +242,8 @@ body event theCar changes =
                                     (Maybe.map
                                         (\t ->
                                             [ text " · "
-                                            , span [ Attributes.class "text-purple-400" ] [ text (Duration.toString t) ]
+                                            , span [ Attributes.style "color" (Performance.textColorOf Performance.Fastest) ]
+                                                [ text (Duration.toString t) ]
                                             ]
                                         )
                                         time
