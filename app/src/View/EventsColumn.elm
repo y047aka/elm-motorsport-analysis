@@ -15,10 +15,13 @@ import Dict exposing (Dict)
 import Html exposing (Html, div, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Lazy
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Flag as Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Lap.Performance as Performance
+import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
@@ -49,18 +52,20 @@ view :
     -> Model
     -> List Car
     -> Timeline
+    -> BestTimes.Changes
     -> Instant
     -> Html msg
-view controls model cars timeline clock =
+view controls model cars timeline changes clock =
     Feed.view
         { attributes = [ attribute "data-events-column" "" ]
         , corner = controls.corner
         , head = text "Race Timeline"
         , body =
-            Html.Lazy.lazy5 (posts controls.earlier)
+            Html.Lazy.lazy6 (posts controls.earlier)
                 model
                 cars
                 timeline
+                changes
                 (Timeline.countUpTo clock timeline)
                 (clockStep clock)
         }
@@ -80,15 +85,15 @@ clockStep clock =
     Instant.toDuration clock // Feed.step
 
 
-posts : msg -> Model -> List Car -> Timeline -> Int -> Int -> Html msg
-posts earlier model cars timeline occurred bucket =
+posts : msg -> Model -> List Car -> Timeline -> BestTimes.Changes -> Int -> Int -> Html msg
+posts earlier model cars timeline changes occurred bucket =
     Feed.posts
         { earlier = earlier
         , empty = "Nothing has happened yet"
         , end = "You have reached the start of the race"
         }
         model
-        (feedPosts cars timeline occurred bucket)
+        (feedPosts cars timeline changes occurred bucket)
 
 
 {-| The posts, newest first, cut where the race clock stands.
@@ -97,8 +102,8 @@ The key is the event's place in the timeline, so a post keeps its key however fa
 the clock has run.
 
 -}
-feedPosts : List Car -> Timeline -> Int -> Int -> List (Feed.Post msg)
-feedPosts cars timeline occurred bucket =
+feedPosts : List Car -> Timeline -> BestTimes.Changes -> Int -> Int -> List (Feed.Post msg)
+feedPosts cars timeline changes occurred bucket =
     let
         carsByNumber =
             List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
@@ -107,7 +112,7 @@ feedPosts cars timeline occurred bucket =
         |> List.take occurred
         |> List.indexedMap Tuple.pair
         |> List.reverse
-        |> List.map (\( id, event ) -> post id event (named event carsByNumber) bucket)
+        |> List.map (\( id, event ) -> post id event (named event carsByNumber) bucket changes)
 
 
 {-| Which car the event names. The field's own events -- a flag, the start -- name
@@ -123,14 +128,14 @@ named event carsByNumber =
             Nothing
 
 
-post : Int -> TimelineEvent -> Maybe Car -> Int -> Feed.Post msg
-post id event theCar bucket =
+post : Int -> TimelineEvent -> Maybe Car -> Int -> BestTimes.Changes -> Feed.Post msg
+post id event theCar bucket changes =
     { key = String.fromInt id
     , avatar = avatar event theCar
     , headline = headline theCar
     , time = Feed.ago { now = bucket * Feed.step, at = Instant.toDuration event.elapsed }
     , author = author theCar
-    , body = body event theCar
+    , body = body event theCar changes
     , stamp = stamp event theCar
     }
 
@@ -194,10 +199,15 @@ author theCar =
 
 {-| What happened. A driver change names the two drivers; a fastest lap is the
 class's, and names who set it and how fast -- the time worn in the purple a timing
-sheet sets fastest laps in.
+sheet sets fastest laps in -- over a strip of the lap's own segments.
+
+The strip is rated against the records as they stood when the lap was set, not as
+they stand at the clock: a post two hours old would otherwise be recoloured by a
+sector beaten since.
+
 -}
-body : TimelineEvent -> Maybe Car -> Html msg
-body event theCar =
+body : TimelineEvent -> Maybe Car -> BestTimes.Changes -> Html msg
+body event theCar changes =
     let
         described =
             TimelineEvent.describe event.eventType
@@ -210,27 +220,40 @@ body event theCar =
                 |> text
 
         ( CarEvent _ FastestLap, Just car ) ->
-            let
-                runner =
-                    TimelineEvent.runningLap car event
+            case TimelineEvent.runningLap car event of
+                Nothing ->
+                    text "Class Fastest Lap"
 
-                who =
-                    Maybe.map (.driver >> Driver.toInitialAndSurname) runner
+                Just lap ->
+                    let
+                        records =
+                            BestTimes.at { elapsed = event.elapsed } changes
 
-                time =
-                    runner |> Maybe.andThen .time
-            in
-            span [] <|
-                [ text ("Class Fastest Lap" ++ Maybe.withDefault "" (Maybe.map (\name -> " · " ++ name) who)) ]
-                    ++ Maybe.withDefault []
-                        (Maybe.map
-                            (\t ->
-                                [ text " · "
-                                , span [ Attributes.class "text-purple-400" ] [ text (Duration.toString t) ]
-                                ]
-                            )
-                            time
-                        )
+                        rated =
+                            Performance.ofSectors records lap
+
+                        time =
+                            lap.time
+                    in
+                    div [ Attributes.class "grid gap-y-1" ]
+                        [ span [] <|
+                            [ text ("Class Fastest Lap · " ++ Driver.toInitialAndSurname lap.driver) ]
+                                ++ Maybe.withDefault []
+                                    (Maybe.map
+                                        (\t ->
+                                            [ text " · "
+                                            , span [ Attributes.class "text-purple-400" ] [ text (Duration.toString t) ]
+                                            ]
+                                        )
+                                        time
+                                    )
+                        , case Performance.ofMiniSectors records lap of
+                            Just mini ->
+                                SegmentStrip.miniSectorsRated mini
+
+                            Nothing ->
+                                SegmentStrip.sectorsRated rated
+                        ]
 
         _ ->
             text described

@@ -441,6 +441,7 @@ columnStrip cell track timeline keys m pitCycles replay snapshot =
                             m.eventsColumn
                             replay.race.cars
                             timeline
+                            replay.race.bestTimeChanges
                             (Clock.getElapsed replay.playback)
                 )
     in
