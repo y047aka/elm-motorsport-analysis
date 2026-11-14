@@ -191,24 +191,37 @@ author theCar =
         |> Maybe.withDefault "Race Control"
 
 
-{-| What happened. A driver change names the two drivers rather than the kind of
-stop.
+{-| What happened. A driver change names the two drivers; a fastest lap names who
+set it and how fast.
 -}
 body : TimelineEvent -> Maybe Car -> String
 body event theCar =
-    case event.eventType of
-        CarEvent _ DriverChange ->
-            Maybe.andThen (handoverWords event) theCar
-                |> Maybe.withDefault (TimelineEvent.describe event.eventType)
+    let
+        described =
+            TimelineEvent.describe event.eventType
+    in
+    case ( event.eventType, theCar ) of
+        ( CarEvent _ DriverChange, Just car ) ->
+            TimelineEvent.handover car event
+                |> Maybe.map (\( handedOver, tookOver ) -> Driver.toHandover handedOver tookOver)
+                |> Maybe.withDefault described
+
+        ( CarEvent _ FastestLap, Just car ) ->
+            TimelineEvent.runningLap car event
+                |> Maybe.map
+                    (\lap ->
+                        described
+                            ++ " · "
+                            ++ Driver.toInitialAndSurname lap.driver
+                            ++ (lap.time
+                                    |> Maybe.map (\time -> " · " ++ Duration.toString time)
+                                    |> Maybe.withDefault ""
+                               )
+                    )
+                |> Maybe.withDefault described
 
         _ ->
-            TimelineEvent.describe event.eventType
-
-
-handoverWords : TimelineEvent -> Car -> Maybe String
-handoverWords event car =
-    TimelineEvent.handover car event
-        |> Maybe.map (\( handedOver, tookOver ) -> Driver.toHandover handedOver tookOver)
+            described
 
 
 {-| The moment the event fell, and the lap it fell on -- the lap the car was
