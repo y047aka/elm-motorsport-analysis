@@ -39,9 +39,7 @@ init =
 {-| The column, and the corner it is held and closed by.
 
 The corner belongs to the strip rather than to the column: the same controls close
-and carry every other column, and they answer to the page's own message. `earlier`
-is what the foot answers to when the reader asks for the posts behind the ones
-shown.
+and carry every other column, and they answer to the page's own message.
 
 -}
 view :
@@ -88,8 +86,7 @@ posts earlier table cars timeline occurred minute =
         (feedPosts cars timeline occurred minute)
 
 
-{-| The posts, newest first, cut where the race clock stands. Every event the
-timeline holds is a post, the fastest laps among them.
+{-| The posts, newest first, cut where the race clock stands.
 
 The key is the event's place in the timeline, so a post keeps its key however far
 the clock has run.
@@ -169,8 +166,7 @@ flagColor eventType =
             "bg-muted text-muted-foreground"
 
 
-{-| The line that leads: the number, and the class it runs in. An event of the
-field's own is posted by no car.
+{-| The line that leads: the number, and the class it runs in.
 -}
 headline : Maybe Car -> Html msg
 headline theCar =
@@ -224,8 +220,7 @@ body event theCar =
             described
 
 
-{-| The moment the event fell, and the lap it fell on -- the lap the car was
-running, which an event of the field's own names no car to have.
+{-| The moment the event fell, and the lap the car was running then.
 -}
 stamp : TimelineEvent -> Maybe Car -> String
 stamp event theCar =

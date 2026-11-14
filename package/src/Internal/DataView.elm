@@ -403,11 +403,10 @@ view ({ columns } as config) model dataList =
 {-| The rows `view` would show, drawn one under another by the caller rather than
 in a table's rows.
 
-A feed has no head to sort by and no field to filter in, so it reads the model's
-`page` alone -- and the pages _up to_ that one, shown together: a reader who
-scrolls to what came before expects what they had passed to stay. `foot` is
-handed how many rows the page has not reached, which is what a control asking
-for the next ones needs to say.
+Only the model's `page` is read -- and the pages _up to_ that one, shown
+together: a reader who scrolls to what came before expects what they had passed to
+stay. `foot` is handed how many rows the page has not reached, which is what a
+control asking for the next ones needs to say.
 
 -}
 feedView :

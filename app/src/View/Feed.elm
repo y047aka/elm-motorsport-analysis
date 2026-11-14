@@ -1,17 +1,13 @@
 module View.Feed exposing (Model, Post, ago, init, posts, view)
 
-{-| A timeline of posts, newest first, the way a social feed shows them: an avatar
-on a rail, four lines beside it, a hairline between posts, and older posts asked
-for a page at a time.
+{-| A timeline of posts, newest first, the way a social feed shows them, with older
+posts asked for a page at a time.
 
-Nothing here is the sport's. The module imports no `Motorsport` module, a post is
-text and an avatar the caller built, and the times it prints are milliseconds the
-caller hands it. That is what leaves it room to become a library of its own.
+Nothing here is the sport's: the module imports no `Motorsport` module, and the
+times it prints are milliseconds the caller hands it.
 
 The frame and the posts are two functions rather than one because they are rebuilt
-at different rates: the frame answers to the pointer and the layout, and the posts
-are held a lazy's argument, so a field of posts is walked once per event rather
-than once per frame.
+at different rates.
 
 -}
 
@@ -59,9 +55,7 @@ type alias Post msg =
 {-| The frame: the card, the head above the scroller, the corner over it.
 
 The head stands above the scroller and not inside it: Card's own ground is
-translucent, so a head within the scroller lets the posts show through it. The
-corner is whatever the column is closed and carried by; the frame only holds it out
-of the head's way.
+translucent, so a head within the scroller lets the posts show through it.
 
 -}
 view :
@@ -82,9 +76,7 @@ view feed =
         ]
 
 
-{-| The posts, paged and newest first, and the foot that asks for the ones behind
-them. The pages are cumulative: a reader who pulled the feed back still sees every
-post above the ones they asked for.
+{-| The posts, and the foot that asks for the ones behind them.
 -}
 posts : { earlier : msg, empty : String, end : String } -> Model -> List (Post msg) -> Html msg
 posts feed table thePosts =

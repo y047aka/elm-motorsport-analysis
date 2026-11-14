@@ -98,7 +98,7 @@ carOfKey key =
 {-| The order of the strip: the columns, in the order the reader left them
 in. An order nobody has touched is the strip as the round opens it -- one
 column per class the field has cars out in, in the order a classification
-lists the classes, the tracker's column and then the events table behind
+lists the classes, the tracker's column and then the events column behind
 them -- which is what `keysOf` reads out of the field; the first open, close
 or move writes that opening down as a list.
 -}

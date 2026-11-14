@@ -24,7 +24,7 @@ suite : Test
 suite =
     describe "Page.Wec.Columns"
         [ describe "the opening strip"
-            [ test "one column per class, in the order the grid lists them, the tracker and the events table behind them" <|
+            [ test "one column per class, in the order the grid lists them, the tracker and the events column behind them" <|
                 \_ ->
                     Columns.init
                         |> keysOf
@@ -63,7 +63,7 @@ suite =
                             Expect.fail "the fixture fields fewer than two classes"
             ]
         , describe "opening and closing"
-            [ test "a car opened joins the back of the strip, behind the events table" <|
+            [ test "a car opened joins the back of the strip, behind the events column" <|
                 \_ ->
                     Columns.init
                         |> step (Open (Car "9"))
@@ -251,7 +251,7 @@ keysOf model =
 
 {-| The columns the strip opens with: one for each class the fixture's field has
 cars out in, in the order the grid lists the classes, the tracker's column and
-the events table behind them -- which is why both are filtered out here.
+the events column behind them -- which is why both are filtered out here.
 -}
 classColumns : List StripKey
 classColumns =

@@ -139,9 +139,7 @@ forCar carNumber eventType =
             False
 
 
-{-| Whether the event is a fastest lap, which the recent rows the tracker's column
-draws keep out: its news is the reference lap at the head of a class's column and
-the records on a car's panel.
+{-| Whether the event is a fastest lap.
 
     isFastestLap (CarEvent "51" FastestLap)
     --> True
@@ -182,9 +180,8 @@ runningLap car event =
 {-| The handover the event marks: who brought the car in, and who took it on.
 
 Read off the laps either side of the event -- the last one completed, and the one
-running -- since that is where a driver change is stamped: the feed puts it as the
-car goes back out. `Nothing` where the two laps name the same driver, or where the
-car has no lap on one side of the event or the other.
+running -- since that is where a timing feed stamps a driver change: as the car
+goes back out.
 
 -}
 handover : Car -> TimelineEvent -> Maybe ( Driver, Driver )

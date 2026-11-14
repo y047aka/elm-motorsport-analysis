@@ -154,8 +154,8 @@ nothingYet =
 clock, cached because every view of a frame shares it, and the one of them
 rebuilt as playback runs.
 
-`timeline` is the events themselves, kept for the events table to read the clock
-against, and the only one of them a round can go without: nothing playback reads
+`timeline` is the events themselves, kept for the events column to read the
+clock against, and the only one of them a round can go without: nothing playback reads
 is counted off them.
 
 `fieldEvents` is those of them the tracker's column draws, held apart rather
@@ -308,7 +308,7 @@ update msg m =
             ( { m | round = timelineArrived key events m.round }, Effect.none )
 
         TimelineLoaded_Wec _ (Err _) ->
-            -- The events table goes without rather than the round: a page draws
+            -- The events column goes without rather than the round: a page draws
             -- every other part of one from the summary and the laps.
             ( m, Effect.none )
 

@@ -159,7 +159,7 @@ function classRow(page: Page, carNumber: string, className: string) {
 }
 
 /** Every column of the strip, left to right: a class's named, a car's numbered,
- * the tracker's as `TRACKER`, the events table's as `EVENTS`. A class's column
+ * the tracker's as `TRACKER`, the events column's as `EVENTS`. A class's column
  * carries its class on the card it is; a car's panel carries its number deeper
  * in, and the tracker's and the events' column carry their own marks. */
 function stripOrder(page: Page) {
@@ -417,7 +417,7 @@ test.describe('Class columns', () => {
       ).toBeVisible();
     }
     await expect(page.getByRole('button', { name: 'Close this column' })).toHaveCount(
-      CLASSES.length + 2, // the tracker's column and the events table, standing from the load, are two of them
+      CLASSES.length + 2, // the tracker's column and the events column, standing from the load, are two of them
     );
     // Nothing has been picked, so no car is marked anywhere.
     await expect(page.locator('[data-live-standings] [aria-pressed="true"]')).toHaveCount(0);

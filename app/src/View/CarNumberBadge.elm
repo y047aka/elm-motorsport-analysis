@@ -2,9 +2,7 @@ module View.CarNumberBadge exposing (circle, view, viewAvatar, viewCompact, view
 
 {-| The maker's mark over the car's number, on the maker's colour.
 
-Four shapes, one drawing: the plate a car is named by, the small plate a class
-column keeps, the row a timing line is as tall as, and the circle a feed posts
-with. What differs between them is the box, and the ratio between the mark, the
+What differs between these shapes is the box, and the ratio between the mark, the
 number and the space left between them -- so a ratio here is read against the
 others, not invented.
 
@@ -45,13 +43,10 @@ viewCompact metadata =
         metadata
 
 
-{-| The circle a feed posts a car with, at the ratio the two plates set between
-them: `view` carries `text-xs` on `w-[35px]` and `viewCompact` carries
-`text-[10px]` on `w-[26px]`, so 32px takes `text-[11px]` for the number.
+{-| The circle a feed posts a car with, at the ratio the plates set.
 
-The mark is a hair under the 14px `viewRow` gives it, and the circle keeps 3px of
-padding: a plate's content reaches its corners, a circle's reaches its curve, and
-the same figure reads tighter in the round.
+The padding is wider than a plate's: content reaches a circle's curve where a
+plate's reaches its corners, and the same figure reads tighter in the round.
 
 -}
 viewAvatar : Car.Metadata -> Html msg
@@ -85,12 +80,10 @@ viewRow metadata =
 
 
 {-| The circle: a label on a ground the caller names, under a mark where there is
-one. A car's avatar and a field event's race-control mark are the same circle; what
-the shape cannot know is the number's size and the ground's colour, so the caller
-brings both.
+one.
 
-A maker with no mark centres its number where the mark would have stood. The plates
-keep the empty box instead, which is what holds their height.
+Where there is no mark the number centres on its own; the plates keep the empty box
+instead, which is what holds their height.
 
 -}
 circle :

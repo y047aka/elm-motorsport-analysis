@@ -112,7 +112,7 @@ A season the grid page is not showing is reached through its season filter, whic
 ### The car column strip
 
 `Page/Wec/Columns.elm` is the strip's own model, messages and update — the order, the one column a pointer carries, and how far down each car's panel was scrolled — and the page holds one `Columns.Model`, forwards through `ColumnsMsg`, and hands the field in per call.
-A column is keyed by `StripKey`: a class's, a car's, the tracker's or the events table's. A car's column joins at the back when the reader picks one, and from the first open, close or move the order is the reader's.
+A column is keyed by `StripKey`: a class's, a car's, the tracker's or the events column's. A car's column joins at the back when the reader picks one, and from the first open, close or move the order is the reader's.
 
 The strip opens with one column per class the field has cars out in, in the order a classification lists them and not the order their leaders run in.
 A class's column (`View/ClassColumn.elm`) is the standings read down one class instead of the field: class place first, the interval to the class-mate ahead rather than to whoever is ahead, and the class's own fastest lap as the reference rather than the race's.
