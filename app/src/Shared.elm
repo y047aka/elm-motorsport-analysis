@@ -158,10 +158,6 @@ rebuilt as playback runs.
 clock against, and the only one of them a round can go without: nothing playback reads
 is counted off them.
 
-`fieldEvents` is those of them the tracker's column draws, held apart rather
-than read off `timeline` on the way: those rows are built behind a `Html.Lazy`
-thunk, and a timeline made afresh on a frame is a new reference on every one.
-
 -}
 type alias LoadedRound =
     { replay : Replay.Model
@@ -170,7 +166,6 @@ type alias LoadedRound =
     , energy : Energy.Table
     , track : Tracker.Track
     , timeline : Timeline
-    , fieldEvents : Timeline
     }
 
 
@@ -497,7 +492,7 @@ timelineArrived key events round =
 
         Loaded id loaded ->
             if keyOf id == key then
-                Loaded id { loaded | timeline = Timeline.fromList events, fieldEvents = fieldEventsOf events }
+                Loaded id { loaded | timeline = Timeline.fromList events }
 
             else
                 round
@@ -514,13 +509,6 @@ didNotArrive key error round =
     forRound key
         (\id _ -> Unavailable { season = String.fromInt id.season, event = id.id } (LoadFailed error))
         round
-
-
-fieldEventsOf : List TimelineEvent -> Timeline
-fieldEventsOf events =
-    events
-        |> List.filter (\event -> TimelineEvent.forField event.eventType)
-        |> Timeline.fromList
 
 
 roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
@@ -548,7 +536,6 @@ roundFrom id summary rawLaps timelineEvents geometry =
     , energy = energy
     , track = trackOf id summary.track geometry
     , timeline = Timeline.fromList timelineEvents
-    , fieldEvents = fieldEventsOf timelineEvents
     }
 
 
