@@ -187,8 +187,8 @@ author theCar =
         |> Maybe.withDefault "Race Control"
 
 
-{-| What happened. A driver change names the two drivers; a fastest lap names who
-set it and how fast.
+{-| What happened. A driver change names the two drivers; a fastest lap is the
+class's, and names who set it and how fast.
 -}
 body : TimelineEvent -> Maybe Car -> String
 body event theCar =
@@ -206,7 +206,7 @@ body event theCar =
             TimelineEvent.runningLap car event
                 |> Maybe.map
                     (\lap ->
-                        described
+                        "Class Fastest Lap"
                             ++ " · "
                             ++ Driver.toInitialAndSurname lap.driver
                             ++ (lap.time
@@ -214,7 +214,7 @@ body event theCar =
                                     |> Maybe.withDefault ""
                                )
                     )
-                |> Maybe.withDefault described
+                |> Maybe.withDefault "Class Fastest Lap"
 
         _ ->
             described
