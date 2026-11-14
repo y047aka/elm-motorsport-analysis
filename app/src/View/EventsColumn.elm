@@ -12,7 +12,7 @@ The visual tests locate the column by `data-events-column`.
 -}
 
 import Dict exposing (Dict)
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Lazy
 import Motorsport.Driver as Driver
@@ -193,9 +193,10 @@ author theCar =
 
 
 {-| What happened. A driver change names the two drivers; a fastest lap is the
-class's, and names who set it and how fast.
+class's, and names who set it and how fast -- the time worn in the purple a timing
+sheet sets fastest laps in.
 -}
-body : TimelineEvent -> Maybe Car -> String
+body : TimelineEvent -> Maybe Car -> Html msg
 body event theCar =
     let
         described =
@@ -206,23 +207,33 @@ body event theCar =
             TimelineEvent.handover car event
                 |> Maybe.map (\( handedOver, tookOver ) -> Driver.toHandover handedOver tookOver)
                 |> Maybe.withDefault described
+                |> text
 
         ( CarEvent _ FastestLap, Just car ) ->
-            TimelineEvent.runningLap car event
-                |> Maybe.map
-                    (\lap ->
-                        "Class Fastest Lap"
-                            ++ " · "
-                            ++ Driver.toInitialAndSurname lap.driver
-                            ++ (lap.time
-                                    |> Maybe.map (\time -> " · " ++ Duration.toString time)
-                                    |> Maybe.withDefault ""
-                               )
-                    )
-                |> Maybe.withDefault "Class Fastest Lap"
+            let
+                runner =
+                    TimelineEvent.runningLap car event
+
+                who =
+                    Maybe.map (.driver >> Driver.toInitialAndSurname) runner
+
+                time =
+                    runner |> Maybe.andThen .time
+            in
+            span [] <|
+                [ text ("Class Fastest Lap" ++ Maybe.withDefault "" (Maybe.map (\name -> " · " ++ name) who)) ]
+                    ++ Maybe.withDefault []
+                        (Maybe.map
+                            (\t ->
+                                [ text " · "
+                                , span [ Attributes.class "text-purple-400" ] [ text (Duration.toString t) ]
+                                ]
+                            )
+                            time
+                        )
 
         _ ->
-            described
+            text described
 
 
 {-| The moment the event fell, and the last lap the car had completed -- one behind
