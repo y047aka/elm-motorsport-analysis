@@ -60,6 +60,7 @@ type alias Model =
     , eventsColumn : EventsColumn.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
+    , rows : Resize.Model
     , trackerExpanded : Bool
     }
 
@@ -72,6 +73,40 @@ standingsFence =
     }
 
 
+standingsEdge : Resize.Edge
+standingsEdge =
+    { axis = Handle.Across
+    , id = "standings-resize-grip"
+    , label = "Resize the standings column"
+    }
+
+
+{-| The row the strip keeps once the tracker is enlarged, and the bounds the
+reader can take it between. The ceiling is a fixed height rather than a share
+of the page: the grid gives the tracker whatever is left, so the worst the
+ceiling does is leave it a short one.
+-}
+stripRow : Float
+stripRow =
+    300
+
+
+rowsFence : Resize.Fence
+rowsFence =
+    { min = 180
+    , max = 600
+    , step = 20
+    }
+
+
+rowsEdge : Resize.Edge
+rowsEdge =
+    { axis = Handle.Down
+    , id = "strip-row-resize-grip"
+    , label = "Resize the columns' row"
+    }
+
+
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { strip = Columns.init
@@ -79,6 +114,7 @@ init params =
       , eventsColumn = EventsColumn.init
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
+      , rows = Resize.init stripRow
       , trackerExpanded = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -96,6 +132,7 @@ type Msg
     | ToggleTrackerZoom
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
+    | RowsMsg Resize.Msg
     | RowTraceChosen Class ClassColumn.Trace
     | EventsColumnMsg Feed.Msg
     | ReplayMsg Replay.Msg
@@ -120,6 +157,9 @@ update shared msg m =
 
         ResizeMsg sub ->
             ( { m | standings = Resize.update standingsFence sub m.standings }, Effect.none )
+
+        RowsMsg sub ->
+            ( { m | rows = Resize.update rowsFence sub m.rows }, Effect.none )
 
         ToggleTrackerZoom ->
             ( { m | trackerExpanded = not m.trackerExpanded }, Effect.none )
@@ -296,17 +336,22 @@ trackerCard several held track snapshot =
 column has; the column keeps its own.
 
 The card takes no class of its own -- `card-elements.ts` owns that element's
-`className` -- so its cell is a div of its own.
+`className` -- so its cell is a div of its own. The grip along the row edge
+between the two stands in `mainGrid`'s `gap-2.5`: its `-top-2.5` and `h-2.5`
+are that gap, so a change to one without the other leaves the grip off it.
 
 The circuit holds its own proportions, so this drawing is bound by the box's
 height and not its width: how much of the page the strip gives up is how big
 the track gets.
 
 -}
-expandedTracker : String -> TrackerChart.Track -> Snapshot -> Html Msg
-expandedTracker cell track snapshot =
+expandedTracker : String -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
+expandedTracker cell rowGrip track snapshot =
     div [ Attributes.class cell ]
-        [ trackerFrame "data-tracker-expanded" track snapshot [ trackerZoomButton True ] ]
+        [ trackerFrame "data-tracker-expanded" track snapshot [ trackerZoomButton True ]
+        , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-items-center" ]
+            [ rowGrip ]
+        ]
 
 
 {-| The press that gives the tracker the room below the strip, and takes it
@@ -333,19 +378,17 @@ trackerZoomButton expanded =
         [ text "⤢" ]
 
 
-{-| Which rows the page is laid out in, and where each of its cells stands.
-The strip is the whole page until the tracker is enlarged, and then it keeps
-the 300px it scrolls its panels in at the top and the tracker takes the page
-below it.
+{-| Where each cell stands. The strip is the whole page until the tracker is
+enlarged, and then it keeps its own row at the top and the tracker takes the
+page below it.
 
 The class strings are written intact: Tailwind generates a class only from a
 string it finds intact in the source, so one assembled from fragments silently
-ships no `grid-template-rows` at all, and every track sizes to its content.
+ships no `grid-template-columns` at all, and every track sizes to its content.
 
 -}
 type alias Layout =
-    { grid : String
-    , standings : String
+    { standings : String
     , strip : String
     , tracker : String
     }
@@ -354,18 +397,25 @@ type alias Layout =
 layout : Bool -> Layout
 layout expanded =
     if expanded then
-        { grid = "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] grid-rows-[minmax(0,300px)_minmax(0,1fr)] gap-2.5 p-[0_10px_10px_10px]"
-        , standings = "col-start-1 row-start-1 row-span-2 min-h-0 grid relative"
+        { standings = "col-start-1 row-start-1 row-span-2 min-h-0 grid relative"
         , strip = "col-start-2 row-start-1"
-        , tracker = "col-start-2 row-start-2 min-h-0 grid"
+        , tracker = "col-start-2 row-start-2 min-h-0 grid relative"
         }
 
     else
-        { grid = "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
-        , standings = "col-start-1 min-h-0 grid relative"
+        { standings = "col-start-1 min-h-0 grid relative"
         , strip = "col-start-2"
         , tracker = "col-start-2"
         }
+
+
+{-| The two rows, the strip's own first. An inline style rather than a class:
+the split is the reader's to set, and Tailwind generates a class only from a
+string it finds intact in the source.
+-}
+rowsStyle : Float -> String
+rowsStyle row =
+    "minmax(0," ++ Columns.px row ++ ") minmax(0,1fr)"
 
 
 mainGrid : Shared.LoadedRound -> List Columns.StripKey -> Model -> Html Msg
@@ -381,10 +431,17 @@ mainGrid round keys m =
             layout m.trackerExpanded
     in
     div
-        [ Attributes.class cells.grid ]
+        ([ Attributes.class "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]" ]
+            ++ (if m.trackerExpanded then
+                    [ Attributes.style "grid-template-rows" (rowsStyle m.rows.size) ]
+
+                else
+                    []
+               )
+        )
         [ standingsCell cells.standings keys m round.energy snapshot replay.race.cars
         , if m.trackerExpanded then
-            expandedTracker cells.tracker round.track snapshot
+            expandedTracker cells.tracker (Html.map RowsMsg (Resize.grip rowsEdge m.rows)) round.track snapshot
 
           else
             text ""
@@ -426,13 +483,13 @@ standingsCell cell keys m energy snapshot cars =
             { onSelect = pickCar
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
             , openColumn = openColumn keys
-            , width = m.standings.width
+            , width = m.standings.size
             , startPosition = \number -> Dict.get number startPositions
             , energy = energy
             }
             snapshot
         , div [ Attributes.class "absolute -right-2.5 top-0 h-full z-10 grid w-2.5 place-items-center" ]
-            [ Html.map ResizeMsg (Resize.grip m.standings) ]
+            [ Html.map ResizeMsg (Resize.grip standingsEdge m.standings) ]
         ]
 
 

@@ -1,15 +1,15 @@
-module Drag.Handle exposing (Pointer, Config, resize, view)
+module Drag.Handle exposing (Axis(..), Pointer, Config, resize, view)
 
-{-| A grip that carries something sideways: by the pointer, or a step at a
+{-| A grip that carries something along a line: by the pointer, or a step at a
 time by the arrow keys once it has the focus.
 
 The grip holds no state of its own -- `held` is the caller's, and the carry
-behind it is `Drag`'s business. What the grip adds is the pointer's path:
-the `drag-handle` custom element calls `setPointerCapture`, which Elm
-cannot, so every move and the release come back to the grip even once the
-pointer has left it.
+behind it is `Drag`'s business. What the grip adds is the pointer's path: the
+`drag-handle` custom element calls `setPointerCapture`, which Elm cannot, so
+every move and the release come back to the grip even once the pointer has left
+it.
 
-@docs Pointer, Config, resize, view
+@docs Axis, Pointer, Config, resize, view
 
 -}
 
@@ -19,12 +19,21 @@ import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-| Which pointer, and its `clientX`. Two fingers can hold two grips at once,
-and each reports its own release.
+{-| The axis a grip reads the pointer along, and steps along with the arrow
+keys: `Across` is `clientX` and ← →, `Down` is `clientY` and ↑ ↓.
+-}
+type Axis
+    = Across
+    | Down
+
+
+{-| Which pointer, and where it is along the axis its grip reads -- `clientX`
+for an `Across` grip, `clientY` for a `Down` one. Two fingers can hold two
+grips at once, and each reports its own release.
 -}
 type alias Pointer =
     { id : Int
-    , x : Float
+    , along : Float
     }
 
 
@@ -58,6 +67,7 @@ type alias Config msg =
 view : Config msg -> Html msg
 view config =
     grip
+        Across
         config
         "grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
         (if config.held then
@@ -70,32 +80,49 @@ view config =
 
 
 {-| The same grip lying along an edge to resize what it bounds: the pointer's
-travel is the width's, and the arrow keys step it.
+travel is the size's, and the arrow keys step it. `Across` lies along a column
+edge, `Down` along a row edge.
 -}
-resize : Config msg -> Html msg
-resize config =
+resize : Axis -> Config msg -> Html msg
+resize axis config =
+    let
+        ( classes, cursor, glyph ) =
+            case axis of
+                Across ->
+                    ( "grid place-items-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                    , "cursor-col-resize"
+                    , "⋮"
+                    )
+
+                Down ->
+                    ( "grid place-items-center h-2 w-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                    , "cursor-row-resize"
+                    , "⋯"
+                    )
+    in
     grip
+        axis
         config
-        "grid place-items-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+        classes
         (if config.held then
             "cursor-grabbing"
 
          else
-            "cursor-col-resize"
+            cursor
         )
-        "⋮"
+        glyph
 
 
-grip : Config msg -> String -> String -> String -> Html msg
-grip config classes cursor glyph =
+grip : Axis -> Config msg -> String -> String -> String -> Html msg
+grip axis config classes cursor glyph =
     Html.node "drag-handle"
         ([ id config.id
          , attribute "role" "button"
          , attribute "aria-roledescription" "drag handle"
-         , attribute "aria-keyshortcuts" "ArrowLeft ArrowRight"
+         , attribute "aria-keyshortcuts" (keyShortcuts axis)
          , attribute "tabindex" "0"
          , attribute "aria-label" config.label
-         , title (config.label ++ ": drag it, or press ← →")
+         , title (config.label ++ ": drag it, or press " ++ arrowHint axis)
          , class
             (classes
                 ++ " "
@@ -107,14 +134,14 @@ grip config classes cursor glyph =
                         " text-muted-foreground"
                    )
             )
-         , on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab pointer))
-         , on "pointerup" (Decode.map config.onDrop pointer)
+         , on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab (pointer axis)))
+         , on "pointerup" (Decode.map config.onDrop (pointer axis))
          , on "pointercancel" (Decode.map config.onCancel pointerId)
          , on "lostpointercapture" (Decode.map config.onCancel pointerId)
-         , preventDefaultOn "keydown" (Decode.map (\step -> ( config.onStep step, True )) arrowStep)
+         , preventDefaultOn "keydown" (Decode.map (\step -> ( config.onStep step, True )) (arrowStep axis))
          ]
             ++ (if config.held then
-                    [ on "pointermove" (Decode.map config.onMove pointer) ]
+                    [ on "pointermove" (Decode.map config.onMove (pointer axis)) ]
 
                 else
                     []
@@ -123,9 +150,24 @@ grip config classes cursor glyph =
         [ text glyph ]
 
 
-pointer : Decoder Pointer
-pointer =
-    Decode.map2 Pointer pointerId (Decode.field "clientX" Decode.float)
+pointer : Axis -> Decoder Pointer
+pointer axis =
+    Decode.map2 Pointer pointerId (coordinate axis)
+
+
+{-| The pointer's position along the axis the grip reads.
+-}
+coordinate : Axis -> Decoder Float
+coordinate axis =
+    Decode.field
+        (case axis of
+            Across ->
+                "clientX"
+
+            Down ->
+                "clientY"
+        )
+        Decode.float
 
 
 pointerId : Decoder Int
@@ -146,18 +188,46 @@ primaryButton =
             )
 
 
-{-| Fails on every other key, so that Tab and the rest keep what they do.
+keyShortcuts : Axis -> String
+keyShortcuts axis =
+    case axis of
+        Across ->
+            "ArrowLeft ArrowRight"
+
+        Down ->
+            "ArrowUp ArrowDown"
+
+
+arrowHint : Axis -> String
+arrowHint axis =
+    case axis of
+        Across ->
+            "← →"
+
+        Down ->
+            "↑ ↓"
+
+
+{-| Fails on every other key, so that Tab and the rest keep what they do. Which
+key steps back and which steps on are the axis's own, so a step goes the same
+way a drag does.
 -}
-arrowStep : Decoder Int
-arrowStep =
+arrowStep : Axis -> Decoder Int
+arrowStep axis =
     Decode.field "key" Decode.string
         |> Decode.andThen
             (\key ->
-                case key of
-                    "ArrowLeft" ->
+                case ( axis, key ) of
+                    ( Across, "ArrowLeft" ) ->
                         Decode.succeed -1
 
-                    "ArrowRight" ->
+                    ( Across, "ArrowRight" ) ->
+                        Decode.succeed 1
+
+                    ( Down, "ArrowUp" ) ->
+                        Decode.succeed -1
+
+                    ( Down, "ArrowDown" ) ->
                         Decode.succeed 1
 
                     _ ->

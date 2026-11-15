@@ -1,10 +1,14 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, init, update, grip)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, init, update, grip)
 
-{-| The width of the standings column, and the grip along their edge that
-moves it. The page holds one `Model` and forwards every `Msg` through it, the
-way it forwards the strip's through `Columns`.
+{-| A size the reader sets -- the width of the standings, the row the strip
+keeps -- and the grip along the edge that moves it. The page holds one `Model`
+per size and forwards every `Msg` through it, the way it forwards the strip's
+through `Columns`.
 
-@docs Model, Msg, Fence, init, update, grip
+Which axis the pointer is read along is the `Edge`'s, and so the arithmetic
+here is the same whichever way the grip lies.
+
+@docs Model, Msg, Fence, Edge, init, update, grip
 
 -}
 
@@ -13,11 +17,11 @@ import Drag.Handle as Handle exposing (Pointer)
 import Html exposing (Html)
 
 
-{-| The width the column stands at, and the carry that moves it: the width
-follows the pointer's travel from the width `Drag` was picked up with.
+{-| The size the thing stands at, and the carry that moves it: the size follows
+the pointer's travel from the size `Drag` was picked up with.
 -}
 type alias Model =
-    { width : Float
+    { size : Float
     , carried : Drag.State Float
     }
 
@@ -29,9 +33,19 @@ type alias Fence =
     }
 
 
+{-| Which edge the grip lies along: the axis it reads and steps, the id it
+answers to, and the words it is labelled with.
+-}
+type alias Edge =
+    { axis : Handle.Axis
+    , id : String
+    , label : String
+    }
+
+
 init : Float -> Model
-init width =
-    { width = width
+init size =
+    { size = size
     , carried = Drag.init
     }
 
@@ -44,14 +58,14 @@ type Msg
     | Step Int
 
 
-{-| The width follows `Drag`, and a `Cancel` leaves it where the last move
-left it -- unlike a carried column, a resize has nothing to put back.
+{-| The size follows `Drag`, and a `Cancel` leaves it where the last move left
+it -- unlike a carried column, a resize has nothing to put back.
 -}
 update : Fence -> Msg -> Model -> Model
 update fence msg m =
     case msg of
         Grab pointer ->
-            { m | carried = Tuple.first (Drag.update (Drag.Pick m.width pointer) m.carried) }
+            { m | carried = Tuple.first (Drag.update (Drag.Pick m.size pointer) m.carried) }
 
         Carrying pointer ->
             let
@@ -60,7 +74,7 @@ update fence msg m =
             in
             case Drag.carrying carried of
                 Just carry ->
-                    { m | carried = carried, width = clampTo fence (carry.location + Drag.travel carry) }
+                    { m | carried = carried, size = clampTo fence (carry.location + Drag.travel carry) }
 
                 Nothing ->
                     { m | carried = carried }
@@ -72,7 +86,7 @@ update fence msg m =
             { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }
 
         Step steps ->
-            { m | width = clampTo fence (m.width + toFloat steps * fence.step) }
+            { m | size = clampTo fence (m.size + toFloat steps * fence.step) }
 
 
 clampTo : Fence -> Float -> Float
@@ -80,13 +94,13 @@ clampTo fence =
     clamp fence.min fence.max
 
 
-{-| The grip along the column's edge.
+{-| The grip along the edge.
 -}
-grip : Model -> Html Msg
-grip m =
-    Handle.resize
-        { id = gripId
-        , label = "Resize the standings column"
+grip : Edge -> Model -> Html Msg
+grip edge m =
+    Handle.resize edge.axis
+        { id = edge.id
+        , label = edge.label
         , held = Drag.isCarrying m.carried
         , onGrab = Grab
         , onMove = Carrying
@@ -94,8 +108,3 @@ grip m =
         , onCancel = Cancel
         , onStep = Step
         }
-
-
-gripId : String
-gripId =
-    "standings-resize-grip"

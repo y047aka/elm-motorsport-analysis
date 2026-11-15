@@ -15,7 +15,7 @@ fence =
 suite : Test
 suite =
     describe "Page.Wec.Resize"
-        [ describe "the width following the pointer"
+        [ describe "the size following the pointer"
             [ test "a second pointer's grab is refused while one is carried" <|
                 \_ ->
                     let
@@ -26,28 +26,28 @@ suite =
                         [ \m -> Expect.equal (startAt 300) m
                         , \m ->
                             step (Carrying (pointer 1 340)) m
-                                |> .width
+                                |> .size
                                 |> Expect.equal 340
                         ]
                         refused
-            , test "a carry moves the width from where it was picked up" <|
+            , test "a carry moves the size from where it was picked up" <|
                 \_ ->
                     startAt 300
                         |> step (Carrying (pointer 1 340))
-                        |> .width
+                        |> .size
                         |> Expect.equal 340
-            , test "the width stops at the fence on either side" <|
+            , test "the size stops at the fence on either side" <|
                 \_ ->
                     Expect.all
                         [ \m ->
                             m
                                 |> step (Carrying (pointer 1 900))
-                                |> .width
+                                |> .size
                                 |> Expect.equal fence.max
                         , \m ->
                             m
                                 |> step (Carrying (pointer 1 -100))
-                                |> .width
+                                |> .size
                                 |> Expect.equal fence.min
                         ]
                         (startAt 300)
@@ -55,11 +55,11 @@ suite =
                 \_ ->
                     startAt 300
                         |> step (Carrying (pointer 2 500))
-                        |> .width
+                        |> .size
                         |> Expect.equal 300
             ]
         , describe "ending a carry"
-            [ test "a release leaves the width where the carry left it" <|
+            [ test "a release leaves the size where the carry left it" <|
                 \_ ->
                     let
                         after =
@@ -68,16 +68,16 @@ suite =
                                 |> step (Release (pointer 1 340))
                     in
                     Expect.all
-                        [ \m -> Expect.equal 340 m.width
+                        [ \m -> Expect.equal 340 m.size
                         , \m -> Expect.equal False (Drag.isCarrying m.carried)
                         ]
                         after
-            , test "a cancel leaves the width where the last move left it" <|
+            , test "a cancel leaves the size where the last move left it" <|
                 \_ ->
                     startAt 300
                         |> step (Carrying (pointer 1 340))
                         |> step (Cancel 1)
-                        |> .width
+                        |> .size
                         |> Expect.equal 340
             , test "the cancel that follows a release changes nothing" <|
                 \_ ->
@@ -93,9 +93,9 @@ suite =
                 \_ ->
                     Expect.all
                         [ \m ->
-                            m |> step (Step 5) |> .width |> Expect.equal 400
+                            m |> step (Step 5) |> .size |> Expect.equal 400
                         , \m ->
-                            m |> step (Step 100) |> .width |> Expect.equal fence.max
+                            m |> step (Step 100) |> .size |> Expect.equal fence.max
                         ]
                         (Resize.init 300)
             ]
@@ -107,8 +107,8 @@ suite =
 
 
 startAt : Float -> Resize.Model
-startAt width =
-    Resize.init width |> step (Grab (pointer 1 width))
+startAt size =
+    Resize.init size |> step (Grab (pointer 1 size))
 
 
 step : Msg -> Resize.Model -> Resize.Model
@@ -118,4 +118,4 @@ step msg model =
 
 pointer : Int -> Float -> Pointer
 pointer id x =
-    { id = id, x = x }
+    { id = id, along = x }

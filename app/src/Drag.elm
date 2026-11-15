@@ -76,7 +76,7 @@ update msg state =
         Pick location pointer ->
             case state of
                 Idle ->
-                    ( Dragging { location = location, pointerId = pointer.id, from = pointer.x, at = pointer.x }
+                    ( Dragging { location = location, pointerId = pointer.id, from = pointer.along, at = pointer.along }
                     , Nothing
                     )
 
@@ -87,7 +87,7 @@ update msg state =
             ( case state of
                 Dragging carry ->
                     if carry.pointerId == pointer.id then
-                        Dragging { carry | at = pointer.x }
+                        Dragging { carry | at = pointer.along }
 
                     else
                         state
@@ -98,7 +98,7 @@ update msg state =
             )
 
         Drop pointer ->
-            endsWith pointer.x pointer.id state
+            endsWith pointer.along pointer.id state
 
         Cancel pointerId ->
             case state of

@@ -266,7 +266,7 @@ classColumnOf name =
 
 pointer : Int -> Float -> Pointer
 pointer id x =
-    { id = id, x = x }
+    { id = id, along = x }
 
 
 
