@@ -8,6 +8,8 @@ pub mod Db.Jdbc {
     import java.sql.SQLException
     import java.sql.Types
 
+    import java.lang.Throwable
+
     import java.io.File
 
     import org.sqlite.JDBC
@@ -73,17 +75,34 @@ pub mod Db.Jdbc {
 
     /// A database opened, read or written, and closed however that went --
     /// which is the whole of what a run or a test does with one.
+    ///
+    /// The close is on every way out, including the one that throws: a
+    /// connection left open holds a read on the database until the process ends.
     pub def withConnection(url: String, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + IO + {TransientDbErr, DbErr} =
         let conn = Db.orRaise(connect(url));
-        let outcome = Db.runWithError(() -> runWith(conn, f));
+        let outcome = try {
+            Db.runWithError(() -> Db.guard(() -> runWith(conn, f)))
+        } catch {
+            case error: Throwable => close(conn); Db.rethrowing(Err(error))
+        };
         close(conn);
         Db.orRaise(outcome)
+
+    /// A driver's failure that is not an `SQLException` is still a failure of
+    /// the database, and a fatal one is not a failure to keep.
+    def guarded(f: Unit -> Result[Error, a] \ IO): Result[Error, a] \ IO =
+        match Db.catchAll(f) {
+            case Ok(result) => result
+            case Err(error) =>
+                if (Db.isFatal(error)) Db.rethrowing(Err(error))
+                else Err(Db.Error.Other(Db.describeThrowable(error)))
+        }
 
     pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite}) + IO =
         run {
             runWriting(conn, f)
         } with handler SqlRead {
-            def fetch(sql, params, k) = k(runFetch(conn, sql, params))
+            def fetch(sql, params, k) = k(guarded(() -> runFetch(conn, sql, params)))
         }
 
     /// The connection as a read alone, which is what the server answers a
@@ -92,17 +111,17 @@ pub mod Db.Jdbc {
         run {
             f()
         } with handler SqlRead {
-            def fetch(sql, params, k) = k(runFetch(conn, sql, params))
+            def fetch(sql, params, k) = k(guarded(() -> runFetch(conn, sql, params)))
         }
 
     pub def runWriting(conn: Connection, f: Unit -> a \ ef): a \ (ef - SqlWrite) + IO =
         run {
             f()
         } with handler SqlWrite {
-            def execute(sql, k) = k(runStatement(conn, sql))
-            def insertMany(sql, rows, k) = k(insertRows(conn, sql, rows))
-            def commit(k) = k(endTransaction(conn, c -> c.commit()))
-            def rollback(k) = k(endTransaction(conn, c -> c.rollback()))
+            def execute(sql, k) = k(guarded(() -> runStatement(conn, sql)))
+            def insertMany(sql, rows, k) = k(guarded(() -> insertRows(conn, sql, rows)))
+            def commit(k) = k(guarded(() -> endTransaction(conn, c -> c.commit())))
+            def rollback(k) = k(guarded(() -> endTransaction(conn, c -> c.rollback())))
         }
 
     def runFetch(conn: Connection, sql: String, params: List[Value]): Result[Error, List[List[Option[String]]]] \ IO =
