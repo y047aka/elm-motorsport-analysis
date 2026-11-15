@@ -198,7 +198,7 @@ author theCar =
 
 {-| What happened. A fastest lap is the class's, whether or not it is also the field's -- which is why the post says `Class Fastest Lap`.
 
-The strip under it is rated against the records as they stood when the lap was set, not as they stand at the clock: a post two hours old would otherwise be recoloured by a sector beaten since. Those baselines come in on the event's own line, and `Performance.rateTime` is what reads a time against them.
+The strip under it is rated against the records as they stood when the lap was set, not as they stand at the clock: a post two hours old would otherwise be recoloured by a sector beaten since.
 
 -}
 body : TimelineEvent -> Maybe Car -> Html msg
@@ -250,8 +250,7 @@ body event theCar =
             text described
 
 
-{-| The three times an event's line carries for one stretch of the lap, rated. `Nothing`
-where there is no time to rate, which is a segment the lap has none of.
+{-| `Nothing` where there is no time to rate, which is a segment the lap has none of.
 
 -}
 rate : TimelineEvent.Rated -> Maybe Performance.RatedTime

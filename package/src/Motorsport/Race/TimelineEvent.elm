@@ -38,14 +38,6 @@ type alias TimelineEvent =
     }
 
 
-{-| One time of the lap an event fell on, beside the two baselines it reads against:
-`fastest` is the field's record as it stood the moment the event fell, and
-`personalBest` this car's own best up to and including that lap.
-
-Three times and no rating. Which of the three a time reads as is
-`Motorsport.Lap.Performance`'s, and the colour that is drawn in is the view's.
-
--}
 type alias Rated =
     { time : Maybe Duration
     , fastest : Maybe Duration
@@ -53,10 +45,8 @@ type alias Rated =
     }
 
 
-{-| The lap an event fell on, as far as a post about it draws it.
-
-`miniSectors` is absent where the round's feed measured none, which is the lap drawn
-on the three sectors.
+{-| `miniSectors` is `Nothing` for a circuit the tracker has no lines for, which is a
+lap drawn on the three sectors.
 
 -}
 type alias LapDetail =

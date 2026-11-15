@@ -28,8 +28,8 @@ pub mod Round.Timeline {
 
     /// The round's timeline, each event beside the lap it fell on.
     ///
-    /// `index` is the round's own, so the records a lap reads against are the
-    /// nineteen `Round.Index` counted and not a second count of them.
+    /// `index` is the round's own, so the records a lap reads against are the ones
+    /// `Round.Index` counted.
     pub def detailed(
         entry: Entry,
         seats: Round.Drivers.Seats,
@@ -265,15 +265,14 @@ pub mod Round.Timeline {
     /// against: `fastest`, the field's record as it stood the moment the event fell,
     /// and `personalBest`, this car's own up to and including that lap.
     ///
-    /// No rating. Which of the three a time reads as, and the colour a rating is
-    /// drawn in, stay `Motorsport.Lap.Performance`'s.
+    /// No rating and no colour crosses here: what a time reads as is
+    /// `Motorsport.Lap.Performance`'s, on the Elm side.
     pub type alias Rated = {
         time         = Option[Duration],
         fastest      = Option[Duration],
         personalBest = Option[Duration]
     }
 
-    /// The lap an event fell on, as far as a post about it draws it.
     pub type alias Detail = {
         driver      = String,
         lap         = Rated,
@@ -372,8 +371,7 @@ pub mod Round.Timeline {
     ): (Sector, Rated) =
         (which, rated(time, Record.FastestSector(which), at, index, best))
 
-    /// The fifteen, where the round's feed measured them. A lap written without them
-    /// has none, and is drawn on the three sectors.
+    /// The fifteen, where the round's feed measured them.
     ///
     /// The bests come back as a JSON array of the same fifteen in the same order,
     /// which is why both are read by position.

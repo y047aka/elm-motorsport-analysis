@@ -33,12 +33,6 @@ pub mod Round.Render {
                 "${Extra.renderOnOneLine(withDetail(Timeline.toJson(item#event), item#detail))}\n")
             |> List.join("")
 
-    /// The lap an event fell on, beside the event.
-    ///
-    /// `performance` holds each of the lap's times next to the two baselines it
-    /// reads against, which is what `Motorsport.Lap.Performance` rates a time on.
-    /// Which of the three it reads as, and the colour that is drawn in, are the
-    /// app's: no rating and no colour crosses here.
     def withDetail(event: Json, detail: Option[Detail]): Json =
         match (event, detail) {
             case (JObject(fields), Some(d)) =>
@@ -60,8 +54,7 @@ pub mod Round.Render {
         )
 
     /// Absent where the round's feed measured no mini-sectors, rather than fifteen
-    /// blanks: a lap of a circuit the tracker has no lines for is drawn on the
-    /// three sectors.
+    /// blanks for a circuit the tracker has no lines for.
     def miniField(d: Detail): List[(String, Json)] =
         match d#miniSectors {
             case None      => Nil
