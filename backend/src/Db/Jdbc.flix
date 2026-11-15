@@ -17,19 +17,12 @@ pub mod Db.Jdbc {
 
     def batchSize(): Int32 = 1000
 
-    /// What a refusal was. SQLite answers a lock it waited out with
-    /// `SQLITE_BUSY`, and its extended codes carry the primary one in their
-    /// low byte -- `SQLITE_BUSY_SNAPSHOT` is 517, which is 5.
-    pub def classify(code: Int32, message: String): Error =
-        match Int32.remainder(code, 256) {
-            case 5 => Db.busy(message)
-            case 6 => Db.busy(message)
-            case _ => Error.Refused(message)
-        }
-
+    /// What a refusal was. The code is the driver's own; the message is what it
+    /// said, which for some failures of its own it leaves unsaid.
     def refusal(e: SQLException): Error \ IO =
-        let code: Int32 = e.getErrorCode();
-        classify(code, "${e.getMessage()}")
+        let message: String = e.getMessage();
+        let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;
+        Db.Sqlite.classify({code = e.getErrorCode(), message = said})
 
     /// The driver registers itself through `META-INF/services` when the JDBC jar
     /// is on the application class path. It is not on the one Flix runs with, so

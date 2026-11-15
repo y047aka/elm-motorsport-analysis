@@ -23,17 +23,6 @@ pub mod Db.TestJdbc {
         let result = connected(() -> SqlRead.fetch("select 'a', null, 42, null", Nil));
         Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
 
-    /// The driver's codes, read without a database: the extended ones carry
-    /// the primary code in their low byte, so `SQLITE_BUSY_SNAPSHOT` is a
-    /// lock like `SQLITE_BUSY` is.
-    @Test
-    def aLockIsTheOneRefusalThatSaysTryAgain(): Unit \ Assert =
-        Assert.assertTrue(Jdbc.classify(5, "locked") == Db.busy("locked"));
-        Assert.assertTrue(Jdbc.classify(6, "locked") == Db.busy("locked"));
-        Assert.assertTrue(Jdbc.classify(517, "locked") == Db.busy("locked"));
-        Assert.assertTrue(Jdbc.classify(1, "no such table: laps") == Db.Error.Refused("no such table: laps"));
-        Assert.assertTrue(Jdbc.classify(1555, "constraint") == Db.Error.Refused("constraint"))
-
     /// What `Db.atomically` marks is SQLite's own savepoint, so this is where
     /// it is driven against one: a round of a load sends rows to several
     /// tables, and a failure at the last of them has to leave none of the
