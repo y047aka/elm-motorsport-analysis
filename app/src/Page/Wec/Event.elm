@@ -60,6 +60,7 @@ type alias Model =
     , eventsColumn : EventsColumn.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
+    , trackerExpanded : Bool
     }
 
 
@@ -78,6 +79,7 @@ init params =
       , eventsColumn = EventsColumn.init
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
+      , trackerExpanded = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -91,6 +93,7 @@ type Msg
     = StartRace
     | PauseRace
     | FocusColumn Columns.StripKey
+    | ToggleTrackerZoom
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
     | RowTraceChosen Class ClassColumn.Trace
@@ -117,6 +120,9 @@ update shared msg m =
 
         ResizeMsg sub ->
             ( { m | standings = Resize.update standingsFence sub m.standings }, Effect.none )
+
+        ToggleTrackerZoom ->
+            ( { m | trackerExpanded = not m.trackerExpanded }, Effect.none )
 
         FocusColumn key ->
             let
@@ -252,27 +258,106 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-{-| The tracker's column, carried among the cars as any other is. Its ✕ is
-the one thing that takes it away.
+{-| The card the tracker is drawn in: the drawing filling whatever box it is
+given, and the controls floating over its top right corner.
 
-It carries `data-tracker-column`, which the visual tests locate it by.
+It carries `data-tracker-column` or `data-tracker-expanded`, which is what the
+visual tests locate each drawing by.
 
 -}
-trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
-trackerCard several held track snapshot =
-    Card.card [ attribute "data-tracker-column" "" ]
+trackerFrame : String -> TrackerChart.Track -> Snapshot -> List (Html Msg) -> Html Msg
+trackerFrame marker track snapshot controls =
+    Card.card [ attribute marker "" ]
         [ div
             [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
             ]
             [ Card.content []
                 [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
                     [ TrackerChart.view TrackerChart.Full track snapshot
-                    , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ]
-                        (standingsTrigger :: cornerControls (corner several held Columns.Tracker))
+                    , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ] controls
                     ]
                 ]
             ]
         ]
+
+
+{-| The tracker's column, carried among the cars as any other is. Its ✕ is
+the one thing that takes it away.
+-}
+trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
+trackerCard several held track snapshot =
+    trackerFrame "data-tracker-column"
+        track
+        snapshot
+        (trackerZoomButton False :: standingsTrigger :: cornerControls (corner several held Columns.Tracker))
+
+
+{-| The tracker drawn with the room above the strip rather than the room one
+column has; the column keeps its own.
+
+The circuit holds its own proportions, so this drawing is bound by the box's
+height and not its width: how far the strip is pushed down is how big the
+track gets.
+
+-}
+expandedTracker : TrackerChart.Track -> Snapshot -> Html Msg
+expandedTracker track snapshot =
+    trackerFrame "data-tracker-expanded" track snapshot [ trackerZoomButton True ]
+
+
+{-| The press that gives the tracker the room above the strip, and takes it
+back. It stands in both drawings' corner, so the way back is wherever the
+room was taken from.
+-}
+trackerZoomButton : Bool -> Html Msg
+trackerZoomButton expanded =
+    let
+        label =
+            if expanded then
+                "Give the tracker its column back"
+
+            else
+                "Give the tracker the room above the strip"
+    in
+    button
+        [ onClick ToggleTrackerZoom
+        , attribute "data-tracker-zoom" ""
+        , attribute "aria-label" label
+        , Attributes.title label
+        , Attributes.class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
+        ]
+        [ text "⤢" ]
+
+
+{-| Which rows the page is laid out in, and where each of its cells stands.
+The strip is the whole page until the tracker is enlarged, and then it keeps
+the 300px it scrolls its panels in, pushed down to make the room.
+
+The class strings are written intact: Tailwind generates a class only from a
+string it finds intact in the source, so one assembled from fragments silently
+ships no `grid-template-rows` at all, and every track sizes to its content.
+
+-}
+type alias Layout =
+    { grid : String
+    , standings : String
+    , strip : String
+    }
+
+
+layout : Bool -> Layout
+layout expanded =
+    if expanded then
+        { grid = "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] grid-rows-[minmax(0,1fr)_minmax(0,300px)] gap-2.5 p-[0_10px_10px_10px]"
+        , standings = "col-start-1 row-start-1 row-span-2 min-h-0 grid relative"
+        , strip = "col-start-2 row-start-2"
+        }
+
+    else
+        { grid = "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
+        , standings = "col-start-1 min-h-0 grid relative"
+        , strip = "col-start-2"
+        }
 
 
 mainGrid : Shared.LoadedRound -> List Columns.StripKey -> Model -> Html Msg
@@ -283,18 +368,19 @@ mainGrid round keys m =
 
         replay =
             round.replay
+
+        cells =
+            layout m.trackerExpanded
     in
     div
-        -- The whole class string is written intact: Tailwind generates a
-        -- class only from a string it finds intact in the source, so one
-        -- assembled from fragments silently ships no
-        -- `grid-template-columns` at all, and every track sizes to its
-        -- content.
-        [ Attributes.class
-            "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
-        ]
-        [ standingsCell keys m round.energy snapshot replay.race.cars
-        , columnStrip "col-start-2" round.track round.timeline keys m round.pitCycles replay snapshot
+        [ Attributes.class cells.grid ]
+        [ standingsCell cells.standings keys m round.energy snapshot replay.race.cars
+        , if m.trackerExpanded then
+            expandedTracker round.track snapshot
+
+          else
+            text ""
+        , columnStrip cells.strip round.track round.timeline keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -320,14 +406,14 @@ other leaves the grip off the gap.
 The column track is `auto`, so the strip gains and loses the width as the
 drag goes on.
 -}
-standingsCell : List Columns.StripKey -> Model -> Energy.Table -> Snapshot -> List Car -> Html Msg
-standingsCell keys m energy snapshot cars =
+standingsCell : String -> List Columns.StripKey -> Model -> Energy.Table -> Snapshot -> List Car -> Html Msg
+standingsCell cell keys m energy snapshot cars =
     let
         startPositions =
             gridOf cars
     in
     div
-        [ Attributes.class "col-start-1 min-h-0 grid relative" ]
+        [ Attributes.class cell ]
         [ LiveStandings.view
             { onSelect = pickCar
             , withColumns = List.map (.metadata >> .carNumber) (Columns.carsIn snapshot keys)
