@@ -57,7 +57,7 @@ pub mod Db.TestDbTest {
     def aWriteThatIsRefusedReachesTheCaller(): Unit \ Assert =
         let refused = Db.Error.Refused("UNIQUE constraint failed: laps.round_id");
         let outcome = DbTest.runFailingWrite(refused, () ->
-            Db.runWithError(() -> Db.execute("INSERT INTO laps VALUES (1)")));
+            Db.runWithError(() -> discard Db.execute("INSERT INTO laps VALUES (1)", Nil)));
         Assert.assertTrue(outcome == Err(refused))
 
     /// The two are separate effects, so a handler answering reads goes around one
@@ -67,7 +67,7 @@ pub mod Db.TestDbTest {
     def aReadIsAnsweredWhereTheWriteWasRefused(): Unit \ Assert =
         let outcome = DbTest.runWithRows(TestCells.row(Some("1:35.365") :: Nil) :: Nil, () ->
             DbTest.runFailingWrite(Db.busy("database is locked"), () -> (
-                Db.runWithError(() -> Db.execute("INSERT INTO laps VALUES (1)")),
+                Db.runWithError(() -> discard Db.execute("INSERT INTO laps VALUES (1)", Nil)),
                 Db.runWithError(() -> Sql.selectAll(lapTimes(7)))
             )));
         Assert.assertTrue(outcome == (Err(Db.busy("database is locked")), Ok("1:35.365" :: Nil)))

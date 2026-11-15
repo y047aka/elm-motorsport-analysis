@@ -15,7 +15,7 @@ pub mod Db.TestDb {
     def creatingDropsTheTableFirst(): Unit \ Assert =
         let (_, statements) = Db.runRecording(() -> Db.runWithError(Laps.create));
         match statements {
-            case Statement.Execute(first) :: Statement.Execute(second) :: Nil =>
+            case Statement.Execute(first, _) :: Statement.Execute(second, _) :: Nil =>
                 Assert.assertTrue(String.startsWith({prefix = "DROP TABLE"}, first));
                 Assert.assertTrue(String.startsWith({prefix = "CREATE TABLE laps"}, second))
             case _ => Assert.assertTrue(false)
@@ -30,12 +30,12 @@ pub mod Db.TestDb {
         let (outcome, statements) = Db.runRecording(() ->
             Db.runWithError(() -> Db.withSavepoint(name, f)));
         Assert.assertTrue(outcome == Ok(Ok(())));
-        statements |> List.map(s -> match s { case Statement.Execute(sql) => sql case _ => "" })
+        statements |> List.map(s -> match s { case Statement.Execute(sql, _) => sql case _ => "" })
 
     @Test
     def aSavepointIsMarkedAndReleasedAroundWhatItHolds(): Unit \ Assert =
         Assert.assertTrue(
-            marked("round", () -> Db.execute("SELECT 1"))
+            marked("round", () -> discard Db.execute("SELECT 1", Nil))
                 == "SAVEPOINT round" :: "SELECT 1" :: "RELEASE SAVEPOINT round" :: Nil
         )
 
@@ -52,7 +52,7 @@ pub mod Db.TestDb {
         let expected: Result[Db.Error, Result[Db.Failure, Unit]] = Ok(Err(Db.toFailure(refused)));
         Assert.assertTrue(result == expected);
         Assert.assertTrue(
-            statements |> List.map(s -> match s { case Statement.Execute(sql) => sql case _ => "" })
+            statements |> List.map(s -> match s { case Statement.Execute(sql, _) => sql case _ => "" })
                 == "SAVEPOINT round" :: "ROLLBACK TO SAVEPOINT round" :: "RELEASE SAVEPOINT round" :: Nil
         )
 
@@ -61,7 +61,7 @@ pub mod Db.TestDb {
     @Test
     def aNameThatIsNotANameSendsNoStatement(): Unit \ Assert =
         let (outcome, statements) = Db.runRecording(() -> Db.runWithError(() ->
-            Db.withSavepoint("round; DROP TABLE laps", () -> Db.execute("SELECT 1"))));
+            Db.withSavepoint("round; DROP TABLE laps", () -> discard Db.execute("SELECT 1", Nil))));
         Assert.assertTrue(outcome == Ok(Err(Db.Failure.Permanent(Db.Error.Other(
             "not a savepoint name: round; DROP TABLE laps (expected ^[a-z_][a-z0-9_]*$)")))));
         Assert.assertTrue(statements == Nil)
@@ -104,7 +104,7 @@ pub mod Db.TestDb {
             Laps.insertRows(sampleRows())
         }));
         match statements {
-            case Statement.Execute(_) :: Statement.Execute(_) :: Statement.InsertMany(_, _) :: Nil =>
+            case Statement.Execute(_, _) :: Statement.Execute(_, _) :: Statement.InsertMany(_, _) :: Nil =>
                 Assert.assertTrue(true)
             case _ => Assert.assertTrue(false)
         }

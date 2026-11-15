@@ -118,8 +118,8 @@ pub mod Db.Schema {
         keys: List[Sql.Key[Bound[r]]],
         storage: Sql.Storage
     ): Unit \ DbWrite =
-        Db.execute(Sql.dropTableIfExists(table));
-        Db.execute(createTable(table, columns, computed, keys, storage))
+        discard Db.execute(Sql.dropTableIfExists(table), Nil);
+        discard Db.execute(createTable(table, columns, computed, keys, storage), Nil)
 
     /// The columns a row binds, then the ones the database makes: a computed
     /// column is declared like any other and is not in the ordering the insert
@@ -144,7 +144,7 @@ pub mod Db.Schema {
         Sql.createIndex(indexName(table, over), table, over |> List.map(declare))
 
     pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite =
-        Db.execute(createIndex(table, over))
+        discard Db.execute(createIndex(table, over), Nil)
 
     def indexName(table: String, over: List[Bound[r]]): String =
         columnNames(over) |> List.foldLeft((acc, name) -> acc + "_" + name, table)

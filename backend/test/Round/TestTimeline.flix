@@ -554,8 +554,8 @@ pub mod Round.TestTimeline {
             lap("7", 2, "3:00.000") ::
             Nil,
             () -> {
-                Db.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
-                    + " WHERE event = 'finished'");
+                discard Db.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
+                    + " WHERE event = 'finished'", Nil);
                 Timeline.read(entry())
             });
         Assert.assertTrue(named("finished", events) == ("4:10.000", "finished", "7") :: Nil);

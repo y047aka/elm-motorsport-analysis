@@ -41,16 +41,16 @@ pub mod Db.TestJdbc {
         let refused = Db.Error.Incomplete("the round was not what it should have been");
         let counted = connected(() -> {
             discard Db.runWithError(() -> {
-                Db.execute("CREATE TABLE t (n int not null)");
-                Db.execute("INSERT INTO t VALUES (1)")
+                discard Db.execute("CREATE TABLE t (n int not null)", Nil);
+                Db.execute("INSERT INTO t VALUES (1)", Nil)
             });
             discard Db.withSavepoint("round", () -> {
-                Db.execute("INSERT INTO t VALUES (2)");
-                Db.execute("INSERT INTO t VALUES (3)");
+                discard Db.execute("INSERT INTO t VALUES (2)", Nil);
+                discard Db.execute("INSERT INTO t VALUES (3)", Nil);
                 DbErr.raise(refused)
             });
             discard Db.withSavepoint("round", () ->
-                Db.execute("INSERT INTO t VALUES (4)"));
+                Db.execute("INSERT INTO t VALUES (4)", Nil));
             SqlRead.fetch("SELECT n FROM t ORDER BY n", Nil)
         });
         Assert.assertTrue(cells(counted) == Ok(
@@ -68,7 +68,7 @@ pub mod Db.TestJdbc {
     @Test
     def aPrimaryKeyBuildsNoIndexOfItsOwn(): Unit \ {Assert, IO} =
         let indexes = table -> connected(() -> {
-            discard Db.runWithError(() -> Db.execute(table));
+            discard Db.runWithError(() -> Db.execute(table, Nil));
             SqlRead.fetch(
                 "SELECT name FROM sqlite_master WHERE type = 'index'"
                     + " AND name LIKE 'sqlite_autoindex%' ORDER BY name", Nil)
@@ -113,6 +113,18 @@ pub mod Db.TestJdbc {
         Assert.assertTrue(cells(result) == Ok(
             (Value.Text("o'brien") :: Value.Integer(42) :: Nil) :: Nil
         ))
+
+    /// A write binds its parameters the same way a read does, and answers with
+    /// how many rows the database took.
+    @Test
+    def aWriteBindsItsParametersAndCountsTheRows(): Unit \ {Assert, IO} =
+        let outcome = connected(() -> Db.runWithError(() -> {
+            discard Db.execute("CREATE TABLE t (n int not null)", Nil);
+            discard Db.execute("INSERT INTO t VALUES (?)", Value.Integer(1) :: Nil);
+            discard Db.execute("INSERT INTO t VALUES (?)", Value.Integer(2) :: Nil);
+            Db.execute("UPDATE t SET n = ? WHERE n = ?", Value.Integer(9) :: Value.Integer(1) :: Nil)
+        }));
+        Assert.assertTrue(outcome == Ok(1))
 
     /// The load of a round is one statement, so a database that refuses it
     /// leaves none of the round's rows behind rather than some of them.

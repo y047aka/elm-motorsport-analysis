@@ -9,8 +9,8 @@ pub mod Db.TestRawSql {
             let seen = Ref.fresh(rc, (Nil: List[String]));
             discard run {
                 Db.runWithError(() -> {
-                    Db.execute("SAVEPOINT round");
-                    Db.execute("RELEASE SAVEPOINT round")
+                    discard Db.execute("SAVEPOINT round", Nil);
+                    Db.execute("RELEASE SAVEPOINT round", Nil)
                 })
             } with handler RawSql {
                 def allow(sql, k) = {
@@ -18,7 +18,7 @@ pub mod Db.TestRawSql {
                     k(())
                 }
             } with handler SqlWrite {
-                def execute(_sql, k) = k(Ok())
+                def execute(_sql, _params, k) = k(Ok(0))
                 def insertMany(_sql, _rows, k) = k(Ok(0))
                 def commit(k) = k(Ok())
                 def rollback(k) = k(Ok())

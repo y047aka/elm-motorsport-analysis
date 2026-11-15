@@ -48,7 +48,7 @@ pub mod Db.DbTest {
         let outcome = run {
             Db.catchAll(() -> RawSql.runWithAllow(f))
         } with handler SqlWrite {
-            def execute(_sql, k) = k(Err(error))
+            def execute(_sql, _params, k) = k(Err(error))
             def insertMany(_sql, _rows, k) = k(Err(error))
             def commit(k) = k(Err(error))
             def rollback(k) = k(Err(error))

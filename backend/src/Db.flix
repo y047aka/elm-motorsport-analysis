@@ -9,14 +9,15 @@ pub eff SqlRead {
     def fetch(sql: String, params: List[Db.Value]): Result[Db.Error, List[Db.Row.Row]]
 }
 
-/// `insertMany` binds each row to one statement and answers with the number
-/// the database took rather than the number it was handed, so the run reports
-/// what was accepted beside what it decoded.
+/// `execute` answers with the number of rows the database took rather than the
+/// number it was sent, and `insertMany` binds each row to one statement and
+/// answers the same way, so a run reports what was accepted beside what it
+/// decoded.
 ///
 /// Nothing a statement sends is kept until `commit`, which is what `Db.transact`
 /// is for: a caller that sends and never commits has sent nothing.
 pub eff SqlWrite {
-    def execute(sql: String): Result[Db.Error, Unit]
+    def execute(sql: String, params: List[Db.Value]): Result[Db.Error, Int32]
     def insertMany(sql: String, rows: List[List[Db.Value]]): Result[Db.Error, Int32]
     def commit(): Result[Db.Error, Unit]
     def rollback(): Result[Db.Error, Unit]
@@ -337,9 +338,11 @@ pub mod Db {
         RawSql.allow(sql);
         SqlRead.fetch(sql, params) |> orRaise
 
-    pub def execute(sql: String): Unit \ DbWrite + RawSql =
+    /// The number of rows the database took, which for a statement touching no
+    /// table -- a `CREATE TABLE`, a `SAVEPOINT` -- is nothing to say.
+    pub def execute(sql: String, params: List[Value]): Int32 \ DbWrite + RawSql =
         RawSql.allow(sql);
-        SqlWrite.execute(sql) |> orRaise
+        SqlWrite.execute(sql, params) |> orRaise
 
     pub def insertMany(sql: String, rows: List[List[Value]]): Int32 \ DbWrite + RawSql =
         RawSql.allow(sql);
@@ -399,7 +402,7 @@ pub mod Db {
 
     /// What `runRecording` keeps.
     pub enum Statement with Eq {
-        case Execute(String)
+        case Execute(String, List[Value])
         case InsertMany(String, List[List[Value]])
         case Fetch(String, List[Value])
         case Commit
@@ -413,9 +416,9 @@ pub mod Db {
                 run {
                     catchAll(() -> RawSql.runWithAllow(f))
                 } with handler SqlWrite {
-                    def execute(sql, k) = {
-                        record(log, Statement.Execute(sql));
-                        k(Ok())
+                    def execute(sql, params, k) = {
+                        record(log, Statement.Execute(sql, params));
+                        k(Ok(0))
                     }
                     def insertMany(sql, rows, k) = {
                         record(log, Statement.InsertMany(sql, rows));
@@ -440,7 +443,7 @@ pub mod Db {
                 }
             } with handler SqlSavepoint {
                 def control(command, k) = {
-                    record(log, Statement.Execute(Savepoint.toSql(command)));
+                    record(log, Statement.Execute(Savepoint.toSql(command), Nil));
                     k(Ok())
                 }
             };
@@ -454,7 +457,7 @@ pub mod Db {
             run {
                 catchAll(() -> RawSql.runWithAllow(f))
             } with handler SqlWrite {
-                def execute(_sql, k) = k(Err(error))
+                def execute(_sql, _params, k) = k(Err(error))
                 def insertMany(_sql, _rows, k) = k(Err(error))
                 def commit(k) = k(Err(error))
                 def rollback(k) = k(Err(error))

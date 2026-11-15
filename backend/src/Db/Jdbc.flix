@@ -110,7 +110,7 @@ pub mod Db.Jdbc {
             }
         } with handler SqlSavepoint {
             def control(command, k) =
-                k(guarded(() -> runStatement(conn, Savepoint.toSql(command))))
+                k(guarded(() -> runStatement(conn, Savepoint.toSql(command), Nil) |> Result.map(_ -> ())))
         })
 
     /// The connection as a read alone, which is what the server answers a
@@ -126,7 +126,7 @@ pub mod Db.Jdbc {
         run {
             f()
         } with handler SqlWrite {
-            def execute(sql, k) = k(guarded(() -> runStatement(conn, sql)))
+            def execute(sql, params, k) = k(guarded(() -> runStatement(conn, sql, params)))
             def insertMany(sql, rows, k) = k(guarded(() -> insertRows(conn, sql, rows)))
             def commit(k) = k(guarded(() -> endTransaction(conn, c -> c.commit())))
             def rollback(k) = k(guarded(() -> endTransaction(conn, c -> c.rollback())))
@@ -163,11 +163,12 @@ pub mod Db.Jdbc {
         else
             readCells(rs, index + 1, width, JdbcConvert.cell(rs, index) :: acc)
 
-    def runStatement(conn: Connection, sql: String): Result[Error, Unit] \ IO =
-        let stmt = conn.createStatement();
+    /// The statement is closed on every way out, including the one that throws.
+    def runStatement(conn: Connection, sql: String, params: List[Value]): Result[Error, Int32] \ IO =
+        let stmt = conn.prepareStatement(sql);
         let outcome = try {
-            discard stmt.executeUpdate(sql);
-            Ok()
+            bind(stmt, params);
+            Ok(stmt.executeUpdate())
         } catch {
             case e: SQLException => Err(refusal(e))
         };
