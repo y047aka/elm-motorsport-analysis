@@ -1,14 +1,14 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, init, update, grip)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip)
 
-{-| A size the reader sets -- the width of the standings, the row the strip
-keeps -- and the grip along the edge that moves it. The page holds one `Model`
-per size and forwards every `Msg` through it, the way it forwards the strip's
-through `Columns`.
+{-| A size the reader sets -- the width of the standings, the row the enlarged
+tracker keeps -- and the grip along the edge that moves it. The page holds one
+`Model` per size and forwards every `Msg` through it, the way it forwards the
+strip's through `Columns`.
 
-Which axis the pointer is read along is the `Edge`'s, and so the arithmetic
-here is the same whichever way the grip lies.
+Which axis the pointer is read along is the `Edge`'s, and which way the size
+moves along it is the `Model`'s; the arithmetic between them is three lines.
 
-@docs Model, Msg, Fence, Edge, init, update, grip
+@docs Model, Msg, Fence, Edge, Grows, init, update, grip
 
 -}
 
@@ -17,11 +17,24 @@ import Drag.Handle as Handle exposing (Pointer)
 import Html exposing (Html)
 
 
-{-| The size the thing stands at, and the carry that moves it: the size follows
-the pointer's travel from the size `Drag` was picked up with.
+{-| Which way the size moves when the pointer travels along the axis. `With` is
+a grip on the far edge of what it bounds: the standings' grip lies on their
+right edge, and a travel right widens them. `Against` is a grip on the near
+edge: the row grip lies on the tracker row's top edge, and a travel down
+shortens it.
+-}
+type Grows
+    = With
+    | Against
+
+
+{-| The size the thing stands at, the way a drag moves it, and the carry that
+moves it: the size follows the pointer's travel from the size `Drag` was picked
+up with.
 -}
 type alias Model =
     { size : Float
+    , grows : Grows
     , carried : Drag.State Float
     }
 
@@ -43,9 +56,10 @@ type alias Edge =
     }
 
 
-init : Float -> Model
-init size =
+init : Grows -> Float -> Model
+init grows size =
     { size = size
+    , grows = grows
     , carried = Drag.init
     }
 
@@ -74,7 +88,7 @@ update fence msg m =
             in
             case Drag.carrying carried of
                 Just carry ->
-                    { m | carried = carried, size = clampTo fence (carry.location + Drag.travel carry) }
+                    { m | carried = carried, size = clampTo fence (carry.location + signed m.grows (Drag.travel carry)) }
 
                 Nothing ->
                     { m | carried = carried }
@@ -86,7 +100,17 @@ update fence msg m =
             { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }
 
         Step steps ->
-            { m | size = clampTo fence (m.size + toFloat steps * fence.step) }
+            { m | size = clampTo fence (m.size + signed m.grows (toFloat steps * fence.step)) }
+
+
+signed : Grows -> Float -> Float
+signed grows travel =
+    case grows of
+        With ->
+            travel
+
+        Against ->
+            negate travel
 
 
 clampTo : Fence -> Float -> Float

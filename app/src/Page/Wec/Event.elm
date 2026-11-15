@@ -81,13 +81,13 @@ standingsEdge =
     }
 
 
-{-| The row the strip keeps once the tracker is enlarged, and the bounds the
-reader can take it between. The ceiling is a fixed height rather than a share
-of the page: the grid gives the tracker whatever is left, so the worst the
-ceiling does is leave it a short one.
+{-| The row the enlarged tracker keeps, and the bounds the reader can take it
+between. The ceiling is a fixed height rather than a share of the page: the grid
+gives the strip whatever is left, so the worst the ceiling does is leave it a
+short one.
 -}
-stripRow : Float
-stripRow =
+trackerRow : Float
+trackerRow =
     300
 
 
@@ -102,8 +102,8 @@ rowsFence =
 rowsEdge : Resize.Edge
 rowsEdge =
     { axis = Handle.Down
-    , id = "strip-row-resize-grip"
-    , label = "Resize the columns' row"
+    , id = "tracker-row-resize-grip"
+    , label = "Resize the enlarged tracker"
     }
 
 
@@ -113,8 +113,8 @@ init params =
       , rowTrace = Dict.empty
       , eventsColumn = EventsColumn.init
       , comparison = CarDetail.initialComparison
-      , standings = Resize.init LiveStandings.width
-      , rows = Resize.init stripRow
+      , standings = Resize.init Resize.With LiveStandings.width
+      , rows = Resize.init Resize.Against trackerRow
       , trackerExpanded = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -336,9 +336,11 @@ trackerCard several held track snapshot =
 column has; the column keeps its own.
 
 The card takes no class of its own -- `card-elements.ts` owns that element's
-`className` -- so its cell is a div of its own. The grip along the row edge
-between the two stands in `mainGrid`'s `gap-2.5`: its `-top-2.5` and `h-2.5`
-are that gap, so a change to one without the other leaves the grip off it.
+`className` -- so its cell is a div of its own, and that div carries
+`data-tracker-row`: it is the one box whose height is the row the grip sets.
+The grip along the row edge between the two stands in `mainGrid`'s `gap-2.5`:
+its `-top-2.5` and `h-2.5` are that gap, so a change to one without the other
+leaves the grip off it.
 
 The circuit holds its own proportions, so this drawing is bound by the box's
 height and not its width: how much of the page the strip gives up is how big
@@ -347,7 +349,7 @@ the track gets.
 -}
 expandedTracker : String -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
 expandedTracker cell rowGrip track snapshot =
-    div [ Attributes.class cell ]
+    div [ Attributes.class cell, attribute "data-tracker-row" "" ]
         [ trackerFrame "data-tracker-expanded" track snapshot [ trackerZoomButton True ]
         , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-items-center" ]
             [ rowGrip ]
@@ -379,8 +381,8 @@ trackerZoomButton expanded =
 
 
 {-| Where each cell stands. The strip is the whole page until the tracker is
-enlarged, and then it keeps its own row at the top and the tracker takes the
-page below it.
+enlarged, and then the tracker keeps its own row at the bottom and the strip
+takes the page above it.
 
 The class strings are written intact: Tailwind generates a class only from a
 string it finds intact in the source, so one assembled from fragments silently
@@ -409,13 +411,13 @@ layout expanded =
         }
 
 
-{-| The two rows, the strip's own first. An inline style rather than a class:
-the split is the reader's to set, and Tailwind generates a class only from a
-string it finds intact in the source.
+{-| The two rows, the enlarged tracker's own last. An inline style rather than a
+class: the split is the reader's to set, and Tailwind generates a class only
+from a string it finds intact in the source.
 -}
 rowsStyle : Float -> String
 rowsStyle row =
-    "minmax(0," ++ Columns.px row ++ ") minmax(0,1fr)"
+    "minmax(0,1fr) minmax(0," ++ Columns.px row ++ ")"
 
 
 mainGrid : Shared.LoadedRound -> List Columns.StripKey -> Model -> Html Msg

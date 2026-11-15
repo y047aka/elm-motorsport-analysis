@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import { waitForPageReady, setLapCount, TRACKER_COLUMN, COTA } from './helpers';
 
 /**
- * The tracker taking the room below the columns is two rows the page is laid
- * out in rather than a thing drawn, so nothing here is pixels: what is asserted
- * is which row each of the two stands in, how the split between them moves, and
- * how big the circuit's own polygon ended up. The row the strip keeps and the
- * bounds it can be taken between are read out of the Elm that decides them, so a
- * number moved there moves the expectation with it.
+ * The tracker taking a row of its own below the columns is two rows the page is
+ * laid out in rather than a thing drawn, so nothing here is pixels: what is
+ * asserted is which row each of the two stands in, how the split between them
+ * moves, and how big the circuit's own polygon ended up. The row the enlarged
+ * tracker keeps and the bounds it can be taken between are read out of the Elm
+ * that decides them, so a number moved there moves the expectation with it.
  */
 const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
 
@@ -22,7 +22,7 @@ function readConstant(name: string, pattern: RegExp): number {
   return value;
 }
 
-const STRIP_ROW = readConstant('stripRow', /\nstripRow =\n\s+(\d+)/);
+const TRACKER_ROW = readConstant('trackerRow', /\ntrackerRow =\n\s+(\d+)/);
 const ROW_MIN = readConstant('rowsFence.min', /\nrowsFence =\n\s*\{\s*min = (\d+)/);
 const ROW_MAX = readConstant('rowsFence.max', /rowsFence =\n\s*\{[^}]*max = (\d+)/);
 const ROW_STEP = readConstant('rowsFence.step', /rowsFence =\n\s*\{[^}]*step = (\d+)/);
@@ -31,13 +31,17 @@ const ZOOM = '[data-tracker-zoom]';
 const EXPANDED = '[data-tracker-expanded]';
 const STRIP = '#column-strip';
 
+/** The cell the enlarged tracker stands in, whose height is the row the grip
+ * sets -- the card inside it is shorter by its own padding. */
+const ROW = '[data-tracker-row]';
+
 /** The column's own toggle: the enlarged drawing carries a second one. */
 const zoomIn = (page: Page) => page.locator(`${TRACKER_COLUMN} ${ZOOM}`);
 
 /** The grip along the row edge between the two rows, which only the enlarged
  * page has. */
 const rowGrip = (page: Page): Locator =>
-  page.getByRole('button', { name: "Resize the columns' row" });
+  page.getByRole('button', { name: 'Resize the enlarged tracker' });
 
 /** The circuit as it comes out on screen -- the polygon, not the box it is
  * centred in, which is the full width of its card whatever the circuit's shape. */
@@ -48,7 +52,8 @@ function drawn(page: Page, selector: string) {
 /**
  * Press the row grip and carry it `by` pixels down, without letting go -- the
  * same wait a column carry and the standings' resize use: the grip only listens
- * for moves once Elm has drawn it held.
+ * for moves once Elm has drawn it held. A travel down is the strip's gain and
+ * the tracker row's loss, the way a boundary between two things works.
  */
 async function resizeRows(page: Page, by: number) {
   const handle = rowGrip(page);
@@ -69,7 +74,7 @@ test.describe('the enlarged tracker', () => {
     await setLapCount(page, COTA, 71);
   });
 
-  test('draws the circuit in the room below the strip', async ({ page }) => {
+  test('draws the circuit in a row of its own, leaving the strip the larger share', async ({ page }) => {
     const before = (await page.locator(STRIP).boundingBox())!;
     const inColumn = (await drawn(page, TRACKER_COLUMN))!;
 
@@ -77,15 +82,15 @@ test.describe('the enlarged tracker', () => {
     await expect(page.locator(EXPANDED)).toHaveCount(1);
 
     const strip = (await page.locator(STRIP).boundingBox())!;
-    const enlarged = (await page.locator(EXPANDED).boundingBox())!;
+    const row = (await page.locator(ROW).boundingBox())!;
     const onScreen = (await drawn(page, EXPANDED))!;
 
-    // The strip keeps the top of the page and its own row; the tracker takes
-    // what is left of the page under it.
-    expect(strip.y).toBeCloseTo(before.y, 0);
-    expect(strip.height).toBeCloseTo(STRIP_ROW, 0);
-    expect(enlarged.y).toBeGreaterThanOrEqual(strip.y + strip.height - 1);
-    expect(enlarged.y + enlarged.height).toBeLessThanOrEqual(before.y + before.height + 1);
+    // The tracker keeps its own row at the bottom of the page, and the strip
+    // keeps the top and what is left of it -- more than the map was given.
+    expect(row.y).toBeGreaterThanOrEqual(strip.y + strip.height - 1);
+    expect(row.y + row.height).toBeLessThanOrEqual(before.y + before.height + 1);
+    expect(row.height).toBeCloseTo(TRACKER_ROW, 0);
+    expect(strip.height).toBeGreaterThan(row.height);
 
     // The same track, bigger than the one still standing in the column.
     expect(onScreen.width).toBeGreaterThan(inColumn.width);
@@ -106,39 +111,42 @@ test.describe('the enlarged tracker', () => {
   });
 
   test('carries the split between the two rows by the grip along their edge', async ({ page }) => {
+    const row = page.locator(ROW);
     await zoomIn(page).click();
     await expect(rowGrip(page)).toHaveCount(1);
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${STRIP_ROW}px`);
+    await expect(row).toHaveCSS('height', `${TRACKER_ROW}px`);
 
-    // Down, so the strip's row grows and the tracker's shrinks.
+    // Down: the columns gain and the map loses, the boundary moving with the
+    // pointer wherever the size is held.
     await resizeRows(page, 100);
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${STRIP_ROW + 100}px`);
+    await expect(row).toHaveCSS('height', `${TRACKER_ROW - 100}px`);
 
     // Past the shortest there is: the row stops where the fence says.
-    await page.mouse.move(700, -1000, { steps: 5 });
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${ROW_MIN}px`);
+    await page.mouse.move(700, 3000, { steps: 5 });
+    await expect(row).toHaveCSS('height', `${ROW_MIN}px`);
     await page.mouse.up();
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${ROW_MIN}px`);
+    await expect(row).toHaveCSS('height', `${ROW_MIN}px`);
 
     // And back: the carry starts from the row the grip found, not the default.
-    await resizeRows(page, ROW_MAX - ROW_MIN + 50);
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${ROW_MAX}px`);
+    await resizeRows(page, -(ROW_MAX - ROW_MIN + 50));
+    await expect(row).toHaveCSS('height', `${ROW_MAX}px`);
     await page.mouse.up();
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${ROW_MAX}px`);
+    await expect(row).toHaveCSS('height', `${ROW_MAX}px`);
   });
 
   test('steps the split by the arrow keys the grip answers to', async ({ page }) => {
+    const row = page.locator(ROW);
     await zoomIn(page).click();
 
     await rowGrip(page).focus();
     await page.keyboard.press('ArrowDown');
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${STRIP_ROW + ROW_STEP}px`);
+    await expect(row).toHaveCSS('height', `${TRACKER_ROW - ROW_STEP}px`);
     await page.keyboard.press('ArrowUp');
     await page.keyboard.press('ArrowUp');
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${STRIP_ROW - ROW_STEP}px`);
+    await expect(row).toHaveCSS('height', `${TRACKER_ROW + ROW_STEP}px`);
 
     // The sideways keys are another grip's business, and step nothing here.
     await page.keyboard.press('ArrowRight');
-    await expect(page.locator(STRIP)).toHaveCSS('height', `${STRIP_ROW - ROW_STEP}px`);
+    await expect(row).toHaveCSS('height', `${TRACKER_ROW + ROW_STEP}px`);
   });
 });
