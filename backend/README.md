@@ -280,7 +280,8 @@ tables, and adding other series keeps it in the low gigabytes.
 Reaching a database is an effect rather than a module of functions, so that
 what a round would send can be read back without a server: `Db.runRecording`
 keeps the statements and answers a read with the error that nothing was sent,
-`Db.runFailing` answers every statement with one error the caller chose, and
+`Db.runFailing` answers every statement with one error the caller chose,
+`Db.DbTest.runWithRows` answers a read with rows the caller named, and
 `Db.Jdbc` is the only file that imports `java.sql`. No effect here names a
 table or a column, so they, `Db.Jdbc` and `Sql` are together a database and a
 query language and nothing of this application; the `Db` table modules and the
@@ -295,18 +296,24 @@ statement that changes the database in them, and the table modules and
 what the type says of the server the connection says too: `Db.Jdbc.runReading`
 installs the read alone, and a write reaches no handler through it.
 
-`DbErr` is the third, and it is what a reader does not carry a `Result` for.
-Its one operation does not return, so `Round.Summary.read` answers with a
-`Metadata` rather than with whether it could read one, and the failure travels
-by itself to the boundary that asked -- `Db.runWithError`, which is where a
-value comes back. Three of those: a round of the export, a request, and the
-run's own transaction. Everything between them is written as though the
-database always answers.
+`DbErr` and `TransientDbErr` are the third and fourth, and they are what a
+reader does not carry a `Result` for. Their one operation does not return, so
+`Round.Summary.read` answers with a `Metadata` rather than with whether it could
+read one, and the failure travels by itself to the boundary that asked --
+`Db.runWithError`, which is where a value comes back. Three of those: a round of
+the export, a request, and the run's own transaction. Everything between them is
+written as though the database always answers. Which of the two effects a failure
+travels by is read off its constructor, so a kind added to either side meets a
+pattern that has to say which it is.
 
 What a signature says is the alias rather than the effect: `\ DbRead` is
-`{SqlRead, DbErr}`, `\ DbWrite` is `{SqlWrite, DbErr}`, and `\ Db` is all
-three. Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db`
-one -- so a caller taking one as an argument is written for the half it uses,
+`{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is
+`{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db` adds `SqlSavepoint`.
+Every one of them already says a statement goes out, which is what `RawSql` is:
+a marker raised by `Db.fetch`, `Db.execute` and `Db.insertMany`, and closed by
+`runWithAllow` at the four places that have read what they send. Flix has no
+subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller
+taking one as an argument is written for the half it uses,
 which is what `Main.onRoot` is polymorphic over and what
 `Round.TestSupport.onRound` takes.
 
@@ -322,15 +329,37 @@ are what `Sql` and `Db.Schema` reach. `Db.Jdbc.withConnection` is the other
 one -- a database opened, worked in, and closed however that went, for a run,
 a test and the server alike.
 
-What a failure is is a `Db.Error` rather than a sentence, and which of the six
-says where the fix is: `Unreachable` is no database reached at all, `Refused` is
-what the driver said no to in its own words, `Busy` is the one refusal that may
-go through next time -- a lock SQLite waited out rather than got, which
-`Db.Jdbc.classify` reads off the driver's code and is tested without a
-database -- `Unread` is a cell the reading could not read, `NoRow` is a query
-that had to answer with one and did not, and `Incomplete` is rows that came back
-whole and do not describe a round. The sentence is `ToString`'s, so the wording is in one place and the kind is what a
+What a failure is is a `Db.Error` rather than a sentence. Two of its kinds are
+transient and travel apart from the rest: `Unreachable` is no database reached at
+all, and `Busy` is the one refusal that may go through next time -- a lock SQLite
+waited out rather than got, which `Db.Sqlite` reads off the driver's result code
+and is tested without a database. The others say where the fix is: `Refused` is
+what the driver said no to in its own words, `Unread` is a cell the reading could
+not read, `NoRow` is a query
+that had to answer with one and did not, `Incomplete` is rows that came back
+whole and do not describe a round, and `Other` is what the JVM threw rather than
+said -- a `StackOverflowError` included, since a deep recursion is a bug and a
+`VirtualMachineError` is what must not be turned into a value. The sentence is
+`ToString`'s, so the wording is in one place and the kind is what a
 caller reads.
+
+`Db.Failure` is both failings in one value, `Transient` and `Permanent`, and it
+is what a boundary takes back: `Db.attempt` is the one place a raised failure
+becomes a value, and `Db.isTransient` the line between a round that cannot be
+served now and one that cannot be served.
+
+A row is `Db.Row.Row` -- the labels the driver gave its columns, and the cells as
+`Db.Value`: text, integer, real, boolean, JSON, and a null that can name the type
+it is bound as. `Db.JdbcConvert` is the only file that turns a `Value` into a
+binding and a `ResultSet` cell back into one, and a number too wide for an `int`
+column comes back as its text, which is the one form a reading reports unread.
+`Sql.Sel` reads a `Row` positionally, as the statements are built positionally;
+`Row.get` is there for the readings that name a column.
+
+`Db.Retry` is where a transient failure would be answered by sending again:
+`retrying` reads the `Failure` and waits out a full-jitter backoff between tries,
+`retryingSavepoint` marks a savepoint and takes back to it before the next one.
+Nothing calls either yet.
 
 `Server.Api` is the one that reads it. `Unreachable` and `Busy` are answered
 503 and everything else 500, which is the difference between a round that
@@ -349,8 +378,10 @@ killed partway leaves the rounds it was rebuilding from rather than three of
 them.
 
 A round the database refuses is still counted and reported rather than taking
-the run with it, and `Db.atomically` is the boundary that makes it so: it is
-`transact` of a part of one, marking a savepoint of SQLite's own so what a
+the run with it, and `Db.withSavepoint` is the boundary that makes it so: it is
+`transact` of a part of one, marking a savepoint of SQLite's own -- its name
+checked against `^[a-z_][a-z0-9_]*$` first, since it is the one name that goes
+into a statement as text -- so what a
 round sent is undone together and what the run sent before it is still to be
 committed. `Cli.Load` marks one per round, which is also what lets the
 numbering follow the rows -- a round that failed frees the names it took, and
@@ -531,7 +562,7 @@ paying for the same split.
   database that answers with the one it was given, and `Server.TestApi` is
   where a `Busy` becomes a 503 and a `Refused` a 500 with the driver's words
   kept out of the body. The two halves of that are otherwise only met apart --
-  `Db.Jdbc.classify` reads the code, and a round read over a real database
+  `Db.Sqlite` reads the code, and a round read over a real database
   never fails.
 
 ## What sqlfx does and this does not
@@ -547,29 +578,25 @@ in `.q` files, checked against a migration's DDL and turned into typed
 functions by a generator. Its author's account of it is
 [the article](https://zenn.dev/ababup1192/articles/0c29f21fe1ab8f).
 
-Three things it has that are not here, none of them adopted, none of them
-resting on which way the SQL is written:
+Its layer 0 was taken, piece by piece, in this order: the failure model
+(`DbErr`/`TransientDbErr`/`Failure`/`attempt`), what the JVM throws and which of
+it must still travel (`guard`, `catchAll`, `rethrowing`, `isFatal`), savepoints,
+the row and value model, the JDBC conversion and the closing of a statement on
+every way out, the test handlers (`Db.DbTest`), and the `RawSql` marker. The
+sections above say where each landed.
 
-- **A marker on raw SQL.** `Sql.raw`, `Sql.column` and a reading of a written
-  expression are the holes in what the builder checks, and a function reaching
-  through one says nothing about it -- `Round.Index` is written almost entirely
-  through them. sqlfx gives a raw statement an effect of its own, `RawSql`,
-  which travels to whoever allows it, so how far unchecked SQL reaches is a
-  question the type checker answers rather than a grep.
-- **A read handler answering with rows.** `Db.runRecording` answers a read with
-  the error that nothing was sent, so a reading is driven either over a real
-  database or, as `Sql.TestSel` does, by handing a row to the reading alone. A
-  handler taking the rows to answer with would put a query and its reading under
-  one test without a database.
-- **A refusal that says whether to send it again.** `Db.Error.Busy` is that
-  refusal and nothing re-sends what it refused: the server answers 503 and the
-  caller is told. sqlfx keeps its transient failures in an effect of their own
-  and retries a transaction against it. One run writing to one file makes the
-  case thin here -- but the kind is already read for the status code, and a
-  retry would be read off the same place.
+Its layer 1 and above were not, and none of it rests on which way the SQL is
+written:
 
-The rest of it is PostgreSQL's, and does not carry: sqlstate read down to the
-constraint name, a generator turning a DDL's named constraints into an enum a
-`match` must cover, a connection pool, forward-only migrations. A single file
-rebuilt from CSV each run has no use for the last two, and SQLite's driver does
-not answer the first.
+- **The `.q` generator and the parser beside it.** sqlfx writes statements in
+  files and checks them against a migration's DDL; this builds them, which is the
+  one direction the two chose differently and the one that has not moved. The
+  `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape
+  this keeps.
+- **A pool, and forward-only migrations.** One file, rebuilt from CSV by
+  `Cli.Load` each run, has no connection to pool and no schema to migrate
+  forward -- the `DROP TABLE`s are the migration.
+- **PostgreSQL's own facts.** sqlstate read down to the constraint name, a
+  generator turning a DDL's named constraints into an enum a `match` must cover,
+  dates, times and UUIDs with their driver's semantics. SQLite's driver does not
+  answer the first, and `Db.Sqlite`'s result codes are what this has instead.
