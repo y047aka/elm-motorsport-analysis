@@ -324,12 +324,12 @@ trackerFrame marker track snapshot controls =
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away.
 -}
-trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
-trackerCard several held track snapshot =
+trackerCard : Bool -> Bool -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
+trackerCard several held toggle track snapshot =
     trackerFrame "data-tracker-column"
         track
         snapshot
-        (trackerZoomButton False :: standingsTrigger :: cornerControls (corner several held Columns.Tracker))
+        (toggle :: standingsTrigger :: cornerControls (corner several held Columns.Tracker))
 
 
 {-| The tracker drawn with the room below the strip rather than the room one
@@ -347,28 +347,34 @@ height and not its width: how much of the page the strip gives up is how big
 the track gets.
 
 -}
-expandedTracker : String -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
-expandedTracker cell rowGrip track snapshot =
+expandedTracker : String -> Html Msg -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
+expandedTracker cell rowGrip toggle track snapshot =
     div [ Attributes.class cell, attribute "data-tracker-row" "" ]
-        [ trackerFrame "data-tracker-expanded" track snapshot [ trackerZoomButton True ]
-        , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-items-center" ]
+        [ trackerFrame "data-tracker-expanded" track snapshot [ toggle ]
+        , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-content-center" ]
             [ rowGrip ]
         ]
 
 
-{-| The press that gives the tracker the room below the strip, and takes it
-back. It stands in both drawings' corner, so the way back is wherever the
-room was taken from.
+{-| The press that toggles the enlargement, wearing the mark of what it does from
+where it stands: `⤢` while the tracker is in its column, and the ✕ every
+overlay here closes with once the enlarged tracker is up. The marks differ,
+which is what lets one button read as the reverse of the other rather than as
+the same invitation twice.
+
+It stands in both drawings' corner, so the way back is wherever the room was
+taken from.
+
 -}
-trackerZoomButton : Bool -> Html Msg
-trackerZoomButton expanded =
+trackerToggle : Bool -> Html Msg
+trackerToggle expanded =
     let
-        label =
+        ( glyph, label ) =
             if expanded then
-                "Give the tracker its column back"
+                ( "✕", "Close the enlarged tracker" )
 
             else
-                "Give the tracker the room below the strip"
+                ( "⤢", "Give the tracker the room below the strip" )
     in
     button
         [ onClick ToggleTrackerZoom
@@ -377,7 +383,7 @@ trackerZoomButton expanded =
         , Attributes.title label
         , Attributes.class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
         ]
-        [ text "⤢" ]
+        [ text glyph ]
 
 
 {-| Where each cell stands. The strip is the whole page until the tracker is
@@ -443,7 +449,7 @@ mainGrid round keys m =
         )
         [ standingsCell cells.standings keys m round.energy snapshot replay.race.cars
         , if m.trackerExpanded then
-            expandedTracker cells.tracker (Html.map RowsMsg (Resize.grip rowsEdge m.rows)) round.track snapshot
+            expandedTracker cells.tracker (Html.map RowsMsg (Resize.grip rowsEdge m.rows)) (trackerToggle True) round.track snapshot
 
           else
             text ""
@@ -583,7 +589,7 @@ columnStrip cell track timeline keys m pitCycles replay snapshot =
                             class_
 
                     Columns.Tracker ->
-                        trackerCard several (Columns.isCarried placement) track snapshot
+                        trackerCard several (Columns.isCarried placement) (trackerToggle m.trackerExpanded) track snapshot
 
                     Columns.Events ->
                         EventsColumn.view

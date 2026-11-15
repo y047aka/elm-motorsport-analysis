@@ -97,12 +97,17 @@ test.describe('the enlarged tracker', () => {
     expect(onScreen.height).toBeGreaterThan(inColumn.height);
   });
 
-  test('gives the room back when pressed again', async ({ page }) => {
+  test('gives the room back when pressed again, by a mark that says so', async ({ page }) => {
     const before = (await page.locator(STRIP).boundingBox())!;
 
     await zoomIn(page).click();
     await expect(page.locator(EXPANDED)).toHaveCount(1);
-    await zoomIn(page).click();
+
+    // What opened the enlargement is not what closes it: both corners take the
+    // ⤢ for a ✕ once the enlarged tracker is up.
+    await expect(page.locator(`${EXPANDED} [data-tracker-zoom]`)).toHaveAttribute('aria-label', 'Close the enlarged tracker');
+    await expect(zoomIn(page)).toHaveAttribute('aria-label', 'Close the enlarged tracker');
+    await page.getByRole('button', { name: 'Close the enlarged tracker' }).first().click();
     await expect(page.locator(EXPANDED)).toHaveCount(0);
 
     const after = (await page.locator(STRIP).boundingBox())!;

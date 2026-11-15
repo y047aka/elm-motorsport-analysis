@@ -95,7 +95,7 @@ resize axis config =
                     )
 
                 Down ->
-                    ( "grid place-items-center h-2 w-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                    ( "grid place-content-center h-2 w-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
                     , "cursor-row-resize"
                     , "⋯"
                     )
@@ -113,6 +113,17 @@ resize axis config =
         glyph
 
 
+{-| The markup every grip is made of: a `drag-handle` with the aria and data
+attributes the contract test reads, the pointer events the state machine is
+driven by, and a glyph. Which end of the pointer it reads is the `Axis`.
+
+The row grip passes `place-content-center`, not `place-items-center`: an implicit
+row track cannot shrink below the glyph's line box, and a track taller than the
+8px that grip is high starts at its top -- `place-items` centers an item within
+its track, so it centers nothing and the glyph hangs below the grip.
+`place-content` centers the track itself, and the overflow splits evenly.
+
+-}
 grip : Axis -> Config msg -> String -> String -> String -> Html msg
 grip axis config classes cursor glyph =
     Html.node "drag-handle"
