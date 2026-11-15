@@ -65,7 +65,7 @@ pub mod Server {
     /// until the process ends, so the close is outside the catch.
     def fromDatabase(databaseUrl: String, route: Route): Response \ IO =
         match Jdbc.connect(databaseUrl) {
-            case Err(cause) => Api.failed(cause)
+            case Err(cause) => Api.failed(Db.toFailure(cause))
             case Ok(conn)   =>
                 let answered = try {
                     Jdbc.runReading(conn, () -> Api.respond(route))

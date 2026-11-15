@@ -24,7 +24,7 @@ pub eff SqlWrite {
 
 /// What ends the reading it happened in. `raise` does not return, so a
 /// function reaching the database answers with what it read and not with
-/// whether it could: the failure travels to `Db.runWithError` on its own.
+/// whether it could: the failure travels to `Db.attempt` on its own.
 ///
 /// The two effects above answer with a `Result` because a Flix handler body is
 /// evaluated outside the `run` it belongs to, so a failure raised in one would
@@ -58,16 +58,12 @@ pub mod Db {
     /// What did not happen, rather than the sentence saying so, which is
     /// `ToString`'s.
     pub enum Error with Eq {
-        /// No database was reached at all.
-        case Unreachable(String)
+        /// A failure the same statement sent again may get past.
+        case Transient(Transient)
 
         /// The database refused what it was sent, in the words the driver
         /// used.
         case Refused(String)
-
-        /// A lock the database waited out rather than got: the one refusal
-        /// that says the same statement may go through next time.
-        case Busy(String)
 
         /// A cell came back that the reading could not read.
         case Unread(String)
@@ -80,15 +76,75 @@ pub mod Db {
         case Incomplete(String)
     }
 
+    /// The failures that trying again is worth trying, which is the line
+    /// between a round that cannot be served now and one that cannot be served.
+    ///
+    /// Apart from the rest rather than one case beside them, so that which of
+    /// the two effects a failure travels by is read off its constructor: a kind
+    /// added to either side meets a pattern that has to say which it is.
+    pub enum Transient with Eq {
+        /// No database was reached at all.
+        case Unreachable(String)
+
+        /// A lock the database waited out rather than got: the one refusal
+        /// that says the same statement may go through next time.
+        case Busy(String)
+    }
+
     instance ToString[Error] {
         pub def toString(e: Error): String = match e {
-            case Error.Unreachable(cause)  => "no database (${cause})"
+            case Error.Transient(t)        => "${t}"
             case Error.Refused(cause)      => cause
-            case Error.Busy(cause)         => cause
             case Error.Unread(detail)      => detail
             case Error.NoRow(subject)      => "${subject} came back with no row"
             case Error.Incomplete(detail)  => detail
         }
+    }
+
+    instance ToString[Transient] {
+        pub def toString(t: Transient): String = match t {
+            case Transient.Unreachable(cause) => "no database (${cause})"
+            case Transient.Busy(cause)        => cause
+        }
+    }
+
+    /// No database was reached at all.
+    pub def unreachable(cause: String): Error =
+        Error.Transient(Transient.Unreachable(cause))
+
+    /// A lock the database waited out rather than got.
+    pub def busy(cause: String): Error =
+        Error.Transient(Transient.Busy(cause))
+
+    /// The two failings in one value, which is what a boundary takes back.
+    /// Nothing between a boundary and the statement answers with this: the
+    /// failure travels by an effect, and the three places a value comes back to
+    /// -- a round of the export, a request, the run's own transaction -- read it.
+    pub enum Failure with Eq {
+        /// Trying the same thing again may get past it.
+        case Transient(Transient)
+
+        /// Trying the same thing again reaches the same failure.
+        case Permanent(Error)
+    }
+
+    instance ToString[Failure] {
+        pub def toString(f: Failure): String = match f {
+            case Failure.Transient(t)     => "${t}"
+            case Failure.Permanent(error) => "${error}"
+        }
+    }
+
+    /// The failure, out of whichever effect carried it.
+    pub def toFailure(error: Error): Failure = match error {
+        case Error.Transient(t) => Failure.Transient(t)
+        case _                  => Failure.Permanent(error)
+    }
+
+    /// The failure, as the effect it belongs to.
+    pub def raiseFailure(failure: Failure): a \ {TransientDbErr, DbErr} = match failure {
+        case Failure.Transient(t)     => TransientDbErr.raise(Error.Transient(t))
+        case Failure.Permanent(error) => raise(error)
     }
 
     /// A value bound to a `?`, in the type its column or comparison has.
@@ -101,12 +157,11 @@ pub mod Db {
         case NullableIntArray(Option[List[Option[Int32]]])
     }
 
-    /// Whether trying the same statement again is worth trying: a lock that
-    /// was waited out, and no database reached at all.
+    /// Whether trying the same statement again is worth trying, which the
+    /// constructor says.
     pub def isTransient(error: Error): Bool = match error {
-        case Error.Busy(_)        => true
-        case Error.Unreachable(_) => true
-        case _                    => false
+        case Error.Transient(_) => true
+        case _                  => false
     }
 
     /// The failure, as whichever of the two effects carries it.
@@ -132,6 +187,11 @@ pub mod Db {
         } with handler TransientDbErr {
             def raise(error, _k) = Err(error)
         }
+
+    /// The failure, whichever of the two effects carried it. This is where a
+    /// reading stops being a value and starts being a `Result`.
+    pub def attempt(f: Unit -> a \ ef): Result[Failure, a] \ (ef - {TransientDbErr, DbErr}) =
+        runWithError(f) |> Result.mapErr(toFailure)
 
     /// What a statement answered, as the value it read or as a failure of the
     /// caller's own.
@@ -238,7 +298,7 @@ pub mod Db {
                 // is told so rather than handed an empty one.
                 def fetch(sql, params, k) = {
                     record(log, Statement.Fetch(sql, params));
-                    k(Err(Error.Unreachable("nothing was sent, so nothing can be read back")))
+                    k(Err(unreachable("nothing was sent, so nothing can be read back")))
                 }
             };
             (result, List.reverse(Ref.get(log)))

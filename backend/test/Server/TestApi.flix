@@ -66,7 +66,7 @@ pub mod Server.TestApi {
     @Test
     def aLockedDatabaseIsA503(): Unit \ Assert =
         Assert.assertTrue(
-            failing(Db.Error.Busy("database is locked"), Route.Summary(2025, "fuji_6h"))#status == 503)
+            failing(Db.busy("database is locked"), Route.Summary(2025, "fuji_6h"))#status == 503)
 
     /// A statement the database refused is the round's fault and not the
     /// request's, and what it was refused for is the log's.

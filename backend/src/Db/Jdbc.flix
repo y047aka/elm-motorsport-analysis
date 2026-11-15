@@ -22,8 +22,8 @@ pub mod Db.Jdbc {
     /// low byte -- `SQLITE_BUSY_SNAPSHOT` is 517, which is 5.
     pub def classify(code: Int32, message: String): Error =
         match Int32.remainder(code, 256) {
-            case 5 => Error.Busy(message)
-            case 6 => Error.Busy(message)
+            case 5 => Db.busy(message)
+            case 6 => Db.busy(message)
             case _ => Error.Refused(message)
         }
 
@@ -48,7 +48,7 @@ pub mod Db.Jdbc {
             conn.setAutoCommit(false);
             Ok(conn)
         } catch {
-            case e: SQLException => Err(Error.Unreachable("${e.getMessage()}"))
+            case e: SQLException => Err(Db.unreachable("${e.getMessage()}"))
         }
 
     def makeParentDirectory(url: String): Unit \ IO =

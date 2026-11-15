@@ -9,7 +9,7 @@ pub mod Cli.Errors {
         case EmptyFile(String)
         case File(FileError)
         case Csv({ path = String, message = String })
-        case Database(Db.Error)
+        case Database(Db.Failure)
         case RoundNotLoaded
     }
 

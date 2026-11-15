@@ -50,7 +50,7 @@ pub mod Cli.Load {
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
     pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
-        let rebuild = Db.runWithError(() -> Db.transact(() -> {
+        let rebuild = Db.attempt(() -> Db.transact(() -> {
             let rounds = createTables();
             convertRounds(root, rounds)
         }));
@@ -141,7 +141,7 @@ pub mod Cli.Load {
                     numbering#entries, task#entry#season, CarRow.firstMentions(rawLaps));
                 reportEntryDisagreements(task, differing);
                 let numbered = { drivers = drivers, entries = entries };
-                let outcome = Db.runWithError(() -> Db.atomically("round", () -> reportViolations(
+                let outcome = Db.attempt(() -> Db.atomically("round", () -> reportViolations(
                         task, load(rounds, numbered, newDrivers, newEntries, seats, task, rawLaps))))
                     |> Result.mapErr(CliError.Database);
                 (outcome, if (Result.isOk(outcome)) numbered else numbering)

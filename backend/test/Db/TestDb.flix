@@ -114,5 +114,28 @@ pub mod Db.TestDb {
             case _ => Assert.assertTrue(false)
         }
 
+    /// A transient failure is a failure: what was sent before it is taken back.
+    @Test
+    def aTransientFailureRollsTheTransactionBack(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() -> Db.runWithError(() ->
+            Db.transact(() -> {
+                discard Laps.insertRows(sampleRows());
+                (Db.raise(Db.busy("database is locked")): Int32)
+            })));
+        Assert.assertTrue(result == Err(Db.busy("database is locked")));
+        match statements {
+            case Statement.InsertMany(_, _) :: Statement.Rollback :: Nil => Assert.assertTrue(true)
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// Which of the two effects a failure travels by is read off its
+    /// constructor, so the two that trying again may get past are named here
+    /// and nowhere else.
+    @Test
+    def whichFailingsTryingAgainIsWorthTrying(): Unit \ Assert =
+        Assert.assertTrue(Db.isTransient(Db.busy("database is locked")));
+        Assert.assertTrue(Db.isTransient(Db.unreachable("no such file")));
+        Assert.assertTrue(not(Db.isTransient(Db.Error.Refused("no such table: laps"))));
+        Assert.assertTrue(not(Db.isTransient(Db.Error.NoRow("the summary"))))
 
 }

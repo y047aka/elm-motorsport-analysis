@@ -28,9 +28,9 @@ pub mod Db.TestJdbc {
     /// lock like `SQLITE_BUSY` is.
     @Test
     def aLockIsTheOneRefusalThatSaysTryAgain(): Unit \ Assert =
-        Assert.assertTrue(Jdbc.classify(5, "locked") == Db.Error.Busy("locked"));
-        Assert.assertTrue(Jdbc.classify(6, "locked") == Db.Error.Busy("locked"));
-        Assert.assertTrue(Jdbc.classify(517, "locked") == Db.Error.Busy("locked"));
+        Assert.assertTrue(Jdbc.classify(5, "locked") == Db.busy("locked"));
+        Assert.assertTrue(Jdbc.classify(6, "locked") == Db.busy("locked"));
+        Assert.assertTrue(Jdbc.classify(517, "locked") == Db.busy("locked"));
         Assert.assertTrue(Jdbc.classify(1, "no such table: laps") == Db.Error.Refused("no such table: laps"));
         Assert.assertTrue(Jdbc.classify(1555, "constraint") == Db.Error.Refused("constraint"))
 
