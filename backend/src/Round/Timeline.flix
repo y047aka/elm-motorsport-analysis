@@ -75,7 +75,7 @@ pub mod Round.Timeline {
     def fastestLaps(entry: Entry): List[Timeline.FastestLap] \ DbRead =
         Sql.rows(Sql.raw("timed"))
             |> Sql.using(Sql.frags(
-                Sql.raw("timed AS (SELECT ${Laps.table()}.car_number, elapsed_ms, lap_time_ms,"
+                Sql.raw("timed AS (SELECT ${Laps.table()}.car_number, elapsed_ms, lap_number, lap_time_ms,"
                     + " MIN(lap_time_ms) OVER (PARTITION BY ${Entries.table()}.class"
                     + " ORDER BY elapsed_ms, source_row"
                     + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS standing"
@@ -85,9 +85,13 @@ pub mod Round.Timeline {
             ))
             |> Sql.filter(_ -> Sql.column("standing IS NULL OR lap_time_ms < standing"))
             |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
-            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms")))
-            |> Sql.reading(match (carNumber, elapsed) ->
-                { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
+            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms"), Sql.int("lap_number")))
+            |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
+                {
+                    carNumber = carNumber,
+                    elapsed = Util.Duration.fromMillis(elapsed),
+                    lapNumber = lapNumber
+                })
             |> Sql.selectAll
 
     // --------------------------------------------------------- driver changes

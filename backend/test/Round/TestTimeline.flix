@@ -58,6 +58,15 @@ pub mod Round.TestTimeline {
     def named(what: String, events: List[Event]): List[(String, String, String)] =
         events |> List.map(shape) |> List.filter(match (_, kind, _) -> kind == what)
 
+    /// `(when, whose, which lap)` for every event that names a lap -- which a
+    /// fastest lap is and nothing else is.
+    def lapsNamed(events: List[Event]): List[(String, String, Int32)] =
+        events |> List.filterMap(event -> match (event#eventType, event#lap) {
+            case (EventType.Of(carNumber, _), Some(lap)) =>
+                Some((Util.Duration.format(event#elapsed), carNumber, lap))
+            case _ => None
+        })
+
     /// Either of the two events a change of the lead is worth, which is what a test
     /// asking whether the lead changed hands at all is asking about.
     def leadChanges(events: List[Event]): List[(String, String, String)] =
@@ -477,6 +486,25 @@ pub mod Round.TestTimeline {
             Nil);
         Assert.assertTrue(named("fastestLap", events) == ("5:54.000", "fastestLap", "7") :: Nil)
 
+    /// The lap each one fell on. The crossing alone says when, and nothing else
+    /// in the rows recovers which lap stood where an `elapsed_ms` is corrected to.
+    @Test
+    def aFastestLapNamesTheLapItFellOn(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            timedLap("7", 1, "2:00.000", "2:00.000") ::
+            gtTimedLap("90", 1, "2:10.000", "2:10.000") ::
+            timedLap("7", 2, "4:02.000", "2:02.000") ::
+            gtTimedLap("90", 2, "4:20.000", "2:10.000") ::
+            timedLap("7", 3, "6:02.000", "2:00.000") ::
+            gtTimedLap("90", 3, "6:28.000", "2:08.000") ::
+            timedLap("7", 4, "8:02.000", "2:00.000") ::
+            Nil);
+        Assert.assertTrue(lapsNamed(events) ==
+            ("4:02.000", "7", 2) ::
+            ("4:20.000", "90", 2) ::
+            ("6:02.000", "7", 3) ::
+            ("6:28.000", "90", 3) :: Nil)
+
     // -------------------------------------------------------- driver changes
 
     /// A car handed over at a stop is one event, timed where the driver before it
@@ -568,6 +596,21 @@ pub mod Round.TestTimeline {
             case (readBack, counted) =>
                 Assert.assertTrue(List.map(shape, readBack) == List.map(shape, counted))
         }
+
+    /// The lap an event names is a column like any other, and so the one thing
+    /// about an event that can be lost between the load counting it and a reader
+    /// reading it back.
+    @Test
+    def aLapTheLoadNamedComesBackThroughARow(): Unit \ {Assert, IO} =
+        let (readBack, counted) = TestSupport.onRound(entry(),
+            timedLap("7", 1, "2:00.000", "2:00.000") ::
+            timedLap("7", 2, "4:02.000", "2:02.000") ::
+            timedLap("7", 3, "6:02.000", "2:00.000") ::
+            Nil,
+            () -> (Timeline.read(entry()), Timeline.fromLaps(entry(), duration("1:00:00.000"))));
+        Assert.assertTrue(lapsNamed(readBack) == lapsNamed(counted));
+        Assert.assertTrue(lapsNamed(readBack) ==
+            ("4:02.000", "7", 2) :: ("6:02.000", "7", 3) :: Nil)
 
     @Test
     def everyKindOfEventComesBackThroughARow(): Unit \ {Assert, IO} =

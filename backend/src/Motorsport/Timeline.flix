@@ -32,9 +32,12 @@ pub mod Motorsport.Timeline {
         case Of(String, CarEvent)
     }
 
+    /// `lap` is the lap the event fell on. The field's own events -- a flag, the
+    /// start -- are on no car's lap and carry none.
     pub type alias Event = {
         elapsed   = Duration,
-        eventType = EventType
+        eventType = EventType,
+        lap       = Option[Int32]
     }
 
     /// A car that took the lead by overtaking on track, and the crossing that did it.
@@ -56,11 +59,12 @@ pub mod Motorsport.Timeline {
         elapsed   = Duration
     }
 
-    /// A lap faster than any its class had run before it, and the crossing that
-    /// completed it.
+    /// A lap faster than any its class had run before it, the crossing that
+    /// completed it, and which lap that was.
     pub type alias FastestLap = {
         carNumber = String,
-        elapsed   = Duration
+        elapsed   = Duration,
+        lapNumber = Int32
     }
 
     /// What the events of one round are gathered from, `cars` being each car's last
@@ -98,37 +102,42 @@ pub mod Motorsport.Timeline {
             |> List.map(snd)
 
     def raceStart(): Event =
-        { elapsed = Util.Duration.zero(), eventType = EventType.RaceStart }
+        { elapsed = Util.Duration.zero(), eventType = EventType.RaceStart, lap = None }
 
     def overtakesForLead(overtakes: List[Overtake]): List[Event] =
         overtakes |> List.map(overtake ->
             {
                 elapsed = overtake#elapsed,
-                eventType = EventType.Of(overtake#carNumber, CarEvent.OvertakeForLead)
+                eventType = EventType.Of(overtake#carNumber, CarEvent.OvertakeForLead),
+                lap = None
             })
 
     def leadersInPit(inPits: List[InPit]): List[Event] =
         inPits |> List.map(inPit ->
             {
                 elapsed = inPit#elapsed,
-                eventType = EventType.Of(inPit#carNumber, CarEvent.LeaderInPit)
+                eventType = EventType.Of(inPit#carNumber, CarEvent.LeaderInPit),
+                lap = None
             })
 
     def flagsShown(flags: List[FlagShown]): List[Event] =
-        flags |> List.map(shown -> { elapsed = shown#elapsed, eventType = EventType.Flag(shown#flag) })
+        flags |> List.map(shown ->
+            { elapsed = shown#elapsed, eventType = EventType.Flag(shown#flag), lap = None })
 
     def fastestLaps(laps: List[FastestLap]): List[Event] =
         laps |> List.map(lap ->
             {
                 elapsed = lap#elapsed,
-                eventType = EventType.Of(lap#carNumber, CarEvent.FastestLap)
+                eventType = EventType.Of(lap#carNumber, CarEvent.FastestLap),
+                lap = Some(lap#lapNumber)
             })
 
     def driverChanges(changes: List[DriverChange]): List[Event] =
         changes |> List.map(change ->
             {
                 elapsed = change#elapsed,
-                eventType = EventType.Of(change#carNumber, CarEvent.DriverChange)
+                eventType = EventType.Of(change#carNumber, CarEvent.DriverChange),
+                lap = None
             })
 
     /// A car still running when the race was scheduled to end took the flag;
@@ -138,7 +147,13 @@ pub mod Motorsport.Timeline {
     def terminals(timeLimit: Duration, cars: List[(String, Duration)]): List[Event] =
         cars |> List.map(match (carNumber, last) ->
             let ended = if (last < timeLimit) CarEvent.Retired else CarEvent.Finished;
-            { elapsed = last, eventType = EventType.Of(carNumber, ended) })
+            { elapsed = last, eventType = EventType.Of(carNumber, ended), lap = None })
+
+    /// What an event is called, and whose it is.
+    pub type alias Kind = {
+        event     = String,
+        carNumber = Option[String]
+    }
 
     /// What an event is made of, in the words the file spells it in. The line
     /// written out and the row `Db.TimelineEvents` holds are two writings of
@@ -146,7 +161,8 @@ pub mod Motorsport.Timeline {
     /// beside either of them.
     pub type alias Parts = {
         event     = String,
-        carNumber = Option[String]
+        carNumber = Option[String],
+        lap       = Option[Int32]
     }
 
     /// The names an event goes by, which is what the column holding one is
@@ -162,7 +178,11 @@ pub mod Motorsport.Timeline {
             Nil
         )
 
-    pub def parts(eventType: EventType): Parts =
+    pub def parts(event: Event): Parts =
+        let kind = kindOf(event#eventType);
+        { +lap = event#lap | kind }
+
+    def kindOf(eventType: EventType): Kind =
         match eventType {
             case EventType.RaceStart               => named("raceStart")
             case EventType.Flag(flag)              => named(Motorsport.Flag.toString(flag))
@@ -170,7 +190,7 @@ pub mod Motorsport.Timeline {
                 { carNumber = Some(carNumber) | carParts(carEvent) }
         }
 
-    def carParts(carEvent: CarEvent): Parts =
+    def carParts(carEvent: CarEvent): Kind =
         match carEvent {
             case CarEvent.OvertakeForLead => named("overtakeForLead")
             case CarEvent.LeaderInPit     => named("leaderInPit")
@@ -180,10 +200,10 @@ pub mod Motorsport.Timeline {
             case CarEvent.Finished        => named("finished")
         }
 
-    def named(event: String): Parts =
+    def named(event: String): Kind =
         { event = event, carNumber = None }
 
-    pub def eventTypeOf(p: Parts): Option[EventType] =
+    pub def eventTypeOf(p: Kind): Option[EventType] =
         match (p#event, p#carNumber) {
             case ("raceStart", None)     => Some(EventType.RaceStart)
             case (_, None)               => Motorsport.Flag.fromString(p#event) |> Option.map(EventType.Flag)
@@ -204,17 +224,23 @@ pub mod Motorsport.Timeline {
         }
 
     pub def toJson(event: Event): OrderedJson.Json =
-        let p = parts(event#eventType);
+        let p = parts(event);
         JObject(
             ("elapsed", JString(Util.Duration.format(event#elapsed))) ::
             ("event", JString(p#event)) ::
-            carNumberField(p)
+            List.append(carNumberField(p), lapField(p))
         )
 
     def carNumberField(p: Parts): List[(String, OrderedJson.Json)] =
         match p#carNumber {
             case Some(carNumber) => ("carNumber", JString(carNumber)) :: Nil
             case None            => Nil
+        }
+
+    def lapField(p: Parts): List[(String, OrderedJson.Json)] =
+        match p#lap {
+            case Some(lap) => ("lap", JNumber(Int32.toBigDecimal(lap))) :: Nil
+            case None      => Nil
         }
 
 }

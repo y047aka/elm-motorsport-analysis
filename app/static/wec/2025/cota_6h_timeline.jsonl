@@ -1,98 +1,98 @@
 { "elapsed": "0.000", "event": "raceStart" }
 { "elapsed": "3:19.104", "event": "safetyCar" }
-{ "elapsed": "6:27.414", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "6:32.119", "event": "fastestLap", "carNumber": "99" }
-{ "elapsed": "6:33.124", "event": "fastestLap", "carNumber": "35" }
-{ "elapsed": "6:35.989", "event": "fastestLap", "carNumber": "15" }
-{ "elapsed": "6:38.984", "event": "fastestLap", "carNumber": "94" }
-{ "elapsed": "6:43.761", "event": "fastestLap", "carNumber": "007" }
-{ "elapsed": "6:53.456", "event": "fastestLap", "carNumber": "88" }
-{ "elapsed": "6:53.869", "event": "fastestLap", "carNumber": "77" }
-{ "elapsed": "6:54.720", "event": "fastestLap", "carNumber": "95" }
-{ "elapsed": "6:58.971", "event": "fastestLap", "carNumber": "78" }
-{ "elapsed": "7:00.111", "event": "fastestLap", "carNumber": "60" }
-{ "elapsed": "7:03.880", "event": "fastestLap", "carNumber": "27" }
-{ "elapsed": "7:08.586", "event": "fastestLap", "carNumber": "54" }
-{ "elapsed": "7:08.906", "event": "fastestLap", "carNumber": "10" }
-{ "elapsed": "7:09.454", "event": "fastestLap", "carNumber": "21" }
-{ "elapsed": "7:10.194", "event": "fastestLap", "carNumber": "85" }
-{ "elapsed": "7:11.393", "event": "fastestLap", "carNumber": "87" }
-{ "elapsed": "9:31.192", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "9:32.253", "event": "fastestLap", "carNumber": "51" }
-{ "elapsed": "9:33.036", "event": "fastestLap", "carNumber": "6" }
-{ "elapsed": "9:57.914", "event": "fastestLap", "carNumber": "88" }
-{ "elapsed": "12:37.245", "event": "fastestLap", "carNumber": "50" }
-{ "elapsed": "12:37.829", "event": "fastestLap", "carNumber": "99" }
-{ "elapsed": "12:39.002", "event": "fastestLap", "carNumber": "35" }
-{ "elapsed": "12:53.733", "event": "fastestLap", "carNumber": "38" }
-{ "elapsed": "12:54.623", "event": "fastestLap", "carNumber": "12" }
-{ "elapsed": "12:56.031", "event": "fastestLap", "carNumber": "7" }
-{ "elapsed": "12:57.601", "event": "fastestLap", "carNumber": "93" }
-{ "elapsed": "12:58.569", "event": "fastestLap", "carNumber": "88" }
-{ "elapsed": "12:59.134", "event": "fastestLap", "carNumber": "77" }
-{ "elapsed": "13:00.830", "event": "fastestLap", "carNumber": "95" }
-{ "elapsed": "13:04.652", "event": "fastestLap", "carNumber": "78" }
-{ "elapsed": "13:05.819", "event": "fastestLap", "carNumber": "60" }
-{ "elapsed": "13:08.859", "event": "fastestLap", "carNumber": "27" }
-{ "elapsed": "13:09.385", "event": "fastestLap", "carNumber": "81" }
-{ "elapsed": "13:10.717", "event": "fastestLap", "carNumber": "61" }
-{ "elapsed": "13:15.976", "event": "fastestLap", "carNumber": "21" }
+{ "elapsed": "6:27.414", "event": "fastestLap", "carNumber": "83", "lap": 2 }
+{ "elapsed": "6:32.119", "event": "fastestLap", "carNumber": "99", "lap": 2 }
+{ "elapsed": "6:33.124", "event": "fastestLap", "carNumber": "35", "lap": 2 }
+{ "elapsed": "6:35.989", "event": "fastestLap", "carNumber": "15", "lap": 2 }
+{ "elapsed": "6:38.984", "event": "fastestLap", "carNumber": "94", "lap": 2 }
+{ "elapsed": "6:43.761", "event": "fastestLap", "carNumber": "007", "lap": 2 }
+{ "elapsed": "6:53.456", "event": "fastestLap", "carNumber": "88", "lap": 2 }
+{ "elapsed": "6:53.869", "event": "fastestLap", "carNumber": "77", "lap": 2 }
+{ "elapsed": "6:54.720", "event": "fastestLap", "carNumber": "95", "lap": 2 }
+{ "elapsed": "6:58.971", "event": "fastestLap", "carNumber": "78", "lap": 2 }
+{ "elapsed": "7:00.111", "event": "fastestLap", "carNumber": "60", "lap": 2 }
+{ "elapsed": "7:03.880", "event": "fastestLap", "carNumber": "27", "lap": 2 }
+{ "elapsed": "7:08.586", "event": "fastestLap", "carNumber": "54", "lap": 2 }
+{ "elapsed": "7:08.906", "event": "fastestLap", "carNumber": "10", "lap": 2 }
+{ "elapsed": "7:09.454", "event": "fastestLap", "carNumber": "21", "lap": 2 }
+{ "elapsed": "7:10.194", "event": "fastestLap", "carNumber": "85", "lap": 2 }
+{ "elapsed": "7:11.393", "event": "fastestLap", "carNumber": "87", "lap": 2 }
+{ "elapsed": "9:31.192", "event": "fastestLap", "carNumber": "83", "lap": 3 }
+{ "elapsed": "9:32.253", "event": "fastestLap", "carNumber": "51", "lap": 3 }
+{ "elapsed": "9:33.036", "event": "fastestLap", "carNumber": "6", "lap": 3 }
+{ "elapsed": "9:57.914", "event": "fastestLap", "carNumber": "88", "lap": 3 }
+{ "elapsed": "12:37.245", "event": "fastestLap", "carNumber": "50", "lap": 4 }
+{ "elapsed": "12:37.829", "event": "fastestLap", "carNumber": "99", "lap": 4 }
+{ "elapsed": "12:39.002", "event": "fastestLap", "carNumber": "35", "lap": 4 }
+{ "elapsed": "12:53.733", "event": "fastestLap", "carNumber": "38", "lap": 4 }
+{ "elapsed": "12:54.623", "event": "fastestLap", "carNumber": "12", "lap": 4 }
+{ "elapsed": "12:56.031", "event": "fastestLap", "carNumber": "7", "lap": 4 }
+{ "elapsed": "12:57.601", "event": "fastestLap", "carNumber": "93", "lap": 4 }
+{ "elapsed": "12:58.569", "event": "fastestLap", "carNumber": "88", "lap": 4 }
+{ "elapsed": "12:59.134", "event": "fastestLap", "carNumber": "77", "lap": 4 }
+{ "elapsed": "13:00.830", "event": "fastestLap", "carNumber": "95", "lap": 4 }
+{ "elapsed": "13:04.652", "event": "fastestLap", "carNumber": "78", "lap": 4 }
+{ "elapsed": "13:05.819", "event": "fastestLap", "carNumber": "60", "lap": 4 }
+{ "elapsed": "13:08.859", "event": "fastestLap", "carNumber": "27", "lap": 4 }
+{ "elapsed": "13:09.385", "event": "fastestLap", "carNumber": "81", "lap": 4 }
+{ "elapsed": "13:10.717", "event": "fastestLap", "carNumber": "61", "lap": 4 }
+{ "elapsed": "13:15.976", "event": "fastestLap", "carNumber": "21", "lap": 4 }
 { "elapsed": "13:16.461", "event": "driverChange", "carNumber": "87" }
-{ "elapsed": "15:54.354", "event": "fastestLap", "carNumber": "38" }
-{ "elapsed": "18:43.145", "event": "fastestLap", "carNumber": "35" }
-{ "elapsed": "19:37.404", "event": "fastestLap", "carNumber": "87" }
-{ "elapsed": "21:37.419", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "21:38.569", "event": "fastestLap", "carNumber": "51" }
-{ "elapsed": "21:40.600", "event": "fastestLap", "carNumber": "50" }
-{ "elapsed": "21:41.180", "event": "fastestLap", "carNumber": "99" }
-{ "elapsed": "21:41.873", "event": "fastestLap", "carNumber": "35" }
-{ "elapsed": "24:35.584", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "24:37.582", "event": "fastestLap", "carNumber": "6" }
-{ "elapsed": "27:38.474", "event": "fastestLap", "carNumber": "99" }
-{ "elapsed": "27:39.553", "event": "fastestLap", "carNumber": "35" }
-{ "elapsed": "27:41.670", "event": "fastestLap", "carNumber": "8" }
-{ "elapsed": "30:42.677", "event": "fastestLap", "carNumber": "009" }
-{ "elapsed": "30:43.373", "event": "fastestLap", "carNumber": "94" }
-{ "elapsed": "30:45.663", "event": "fastestLap", "carNumber": "20" }
+{ "elapsed": "15:54.354", "event": "fastestLap", "carNumber": "38", "lap": 5 }
+{ "elapsed": "18:43.145", "event": "fastestLap", "carNumber": "35", "lap": 6 }
+{ "elapsed": "19:37.404", "event": "fastestLap", "carNumber": "87", "lap": 6 }
+{ "elapsed": "21:37.419", "event": "fastestLap", "carNumber": "83", "lap": 7 }
+{ "elapsed": "21:38.569", "event": "fastestLap", "carNumber": "51", "lap": 7 }
+{ "elapsed": "21:40.600", "event": "fastestLap", "carNumber": "50", "lap": 7 }
+{ "elapsed": "21:41.180", "event": "fastestLap", "carNumber": "99", "lap": 7 }
+{ "elapsed": "21:41.873", "event": "fastestLap", "carNumber": "35", "lap": 7 }
+{ "elapsed": "24:35.584", "event": "fastestLap", "carNumber": "83", "lap": 8 }
+{ "elapsed": "24:37.582", "event": "fastestLap", "carNumber": "6", "lap": 8 }
+{ "elapsed": "27:38.474", "event": "fastestLap", "carNumber": "99", "lap": 9 }
+{ "elapsed": "27:39.553", "event": "fastestLap", "carNumber": "35", "lap": 9 }
+{ "elapsed": "27:41.670", "event": "fastestLap", "carNumber": "8", "lap": 9 }
+{ "elapsed": "30:42.677", "event": "fastestLap", "carNumber": "009", "lap": 10 }
+{ "elapsed": "30:43.373", "event": "fastestLap", "carNumber": "94", "lap": 10 }
+{ "elapsed": "30:45.663", "event": "fastestLap", "carNumber": "20", "lap": 10 }
 { "elapsed": "33:55.160", "event": "leaderInPit", "carNumber": "88" }
-{ "elapsed": "34:10.159", "event": "fastestLap", "carNumber": "93" }
+{ "elapsed": "34:10.159", "event": "fastestLap", "carNumber": "93", "lap": 11 }
 { "elapsed": "39:37.017", "event": "retired", "carNumber": "20" }
-{ "elapsed": "39:53.390", "event": "fastestLap", "carNumber": "93" }
-{ "elapsed": "40:11.423", "event": "fastestLap", "carNumber": "78" }
+{ "elapsed": "39:53.390", "event": "fastestLap", "carNumber": "93", "lap": 13 }
+{ "elapsed": "40:11.423", "event": "fastestLap", "carNumber": "78", "lap": 13 }
 { "elapsed": "49:10.244", "event": "leaderInPit", "carNumber": "77" }
 { "elapsed": "52:17.418", "event": "leaderInPit", "carNumber": "83" }
 { "elapsed": "1:00:20.613", "event": "redFlag" }
 { "elapsed": "1:43:58.268", "event": "safetyCar" }
 { "elapsed": "1:43:58.268", "event": "overtakeForLead", "carNumber": "83" }
 { "elapsed": "1:49:49.613", "event": "greenFlag" }
-{ "elapsed": "1:49:50.251", "event": "fastestLap", "carNumber": "51" }
-{ "elapsed": "1:49:50.645", "event": "fastestLap", "carNumber": "6" }
-{ "elapsed": "1:49:51.407", "event": "fastestLap", "carNumber": "50" }
-{ "elapsed": "1:49:53.918", "event": "fastestLap", "carNumber": "8" }
-{ "elapsed": "1:49:54.805", "event": "fastestLap", "carNumber": "15" }
-{ "elapsed": "1:49:55.211", "event": "fastestLap", "carNumber": "009" }
-{ "elapsed": "1:49:56.324", "event": "fastestLap", "carNumber": "94" }
-{ "elapsed": "1:49:56.703", "event": "fastestLap", "carNumber": "36" }
-{ "elapsed": "1:49:57.436", "event": "fastestLap", "carNumber": "007" }
-{ "elapsed": "1:49:58.200", "event": "fastestLap", "carNumber": "5" }
-{ "elapsed": "1:49:58.409", "event": "fastestLap", "carNumber": "38" }
-{ "elapsed": "1:49:59.580", "event": "fastestLap", "carNumber": "12" }
-{ "elapsed": "1:50:00.559", "event": "fastestLap", "carNumber": "7" }
-{ "elapsed": "1:52:03.284", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "1:52:31.543", "event": "fastestLap", "carNumber": "95" }
-{ "elapsed": "1:52:31.892", "event": "fastestLap", "carNumber": "27" }
-{ "elapsed": "1:52:33.863", "event": "fastestLap", "carNumber": "60" }
-{ "elapsed": "1:52:45.897", "event": "fastestLap", "carNumber": "88" }
-{ "elapsed": "1:54:16.373", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "1:54:55.625", "event": "fastestLap", "carNumber": "95" }
-{ "elapsed": "1:54:57.526", "event": "fastestLap", "carNumber": "60" }
-{ "elapsed": "1:54:58.942", "event": "fastestLap", "carNumber": "33" }
-{ "elapsed": "1:55:03.323", "event": "fastestLap", "carNumber": "46" }
+{ "elapsed": "1:49:50.251", "event": "fastestLap", "carNumber": "51", "lap": 22 }
+{ "elapsed": "1:49:50.645", "event": "fastestLap", "carNumber": "6", "lap": 22 }
+{ "elapsed": "1:49:51.407", "event": "fastestLap", "carNumber": "50", "lap": 22 }
+{ "elapsed": "1:49:53.918", "event": "fastestLap", "carNumber": "8", "lap": 22 }
+{ "elapsed": "1:49:54.805", "event": "fastestLap", "carNumber": "15", "lap": 22 }
+{ "elapsed": "1:49:55.211", "event": "fastestLap", "carNumber": "009", "lap": 22 }
+{ "elapsed": "1:49:56.324", "event": "fastestLap", "carNumber": "94", "lap": 22 }
+{ "elapsed": "1:49:56.703", "event": "fastestLap", "carNumber": "36", "lap": 22 }
+{ "elapsed": "1:49:57.436", "event": "fastestLap", "carNumber": "007", "lap": 22 }
+{ "elapsed": "1:49:58.200", "event": "fastestLap", "carNumber": "5", "lap": 22 }
+{ "elapsed": "1:49:58.409", "event": "fastestLap", "carNumber": "38", "lap": 22 }
+{ "elapsed": "1:49:59.580", "event": "fastestLap", "carNumber": "12", "lap": 22 }
+{ "elapsed": "1:50:00.559", "event": "fastestLap", "carNumber": "7", "lap": 22 }
+{ "elapsed": "1:52:03.284", "event": "fastestLap", "carNumber": "83", "lap": 23 }
+{ "elapsed": "1:52:31.543", "event": "fastestLap", "carNumber": "95", "lap": 23 }
+{ "elapsed": "1:52:31.892", "event": "fastestLap", "carNumber": "27", "lap": 23 }
+{ "elapsed": "1:52:33.863", "event": "fastestLap", "carNumber": "60", "lap": 23 }
+{ "elapsed": "1:52:45.897", "event": "fastestLap", "carNumber": "88", "lap": 23 }
+{ "elapsed": "1:54:16.373", "event": "fastestLap", "carNumber": "83", "lap": 24 }
+{ "elapsed": "1:54:55.625", "event": "fastestLap", "carNumber": "95", "lap": 24 }
+{ "elapsed": "1:54:57.526", "event": "fastestLap", "carNumber": "60", "lap": 24 }
+{ "elapsed": "1:54:58.942", "event": "fastestLap", "carNumber": "33", "lap": 24 }
+{ "elapsed": "1:55:03.323", "event": "fastestLap", "carNumber": "46", "lap": 24 }
 { "elapsed": "1:56:40.395", "event": "safetyCar" }
 { "elapsed": "2:08:15.351", "event": "driverChange", "carNumber": "12" }
 { "elapsed": "2:08:40.029", "event": "driverChange", "carNumber": "007" }
 { "elapsed": "2:13:51.814", "event": "greenFlag" }
-{ "elapsed": "2:16:03.878", "event": "fastestLap", "carNumber": "83" }
+{ "elapsed": "2:16:03.878", "event": "fastestLap", "carNumber": "83", "lap": 31 }
 { "elapsed": "2:16:31.126", "event": "leaderInPit", "carNumber": "95" }
 { "elapsed": "2:16:31.126", "event": "driverChange", "carNumber": "95" }
 { "elapsed": "2:16:31.873", "event": "driverChange", "carNumber": "27" }
@@ -102,26 +102,26 @@
 { "elapsed": "2:16:38.988", "event": "driverChange", "carNumber": "59" }
 { "elapsed": "2:16:40.976", "event": "driverChange", "carNumber": "31" }
 { "elapsed": "2:16:45.690", "event": "driverChange", "carNumber": "21" }
-{ "elapsed": "2:18:14.067", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "2:18:15.688", "event": "fastestLap", "carNumber": "51" }
+{ "elapsed": "2:18:14.067", "event": "fastestLap", "carNumber": "83", "lap": 32 }
+{ "elapsed": "2:18:15.688", "event": "fastestLap", "carNumber": "51", "lap": 32 }
 { "elapsed": "2:19:10.059", "event": "driverChange", "carNumber": "78" }
 { "elapsed": "2:19:11.610", "event": "driverChange", "carNumber": "10" }
 { "elapsed": "2:19:12.654", "event": "driverChange", "carNumber": "92" }
 { "elapsed": "2:19:19.142", "event": "driverChange", "carNumber": "54" }
-{ "elapsed": "2:20:22.891", "event": "fastestLap", "carNumber": "83" }
-{ "elapsed": "2:21:29.354", "event": "fastestLap", "carNumber": "88" }
-{ "elapsed": "2:21:31.221", "event": "fastestLap", "carNumber": "77" }
-{ "elapsed": "2:22:10.822", "event": "fastestLap", "carNumber": "59" }
-{ "elapsed": "2:22:53.023", "event": "fastestLap", "carNumber": "38" }
+{ "elapsed": "2:20:22.891", "event": "fastestLap", "carNumber": "83", "lap": 33 }
+{ "elapsed": "2:21:29.354", "event": "fastestLap", "carNumber": "88", "lap": 33 }
+{ "elapsed": "2:21:31.221", "event": "fastestLap", "carNumber": "77", "lap": 33 }
+{ "elapsed": "2:22:10.822", "event": "fastestLap", "carNumber": "59", "lap": 33 }
+{ "elapsed": "2:22:53.023", "event": "fastestLap", "carNumber": "38", "lap": 34 }
 { "elapsed": "2:23:46.795", "event": "driverChange", "carNumber": "60" }
 { "elapsed": "2:23:51.940", "event": "driverChange", "carNumber": "88" }
-{ "elapsed": "2:24:32.678", "event": "fastestLap", "carNumber": "85" }
-{ "elapsed": "2:24:37.623", "event": "fastestLap", "carNumber": "92" }
-{ "elapsed": "2:25:48.209", "event": "fastestLap", "carNumber": "93" }
-{ "elapsed": "2:26:13.064", "event": "fastestLap", "carNumber": "77" }
-{ "elapsed": "2:27:55.942", "event": "fastestLap", "carNumber": "93" }
+{ "elapsed": "2:24:32.678", "event": "fastestLap", "carNumber": "85", "lap": 34 }
+{ "elapsed": "2:24:37.623", "event": "fastestLap", "carNumber": "92", "lap": 34 }
+{ "elapsed": "2:25:48.209", "event": "fastestLap", "carNumber": "93", "lap": 35 }
+{ "elapsed": "2:26:13.064", "event": "fastestLap", "carNumber": "77", "lap": 35 }
+{ "elapsed": "2:27:55.942", "event": "fastestLap", "carNumber": "93", "lap": 36 }
 { "elapsed": "2:28:46.338", "event": "driverChange", "carNumber": "61" }
-{ "elapsed": "2:33:32.261", "event": "fastestLap", "carNumber": "50" }
+{ "elapsed": "2:33:32.261", "event": "fastestLap", "carNumber": "50", "lap": 39 }
 { "elapsed": "2:35:28.831", "event": "overtakeForLead", "carNumber": "51" }
 { "elapsed": "2:40:27.816", "event": "overtakeForLead", "carNumber": "77" }
 { "elapsed": "2:42:19.562", "event": "driverChange", "carNumber": "50" }
@@ -184,49 +184,49 @@
 { "elapsed": "4:41:46.929", "event": "greenFlag" }
 { "elapsed": "4:42:00.220", "event": "driverChange", "carNumber": "99" }
 { "elapsed": "4:42:09.883", "event": "driverChange", "carNumber": "81" }
-{ "elapsed": "4:44:18.068", "event": "fastestLap", "carNumber": "59" }
+{ "elapsed": "4:44:18.068", "event": "fastestLap", "carNumber": "59", "lap": 84 }
 { "elapsed": "4:46:42.464", "event": "retired", "carNumber": "61" }
-{ "elapsed": "4:49:02.335", "event": "fastestLap", "carNumber": "54" }
+{ "elapsed": "4:49:02.335", "event": "fastestLap", "carNumber": "54", "lap": 86 }
 { "elapsed": "4:50:14.855", "event": "fullCourseYellow" }
 { "elapsed": "4:56:11.839", "event": "greenFlag" }
-{ "elapsed": "4:58:36.063", "event": "fastestLap", "carNumber": "77" }
-{ "elapsed": "4:58:39.117", "event": "fastestLap", "carNumber": "95" }
-{ "elapsed": "4:58:40.191", "event": "fastestLap", "carNumber": "54" }
-{ "elapsed": "4:59:36.763", "event": "fastestLap", "carNumber": "6" }
-{ "elapsed": "5:07:57.682", "event": "fastestLap", "carNumber": "54" }
-{ "elapsed": "5:16:36.914", "event": "fastestLap", "carNumber": "78" }
+{ "elapsed": "4:58:36.063", "event": "fastestLap", "carNumber": "77", "lap": 89 }
+{ "elapsed": "4:58:39.117", "event": "fastestLap", "carNumber": "95", "lap": 89 }
+{ "elapsed": "4:58:40.191", "event": "fastestLap", "carNumber": "54", "lap": 89 }
+{ "elapsed": "4:59:36.763", "event": "fastestLap", "carNumber": "6", "lap": 92 }
+{ "elapsed": "5:07:57.682", "event": "fastestLap", "carNumber": "54", "lap": 93 }
+{ "elapsed": "5:16:36.914", "event": "fastestLap", "carNumber": "78", "lap": 96 }
 { "elapsed": "5:16:44.600", "event": "driverChange", "carNumber": "12" }
 { "elapsed": "5:17:14.060", "event": "leaderInPit", "carNumber": "77" }
 { "elapsed": "5:17:14.060", "event": "driverChange", "carNumber": "77" }
 { "elapsed": "5:22:04.166", "event": "retired", "carNumber": "007" }
 { "elapsed": "5:24:13.240", "event": "leaderInPit", "carNumber": "54" }
-{ "elapsed": "5:24:22.731", "event": "fastestLap", "carNumber": "92" }
-{ "elapsed": "5:24:51.455", "event": "fastestLap", "carNumber": "15" }
+{ "elapsed": "5:24:22.731", "event": "fastestLap", "carNumber": "92", "lap": 100 }
+{ "elapsed": "5:24:51.455", "event": "fastestLap", "carNumber": "15", "lap": 102 }
 { "elapsed": "5:26:40.830", "event": "leaderInPit", "carNumber": "95" }
-{ "elapsed": "5:26:56.545", "event": "fastestLap", "carNumber": "15" }
+{ "elapsed": "5:26:56.545", "event": "fastestLap", "carNumber": "15", "lap": 103 }
 { "elapsed": "5:28:45.759", "event": "fullCourseYellow" }
 { "elapsed": "5:33:03.180", "event": "retired", "carNumber": "009" }
 { "elapsed": "5:33:32.908", "event": "greenFlag" }
-{ "elapsed": "5:35:43.866", "event": "fastestLap", "carNumber": "6" }
-{ "elapsed": "5:36:47.242", "event": "fastestLap", "carNumber": "92" }
-{ "elapsed": "5:37:32.850", "event": "fastestLap", "carNumber": "27" }
-{ "elapsed": "5:39:48.508", "event": "fastestLap", "carNumber": "27" }
-{ "elapsed": "5:41:56.208", "event": "fastestLap", "carNumber": "46" }
-{ "elapsed": "5:43:54.877", "event": "fastestLap", "carNumber": "54" }
-{ "elapsed": "5:44:02.405", "event": "fastestLap", "carNumber": "95" }
-{ "elapsed": "5:44:09.488", "event": "fastestLap", "carNumber": "46" }
+{ "elapsed": "5:35:43.866", "event": "fastestLap", "carNumber": "6", "lap": 108 }
+{ "elapsed": "5:36:47.242", "event": "fastestLap", "carNumber": "92", "lap": 104 }
+{ "elapsed": "5:37:32.850", "event": "fastestLap", "carNumber": "27", "lap": 104 }
+{ "elapsed": "5:39:48.508", "event": "fastestLap", "carNumber": "27", "lap": 105 }
+{ "elapsed": "5:41:56.208", "event": "fastestLap", "carNumber": "46", "lap": 106 }
+{ "elapsed": "5:43:54.877", "event": "fastestLap", "carNumber": "54", "lap": 107 }
+{ "elapsed": "5:44:02.405", "event": "fastestLap", "carNumber": "95", "lap": 107 }
+{ "elapsed": "5:44:09.488", "event": "fastestLap", "carNumber": "46", "lap": 107 }
 { "elapsed": "5:46:12.796", "event": "leaderInPit", "carNumber": "6" }
-{ "elapsed": "5:46:21.120", "event": "fastestLap", "carNumber": "46" }
-{ "elapsed": "5:46:28.939", "event": "fastestLap", "carNumber": "27" }
-{ "elapsed": "5:48:36.260", "event": "fastestLap", "carNumber": "59" }
+{ "elapsed": "5:46:21.120", "event": "fastestLap", "carNumber": "46", "lap": 108 }
+{ "elapsed": "5:46:28.939", "event": "fastestLap", "carNumber": "27", "lap": 108 }
+{ "elapsed": "5:48:36.260", "event": "fastestLap", "carNumber": "59", "lap": 109 }
 { "elapsed": "5:48:46.702", "event": "leaderInPit", "carNumber": "51" }
-{ "elapsed": "5:50:46.353", "event": "fastestLap", "carNumber": "31" }
-{ "elapsed": "5:51:47.556", "event": "fastestLap", "carNumber": "10" }
+{ "elapsed": "5:50:46.353", "event": "fastestLap", "carNumber": "31", "lap": 110 }
+{ "elapsed": "5:51:47.556", "event": "fastestLap", "carNumber": "10", "lap": 110 }
 { "elapsed": "5:55:01.359", "event": "overtakeForLead", "carNumber": "54" }
-{ "elapsed": "5:57:27.949", "event": "fastestLap", "carNumber": "27" }
+{ "elapsed": "5:57:27.949", "event": "fastestLap", "carNumber": "27", "lap": 113 }
 { "elapsed": "5:57:40.423", "event": "retired", "carNumber": "85" }
-{ "elapsed": "5:59:25.830", "event": "fastestLap", "carNumber": "46" }
-{ "elapsed": "5:59:32.830", "event": "fastestLap", "carNumber": "59" }
+{ "elapsed": "5:59:25.830", "event": "fastestLap", "carNumber": "46", "lap": 114 }
+{ "elapsed": "5:59:32.830", "event": "fastestLap", "carNumber": "59", "lap": 114 }
 { "elapsed": "6:01:25.310", "event": "finished", "carNumber": "6" }
 { "elapsed": "6:01:25.966", "event": "finished", "carNumber": "81" }
 { "elapsed": "6:01:29.266", "event": "finished", "carNumber": "99" }
