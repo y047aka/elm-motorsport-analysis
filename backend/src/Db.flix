@@ -56,10 +56,12 @@ pub eff SqlSavepoint {
     def control(command: Db.Savepoint.Command): Result[Db.Error, Unit]
 }
 
-/// What a signature says, which is a statement and both of its failings.
-pub type alias DbRead = {SqlRead, TransientDbErr, DbErr}
-pub type alias DbWrite = {SqlWrite, TransientDbErr, DbErr}
-pub type alias Db = {SqlRead, SqlWrite, SqlSavepoint, TransientDbErr, DbErr}
+/// What a signature says, which is a statement, both of its failings, and the
+/// marker saying its text was written. A caller that names one of these is
+/// already saying a statement goes out, which is what the marker is for.
+pub type alias DbRead = {SqlRead, TransientDbErr, DbErr, RawSql}
+pub type alias DbWrite = {SqlWrite, TransientDbErr, DbErr, RawSql}
+pub type alias Db = {SqlRead, SqlWrite, SqlSavepoint, TransientDbErr, DbErr, RawSql}
 
 pub mod Db {
 
@@ -332,15 +334,18 @@ pub mod Db {
     /// becomes a `DbErr` here, where the caller's own handlers are installed.
 
     pub def fetch(sql: String, params: List[Value]): List[Db.Row.Row] \ DbRead =
+        RawSql.allow(sql);
         SqlRead.fetch(sql, params) |> orRaise
 
-    pub def execute(sql: String): Unit \ DbWrite =
+    pub def execute(sql: String): Unit \ DbWrite + RawSql =
+        RawSql.allow(sql);
         SqlWrite.execute(sql) |> orRaise
 
-    pub def insertMany(sql: String, rows: List[List[Value]]): Int32 \ DbWrite =
+    pub def insertMany(sql: String, rows: List[List[Value]]): Int32 \ DbWrite + RawSql =
+        RawSql.allow(sql);
         SqlWrite.insertMany(sql, rows) |> orRaise
 
-    def commit(): Unit \ DbWrite =
+    def commit(): Unit \ {SqlWrite, TransientDbErr, DbErr} =
         SqlWrite.commit() |> orRaise
 
     /// What `transact` takes back with, which says nothing the failure it is
@@ -355,7 +360,7 @@ pub mod Db {
     /// A run that dies before answering commits nothing, which is what makes a
     /// rebuild of the table safe to interrupt: the `DROP TABLE` it starts with
     /// is undone with the rows it did not finish loading.
-    pub def transact(f: Unit -> a \ ef): a \ (ef - {TransientDbErr, DbErr}) + DbWrite =
+    pub def transact(f: Unit -> a \ ef): a \ (ef - {TransientDbErr, DbErr}) + {SqlWrite, TransientDbErr, DbErr} =
         match runWithError(f) {
             case Ok(value) => commit(); value
             case Err(e)    => rollback(); raise(e)
@@ -401,12 +406,12 @@ pub mod Db {
         case Rollback
     }
 
-    pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) =
+    pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - {RawSql, SqlRead, SqlWrite, SqlSavepoint}) =
         region rc {
             let log = Ref.fresh(rc, (Nil: List[Statement]));
             let result = run {
                 run {
-                    catchAll(f)
+                    catchAll(() -> RawSql.runWithAllow(f))
                 } with handler SqlWrite {
                     def execute(sql, k) = {
                         record(log, Statement.Execute(sql));
@@ -444,10 +449,10 @@ pub mod Db {
 
     /// A database that answers every statement with the same failure, for a
     /// caller whose subject is what it does about one.
-    pub def runFailing(error: Error, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) =
+    pub def runFailing(error: Error, f: Unit -> a \ ef): a \ (ef - {RawSql, SqlRead, SqlWrite, SqlSavepoint}) =
         let outcome = run {
             run {
-                catchAll(f)
+                catchAll(() -> RawSql.runWithAllow(f))
             } with handler SqlWrite {
                 def execute(_sql, k) = k(Err(error))
                 def insertMany(_sql, _rows, k) = k(Err(error))

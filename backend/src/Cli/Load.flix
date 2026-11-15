@@ -49,7 +49,7 @@ pub mod Cli.Load {
     /// run that dies partway through leaves the rounds it was rebuilding from.
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
-    pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint} =
+    pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint, RawSql} =
         let rebuild = Db.attempt(() -> Db.transact(() -> {
             let rounds = createTables();
             convertRounds(root, rounds)
@@ -179,7 +179,7 @@ pub mod Cli.Load {
         seats: List[CarDrivers.Seat],
         task: FileTask.Input,
         rawLaps: List[RawLap]
-    ): Loaded \ {SqlRead, SqlWrite, TransientDbErr, DbErr} =
+    ): Loaded \ DbRead + SqlWrite =
         match Rounds.idIn(rounds, task#entry) {
             case None => DbErr.raise(Db.Error.Incomplete(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
@@ -205,7 +205,7 @@ pub mod Cli.Load {
                 }
         }
 
-    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ {SqlRead, SqlWrite, TransientDbErr, DbErr} =
+    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ (Db - {SqlSavepoint}) =
         TimelineEvents.insertRows(TimelineEvents.fromEvents(
             roundId,
             Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)

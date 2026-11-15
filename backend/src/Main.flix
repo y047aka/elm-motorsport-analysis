@@ -31,7 +31,7 @@ def main(): Unit \ {Env, IO, Exit, Console} =
 /// A round that failed to load has no rows, so the export fails it too and
 /// leaves the files it would have replaced alone. The rounds beside it are
 /// written either way.
-def loadAndExport(csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint} =
+def loadAndExport(csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint, RawSql} =
     let loaded = Load.runAll(csv);
     let exported = Export.runAll(out, rounds);
     if (loaded == 0 and exported == 0) 0 else 1

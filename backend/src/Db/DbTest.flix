@@ -16,9 +16,9 @@ pub mod Db.DbTest {
 
     /// Every `SELECT` is answered with the same rows. The least a reading needs
     /// to be driven without a database.
-    pub def runWithRows(rows: List[Row], f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlSavepoint}) =
+    pub def runWithRows(rows: List[Row], f: Unit -> a \ ef): a \ (ef - {RawSql, SqlRead, SqlSavepoint}) =
         let outcome = run {
-            Db.catchAll(f)
+            Db.catchAll(() -> RawSql.runWithAllow(f))
         } with handler SqlRead {
             def fetch(_sql, _params, k) = k(Ok(rows))
         } with handler SqlSavepoint {
@@ -31,9 +31,9 @@ pub mod Db.DbTest {
     ///
     /// The text rather than the parsed query, since a query no combinator here
     /// builds -- a `WITH`, a `json_each` -- is one of these has to answer too.
-    pub def runWithTable(rowsFor: String -> Option[List[Row]], f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlSavepoint}) =
+    pub def runWithTable(rowsFor: String -> Option[List[Row]], f: Unit -> a \ ef): a \ (ef - {RawSql, SqlRead, SqlSavepoint}) =
         let outcome = run {
-            Db.catchAll(f)
+            Db.catchAll(() -> RawSql.runWithAllow(f))
         } with handler SqlRead {
             def fetch(sql, _params, k) = k(Ok(Option.getWithDefault(Nil, rowsFor(sql))))
         } with handler SqlSavepoint {
@@ -44,9 +44,9 @@ pub mod Db.DbTest {
     /// A database that refuses every write, for a caller whose subject is what it
     /// does about a refusal. A read is left to a handler outside, which is what
     /// lets one that answers rows be put around this one.
-    pub def runFailingWrite(error: Error, f: Unit -> a \ ef): a \ (ef - {SqlWrite, SqlSavepoint}) =
+    pub def runFailingWrite(error: Error, f: Unit -> a \ ef): a \ (ef - {RawSql, SqlWrite, SqlSavepoint}) =
         let outcome = run {
-            Db.catchAll(f)
+            Db.catchAll(() -> RawSql.runWithAllow(f))
         } with handler SqlWrite {
             def execute(_sql, k) = k(Err(error))
             def insertMany(_sql, _rows, k) = k(Err(error))

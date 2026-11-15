@@ -101,8 +101,8 @@ pub mod Db.Jdbc {
                 else Err(Db.Error.Other(Db.describeThrowable(error)))
         }
 
-    pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) + IO =
-        run {
+    pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {RawSql, SqlRead, SqlWrite, SqlSavepoint}) + IO =
+        RawSql.runWithAllow(() -> run {
             run {
                 runWriting(conn, f)
             } with handler SqlRead {
@@ -111,7 +111,7 @@ pub mod Db.Jdbc {
         } with handler SqlSavepoint {
             def control(command, k) =
                 k(guarded(() -> runStatement(conn, Savepoint.toSql(command))))
-        }
+        })
 
     /// The connection as a read alone, which is what the server answers a
     /// request through.

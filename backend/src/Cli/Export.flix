@@ -36,7 +36,7 @@ pub mod Cli.Export {
     /// different ways.
     pub def urlRoot(): String = "/static/wec"
 
-    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, SqlRead} =
+    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, SqlRead, RawSql} =
         let tasks = FileTask.outputs(root, rounds);
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
@@ -58,7 +58,7 @@ pub mod Cli.Export {
         Console.println("Export completed: ${summary#exported} exported, ${errors} errors");
         if (errors == 0) 0 else 1
 
-    def exportRound(task: FileTask.Output): Result[CliError, Rendered] \ {IO, SqlRead} =
+    def exportRound(task: FileTask.Output): Result[CliError, Rendered] \ {IO, SqlRead, RawSql} =
         match Db.attempt(() -> read(task)) {
             case Err(cause)  => Err(CliError.Database(cause))
             case Ok(outcome) => outcome |> Result.flatMap(rendered ->

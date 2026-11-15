@@ -75,7 +75,7 @@ pub mod Server.Api {
             case _                    => false
         }
 
-    pub def respond(route: Route): Response \ SqlRead =
+    pub def respond(route: Route): Response \ {SqlRead, RawSql} =
         match route {
             case Route.Health            => ok("text/plain", "ok")
             case Route.Calendar          => ok("application/json", calendar())
