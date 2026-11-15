@@ -1,13 +1,19 @@
 pub mod Round.Render {
 
     use oj::OrderedJson.Json
-    use oj::OrderedJson.Json.{JObject, JNumber}
+    use oj::OrderedJson.Json.{JObject, JNumber, JString}
     use Util.Json.Extra
     use Motorsport.Index
     use Motorsport.Metadata
+    use Motorsport.MiniSector
     use Motorsport.Timeline
     use Motorsport.Wec
+    use Motorsport.Sector
     use Round.Laps.Placed
+    use Round.Timeline.Detail
+    use Round.Timeline.Detailed
+    use Round.Timeline.Rated
+    use Util.Duration.Duration
 
     /// The round's summary and the indices read off the same rows, written as
     /// one document.
@@ -21,10 +27,62 @@ pub mod Round.Render {
             case other => other
         }
 
-    pub def renderTimelineJsonl(events: List[Timeline.Event]): String =
+    pub def renderTimelineJsonl(events: List[Detailed]): String =
         events
-            |> List.map(event -> "${Extra.renderOnOneLine(Timeline.toJson(event))}\n")
+            |> List.map(item ->
+                "${Extra.renderOnOneLine(withDetail(Timeline.toJson(item#event), item#detail))}\n")
             |> List.join("")
+
+    /// The lap an event fell on, beside the event.
+    ///
+    /// `performance` holds each of the lap's times next to the two baselines it
+    /// reads against, which is what `Motorsport.Lap.Performance` rates a time on.
+    /// Which of the three it reads as, and the colour that is drawn in, are the
+    /// app's: no rating and no colour crosses here.
+    def withDetail(event: Json, detail: Option[Detail]): Json =
+        match (event, detail) {
+            case (JObject(fields), Some(d)) =>
+                JObject(List.append(fields,
+                    ("driver", JString(d#driver)) ::
+                    ("performance", performanceToJson(d)) :: Nil))
+            case (other, _) => other
+        }
+
+    /// The same three lists the summary's `index.bestTimeChanges` is made of, so
+    /// the records and the times they rate come back shaped alike.
+    def performanceToJson(d: Detail): Json =
+        JObject(
+            ("lap", ratedToJson(d#lap)) ::
+            ("sectors", JObject(d#sectors
+                |> List.map(match (sector, rated) ->
+                    (Motorsport.Sector.jsonKey(sector), ratedToJson(rated))))) ::
+            miniField(d)
+        )
+
+    /// Absent where the round's feed measured no mini-sectors, rather than fifteen
+    /// blanks: a lap of a circuit the tracker has no lines for is drawn on the
+    /// three sectors.
+    def miniField(d: Detail): List[(String, Json)] =
+        match d#miniSectors {
+            case None      => Nil
+            case Some(minis) =>
+                ("miniSectors", JObject(minis |> List.map(match (mini, rated) ->
+                    (Motorsport.MiniSector.jsonKey(mini), ratedToJson(rated))))) :: Nil
+        }
+
+    def ratedToJson(rated: Rated): Json =
+        JObject(
+            ("time", durationJson(rated#time)) ::
+            ("fastest", durationJson(rated#fastest)) ::
+            ("personalBest", durationJson(rated#personalBest)) :: Nil
+        )
+
+    /// An absent time is the empty string, as it is in the laps file.
+    def durationJson(time: Option[Duration]): Json =
+        JString(match time {
+            case Some(ms) => Util.Duration.format(ms)
+            case None     => ""
+        })
 
     pub def renderJsonl(laps: List[Placed]): String =
         laps

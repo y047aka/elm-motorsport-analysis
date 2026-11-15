@@ -45,7 +45,8 @@ pub mod Round.TestRender {
 
     def timelineOf(laps: List[RawLap]): String \ IO =
         TestSupport.onRound(leMans(), laps, () ->
-            Render.renderTimelineJsonl(Timeline.read(leMans())))
+            Render.renderTimelineJsonl(Timeline.detailed(
+                leMans(), Drivers.read(leMans()), Index.read(leMans(), Drivers.read(leMans())))))
 
     /// Read back rather than rendered from the laps in hand: a lap's place in
     /// the field is counted over the round's rows, so the reader is the only
@@ -103,6 +104,32 @@ pub mod Round.TestRender {
     @Test
     def testRenderTimelineJsonlOfARoundWithNoLapsIsTheStartAlone(): Unit \ {Assert, IO} =
         Assert.assertTrue(timelineOf(Nil) == "{ \"elapsed\": \"0.000\", \"event\": \"raceStart\" }\n")
+
+    /// The lap a fastest lap was set on travels with it: each of its times beside
+    /// the field's record as it stood then and this car's own best up to that lap.
+    ///
+    /// The fixture's rows leave the mini-sector columns blank, so the line carries
+    /// no `miniSectors` at all rather than fifteen blanks.
+    @Test
+    def theFastestLapLineCarriesTheLapItWasSetOn(): Unit \ {Assert, IO} =
+        let lines = timelineOf(sampleRawLaps())
+            |> String.splitOn({substr = "\n"})
+            |> List.filter(l -> String.contains({substr = "\"event\": \"fastestLap\""}, l));
+        let line = match List.head(lines) {
+            case Some(l) => l
+            case None     => ""
+        };
+        Assert.assertTrue(String.contains({substr = "\"lap\": 2"}, line));
+        Assert.assertTrue(String.contains({substr =
+            "\"lap\": { \"time\": \"1:32.245\", \"fastest\": \"1:32.245\", \"personalBest\": \"1:32.245\" }"},
+            line));
+        Assert.assertTrue(String.contains({substr =
+            "\"s1\": { \"time\": \"22.500\", \"fastest\": \"22.500\", \"personalBest\": \"22.500\" }"},
+            line));
+        Assert.assertTrue(String.contains({substr =
+            "\"s3\": { \"time\": \"40.645\", \"fastest\": \"40.645\", \"personalBest\": \"40.645\" }"},
+            line));
+        Assert.assertTrue(not String.contains({substr = "\"miniSectors\""}, line))
 
     @Test
     def testRenderJsonlRendersEveryLap(): Unit \ {Assert, IO} =

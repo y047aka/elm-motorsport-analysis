@@ -10,13 +10,38 @@ pub mod Round.Timeline {
     use Db.Schema
     use Db.TimelineEvents
     use Db.TimelineEvents.EventRow
+    use Db.Value
     use Motorsport.Calendar.Entry
+    use Motorsport.Index
+    use Motorsport.Index.Record
+    use Motorsport.MiniSector
+    use Motorsport.MiniSector.MiniSectorId
+    use Motorsport.Sector
+    use Motorsport.Sector.Sector
     use Motorsport.Timeline
+    use Motorsport.Timeline.EventType
+    use Sql.Sel
     use Util.Duration.Duration
+
+    pub def read(entry: Entry): List[Timeline.Event] \ DbRead =
+        events(entry)
+
+    /// The round's timeline, each event beside the lap it fell on.
+    ///
+    /// `index` is the round's own, so the records a lap reads against are the
+    /// nineteen `Round.Index` counted and not a second count of them.
+    pub def detailed(
+        entry: Entry,
+        seats: Round.Drivers.Seats,
+        index: Index.Index
+    ): List[Detailed] \ DbRead =
+        let happening = events(entry);
+        let cells = lapCells(entry, List.filterMap(lapOf, happening));
+        happening |> List.map(beside(seats, index, cells))
 
     /// Sorted rather than read in the key's order, so that a row corrected in
     /// SQL comes back at its new moment rather than at its old one.
-    pub def read(entry: Entry): List[Timeline.Event] \ DbRead =
+    def events(entry: Entry): List[Timeline.Event] \ DbRead =
         let c = TimelineEvents.columns();
         TimelineEvents.rows(entry)
             |> Sql.orderBy(Schema.term(c#elapsedMs) :: Schema.term(c#seq) :: Nil)
@@ -233,5 +258,240 @@ pub mod Round.Timeline {
         "(SELECT l.elapsed_ms FROM l WHERE l.car_number = ${car}"
             + " AND l.lap_number BETWEEN ${lap} - 1 AND ${lap}"
             + " AND l.pitted ORDER BY l.lap_number ASC LIMIT 1)"
+
+    // -------------------------------------------------- the laps events fell on
+
+    /// One time of the lap an event fell on, beside the two baselines it reads
+    /// against: `fastest`, the field's record as it stood the moment the event fell,
+    /// and `personalBest`, this car's own up to and including that lap.
+    ///
+    /// No rating. Which of the three a time reads as, and the colour a rating is
+    /// drawn in, stay `Motorsport.Lap.Performance`'s.
+    pub type alias Rated = {
+        time         = Option[Duration],
+        fastest      = Option[Duration],
+        personalBest = Option[Duration]
+    }
+
+    /// The lap an event fell on, as far as a post about it draws it.
+    pub type alias Detail = {
+        driver      = String,
+        lap         = Rated,
+        sectors     = List[(Sector, Rated)],
+        miniSectors = Option[List[(MiniSectorId, Rated)]]
+    }
+
+    /// An event, and the lap it fell on where it fell on one.
+    pub type alias Detailed = {
+        event  = Timeline.Event,
+        detail = Option[Detail]
+    }
+
+    /// The cells a `Detail` is made of: the lap's own times, and this car's best of
+    /// each of them up to and including this lap. The two mini-sector lists are the
+    /// fifteen of `Motorsport.MiniSector.all()` in track order.
+    type alias Cells = {
+        carNumber    = String,
+        lapNumber    = Int32,
+        driverNumber = Int32,
+        lapTime      = Option[Int32],
+        s1           = Option[Int32],
+        s2           = Option[Int32],
+        s3           = Option[Int32],
+        miniTimes    = Option[List[Option[Int32]]],
+        lapBest      = Option[Int32],
+        s1Best       = Option[Int32],
+        s2Best       = Option[Int32],
+        s3Best       = Option[Int32],
+        miniBests    = Option[List[Option[Int32]]]
+    }
+
+    /// Which lap an event names.
+    def lapOf(event: Timeline.Event): Option[(String, Int32)] =
+        match (event#eventType, event#lap) {
+            case (EventType.Of(carNumber, _), Some(lap)) => Some((carNumber, lap))
+            case _                                       => None
+        }
+
+    /// The laps the events fell on, keyed by the pair that names one.
+    ///
+    /// The running minimum is a window over every lap of the round and the laps are
+    /// picked out outside it: a `WHERE` of the same SELECT is settled before a
+    /// window, and the best of the kept laps alone is not the best up to that lap.
+    def lapCells(entry: Entry, named: List[(String, Int32)]): Map[(String, Int32), Cells] \ DbRead =
+        if (List.isEmpty(named))
+            Map.empty()
+        else
+            Sql.rows(Sql.raw("running"))
+                |> Sql.using(running(entry))
+                |> Sql.filter(_ -> namedLaps(named))
+                |> Sql.map(_ -> cellSelection())
+                |> Sql.selectAll
+                |> List.map(row -> ((row#carNumber, row#lapNumber), row))
+                |> List.toMap
+
+    def beside(
+        seats: Round.Drivers.Seats,
+        index: Index.Index,
+        cells: Map[(String, Int32), Cells]
+    ): Timeline.Event -> Detailed \ DbErr =
+        event -> {
+            event = event,
+            detail = Option.flatMap(lap -> match Map.get(lap, cells) {
+                case Some(r) => Some(detail(seats, index, event#elapsed, fst(lap), r))
+                case None    => DbErr.fail(Db.Error.Incomplete(
+                    "the timeline names lap ${snd(lap)} of car ${fst(lap)}, which the laps are not"))
+            }, lapOf(event))
+        }
+
+    def detail(
+        seats: Round.Drivers.Seats,
+        index: Index.Index,
+        at: Duration,
+        carNumber: String,
+        r: Cells
+    ): Detail \ DbErr =
+        {
+            driver = Round.Drivers.nameOf(seats, carNumber, r#driverNumber),
+            lap = rated(r#lapTime, Record.FastestLap, at, index, r#lapBest),
+            sectors = sectorRatings(r, at, index),
+            miniSectors = miniRatings(r, at, index)
+        }
+
+    def sectorRatings(r: Cells, at: Duration, index: Index.Index): List[(Sector, Rated)] =
+        sectorRating(Sector.S1, r#s1, r#s1Best, at, index) ::
+        sectorRating(Sector.S2, r#s2, r#s2Best, at, index) ::
+        sectorRating(Sector.S3, r#s3, r#s3Best, at, index) :: Nil
+
+    def sectorRating(
+        which: Sector,
+        time: Option[Int32],
+        best: Option[Int32],
+        at: Duration,
+        index: Index.Index
+    ): (Sector, Rated) =
+        (which, rated(time, Record.FastestSector(which), at, index, best))
+
+    /// The fifteen, where the round's feed measured them. A lap written without them
+    /// has none, and is drawn on the three sectors.
+    ///
+    /// The bests come back as a JSON array of the same fifteen in the same order,
+    /// which is why both are read by position.
+    def miniRatings(r: Cells, at: Duration, index: Index.Index): Option[List[(MiniSectorId, Rated)]] =
+        match r#miniTimes {
+            case None        => None
+            case Some(times) =>
+                let bests = match r#miniBests {
+                    case Some(b) => b
+                    case None    => Nil
+                };
+                let places = List.zipWithIndex(MiniSector.all());
+                Some(places |> List.map(miniPlace(times, bests, at, index)))
+        }
+
+    /// The fifteen, each by its place on the circuit -- the subscript the array
+    /// column is read at, and the index `List.zipWithIndex` counts from.
+    def miniPlace(
+        times: List[Option[Int32]],
+        bests: List[Option[Int32]],
+        at: Duration,
+        index: Index.Index
+    ): ((Int32, MiniSectorId)) -> (MiniSectorId, Rated) =
+        place -> match place {
+            case (position, which) =>
+                (which, rated(
+                    Option.flatten(List.nth(position, times)),
+                    Record.FastestMiniSector(which),
+                    at,
+                    index,
+                    Option.flatten(List.nth(position, bests))))
+        }
+
+    def rated(
+        time: Option[Int32],
+        record: Record,
+        at: Duration,
+        index: Index.Index,
+        best: Option[Int32]
+    ): Rated =
+        {
+            time = Option.map(Util.Duration.fromMillis, time),
+            fastest = standingAt(record, at, index),
+            personalBest = Option.map(Util.Duration.fromMillis, best)
+        }
+
+    /// The record as it stood when the event fell: the last change at or before it,
+    /// which is the lap that took it. `Round.Index` counts a change the moment a
+    /// record is beaten, so a lap is rated against the record it itself took -- as
+    /// `Motorsport.BestTimes.at` reads the same changes back.
+    def standingAt(record: Record, at: Duration, index: Index.Index): Option[Duration] =
+        Index.changesOf(record, index)
+            |> List.filter(change -> change#elapsed <= at)
+            |> List.last
+            |> Option.map(change -> change#time)
+
+    /// The window, over every lap of the round.
+    ///
+    /// A mini-sector of a lap the feed wrote no time for is no segment of the
+    /// circuit, which is why the fifteen are each guarded by `lap_time_ms <> 0` --
+    /// the same reading `Round.Index` throws out of the records.
+    def running(entry: Entry): Sql.Frag =
+        Sql.frags(
+            Sql.raw("running AS (SELECT car_number, driver_number, lap_number,"
+                + " NULLIF(lap_time_ms, 0) AS lap_time, s1_ms, s2_ms, s3_ms,"
+                + " mini_sector_time_ms,"
+                + " MIN(NULLIF(lap_time_ms, 0)) OVER w AS lap_best,"
+                + " MIN(s1_ms) OVER w AS s1_best,"
+                + " MIN(s2_ms) OVER w AS s2_best,"
+                + " MIN(s3_ms) OVER w AS s3_best, "
+                + miniWindows()
+                + " FROM " + Laps.table() + " WHERE") ::
+            Sql.term(Laps.inRound(entry)) ::
+            Sql.raw("WINDOW w AS (PARTITION BY car_number ORDER BY lap_number"
+                + " ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))") :: Nil
+        )
+
+    /// One `MIN ... OVER w` per place on the circuit, and `json_extract` reads the
+    /// array column by that same subscript.
+    def miniWindows(): String =
+        List.range(0, List.length(MiniSector.all()))
+            |> List.map(position ->
+                "MIN(CASE WHEN lap_time_ms <> 0"
+                    + " THEN json_extract(mini_sector_time_ms, '$[${position}]') END) OVER w AS b${position}")
+            |> List.join(", ")
+
+    def miniBests(): String =
+        List.range(0, List.length(MiniSector.all()))
+            |> List.map(position -> "b${position}")
+            |> List.join(", ")
+
+    /// The laps the events fell on. A row-value `IN`, since a lap is named by a
+    /// pair, and bound rather than written in: a car number came out of a feed.
+    def namedLaps(named: List[(String, Int32)]): Sql.Expr[Bool] =
+        let placeholders = named |> List.map(_ -> "(?, ?)") |> List.join(", ");
+        let params = named |> List.flatMap(match (carNumber, lapNumber) ->
+            List#{Value.Text(carNumber), Value.Integer(lapNumber)});
+        Sql.written(Sql.frag("(car_number, lap_number) IN (${placeholders})", params))
+
+    /// A lap the events fell on, its own times and its car's best of each, the
+    /// fifteen mini-sector bests gathered back into one JSON array so the reading is
+    /// thirteen columns and not twenty-seven.
+    def cellSelection(): Sel[Cells] =
+        Sql.record({})
+            |> Sql.field(Sql.text("car_number"), (r, value) -> { +carNumber = value | r })
+            |> Sql.field(Sql.int("lap_number"), (r, value) -> { +lapNumber = value | r })
+            |> Sql.field(Sql.int("driver_number"), (r, value) -> { +driverNumber = value | r })
+            |> Sql.field(Sql.optionalInt("lap_time"), (r, value) -> { +lapTime = value | r })
+            |> Sql.field(Sql.optionalInt("s1_ms"), (r, value) -> { +s1 = value | r })
+            |> Sql.field(Sql.optionalInt("s2_ms"), (r, value) -> { +s2 = value | r })
+            |> Sql.field(Sql.optionalInt("s3_ms"), (r, value) -> { +s3 = value | r })
+            |> Sql.field(Sql.optionalIntArray("mini_sector_time_ms"),
+                (r, value) -> { +miniTimes = value | r })
+            |> Sql.field(Sql.optionalInt("lap_best"), (r, value) -> { +lapBest = value | r })
+            |> Sql.field(Sql.optionalInt("s1_best"), (r, value) -> { +s1Best = value | r })
+            |> Sql.field(Sql.optionalInt("s2_best"), (r, value) -> { +s2Best = value | r })
+            |> Sql.field(Sql.optionalInt("s3_best"), (r, value) -> { +s3Best = value | r })
+            |> Sql.field(Sql.optionalIntArray("json_array(${miniBests()}) AS mini_best"),
+                (r, value) -> { +miniBests = value | r })
 
 }

@@ -78,17 +78,18 @@ pub mod Cli.Export {
         else
             let seats = Round.Drivers.read(task#entry);
             let metadata = Summary.read(task#entry, seats);
+            let index = Index.read(task#entry, seats);
             Ok(render(
                 metadata,
-                Index.read(task#entry, seats),
-                Timeline.read(task#entry),
+                index,
+                Timeline.detailed(task#entry, seats, index),
                 Laps.read(task#entry, seats)
             ))
 
     def render(
         metadata: Motorsport.Metadata.Metadata,
         index: Motorsport.Index.Index,
-        timeline: List[Motorsport.Timeline.Event],
+        timeline: List[Round.Timeline.Detailed],
         laps: List[Laps.Placed]
     ): Rendered =
         {

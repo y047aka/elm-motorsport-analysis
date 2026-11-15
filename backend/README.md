@@ -38,10 +38,10 @@ laps are 25MB, and 3.4MB on the wire.
 `Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars`
 take an `Entry` and the `DbRead` effect and read it; `Round.Render` takes what
 they returned, is pure, and turns it into the bytes that go out. None of the six
-knows whether a file or a request is waiting at the other end. Three of them take a
+knows whether a file or a request is waiting at the other end. Four of them take a
 `Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
 once for the round by whichever answer names a driver rather than once by each
-of them; the timeline names none. `Round.loaded` is what both ask first, and it
+of them. `Round.loaded` is what both ask first, and it
 asks `laps` and `cars`:
 laps without cars is a round half in the database, and answered off the laps
 alone it would be a race whose grid was empty.
@@ -196,6 +196,16 @@ only one of the walks a reader does not make:
 round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
 rather than read in their key's order, which is the same list until a row is
 corrected in SQL and then is the list that moment used to be in.
+
+`Round.Timeline.detailed` reads those rows beside the lap each event fell on,
+which the row names by number and `laps` still holds every cell of. The nineteen
+baselines a time reads against are not counted again here: `detailed` is handed
+the `Round.Index` the answer already has and takes, for each record, the last
+change at or before the event's moment -- the same reading `Motorsport.BestTimes.at`
+performs app-side, over the same rows, so the two cannot disagree about what a
+record was worth then. The car's own best of each time is the one thing no row
+carries and no reader had counted: nineteen running minima per car, a window over
+every lap of the round, with the laps the events fell on picked out outside it.
 
 Each car's last crossing is one `GROUP BY`, and a class's lead is
 `ROW_NUMBER` picking the class's first crossing of each lap with `LAG` asking who

@@ -121,7 +121,9 @@ pub mod Server.Api {
             Render.renderSummary(Summary.read(e, seats), Index.read(e, seats)))
 
     def timeline(season: Int32, id: String): Option[String] \ DbRead =
-        answer(season, id, e -> Render.renderTimelineJsonl(Timeline.read(e)))
+        answer(season, id, e ->
+            let seats = Round.Drivers.read(e);
+            Render.renderTimelineJsonl(Timeline.detailed(e, seats, Index.read(e, seats))))
 
     def laps(season: Int32, id: String): Option[String] \ DbRead =
         answer(season, id, e -> Render.renderJsonl(Laps.read(e, Round.Drivers.read(e))))
