@@ -292,20 +292,24 @@ trackerCard several held track snapshot =
         (trackerZoomButton False :: standingsTrigger :: cornerControls (corner several held Columns.Tracker))
 
 
-{-| The tracker drawn with the room above the strip rather than the room one
+{-| The tracker drawn with the room below the strip rather than the room one
 column has; the column keeps its own.
 
+The card takes no class of its own -- `card-elements.ts` owns that element's
+`className` -- so its cell is a div of its own.
+
 The circuit holds its own proportions, so this drawing is bound by the box's
-height and not its width: how far the strip is pushed down is how big the
-track gets.
+height and not its width: how much of the page the strip gives up is how big
+the track gets.
 
 -}
-expandedTracker : TrackerChart.Track -> Snapshot -> Html Msg
-expandedTracker track snapshot =
-    trackerFrame "data-tracker-expanded" track snapshot [ trackerZoomButton True ]
+expandedTracker : String -> TrackerChart.Track -> Snapshot -> Html Msg
+expandedTracker cell track snapshot =
+    div [ Attributes.class cell ]
+        [ trackerFrame "data-tracker-expanded" track snapshot [ trackerZoomButton True ] ]
 
 
-{-| The press that gives the tracker the room above the strip, and takes it
+{-| The press that gives the tracker the room below the strip, and takes it
 back. It stands in both drawings' corner, so the way back is wherever the
 room was taken from.
 -}
@@ -317,7 +321,7 @@ trackerZoomButton expanded =
                 "Give the tracker its column back"
 
             else
-                "Give the tracker the room above the strip"
+                "Give the tracker the room below the strip"
     in
     button
         [ onClick ToggleTrackerZoom
@@ -331,7 +335,8 @@ trackerZoomButton expanded =
 
 {-| Which rows the page is laid out in, and where each of its cells stands.
 The strip is the whole page until the tracker is enlarged, and then it keeps
-the 300px it scrolls its panels in, pushed down to make the room.
+the 300px it scrolls its panels in at the top and the tracker takes the page
+below it.
 
 The class strings are written intact: Tailwind generates a class only from a
 string it finds intact in the source, so one assembled from fragments silently
@@ -342,21 +347,24 @@ type alias Layout =
     { grid : String
     , standings : String
     , strip : String
+    , tracker : String
     }
 
 
 layout : Bool -> Layout
 layout expanded =
     if expanded then
-        { grid = "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] grid-rows-[minmax(0,1fr)_minmax(0,300px)] gap-2.5 p-[0_10px_10px_10px]"
+        { grid = "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] grid-rows-[minmax(0,300px)_minmax(0,1fr)] gap-2.5 p-[0_10px_10px_10px]"
         , standings = "col-start-1 row-start-1 row-span-2 min-h-0 grid relative"
-        , strip = "col-start-2 row-start-2"
+        , strip = "col-start-2 row-start-1"
+        , tracker = "col-start-2 row-start-2 min-h-0 grid"
         }
 
     else
         { grid = "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]"
         , standings = "col-start-1 min-h-0 grid relative"
         , strip = "col-start-2"
+        , tracker = "col-start-2"
         }
 
 
@@ -376,7 +384,7 @@ mainGrid round keys m =
         [ Attributes.class cells.grid ]
         [ standingsCell cells.standings keys m round.energy snapshot replay.race.cars
         , if m.trackerExpanded then
-            expandedTracker round.track snapshot
+            expandedTracker cells.tracker round.track snapshot
 
           else
             text ""

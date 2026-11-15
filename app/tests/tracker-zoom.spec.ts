@@ -3,14 +3,14 @@ import { readFileSync } from 'node:fs';
 import { waitForPageReady, setLapCount, TRACKER_COLUMN, COTA } from './helpers';
 
 /**
- * The tracker taking the room above the columns is a row the page is laid out
+ * The tracker taking the room below the columns is a row the page is laid out
  * in rather than a thing drawn, so nothing here is pixels: what is asserted is
- * where the strip came to rest and how big the circuit's own polygon ended up.
- * The row the strip keeps is read out of the class string that lays the page
- * out, so a row moved in the Elm moves the expectation with it.
+ * which row each of the two stands in and how big the circuit's own polygon
+ * ended up. The row the strip keeps is read out of the class string that lays
+ * the page out, so a row moved in the Elm moves the expectation with it.
  */
 const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
-const STRIP_ROW = Number(/grid-rows-\[minmax\(0,1fr\)_minmax\(0,(\d+)px\)\]/.exec(eventSource)?.[1]);
+const STRIP_ROW = Number(/grid-rows-\[minmax\(0,(\d+)px\)_minmax\(0,1fr\)\]/.exec(eventSource)?.[1]);
 if (!Number.isFinite(STRIP_ROW)) {
   throw new Error('the enlarged layout row is not in Page/Wec/Event.elm -- did it move?');
 }
@@ -36,7 +36,7 @@ test.describe('the enlarged tracker', () => {
     await setLapCount(page, COTA, 71);
   });
 
-  test('pushes the strip down and draws the circuit in the room it gave', async ({ page }) => {
+  test('draws the circuit in the room below the strip', async ({ page }) => {
     const before = (await page.locator(STRIP).boundingBox())!;
     const inColumn = (await drawn(page, TRACKER_COLUMN))!;
 
@@ -47,12 +47,12 @@ test.describe('the enlarged tracker', () => {
     const enlarged = (await page.locator(EXPANDED).boundingBox())!;
     const onScreen = (await drawn(page, EXPANDED))!;
 
-    // The strip went down into the row it keeps, and the tracker stands in
-    // what it gave up.
-    expect(strip.y).toBeGreaterThan(before.y);
+    // The strip keeps the top of the page and its own row; the tracker takes
+    // what is left of the page under it.
+    expect(strip.y).toBeCloseTo(before.y, 0);
     expect(strip.height).toBeCloseTo(STRIP_ROW, 0);
-    expect(enlarged.y).toBeLessThan(strip.y);
-    expect(enlarged.y + enlarged.height).toBeLessThanOrEqual(strip.y + 1);
+    expect(enlarged.y).toBeGreaterThanOrEqual(strip.y + strip.height - 1);
+    expect(enlarged.y + enlarged.height).toBeLessThanOrEqual(before.y + before.height + 1);
 
     // The same track, bigger than the one still standing in the column.
     expect(onScreen.width).toBeGreaterThan(inColumn.width);
