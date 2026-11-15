@@ -48,10 +48,18 @@ pub eff TransientDbErr {
     def raise(error: Db.Error): Void
 }
 
+/// The savepoints a reading marks.
+///
+/// One command rather than one operation per statement, so that a fourth one
+/// breaks the code that matches on it and not every handler ever installed.
+pub eff SqlSavepoint {
+    def control(command: Db.Savepoint.Command): Result[Db.Error, Unit]
+}
+
 /// What a signature says, which is a statement and both of its failings.
 pub type alias DbRead = {SqlRead, TransientDbErr, DbErr}
 pub type alias DbWrite = {SqlWrite, TransientDbErr, DbErr}
-pub type alias Db = {SqlRead, SqlWrite, TransientDbErr, DbErr}
+pub type alias Db = {SqlRead, SqlWrite, SqlSavepoint, TransientDbErr, DbErr}
 
 pub mod Db {
 
@@ -334,26 +342,35 @@ pub mod Db {
     /// together when a failure ends it, and what its caller sent before is
     /// still to be committed.
     ///
+    /// A name the database would not take is `Error.Other`, and a failure
+    /// inside the mark comes back as a value rather than raised.
+    ///
     /// The savepoint is SQLite's rather than the driver's, so it goes out as a
-    /// statement -- which is what `runRecording` keeps and `runFailing`
-    /// refuses, like every other. `Db.Jdbc` marks one of the driver's per
-    /// insert, and that is the batch's alone.
-    pub def atomically(name: String, f: Unit -> a \ ef): a \ (ef - {TransientDbErr, DbErr}) + DbWrite =
-        execute("SAVEPOINT ${name}");
-        match runWithError(f) {
-            case Ok(value) => execute("RELEASE ${name}"); value
-            case Err(e)    => undo(name); raise(e)
+    /// statement -- which is what `runRecording` keeps and `runFailing` refuses,
+    /// like every other. `Db.Jdbc` marks one of the driver's per insert, and
+    /// that is the batch's alone.
+    pub def withSavepoint(name: String, f: Unit -> a \ ef): Result[Failure, a] \ (ef - {TransientDbErr, DbErr}) + {SqlSavepoint, TransientDbErr, DbErr} =
+        if (not Savepoint.isValidName(name))
+            Err(Failure.Permanent(Error.Other("not a savepoint name: ${name} (${Savepoint.nameRule()})")))
+        else {
+            control(Savepoint.Command.Mark(name));
+            match attempt(f) {
+                case Ok(value) => { control(Savepoint.Command.Release(name)); Ok(value) }
+                case Err(e)    => {
+                    control(Savepoint.Command.BackTo(name));
+                    control(Savepoint.Command.Release(name));
+                    Err(e)
+                }
+            }
         }
 
-    /// As `rollback`: what a failure is taken back with says nothing the
-    /// failure does not. The savepoint is released either way, so a caller
-    /// that goes on is not left standing inside one.
-    def undo(name: String): Unit \ SqlWrite =
-        discard SqlWrite.execute("ROLLBACK TO ${name}");
-        discard SqlWrite.execute("RELEASE ${name}")
+    /// The statement, and the failure it answered with raised in the caller's
+    /// own context.
+    def control(command: Savepoint.Command): Unit \ {SqlSavepoint, TransientDbErr, DbErr} =
+        orRaise(SqlSavepoint.control(command))
 
     /// What `runRecording` keeps.
-    pub enum Statement {
+    pub enum Statement with Eq {
         case Execute(String)
         case InsertMany(String, List[List[Value]])
         case Fetch(String, List[Value])
@@ -361,7 +378,7 @@ pub mod Db {
         case Rollback
     }
 
-    pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - {SqlRead, SqlWrite}) =
+    pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) =
         region rc {
             let log = Ref.fresh(rc, (Nil: List[Statement]));
             let result = run {
@@ -393,13 +410,18 @@ pub mod Db {
                     record(log, Statement.Fetch(sql, params));
                     k(Err(unreachable("nothing was sent, so nothing can be read back")))
                 }
+            } with handler SqlSavepoint {
+                def control(command, k) = {
+                    record(log, Statement.Execute(Savepoint.toSql(command)));
+                    k(Ok())
+                }
             };
             (rethrowing(result), List.reverse(Ref.get(log)))
         }
 
     /// A database that answers every statement with the same failure, for a
     /// caller whose subject is what it does about one.
-    pub def runFailing(error: Error, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite}) =
+    pub def runFailing(error: Error, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) =
         let outcome = run {
             run {
                 catchAll(f)
@@ -411,6 +433,8 @@ pub mod Db {
             }
         } with handler SqlRead {
             def fetch(_sql, _params, k) = k(Err(error))
+        } with handler SqlSavepoint {
+            def control(_command, k) = k(Err(error))
         };
         rethrowing(outcome)
 

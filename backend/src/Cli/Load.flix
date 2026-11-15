@@ -49,7 +49,7 @@ pub mod Cli.Load {
     /// run that dies partway through leaves the rounds it was rebuilding from.
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
-    pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
+    pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint} =
         let rebuild = Db.attempt(() -> Db.transact(() -> {
             let rounds = createTables();
             convertRounds(root, rounds)
@@ -83,7 +83,7 @@ pub mod Cli.Load {
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, SqlRead, SqlWrite} =
+    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Db} =
         let tasks = FileTask.inputs(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(rounds, acc#numbered, task) {
@@ -129,7 +129,7 @@ pub mod Cli.Load {
         rounds: List[RoundRow],
         numbering: Numbered,
         task: FileTask.Input
-    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, SqlRead, SqlWrite} =
+    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, Db} =
         match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
             case Err(e) => (Err(e), numbering)
             case Ok(rawLaps) =>
@@ -141,8 +141,8 @@ pub mod Cli.Load {
                     numbering#entries, task#entry#season, CarRow.firstMentions(rawLaps));
                 reportEntryDisagreements(task, differing);
                 let numbered = { drivers = drivers, entries = entries };
-                let outcome = Db.attempt(() -> Db.atomically("round", () -> reportViolations(
-                        task, load(rounds, numbered, newDrivers, newEntries, seats, task, rawLaps))))
+                let outcome = Db.withSavepoint("round", () -> reportViolations(
+                        task, load(rounds, numbered, newDrivers, newEntries, seats, task, rawLaps)))
                     |> Result.mapErr(CliError.Database);
                 (outcome, if (Result.isOk(outcome)) numbered else numbering)
         }
@@ -179,7 +179,7 @@ pub mod Cli.Load {
         seats: List[CarDrivers.Seat],
         task: FileTask.Input,
         rawLaps: List[RawLap]
-    ): Loaded \ Db =
+    ): Loaded \ {SqlRead, SqlWrite, TransientDbErr, DbErr} =
         match Rounds.idIn(rounds, task#entry) {
             case None => DbErr.raise(Db.Error.Incomplete(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
@@ -205,7 +205,7 @@ pub mod Cli.Load {
                 }
         }
 
-    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ Db =
+    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ {SqlRead, SqlWrite, TransientDbErr, DbErr} =
         TimelineEvents.insertRows(TimelineEvents.fromEvents(
             roundId,
             Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)

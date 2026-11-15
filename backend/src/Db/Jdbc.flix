@@ -15,6 +15,7 @@ pub mod Db.Jdbc {
     import org.sqlite.JDBC
 
     use Db.Error
+    use Db.Savepoint
     use Db.Value
 
     def batchSize(): Int32 = 1000
@@ -78,7 +79,7 @@ pub mod Db.Jdbc {
     ///
     /// The close is on every way out, including the one that throws: a
     /// connection left open holds a read on the database until the process ends.
-    pub def withConnection(url: String, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + IO + {TransientDbErr, DbErr} =
+    pub def withConnection(url: String, f: Unit -> a \ ef): a \ (ef - Db) + IO + {TransientDbErr, DbErr} =
         let conn = Db.orRaise(connect(url));
         let outcome = try {
             Db.runWithError(() -> Db.guard(() -> runWith(conn, f)))
@@ -98,11 +99,16 @@ pub mod Db.Jdbc {
                 else Err(Db.Error.Other(Db.describeThrowable(error)))
         }
 
-    pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite}) + IO =
+    pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) + IO =
         run {
-            runWriting(conn, f)
-        } with handler SqlRead {
-            def fetch(sql, params, k) = k(guarded(() -> runFetch(conn, sql, params)))
+            run {
+                runWriting(conn, f)
+            } with handler SqlRead {
+                def fetch(sql, params, k) = k(guarded(() -> runFetch(conn, sql, params)))
+            }
+        } with handler SqlSavepoint {
+            def control(command, k) =
+                k(guarded(() -> runStatement(conn, Savepoint.toSql(command))))
         }
 
     /// The connection as a read alone, which is what the server answers a

@@ -31,14 +31,14 @@ def main(): Unit \ {Env, IO, Exit, Console} =
 /// A round that failed to load has no rows, so the export fails it too and
 /// leaves the files it would have replaced alone. The rounds beside it are
 /// written either way.
-def loadAndExport(csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, SqlWrite} =
+def loadAndExport(csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint} =
     let loaded = Load.runAll(csv);
     let exported = Export.runAll(out, rounds);
     if (loaded == 0 and exported == 0) 0 else 1
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> Int32 \ ef): Int32 \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + Env + IO + Console =
+def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> Int32 \ ef): Int32 \ (ef - Db) + Env + IO + Console =
     match Result.traverseX(checkDirectory, dirs) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");

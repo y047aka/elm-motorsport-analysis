@@ -12,7 +12,7 @@ pub mod Db.TestJdbc {
     use Motorsport.Calendar.Entry
     use Round.TestSupport
 
-    def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + IO =
+    def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - Db) + IO =
         match Db.runWithError(() -> Jdbc.withConnection(TestSupport.url(), f)) {
             case Ok(result) => result
             case Err(e)     => Err(e)
@@ -36,13 +36,13 @@ pub mod Db.TestJdbc {
                 Db.execute("CREATE TABLE t (n int not null)");
                 Db.execute("INSERT INTO t VALUES (1)")
             });
-            discard (Db.runWithError(() -> Db.atomically("round", () -> {
+            discard Db.withSavepoint("round", () -> {
                 Db.execute("INSERT INTO t VALUES (2)");
                 Db.execute("INSERT INTO t VALUES (3)");
                 DbErr.raise(refused)
-            })): Result[Db.Error, Unit]);
-            discard Db.runWithError(() -> Db.atomically("round", () ->
-                Db.execute("INSERT INTO t VALUES (4)")));
+            });
+            discard Db.withSavepoint("round", () ->
+                Db.execute("INSERT INTO t VALUES (4)"));
             SqlRead.fetch("SELECT n FROM t ORDER BY n", Nil)
         });
         Assert.assertTrue(counted == Ok((Some("1") :: Nil) :: (Some("4") :: Nil) :: Nil))
@@ -137,7 +137,7 @@ pub mod Db.TestJdbc {
 
     /// A database of its own per test, under a directory that does not exist,
     /// which is what a working copy's `.db` is on a first run.
-    def onFile(f: Unit -> Result[Db.Error, a] \ ef): (String, Result[Db.Error, a]) \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + IO =
+    def onFile(f: Unit -> Result[Db.Error, a] \ ef): (String, Result[Db.Error, a]) \ (ef - Db) + IO =
         let stem = File.createTempFile("motorsport-test", "");
         discard stem.delete();
         let path = "${stem.getPath()}/motorsport.sqlite";

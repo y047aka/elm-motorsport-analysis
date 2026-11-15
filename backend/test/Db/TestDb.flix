@@ -23,28 +23,48 @@ pub mod Db.TestDb {
 
     /// The savepoint is SQLite's, so it goes out as a statement like any
     /// other -- which is what lets a handler standing in for a database see it.
+    ///
+    /// The handler never fails the statements it is asked to mark, so the
+    /// failure effects a savepoint can raise are discharged here.
+    def marked(name: String, f: Unit -> Unit \ ef): List[String] \ (ef - Db) + Assert =
+        let (outcome, statements) = Db.runRecording(() ->
+            Db.runWithError(() -> Db.withSavepoint(name, f)));
+        Assert.assertTrue(outcome == Ok(Ok(())));
+        statements |> List.map(s -> match s { case Statement.Execute(sql) => sql case _ => "" })
+
     @Test
     def aSavepointIsMarkedAndReleasedAroundWhatItHolds(): Unit \ Assert =
-        let (_, statements) = Db.runRecording(() ->
-            Db.runWithError(() -> Db.atomically("round", () -> Db.execute("SELECT 1"))));
         Assert.assertTrue(
-            statements |> List.map(s -> match s { case Statement.Execute(sql) => sql case _ => "" })
-                == "SAVEPOINT round" :: "SELECT 1" :: "RELEASE round" :: Nil
+            marked("round", () -> Db.execute("SELECT 1"))
+                == "SAVEPOINT round" :: "SELECT 1" :: "RELEASE SAVEPOINT round" :: Nil
         )
 
-    /// A failure inside is taken back to the mark and raised again, and the
-    /// mark is released either way so the caller is not left standing in one.
+    /// A failure inside is taken back to the mark, and the mark is released
+    /// either way so the caller is not left standing in one.
     @Test
     def aFailureInsideIsTakenBackToTheMark(): Unit \ Assert =
         let refused = Db.Error.Incomplete("the round was not what it should have been");
         let (result, statements) = Db.runRecording(() ->
-            (Db.runWithError(() -> Db.atomically("round", () -> DbErr.raise(refused))):
-                Result[Db.Error, Unit]));
-        Assert.assertTrue(result == Err(refused));
+            Db.runWithError(() -> Db.withSavepoint("round", () -> {
+                DbErr.raise(refused);
+                ()
+            })));
+        let expected: Result[Db.Error, Result[Db.Failure, Unit]] = Ok(Err(Db.toFailure(refused)));
+        Assert.assertTrue(result == expected);
         Assert.assertTrue(
             statements |> List.map(s -> match s { case Statement.Execute(sql) => sql case _ => "" })
-                == "SAVEPOINT round" :: "ROLLBACK TO round" :: "RELEASE round" :: Nil
+                == "SAVEPOINT round" :: "ROLLBACK TO SAVEPOINT round" :: "RELEASE SAVEPOINT round" :: Nil
         )
+
+    /// A name is the one value that reaches the statement's text, so a name
+    /// that is not a name is refused before any statement is sent.
+    @Test
+    def aNameThatIsNotANameSendsNoStatement(): Unit \ Assert =
+        let (outcome, statements) = Db.runRecording(() -> Db.runWithError(() ->
+            Db.withSavepoint("round; DROP TABLE laps", () -> Db.execute("SELECT 1"))));
+        Assert.assertTrue(outcome == Ok(Err(Db.Failure.Permanent(Db.Error.Other(
+            "not a savepoint name: round; DROP TABLE laps (expected ^[a-z_][a-z0-9_]*$)")))));
+        Assert.assertTrue(statements == Nil)
 
     @Test
     def theRowsReachTheBoundary(): Unit \ Assert =
