@@ -164,7 +164,7 @@ cotaFastestLap =
     """{ "elapsed": "6:27.414", "event": "fastestLap", "carNumber": "83", "lap": 2, "driver": "Philip HANSON", "performance": { "lap": { "time": "3:08.310", "fastest": "3:08.310", "personalBest": "3:08.310" }, "sectors": { "s1": { "time": "40.152", "fastest": "40.152", "personalBest": "40.152" }, "s2": { "time": "1:12.811", "fastest": "1:12.811", "personalBest": "1:12.811" }, "s3": { "time": "1:15.347", "fastest": "1:09.182", "personalBest": "1:13.095" } } } }"""
 
 
-{-| The first fifteen of Le Mans's, on the lap 5 set at 7:11.321.
+{-| Le Mans's fifteen mini-sectors, on the lap car 5 set its fastest at 7:11.321.
 -}
 leMansFastestLap : String
 leMansFastestLap =

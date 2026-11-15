@@ -209,9 +209,8 @@ decoder =
     Decode.map3 TimelineEvent
         (field "elapsed" Instant.decoder)
         (field "event" string |> Decode.andThen eventTypeDecoder)
-        -- A lap is named by number, and the number is what the detail is read from,
-        -- so the one being absent is the whole detail being absent. A `lap` that
-        -- names one and carries no `performance` is a bad line, not a plain event.
+        -- The number is what the detail is read from, so a `lap` naming one with no
+        -- `performance` beside it is a bad line rather than a plain event.
         (Decode.maybe (field "lap" Decode.int)
             |> Decode.andThen
                 (\number ->
@@ -226,7 +225,7 @@ decoder =
 
 
 {-| The lap an event fell on, which sits flat beside the event rather than under a key
-of its own: the line is one event, and the lap is how far a post about it draws.
+of its own.
 
 -}
 lapDetailDecoder : Decoder LapDetail
