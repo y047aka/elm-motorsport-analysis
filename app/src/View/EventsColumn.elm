@@ -15,7 +15,6 @@ import Dict exposing (Dict)
 import Html exposing (Html, div, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Lazy
-import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Flag as Flag exposing (Flag(..))
@@ -25,6 +24,8 @@ import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Sector as Sector exposing (Sector)
+import Motorsport.Wec.Circuit.LeMans as LeMans
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.Feed as Feed
@@ -52,20 +53,18 @@ view :
     -> Model
     -> List Car
     -> Timeline
-    -> BestTimes.Changes
     -> Instant
     -> Html msg
-view controls model cars timeline changes clock =
+view controls model cars timeline clock =
     Feed.view
         { attributes = [ attribute "data-events-column" "" ]
         , corner = controls.corner
         , head = text "Race Timeline"
         , body =
-            Html.Lazy.lazy6 (posts controls.earlier)
+            Html.Lazy.lazy5 (posts controls.earlier)
                 model
                 cars
                 timeline
-                changes
                 (Timeline.countUpTo clock timeline)
                 (clockStep clock)
         }
@@ -85,15 +84,15 @@ clockStep clock =
     Instant.toDuration clock // Feed.step
 
 
-posts : msg -> Model -> List Car -> Timeline -> BestTimes.Changes -> Int -> Int -> Html msg
-posts earlier model cars timeline changes occurred bucket =
+posts : msg -> Model -> List Car -> Timeline -> Int -> Int -> Html msg
+posts earlier model cars timeline occurred bucket =
     Feed.posts
         { earlier = earlier
         , empty = "Nothing has happened yet"
         , end = "You have reached the start of the race"
         }
         model
-        (feedPosts cars timeline changes occurred bucket)
+        (feedPosts cars timeline occurred bucket)
 
 
 {-| The posts, newest first, cut where the race clock stands.
@@ -102,8 +101,8 @@ The key is the event's place in the timeline, so a post keeps its key however fa
 the clock has run.
 
 -}
-feedPosts : List Car -> Timeline -> BestTimes.Changes -> Int -> Int -> List (Feed.Post msg)
-feedPosts cars timeline changes occurred bucket =
+feedPosts : List Car -> Timeline -> Int -> Int -> List (Feed.Post msg)
+feedPosts cars timeline occurred bucket =
     let
         carsByNumber =
             List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
@@ -112,7 +111,7 @@ feedPosts cars timeline changes occurred bucket =
         |> List.take occurred
         |> List.indexedMap Tuple.pair
         |> List.reverse
-        |> List.map (\( id, event ) -> post id event (named event carsByNumber) bucket changes)
+        |> List.map (\( id, event ) -> post id event (named event carsByNumber) bucket)
 
 
 {-| Which car the event names. The field's own events -- a flag, the start -- name
@@ -128,14 +127,14 @@ named event carsByNumber =
             Nothing
 
 
-post : Int -> TimelineEvent -> Maybe Car -> Int -> BestTimes.Changes -> Feed.Post msg
-post id event theCar bucket changes =
+post : Int -> TimelineEvent -> Maybe Car -> Int -> Feed.Post msg
+post id event theCar bucket =
     { key = String.fromInt id
     , avatar = avatar event theCar
     , headline = headline theCar
     , time = Feed.ago { now = bucket * Feed.step, at = Instant.toDuration event.elapsed }
     , author = author theCar
-    , body = body event theCar changes
+    , body = body event theCar
     , stamp = stamp event theCar
     }
 
@@ -199,11 +198,11 @@ author theCar =
 
 {-| What happened. A fastest lap is the class's, whether or not it is also the field's -- which is why the post says `Class Fastest Lap`.
 
-The strip under it is rated against the records as they stood when the lap was set, not as they stand at the clock: a post two hours old would otherwise be recoloured by a sector beaten since.
+The strip under it is rated against the records as they stood when the lap was set, not as they stand at the clock: a post two hours old would otherwise be recoloured by a sector beaten since. Those baselines come in on the event's own line, and `Performance.rateTime` is what reads a time against them.
 
 -}
-body : TimelineEvent -> Maybe Car -> BestTimes.Changes -> Html msg
-body event theCar changes =
+body : TimelineEvent -> Maybe Car -> Html msg
+body event theCar =
     let
         described =
             TimelineEvent.describe event.eventType
@@ -215,25 +214,15 @@ body event theCar changes =
                 |> Maybe.withDefault described
                 |> text
 
-        ( CarEvent _ FastestLap, Just car ) ->
-            case TimelineEvent.runningLap car event of
+        ( CarEvent _ FastestLap, _ ) ->
+            case event.lap of
                 Nothing ->
                     text "Class Fastest Lap"
 
                 Just lap ->
-                    let
-                        records =
-                            BestTimes.at { elapsed = event.elapsed } changes
-
-                        rated =
-                            Performance.ofSectors records lap
-
-                        time =
-                            lap.time
-                    in
                     div [ Attributes.class "grid gap-y-1" ]
                         [ span [] <|
-                            [ text ("Class Fastest Lap · " ++ Driver.toInitialAndSurname lap.driver) ]
+                            [ text ("Class Fastest Lap · " ++ Driver.toInitialAndSurname (Driver.fromName lap.driver)) ]
                                 ++ Maybe.withDefault []
                                     (Maybe.map
                                         (\t ->
@@ -242,18 +231,33 @@ body event theCar changes =
                                                 [ text (Duration.toString t) ]
                                             ]
                                         )
-                                        time
+                                        lap.lap.time
                                     )
-                        , case Performance.ofMiniSectors records lap of
-                            Just mini ->
-                                SegmentStrip.miniSectorsRated mini
+                        , case lap.miniSectors of
+                            Just miniSectors ->
+                                SegmentStrip.miniSectorsRated
+                                    (LeMans.initialize (\which -> rate (LeMans.get which miniSectors)))
 
                             Nothing ->
-                                SegmentStrip.sectorsRated rated
+                                SegmentStrip.sectorsRated
+                                    { s1 = rate (Sector.get Sector.S1 lap.sectors)
+                                    , s2 = rate (Sector.get Sector.S2 lap.sectors)
+                                    , s3 = rate (Sector.get Sector.S3 lap.sectors)
+                                    }
                         ]
 
         _ ->
             text described
+
+
+{-| The three times an event's line carries for one stretch of the lap, rated. `Nothing`
+where there is no time to rate, which is a segment the lap has none of.
+
+-}
+rate : TimelineEvent.Rated -> Maybe Performance.RatedTime
+rate rated =
+    Performance.rateTime rated.fastest
+        { time = rated.time, personalBest = rated.personalBest }
 
 
 {-| The moment the event fell, and the last lap the car had completed -- one behind

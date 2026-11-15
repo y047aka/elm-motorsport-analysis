@@ -74,7 +74,7 @@ rawLapDecoder =
         |> optional "miniSectors" (Decode.map Just miniSectorsDecoder) Nothing
         |> required "elapsed" Instant.decoder
         |> required "crossingFinishLineInPit" flagDecoder
-        |> required "pitTime" optionalDurationDecoder
+        |> required "pitTime" Duration.optionalDecoder
         |> required "flagAtFl" flagAtFlDecoder
 
 
@@ -130,7 +130,7 @@ sectorsDecoder =
 
 sectorTimeDecoder : Decoder (Maybe Duration)
 sectorTimeDecoder =
-    Decode.field "time" optionalDurationDecoder
+    Decode.field "time" Duration.optionalDecoder
 
 
 {-| The mini-sector counterpart, on the rounds whose feed splits the lap that
@@ -169,26 +169,13 @@ miniSectorsDecoder =
 miniSectorDecoder : Decoder RawMiniSector
 miniSectorDecoder =
     Decode.succeed RawMiniSector
-        |> required "time" optionalDurationDecoder
-        |> required "elapsed" optionalDurationDecoder
+        |> required "time" Duration.optionalDecoder
+        |> required "elapsed" Duration.optionalDecoder
 
 
 durationDecoder : Decoder Duration
 durationDecoder =
     string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")
-
-
-optionalDurationDecoder : Decoder (Maybe Duration)
-optionalDurationDecoder =
-    string
-        |> Decode.map
-            (\s ->
-                if String.isEmpty s then
-                    Nothing
-
-                else
-                    Duration.fromString s
-            )
 
 
 

@@ -1,6 +1,7 @@
 module Motorsport.Duration exposing
     ( Duration
     , decoder
+    , optionalDecoder
     , toString
     , toStringToSeconds, toStringToTenths
     , fromString, fromStringWithDefault
@@ -10,6 +11,7 @@ module Motorsport.Duration exposing
 
 @docs Duration
 @docs decoder
+@docs optionalDecoder
 @docs toString
 @docs toStringToSeconds, toStringToTenths
 @docs fromString, fromStringWithDefault
@@ -38,6 +40,23 @@ decoder =
 
                     Nothing ->
                         Decode.fail ("Expected a Duration, got \"" ++ str ++ "\"")
+            )
+
+
+{-| A time the feed wrote no time for is the empty string on the wire, and no segment
+of the circuit.
+
+-}
+optionalDecoder : Decoder (Maybe Duration)
+optionalDecoder =
+    Decode.string
+        |> Decode.map
+            (\str ->
+                if String.isEmpty str then
+                    Nothing
+
+                else
+                    fromString str
             )
 
 
