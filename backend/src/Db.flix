@@ -2,11 +2,11 @@
 /// table and no column, so `Db.Jdbc` and `Db.runRecording` are the whole of
 /// what a statement can be sent through.
 ///
-/// `fetch` answers with every cell as text, `None` where the column was
-/// null. The server has the types and the caller knows what it asked for,
-/// so nothing is gained by carrying them across in between.
+/// `fetch` answers with rows, and a cell is the type the driver found it in
+/// rather than the column's own: SQLite types a value, not a column. `Db.Row`
+/// is what a cell can be, and `Sql`'s readings say what they take.
 pub eff SqlRead {
-    def fetch(sql: String, params: List[Db.Value]): Result[Db.Error, List[List[Option[String]]]]
+    def fetch(sql: String, params: List[Db.Value]): Result[Db.Error, List[Db.Row.Row]]
 }
 
 /// `insertMany` binds each row to one statement and answers with the number
@@ -177,8 +177,11 @@ pub mod Db {
         case Boolean(Bool)
         /// The mini-sector shares, in the JSON array the column holds.
         case Json(List[Option[Int32]])
-        /// Nothing, and the SQL type the driver is told to read it as.
-        case Null(NullType)
+        /// Nothing at all, which is what a null column comes back as.
+        case Null
+        /// Nothing, and the SQL type the driver is told to read it as. The type
+        /// is asked for on the way in and never on the way out.
+        case NullOf(NullType)
     }
 
     /// The type a `null` is bound as, which is what JDBC's `setNull` asks for.
@@ -191,7 +194,7 @@ pub mod Db {
     pub def ofNull(option: Option[Value], nullType: NullType): Value =
         match option {
             case Some(value) => value
-            case None        => Value.Null(nullType)
+            case None        => Value.NullOf(nullType)
         }
 
     /// Whether trying the same statement again is worth trying, which the
@@ -328,7 +331,7 @@ pub mod Db {
     /// module outside this one calls: the failure a handler answered with
     /// becomes a `DbErr` here, where the caller's own handlers are installed.
 
-    pub def fetch(sql: String, params: List[Value]): List[List[Option[String]]] \ DbRead =
+    pub def fetch(sql: String, params: List[Value]): List[Db.Row.Row] \ DbRead =
         SqlRead.fetch(sql, params) |> orRaise
 
     pub def execute(sql: String): Unit \ DbWrite =

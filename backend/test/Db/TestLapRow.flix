@@ -144,7 +144,7 @@ pub mod Db.TestLapRow {
         let values = Laps.values(LapRow.fromRawLap(fujiId(), 1, plainLap()));
         Assert.assertTrue(List.take(3, values)
             == Value.Integer(7) :: Value.Integer(1) :: Value.Text("12") :: Nil);
-        Assert.assertTrue(List.last(values) == Some(Value.Null(Db.NullType.Text)))
+        Assert.assertTrue(List.last(values) == Some(Value.NullOf(Db.NullType.Text)))
 
     /// The cells the reading comes back as.
     def cells(): List[Option[String]] =
@@ -156,7 +156,7 @@ pub mod Db.TestLapRow {
 
     @Test
     def theRowIsReadInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        match Sql.decode(Laps.selection(), cells()) {
+        match Sql.decode(Laps.selection(), TestCells.row(cells())) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) =>
                 Assert.assertTrue(Laps.values(row) == Laps.values(LapRow.fromRawLap(fujiId(), 1, plainLap())))
@@ -168,7 +168,7 @@ pub mod Db.TestLapRow {
             List.take(20, cells()),
             Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
-        match Sql.decode(Laps.selection(), withMiniSectors) {
+        match Sql.decode(Laps.selection(), TestCells.row(withMiniSectors)) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }

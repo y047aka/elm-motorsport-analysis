@@ -31,10 +31,10 @@ pub mod Sql.TestTagged {
     @Test
     def theReadingTurnsTheNumberBackIntoWhatTheArmWasAbout(): Unit \ Assert =
         let (_, tag) = Sql.unionAllTagged("k", branches());
-        Assert.assertTrue(Sql.decode(tag, Some("0") :: Nil) == Ok("fastest lap"));
-        Assert.assertTrue(Sql.decode(tag, Some("1") :: Nil) == Ok("slowest lap"));
-        Assert.assertTrue(Sql.decode(tag, Some("2") :: Nil) == Ok("marker 1"));
-        Assert.assertTrue(Sql.decode(tag, Some("4") :: Nil) == Ok("marker 3"))
+        Assert.assertTrue(Sql.decode(tag, TestCells.row(Some("0") :: Nil)) == Ok("fastest lap"));
+        Assert.assertTrue(Sql.decode(tag, TestCells.row(Some("1") :: Nil)) == Ok("slowest lap"));
+        Assert.assertTrue(Sql.decode(tag, TestCells.row(Some("2") :: Nil)) == Ok("marker 1"));
+        Assert.assertTrue(Sql.decode(tag, TestCells.row(Some("4") :: Nil)) == Ok("marker 3"))
 
     @Test
     def theReadingNamesTheColumnTheNumberIsCarriedIn(): Unit \ Assert =
@@ -44,6 +44,6 @@ pub mod Sql.TestTagged {
     @Test
     def aNumberNoArmAnswersToIsAnError(): Unit \ Assert =
         let (_, tag) = Sql.unionAllTagged("k", branches());
-        Assert.assertTrue(Sql.decode(tag, Some("5") :: Nil) == Err(Db.Error.Unread("no arm answers to `k` 5")))
+        Assert.assertTrue(Sql.decode(tag, TestCells.row(Some("5") :: Nil)) == Err(Db.Error.Unread("no arm answers to `k` 5")))
 
 }

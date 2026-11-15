@@ -89,7 +89,7 @@ pub mod Db.TestEntries {
             Entries.values({ entryId = 3, season = 2025, carNumber = "7", class = "HYPERCAR",
                              carGroup = None, team = "Toyota Gazoo Racing", manufacturer = "Toyota" })
                 == Value.Integer(3) :: Value.Integer(2025) :: Value.Text("7") ::
-                   Value.Text("HYPERCAR") :: Value.Null(Db.NullType.Text) ::
+                   Value.Text("HYPERCAR") :: Value.NullOf(Db.NullType.Text) ::
                    Value.Text("Toyota Gazoo Racing") :: Value.Text("Toyota") :: Nil
         )
 

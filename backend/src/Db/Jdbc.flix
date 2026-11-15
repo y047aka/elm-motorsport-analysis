@@ -15,8 +15,9 @@ pub mod Db.Jdbc {
     import org.sqlite.JDBC
 
     use Db.Error
+    use Db.JdbcConvert
+    use Db.Row.Row
     use Db.Savepoint
-    use Db.NullType
     use Db.Value
 
     def batchSize(): Int32 = 1000
@@ -131,45 +132,50 @@ pub mod Db.Jdbc {
             def rollback(k) = k(guarded(() -> endTransaction(conn, c -> c.rollback())))
         }
 
-    def runFetch(conn: Connection, sql: String, params: List[Value]): Result[Error, List[List[Option[String]]]] \ IO =
-        try {
-            let stmt = conn.prepareStatement(sql);
+    /// The statement is closed on every way out, including the one that throws:
+    /// a statement left open holds the read on the database until the process
+    /// ends, which is what a server that answers one request at a time would
+    /// then never come back from.
+    def runFetch(conn: Connection, sql: String, params: List[Value]): Result[Error, List[Row]] \ IO =
+        let stmt = conn.prepareStatement(sql);
+        let outcome = try {
             bind(stmt, params);
             let rs = stmt.executeQuery();
-            let width = rs.getMetaData().getColumnCount();
-            let rows = readRows(rs, width, Nil);
-            rs.close();
-            stmt.close();
-            Ok(rows)
+            Ok(readRows(rs, JdbcConvert.labels(rs), Nil))
         } catch {
             case e: SQLException => Err(refusal(e))
-        }
+        };
+        discard guarded(() -> {
+            stmt.close();
+            Ok()
+        });
+        outcome
 
-    def readRows(rs: ResultSet, width: Int32, acc: List[List[Option[String]]]): List[List[Option[String]]] \ IO =
+    def readRows(rs: ResultSet, names: List[String], acc: List[Row]): List[Row] \ IO =
         if (rs.next())
-            readRows(rs, width, readRow(rs, 1, width, Nil) :: acc)
+            readRows(rs, names, Row.of(names, readCells(rs, 1, List.length(names), Nil)) :: acc)
         else
             List.reverse(acc)
 
-    def readRow(rs: ResultSet, index: Int32, width: Int32, acc: List[Option[String]]): List[Option[String]] \ IO =
+    def readCells(rs: ResultSet, index: Int32, width: Int32, acc: List[Value]): List[Value] \ IO =
         if (index > width)
             List.reverse(acc)
         else
-            readRow(rs, index + 1, width, cell(rs, index) :: acc)
-
-    def cell(rs: ResultSet, index: Int32): Option[String] \ IO =
-        let value = rs.getString(index);
-        if (rs.wasNull()) None else Some(value)
+            readCells(rs, index + 1, width, JdbcConvert.cell(rs, index) :: acc)
 
     def runStatement(conn: Connection, sql: String): Result[Error, Unit] \ IO =
-        try {
-            let stmt = conn.createStatement();
+        let stmt = conn.createStatement();
+        let outcome = try {
             discard stmt.executeUpdate(sql);
-            stmt.close();
             Ok()
         } catch {
             case e: SQLException => Err(refusal(e))
-        }
+        };
+        discard guarded(() -> {
+            stmt.close();
+            Ok()
+        });
+        outcome
 
     /// The rows go out in batches, so a refusal partway through has already
     /// sent some of them. They are undone against a savepoint rather than by
@@ -179,8 +185,8 @@ pub mod Db.Jdbc {
         match savepoint(conn) {
             case Err(e) => Err(e)
             case Ok(mark) =>
+                let pstmt = conn.prepareStatement(sql);
                 let outcome = try {
-                    let pstmt = conn.prepareStatement(sql);
                     let count = List.foldLeft((sent, row) -> {
                         bind(pstmt, row);
                         pstmt.addBatch();
@@ -188,11 +194,14 @@ pub mod Db.Jdbc {
                         sent + 1
                     }, 0, rows);
                     discard pstmt.executeBatch();
-                    pstmt.close();
                     Ok(count)
                 } catch {
                     case e: SQLException => Err(refusal(e))
                 };
+                discard guarded(() -> {
+                    pstmt.close();
+                    Ok()
+                });
                 match outcome {
                     case Ok(count) => release(conn, mark); Ok(count)
                     case Err(e)    => undo(conn, mark); Err(e)
@@ -221,20 +230,7 @@ pub mod Db.Jdbc {
         }
 
     def bind(pstmt: PreparedStatement, values: List[Value]): Unit \ IO =
-        List.forEachWithIndex((index, value) -> bindOne(pstmt, index + 1, value), values)
-
-    def bindOne(pstmt: PreparedStatement, index: Int32, value: Value): Unit \ IO =
-        match value {
-            case Value.Text(s)     => pstmt.setString(index, s)
-            case Value.Integer(n)  => pstmt.setInt(index, n)
-            case Value.Real(n)     => pstmt.setDouble(index, n)
-            case Value.Boolean(b)  => pstmt.setBoolean(index, b)
-            case Value.Json(xs)    => pstmt.setString(index, Db.jsonArray(xs))
-            case Value.Null(t)     => pstmt.setNull(index, match t {
-                case NullType.Text    => Types.VARCHAR
-                case NullType.Integer => Types.INTEGER
-            })
-        }
+        List.forEachWithIndex((index, value) -> JdbcConvert.bind(pstmt, index + 1, value), values)
 
     def endTransaction(conn: Connection, end: Connection -> Unit \ IO): Result[Error, Unit] \ IO =
         try {

@@ -8,9 +8,15 @@ pub mod Db.TestJdbc {
 
     use Db.Jdbc
     use Db.LapRow
+    use Db.Row.Row
     use Db.TestLapRow
     use Motorsport.Calendar.Entry
     use Round.TestSupport
+
+    /// The cells of the rows a fetch answered with. The names beside them are
+    /// the driver's own, and what these tests say is the cells.
+    def cells(rows: Result[Db.Error, List[Row]]): Result[Db.Error, List[List[Value]]] =
+        Result.map(List.map(Row.cells), rows)
 
     def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - Db) + IO =
         match Db.runWithError(() -> Jdbc.withConnection(TestSupport.url(), f)) {
@@ -21,7 +27,9 @@ pub mod Db.TestJdbc {
     @Test
     def aFetchReadsBackTextAndNulls(): Unit \ {Assert, IO} =
         let result = connected(() -> SqlRead.fetch("select 'a', null, 42, null", Nil));
-        Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
+        Assert.assertTrue(cells(result) == Ok(
+            (Value.Text("a") :: Value.Null :: Value.Integer(42) :: Value.Null :: Nil) :: Nil
+        ))
 
     /// What `Db.atomically` marks is SQLite's own savepoint, so this is where
     /// it is driven against one: a round of a load sends rows to several
@@ -45,7 +53,9 @@ pub mod Db.TestJdbc {
                 Db.execute("INSERT INTO t VALUES (4)"));
             SqlRead.fetch("SELECT n FROM t ORDER BY n", Nil)
         });
-        Assert.assertTrue(counted == Ok((Some("1") :: Nil) :: (Some("4") :: Nil) :: Nil))
+        Assert.assertTrue(cells(counted) == Ok(
+            (Value.Integer(1) :: Nil) :: (Value.Integer(4) :: Nil) :: Nil
+        ))
 
     /// SQLite builds an index for a primary key unless the key is the row's
     /// own id, which it is only where the column is declared `integer`. The
@@ -63,15 +73,15 @@ pub mod Db.TestJdbc {
                 "SELECT name FROM sqlite_master WHERE type = 'index'"
                     + " AND name LIKE 'sqlite_autoindex%' ORDER BY name", Nil)
         });
-        Assert.assertTrue(indexes(Db.Rounds.createTable()) == Ok(
-            (Some("sqlite_autoindex_rounds_1") :: Nil) :: Nil
+        Assert.assertTrue(cells(indexes(Db.Rounds.createTable())) == Ok(
+            (Value.Text("sqlite_autoindex_rounds_1") :: Nil) :: Nil
         ));
-        Assert.assertTrue(indexes(Db.Drivers.createTable()) == Ok(
-            (Some("sqlite_autoindex_drivers_1") :: Nil) :: Nil
+        Assert.assertTrue(cells(indexes(Db.Drivers.createTable())) == Ok(
+            (Value.Text("sqlite_autoindex_drivers_1") :: Nil) :: Nil
         ));
-        Assert.assertTrue(indexes(Db.CarDrivers.createTable()) == Ok(Nil));
-        Assert.assertTrue(indexes(Db.Cars.createTable()) == Ok(Nil));
-        Assert.assertTrue(indexes(Db.TimelineEvents.createTable()) == Ok(Nil))
+        Assert.assertTrue(cells(indexes(Db.CarDrivers.createTable())) == Ok(Nil));
+        Assert.assertTrue(cells(indexes(Db.Cars.createTable())) == Ok(Nil));
+        Assert.assertTrue(cells(indexes(Db.TimelineEvents.createTable())) == Ok(Nil))
 
     /// The connection the server answers through.
     @Test
@@ -83,14 +93,14 @@ pub mod Db.TestJdbc {
                 Jdbc.close(conn);
                 value
         };
-        Assert.assertTrue(result == Ok((Some("1") :: Nil) :: Nil))
+        Assert.assertTrue(cells(result) == Ok((Value.Integer(1) :: Nil) :: Nil))
 
     @Test
     def aFetchReadsEveryRowInTheOrderAsked(): Unit \ {Assert, IO} =
         let result = connected(() -> SqlRead.fetch(
             "select n from (select 1 as n union select 2 union select 3) order by n desc", Nil));
-        Assert.assertTrue(result == Ok(
-            (Some("3") :: Nil) :: (Some("2") :: Nil) :: (Some("1") :: Nil) :: Nil
+        Assert.assertTrue(cells(result) == Ok(
+            (Value.Integer(3) :: Nil) :: (Value.Integer(2) :: Nil) :: (Value.Integer(1) :: Nil) :: Nil
         ))
 
     /// A value reaches the database as a binding rather than as text, so a
@@ -100,7 +110,9 @@ pub mod Db.TestJdbc {
     def aFetchBindsItsParameters(): Unit \ {Assert, IO} =
         let result = connected(() -> SqlRead.fetch(
             "select ?, ?", Value.Text("o'brien") :: Value.Integer(42) :: Nil));
-        Assert.assertTrue(result == Ok((Some("o'brien") :: Some("42") :: Nil) :: Nil))
+        Assert.assertTrue(cells(result) == Ok(
+            (Value.Text("o'brien") :: Value.Integer(42) :: Nil) :: Nil
+        ))
 
     /// The load of a round is one statement, so a database that refuses it
     /// leaves none of the round's rows behind rather than some of them.
@@ -120,8 +132,32 @@ pub mod Db.TestJdbc {
                     case Ok(_)  => Assert.assertTrue(false)
                     case Err(_) => Assert.assertTrue(true)
                 };
-                Assert.assertTrue(counted == Ok((Some("1") :: Nil) :: Nil))
+                Assert.assertTrue(cells(counted) == Ok((Value.Integer(1) :: Nil) :: Nil))
             case Err(_) => Assert.assertTrue(false)
+        }
+
+    /// The names come back as the driver reports them, which is what the query
+    /// aliased -- and a column read by name is the one thing position cannot do.
+    @Test
+    def aRowIsReadByTheNameTheQueryGaveIt(): Unit \ {Assert, IO} =
+        let result = connected(() -> SqlRead.fetch("select 42 as answer, 'text' as said", Nil));
+        match Result.map(List.head, result) {
+            case Ok(Some(row)) =>
+                Assert.assertTrue(Row.get(row, "answer") == Some(Value.Integer(42)));
+                Assert.assertTrue(Row.get(row, "said") == Some(Value.Text("text")));
+                Assert.assertTrue(Row.get(row, "absent") == None)
+            case _             => Assert.assertTrue(false)
+        }
+
+    /// An aggregate answers in a number the driver found rather than one the
+    /// schema declared, and a reading takes it without going through text.
+    @Test
+    def aNumberTheDriverFoundIsReadAsOne(): Unit \ {Assert, IO} =
+        let sel = Sql.intOf(Sql.raw("total"));
+        let result = connected(() -> SqlRead.fetch("select 3 + 4 as total", Nil));
+        match Result.map(List.head, result) {
+            case Ok(Some(row)) => Assert.assertTrue(Sql.decode(sel, row) == Ok(7))
+            case _             => Assert.assertTrue(false)
         }
 
     @Test
@@ -160,7 +196,7 @@ pub mod Db.TestJdbc {
     @Test
     def connectingMakesTheDirectoryTheFileNeeds(): Unit \ {Assert, IO} =
         let (path, result) = onFile(() -> SqlRead.fetch("select 1", Nil));
-        Assert.assertTrue(result == Ok((Some("1") :: Nil) :: Nil));
+        Assert.assertTrue(cells(result) == Ok((Value.Integer(1) :: Nil) :: Nil));
         Assert.assertTrue(new File(path).exists());
         remove(path)
 
@@ -169,7 +205,7 @@ pub mod Db.TestJdbc {
     @Test
     def aFileDatabaseIsJournalledForConcurrentReaders(): Unit \ {Assert, IO} =
         let (path, result) = onFile(() -> SqlRead.fetch("PRAGMA journal_mode", Nil));
-        Assert.assertTrue(result == Ok((Some("wal") :: Nil) :: Nil));
+        Assert.assertTrue(cells(result) == Ok((Value.Text("wal") :: Nil) :: Nil));
         remove(path)
 
     /// Two connections at once, which an in-memory database cannot be: each
@@ -179,7 +215,7 @@ pub mod Db.TestJdbc {
         let (path, written) = onFile(() -> Db.runWithError(() -> Db.transact(load)));
         let readBack = counted(path);
         Assert.assertTrue(written == Ok(1));
-        Assert.assertTrue(readBack == Ok((Some("1") :: Nil) :: Nil));
+        Assert.assertTrue(cells(readBack) == Ok((Value.Integer(1) :: Nil) :: Nil));
         remove(path)
 
     /// What a run that stopped partway left is what it started from: the
@@ -217,7 +253,7 @@ pub mod Db.TestJdbc {
         Laps.insertRows(LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil))
 
     /// From a connection of its own, so what it counts is what was committed.
-    def counted(path: String): Result[Db.Error, List[List[Option[String]]]] \ IO =
+    def counted(path: String): Result[Db.Error, List[Row]] \ IO =
         match Jdbc.connect("jdbc:sqlite:${path}") {
             case Err(e)   => Err(e)
             case Ok(conn) =>
