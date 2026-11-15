@@ -231,9 +231,26 @@ lapDetailDecoder =
 ratedDecoder : Decoder Rated
 ratedDecoder =
     Decode.map3 Rated
-        (field "time" Duration.optionalDecoder)
-        (field "fastest" Duration.optionalDecoder)
-        (field "personalBest" Duration.optionalDecoder)
+        (field "time" optionalDurationDecoder)
+        (field "fastest" optionalDurationDecoder)
+        (field "personalBest" optionalDurationDecoder)
+
+
+{-| A time the feed wrote none for is the empty string on the wire, and no segment of
+the circuit.
+
+-}
+optionalDurationDecoder : Decoder (Maybe Duration)
+optionalDurationDecoder =
+    string
+        |> Decode.map
+            (\s ->
+                if String.isEmpty s then
+                    Nothing
+
+                else
+                    Duration.fromString s
+            )
 
 
 ratedBySectorDecoder : Decoder (BySector Rated)

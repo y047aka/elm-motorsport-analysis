@@ -133,11 +133,25 @@ holderDecoder =
     Decode.map2 Tuple.pair
         (field "elapsed" Instant.decoder)
         (Decode.map4 Holder
-            (field "time" Duration.decoder)
+            (field "time" durationDecoder)
             (field "carNumber" Decode.string)
             (field "lap" Decode.int)
             (field "driver" (Decode.map Driver.fromName Decode.string))
         )
+
+
+durationDecoder : Decoder Duration
+durationDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case Duration.fromString str of
+                    Just duration ->
+                        Decode.succeed duration
+
+                    Nothing ->
+                        Decode.fail ("Expected a Duration, got \"" ++ str ++ "\"")
+            )
 
 
 {-| The records as they stood at a moment of the race: what a car crossing the
