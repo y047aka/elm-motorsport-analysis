@@ -9,6 +9,7 @@
 /// taking an `Option` is the nullable one.
 pub mod Db.Schema {
 
+    use Db.NullType
     use Db.Value
     use Sql.Sel
 
@@ -185,12 +186,15 @@ pub mod Db.Schema {
         column(name, "int not null", row -> Value.Boolean(get(row)), Sql.bool)
 
     pub def nullableText(name: String, get: r -> Option[String]): Column[r, Option[String]] =
-        column(name, "text", row -> Value.NullableText(get(row)), Sql.optionalText)
+        column(name, "text",
+            row -> Db.ofNull(get(row) |> Option.map(Value.Text), NullType.Text), Sql.optionalText)
 
     pub def nullableInteger(name: String, get: r -> Option[Int32]): Column[r, Option[Int32]] =
-        column(name, "int", row -> Value.NullableInteger(get(row)), Sql.optionalInt)
+        column(name, "int",
+            row -> Db.ofNull(get(row) |> Option.map(Value.Integer), NullType.Integer), Sql.optionalInt)
 
     pub def nullableIntArray(name: String, get: r -> Option[List[Option[Int32]]]): Column[r, Option[List[Option[Int32]]]] =
-        column(name, "text", row -> Value.NullableIntArray(get(row)), Sql.optionalIntArray)
+        column(name, "text",
+            row -> Db.ofNull(get(row) |> Option.map(Value.Json), NullType.Text), Sql.optionalIntArray)
 
 }

@@ -144,7 +144,7 @@ pub mod Db.TestLapRow {
         let values = Laps.values(LapRow.fromRawLap(fujiId(), 1, plainLap()));
         Assert.assertTrue(List.take(3, values)
             == Value.Integer(7) :: Value.Integer(1) :: Value.Text("12") :: Nil);
-        Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
+        Assert.assertTrue(List.last(values) == Some(Value.Null(Db.NullType.Text)))
 
     /// The cells the reading comes back as.
     def cells(): List[Option[String]] =

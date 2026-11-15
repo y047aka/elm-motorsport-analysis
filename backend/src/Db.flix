@@ -164,15 +164,35 @@ pub mod Db {
         case Failure.Permanent(error) => raise(error)
     }
 
-    /// A value bound to a `?`, in the type its column or comparison has.
+    /// A value a `?` binds, or a cell came back as, in the type the driver
+    /// answered in.
+    ///
+    /// SQLite's typing is per value rather than per column, so a cell is what
+    /// the driver found and not what the schema declared: a reading takes what
+    /// it can and says what it wanted in the failure it answers with.
     pub enum Value with Eq, ToString {
         case Text(String)
         case Integer(Int32)
+        case Real(Float64)
         case Boolean(Bool)
-        case NullableText(Option[String])
-        case NullableInteger(Option[Int32])
-        case NullableIntArray(Option[List[Option[Int32]]])
+        /// The mini-sector shares, in the JSON array the column holds.
+        case Json(List[Option[Int32]])
+        /// Nothing, and the SQL type the driver is told to read it as.
+        case Null(NullType)
     }
+
+    /// The type a `null` is bound as, which is what JDBC's `setNull` asks for.
+    pub enum NullType with Eq, ToString {
+        case Text
+        case Integer
+    }
+
+    /// A value that may be absent, which is what a nullable column binds.
+    pub def ofNull(option: Option[Value], nullType: NullType): Value =
+        match option {
+            case Some(value) => value
+            case None        => Value.Null(nullType)
+        }
 
     /// Whether trying the same statement again is worth trying, which the
     /// constructor says.

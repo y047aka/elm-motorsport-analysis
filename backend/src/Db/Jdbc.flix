@@ -16,6 +16,7 @@ pub mod Db.Jdbc {
 
     use Db.Error
     use Db.Savepoint
+    use Db.NullType
     use Db.Value
 
     def batchSize(): Int32 = 1000
@@ -224,21 +225,15 @@ pub mod Db.Jdbc {
 
     def bindOne(pstmt: PreparedStatement, index: Int32, value: Value): Unit \ IO =
         match value {
-            case Value.Text(s)    => pstmt.setString(index, s)
-            case Value.Integer(n) => pstmt.setInt(index, n)
-            case Value.Boolean(b) => pstmt.setBoolean(index, b)
-            case Value.NullableText(o) => match o {
-                case Some(s) => pstmt.setString(index, s)
-                case None    => pstmt.setNull(index, Types.VARCHAR)
-            }
-            case Value.NullableInteger(o) => match o {
-                case Some(n) => pstmt.setInt(index, n)
-                case None    => pstmt.setNull(index, Types.INTEGER)
-            }
-            case Value.NullableIntArray(o) => match o {
-                case Some(xs) => pstmt.setString(index, Db.jsonArray(xs))
-                case None     => pstmt.setNull(index, Types.VARCHAR)
-            }
+            case Value.Text(s)     => pstmt.setString(index, s)
+            case Value.Integer(n)  => pstmt.setInt(index, n)
+            case Value.Real(n)     => pstmt.setDouble(index, n)
+            case Value.Boolean(b)  => pstmt.setBoolean(index, b)
+            case Value.Json(xs)    => pstmt.setString(index, Db.jsonArray(xs))
+            case Value.Null(t)     => pstmt.setNull(index, match t {
+                case NullType.Text    => Types.VARCHAR
+                case NullType.Integer => Types.INTEGER
+            })
         }
 
     def endTransaction(conn: Connection, end: Connection -> Unit \ IO): Result[Error, Unit] \ IO =
