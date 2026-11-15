@@ -181,19 +181,19 @@ pub mod Cli.Load {
         rawLaps: List[RawLap]
     ): Loaded \ Db =
         match Rounds.idIn(rounds, task#entry) {
-            case None => DbErr.fail(Db.Error.Incomplete(
+            case None => DbErr.raise(Db.Error.Incomplete(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
             case Some(roundId) =>
                 discard Drivers.insertRows(newDrivers);
                 let entries = Entries.insertRows(newEntries);
                 match CarDrivers.fromSeats(roundId, numbering#drivers, seats) {
-                    case None => DbErr.fail(Db.Error.Incomplete(
+                    case None => DbErr.raise(Db.Error.Incomplete(
                         "round ${FileTask.label(task)} names a driver the run did not number"))
                     case Some(seatRows) =>
                         let seatCount = CarDrivers.insertRows(seatRows);
                         match CarRow.fromRawLaps(
                                 roundId, task#entry#season, numbering#entries, rawLaps) {
-                            case None => DbErr.fail(Db.Error.Incomplete(
+                            case None => DbErr.raise(Db.Error.Incomplete(
                                 "round ${FileTask.label(task)} names a car the run did not number"))
                             case Some(carRows) =>
                                 let cars = Cars.insertRows(carRows);

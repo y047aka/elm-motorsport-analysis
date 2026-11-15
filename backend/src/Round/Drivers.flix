@@ -43,7 +43,7 @@ pub mod Round.Drivers {
     pub def nameOf(seats: Seats, carNumber: String, driverNumber: Int32): String \ DbErr =
         match Map.get((carNumber, driverNumber), seats) {
             case Some(name) => name
-            case None       => DbErr.fail(Db.Error.Incomplete(
+            case None       => DbErr.raise(Db.Error.Incomplete(
                 "car ${carNumber} has laps from driver ${driverNumber}"
                     + " but is not one of the round's seats"))
         }

@@ -38,7 +38,7 @@ def loadAndExport(csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> Int32 \ ef): Int32 \ (ef - {SqlRead, SqlWrite, DbErr}) + Env + IO + Console =
+def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> Int32 \ ef): Int32 \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + Env + IO + Console =
     match Result.traverseX(checkDirectory, dirs) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");

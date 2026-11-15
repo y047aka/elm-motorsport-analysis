@@ -388,7 +388,7 @@ pub mod Sql {
         let Query.Query(_, sel) = q;
         match fetched(q) {
             case row :: _ => Db.orRaise(decode(sel, row))
-            case Nil      => DbErr.fail(Error.NoRow(subject))
+            case Nil      => DbErr.raise(Error.NoRow(subject))
         }
 
     def fetched(q: Query[a]): List[List[Option[String]]] \ DbRead =

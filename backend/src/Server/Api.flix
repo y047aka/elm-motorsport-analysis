@@ -91,7 +91,7 @@ pub mod Server.Api {
     def notFound(reason: String): Response =
         { status = 404, contentType = "text/plain", body = reason, cause = None }
 
-    def body(contentType: String, render: Unit -> Option[String] \ ef): Response \ (ef - DbErr) =
+    def body(contentType: String, render: Unit -> Option[String] \ ef): Response \ (ef - {TransientDbErr, DbErr}) =
         match Db.runWithError(render) {
             case Ok(Some(rendered)) => ok(contentType, rendered)
             case Ok(None)           => notFound("round not loaded")

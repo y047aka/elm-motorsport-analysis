@@ -22,7 +22,7 @@ pub eff SqlWrite {
     def rollback(): Result[Db.Error, Unit]
 }
 
-/// What ends the reading it happened in. `fail` does not return, so a
+/// What ends the reading it happened in. `raise` does not return, so a
 /// function reaching the database answers with what it read and not with
 /// whether it could: the failure travels to `Db.runWithError` on its own.
 ///
@@ -30,14 +30,28 @@ pub eff SqlWrite {
 /// evaluated outside the `run` it belongs to, so a failure raised in one would
 /// pass every handler the caller had installed. `Db.orRaise` is where the
 /// value becomes this, in the caller's own context.
+///
+/// One operation rather than one per kind, so that a kind added to `Db.Error`
+/// breaks the code that matches on it and not every handler ever installed.
 pub eff DbErr {
-    def fail(error: Db.Error): Void
+    def raise(error: Db.Error): Void
 }
 
-/// What a signature says, which is the pair of a statement and its failing.
-pub type alias DbRead = {SqlRead, DbErr}
-pub type alias DbWrite = {SqlWrite, DbErr}
-pub type alias Db = {SqlRead, SqlWrite, DbErr}
+/// The failures that trying the same thing again may get past, which is the
+/// line between a round that cannot be served now and one that cannot be
+/// served at all.
+///
+/// Apart from `DbErr` rather than one case inside it because a caller that
+/// wants to try again -- and only such a caller -- installs this one and lets
+/// the rest through.
+pub eff TransientDbErr {
+    def raise(error: Db.Error): Void
+}
+
+/// What a signature says, which is a statement and both of its failings.
+pub type alias DbRead = {SqlRead, TransientDbErr, DbErr}
+pub type alias DbWrite = {SqlWrite, TransientDbErr, DbErr}
+pub type alias Db = {SqlRead, SqlWrite, TransientDbErr, DbErr}
 
 pub mod Db {
 
@@ -87,6 +101,18 @@ pub mod Db {
         case NullableIntArray(Option[List[Option[Int32]]])
     }
 
+    /// Whether trying the same statement again is worth trying: a lock that
+    /// was waited out, and no database reached at all.
+    pub def isTransient(error: Error): Bool = match error {
+        case Error.Busy(_)        => true
+        case Error.Unreachable(_) => true
+        case _                    => false
+    }
+
+    /// The failure, as whichever of the two effects carries it.
+    pub def raise(error: Error): a \ {TransientDbErr, DbErr} =
+        if (isTransient(error)) TransientDbErr.raise(error) else DbErr.raise(error)
+
     /// The text a nullable-int-array column holds, which `json_each` reads
     /// back as one row per element.
     pub def jsonArray(values: List[Option[Int32]]): String =
@@ -96,19 +122,23 @@ pub mod Db {
         }) |> List.join(",")) + "]"
 
     /// The value, or the failure that ended the reading.
-    pub def runWithError(f: Unit -> a \ ef): Result[Error, a] \ (ef - DbErr) =
+    pub def runWithError(f: Unit -> a \ ef): Result[Error, a] \ (ef - {TransientDbErr, DbErr}) =
         run {
-            Ok(f())
-        } with handler DbErr {
-            def fail(error, _k) = Err(error)
+            run {
+                Ok(f())
+            } with handler DbErr {
+                def raise(error, _k) = Err(error)
+            }
+        } with handler TransientDbErr {
+            def raise(error, _k) = Err(error)
         }
 
     /// What a statement answered, as the value it read or as a failure of the
     /// caller's own.
-    pub def orRaise(result: Result[Error, a]): a \ DbErr =
+    pub def orRaise(result: Result[Error, a]): a \ {TransientDbErr, DbErr} =
         match result {
             case Ok(value) => value
-            case Err(e)    => DbErr.fail(e)
+            case Err(e)    => raise(e)
         }
 
     // ------------------------------------------------------- the statements
@@ -141,10 +171,10 @@ pub mod Db {
     /// A run that dies before answering commits nothing, which is what makes a
     /// rebuild of the table safe to interrupt: the `DROP TABLE` it starts with
     /// is undone with the rows it did not finish loading.
-    pub def transact(f: Unit -> a \ ef): a \ (ef - DbErr) + DbWrite =
+    pub def transact(f: Unit -> a \ ef): a \ (ef - {TransientDbErr, DbErr}) + DbWrite =
         match runWithError(f) {
             case Ok(value) => commit(); value
-            case Err(e)    => rollback(); DbErr.fail(e)
+            case Err(e)    => rollback(); raise(e)
         }
 
     /// As `transact`, of a part of one: the statements `f` sends are undone
@@ -155,11 +185,11 @@ pub mod Db {
     /// statement -- which is what `runRecording` keeps and `runFailing`
     /// refuses, like every other. `Db.Jdbc` marks one of the driver's per
     /// insert, and that is the batch's alone.
-    pub def atomically(name: String, f: Unit -> a \ ef): a \ (ef - DbErr) + DbWrite =
+    pub def atomically(name: String, f: Unit -> a \ ef): a \ (ef - {TransientDbErr, DbErr}) + DbWrite =
         execute("SAVEPOINT ${name}");
         match runWithError(f) {
             case Ok(value) => execute("RELEASE ${name}"); value
-            case Err(e)    => undo(name); DbErr.fail(e)
+            case Err(e)    => undo(name); raise(e)
         }
 
     /// As `rollback`: what a failure is taken back with says nothing the

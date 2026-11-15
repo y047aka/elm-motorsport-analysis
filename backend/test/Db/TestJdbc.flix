@@ -12,7 +12,7 @@ pub mod Db.TestJdbc {
     use Motorsport.Calendar.Entry
     use Round.TestSupport
 
-    def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
+    def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + IO =
         match Db.runWithError(() -> Jdbc.withConnection(TestSupport.url(), f)) {
             case Ok(result) => result
             case Err(e)     => Err(e)
@@ -50,7 +50,7 @@ pub mod Db.TestJdbc {
             discard (Db.runWithError(() -> Db.atomically("round", () -> {
                 Db.execute("INSERT INTO t VALUES (2)");
                 Db.execute("INSERT INTO t VALUES (3)");
-                DbErr.fail(refused)
+                DbErr.raise(refused)
             })): Result[Db.Error, Unit]);
             discard Db.runWithError(() -> Db.atomically("round", () ->
                 Db.execute("INSERT INTO t VALUES (4)")));
@@ -148,7 +148,7 @@ pub mod Db.TestJdbc {
 
     /// A database of its own per test, under a directory that does not exist,
     /// which is what a working copy's `.db` is on a first run.
-    def onFile(f: Unit -> Result[Db.Error, a] \ ef): (String, Result[Db.Error, a]) \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
+    def onFile(f: Unit -> Result[Db.Error, a] \ ef): (String, Result[Db.Error, a]) \ (ef - {SqlRead, SqlWrite, TransientDbErr, DbErr}) + IO =
         let stem = File.createTempFile("motorsport-test", "");
         discard stem.delete();
         let path = "${stem.getPath()}/motorsport.sqlite";
@@ -221,7 +221,7 @@ pub mod Db.TestJdbc {
     /// with an error.
     def refuse(): Int32 \ DbWrite =
         discard load();
-        DbErr.fail(Db.Error.Incomplete("the round was not what it should have been"))
+        DbErr.raise(Db.Error.Incomplete("the round was not what it should have been"))
 
     def load(): Int32 \ DbWrite =
         Laps.create();

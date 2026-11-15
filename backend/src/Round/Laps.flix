@@ -48,17 +48,17 @@ pub mod Round.Laps {
     def placeInField(): String =
         "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) - 1"
 
-    def placed(cars: Map[String, RawCar], seats: Seats): ((LapRow, Int32)) -> Placed \ DbErr =
+    def placed(cars: Map[String, RawCar], seats: Seats): ((LapRow, Int32)) -> Placed \ {DbErr, TransientDbErr} =
         row -> match row {
             case (lap, position) => { lap = rawLap(cars, seats)(lap), position = position }
         }
 
     /// A car with laps and no row in `cars` is a round loaded by halves, which
     /// is the one thing a lap cannot say for itself.
-    def rawLap(cars: Map[String, RawCar], seats: Seats): LapRow -> RawLap \ DbErr =
+    def rawLap(cars: Map[String, RawCar], seats: Seats): LapRow -> RawLap \ {DbErr, TransientDbErr} =
         row ->
             match Map.get(row#carNumber, cars) {
-                case None      => DbErr.fail(Db.Error.Incomplete(
+                case None      => DbErr.raise(Db.Error.Incomplete(
                     "car ${row#carNumber} has laps but is not one of the round's cars"))
                 case Some(car) =>
                     let driver = Drivers.nameOf(seats, row#carNumber, row#driverNumber);

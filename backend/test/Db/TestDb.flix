@@ -38,7 +38,7 @@ pub mod Db.TestDb {
     def aFailureInsideIsTakenBackToTheMark(): Unit \ Assert =
         let refused = Db.Error.Incomplete("the round was not what it should have been");
         let (result, statements) = Db.runRecording(() ->
-            (Db.runWithError(() -> Db.atomically("round", () -> DbErr.fail(refused))):
+            (Db.runWithError(() -> Db.atomically("round", () -> DbErr.raise(refused))):
                 Result[Db.Error, Unit]));
         Assert.assertTrue(result == Err(refused));
         Assert.assertTrue(
@@ -106,7 +106,7 @@ pub mod Db.TestDb {
         let (result, statements) = Db.runRecording(() -> Db.runWithError(() ->
             Db.transact(() -> {
                 discard Laps.insertRows(sampleRows());
-                (DbErr.fail(Db.Error.Incomplete("the round was not what it should have been")): Int32)
+                (DbErr.raise(Db.Error.Incomplete("the round was not what it should have been")): Int32)
             })));
         Assert.assertTrue(result == Err(Db.Error.Incomplete("the round was not what it should have been")));
         match statements {
