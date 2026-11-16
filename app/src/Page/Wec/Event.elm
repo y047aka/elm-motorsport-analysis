@@ -376,7 +376,7 @@ expandedTracker cell rowGrip toggle model track snapshot =
     div [ Attributes.class cell, attribute "data-tracker-row" "" ]
         [ trackerFrame "data-tracker-expanded"
             (TrackMap3d.surface { model = model, toMsg = Track3dMsg, track = track, snapshot = snapshot })
-            (toggle :: TrackMap3d.controls Track3dMsg)
+            [ toggle ]
         , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-content-center" ]
             [ rowGrip ]
         ]

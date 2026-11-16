@@ -59,7 +59,7 @@ init =
 
 {-| `Grab` and `Turn` carry the pointer's own page position, and `Turn` turns the map
 by the travel since the last turn -- so how far it goes is the reader's drag and
-nothing else's. `Step` turns by radians. `Reset` is `init` with the pointer kept.
+nothing else's. `Step` turns by radians.
 
 -}
 type Msg
@@ -68,7 +68,6 @@ type Msg
     | Release
     | Cancel
     | Step Float Float
-    | Reset
 
 
 update : Msg -> Model -> Model
@@ -97,9 +96,6 @@ update msg m =
 
         Step dAzimuth dElevation ->
             { m | azimuth = m.azimuth + dAzimuth, elevation = lifted (m.elevation + dElevation) }
-
-        Reset ->
-            { init | drag = m.drag }
 
 
 {-| Radians per pixel of the pointer's travel.

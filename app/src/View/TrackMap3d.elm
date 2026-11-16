@@ -1,18 +1,17 @@
-module View.TrackMap3d exposing (Config, controls, surface)
+module View.TrackMap3d exposing (Config, surface)
 
-{-| The track map raised in space, the pointer that turns it, and the press that turns
-it back to where it opened.
+{-| The track map raised in space and the pointer that turns it.
 
 The surface is a `drag-handle`: turned without pointer capture, the map stops the
 moment the pointer leaves the card -- which a turn round the lap does, twice.
 
-@docs Config, controls, surface
+@docs Config, surface
 
 -}
 
-import Html exposing (Html, button, text)
-import Html.Attributes as Attributes exposing (attribute, class)
-import Html.Events exposing (on, onClick, preventDefaultOn)
+import Html exposing (Html)
+import Html.Attributes exposing (attribute, class)
+import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Chart.Tracker exposing (Track)
 import Motorsport.Chart.Tracker3d as Track3d exposing (Model, Msg)
@@ -118,21 +117,3 @@ keys toMsg =
 keyStep : Float
 keyStep =
     degrees 5
-
-
-{-| The press that stands over the map: the way back to where the map opened.
--}
-controls : (Msg -> msg) -> List (Html msg)
-controls toMsg =
-    [ control "⟲" "Turn the map back to where it started" Track3d.Reset toMsg ]
-
-
-control : String -> String -> Msg -> (Msg -> msg) -> Html msg
-control glyph label msg toMsg =
-    button
-        [ onClick (toMsg msg)
-        , attribute "aria-label" label
-        , Attributes.title label
-        , class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        ]
-        [ text glyph ]

@@ -38,15 +38,6 @@ tests =
                         , \_ -> Expect.within (Expect.Absolute 0.0001) released.azimuth ((drag 120 -60).azimuth)
                         ]
                         ()
-            , test "reset returns to the angle the map opened at" <|
-                \_ ->
-                    let
-                        m =
-                            Tracker3d.update Tracker3d.Reset (drag 300 200)
-                    in
-                    Expect.equal
-                        { azimuth = Tracker3d.init.azimuth, elevation = Tracker3d.init.elevation }
-                        { azimuth = m.azimuth, elevation = m.elevation }
             , fuzz2 Fuzz.float Fuzz.float "the eye stops short of the frame that turns the circuit over" <|
                 \dx dy ->
                     Expect.within (Expect.Absolute 0.0001)
