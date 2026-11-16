@@ -2,7 +2,7 @@ module Drag exposing (State, Msg(..), Carry, Done, init, update, carrying, trave
 
 {-| The state of one thing being carried by a pointer: picked up, tracked,
 let go of, or taken away by the browser. The thing carried is whatever the
-caller names -- a column, the width a grip found -- and rides along untouched,
+caller names -- a column, the size a grip found -- and rides along untouched,
 coming back with the pointer's travel when the carry ends.
 
 `Drag.Handle` is the event source this is read from: the grip reports a
@@ -114,11 +114,11 @@ update msg state =
 
 
 endsWith : Float -> Int -> State location -> ( State location, Maybe (Done location) )
-endsWith x pointerId state =
+endsWith along pointerId state =
     case state of
         Dragging carry ->
             if carry.pointerId == pointerId then
-                ( Idle, Just { location = carry.location, travel = x - carry.from } )
+                ( Idle, Just { location = carry.location, travel = along - carry.from } )
 
             else
                 ( state, Nothing )
