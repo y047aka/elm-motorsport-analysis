@@ -203,51 +203,60 @@ The strip under it is rated against the records as they stood when the lap was s
 -}
 body : TimelineEvent -> Maybe Car -> Html msg
 body event theCar =
-    let
-        described =
-            TimelineEvent.describe event.eventType
-    in
     case ( event.eventType, theCar ) of
+        -- The one arm that reads the car, for the two names the handover is between.
+        -- With no car row it says the generic line.
         ( CarEvent _ DriverChange, Just car ) ->
             TimelineEvent.handover car event
                 |> Maybe.map (\( handedOver, tookOver ) -> Driver.toHandover handedOver tookOver)
-                |> Maybe.withDefault described
+                |> Maybe.withDefault (TimelineEvent.describe event.eventType)
                 |> text
 
         ( CarEvent _ FastestLap, _ ) ->
-            case event.lap of
-                Nothing ->
-                    text "Class Fastest Lap"
-
-                Just lap ->
-                    div [ Attributes.class "grid gap-y-1" ]
-                        [ span [] <|
-                            [ text ("Class Fastest Lap · " ++ Driver.toInitialAndSurname (Driver.fromName lap.driver)) ]
-                                ++ Maybe.withDefault []
-                                    (Maybe.map
-                                        (\t ->
-                                            [ text " · "
-                                            , span [ Attributes.style "color" (Performance.textColorOf Performance.Fastest) ]
-                                                [ text (Duration.toString t) ]
-                                            ]
-                                        )
-                                        lap.lap.time
-                                    )
-                        , case lap.miniSectors of
-                            Just miniSectors ->
-                                SegmentStrip.miniSectorsRated
-                                    (LeMans.initialize (\which -> rate (LeMans.get which miniSectors)))
-
-                            Nothing ->
-                                SegmentStrip.sectorsRated
-                                    { s1 = rate (Sector.get Sector.S1 lap.sectors)
-                                    , s2 = rate (Sector.get Sector.S2 lap.sectors)
-                                    , s3 = rate (Sector.get Sector.S3 lap.sectors)
-                                    }
-                        ]
+            fastestLap event
 
         _ ->
-            text described
+            text (TimelineEvent.describe event.eventType)
+
+
+{-| The fastest lap: the driver, the time, and the segments it ran. It takes no car --
+everything here is off the event's own `lap`, which the backend attached -- so a lap
+keeps its strip even where the field has no row for the car, and asks the field for
+nothing a second time.
+
+-}
+fastestLap : TimelineEvent -> Html msg
+fastestLap event =
+    case event.lap of
+        Nothing ->
+            text "Class Fastest Lap"
+
+        Just lap ->
+            div [ Attributes.class "grid gap-y-1" ]
+                [ span [] <|
+                    [ text ("Class Fastest Lap · " ++ Driver.toInitialAndSurname (Driver.fromName lap.driver)) ]
+                        ++ Maybe.withDefault []
+                            (Maybe.map
+                                (\t ->
+                                    [ text " · "
+                                    , span [ Attributes.style "color" (Performance.textColorOf Performance.Fastest) ]
+                                        [ text (Duration.toString t) ]
+                                    ]
+                                )
+                                lap.lap.time
+                            )
+                , case lap.miniSectors of
+                    Just miniSectors ->
+                        SegmentStrip.miniSectorsRated
+                            (LeMans.initialize (\which -> rate (LeMans.get which miniSectors)))
+
+                    Nothing ->
+                        SegmentStrip.sectorsRated
+                            { s1 = rate (Sector.get Sector.S1 lap.sectors)
+                            , s2 = rate (Sector.get Sector.S2 lap.sectors)
+                            , s3 = rate (Sector.get Sector.S3 lap.sectors)
+                            }
+                ]
 
 
 {-| `Nothing` where there is no time to rate, which is a segment the lap has none of.
