@@ -58,13 +58,29 @@ pub mod Round.TestTimeline {
     def named(what: String, events: List[Event]): List[(String, String, String)] =
         events |> List.map(shape) |> List.filter(match (_, kind, _) -> kind == what)
 
-    /// `(when, whose, which lap)` for every event that names a lap -- which a
-    /// fastest lap is and nothing else is.
+    /// `(when, whose, which lap)` for every car event, each naming the lap it fell on.
     def lapsNamed(events: List[Event]): List[(String, String, Int32)] =
         events |> List.filterMap(event -> match (event#eventType, event#lap) {
             case (EventType.Of(carNumber, _), Some(lap)) =>
                 Some((Util.Duration.format(event#elapsed), carNumber, lap))
             case _ => None
+        })
+
+    /// The same, for one kind of car event -- which is what a test asking which laps
+    /// the fastest laps fell on wants, now every car event names one.
+    def lapsNamedAs(what: String, events: List[Event]): List[(String, String, Int32)] =
+        events |> List.filterMap(event -> match (event#eventType, event#lap) {
+            case (EventType.Of(carNumber, carEvent), Some(lap)) if name(carEvent) == what =>
+                Some((Util.Duration.format(event#elapsed), carNumber, lap))
+            case _ => None
+        })
+
+    /// Which car events name no lap. None is the answer the app leans on: its stamp
+    /// prints a lap for every car event, and only a flag or the start is on nobody's.
+    def carEventsWithoutALap(events: List[Event]): List[String] =
+        events |> List.filterMap(event -> match (event#eventType, event#lap) {
+            case (EventType.Of(carNumber, _), None) => Some(carNumber)
+            case _                                  => None
         })
 
     /// Either of the two events a change of the lead is worth, which is what a test
@@ -499,7 +515,7 @@ pub mod Round.TestTimeline {
             gtTimedLap("90", 3, "6:28.000", "2:08.000") ::
             timedLap("7", 4, "8:02.000", "2:00.000") ::
             Nil);
-        Assert.assertTrue(lapsNamed(events) ==
+        Assert.assertTrue(lapsNamedAs("fastestLap", events) ==
             ("4:02.000", "7", 2) ::
             ("4:20.000", "90", 2) ::
             ("6:02.000", "7", 3) ::
@@ -609,7 +625,7 @@ pub mod Round.TestTimeline {
             Nil,
             () -> (Timeline.read(entry()), Timeline.fromLaps(entry(), duration("1:00:00.000"))));
         Assert.assertTrue(lapsNamed(readBack) == lapsNamed(counted));
-        Assert.assertTrue(lapsNamed(readBack) ==
+        Assert.assertTrue(lapsNamedAs("fastestLap", readBack) ==
             ("4:02.000", "7", 2) :: ("6:02.000", "7", 3) :: Nil)
 
     @Test
@@ -624,6 +640,17 @@ pub mod Round.TestTimeline {
                 Assert.assertTrue(named("finished", readBack) ==
                     ("1:30:00.000", "finished", "7") :: ("1:31:00.000", "finished", "8") :: Nil);
                 Assert.assertTrue(named("retired", readBack) == ("32:00.000", "retired", "9") :: Nil)
+        }
+
+    /// Every car event names the lap it fell on, both as the load wrote the rows and as
+    /// the round reads them back -- which is what lets the app's stamp print a lap for a
+    /// stop or a flag-side event without walking that car's laps to find one.
+    @Test
+    def everyCarEventNamesTheLapItFellOn(): Unit \ {Assert, IO} =
+        match loadedAndCounted() {
+            case (readBack, counted) =>
+                Assert.assertTrue(carEventsWithoutALap(counted) == Nil);
+                Assert.assertTrue(carEventsWithoutALap(readBack) == Nil)
         }
 
 }

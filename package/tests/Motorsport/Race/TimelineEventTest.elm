@@ -106,8 +106,7 @@ lapDetail =
                     |> Expect.equal
                         (Ok
                             (Just
-                                { number = 2
-                                , driver = "Philip HANSON"
+                                { driver = "Philip HANSON"
                                 , lap = rated "3:08.310" "3:08.310" "3:08.310"
                                 , sectors =
                                     { s1 = rated "40.152" "40.152" "40.152"
@@ -233,6 +232,7 @@ changeAt : Int -> TimelineEvent.TimelineEvent
 changeAt ms =
     { elapsed = Instant.fromDuration ms
     , eventType = CarEvent "7" DriverChange
+    , lapNumber = Nothing
     , lap = Nothing
     }
 

@@ -34,6 +34,7 @@ import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 type alias TimelineEvent =
     { elapsed : Instant
     , eventType : EventType
+    , lapNumber : Maybe Int
     , lap : Maybe LapDetail
     }
 
@@ -51,8 +52,7 @@ different fact: a surveyed circuit can be timed no finer than three sectors.
 
 -}
 type alias LapDetail =
-    { number : Int
-    , driver : String
+    { driver : String
     , lap : Rated
     , sectors : BySector Rated
     , miniSectors : Maybe (ByMiniSector Rated)
@@ -197,12 +197,14 @@ but the race's own start -- whose it was.
 -}
 decoder : Decoder TimelineEvent
 decoder =
-    Decode.map3 TimelineEvent
+    Decode.map4 TimelineEvent
         (field "elapsed" Instant.decoder)
         (field "event" string |> Decode.andThen eventTypeDecoder)
+        (Decode.maybe (field "lap" Decode.int))
         -- The number is what the detail is read from, so a `lap` reading as an int
         -- with no `performance` beside it is a bad line rather than a plain event. One
-        -- that is not an int is no `lap` at all, and reads as a plain event.
+        -- that is not an int is no `lap` at all, and reads as a plain event with no
+        -- number either.
         (Decode.maybe (field "lap" Decode.int)
             |> Decode.andThen
                 (\number ->
@@ -222,8 +224,7 @@ of its own.
 -}
 lapDetailDecoder : Decoder LapDetail
 lapDetailDecoder =
-    Decode.map5 LapDetail
-        (field "lap" Decode.int)
+    Decode.map4 LapDetail
         (field "driver" Decode.string)
         (field "performance" (field "lap" ratedDecoder))
         (field "performance" (field "sectors" ratedBySectorDecoder))

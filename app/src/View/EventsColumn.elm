@@ -135,7 +135,7 @@ post id event theCar bucket =
     , time = Feed.ago { now = bucket * Feed.step, at = Instant.toDuration event.elapsed }
     , author = author theCar
     , body = body event theCar
-    , stamp = stamp event theCar
+    , stamp = stamp event
     }
 
 
@@ -259,14 +259,14 @@ rate rated =
         { time = rated.time, personalBest = rated.personalBest }
 
 
-{-| The moment the event fell, and the last lap the car had completed -- one behind
-the lap a timing sheet has the car on.
+{-| The moment the event fell, and the lap it fell on -- one behind the lap a timing
+sheet has the car on, which is what the event's own line calls it.
+
 -}
-stamp : TimelineEvent -> Maybe Car -> String
-stamp event theCar =
+stamp : TimelineEvent -> String
+stamp event =
     Duration.toStringToSeconds (Instant.toDuration event.elapsed)
-        ++ (theCar
-                |> Maybe.andThen (\car_ -> TimelineEvent.runningLap car_ event)
-                |> Maybe.map (\lap_ -> " · Lap " ++ String.fromInt lap_.lap)
+        ++ (event.lapNumber
+                |> Maybe.map (\lap -> " · Lap " ++ String.fromInt lap)
                 |> Maybe.withDefault ""
            )

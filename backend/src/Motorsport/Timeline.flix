@@ -40,23 +40,28 @@ pub mod Motorsport.Timeline {
         lap       = Option[Int32]
     }
 
-    /// A car that took the lead by overtaking on track, and the crossing that did it.
+    /// A car that took the lead by overtaking on track, and the crossing that did it --
+    /// which is one of the car's own laps.
     pub type alias Overtake = {
         carNumber = String,
-        elapsed   = Duration
+        elapsed   = Duration,
+        lapNumber = Int32
     }
 
-    /// The leader's crossing into the pit lane, and whose it was.
+    /// The leader's crossing into the pit lane, and whose it was -- the in-lap, which
+    /// is one of the car's own laps.
     pub type alias InPit = {
         carNumber = String,
-        elapsed   = Duration
+        elapsed   = Duration,
+        lapNumber = Int32
     }
 
     /// A car handed to another driver, and the crossing that did it: the last one
-    /// the driver before made.
+    /// the driver before made, which is one of the car's own laps.
     pub type alias DriverChange = {
         carNumber = String,
-        elapsed   = Duration
+        elapsed   = Duration,
+        lapNumber = Int32
     }
 
     /// A lap faster than any its class had run before it, the crossing that
@@ -68,11 +73,12 @@ pub mod Motorsport.Timeline {
     }
 
     /// What the events of one round are gathered from, `cars` being each car's last
-    /// crossing. A change of the lead the leader's stop settled is no overtake: the
-    /// stop is the event, and the car that stayed out in front is in none.
+    /// crossing and the lap that made it. A change of the lead the leader's stop
+    /// settled is no overtake: the stop is the event, and the car that stayed out in
+    /// front is in none.
     pub type alias Readings = {
         timeLimit     = Duration,
-        cars          = List[(String, Duration)],
+        cars          = List[(String, Duration, Int32)],
         flags         = List[FlagShown],
         overtakes     = List[Overtake],
         inPits        = List[InPit],
@@ -109,7 +115,7 @@ pub mod Motorsport.Timeline {
             {
                 elapsed = overtake#elapsed,
                 eventType = EventType.Of(overtake#carNumber, CarEvent.OvertakeForLead),
-                lap = None
+                lap = Some(overtake#lapNumber)
             })
 
     def leadersInPit(inPits: List[InPit]): List[Event] =
@@ -117,7 +123,7 @@ pub mod Motorsport.Timeline {
             {
                 elapsed = inPit#elapsed,
                 eventType = EventType.Of(inPit#carNumber, CarEvent.LeaderInPit),
-                lap = None
+                lap = Some(inPit#lapNumber)
             })
 
     def flagsShown(flags: List[FlagShown]): List[Event] =
@@ -137,17 +143,19 @@ pub mod Motorsport.Timeline {
             {
                 elapsed = change#elapsed,
                 eventType = EventType.Of(change#carNumber, CarEvent.DriverChange),
-                lap = None
+                lap = Some(change#lapNumber)
             })
 
     /// A car still running when the race was scheduled to end took the flag;
     /// one whose last lap fell short of it retired. The rows say when each car
     /// stopped and not why, and the time limit is `Metadata`'s estimate rather
     /// than anything the feed states.
-    def terminals(timeLimit: Duration, cars: List[(String, Duration)]): List[Event] =
-        cars |> List.map(match (carNumber, last) ->
+    def terminals(timeLimit: Duration, cars: List[(String, Duration, Int32)]): List[Event] =
+        cars |> List.map(match (carNumber, last, lastLap) ->
             let ended = if (last < timeLimit) CarEvent.Retired else CarEvent.Finished;
-            { elapsed = last, eventType = EventType.Of(carNumber, ended), lap = None })
+            { elapsed = last,
+              eventType = EventType.Of(carNumber, ended),
+              lap = Some(lastLap) })
 
     /// What an event is called, and whose it is.
     pub type alias Kind = {

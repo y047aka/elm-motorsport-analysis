@@ -178,7 +178,7 @@ instant =
 
 event : Int -> EventType -> TimelineEvent
 event ms eventType =
-    { elapsed = instant ms, eventType = eventType, lap = Nothing }
+    { elapsed = instant ms, eventType = eventType, lapNumber = Nothing, lap = Nothing }
 
 
 {-| A lap the feed left untimed: what a lap the car is still driving reads as.

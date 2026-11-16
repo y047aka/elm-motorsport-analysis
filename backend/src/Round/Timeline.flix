@@ -19,6 +19,7 @@ pub mod Round.Timeline {
     use Motorsport.Sector
     use Motorsport.Sector.Sector
     use Motorsport.Timeline
+    use Motorsport.Timeline.CarEvent
     use Motorsport.Timeline.EventType
     use Sql.Sel
     use Util.Duration.Duration
@@ -75,18 +76,19 @@ pub mod Round.Timeline {
 
     // ------------------------------------------------------------------ cars
 
-    /// Each car that turned a lap, with the moment it last crossed the line,
-    /// in the order the file first showed them.
+    /// Each car that turned a lap, with the moment it last crossed the line and the
+    /// lap that made it, in the order the file first showed them.
     ///
-    /// A car's laps only ever run forwards, so its latest crossing is the one
-    /// its last lap made, and no lap number is read to find it.
-    def cars(entry: Entry): List[(String, Duration)] \ DbRead =
+    /// A car's laps only ever run forwards, so its latest crossing is the one its
+    /// last lap made, and its highest lap number is the same row's.
+    def cars(entry: Entry): List[(String, Duration, Int32)] \ DbRead =
         let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.groupBy(Schema.term(c#carNumber) :: Nil)
             |> Sql.orderBy(Sql.raw("MIN(source_row)") :: Nil)
-            |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)")))
-            |> Sql.reading(match (carNumber, last) -> (carNumber, Util.Duration.fromMillis(last)))
+            |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)"), Sql.int("MAX(lap_number)")))
+            |> Sql.reading(match (carNumber, last, lastLap) ->
+                (carNumber, Util.Duration.fromMillis(last), lastLap))
             |> Sql.selectAll
 
     // ----------------------------------------------------------- fastest laps
@@ -130,16 +132,21 @@ pub mod Round.Timeline {
             |> Sql.using(Sql.frags(
                 Sql.raw("seated AS (SELECT car_number, driver_number,"
                     + " LAG(driver_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS prior,"
-                    + " LAG(elapsed_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_at"
+                    + " LAG(elapsed_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_at,"
+                    + " LAG(lap_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_lap"
                     + " FROM " + Laps.table() + " WHERE") ::
                 Sql.term(Laps.inRound(entry)) ::
                 Sql.raw(")") :: Nil
             ))
             |> Sql.filter(_ -> Sql.column("prior IS NOT NULL AND prior <> driver_number"))
             |> Sql.orderBy(Sql.raw("handed_at") :: Nil)
-            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("handed_at")))
-            |> Sql.reading(match (carNumber, elapsed) ->
-                { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
+            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("handed_at"), Sql.int("handed_lap")))
+            |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
+                {
+                    carNumber = carNumber,
+                    elapsed = Util.Duration.fromMillis(elapsed),
+                    lapNumber = lapNumber
+                })
             |> Sql.selectAll
 
     // ------------------------------------------------------------ overtakes
@@ -167,9 +174,13 @@ pub mod Round.Timeline {
             |> Sql.filter(_ -> Sql.column("held IS NOT NULL AND held <> car_number"))
             |> Sql.filter(_ -> Sql.column(crossedOnTrack("led.held", "led.lap_number")))
             |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
-            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms")))
-            |> Sql.reading(match (carNumber, elapsed) ->
-                { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
+            |> Sql.map(_ -> (Sql.text("car_number"), Sql.int("elapsed_ms"), Sql.int("lap_number")))
+            |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
+                {
+                    carNumber = carNumber,
+                    elapsed = Util.Duration.fromMillis(elapsed),
+                    lapNumber = lapNumber
+                })
             |> Sql.selectAll
 
     // ---------------------------------------------------------------- in pit
@@ -186,10 +197,15 @@ pub mod Round.Timeline {
             |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
             |> Sql.map(_ -> (
                 Sql.text("car_number"),
-                Sql.int(cameInAt("stop.car_number", "stop.lap_number"))
+                Sql.int(cameInAt("stop.car_number", "stop.lap_number")),
+                Sql.int(cameInOn("stop.car_number", "stop.lap_number"))
             ))
-            |> Sql.reading(match (carNumber, elapsed) ->
-                { carNumber = carNumber, elapsed = Util.Duration.fromMillis(elapsed) })
+            |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
+                {
+                    carNumber = carNumber,
+                    elapsed = Util.Duration.fromMillis(elapsed),
+                    lapNumber = lapNumber
+                })
             |> Sql.selectAll
 
     /// Every crossing of the round's, with its class and its place in its class's
@@ -259,6 +275,14 @@ pub mod Round.Timeline {
             + " AND l.lap_number BETWEEN ${lap} - 1 AND ${lap}"
             + " AND l.pitted ORDER BY l.lap_number ASC LIMIT 1)"
 
+    /// Which lap the car named came in on, for the out-lap named. The same row
+    /// `cameInAt` reads its moment off, so the two cannot disagree about which
+    /// crossing the event fell on.
+    def cameInOn(car: String, lap: String): String =
+        "(SELECT l.lap_number FROM l WHERE l.car_number = ${car}"
+            + " AND l.lap_number BETWEEN ${lap} - 1 AND ${lap}"
+            + " AND l.pitted ORDER BY l.lap_number ASC LIMIT 1)"
+
     // -------------------------------------------------- the laps events fell on
 
     /// One time of the lap an event fell on, beside the two baselines it reads
@@ -305,11 +329,13 @@ pub mod Round.Timeline {
         miniBests    = Option[List[Option[Int32]]]
     }
 
-    /// Which lap an event names.
+    /// Which lap a fastest lap was set on, which is the only lap read for its cells.
+    /// The other car events name a lap too -- the one they fell on -- and are on no
+    /// lap whose times are drawn.
     def lapOf(event: Timeline.Event): Option[(String, Int32)] =
         match (event#eventType, event#lap) {
-            case (EventType.Of(carNumber, _), Some(lap)) => Some((carNumber, lap))
-            case _                                       => None
+            case (EventType.Of(carNumber, CarEvent.FastestLap), Some(lap)) => Some((carNumber, lap))
+            case _                                                          => None
         }
 
     /// The laps the events fell on, keyed by the pair that names one.
