@@ -5,8 +5,9 @@ tracker keeps -- and the grip along the edge that moves it. The page holds one
 `Model` per size and forwards every `Msg` through it, the way it forwards the
 strip's through `Columns`.
 
-Which axis the pointer is read along is the `Edge`'s, and which way the size
-moves along it is the `Model`'s; the arithmetic between them is three lines.
+Which edge the grip lies along -- the axis its pointer is read along, the way the
+size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
+`Model` holds the size and the carry.
 
 @docs Model, Msg, Fence, Edge, Grows, init, update, grip
 
@@ -17,24 +18,27 @@ import Drag.Handle as Handle exposing (Pointer)
 import Html exposing (Html)
 
 
-{-| Which way the size moves when the pointer travels along the axis. `WithPointer` is
-a grip on the far edge of what it bounds: the standings' grip lies on their
+{-| Which way the size moves when the pointer travels along the axis. `WithPointer`
+is a grip on the far edge of what it bounds: the standings' grip lies on their
 right edge, and a travel right widens them. `AgainstPointer` is a grip on the near
 edge: the row grip lies on the tracker row's top edge, and a travel down
 shortens it.
+
+This belongs to the edge rather than to the size: an edge already says which side
+it bounds, and pairing a `Down` grip with the wrong one of these is a row that
+draggs backwards in silence.
+
 -}
 type Grows
     = WithPointer
     | AgainstPointer
 
 
-{-| The size the thing stands at, the way a drag moves it, and the carry that
-moves it: the size follows the pointer's travel from the size `Drag` was picked
-up with.
+{-| The size the thing stands at and the carry that moves it: the size follows the
+pointer's travel from the size `Drag` was picked up with.
 -}
 type alias Model =
     { size : Float
-    , grows : Grows
     , carried : Drag.State Float
     }
 
@@ -46,20 +50,22 @@ type alias Fence =
     }
 
 
-{-| Which edge the grip lies along: the axis it reads and steps, the id it
-answers to, and the words it is labelled with.
+{-| Which edge the grip lies along: the axis it reads and steps, the way the size
+moves along it, the bounds it holds the size between, the id it answers to, and
+the words it is labelled with.
 -}
 type alias Edge =
     { axis : Handle.Axis
+    , grows : Grows
+    , fence : Fence
     , id : String
     , label : String
     }
 
 
-init : Grows -> Float -> Model
-init grows size =
+init : Float -> Model
+init size =
     { size = size
-    , grows = grows
     , carried = Drag.init
     }
 
@@ -75,8 +81,8 @@ type Msg
 {-| The size follows `Drag`, and a `Cancel` leaves it where the last move left
 it -- unlike a carried column, a resize has nothing to put back.
 -}
-update : Fence -> Msg -> Model -> Model
-update fence msg m =
+update : Edge -> Msg -> Model -> Model
+update edge msg m =
     case msg of
         Grab pointer ->
             { m | carried = Tuple.first (Drag.update (Drag.Pick m.size pointer) m.carried) }
@@ -88,7 +94,7 @@ update fence msg m =
             in
             case Drag.carrying carried of
                 Just carry ->
-                    { m | carried = carried, size = clampTo fence (carry.location + signed m.grows (Drag.travel carry)) }
+                    { m | carried = carried, size = clampTo edge.fence (carry.location + signed edge.grows (Drag.travel carry)) }
 
                 Nothing ->
                     { m | carried = carried }
@@ -100,7 +106,7 @@ update fence msg m =
             { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }
 
         Step steps ->
-            { m | size = clampTo fence (m.size + signed m.grows (toFloat steps * fence.step)) }
+            { m | size = clampTo edge.fence (m.size + signed edge.grows (toFloat steps * edge.fence.step)) }
 
 
 signed : Grows -> Float -> Float

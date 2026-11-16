@@ -65,19 +65,21 @@ type alias Model =
     }
 
 
+standingsEdge : Resize.Edge
+standingsEdge =
+    { axis = Handle.Across
+    , grows = Resize.WithPointer
+    , fence = standingsFence
+    , id = "standings-resize-grip"
+    , label = "Resize the standings column"
+    }
+
+
 standingsFence : Resize.Fence
 standingsFence =
     { min = LiveStandings.minWidth
     , max = LiveStandings.maxWidth
     , step = 20
-    }
-
-
-standingsEdge : Resize.Edge
-standingsEdge =
-    { axis = Handle.Across
-    , id = "standings-resize-grip"
-    , label = "Resize the standings column"
     }
 
 
@@ -102,6 +104,8 @@ trackerRowFence =
 trackerRowEdge : Resize.Edge
 trackerRowEdge =
     { axis = Handle.Down
+    , grows = Resize.AgainstPointer
+    , fence = trackerRowFence
     , id = "tracker-row-resize-grip"
     , label = "Resize the enlarged tracker"
     }
@@ -113,8 +117,8 @@ init params =
       , rowTrace = Dict.empty
       , eventsColumn = EventsColumn.init
       , comparison = CarDetail.initialComparison
-      , standings = Resize.init Resize.WithPointer LiveStandings.width
-      , trackerRow = Resize.init Resize.AgainstPointer defaultTrackerRow
+      , standings = Resize.init LiveStandings.width
+      , trackerRow = Resize.init defaultTrackerRow
       , trackerExpanded = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -156,10 +160,10 @@ update shared msg m =
             ( { m | strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
 
         ResizeMsg sub ->
-            ( { m | standings = Resize.update standingsFence sub m.standings }, Effect.none )
+            ( { m | standings = Resize.update standingsEdge sub m.standings }, Effect.none )
 
         TrackerRowMsg sub ->
-            ( { m | trackerRow = Resize.update trackerRowFence sub m.trackerRow }, Effect.none )
+            ( { m | trackerRow = Resize.update trackerRowEdge sub m.trackerRow }, Effect.none )
 
         ToggleTrackerExpanded ->
             ( { m | trackerExpanded = not m.trackerExpanded }, Effect.none )

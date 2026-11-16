@@ -1,7 +1,7 @@
 module Page.Wec.ResizeTest exposing (suite)
 
 import Drag
-import Drag.Handle exposing (Pointer)
+import Drag.Handle as Handle exposing (Pointer)
 import Expect
 import Page.Wec.Resize as Resize exposing (Msg(..))
 import Test exposing (Test, describe, test)
@@ -10,6 +10,16 @@ import Test exposing (Test, describe, test)
 fence : Resize.Fence
 fence =
     { min = 200, max = 600, step = 20 }
+
+
+edge : Resize.Edge
+edge =
+    { axis = Handle.Across
+    , grows = Resize.WithPointer
+    , fence = fence
+    , id = "test-resize-grip"
+    , label = "Resize the test thing"
+    }
 
 
 suite : Test
@@ -97,7 +107,7 @@ suite =
                         , \m ->
                             m |> step (Step 100) |> .size |> Expect.equal fence.max
                         ]
-                        (Resize.init Resize.WithPointer 300)
+                        (Resize.init 300)
             ]
         ]
 
@@ -108,12 +118,12 @@ suite =
 
 startAt : Float -> Resize.Model
 startAt size =
-    Resize.init Resize.WithPointer size |> step (Grab (pointer 1 size))
+    Resize.init size |> step (Grab (pointer 1 size))
 
 
 step : Msg -> Resize.Model -> Resize.Model
 step msg model =
-    Resize.update fence msg model
+    Resize.update edge msg model
 
 
 pointer : Int -> Float -> Pointer
