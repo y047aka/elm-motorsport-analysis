@@ -151,7 +151,10 @@ pub mod Server.TestApi {
                     Index.read(fuji(), Round.Drivers.read(fuji()))
                 ),
                 laps     = Render.renderJsonl(Round.Laps.read(fuji(), Round.Drivers.read(fuji()))),
-                timeline = Render.renderTimelineJsonl(Round.Timeline.read(fuji()))
+                timeline = Render.renderTimelineJsonl(Round.Timeline.detailed(
+                    fuji(),
+                    Round.Drivers.read(fuji()),
+                    Index.read(fuji(), Round.Drivers.read(fuji()))))
             }
         ))
 

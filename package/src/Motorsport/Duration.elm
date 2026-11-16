@@ -1,6 +1,5 @@
 module Motorsport.Duration exposing
     ( Duration
-    , decoder
     , toString
     , toStringToSeconds, toStringToTenths
     , fromString, fromStringWithDefault
@@ -9,36 +8,15 @@ module Motorsport.Duration exposing
 {-|
 
 @docs Duration
-@docs decoder
 @docs toString
 @docs toStringToSeconds, toStringToTenths
 @docs fromString, fromStringWithDefault
 
 -}
 
-import Json.Decode as Decode exposing (Decoder)
-
 
 type alias Duration =
     Int
-
-
-
--- DECODER
-
-
-decoder : Decoder Duration
-decoder =
-    Decode.string
-        |> Decode.andThen
-            (\str ->
-                case fromString str of
-                    Just duration ->
-                        Decode.succeed duration
-
-                    Nothing ->
-                        Decode.fail ("Expected a Duration, got \"" ++ str ++ "\"")
-            )
 
 
 {-|

@@ -93,7 +93,7 @@ events =
 
 eventAt : Duration -> TimelineEvent.EventType -> TimelineEvent
 eventAt elapsed eventType =
-    { elapsed = Instant.fromDuration elapsed, eventType = eventType }
+    { elapsed = Instant.fromDuration elapsed, eventType = eventType, lapNumber = Nothing, lap = Nothing }
 
 
 elapsedOf : TimelineEvent -> Duration

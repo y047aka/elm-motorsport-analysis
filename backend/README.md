@@ -38,10 +38,10 @@ laps are 25MB, and 3.4MB on the wire.
 `Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars`
 take an `Entry` and the `DbRead` effect and read it; `Round.Render` takes what
 they returned, is pure, and turns it into the bytes that go out. None of the six
-knows whether a file or a request is waiting at the other end. Three of them take a
-`Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
-once for the round by whichever answer names a driver rather than once by each
-of them; the timeline names none. `Round.loaded` is what both ask first, and it
+knows whether a file or a request is waiting at the other end. Those that name a
+driver take a `Round.Drivers` as well -- who sat in the seat a lap names -- because
+it is read once for the round by whichever answer names one rather than once by
+each of them. `Round.loaded` is what both ask first, and it
 asks `laps` and `cars`:
 laps without cars is a round half in the database, and answered off the laps
 alone it would be a race whose grid was empty.
@@ -51,7 +51,10 @@ either: it makes the same calls `Cli.Export` makes, so what is served and what
 is written are the same bytes rather than two renderings that agree. An answer
 carrying one of the three reads only what that one is made of, rather than
 reading a round's laps to throw them away, which is the one thing the two
-callers do differently.
+callers do differently. What a timeline line is made of now includes the records
+its lap reads against, so that answer reads `Round.Index` too and walks every lap
+as the summary's does -- and `Server.flix` computes the `ETag` off the rendered
+bytes, which means even a request that comes back 304 pays for the walk.
 
 The root is the one thing that differs, and it is asserted rather than
 assumed: `Server.TestApi` compares the served calendar against `Manifest`
@@ -196,6 +199,12 @@ only one of the walks a reader does not make:
 round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
 rather than read in their key's order, which is the same list until a row is
 corrected in SQL and then is the list that moment used to be in.
+
+`Round.Timeline.detailed` reads those rows beside the lap each event fell on,
+which the row names by number and `laps` still holds every cell of. It is handed
+the `Round.Index` the answer already has rather than counting the records again,
+and the one figure no row carries is the car's own best of each time: nineteen
+running minima per car, read off `laps`.
 
 Each car's last crossing is one `GROUP BY`, and a class's lead is
 `ROW_NUMBER` picking the class's first crossing of each lap with `LAG` asking who

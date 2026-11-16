@@ -11,7 +11,7 @@ pub mod Db.TestTimelineEvents {
     use Util.Json.Extra
 
     def at(ms: Int32, eventType: EventType): Event =
-        { elapsed = Util.Duration.fromMillis(ms), eventType = eventType }
+        { elapsed = Util.Duration.fromMillis(ms), eventType = eventType, lap = None }
 
     /// One of each, which is what the row has to carry between them.
     def oneOfEach(): List[Event] =
@@ -65,10 +65,38 @@ pub mod Db.TestTimelineEvents {
     def aNameNoEventAnswersToSpellsNone(): Unit \ Assert =
         let row = {
             roundId = 1, seq = 0, elapsedMs = 0, event = "slowZone",
-            carNumber = Some("7")
+            carNumber = Some("7"), lapNumber = None
         };
         Assert.assertTrue(Option.isEmpty(TimelineEvents.toEvent(row)));
         Assert.assertTrue(not List.memberOf("slowZone", Timeline.names()))
+
+    /// The lap an event fell on, written into the row by `parts` and read back
+    /// by `toEvent`, and out again as the line the event is written as.
+    @Test
+    def theLapAnEventFellOnSurvivesTheRow(): Unit \ Assert =
+        let event = {
+            elapsed = Util.Duration.fromMillis(1200),
+            eventType = EventType.Of("8", CarEvent.FastestLap),
+            lap = Some(37)
+        };
+        let rows = TimelineEvents.fromEvents(1, event :: Nil);
+        Assert.assertTrue(List.map(r -> r#lapNumber, rows) == Some(37) :: Nil);
+        Assert.assertTrue(line(event) ==
+            "{ \"elapsed\": \"1.200\", \"event\": \"fastestLap\", \"carNumber\": \"8\", \"lap\": 37 }");
+        match List.head(rows) |> Option.flatMap(TimelineEvents.toEvent) {
+            case Some(readBack) =>
+                Assert.assertTrue(readBack#lap == Some(37));
+                Assert.assertTrue(Util.Duration.format(readBack#elapsed) == "1.200")
+            case None => Assert.assertTrue(false)
+        }
+
+    /// An event that fell on no lap is written with no `lap` at all.
+    @Test
+    def anEventOnNoLapCarriesNoLap(): Unit \ Assert =
+        Assert.assertTrue(line(at(600, EventType.Flag(Flag.FullCourseYellow))) ==
+            "{ \"elapsed\": \"0.600\", \"event\": \"fullCourseYellow\" }");
+        Assert.assertTrue(List.forAll(r -> Option.isEmpty(r#lapNumber),
+            TimelineEvents.fromEvents(1, oneOfEach())))
 
     // --------------------------------------------------------------- schema
 

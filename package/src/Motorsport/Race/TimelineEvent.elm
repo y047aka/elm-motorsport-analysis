@@ -1,5 +1,6 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
+    , Rated, LapDetail
     , fromJsonl, decoder
     , describe, forCar
     , runningLap, handover
@@ -10,6 +11,7 @@ module Motorsport.Race.TimelineEvent exposing
 Read out of the round's timeline file, which `Round.Timeline` writes.
 
 @docs TimelineEvent, EventType, CarEventType
+@docs Rated, LapDetail
 @docs fromJsonl, decoder
 @docs describe, forCar
 @docs runningLap, handover
@@ -18,15 +20,43 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
+import Json.Decode.Pipeline exposing (required)
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
+import Motorsport.Sector exposing (BySector)
+import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 
 
 type alias TimelineEvent =
-    { elapsed : Instant, eventType : EventType }
+    { elapsed : Instant
+    , eventType : EventType
+    , lapNumber : Maybe Int
+    , lap : Maybe LapDetail
+    }
+
+
+type alias Rated =
+    { time : Maybe Duration
+    , fastest : Maybe Duration
+    , personalBest : Maybe Duration
+    }
+
+
+{-| `miniSectors` is `Nothing` where the round's feed measured no mini-sectors, which is
+the lap drawn on the three sectors. Whether the circuit is drawn from a survey is a
+different fact: a surveyed circuit can be timed no finer than three sectors.
+
+-}
+type alias LapDetail =
+    { driver : String
+    , lap : Rated
+    , sectors : BySector Rated
+    , miniSectors : Maybe (ByMiniSector Rated)
+    }
 
 
 type EventType
@@ -167,9 +197,104 @@ but the race's own start -- whose it was.
 -}
 decoder : Decoder TimelineEvent
 decoder =
-    Decode.map2 TimelineEvent
+    Decode.map3 (\elapsed eventType lapNumber -> { elapsed = elapsed, eventType = eventType, lapNumber = lapNumber, lap = Nothing })
         (field "elapsed" Instant.decoder)
         (field "event" string |> Decode.andThen eventTypeDecoder)
+        (Decode.maybe (field "lap" Decode.int))
+        |> Decode.andThen withLapDetail
+
+
+{-| Whether a lap's times ride along, and its kind say which event they are read for.
+
+    Every car event names the lap it fell on, so the number alone says nothing about
+    there being a lap to draw -- only the event's kind does. A fastest lap that names a
+    lap and carries no `performance` beside it is a bad line rather than a plain event.
+
+-}
+withLapDetail : TimelineEvent -> Decoder TimelineEvent
+withLapDetail event =
+    case ( event.eventType, event.lapNumber ) of
+        ( CarEvent _ FastestLap, Just _ ) ->
+            Decode.map (\lap -> { event | lap = Just lap }) lapDetailDecoder
+
+        _ ->
+            Decode.succeed event
+
+
+{-| The lap an event fell on, which sits flat beside the event rather than under a key
+of its own.
+
+-}
+lapDetailDecoder : Decoder LapDetail
+lapDetailDecoder =
+    Decode.map4 LapDetail
+        (field "driver" Decode.string)
+        (field "performance" (field "lap" ratedDecoder))
+        (field "performance" (field "sectors" ratedBySectorDecoder))
+        (Decode.maybe (field "performance" (field "miniSectors" ratedByMiniSectorDecoder)))
+
+
+ratedDecoder : Decoder Rated
+ratedDecoder =
+    Decode.map3 Rated
+        (field "time" optionalDurationDecoder)
+        (field "fastest" optionalDurationDecoder)
+        (field "personalBest" optionalDurationDecoder)
+
+
+{-| A time the feed wrote none for is the empty string on the wire, and no segment of
+the circuit.
+
+-}
+optionalDurationDecoder : Decoder (Maybe Duration)
+optionalDurationDecoder =
+    string
+        |> Decode.map
+            (\s ->
+                if String.isEmpty s then
+                    Nothing
+
+                else
+                    Duration.fromString s
+            )
+
+
+ratedBySectorDecoder : Decoder (BySector Rated)
+ratedBySectorDecoder =
+    Decode.succeed BySector
+        |> required "s1" ratedDecoder
+        |> required "s2" ratedDecoder
+        |> required "s3" ratedDecoder
+
+
+{-| All fifteen, keyed by the name the file uses. A lap written without a time for one
+of them has no segment there, which is a blank rather than a failure to read the lap.
+
+The fifteen are all required, and `lapDetailDecoder` reads the whole thing through
+`Decode.maybe` -- so a line carrying a differently-split fifteen reads as no
+mini-sectors, and is drawn on the three sectors. That is `Data.Wec`'s
+`byMiniSectorDecoder` doing the same thing to a lap, and here the fallback is a
+plausible drawing rather than a missing one.
+
+-}
+ratedByMiniSectorDecoder : Decoder (ByMiniSector Rated)
+ratedByMiniSectorDecoder =
+    Decode.succeed ByMiniSector
+        |> required "scl2" ratedDecoder
+        |> required "z4" ratedDecoder
+        |> required "ip1" ratedDecoder
+        |> required "z12" ratedDecoder
+        |> required "sclc" ratedDecoder
+        |> required "a7_1" ratedDecoder
+        |> required "ip2" ratedDecoder
+        |> required "a8_1" ratedDecoder
+        |> required "sclb" ratedDecoder
+        |> required "porin" ratedDecoder
+        |> required "porout" ratedDecoder
+        |> required "pitref" ratedDecoder
+        |> required "scl1" ratedDecoder
+        |> required "fordout" ratedDecoder
+        |> required "fl" ratedDecoder
 
 
 eventTypeDecoder : String -> Decoder EventType
