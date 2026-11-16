@@ -5,22 +5,19 @@ pub mod Db.Retry {
 
     use Util.Duration
 
-    /// How many tries an operation gets, and the shape of the wait between them:
-    /// tries, the base wait, and the ceiling it never passes.
-    pub enum Config {
-        case Config(Int32, Duration, Duration)
+    /// How many tries an operation gets, and the shape of the wait between them.
+    pub type alias Policy = {
+        attempts = Int32,
+        base     = Duration,
+        cap      = Duration
     }
 
-    pub def default(): Config =
-        Config.Config(4, Util.Duration.fromMillis(1000), Util.Duration.fromMillis(30000))
+    pub def default(): Policy =
+        { attempts = 4, base = Util.Duration.fromMillis(1000), cap = Util.Duration.fromMillis(30000) }
 
-    /// A configuration that waits nothing between its tries.
-    pub def immediate(tries: Int32): Config =
-        Config.Config(tries, Util.Duration.zero(), Util.Duration.zero())
-
-    pub def tries(c: Config): Int32 = let Config.Config(n, _, _) = c; n
-    pub def base(c: Config): Duration = let Config.Config(_, b, _) = c; b
-    pub def cap(c: Config): Duration = let Config.Config(_, _, k) = c; k
+    /// A policy that waits nothing between its tries.
+    pub def immediate(attempts: Int32): Policy =
+        { attempts = attempts, base = Util.Duration.zero(), cap = Util.Duration.zero() }
 
     /// `step` doubled `left` times, stopping at `stop` rather than overflowing.
     def doubled(step: Int32, stop: Int32, left: Int32): Int32 =
@@ -34,9 +31,9 @@ pub mod Db.Retry {
     /// uniformly from `[0, min(cap, base * 2^attempt)]`, which is what keeps
     /// several processes refused at the same instant from coming back at the
     /// same instant. `jitter` is that draw, out of a thousand.
-    pub def backoff(attempt: Int32, c: Config, jitter: Int32): Duration = {
-        let stop = Util.Duration.millis(cap(c));
-        let window = doubled(Util.Duration.millis(base(c)), stop, attempt);
+    pub def backoff(p: Policy, attempt: Int32, jitter: Int32): Duration = {
+        let stop = p#cap |> Util.Duration.millis;
+        let window = doubled(p#base |> Util.Duration.millis, stop, attempt);
         Util.Duration.fromMillis(window * clamp(jitter) / 1000)
     }
 
@@ -56,15 +53,15 @@ pub mod Db.Retry {
     /// rather than reached for: the trying is then driven without sleeping, and the
     /// backoff tested at a draw chosen by the test.
     pub def retryingWith(
-        c: Config,
+        p: Policy,
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
         f: Unit -> a \ ef
     ): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + ef2 + ef3) =
-        loopWith(c, 1, wait, jitter, f)
+        loopWith(p, 1, wait, jitter, f)
 
     def loopWith(
-        c: Config,
+        p: Policy,
         attempt: Int32,
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
@@ -73,11 +70,11 @@ pub mod Db.Retry {
         match Db.attempt(f) {
             case Ok(v) => Ok(v)
             case Err(failure) =>
-                if (attempt >= tries(c) or not worthTrying(failure))
+                if (attempt >= p#attempts or not worthTrying(failure))
                     Err(failure)
                 else {
-                    wait(Util.Duration.millis(backoff(attempt, c, jitter())));
-                    loopWith(c, attempt + 1, wait, jitter, f)
+                    wait(backoff(p, attempt, jitter()) |> Util.Duration.millis);
+                    loopWith(p, attempt + 1, wait, jitter, f)
                 }
         }
 
@@ -87,8 +84,8 @@ pub mod Db.Retry {
     /// Only a transient failure is worth another try; a permanent one comes back
     /// at once. A `Busy` failure is retried here, which is only right when `f`
     /// opens the transaction itself -- see `retryingSavepoint`.
-    pub def retrying(c: Config, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
-        retryingWith(c, sleepMs, draw, f)
+    pub def retrying(p: Policy, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
+        retryingWith(p, sleepMs, draw, f)
 
     def sleepMs(ms: Int32): Unit \ IO =
         Thread.sleep(Int32.toInt64(ms))
@@ -102,24 +99,24 @@ pub mod Db.Retry {
     /// transaction waiting for a rollback that will not come.
     pub def retryingSavepoint(
         name: String,
-        c: Config,
+        p: Policy,
         f: Unit -> a \ ef
     ): Result[Db.Failure, a] \ (ef + Db + IO) =
-        retryingSavepointWith(name, c, sleepMs, draw, f)
+        retryingSavepointWith(name, p, sleepMs, draw, f)
 
     /// As `retryingWith`, of a savepoint.
     pub def retryingSavepointWith(
         name: String,
-        c: Config,
+        p: Policy,
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
         f: Unit -> a \ ef
     ): Result[Db.Failure, a] \ (ef + Db + ef2 + ef3) =
-        loopSavepoint(name, c, 1, wait, jitter, f)
+        loopSavepoint(name, p, 1, wait, jitter, f)
 
     def loopSavepoint(
         name: String,
-        c: Config,
+        p: Policy,
         attempt: Int32,
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
@@ -128,11 +125,11 @@ pub mod Db.Retry {
         match Db.withSavepoint(name, f) {
             case Ok(v) => Ok(v)
             case Err(failure) =>
-                if (attempt >= tries(c) or not worthTrying(failure))
+                if (attempt >= p#attempts or not worthTrying(failure))
                     Err(failure)
                 else {
-                    wait(Util.Duration.millis(backoff(attempt, c, jitter())));
-                    loopSavepoint(name, c, attempt + 1, wait, jitter, f)
+                    wait(backoff(p, attempt, jitter()) |> Util.Duration.millis);
+                    loopSavepoint(name, p, attempt + 1, wait, jitter, f)
                 }
         }
 

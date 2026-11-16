@@ -3,23 +3,23 @@ pub mod Db.TestRetry {
     /// The window a try waits inside doubles per try and stops at the ceiling.
     @Test
     def theWindowDoublesAndStopsAtTheCeiling(): Unit \ Assert = {
-        let c = Db.Retry.Config.Config(4, Util.Duration.fromMillis(1000), Util.Duration.fromMillis(5000));
-        Assert.assertTrue(Db.Retry.backoff(0, c, 999) == Util.Duration.fromMillis(999));
-        Assert.assertTrue(Db.Retry.backoff(1, c, 999) == Util.Duration.fromMillis(1998));
-        Assert.assertTrue(Db.Retry.backoff(2, c, 999) == Util.Duration.fromMillis(3996));
-        Assert.assertTrue(Db.Retry.backoff(3, c, 999) == Util.Duration.fromMillis(4995));
-        Assert.assertTrue(Db.Retry.backoff(9, c, 999) == Util.Duration.fromMillis(4995))
+        let c = { attempts = 4, base = Util.Duration.fromMillis(1000), cap = Util.Duration.fromMillis(5000) };
+        Assert.assertTrue(Db.Retry.backoff(c, 0, 999) == Util.Duration.fromMillis(999));
+        Assert.assertTrue(Db.Retry.backoff(c, 1, 999) == Util.Duration.fromMillis(1998));
+        Assert.assertTrue(Db.Retry.backoff(c, 2, 999) == Util.Duration.fromMillis(3996));
+        Assert.assertTrue(Db.Retry.backoff(c, 3, 999) == Util.Duration.fromMillis(4995));
+        Assert.assertTrue(Db.Retry.backoff(c, 9, 999) == Util.Duration.fromMillis(4995))
     }
 
     /// Full jitter draws from the whole window, so a draw of nothing waits
     /// nothing and a draw past the window is held inside it.
     @Test
     def theDrawIsHeldInsideTheWindow(): Unit \ Assert = {
-        let c = Db.Retry.Config.Config(4, Util.Duration.fromMillis(1000), Util.Duration.fromMillis(30000));
-        Assert.assertTrue(Db.Retry.backoff(0, c, 0) == Util.Duration.zero());
-        Assert.assertTrue(Db.Retry.backoff(0, c, -5) == Util.Duration.zero());
-        Assert.assertTrue(Db.Retry.backoff(0, c, 500) == Util.Duration.fromMillis(500));
-        Assert.assertTrue(Db.Retry.backoff(0, c, 1200) == Util.Duration.fromMillis(999))
+        let c = { attempts = 4, base = Util.Duration.fromMillis(1000), cap = Util.Duration.fromMillis(30000) };
+        Assert.assertTrue(Db.Retry.backoff(c, 0, 0) == Util.Duration.zero());
+        Assert.assertTrue(Db.Retry.backoff(c, 0, -5) == Util.Duration.zero());
+        Assert.assertTrue(Db.Retry.backoff(c, 0, 500) == Util.Duration.fromMillis(500));
+        Assert.assertTrue(Db.Retry.backoff(c, 0, 1200) == Util.Duration.fromMillis(999))
     }
 
     /// The wait is given the backoff's duration rather than reaching for a clock,
@@ -28,7 +28,7 @@ pub mod Db.TestRetry {
     def theWaitIsGivenTheBackoffItWouldSleep(): Unit \ Assert =
         region rc {
             let waits = Ref.fresh(rc, (Nil: List[Int32]));
-            let c = Db.Retry.Config.Config(3, Util.Duration.fromMillis(1000), Util.Duration.fromMillis(30000));
+            let c = { attempts = 3, base = Util.Duration.fromMillis(1000), cap = Util.Duration.fromMillis(30000) };
             discard Db.Retry.retryingWith(c, ms -> Ref.put(ms :: Ref.get(waits), waits), _ -> 500, () ->
                 DbErr.raise(Db.unreachable("connection refused")));
             Assert.assertTrue(List.reverse(Ref.get(waits)) == 1000 :: 2000 :: Nil)
