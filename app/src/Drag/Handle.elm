@@ -152,7 +152,6 @@ grip axis kind config classes cursor glyph =
     Html.node "drag-handle"
         ([ id config.id
          , attribute "aria-roledescription" "drag handle"
-         , attribute "aria-keyshortcuts" (keyShortcuts axis)
          , attribute "tabindex" "0"
          , attribute "aria-label" config.label
          , title (config.label ++ ": drag it, or press " ++ arrowHint axis)
@@ -198,7 +197,13 @@ role : Axis -> Kind -> List (Html.Attribute msg)
 role axis kind =
     case kind of
         Carry ->
-            [ attribute "role" "button" ]
+            [ attribute "role" "button"
+
+            -- Said, because arrows move a column without the reader being on the
+            -- grip. A splitter's arrows are its standard interaction, and
+            -- `aria-keyshortcuts` is for keys that work unfocused.
+            , attribute "aria-keyshortcuts" (keyShortcuts axis)
+            ]
 
         Splitter { min, max, now } ->
             [ attribute "role" "separator"
