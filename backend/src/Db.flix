@@ -389,7 +389,7 @@ pub mod Db {
             match attempt(f) {
                 case Ok(value) => { control(Savepoint.Command.Release(name)); Ok(value) }
                 case Err(e)    => {
-                    control(Savepoint.Command.BackTo(name));
+                    control(Savepoint.Command.RollbackTo(name));
                     control(Savepoint.Command.Release(name));
                     Err(e)
                 }

@@ -8,7 +8,7 @@ pub mod Db.Savepoint {
     pub enum Command with Eq, ToString {
         case Mark(String)
         case Release(String)
-        case BackTo(String)
+        case RollbackTo(String)
     }
 
     /// The name `^[a-z_][a-z0-9_]*$`, which is what a savepoint may be called
@@ -21,9 +21,9 @@ pub mod Db.Savepoint {
 
     /// The statement, in the spelling SQLite takes.
     pub def toSql(command: Command): String = match command {
-        case Command.Mark(name)   => "SAVEPOINT ${name}"
-        case Command.Release(name) => "RELEASE SAVEPOINT ${name}"
-        case Command.BackTo(name)  => "ROLLBACK TO SAVEPOINT ${name}"
+        case Command.Mark(name)      => "SAVEPOINT ${name}"
+        case Command.Release(name)   => "RELEASE SAVEPOINT ${name}"
+        case Command.RollbackTo(name) => "ROLLBACK TO SAVEPOINT ${name}"
     }
 
     /// The rule, in the one line a refusal can say.
