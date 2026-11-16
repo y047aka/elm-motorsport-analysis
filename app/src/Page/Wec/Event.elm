@@ -390,9 +390,9 @@ trackerToggle expanded =
         [ text glyph ]
 
 
-{-| Where each cell stands. The strip is the whole page until the tracker is
-enlarged, and then the tracker keeps its own row at the bottom and the strip
-takes the page above it.
+{-| Where the standings and the strip stand. The strip is the whole page until the
+tracker is enlarged, and then the standings span both rows and the strip takes
+the top one.
 
 The class strings are written intact: Tailwind generates a class only from a
 string it finds intact in the source, so one assembled from fragments silently
@@ -402,7 +402,6 @@ ships no `grid-template-columns` at all, and every track sizes to its content.
 type alias Layout =
     { standings : String
     , strip : String
-    , tracker : String
     }
 
 
@@ -411,14 +410,20 @@ layout expanded =
     if expanded then
         { standings = "col-start-1 row-start-1 row-span-2 min-h-0 grid relative"
         , strip = "col-start-2 row-start-1"
-        , tracker = "col-start-2 row-start-2 min-h-0 grid relative"
         }
 
     else
         { standings = "col-start-1 min-h-0 grid relative"
         , strip = "col-start-2"
-        , tracker = "col-start-2"
         }
+
+
+{-| The enlarged tracker's cell: the row below the strip, which is what the
+`rowsStyle` split sizes.
+-}
+trackerCell : String
+trackerCell =
+    "col-start-2 row-start-2 min-h-0 grid relative"
 
 
 {-| The two rows, the enlarged tracker's own last. An inline style rather than a
@@ -452,12 +457,16 @@ mainGrid round keys m =
                )
         )
         [ standingsCell cells.standings keys m round.energy snapshot replay.race.cars
+        , columnStrip cells.strip round.track round.timeline keys m round.pitCycles replay snapshot
+
+        -- The row at the bottom of the page follows the strip it takes the room
+        -- from, so the tab order goes down the page rather than into the bottom
+        -- row and back up again. Where it stands is the grid's `row-start-2`.
         , if m.trackerExpanded then
-            expandedTracker cells.tracker (Html.map TrackerRowMsg (Resize.grip trackerRowEdge m.trackerRow)) (trackerToggle True) round.track snapshot
+            expandedTracker trackerCell (Html.map TrackerRowMsg (Resize.grip trackerRowEdge m.trackerRow)) (trackerToggle True) round.track snapshot
 
           else
             text ""
-        , columnStrip cells.strip round.track round.timeline keys m round.pitCycles replay snapshot
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
