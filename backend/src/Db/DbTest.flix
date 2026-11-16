@@ -1,8 +1,9 @@
 /// Handlers standing in for a database, for a test whose subject is the query
 /// and the reading of what it came back as.
 ///
-/// `Db.runRecording` is the other kind: it keeps what was sent and answers a read
-/// with nothing. These answer.
+/// `Db.runRecording` is the narrower kind: it keeps what was sent and answers a read
+/// with nothing, so a read no one meant to send fails rather than coming back
+/// empty. `runRecording` here answers as well as keeps.
 pub mod Db.DbTest {
 
     use Db.Error
@@ -33,6 +34,53 @@ pub mod Db.DbTest {
             def control(_command, k) = k(Ok(()))
         };
         Db.rethrowing(outcome)
+
+    /// The statements `f` sends, kept, and every `SELECT` answered with `rows`.
+    /// A write answers with `affected` rows, which is what a caller that reads the
+    /// round it just wrote needs in order to read the count back.
+    pub def runRecording(
+        rows: List[Row],
+        affected: Int32,
+        f: Unit -> a \ ef
+    ): (a, List[Db.Statement]) \ (ef - {RawSql, SqlRead, SqlWrite, SqlSavepoint}) =
+        runRecordingWith(_ -> Some(rows), affected, f)
+
+    /// As `runRecording`, with the rows a `SELECT` is answered with chosen by its
+    /// text, so a caller sending several can be answered apart.
+    pub def runRecordingWith(
+        rowsFor: String -> Option[List[Row]],
+        affected: Int32,
+        f: Unit -> a \ ef
+    ): (a, List[Db.Statement]) \ (ef - {RawSql, SqlRead, SqlWrite, SqlSavepoint}) =
+        region rc {
+            let log = Ref.fresh(rc, (Nil: List[Db.Statement]));
+            let keep = statement -> Ref.put(statement :: Ref.get(log), log);
+            let outcome = run {
+                Db.catchAll(() -> RawSql.runWithAllow(f))
+            } with handler SqlWrite {
+                def execute(sql, params, k) = {
+                    keep(Db.Statement.Execute(sql, params));
+                    k(Ok(affected))
+                }
+                def insertMany(sql, rows, k) = {
+                    keep(Db.Statement.InsertMany(sql, rows));
+                    k(Ok(List.length(rows)))
+                }
+                def commit(k) = { keep(Db.Statement.Commit); k(Ok()) }
+                def rollback(k) = { keep(Db.Statement.Rollback); k(Ok()) }
+            } with handler SqlRead {
+                def fetch(sql, params, k) = {
+                    keep(Db.Statement.Fetch(sql, params));
+                    k(Ok(Option.getWithDefault(Nil, rowsFor(sql))))
+                }
+            } with handler SqlSavepoint {
+                def control(command, k) = {
+                    keep(Db.Statement.Execute(Db.Savepoint.toSql(command), Nil));
+                    k(Ok())
+                }
+            };
+            (Db.rethrowing(outcome), List.reverse(Ref.get(log)))
+        }
 
     /// A database that refuses every write. A read is left to a handler outside, so
     /// one that answers rows can be put around this one.

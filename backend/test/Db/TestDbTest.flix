@@ -72,4 +72,45 @@ pub mod Db.TestDbTest {
             )));
         Assert.assertTrue(outcome == (Err(Db.busy("database is locked")), Ok("1:35.365" :: Nil)))
 
+    /// A write and the reading of what came back after it, under one test: the
+    /// statements kept and the `SELECT` answered, which is what a caller reading
+    /// the round it just wrote needs.
+    @Test
+    def aWriteAndTheReadAfterItAreDrivenTogether(): Unit \ Assert =
+        let rows = TestCells.row(Some("1:35.365") :: Nil) :: Nil;
+        let ((written, readBack), sent) = DbTest.runRecording(rows, 1, () -> (
+            Db.runWithError(() -> discard Db.execute("UPDATE laps SET lap_time = '1:35.365'", Nil)),
+            Db.runWithError(() -> Sql.selectAll(lapTimes(7)))));
+        Assert.assertTrue(written == Ok(()));
+        Assert.assertTrue(readBack == Ok("1:35.365" :: Nil));
+        Assert.assertTrue(match sent {
+            case Db.Statement.Execute(sql, Nil) :: Db.Statement.Fetch(_, _) :: Nil =>
+                sql == "UPDATE laps SET lap_time = '1:35.365'"
+            case _ => false
+        })
+
+    /// A write answers with the rows the database took, which is the count a
+    /// run reports beside what it decoded.
+    @Test
+    def aWriteAnswersWithTheRowsTheDatabaseTook(): Unit \ Assert =
+        let (taken, _) = DbTest.runRecording(Nil, 3, () ->
+            Db.runWithError(() -> Db.execute("UPDATE laps SET deleted = 1", Nil)));
+        Assert.assertTrue(taken == Ok(3))
+
+    /// Several `SELECT`s are answered apart while every statement is kept.
+    @Test
+    def eachQueryIsAnsweredByItsOwnTextWhileAllAreKept(): Unit \ Assert =
+        let rowsFor = sql ->
+            if (String.startsWith({prefix = "SELECT driver_name"}, sql))
+                Some(TestCells.row(Some("Will STEVENS") :: Nil) :: Nil)
+            else
+                Some(TestCells.row(Some("1:35.365") :: Nil) :: Nil);
+        let (both, sent) = DbTest.runRecordingWith(rowsFor, 0, () -> (
+            Db.runWithError(() -> Sql.selectAll(driverNames())),
+            Db.runWithError(() -> Sql.selectAll(lapTimes(7)))));
+        Assert.assertTrue(
+            both == (Ok("Will STEVENS" :: Nil), Ok("1:35.365" :: Nil))
+                and List.length(sent) == 2
+        )
+
 }

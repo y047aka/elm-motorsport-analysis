@@ -431,9 +431,10 @@ pub mod Db {
                     }
                 }
             } with handler SqlRead {
-                // Nothing was written, so there is nothing to read back: a
-                // caller that reads the round it sent needs a database, and
-                // is told so rather than handed an empty one.
+                // Nothing was written, so there is nothing to read back. A
+                // caller that reads the round it sent is told so rather than
+                // handed an empty one; `Db.DbTest.runRecording` answers the
+                // read as well as keeping the statement.
                 def fetch(sql, params, k) = {
                     record(log, Statement.Fetch(sql, params));
                     k(Err(unreachable("nothing was sent, so nothing can be read back")))
