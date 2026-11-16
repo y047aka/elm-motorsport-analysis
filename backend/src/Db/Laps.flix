@@ -173,7 +173,7 @@ pub mod Db.Laps {
     /// one of its own: a common table expression's source is text, so it
     /// declares no columns for `rows` to scope.
     pub def inRound(entry: Entry): Sql.Expr[Bool] =
-        scope(columns(), entry)
+        scopedBy(columns(), entry)
 
     /// A lap of one car that took it into the pit lane, either half of a stop:
     /// the in-lap, which turned down the pit lane at its end and is marked
@@ -195,11 +195,20 @@ pub mod Db.Laps {
     /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them. Named for
     /// the table, since a join's other side has a `round_id` too.
-    def scope(c: Columns, entry: Entry): Sql.Expr[Bool] =
+    def scopedBy(c: Columns, entry: Entry): Sql.Expr[Bool] =
         Rounds.scope(Schema.qualified(table(), c#roundId), entry)
 
+    /// The round's rows, and whatever else the query asks of them, as the piece
+    /// that follows a `WHERE` written as text.
+    ///
+    /// `rows` scopes a source it can name columns on, and a statement that wrote
+    /// its own `WHERE` has no such source. `every` asks `1 = 1` of no predicates,
+    /// since this goes where a predicate belongs.
+    pub def scope(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
+        Sql.term(Sql.every(inRound(entry) :: predicates))
+
     def scoped(entry: Entry, rows: Sql.Rows[Columns]): Sql.Rows[Columns] =
-        rows |> Sql.filter(c -> scope(c, entry))
+        rows |> Sql.filter(c -> scopedBy(c, entry))
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
     /// and which is therefore where the round's start time is written. The

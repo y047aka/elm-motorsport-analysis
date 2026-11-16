@@ -222,8 +222,14 @@ pub mod Sql {
         andThen(value -> Ok(transform(value)), sel)
 
     pub def clause(sel: Sel[a]): Frag =
-        let Sel.Sel(columns, _) = sel;
-        frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
+        frags(raw("SELECT") :: columnsOf(sel) :: Nil)
+
+    /// The expressions a projection names, as the `SELECT` clause spells them and
+    /// without the keyword -- the piece a statement written out puts between
+    /// `SELECT` and `FROM`.
+    pub def columnsOf(p: p): Frag with Project[p] =
+        let Sel.Sel(columns, _) = Project.sel(p);
+        joinFrags(", ", columns)
 
     pub def decode(sel: Sel[a], row: Row): Result[Error, a] =
         let Sel.Sel(_, decodeCells) = sel;
@@ -305,7 +311,12 @@ pub mod Sql {
 
     /// Rows and the reading of one.
     pub enum Query[a] {
-        case Query(Clauses, Sel[a])
+        /// The clauses a query was built with, and the reading of them.
+        case Built(Clauses, Sel[a])
+
+        /// A statement written out, and the reading of the rows it answers with.
+        /// As `Built`, what it projects and what it reads back are one value.
+        case Written(Frag, Sel[a])
     }
 
     /// `source` is what follows `FROM`: a table, a derived table, or tables
@@ -358,17 +369,24 @@ pub mod Sql {
     /// comes back are both read off what `pick` returned.
     pub def map(pick: c -> p, rows: Rows[c]): Query[Project.Out[p]] with Project[p] =
         let Rows.Rows(r, columns) = rows;
-        Query.Query(r, Project.sel(pick(columns)))
+        Query.Built(r, Project.sel(pick(columns)))
 
     /// What the row read means, which is the caller's own type rather than
     /// the tuple the columns came back as.
     pub def reading(transform: a -> b, q: Query[a]): Query[b] =
-        let Query.Query(r, sel) = q;
-        Query.Query(r, selMap(transform, sel))
+        match q {
+            case Query.Built(r, sel)     => Query.Built(r, selMap(transform, sel))
+            case Query.Written(sql, sel) => Query.Written(sql, selMap(transform, sel))
+        }
 
     /// What the query is, which is settled without a database.
     pub def toStatement(q: Query[a]): Frag =
-        let Query.Query(r, sel) = q;
+        match q {
+            case Query.Written(sql, _) => sql
+            case Query.Built(r, sel)   => built(r, sel)
+        }
+
+    def built(r: Clauses, sel: Sel[a]): Frag =
         frags(
             keyword("WITH", ", ", r#ctes) ::
             clause(sel) ::
@@ -392,20 +410,95 @@ pub mod Sql {
             frags(raw(word) :: joinFrags(separator, terms) :: Nil)
 
     ///
+    /// ===== STATEMENTS WRITTEN OUT =====
+    ///
+
+    /// A statement the caller wrote, and the reading of the rows it answers with.
+    ///
+    /// `??` is where each of `holes` goes, in the order they stand, and `%%` is
+    /// where the `SELECT` clause goes -- which `columnsOf` renders from the
+    /// projection that reads it back, so a statement written out names its columns
+    /// and reads them off the one value, as a built query does.
+    ///
+    /// A marker and a piece disagreeing about how many there are is a mistake in
+    /// the statement, and says which statement it is in rather than sending SQL
+    /// that fails somewhere the reader will not recognise.
+    pub def statement(
+        template: String,
+        holes: List[Frag],
+        projection: p
+    ): Query[Project.Out[p]] \ DbErr with Project[p] =
+        Query.Written(filled(template, holes, columnsOf(projection)), Project.sel(projection))
+
+    /// The statement, the holes filled.
+    ///
+    /// The template carries no values of its own -- a value goes out bound, which
+    /// is why it is a hole and not text -- so the values come out in the order the
+    /// `?`s they bind stand in, the clause's own among them.
+    def filled(template: String, holes: List[Frag], clause: Frag): Frag \ DbErr =
+        match String.splitOn({substr = "%%"}, template) {
+            case before :: after :: Nil =>
+                let head = String.splitOn({substr = "??"}, before);
+                let tail = String.splitOn({substr = "??"}, after);
+                let here = List.length(head) - 1;
+                let after_ = List.drop(here, holes);
+                if (here > List.length(holes) or List.length(tail) - 1 != List.length(after_))
+                    DbErr.raise(Error.Other(
+                        "the statement has ${here + List.length(tail) - 1} `??` and"
+                        + " ${List.length(holes)} to put in them: ${String.take(120, template)}"
+                    ))
+                else
+                    let (beforeHoles, afterHoles) = List.splitAt(here, holes);
+                    joinFrags("", splice(head, beforeHoles) :: clause :: splice(tail, afterHoles) :: Nil)
+            case _ => DbErr.raise(Error.Other(
+                "the statement has no `%%` for its SELECT clause: ${String.take(120, template)}"
+            ))
+        }
+
+    /// A piece of a statement written as one string, with `??` where each of
+    /// `holes` goes, in the order they stand, and no clause in it: a common table
+    /// expression, an arm of a `UNION ALL`, a scalar subquery.
+    pub def spliced(template: String, holes: List[Frag]): Frag \ DbErr =
+        let parts = String.splitOn({substr = "??"}, template);
+        if (List.length(parts) != List.length(holes) + 1)
+            DbErr.raise(Error.Other(
+                "the piece has ${List.length(parts) - 1} `??` and ${List.length(holes)}"
+                + " to put in them: ${String.take(120, template)}"
+            ))
+        else
+            splice(parts, holes)
+
+    /// The pieces and the holes between them, the values coming out in the order
+    /// the `?`s they bind stand in.
+    def splice(parts: List[String], holes: List[Frag]): Frag =
+        match (parts, holes) {
+            case (only :: Nil, Nil) => raw(only)
+            case (part :: restParts, hole :: restHoles) =>
+                let Frag.Frag(tail, tailParams) = splice(restParts, restHoles);
+                let Frag.Frag(holeText, holeParams) = hole;
+                Frag.Frag(part + holeText + tail, holeParams ++ tailParams)
+            case _ => raw("")
+        }
+
+    ///
     /// ===== RUNNING =====
     ///
 
     pub def selectAll(q: Query[a]): List[a] \ DbRead =
-        let Query.Query(_, sel) = q;
-        fetched(q) |> List.map(row -> Db.orRaise(decode(sel, row)))
+        fetched(q) |> List.map(row -> Db.orRaise(decode(projectionOf(q), row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
     pub def selectOne(subject: String, q: Query[a]): a \ DbRead =
-        let Query.Query(_, sel) = q;
         match fetched(q) {
-            case row :: _ => Db.orRaise(decode(sel, row))
+            case row :: _ => Db.orRaise(decode(projectionOf(q), row))
             case Nil      => DbErr.raise(Error.NoRow(subject))
+        }
+
+    def projectionOf(q: Query[a]): Sel[a] =
+        match q {
+            case Query.Built(_, sel)   => sel
+            case Query.Written(_, sel) => sel
         }
 
     def fetched(q: Query[a]): List[Row] \ DbRead =

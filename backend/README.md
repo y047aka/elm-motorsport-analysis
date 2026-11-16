@@ -423,11 +423,10 @@ applied where the rows come from rather than by the reader: `Db.Laps.rows` and
 of a table at large are not something those modules hand out and a reader cannot
 forget the scope. A reader ANDs its own onto them. Both carry a `round_id`, so a
 scope built from the wrong one would bind to whichever side of a join happened
-to have one; the records do not unify, so it does not compile. What a query builds itself cannot reach a
-`WHERE` written into a common table expression, which is text and takes the
-table's own columns: `Db.Laps.inRound` is the same predicate had on its own,
-for the queries in `Round.Index`, `Round.Summary` and `Cli.Load.Validation`
-that write one. Each names the table it is of, and a source that renames it
+to have one; the records do not unify, so it does not compile. What a query builds
+itself needs no `WHERE` written as text: `Db.Laps.scope` is the same predicate had on
+its own, plus whatever else the statement asks, as the piece that goes into a `WHERE`
+the caller wrote. Each names the table it is of, and a source that renames it
 says so itself: `Db.Rounds.scope` takes the column under that name, which is
 what `Round.Summary.carBuilds` hands its `c`. The type is what carries
 nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
@@ -451,6 +450,27 @@ asked for, a clause with nothing to say is left out, and `filter` asked twice
 asks both. `Sql.toStatement` is pure, so what
 a query is can be read back without a database.
 
+Some queries are written rather than built, and the line is the builder's own reach:
+it takes the projection and the four outer clauses, and what it does not reach -- a
+`WITH`, a window, a correlated subquery -- was text whichever way the statement was
+put together. `Sql.statement` takes such a statement as one string, with `??` where
+each piece it cannot write for itself goes -- the round it is scoped to, the laps the
+events fell on -- and `%%` where the `SELECT` clause goes, which `columnsOf` renders
+from the projection that reads it back. So a written statement names its columns and
+reads them off the one value, as a built query does, and its values go out bound in
+the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a
+statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery. A
+marker and a piece disagreeing about how many there are is refused by name rather than
+sent to SQLite.
+
+`Round.Timeline`'s four walks, `Round.Index`'s two, `Round.Summary`'s grid and four of
+`Cli.Load.Validation`'s five rules are written; the readings that are a `GROUP BY` or a
+plain scan stay built, which is where the declared columns and the scoped source earn
+their keep. What the two forms are chosen between is what caught the eye before: the
+built readings name every column as the table declares it, and the written ones say
+`Sql.column` and `Sql.raw` for columns no declaration reaches -- the fifteen
+`b0`..`b14` a mini-sector best is gathered out of, the `held` a `LAG` answers with.
+
 So is what the load writes. `Sql.createTable` takes the columns and the keys
 over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns
 and the rows -- and that last one hands back the statement and each row bound
@@ -467,15 +487,15 @@ named, so the columns `Sql.access` carries are the caller's word that the text
 has them, and a word about the wrong source fails where the query runs rather
 than where it is built. `Db.Laps.rows` and `Db.Laps.rowsBeside` are the two
 that cannot be wrong -- the round's rows of the table itself, and of the table
-read alongside a `json_each` of its own -- so a derived table calls `Sql.access` and names the
-columns it selects, which is what `Round.Summary.driverNames` does with two of
-them. A source that has none is `Sql.column` as before.
+read alongside a `json_each` of its own -- so a join names the columns its sides
+have, which is what `Round.Drivers.read` does with the four of two tables. A
+source that has none is `Sql.column` as before.
 
-`Round.Summary.carBuilds` joins `cars` to `entries` and to two of those, and
-what its sides have is said the same way: `Db.Schema.qualified` is a column of a table under the
-name a source gives it, so `c.car_number` and `l1.elapsed_ms` are declared
-columns read and compared as that source's, and the join's `ON` is a comparison
-of two of them rather than text. What a `LEFT JOIN` does to the far side is
+`Round.Summary.carBuilds` joins `cars` to `entries` and to two of those, and writes
+the join it joins them with. What its sides have is still said as declared columns:
+`Db.Schema.qualified` is a column of a table under the name a source gives it, so
+`c.car_number` and `l1.elapsed_ms` are read and compared as that source's, and the
+projection names them rather than spelling them. What a `LEFT JOIN` does to the far side is
 `Sql.orNull`, which reads a null cell as nothing rather than as a reading that
 failed -- needed for a column the table has of every row, and not for one that
 is null in its own right. The records naming each side are still written out,
@@ -538,7 +558,16 @@ Where it goes the other way is the SQL itself, which it writes rather than build
 
 What it has above that base is not here, and none of it rests on which way the SQL is written:
 
-- **The `.q` generator and the parser beside it.** sqlfx writes statements in files and checks them against a migration's DDL; this builds them. The `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape this keeps.
+- **The `.q` generator and the parser beside it.** sqlfx writes statements in files and
+  checks them against a migration's DDL; this builds most of them and writes the
+  hardest ones out. What it keeps of sqlfx's idea is the check rather than the parser:
+  every one of these statements runs against the in-memory SQLite of `Round.TestSupport`
+  through `Round.TestTimeline`, `TestValidation`, `TestIndex` and `TestSummary`, so a
+  column no table declares fails there by name -- after the change to written
+  statements, as before it. A parser reading the DDL would catch that at compile time,
+  and would not accept `WINDOW w AS`, a recursive `WITH`, or `json_each` in the `FROM`,
+  which is where four of these statements live. The `Sql` combinators, `Db.Schema.Column`
+  and the positional `Sel` are the shape this keeps.
 - **A pool, and forward-only migrations.** One file, rebuilt from CSV by
   `Cli.Load` each run, has no connection to pool and no schema to migrate
   forward -- the `DROP TABLE`s are the migration.

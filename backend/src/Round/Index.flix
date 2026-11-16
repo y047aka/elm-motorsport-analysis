@@ -26,11 +26,6 @@ pub mod Round.Index {
             flags          = flags(entry)
         }
 
-    /// The round's rows as a fragment, for the arms that read them from
-    /// inside one of their own.
-    def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
-        Sql.term(Sql.every(Laps.inRound(entry) :: predicates))
-
     // ------------------------------------------------------- lap completions
 
     /// The counter reads the leading car's completed laps, so it goes up the
@@ -55,17 +50,13 @@ pub mod Round.Index {
     pub def flags(entry: Entry): List[FlagShown] \ DbRead =
         let green = Wec.flagToString(Wec.Flag.Green);
         let finish = Wec.flagToString(Wec.Flag.Finish);
-        Sql.rows(Sql.raw("shown"))
-            |> Sql.using(Sql.frags(
-                Sql.raw("shown AS (SELECT elapsed_ms, flag_at_fl,"
-                    + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
-                    + " FROM " + Laps.table() + " WHERE flag_at_fl <> '${finish}' AND") ::
-                Sql.term(Laps.inRound(entry)) ::
-                Sql.raw(")") :: Nil
-            ))
-            |> Sql.filter(_ -> Sql.column("flag_at_fl <> prior"))
-            |> Sql.orderBy(Sql.raw("elapsed_ms") :: Nil)
-            |> Sql.map(_ -> (Sql.text("flag_at_fl"), Sql.int("elapsed_ms")))
+        Sql.statement(
+            "WITH shown AS (SELECT elapsed_ms, flag_at_fl,"
+                + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
+                + " FROM ${Laps.table()} WHERE flag_at_fl <> '${finish}' AND ??)"
+                + " SELECT %% FROM shown WHERE flag_at_fl <> prior ORDER BY elapsed_ms",
+            Laps.scope(entry, Nil) :: Nil,
+            (Sql.text("flag_at_fl"), Sql.int("elapsed_ms")))
             |> Sql.selectAll
             |> List.filterMap(match (flag, elapsed) ->
                 Wec.flagFromString(flag)
@@ -93,11 +84,18 @@ pub mod Round.Index {
 
     def bestTimes(entry: Entry, seats: Round.Drivers.Seats): List[(Record, Change)] \ DbRead =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
-        Sql.rows(Sql.raw("(" + standing() + ")"))
-            |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
-            |> Sql.filter(_ -> Sql.column("prev IS NULL OR t < prev"))
-            |> Sql.orderBy(Sql.raw("k") :: Sql.raw("elapsed_ms") :: Sql.raw("source_row") :: Nil)
-            |> Sql.map(_ -> (
+        Sql.statement(
+            // Every reading with the record as it stood before it beside it, the
+            // readings walked once in the order the laps were completed.
+            "WITH v AS (??)"
+                + " SELECT %% FROM (SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_number, t,"
+                + " MIN(t) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
+                + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
+                + " FROM v WHERE t IS NOT NULL)"
+                + " WHERE prev IS NULL OR t < prev"
+                + " ORDER BY k, elapsed_ms, source_row",
+            readings :: Nil,
+            (
                 record,
                 Sql.int("elapsed_ms"),
                 Sql.int("t"),
@@ -122,14 +120,14 @@ pub mod Round.Index {
     def changesOf(record: Record, changes: List[(Record, Change)]): List[Change] =
         changes |> List.filterMap(match (r, change) -> if (r == record) Some(change) else None)
 
-    def branches(entry: Entry): List[Sql.Branch[Record]] =
+    def branches(entry: Entry): List[Sql.Branch[Record]] \ DbErr =
         let scalar = sources() |> List.map(match (record, expression, predicates) ->
             Sql.Branch.One(record, reading(entry, expression, predicates)));
         List.append(scalar, miniSectorBranch(entry) :: Nil)
 
     /// The fifteen mini-sectors are one arm, `json_each` numbering them from
     /// zero where `Motorsport.MiniSector.positionOf` counts from one.
-    def miniSectorBranch(entry: Entry): Sql.Branch[Record] =
+    def miniSectorBranch(entry: Entry): Sql.Branch[Record] \ DbErr =
         Sql.Branch.Many(
             {
                 span   = List.length(MiniSector.all()),
@@ -140,31 +138,19 @@ pub mod Round.Index {
             miniSectorReadings(entry)
         )
 
-    /// Every reading with the record as it stood before it beside it, the
-    /// readings walked once in the order the laps were completed.
-    def standing(): String =
-        "SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_number, t,"
-            + " MIN(t) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
-            + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
-            + " FROM v WHERE t IS NOT NULL"
-
-    def reading(entry: Entry, expression: String, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
-        Sql.frags(
-            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number,"
-                + " ${expression} AS t"
-                + " FROM " + Laps.table() + " WHERE") ::
-            where_(entry, predicates) :: Nil
-        )
+    def reading(entry: Entry, expression: String, predicates: List[Sql.Expr[Bool]]): Sql.Frag \ DbErr =
+        Sql.spliced(
+            "elapsed_ms, source_row, car_number, lap_number, driver_number,"
+                + " ${expression} AS t FROM ${Laps.table()} WHERE ??",
+            Laps.scope(entry, predicates) :: Nil)
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
-    def miniSectorReadings(entry: Entry): Sql.Frag =
-        Sql.frags(
-            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number, m.value"
-                + " FROM " + Laps.table()
-                + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"
-                + " WHERE") ::
-            where_(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil
-        )
+    def miniSectorReadings(entry: Entry): Sql.Frag \ DbErr =
+        Sql.spliced(
+            "elapsed_ms, source_row, car_number, lap_number, driver_number, m.value"
+                + " FROM ${Laps.table()}"
+                + ", json_each(${Laps.table()}.mini_sector_time_ms) m WHERE ??",
+            Laps.scope(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil)
 
 }
