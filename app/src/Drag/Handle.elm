@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Pointer, Config, resize, view)
+module Drag.Handle exposing (Axis(..), Pointer, Config, Range, resize, view)
 
 {-| A grip that carries something along a line: by the pointer, or a step at a
 time by the arrow keys once it has the focus.
@@ -9,7 +9,7 @@ behind it is `Drag`'s business. What the grip adds is the pointer's path: the
 every move and the release come back to the grip even once the pointer has left
 it.
 
-@docs Axis, Pointer, Config, resize, view
+@docs Axis, Pointer, Config, Range, resize, view
 
 -}
 
@@ -68,6 +68,7 @@ view : Config msg -> Html msg
 view config =
     grip
         Across
+        Carry
         config
         "grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
         (if config.held then
@@ -81,10 +82,11 @@ view config =
 
 {-| The same grip lying along an edge to resize what it bounds: the pointer's
 travel is the size's, and the arrow keys step it. `Across` lies along a column
-edge, `Down` along a row edge.
+edge, `Down` along a row edge. It answers as the splitter it is, so the range it
+can be taken between is said with `Range`.
 -}
-resize : Axis -> Config msg -> Html msg
-resize axis config =
+resize : Axis -> Range -> Config msg -> Html msg
+resize axis range config =
     let
         ( classes, cursor, glyph ) =
             case axis of
@@ -102,6 +104,7 @@ resize axis config =
     in
     grip
         axis
+        (Splitter range)
         config
         classes
         (if config.held then
@@ -111,6 +114,28 @@ resize axis config =
             cursor
         )
         glyph
+
+
+{-| How far the grip's size may go, and where it stands now. `Resize` hands this
+over from the `Fence` and the `Model` it is given.
+-}
+type alias Range =
+    { min : Float
+    , max : Float
+    , now : Float
+    }
+
+
+{-| What the grip is to a reader: `Carry` moves a thing and answers as a button;
+`Splitter` bounds a size, and a size has a range and an orientation.
+
+The distinction is the ARIA's: a thing a screen reader is told to press has to do
+something when pressed, which a splitter does not.
+
+-}
+type Kind
+    = Carry
+    | Splitter Range
 
 
 {-| The markup every grip is made of: a `drag-handle` with the aria and data
@@ -124,11 +149,10 @@ its track, so it centers nothing and the glyph hangs below the grip.
 `place-content` centers the track itself, and the overflow splits evenly.
 
 -}
-grip : Axis -> Config msg -> String -> String -> String -> Html msg
-grip axis config classes cursor glyph =
+grip : Axis -> Kind -> Config msg -> String -> String -> String -> Html msg
+grip axis kind config classes cursor glyph =
     Html.node "drag-handle"
         ([ id config.id
-         , attribute "role" "button"
          , attribute "aria-roledescription" "drag handle"
          , attribute "aria-keyshortcuts" (keyShortcuts axis)
          , attribute "tabindex" "0"
@@ -145,12 +169,14 @@ grip axis config classes cursor glyph =
                         " text-muted-foreground"
                    )
             )
-         , on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab (pointer axis)))
-         , on "pointerup" (Decode.map config.onDrop (pointer axis))
-         , on "pointercancel" (Decode.map config.onCancel pointerId)
-         , on "lostpointercapture" (Decode.map config.onCancel pointerId)
-         , preventDefaultOn "keydown" (Decode.map (\step -> ( config.onStep step, True )) (arrowStep axis))
          ]
+            ++ role axis kind
+            ++ [ on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab (pointer axis)))
+               , on "pointerup" (Decode.map config.onDrop (pointer axis))
+               , on "pointercancel" (Decode.map config.onCancel pointerId)
+               , on "lostpointercapture" (Decode.map config.onCancel pointerId)
+               , preventDefaultOn "keydown" (Decode.map (\step -> ( config.onStep step, True )) (arrowStep axis))
+               ]
             ++ (if config.held then
                     [ on "pointermove" (Decode.map config.onMove (pointer axis)) ]
 
@@ -164,6 +190,32 @@ grip axis config classes cursor glyph =
 pointer : Axis -> Decoder Pointer
 pointer axis =
     Decode.map2 Pointer pointerId (coordinate axis)
+
+
+{-| The role and the value. `aria-orientation` names the bar the grip is, not the
+axis it travels along: the grip across a column edge is a vertical bar dragged
+sideways.
+-}
+role : Axis -> Kind -> List (Html.Attribute msg)
+role axis kind =
+    case kind of
+        Carry ->
+            [ attribute "role" "button" ]
+
+        Splitter { min, max, now } ->
+            [ attribute "role" "separator"
+            , attribute "aria-orientation"
+                (case axis of
+                    Across ->
+                        "vertical"
+
+                    Down ->
+                        "horizontal"
+                )
+            , attribute "aria-valuemin" (String.fromFloat min)
+            , attribute "aria-valuemax" (String.fromFloat max)
+            , attribute "aria-valuenow" (String.fromFloat now)
+            ]
 
 
 {-| The pointer's position along the axis the grip reads.

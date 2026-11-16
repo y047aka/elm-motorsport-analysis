@@ -41,7 +41,7 @@ const toggleTracker = (page: Page) => page.locator(`${TRACKER_COLUMN} ${TOGGLE}`
 /** The grip along the row edge between the two rows, which only the enlarged
  * page has. */
 const rowGrip = (page: Page): Locator =>
-  page.getByRole('button', { name: 'Resize the enlarged tracker' });
+  page.getByRole('separator', { name: 'Resize the enlarged tracker' });
 
 /** The circuit as it comes out on screen -- the polygon, not the box it is
  * centred in, which is the full width of its card whatever the circuit's shape. */

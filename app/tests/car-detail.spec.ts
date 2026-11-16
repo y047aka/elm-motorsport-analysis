@@ -831,7 +831,7 @@ test.describe('Car Detail Columns', () => {
 
   /** The grip along the standings' right edge that resizes them. */
   function standingsGrip(page: Page) {
-    return page.getByRole('button', { name: 'Resize the standings column' });
+    return page.getByRole('separator', { name: 'Resize the standings column' });
   }
 
   /**
