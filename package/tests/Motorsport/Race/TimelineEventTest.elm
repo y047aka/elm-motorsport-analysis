@@ -20,6 +20,7 @@ suite =
     describe "TimelineEvent"
         [ decoder
         , lapDetail
+        , carEventLaps
         , handover
         ]
 
@@ -148,6 +149,81 @@ lapDetail =
                     """{ "elapsed": "6:27.414", "event": "fastestLap", "carNumber": "83", "lap": 2 }"""
                     |> Expect.err
         ]
+
+
+{-| Every car event names the lap it fell on, and only a fastest lap carries that lap's
+    times. These are lines the kept round actually writes, so a decoder that reads a
+    `lap` on its own as a promise of `performance` fails here rather than taking the
+    whole events column down with it.
+
+-}
+carEventLaps : Test
+carEventLaps =
+    let
+        namesItsLap line =
+            case Decode.decodeString TimelineEvent.decoder line of
+                Err problem ->
+                    Err (Decode.errorToString problem)
+
+                Ok event ->
+                    if event.lapNumber == Nothing || event.lap /= Nothing then
+                        Err ("expected a lap and no detail, got " ++ Debug.toString event)
+
+                    else
+                        Ok ()
+    in
+    describe "TimelineEvent.decoder, of the lap every car event names"
+        [ test "a car event names its lap and carries no detail" <|
+            \_ ->
+                List.foldl
+                    (\line seen ->
+                        Result.andThen (\_ -> namesItsLap line) seen
+                    )
+                    (Ok ())
+                    [ driverChange
+                    , overtakeForLead
+                    , leaderInPit
+                    , finished
+                    , retired
+                    ]
+                    |> Expect.ok
+        , test "the number reaches the stamp, and no detail reaches the strip" <|
+            \_ ->
+                Decode.decodeString TimelineEvent.decoder driverChange
+                    |> Result.map (\event -> ( event.eventType, event.lapNumber, event.lap ))
+                    |> Expect.equal
+                        (Ok
+                            ( CarEvent "87" DriverChange
+                            , Just 4
+                            , Nothing
+                            )
+                        )
+        ]
+
+
+driverChange : String
+driverChange =
+    """{ "elapsed": "13:16.461", "event": "driverChange", "carNumber": "87", "lap": 4 }"""
+
+
+overtakeForLead : String
+overtakeForLead =
+    """{ "elapsed": "1:43:58.268", "event": "overtakeForLead", "carNumber": "83", "lap": 20 }"""
+
+
+leaderInPit : String
+leaderInPit =
+    """{ "elapsed": "33:55.160", "event": "leaderInPit", "carNumber": "88", "lap": 11 }"""
+
+
+finished : String
+finished =
+    """{ "elapsed": "6:01:25.310", "event": "finished", "carNumber": "6", "lap": 120 }"""
+
+
+retired : String
+retired =
+    """{ "elapsed": "39:37.017", "event": "retired", "carNumber": "20", "lap": 13 }"""
 
 
 rated : String -> String -> String -> TimelineEvent.Rated

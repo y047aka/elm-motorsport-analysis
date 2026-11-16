@@ -197,25 +197,28 @@ but the race's own start -- whose it was.
 -}
 decoder : Decoder TimelineEvent
 decoder =
-    Decode.map4 TimelineEvent
+    Decode.map3 (\elapsed eventType lapNumber -> { elapsed = elapsed, eventType = eventType, lapNumber = lapNumber, lap = Nothing })
         (field "elapsed" Instant.decoder)
         (field "event" string |> Decode.andThen eventTypeDecoder)
         (Decode.maybe (field "lap" Decode.int))
-        -- The number is what the detail is read from, so a `lap` reading as an int
-        -- with no `performance` beside it is a bad line rather than a plain event. One
-        -- that is not an int is no `lap` at all, and reads as a plain event with no
-        -- number either.
-        (Decode.maybe (field "lap" Decode.int)
-            |> Decode.andThen
-                (\number ->
-                    case number of
-                        Nothing ->
-                            Decode.succeed Nothing
+        |> Decode.andThen withLapDetail
 
-                        Just _ ->
-                            Decode.map Just lapDetailDecoder
-                )
-        )
+
+{-| Whether a lap's times ride along, and its kind say which event they are read for.
+
+    Every car event names the lap it fell on, so the number alone says nothing about
+    there being a lap to draw -- only the event's kind does. A fastest lap that names a
+    lap and carries no `performance` beside it is a bad line rather than a plain event.
+
+-}
+withLapDetail : TimelineEvent -> Decoder TimelineEvent
+withLapDetail event =
+    case ( event.eventType, event.lapNumber ) of
+        ( CarEvent _ FastestLap, Just _ ) ->
+            Decode.map (\lap -> { event | lap = Just lap }) lapDetailDecoder
+
+        _ ->
+            Decode.succeed event
 
 
 {-| The lap an event fell on, which sits flat beside the event rather than under a key
