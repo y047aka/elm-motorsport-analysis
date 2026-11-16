@@ -302,7 +302,10 @@ update msg m =
 
         TimelineLoaded_Wec _ (Err _) ->
             -- The events column goes without rather than the round: a page draws
-            -- every other part of one from the summary and the laps.
+            -- every other part of one from the summary and the laps. The file decodes
+            -- whole or not at all, so one line the renderer wrote wrong takes the whole
+            -- column down with no notice -- which is the trade for a post being able to
+            -- read its lap off its own line.
             ( m, Effect.none )
 
         GeometryLoaded key circuit (Ok geometry) ->

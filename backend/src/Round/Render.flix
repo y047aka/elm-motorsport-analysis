@@ -54,7 +54,8 @@ pub mod Round.Render {
         )
 
     /// Absent where the round's feed measured no mini-sectors, rather than fifteen
-    /// blanks for a circuit the tracker has no lines for.
+    /// blanks. Whether the tracker has lines for the circuit is a different fact: a
+    /// circuit drawn from a survey can be timed no finer than three sectors.
     def miniField(d: Detail): List[(String, Json)] =
         match d#miniSectors {
             case None      => Nil

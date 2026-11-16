@@ -51,7 +51,10 @@ either: it makes the same calls `Cli.Export` makes, so what is served and what
 is written are the same bytes rather than two renderings that agree. An answer
 carrying one of the three reads only what that one is made of, rather than
 reading a round's laps to throw them away, which is the one thing the two
-callers do differently.
+callers do differently. What a timeline line is made of now includes the records
+its lap reads against, so that answer reads `Round.Index` too and walks every lap
+as the summary's does -- and `Server.flix` computes the `ETag` off the rendered
+bytes, which means even a request that comes back 304 pays for the walk.
 
 The root is the one thing that differs, and it is asserted rather than
 assumed: `Server.TestApi` compares the served calendar against `Manifest`

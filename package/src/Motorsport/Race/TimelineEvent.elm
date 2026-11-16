@@ -45,8 +45,9 @@ type alias Rated =
     }
 
 
-{-| `miniSectors` is `Nothing` for a circuit the tracker has no lines for, which is a
-lap drawn on the three sectors.
+{-| `miniSectors` is `Nothing` where the round's feed measured no mini-sectors, which is
+the lap drawn on the three sectors. Whether the circuit is drawn from a survey is a
+different fact: a surveyed circuit can be timed no finer than three sectors.
 
 -}
 type alias LapDetail =
@@ -199,8 +200,9 @@ decoder =
     Decode.map3 TimelineEvent
         (field "elapsed" Instant.decoder)
         (field "event" string |> Decode.andThen eventTypeDecoder)
-        -- The number is what the detail is read from, so a `lap` naming one with no
-        -- `performance` beside it is a bad line rather than a plain event.
+        -- The number is what the detail is read from, so a `lap` reading as an int
+        -- with no `performance` beside it is a bad line rather than a plain event. One
+        -- that is not an int is no `lap` at all, and reads as a plain event.
         (Decode.maybe (field "lap" Decode.int)
             |> Decode.andThen
                 (\number ->
@@ -263,6 +265,12 @@ ratedBySectorDecoder =
 
 {-| All fifteen, keyed by the name the file uses. A lap written without a time for one
 of them has no segment there, which is a blank rather than a failure to read the lap.
+
+The fifteen are all required, and `lapDetailDecoder` reads the whole thing through
+`Decode.maybe` -- so a line carrying a differently-split fifteen reads as no
+mini-sectors, and is drawn on the three sectors. That is `Data.Wec`'s
+`byMiniSectorDecoder` doing the same thing to a lap, and here the fallback is a
+plausible drawing rather than a missing one.
 
 -}
 ratedByMiniSectorDecoder : Decoder (ByMiniSector Rated)
