@@ -136,6 +136,13 @@ pub mod Db {
     pub def busy(cause: String): Error =
         Error.Transient(Transient.Busy(cause))
 
+    /// Whether trying the same statement again is worth trying, which the
+    /// constructor says.
+    pub def isTransient(error: Error): Bool = match error {
+        case Error.Transient(_) => true
+        case _                  => false
+    }
+
     /// The two failings in one value, which is what a boundary takes back.
     /// Nothing between a boundary and the statement answers with this: the
     /// failure travels by an effect, and the three places a value comes back to
@@ -200,17 +207,6 @@ pub mod Db {
             case None        => Value.NullOf(nullType)
         }
 
-    /// Whether trying the same statement again is worth trying, which the
-    /// constructor says.
-    pub def isTransient(error: Error): Bool = match error {
-        case Error.Transient(_) => true
-        case _                  => false
-    }
-
-    /// The failure, as whichever of the two effects carries it.
-    pub def raise(error: Error): a \ {TransientDbErr, DbErr} =
-        if (isTransient(error)) TransientDbErr.raise(error) else DbErr.raise(error)
-
     /// The text a nullable-int-array column holds, which `json_each` reads
     /// back as one row per element.
     pub def jsonArray(values: List[Option[Int32]]): String =
@@ -218,6 +214,10 @@ pub mod Db {
             case Some(n) => "${n}"
             case None    => "null"
         }) |> List.join(",")) + "]"
+
+    /// The failure, as whichever of the two effects carries it.
+    pub def raise(error: Error): a \ {TransientDbErr, DbErr} =
+        if (isTransient(error)) TransientDbErr.raise(error) else DbErr.raise(error)
 
     /// The value, or the failure that ended the reading.
     pub def runWithError(f: Unit -> a \ ef): Result[Error, a] \ (ef - {TransientDbErr, DbErr}) =

@@ -22,13 +22,6 @@ pub mod Db.Jdbc {
 
     def batchSize(): Int32 = 1000
 
-    /// What a refusal was. The code is the driver's own; the message is what it
-    /// said, which for some failures of its own it leaves unsaid.
-    def refusal(e: SQLException): Error \ IO =
-        let message: String = e.getMessage();
-        let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;
-        Db.Sqlite.classify({code = e.getErrorCode(), message = said})
-
     /// The driver registers itself through `META-INF/services` when the JDBC jar
     /// is on the application class path. It is not on the one Flix runs with, so
     /// without `registerDriver` this reports that no driver matches the URL —
@@ -240,5 +233,12 @@ pub mod Db.Jdbc {
         } catch {
             case e: SQLException => Err(refusal(e))
         }
+
+    /// What a refusal was. The code is the driver's own; the message is what it
+    /// said, which for some failures of its own it leaves unsaid.
+    def refusal(e: SQLException): Error \ IO =
+        let message: String = e.getMessage();
+        let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;
+        Db.Sqlite.classify({code = e.getErrorCode(), message = said})
 
 }
