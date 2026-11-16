@@ -24,10 +24,21 @@ pub mod Round.Timeline {
     use Sql.Sel
     use Util.Duration.Duration
 
+    /// The round's timeline as the rows hold it: every event with the lap it fell on,
+    /// and nothing beside it.
+    ///
+    /// Sorted rather than read in the key's order, so that a row corrected in SQL comes
+    /// back at its new moment rather than at its old one.
     pub def read(entry: Entry): List[Timeline.Event] \ DbRead =
-        events(entry)
+        let c = TimelineEvents.columns();
+        TimelineEvents.rows(entry)
+            |> Sql.orderBy(Schema.term(c#elapsedMs) :: Schema.term(c#seq) :: Nil)
+            |> Sql.map(_ -> TimelineEvents.selection())
+            |> Sql.selectAll
+            |> List.map(event)
 
-    /// The round's timeline, each event beside the lap it fell on.
+    /// The round's timeline, each event that fell on a timed lap beside that lap's
+    /// driver and the times it ran.
     ///
     /// `index` is the round's own, so the records a lap reads against are the ones
     /// `Round.Index` counted.
@@ -36,19 +47,9 @@ pub mod Round.Timeline {
         seats: Round.Drivers.Seats,
         index: Index.Index
     ): List[Detailed] \ DbRead =
-        let happening = events(entry);
+        let happening = read(entry);
         let cells = lapCells(entry, List.filterMap(lapOf, happening));
         happening |> List.map(beside(seats, index, cells))
-
-    /// Sorted rather than read in the key's order, so that a row corrected in
-    /// SQL comes back at its new moment rather than at its old one.
-    def events(entry: Entry): List[Timeline.Event] \ DbRead =
-        let c = TimelineEvents.columns();
-        TimelineEvents.rows(entry)
-            |> Sql.orderBy(Schema.term(c#elapsedMs) :: Schema.term(c#seq) :: Nil)
-            |> Sql.map(_ -> TimelineEvents.selection())
-            |> Sql.selectAll
-            |> List.map(event)
 
     /// A row that spells no event is a table written by something other than
     /// `Db.TimelineEvents.fromEvents`, which is the one thing the rows cannot
