@@ -9,9 +9,8 @@ hands the flat drawing -- and is set on a plane of its own above the plane it wa
 surveyed on. Nothing is added to the circuit: no height it does not have. What
 turns it is a frame, and what draws it is SVG, projected point by point.
 
-Everything the drawing measures is a share of the lap's own size, since the lap is
-put on a plane two units across before the eye is set: one set of lengths serves
-every circuit and the ring it falls back to.
+Everything the drawing measures is a share of the lap's own size, so one set of
+lengths serves every circuit and the ring it falls back to.
 
 @docs Model, Msg, init, update, view, box, projected, band
 
@@ -38,10 +37,9 @@ import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, s
 
 {-| How the map is looked at, and whether a pointer is on it.
 
-The azimuth spins the map round the vertical; the elevation lifts the eye from the
-grazing line to overhead, where the drawing is the flat map again. `perspective`
-walks the eye in from ten lap-radii to four, which foreshortens without changing how
-big the lap comes out: the drawing is fitted to its box whatever the distance.
+The azimuth spins the map round the vertical and the elevation lifts the eye towards
+overhead. `perspective` walks the eye in, which foreshortens without changing how big
+the lap comes out: the drawing is fitted to its box whatever the distance.
 
 -}
 type alias Model =
@@ -64,14 +62,9 @@ init =
     }
 
 
-{-| `Grab` and `Turn` are one pointer's press and its moves, at the pointer's own
-page position; `Release` and `Cancel` are that pointer let go of, or taken away.
-`Turn` turns the map by the pointer's travel since the last turn, so how far it goes
-is the reader's drag and nothing else's.
-
-`Step` turns by a named amount, in radians -- the arrow keys, a step at a time.
-`Depth` walks the eye in or out by a share of the way between the two ends. `Reset`
-is `init` with the pointer kept.
+{-| `Grab` and `Turn` carry the pointer's own page position, and `Turn` turns the map
+by the travel since the last turn -- so how far it goes is the reader's drag and
+nothing else's. `Step` turns by radians. `Reset` is `init` with the pointer kept.
 
 -}
 type Msg
@@ -147,19 +140,15 @@ eyeDistance perspective =
 {-| Nothing claims a coordinate frame for the scene: the units are unitless and the
 coordinates are nobody's.
 
-The scene is unitless because every length in it is a share of the lap's own size,
-and the lap is metres to the circuit and viewBox units to the ring.
-
 -}
 type alias Space =
     ()
 
 
-{-| The box the scene is projected into, and the screen the eye looks through: three
-across to one high, which is how the row it stands in is shaped and how a lap turned
-towards the eye comes out. The svg keeps these proportions, and the card it stands in
-keeps its own; how much of the card the drawing takes is the fit's doing, not this
-box's.
+{-| The box the scene is projected into: three across to one high, which is how the row
+it stands in is shaped and how a lap turned towards the eye comes out. The svg keeps
+these proportions, and the card it stands in keeps its own; how much of the card the
+drawing takes is the fit's doing, not this box's.
 -}
 box : { w : Float, h : Float }
 box =
@@ -224,9 +213,8 @@ atDepth eye shot =
 -- FITTING THE DRAWING TO ITS BOX
 
 
-{-| Scale every projected point by `k`, stand the middle of what was projected at
-the origin, and hand it to the middle of the box: the projected coordinates are
-centred on the origin, and the box is not.
+{-| The projected coordinates are centred on the origin, and the box is not: `k` and the
+two offsets are what carry one into the other.
 -}
 type alias Place =
     { k : Float
@@ -281,8 +269,8 @@ lineTo p ( a, b ) =
 
 
 {-| The lap stood on the plane it is drawn on, turned to the way it is being looked at,
-and the fit that scales it to the box. The eye and the plane's size come out with it,
-since a car is drawn at the eye and sized by how far the eye already is.
+and the fit that scales it to the box. The eye comes out with it: a car is drawn at
+the eye and sized by how far the eye already is.
 -}
 type alias Stance =
     { eye : Camera3d Unitless Space
@@ -358,7 +346,8 @@ band model points =
 -- THE SCENE
 
 
-{-| The lap raised off its own ground, in screen units, before the fit scales it.
+{-| Everything the drawing is made of, projected but not yet fitted: the points are
+still the eye's own screen units, and `draw` scales them to the box.
 -}
 type alias Scene =
     { ground : List Shot
@@ -490,8 +479,7 @@ view model shown standings =
     draw fit scene
 
 
-{-| A car's size as a share of the size named: the leader full, a car behind
-smaller, as on the flat tracker.
+{-| How much smaller a car behind the leader is drawn, as on the flat tracker.
 -}
 carScale : Int -> Float
 carScale positionInClass =
@@ -507,8 +495,7 @@ outward position =
     { x = negate position.heading.y, y = position.heading.x }
 
 
-{-| How many points of the lap stand between two of the lines that hold the raised
-lap to its ground.
+{-| How many marks stand between two risers.
 -}
 riserStride : List a -> Int
 riserStride ring =

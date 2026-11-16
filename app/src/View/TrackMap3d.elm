@@ -3,9 +3,8 @@ module View.TrackMap3d exposing (Config, controls, surface)
 {-| The track map raised in space, the pointer that turns it, and the two presses
 that set how deep the perspective is.
 
-The surface is a `drag-handle`, because Elm cannot call `setPointerCapture`: turned
-without capture, the map stops the moment the pointer leaves the card -- which a
-turn round the lap does, twice.
+The surface is a `drag-handle`: turned without pointer capture, the map stops the
+moment the pointer leaves the card -- which a turn round the lap does, twice.
 
 @docs Config, controls, surface
 
@@ -20,8 +19,7 @@ import Motorsport.Chart.Tracker3d as Track3d exposing (Model, Msg)
 import Motorsport.Race.Snapshot exposing (Snapshot)
 
 
-{-| Everything the drawing needs that the page holds: the map keeps no state of its
-own, so two maps of one round turn independently.
+{-| The page holds the way the map is looked at; the view keeps nothing of its own.
 -}
 type alias Config msg =
     { model : Model

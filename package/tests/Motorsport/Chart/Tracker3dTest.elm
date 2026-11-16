@@ -3,9 +3,8 @@ module Motorsport.Chart.Tracker3dTest exposing (tests)
 {-| The turnable map: how the reader's drag becomes an angle, and what the camera
 does to the circuit's own metres.
 
-The projection is tested because a camera goes wrong quietly. A frame that turns the
-circuit over draws its mirror image, and a fit that misses the box draws a lap running
-off the edge -- and both still look like a track.
+The projection is tested because a camera goes wrong quietly; `projected` names the
+two ways it does.
 
 -}
 
@@ -171,8 +170,7 @@ overhead =
     turned Tracker3d.init.azimuth (degrees 86)
 
 
-{-| The map opened at, turned to a given azimuth and elevation. Elm's record update
-takes a variable, so the opening model is named to be turned at all.
+{-| The map opened at, turned to a given azimuth and elevation.
 -}
 turned : Float -> Float -> Tracker3d.Model
 turned azimuth elevation =
