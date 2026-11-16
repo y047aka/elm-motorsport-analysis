@@ -158,4 +158,23 @@ pub mod Db.TestDb {
         Assert.assertTrue(not(Db.isTransient(Db.Error.Refused("no such table: laps"))));
         Assert.assertTrue(not(Db.isTransient(Db.Error.NoRow("the summary"))))
 
+    /// A rollback that fails says nothing the failure it is undoing does not, so its
+    /// answer is discarded: the failure the caller learns is the one that ended the
+    /// transaction, not the one that tried to undo it.
+    @Test
+    def aFailingRollbackDoesNotReplaceTheFailureItUndoes(): Unit \ Assert =
+        let outcome = run {
+            Db.runWithError(() -> Db.transact(() ->
+                DbErr.raise(Db.Error.Refused("the round's own failure"))))
+        } with handler SqlWrite {
+            def execute(_sql, _params, k) = k(Ok(0))
+            def insertMany(_sql, _rows, k) = k(Ok(0))
+            def commit(k) = k(Ok())
+            def rollback(k) = k(Err(Db.Error.Refused("the rollback's failure")))
+        };
+        Assert.assertTrue(match outcome {
+            case Err(error) => "${error}" == "the round's own failure"
+            case Ok(_)      => false
+        })
+
 }

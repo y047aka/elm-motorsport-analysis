@@ -373,6 +373,10 @@ pub mod Db {
     /// A name the database would not take is `Error.Other`, and a failure
     /// inside the mark comes back as a value rather than raised.
     ///
+    /// The savepoint is released after being rolled back to rather than left marked:
+    /// `ROLLBACK TO` leaves it there, and a caller that marks the same name again --
+    /// `Db.Retry.retryingSavepoint` does, once per try -- would nest one level each.
+    ///
     /// The savepoint is SQLite's rather than the driver's, so it goes out as a
     /// statement -- which is what `runRecording` keeps and `runFailing` refuses,
     /// like every other. `Db.Jdbc` marks one of the driver's per insert, and
