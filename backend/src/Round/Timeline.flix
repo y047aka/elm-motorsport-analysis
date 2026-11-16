@@ -30,7 +30,7 @@ pub mod Round.Timeline {
     def event(r: EventRow): Timeline.Event \ DbErr =
         match TimelineEvents.toEvent(r) {
             case Some(e) => e
-            case None    => DbErr.fail(Db.Error.Incomplete(
+            case None    => DbErr.raise(Db.Error.Incomplete(
                 "timeline event ${r#seq} is a \"${r#event}\" carrying nothing that spells one"))
         }
 

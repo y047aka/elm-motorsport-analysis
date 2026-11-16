@@ -23,15 +23,15 @@ pub mod Round.TestSupport {
     /// archive a working copy has.
     pub def url(): String = "jdbc:sqlite::memory:"
 
-    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
+    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Db) + IO =
         onRows(entry, laps, true, read)
 
     /// As `onRound`, with the round's cars left out: what a round only half in
     /// the database reads as.
-    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
+    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Db) + IO =
         onRows(entry, laps, false, read)
 
-    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
+    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - Db) + IO =
         let outcome = Db.runWithError(() -> Jdbc.withConnection(url(), () -> {
             let rounds = Rounds.create(entry :: Nil);
             Drivers.create();

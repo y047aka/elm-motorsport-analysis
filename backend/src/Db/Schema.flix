@@ -9,6 +9,7 @@
 /// taking an `Option` is the nullable one.
 pub mod Db.Schema {
 
+    use Db.NullType
     use Db.Value
     use Sql.Sel
 
@@ -117,8 +118,8 @@ pub mod Db.Schema {
         keys: List[Sql.Key[Bound[r]]],
         storage: Sql.Storage
     ): Unit \ DbWrite =
-        Db.execute(Sql.dropTableIfExists(table));
-        Db.execute(createTable(table, columns, computed, keys, storage))
+        discard Db.execute(Sql.dropTableIfExists(table), Nil);
+        discard Db.execute(createTable(table, columns, computed, keys, storage), Nil)
 
     /// The columns a row binds, then the ones the database makes: a computed
     /// column is declared like any other and is not in the ordering the insert
@@ -143,7 +144,7 @@ pub mod Db.Schema {
         Sql.createIndex(indexName(table, over), table, over |> List.map(declare))
 
     pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite =
-        Db.execute(createIndex(table, over))
+        discard Db.execute(createIndex(table, over), Nil)
 
     def indexName(table: String, over: List[Bound[r]]): String =
         columnNames(over) |> List.foldLeft((acc, name) -> acc + "_" + name, table)
@@ -185,12 +186,15 @@ pub mod Db.Schema {
         column(name, "int not null", row -> Value.Boolean(get(row)), Sql.bool)
 
     pub def nullableText(name: String, get: r -> Option[String]): Column[r, Option[String]] =
-        column(name, "text", row -> Value.NullableText(get(row)), Sql.optionalText)
+        column(name, "text",
+            row -> Db.ofNull(get(row) |> Option.map(Value.Text), NullType.Text), Sql.optionalText)
 
     pub def nullableInteger(name: String, get: r -> Option[Int32]): Column[r, Option[Int32]] =
-        column(name, "int", row -> Value.NullableInteger(get(row)), Sql.optionalInt)
+        column(name, "int",
+            row -> Db.ofNull(get(row) |> Option.map(Value.Integer), NullType.Integer), Sql.optionalInt)
 
     pub def nullableIntArray(name: String, get: r -> Option[List[Option[Int32]]]): Column[r, Option[List[Option[Int32]]]] =
-        column(name, "text", row -> Value.NullableIntArray(get(row)), Sql.optionalIntArray)
+        column(name, "text",
+            row -> Db.ofNull(get(row) |> Option.map(Value.Json), NullType.Text), Sql.optionalIntArray)
 
 }

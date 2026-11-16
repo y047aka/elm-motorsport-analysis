@@ -71,18 +71,22 @@ pub def fetch(sql: String, params: List[Value]): ... \ DbRead =
 `ef - DbErr`, `ef - {SqlRead, SqlWrite}` and `ef - Db` (an alias of a set) all
 work. Prefer the alias where one exists, and remember that a boundary that
 handles the error effect too has to subtract it as well: `withConnection` is
-`(ef - {SqlRead, SqlWrite, DbErr}) + IO + DbErr`, and leaving `DbErr` out of the
+`(ef - Db) + IO + {TransientDbErr, DbErr}`, and leaving one of the two out of the
 subtraction fails as `E6469 Unable to unify the effect formulas` with two
 formulas that differ only by that term.
 
 ### A failure effect wants one op, not one per kind
 
-`DbErr` has a single `fail(error: Db.Error): Void`. An operation returning
-`Void` does not resume, so the caller's code is written as though it always
-succeeds, and `Db.runWithError` turns it back into a `Result` at the boundary.
+Each of `DbErr` and `TransientDbErr` has a single `raise(error: Db.Error): Void`.
+An operation returning `Void` does not resume, so the caller's code is written as
+though it always succeeds, and `Db.runWithError` turns it back into a `Result` at
+the boundary.
 
 An op per error kind buys partial handling — catching one kind and letting the
-rest fly. Nothing here does that, so nothing here has one.
+rest fly. There are two *effects* here, one per whether trying again is worth
+trying, and `Db.raise` routes a failure to its effect off its constructor: the
+choice is taken once, where the failure is raised, rather than at every handler
+that might see it.
 
 ### `bug!` takes a `String`
 

@@ -27,7 +27,7 @@ pub mod Server {
             let server = HttpServer.create(new InetSocketAddress(port), 0);
             discard server.createContext("/api", new HttpHandler {
                 def handle(_this: HttpHandler, exchange: HttpExchange): Unit \ IO =
-                    answer(databaseUrl, exchange)
+                    RawSql.runWithAllow(() -> answer(databaseUrl, exchange))
             });
             server.setExecutor(Executors.newFixedThreadPool(threads()));
             server.start();
@@ -40,7 +40,10 @@ pub mod Server {
     /// Anything thrown while the answer is worked out becomes a 500. Left to
     /// fall through, it leaves the exchange open and the caller waiting: the
     /// request neither fails nor returns.
-    def answer(databaseUrl: String, exchange: HttpExchange): Unit \ IO =
+    ///
+    /// The statements this answers with are the server's own, so the request
+    /// handler is where the marker saying their text was written is discharged.
+    def answer(databaseUrl: String, exchange: HttpExchange): Unit \ {IO, RawSql} =
         let response = try {
             respond(databaseUrl, exchange)
         } catch {
@@ -48,7 +51,7 @@ pub mod Server {
         };
         send(exchange, response)
 
-    def respond(databaseUrl: String, exchange: HttpExchange): Response \ IO =
+    def respond(databaseUrl: String, exchange: HttpExchange): Response \ {IO, RawSql} =
         let route = Api.route(exchange.getRequestURI().getPath());
         if (Api.needsDatabase(route))
             fromDatabase(databaseUrl, route)
@@ -63,9 +66,9 @@ pub mod Server {
     ///
     /// A connection a thrown request left behind holds a read on the database
     /// until the process ends, so the close is outside the catch.
-    def fromDatabase(databaseUrl: String, route: Route): Response \ IO =
+    def fromDatabase(databaseUrl: String, route: Route): Response \ {IO, RawSql} =
         match Jdbc.connect(databaseUrl) {
-            case Err(cause) => Api.failed(cause)
+            case Err(cause) => Api.failed(Db.toFailure(cause))
             case Ok(conn)   =>
                 let answered = try {
                     Jdbc.runReading(conn, () -> Api.respond(route))

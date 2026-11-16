@@ -16,6 +16,7 @@
 pub mod Sql {
 
     use Db.Error
+    use Db.Row.Row
     use Db.Value
 
     ///
@@ -115,59 +116,76 @@ pub mod Sql {
     /// The expressions of the SELECT clause, and a reading of the cells they
     /// come back as which answers with what is left of the row.
     pub enum Sel[a] {
-        case Sel(List[Frag], List[Option[String]] -> Result[Error, (a, List[Option[String]])])
+        case Sel(List[Frag], Row -> Result[Error, (a, Row)])
     }
 
-    def cell(expr: Frag, read: String -> Option[String] -> Result[Error, a]): Sel[a] =
+    def cell(expr: Frag, read: String -> Value -> Result[Error, a]): Sel[a] =
         let Frag.Frag(text, _) = expr;
-        Sel.Sel(expr :: Nil, cells -> match cells {
-            case c :: rest => read(text, c) |> Result.map(value -> (value, rest))
-            case Nil       => Err(Error.Unread("the row ended before `${text}`"))
+        Sel.Sel(expr :: Nil, row -> match Row.uncons(row) {
+            case Some((_, value, rest)) => read(text, value) |> Result.map(read_ -> (read_, rest))
+            case None                   => Err(Error.Unread("the row ended before `${text}`"))
         })
 
+    /// A cell the reading wants as text. The schema binds text and SQLite keeps
+    /// what it is given, so a column is asked for as text whatever the driver
+    /// answered it in -- which is also how an expression's cell arrives.
     pub def text(expr: String): Sel[String] =
-        cell(raw(expr), (name, c) -> c |> Option.toOk(Error.Unread("column `${name}` was null")))
+        cell(raw(expr), (name, v) -> nonNull(name, v) |> Result.map(Row.textOf))
 
     pub def optionalText(expr: String): Sel[Option[String]] =
-        cell(raw(expr), (_, c) -> Ok(c))
+        cell(raw(expr), (_, v) ->
+            if (Row.isNull(v)) Ok(None) else Ok(Some(Row.textOf(v))))
 
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
 
     /// As `int`, where the expression is one a query built.
+    ///
+    /// A number the driver answered in another type -- a `SUM`, a `json_each`
+    /// element -- is read from its text, which is the one form every cell has.
     pub def intOf(expr: Frag): Sel[Int32] =
-        cell(expr, (name, c) -> forM(
-            cell  <- c |> Option.toOk(Error.Unread("column `${name}` was null"));
-            value <- parseInt(name, cell)
-        ) yield value)
+        cell(expr, (name, v) -> match v {
+            case Value.Integer(n) => Ok(n)
+            case Value.Null       => Err(Error.Unread("column `${name}` was null"))
+            case _                => parseInt(name, Row.textOf(v))
+        })
 
     /// A truth value is stored as the 1 or 0 the driver bound it as.
     pub def bool(expr: String): Sel[Bool] =
-        cell(raw(expr), (name, c) -> forM(
-            cell  <- c |> Option.toOk(Error.Unread("column `${name}` was null"));
-            value <- match cell {
+        cell(raw(expr), (name, v) -> match v {
+            case Value.Integer(1) => Ok(true)
+            case Value.Integer(0) => Ok(false)
+            case Value.Null       => Err(Error.Unread("column `${name}` was null"))
+            case _ => match Row.textOf(v) {
                 case "1" => Ok(true)
                 case "0" => Ok(false)
-                case _   => Err(Error.Unread("column `${name}` is not a boolean: \"${cell}\""))
+                case t   => Err(Error.Unread("column `${name}` is not a boolean: \"${t}\""))
             }
-        ) yield value)
+        })
 
     pub def optionalInt(expr: String): Sel[Option[Int32]] =
         optionalIntOf(raw(expr))
 
     /// As `optionalInt`, where the expression binds values of its own.
     pub def optionalIntOf(expr: Frag): Sel[Option[Int32]] =
-        cell(expr, (name, c) -> match c {
-            case None       => Ok(None)
-            case Some(cell) => parseInt(name, cell) |> Result.map(value -> Some(value))
+        cell(expr, (name, v) -> match v {
+            case Value.Integer(n) => Ok(Some(n))
+            case Value.Null       => Ok(None)
+            case _                => parseInt(name, Row.textOf(v)) |> Result.map(Some)
         })
 
     /// A mini-sector column arrives as the JSON array it was written as.
     pub def optionalIntArray(expr: String): Sel[Option[List[Option[Int32]]]] =
-        cell(raw(expr), (name, c) -> match c {
-            case None       => Ok(None)
-            case Some(cell) => parseIntArray(name, cell) |> Result.map(values -> Some(values))
+        cell(raw(expr), (name, v) -> match v {
+            case Value.Json(xs) => Ok(Some(xs))
+            case Value.Null     => Ok(None)
+            case _              => parseIntArray(name, Row.textOf(v)) |> Result.map(Some)
         })
+
+    /// The failure a cell that carries nothing is, in the words the reading has
+    /// always used for one.
+    def nonNull(name: String, value: Value): Result[Error, Value] =
+        if (Row.isNull(value)) Err(Error.Unread("column `${name}` was null")) else Ok(value)
 
     def parseInt(expr: String, text: String): Result[Error, Int32] =
         Int32.fromString(text) |> Option.toOk(Error.Unread("column `${expr}` is not a number: \"${text}\""))
@@ -207,13 +225,13 @@ pub mod Sql {
         let Sel.Sel(columns, _) = sel;
         frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
 
-    pub def decode(sel: Sel[a], row: List[Option[String]]): Result[Error, a] =
+    pub def decode(sel: Sel[a], row: Row): Result[Error, a] =
         let Sel.Sel(_, decodeCells) = sel;
         decodeCells(row) |> Result.flatMap(match (value, rest) ->
-            if (List.isEmpty(rest))
+            if (Row.isEmpty(rest))
                 Ok(value)
             else
-                Err(Error.Unread("the row carries ${List.length(rest)} more columns than the projection reads"))
+                Err(Error.Unread("the row carries ${Row.size(rest)} more columns than the projection reads"))
         )
 
     ///
@@ -241,12 +259,11 @@ pub mod Sql {
     pub def orNull(pick: p): Sel[Option[Project.Out[p]]] with Project[p] =
         let Sel.Sel(columns, decodeCells) = Project.sel(pick);
         let width = List.length(columns);
-        Sel.Sel(columns, cells ->
-            if (width > 0 and List.length(cells) >= width
-                    and List.take(width, cells) |> List.forAll(Option.isEmpty))
-                Ok((None, List.drop(width, cells)))
+        Sel.Sel(columns, row ->
+            if (width > 0 and Row.size(row) >= width and Row.allNull(row, width))
+                Ok((None, Row.drop(row, width)))
             else
-                decodeCells(cells) |> Result.map(match (value, rest) -> (Some(value), rest))
+                decodeCells(row) |> Result.map(match (value, rest) -> (Some(value), rest))
         )
 
     /// A reading of a record, extended a field at a time: `add` names the
@@ -388,10 +405,10 @@ pub mod Sql {
         let Query.Query(_, sel) = q;
         match fetched(q) {
             case row :: _ => Db.orRaise(decode(sel, row))
-            case Nil      => DbErr.fail(Error.NoRow(subject))
+            case Nil      => DbErr.raise(Error.NoRow(subject))
         }
 
-    def fetched(q: Query[a]): List[List[Option[String]]] \ DbRead =
+    def fetched(q: Query[a]): List[Row] \ DbRead =
         let Frag.Frag(sql, params) = toStatement(q);
         Db.fetch(sql, params)
 

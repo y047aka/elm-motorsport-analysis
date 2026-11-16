@@ -50,7 +50,7 @@ pub mod Sql.TestExpr {
         Assert.assertTrue(
             Sql.toSql(Sql.clause(Schema.read(lap1))) == ("SELECT l1.car_number", Nil)
         );
-        Assert.assertTrue(Sql.decode(Schema.read(lap1), Some("12") :: Nil) == Ok("12"))
+        Assert.assertTrue(Sql.decode(Schema.read(lap1), TestCells.row(Some("12") :: Nil)) == Ok("12"))
 
     def leMans(): Entry = { season = 2025, id = "le_mans_24h", date = "2025-06-14" }
 

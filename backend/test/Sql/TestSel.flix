@@ -13,7 +13,8 @@ pub mod Sql.TestSel {
     @Test
     def aReadingTakesTheCellUnderItsOwnExpression(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), Some("Will STEVENS") :: Some("7") :: Nil) == Ok(("Will STEVENS", 7))
+            Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: Some("7") :: Nil))
+                == Ok(("Will STEVENS", 7))
         )
 
     /// A reading of several is itself a reading, and contributes its columns
@@ -23,45 +24,46 @@ pub mod Sql.TestSel {
         let sel = Sql.Project.sel((pair(), Sql.text("flag_at_fl")));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT driver_name, lap_number, flag_at_fl", Nil));
         Assert.assertTrue(
-            Sql.decode(sel, Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil)
+            Sql.decode(sel, TestCells.row(Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil))
                 == Ok((("Will STEVENS", 7), "SF"))
         )
 
     @Test
     def aNullUnderANonOptionalReadingNamesTheExpression(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), Some("Will STEVENS") :: None :: Nil)
+            Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: None :: Nil))
                 == Err(Db.Error.Unread("column `lap_number` was null"))
         )
 
     @Test
     def aCellThatIsNotANumberNamesTheExpression(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), Some("Will STEVENS") :: Some("7.5") :: Nil)
+            Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: Some("7.5") :: Nil))
                 == Err(Db.Error.Unread("column `lap_number` is not a number: \"7.5\""))
         )
 
     @Test
     def anOptionalReadingTakesANullAsNothing(): Unit \ Assert =
         let sel = Sql.optionalInt("pit_time_ms");
-        Assert.assertTrue(Sql.decode(sel, None :: Nil) == Ok(None));
-        Assert.assertTrue(Sql.decode(sel, Some("31000") :: Nil) == Ok(Some(31000)))
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(None :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("31000") :: Nil)) == Ok(Some(31000)))
 
     @Test
     def anArrayReadingKeepsTheBlanksInPlace(): Unit \ Assert =
         let sel = Sql.optionalIntArray("mini_sector_time_ms");
         Assert.assertTrue(
-            Sql.decode(sel, Some("[20708,null]") :: Nil) == Ok(Some(Some(20708) :: None :: Nil))
+            Sql.decode(sel, TestCells.row(Some("[20708,null]") :: Nil))
+                == Ok(Some(Some(20708) :: None :: Nil))
         );
-        Assert.assertTrue(Sql.decode(sel, Some("[]") :: Nil) == Ok(Some(Nil)))
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("[]") :: Nil)) == Ok(Some(Nil)))
 
     @Test
     def aBooleanIsTheOneOrZeroTheDriverBoundIt(): Unit \ Assert =
         let sel = Sql.bool("crossing_finish_line_in_pit");
-        Assert.assertTrue(Sql.decode(sel, Some("1") :: Nil) == Ok(true));
-        Assert.assertTrue(Sql.decode(sel, Some("0") :: Nil) == Ok(false));
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("1") :: Nil)) == Ok(true));
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("0") :: Nil)) == Ok(false));
         Assert.assertTrue(
-            Sql.decode(sel, Some("true") :: Nil)
+            Sql.decode(sel, TestCells.row(Some("true") :: Nil))
                 == Err(Db.Error.Unread("column `crossing_finish_line_in_pit` is not a boolean: \"true\""))
         )
 
@@ -70,8 +72,11 @@ pub mod Sql.TestSel {
         let sel = Sql.int("k") |> Sql.andThen(label ->
             if (label == 0) Ok("fastest lap") else Err(Db.Error.Unread("no record is labelled ${label}")));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT k", Nil));
-        Assert.assertTrue(Sql.decode(sel, Some("0") :: Nil) == Ok("fastest lap"));
-        Assert.assertTrue(Sql.decode(sel, Some("9") :: Nil) == Err(Db.Error.Unread("no record is labelled 9")))
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("0") :: Nil)) == Ok("fastest lap"));
+        Assert.assertTrue(
+            Sql.decode(sel, TestCells.row(Some("9") :: Nil))
+                == Err(Db.Error.Unread("no record is labelled 9"))
+        )
 
     /// The far side of a `LEFT JOIN`: a null cell is the row the join did not
     /// find rather than a reading that failed.
@@ -79,30 +84,33 @@ pub mod Sql.TestSel {
     def aReadingOfTheFarSideOfAJoinTakesANullAsNothing(): Unit \ Assert =
         let sel = Sql.orNull(Sql.int("l1.elapsed_ms"));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT l1.elapsed_ms", Nil));
-        Assert.assertTrue(Sql.decode(sel, None :: Nil) == Ok(None));
-        Assert.assertTrue(Sql.decode(sel, Some("95365") :: Nil) == Ok(Some(95365)))
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(None :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("95365") :: Nil)) == Ok(Some(95365)))
 
     /// It takes the cells its reading would have taken, whichever way it
     /// answers, so the readings beside it are still on their own.
     @Test
     def aReadingOfTheFarSideTakesItsOwnCellsEitherWay(): Unit \ Assert =
         let sel = Sql.Project.sel((Sql.orNull(Sql.int("l1.elapsed_ms")), Sql.text("c.car_number")));
-        Assert.assertTrue(Sql.decode(sel, None :: Some("12") :: Nil) == Ok((None, "12")));
         Assert.assertTrue(
-            Sql.decode(sel, Some("95365") :: Some("12") :: Nil) == Ok((Some(95365), "12"))
+            Sql.decode(sel, TestCells.row(None :: Some("12") :: Nil)) == Ok((None, "12"))
+        );
+        Assert.assertTrue(
+            Sql.decode(sel, TestCells.row(Some("95365") :: Some("12") :: Nil)) == Ok((Some(95365), "12"))
         )
 
     @Test
     def aRowLongerThanTheProjectionIsAnError(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil)
+            Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil))
                 == Err(Db.Error.Unread("the row carries 1 more columns than the projection reads"))
         )
 
     @Test
     def aRowShorterThanTheProjectionNamesWhereItEnded(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), Some("Will STEVENS") :: Nil) == Err(Db.Error.Unread("the row ended before `lap_number`"))
+            Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: Nil))
+                == Err(Db.Error.Unread("the row ended before `lap_number`"))
         )
 
     ///

@@ -275,18 +275,10 @@ Nothing about the scale argues otherwise later, either: the whole of the WEC,
 twenty seasons of it, is on the order of 1.5 million laps and 150MB in these
 tables, and adding other series keeps it in the low gigabytes.
 
-## `SqlRead`, `SqlWrite` and `DbErr`
+## The database effects
 
-Reaching a database is an effect rather than a module of functions, so that
-what a round would send can be read back without a server: `Db.runRecording`
-keeps the statements and answers a read with the error that nothing was sent,
-`Db.runFailing` answers every statement with one error the caller chose, and
-`Db.Jdbc` is the only file that imports `java.sql`. No effect here names a
-table or a column, so they, `Db.Jdbc` and `Sql` are together a database and a
-query language and nothing of this application; the `Db` table modules and the
-row types beside them are the whole of what the application tells them about
-itself, which is the same line Acadia draws between `Transaction`, `Rows` and a
-`Table`.
+Reaching a database is an effect rather than a module of functions, so that what a round would send can be read back without a server: `Db.runRecording` keeps the statements and answers a read with the error that nothing was sent, `Db.runFailing` answers every statement with one error the caller chose, and `Db.DbTest.runWithRows` answers a read with rows the caller named. `java.sql` is imported by `Db.Jdbc` and `Db.JdbcConvert` alone.
+No effect here names a table or a column, so the handlers, those two files and `Sql` are together a database and a query language and nothing of this application; the `Db` table modules and the row types beside them are the whole of what the application tells them about itself, which is the same line Acadia draws between `Transaction`, `Rows` and a `Table`.
 
 Reading and writing are two effects because the sides of this repository are
 two: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a
@@ -295,25 +287,20 @@ statement that changes the database in them, and the table modules and
 what the type says of the server the connection says too: `Db.Jdbc.runReading`
 installs the read alone, and a write reaches no handler through it.
 
-`DbErr` is the third, and it is what a reader does not carry a `Result` for.
-Its one operation does not return, so `Round.Summary.read` answers with a
-`Metadata` rather than with whether it could read one, and the failure travels
-by itself to the boundary that asked -- `Db.runWithError`, which is where a
-value comes back. Three of those: a round of the export, a request, and the
-run's own transaction. Everything between them is written as though the
-database always answers.
+`DbErr` and `TransientDbErr` are the third and fourth, and they are what a reader does not carry a `Result` for.
+Their one operation does not return, so `Round.Summary.read` answers with a `Metadata` rather than with whether it could read one, and the failure travels by itself to the boundary that asked.
+`Db.runWithError` is where a raised failure comes back as a value, and `Db.attempt` the same with the transient ones folded into `Db.Failure`.
+Everything between those and the statement is written as though the database always answers.
+Which of the two effects a failure travels by is read off its `Error` constructor -- `Db.raise` routes it there -- so a kind added to either side meets a pattern that has to say which it is.
 
-What a signature says is the alias rather than the effect: `\ DbRead` is
-`{SqlRead, DbErr}`, `\ DbWrite` is `{SqlWrite, DbErr}`, and `\ Db` is all
-three. Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db`
-one -- so a caller taking one as an argument is written for the half it uses,
-which is what `Main.onRoot` is polymorphic over and what
-`Round.TestSupport.onRound` takes.
+What a signature says is the alias rather than the effect: `\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db` adds `SqlSavepoint`.
+Every one of them already says a statement goes out, which is what `RawSql` marks: `Db.fetch`, `Db.execute` and `Db.insertMany` raise it, and `RawSql`'s own header says who closes it.
+Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller taking a reading as an argument names the half it uses, as `Cli.Load.loadRound` does with `DbRead + SqlWrite`, or the whole it hands over, as `Main.onDirectories` and `Round.TestSupport.onRound` do with `Db`.
 
 The two statement effects answer with a `Result` even so, and that is not a
 choice: a Flix handler body is evaluated outside the `run` it belongs to, so a
 failure raised inside `Db.Jdbc`'s handler would pass every handler its caller
-had installed. `Db.orRaise` is where the value becomes a `DbErr`, in the
+had installed. `Db.orRaise` is where the value becomes a raised failure, in the
 caller's own context. sqlfx found the same thing and answers it the same way.
 
 So nothing outside `Db` calls an operation: `Db.fetch`, `Db.execute` and
@@ -322,17 +309,19 @@ are what `Sql` and `Db.Schema` reach. `Db.Jdbc.withConnection` is the other
 one -- a database opened, worked in, and closed however that went, for a run,
 a test and the server alike.
 
-What a failure is is a `Db.Error` rather than a sentence, and which of the six
-says where the fix is: `Unreachable` is no database reached at all, `Refused` is
-what the driver said no to in its own words, `Busy` is the one refusal that may
-go through next time -- a lock SQLite waited out rather than got, which
-`Db.Jdbc.classify` reads off the driver's code and is tested without a
-database -- `Unread` is a cell the reading could not read, `NoRow` is a query
-that had to answer with one and did not, and `Incomplete` is rows that came back
-whole and do not describe a round. The sentence is `ToString`'s, so the wording is in one place and the kind is what a
-caller reads.
+What a failure is is a `Db.Error` rather than a sentence.
+The transient ones travel apart from the rest: `Unreachable` is no database reached at all, and `Busy` is the one refusal that may go through next time -- a lock SQLite waited out rather than got, which `Db.Sqlite` reads off the driver's result code and is tested without a database.
+The others say where the fix is: `Refused` is what the driver said no to in its own words, `Unread` is a cell the reading could not read, `NoRow` is a query that had to answer with one and did not, `Incomplete` is rows that came back whole and do not describe a round, and `Other` is what the JVM threw rather than said.
+The sentence is `ToString`'s, so the wording is in one place and the kind is what a caller reads.
 
-`Server.Api` is the one that reads it. `Unreachable` and `Busy` are answered
+`Db.Failure` is both failings in one value, `Transient` and `Permanent`, and it is what a boundary takes back.
+`Db.Retry` is what would answer a transient one by sending again: `retrying` waits out a full-jitter backoff between tries, and `retryingSavepoint` takes back to a savepoint before the next. Nothing sends on it yet.
+
+A row is `Db.Row.Row`: the labels the driver reported, and the cells as `Db.Value`.
+`Db.JdbcConvert` is the only file that turns a `Value` into a binding and a `ResultSet` cell back into one.
+`Sql.Sel` reads a `Row` positionally, as the statements are built positionally, and `Row.get` is there for the readings that name a column.
+
+`Server.Api` is the one that reads the kind. `Unreachable` and `Busy` are answered
 503 and everything else 500, which is the difference between a round that
 cannot be served now and one that cannot be served. What the answer carries is
 that sentence and not the database's: a failure names tables and files in its
@@ -341,7 +330,7 @@ and does not send.
 
 Nothing a statement sends is kept until a commit, and `Db.transact` is the only
 sender of one: it commits what its caller sent when the caller returns, and
-rolls a `DbErr` back before raising it again, the rollback being what it did
+rolls a raised failure back before raising it again, the rollback being what it did
 about the failure rather than what it answers. `Cli.Load.runAll` is the one
 caller, so the rebuild of every table is a single transaction -- the
 `DROP TABLE`s it opens with land only if the run reaches its end, and a run
@@ -349,10 +338,8 @@ killed partway leaves the rounds it was rebuilding from rather than three of
 them.
 
 A round the database refuses is still counted and reported rather than taking
-the run with it, and `Db.atomically` is the boundary that makes it so: it is
-`transact` of a part of one, marking a savepoint of SQLite's own so what a
-round sent is undone together and what the run sent before it is still to be
-committed. `Cli.Load` marks one per round, which is also what lets the
+the run with it, and `Db.withSavepoint` is the boundary that makes it so: it is `transact` of a part of one, marking a savepoint of SQLite's own -- its name checked against the rule `Db.Savepoint` states, since it is the one name that goes into a statement as text -- so what a round sent is undone together and what the run sent before it is still to be committed.
+`Cli.Load` marks one per round, which is also what lets the
 numbering follow the rows -- a round that failed frees the names it took, and
 advancing past it would leave a name numbered and unwritten for every later
 round to reference. `Db.Jdbc`'s insert marks one of the driver's inside that,
@@ -531,45 +518,22 @@ paying for the same split.
   database that answers with the one it was given, and `Server.TestApi` is
   where a `Busy` becomes a 503 and a `Refused` a 500 with the driver's words
   kept out of the body. The two halves of that are otherwise only met apart --
-  `Db.Jdbc.classify` reads the code, and a round read over a real database
+  `Db.Sqlite` reads the code, and a round read over a real database
   never fails.
 
 ## What sqlfx does and this does not
 
-[sqlfx](https://github.com/ababup1192/sqlfx) is a Flix database library for
-PostgreSQL, written over the same months as this and arriving at the same base:
-`SqlRead` and `SqlWrite` split apart, `DbRead` and `DbWrite` as the aliases
-over them, a failure carried as an effect and turned into a value once at a
-boundary, statements answering with a `Result` for the reason above, and
-handlers swapped to run the same code without a database. Where it goes the
-other way is the SQL itself, which it writes rather than builds: raw statements
-in `.q` files, checked against a migration's DDL and turned into typed
-functions by a generator. Its author's account of it is
-[the article](https://zenn.dev/ababup1192/articles/0c29f21fe1ab8f).
+[sqlfx](https://github.com/ababup1192/sqlfx) is a Flix database library for PostgreSQL, written over the same months as this and arriving at the same base: `SqlRead` and `SqlWrite` split apart, `DbRead` and `DbWrite` as the aliases over them, a failure carried as an effect and turned into a value once at a boundary, the transient ones kept in an effect of their own, and a marker naming the functions that put a statement's text on the wire.
+Statements answer with a `Result` for the reason above, rows carry the type the driver found each cell in, and handlers are swapped to run the same code without a database -- including one answering a read with rows the caller named.
+Where it goes the other way is the SQL itself, which it writes rather than builds: raw statements in `.q` files, checked against a migration's DDL and turned into typed functions by a generator. Its author's account of it is [the article](https://zenn.dev/ababup1192/articles/0c29f21fe1ab8f).
 
-Three things it has that are not here, none of them adopted, none of them
-resting on which way the SQL is written:
+What it has above that base is not here, and none of it rests on which way the SQL is written:
 
-- **A marker on raw SQL.** `Sql.raw`, `Sql.column` and a reading of a written
-  expression are the holes in what the builder checks, and a function reaching
-  through one says nothing about it -- `Round.Index` is written almost entirely
-  through them. sqlfx gives a raw statement an effect of its own, `RawSql`,
-  which travels to whoever allows it, so how far unchecked SQL reaches is a
-  question the type checker answers rather than a grep.
-- **A read handler answering with rows.** `Db.runRecording` answers a read with
-  the error that nothing was sent, so a reading is driven either over a real
-  database or, as `Sql.TestSel` does, by handing a row to the reading alone. A
-  handler taking the rows to answer with would put a query and its reading under
-  one test without a database.
-- **A refusal that says whether to send it again.** `Db.Error.Busy` is that
-  refusal and nothing re-sends what it refused: the server answers 503 and the
-  caller is told. sqlfx keeps its transient failures in an effect of their own
-  and retries a transaction against it. One run writing to one file makes the
-  case thin here -- but the kind is already read for the status code, and a
-  retry would be read off the same place.
-
-The rest of it is PostgreSQL's, and does not carry: sqlstate read down to the
-constraint name, a generator turning a DDL's named constraints into an enum a
-`match` must cover, a connection pool, forward-only migrations. A single file
-rebuilt from CSV each run has no use for the last two, and SQLite's driver does
-not answer the first.
+- **The `.q` generator and the parser beside it.** sqlfx writes statements in files and checks them against a migration's DDL; this builds them. The `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape this keeps.
+- **A pool, and forward-only migrations.** One file, rebuilt from CSV by
+  `Cli.Load` each run, has no connection to pool and no schema to migrate
+  forward -- the `DROP TABLE`s are the migration.
+- **PostgreSQL's own facts.** sqlstate read down to the constraint name, a
+  generator turning a DDL's named constraints into an enum a `match` must cover,
+  dates, times and UUIDs with their driver's semantics. SQLite's driver does not
+  answer the first, and `Db.Sqlite`'s result codes are what this has instead.
