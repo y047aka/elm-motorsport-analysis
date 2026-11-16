@@ -20,8 +20,7 @@ pub mod Db.Row {
     pub def of(names: List[String], cells: List[Value]): Row =
         Row.Row(names, cells)
 
-    /// A row of cells and no names, which is what a caller handing a reading
-    /// its own cells writes: the position is the only thing the reading takes.
+    /// A row of cells and no names, for a reading that takes only positions.
     pub def ofCells(cells: List[Value]): Row =
         Row.Row(Nil, cells)
 
@@ -66,8 +65,8 @@ pub mod Db.Row {
         }
 
     /// The cell as text, which is what every column of this schema was written
-    /// as: the load binds text, and SQLite keeps what it is given. A null has
-    /// no text, which is why the callers ask after it first.
+    /// as: the load binds text, and SQLite keeps what it is given. A null has no
+    /// text, and the answer for one is the empty string.
     pub def textOf(value: Value): String = match value {
         case Value.Text(s)     => s
         case Value.Integer(n)  => "${n}"

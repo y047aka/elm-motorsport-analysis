@@ -4,8 +4,7 @@
 /// placeholder, so it is the one value with a rule of its own.
 pub mod Db.Savepoint {
 
-    /// The statement. A savepoint is marked, released, and rolled back to, and
-    /// there is nothing else to say about one.
+    /// The three statements a savepoint is.
     pub enum Command with Eq, ToString {
         case Mark(String)
         case Release(String)
@@ -20,8 +19,7 @@ pub mod Db.Savepoint {
             case Nil          => false
         }
 
-    /// The statement, in the spelling SQLite takes from either side of the
-    /// optional words.
+    /// The statement, in the spelling SQLite takes.
     pub def toSql(command: Command): String = match command {
         case Command.Mark(name)   => "SAVEPOINT ${name}"
         case Command.Release(name) => "RELEASE SAVEPOINT ${name}"

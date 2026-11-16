@@ -11,7 +11,6 @@ pub mod Db.Retry {
         case Config(Int32, Duration, Duration)
     }
 
-    /// Four tries, a second's floor, half a minute's ceiling.
     pub def default(): Config =
         Config.Config(4, Util.Duration.fromMillis(1000), Util.Duration.fromMillis(30000))
 

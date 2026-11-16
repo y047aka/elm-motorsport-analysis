@@ -243,9 +243,8 @@ pub mod Db {
     /// untouched. Whether it was a database's failure or the JVM's is the
     /// caller's to decide, and a fatal one is not a failure to keep.
     ///
-    /// The handlers installed here are wrapped with this, and the throw comes
-    /// back after the `run` has been left: what is thrown from inside a `run`
-    /// passes every catch the caller had put outside it.
+    /// The throw comes back after the `run` has been left: what is thrown from
+    /// inside a `run` passes every catch the caller had put outside it.
     pub def catchAll(f: Unit -> a \ ef): Result[Throwable, a] \ ef =
         try {
             Ok(f())
@@ -257,8 +256,7 @@ pub mod Db {
     /// it and not wrapped in another.
     ///
     /// The throwing is not in the signature: what comes out is what the caller
-    /// already threw and not a new side effect, and writing it would put `IO`
-    /// on every entry that takes a failure as a value.
+    /// already threw.
     pub def rethrowing(outcome: Result[Throwable, a]): a = match outcome {
         case Ok(value)  => value
         case Err(error) => unchecked_cast(throwAgain(error) as _ \ {})
@@ -308,10 +306,9 @@ pub mod Db {
     /// What the JVM threw, as a failure of the database. A failure the JVM
     /// cannot go on past is thrown again rather than turned into a value.
     ///
-    /// The driver is reached through interop and the exceptions it throws are
-    /// not all `SQLException`; without this one escapes every handler the
-    /// caller had installed, which is the same reason the statement effects
-    /// answer with a `Result`.
+    /// The driver is reached through interop and the exceptions it throws are not
+    /// all `SQLException`; without this one escapes every handler the caller had
+    /// installed.
     pub def guard(f: Unit -> a \ ef): a \ ef + IO + DbErr =
         match catchAll(f) {
             case Ok(value)  => value

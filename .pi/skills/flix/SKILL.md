@@ -52,9 +52,8 @@ been hit here. Add to the first list when you hit something new, and say where.
 ## Writing
 
 - The effect belongs in the signature; do not `run` it early. A handler is
-  installed at the boundary that owns it — for the database, that is
-  `Db.Jdbc.withConnection`, `Db.runRecording` and `Db.runWithError`, and
-  nothing else installs one.
-- Aliases are what signatures say (`\ DbRead`, not `\ {SqlRead, DbErr}`).
+  installed at the boundary that owns it — for the database, at the connection
+  and at the handlers standing in for one — and not in the middle of a reading.
+- Aliases are what signatures say (`\ DbRead`, not the set it names).
 - Comments follow the repository's rule in `AGENTS.md`: an outside constraint, a
   hazard, or a decision whose alternatives looked equal. Nothing else.
