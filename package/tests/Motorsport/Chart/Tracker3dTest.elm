@@ -62,7 +62,50 @@ tests =
                     Expect.within (Expect.Absolute 0.0001) (clamp 0 1 m.perspective) m.perspective
             ]
         , describe "the projection"
-            [ test "the lap lands inside the box it is drawn in" <|
+            [ test "the band runs all the way round the lap" <|
+                \_ ->
+                    let
+                        edges =
+                            Tracker3d.band Tracker3d.init metres
+
+                        n =
+                            List.length edges // 2
+
+                        outer =
+                            List.take n edges
+
+                        inner =
+                            List.drop n edges
+                    in
+                    Expect.all
+                        [ \_ -> Expect.equal (List.head outer) (List.head (List.reverse outer))
+                        , \_ -> Expect.equal (List.head inner) (List.head (List.reverse inner))
+                        ]
+                        ()
+            , test "the band is a surface and not a line" <|
+                \_ ->
+                    -- Looked at from above, where nothing is foreshortened: the two
+                    -- edges stand a share of the lap's half apart, and the lap itself
+                    -- two halves across.
+                    let
+                        edges =
+                            Tracker3d.band overhead metres
+
+                        n =
+                            List.length edges // 2
+
+                        widths =
+                            List.map2
+                                (\o i -> sqrt ((o.x - i.x) ^ 2 + (o.y - i.y) ^ 2))
+                                (List.take n edges)
+                                (List.reverse (List.drop n edges))
+
+                        extent =
+                            Maybe.withDefault 1 (List.maximum (List.map .x edges))
+                                - Maybe.withDefault 0 (List.minimum (List.map .x edges))
+                    in
+                    Expect.greaterThan (extent * 0.005) (Maybe.withDefault 0 (List.maximum widths))
+            , test "the lap lands inside the box it is drawn in" <|
                 \_ ->
                     insideBox Tracker3d.init
             , fuzz2 azimuths elevations "at any frame the map can be turned to" <|
@@ -156,6 +199,16 @@ stand east, north, west and south of the middle.
 lap : List { x : Float, y : Float }
 lap =
     [ { x = 1, y = 0 }, { x = 0, y = -1 }, { x = -1, y = 0 }, { x = 0, y = 1 } ]
+
+
+{-| A lap authored the way a circuit's marks are: metres, a long way from the origin,
+and a half of 2000. The band is a share of that half, so a drawing that offsets the
+metres themselves instead of the share shows up against this and not against a lap
+already two units across.
+-}
+metres : List { x : Float, y : Float }
+metres =
+    [ { x = 2000, y = 0 }, { x = 4000, y = 2000 }, { x = 2000, y = 4000 }, { x = 0, y = 2000 } ]
 
 
 insideBox : Tracker3d.Model -> Expect.Expectation

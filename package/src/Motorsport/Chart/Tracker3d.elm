@@ -1,4 +1,4 @@
-module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, box, projected)
+module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), band, box, init, projected, update, view)
 
 {-| The circuit raised off the ground it was surveyed on and seen through a
 perspective camera, so the side of the loop standing near comes out wide and the
@@ -13,7 +13,7 @@ Everything the drawing measures is a share of the lap's own size, since the lap 
 put on a plane two units across before the eye is set: one set of lengths serves
 every circuit and the ring it falls back to.
 
-@docs Model, Msg, init, update, view, box, projected
+@docs Model, Msg, init, update, view, box, projected, band
 
 -}
 
@@ -270,12 +270,12 @@ room =
     0.94
 
 
-place : Place -> Shot -> { x : Float, y : Float }
+place : Place -> Shot -> Shot
 place { k, dx, dy } shot =
-    { x = box.w / 2 + k * (shot.x + dx), y = box.h / 2 + k * (shot.y + dy) }
+    { x = box.w / 2 + k * (shot.x + dx), y = box.h / 2 + k * (shot.y + dy), depth = shot.depth }
 
 
-lineTo : Place -> ( Shot, Shot ) -> ( { x : Float, y : Float }, { x : Float, y : Float } )
+lineTo : Place -> ( Shot, Shot ) -> ( Shot, Shot )
 lineTo p ( a, b ) =
     ( place p a, place p b )
 
@@ -288,7 +288,7 @@ type alias Stance =
     { eye : Camera3d Unitless Space
     , size : { centre : Point, half : Float }
     , ground : List Shot
-    , band : List Shot
+    , ribbon : List Shot
     , fit : Place
     }
 
@@ -308,17 +308,17 @@ stance model points =
         ground =
             List.map (project eye << groundAt size) ring
 
-        band =
-            List.map (project eye << raisedAt size) (bandOf ring)
+        ribbon =
+            List.map (project eye << raisedAt size) (bandOf size ring)
     in
     { eye = eye
     , size = size
     , ground = ground
-    , band = band
+    , ribbon = ribbon
     , fit =
         -- The fit is the lap's, so the field moving round the lap cannot breathe the
         -- drawing bigger and smaller between frames.
-        fitOf (ground ++ band)
+        fitOf (ground ++ ribbon)
     }
 
 
@@ -334,11 +334,24 @@ misses the box draws a lap running off the edge. Both still look like a track.
 projected : Model -> List Point -> List Shot
 projected model points =
     let
-        { eye, size, fit } =
+        { ground, fit } =
             stance model points
     in
-    List.map (\shot -> { x = (place fit shot).x, y = (place fit shot).y, depth = shot.depth })
-        (List.map (project eye << groundAt size) (ringOf points))
+    List.map (place fit) ground
+
+
+{-| The lap as the band it is drawn as: the outside edge and back round the inside, in
+the box's own units.
+
+@docs band
+-}
+band : Model -> List Point -> List Shot
+band model points =
+    let
+        scene =
+            stance model points
+    in
+    List.map (place scene.fit) scene.ribbon
 
 
 
@@ -349,7 +362,7 @@ projected model points =
 -}
 type alias Scene =
     { ground : List Shot
-    , pit : List Shot
+    , pit : { ground : List Shot, band : List Shot }
     , band : List Shot
     , risers : List ( Shot, Shot )
     , boundaries : List ( Shot, Shot )
@@ -402,7 +415,7 @@ view model shown standings =
         g =
             Tracker.ground shown
 
-        { eye, size, ground, band, fit } =
+        { eye, size, ground, ribbon, fit } =
             stance model g.lap
 
         acrossBand : Float -> Shape.Position -> ( Shot, Shot )
@@ -420,7 +433,9 @@ view model shown standings =
             g.at progress
 
         pit =
-            List.map (project eye << groundAt size) g.pitLane
+            { ground = List.map (project eye << groundAt size) g.pitLane
+            , band = List.map (project eye << raisedAt size) g.pitLane
+            }
 
         cars =
             Snapshot.toList standings
@@ -447,7 +462,7 @@ view model shown standings =
         scene =
             { ground = ground
             , pit = pit
-            , band = band
+            , band = ribbon
             , risers =
                 every (riserStride (ringOf g.lap)) (ringOf g.lap)
                     |> List.map (\p -> ( project eye (groundAt size p), project eye (raisedAt size p) ))
@@ -515,15 +530,25 @@ every n list =
 {-| The lap as the two edges of a band, in the order a polygon wants them: one way
 round the outside and back round the inside, which leaves the band itself filled and
 the middle of the circuit empty.
+
+The width is a share of the lap's half, and the marks are the circuit's own metres, so
+the offset goes through the half: offset the metres themselves and the band is a hair
+wide, and reads as a line rather than a surface.
+
+Both edges run one mark past the end. The mark the lap closes at is a seam like any
+other, and a polygon closes only the two ends of the list it is handed: leave the edges
+short of it and the band has a wedge missing where the finish line stands.
 -}
-bandOf : List Point -> List Point
-bandOf ring =
+bandOf : { centre : Point, half : Float } -> List Point -> List Point
+bandOf size ring =
     let
-        edges =
-            normals ring
+        seams =
+            List.map2 Tuple.pair ring (normals ring) |> closed
+
+        edge share =
+            List.map (\( p, n ) -> offset (share * size.half) p n) seams
     in
-    List.map2 (offset (bandWidth / 2)) ring edges
-        ++ List.reverse (List.map2 (offset (negate (bandWidth / 2))) ring edges)
+    edge (bandWidth / 2) ++ List.reverse (edge (negate (bandWidth / 2)))
 
 
 offset : Float -> Point -> Point -> Point
@@ -635,7 +660,7 @@ draw fit scene =
         , class "h-full w-full"
         ]
         [ polysegment "oklch(1 0 0 / 0.14)" 3 (closed (List.map (place fit) scene.ground))
-        , polysegment "oklch(1 0 0 / 0.08)" 3 (List.map (place fit) scene.pit)
+        , polysegment "oklch(1 0 0 / 0.08)" 3 (List.map (place fit) scene.pit.ground)
         , g [] (List.map (segment "oklch(1 0 0 / 0.12)" 2 fit) scene.risers)
         , polygon
             [ fill "oklch(1 0 0 / 0.13)"
@@ -645,6 +670,7 @@ draw fit scene =
             , points (pointsOf (List.map (place fit) scene.band))
             ]
             []
+        , polysegment "oklch(1 0 0 / 0.35)" 3 (List.map (place fit) scene.pit.band)
         , g [] (List.map (segment "oklch(0.23 0 0)" 5 fit) scene.boundaries)
         , segment "#fff" 7 fit scene.finish
         , g [] (List.map (sector fit) scene.labels)
@@ -678,7 +704,7 @@ segment colour width p ( a, b ) =
         []
 
 
-polysegment : String -> Float -> List { x : Float, y : Float } -> Svg msg
+polysegment : String -> Float -> List { a | x : Float, y : Float } -> Svg msg
 polysegment colour width points_ =
     polyline
         [ stroke colour
@@ -690,7 +716,7 @@ polysegment colour width points_ =
         []
 
 
-pointsOf : List { x : Float, y : Float } -> String
+pointsOf : List { a | x : Float, y : Float } -> String
 pointsOf =
     List.map (\pt -> String.fromFloat pt.x ++ "," ++ String.fromFloat pt.y)
         >> String.join " "
