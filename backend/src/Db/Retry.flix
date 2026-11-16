@@ -52,30 +52,50 @@ pub mod Db.Retry {
             case Db.Failure.Permanent(_) => false
         }
 
-    /// The jitter's draw, out of a thousand.
-    def draw(): Int32 \ IO =
-        ThreadLocalRandom.current().nextInt(1000)
+    /// The wait between tries, and the draw the jitter is made from. Both are given
+    /// rather than reached for: the trying is then driven without sleeping, and the
+    /// backoff tested at a draw chosen by the test.
+    pub def retryingWith(
+        c: Config,
+        wait: Int32 -> Unit \ ef2,
+        jitter: Unit -> Int32 \ ef3,
+        f: Unit -> a \ ef
+    ): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + ef2 + ef3) =
+        loopWith(c, 1, wait, jitter, f)
 
-    /// `f` is tried until it answers or its tries run out.
-    ///
-    /// Only a transient failure is worth another try; a permanent one comes back
-    /// at once. A `Busy` failure is retried here, which is only right when `f`
-    /// opens the transaction itself -- see `retryingSavepoint`.
-    pub def retrying(c: Config, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
-        loop(c, 1, f)
-
-    def loop(c: Config, attempt: Int32, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
-        let outcome = Db.attempt(f);
-        match outcome {
+    def loopWith(
+        c: Config,
+        attempt: Int32,
+        wait: Int32 -> Unit \ ef2,
+        jitter: Unit -> Int32 \ ef3,
+        f: Unit -> a \ ef
+    ): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + ef2 + ef3) =
+        match Db.attempt(f) {
             case Ok(v) => Ok(v)
             case Err(failure) =>
                 if (attempt >= tries(c) or not worthTrying(failure))
                     Err(failure)
                 else {
-                    Thread.sleep(Int32.toInt64(Util.Duration.millis(backoff(attempt, c, draw()))));
-                    loop(c, attempt + 1, f)
+                    wait(Util.Duration.millis(backoff(attempt, c, jitter())));
+                    loopWith(c, attempt + 1, wait, jitter, f)
                 }
         }
+
+    /// `f` is tried until it answers or its tries run out, waiting on the current
+    /// thread and drawing its jitter as it goes.
+    ///
+    /// Only a transient failure is worth another try; a permanent one comes back
+    /// at once. A `Busy` failure is retried here, which is only right when `f`
+    /// opens the transaction itself -- see `retryingSavepoint`.
+    pub def retrying(c: Config, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
+        retryingWith(c, sleepMs, draw, f)
+
+    def sleepMs(ms: Int32): Unit \ IO =
+        Thread.sleep(Int32.toInt64(ms))
+
+    /// The jitter's draw, out of a thousand.
+    def draw(): Int32 \ IO =
+        ThreadLocalRandom.current().nextInt(1000)
 
     /// A savepoint is marked inside the transaction and taken back to before the
     /// next try, so the work of the failed try is gone rather than sitting in the
@@ -85,22 +105,34 @@ pub mod Db.Retry {
         c: Config,
         f: Unit -> a \ ef
     ): Result[Db.Failure, a] \ (ef + Db + IO) =
-        loopSavepoint(name, c, 1, f)
+        retryingSavepointWith(name, c, sleepMs, draw, f)
+
+    /// As `retryingWith`, of a savepoint.
+    pub def retryingSavepointWith(
+        name: String,
+        c: Config,
+        wait: Int32 -> Unit \ ef2,
+        jitter: Unit -> Int32 \ ef3,
+        f: Unit -> a \ ef
+    ): Result[Db.Failure, a] \ (ef + Db + ef2 + ef3) =
+        loopSavepoint(name, c, 1, wait, jitter, f)
 
     def loopSavepoint(
         name: String,
         c: Config,
         attempt: Int32,
+        wait: Int32 -> Unit \ ef2,
+        jitter: Unit -> Int32 \ ef3,
         f: Unit -> a \ ef
-    ): Result[Db.Failure, a] \ (ef + Db + IO) =
+    ): Result[Db.Failure, a] \ (ef + Db + ef2 + ef3) =
         match Db.withSavepoint(name, f) {
             case Ok(v) => Ok(v)
             case Err(failure) =>
                 if (attempt >= tries(c) or not worthTrying(failure))
                     Err(failure)
                 else {
-                    Thread.sleep(Int32.toInt64(Util.Duration.millis(backoff(attempt, c, draw()))));
-                    loopSavepoint(name, c, attempt + 1, f)
+                    wait(Util.Duration.millis(backoff(attempt, c, jitter())));
+                    loopSavepoint(name, c, attempt + 1, wait, jitter, f)
                 }
         }
 

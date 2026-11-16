@@ -22,12 +22,24 @@ pub mod Db.TestRetry {
         Assert.assertTrue(Db.Retry.backoff(0, c, 1200) == Util.Duration.fromMillis(999))
     }
 
+    /// The wait is given the backoff's duration rather than reaching for a clock,
+    /// so a test sees how long each try would have waited.
+    @Test
+    def theWaitIsGivenTheBackoffItWouldSleep(): Unit \ Assert =
+        region rc {
+            let waits = Ref.fresh(rc, (Nil: List[Int32]));
+            let c = Db.Retry.Config.Config(3, Util.Duration.fromMillis(1000), Util.Duration.fromMillis(30000));
+            discard Db.Retry.retryingWith(c, ms -> Ref.put(ms :: Ref.get(waits), waits), _ -> 500, () ->
+                DbErr.raise(Db.unreachable("connection refused")));
+            Assert.assertTrue(List.reverse(Ref.get(waits)) == 1000 :: 2000 :: Nil)
+        }
+
     /// A first try that answers is the only try.
     @Test
-    def anAnswerIsNotTriedAgain(): Unit \ {Assert, IO} =
+    def anAnswerIsNotTriedAgain(): Unit \ Assert =
         region rc {
             let calls = Ref.fresh(rc, 0);
-            let outcome = Db.Retry.retrying(Db.Retry.immediate(3), () -> {
+            let outcome = Db.Retry.retryingWith(Db.Retry.immediate(3), _ -> (), _ -> 500, () -> {
                 Ref.put(Ref.get(calls) + 1, calls);
                 "done"
             });
@@ -37,10 +49,10 @@ pub mod Db.TestRetry {
     /// A failure the same statement may get past is tried again, and the last
     /// one is what comes back once the tries run out.
     @Test
-    def aTransientFailureIsTriedAgainUntilTheTriesRunOut(): Unit \ {Assert, IO} =
+    def aTransientFailureIsTriedAgainUntilTheTriesRunOut(): Unit \ Assert =
         region rc {
             let calls = Ref.fresh(rc, 0);
-            let outcome = Db.Retry.retrying(Db.Retry.immediate(3), () -> {
+            let outcome = Db.Retry.retryingWith(Db.Retry.immediate(3), _ -> (), _ -> 500, () -> {
                 Ref.put(Ref.get(calls) + 1, calls);
                 DbErr.raise(Db.unreachable("connection refused"))
             });
@@ -55,10 +67,10 @@ pub mod Db.TestRetry {
 
     /// A failure the same statement reaches again comes back at once.
     @Test
-    def aPermanentFailureIsNotTriedAgain(): Unit \ {Assert, IO} =
+    def aPermanentFailureIsNotTriedAgain(): Unit \ Assert =
         region rc {
             let calls = Ref.fresh(rc, 0);
-            let outcome = Db.Retry.retrying(Db.Retry.immediate(3), () -> {
+            let outcome = Db.Retry.retryingWith(Db.Retry.immediate(3), _ -> (), _ -> 500, () -> {
                 Ref.put(Ref.get(calls) + 1, calls);
                 DbErr.raise(Db.Error.Refused("no such table: laps"))
             });
@@ -74,10 +86,10 @@ pub mod Db.TestRetry {
     /// A lock the database waited out is worth another try, and the try is made
     /// from the savepoint rather than from where the failed one got to.
     @Test
-    def aSavepointIsTakenBackToBeforeTheNextTry(): Unit \ {Assert, IO} = {
+    def aSavepointIsTakenBackToBeforeTheNextTry(): Unit \ Assert = {
         let (outcome, sent) = Db.runRecording(() ->
             Db.runWithError(() ->
-                Db.Retry.retryingSavepoint("round", Db.Retry.immediate(2), () ->
+                Db.Retry.retryingSavepointWith("round", Db.Retry.immediate(2), _ -> (), _ -> 500, () ->
                     DbErr.raise(Db.busy("database is locked")))));
         let names = sent |> List.filterMap(s ->
             match s {
@@ -100,10 +112,10 @@ pub mod Db.TestRetry {
 
     /// A savepoint that is released is not taken back to.
     @Test
-    def aSavepointThatAnswersIsReleased(): Unit \ {Assert, IO} = {
+    def aSavepointThatAnswersIsReleased(): Unit \ Assert = {
         let (outcome, sent) = Db.runRecording(() ->
             Db.runWithError(() ->
-                Db.Retry.retryingSavepoint("round", Db.Retry.immediate(3), () -> 7)));
+                Db.Retry.retryingSavepointWith("round", Db.Retry.immediate(3), _ -> (), _ -> 500, () -> 7)));
         Assert.assertTrue(
             outcome == Ok(Ok(7))
                 and List.map(s -> match s {
