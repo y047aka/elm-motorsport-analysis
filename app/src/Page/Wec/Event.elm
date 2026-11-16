@@ -358,8 +358,7 @@ The card takes no class of its own -- `card-elements.ts` owns that element's
 `className` -- so its cell is a div of its own, and that div carries
 `data-tracker-row`: it is the one box whose height is the row the grip sets.
 The grip along the row edge between the two stands in `mainGrid`'s `gap-2.5`:
-its `-top-2.5` and `h-2.5` are that gap, so a change to one without the other
-leaves the grip off it.
+its `-top-2.5` and `h-2.5` are that gap.
 
 The circuit holds its own proportions, so this drawing is bound by the box's
 height and not its width: how much of the page the strip gives up is how big
@@ -375,15 +374,9 @@ expandedTracker cell rowGrip toggle track snapshot =
         ]
 
 
-{-| The press that toggles the enlargement, wearing the mark of what it does from
-where it stands: `⤢` while the tracker is in its column, and the ✕ every
-overlay here closes with once the enlarged tracker is up. The marks differ,
-which is what lets one button read as the reverse of the other rather than as
-the same invitation twice.
-
-It stands in both drawings' corner, so the way back is wherever the room was
-taken from.
-
+{-| The press that toggles the enlargement: `⤢` while the tracker is in its
+column, the ✕ every overlay here closes with once it is enlarged. It stands in
+both drawings' corner, so the way back is wherever the room was taken from.
 -}
 trackerToggle : Bool -> Html Msg
 trackerToggle expanded =
@@ -442,8 +435,7 @@ trackerCell =
 
 
 {-| The two rows, the enlarged tracker's own last. An inline style rather than a
-class: the split is the reader's to set, and Tailwind generates a class only
-from a string it finds intact in the source.
+class: the split is the reader's to set.
 -}
 trackerRowStyle : Float -> String
 trackerRowStyle row =

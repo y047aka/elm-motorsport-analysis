@@ -27,9 +27,8 @@ type Axis
     | Down
 
 
-{-| Which pointer, and where it is along the axis its grip reads -- `clientX`
-for an `Across` grip, `clientY` for a `Down` one. Two fingers can hold two
-grips at once, and each reports its own release.
+{-| Which pointer, and where it is along the axis its grip reads. Two fingers can
+hold two grips at once, and each reports its own release.
 -}
 type alias Pointer =
     { id : Int
@@ -70,7 +69,7 @@ view config =
         Across
         Carry
         config
-        "grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+        "grid place-content-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
         (if config.held then
             "cursor-grabbing"
 
@@ -91,7 +90,7 @@ resize axis range config =
         ( classes, cursor, glyph ) =
             case axis of
                 Across ->
-                    ( "grid place-items-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                    ( "grid place-content-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
                     , "cursor-col-resize"
                     , "⋮"
                     )
@@ -142,11 +141,10 @@ type Kind
 attributes the contract test reads, the pointer events the state machine is
 driven by, and a glyph. Which end of the pointer it reads is the `Axis`.
 
-The row grip passes `place-content-center`, not `place-items-center`: an implicit
-row track cannot shrink below the glyph's line box, and a track taller than the
-8px that grip is high starts at its top -- `place-items` centers an item within
-its track, so it centers nothing and the glyph hangs below the grip.
-`place-content` centers the track itself, and the overflow splits evenly.
+Every grip centers its glyph with `place-content` rather than `place-items`: an
+implicit row track cannot shrink below the glyph's line box, and `place-items`
+centers an item within its own track -- which is nothing at all where the glyph
+is taller than the 8px an edge grip is, and the row hangs below the grip.
 
 -}
 grip : Axis -> Kind -> Config msg -> String -> String -> String -> Html msg
@@ -218,8 +216,6 @@ role axis kind =
             ]
 
 
-{-| The pointer's position along the axis the grip reads.
--}
 coordinate : Axis -> Decoder Float
 coordinate axis =
     Decode.field
@@ -271,9 +267,7 @@ arrowHint axis =
             "↑ ↓"
 
 
-{-| Fails on every other key, so that Tab and the rest keep what they do. Which
-key steps back and which steps on are the axis's own, so a step goes the same
-way a drag does.
+{-| Fails on every other key, so that Tab and the rest keep what they do.
 -}
 arrowStep : Axis -> Decoder Int
 arrowStep axis =
