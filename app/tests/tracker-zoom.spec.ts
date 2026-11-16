@@ -1,6 +1,5 @@
 import { test, expect, Locator, Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { waitForPageReady, setLapCount, TRACKER_COLUMN, COTA } from './helpers';
+import { waitForPageReady, setLapCount, readConstant, readSource, TRACKER_COLUMN, COTA } from './helpers';
 
 /**
  * The tracker taking a row of its own below the columns is two rows the page is
@@ -10,22 +9,12 @@ import { waitForPageReady, setLapCount, TRACKER_COLUMN, COTA } from './helpers';
  * tracker keeps and the bounds it can be taken between are read out of the Elm
  * that decides them, so a number moved there moves the expectation with it.
  */
-const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
+const eventSource = readSource('app/src/Page/Wec/Event.elm');
 
-/** As `car-detail.spec.ts`'s own `readConstant`: a pattern that misses takes the
- * spec load down by name rather than letting the constant become `NaN`. */
-function readConstant(name: string, pattern: RegExp): number {
-  const value = Number(pattern.exec(eventSource)?.[1]);
-  if (!Number.isFinite(value)) {
-    throw new Error(`${name} not found in Page/Wec/Event.elm -- did it move?`);
-  }
-  return value;
-}
-
-const TRACKER_ROW = readConstant('defaultTrackerRow', /\ndefaultTrackerRow =\n\s+(\d+)/);
-const ROW_MIN = readConstant('trackerRowFence.min', /\ntrackerRowFence =\n\s*\{\s*min = (\d+)/);
-const ROW_MAX = readConstant('trackerRowFence.max', /trackerRowFence =\n\s*\{[^}]*max = (\d+)/);
-const ROW_STEP = readConstant('trackerRowFence.step', /trackerRowFence =\n\s*\{[^}]*step = (\d+)/);
+const TRACKER_ROW = readConstant('defaultTrackerRow', eventSource, /\ndefaultTrackerRow =\n\s+(\d+)/);
+const ROW_MIN = readConstant('trackerRowFence.min', eventSource, /trackerRowFence =\n\s*\{[^}]*min = (\d+)/);
+const ROW_MAX = readConstant('trackerRowFence.max', eventSource, /trackerRowFence =\n\s*\{[^}]*max = (\d+)/);
+const ROW_STEP = readConstant('trackerRowFence.step', eventSource, /trackerRowFence =\n\s*\{[^}]*step = (\d+)/);
 
 const TOGGLE = '[data-tracker-toggle]';
 const EXPANDED = '[data-tracker-expanded]';
@@ -78,6 +67,10 @@ test.describe('the enlarged tracker', () => {
     const before = (await page.locator(STRIP).boundingBox())!;
     const inColumn = (await drawn(page, TRACKER_COLUMN))!;
 
+    // The grip belongs to the row, so there is nothing to drag until the row is
+    // there to set.
+    await expect(rowGrip(page)).toHaveCount(0);
+
     await toggleTracker(page).click();
     await expect(page.locator(EXPANDED)).toHaveCount(1);
 
@@ -121,10 +114,25 @@ test.describe('the enlarged tracker', () => {
     await expect(rowGrip(page)).toHaveCount(1);
     await expect(row).toHaveCSS('height', `${TRACKER_ROW}px`);
 
+    // The grip says what it is, which way it goes, and where the row stands.
+    await expect(rowGrip(page)).toHaveAttribute('aria-orientation', 'horizontal');
+    await expect(rowGrip(page)).toHaveAttribute('aria-valuemin', `${ROW_MIN}`);
+    await expect(rowGrip(page)).toHaveAttribute('aria-valuemax', `${ROW_MAX}`);
+    await expect(rowGrip(page)).toHaveAttribute('aria-valuenow', `${TRACKER_ROW}`);
+
+    // Every grip centres its glyph by its tracks rather than by its item: a glyph
+    // taller than the 8px this one is high hangs below the grip under
+    // `place-items`, which centres an item within a track already its own size.
+    await expect(rowGrip(page)).toHaveCSS('align-content', 'center');
+    await expect(page.locator('#standings-resize-grip')).toHaveCSS('align-content', 'center');
+
     // Down: the columns gain and the map loses, the boundary moving with the
     // pointer wherever the size is held.
+    const stripBefore = (await page.locator(STRIP).boundingBox())!.height;
     await resizeRows(page, 100);
     await expect(row).toHaveCSS('height', `${TRACKER_ROW - 100}px`);
+    // The strip is the `1fr` beside it, so it gains exactly what the row loses.
+    expect((await page.locator(STRIP).boundingBox())!.height).toBeCloseTo(stripBefore + 100, 0);
 
     // Past the shortest there is: the row stops where the fence says.
     await page.mouse.move(700, 3000, { steps: 5 });

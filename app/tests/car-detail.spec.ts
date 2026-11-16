@@ -1,25 +1,14 @@
 import { test, expect, Locator, Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { waitForPageReady, setLapCount, LE_MANS } from './helpers';
+import { waitForPageReady, setLapCount, readConstant, LE_MANS } from './helpers';
 
 const DETAIL = '[data-car-detail]';
 const CLASS_COLUMN = '[data-class-column]';
 
 /**
  * Reads a constant out of the source that decides it, rather than repeating
- * it here. A pattern that misses throws while the spec loads, taking every
- * test down with a named error -- a constant that moved modules without its
- * pattern would otherwise become `NaN`, and surface as an expectation of
- * `NaNpx` three hundred lines later.
+ * it here.
  */
-function readConstant(name: string, source: string, pattern: RegExp): number {
-  const value = Number(pattern.exec(source)?.[1]);
-  if (!Number.isFinite(value)) {
-    throw new Error(`${name} not found in its source -- did it move?`);
-  }
-  return value;
-}
-
 /** The string sibling of `readConstant`, for the labels a selector matches
  * the prefix of. */
 function readString(name: string, source: string, pattern: RegExp): string {

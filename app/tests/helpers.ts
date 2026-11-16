@@ -9,6 +9,21 @@ export function readSource(pathFromRoot: string): string {
 }
 
 /**
+ * A number a spec needs to agree with the Elm source that decides it -- a width, a
+ * step, a fence's bound -- read out of that source rather than repeated here. A
+ * pattern that misses throws while the spec loads, taking every test down with a
+ * named error; a constant that moved modules without its pattern would otherwise
+ * become `NaN`, and surface as an expectation of `NaNpx` three hundred lines later.
+ */
+export function readConstant(name: string, source: string, pattern: RegExp): number {
+  const value = Number(pattern.exec(source)?.[1]);
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} not found in its source -- did it move?`);
+  }
+  return value;
+}
+
+/**
  * Which circuits `Shared` draws to their own shape: the words it matches in `trackOf`,
  * which are the words it asks `/static/geometry/<word>.geojson` for and the words
  * Flix's `Circuit.jsonValue` sends.
