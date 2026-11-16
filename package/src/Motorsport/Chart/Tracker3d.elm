@@ -35,17 +35,13 @@ import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, s
 -- HOW THE MAP IS HELD
 
 
-{-| How the map is looked at, and whether a pointer is on it.
-
-The azimuth spins the map round the vertical and the elevation lifts the eye towards
-overhead. `perspective` walks the eye in, which foreshortens without changing how big
-the lap comes out: the drawing is fitted to its box whatever the distance.
-
+{-| How the map is looked at, and whether a pointer is on it. The azimuth spins the map
+round the vertical and the elevation lifts the eye towards overhead; together they are
+the whole pose -- there is no scale to set, the drawing being fitted to its box.
 -}
 type alias Model =
     { azimuth : Float
     , elevation : Float
-    , perspective : Float
     , drag : Maybe { x : Float, y : Float }
     }
 
@@ -57,7 +53,6 @@ init : Model
 init =
     { azimuth = -pi / 2
     , elevation = degrees 26
-    , perspective = 0.3
     , drag = Nothing
     }
 
@@ -73,7 +68,6 @@ type Msg
     | Release
     | Cancel
     | Step Float Float
-    | Depth Float
     | Reset
 
 
@@ -104,9 +98,6 @@ update msg m =
         Step dAzimuth dElevation ->
             { m | azimuth = m.azimuth + dAzimuth, elevation = lifted (m.elevation + dElevation) }
 
-        Depth d ->
-            { m | perspective = clamp 0 1 (m.perspective + d) }
-
         Reset ->
             { init | drag = m.drag }
 
@@ -127,10 +118,17 @@ lifted =
 
 
 {-| The eye's distance from the lap, in the lap's own radii.
+
+It is fixed because the distance is not free. It sets how much bigger the near side of
+the lap is drawn than the far side -- a quarter at this distance -- and a car's drawn
+size is scaled by that same depth while already carrying its class position at 10% a
+place. The standing alone is therefore worth about two places of that encoding, and a
+nearer eye would drown it. Zooming is another matter: the row is there to show the
+whole lap.
 -}
-eyeDistance : Float -> Float
-eyeDistance perspective =
-    10 - perspective * 6
+eyeDistance : Float
+eyeDistance =
+    8.2
 
 
 
@@ -172,7 +170,7 @@ camera m =
         { focalPoint = Point3d.origin
         , azimuth = Angle.radians m.azimuth
         , elevation = Angle.radians m.elevation
-        , distance = Quantity.float (eyeDistance m.perspective)
+        , distance = Quantity.float eyeDistance
         , projection = Camera3d.Perspective
         , fov = Camera3d.angle (Angle.degrees 30)
         }

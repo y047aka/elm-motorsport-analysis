@@ -1,7 +1,7 @@
 module View.TrackMap3d exposing (Config, controls, surface)
 
-{-| The track map raised in space, the pointer that turns it, and the two presses
-that set how deep the perspective is.
+{-| The track map raised in space, the pointer that turns it, and the press that turns
+it back to where it opened.
 
 The surface is a `drag-handle`: turned without pointer capture, the map stops the
 moment the pointer leaves the card -- which a turn round the lap does, twice.
@@ -120,15 +120,11 @@ keyStep =
     degrees 5
 
 
-{-| The presses that stand over the map: how deep the perspective is, and the way
-back to where the map started.
+{-| The press that stands over the map: the way back to where the map opened.
 -}
 controls : (Msg -> msg) -> List (Html msg)
 controls toMsg =
-    [ control "▽" "Flatten the perspective" (Track3d.Depth -0.25) toMsg
-    , control "◇" "Deepen the perspective" (Track3d.Depth 0.25) toMsg
-    , control "⟲" "Turn the map back to where it started" Track3d.Reset toMsg
-    ]
+    [ control "⟲" "Turn the map back to where it started" Track3d.Reset toMsg ]
 
 
 control : String -> String -> Msg -> (Msg -> msg) -> Html msg

@@ -45,20 +45,13 @@ tests =
                             Tracker3d.update Tracker3d.Reset (drag 300 200)
                     in
                     Expect.equal
-                        { azimuth = Tracker3d.init.azimuth, elevation = Tracker3d.init.elevation, perspective = Tracker3d.init.perspective }
-                        { azimuth = m.azimuth, elevation = m.elevation, perspective = m.perspective }
+                        { azimuth = Tracker3d.init.azimuth, elevation = Tracker3d.init.elevation }
+                        { azimuth = m.azimuth, elevation = m.elevation }
             , fuzz2 Fuzz.float Fuzz.float "the eye stops short of the frame that turns the circuit over" <|
                 \dx dy ->
                     Expect.within (Expect.Absolute 0.0001)
                         (clamp (degrees 4) (degrees 87) (drag dx dy).elevation)
                         (drag dx dy).elevation
-            , fuzz2 Fuzz.float Fuzz.float "the eye stays between the two ends of its walk in" <|
-                \a b ->
-                    let
-                        m =
-                            Tracker3d.update (Tracker3d.Depth a) (Tracker3d.update (Tracker3d.Depth b) Tracker3d.init)
-                    in
-                    Expect.within (Expect.Absolute 0.0001) (clamp 0 1 m.perspective) m.perspective
             ]
         , describe "the projection"
             [ test "the band runs all the way round the lap" <|
