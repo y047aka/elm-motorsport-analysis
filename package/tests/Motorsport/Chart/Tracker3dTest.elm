@@ -1,0 +1,195 @@
+module Motorsport.Chart.Tracker3dTest exposing (tests)
+
+{-| The turnable map: how the reader's drag becomes an angle, and what the camera
+does to the circuit's own metres.
+
+The projection is tested because a camera goes wrong quietly. A frame that turns the
+circuit over draws its mirror image, and a fit that misses the box draws a lap running
+off the edge -- and both still look like a track.
+
+-}
+
+import Expect
+import Fuzz exposing (Fuzzer)
+import Motorsport.Chart.Tracker3d as Tracker3d
+import Test exposing (Test, describe, fuzz2, test)
+
+
+tests : Test
+tests =
+    describe "Motorsport.Chart.Tracker3d"
+        [ describe "turning the map"
+            [ test "a drag turns it by how far the pointer travelled" <|
+                \_ ->
+                    Expect.within (Expect.Absolute 0.0001)
+                        (drag 200 0).azimuth
+                        (Tracker3d.init.azimuth + 2 * ((drag 100 0).azimuth - Tracker3d.init.azimuth))
+            , test "no turn reaches a map with no pointer held on it" <|
+                \_ ->
+                    (Tracker3d.update (Tracker3d.Turn 400 30) Tracker3d.init).azimuth
+                        |> Expect.within (Expect.Absolute 0.0001) Tracker3d.init.azimuth
+            , test "letting go keeps the angle the drag reached" <|
+                \_ ->
+                    let
+                        released =
+                            Tracker3d.update Tracker3d.Release (drag 120 -60)
+                    in
+                    Expect.all
+                        [ \_ -> Expect.equal Nothing released.drag
+                        , \_ -> Expect.within (Expect.Absolute 0.0001) released.azimuth ((drag 120 -60).azimuth)
+                        ]
+                        ()
+            , test "reset returns to the angle the map opened at" <|
+                \_ ->
+                    let
+                        m =
+                            Tracker3d.update Tracker3d.Reset (drag 300 200)
+                    in
+                    Expect.equal
+                        { azimuth = Tracker3d.init.azimuth, elevation = Tracker3d.init.elevation, perspective = Tracker3d.init.perspective }
+                        { azimuth = m.azimuth, elevation = m.elevation, perspective = m.perspective }
+            , fuzz2 Fuzz.float Fuzz.float "the eye stops short of the frame that turns the circuit over" <|
+                \dx dy ->
+                    Expect.within (Expect.Absolute 0.0001)
+                        (clamp (degrees 4) (degrees 87) (drag dx dy).elevation)
+                        (drag dx dy).elevation
+            , fuzz2 Fuzz.float Fuzz.float "the eye stays between the two ends of its walk in" <|
+                \a b ->
+                    let
+                        m =
+                            Tracker3d.update (Tracker3d.Depth a) (Tracker3d.update (Tracker3d.Depth b) Tracker3d.init)
+                    in
+                    Expect.within (Expect.Absolute 0.0001) (clamp 0 1 m.perspective) m.perspective
+            ]
+        , describe "the projection"
+            [ test "the lap lands inside the box it is drawn in" <|
+                \_ ->
+                    insideBox Tracker3d.init
+            , fuzz2 azimuths elevations "at any frame the map can be turned to" <|
+                \az el ->
+                    insideBox (turned az el)
+            , test "the lap stands centred in that box" <|
+                \_ ->
+                    let
+                        drawn =
+                            Tracker3d.projected Tracker3d.init lap
+
+                        centre =
+                            bounds drawn
+
+                        -- The fit takes the raised lap and the ground outline together,
+                        -- and the outline stands a little under the lap it is drawn
+                        -- beside: the ring's own middle is that much off the box's.
+                        slack =
+                            0.05
+                    in
+                    Expect.all
+                        [ \_ -> Expect.within (Expect.Absolute (Tracker3d.box.w * slack)) ((centre.x0 + centre.x1) / 2) (Tracker3d.box.w / 2)
+                        , \_ -> Expect.within (Expect.Absolute (Tracker3d.box.h * slack)) ((centre.y0 + centre.y1) / 2) (Tracker3d.box.h / 2)
+                        ]
+                        ()
+            , test "looked at from above the map is the circuit, not its mirror image" <|
+                \_ ->
+                    Expect.greaterThan 0 (winding lap * winding (Tracker3d.projected overhead lap))
+            , fuzz2 azimuths elevations "the lap winds the same way at every frame" <|
+                \az el ->
+                    Expect.greaterThan 0 (winding lap * winding (Tracker3d.projected (turned az el) lap))
+            , test "the side standing near stands further out than the side standing far" <|
+                \_ ->
+                    let
+                        shots =
+                            Tracker3d.projected Tracker3d.init lap
+
+                        middle =
+                            { x = Tracker3d.box.w / 2, y = Tracker3d.box.h / 2 }
+
+                        -- The eye opens south of the lap, so the corner drawn at its
+                        -- bottom is the near one and the corner drawn at its top the far.
+                        near =
+                            List.drop 3 shots |> List.head |> Maybe.map (reach middle) |> Maybe.withDefault 0
+
+                        far =
+                            List.drop 1 shots |> List.head |> Maybe.map (reach middle) |> Maybe.withDefault 0
+                    in
+                    Expect.greaterThan far near
+            ]
+        ]
+
+
+{-| A press at the origin and one move: the model after a drag of `x`, `y` pixels.
+-}
+drag : Float -> Float -> Tracker3d.Model
+drag x y =
+    Tracker3d.update (Tracker3d.Turn x y) (Tracker3d.update (Tracker3d.Grab 0 0) Tracker3d.init)
+
+
+overhead : Tracker3d.Model
+overhead =
+    turned Tracker3d.init.azimuth (degrees 86)
+
+
+{-| The map opened at, turned to a given azimuth and elevation. Elm's record update
+takes a variable, so the opening model is named to be turned at all.
+-}
+turned : Float -> Float -> Tracker3d.Model
+turned azimuth elevation =
+    let
+        opened =
+            Tracker3d.init
+    in
+    { opened | azimuth = azimuth, elevation = elevation }
+
+
+azimuths : Fuzzer Float
+azimuths =
+    Fuzz.map (\n -> degrees (toFloat (modBy 360 (abs n)))) Fuzz.int
+
+
+elevations : Fuzzer Float
+elevations =
+    Fuzz.map (\n -> degrees (4 + toFloat (modBy 100 (abs n)) * 0.83)) Fuzz.int
+
+
+{-| A lap drawn as the circuit's metres are drawn, `y` running south. The four corners
+stand east, north, west and south of the middle.
+-}
+lap : List { x : Float, y : Float }
+lap =
+    [ { x = 1, y = 0 }, { x = 0, y = -1 }, { x = -1, y = 0 }, { x = 0, y = 1 } ]
+
+
+insideBox : Tracker3d.Model -> Expect.Expectation
+insideBox model =
+    Tracker3d.projected model lap
+        |> Expect.all
+            [ \shots -> Expect.equal True (List.all (\s -> 0 <= s.x && s.x <= Tracker3d.box.w) shots)
+            , \shots -> Expect.equal True (List.all (\s -> 0 <= s.y && s.y <= Tracker3d.box.h) shots)
+            , \shots -> Expect.equal True (List.all (\s -> s.x == s.x && s.y == s.y) shots)
+            ]
+
+
+bounds : List { a | x : Float, y : Float } -> { x0 : Float, x1 : Float, y0 : Float, y1 : Float }
+bounds shots =
+    { x0 = Maybe.withDefault 0 (List.minimum (List.map .x shots))
+    , x1 = Maybe.withDefault 0 (List.maximum (List.map .x shots))
+    , y0 = Maybe.withDefault 0 (List.minimum (List.map .y shots))
+    , y1 = Maybe.withDefault 0 (List.maximum (List.map .y shots))
+    }
+
+
+{-| The shoelace sum: signed, so its sign says which way round the points run.
+-}
+winding : List { a | x : Float, y : Float } -> Float
+winding points =
+    case points of
+        [] ->
+            0
+
+        first :: _ ->
+            List.map2 (\p q -> p.x * q.y - q.x * p.y) points (List.drop 1 points ++ [ first ])
+                |> List.sum
+
+
+reach : { a | x : Float, y : Float } -> { b | x : Float, y : Float } -> Float
+reach a b =
+    sqrt ((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2)
