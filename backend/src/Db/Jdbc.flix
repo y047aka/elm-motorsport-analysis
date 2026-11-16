@@ -106,11 +106,11 @@ pub mod Db.Jdbc {
             run {
                 runWriting(conn, f)
             } with handler SqlRead {
-                def fetch(sql, params, k) = k(guarded(() -> runFetch(conn, sql, params)))
+                def fetch(sql, params, k) = k(guarded(() -> fetchRows(conn, sql, params)))
             }
         } with handler SqlSavepoint {
             def control(command, k) =
-                k(guarded(() -> runStatement(conn, Savepoint.toSql(command), Nil) |> Result.map(_ -> ())))
+                k(guarded(() -> executeStatement(conn, Savepoint.toSql(command), Nil) |> Result.map(_ -> ())))
         })
 
     /// The connection as a read alone, which is what the server answers a
@@ -119,14 +119,14 @@ pub mod Db.Jdbc {
         run {
             f()
         } with handler SqlRead {
-            def fetch(sql, params, k) = k(guarded(() -> runFetch(conn, sql, params)))
+            def fetch(sql, params, k) = k(guarded(() -> fetchRows(conn, sql, params)))
         }
 
     pub def runWriting(conn: Connection, f: Unit -> a \ ef): a \ (ef - SqlWrite) + IO =
         run {
             f()
         } with handler SqlWrite {
-            def execute(sql, params, k) = k(guarded(() -> runStatement(conn, sql, params)))
+            def execute(sql, params, k) = k(guarded(() -> executeStatement(conn, sql, params)))
             def insertMany(sql, rows, k) = k(guarded(() -> insertRows(conn, sql, rows)))
             def commit(k) = k(guarded(() -> endTransaction(conn, c -> c.commit())))
             def rollback(k) = k(guarded(() -> endTransaction(conn, c -> c.rollback())))
@@ -136,7 +136,7 @@ pub mod Db.Jdbc {
     /// a statement left open holds the read on the database until the process
     /// ends, which is what a server that answers one request at a time would
     /// then never come back from.
-    def runFetch(conn: Connection, sql: String, params: List[Value]): Result[Error, List[Row]] \ IO =
+    def fetchRows(conn: Connection, sql: String, params: List[Value]): Result[Error, List[Row]] \ IO =
         let stmt = conn.prepareStatement(sql);
         let outcome = try {
             bind(stmt, params);
@@ -164,7 +164,7 @@ pub mod Db.Jdbc {
             readCells(rs, index + 1, width, JdbcConvert.cell(rs, index) :: acc)
 
     /// The statement is closed on every way out, including the one that throws.
-    def runStatement(conn: Connection, sql: String, params: List[Value]): Result[Error, Int32] \ IO =
+    def executeStatement(conn: Connection, sql: String, params: List[Value]): Result[Error, Int32] \ IO =
         let stmt = conn.prepareStatement(sql);
         let outcome = try {
             bind(stmt, params);

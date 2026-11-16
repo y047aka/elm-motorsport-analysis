@@ -17,8 +17,8 @@ pub mod Db.Row {
     }
 
     /// The row a statement came back as, names and cells.
-    pub def of(names: List[String], cells: List[Value]): Row =
-        Row.Row(names, cells)
+    pub def of(columns: List[String], cells: List[Value]): Row =
+        Row.Row(columns, cells)
 
     /// A row of cells and no names, for a reading that takes only positions.
     pub def ofCells(cells: List[Value]): Row =
@@ -29,7 +29,7 @@ pub mod Db.Row {
         values
 
     /// The column names the driver reported, in the order the cells came in.
-    pub def names(row: Row): List[String] =
+    pub def columnNames(row: Row): List[String] =
         let Row.Row(labels, _) = row;
         labels
 
@@ -55,7 +55,7 @@ pub mod Db.Row {
     /// The cell under a name. Two columns of the same name -- a join naming
     /// one from each side -- answer with the first.
     pub def get(row: Row, name: String): Option[Value] =
-        lookup(names(row), cells(row), name)
+        lookup(columnNames(row), cells(row), name)
 
     def lookup(names: List[String], cells: List[Value], name: String): Option[Value] =
         match (names, cells) {
