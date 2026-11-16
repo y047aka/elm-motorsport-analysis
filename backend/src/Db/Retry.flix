@@ -19,35 +19,14 @@ pub mod Db.Retry {
     pub def immediate(attempts: Int32): Policy =
         { attempts = attempts, base = Util.Duration.zero(), cap = Util.Duration.zero() }
 
-    /// `step` doubled `left` times, stopping at `stop` rather than overflowing.
-    def doubled(step: Int32, stop: Int32, left: Int32): Int32 =
-        if (left <= 0)
-            step
-        else if (step >= stop)
-            step
-        else doubled(if (step > stop / 2) stop else step * 2, stop, left - 1)
-
-    /// Exponential backoff with full jitter: a try waits a duration drawn
-    /// uniformly from `[0, min(cap, base * 2^attempt)]`, which is what keeps
-    /// several processes refused at the same instant from coming back at the
-    /// same instant. `jitter` is that draw, out of a thousand.
-    pub def backoff(p: Policy, attempt: Int32, jitter: Int32): Duration = {
-        let stop = p#cap |> Util.Duration.millis;
-        let window = doubled(p#base |> Util.Duration.millis, stop, attempt);
-        Util.Duration.fromMillis(window * clamp(jitter) / 1000)
-    }
-
-    /// The draw, kept inside `[0, 999]` so a caller's arithmetic cannot go
-    /// negative or reach the whole window.
-    def clamp(jitter: Int32): Int32 =
-        if (jitter < 0) 0 else if (jitter > 999) 999 else jitter
-
-    /// Whether trying the same statement again could get past.
-    def worthTrying(failure: Db.Failure): Bool =
-        match failure {
-            case Db.Failure.Transient(_) => true
-            case Db.Failure.Permanent(_) => false
-        }
+    /// `f` is tried until it answers or its tries run out, waiting on the current
+    /// thread and drawing its jitter as it goes.
+    ///
+    /// Only a transient failure is worth another try; a permanent one comes back
+    /// at once. A `Busy` failure is retried here, which is only right when `f`
+    /// opens the transaction itself -- see `retryingSavepoint`.
+    pub def retrying(p: Policy, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
+        retryingWith(p, sleepMs, draw, f)
 
     /// The wait between tries, and the draw the jitter is made from. Both are given
     /// rather than reached for: the trying is then driven without sleeping, and the
@@ -77,22 +56,6 @@ pub mod Db.Retry {
                     loopWith(p, attempt + 1, wait, jitter, f)
                 }
         }
-
-    /// `f` is tried until it answers or its tries run out, waiting on the current
-    /// thread and drawing its jitter as it goes.
-    ///
-    /// Only a transient failure is worth another try; a permanent one comes back
-    /// at once. A `Busy` failure is retried here, which is only right when `f`
-    /// opens the transaction itself -- see `retryingSavepoint`.
-    pub def retrying(p: Policy, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
-        retryingWith(p, sleepMs, draw, f)
-
-    def sleepMs(ms: Int32): Unit \ IO =
-        Thread.sleep(Int32.toInt64(ms))
-
-    /// The jitter's draw, out of a thousand.
-    def draw(): Int32 \ IO =
-        ThreadLocalRandom.current().nextInt(1000)
 
     /// A savepoint is marked inside the transaction and taken back to before the
     /// next try, so the work of the failed try is gone rather than sitting in the
@@ -132,5 +95,42 @@ pub mod Db.Retry {
                     loopSavepoint(name, p, attempt + 1, wait, jitter, f)
                 }
         }
+
+    /// Exponential backoff with full jitter: a try waits a duration drawn
+    /// uniformly from `[0, min(cap, base * 2^attempt)]`, which is what keeps
+    /// several processes refused at the same instant from coming back at the
+    /// same instant. `jitter` is that draw, out of a thousand.
+    pub def backoff(p: Policy, attempt: Int32, jitter: Int32): Duration = {
+        let stop = p#cap |> Util.Duration.millis;
+        let window = doubled(p#base |> Util.Duration.millis, stop, attempt);
+        Util.Duration.fromMillis(window * clamp(jitter) / 1000)
+    }
+
+    /// `step` doubled `left` times, stopping at `stop` rather than overflowing.
+    def doubled(step: Int32, stop: Int32, left: Int32): Int32 =
+        if (left <= 0)
+            step
+        else if (step >= stop)
+            step
+        else doubled(if (step > stop / 2) stop else step * 2, stop, left - 1)
+
+    /// The draw, kept inside `[0, 999]` so a caller's arithmetic cannot go
+    /// negative or reach the whole window.
+    def clamp(jitter: Int32): Int32 =
+        if (jitter < 0) 0 else if (jitter > 999) 999 else jitter
+
+    /// Whether trying the same statement again could get past.
+    def worthTrying(failure: Db.Failure): Bool =
+        match failure {
+            case Db.Failure.Transient(_) => true
+            case Db.Failure.Permanent(_) => false
+        }
+
+    def sleepMs(ms: Int32): Unit \ IO =
+        Thread.sleep(Int32.toInt64(ms))
+
+    /// The jitter's draw, out of a thousand.
+    def draw(): Int32 \ IO =
+        ThreadLocalRandom.current().nextInt(1000)
 
 }
