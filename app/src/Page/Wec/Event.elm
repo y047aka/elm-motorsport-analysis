@@ -84,9 +84,9 @@ standingsFence =
 
 
 {-| The row the enlarged tracker keeps by default, and the bounds the reader can
-take it between. The ceiling is a fixed height rather than a share of the page: the grid
-gives the strip whatever is left, so the worst the ceiling does is leave it a
-short one.
+take it between. The ceiling is a fixed height rather than a share of the page, so a
+short window can be asked for more than it has; `stripFloor` is what the strip
+keeps in that case.
 -}
 defaultTrackerRow : Float
 defaultTrackerRow =
@@ -447,7 +447,16 @@ from a string it finds intact in the source.
 -}
 trackerRowStyle : Float -> String
 trackerRowStyle row =
-    "minmax(0,1fr) minmax(0," ++ Columns.px row ++ ")"
+    "minmax(" ++ Columns.px stripFloor ++ ",1fr) minmax(0," ++ Columns.px row ++ ")"
+
+
+{-| What the columns keep whatever the row is taken to. The fence bounds the row by
+what the reader asked for and not by how tall the page is, and a `1fr` with no
+floor lets the strip go to nothing when the two disagree.
+-}
+stripFloor : Float
+stripFloor =
+    120
 
 
 mainGrid : Shared.LoadedRound -> List Columns.StripKey -> Model -> Html Msg
