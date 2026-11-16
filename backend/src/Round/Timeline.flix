@@ -365,7 +365,7 @@ pub mod Round.Timeline {
             event = event,
             detail = Option.flatMap(lap -> match Map.get(lap, cells) {
                 case Some(r) => Some(detail(seats, index, event#elapsed, fst(lap), r))
-                case None    => DbErr.fail(Db.Error.Incomplete(
+                case None    => DbErr.raise(Db.Error.Incomplete(
                     "the timeline names lap ${snd(lap)} of car ${fst(lap)}, which the laps are not"))
             }, lapOf(event))
         }
