@@ -97,7 +97,7 @@ suite =
                         , \m ->
                             m |> step (Step 100) |> .size |> Expect.equal fence.max
                         ]
-                        (Resize.init Resize.With 300)
+                        (Resize.init Resize.WithPointer 300)
             ]
         ]
 
@@ -108,7 +108,7 @@ suite =
 
 startAt : Float -> Resize.Model
 startAt size =
-    Resize.init Resize.With size |> step (Grab (pointer 1 size))
+    Resize.init Resize.WithPointer size |> step (Grab (pointer 1 size))
 
 
 step : Msg -> Resize.Model -> Resize.Model

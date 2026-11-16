@@ -17,15 +17,15 @@ import Drag.Handle as Handle exposing (Pointer)
 import Html exposing (Html)
 
 
-{-| Which way the size moves when the pointer travels along the axis. `With` is
+{-| Which way the size moves when the pointer travels along the axis. `WithPointer` is
 a grip on the far edge of what it bounds: the standings' grip lies on their
-right edge, and a travel right widens them. `Against` is a grip on the near
+right edge, and a travel right widens them. `AgainstPointer` is a grip on the near
 edge: the row grip lies on the tracker row's top edge, and a travel down
 shortens it.
 -}
 type Grows
-    = With
-    | Against
+    = WithPointer
+    | AgainstPointer
 
 
 {-| The size the thing stands at, the way a drag moves it, and the carry that
@@ -106,10 +106,10 @@ update fence msg m =
 signed : Grows -> Float -> Float
 signed grows travel =
     case grows of
-        With ->
+        WithPointer ->
             travel
 
-        Against ->
+        AgainstPointer ->
             negate travel
 
 

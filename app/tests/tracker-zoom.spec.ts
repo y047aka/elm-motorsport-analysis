@@ -22,12 +22,12 @@ function readConstant(name: string, pattern: RegExp): number {
   return value;
 }
 
-const TRACKER_ROW = readConstant('trackerRow', /\ntrackerRow =\n\s+(\d+)/);
-const ROW_MIN = readConstant('rowsFence.min', /\nrowsFence =\n\s*\{\s*min = (\d+)/);
-const ROW_MAX = readConstant('rowsFence.max', /rowsFence =\n\s*\{[^}]*max = (\d+)/);
-const ROW_STEP = readConstant('rowsFence.step', /rowsFence =\n\s*\{[^}]*step = (\d+)/);
+const TRACKER_ROW = readConstant('defaultTrackerRow', /\ndefaultTrackerRow =\n\s+(\d+)/);
+const ROW_MIN = readConstant('trackerRowFence.min', /\ntrackerRowFence =\n\s*\{\s*min = (\d+)/);
+const ROW_MAX = readConstant('trackerRowFence.max', /trackerRowFence =\n\s*\{[^}]*max = (\d+)/);
+const ROW_STEP = readConstant('trackerRowFence.step', /trackerRowFence =\n\s*\{[^}]*step = (\d+)/);
 
-const ZOOM = '[data-tracker-zoom]';
+const TOGGLE = '[data-tracker-toggle]';
 const EXPANDED = '[data-tracker-expanded]';
 const STRIP = '#column-strip';
 
@@ -36,7 +36,7 @@ const STRIP = '#column-strip';
 const ROW = '[data-tracker-row]';
 
 /** The column's own toggle: the enlarged drawing carries a second one. */
-const zoomIn = (page: Page) => page.locator(`${TRACKER_COLUMN} ${ZOOM}`);
+const toggleTracker = (page: Page) => page.locator(`${TRACKER_COLUMN} ${TOGGLE}`);
 
 /** The grip along the row edge between the two rows, which only the enlarged
  * page has. */
@@ -78,7 +78,7 @@ test.describe('the enlarged tracker', () => {
     const before = (await page.locator(STRIP).boundingBox())!;
     const inColumn = (await drawn(page, TRACKER_COLUMN))!;
 
-    await zoomIn(page).click();
+    await toggleTracker(page).click();
     await expect(page.locator(EXPANDED)).toHaveCount(1);
 
     const strip = (await page.locator(STRIP).boundingBox())!;
@@ -100,13 +100,13 @@ test.describe('the enlarged tracker', () => {
   test('gives the room back when pressed again, by a mark that says so', async ({ page }) => {
     const before = (await page.locator(STRIP).boundingBox())!;
 
-    await zoomIn(page).click();
+    await toggleTracker(page).click();
     await expect(page.locator(EXPANDED)).toHaveCount(1);
 
     // What opened the enlargement is not what closes it: both corners take the
     // ⤢ for a ✕ once the enlarged tracker is up.
-    await expect(page.locator(`${EXPANDED} [data-tracker-zoom]`)).toHaveAttribute('aria-label', 'Close the enlarged tracker');
-    await expect(zoomIn(page)).toHaveAttribute('aria-label', 'Close the enlarged tracker');
+    await expect(page.locator(`${EXPANDED} ${TOGGLE}`)).toHaveAttribute('aria-label', 'Close the enlarged tracker');
+    await expect(toggleTracker(page)).toHaveAttribute('aria-label', 'Close the enlarged tracker');
     await page.getByRole('button', { name: 'Close the enlarged tracker' }).first().click();
     await expect(page.locator(EXPANDED)).toHaveCount(0);
 
@@ -117,7 +117,7 @@ test.describe('the enlarged tracker', () => {
 
   test('carries the split between the two rows by the grip along their edge', async ({ page }) => {
     const row = page.locator(ROW);
-    await zoomIn(page).click();
+    await toggleTracker(page).click();
     await expect(rowGrip(page)).toHaveCount(1);
     await expect(row).toHaveCSS('height', `${TRACKER_ROW}px`);
 
@@ -141,7 +141,7 @@ test.describe('the enlarged tracker', () => {
 
   test('steps the split by the arrow keys the grip answers to', async ({ page }) => {
     const row = page.locator(ROW);
-    await zoomIn(page).click();
+    await toggleTracker(page).click();
 
     await rowGrip(page).focus();
     await page.keyboard.press('ArrowDown');

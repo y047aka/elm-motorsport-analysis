@@ -60,7 +60,7 @@ type alias Model =
     , eventsColumn : EventsColumn.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
-    , rows : Resize.Model
+    , trackerRow : Resize.Model
     , trackerExpanded : Bool
     }
 
@@ -81,26 +81,26 @@ standingsEdge =
     }
 
 
-{-| The row the enlarged tracker keeps, and the bounds the reader can take it
-between. The ceiling is a fixed height rather than a share of the page: the grid
+{-| The row the enlarged tracker keeps by default, and the bounds the reader can
+take it between. The ceiling is a fixed height rather than a share of the page: the grid
 gives the strip whatever is left, so the worst the ceiling does is leave it a
 short one.
 -}
-trackerRow : Float
-trackerRow =
+defaultTrackerRow : Float
+defaultTrackerRow =
     300
 
 
-rowsFence : Resize.Fence
-rowsFence =
+trackerRowFence : Resize.Fence
+trackerRowFence =
     { min = 180
     , max = 600
     , step = 20
     }
 
 
-rowsEdge : Resize.Edge
-rowsEdge =
+trackerRowEdge : Resize.Edge
+trackerRowEdge =
     { axis = Handle.Down
     , id = "tracker-row-resize-grip"
     , label = "Resize the enlarged tracker"
@@ -113,8 +113,8 @@ init params =
       , rowTrace = Dict.empty
       , eventsColumn = EventsColumn.init
       , comparison = CarDetail.initialComparison
-      , standings = Resize.init Resize.With LiveStandings.width
-      , rows = Resize.init Resize.Against trackerRow
+      , standings = Resize.init Resize.WithPointer LiveStandings.width
+      , trackerRow = Resize.init Resize.AgainstPointer defaultTrackerRow
       , trackerExpanded = False
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -129,10 +129,10 @@ type Msg
     = StartRace
     | PauseRace
     | FocusColumn Columns.StripKey
-    | ToggleTrackerZoom
+    | ToggleTrackerExpanded
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
-    | RowsMsg Resize.Msg
+    | TrackerRowMsg Resize.Msg
     | RowTraceChosen Class ClassColumn.Trace
     | EventsColumnMsg Feed.Msg
     | ReplayMsg Replay.Msg
@@ -158,10 +158,10 @@ update shared msg m =
         ResizeMsg sub ->
             ( { m | standings = Resize.update standingsFence sub m.standings }, Effect.none )
 
-        RowsMsg sub ->
-            ( { m | rows = Resize.update rowsFence sub m.rows }, Effect.none )
+        TrackerRowMsg sub ->
+            ( { m | trackerRow = Resize.update trackerRowFence sub m.trackerRow }, Effect.none )
 
-        ToggleTrackerZoom ->
+        ToggleTrackerExpanded ->
             ( { m | trackerExpanded = not m.trackerExpanded }, Effect.none )
 
         FocusColumn key ->
@@ -377,8 +377,8 @@ trackerToggle expanded =
                 ( "⤢", "Give the tracker the room below the strip" )
     in
     button
-        [ onClick ToggleTrackerZoom
-        , attribute "data-tracker-zoom" ""
+        [ onClick ToggleTrackerExpanded
+        , attribute "data-tracker-toggle" ""
         , attribute "aria-label" label
         , Attributes.title label
         , Attributes.class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -421,8 +421,8 @@ layout expanded =
 class: the split is the reader's to set, and Tailwind generates a class only
 from a string it finds intact in the source.
 -}
-rowsStyle : Float -> String
-rowsStyle row =
+trackerRowStyle : Float -> String
+trackerRowStyle row =
     "minmax(0,1fr) minmax(0," ++ Columns.px row ++ ")"
 
 
@@ -441,7 +441,7 @@ mainGrid round keys m =
     div
         ([ Attributes.class "row-start-2 h-full min-h-0 grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]" ]
             ++ (if m.trackerExpanded then
-                    [ Attributes.style "grid-template-rows" (rowsStyle m.rows.size) ]
+                    [ Attributes.style "grid-template-rows" (trackerRowStyle m.trackerRow.size) ]
 
                 else
                     []
@@ -449,7 +449,7 @@ mainGrid round keys m =
         )
         [ standingsCell cells.standings keys m round.energy snapshot replay.race.cars
         , if m.trackerExpanded then
-            expandedTracker cells.tracker (Html.map RowsMsg (Resize.grip rowsEdge m.rows)) (trackerToggle True) round.track snapshot
+            expandedTracker cells.tracker (Html.map TrackerRowMsg (Resize.grip trackerRowEdge m.trackerRow)) (trackerToggle True) round.track snapshot
 
           else
             text ""
