@@ -166,7 +166,22 @@ update shared msg m =
             ( { m | trackerRow = Resize.update trackerRowEdge sub m.trackerRow }, Effect.none )
 
         ToggleTrackerExpanded ->
-            ( { m | trackerExpanded = not m.trackerExpanded }, Effect.none )
+            if m.trackerExpanded then
+                ( { m | trackerExpanded = False }, Effect.none )
+
+            else
+                -- The only press that enlarges stands in the tracker column's
+                -- corner, and the reader can close that column: opening the row
+                -- opens the column back, or the feature has gone missing.
+                let
+                    ( strip, cmd ) =
+                        if List.member Columns.Tracker m.strip.order then
+                            ( m.strip, Cmd.none )
+
+                        else
+                            Columns.update (field shared) (Columns.Open Columns.Tracker) m.strip
+                in
+                ( { m | trackerExpanded = True, strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
 
         FocusColumn key ->
             let
@@ -833,6 +848,11 @@ navigation keys title maybeRound =
 Clicking one scrolls the strip along to that column; taking a column away
 stays the column's own ✕'s work.
 
+The tracker's tile stands here closed as well as open. Its corner is the only
+press that enlarges the drawing, so a reader who closes the column has taken the
+feature off the page, and this is where a closed column is asked for again -- the
+way a class's name in the standings is.
+
 The list is capped and scrolls within itself so a long field of open columns
 cannot crowd the controls out of the middle of the header.
 
@@ -843,11 +863,18 @@ columnList maybeRound keys =
         [ Attributes.class "flex items-center gap-x-1 min-w-0 max-w-[40vw] overflow-x-auto"
         , attribute "data-header-columns" ""
         ]
-        (List.map (headerColumn (Maybe.map .snapshot maybeRound)) keys)
+        (List.map (headerColumn keys (Maybe.map .snapshot maybeRound))
+            (if List.member Columns.Tracker keys then
+                keys
+
+             else
+                Columns.Tracker :: keys
+            )
+        )
 
 
-headerColumn : Maybe Snapshot -> Columns.StripKey -> Html Msg
-headerColumn maybeSnapshot key =
+headerColumn : List Columns.StripKey -> Maybe Snapshot -> Columns.StripKey -> Html Msg
+headerColumn keys maybeSnapshot key =
     let
         badge =
             case ( key, maybeSnapshot ) of
@@ -872,23 +899,39 @@ headerColumn maybeSnapshot key =
             div [ Attributes.class "w-[35px] p-1 rounded flex flex-col items-center justify-center border border-border leading-none text-[9px] font-bold" ]
                 [ text label ]
 
+        open =
+            List.member key keys
+
         labelText =
-            case key of
-                Columns.Car carNumber ->
-                    "Scroll to car #" ++ carNumber
+            if open then
+                case key of
+                    Columns.Car carNumber ->
+                        "Scroll to car #" ++ carNumber
 
-                Columns.ClassColumn class_ ->
-                    "Scroll to the " ++ Class.toString class_ ++ " column"
+                    Columns.ClassColumn class_ ->
+                        "Scroll to the " ++ Class.toString class_ ++ " column"
 
-                Columns.Tracker ->
-                    "Scroll to the tracker"
+                    Columns.Tracker ->
+                        "Scroll to the tracker"
 
-                Columns.Events ->
-                    "Scroll to the events column"
+                    Columns.Events ->
+                        "Scroll to the events column"
+
+            else
+                "Open the tracker column"
+
+        -- An open column has a place in the strip to scroll to; a closed one has
+        -- only `Columns.Open`, which opens it where the order ends.
+        press =
+            if open then
+                FocusColumn key
+
+            else
+                ColumnsMsg (Columns.Open key)
     in
     button
         [ Attributes.class "shrink-0 flex items-center p-0.5 rounded cursor-pointer transition-colors hover:bg-accent/40"
-        , onClick (FocusColumn key)
+        , onClick press
         , attribute "aria-label" labelText
         , Attributes.title labelText
         ]
