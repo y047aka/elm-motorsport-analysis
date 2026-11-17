@@ -5,8 +5,10 @@
 /// record is stays in `Motorsport.Index`.
 pub mod Round.Index {
 
+    use Db.LapRow.LapRow
     use Db.Laps
     use Db.Schema
+    use Db.Schema.Column
     use Motorsport.Calendar.Entry
     use Motorsport.Flag.FlagShown
     use Motorsport.Index
@@ -74,36 +76,55 @@ pub mod Round.Index {
     /// at Fuji, Spa and Bahrain the leader's beats every later S1 by 0.6 to 1.7
     /// seconds. Its S2, its S3 and its mini-sectors are a lap's like any other.
     def sources(): List[(Record, String, List[Sql.Expr[Bool]])] =
-        (Record.FastestLap, "NULLIF(lap_time_ms, 0)", notLapOne() :: Nil) ::
-        (Record.FastestSector(Sector.S1), "s1_ms", notLapOne() :: Nil) ::
-        (Record.FastestSector(Sector.S2), "s2_ms", Nil) ::
-        (Record.FastestSector(Sector.S3), "s3_ms", Nil) ::
+        let c = Laps.columns();
+        (Record.FastestLap, "NULLIF(${c#lapTimeMs}, 0)", notLapOne() :: Nil) ::
+        (Record.FastestSector(Sector.S1), "${c#s1Ms}", notLapOne() :: Nil) ::
+        (Record.FastestSector(Sector.S2), "${c#s2Ms}", Nil) ::
+        (Record.FastestSector(Sector.S3), "${c#s3Ms}", Nil) ::
         Nil
+
+    /// The five columns every reading carries beside the reading itself: the arms
+    /// name these, `v` keeps them, and the walk reads them back, so a name is
+    /// spelled here once.
+    pub type alias Walked = {
+        elapsedMs    = Column[LapRow, Int32],
+        sourceRow    = Column[LapRow, Int32],
+        carNumber    = Column[LapRow, String],
+        lapNumber    = Column[LapRow, Int32],
+        driverNumber = Column[LapRow, Int32],
+        t            = Column[LapRow, Int32]
+    }
+
+    def walked(): Walked =
+        let c = Laps.columns();
+        {
+            elapsedMs    = c#elapsedMs,
+            sourceRow    = c#sourceRow,
+            carNumber    = c#carNumber,
+            lapNumber    = c#lapNumber,
+            driverNumber = c#driverNumber,
+            t            = Schema.derived("t", "int", Sql.int)
+        }
 
     def notLapOne(): Sql.Expr[Bool] =
         Sql.ne(Schema.expr(Laps.columns()#lapNumber), Sql.i32(1))
 
     def bestTimes(entry: Entry, seats: Round.Drivers.Seats): List[(Record, Change)] \ DbRead =
+        let w = walked();
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.statement(
             // Every reading with the record as it stood before it beside it, the
             // readings walked once in the order the laps were completed.
             "WITH v AS ({{readings}})"
-                + " SELECT %% FROM (SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_number, t,"
-                + " MIN(t) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
+                + " SELECT %% FROM (SELECT k, ${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber},"
+                + " ${w#lapNumber}, ${w#driverNumber}, ${w#t},"
+                + " MIN(${w#t}) OVER (PARTITION BY k ORDER BY ${w#elapsedMs}, ${w#sourceRow}"
                 + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
-                + " FROM v WHERE t IS NOT NULL)"
-                + " WHERE prev IS NULL OR t < prev"
-                + " ORDER BY k, elapsed_ms, source_row",
+                + " FROM v WHERE ${w#t} IS NOT NULL)"
+                + " WHERE prev IS NULL OR ${w#t} < prev"
+                + " ORDER BY k, ${w#elapsedMs}, ${w#sourceRow}",
             Map#{ "readings" => readings },
-            (
-                record,
-                Sql.int("elapsed_ms"),
-                Sql.int("t"),
-                Sql.text("car_number"),
-                Sql.int("lap_number"),
-                Sql.int("driver_number")
-            ))
+            (record, w#elapsedMs, w#t, w#carNumber, w#lapNumber, w#driverNumber))
             |> Sql.selectAll
             |> List.map(change(seats))
 
@@ -140,18 +161,21 @@ pub mod Round.Index {
         )
 
     def reading(entry: Entry, expression: String, predicates: List[Sql.Expr[Bool]]): Sql.Frag \ DbErr =
+        let w = walked();
         Sql.spliced(
-            "elapsed_ms, source_row, car_number, lap_number, driver_number,"
-                + " ${expression} AS t FROM ${Laps.table()} WHERE {{scope}}",
+            "${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber}, ${w#lapNumber}, ${w#driverNumber},"
+                + " ${expression} AS ${w#t} FROM ${Laps.table()} WHERE {{scope}}",
             Map#{ "scope" => Laps.scope(entry, predicates) })
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
     def miniSectorReadings(entry: Entry): Sql.Frag \ DbErr =
+        let w = walked();
+        let c = Laps.columns();
         Sql.spliced(
-            "elapsed_ms, source_row, car_number, lap_number, driver_number, m.value"
+            "${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber}, ${w#lapNumber}, ${w#driverNumber}, m.value"
                 + " FROM ${Laps.table()}"
-                + ", json_each(${Laps.table()}.mini_sector_time_ms) m WHERE {{scope}}",
+                + ", json_each(${Laps.table()}.${c#miniSectorTimeMs}) m WHERE {{scope}}",
             Map#{ "scope" =>
                 Laps.scope(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) })
 

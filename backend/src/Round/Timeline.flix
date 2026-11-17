@@ -104,6 +104,7 @@ pub mod Round.Timeline {
     /// Not lap 1, for the reason `Round.Index` leaves it out of the fastest lap. A
     /// lap the feed did not time is written `0.000` and is no lap at all.
     def fastestLaps(entry: Entry): List[Timeline.FastestLap] \ DbRead =
+        let c = Laps.columns();
         Sql.statement(
             "WITH timed AS (SELECT ${Laps.table()}.car_number, elapsed_ms, lap_number, lap_time_ms,"
                 + " MIN(lap_time_ms) OVER (PARTITION BY ${Entries.table()}.class"
@@ -114,7 +115,7 @@ pub mod Round.Timeline {
                 + " WHERE standing IS NULL OR lap_time_ms < standing"
                 + " ORDER BY elapsed_ms",
             Map#{ "scope" => Laps.scope(entry, Nil) },
-            (Sql.text("car_number"), Sql.int("elapsed_ms"), Sql.int("lap_number")))
+            (c#carNumber, c#elapsedMs, c#lapNumber))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
                     carNumber = carNumber,
@@ -130,6 +131,11 @@ pub mod Round.Timeline {
     /// driver's, which is when the app reads the car as theirs. Not only out-laps,
     /// though every change in the rounds loaded falls on one.
     def driverChanges(entry: Entry): List[Timeline.DriverChange] \ DbRead =
+        let c = Laps.columns();
+        let handed = {
+            at  = Schema.derived("handed_at", "int", Sql.int),
+            lap = Schema.derived("handed_lap", "int", Sql.int)
+        };
         Sql.statement(
             "WITH seated AS (SELECT car_number, driver_number,"
                 + " LAG(driver_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS prior,"
@@ -140,7 +146,7 @@ pub mod Round.Timeline {
                 + " WHERE prior IS NOT NULL AND prior <> driver_number"
                 + " ORDER BY handed_at",
             Map#{ "scope" => Laps.scope(entry, Nil) },
-            (Sql.text("car_number"), Sql.int("handed_at"), Sql.int("handed_lap")))
+            (c#carNumber, handed#at, handed#lap))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
                     carNumber = carNumber,
@@ -565,16 +571,16 @@ pub mod Round.Timeline {
     /// fifteen mini-sector bests gathered back into one JSON array so the reading is
     /// thirteen columns and not twenty-seven.
     def cellSelection(): Sel[Cells] =
+        let c = Laps.columns();
         Sql.record({})
-            |> Sql.field(Sql.text("car_number"), (r, value) -> { +carNumber = value | r })
-            |> Sql.field(Sql.int("lap_number"), (r, value) -> { +lapNumber = value | r })
-            |> Sql.field(Sql.int("driver_number"), (r, value) -> { +driverNumber = value | r })
+            |> Sql.field(c#carNumber, (r, value) -> { +carNumber = value | r })
+            |> Sql.field(c#lapNumber, (r, value) -> { +lapNumber = value | r })
+            |> Sql.field(c#driverNumber, (r, value) -> { +driverNumber = value | r })
             |> Sql.field(Sql.optionalInt("lap_time"), (r, value) -> { +lapTime = value | r })
-            |> Sql.field(Sql.optionalInt("s1_ms"), (r, value) -> { +s1 = value | r })
-            |> Sql.field(Sql.optionalInt("s2_ms"), (r, value) -> { +s2 = value | r })
-            |> Sql.field(Sql.optionalInt("s3_ms"), (r, value) -> { +s3 = value | r })
-            |> Sql.field(Sql.optionalIntArray("mini_sector_time_ms"),
-                (r, value) -> { +miniTimes = value | r })
+            |> Sql.field(c#s1Ms, (r, value) -> { +s1 = value | r })
+            |> Sql.field(c#s2Ms, (r, value) -> { +s2 = value | r })
+            |> Sql.field(c#s3Ms, (r, value) -> { +s3 = value | r })
+            |> Sql.field(c#miniSectorTimeMs, (r, value) -> { +miniTimes = value | r })
             |> Sql.field(Sql.optionalInt("lap_best"), (r, value) -> { +lapBest = value | r })
             |> Sql.field(Sql.optionalInt("s1_best"), (r, value) -> { +s1Best = value | r })
             |> Sql.field(Sql.optionalInt("s2_best"), (r, value) -> { +s2Best = value | r })
