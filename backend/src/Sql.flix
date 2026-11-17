@@ -89,6 +89,7 @@ pub mod Sql {
     pub def ne(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<>", left, right)
     pub def lte(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<=", left, right)
     pub def isNotNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NOT NULL", expr)
+    pub def isNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NULL", expr)
 
     /// The predicates, ANDed. Nothing asked is `1 = 1` rather than an empty
     /// fragment: this goes where a predicate is expected, and a caller ANDing
@@ -287,6 +288,160 @@ pub mod Sql {
     /// and a column of a declared table both go in.
     pub def field(pick: p, add: (r, Project.Out[p]) -> s, rest: Sel[r]): Sel[s] with Project[p] =
         both(rest, Project.sel(pick)) |> selMap(match (r, value) -> add(r, value))
+
+    ///
+    /// ===== AGGREGATES AND WINDOWS =====
+    ///
+    /// An aggregate or a window is written over a projection and read back as that
+    /// projection reads, which is what `Project` already says how to do:
+    /// `min(c#s1Ms)` reads as an `Option[Int32]` because `s1_ms` is one. The
+    /// reading is carried through; only the text is wrapped. What a caller used to
+    /// assert -- `optionalInt("MAX(elapsed_ms)")` -- is now derived, which is the
+    /// whole point: the nullability of a reading is not the caller's to remember.
+    ///
+
+    /// The pieces a list is made of, separated as SQL separates them.
+    pub def joined(pieces: List[Frag]): Frag =
+        joinFrags(", ", pieces)
+
+    /// The piece of a statement a projection contributes, values and all.
+    pub def fragment(sel: Sel[a]): Frag =
+        joinFrags(", ", selColumns(sel))
+
+    def selColumns(sel: Sel[a]): List[Frag] =
+        let Sel.Sel(columns, _) = sel;
+        columns
+
+    /// Pieces run together with nothing between them, where the text itself puts
+    /// the separation -- inside a function's parentheses, around a window's.
+    def glued(pieces: List[Frag]): Frag =
+        joinFrags("", pieces)
+
+    /// The function named, over what `arg` is.
+    def call(name: String, arg: Sel[a]): Sel[a] =
+        let Sel.Sel(_, decode) = arg;
+        Sel.Sel(glued(raw("${name}(") :: joinFrags(", ", selColumns(arg)) :: raw(")") :: Nil) :: Nil, decode)
+
+    pub def sum(p: p): Sel[Project.Out[p]] with Project[p] = call("SUM", Project.sel(p))
+    pub def min(p: p): Sel[Project.Out[p]] with Project[p] = call("MIN", Project.sel(p))
+    pub def max(p: p): Sel[Project.Out[p]] with Project[p] = call("MAX", Project.sel(p))
+    pub def firstValue(p: p): Sel[Project.Out[p]] with Project[p] = call("FIRST_VALUE", Project.sel(p))
+
+    /// A count is never null and never the argument's type, so it is the one
+    /// aggregate whose reading is its own.
+    pub def count(p: p): Sel[Int32] with Project[p] =
+        intOf(glued(raw("COUNT(") :: joinFrags(", ", selColumns(Project.sel(p))) :: raw(")") :: Nil))
+
+    /// The same columns read as possibly nothing. Two things answer with a null
+    /// the argument's own type does not predict: an aggregate over a group
+    /// holding no rows, and the predecessor `lag` names for the first row of a
+    /// window.
+    pub def opt(p: p): Sel[Option[Project.Out[p]]] with Project[p] =
+        let Sel.Sel(columns, decode) = Project.sel(p);
+        Sel.Sel(columns, row -> match List.head(Row.cells(row)) {
+            case Some(value) if Row.isNull(value) => Ok((None, Row.drop(row, 1)))
+            case _ => decode(row) |> Result.map(match (value, rest) -> (Some(value), rest))
+        })
+
+    /// `COALESCE`, the nullable side first. The reading is the fallback's, which is
+    /// what answers when the first side carries nothing.
+    pub def coalesce(nullable: Sel[Option[a]], fallback: Sel[a]): Sel[a] =
+        let Sel.Sel(_, decode) = fallback;
+        Sel.Sel(
+            glued(
+                raw("COALESCE(") :: joinFrags(", ", selColumns(nullable)) ::
+                raw(", ") :: joinFrags(", ", selColumns(fallback)) :: raw(")") :: Nil
+            ) :: Nil,
+            decode
+        )
+
+    /// A projected expression under the name the query gives it.
+    pub def aliased(name: String, sel: Sel[a]): Frag =
+        frags(joinFrags(", ", selColumns(sel)) :: raw("AS ${name}") :: Nil)
+
+    // ------------------------------------------------------------------ windows
+
+    /// How far a window reaches from the row being read.
+    pub enum Frame {
+        case UnboundedPreceding
+        case Preceding(Int32)
+        case CurrentRow
+        case Following(Int32)
+        case UnboundedFollowing
+    }
+
+    /// What a window is: the name the query gives it when it reads the window more
+    /// than once, the rows it is split into, the order it walks them in, and how
+    /// far it reaches. A name set means the clauses are spelled once, in the
+    /// `WINDOW` clause, and every use refers back to it.
+    pub type alias Window = {
+        name      = Option[String],
+        partition = List[Frag],
+        order     = List[Frag],
+        frame     = Option[Frag]
+    }
+
+    /// A window read once: spelled where it is used.
+    pub def window(partition: List[Frag], order: List[Frag], frame: Option[Frag]): Window =
+        { name = None, partition = partition, order = order, frame = frame }
+
+    /// A window read more than once: named, spelled once, and referred to by that
+    /// name everywhere else. Fifteen running minima are one `WINDOW w AS`.
+    pub def namedWindow(
+        name: String,
+        partition: List[Frag],
+        order: List[Frag],
+        frame: Option[Frag]
+    ): Window =
+        { name = Some(name), partition = partition, order = order, frame = frame }
+
+    /// `ROWS BETWEEN ... AND ...`, the one frame these queries spell out.
+    pub def rowsBetween(start: Frame, end: Frame): Option[Frag] =
+        Some(raw("ROWS BETWEEN ${textOf(start)} AND ${textOf(end)}"))
+
+    def textOf(frame: Frame): String = match frame {
+        case Frame.UnboundedPreceding  => "UNBOUNDED PRECEDING"
+        case Frame.Preceding(n)        => "${n} PRECEDING"
+        case Frame.CurrentRow          => "CURRENT ROW"
+        case Frame.Following(n)        => "${n} FOLLOWING"
+        case Frame.UnboundedFollowing  => "UNBOUNDED FOLLOWING"
+    }
+
+    /// The clauses between the `OVER (` and its `)`. A clause with nothing to say
+    /// is left out, as every other clause of a query is.
+    def overClause(w: Window): Frag =
+        let parts =
+            (if (List.isEmpty(w#partition)) Nil
+             else frags(raw("PARTITION BY") :: joinFrags(", ", w#partition) :: Nil) :: Nil) ++
+            (if (List.isEmpty(w#order)) Nil
+             else frags(raw("ORDER BY") :: joinFrags(", ", w#order) :: Nil) :: Nil) ++
+            (match w#frame { case None => Nil case Some(f) => f :: Nil });
+        joinFrags(" ", parts)
+
+    /// What follows `OVER`: the name the query gave the window, or its clauses.
+    def overTarget(w: Window): Frag = match w#name {
+        case Some(name) => raw("OVER ${name}")
+        case None       => glued(raw("OVER (") :: overClause(w) :: raw(")") :: Nil)
+    }
+
+    /// The expression, over its window.
+    pub def over(p: p, w: Window): Sel[Project.Out[p]] with Project[p] =
+        let Sel.Sel(columns, decode) = Project.sel(p);
+        Sel.Sel(frags(joinFrags(", ", columns) :: overTarget(w) :: Nil) :: Nil, decode)
+
+    /// `WINDOW w AS (...)`, the clause a named `OVER w` refers back to. Nothing
+    /// for a window no query named.
+    pub def windowClause(w: Window): Option[Frag] =
+        Option.map(name -> glued(raw("WINDOW ${name} AS (") :: overClause(w) :: raw(")") :: Nil), w#name)
+
+    /// The row's place within its partition, counted from one.
+    pub def rowNumber(w: Window): Sel[Int32] =
+        intOf(frags(raw("ROW_NUMBER()") :: overTarget(w) :: Nil))
+
+    /// The value the previous row of the window had. Nothing for the first row,
+    /// which is what the reading is an `Option` for.
+    pub def lag(p: p, w: Window): Sel[Option[Project.Out[p]]] with Project[p] =
+        opt(over(call("LAG", Project.sel(p)), w))
 
     ///
     /// ===== QUERIES =====
