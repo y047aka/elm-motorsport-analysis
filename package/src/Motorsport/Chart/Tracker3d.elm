@@ -765,6 +765,78 @@ sector fit ( shot, size, label ) =
         [ text label ]
 
 
+{-| The share of its own width a car's dot keeps when the road it lies on has gone
+as thin as the eye can be brought. Below this the dot is drawn fatter than the ground
+it stands on, because a car is what a reader is looking for and the road is not.
+-}
+dotFloor : Float
+dotFloor =
+    0.2
+
+
+{-| The ellipse a disc comes out as: the two axes and the angle of the wide one, with
+the thin one lifted to `dotFloor` of the wide. A circle looks the same however its
+pre-image was turned, so the polar form alone says the drawing.
+-}
+axesOf :
+    { ux : Float, uy : Float, vx : Float, vy : Float }
+    -> Float
+    -> { wide : Float, thick : Float, angle : Float }
+axesOf disc k =
+    let
+        a =
+            disc.ux * k
+
+        b =
+            disc.uy * k
+
+        c =
+            disc.vx * k
+
+        d =
+            disc.vy * k
+
+        along =
+            a * a + b * b
+
+        between =
+            a * c + b * d
+
+        across =
+            c * c + d * d
+
+        spread =
+            sqrt ((along - across) ^ 2 + 4 * between ^ 2)
+
+        wide =
+            sqrt ((along + across + spread) / 2)
+
+        thin =
+            sqrt (max 0 ((along + across - spread) / 2))
+    in
+    { wide = wide
+    , thick = max (wide * dotFloor) thin
+    , angle = 0.5 * atan2 (2 * between) (along - across)
+    }
+
+
+{-| The unit circle turned to an ellipse's angle, scaled by its axes, and set down where
+the car stands.
+-}
+matrixOf : Float -> Float -> Float -> { a | x : Float, y : Float } -> String
+matrixOf wide thick angle placed =
+    [ wide * cos angle
+    , wide * sin angle
+    , negate (thick * sin angle)
+    , thick * cos angle
+    , placed.x
+    , placed.y
+    ]
+        |> List.map String.fromFloat
+        |> String.join " "
+        |> \numbers -> "matrix(" ++ numbers ++ ")"
+
+
 {-| The field, farthest first: the near cars are drawn over the far ones, as the
 near side of the lap stands over the far side. A dot is the disc the car stands on, the
 image of a circle lying in the road's own plane, so it goes thin as the eye comes down
@@ -778,30 +850,25 @@ carMarker fit car =
         placed =
             place fit car.at
 
-        -- The unit circle taken through the road's two axes, and set down where the car
-        -- stands: an ellipse, drawn as the affine image of a circle rather than as one
-        -- solved for.
-        matrix =
-            [ car.disc.ux * fit.k
-            , car.disc.uy * fit.k
-            , car.disc.vx * fit.k
-            , car.disc.vy * fit.k
-            , placed.x
-            , placed.y
-            ]
-                |> List.map String.fromFloat
-                |> String.join " "
+        { wide, thick, angle } =
+            axesOf car.disc fit.k
+
+        -- The name hangs off the dot a reader sees. Kept at the circle's own radius, it
+        -- floats further above a thin one than the car is wide.
+        above =
+            sqrt ((wide * sin angle) ^ 2 + (thick * cos angle) ^ 2)
+                + car.fontSize * fit.k * 0.5
     in
     g []
         [ circle
             [ Svg.Attributes.r "1"
-            , transform ("matrix(" ++ matrix ++ ")")
+            , transform (matrixOf wide thick angle placed)
             , fill car.colour
             ]
             []
         , text_
             [ Svg.Attributes.x (String.fromFloat placed.x)
-            , Svg.Attributes.y (String.fromFloat (placed.y - car.radius * 1.9 * fit.k))
+            , Svg.Attributes.y (String.fromFloat (placed.y - above))
             , Svg.Attributes.fontSize (String.fromFloat (car.fontSize * fit.k))
             , textAnchor "middle"
             , dominantBaseline "central"
