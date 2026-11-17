@@ -430,9 +430,14 @@ the caller wrote. Each names the table it is of, and a source that renames it
 says so itself: `Db.Rounds.scope` takes the column under that name, which is
 what `Round.Summary.carBuilds` hands its `c`. The type is what carries
 nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
-asked of `mini_sector_time_ms` and not of `lap_time_ms`. A column a common
-table expression made up is `Sql.column`, named rather than drawn, and its type
-is the caller's word.
+asked of `mini_sector_time_ms` and not of `lap_time_ms`.
+
+A column a common table expression made up is `Schema.derived`: the name the
+expression gives it, the type the expression it selects has, and that name's
+reading. `Round.Timeline.crossings` is the one set of them, and it is read twice
+over -- once to write `l`'s own `SELECT`, once by every subquery that correlates on
+`l`, `led`, `stop` or `between_` -- which is what makes a name spelled once. What no
+declaration reaches at all is `Sql.column`, and its type is the caller's word.
 
 `Sql.unionAllTagged` stacks arms of a `UNION ALL` and labels each with a number
 it picks, handing back a reading of that number as the thing the arm was about.
@@ -450,6 +455,17 @@ asked for, a clause with nothing to say is left out, and `filter` asked twice
 asks both. `Sql.toStatement` is pure, so what
 a query is can be read back without a database.
 
+An aggregate and a window are written over a projection and read back as that
+projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and
+`lag(c#flagAtFl, w)` is an `Option` because the first row of a window has no
+predecessor. `opt` is the same fact from the other side: an aggregate over a group
+holding no rows answers null too. A `Sql.Window` is a value, and a named one is
+spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which
+is how nineteen running minima are one clause. What a statement written out
+interpolates is the same value: `Db.Schema` gives a `Column` a `ToString` of its own
+name, so `${l#carNumber}` puts the name between the keywords while what the code
+holds is still the column.
+
 Some queries are written rather than built, and the line is the builder's own reach:
 it takes the projection and the four outer clauses, and what it does not reach -- a
 `WITH`, a window, a correlated subquery -- was text whichever way the statement was
@@ -466,10 +482,11 @@ sent to SQLite.
 `Round.Timeline`'s four walks, `Round.Index`'s two, `Round.Summary`'s grid and four of
 `Cli.Load.Validation`'s five rules are written; the readings that are a `GROUP BY` or a
 plain scan stay built, which is where the declared columns and the scoped source earn
-their keep. What the two forms are chosen between is what caught the eye before: the
-built readings name every column as the table declares it, and the written ones say
-`Sql.column` and `Sql.raw` for columns no declaration reaches -- the fifteen
-`b0`..`b14` a mini-sector best is gathered out of, the `held` a `LAG` answers with.
+their keep. The line between them is a clause's, not a statement's: what is written is
+the statement's shape, and the pieces interpolated into it are declared columns,
+aggregates over them, and windows over those. What stays text is a column no
+declaration reaches -- the fifteen `b0`..`b14` a mini-sector best is gathered out of, the
+`m.key` and `m.value` a `json_each` answers with.
 
 So is what the load writes. `Sql.createTable` takes the columns and the keys
 over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns

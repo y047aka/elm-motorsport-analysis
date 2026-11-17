@@ -6,8 +6,11 @@ pub mod Round.Timeline {
 
     use Db.Cars
     use Db.Entries
+    use Db.Entries.EntryRow
+    use Db.LapRow.LapRow
     use Db.Laps
     use Db.Schema
+    use Db.Schema.Column
     use Db.TimelineEvents
     use Db.TimelineEvents.EventRow
     use Db.Value
@@ -166,21 +169,26 @@ pub mod Round.Timeline {
     /// `leadersInPit`'s event -- and nor was one that never crossed it, having
     /// retired.
     def overtakes(entry: Entry): List[Timeline.Overtake] \ DbRead =
+        let x = crossings();
+        let l = seen("l", x);
+        let led = seen("led", x);
+        let held = Schema.qualified("led", held());
         Sql.statement(
-            "WITH ${crossings()}"
+            "WITH ${crossed(x)}"
                 + " SELECT %% FROM ("
-                + " SELECT car_number, lap_number, elapsed_ms,"
-                + " LAG(car_number) OVER (PARTITION BY car_class ORDER BY lap_number) AS held"
-                + " FROM l WHERE rn = 1) AS led"
-                + " WHERE held IS NOT NULL AND held <> car_number"
+                + " SELECT ${l#carNumber}, ${l#lapNumber}, ${l#elapsedMs},"
+                + " ${Sql.sqlOf(Sql.fragment(Sql.lag(l#carNumber, classLeads(l))))} AS ${heldName()}"
+                + " FROM ${l#table} WHERE ${l#place} = 1) AS ${led#table}"
+                + " WHERE ${held} IS NOT NULL AND ${held} <> ${led#carNumber}"
                 // The lap the overtake is read on is the out-lap's own, and not the one
                 // before it: a leader that came back out in front has its out-lap there,
                 // and an overtake on the lap after is still one.
-                + " AND EXISTS (SELECT 1 FROM l WHERE l.car_number = led.held"
-                + " AND l.lap_number = led.lap_number AND NOT l.pitted)"
-                + " ORDER BY elapsed_ms",
+                + " AND EXISTS (SELECT 1 FROM ${l#table}"
+                + " WHERE ${l#carNumber} = ${held}"
+                + " AND ${l#lapNumber} = ${led#lapNumber} AND NOT ${l#pitted})"
+                + " ORDER BY ${led#elapsedMs}",
             Laps.scope(entry, Nil) :: Nil,
-            (Sql.text("car_number"), Sql.int("elapsed_ms"), Sql.int("lap_number")))
+            (led#carNumber, led#elapsedMs, led#lapNumber))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
                     carNumber = carNumber,
@@ -197,26 +205,35 @@ pub mod Round.Timeline {
     /// A stop is counted at its out-lap, for `Db.Laps.pitOutLap`'s reason, and timed
     /// at its in-lap.
     def leadersInPit(entry: Entry): List[Timeline.InPit] \ DbRead =
+        let x = crossings();
+        let l = seen("l", x);
+        let led = seen("led", x);
+        let stop = seen("stop", x);
+        let between = seen("between_", x);
         Sql.statement(
-            "WITH ${crossings()},"
+            "WITH ${crossed(x)},"
                 // Who led their class on each lap. A car only ever leads its own class,
                 // so a stop is matched to its car's leads by the car alone.
-                + " led AS (SELECT car_number, lap_number FROM l WHERE rn = 1)"
-                + " SELECT %% FROM l AS stop"
+                + " ${led#table} AS (SELECT ${l#carNumber}, ${l#lapNumber}"
+                + " FROM ${l#table} WHERE ${l#place} = 1)"
+                + " SELECT %% FROM ${l#table} AS ${stop#table}"
                 // A stop the car in the lead made: it led the lap before its out-lap, or
                 // the lap before that -- the leader that lost the lead at the crossing it
                 // turned down the lane from, coming back out one lap later. Not the lap
                 // before that when the lap between was an out-lap of its own: that is a
                 // second stop straight after one, and the lead two laps back was lost at
                 // the first.
-                + " WHERE stopped AND EXISTS (SELECT 1 FROM led WHERE led.car_number = stop.car_number"
-                + " AND (led.lap_number = stop.lap_number - 1"
-                + " OR (led.lap_number = stop.lap_number - 2"
-                + " AND NOT EXISTS (SELECT 1 FROM l AS between_ WHERE between_.car_number = stop.car_number"
-                + " AND between_.lap_number = stop.lap_number - 1 AND between_.stopped))))"
-                + " ORDER BY elapsed_ms",
+                + " WHERE ${stop#stopped} AND EXISTS (SELECT 1 FROM ${led#table}"
+                + " WHERE ${led#carNumber} = ${stop#carNumber}"
+                + " AND (${led#lapNumber} = ${stop#lapNumber} - 1"
+                + " OR (${led#lapNumber} = ${stop#lapNumber} - 2"
+                + " AND NOT EXISTS (SELECT 1 FROM ${l#table} AS ${between#table}"
+                + " WHERE ${between#carNumber} = ${stop#carNumber}"
+                + " AND ${between#lapNumber} = ${stop#lapNumber} - 1"
+                + " AND ${between#stopped}))))"
+                + " ORDER BY ${stop#elapsedMs}",
             Laps.scope(entry, Nil) :: Nil,
-            (Sql.text("car_number"), cameInAt(), cameInOn()))
+            (stop#carNumber, cameInAt(stop), cameInOn(stop)))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
                     carNumber = carNumber,
@@ -225,16 +242,79 @@ pub mod Round.Timeline {
                 })
             |> Sql.selectAll
 
-    /// Every crossing of the round's, with its class and its place in its class's
-    /// lap, under the name `l` the two readings that count what happened at a
-    /// boundary correlate their subqueries on.
-    def crossings(): String =
-        "l AS (SELECT ${Laps.table()}.car_number, lap_number, elapsed_ms,"
-            + " ${Laps.pitLap()} AS pitted, ${Laps.pitOutLap()} AS stopped,"
-            + " ${Entries.table()}.class AS car_class,"
-            + " ROW_NUMBER() OVER (PARTITION BY ${Entries.table()}.class, lap_number"
-            + " ORDER BY elapsed_ms, source_row) AS rn"
+    /// One crossing of the round, with its car's class and its place in its class's
+    /// lap. The common table expression below writes these names and the readings
+    /// that correlate on it read them, so a name is spelled once.
+    pub type alias Crossings = {
+        table     = String,
+        carNumber = Column[LapRow, String],
+        lapNumber = Column[LapRow, Int32],
+        elapsedMs = Column[LapRow, Int32],
+        pitted    = Column[LapRow, Bool],
+        stopped   = Column[LapRow, Bool],
+        carClass  = Column[EntryRow, String],
+        place     = Column[LapRow, Int32]
+    }
+
+    /// The crossings as `l` declares them: three are `laps`' own columns, four are
+    /// what the expression makes up, and none of them is qualified yet.
+    def crossings(): Crossings =
+        let c = Laps.columns();
+        {
+            table     = "l",
+            carNumber = c#carNumber,
+            lapNumber = c#lapNumber,
+            elapsedMs = c#elapsedMs,
+            pitted    = Schema.derived("pitted", "int not null", Sql.bool),
+            stopped   = Schema.derived("stopped", "int not null", Sql.bool),
+            carClass  = Schema.derived("car_class", "text not null", Sql.text),
+            place     = Schema.derived("rn", "int not null", Sql.int)
+        }
+
+    /// The same crossings under the name one of the sources gives them, which is how
+    /// `l`, `led`, `stop` and `between_` are the same columns four times.
+    def seen(source: String, c: Crossings): Crossings =
+        {
+            table     = source,
+            carNumber = Schema.qualified(source, c#carNumber),
+            lapNumber = Schema.qualified(source, c#lapNumber),
+            elapsedMs = Schema.qualified(source, c#elapsedMs),
+            pitted    = Schema.qualified(source, c#pitted),
+            stopped   = Schema.qualified(source, c#stopped),
+            carClass  = Schema.qualified(source, c#carClass),
+            place     = Schema.qualified(source, c#place)
+        }
+
+    /// Who led their class on each lap, under the name `overtakes` gives it.
+    def held(): Column[LapRow, String] =
+        Schema.derived("held", "text", Sql.text)
+
+    def heldName(): String =
+        Schema.name(held())
+
+    /// The crossings written out. `??` is where the round's rows go, bound.
+    def crossed(c: Crossings): String =
+        let e = Entries.columns();
+        "${c#table} AS (SELECT ${Laps.table()}.${c#carNumber}, ${c#lapNumber}, ${c#elapsedMs},"
+            + " ${Laps.pitLap()} AS ${c#pitted}, ${Laps.pitOutLap()} AS ${c#stopped},"
+            + " ${Entries.table()}.${Schema.name(e#carClass)} AS ${c#carClass},"
+            + " ${Sql.sqlOf(Sql.fragment(Sql.rowNumber(firstAcross(c))))} AS ${c#place}"
             + " FROM ${classed()} WHERE ??)"
+
+    /// Who crossed the line first in their class on that lap.
+    def firstAcross(c: Crossings): Sql.Window =
+        let l = Laps.columns();
+        Sql.window(
+            Schema.term(Schema.qualified(Entries.table(), Entries.columns()#carClass)) ::
+            Schema.term(c#lapNumber) :: Nil,
+            Schema.term(l#elapsedMs) :: Schema.term(l#sourceRow) :: Nil,
+            None
+        )
+
+    /// The order a class's leads were taken in: its own laps, in the order they were
+    /// run.
+    def classLeads(c: Crossings): Sql.Window =
+        Sql.window(Schema.term(c#carClass) :: Nil, Schema.term(c#lapNumber) :: Nil, None)
 
     /// The laps, each beside the class of the car that ran it. A lap with no row in
     /// `cars` has no class and is dropped; the load writes the cars first.
@@ -250,18 +330,22 @@ pub mod Round.Timeline {
     /// it, the earlier of the crossings that are one half of a stop, which is the
     /// in-lap when the feed wrote it.
     ///
-    /// Both these readings correlate on rows no source declares columns for, and read
+    /// Both these readings correlate on the crossings from another `def`, and read
     /// the same row, so they cannot disagree about which crossing the event fell on.
-    def cameInAt(): Sel[Int32] =
-        Sql.int("(SELECT l.elapsed_ms FROM l WHERE l.car_number = stop.car_number"
-            + " AND l.lap_number BETWEEN stop.lap_number - 1 AND stop.lap_number"
-            + " AND l.pitted ORDER BY l.lap_number ASC LIMIT 1)")
+    def cameInAt(stop: Crossings): Sel[Int32] =
+        let l = seen("l", crossings());
+        Sql.int("(SELECT ${l#elapsedMs} FROM ${l#table}"
+            + " WHERE ${l#carNumber} = ${stop#carNumber}"
+            + " AND ${l#lapNumber} BETWEEN ${stop#lapNumber} - 1 AND ${stop#lapNumber}"
+            + " AND ${l#pitted} ORDER BY ${l#lapNumber} ASC LIMIT 1)")
 
     /// Which lap the car came in on, read off the crossing `cameInAt` times.
-    def cameInOn(): Sel[Int32] =
-        Sql.int("(SELECT l.lap_number FROM l WHERE l.car_number = stop.car_number"
-            + " AND l.lap_number BETWEEN stop.lap_number - 1 AND stop.lap_number"
-            + " AND l.pitted ORDER BY l.lap_number ASC LIMIT 1)")
+    def cameInOn(stop: Crossings): Sel[Int32] =
+        let l = seen("l", crossings());
+        Sql.int("(SELECT ${l#lapNumber} FROM ${l#table}"
+            + " WHERE ${l#carNumber} = ${stop#carNumber}"
+            + " AND ${l#lapNumber} BETWEEN ${stop#lapNumber} - 1 AND ${stop#lapNumber}"
+            + " AND ${l#pitted} ORDER BY ${l#lapNumber} ASC LIMIT 1)")
 
     // -------------------------------------------------- the laps events fell on
 

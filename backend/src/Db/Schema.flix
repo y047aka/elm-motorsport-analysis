@@ -90,6 +90,22 @@ pub mod Db.Schema {
         let Column.Column(c) = column;
         Column.Column({ name = source + "." + c#name | c })
 
+    /// A column a common table expression names: the name it gives, the type the
+    /// expression it selects has, and how that name reads back.
+    ///
+    /// Nothing binds such a column -- a derived source answers with rows and no row
+    /// writes it -- so the `bind` is the one field of it no query reaches.
+    pub def derived(name: String, sqlType: String, reading: String -> Sel[a]): Column[r, a] =
+        column(name, sqlType, _ -> Value.Null, reading)
+
+    /// A statement written out names a column by its name and nothing else, so this
+    /// is what `${c#carNumber}` puts between the keywords: the name, while the value
+    /// interpolated is still the column and its type.
+    instance ToString[Column[r, a]] {
+        pub def toString(column: Column[r, a]): String =
+            name(column)
+    }
+
     /// A column is one of the things a query may project.
     instance Sql.Project[Column[r, a]] {
         type Out = a

@@ -56,6 +56,17 @@ pub mod Sql {
         let Frag.Frag(sql, params) = fragment;
         (sql, params)
 
+    /// The text of a piece that binds nothing, which is what a statement written out
+    /// interpolates: a column's name, an aggregate over declared columns, a window's
+    /// clauses. A piece that does bind values has nowhere else they could go, and is
+    /// asked for by `toSql`, which keeps them.
+    pub def sqlOf(fragment: Frag): String =
+        let Frag.Frag(sql, params) = fragment;
+        if (List.isEmpty(params))
+            sql
+        else
+            "${sql} /* binds ${List.length(params)} */"
+
     ///
     /// ===== EXPRESSIONS =====
     ///
@@ -293,11 +304,10 @@ pub mod Sql {
     /// ===== AGGREGATES AND WINDOWS =====
     ///
     /// An aggregate or a window is written over a projection and read back as that
-    /// projection reads, which is what `Project` already says how to do:
-    /// `min(c#s1Ms)` reads as an `Option[Int32]` because `s1_ms` is one. The
-    /// reading is carried through; only the text is wrapped. What a caller used to
-    /// assert -- `optionalInt("MAX(elapsed_ms)")` -- is now derived, which is the
-    /// whole point: the nullability of a reading is not the caller's to remember.
+    /// projection reads, which is what `Project` already says how to do: `min(c#s1Ms)`
+    /// reads as an `Option[Int32]` because `s1_ms` is one.
+    ///
+    /// The reading is carried through; only the text is wrapped.
     ///
 
     /// The pieces a list is made of, separated as SQL separates them.
@@ -312,8 +322,8 @@ pub mod Sql {
         let Sel.Sel(columns, _) = sel;
         columns
 
-    /// Pieces run together with nothing between them, where the text itself puts
-    /// the separation -- inside a function's parentheses, around a window's.
+    /// Pieces run together with nothing between them, where the text itself puts the
+    /// separation -- inside a function's parentheses, around a window's.
     def glued(pieces: List[Frag]): Frag =
         joinFrags("", pieces)
 
@@ -327,15 +337,16 @@ pub mod Sql {
     pub def max(p: p): Sel[Project.Out[p]] with Project[p] = call("MAX", Project.sel(p))
     pub def firstValue(p: p): Sel[Project.Out[p]] with Project[p] = call("FIRST_VALUE", Project.sel(p))
 
-    /// A count is never null and never the argument's type, so it is the one
-    /// aggregate whose reading is its own.
+    /// A count is never null and never the argument's type, so it is the one aggregate
+    /// whose reading is its own.
     pub def count(p: p): Sel[Int32] with Project[p] =
         intOf(glued(raw("COUNT(") :: joinFrags(", ", selColumns(Project.sel(p))) :: raw(")") :: Nil))
 
-    /// The same columns read as possibly nothing. Two things answer with a null
-    /// the argument's own type does not predict: an aggregate over a group
-    /// holding no rows, and the predecessor `lag` names for the first row of a
-    /// window.
+    /// The same columns read as possibly nothing.
+    ///
+    /// Two things answer with a null the argument's own type does not predict: an
+    /// aggregate over a group holding no rows, and the predecessor `lag` names for the
+    /// first row of a window.
     pub def opt(p: p): Sel[Option[Project.Out[p]]] with Project[p] =
         let Sel.Sel(columns, decode) = Project.sel(p);
         Sel.Sel(columns, row -> match List.head(Row.cells(row)) {
@@ -343,8 +354,10 @@ pub mod Sql {
             case _ => decode(row) |> Result.map(match (value, rest) -> (Some(value), rest))
         })
 
-    /// `COALESCE`, the nullable side first. The reading is the fallback's, which is
-    /// what answers when the first side carries nothing.
+    /// `COALESCE`, the nullable side first.
+    ///
+    /// The reading is the fallback's, which is what answers when the first side carries
+    /// nothing.
     pub def coalesce(nullable: Sel[Option[a]], fallback: Sel[a]): Sel[a] =
         let Sel.Sel(_, decode) = fallback;
         Sel.Sel(
@@ -371,9 +384,11 @@ pub mod Sql {
     }
 
     /// What a window is: the name the query gives it when it reads the window more
-    /// than once, the rows it is split into, the order it walks them in, and how
-    /// far it reaches. A name set means the clauses are spelled once, in the
-    /// `WINDOW` clause, and every use refers back to it.
+    /// than once, the rows it is split into, the order it walks them in, and how far
+    /// it reaches.
+    ///
+    /// A name set means the clauses are spelled once, in the `WINDOW` clause, and every
+    /// use refers back to it.
     pub type alias Window = {
         name      = Option[String],
         partition = List[Frag],
@@ -385,8 +400,8 @@ pub mod Sql {
     pub def window(partition: List[Frag], order: List[Frag], frame: Option[Frag]): Window =
         { name = None, partition = partition, order = order, frame = frame }
 
-    /// A window read more than once: named, spelled once, and referred to by that
-    /// name everywhere else. Fifteen running minima are one `WINDOW w AS`.
+    /// A window read more than once: named, spelled once, and referred to by that name
+    /// everywhere else.
     pub def namedWindow(
         name: String,
         partition: List[Frag],
@@ -407,8 +422,9 @@ pub mod Sql {
         case Frame.UnboundedFollowing  => "UNBOUNDED FOLLOWING"
     }
 
-    /// The clauses between the `OVER (` and its `)`. A clause with nothing to say
-    /// is left out, as every other clause of a query is.
+    /// The clauses between the `OVER (` and its `)`.
+    ///
+    /// A clause with nothing to say is left out, as every other clause of a query is.
     def overClause(w: Window): Frag =
         let parts =
             (if (List.isEmpty(w#partition)) Nil
@@ -429,8 +445,9 @@ pub mod Sql {
         let Sel.Sel(columns, decode) = Project.sel(p);
         Sel.Sel(frags(joinFrags(", ", columns) :: overTarget(w) :: Nil) :: Nil, decode)
 
-    /// `WINDOW w AS (...)`, the clause a named `OVER w` refers back to. Nothing
-    /// for a window no query named.
+    /// `WINDOW w AS (...)`, the clause a named `OVER w` refers back to.
+    ///
+    /// Nothing for a window no query named.
     pub def windowClause(w: Window): Option[Frag] =
         Option.map(name -> glued(raw("WINDOW ${name} AS (") :: overClause(w) :: raw(")") :: Nil), w#name)
 
@@ -438,8 +455,9 @@ pub mod Sql {
     pub def rowNumber(w: Window): Sel[Int32] =
         intOf(frags(raw("ROW_NUMBER()") :: overTarget(w) :: Nil))
 
-    /// The value the previous row of the window had. Nothing for the first row,
-    /// which is what the reading is an `Option` for.
+    /// The value the previous row of the window had.
+    ///
+    /// Nothing for the first row, which is what the reading is an `Option` for.
     pub def lag(p: p, w: Window): Sel[Option[Project.Out[p]]] with Project[p] =
         opt(over(call("LAG", Project.sel(p)), w))
 
