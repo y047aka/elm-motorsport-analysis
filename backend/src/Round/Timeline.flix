@@ -271,8 +271,7 @@ pub mod Round.Timeline {
             place     = Schema.derived("rn", "int not null", Sql.int)
         }
 
-    /// The same crossings under the name one of the sources gives them, which is how
-    /// `l`, `led`, `stop` and `between_` are the same columns four times.
+    /// The crossings under the name one of the sources gives them.
     def seen(source: String, c: Crossings): Crossings =
         {
             table     = source,

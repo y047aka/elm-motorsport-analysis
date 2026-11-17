@@ -482,6 +482,12 @@ are then told apart by: a name the statement asks for and nothing was given for,
 name nothing was asked for, are different sentences. A statement with no `%%` at all is
 the third.
 
+The other half of the bargain is that SQLite resolves a written statement's names where
+the statement is prepared, and the driver's refusal says `no such column: led.held` and
+never the SQL it was written into. `Db.Jdbc.refusal` therefore puts the statement after
+the reason, since a statement written out is read as one string and that is the thing to
+look at.
+
 `Round.Timeline`'s four walks, `Round.Index`'s two, `Round.Summary`'s grid and four of
 `Cli.Load.Validation`'s five rules are written; the readings that are a `GROUP BY` or a
 plain scan stay built, which is where the declared columns and the scoped source earn

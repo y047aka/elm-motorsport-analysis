@@ -130,19 +130,25 @@ pub mod Db.Jdbc {
     /// ends, which is what a server that answers one request at a time would
     /// then never come back from.
     def fetchRows(conn: Connection, sql: String, params: List[Value]): Result[Error, List[Row]] \ IO =
-        let stmt = conn.prepareStatement(sql);
-        let outcome = try {
-            bind(stmt, params);
-            let rs = stmt.executeQuery();
-            Ok(readRows(rs, JdbcConvert.labels(rs), Nil))
-        } catch {
-            case e: SQLException => Err(refusal(e))
-        };
-        discard guarded(() -> {
-            stmt.close();
-            Ok()
-        });
-        outcome
+        // SQLite resolves the names a statement uses where the statement is prepared,
+        // which is where a statement written out most often fails, and the driver
+        // carries the statement no further than here.
+        match prepared(conn, sql) {
+            case Err(failure) => Err(failure)
+            case Ok(stmt) =>
+                let outcome = try {
+                    bind(stmt, params);
+                    let rs = stmt.executeQuery();
+                    Ok(readRows(rs, JdbcConvert.labels(rs), Nil))
+                } catch {
+                    case e: SQLException => Err(refusal(sql, e))
+                };
+                discard guarded(() -> {
+                    stmt.close();
+                    Ok()
+                });
+                outcome
+        }
 
     def readRows(rs: ResultSet, names: List[String], acc: List[Row]): List[Row] \ IO =
         if (rs.next())
@@ -158,18 +164,30 @@ pub mod Db.Jdbc {
 
     /// The statement is closed on every way out, including the one that throws.
     def executeStatement(conn: Connection, sql: String, params: List[Value]): Result[Error, Int32] \ IO =
-        let stmt = conn.prepareStatement(sql);
-        let outcome = try {
-            bind(stmt, params);
-            Ok(stmt.executeUpdate())
+        match prepared(conn, sql) {
+            case Err(failure) => Err(failure)
+            case Ok(stmt) =>
+                let outcome = try {
+                    bind(stmt, params);
+                    Ok(stmt.executeUpdate())
+                } catch {
+                    case e: SQLException => Err(refusal(sql, e))
+                };
+                discard guarded(() -> {
+                    stmt.close();
+                    Ok()
+                });
+                outcome
+        }
+
+    /// A statement the database will not take is refused at the preparing of it, so
+    /// that is where the statement still has to be in hand to say so.
+    def prepared(conn: Connection, sql: String): Result[Error, PreparedStatement] \ IO =
+        try {
+            Ok(conn.prepareStatement(sql))
         } catch {
-            case e: SQLException => Err(refusal(e))
-        };
-        discard guarded(() -> {
-            stmt.close();
-            Ok()
-        });
-        outcome
+            case e: SQLException => Err(refusal(sql, e))
+        }
 
     /// The rows go out in batches, so a refusal partway through has already
     /// sent some of them. They are undone against a savepoint rather than by
@@ -190,7 +208,7 @@ pub mod Db.Jdbc {
                     discard pstmt.executeBatch();
                     Ok(count)
                 } catch {
-                    case e: SQLException => Err(refusal(e))
+                    case e: SQLException => Err(refusal(sql, e))
                 };
                 discard guarded(() -> {
                     pstmt.close();
@@ -206,7 +224,7 @@ pub mod Db.Jdbc {
         try {
             Ok(conn.setSavepoint())
         } catch {
-            case e: SQLException => Err(refusal(e))
+            case e: SQLException => Err(refusal("SAVEPOINT", e))
         }
 
     def release(conn: Connection, mark: Savepoint): Unit \ IO =
@@ -231,14 +249,21 @@ pub mod Db.Jdbc {
             end(conn);
             Ok()
         } catch {
-            case e: SQLException => Err(refusal(e))
+            case e: SQLException => Err(refusal("the transaction's end", e))
         }
 
     /// What a refusal was. The code is the driver's own; the message is what it
     /// said, which for some failures of its own it leaves unsaid.
-    def refusal(e: SQLException): Error \ IO =
+    ///
+    /// `statement` rides along because the driver names what it could not resolve and
+    /// never the SQL it was asked in, and a statement written out is read as one
+    /// string. A busy database says its own piece and is left alone.
+    def refusal(statement: String, e: SQLException): Error \ IO =
         let message: String = e.getMessage();
         let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;
-        Db.Sqlite.classify({code = e.getErrorCode(), message = said})
+        match Db.Sqlite.classify({code = e.getErrorCode(), message = said}) {
+            case Db.Error.Refused(why)   => Db.Error.Refused("${why}: ${String.take(220, statement)}")
+            case other                   => other
+        }
 
 }
