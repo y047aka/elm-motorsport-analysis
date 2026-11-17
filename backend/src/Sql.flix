@@ -588,69 +588,103 @@ pub mod Sql {
 
     /// A statement the caller wrote, and the reading of the rows it answers with.
     ///
-    /// `??` is where each of `holes` goes, in the order they stand, and `%%` is
-    /// where the `SELECT` clause goes -- which `columnsOf` renders from the
-    /// projection that reads it back, so a statement written out names its columns
-    /// and reads them off the one value, as a built query does.
+    /// `{{name}}` is where each of `holes` goes, and `%%` is where the `SELECT` clause
+    /// goes -- which `columnsOf` renders from the projection that reads it back, so a
+    /// statement written out names its columns and reads them off the one value, as a
+    /// built query does.
     ///
-    /// A marker and a piece disagreeing about how many there are is a mistake in
-    /// the statement, and says which statement it is in rather than sending SQL
-    /// that fails somewhere the reader will not recognise.
+    /// A hole is named rather than counted, so a statement and its pieces disagreeing
+    /// says which name is missing, or which name nothing was given for, and not how
+    /// many of each there happened to be.
     pub def statement(
         template: String,
-        holes: List[Frag],
+        holes: Map[String, Frag],
         projection: p
     ): Query[Project.Out[p]] \ DbErr with Project[p] =
         Query.Written(filled(template, holes, columnsOf(projection)), Project.sel(projection))
 
     /// The statement, the holes filled.
     ///
-    /// The template carries no values of its own -- a value goes out bound, which
-    /// is why it is a hole and not text -- so the values come out in the order the
-    /// `?`s they bind stand in, the clause's own among them.
-    def filled(template: String, holes: List[Frag], clause: Frag): Frag \ DbErr =
+    /// The template carries no values of its own -- a value goes out bound, which is
+    /// why it is a hole and not text -- so the values come out in the order the `?`s
+    /// they bind stand in, the `SELECT` clause's own among them.
+    def filled(template: String, holes: Map[String, Frag], clause: Frag): Frag \ DbErr =
         match String.splitOn({substr = "%%"}, template) {
             case before :: after :: Nil =>
-                let head = String.splitOn({substr = "??"}, before);
-                let tail = String.splitOn({substr = "??"}, after);
-                let here = List.length(head) - 1;
-                let after_ = List.drop(here, holes);
-                if (here > List.length(holes) or List.length(tail) - 1 != List.length(after_))
-                    DbErr.raise(Error.Other(
-                        "the statement has ${here + List.length(tail) - 1} `??` and"
-                        + " ${List.length(holes)} to put in them: ${String.take(120, template)}"
+                let named = holeNames(template);
+                let given = holes |> Map.toList |> List.map(match (name, _) -> name);
+                let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
+                let unused = List.filter(name -> not List.exists(k -> k == name, named), given);
+                match (missing, unused) {
+                    case (name :: _, _) => DbErr.raise(Error.Other(
+                        "the statement names `{{${name}}}` and gives nothing for it:"
+                            + " ${String.take(120, template)}"
                     ))
-                else
-                    let (beforeHoles, afterHoles) = List.splitAt(here, holes);
-                    joinFrags("", splice(head, beforeHoles) :: clause :: splice(tail, afterHoles) :: Nil)
+                    case (Nil, name :: _) => DbErr.raise(Error.Other(
+                        "the statement never names `{{${name}}}`: ${String.take(120, template)}"
+                    ))
+                    case (Nil, Nil) => joinFrags(
+                        "",
+                        holesFilled(before, holes, template) ::
+                        clause ::
+                        holesFilled(after, holes, template) ::
+                        Nil
+                    )
+                }
             case _ => DbErr.raise(Error.Other(
                 "the statement has no `%%` for its SELECT clause: ${String.take(120, template)}"
             ))
         }
 
-    /// A piece of a statement written as one string, with `??` where each of
-    /// `holes` goes, in the order they stand, and no clause in it: a common table
-    /// expression, an arm of a `UNION ALL`, a scalar subquery.
-    pub def spliced(template: String, holes: List[Frag]): Frag \ DbErr =
-        let parts = String.splitOn({substr = "??"}, template);
-        if (List.length(parts) != List.length(holes) + 1)
-            DbErr.raise(Error.Other(
-                "the piece has ${List.length(parts) - 1} `??` and ${List.length(holes)}"
-                + " to put in them: ${String.take(120, template)}"
+    /// A piece of a statement written as one string, with `{{name}}` where each of
+    /// `holes` goes and no clause in it: a common table expression, an arm of a
+    /// `UNION ALL`, a scalar subquery.
+    pub def spliced(template: String, holes: Map[String, Frag]): Frag \ DbErr =
+        let named = holeNames(template);
+        let given = holes |> Map.toList |> List.map(match (name, _) -> name);
+        let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
+        let unused = List.filter(name -> not List.exists(k -> k == name, named), given);
+        match (missing, unused) {
+            case (name :: _, _) => DbErr.raise(Error.Other(
+                "the piece names `{{${name}}}` and gives nothing for it:"
+                    + " ${String.take(120, template)}"
             ))
-        else
-            splice(parts, holes)
+            case (Nil, name :: _) => DbErr.raise(Error.Other(
+                "the piece never names `{{${name}}}`: ${String.take(120, template)}"
+            ))
+            case (Nil, Nil) => holesFilled(template, holes, template)
+        }
 
-    /// The pieces and the holes between them, the values coming out in the order
-    /// the `?`s they bind stand in.
-    def splice(parts: List[String], holes: List[Frag]): Frag =
-        match (parts, holes) {
-            case (only :: Nil, Nil) => raw(only)
-            case (part :: restParts, hole :: restHoles) =>
-                let Frag.Frag(tail, tailParams) = splice(restParts, restHoles);
-                let Frag.Frag(holeText, holeParams) = hole;
-                Frag.Frag(part + holeText + tail, holeParams ++ tailParams)
-            case _ => raw("")
+    /// Every hole a template names, in the order it names them.
+    def holeNames(text: String): List[String] =
+        match String.splitOn({substr = "{{"}, text) {
+            case Nil       => Nil
+            case _ :: Nil  => Nil
+            case _ :: rest =>
+                match String.splitOn({substr = "}}"}, List.join("{{", rest)) {
+                    case Nil          => Nil
+                    case name :: more => name :: holeNames(List.join("}}", more))
+                }
+        }
+
+    /// The text, its named holes spliced in, the values coming out in the order the
+    /// `?`s they bind stand in.
+    def holesFilled(text: String, holes: Map[String, Frag], template: String): Frag \ DbErr =
+        match String.splitOn({substr = "{{"}, text) {
+            case Nil          => raw("")
+            case only :: Nil  => raw(only)
+            case before :: rest =>
+                match String.splitOn({substr = "}}"}, List.join("{{", rest)) {
+                    case Nil => raw(before)
+                    case name :: more =>
+                        let Frag.Frag(holeText, holeParams) = Map.getWithDefault(name, raw(""), holes);
+                        let Frag.Frag(tailText, tailParams) =
+                            holesFilled(List.join("}}", more), holes, template);
+                        Frag.Frag(
+                            before + holeText + tailText,
+                            holeParams ++ tailParams
+                        )
+                }
         }
 
     ///

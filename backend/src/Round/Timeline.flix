@@ -109,11 +109,11 @@ pub mod Round.Timeline {
                 + " MIN(lap_time_ms) OVER (PARTITION BY ${Entries.table()}.class"
                 + " ORDER BY elapsed_ms, source_row"
                 + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS standing"
-                + " FROM ${classed()} WHERE lap_number > 1 AND lap_time_ms <> 0 AND ??)"
+                + " FROM ${classed()} WHERE lap_number > 1 AND lap_time_ms <> 0 AND {{scope}})"
                 + " SELECT %% FROM timed"
                 + " WHERE standing IS NULL OR lap_time_ms < standing"
                 + " ORDER BY elapsed_ms",
-            Laps.scope(entry, Nil) :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
             (Sql.text("car_number"), Sql.int("elapsed_ms"), Sql.int("lap_number")))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
@@ -135,11 +135,11 @@ pub mod Round.Timeline {
                 + " LAG(driver_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS prior,"
                 + " LAG(elapsed_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_at,"
                 + " LAG(lap_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_lap"
-                + " FROM ${Laps.table()} WHERE ??)"
+                + " FROM ${Laps.table()} WHERE {{scope}})"
                 + " SELECT %% FROM seated"
                 + " WHERE prior IS NOT NULL AND prior <> driver_number"
                 + " ORDER BY handed_at",
-            Laps.scope(entry, Nil) :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
             (Sql.text("car_number"), Sql.int("handed_at"), Sql.int("handed_lap")))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
@@ -187,7 +187,7 @@ pub mod Round.Timeline {
                 + " WHERE ${l#carNumber} = ${held}"
                 + " AND ${l#lapNumber} = ${led#lapNumber} AND NOT ${l#pitted})"
                 + " ORDER BY ${led#elapsedMs}",
-            Laps.scope(entry, Nil) :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
             (led#carNumber, led#elapsedMs, led#lapNumber))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
@@ -232,7 +232,7 @@ pub mod Round.Timeline {
                 + " AND ${between#lapNumber} = ${stop#lapNumber} - 1"
                 + " AND ${between#stopped}))))"
                 + " ORDER BY ${stop#elapsedMs}",
-            Laps.scope(entry, Nil) :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
             (stop#carNumber, cameInAt(stop), cameInOn(stop)))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
                 {
@@ -292,14 +292,14 @@ pub mod Round.Timeline {
     def heldName(): String =
         Schema.name(held())
 
-    /// The crossings written out. `??` is where the round's rows go, bound.
+    /// The crossings written out. `{{scope}}` is where the round's rows go, bound.
     def crossed(c: Crossings): String =
         let e = Entries.columns();
         "${c#table} AS (SELECT ${Laps.table()}.${c#carNumber}, ${c#lapNumber}, ${c#elapsedMs},"
             + " ${Laps.pitLap()} AS ${c#pitted}, ${Laps.pitOutLap()} AS ${c#stopped},"
             + " ${Entries.table()}.${Schema.name(e#carClass)} AS ${c#carClass},"
             + " ${Sql.sqlOf(Sql.fragment(Sql.rowNumber(firstAcross(c))))} AS ${c#place}"
-            + " FROM ${classed()} WHERE ??)"
+            + " FROM ${classed()} WHERE {{scope}})"
 
     /// Who crossed the line first in their class on that lap.
     def firstAcross(c: Crossings): Sql.Window =
@@ -407,7 +407,13 @@ pub mod Round.Timeline {
         if (List.isEmpty(named))
             Map.empty()
         else
-            Sql.statement(running(), Laps.scope(entry, Nil) :: namedLaps(named) :: Nil, cellSelection())
+            Sql.statement(
+                running(),
+                Map#{
+                    "scope" => Laps.scope(entry, Nil),
+                    "laps"  => namedLaps(named)
+                },
+                cellSelection())
                 |> Sql.selectAll
                 |> List.map(row -> ((row#carNumber, row#lapNumber), row))
                 |> List.toMap
@@ -529,10 +535,10 @@ pub mod Round.Timeline {
             + " MIN(s2_ms) OVER w AS s2_best,"
             + " MIN(s3_ms) OVER w AS s3_best, "
             + miniWindows()
-            + " FROM ${Laps.table()} WHERE ??"
+            + " FROM ${Laps.table()} WHERE {{scope}}"
             + " WINDOW w AS (PARTITION BY car_number ORDER BY lap_number"
             + " ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))"
-            + " SELECT %% FROM running WHERE ??"
+            + " SELECT %% FROM running WHERE {{laps}}"
 
     /// One `MIN ... OVER w` per place on the circuit, and `json_extract` reads the
     /// array column by that same subscript.

@@ -101,9 +101,9 @@ pub mod Cli.Load.Validation {
             "WITH c AS (SELECT car_number, lap_number, elapsed_ms,"
                 + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
                 + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
-                + " FROM ${Laps.table()} WHERE ??)"
+                + " FROM ${Laps.table()} WHERE {{scope}})"
                 + " SELECT %% FROM c WHERE running <> elapsed_ms ORDER BY first_seen, lap_number",
-            Laps.scope(entry, Nil) :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
             (lapOf(), Sql.int("running"), Sql.int("elapsed_ms")))
             |> Sql.reading(match (lap, expected, actual) ->
                 Violation.ElapsedDrift(lap, duration(expected), duration(actual)))
@@ -115,9 +115,9 @@ pub mod Cli.Load.Validation {
         Sql.statement(
             "WITH o AS (SELECT car_number, lap_number, source_row, ${offset()},"
                 + " FIRST_VALUE(${offset()}) OVER (ORDER BY source_row) AS base"
-                + " FROM ${Laps.table()} WHERE ??)"
+                + " FROM ${Laps.table()} WHERE {{scope}})"
                 + " SELECT %% FROM o WHERE ${offset()} <> base ORDER BY source_row",
-            Laps.scope(entry, Nil) :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
             (lapOf(), Sql.int("base"), Laps.hourOffsetMs()))
             |> Sql.reading(match (lap, base, actual) ->
                 Violation.HourElapsedOffset(lap, base, actual))
@@ -141,12 +141,14 @@ pub mod Cli.Load.Validation {
                 + " COALESCE((SELECT GROUP_CONCAT(t.key + 1, ',' ORDER BY t.key)"
                 + "  FROM ${miniSectorTimes()}"
                 + "  WHERE t.value IS NULL), '') AS blanks"
-                + " FROM ${Laps.table()} WHERE ??)"
+                + " FROM ${Laps.table()} WHERE {{scope}})"
                 + " SELECT %% FROM m"
-                + " WHERE NOT ${Laps.pitLap()} AND sum_ms <> lap_time_ms AND ??"
+                + " WHERE NOT ${Laps.pitLap()} AND sum_ms <> lap_time_ms AND {{exclusions}}"
                 + " ORDER BY source_row",
-            Laps.scope(entry, Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorTimeMs)) :: Nil)
-                :: Sql.term(Sql.every(trackLimitsExclusions())) :: Nil,
+            Map#{
+                "scope"     => Laps.scope(entry, Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorTimeMs)) :: Nil),
+                "exclusions" => Sql.term(Sql.every(trackLimitsExclusions()))
+            },
             (
                 lapOf(),
                 Sql.int("source_row"),
@@ -164,13 +166,14 @@ pub mod Cli.Load.Validation {
                 + " x.key + 1 AS ord, x.value AS v,"
                 + " LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v"
                 + " FROM ${Laps.table()}"
-                + ", json_each(${Laps.table()}.mini_sector_elapsed_ms) x WHERE ??"
+                + ", json_each(${Laps.table()}.mini_sector_elapsed_ms) x WHERE {{scope}}"
                 + " WINDOW w AS (PARTITION BY source_row ORDER BY x.key))"
                 + " SELECT %% FROM e WHERE prev_v IS NOT NULL AND v <= prev_v"
                 + " ORDER BY source_row, ord",
-            Laps.scope(entry,
-                Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorElapsedMs)) ::
-                Sql.isNotNull(Sql.column("x.value")) :: Nil) :: Nil,
+            Map#{ "scope" =>
+                Laps.scope(entry,
+                    Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorElapsedMs)) ::
+                    Sql.isNotNull(Sql.column("x.value")) :: Nil) },
             (
                 lapOf(),
                 Sql.int("source_row"),

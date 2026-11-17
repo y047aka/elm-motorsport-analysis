@@ -1,4 +1,4 @@
-/// A statement written out: where the `SELECT` clause lands, and the order the
+/// A statement written out: where a named hole's piece lands, and the order the
 /// values the statement cannot write for itself come out in.
 pub mod Sql.TestWritten {
 
@@ -9,17 +9,17 @@ pub mod Sql.TestWritten {
     def scoped(): Sql.Frag =
         Sql.frag("round_id = ?", Value.Integer(3) :: Nil)
 
-    /// The statement, and the values its holes bound -- or the sentence saying
-    /// its markers and its pieces disagree.
+    /// The statement, and the values its holes bound -- or the sentence saying a
+    /// name is missing from one side or the other.
     def rendered(statement: Unit -> Sql.Query[a] \ DbErr): Result[Db.Error, (String, List[Value])] =
         Db.runWithError(statement) |> Result.map(Sql.toStatement >> Sql.toSql)
 
     @Test
     def theClauseIsRenderedFromTheProjectionAndLandsWhereTheMarkerStands(): Unit \ Assert =
         Assert.assertTrue(rendered(() -> Sql.statement(
-            "WITH c AS (SELECT car_number, elapsed_ms FROM laps WHERE ??)"
-                + " SELECT %% FROM c WHERE elapsed_ms > ??",
-            scoped() :: Sql.term(Sql.i32(900)) :: Nil,
+            "WITH c AS (SELECT car_number, elapsed_ms FROM laps WHERE {{scope}})"
+                + " SELECT %% FROM c WHERE elapsed_ms > {{since}}",
+            Map#{ "scope" => scoped(), "since" => Sql.term(Sql.i32(900)) },
             (Sql.text("car_number"), Sql.int("elapsed_ms"))))
             == Ok((
                 "WITH c AS (SELECT car_number, elapsed_ms FROM laps WHERE round_id = ?)"
@@ -27,60 +27,75 @@ pub mod Sql.TestWritten {
                 Value.Integer(3) :: Value.Integer(900) :: Nil
             )))
 
-    /// The clause is a piece of the statement like any other, so a column that
-    /// binds a value of its own has it come out between the values either side
-    /// of it rather than last.
+    /// The clause is a piece of the statement like any other, so a column that binds
+    /// a value of its own has it come out between the values either side of it rather
+    /// than last.
     @Test
     def aColumnThatBindsAValueKeepsItsPlaceAmongTheValues(): Unit \ Assert =
         Assert.assertTrue(rendered(() -> Sql.statement(
-            "SELECT %% FROM laps WHERE ??",
-            scoped() :: Nil,
+            "SELECT %% FROM laps WHERE {{scope}}",
+            Map#{ "scope" => scoped() },
             Sql.optionalIntOf(Sql.frag("(SELECT ? FROM rounds LIMIT 1)", Value.Integer(7) :: Nil))))
             == Ok((
                 "SELECT (SELECT ? FROM rounds LIMIT 1) FROM laps WHERE round_id = ?",
                 Value.Integer(7) :: Value.Integer(3) :: Nil
             )))
 
+    /// The name is what orders the values, not the order the map happens to be
+    /// walked in.
     @Test
-    def aPieceOfAStatementTakesItsHolesInOrder(): Unit \ Assert =
+    def aHoleNamedLaterThanAnotherStillComesOutWhereItStands(): Unit \ Assert =
         Assert.assertTrue(
             Db.runWithError(() -> Sql.spliced(
-                "(SELECT car_number FROM laps WHERE ?? AND lap_number > ?)",
-                scoped() :: Nil))
+                "(SELECT car_number FROM laps WHERE {{scope}} AND lap_number > {{lap}})",
+                Map#{ "lap" => Sql.frag("?", Value.Integer(2) :: Nil), "scope" => scoped() }))
                 |> Result.map(Sql.toSql)
                 == Ok((
                     "(SELECT car_number FROM laps WHERE round_id = ? AND lap_number > ?)",
-                    Value.Integer(3) :: Nil
+                    Value.Integer(3) :: Value.Integer(2) :: Nil
                 )))
 
-    /// A `??` the caller left, or a piece left over, is a mistake in the
-    /// statement: it says which statement, rather than sending SQL that fails
-    /// somewhere the reader will not recognise.
+    /// A `{{name}}` the caller left with nothing in it is a mistake in the statement:
+    /// it says which name, rather than sending SQL that fails somewhere the reader
+    /// will not recognise.
     @Test
-    def aHoleWithNothingToPutInItNamesTheStatement(): Unit \ Assert =
+    def aHoleWithNothingToPutInItNamesTheMissingOne(): Unit \ Assert =
         Assert.assertTrue(sentence(Db.runWithError(() -> Sql.statement(
-            "SELECT %% FROM laps WHERE round_id = ?? AND lap_number = ??",
-            scoped() :: Nil,
+            "SELECT %% FROM laps WHERE round_id = {{scope}} AND lap_number = {{lap}}",
+            Map#{ "scope" => scoped() },
             Sql.int("lap_number"))))
-            == "the statement has 2 `??` and 1 to put in them:"
-                + " SELECT %% FROM laps WHERE round_id = ?? AND lap_number = ??")
+            == "the statement names `{{lap}}` and gives nothing for it:"
+                + " SELECT %% FROM laps WHERE round_id = {{scope}} AND lap_number = {{lap}}")
+
+    /// The other half of the same mistake: a piece the statement never asks for would
+    /// leave its values bound to nothing.
+    @Test
+    def aPieceTheStatementNeverNamesSaysSo(): Unit \ Assert =
+        Assert.assertTrue(sentence(Db.runWithError(() -> Sql.statement(
+            "SELECT %% FROM laps WHERE round_id = {{scope}}",
+            Map#{ "scope" => scoped(), "season" => Sql.frag("?", Value.Text("2025") :: Nil) },
+            Sql.int("lap_number"))))
+            == "the statement never names `{{season}}`:"
+                + " SELECT %% FROM laps WHERE round_id = {{scope}}")
 
     @Test
     def aStatementWithNoPlaceForItsClauseNamesItself(): Unit \ Assert =
         Assert.assertTrue(sentence(Db.runWithError(() -> Sql.statement(
-            "SELECT car_number FROM laps WHERE round_id = ??",
-            scoped() :: Nil,
+            "SELECT car_number FROM laps WHERE round_id = {{scope}}",
+            Map#{ "scope" => scoped() },
             Sql.int("lap_number"))))
             == "the statement has no `%%` for its SELECT clause:"
-                + " SELECT car_number FROM laps WHERE round_id = ??")
+                + " SELECT car_number FROM laps WHERE round_id = {{scope}}")
 
     @Test
-    def aPieceWithMoreHolesThanPiecesSaysSo(): Unit \ Assert =
+    def aPieceWithAMissingHoleNamesTheMissingOne(): Unit \ Assert =
         Assert.assertTrue(sentence(Db.runWithError(() ->
-            Sql.spliced("round_id = ?? AND season = ??", scoped() :: Nil)))
-            == "the piece has 2 `??` and 1 to put in them: round_id = ?? AND season = ??")
+            Sql.spliced("round_id = {{scope}} AND season = {{season}}",
+                Map#{ "scope" => scoped() })))
+            == "the piece names `{{season}}` and gives nothing for it:"
+                + " round_id = {{scope}} AND season = {{season}}")
 
-    /// The sentence a statement with its markers wrong is reported by.
+    /// The sentence a statement with its holes wrong is reported by.
     def sentence(outcome: Result[Db.Error, a]): String =
         match outcome {
             case Err(Error.Other(text)) => text

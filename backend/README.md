@@ -469,15 +469,18 @@ holds is still the column.
 Some queries are written rather than built, and the line is the builder's own reach:
 it takes the projection and the four outer clauses, and what it does not reach -- a
 `WITH`, a window, a correlated subquery -- was text whichever way the statement was
-put together. `Sql.statement` takes such a statement as one string, with `??` where
-each piece it cannot write for itself goes -- the round it is scoped to, the laps the
-events fell on -- and `%%` where the `SELECT` clause goes, which `columnsOf` renders
+put together. `Sql.statement` takes such a statement as one string, with `{{name}}`
+where each piece it cannot write for itself goes -- the round it is scoped to, the laps
+the events fell on -- and `%%` where the `SELECT` clause goes, which `columnsOf` renders
 from the projection that reads it back. So a written statement names its columns and
 reads them off the one value, as a built query does, and its values go out bound in
 the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a
-statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery. A
-marker and a piece disagreeing about how many there are is refused by name rather than
-sent to SQLite.
+statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
+
+A hole is named rather than counted, which is what the two ways of getting it wrong
+are then told apart by: a name the statement asks for and nothing was given for, and a
+name nothing was asked for, are different sentences. A statement with no `%%` at all is
+the third.
 
 `Round.Timeline`'s four walks, `Round.Index`'s two, `Round.Summary`'s grid and four of
 `Cli.Load.Validation`'s five rules are written; the readings that are a `GROUP BY` or a

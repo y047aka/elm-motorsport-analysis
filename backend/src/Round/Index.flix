@@ -53,9 +53,9 @@ pub mod Round.Index {
         Sql.statement(
             "WITH shown AS (SELECT elapsed_ms, flag_at_fl,"
                 + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
-                + " FROM ${Laps.table()} WHERE flag_at_fl <> '${finish}' AND ??)"
+                + " FROM ${Laps.table()} WHERE flag_at_fl <> '${finish}' AND {{scope}})"
                 + " SELECT %% FROM shown WHERE flag_at_fl <> prior ORDER BY elapsed_ms",
-            Laps.scope(entry, Nil) :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
             (Sql.text("flag_at_fl"), Sql.int("elapsed_ms")))
             |> Sql.selectAll
             |> List.filterMap(match (flag, elapsed) ->
@@ -87,14 +87,14 @@ pub mod Round.Index {
         Sql.statement(
             // Every reading with the record as it stood before it beside it, the
             // readings walked once in the order the laps were completed.
-            "WITH v AS (??)"
+            "WITH v AS ({{readings}})"
                 + " SELECT %% FROM (SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_number, t,"
                 + " MIN(t) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
                 + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
                 + " FROM v WHERE t IS NOT NULL)"
                 + " WHERE prev IS NULL OR t < prev"
                 + " ORDER BY k, elapsed_ms, source_row",
-            readings :: Nil,
+            Map#{ "readings" => readings },
             (
                 record,
                 Sql.int("elapsed_ms"),
@@ -141,8 +141,8 @@ pub mod Round.Index {
     def reading(entry: Entry, expression: String, predicates: List[Sql.Expr[Bool]]): Sql.Frag \ DbErr =
         Sql.spliced(
             "elapsed_ms, source_row, car_number, lap_number, driver_number,"
-                + " ${expression} AS t FROM ${Laps.table()} WHERE ??",
-            Laps.scope(entry, predicates) :: Nil)
+                + " ${expression} AS t FROM ${Laps.table()} WHERE {{scope}}",
+            Map#{ "scope" => Laps.scope(entry, predicates) })
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
@@ -150,7 +150,8 @@ pub mod Round.Index {
         Sql.spliced(
             "elapsed_ms, source_row, car_number, lap_number, driver_number, m.value"
                 + " FROM ${Laps.table()}"
-                + ", json_each(${Laps.table()}.mini_sector_time_ms) m WHERE ??",
-            Laps.scope(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil)
+                + ", json_each(${Laps.table()}.mini_sector_time_ms) m WHERE {{scope}}",
+            Map#{ "scope" =>
+                Laps.scope(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) })
 
 }
