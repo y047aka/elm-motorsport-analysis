@@ -299,15 +299,34 @@ stance model points =
 
         ribbon =
             List.map (project eye << raisedAt size) (bandOf size ring)
+
+        marks =
+            ground ++ ribbon
+
+        -- The room a name needs over the lap: the topmost mark can carry a car, and what
+        -- falls outside a viewBox is not drawn at all. Held at both ends, so the lap stays
+        -- centred in its box and the room costs a little scale rather than the drawing
+        -- sitting low in it.
+        crown =
+            case ( List.sortBy .y marks, List.sortBy .y marks |> List.reverse ) of
+                ( peak :: _, last :: _ ) ->
+                    let
+                        rise =
+                            nameRise eye peak
+                    in
+                    [ { peak | y = peak.y - rise }, { last | y = last.y + rise } ]
+
+                _ ->
+                    []
     in
     { eye = eye
     , size = size
     , ground = ground
     , ribbon = ribbon
     , fit =
-        -- The fit is the lap's, so the field moving round the lap cannot breathe the
-        -- drawing bigger and smaller between frames.
-        fitOf (ground ++ ribbon)
+        -- The lap and the room a name needs over it, never the cars: the field moving round
+        -- the lap cannot breathe the drawing bigger and smaller between frames.
+        fitOf (marks ++ crown)
     }
 
 
@@ -400,6 +419,41 @@ carSize =
     0.024
 
 
+{-| How the name over a car is sized and set: its em is `nameSize` dot radii, its line
+stands `nameGap` ems over the top of the dot, and its glyphs reach `nameReach` ems above
+the line. The fit holds room over the lap for all three -- see `nameRise`.
+-}
+nameSize : Float
+nameSize =
+    1.7
+
+
+nameGap : Float
+nameGap =
+    1.2
+
+
+nameReach : Float
+nameReach =
+    0.5
+
+
+{-| How far a name stands over the mark it is drawn at, in the projection's own units: the
+dot's height, the gap the name's line stands at, and the reach of its glyphs. The names
+carry no standing, so this is the height of every name drawn at the depth `shot` stands at.
+-}
+nameRise : Camera3d Unitless Space -> Shot -> Float
+nameRise eye shot =
+    let
+        size =
+            carSize * atDepth eye shot
+
+        em =
+            nameSize * size
+    in
+    size + (nameGap + nameReach) * em
+
+
 labelOffset : Float
 labelOffset =
     0.075
@@ -462,7 +516,7 @@ view model shown standings =
                             -- on top of the depth the car stands at is one the back of the
                             -- field cannot read, and it says nothing the dot has not said.
                             name =
-                                carSize * atDepth eye shot * 1.7
+                                carSize * atDepth eye shot * nameSize
 
                             inPlane axis =
                                 project eye
@@ -807,28 +861,10 @@ carMarker fit car =
         high =
             sqrt ((car.disc.uy * k) ^ 2 + (car.disc.vy * k) ^ 2)
 
-        -- Half the name's em: how far the glyphs reach above the line `y` sets it on.
-        reach =
-            car.fontSize * k * 0.5
-
-        -- How far the name's line stands above the top of its dot.
-        gap =
-            car.fontSize * k * 1.2
-
+        -- The name's line stands `nameGap` ems over the top of its dot, and the fit holds
+        -- room over the lap for that much -- see `nameRise`.
         above =
-            high + gap
-
-        -- The name stands above its car, except where that puts it past the top of the box:
-        -- what falls outside a viewBox is not drawn at all. The fit is the lap's -- the names
-        -- are not part of what it measures -- so a car at the top of the lap has nothing
-        -- over its head. There the name goes under its car instead, over the road it runs on:
-        -- the name is drawn after the road.
-        y =
-            if placed.y - above - reach < 0 then
-                placed.y + above
-
-            else
-                placed.y - above
+            high + car.fontSize * k * nameGap
     in
     g []
         [ circle
@@ -839,7 +875,7 @@ carMarker fit car =
             []
         , text_
             [ Svg.Attributes.x (String.fromFloat placed.x)
-            , Svg.Attributes.y (String.fromFloat y)
+            , Svg.Attributes.y (String.fromFloat (placed.y - above))
             , Svg.Attributes.fontSize (String.fromFloat (car.fontSize * k))
             , textAnchor "middle"
             , dominantBaseline "central"
