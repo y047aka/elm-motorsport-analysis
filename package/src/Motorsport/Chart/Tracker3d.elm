@@ -324,8 +324,8 @@ stance model points =
     , ground = ground
     , ribbon = ribbon
     , fit =
-        -- The lap and the room a name needs over it, never the cars: the field moving round
-        -- the lap cannot breathe the drawing bigger and smaller between frames.
+        -- Never the cars: the field moving round the lap cannot breathe the drawing bigger
+        -- and smaller between frames.
         fitOf (marks ++ crown)
     }
 
@@ -381,10 +381,9 @@ type alias Scene =
     }
 
 
-{-| A car as the drawing needs it: where it stands, how wide its name, and the disc it
-stands on. That disc is the two axes of the circle the dot is drawn as -- what becomes of
-a step of the car's own radius along the circuit's `x`, and of one along its `y` -- in the
-projection's units before the fit.
+{-| A car as the drawing needs it. `disc` is the two axes of the circle the dot is -- what
+becomes of a step of the car's own radius along the circuit's `x`, and of one along its
+`y` -- in the projection's units before the fit.
 -}
 type alias Car =
     { at : Shot
@@ -402,7 +401,7 @@ type alias Car =
 
 
 {-| How far the lap stands above the plane it was surveyed on, how wide the band it
-is drawn as, how big a car, and how tall a name: all shares of the lap's own half.
+is drawn as, and how big a car: all shares of the lap's own half.
 -}
 lift : Float
 lift =
@@ -421,7 +420,7 @@ carSize =
 
 {-| How the name over a car is sized and set: its em is `nameSize` dot radii, its line
 stands `nameGap` ems over the top of the dot, and its glyphs reach `nameReach` ems above
-the line. The fit holds room over the lap for all three -- see `nameRise`.
+the line.
 -}
 nameSize : Float
 nameSize =
@@ -438,9 +437,9 @@ nameReach =
     0.5
 
 
-{-| How far a name stands over the mark it is drawn at, in the projection's own units: the
-dot's height, the gap the name's line stands at, and the reach of its glyphs. The names
-carry no standing, so this is the height of every name drawn at the depth `shot` stands at.
+{-| How far a name stands over the mark it is drawn at -- the gap and the reach the name
+is set by, over the top of its dot. In the projection's units, before the fit. The names
+carry no standing, so this is every name's height at the depth `shot` stands at.
 -}
 nameRise : Camera3d Unitless Space -> Shot -> Float
 nameRise eye shot =
@@ -861,8 +860,8 @@ carMarker fit car =
         high =
             sqrt ((car.disc.uy * k) ^ 2 + (car.disc.vy * k) ^ 2)
 
-        -- The name's line stands `nameGap` ems over the top of its dot, and the fit holds
-        -- room over the lap for that much -- see `nameRise`.
+        -- How far above the car's mark its name's line stands. The fit holds room over the
+        -- lap for this much -- see `nameRise`.
         above =
             high + car.fontSize * k * nameGap
     in

@@ -3,8 +3,8 @@ module Motorsport.Chart.Tracker3dTest exposing (tests)
 {-| The turnable map: how the reader's drag becomes an angle, and what the camera
 does to the circuit's own metres.
 
-The projection is tested because a camera goes wrong quietly; `projected` names the
-two ways it does.
+The projection is tested because a camera goes wrong quietly; `projected` names the ways
+it does.
 
 -}
 
