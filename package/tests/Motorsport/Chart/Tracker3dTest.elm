@@ -92,7 +92,7 @@ tests =
                 \_ ->
                     -- The convention the map is turned by, and the one that goes back
                     -- unnoticed: the pointer's `x` and the azimuth run opposite.
-                    Expect.equal True ((drag 100 0).azimuth < Tracker3d.init.azimuth)
+                    Expect.lessThan Tracker3d.init.azimuth (drag 100 0).azimuth
             , test "the lap lands inside the box it is drawn in" <|
                 \_ ->
                     insideBox Tracker3d.init
@@ -143,6 +143,40 @@ tests =
                             List.drop 1 shots |> List.head |> Maybe.map (reach middle) |> Maybe.withDefault 0
                     in
                     Expect.greaterThan far near
+            , test "the road a dot is drawn on is round from above and thin from the side" <|
+                \_ ->
+                    -- A dot is a disc lying in the road's plane, so it shows that plane's
+                    -- own flatness. The fit scales a drawing to its box and so leaves the
+                    -- ratio of a figure's two spans alone, which is what is read here.
+                    let
+                        patch =
+                            [ { x = 1000, y = 1040 }, { x = 1040, y = 1000 }, { x = 1000, y = 960 }, { x = 960, y = 1000 } ]
+
+                        flatness model =
+                            let
+                                shots =
+                                    Tracker3d.projected model patch
+
+                                edge get =
+                                    let
+                                        values =
+                                            List.map get shots
+                                    in
+                                    Maybe.withDefault 0 (List.maximum values)
+                                        - Maybe.withDefault 0 (List.minimum values)
+
+                                wide =
+                                    edge .x
+
+                                tall =
+                                    edge .y
+                            in
+                            min wide tall / max wide tall
+
+                        grazing =
+                            turned Tracker3d.init.azimuth (degrees 4)
+                    in
+                    Expect.greaterThan (flatness grazing) (flatness overhead)
             ]
         ]
 

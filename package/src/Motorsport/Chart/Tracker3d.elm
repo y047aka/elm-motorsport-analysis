@@ -28,7 +28,7 @@ import Point3d.Projection as Projection
 import Quantity exposing (Unitless)
 import Rectangle2d exposing (Rectangle2d)
 import Svg exposing (Svg, circle, g, line, polygon, polyline, svg, text, text_)
-import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, strokeLinejoin, strokeWidth, textAnchor, viewBox)
+import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, strokeLinejoin, strokeWidth, textAnchor, transform, viewBox)
 
 
 
@@ -362,8 +362,19 @@ type alias Scene =
     }
 
 
+{-| A car as the drawing needs it: where it stands, how wide its name, and the disc it
+stands on. That disc is the two axes of the circle the dot is drawn as -- what becomes of
+a step of the car's own radius along the circuit's `x`, and of one along its `y` -- in the
+projection's units before the fit.
+-}
 type alias Car =
     { at : Shot
+    , disc :
+        { ux : Float
+        , uy : Float
+        , vx : Float
+        , vy : Float
+    }
     , radius : Float
     , colour : String
     , number : String
@@ -438,14 +449,41 @@ view model shown standings =
                             shot =
                                 project eye (raisedAt size position)
 
-                            radius =
-                                carSize * atDepth eye shot * carScale car.standing.positionInClass
+                            -- The dot is the ground the car stands on: a circle of the
+                            -- car's own radius, drawn in the road's plane rather than on
+                            -- the screen, so it follows the tilt of the road.
+                            share =
+                                carSize * carScale car.standing.positionInClass
+
+                            wide =
+                                share * atDepth eye shot
+
+                            inPlane axis =
+                                project eye
+                                    (raisedAt size
+                                        { x = position.x + axis.x * share * size.half
+                                        , y = position.y + axis.y * share * size.half
+                                        }
+                                    )
+
+                            fromCentre axis =
+                                let
+                                    here =
+                                        inPlane axis
+                                in
+                                { x = here.x - shot.x, y = here.y - shot.y }
                         in
                         { at = shot
-                        , radius = radius
+                        , disc =
+                            { ux = (fromCentre { x = 1, y = 0 }).x
+                            , uy = (fromCentre { x = 1, y = 0 }).y
+                            , vx = (fromCentre { x = 0, y = 1 }).x
+                            , vy = (fromCentre { x = 0, y = 1 }).y
+                            }
+                        , radius = wide
                         , colour = Class.toColor car.metadata.class
                         , number = car.metadata.carNumber
-                        , fontSize = radius * 1.7
+                        , fontSize = wide * 1.7
                         }
                     )
 
@@ -728,8 +766,11 @@ sector fit ( shot, size, label ) =
 
 
 {-| The field, farthest first: the near cars are drawn over the far ones, as the
-near side of the lap stands over the far side. A name stands above its own car, and
-both grow and shrink together with the depth the car stands at.
+near side of the lap stands over the far side. A dot is the disc the car stands on, the
+image of a circle lying in the road's own plane, so it goes thin as the eye comes down
+to that plane and round again overhead. A name stands above its own car -- the name keeps
+the screen's own uprightness, being read rather than driven -- and both grow and shrink
+together with the depth the car stands at.
 -}
 carMarker : Place -> Car -> Svg msg
 carMarker fit car =
@@ -737,20 +778,30 @@ carMarker fit car =
         placed =
             place fit car.at
 
-        radius =
-            car.radius * fit.k
+        -- The unit circle taken through the road's two axes, and set down where the car
+        -- stands: an ellipse, drawn as the affine image of a circle rather than as one
+        -- solved for.
+        matrix =
+            [ car.disc.ux * fit.k
+            , car.disc.uy * fit.k
+            , car.disc.vx * fit.k
+            , car.disc.vy * fit.k
+            , placed.x
+            , placed.y
+            ]
+                |> List.map String.fromFloat
+                |> String.join " "
     in
     g []
         [ circle
-            [ Svg.Attributes.cx (String.fromFloat placed.x)
-            , Svg.Attributes.cy (String.fromFloat placed.y)
-            , Svg.Attributes.r (String.fromFloat radius)
+            [ Svg.Attributes.r "1"
+            , transform ("matrix(" ++ matrix ++ ")")
             , fill car.colour
             ]
             []
         , text_
             [ Svg.Attributes.x (String.fromFloat placed.x)
-            , Svg.Attributes.y (String.fromFloat (placed.y - radius * 1.9))
+            , Svg.Attributes.y (String.fromFloat (placed.y - car.radius * 1.9 * fit.k))
             , Svg.Attributes.fontSize (String.fromFloat (car.fontSize * fit.k))
             , textAnchor "middle"
             , dominantBaseline "central"
