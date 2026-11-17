@@ -249,8 +249,7 @@ pub mod Round.Timeline {
             |> Sql.selectAll
 
     /// One crossing of the round, with its car's class and its place in its class's
-    /// lap. The common table expression below writes these names and the readings
-    /// that correlate on it read them, so a name is spelled once.
+    /// lap. A statement written out interpolates these, so a name is spelled once.
     pub type alias Crossings = {
         table     = String,
         carNumber = Column[LapRow, String],
@@ -262,8 +261,7 @@ pub mod Round.Timeline {
         place     = Column[LapRow, Int32]
     }
 
-    /// The crossings as `l` declares them: three are `laps`' own columns, four are
-    /// what the expression makes up, and none of them is qualified yet.
+    /// The crossings as `l` declares them, unqualified.
     def crossings(): Crossings =
         let c = Laps.columns();
         {
@@ -334,9 +332,6 @@ pub mod Round.Timeline {
     /// Where the car that made the out-lap came in: of that lap and the one before
     /// it, the earlier of the crossings that are one half of a stop, which is the
     /// in-lap when the feed wrote it.
-    ///
-    /// Both these readings correlate on the crossings from another `def`, and read
-    /// the same row, so they cannot disagree about which crossing the event fell on.
     def cameInAt(stop: Crossings): Sel[Int32] =
         let l = seen("l", crossings());
         Sql.int("(SELECT ${l#elapsedMs} FROM ${l#table}"

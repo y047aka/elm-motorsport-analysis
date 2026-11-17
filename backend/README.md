@@ -432,12 +432,7 @@ what `Round.Summary.carBuilds` hands its `c`. The type is what carries
 nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
 asked of `mini_sector_time_ms` and not of `lap_time_ms`.
 
-A column a common table expression made up is `Schema.derived`: the name the
-expression gives it, the type the expression it selects has, and that name's
-reading. `Round.Timeline.crossings` is the one set of them, and it is read twice
-over -- once to write `l`'s own `SELECT`, once by every subquery that correlates on
-`l`, `led`, `stop` or `between_` -- which is what makes a name spelled once. What no
-declaration reaches at all is `Sql.column`, and its type is the caller's word.
+A column a common table expression made up is `Schema.derived`: the name the expression gives it, the type the expression it selects has, and that name's reading. `Round.Timeline.crossings` is where they are declared, and `Schema.qualified` reads them under each name the sources give them -- `l`, `led`, `stop`, `between_` -- which is what makes a name spelled once. What no declaration reaches at all is `Sql.column`, and its type is the caller's word.
 
 `Sql.unionAllTagged` stacks arms of a `UNION ALL` and labels each with a number
 it picks, handing back a reading of that number as the thing the arm was about.
@@ -455,47 +450,13 @@ asked for, a clause with nothing to say is left out, and `filter` asked twice
 asks both. `Sql.toStatement` is pure, so what
 a query is can be read back without a database.
 
-An aggregate and a window are written over a projection and read back as that
-projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and
-`lag(c#flagAtFl, w)` is an `Option` because the first row of a window has no
-predecessor. `opt` is the same fact from the other side: an aggregate over a group
-holding no rows answers null too. A `Sql.Window` is a value, and a named one is
-spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which
-is how nineteen running minima are one clause. What a statement written out
-interpolates is the same value: `Db.Schema` gives a `Column` a `ToString` of its own
-name, so `${l#carNumber}` puts the name between the keywords while what the code
-holds is still the column.
+An aggregate and a window are written over a projection and read back as that projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and `lag(l#carNumber, w)` is an `Option` because the first row of a window has no predecessor. `opt` is the same fact from the other side: an aggregate over a group holding no rows answers null too. A `Sql.Window` is a value, and a named one is spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which is how nineteen running minima are one clause. What a statement written out interpolates is the same value: `${l#carNumber}` puts a declared column's name between the keywords.
 
-Some queries are written rather than built, and the line is the builder's own reach:
-it takes the projection and the four outer clauses, and what it does not reach -- a
-`WITH`, a window, a correlated subquery -- was text whichever way the statement was
-put together. `Sql.statement` takes such a statement as one string, with `{{name}}`
-where each piece it cannot write for itself goes -- the round it is scoped to, the laps
-the events fell on -- and `%%` where the `SELECT` clause goes, which `columnsOf` renders
-from the projection that reads it back. So a written statement names its columns and
-reads them off the one value, as a built query does, and its values go out bound in
-the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a
-statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
+Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement as one string, with `{{name}}` where each piece it cannot write for itself goes -- the round it is scoped to, the laps the events fell on -- and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. So a written statement names its columns and reads them off the one value, as a built query does, and its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
 
-A hole is named rather than counted, which is what the two ways of getting it wrong
-are then told apart by: a name the statement asks for and nothing was given for, and a
-name nothing was asked for, are different sentences. A statement with no `%%` at all is
-the third.
+The bargain written statements are accepted on is that the database checks them: SQLite resolves a statement's names where it prepares it, so a rename that missed a reference is a refusal the run raises and not a build that fails. `Db.Jdbc.refusal` carries the statement into that refusal, which is the half the driver's message lacks.
 
-The other half of the bargain is that SQLite resolves a written statement's names where
-the statement is prepared, and the driver's refusal says `no such column: led.held` and
-never the SQL it was written into. `Db.Jdbc.refusal` therefore puts the statement after
-the reason, since a statement written out is read as one string and that is the thing to
-look at.
-
-`Round.Timeline`'s four walks, `Round.Index`'s two, `Round.Summary`'s grid and four of
-`Cli.Load.Validation`'s five rules are written; the readings that are a `GROUP BY` or a
-plain scan stay built, which is where the declared columns and the scoped source earn
-their keep. The line between them is a clause's, not a statement's: what is written is
-the statement's shape, and the pieces interpolated into it are declared columns,
-aggregates over them, and windows over those. What stays text is a column no
-declaration reaches -- the fifteen `b0`..`b14` a mini-sector best is gathered out of, the
-`m.key` and `m.value` a `json_each` answers with.
+Which statements are written is told by the call sites of `Sql.statement`. The readings that are a `GROUP BY` or a plain scan stay built, which is where the declared columns and the scoped source earn their keep. The line between them is a clause's, not a statement's: what is written is the statement's shape, and the pieces interpolated into it are declared columns, aggregates over them, and windows over those. What stays text is a column no declaration reaches -- the fifteen `b0`..`b14` a mini-sector best is gathered out of, the `m.key` and `m.value` a `json_each` answers with.
 
 So is what the load writes. `Sql.createTable` takes the columns and the keys
 over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns
@@ -587,13 +548,11 @@ What it has above that base is not here, and none of it rests on which way the S
 - **The `.q` generator and the parser beside it.** sqlfx writes statements in files and
   checks them against a migration's DDL; this builds most of them and writes the
   hardest ones out. What it keeps of sqlfx's idea is the check rather than the parser:
-  every one of these statements runs against the in-memory SQLite of `Round.TestSupport`
-  through `Round.TestTimeline`, `TestValidation`, `TestIndex` and `TestSummary`, so a
-  column no table declares fails there by name -- after the change to written
-  statements, as before it. A parser reading the DDL would catch that at compile time,
-  and would not accept `WINDOW w AS`, a recursive `WITH`, or `json_each` in the `FROM`,
-  which is where four of these statements live. The `Sql` combinators, `Db.Schema.Column`
-  and the positional `Sel` are the shape this keeps.
+  every statement goes out against the in-memory SQLite `Round.TestSupport` builds, so a
+  column no table declares fails a test by name. A parser reading the DDL would catch
+  that at compile time, and would not accept `WINDOW w AS`, a recursive `WITH`, or
+  `json_each` in the `FROM`, which is where the hardest of these statements live. The
+  `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape this keeps.
 - **A pool, and forward-only migrations.** One file, rebuilt from CSV by
   `Cli.Load` each run, has no connection to pool and no schema to migrate
   forward -- the `DROP TABLE`s are the migration.

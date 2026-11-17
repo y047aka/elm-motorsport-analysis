@@ -1,11 +1,7 @@
-/// Every statement the round is read by, sent against the schema the round was
-/// created in.
-///
-/// SQLite resolves a written statement's names where it prepares it, so a name that
-/// drifted off a table is refused before it looks at a row: an empty answer is a pass
-/// and only a refusal is a failure. `Round.TestSupport` stops the run on any error,
-/// and a refusal carries the statement it was asked in, so what a drift is reported
-/// with is the statement to fix.
+/// Every reader of a round, named, sent against the schema the round was created in:
+/// an empty answer is a pass, and only a refusal is a failure. Which statements are
+/// written, and what a name that drifted off a table is answered with, is
+/// `backend/README.md`'s.
 pub mod Round.TestReadersResolve {
 
     use csv::Csv.Decode
@@ -43,10 +39,7 @@ pub mod Round.TestReadersResolve {
         lap("8", "Driver B", 3, "60.500", "3:03.500", "FCY", "", "") ::
         Nil
 
-    /// The readers, in the order the round is assembled: the seats and the cars, then
-    /// the laps, the index, the summary, the timeline, and the rules the load asks of
-    /// the rows. The summary and the detailed timeline are discarded rather than
-    /// counted, since what they answer is a record of many parts.
+    /// The readers, in the order the round is assembled.
     @Test
     def everyReaderResolvesAgainstTheSchemaItReads(): Unit \ Assert + IO =
         let seen = TestSupport.onRound(entry(), laps(), () -> {

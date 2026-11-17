@@ -410,7 +410,7 @@ pub mod Sql {
     ): Window =
         { name = Some(name), partition = partition, order = order, frame = frame }
 
-    /// `ROWS BETWEEN ... AND ...`, the one frame these queries spell out.
+    /// `ROWS BETWEEN ... AND ...`.
     pub def rowsBetween(start: Frame, end: Frame): Option[Frag] =
         Some(raw("ROWS BETWEEN ${textOf(start)} AND ${textOf(end)}"))
 

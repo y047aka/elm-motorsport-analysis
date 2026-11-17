@@ -83,9 +83,8 @@ pub mod Round.Index {
         (Record.FastestSector(Sector.S3), "${c#s3Ms}", Nil) ::
         Nil
 
-    /// The five columns every reading carries beside the reading itself: the arms
-    /// name these, `v` keeps them, and the walk reads them back, so a name is
-    /// spelled here once.
+    /// The five columns every reading carries, beside the reading itself. A statement
+    /// written out interpolates these, so a name is spelled here once.
     pub type alias Walked = {
         elapsedMs    = Column[LapRow, Int32],
         sourceRow    = Column[LapRow, Int32],

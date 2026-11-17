@@ -38,9 +38,9 @@ pub mod Round.Laps {
             |> Sql.selectAll
             |> List.map(placed(cars, seats))
 
-    /// A window runs over the rows the round was scoped to, so the field is this
-    /// round's and not the table's. Ties on the clock are broken by the file's
-    /// order, which no two rows share.
+    /// The rows are already the round's, so the field needs no partition of its
+    /// own. Ties on the clock are broken by the file's order, which no two rows
+    /// share.
     ///
     /// `Round.Timeline` counts the same order again, within each class, to find
     /// who led each lap: a place on the lap rides beside it, and the lead is a

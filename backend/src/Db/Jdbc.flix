@@ -130,9 +130,6 @@ pub mod Db.Jdbc {
     /// ends, which is what a server that answers one request at a time would
     /// then never come back from.
     def fetchRows(conn: Connection, sql: String, params: List[Value]): Result[Error, List[Row]] \ IO =
-        // SQLite resolves the names a statement uses where the statement is prepared,
-        // which is where a statement written out most often fails, and the driver
-        // carries the statement no further than here.
         match prepared(conn, sql) {
             case Err(failure) => Err(failure)
             case Ok(stmt) =>
@@ -255,9 +252,8 @@ pub mod Db.Jdbc {
     /// What a refusal was. The code is the driver's own; the message is what it
     /// said, which for some failures of its own it leaves unsaid.
     ///
-    /// `statement` rides along because the driver names what it could not resolve and
-    /// never the SQL it was asked in, and a statement written out is read as one
-    /// string. A busy database says its own piece and is left alone.
+    /// The driver names what it could not resolve and never the statement it was
+    /// written into, which is why `statement` rides along.
     def refusal(statement: String, e: SQLException): Error \ IO =
         let message: String = e.getMessage();
         let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;
