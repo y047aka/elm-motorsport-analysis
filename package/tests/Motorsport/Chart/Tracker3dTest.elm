@@ -88,6 +88,11 @@ tests =
                                 - Maybe.withDefault 0 (List.minimum (List.map .x edges))
                     in
                     Expect.greaterThan (extent * 0.005) (Maybe.withDefault 0 (List.maximum widths))
+            , test "a drag to the right turns the azimuth the other way" <|
+                \_ ->
+                    -- The convention the map is turned by, and the one that goes back
+                    -- unnoticed: the pointer's `x` and the azimuth run opposite.
+                    Expect.equal True ((drag 100 0).azimuth < Tracker3d.init.azimuth)
             , test "the lap lands inside the box it is drawn in" <|
                 \_ ->
                     insideBox Tracker3d.init

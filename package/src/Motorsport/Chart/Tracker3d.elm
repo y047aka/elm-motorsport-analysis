@@ -59,7 +59,8 @@ init =
 
 {-| `Grab` and `Turn` carry the pointer's own page position, and `Turn` turns the map
 by the travel since the last turn -- so how far it goes is the reader's drag and
-nothing else's. `Step` turns by radians.
+nothing else's. `Step` rolls the map towards the right by, and lifts the eye towards
+overhead by, the radians given.
 
 -}
 type Msg
@@ -70,6 +71,12 @@ type Msg
     | Step Float Float
 
 
+{-| The azimuth runs the other way round from the pointer's `x`: a thing rolled to the
+right carries the side standing near to the right with it, and that is the azimuth
+running down. Both the drag and the arrow keys are asked for in the reader's own
+directions -- `Turn` is the pointer's travel, `Step` a roll towards the right -- so the
+reversal is made here and nowhere else.
+-}
 update : Msg -> Model -> Model
 update msg m =
     case msg of
@@ -83,7 +90,7 @@ update msg m =
 
                 Just from ->
                     { m
-                        | azimuth = m.azimuth + (x - from.x) * turn
+                        | azimuth = m.azimuth - (x - from.x) * turn
                         , elevation = lifted (m.elevation + (y - from.y) * turn)
                         , drag = Just { x = x, y = y }
                     }
@@ -94,8 +101,8 @@ update msg m =
         Cancel ->
             { m | drag = Nothing }
 
-        Step dAzimuth dElevation ->
-            { m | azimuth = m.azimuth + dAzimuth, elevation = lifted (m.elevation + dElevation) }
+        Step roll rise ->
+            { m | azimuth = m.azimuth - roll, elevation = lifted (m.elevation + rise) }
 
 
 {-| Radians per pixel of the pointer's travel.
