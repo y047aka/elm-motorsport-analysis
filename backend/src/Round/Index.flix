@@ -50,13 +50,14 @@ pub mod Round.Index {
     pub def flags(entry: Entry): List[FlagShown] \ DbRead =
         let green = Wec.flagToString(Wec.Flag.Green);
         let finish = Wec.flagToString(Wec.Flag.Finish);
+        let c = Laps.columns();
         Sql.statement(
             "WITH shown AS (SELECT elapsed_ms, flag_at_fl,"
                 + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
                 + " FROM ${Laps.table()} WHERE flag_at_fl <> '${finish}' AND {{scope}})"
                 + " SELECT %% FROM shown WHERE flag_at_fl <> prior ORDER BY elapsed_ms",
             Map#{ "scope" => Laps.scope(entry, Nil) },
-            (Sql.text("flag_at_fl"), Sql.int("elapsed_ms")))
+            (c#flagAtFl, c#elapsedMs))
             |> Sql.selectAll
             |> List.filterMap(match (flag, elapsed) ->
                 Wec.flagFromString(flag)
