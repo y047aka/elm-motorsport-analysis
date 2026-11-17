@@ -34,7 +34,7 @@ pub mod Round.Index {
         Laps.rows(entry)
             |> Sql.groupBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.orderBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
-            |> Sql.map(c -> (c#lapNumber, Sql.int("MIN(elapsed_ms)")))
+            |> Sql.map(c -> (c#lapNumber, Sql.min(c#elapsedMs)))
             |> Sql.reading(match (lap, elapsed) -> (lap, Util.Duration.fromMillis(elapsed)))
             |> Sql.selectAll
 

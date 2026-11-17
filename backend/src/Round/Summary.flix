@@ -31,11 +31,12 @@ pub mod Round.Summary {
     /// `pub` reaches the load, which wants the time limit and not the grid.
     pub def particulars(entry: Entry): Metadata.Particulars \ DbRead =
         let start = startedAt(entry);
+        let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.map(_ -> (
                 start,
-                Sql.optionalInt("MAX(elapsed_ms)"),
-                Sql.optionalInt("MAX(lap_number)")
+                Sql.opt(Sql.max(c#elapsedMs)),
+                Sql.opt(Sql.max(c#lapNumber))
             ))
             |> Sql.reading(match (started, duration, lapTotal) -> Metadata.particulars(
                 Option.map(ms -> Hour.Hour(ms), started),
@@ -155,11 +156,12 @@ pub mod Round.Summary {
         }
 
     def fastestSectors(entry: Entry): (Option[Duration], Option[Duration], Option[Duration], Bool) \ DbRead =
+        let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.map(_ -> (
-                Sql.optionalInt("MIN(s1_ms)"),
-                Sql.optionalInt("MIN(s2_ms)"),
-                Sql.optionalInt("MIN(s3_ms)"),
+                Sql.min(c#s1Ms),
+                Sql.min(c#s2Ms),
+                Sql.min(c#s3Ms),
                 Sql.bool("COALESCE(MAX(mini_sector_time_ms IS NOT NULL), 0)")
             ))
             |> Sql.reading(match (s1, s2, s3, mini) -> (
@@ -179,7 +181,7 @@ pub mod Round.Summary {
             |> Sql.filter(_ -> Sql.isNotNull(Sql.column("m.value")))
             |> Sql.groupBy(Sql.raw("m.key") :: Nil)
             |> Sql.orderBy(Sql.raw("m.key") :: Nil)
-            |> Sql.map(_ -> (Sql.int("m.key + 1"), Sql.int("MIN(m.value)")))
+            |> Sql.map(_ -> (Sql.int("m.key + 1"), Sql.min(Sql.int("m.value"))))
             |> Sql.reading(match (position, fastest) ->
                 (position, Util.Duration.fromMillis(fastest)))
             |> Sql.selectAll

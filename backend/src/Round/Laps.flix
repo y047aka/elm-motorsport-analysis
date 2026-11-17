@@ -34,19 +34,29 @@ pub mod Round.Laps {
         let cars = Cars.read(entry);
         Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
-            |> Sql.map(_ -> (Laps.selection(), Sql.int(placeInField())))
+            |> Sql.map(_ -> (Laps.selection(), place()))
             |> Sql.selectAll
             |> List.map(placed(cars, seats))
 
-    /// Counted from nought. A window runs over the rows the round was scoped
-    /// to, so the field is this round's and not the table's. Ties on the clock
-    /// are broken by the file's order, which no two rows share.
+    /// A window runs over the rows the round was scoped to, so the field is this
+    /// round's and not the table's. Ties on the clock are broken by the file's
+    /// order, which no two rows share.
     ///
     /// `Round.Timeline` counts the same order again, within each class, to find
     /// who led each lap: a place on the lap rides beside it, and the lead is a
     /// change between laps, so neither reading is the other's to hand over.
-    def placeInField(): String =
-        "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) - 1"
+    def fieldOrder(): Sql.Window =
+        let c = Laps.columns();
+        Sql.window(
+            Schema.term(c#lapNumber) :: Nil,
+            Schema.term(c#elapsedMs) :: Schema.term(c#sourceRow) :: Nil,
+            None
+        )
+
+    /// The place in the field, counted from nought where `ROW_NUMBER` counts from
+    /// one.
+    def place(): Sql.Sel[Int32] =
+        Sql.intOf(Sql.frags(Sql.fragment(Sql.rowNumber(fieldOrder())) :: Sql.raw("- 1") :: Nil))
 
     def placed(cars: Map[String, RawCar], seats: Seats): ((LapRow, Int32)) -> Placed \ {DbErr, TransientDbErr} =
         row -> match row {

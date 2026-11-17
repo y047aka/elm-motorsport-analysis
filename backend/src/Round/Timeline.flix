@@ -86,8 +86,8 @@ pub mod Round.Timeline {
         let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.groupBy(Schema.term(c#carNumber) :: Nil)
-            |> Sql.orderBy(Sql.raw("MIN(source_row)") :: Nil)
-            |> Sql.map(row -> (row#carNumber, Sql.int("MAX(elapsed_ms)"), Sql.int("MAX(lap_number)")))
+            |> Sql.orderBy(Sql.fragment(Sql.min(c#sourceRow)) :: Nil)
+            |> Sql.map(row -> (row#carNumber, Sql.max(row#elapsedMs), Sql.max(row#lapNumber)))
             |> Sql.reading(match (carNumber, last, lastLap) ->
                 (carNumber, Util.Duration.fromMillis(last), lastLap))
             |> Sql.selectAll
@@ -152,7 +152,7 @@ pub mod Round.Timeline {
     /// the crossing that took it.
     ///
     /// The lead is a class's order at a lap boundary, read the way
-    /// `Round.Laps.placeInField` reads the field's: the first of the class's rows
+    /// `Round.Laps.place` reads the field's: the first of the class's rows
     /// carrying a lap number. The top class's lead is the field's in every round
     /// loaded, so no lead is counted over the whole field beside it. Whoever led
     /// the opening lap took it from nobody, which is what `LAG` answering null is.
