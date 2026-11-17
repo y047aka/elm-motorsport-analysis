@@ -1,8 +1,12 @@
-module Motorsport.Chart.Tracker exposing (Detail(..), Track, fromConfig, onCircuit, view)
+module Motorsport.Chart.Tracker exposing
+    ( Detail(..), Track, fromConfig, onCircuit, view
+    , Ground, ground
+    )
 
 {-| The field drawn going round the circuit.
 
 @docs Detail, Track, fromConfig, onCircuit, view
+@docs Ground, ground
 
 -}
 
@@ -190,6 +194,92 @@ onCircuit layout { direction, config } =
                     ++ layout.pitLane
                 )
         }
+
+
+{-| The track read on the ground it runs on: the lines it is drawn from, where a
+progress round the lap (0-1) stands, and how far round the lap a car is.
+
+The units are the ones the track's own drawing uses -- drawing metres for a
+circuit, viewBox units for the ring -- so a second reading of the same track asks
+its questions of both. The ring is sampled into the shape it traces; it has no pit
+lane, because it draws none.
+
+@docs Ground, ground
+
+-}
+type alias Ground =
+    { lap : List Point
+    , pitLane : List Point
+    , at : Float -> Shape.Position
+    , progressOf : CarAt -> Float
+    , boundaries : List Float
+    , sectors : List { progress : Float, label : String }
+    }
+
+
+ground : Track -> Ground
+ground shown =
+    case shown of
+        Ring config ->
+            let
+                { cx, cy, r } =
+                    (constants Full).track
+
+                scale =
+                    progressToAngleScale Clockwise
+
+                around progress =
+                    let
+                        angle =
+                            Scale.convert scale progress
+                    in
+                    { x = cx + r * cos angle
+                    , y = cy + r * sin angle
+                    , heading = { x = negate (sin angle), y = cos angle }
+                    }
+
+                onRing progress =
+                    let
+                        { x, y } =
+                            around progress
+                    in
+                    { x = x, y = y }
+            in
+            { lap = List.map onRing (fractions 120)
+            , pitLane = []
+            , at = around
+            , progressOf = Config.computeProgress config
+            , boundaries = Config.calcSectorBoundaries config
+            , sectors = sectorMarks config
+            }
+
+        OnCircuit circuit ->
+            { lap = List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks circuit.shape)
+            , pitLane = circuit.pitLane
+            , at = \progress -> Shape.at (Config.toMetres circuit.scale progress) circuit.shape
+            , progressOf = Config.computeProgress circuit.config
+            , boundaries = Config.calcSectorBoundaries circuit.config
+            , sectors = sectorMarks circuit.config
+            }
+
+
+{-| Where each sector's name stands: the middle of its stretch.
+-}
+sectorMarks : TrackConfig -> List { progress : Float, label : String }
+sectorMarks config =
+    config.sectors
+        |> Sector.toList
+        |> List.map
+            (\( sector, { start, share } ) ->
+                { progress = start + share / 2
+                , label = Sector.toString sector
+                }
+            )
+
+
+fractions : Int -> List Float
+fractions n =
+    List.map (\i -> toFloat i / toFloat n) (List.range 0 (n - 1))
 
 
 boundsOf : List Point -> Bounds

@@ -23,6 +23,7 @@ import List.Extra
 import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
+import Motorsport.Chart.Tracker3d as Track3d
 import Motorsport.Clock as Clock
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
@@ -48,6 +49,7 @@ import View.EventsColumn as EventsColumn
 import View.Feed as Feed
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
+import View.TrackMap3d as TrackMap3d
 
 
 
@@ -62,6 +64,7 @@ type alias Model =
     , standings : Resize.Model
     , trackerRow : Resize.Model
     , trackerExpanded : Bool
+    , track3d : Track3d.Model
     }
 
 
@@ -120,6 +123,7 @@ init params =
       , standings = Resize.init LiveStandings.width
       , trackerRow = Resize.init defaultTrackerRow
       , trackerExpanded = False
+      , track3d = Track3d.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -134,6 +138,7 @@ type Msg
     | PauseRace
     | FocusColumn Columns.StripKey
     | ToggleTrackerExpanded
+    | Track3dMsg Track3d.Msg
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
     | TrackerRowMsg Resize.Msg
@@ -164,6 +169,9 @@ update shared msg m =
 
         TrackerRowMsg sub ->
             ( { m | trackerRow = Resize.update trackerRowEdge sub m.trackerRow }, Effect.none )
+
+        Track3dMsg sub ->
+            ( { m | track3d = Track3d.update sub m.track3d }, Effect.none )
 
         ToggleTrackerExpanded ->
             if m.trackerExpanded then
@@ -317,23 +325,23 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-{-| The card the tracker is drawn in: the drawing filling whatever box it is
+{-| The card a tracker drawing is drawn in: the drawing filling whatever box it is
 given, and the controls floating over its top right corner.
 
 It carries `data-tracker-column` or `data-tracker-expanded`, which is what the
 visual tests locate each drawing by.
 
 -}
-trackerFrame : String -> TrackerChart.Track -> Snapshot -> List (Html Msg) -> Html Msg
-trackerFrame marker track snapshot controls =
+trackerFrame : String -> Html Msg -> List (Html Msg) -> Html Msg
+trackerFrame marker drawing controls =
     Card.card [ attribute marker "" ]
         [ div
             [ Attributes.class "flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)]"
             ]
             [ Card.content []
                 [ div [ Attributes.class "relative h-full w-full grid place-items-center" ]
-                    [ TrackerChart.view TrackerChart.Full track snapshot
-                    , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1" ] controls
+                    [ drawing
+                    , div [ Attributes.class "absolute top-0 right-0 flex items-start gap-x-1 z-10" ] controls
                     ]
                 ]
             ]
@@ -346,8 +354,7 @@ the one thing that takes it away.
 trackerCard : Bool -> Bool -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
 trackerCard several held toggle track snapshot =
     trackerFrame "data-tracker-column"
-        track
-        snapshot
+        (TrackerChart.view TrackerChart.Full track snapshot)
         (toggle :: standingsTrigger :: cornerControls (corner several held Columns.Tracker))
 
 
@@ -360,15 +367,16 @@ The card takes no class of its own -- `card-elements.ts` owns that element's
 The grip along the row edge between the two stands in `mainGrid`'s `gap-2.5`:
 its `-top-2.5` and `h-2.5` are that gap.
 
-The circuit holds its own proportions, so this drawing is bound by the box's
-height and not its width: how much of the page the strip gives up is how big
-the track gets.
+The drawing is fitted to whatever box it is handed, so how much of the page the
+strip gives up is how big the track gets.
 
 -}
-expandedTracker : String -> Html Msg -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
-expandedTracker cell rowGrip toggle track snapshot =
+expandedTracker : String -> Html Msg -> Html Msg -> Track3d.Model -> TrackerChart.Track -> Snapshot -> Html Msg
+expandedTracker cell rowGrip toggle model track snapshot =
     div [ Attributes.class cell, attribute "data-tracker-row" "" ]
-        [ trackerFrame "data-tracker-expanded" track snapshot [ toggle ]
+        [ trackerFrame "data-tracker-expanded"
+            (TrackMap3d.surface { model = model, toMsg = Track3dMsg, track = track, snapshot = snapshot })
+            [ toggle ]
         , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-content-center" ]
             [ rowGrip ]
         ]
@@ -479,7 +487,7 @@ mainGrid round keys m =
         -- from, so the tab order goes down the page rather than into the bottom
         -- row and back up again. Where it stands is the grid's `row-start-2`.
         , if m.trackerExpanded then
-            expandedTracker trackerCell (Html.map TrackerRowMsg (Resize.grip trackerRowEdge m.trackerRow)) (trackerToggle True) round.track snapshot
+            expandedTracker trackerCell (Html.map TrackerRowMsg (Resize.grip trackerRowEdge m.trackerRow)) (trackerToggle True) m.track3d round.track snapshot
 
           else
             text ""
