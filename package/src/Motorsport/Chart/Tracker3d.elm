@@ -807,8 +807,28 @@ carMarker fit car =
         high =
             sqrt ((car.disc.uy * k) ^ 2 + (car.disc.vy * k) ^ 2)
 
+        -- Half the name's em: how far the glyphs reach above the line `y` sets it on.
+        reach =
+            car.fontSize * k * 0.5
+
+        -- How far the name's line stands above the top of its dot.
+        gap =
+            car.fontSize * k * 1.2
+
         above =
-            high + car.fontSize * k * 0.5
+            high + gap
+
+        -- The name stands above its car, except where that puts it past the top of the box:
+        -- what falls outside a viewBox is not drawn at all. The fit is the lap's -- the names
+        -- are not part of what it measures -- so a car at the top of the lap has nothing
+        -- over its head. There the name goes under its car instead, over the road it runs on:
+        -- the name is drawn after the road.
+        y =
+            if placed.y - above - reach < 0 then
+                placed.y + above
+
+            else
+                placed.y - above
     in
     g []
         [ circle
@@ -819,7 +839,7 @@ carMarker fit car =
             []
         , text_
             [ Svg.Attributes.x (String.fromFloat placed.x)
-            , Svg.Attributes.y (String.fromFloat (placed.y - above))
+            , Svg.Attributes.y (String.fromFloat y)
             , Svg.Attributes.fontSize (String.fromFloat (car.fontSize * k))
             , textAnchor "middle"
             , dominantBaseline "central"
