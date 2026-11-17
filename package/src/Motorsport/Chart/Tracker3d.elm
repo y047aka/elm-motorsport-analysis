@@ -771,79 +771,6 @@ sector fit ( shot, size, label ) =
         [ text label ]
 
 
-{-| The least semi-axis a dot is drawn with, in the box's own units. The eye comes down
-far enough that a car lying on the road would follow it under a pixel, and the dot stops
-short there. It is a floor under the drawing rather than a share of the width: a share
-would leave the road going thin while the cars stopped doing so, which is the tilt lying.
--}
-dotThin : Float
-dotThin =
-    2.5
-
-
-{-| The ellipse a disc comes out as: the two axes and the angle of the wide one, with
-the thin one kept above `dotThin`. A circle looks the same however its pre-image was
-turned, so the polar form alone says the drawing.
--}
-axesOf :
-    { ux : Float, uy : Float, vx : Float, vy : Float }
-    -> Float
-    -> { wide : Float, thick : Float, angle : Float }
-axesOf disc k =
-    let
-        a =
-            disc.ux * k
-
-        b =
-            disc.uy * k
-
-        c =
-            disc.vx * k
-
-        d =
-            disc.vy * k
-
-        along =
-            a * a + b * b
-
-        between =
-            a * c + b * d
-
-        across =
-            c * c + d * d
-
-        spread =
-            sqrt ((along - across) ^ 2 + 4 * between ^ 2)
-
-        wide =
-            sqrt ((along + across + spread) / 2)
-
-        thin =
-            sqrt (max 0 ((along + across - spread) / 2))
-    in
-    { wide = wide
-    , thick = max dotThin thin
-    , angle = 0.5 * atan2 (2 * between) (along - across)
-    }
-
-
-{-| The unit circle turned to an ellipse's angle, scaled by its axes, and set down where
-the car stands.
--}
-matrixOf : Float -> Float -> Float -> { a | x : Float, y : Float } -> String
-matrixOf wide thick angle placed =
-    [ wide * cos angle
-    , wide * sin angle
-    , negate (thick * sin angle)
-    , thick * cos angle
-    , placed.x
-    , placed.y
-    ]
-        |> List.map String.fromFloat
-        |> String.join " "
-        |> \numbers -> "matrix(" ++ numbers ++ ")"
-
-
 {-| The field, farthest first: the near cars are drawn over the far ones, as the
 near side of the lap stands over the far side. A dot is the disc the car stands on, the
 image of a circle lying in the road's own plane, so it goes thin as the eye comes down
@@ -857,26 +784,43 @@ carMarker fit car =
         placed =
             place fit car.at
 
-        { wide, thick, angle } =
-            axesOf car.disc fit.k
+        k =
+            fit.k
 
-        -- The name hangs off the dot a reader sees. Kept at the circle's own radius, it
-        -- floats further above a thin one than the car is wide.
+        -- The unit circle taken through the road's two axes, and set down where the car
+        -- stands. Nothing is solved for and nothing is floored: the affine image is the
+        -- disc, and it is the disc at every pose or it is one at none.
+        matrix =
+            [ car.disc.ux * k
+            , car.disc.uy * k
+            , car.disc.vx * k
+            , car.disc.vy * k
+            , placed.x
+            , placed.y
+            ]
+                |> List.map String.fromFloat
+                |> String.join " "
+
+        -- How high the dot reaches on the screen: the image of a circle sweeps its y out
+        -- to the amplitude of the two axes' y. The name hangs off that, so it keeps its
+        -- distance from the car as the road goes thin.
+        high =
+            sqrt ((car.disc.uy * k) ^ 2 + (car.disc.vy * k) ^ 2)
+
         above =
-            sqrt ((wide * sin angle) ^ 2 + (thick * cos angle) ^ 2)
-                + car.fontSize * fit.k * 0.5
+            high + car.fontSize * k * 0.5
     in
     g []
         [ circle
             [ Svg.Attributes.r "1"
-            , transform (matrixOf wide thick angle placed)
+            , transform ("matrix(" ++ matrix ++ ")")
             , fill car.colour
             ]
             []
         , text_
             [ Svg.Attributes.x (String.fromFloat placed.x)
             , Svg.Attributes.y (String.fromFloat (placed.y - above))
-            , Svg.Attributes.fontSize (String.fromFloat (car.fontSize * fit.k))
+            , Svg.Attributes.fontSize (String.fromFloat (car.fontSize * k))
             , textAnchor "middle"
             , dominantBaseline "central"
             , fill "oklch(1 0 0 / 0.7)"
