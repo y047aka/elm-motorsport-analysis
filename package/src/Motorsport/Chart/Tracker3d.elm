@@ -458,6 +458,12 @@ view model shown standings =
                             wide =
                                 share * atDepth eye shot
 
+                            -- The dot carries the standing. A name shrunk a tenth a place
+                            -- on top of the depth the car stands at is one the back of the
+                            -- field cannot read, and it says nothing the dot has not said.
+                            name =
+                                carSize * atDepth eye shot * 1.7
+
                             inPlane axis =
                                 project eye
                                     (raisedAt size
@@ -483,7 +489,7 @@ view model shown standings =
                         , radius = wide
                         , colour = Class.toColor car.metadata.class
                         , number = car.metadata.carNumber
-                        , fontSize = wide * 1.7
+                        , fontSize = name
                         }
                     )
 
@@ -765,18 +771,19 @@ sector fit ( shot, size, label ) =
         [ text label ]
 
 
-{-| The share of its own width a car's dot keeps when the road it lies on has gone
-as thin as the eye can be brought. Below this the dot is drawn fatter than the ground
-it stands on, because a car is what a reader is looking for and the road is not.
+{-| The least semi-axis a dot is drawn with, in the box's own units. The eye comes down
+far enough that a car lying on the road would follow it under a pixel, and the dot stops
+short there. It is a floor under the drawing rather than a share of the width: a share
+would leave the road going thin while the cars stopped doing so, which is the tilt lying.
 -}
-dotFloor : Float
-dotFloor =
-    0.2
+dotThin : Float
+dotThin =
+    2.5
 
 
 {-| The ellipse a disc comes out as: the two axes and the angle of the wide one, with
-the thin one lifted to `dotFloor` of the wide. A circle looks the same however its
-pre-image was turned, so the polar form alone says the drawing.
+the thin one kept above `dotThin`. A circle looks the same however its pre-image was
+turned, so the polar form alone says the drawing.
 -}
 axesOf :
     { ux : Float, uy : Float, vx : Float, vy : Float }
@@ -815,7 +822,7 @@ axesOf disc k =
             sqrt (max 0 ((along + across - spread) / 2))
     in
     { wide = wide
-    , thick = max (wide * dotFloor) thin
+    , thick = max dotThin thin
     , angle = 0.5 * atan2 (2 * between) (along - across)
     }
 
