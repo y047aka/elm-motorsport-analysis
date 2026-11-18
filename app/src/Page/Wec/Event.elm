@@ -23,7 +23,6 @@ import List.Extra
 import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Chart.Tracker3d as Track3d
 import Motorsport.Clock as Clock
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
@@ -32,8 +31,8 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Class as Class exposing (Class)
 import Page.Wec.Columns as Columns
+import Page.Wec.Float as Float
 import Page.Wec.Resize as Resize
-import Page.Wec.Shift as Shift
 import Route
 import Shared
 import Shared.Msg
@@ -50,7 +49,6 @@ import View.EventsColumn as EventsColumn
 import View.Feed as Feed
 import View.LiveStandings as LiveStandings
 import View.PlaybackControls as PlaybackControls
-import View.TrackMap3d as TrackMap3d
 
 
 
@@ -63,11 +61,7 @@ type alias Model =
     , eventsColumn : EventsColumn.Model
     , comparison : CarDetail.Comparison
     , standings : Resize.Model
-    , trackerFloat : Bool
-    , floatWidth : Resize.Model
-    , floatHeight : Resize.Model
-    , floatShift : Shift.Model
-    , track3d : Track3d.Model
+    , float : Float.Model
     }
 
 
@@ -89,56 +83,6 @@ standingsFence =
     }
 
 
-{-| The box the floating map opens at.
-480 by 180 is `Tracker3d.box`'s own three to one once the card's 32px of padding is gone, and a box of that shape is the one the drawing fills exactly; letterboxing is what a box of another proportion costs.
-The map is stood at the bottom right of the page and grows up and left, so both grips are `AgainstPointer`: a travel away from the corner it is anchored to is what makes it bigger.
--}
-defaultFloatWidth : Float
-defaultFloatWidth =
-    480
-
-
-defaultFloatHeight : Float
-defaultFloatHeight =
-    180
-
-
-floatWidthFence : Resize.Fence
-floatWidthFence =
-    { min = 280
-    , max = 960
-    , step = 20
-    }
-
-
-floatHeightFence : Resize.Fence
-floatHeightFence =
-    { min = 120
-    , max = 480
-    , step = 20
-    }
-
-
-floatWidthEdge : Resize.Edge
-floatWidthEdge =
-    { axis = Handle.Across
-    , grows = Resize.AgainstPointer
-    , fence = floatWidthFence
-    , id = "tracker-float-width-grip"
-    , label = "Resize the floating track map's width"
-    }
-
-
-floatHeightEdge : Resize.Edge
-floatHeightEdge =
-    { axis = Handle.Down
-    , grows = Resize.AgainstPointer
-    , fence = floatHeightFence
-    , id = "tracker-float-height-grip"
-    , label = "Resize the floating track map's height"
-    }
-
-
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { strip = Columns.init
@@ -146,11 +90,7 @@ init params =
       , eventsColumn = EventsColumn.init
       , comparison = CarDetail.initialComparison
       , standings = Resize.init LiveStandings.width
-      , trackerFloat = False
-      , floatWidth = Resize.init defaultFloatWidth
-      , floatHeight = Resize.init defaultFloatHeight
-      , floatShift = Shift.init
-      , track3d = Track3d.init
+      , float = Float.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
     )
@@ -164,13 +104,9 @@ type Msg
     = StartRace
     | PauseRace
     | FocusColumn Columns.StripKey
-    | ToggleTrackerFloat
-    | Track3dMsg Track3d.Msg
+    | FloatMsg Float.Msg
     | ColumnsMsg Columns.Msg
     | ResizeMsg Resize.Msg
-    | FloatWidthMsg Resize.Msg
-    | FloatHeightMsg Resize.Msg
-    | FloatShiftMsg Shift.Msg
     | RowTraceChosen Class ClassColumn.Trace
     | EventsColumnMsg Feed.Msg
     | ReplayMsg Replay.Msg
@@ -196,39 +132,30 @@ update shared msg m =
         ResizeMsg sub ->
             ( { m | standings = Resize.update standingsEdge sub m.standings }, Effect.none )
 
-        FloatWidthMsg sub ->
-            ( { m | floatWidth = Resize.update floatWidthEdge sub m.floatWidth }, Effect.none )
-
-        FloatHeightMsg sub ->
-            ( { m | floatHeight = Resize.update floatHeightEdge sub m.floatHeight }, Effect.none )
-
-        FloatShiftMsg sub ->
+        FloatMsg sub ->
             let
-                ( floatShift, cmd ) =
-                    Shift.update floatBox sub m.floatShift
+                ( float, out ) =
+                    Float.update sub m.float
             in
-            ( { m | floatShift = floatShift }, Effect.sendCmd (Cmd.map FloatShiftMsg cmd) )
+            case out of
+                Float.None ->
+                    ( { m | float = float }, Effect.none )
 
-        Track3dMsg sub ->
-            ( { m | track3d = Track3d.update sub m.track3d }, Effect.none )
+                Float.Send cmd ->
+                    ( { m | float = float }, Effect.sendCmd (Cmd.map FloatMsg cmd) )
 
-        ToggleTrackerFloat ->
-            if m.trackerFloat then
-                ( { m | trackerFloat = False }, Effect.none )
+                -- `Open` joins a column at the back of the order, so one already
+                -- open is not opened again.
+                Float.OpenTrackerColumn ->
+                    let
+                        ( strip, cmd ) =
+                            if List.member Columns.Tracker m.strip.order then
+                                ( m.strip, Cmd.none )
 
-            else
-                -- The only press that floats the map stands in the tracker column's
-                -- corner, and the reader can close that column: opening the map opens
-                -- the column back, or the feature has gone missing.
-                let
-                    ( strip, cmd ) =
-                        if List.member Columns.Tracker m.strip.order then
-                            ( m.strip, Cmd.none )
-
-                        else
-                            Columns.update (field shared) (Columns.Open Columns.Tracker) m.strip
-                in
-                ( { m | trackerFloat = True, strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
+                            else
+                                Columns.update (field shared) (Columns.Open Columns.Tracker) m.strip
+                    in
+                    ( { m | float = float, strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
 
         FocusColumn key ->
             let
@@ -371,7 +298,7 @@ It carries `data-tracker-column` or `data-tracker-float-card`, which is what the
 visual tests locate each drawing by.
 
 -}
-trackerFrame : String -> Html Msg -> List (Html Msg) -> Html Msg
+trackerFrame : String -> Html msg -> List (Html msg) -> Html msg
 trackerFrame marker drawing controls =
     Card.card [ attribute marker "" ]
         [ div
@@ -397,58 +324,6 @@ trackerCard several held toggle track snapshot =
         (toggle :: standingsTrigger :: cornerControls (corner several held Columns.Tracker))
 
 
-{-| The circuit raised off the ground it was surveyed on, standing over the
-strip and taking part in none of its grid.
-
-It is a child of `mainGrid` and not of the strip: the strip scrolls sideways, and anything absolutely placed inside one is placed against its scrollport and travels with it. Its offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at. `z-40` is what a carried column's `z-30` needs to be under, and `card-elements.ts` owns every class the card itself has, which leaves the wrapper the one thing here that can carry a surface.
-
--}
-floatingTracker : Resize.Model -> Resize.Model -> Shift.Model -> Track3d.Model -> TrackerChart.Track -> Snapshot -> Html Msg
-floatingTracker width height shift model track snapshot =
-    div
-        [ Attributes.id floatBox.boxId
-        , Attributes.class "absolute bottom-2.5 right-2.5 z-40 grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
-        , Attributes.style "width" (Columns.px width.size)
-        , Attributes.style "height" (Columns.px height.size)
-        , Attributes.style "transform" ("translate(" ++ Columns.px shift.x ++ ", " ++ Columns.px shift.y ++ ")")
-        , attribute "data-tracker-float" ""
-        ]
-        [ trackerFrame "data-tracker-float-card"
-            (TrackMap3d.surface { model = model, toMsg = Track3dMsg, track = track, snapshot = snapshot })
-            [ Html.map FloatShiftMsg (Shift.handle floatBox shift), trackerFloatToggle True ]
-        , div [ Attributes.class "absolute -left-2.5 top-0 z-10 grid h-full w-2.5 place-items-center" ]
-            [ Html.map FloatWidthMsg (Resize.grip floatWidthEdge width) ]
-        , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-content-center" ]
-            [ Html.map FloatHeightMsg (Resize.grip floatHeightEdge height) ]
-        ]
-
-
-{-| The box the map is stood in, and the grip it is carried by. `boxId` is what
-the travel is measured against at every pick.
--}
-floatBox : Shift.Box
-floatBox =
-    { boxId = "tracker-float-box"
-    , gripId = "tracker-float-move-grip"
-    , label = "Move the floating track map"
-    }
-
-
-{-| The press that floats the map over the columns: `◱` while it is hidden, the ✕ every overlay here closes with once it is shown.
--}
-trackerFloatToggle : Bool -> Html Msg
-trackerFloatToggle shown =
-    let
-        ( glyph, label ) =
-            if shown then
-                ( "✕", "Close the floating track map" )
-
-            else
-                ( "◱", "Float the track map over the columns" )
-    in
-    Header.cornerButton { onPress = ToggleTrackerFloat, label = label, glyph = glyph }
-
-
 {-| The page under the header: the standings, the strip, and whatever floats over
 them.
 
@@ -470,11 +345,7 @@ mainGrid round keys m =
         [ Attributes.class "row-start-2 h-full min-h-0 relative grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]" ]
         [ standingsCell "col-start-1 min-h-0 grid relative" keys m round.energy snapshot replay.race.cars
         , columnStrip "col-start-2" round.track round.timeline keys m round.pitCycles replay snapshot
-        , if m.trackerFloat then
-            floatingTracker m.floatWidth m.floatHeight m.floatShift m.track3d round.track snapshot
-
-          else
-            text ""
+        , Html.map FloatMsg (Float.view m.float (trackerFrame "data-tracker-float-card") round.track snapshot)
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -610,7 +481,7 @@ columnStrip cell track timeline keys m pitCycles replay snapshot =
                             class_
 
                     Columns.Tracker ->
-                        trackerCard several (Columns.isCarried placement) (trackerFloatToggle m.trackerFloat) track snapshot
+                        trackerCard several (Columns.isCarried placement) (Html.map FloatMsg (Float.toggle m.float.shown)) track snapshot
 
                     Columns.Events ->
                         EventsColumn.view

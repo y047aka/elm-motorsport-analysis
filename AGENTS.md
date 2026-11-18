@@ -154,7 +154,7 @@ The degrees are no Elm module: they are a GeoJSON file at `static/geometry/<circ
 
 The tracker float is 3D and the tracker column is not. `Chart/Tracker3d` stands the metres `Tracker.ground` hands the flat column on a plane of its own and projects them through a perspective camera — SVG, point by point, no WebGL — and `View/TrackMap3d` is the surface the reader turns it on: a drag anywhere on it, the arrow keys once it has the focus. One `Ground` feeds both, so the raised circuit is the circuit the column already shows, and `Tracker3dTest` freezes what `projected` says a camera gets wrong quietly.
 
-`floatingTracker` is the raised circuit's one home: a box stood over the strip's bottom right, hidden until the tracker column's `◱` asks for it, sized by a grip along each of its two inner edges, and costing the strip no height because it takes part in no grid track.
+`Page/Wec/Float.elm` is the raised circuit's one home: the box it is stood in, the two grips that size it, the one that carries it, the camera it is turned with, and the `◱` that opens it. The page holds one `Float.Model` and forwards through `FloatMsg`, the way it forwards the strip's through `Columns`. The box is stood over the strip's bottom right, hidden until the tracker column asks for it, sized by a grip along each of its two inner edges, and costing the strip no height because it takes part in no grid track.
 
 The box is carried by a `⠿` in its own corner and not by the drawing under it: a drag anywhere on the circuit turns the camera. `Page/Wec/Shift` is that grip and the pair of offsets it moves, and it is not `Drag.Handle` because a handle there reads the pointer along one axis and a box on a page goes sideways and up together.
 

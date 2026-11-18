@@ -9,17 +9,17 @@ import { waitForPageReady, setLapCount, readConstant, readSource, expectSurveyed
  * each grip takes it, and where a carry leaves it. The box it opens at and the
  * bounds the grips hold it between are read out of the Elm that decides them.
  */
-const eventSource = readSource('app/src/Page/Wec/Event.elm');
+const floatSource = readSource('app/src/Page/Wec/Float.elm');
 const shiftSource = readSource('app/src/Page/Wec/Shift.elm');
 
 const MOVE_STEP = readConstant('step', shiftSource, /\nstep =\n\s+(\d+)/);
 
-const FLOAT_WIDTH = readConstant('defaultFloatWidth', eventSource, /\ndefaultFloatWidth =\n\s+(\d+)/);
-const FLOAT_HEIGHT = readConstant('defaultFloatHeight', eventSource, /\ndefaultFloatHeight =\n\s+(\d+)/);
-const WIDTH_MIN = readConstant('floatWidthFence.min', eventSource, /floatWidthFence =\n\s*\{[^}]*min = (\d+)/);
-const WIDTH_MAX = readConstant('floatWidthFence.max', eventSource, /floatWidthFence =\n\s*\{[^}]*max = (\d+)/);
-const WIDTH_STEP = readConstant('floatWidthFence.step', eventSource, /floatWidthFence =\n\s*\{[^}]*step = (\d+)/);
-const HEIGHT_STEP = readConstant('floatHeightFence.step', eventSource, /floatHeightFence =\n\s*\{[^}]*step = (\d+)/);
+const FLOAT_WIDTH = readConstant('defaultWidth', floatSource, /\ndefaultWidth =\n\s+(\d+)/);
+const FLOAT_HEIGHT = readConstant('defaultHeight', floatSource, /\ndefaultHeight =\n\s+(\d+)/);
+const WIDTH_MIN = readConstant('widthFence.min', floatSource, /widthFence =\n\s*\{[^}]*min = (\d+)/);
+const WIDTH_MAX = readConstant('widthFence.max', floatSource, /widthFence =\n\s*\{[^}]*max = (\d+)/);
+const WIDTH_STEP = readConstant('widthFence.step', floatSource, /widthFence =\n\s*\{[^}]*step = (\d+)/);
+const HEIGHT_STEP = readConstant('heightFence.step', floatSource, /heightFence =\n\s*\{[^}]*step = (\d+)/);
 
 const FLOAT = '[data-tracker-float]';
 const STRIP = '#column-strip';
