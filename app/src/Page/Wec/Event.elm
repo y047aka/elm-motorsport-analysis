@@ -445,14 +445,7 @@ trackerFloatToggle shown =
             else
                 ( "◱", "Float the track map over the columns" )
     in
-    button
-        [ onClick ToggleTrackerFloat
-        , attribute "data-tracker-float-toggle" ""
-        , attribute "aria-label" label
-        , Attributes.title label
-        , Attributes.class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
-        ]
-        [ text glyph ]
+    Header.cornerButton { onPress = ToggleTrackerFloat, label = label, glyph = glyph }
 
 
 {-| The page under the header: the standings, the strip, and whatever floats over

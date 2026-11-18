@@ -1,9 +1,9 @@
-module View.CarDetail.Header exposing (closeButton, view)
+module View.CarDetail.Header exposing (closeButton, cornerButton, view)
 
 {-| The line a classification prints for one car, and the ✕ that closes a
 column when the reader has several open.
 
-@docs closeButton, view
+@docs closeButton, cornerButton, view
 
 -}
 
@@ -94,13 +94,20 @@ nameplates nothing, so it hangs this in its own top corner.
 -}
 closeButton : msg -> Html msg
 closeButton msg =
+    cornerButton { onPress = msg, label = "Close this column", glyph = "✕" }
+
+
+{-| The icon button a column's corner hangs its controls on.
+-}
+cornerButton : { onPress : msg, label : String, glyph : String } -> Html msg
+cornerButton { onPress, label, glyph } =
     button
-        [ onClick msg
-        , attribute "aria-label" "Close this column"
-        , title "Close this column"
+        [ onClick onPress
+        , attribute "aria-label" label
+        , title label
         , class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
         ]
-        [ text "✕" ]
+        [ text glyph ]
 
 
 {-| The field's place and not the class's, which the strip below reports.

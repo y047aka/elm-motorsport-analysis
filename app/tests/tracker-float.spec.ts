@@ -22,12 +22,16 @@ const WIDTH_STEP = readConstant('floatWidthFence.step', eventSource, /floatWidth
 const HEIGHT_STEP = readConstant('floatHeightFence.step', eventSource, /floatHeightFence =\n\s*\{[^}]*step = (\d+)/);
 
 const FLOAT = '[data-tracker-float]';
-const FLOAT_TOGGLE = '[data-tracker-float-toggle]';
 const STRIP = '#column-strip';
 
-/** The column's own trigger: `◱` while the map is hidden, the ✕ every overlay
- * here closes with once it is not. */
-const floatTrigger = (page: Page) => page.locator(`${TRACKER_COLUMN} ${FLOAT_TOGGLE}`);
+/** The map's two presses, found by what they are called: the column's own `◱`
+ * while it is hidden, the ✕ every overlay here closes with once it is not. The ✕
+ * is drawn twice when the map is up, and the press in the column turns back into
+ * a `◱` again. */
+const floatTrigger = (page: Page) =>
+  page.locator(TRACKER_COLUMN).getByRole('button', { name: 'Float the track map over the columns' });
+const floatClose = (page: Page) =>
+  page.getByRole('button', { name: 'Close the floating track map' });
 
 const widthGrip = (page: Page): Locator =>
   page.getByRole('separator', { name: "Resize the floating track map's width" });
@@ -252,18 +256,20 @@ test.describe('the floating track map', () => {
   });
 
   test('closes from either corner, and the column says which state it is in', async ({ page }) => {
-    await expect(floatTrigger(page)).toHaveAttribute('aria-label', 'Float the track map over the columns');
+    await expect(floatTrigger(page)).toHaveCount(1);
+    await expect(floatClose(page)).toHaveCount(0);
 
     await floatTrigger(page).click();
     await expect(page.locator(FLOAT)).toHaveCount(1);
 
     // Both corners take the `◱` for a ✕ once the map is up: the way back is
     // wherever the room was asked from.
-    await expect(floatTrigger(page)).toHaveAttribute('aria-label', 'Close the floating track map');
-    await expect(page.locator(`${FLOAT} ${FLOAT_TOGGLE}`)).toHaveAttribute('aria-label', 'Close the floating track map');
+    await expect(floatTrigger(page)).toHaveCount(0);
+    await expect(floatClose(page)).toHaveCount(2);
+    await expect(page.locator(FLOAT).getByRole('button', { name: 'Close the floating track map' })).toHaveCount(1);
 
-    await page.getByRole('button', { name: 'Close the floating track map' }).first().click();
+    await floatClose(page).first().click();
     await expect(page.locator(FLOAT)).toHaveCount(0);
-    await expect(floatTrigger(page)).toHaveAttribute('aria-label', 'Float the track map over the columns');
+    await expect(floatTrigger(page)).toHaveCount(1);
   });
 });

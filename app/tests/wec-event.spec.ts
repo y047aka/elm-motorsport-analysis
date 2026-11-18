@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { waitForPageReady, setLapCount, expectSurveyedLap, TRACKER_COLUMN, LE_MANS } from './helpers';
 
-const FLOAT_TOGGLE = '[data-tracker-float-toggle]';
 const FLOAT_CARD = '[data-tracker-float-card]';
 
 test.describe('Le Mans 2025 Visual Tests', () => {
@@ -36,7 +35,10 @@ test.describe('Le Mans 2025 Visual Tests', () => {
   // model opens at -- so the pixels follow the lap data alone.
   test('should render the raised circuit floated over the columns', async ({ page }) => {
     await setLapCount(page, LE_MANS, 180);
-    await page.locator(`${TRACKER_COLUMN} ${FLOAT_TOGGLE}`).click();
+    await page
+      .locator(TRACKER_COLUMN)
+      .getByRole('button', { name: 'Float the track map over the columns' })
+      .click();
     await expect(page.locator(FLOAT_CARD)).toHaveCount(1);
 
     // The box drew the circuit and not the ring, apart from the pixels: a round
