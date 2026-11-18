@@ -456,13 +456,13 @@ expandedTracker cell rowGrip toggle model track snapshot =
 {-| The circuit raised off the ground it was surveyed on, standing over the
 strip rather than taking a row of it.
 
-It is a child of `mainGrid` and not of the strip: the strip scrolls sideways, and anything absolutely placed inside one is placed against its scrollport and travels with it. Its offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at. `z-40` is what a carried column's `z-30` needs to be under, and the wrapper is shaded as `standingsPopover` is because `card-elements.ts` owns every class the card itself has, which leaves the wrapper the one thing here that can carry a surface.
+It is a child of `mainGrid` and not of the strip: the strip scrolls sideways, and anything absolutely placed inside one is placed against its scrollport and travels with it. Its offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at. `z-40` is what a carried column's `z-30` needs to be under, and `card-elements.ts` owns every class the card itself has, which leaves the wrapper the one thing here that can carry a surface.
 
 -}
 floatingTracker : Resize.Model -> Resize.Model -> Track3d.Model -> TrackerChart.Track -> Snapshot -> Html Msg
 floatingTracker width height model track snapshot =
     div
-        [ Attributes.class "absolute bottom-2.5 right-2.5 z-40 grid rounded-xl bg-popover text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
+        [ Attributes.class "absolute bottom-2.5 right-2.5 z-40 grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
         , Attributes.style "width" (Columns.px width.size)
         , Attributes.style "height" (Columns.px height.size)
         , attribute "data-tracker-float" ""
