@@ -88,7 +88,7 @@ test.describe('the floating track map', () => {
     await expect(page.locator(FLOAT)).toHaveCount(1);
 
     // The claim the whole layout rests on: the strip keeps the box it had, down to
-    // where it stands. The row takes `defaultTrackerRow` of it; this takes none.
+    // where it stands. The map is stood over it, so it gives up nothing.
     const after = await box(page, STRIP);
     expect(after.x).toBeCloseTo(before.x, 0);
     expect(after.y).toBeCloseTo(before.y, 0);
@@ -139,6 +139,13 @@ test.describe('the floating track map', () => {
 
     // The grip along the top edge is the height's, and goes the same way.
     await expect(heightGrip(page)).toHaveAttribute('aria-orientation', 'horizontal');
+
+    // Every grip centres its glyph by its tracks rather than by its item: a glyph
+    // taller than the 8px this one is high hangs below the grip under
+    // `place-items`, which centres an item within its own track.
+    await expect(heightGrip(page)).toHaveCSS('align-content', 'center');
+    await expect(page.locator('#standings-resize-grip')).toHaveCSS('align-content', 'center');
+
     await carryGrip(page, heightGrip(page), 0, -100);
     const taller = await box(page, FLOAT);
     expect(taller.height).toBeCloseTo(FLOAT_HEIGHT + 100, 0);
@@ -250,8 +257,8 @@ test.describe('the floating track map', () => {
     await floatTrigger(page).click();
     await expect(page.locator(FLOAT)).toHaveCount(1);
 
-    // Both corners take the `◱` for a ✕ once the map is up, the way the enlarged
-    // row's does: the way back is wherever the room was asked from.
+    // Both corners take the `◱` for a ✕ once the map is up: the way back is
+    // wherever the room was asked from.
     await expect(floatTrigger(page)).toHaveAttribute('aria-label', 'Close the floating track map');
     await expect(page.locator(`${FLOAT} ${FLOAT_TOGGLE}`)).toHaveAttribute('aria-label', 'Close the floating track map');
 

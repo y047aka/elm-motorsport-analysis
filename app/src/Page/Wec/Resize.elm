@@ -1,9 +1,8 @@
 module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip)
 
-{-| A size the reader sets -- the width of the standings, the row the enlarged
-tracker keeps -- and the grip along the edge that moves it. The page holds one
-`Model` per size and forwards every `Msg` through it, the way it forwards the
-strip's through `Columns`.
+{-| A size the reader sets -- the width of the standings, the box a floated map keeps
+-- and the grip along the edge that moves it. The page holds one `Model` per size and
+forwards every `Msg` through it, the way it forwards the strip's through `Columns`.
 
 Which edge the grip lies along -- the axis its pointer is read along, the way the
 size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
@@ -21,7 +20,7 @@ import Html exposing (Html)
 {-| Which way the size moves when the pointer travels along the axis. `WithPointer`
 is a grip on the far edge of what it bounds: the standings' grip lies on their
 right edge, and a travel right widens them. `AgainstPointer` is a grip on the near
-edge: the row grip lies on the tracker row's top edge, and a travel down
+edge: the grip along a floated map's top edge lies above it, and a travel down
 shortens it.
 
 This belongs to the edge rather than to the size: an edge already says which side

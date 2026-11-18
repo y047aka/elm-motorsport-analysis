@@ -1,9 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { waitForPageReady, setLapCount, expectSurveyedLap, TRACKER_COLUMN, LE_MANS } from './helpers';
 
-const TRACKER_TOGGLE = '[data-tracker-toggle]';
-const EXPANDED = '[data-tracker-expanded]';
-
 test.describe('Le Mans 2025 Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/wec/2025/le_mans_24h', { waitUntil: 'load' });
@@ -28,22 +25,5 @@ test.describe('Le Mans 2025 Visual Tests', () => {
     await setLapCount(page, LE_MANS, 180);
     await expect(page.locator(TRACKER_COLUMN)).toHaveCount(1);
     await expectSurveyedLap(page);
-  });
-
-  // The circuit raised off the ground it was surveyed on, at the pose it opens at:
-  // the band, the pit lane riding on it, the sector lines, and the field drawn as
-  // the discs the cars stand on. Nothing turns it here -- the pose is the one the
-  // model opens at -- so the pixels follow the lap data alone.
-  test('should render the raised circuit opened below the columns', async ({ page }) => {
-    await setLapCount(page, LE_MANS, 180);
-    await page.locator(`${TRACKER_COLUMN} ${TRACKER_TOGGLE}`).click();
-    await expect(page.locator(EXPANDED)).toHaveCount(1);
-
-    // The row drew the circuit and not the ring, apart from the pixels: a round
-    // exported before the summary named its circuit raises a ring into space, and a
-    // raised ring still looks like a track.
-    await expectSurveyedLap(page, EXPANDED);
-
-    await expect(page.locator(EXPANDED)).toHaveScreenshot('tracker-3d-row.png');
   });
 });
