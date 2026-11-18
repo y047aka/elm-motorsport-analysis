@@ -11,22 +11,9 @@ The travel it may take is measured off the box itself when the grip is picked up
 -}
 
 import Browser.Dom
-import Drag.Handle as Handle exposing (Axis)
-import Html exposing (Html, text)
-import Html.Attributes exposing (attribute, class, id, title)
-import Html.Events exposing (on, preventDefaultOn)
-import Json.Decode as Decode exposing (Decoder)
+import Drag.Handle as Handle
+import Html exposing (Html)
 import Task
-
-
-{-| Which box the grip carries: the id the travel is measured against, the id the
-grip answers to, and the words it is labelled with.
--}
-type alias Box =
-    { boxId : String
-    , gripId : String
-    , label : String
-    }
 
 
 {-| How far the box has been taken from where it is stood, and whether a pointer
@@ -41,11 +28,12 @@ type alias Model =
     }
 
 
-{-| The two ends of a carry: where the pointer was picked up, and where the box
-stood when that happened.
+{-| The two ends of a carry: which pointer holds the box, where it was picked up,
+and where the box stood when that happened.
 -}
 type alias Hold =
-    { pointer : { x : Float, y : Float }
+    { pointerId : Int
+    , pointer : { x : Float, y : Float }
     , from : { x : Float, y : Float }
     }
 
@@ -58,6 +46,16 @@ type alias Bounds =
     , maxX : Float
     , minY : Float
     , maxY : Float
+    }
+
+
+{-| Which box the grip carries: the id the travel is measured against, the id the
+grip answers to, and the words it is labelled with.
+-}
+type alias Box =
+    { boxId : String
+    , gripId : String
+    , label : String
     }
 
 
@@ -76,46 +74,59 @@ init =
 
 
 type Msg
-    = Grab { x : Float, y : Float }
-    | Carry { x : Float, y : Float }
-    | Release
-    | Cancel
+    = Grab Handle.Place
+    | Carry Handle.Place
+    | Release Handle.Place
+    | Cancel Int
     | Travel Bounds
-    | Step Axis Int
+    | Step Handle.Steps
 
 
 {-| A box that has gone missing leaves the bounds wide, since a grip on it cannot
 be held anyway.
+
+A carry belongs to the pointer that picked it up: a second finger on the box neither
+picks it up again nor moves it nor lets it go.
+
 -}
 update : Box -> Msg -> Model -> ( Model, Cmd Msg )
 update box msg m =
     case msg of
-        Grab pointer ->
-            ( { m | carried = Just { pointer = pointer, from = { x = m.x, y = m.y } } }
-            , Browser.Dom.getElement box.boxId
-                |> Task.map (boundsFrom { x = m.x, y = m.y })
-                |> Task.onError (\_ -> Task.succeed unmeasured)
-                |> Task.perform Travel
-            )
-
-        Carry pointer ->
+        Grab place ->
+            let
+                pointer =
+                    { x = place.x, y = place.y }
+            in
             case m.carried of
+                Just _ ->
+                    ( m, Cmd.none )
+
+                Nothing ->
+                    ( { m | carried = Just { pointerId = place.id, pointer = pointer, from = { x = m.x, y = m.y } } }
+                    , Browser.Dom.getElement box.boxId
+                        |> Task.map (boundsFrom { x = m.x, y = m.y })
+                        |> Task.onError (\_ -> Task.succeed unmeasured)
+                        |> Task.perform Travel
+                    )
+
+        Carry place ->
+            case heldBy place.id m.carried of
                 Nothing ->
                     ( m, Cmd.none )
 
-                Just carry ->
+                Just hold ->
                     ( { m
-                        | x = clamp m.bounds.minX m.bounds.maxX (carry.from.x + pointer.x - carry.pointer.x)
-                        , y = clamp m.bounds.minY m.bounds.maxY (carry.from.y + pointer.y - carry.pointer.y)
+                        | x = clamp m.bounds.minX m.bounds.maxX (hold.from.x + place.x - hold.pointer.x)
+                        , y = clamp m.bounds.minY m.bounds.maxY (hold.from.y + place.y - hold.pointer.y)
                       }
                     , Cmd.none
                     )
 
-        Release ->
-            ( { m | carried = Nothing }, Cmd.none )
+        Release place ->
+            ( { m | carried = Maybe.andThen (keptUnless place.id) m.carried }, Cmd.none )
 
-        Cancel ->
-            ( { m | carried = Nothing }, Cmd.none )
+        Cancel id ->
+            ( { m | carried = Maybe.andThen (keptUnless id) m.carried }, Cmd.none )
 
         Travel bounds ->
             ( { m
@@ -126,17 +137,41 @@ update box msg m =
             , Cmd.none
             )
 
-        Step axis steps ->
-            let
-                d =
-                    toFloat steps * step
-            in
-            case axis of
-                Handle.Across ->
-                    ( { m | x = clamp m.bounds.minX m.bounds.maxX (m.x + d) }, Cmd.none )
+        Step steps ->
+            ( { m
+                | x = clamp m.bounds.minX m.bounds.maxX (m.x + toFloat steps.x * step)
+                , y = clamp m.bounds.minY m.bounds.maxY (m.y + toFloat steps.y * step)
+              }
+            , Cmd.none
+            )
 
-                Handle.Down ->
-                    ( { m | y = clamp m.bounds.minY m.bounds.maxY (m.y + d) }, Cmd.none )
+
+{-| The carry, when the pointer named is the one holding the box.
+-}
+heldBy : Int -> Maybe Hold -> Maybe Hold
+heldBy id carried =
+    case carried of
+        Just hold ->
+            if hold.pointerId == id then
+                Just hold
+
+            else
+                Nothing
+
+        Nothing ->
+            Nothing
+
+
+{-| The carry let go of, when the pointer named is the one holding it; a second
+finger's release leaves the first holding on.
+-}
+keptUnless : Int -> Hold -> Maybe Hold
+keptUnless id hold =
+    if hold.pointerId == id then
+        Nothing
+
+    else
+        Just hold
 
 
 {-| The four shifts the window leaves a box, said in the shift's own units rather
@@ -174,84 +209,13 @@ once it has the focus.
 -}
 handle : Box -> Model -> Html Msg
 handle box m =
-    Html.node "drag-handle"
-        ([ id box.gripId
-         , attribute "role" "button"
-         , attribute "aria-roledescription" "drag handle"
-         , attribute "tabindex" "0"
-         , attribute "aria-label" box.label
-         , title (box.label ++ ": drag it, or press ← → ↑ ↓")
-         , attribute "aria-keyshortcuts" "ArrowLeft ArrowRight ArrowUp ArrowDown"
-         , class
-            ("grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground "
-                ++ (if m.carried /= Nothing then
-                        "cursor-grabbing"
-
-                    else
-                        "cursor-grab"
-                   )
-            )
-         , on "pointerdown" press
-         , on "pointerup" (Decode.succeed Release)
-         , on "pointercancel" (Decode.succeed Cancel)
-         , on "lostpointercapture" (Decode.succeed Cancel)
-         , preventDefaultOn "keydown" keys
-         ]
-            ++ moves m
-        )
-        [ text "⠿" ]
-
-
-moves : Model -> List (Html.Attribute Msg)
-moves m =
-    if m.carried /= Nothing then
-        [ on "pointermove" position ]
-
-    else
-        []
-
-
-press : Decoder Msg
-press =
-    Decode.field "button" Decode.int
-        |> Decode.andThen
-            (\button ->
-                if button == 0 then
-                    Decode.map Grab (pair "clientX" "clientY")
-
-                else
-                    Decode.fail "not the primary button"
-            )
-
-
-position : Decoder Msg
-position =
-    Decode.map Carry (pair "clientX" "clientY")
-
-
-pair : String -> String -> Decoder { x : Float, y : Float }
-pair x y =
-    Decode.map2 (\a b -> { x = a, y = b }) (Decode.field x Decode.float) (Decode.field y Decode.float)
-
-
-keys : Decoder ( Msg, Bool )
-keys =
-    Decode.field "key" Decode.string
-        |> Decode.andThen
-            (\key ->
-                case key of
-                    "ArrowLeft" ->
-                        Decode.succeed ( Step Handle.Across -1, True )
-
-                    "ArrowRight" ->
-                        Decode.succeed ( Step Handle.Across 1, True )
-
-                    "ArrowUp" ->
-                        Decode.succeed ( Step Handle.Down -1, True )
-
-                    "ArrowDown" ->
-                        Decode.succeed ( Step Handle.Down 1, True )
-
-                    _ ->
-                        Decode.succeed ( Step Handle.Across 0, False )
-            )
+    Handle.carry
+        { id = box.gripId
+        , label = box.label
+        , held = m.carried /= Nothing
+        , onGrab = Grab
+        , onMove = Carry
+        , onDrop = Release
+        , onCancel = Cancel
+        , onStep = Step
+        }
