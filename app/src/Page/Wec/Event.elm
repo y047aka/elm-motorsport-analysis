@@ -490,9 +490,6 @@ floatingTracker width height shift model track snapshot =
         ]
 
 
-{-| The box is read by id at the pick, so it needs one, and the grip that carries it
-answers to its own.
--}
 floatBoxId : String
 floatBoxId =
     "tracker-float-box"

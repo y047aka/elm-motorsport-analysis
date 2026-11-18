@@ -3,12 +3,6 @@ module Page.Wec.Shift exposing (Model, Msg(..), init, update, handle)
 {-| Where a box stood before anything moved it, and the grip that carries it across
 the page in both directions at once.
 
-`Resize` bounds one number along one axis, and `Drag.Handle` reads the pointer along
-the one axis its grip is told about; a box floated over the page has to go sideways
-and up together, so this holds the pair itself and the grip is a `drag-handle` the
-way `View.TrackMap3d.surface` is -- the element keeps the pointer, and every move
-comes back even once the pointer has left the grip.
-
 The box cannot be carried out of the window.
 The travel it may take is measured off the box itself when the grip is picked up, and every move is clamped to what that leaves: the box's own edges stop at the window's.
 
@@ -80,9 +74,7 @@ type Msg
     | Step Axis Int
 
 
-{-| The box the grip is on is read at the pick -- the one moment its position is
-asked for, rather than every move -- and the travel the window leaves is derived from
-that. A box that has gone missing leaves the bounds wide, since a grip on it cannot
+{-| A box that has gone missing leaves the bounds wide, since a grip on it cannot
 be held anyway.
 -}
 update : String -> Msg -> Model -> ( Model, Cmd Msg )
@@ -144,6 +136,7 @@ under, so the bounds say the same thing at every pick and between picks too.
 
 `Browser.Dom.getElement` puts `viewport.x` and `viewport.y` at how far the page has
 been scrolled, so `element.x` without them is where the box stands within the window.
+
 -}
 boundsFrom : { x : Float, y : Float } -> Browser.Dom.Element -> Bounds
 boundsFrom { x, y } { element, viewport } =
@@ -166,10 +159,8 @@ step =
     20
 
 
-{-| The grip a box is carried by. It answers as the other grips here do -- the
-pointer held by `drag-handle`, the arrow keys once it has the focus -- and it is
-wherever the caller stands it, since the box's own surface is already doing something
-with a drag.
+{-| The grip a box is carried by: the pointer held by `drag-handle`, the arrow keys
+once it has the focus.
 -}
 handle : String -> Model -> Html Msg
 handle gripId m =
