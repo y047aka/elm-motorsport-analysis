@@ -97,7 +97,7 @@ diagnosing a Flix build failure by reading code.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` one module per page, plain TEA · `View/` what a page is laid out of · `Data/` the shape of the feed · `UI/` `Notice` and the `Shadcn/` wrappers
-- `Drag`/`Drag.Handle` — carrying a thing by a pointer: the state machine and the grip that reports it. `elements/` holds the one custom element that is not shadcn's, `<drag-handle>`, which does the one thing Elm cannot, `setPointerCapture`
+- `Drag`/`Drag.Handle` — carrying a thing by a pointer: the state machine and the grip that reports it, along a line for a column or a size and across the page for a box. `elements/` holds the one custom element that is not shadcn's, `<drag-handle>`, which does the one thing Elm cannot, `setPointerCapture`
 
 A table the cars are decoded against is read where the cars decode rather than where they are drawn — `Data.Wec.eventDecoder` hands `Car.Metadata` the resolved colour, badge and photograph — so a widget handed a car has everything it draws and asks nothing a second time.
 
@@ -156,7 +156,7 @@ The tracker float is 3D and the tracker column is not. `Chart/Tracker3d` stands 
 
 `Page/Wec/Float.elm` is the raised circuit's one home: the box it is stood in, the two grips that size it, the one that carries it, the camera it is turned with, and the `◱` that opens it. The page holds one `Float.Model` and forwards through `FloatMsg`, the way it forwards the strip's through `Columns`. The box is stood over the strip's bottom right, hidden until the tracker column asks for it, sized by a grip along each of its two inner edges, and costing the strip no height because it takes part in no grid track.
 
-The box is carried by a `⠿` in its own corner and not by the drawing under it: a drag anywhere on the circuit turns the camera. `Page/Wec/Shift` is that grip and the pair of offsets it moves, and it is not `Drag.Handle` because a handle there reads the pointer along one axis and a box on a page goes sideways and up together.
+The box is carried by a `⠿` in its own corner and not by the drawing under it: a drag anywhere on the circuit turns the camera. `Page/Wec/Shift` is the pair of offsets that grip moves; the grip is `Drag.Handle.carry`, the one grip there that reads the pointer along both axes at once.
 
 The lines a drawing times to come from the circuit's own published map of them, and where those distances come from is `circuits/README.md`'s to say; what is decided here is how a car is placed between them. A line a map gives no distance for is placed by the time between the lines either side of it (`Tracker.Config.lapScale`), and a circuit whose feed never measures the lap finer than three sectors has no finer lines to place a car by either, so it is drawn less finely too: between two of its lines a COTA car is placed by the time it has run between them, where a Le Mans car is placed by a mini-sector.
 
