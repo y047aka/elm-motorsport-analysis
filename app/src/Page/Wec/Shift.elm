@@ -1,4 +1,4 @@
-module Page.Wec.Shift exposing (Model, Msg(..), init, update, handle)
+module Page.Wec.Shift exposing (Model, Msg(..), Box, init, update, handle)
 
 {-| Where a box stood before anything moved it, and the grip that carries it across
 the page in both directions at once.
@@ -6,7 +6,7 @@ the page in both directions at once.
 The box cannot be carried out of the window.
 The travel it may take is measured off the box itself when the grip is picked up, and every move is clamped to what that leaves: the box's own edges stop at the window's.
 
-@docs Model, Msg, init, update, handle
+@docs Model, Msg, Box, init, update, handle
 
 -}
 
@@ -17,6 +17,16 @@ import Html.Attributes exposing (attribute, class, id, title)
 import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 import Task
+
+
+{-| Which box the grip carries: the id the travel is measured against, the id the
+grip answers to, and the words it is labelled with.
+-}
+type alias Box =
+    { boxId : String
+    , gripId : String
+    , label : String
+    }
 
 
 {-| How far the box has been taken from where it is stood, and whether a pointer
@@ -77,12 +87,12 @@ type Msg
 {-| A box that has gone missing leaves the bounds wide, since a grip on it cannot
 be held anyway.
 -}
-update : String -> Msg -> Model -> ( Model, Cmd Msg )
-update boxId msg m =
+update : Box -> Msg -> Model -> ( Model, Cmd Msg )
+update box msg m =
     case msg of
         Grab pointer ->
             ( { m | carried = Just { pointer = pointer, from = { x = m.x, y = m.y } } }
-            , Browser.Dom.getElement boxId
+            , Browser.Dom.getElement box.boxId
                 |> Task.map (boundsFrom { x = m.x, y = m.y })
                 |> Task.onError (\_ -> Task.succeed unmeasured)
                 |> Task.perform Travel
@@ -162,15 +172,15 @@ step =
 {-| The grip a box is carried by: the pointer held by `drag-handle`, the arrow keys
 once it has the focus.
 -}
-handle : String -> Model -> Html Msg
-handle gripId m =
+handle : Box -> Model -> Html Msg
+handle box m =
     Html.node "drag-handle"
-        ([ id gripId
+        ([ id box.gripId
          , attribute "role" "button"
          , attribute "aria-roledescription" "drag handle"
          , attribute "tabindex" "0"
-         , attribute "aria-label" "Move the floating track map"
-         , title "Move the floating track map: drag it, or press ← → ↑ ↓"
+         , attribute "aria-label" box.label
+         , title (box.label ++ ": drag it, or press ← → ↑ ↓")
          , attribute "aria-keyshortcuts" "ArrowLeft ArrowRight ArrowUp ArrowDown"
          , class
             ("grid place-items-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground "

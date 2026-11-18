@@ -205,7 +205,7 @@ update shared msg m =
         FloatShiftMsg sub ->
             let
                 ( floatShift, cmd ) =
-                    Shift.update floatBoxId sub m.floatShift
+                    Shift.update floatBox sub m.floatShift
             in
             ( { m | floatShift = floatShift }, Effect.sendCmd (Cmd.map FloatShiftMsg cmd) )
 
@@ -406,7 +406,7 @@ It is a child of `mainGrid` and not of the strip: the strip scrolls sideways, an
 floatingTracker : Resize.Model -> Resize.Model -> Shift.Model -> Track3d.Model -> TrackerChart.Track -> Snapshot -> Html Msg
 floatingTracker width height shift model track snapshot =
     div
-        [ Attributes.id floatBoxId
+        [ Attributes.id floatBox.boxId
         , Attributes.class "absolute bottom-2.5 right-2.5 z-40 grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
         , Attributes.style "width" (Columns.px width.size)
         , Attributes.style "height" (Columns.px height.size)
@@ -415,7 +415,7 @@ floatingTracker width height shift model track snapshot =
         ]
         [ trackerFrame "data-tracker-float-card"
             (TrackMap3d.surface { model = model, toMsg = Track3dMsg, track = track, snapshot = snapshot })
-            [ Html.map FloatShiftMsg (Shift.handle floatGripId shift), trackerFloatToggle True ]
+            [ Html.map FloatShiftMsg (Shift.handle floatBox shift), trackerFloatToggle True ]
         , div [ Attributes.class "absolute -left-2.5 top-0 z-10 grid h-full w-2.5 place-items-center" ]
             [ Html.map FloatWidthMsg (Resize.grip floatWidthEdge width) ]
         , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-content-center" ]
@@ -423,14 +423,15 @@ floatingTracker width height shift model track snapshot =
         ]
 
 
-floatBoxId : String
-floatBoxId =
-    "tracker-float-box"
-
-
-floatGripId : String
-floatGripId =
-    "tracker-float-move-grip"
+{-| The box the map is stood in, and the grip it is carried by. `boxId` is what
+the travel is measured against at every pick.
+-}
+floatBox : Shift.Box
+floatBox =
+    { boxId = "tracker-float-box"
+    , gripId = "tracker-float-move-grip"
+    , label = "Move the floating track map"
+    }
 
 
 {-| The press that floats the map over the columns: `◱` while it is hidden, the ✕ every overlay here closes with once it is shown.
