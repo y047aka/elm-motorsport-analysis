@@ -33,6 +33,7 @@ import Motorsport.Replay as Replay
 import Motorsport.Wec.Class as Class exposing (Class)
 import Page.Wec.Columns as Columns
 import Page.Wec.Resize as Resize
+import Page.Wec.Shift as Shift
 import Route
 import Shared
 import Shared.Msg
@@ -67,6 +68,7 @@ type alias Model =
     , trackerFloat : Bool
     , floatWidth : Resize.Model
     , floatHeight : Resize.Model
+    , floatShift : Shift.Model
     , track3d : Track3d.Model
     }
 
@@ -179,6 +181,7 @@ init params =
       , trackerFloat = False
       , floatWidth = Resize.init defaultFloatWidth
       , floatHeight = Resize.init defaultFloatHeight
+      , floatShift = Shift.init
       , track3d = Track3d.init
       }
     , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = params.season, event = params.event })
@@ -201,6 +204,7 @@ type Msg
     | TrackerRowMsg Resize.Msg
     | FloatWidthMsg Resize.Msg
     | FloatHeightMsg Resize.Msg
+    | FloatShiftMsg Shift.Msg
     | RowTraceChosen Class ClassColumn.Trace
     | EventsColumnMsg Feed.Msg
     | ReplayMsg Replay.Msg
@@ -234,6 +238,13 @@ update shared msg m =
 
         FloatHeightMsg sub ->
             ( { m | floatHeight = Resize.update floatHeightEdge sub m.floatHeight }, Effect.none )
+
+        FloatShiftMsg sub ->
+            let
+                ( floatShift, cmd ) =
+                    Shift.update floatBoxId sub m.floatShift
+            in
+            ( { m | floatShift = floatShift }, Effect.sendCmd (Cmd.map FloatShiftMsg cmd) )
 
         Track3dMsg sub ->
             ( { m | track3d = Track3d.update sub m.track3d }, Effect.none )
@@ -459,22 +470,37 @@ strip rather than taking a row of it.
 It is a child of `mainGrid` and not of the strip: the strip scrolls sideways, and anything absolutely placed inside one is placed against its scrollport and travels with it. Its offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at. `z-40` is what a carried column's `z-30` needs to be under, and `card-elements.ts` owns every class the card itself has, which leaves the wrapper the one thing here that can carry a surface.
 
 -}
-floatingTracker : Resize.Model -> Resize.Model -> Track3d.Model -> TrackerChart.Track -> Snapshot -> Html Msg
-floatingTracker width height model track snapshot =
+floatingTracker : Resize.Model -> Resize.Model -> Shift.Model -> Track3d.Model -> TrackerChart.Track -> Snapshot -> Html Msg
+floatingTracker width height shift model track snapshot =
     div
-        [ Attributes.class "absolute bottom-2.5 right-2.5 z-40 grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
+        [ Attributes.id floatBoxId
+        , Attributes.class "absolute bottom-2.5 right-2.5 z-40 grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
         , Attributes.style "width" (Columns.px width.size)
         , Attributes.style "height" (Columns.px height.size)
+        , Attributes.style "transform" ("translate(" ++ Columns.px shift.x ++ ", " ++ Columns.px shift.y ++ ")")
         , attribute "data-tracker-float" ""
         ]
         [ trackerFrame "data-tracker-float-card"
             (TrackMap3d.surface { model = model, toMsg = Track3dMsg, track = track, snapshot = snapshot })
-            [ trackerFloatToggle True ]
+            [ Html.map FloatShiftMsg (Shift.handle floatGripId shift), trackerFloatToggle True ]
         , div [ Attributes.class "absolute -left-2.5 top-0 z-10 grid h-full w-2.5 place-items-center" ]
             [ Html.map FloatWidthMsg (Resize.grip floatWidthEdge width) ]
         , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-content-center" ]
             [ Html.map FloatHeightMsg (Resize.grip floatHeightEdge height) ]
         ]
+
+
+{-| The box is read by id at the pick, so it needs one, and the grip that carries it
+answers to its own.
+-}
+floatBoxId : String
+floatBoxId =
+    "tracker-float-box"
+
+
+floatGripId : String
+floatGripId =
+    "tracker-float-move-grip"
 
 
 {-| The press that floats the map over the columns: `◱` while it is hidden, the ✕ every overlay here closes with once it is shown.
@@ -610,7 +636,7 @@ mainGrid round keys m =
           else
             text ""
         , if m.trackerFloat then
-            floatingTracker m.floatWidth m.floatHeight m.track3d round.track snapshot
+            floatingTracker m.floatWidth m.floatHeight m.floatShift m.track3d round.track snapshot
 
           else
             text ""

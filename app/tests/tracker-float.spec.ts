@@ -5,11 +5,14 @@ import { waitForPageReady, setLapCount, readConstant, readSource, expectSurveyed
  * A map stood *over* the strip rather than taking a row of it is a claim about the
  * page's boxes, and a screenshot of a page that kept its height by some other
  * means would look the same. So nothing here is pixels: which corner the box is
- * anchored to, what the strip measures before and after the box appears, and how
- * far each grip takes it. The box it opens at and the bounds the grips hold it
- * between are read out of the Elm that decides them.
+ * anchored to, what the strip measures before and after the box appears, how far
+ * each grip takes it, and where a carry leaves it. The box it opens at and the
+ * bounds the grips hold it between are read out of the Elm that decides them.
  */
 const eventSource = readSource('app/src/Page/Wec/Event.elm');
+const shiftSource = readSource('app/src/Page/Wec/Shift.elm');
+
+const MOVE_STEP = readConstant('step', shiftSource, /\nstep =\n\s+(\d+)/);
 
 const FLOAT_WIDTH = readConstant('defaultFloatWidth', eventSource, /\ndefaultFloatWidth =\n\s+(\d+)/);
 const FLOAT_HEIGHT = readConstant('defaultFloatHeight', eventSource, /\ndefaultFloatHeight =\n\s+(\d+)/);
@@ -31,7 +34,26 @@ const widthGrip = (page: Page): Locator =>
 const heightGrip = (page: Page): Locator =>
   page.getByRole('separator', { name: "Resize the floating track map's height" });
 
+/** The grip the box is carried by. The circuit itself takes a drag to turn, so the
+ * two drags have to be told apart by where they are pressed. */
+const moveGrip = (page: Page): Locator =>
+  page.getByRole('button', { name: 'Move the floating track map' });
+
 const box = async (page: Page, selector: string) => (await page.locator(selector).boundingBox())!;
+
+/**
+ * Wait until the box has been drawn where it is expected. Elm renders on an animation
+ * frame, so a `boundingBox` read taken straight after a keypress can still show the
+ * frame before it, and a carry's last move lands a frame after the pointer stops.
+ */
+async function expectBox(page: Page, expected: { x: number; y: number }) {
+  await expect
+    .poll(async () => {
+      const { x, y } = await box(page, FLOAT);
+      return `${Math.round(x)},${Math.round(y)}`;
+    })
+    .toBe(`${Math.round(expected.x)},${Math.round(expected.y)}`);
+}
 
 /**
  * Press a grip and carry the pointer by `dx` and `dy` without letting go -- the
@@ -122,6 +144,86 @@ test.describe('the floating track map', () => {
     expect(taller.height).toBeCloseTo(FLOAT_HEIGHT + 100, 0);
     expect(taller.y + taller.height).toBeCloseTo(opened.y + opened.height, 0);
     await page.mouse.up();
+  });
+
+  test('is carried round the page by its grip, at the size it was measured at', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+
+    // The grip is the only place a carry starts: the circuit under the pointer takes
+    // a drag to turn, so the two drags are told apart by where they are pressed.
+    await expect(moveGrip(page)).toHaveCount(1);
+    await carryGrip(page, moveGrip(page), -180, -120);
+
+    await expectBox(page, { x: opened.x - 180, y: opened.y - 120 });
+    const moved = await box(page, FLOAT);
+
+    // A carry moves the box and resizes nothing.
+    expect(moved.width).toBeCloseTo(FLOAT_WIDTH, 0);
+    expect(moved.height).toBeCloseTo(FLOAT_HEIGHT, 0);
+    await page.mouse.up();
+
+    // The next carry starts from where the box was left, not from the corner.
+    await carryGrip(page, moveGrip(page), 60, 40);
+    await expectBox(page, { x: opened.x - 180 + 60, y: opened.y - 120 + 40 });
+    await page.mouse.up();
+  });
+
+  test('cannot be carried out of the window, however far the pointer goes', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+
+    // Past the corner it is stood at there is only the gutter it is stood in, and the
+    // window's own edge is where the box stops.
+    await carryGrip(page, moveGrip(page), 400, 400);
+    await expectBox(page, { x: opened.x + 10, y: opened.y + 10 });
+    await page.mouse.up();
+
+    // The other way: a pointer thrown 5000px away leaves the box whole, its own
+    // corner on the window's.
+    await carryGrip(page, moveGrip(page), -5000, -5000);
+    await expectBox(page, { x: 0, y: 0 });
+    const moved = await box(page, FLOAT);
+    expect(moved.width).toBeCloseTo(FLOAT_WIDTH, 0);
+    expect(moved.height).toBeCloseTo(FLOAT_HEIGHT, 0);
+    await page.mouse.up();
+
+    // And back the way it came is free: the clamp stops the box, not the carry.
+    await carryGrip(page, moveGrip(page), 400, 400);
+    await expectBox(page, { x: 400, y: 400 });
+    await page.mouse.up();
+  });
+
+  test('turns under a drag on the circuit itself, and does not slide', async ({ page }) => {
+    await floatTrigger(page).click();
+    const before = await box(page, FLOAT);
+    const drawing = (await page.locator(`${FLOAT} svg`).boundingBox())!;
+
+    await page.mouse.move(drawing.x + drawing.width / 2, drawing.y + drawing.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(drawing.x + drawing.width / 2 + 200, drawing.y + drawing.height / 2 + 120, {
+      steps: 10,
+    });
+    await page.mouse.up();
+
+    const after = await box(page, FLOAT);
+    expect(after.x).toBeCloseTo(before.x, 0);
+    expect(after.y).toBeCloseTo(before.y, 0);
+  });
+
+  test('steps the box by the arrow keys its own grip answers to', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+
+    await moveGrip(page).focus();
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowUp');
+    await expectBox(page, { x: opened.x - MOVE_STEP, y: opened.y - MOVE_STEP });
+
+    // Both axes go back, and the box is where it was.
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowDown');
+    await expectBox(page, { x: opened.x, y: opened.y });
   });
 
   test('steps by the arrow keys each grip answers to', async ({ page }) => {
