@@ -213,10 +213,22 @@ update shared msg m =
             ( { m | track3d = Track3d.update sub m.track3d }, Effect.none )
 
         ToggleTrackerFloat ->
-            -- Nothing about the layout moves, so nothing else has to be opened back.
-            -- The only press that floats the map stands in the tracker column's corner,
-            -- and the column is there because it was pressed.
-            ( { m | trackerFloat = not m.trackerFloat }, Effect.none )
+            if m.trackerFloat then
+                ( { m | trackerFloat = False }, Effect.none )
+
+            else
+                -- The only press that floats the map stands in the tracker column's
+                -- corner, and the reader can close that column: opening the map opens
+                -- the column back, or the feature has gone missing.
+                let
+                    ( strip, cmd ) =
+                        if List.member Columns.Tracker m.strip.order then
+                            ( m.strip, Cmd.none )
+
+                        else
+                            Columns.update (field shared) (Columns.Open Columns.Tracker) m.strip
+                in
+                ( { m | trackerFloat = True, strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
 
         FocusColumn key ->
             let
@@ -443,26 +455,14 @@ trackerFloatToggle shown =
         [ text glyph ]
 
 
-{-| Where the standings and the strip stand.
+{-| The page under the header: the standings, the strip, and whatever floats over
+them.
 
 The class strings are written intact: Tailwind generates a class only from a
 string it finds intact in the source, so one assembled from fragments silently
 ships no `grid-template-columns` at all, and every track sizes to its content.
 
 -}
-type alias Layout =
-    { standings : String
-    , strip : String
-    }
-
-
-layout : Layout
-layout =
-    { standings = "col-start-1 min-h-0 grid relative"
-    , strip = "col-start-2"
-    }
-
-
 mainGrid : Shared.LoadedRound -> List Columns.StripKey -> Model -> Html Msg
 mainGrid round keys m =
     let
@@ -471,14 +471,11 @@ mainGrid round keys m =
 
         replay =
             round.replay
-
-        cells =
-            layout
     in
     div
         [ Attributes.class "row-start-2 h-full min-h-0 relative grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]" ]
-        [ standingsCell cells.standings keys m round.energy snapshot replay.race.cars
-        , columnStrip cells.strip round.track round.timeline keys m round.pitCycles replay snapshot
+        [ standingsCell "col-start-1 min-h-0 grid relative" keys m round.energy snapshot replay.race.cars
+        , columnStrip "col-start-2" round.track round.timeline keys m round.pitCycles replay snapshot
         , if m.trackerFloat then
             floatingTracker m.floatWidth m.floatHeight m.floatShift m.track3d round.track snapshot
 
