@@ -72,6 +72,7 @@ standingsEdge =
     , fence = standingsFence
     , id = "standings-resize-grip"
     , label = "Resize the standings column"
+    , glyph = "⋮"
     }
 
 

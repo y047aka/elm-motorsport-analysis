@@ -143,22 +143,27 @@ carry config =
 travel is the size's, and the arrow keys step it. `Across` lies along a column
 edge, `Down` along a row edge. It answers as the splitter it is, so the range it
 can be taken between is said with `Range`.
+
+The `String` is the mark drawn along the edge. An empty one leaves the cursor the
+only thing saying where the grip is -- and asks the wrapper to centre along the
+mark's own axis only: `justify-content: center` sizes a track to its content, and a
+`w-full` grip with no mark then has no width to be, so `content-center` rather than
+`place-content-center`.
+
 -}
-resize : Axis -> Range -> Config msg -> Html msg
-resize axis range config =
+resize : Axis -> String -> Range -> Config msg -> Html msg
+resize axis glyph range config =
     let
-        ( classes, cursor, glyph ) =
+        ( classes, cursor ) =
             case axis of
                 Across ->
                     ( "grid place-content-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
                     , "cursor-col-resize"
-                    , "⋮"
                     )
 
                 Down ->
                     ( "grid place-content-center h-2 w-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
                     , "cursor-row-resize"
-                    , "⋯"
                     )
     in
     grip

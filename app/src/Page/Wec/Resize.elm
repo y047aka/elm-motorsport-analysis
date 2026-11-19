@@ -50,8 +50,9 @@ type alias Fence =
 
 
 {-| Which edge the grip lies along: the axis it reads and steps, the way the size
-moves along it, the bounds it holds the size between, the id it answers to, and
-the words it is labelled with.
+moves along it, the bounds it holds the size between, the id it answers to, the
+words it is labelled with, and the mark it shows -- `""` where the cursor is mark
+enough.
 -}
 type alias Edge =
     { axis : Handle.Axis
@@ -59,6 +60,7 @@ type alias Edge =
     , fence : Fence
     , id : String
     , label : String
+    , glyph : String
     }
 
 
@@ -128,6 +130,7 @@ clampTo fence =
 grip : Edge -> Model -> Html Msg
 grip edge m =
     Handle.resize edge.axis
+        edge.glyph
         { min = edge.fence.min, max = edge.fence.max, now = m.size }
         { id = edge.id
         , label = edge.label

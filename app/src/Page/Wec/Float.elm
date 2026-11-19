@@ -93,6 +93,7 @@ widthEdge =
     , fence = widthFence
     , id = "tracker-float-width-grip"
     , label = "Resize the floating track map's width"
+    , glyph = ""
     }
 
 
@@ -103,6 +104,7 @@ heightEdge =
     , fence = heightFence
     , id = "tracker-float-height-grip"
     , label = "Resize the floating track map's height"
+    , glyph = ""
     }
 
 
@@ -171,7 +173,7 @@ view m frame track snapshot =
             [ Html.map ShiftMsg (Shift.handle box m.shift), closer ]
         , div [ Attributes.class "absolute -left-2.5 top-0 z-10 grid h-full w-2.5 place-items-center" ]
             [ Html.map WidthMsg (Resize.grip widthEdge m.width) ]
-        , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full place-content-center" ]
+        , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full content-center" ]
             [ Html.map HeightMsg (Resize.grip heightEdge m.height) ]
         ]
 

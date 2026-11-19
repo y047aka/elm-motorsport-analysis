@@ -126,8 +126,8 @@ test.describe('the floating track map', () => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);
 
-    // The grip along the left edge is the width's: a vertical bar, and the range
-    // the box can be taken between is said with `Range`.
+    // The grip along the left edge is the width's, and the range the box can be
+    // taken between is said with `Range`.
     await expect(widthGrip(page)).toHaveAttribute('aria-orientation', 'vertical');
     await expect(widthGrip(page)).toHaveAttribute('aria-valuemin', `${WIDTH_MIN}`);
     await expect(widthGrip(page)).toHaveAttribute('aria-valuemax', `${WIDTH_MAX}`);
@@ -145,9 +145,9 @@ test.describe('the floating track map', () => {
     // The grip along the top edge is the height's, and goes the same way.
     await expect(heightGrip(page)).toHaveAttribute('aria-orientation', 'horizontal');
 
-    // Every grip centres its glyph by its tracks rather than by its item: a glyph
-    // taller than the 8px this one is high hangs below the grip under
-    // `place-items`, which centres an item within its own track.
+    // A grip centres its mark by its tracks rather than by its item: a glyph taller
+    // than the 8px these are high hangs below the grip under `place-items`, which
+    // centres an item within its own track.
     await expect(heightGrip(page)).toHaveCSS('align-content', 'center');
     await expect(page.locator('#standings-resize-grip')).toHaveCSS('align-content', 'center');
 
@@ -156,6 +156,12 @@ test.describe('the floating track map', () => {
     expect(taller.height).toBeCloseTo(FLOAT_HEIGHT + 100, 0);
     expect(taller.y + taller.height).toBeCloseTo(opened.y + opened.height, 0);
     await page.mouse.up();
+
+    // Neither of these two grips marks itself: the cursor along the edge is the whole
+    // affordance here, unlike the standings' `⋮` along a column edge.
+    await expect(widthGrip(page)).toHaveText('');
+    await expect(heightGrip(page)).toHaveText('');
+
   });
 
   test('is carried round the page by its grip, at the size it was measured at', async ({ page }) => {
