@@ -17,6 +17,7 @@ const MOVE_STEP = readConstant('step', shiftSource, /\nstep =\n\s+(\d+)/);
 const FLOAT_WIDTH = readConstant('defaultWidth', floatSource, /\ndefaultWidth =\n\s+(\d+)/);
 const FLOAT_HEIGHT = readConstant('defaultHeight', floatSource, /\ndefaultHeight =\n\s+(\d+)/);
 const WIDTH_MIN = readConstant('widthFence.min', floatSource, /widthFence =\n\s*\{[^}]*min = (\d+)/);
+const CORNER_ROOM = readConstant('cornerRoom', floatSource, /\ncornerRoom =\n\s+(\d+)/);
 
 const FLOAT = '[data-tracker-float]';
 const STRIP = '#column-strip';
@@ -29,10 +30,15 @@ const floatTrigger = (page: Page) =>
 const floatClose = (page: Page) =>
   page.getByRole('button', { name: 'Close the floating track map' });
 
-const widthGrip = (page: Page): Locator =>
-  page.getByRole('separator', { name: "Resize the floating track map's width" });
-const heightGrip = (page: Page): Locator =>
-  page.getByRole('separator', { name: "Resize the floating track map's height" });
+/** The four edges the box is sized by, found by the words they are called by. The two
+ * away from the corner it is stood at grow it up and left; the two at that corner take
+ * the box along with the size. */
+const edgeGrip = (page: Page, edge: 'left' | 'right' | 'top' | 'bottom'): Locator =>
+  page.getByRole('separator', { name: `Resize the floating track map from the ${edge}` });
+const leftGrip = (page: Page): Locator => edgeGrip(page, 'left');
+const rightGrip = (page: Page): Locator => edgeGrip(page, 'right');
+const topGrip = (page: Page): Locator => edgeGrip(page, 'top');
+const bottomGrip = (page: Page): Locator => edgeGrip(page, 'bottom');
 
 /** The grip the box is carried by. The circuit itself takes a drag to turn, so the
  * two drags have to be told apart by where they are pressed. */
@@ -123,22 +129,22 @@ test.describe('the floating track map', () => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);
 
-    // The grip along the left edge is the width's, and says which bar it is. The
-    // bounds the size is held between are the Elm's and are said nowhere on it.
-    await expect(widthGrip(page)).toHaveAttribute('aria-orientation', 'vertical');
-    await expect(widthGrip(page)).not.toHaveAttribute('aria-valuenow');
+    // The grip along the left edge says which bar it is. The bounds the size is held
+    // between are the Elm's and are said nowhere on it.
+    await expect(leftGrip(page)).toHaveAttribute('aria-orientation', 'vertical');
+    await expect(leftGrip(page)).not.toHaveAttribute('aria-valuenow');
 
     // The pointer is the only way in: no key reaches the grip and it is no tab stop, so
     // the cursor along the edge is the whole affordance. Nothing lights under the
     // pointer, and the grip takes a background only while it is held.
-    await expect(widthGrip(page)).toHaveCSS('cursor', 'col-resize');
-    await expect(widthGrip(page)).not.toHaveAttribute('tabindex');
-    await widthGrip(page).hover();
-    await expect(widthGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(leftGrip(page)).toHaveCSS('cursor', 'col-resize');
+    await expect(leftGrip(page)).not.toHaveAttribute('tabindex');
+    await leftGrip(page).hover();
+    await expect(leftGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
     // Left is away from the corner the box is stood at, so a travel left widens
     // it -- and the right edge, the anchor, does not move.
-    await carryGrip(page, widthGrip(page), -120, 0);
+    await carryGrip(page, leftGrip(page), -120, 0);
     const wider = await box(page, FLOAT);
     expect(wider.width).toBeCloseTo(FLOAT_WIDTH + 120, 0);
     expect(wider.x + wider.width).toBeCloseTo(opened.x + opened.width, 0);
@@ -146,15 +152,15 @@ test.describe('the floating track map', () => {
     await page.mouse.up();
 
     // The grip along the top edge is the height's, and goes the same way.
-    await expect(heightGrip(page)).toHaveAttribute('aria-orientation', 'horizontal');
+    await expect(topGrip(page)).toHaveAttribute('aria-orientation', 'horizontal');
 
     // A grip centres its mark by its tracks rather than by its item: a glyph taller
     // than the 8px these are high hangs below the grip under `place-items`, which
     // centres an item within its own track.
-    await expect(heightGrip(page)).toHaveCSS('align-content', 'center');
+    await expect(topGrip(page)).toHaveCSS('align-content', 'center');
     await expect(page.locator('#standings-resize-grip')).toHaveCSS('align-content', 'center');
 
-    await carryGrip(page, heightGrip(page), 0, -100);
+    await carryGrip(page, topGrip(page), 0, -100);
     const taller = await box(page, FLOAT);
     expect(taller.height).toBeCloseTo(FLOAT_HEIGHT + 100, 0);
     expect(taller.y + taller.height).toBeCloseTo(opened.y + opened.height, 0);
@@ -162,7 +168,7 @@ test.describe('the floating track map', () => {
 
     // The fence the size is held between is the Elm's, and it bites: a travel past the
     // narrowest leaves the box at it, and the anchor edge does not move.
-    await carryGrip(page, widthGrip(page), 400, 0);
+    await carryGrip(page, leftGrip(page), 400, 0);
     const narrow = await box(page, FLOAT);
     expect(narrow.width).toBeCloseTo(WIDTH_MIN, 0);
     expect(narrow.x + narrow.width).toBeCloseTo(opened.x + opened.width, 0);
@@ -170,8 +176,45 @@ test.describe('the floating track map', () => {
 
     // Neither of these two grips marks itself: the cursor along the edge is the whole
     // affordance here, unlike the standings' `⋮` along a column edge.
-    await expect(widthGrip(page)).toHaveText('');
-    await expect(heightGrip(page)).toHaveText('');
+    await expect(leftGrip(page)).toHaveText('');
+    await expect(topGrip(page)).toHaveText('');
+  });
+
+  test('grows down and right from the corner it is anchored at, and stops at the window', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+
+    // A travel at the anchored edge moves that edge and takes the box with it, so the
+    // edge opposite stays where it was.
+    await carryGrip(page, rightGrip(page), -200, 0);
+    expect((await box(page, FLOAT)).x).toBeCloseTo(opened.x, 0);
+    await page.mouse.up();
+
+    // And the window stops it: the box grows by the room its corner left and no
+    // further, so its own edge lands on the window's -- the shrink above gave all of
+    // that room back, and the pointer goes well past it.
+    await carryGrip(page, rightGrip(page), 260, 0);
+    const stopped = await box(page, FLOAT);
+    expect(stopped.width).toBeCloseTo(FLOAT_WIDTH + CORNER_ROOM, 0);
+    expect(stopped.x + stopped.width).toBeCloseTo(opened.x + opened.width + CORNER_ROOM, 0);
+    await page.mouse.up();
+
+    // Carried away from the corner, the two anchored grips have the room the carry left.
+    await carryGrip(page, moveGrip(page), -400, -200);
+    await page.mouse.up();
+    const stood = await box(page, FLOAT);
+
+    await carryGrip(page, rightGrip(page), 200, 0);
+    const wider = await box(page, FLOAT);
+    expect(wider.width).toBeCloseTo(FLOAT_WIDTH + CORNER_ROOM + 200, 0);
+    expect(wider.x).toBeCloseTo(stood.x, 0);
+    await page.mouse.up();
+
+    await carryGrip(page, bottomGrip(page), 0, 150);
+    const taller = await box(page, FLOAT);
+    expect(taller.height).toBeCloseTo(FLOAT_HEIGHT + 150, 0);
+    expect(taller.y).toBeCloseTo(stood.y, 0);
+    await page.mouse.up();
   });
 
   test('is carried round the page by its grip, at the size it was measured at', async ({ page }) => {

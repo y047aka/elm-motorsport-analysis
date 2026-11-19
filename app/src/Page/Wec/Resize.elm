@@ -1,4 +1,4 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, cappedTo)
 
 {-| A size the reader sets -- the width of the standings, the box a floated map keeps
 -- and the grip along the edge that moves it. The page holds one `Model` per size and
@@ -8,7 +8,7 @@ Which edge the grip lies along -- the axis its pointer is read along, the way th
 size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
 `Model` holds the size and the carry.
 
-@docs Model, Msg, Fence, Edge, Grows, init, update, grip
+@docs Model, Msg, Fence, Edge, Grows, init, update, grip, cappedTo
 
 -}
 
@@ -17,11 +17,11 @@ import Drag.Handle as Handle exposing (Pointer)
 import Html exposing (Html)
 
 
-{-| Which way the size moves when the pointer travels along the axis. `WithPointer`
-is a grip on the far edge of what it bounds: the standings' grip lies on their
-right edge, and a travel right widens them. `AgainstPointer` is a grip on the near
-edge: the grip along a floated map's top edge lies above it, and a travel down
-shortens it.
+{-| Which way the size moves when the pointer travels along the axis: `WithPointer`
+says a travel right or down makes it bigger, `AgainstPointer` says a travel left or
+up does. Which of them an edge is follows from which side it bounds -- the
+standings' grip lies on their right edge, and a travel right widens them; the grip
+along a floated map's top edge lies above it, and a travel down shortens it.
 
 This belongs to the edge rather than to the size: an edge already says which side
 it bounds, and pairing a `Down` grip with the wrong one of these is a row that
@@ -35,11 +35,19 @@ type Grows
 
 {-| The size the thing stands at and the carry that moves it: the size follows the
 pointer's travel from the size `Drag` was picked up with.
+
+A size has a grip along each of its two edges and one `Model` between them, so which
+of the two holds it is kept beside the carry: `grip` is the id of the one that does,
+and `Nothing` is none.
+
 -}
 type alias Model =
     { size : Float
     , carried : Drag.State Float
+    , grip : Maybe String
     }
+    -- `grip` names which grip has the size in hand rather than saying that one does: a
+    -- size has two grips now, and the one drawn held is the one taken up.
 
 
 type alias Fence =
@@ -67,6 +75,7 @@ init : Float -> Model
 init size =
     { size = size
     , carried = Drag.init
+    , grip = Nothing
     }
 
 
@@ -84,7 +93,12 @@ update : Edge -> Msg -> Model -> Model
 update edge msg m =
     case msg of
         Grab pointer ->
-            { m | carried = Tuple.first (Drag.update (Drag.Pick m.size pointer) m.carried) }
+            case m.grip of
+                Just _ ->
+                    m
+
+                Nothing ->
+                    { m | carried = Tuple.first (Drag.update (Drag.Pick m.size pointer) m.carried), grip = Just edge.id }
 
         Carrying pointer ->
             let
@@ -99,10 +113,30 @@ update edge msg m =
                     { m | carried = carried }
 
         Release pointer ->
-            { m | carried = Tuple.first (Drag.update (Drag.Drop pointer) m.carried) }
+            let
+                ( carried, _ ) =
+                    Drag.update (Drag.Drop pointer) m.carried
+            in
+            { m | carried = carried, grip = holding (Drag.isCarrying carried) m.grip }
 
         Cancel pointerId ->
-            { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }
+            let
+                ( carried, _ ) =
+                    Drag.update (Drag.Cancel pointerId) m.carried
+            in
+            { m | carried = carried, grip = holding (Drag.isCarrying carried) m.grip }
+
+
+{-| The grip holding the size, until nothing is carried any more. A second pointer's
+release leaves the first holding on, and `Drag` says so.
+-}
+holding : Bool -> Maybe String -> Maybe String
+holding stillCarried held =
+    if stillCarried then
+        held
+
+    else
+        Nothing
 
 
 signed : Grows -> Float -> Float
@@ -120,7 +154,16 @@ clampTo fence =
     clamp fence.min fence.max
 
 
-{-| The grip along the edge.
+{-| The edge with its `Fence`'s top taken down to a ceiling the caller knows. A size
+is bounded by its `Fence` and sometimes by something of the page's besides: a floated
+box cannot grow past the window its corner stands in.
+-}
+cappedTo : Float -> Edge -> Edge
+cappedTo ceiling edge =
+    { edge | fence = { min = edge.fence.min, max = min edge.fence.max ceiling } }
+
+
+{-| The grip along the edge, held when it is the one that took the size up.
 -}
 grip : Edge -> Model -> Html Msg
 grip edge m =
@@ -128,7 +171,7 @@ grip edge m =
         edge.glyph
         { id = edge.id
         , label = edge.label
-        , held = Drag.isCarrying m.carried
+        , held = m.grip == Just edge.id
         , onGrab = Grab
         , onMove = Carrying
         , onDrop = Release

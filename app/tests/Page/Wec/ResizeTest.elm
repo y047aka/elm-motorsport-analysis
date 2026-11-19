@@ -47,6 +47,15 @@ suite =
                         |> step (Carrying (pointer 1 340))
                         |> .size
                         |> Expect.equal 340
+            , test "the grip that took the size up is the one said to hold it" <|
+                \_ ->
+                    Expect.all
+                        [ \m ->
+                            Expect.equal (Just edge.id) m.grip
+                        , \m ->
+                            m |> step (Release (pointer 1 300)) |> .grip |> Expect.equal Nothing
+                        ]
+                        (startAt 300)
             , test "the size stops at the fence on either side" <|
                 \_ ->
                     Expect.all
