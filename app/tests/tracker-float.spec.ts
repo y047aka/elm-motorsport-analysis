@@ -18,8 +18,6 @@ const FLOAT_WIDTH = readConstant('defaultWidth', floatSource, /\ndefaultWidth =\
 const FLOAT_HEIGHT = readConstant('defaultHeight', floatSource, /\ndefaultHeight =\n\s+(\d+)/);
 const WIDTH_MIN = readConstant('widthFence.min', floatSource, /widthFence =\n\s*\{[^}]*min = (\d+)/);
 const WIDTH_MAX = readConstant('widthFence.max', floatSource, /widthFence =\n\s*\{[^}]*max = (\d+)/);
-const WIDTH_STEP = readConstant('widthFence.step', floatSource, /widthFence =\n\s*\{[^}]*step = (\d+)/);
-const HEIGHT_STEP = readConstant('heightFence.step', floatSource, /heightFence =\n\s*\{[^}]*step = (\d+)/);
 
 const FLOAT = '[data-tracker-float]';
 const STRIP = '#column-strip';
@@ -133,6 +131,14 @@ test.describe('the floating track map', () => {
     await expect(widthGrip(page)).toHaveAttribute('aria-valuemax', `${WIDTH_MAX}`);
     await expect(widthGrip(page)).toHaveAttribute('aria-valuenow', `${FLOAT_WIDTH}`);
 
+    // The pointer is the only way in: no key reaches the grip and it is no tab stop, so
+    // the cursor along the edge is the whole affordance. Nothing lights under the
+    // pointer, and the grip takes a background only while it is held.
+    await expect(widthGrip(page)).toHaveCSS('cursor', 'col-resize');
+    await expect(widthGrip(page)).not.toHaveAttribute('tabindex');
+    await widthGrip(page).hover();
+    await expect(widthGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+
     // Left is away from the corner the box is stood at, so a travel left widens
     // it -- and the right edge, the anchor, does not move.
     await carryGrip(page, widthGrip(page), -120, 0);
@@ -242,24 +248,6 @@ test.describe('the floating track map', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
     await expectBox(page, { x: opened.x, y: opened.y });
-  });
-
-  test('steps by the arrow keys each grip answers to', async ({ page }) => {
-    await floatTrigger(page).click();
-    await expect(page.locator(FLOAT)).toHaveCSS('width', `${FLOAT_WIDTH}px`);
-
-    await widthGrip(page).focus();
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.locator(FLOAT)).toHaveCSS('width', `${FLOAT_WIDTH + WIDTH_STEP}px`);
-    await page.keyboard.press('ArrowRight');
-    await expect(page.locator(FLOAT)).toHaveCSS('width', `${FLOAT_WIDTH}px`);
-
-    // The keys along the other axis step nothing here, and vice versa.
-    await heightGrip(page).focus();
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.locator(FLOAT)).toHaveCSS('height', `${FLOAT_HEIGHT}px`);
-    await page.keyboard.press('ArrowUp');
-    await expect(page.locator(FLOAT)).toHaveCSS('height', `${FLOAT_HEIGHT + HEIGHT_STEP}px`);
   });
 
   test('opens from the column corner and closes from its own', async ({ page }) => {

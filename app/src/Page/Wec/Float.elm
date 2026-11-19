@@ -74,7 +74,6 @@ widthFence : Resize.Fence
 widthFence =
     { min = 280
     , max = 960
-    , step = 20
     }
 
 
@@ -82,7 +81,6 @@ heightFence : Resize.Fence
 heightFence =
     { min = 120
     , max = 480
-    , step = 20
     }
 
 

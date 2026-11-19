@@ -1,14 +1,15 @@
-module Drag.Handle exposing (Axis(..), Pointer, Place, Steps, Config, Config2, Range, resize, view, carry)
+module Drag.Handle exposing (Axis(..), Pointer, Place, Steps, Config, Stepped, Config2, Range, resize, view, carry)
 
 {-| A grip that carries something: along a line, or across the page in both directions at
-once -- by the pointer, or a step at a time by the arrow keys once it has the focus.
+once -- by the pointer, or a step at a time by the arrow keys for the grips that
+answer to them.
 
 The grip holds no state of its own -- `held` is the caller's, and the carry
 behind it is `Drag`'s business. What the grip adds is the pointer's path: the
 `drag-handle` custom element calls `setPointerCapture`, which Elm cannot, so every move and the release come back to the grip even once the pointer has left
 it.
 
-@docs Axis, Pointer, Place, Steps, Config, Config2, Range, resize, view, carry
+@docs Axis, Pointer, Place, Steps, Config, Stepped, Config2, Range, resize, view, carry
 
 -}
 
@@ -18,8 +19,8 @@ import Html.Events exposing (on, preventDefaultOn)
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-| The axis a grip reads the pointer along, and steps along with the arrow
-keys: `Across` is `clientX` and ← →, `Down` is `clientY` and ↑ ↓.
+{-| The axis a grip reads the pointer along: `Across` is `clientX`, `Down` is `clientY`.
+The grip that answers to keys steps along them too -- `Across` is ← →, `Down` is ↑ ↓.
 -}
 type Axis
     = Across
@@ -63,11 +64,22 @@ next frame has reported no moves at all.
 the pointer for itself, or the grip leaving the document. It also follows
 every `onDrop`, and both arrive whether or not anything is held.
 
-`onStep` is for the arrow keys once the grip has the focus, and arrives for
-every other key as nothing.
-
 -}
 type alias Config msg =
+    { id : String
+    , label : String
+    , held : Bool
+    , onGrab : Pointer -> msg
+    , onMove : Pointer -> msg
+    , onDrop : Pointer -> msg
+    , onCancel : Int -> msg
+    }
+
+
+{-| The same, for a grip the arrow keys step once it has the focus. The step comes
+for every other key as nothing.
+-}
+type alias Stepped msg =
     { id : String
     , label : String
     , held : Bool
@@ -97,14 +109,14 @@ type alias Config2 msg =
 
 {-| The grip for carrying a thing along.
 -}
-view : Config msg -> Html msg
+view : Stepped msg -> Html msg
 view config =
     grip
-        (Carry (keyShortcuts Across))
+        (Carry "ArrowLeft ArrowRight")
         { id = config.id
         , label = config.label
         , held = config.held
-        , hint = arrowHint Across
+        , hint = "← →"
         , classes = "grid place-content-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
         , cursor =
             if config.held then
@@ -113,7 +125,7 @@ view config =
             else
                 "cursor-grab"
         , glyph = "⠿"
-        , events = eventsAlong Across config
+        , events = eventsAlong Across config ++ [ stepWith leftRight config.onStep ]
         }
 
 
@@ -135,12 +147,12 @@ carry config =
             else
                 "cursor-grab"
         , glyph = "⠿"
-        , events = eventsAcross config
+        , events = eventsAcross config ++ [ stepWith bothArrows config.onStep ]
         }
 
 
 {-| The same grip lying along an edge to resize what it bounds: the pointer's
-travel is the size's, and the arrow keys step it. `Across` lies along a column
+travel is the size's, and no key reaches it. `Across` lies along a column
 edge, `Down` along a row edge. It answers as the splitter it is, so the range it
 can be taken between is said with `Range`.
 
@@ -157,12 +169,12 @@ resize axis glyph range config =
         ( classes, cursor ) =
             case axis of
                 Across ->
-                    ( "grid place-content-center w-2 h-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                    ( "grid place-content-center w-2 h-full text-[11px] select-none transition-colors"
                     , "cursor-col-resize"
                     )
 
                 Down ->
-                    ( "grid place-content-center h-2 w-full text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                    ( "grid place-content-center h-2 w-full text-[11px] select-none transition-colors"
                     , "cursor-row-resize"
                     )
     in
@@ -171,7 +183,7 @@ resize axis glyph range config =
         { id = config.id
         , label = config.label
         , held = config.held
-        , hint = arrowHint axis
+        , hint = ""
         , classes = classes
         , cursor =
             if config.held then
@@ -210,6 +222,10 @@ type Kind
 {-| What every grip is made of: the a11y attributes, the class, the glyph, and the
 events the state machine is driven by -- which are the one thing a grip along a line
 and a grip across the page do not share.
+
+`hint` is the arrows the grip answers to. An empty one says no key reaches it, and it
+is then no tab stop either.
+
 -}
 type alias Grip msg =
     { id : String
@@ -230,12 +246,24 @@ is taller than the 8px an edge grip is, and the row hangs below the grip.
 -}
 grip : Kind -> Grip msg -> Html msg
 grip kind g =
+    let
+        keys =
+            not (String.isEmpty g.hint)
+    in
     Html.node "drag-handle"
         ([ id g.id
          , attribute "aria-roledescription" "drag handle"
-         , attribute "tabindex" "0"
          , attribute "aria-label" g.label
-         , title (g.label ++ ": drag it, or press " ++ g.hint)
+         , title
+            (g.label
+                ++ ": drag it"
+                ++ (if keys then
+                        ", or press " ++ g.hint
+
+                    else
+                        ""
+                   )
+            )
          , class
             (g.classes
                 ++ " "
@@ -248,17 +276,38 @@ grip kind g =
                    )
             )
          ]
+            ++ (if keys then
+                    [ attribute "tabindex" "0" ]
+
+                else
+                    []
+               )
             ++ role kind
             ++ g.events
         )
         [ text g.glyph ]
 
 
-{-| The events of a grip read along one axis. A move is listened for only while one
-is held, and the release is listened for always: the pointer can be let go of before
-the frame that would have added a move.
+{-| The keys a grip steps along, and nothing else. `preventDefault` because the page
+would otherwise scroll under them.
 -}
-eventsAlong : Axis -> Config msg -> List (Html.Attribute msg)
+stepWith : Decoder step -> (step -> msg) -> Html.Attribute msg
+stepWith decoder toMsg =
+    preventDefaultOn "keydown" (Decode.map (\step -> ( toMsg step, True )) decoder)
+
+
+{-| The pointer's events of a grip read along one axis. A move is listened for only
+while one is held, and the release is listened for always: the pointer can be let go
+of before the frame that would have added a move.
+
+The row stays open because the grip that steps along the axis is handed over too, and
+its `onStep` is the grip's own business.
+
+-}
+eventsAlong :
+    Axis
+    -> { g | held : Bool, onGrab : Pointer -> msg, onMove : Pointer -> msg, onDrop : Pointer -> msg, onCancel : Int -> msg }
+    -> List (Html.Attribute msg)
 eventsAlong axis config =
     let
         read =
@@ -268,7 +317,6 @@ eventsAlong axis config =
     , on "pointerup" (Decode.map config.onDrop read)
     , on "pointercancel" (Decode.map config.onCancel pointerId)
     , on "lostpointercapture" (Decode.map config.onCancel pointerId)
-    , preventDefaultOn "keydown" (Decode.map (\step -> ( config.onStep step, True )) (arrowStep axis))
     ]
         ++ (if config.held then
                 [ on "pointermove" (Decode.map config.onMove read) ]
@@ -278,7 +326,7 @@ eventsAlong axis config =
            )
 
 
-{-| The events of a grip read in both directions at once.
+{-| The pointer's events of a grip read in both directions at once.
 -}
 eventsAcross : Config2 msg -> List (Html.Attribute msg)
 eventsAcross config =
@@ -286,7 +334,6 @@ eventsAcross config =
     , on "pointerup" (Decode.map config.onDrop place)
     , on "pointercancel" (Decode.map config.onCancel pointerId)
     , on "lostpointercapture" (Decode.map config.onCancel pointerId)
-    , preventDefaultOn "keydown" (Decode.map (\steps -> ( config.onStep steps, True )) bothArrows)
     ]
         ++ (if config.held then
                 [ on "pointermove" (Decode.map config.onMove place) ]
@@ -369,45 +416,18 @@ primaryButton =
             )
 
 
-keyShortcuts : Axis -> String
-keyShortcuts axis =
-    case axis of
-        Across ->
-            "ArrowLeft ArrowRight"
-
-        Down ->
-            "ArrowUp ArrowDown"
-
-
-arrowHint : Axis -> String
-arrowHint axis =
-    case axis of
-        Across ->
-            "← →"
-
-        Down ->
-            "↑ ↓"
-
-
-{-| Fails on every other key, so that Tab and the rest keep what they do. The keys
-along the other axis step nothing here, and vice versa.
+{-| Fails on every other key, so that Tab and the rest keep what they do.
 -}
-arrowStep : Axis -> Decoder Int
-arrowStep axis =
+leftRight : Decoder Int
+leftRight =
     Decode.field "key" Decode.string
         |> Decode.andThen
             (\key ->
-                case ( axis, key ) of
-                    ( Across, "ArrowLeft" ) ->
+                case key of
+                    "ArrowLeft" ->
                         Decode.succeed -1
 
-                    ( Across, "ArrowRight" ) ->
-                        Decode.succeed 1
-
-                    ( Down, "ArrowUp" ) ->
-                        Decode.succeed -1
-
-                    ( Down, "ArrowDown" ) ->
+                    "ArrowRight" ->
                         Decode.succeed 1
 
                     _ ->

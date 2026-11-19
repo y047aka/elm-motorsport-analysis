@@ -9,7 +9,7 @@ import Test exposing (Test, describe, test)
 
 fence : Resize.Fence
 fence =
-    { min = 200, max = 600, step = 20 }
+    { min = 200, max = 600 }
 
 
 edge : Resize.Edge
@@ -19,6 +19,7 @@ edge =
     , fence = fence
     , id = "test-resize-grip"
     , label = "Resize the test thing"
+    , glyph = ""
     }
 
 
@@ -97,17 +98,6 @@ suite =
                     in
                     step (Cancel 1) released
                         |> Expect.equal released
-            ]
-        , describe "stepping by hand"
-            [ test "the arrow keys take the step, and hold at the fence" <|
-                \_ ->
-                    Expect.all
-                        [ \m ->
-                            m |> step (Step 5) |> .size |> Expect.equal 400
-                        , \m ->
-                            m |> step (Step 100) |> .size |> Expect.equal fence.max
-                        ]
-                        (Resize.init 300)
             ]
         ]
 

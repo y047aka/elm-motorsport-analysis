@@ -45,11 +45,10 @@ type alias Model =
 type alias Fence =
     { min : Float
     , max : Float
-    , step : Float
     }
 
 
-{-| Which edge the grip lies along: the axis it reads and steps, the way the size
+{-| Which edge the grip lies along: the axis its pointer is read along, the way the size
 moves along it, the bounds it holds the size between, the id it answers to, the
 words it is labelled with, and the mark it shows -- `""` where the cursor is mark
 enough.
@@ -76,7 +75,6 @@ type Msg
     | Carrying Pointer
     | Release Pointer
     | Cancel Int
-    | Step Int
 
 
 {-| The size follows `Drag`, and a `Cancel` leaves it where the last move left
@@ -105,9 +103,6 @@ update edge msg m =
 
         Cancel pointerId ->
             { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }
-
-        Step steps ->
-            { m | size = clampTo edge.fence (m.size + signed edge.grows (toFloat steps * edge.fence.step)) }
 
 
 signed : Grows -> Float -> Float
@@ -139,5 +134,4 @@ grip edge m =
         , onMove = Carrying
         , onDrop = Release
         , onCancel = Cancel
-        , onStep = Step
         }
