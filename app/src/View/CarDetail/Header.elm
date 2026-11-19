@@ -1,9 +1,9 @@
-module View.CarDetail.Header exposing (closeButton, cornerButton, view)
+module View.CarDetail.Header exposing (closeButton, cornerButton, cornerPopover, view)
 
 {-| The line a classification prints for one car, and the ✕ that closes a
 column when the reader has several open.
 
-@docs closeButton, cornerButton, view
+@docs closeButton, cornerButton, cornerPopover, view
 
 -}
 
@@ -105,9 +105,29 @@ cornerButton { onPress, label, glyph } =
         [ onClick onPress
         , attribute "aria-label" label
         , title label
-        , class "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
+        , class cornerClass
         ]
         [ text glyph ]
+
+
+{-| The same button showing a popover instead of sending a message: the browser
+keeps whether that popover is open, so nothing here is asked to.
+-}
+cornerPopover : { popover : String, action : String, label : String, glyph : String } -> Html msg
+cornerPopover { popover, action, label, glyph } =
+    button
+        [ attribute "popovertarget" popover
+        , attribute "popovertargetaction" action
+        , attribute "aria-label" label
+        , title label
+        , class cornerClass
+        ]
+        [ text glyph ]
+
+
+cornerClass : String
+cornerClass =
+    "grid place-items-center w-5 h-5 rounded-md text-[11px] text-muted-foreground cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
 
 
 {-| The field's place and not the class's, which the strip below reports.

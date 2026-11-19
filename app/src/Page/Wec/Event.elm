@@ -134,28 +134,10 @@ update shared msg m =
 
         FloatMsg sub ->
             let
-                ( float, out ) =
+                ( float, cmd ) =
                     Float.update sub m.float
             in
-            case out of
-                Float.None ->
-                    ( { m | float = float }, Effect.none )
-
-                Float.Send cmd ->
-                    ( { m | float = float }, Effect.sendCmd (Cmd.map FloatMsg cmd) )
-
-                -- `Open` joins a column at the back of the order, so one already
-                -- open is not opened again.
-                Float.OpenTrackerColumn ->
-                    let
-                        ( strip, cmd ) =
-                            if List.member Columns.Tracker m.strip.order then
-                                ( m.strip, Cmd.none )
-
-                            else
-                                Columns.update (field shared) (Columns.Open Columns.Tracker) m.strip
-                    in
-                    ( { m | float = float, strip = strip }, Effect.sendCmd (Cmd.map ColumnsMsg cmd) )
+            ( { m | float = float }, Effect.sendCmd (Cmd.map FloatMsg cmd) )
 
         FocusColumn key ->
             let
@@ -481,7 +463,7 @@ columnStrip cell track timeline keys m pitCycles replay snapshot =
                             class_
 
                     Columns.Tracker ->
-                        trackerCard several (Columns.isCarried placement) (Html.map FloatMsg (Float.toggle m.float.shown)) track snapshot
+                        trackerCard several (Columns.isCarried placement) (Html.map FloatMsg Float.trigger) track snapshot
 
                     Columns.Events ->
                         EventsColumn.view

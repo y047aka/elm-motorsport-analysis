@@ -24,10 +24,9 @@ const HEIGHT_STEP = readConstant('heightFence.step', floatSource, /heightFence =
 const FLOAT = '[data-tracker-float]';
 const STRIP = '#column-strip';
 
-/** The map's two presses, found by what they are called: the column's own `◱`
- * while it is hidden, the ✕ every overlay here closes with once it is not. The ✕
- * is drawn twice when the map is up, and the press in the column turns back into
- * a `◱` again. */
+/** The map's two presses, found by what they are called. Neither one carries the
+ * state: the browser keeps whether the popover is open, the column's press stays `◱`
+ * forever, and the ✕ lives in the map's own corner -- the only way back. */
 const floatTrigger = (page: Page) =>
   page.locator(TRACKER_COLUMN).getByRole('button', { name: 'Float the track map over the columns' });
 const floatClose = (page: Page) =>
@@ -82,14 +81,16 @@ test.describe('the floating track map', () => {
     await setLapCount(page, COTA, 71);
   });
 
-  test('is not on the page until the column asks for it, and costs the strip nothing', async ({ page }) => {
-    // Nothing is drawn, and nothing is laid out for it: the page opens without the
-    // map, which is the difference between this and the row below the strip.
-    await expect(page.locator(FLOAT)).toHaveCount(0);
+  test('is closed until the column asks for it, and costs the strip nothing', async ({ page }) => {
+    // The box is on the page -- a `popovertarget` resolves by id, so the element has
+    // to be there to be shown -- but the UA keeps a closed popover out of layout, and
+    // the drawing inside it is not built. That is the difference between this and the
+    // row below the strip.
+    await expect(page.locator(FLOAT)).toBeHidden();
     const before = await box(page, STRIP);
 
     await floatTrigger(page).click();
-    await expect(page.locator(FLOAT)).toHaveCount(1);
+    await expect(page.locator(FLOAT)).toBeVisible();
 
     // The claim the whole layout rests on: the strip keeps the box it had, down to
     // where it stands. The map is stood over it, so it gives up nothing.
@@ -255,21 +256,24 @@ test.describe('the floating track map', () => {
     await expect(page.locator(FLOAT)).toHaveCSS('height', `${FLOAT_HEIGHT + HEIGHT_STEP}px`);
   });
 
-  test('closes from either corner, and the column says which state it is in', async ({ page }) => {
+  test('opens from the column corner and closes from its own', async ({ page }) => {
     await expect(floatTrigger(page)).toHaveCount(1);
+
+    // The ✕ is on the page from the first frame, but a closed popover keeps its
+    // subtree out of the accessibility tree, so there is no press to find.
     await expect(floatClose(page)).toHaveCount(0);
 
     await floatTrigger(page).click();
-    await expect(page.locator(FLOAT)).toHaveCount(1);
+    await expect(page.locator(FLOAT)).toBeVisible();
 
-    // Both corners take the `◱` for a ✕ once the map is up: the way back is
-    // wherever the room was asked from.
-    await expect(floatTrigger(page)).toHaveCount(0);
-    await expect(floatClose(page)).toHaveCount(2);
-    await expect(page.locator(FLOAT).getByRole('button', { name: 'Close the floating track map' })).toHaveCount(1);
+    // The way back is in the map's own corner, and the column keeps saying `◱`.
+    await expect(floatTrigger(page)).toHaveCount(1);
+    await expect(floatClose(page)).toHaveCount(1);
 
-    await floatClose(page).first().click();
-    await expect(page.locator(FLOAT)).toHaveCount(0);
+    // Nothing outside the map closes it: a `manual` popover is not dismissed by a
+    // press beside it, so the columns go on being worked while the map is up.
+    await floatClose(page).click();
+    await expect(page.locator(FLOAT)).toBeHidden();
     await expect(floatTrigger(page)).toHaveCount(1);
   });
 });
