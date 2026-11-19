@@ -49,8 +49,8 @@ pub mod Round.Summary {
     /// carries.
     def startedAt(entry: Entry): Sel[Option[Int32]] \ DbErr =
         Sql.optionalIntOf(Sql.spliced(
-            "(SELECT ${Schema.nameOf(Laps.hourOffsetMs())}"
-                + " FROM ${Laps.table()} WHERE {{scope}} ORDER BY source_row LIMIT 1)",
+            "(SELECT ${Schema.nameOf(Laps.hourOffsetMs())}" ::
+            "FROM ${Laps.table()} WHERE {{scope}} ORDER BY source_row LIMIT 1)" :: Nil,
             Map#{ "scope" => Laps.scope(entry, Nil) }))
 
     // ----------------------------------------------------------------- cars
@@ -65,9 +65,9 @@ pub mod Round.Summary {
     def driverNames(entry: Entry, seats: Round.Drivers.Seats): List[(String, String)] \ DbRead =
         let c = Laps.columns();
         Sql.statement(
-            "SELECT %% FROM (SELECT car_number, driver_number, MIN(source_row) AS first_seen"
-                + " FROM ${Laps.table()} WHERE {{scope}} GROUP BY car_number, driver_number) d"
-                + " ORDER BY first_seen",
+            "SELECT %% FROM (SELECT car_number, driver_number, MIN(source_row) AS first_seen" ::
+            "FROM ${Laps.table()} WHERE {{scope}} GROUP BY car_number, driver_number) d" ::
+            "ORDER BY first_seen" :: Nil,
             Map#{ "scope" => Laps.scope(entry, Nil) },
             (c#carNumber, c#driverNumber))
             |> Sql.selectAll
@@ -84,16 +84,16 @@ pub mod Round.Summary {
         let entered = Entries.columns();
         let laps = Laps.columns();
         Sql.statement(
-            "WITH f AS (SELECT car_number, MIN(source_row) AS first_seen"
-                + " FROM ${Laps.table()} WHERE {{scope}} GROUP BY car_number),"
-                + " l1 AS (SELECT * FROM ("
-                + " SELECT car_number, s1_ms, elapsed_ms,"
-                + " ROW_NUMBER() OVER (PARTITION BY car_number ORDER BY source_row) AS rn"
-                + " FROM ${Laps.table()} WHERE {{lapOne}}) WHERE rn = 1)"
-                + " SELECT %% FROM ${Cars.table()} c JOIN ${Entries.table()} e ON e.entry_id = c.entry_id"
-                + " JOIN f ON f.car_number = c.car_number"
-                + " LEFT JOIN l1 ON l1.car_number = c.car_number"
-                + " WHERE {{round}} ORDER BY f.first_seen",
+            "WITH f AS (SELECT car_number, MIN(source_row) AS first_seen" ::
+            "FROM ${Laps.table()} WHERE {{scope}} GROUP BY car_number)," ::
+            "l1 AS (SELECT * FROM (" ::
+            "SELECT car_number, s1_ms, elapsed_ms," ::
+            "ROW_NUMBER() OVER (PARTITION BY car_number ORDER BY source_row) AS rn" ::
+            "FROM ${Laps.table()} WHERE {{lapOne}}) WHERE rn = 1)" ::
+            "SELECT %% FROM ${Cars.table()} c JOIN ${Entries.table()} e ON e.entry_id = c.entry_id" ::
+            "JOIN f ON f.car_number = c.car_number" ::
+            "LEFT JOIN l1 ON l1.car_number = c.car_number" ::
+            "WHERE {{round}} ORDER BY f.first_seen" :: Nil,
             Map#{
                 "scope"  => Laps.scope(entry, Nil),
                 "lapOne" => Laps.scope(entry, Sql.eq(Schema.expr(laps#lapNumber), Sql.i32(1)) :: Nil),

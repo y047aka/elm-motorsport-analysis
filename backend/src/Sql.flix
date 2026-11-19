@@ -56,11 +56,14 @@ pub mod Sql {
         let Frag.Frag(sql, params) = fragment;
         (sql, params)
 
-    /// The text of a piece that binds nothing, which is what a statement written out
-    /// interpolates: a column's name, an aggregate over declared columns, a window's
-    /// clauses. A piece that does bind values has nowhere else they could go, and is
-    /// asked for by `toSql`, which keeps them.
-    pub def sqlOf(fragment: Frag): String =
+    /// The text of a projection, which is what a statement written out interpolates: a
+    /// column's name, an aggregate over declared columns, a window's clauses.
+    ///
+    /// A projection that binds values has nowhere else they could go, and its text says how many it binds rather than pretending they are not there.
+    pub def sqlOf(p: p): String with Project[p] =
+        sqlText(columnsOf(p))
+
+    def sqlText(fragment: Frag): String =
         let Frag.Frag(sql, params) = fragment;
         if (List.isEmpty(params))
             sql
@@ -597,11 +600,11 @@ pub mod Sql {
     /// says which name is missing, or which name nothing was given for, and not how
     /// many of each there happened to be.
     pub def statement(
-        template: String,
+        lines: List[String],
         holes: Map[String, Frag],
         projection: p
     ): Query[Project.Out[p]] \ DbErr with Project[p] =
-        Query.Written(filled(template, holes, columnsOf(projection)), Project.sel(projection))
+        Query.Written(filled(spaced(lines), holes, columnsOf(projection)), Project.sel(projection))
 
     /// The statement, the holes filled.
     ///
@@ -636,10 +639,11 @@ pub mod Sql {
             ))
         }
 
-    /// A piece of a statement written as one string, with `{{name}}` where each of
-    /// `holes` goes and no clause in it: a common table expression, an arm of a
-    /// `UNION ALL`, a scalar subquery.
-    pub def spliced(template: String, holes: Map[String, Frag]): Frag \ DbErr =
+    /// A piece of a statement written out, with `{{name}}` where each of `holes` goes
+    /// and no clause in it: a common table expression, an arm of a `UNION ALL`, a
+    /// scalar subquery.
+    pub def spliced(lines: List[String], holes: Map[String, Frag]): Frag \ DbErr =
+        let template = spaced(lines);
         let named = holeNames(template);
         let given = holes |> Map.toList |> List.map(match (name, _) -> name);
         let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
@@ -654,6 +658,12 @@ pub mod Sql {
             ))
             case (Nil, Nil) => holesFilled(template, holes, template)
         }
+
+    /// The lines of a written statement, or of a piece of one, run together where SQL puts a space.
+    ///
+    /// Flix has no multi-line string literal, which is why a statement is written one clause per line and put back into one string here.
+    pub def spaced(lines: List[String]): String =
+        List.join(" ", lines)
 
     /// Every hole a template names, in the order it names them.
     def holeNames(text: String): List[String] =

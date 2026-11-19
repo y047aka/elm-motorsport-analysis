@@ -106,14 +106,14 @@ pub mod Round.Timeline {
     def fastestLaps(entry: Entry): List[Timeline.FastestLap] \ DbRead =
         let c = Laps.columns();
         Sql.statement(
-            "WITH timed AS (SELECT ${Laps.table()}.car_number, elapsed_ms, lap_number, lap_time_ms,"
-                + " MIN(lap_time_ms) OVER (PARTITION BY ${Entries.table()}.class"
-                + " ORDER BY elapsed_ms, source_row"
-                + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS standing"
-                + " FROM ${classed()} WHERE lap_number > 1 AND lap_time_ms <> 0 AND {{scope}})"
-                + " SELECT %% FROM timed"
-                + " WHERE standing IS NULL OR lap_time_ms < standing"
-                + " ORDER BY elapsed_ms",
+            "WITH timed AS (SELECT ${Laps.table()}.car_number, elapsed_ms, lap_number, lap_time_ms," ::
+            "MIN(lap_time_ms) OVER (PARTITION BY ${Entries.table()}.class" ::
+            "ORDER BY elapsed_ms, source_row" ::
+            "ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS standing" ::
+            "FROM ${classed()} WHERE lap_number > 1 AND lap_time_ms <> 0 AND {{scope}})" ::
+            "SELECT %% FROM timed" ::
+            "WHERE standing IS NULL OR lap_time_ms < standing" ::
+            "ORDER BY elapsed_ms" :: Nil,
             Map#{ "scope" => Laps.scope(entry, Nil) },
             (c#carNumber, c#elapsedMs, c#lapNumber))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
@@ -137,14 +137,14 @@ pub mod Round.Timeline {
             lap = Schema.derived("handed_lap", "int", Sql.int)
         };
         Sql.statement(
-            "WITH seated AS (SELECT car_number, driver_number,"
-                + " LAG(driver_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS prior,"
-                + " LAG(elapsed_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_at,"
-                + " LAG(lap_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_lap"
-                + " FROM ${Laps.table()} WHERE {{scope}})"
-                + " SELECT %% FROM seated"
-                + " WHERE prior IS NOT NULL AND prior <> driver_number"
-                + " ORDER BY handed_at",
+            "WITH seated AS (SELECT car_number, driver_number," ::
+            "LAG(driver_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS prior," ::
+            "LAG(elapsed_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_at," ::
+            "LAG(lap_number) OVER (PARTITION BY car_number ORDER BY lap_number) AS handed_lap" ::
+            "FROM ${Laps.table()} WHERE {{scope}})" ::
+            "SELECT %% FROM seated" ::
+            "WHERE prior IS NOT NULL AND prior <> driver_number" ::
+            "ORDER BY handed_at" :: Nil,
             Map#{ "scope" => Laps.scope(entry, Nil) },
             (c#carNumber, handed#at, handed#lap))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
@@ -180,19 +180,19 @@ pub mod Round.Timeline {
         let led = seen("led", x);
         let held = Schema.qualified("led", held());
         Sql.statement(
-            "WITH ${crossed(x)}"
-                + " SELECT %% FROM ("
-                + " SELECT ${l#carNumber}, ${l#lapNumber}, ${l#elapsedMs},"
-                + " ${Sql.sqlOf(Sql.fragment(Sql.lag(l#carNumber, classLeads(l))))} AS ${heldName()}"
-                + " FROM ${l#table} WHERE ${l#place} = 1) AS ${led#table}"
-                + " WHERE ${held} IS NOT NULL AND ${held} <> ${led#carNumber}"
+            "WITH ${crossed(x)}" ::
+            "SELECT %% FROM (" ::
+            "SELECT ${l#carNumber}, ${l#lapNumber}, ${l#elapsedMs}," ::
+            "${Sql.sqlOf(Sql.lag(l#carNumber, classLeads(l)))} AS ${heldName()}" ::
+            "FROM ${l#table} WHERE ${l#place} = 1) AS ${led#table}" ::
+            "WHERE ${held} IS NOT NULL AND ${held} <> ${led#carNumber}" ::
                 // The lap the overtake is read on is the out-lap's own, and not the one
                 // before it: a leader that came back out in front has its out-lap there,
                 // and an overtake on the lap after is still one.
-                + " AND EXISTS (SELECT 1 FROM ${l#table}"
-                + " WHERE ${l#carNumber} = ${held}"
-                + " AND ${l#lapNumber} = ${led#lapNumber} AND NOT ${l#pitted})"
-                + " ORDER BY ${led#elapsedMs}",
+            "AND EXISTS (SELECT 1 FROM ${l#table}" ::
+            "WHERE ${l#carNumber} = ${held}" ::
+            "AND ${l#lapNumber} = ${led#lapNumber} AND NOT ${l#pitted})" ::
+            "ORDER BY ${led#elapsedMs}" :: Nil,
             Map#{ "scope" => Laps.scope(entry, Nil) },
             (led#carNumber, led#elapsedMs, led#lapNumber))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
@@ -217,27 +217,27 @@ pub mod Round.Timeline {
         let stop = seen("stop", x);
         let between = seen("between_", x);
         Sql.statement(
-            "WITH ${crossed(x)},"
+            "WITH ${crossed(x)}," ::
                 // Who led their class on each lap. A car only ever leads its own class,
                 // so a stop is matched to its car's leads by the car alone.
-                + " ${led#table} AS (SELECT ${l#carNumber}, ${l#lapNumber}"
-                + " FROM ${l#table} WHERE ${l#place} = 1)"
-                + " SELECT %% FROM ${l#table} AS ${stop#table}"
+            "${led#table} AS (SELECT ${l#carNumber}, ${l#lapNumber}" ::
+            "FROM ${l#table} WHERE ${l#place} = 1)" ::
+            "SELECT %% FROM ${l#table} AS ${stop#table}" ::
                 // A stop the car in the lead made: it led the lap before its out-lap, or
                 // the lap before that -- the leader that lost the lead at the crossing it
                 // turned down the lane from, coming back out one lap later. Not the lap
                 // before that when the lap between was an out-lap of its own: that is a
                 // second stop straight after one, and the lead two laps back was lost at
                 // the first.
-                + " WHERE ${stop#stopped} AND EXISTS (SELECT 1 FROM ${led#table}"
-                + " WHERE ${led#carNumber} = ${stop#carNumber}"
-                + " AND (${led#lapNumber} = ${stop#lapNumber} - 1"
-                + " OR (${led#lapNumber} = ${stop#lapNumber} - 2"
-                + " AND NOT EXISTS (SELECT 1 FROM ${l#table} AS ${between#table}"
-                + " WHERE ${between#carNumber} = ${stop#carNumber}"
-                + " AND ${between#lapNumber} = ${stop#lapNumber} - 1"
-                + " AND ${between#stopped}))))"
-                + " ORDER BY ${stop#elapsedMs}",
+            "WHERE ${stop#stopped} AND EXISTS (SELECT 1 FROM ${led#table}" ::
+            "WHERE ${led#carNumber} = ${stop#carNumber}" ::
+            "AND (${led#lapNumber} = ${stop#lapNumber} - 1" ::
+            "OR (${led#lapNumber} = ${stop#lapNumber} - 2" ::
+            "AND NOT EXISTS (SELECT 1 FROM ${l#table} AS ${between#table}" ::
+            "WHERE ${between#carNumber} = ${stop#carNumber}" ::
+            "AND ${between#lapNumber} = ${stop#lapNumber} - 1" ::
+            "AND ${between#stopped}))))" ::
+            "ORDER BY ${stop#elapsedMs}" :: Nil,
             Map#{ "scope" => Laps.scope(entry, Nil) },
             (stop#carNumber, cameInAt(stop), cameInOn(stop)))
             |> Sql.reading(match (carNumber, elapsed, lapNumber) ->
@@ -298,11 +298,12 @@ pub mod Round.Timeline {
     /// The crossings written out. `{{scope}}` is where the round's rows go, bound.
     def crossed(c: Crossings): String =
         let e = Entries.columns();
-        "${c#table} AS (SELECT ${Laps.table()}.${c#carNumber}, ${c#lapNumber}, ${c#elapsedMs},"
-            + " ${Laps.pitLap()} AS ${c#pitted}, ${Laps.pitOutLap()} AS ${c#stopped},"
-            + " ${Entries.table()}.${Schema.name(e#carClass)} AS ${c#carClass},"
-            + " ${Sql.sqlOf(Sql.fragment(Sql.rowNumber(firstAcross(c))))} AS ${c#place}"
-            + " FROM ${classed()} WHERE {{scope}})"
+        Sql.spaced(
+            "${c#table} AS (SELECT ${Laps.table()}.${c#carNumber}, ${c#lapNumber}, ${c#elapsedMs}," ::
+            "${Laps.pitLap()} AS ${c#pitted}, ${Laps.pitOutLap()} AS ${c#stopped}," ::
+            "${Entries.table()}.${Schema.name(e#carClass)} AS ${c#carClass}," ::
+            "${Sql.sqlOf(Sql.rowNumber(firstAcross(c)))} AS ${c#place}" ::
+            "FROM ${classed()} WHERE {{scope}})" :: Nil)
 
     /// Who crossed the line first in their class on that lap.
     def firstAcross(c: Crossings): Sql.Window =
@@ -325,27 +326,30 @@ pub mod Round.Timeline {
         let laps = Laps.table();
         let cars = Cars.table();
         let entries = Entries.table();
-        "${laps} JOIN ${cars} ON ${cars}.round_id = ${laps}.round_id"
-            + " AND ${cars}.car_number = ${laps}.car_number"
-            + " JOIN ${entries} ON ${entries}.entry_id = ${cars}.entry_id"
+        Sql.spaced(
+            "${laps} JOIN ${cars} ON ${cars}.round_id = ${laps}.round_id" ::
+            "AND ${cars}.car_number = ${laps}.car_number" ::
+            "JOIN ${entries} ON ${entries}.entry_id = ${cars}.entry_id" :: Nil)
 
     /// Where the car that made the out-lap came in: of that lap and the one before
     /// it, the earlier of the crossings that are one half of a stop, which is the
     /// in-lap when the feed wrote it.
     def cameInAt(stop: Crossings): Sel[Int32] =
         let l = seen("l", crossings());
-        Sql.int("(SELECT ${l#elapsedMs} FROM ${l#table}"
-            + " WHERE ${l#carNumber} = ${stop#carNumber}"
-            + " AND ${l#lapNumber} BETWEEN ${stop#lapNumber} - 1 AND ${stop#lapNumber}"
-            + " AND ${l#pitted} ORDER BY ${l#lapNumber} ASC LIMIT 1)")
+        Sql.int(Sql.spaced(
+            "(SELECT ${l#elapsedMs} FROM ${l#table}" ::
+            "WHERE ${l#carNumber} = ${stop#carNumber}" ::
+            "AND ${l#lapNumber} BETWEEN ${stop#lapNumber} - 1 AND ${stop#lapNumber}" ::
+            "AND ${l#pitted} ORDER BY ${l#lapNumber} ASC LIMIT 1)" :: Nil))
 
     /// Which lap the car came in on, read off the crossing `cameInAt` times.
     def cameInOn(stop: Crossings): Sel[Int32] =
         let l = seen("l", crossings());
-        Sql.int("(SELECT ${l#lapNumber} FROM ${l#table}"
-            + " WHERE ${l#carNumber} = ${stop#carNumber}"
-            + " AND ${l#lapNumber} BETWEEN ${stop#lapNumber} - 1 AND ${stop#lapNumber}"
-            + " AND ${l#pitted} ORDER BY ${l#lapNumber} ASC LIMIT 1)")
+        Sql.int(Sql.spaced(
+            "(SELECT ${l#lapNumber} FROM ${l#table}" ::
+            "WHERE ${l#carNumber} = ${stop#carNumber}" ::
+            "AND ${l#lapNumber} BETWEEN ${stop#lapNumber} - 1 AND ${stop#lapNumber}" ::
+            "AND ${l#pitted} ORDER BY ${l#lapNumber} ASC LIMIT 1)" :: Nil))
 
     // -------------------------------------------------- the laps events fell on
 
@@ -526,19 +530,19 @@ pub mod Round.Timeline {
     /// The laps the events fell on are picked out outside the window: a `WHERE` of
     /// the same SELECT is settled before a window, and the best of the kept laps
     /// alone is not the best up to that lap.
-    def running(): String =
-        "WITH running AS (SELECT car_number, driver_number, lap_number,"
-            + " NULLIF(lap_time_ms, 0) AS lap_time, s1_ms, s2_ms, s3_ms,"
-            + " mini_sector_time_ms,"
-            + " MIN(NULLIF(lap_time_ms, 0)) OVER w AS lap_best,"
-            + " MIN(s1_ms) OVER w AS s1_best,"
-            + " MIN(s2_ms) OVER w AS s2_best,"
-            + " MIN(s3_ms) OVER w AS s3_best, "
-            + miniWindows()
-            + " FROM ${Laps.table()} WHERE {{scope}}"
-            + " WINDOW w AS (PARTITION BY car_number ORDER BY lap_number"
-            + " ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))"
-            + " SELECT %% FROM running WHERE {{laps}}"
+    def running(): List[String] =
+        "WITH running AS (SELECT car_number, driver_number, lap_number," ::
+        "NULLIF(lap_time_ms, 0) AS lap_time, s1_ms, s2_ms, s3_ms," ::
+        "mini_sector_time_ms," ::
+        "MIN(NULLIF(lap_time_ms, 0)) OVER w AS lap_best," ::
+        "MIN(s1_ms) OVER w AS s1_best," ::
+        "MIN(s2_ms) OVER w AS s2_best," ::
+        "MIN(s3_ms) OVER w AS s3_best," ::
+        miniWindows() ::
+        "FROM ${Laps.table()} WHERE {{scope}}" ::
+        "WINDOW w AS (PARTITION BY car_number ORDER BY lap_number" ::
+        "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW))" ::
+        "SELECT %% FROM running WHERE {{laps}}" :: Nil
 
     /// One `MIN ... OVER w` per place on the circuit, and `json_extract` reads the
     /// array column by that same subscript.

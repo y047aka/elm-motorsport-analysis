@@ -54,10 +54,10 @@ pub mod Round.Index {
         let finish = Wec.flagToString(Wec.Flag.Finish);
         let c = Laps.columns();
         Sql.statement(
-            "WITH shown AS (SELECT elapsed_ms, flag_at_fl,"
-                + " COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior"
-                + " FROM ${Laps.table()} WHERE flag_at_fl <> '${finish}' AND {{scope}})"
-                + " SELECT %% FROM shown WHERE flag_at_fl <> prior ORDER BY elapsed_ms",
+            "WITH shown AS (SELECT elapsed_ms, flag_at_fl," ::
+            "COALESCE(LAG(flag_at_fl) OVER (ORDER BY elapsed_ms, source_row), '${green}') AS prior" ::
+            "FROM ${Laps.table()} WHERE flag_at_fl <> '${finish}' AND {{scope}})" ::
+            "SELECT %% FROM shown WHERE flag_at_fl <> prior ORDER BY elapsed_ms" :: Nil,
             Map#{ "scope" => Laps.scope(entry, Nil) },
             (c#flagAtFl, c#elapsedMs))
             |> Sql.selectAll
@@ -114,14 +114,14 @@ pub mod Round.Index {
         Sql.statement(
             // Every reading with the record as it stood before it beside it, the
             // readings walked once in the order the laps were completed.
-            "WITH v AS ({{readings}})"
-                + " SELECT %% FROM (SELECT k, ${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber},"
-                + " ${w#lapNumber}, ${w#driverNumber}, ${w#t},"
-                + " MIN(${w#t}) OVER (PARTITION BY k ORDER BY ${w#elapsedMs}, ${w#sourceRow}"
-                + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
-                + " FROM v WHERE ${w#t} IS NOT NULL)"
-                + " WHERE prev IS NULL OR ${w#t} < prev"
-                + " ORDER BY k, ${w#elapsedMs}, ${w#sourceRow}",
+            "WITH v AS ({{readings}})" ::
+            "SELECT %% FROM (SELECT k, ${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber}," ::
+            "${w#lapNumber}, ${w#driverNumber}, ${w#t}," ::
+            "MIN(${w#t}) OVER (PARTITION BY k ORDER BY ${w#elapsedMs}, ${w#sourceRow}" ::
+            "ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev" ::
+            "FROM v WHERE ${w#t} IS NOT NULL)" ::
+            "WHERE prev IS NULL OR ${w#t} < prev" ::
+            "ORDER BY k, ${w#elapsedMs}, ${w#sourceRow}" :: Nil,
             Map#{ "readings" => readings },
             (record, w#elapsedMs, w#t, w#carNumber, w#lapNumber, w#driverNumber))
             |> Sql.selectAll
@@ -162,8 +162,8 @@ pub mod Round.Index {
     def reading(entry: Entry, expression: String, predicates: List[Sql.Expr[Bool]]): Sql.Frag \ DbErr =
         let w = walked();
         Sql.spliced(
-            "${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber}, ${w#lapNumber}, ${w#driverNumber},"
-                + " ${expression} AS ${w#t} FROM ${Laps.table()} WHERE {{scope}}",
+            "${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber}, ${w#lapNumber}, ${w#driverNumber}," ::
+            "${expression} AS ${w#t} FROM ${Laps.table()} WHERE {{scope}}" :: Nil,
             Map#{ "scope" => Laps.scope(entry, predicates) })
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
@@ -172,9 +172,9 @@ pub mod Round.Index {
         let w = walked();
         let c = Laps.columns();
         Sql.spliced(
-            "${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber}, ${w#lapNumber}, ${w#driverNumber}, m.value"
-                + " FROM ${Laps.table()}"
-                + ", json_each(${Laps.table()}.${c#miniSectorTimeMs}) m WHERE {{scope}}",
+            "${w#elapsedMs}, ${w#sourceRow}, ${w#carNumber}, ${w#lapNumber}, ${w#driverNumber}, m.value" ::
+            "FROM ${Laps.table()}" ::
+            ", json_each(${Laps.table()}.${c#miniSectorTimeMs}) m WHERE {{scope}}" :: Nil,
             Map#{ "scope" =>
                 Laps.scope(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) })
 

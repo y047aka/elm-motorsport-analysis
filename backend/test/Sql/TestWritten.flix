@@ -17,8 +17,8 @@ pub mod Sql.TestWritten {
     @Test
     def theClauseIsRenderedFromTheProjectionAndLandsWhereTheMarkerStands(): Unit \ Assert =
         Assert.assertTrue(rendered(() -> Sql.statement(
-            "WITH c AS (SELECT car_number, elapsed_ms FROM laps WHERE {{scope}})"
-                + " SELECT %% FROM c WHERE elapsed_ms > {{since}}",
+            "WITH c AS (SELECT car_number, elapsed_ms FROM laps WHERE {{scope}})" ::
+            "SELECT %% FROM c WHERE elapsed_ms > {{since}}" :: Nil,
             Map#{ "scope" => scoped(), "since" => Sql.term(Sql.i32(900)) },
             (Sql.text("car_number"), Sql.int("elapsed_ms"))))
             == Ok((
@@ -33,7 +33,7 @@ pub mod Sql.TestWritten {
     @Test
     def aColumnThatBindsAValueKeepsItsPlaceAmongTheValues(): Unit \ Assert =
         Assert.assertTrue(rendered(() -> Sql.statement(
-            "SELECT %% FROM laps WHERE {{scope}}",
+            "SELECT %% FROM laps WHERE {{scope}}" :: Nil,
             Map#{ "scope" => scoped() },
             Sql.optionalIntOf(Sql.frag("(SELECT ? FROM rounds LIMIT 1)", Value.Integer(7) :: Nil))))
             == Ok((
@@ -47,7 +47,7 @@ pub mod Sql.TestWritten {
     def aHoleNamedLaterThanAnotherStillComesOutWhereItStands(): Unit \ Assert =
         Assert.assertTrue(
             Db.runWithError(() -> Sql.spliced(
-                "(SELECT car_number FROM laps WHERE {{scope}} AND lap_number > {{lap}})",
+                "(SELECT car_number FROM laps WHERE {{scope}} AND lap_number > {{lap}})" :: Nil,
                 Map#{ "lap" => Sql.frag("?", Value.Integer(2) :: Nil), "scope" => scoped() }))
                 |> Result.map(Sql.toSql)
                 == Ok((
@@ -61,7 +61,7 @@ pub mod Sql.TestWritten {
     @Test
     def aHoleWithNothingToPutInItNamesTheMissingOne(): Unit \ Assert =
         Assert.assertTrue(sentence(Db.runWithError(() -> Sql.statement(
-            "SELECT %% FROM laps WHERE round_id = {{scope}} AND lap_number = {{lap}}",
+            "SELECT %% FROM laps WHERE round_id = {{scope}} AND lap_number = {{lap}}" :: Nil,
             Map#{ "scope" => scoped() },
             Sql.int("lap_number"))))
             == "the statement names `{{lap}}` and gives nothing for it:"
@@ -72,7 +72,7 @@ pub mod Sql.TestWritten {
     @Test
     def aPieceTheStatementNeverNamesSaysSo(): Unit \ Assert =
         Assert.assertTrue(sentence(Db.runWithError(() -> Sql.statement(
-            "SELECT %% FROM laps WHERE round_id = {{scope}}",
+            "SELECT %% FROM laps WHERE round_id = {{scope}}" :: Nil,
             Map#{ "scope" => scoped(), "season" => Sql.frag("?", Value.Text("2025") :: Nil) },
             Sql.int("lap_number"))))
             == "the statement never names `{{season}}`:"
@@ -81,7 +81,7 @@ pub mod Sql.TestWritten {
     @Test
     def aStatementWithNoPlaceForItsClauseNamesItself(): Unit \ Assert =
         Assert.assertTrue(sentence(Db.runWithError(() -> Sql.statement(
-            "SELECT car_number FROM laps WHERE round_id = {{scope}}",
+            "SELECT car_number FROM laps WHERE round_id = {{scope}}" :: Nil,
             Map#{ "scope" => scoped() },
             Sql.int("lap_number"))))
             == "the statement has no `%%` for its SELECT clause:"
@@ -90,7 +90,7 @@ pub mod Sql.TestWritten {
     @Test
     def aPieceWithAMissingHoleNamesTheMissingOne(): Unit \ Assert =
         Assert.assertTrue(sentence(Db.runWithError(() ->
-            Sql.spliced("round_id = {{scope}} AND season = {{season}}",
+            Sql.spliced("round_id = {{scope}} AND season = {{season}}" :: Nil,
                 Map#{ "scope" => scoped() })))
             == "the piece names `{{season}}` and gives nothing for it:"
                 + " round_id = {{scope}} AND season = {{season}}")

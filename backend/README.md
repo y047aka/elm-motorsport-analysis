@@ -450,9 +450,9 @@ asked for, a clause with nothing to say is left out, and `filter` asked twice
 asks both. `Sql.toStatement` is pure, so what
 a query is can be read back without a database.
 
-An aggregate and a window are written over a projection and read back as that projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and `lag(l#carNumber, w)` is an `Option` because the first row of a window has no predecessor. `opt` is the same fact from the other side: an aggregate over a group holding no rows answers null too. A `Sql.Window` is a value, and a named one is spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which is how nineteen running minima are one clause. What a statement written out interpolates is the same value: `${l#carNumber}` puts a declared column's name between the keywords.
+An aggregate and a window are written over a projection and read back as that projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and `lag(l#carNumber, w)` is an `Option` because the first row of a window has no predecessor. `opt` is the same fact from the other side: an aggregate over a group holding no rows answers null too. A `Sql.Window` is a value, and a named one is spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which is how nineteen running minima are one clause. What a statement written out interpolates is the same value: `${l#carNumber}` puts a declared column's name between the keywords, and `Sql.sqlOf` -- which takes a projection, the way `%%` does -- puts an aggregate's or a window's text there.
 
-Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement as one string, with `{{name}}` where each piece it cannot write for itself goes -- the round it is scoped to, the laps the events fell on -- and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. So a written statement names its columns and reads them off the one value, as a built query does, and its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
+Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement one clause per line -- Flix has no multi-line string literal, and `spaced` puts the lines back where SQL puts a space -- with `{{name}}` where each piece it cannot write for itself goes, the round it is scoped to and the laps the events fell on, and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. So a written statement names its columns and reads them off the one value, as a built query does, and its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
 
 The bargain written statements are accepted on is that the database checks them: SQLite resolves a statement's names where it prepares it, so a rename that missed a reference is a refusal the run raises and not a build that fails. `Db.Jdbc.refusal` carries the statement into that refusal, which is the half the driver's message lacks.
 
@@ -549,9 +549,12 @@ What it has above that base is not here, and none of it rests on which way the S
   checks them against a migration's DDL; this builds most of them and writes the
   hardest ones out. What it keeps of sqlfx's idea is the check rather than the parser:
   every statement goes out against the in-memory SQLite `Round.TestSupport` builds, so a
-  column no table declares fails a test by name. A parser reading the DDL would catch
-  that at compile time, and would not accept `WINDOW w AS`, a recursive `WITH`, or
-  `json_each` in the `FROM`, which is where the hardest of these statements live. The
+  column no table declares fails a test by name, and `Round.TestReadersResolve` makes
+  every reader answer with a row, since a reader that answers with nothing never runs
+  the projection it reads with. A parser reading the DDL would catch
+  that at compile time, and is a PostgreSQL one: the dialect it reads has no `json_each`
+  to read, and sqlfx refuses `WITH RECURSIVE` and a `WITH` inside a CTE, which is where
+  the hardest of these statements live. The
   `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape this keeps.
 - **A pool, and forward-only migrations.** One file, rebuilt from CSV by
   `Cli.Load` each run, has no connection to pool and no schema to migrate
