@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Pointer, Place, Steps, Config, Stepped, Config2, Range, resize, view, carry)
+module Drag.Handle exposing (Axis(..), Pointer, Place, Steps, Config, Stepped, Config2, resize, view, carry)
 
 {-| A grip that carries something: along a line, or across the page in both directions at
 once -- by the pointer, or a step at a time by the arrow keys for the grips that
@@ -9,7 +9,7 @@ behind it is `Drag`'s business. What the grip adds is the pointer's path: the
 `drag-handle` custom element calls `setPointerCapture`, which Elm cannot, so every move and the release come back to the grip even once the pointer has left
 it.
 
-@docs Axis, Pointer, Place, Steps, Config, Stepped, Config2, Range, resize, view, carry
+@docs Axis, Pointer, Place, Steps, Config, Stepped, Config2, resize, view, carry
 
 -}
 
@@ -153,8 +153,8 @@ carry config =
 
 {-| The same grip lying along an edge to resize what it bounds: the pointer's
 travel is the size's, and no key reaches it. `Across` lies along a column
-edge, `Down` along a row edge. It answers as the splitter it is, so the range it
-can be taken between is said with `Range`.
+edge, `Down` along a row edge. It answers as the splitter it is, and how far the
+size can go is said nowhere on the element.
 
 The `String` is the mark drawn along the edge. An empty one leaves the cursor the
 only thing saying where the grip is -- and asks the wrapper to centre along the
@@ -163,8 +163,8 @@ mark's own axis only: `justify-content: center` sizes a track to its content, an
 `place-content-center`.
 
 -}
-resize : Axis -> String -> Range -> Config msg -> Html msg
-resize axis glyph range config =
+resize : Axis -> String -> Config msg -> Html msg
+resize axis glyph config =
     let
         ( classes, cursor ) =
             case axis of
@@ -179,7 +179,7 @@ resize axis glyph range config =
                     )
     in
     grip
-        (Splitter axis range)
+        (Splitter axis)
         { id = config.id
         , label = config.label
         , held = config.held
@@ -196,19 +196,9 @@ resize axis glyph range config =
         }
 
 
-{-| How far the grip's size may go, and where it stands now. `Resize` hands this
-over from the `Fence` and the `Model` it is given.
--}
-type alias Range =
-    { min : Float
-    , max : Float
-    , now : Float
-    }
-
-
 {-| What the grip is to a reader: `Carry` moves a thing and answers as a button,
-and the `String` is the arrows it answers to; `Splitter` bounds a size, and a size
-has a range and an orientation.
+and the `String` is the arrows it answers to; `Splitter` is the bar a size is bounded
+by, and says which bar it is.
 
 The distinction is the ARIA's: a thing a screen reader is told to press has to do
 something when pressed, which a splitter does not.
@@ -216,7 +206,7 @@ something when pressed, which a splitter does not.
 -}
 type Kind
     = Carry String
-    | Splitter Axis Range
+    | Splitter Axis
 
 
 {-| What every grip is made of: the a11y attributes, the class, the glyph, and the
@@ -353,9 +343,9 @@ place =
     Decode.map3 Place pointerId (Decode.field "clientX" Decode.float) (Decode.field "clientY" Decode.float)
 
 
-{-| The role and the value. `aria-orientation` names the bar the grip is, not the
-axis it travels along: the grip across a column edge is a vertical bar dragged
-sideways.
+{-| The role, and the one attribute the role wants. `aria-orientation` names the bar
+the grip is, not the axis it travels along: the grip across a column edge is a
+vertical bar dragged sideways.
 -}
 role : Kind -> List (Html.Attribute msg)
 role kind =
@@ -364,12 +354,12 @@ role kind =
             [ attribute "role" "button"
 
             -- Said, because arrows move a column without the reader being on the
-            -- grip. A splitter's arrows are its standard interaction, and
-            -- `aria-keyshortcuts` is for keys that work unfocused.
+            -- grip. A splitter answers to no keys at all, and `aria-keyshortcuts` is
+            -- for keys that work unfocused.
             , attribute "aria-keyshortcuts" arrows
             ]
 
-        Splitter axis { min, max, now } ->
+        Splitter axis ->
             [ attribute "role" "separator"
             , attribute "aria-orientation"
                 (case axis of
@@ -379,9 +369,6 @@ role kind =
                     Down ->
                         "horizontal"
                 )
-            , attribute "aria-valuemin" (String.fromFloat min)
-            , attribute "aria-valuemax" (String.fromFloat max)
-            , attribute "aria-valuenow" (String.fromFloat now)
             ]
 
 

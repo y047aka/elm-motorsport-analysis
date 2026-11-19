@@ -126,7 +126,6 @@ grip : Edge -> Model -> Html Msg
 grip edge m =
     Handle.resize edge.axis
         edge.glyph
-        { min = edge.fence.min, max = edge.fence.max, now = m.size }
         { id = edge.id
         , label = edge.label
         , held = Drag.isCarrying m.carried

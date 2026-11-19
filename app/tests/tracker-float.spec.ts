@@ -17,7 +17,6 @@ const MOVE_STEP = readConstant('step', shiftSource, /\nstep =\n\s+(\d+)/);
 const FLOAT_WIDTH = readConstant('defaultWidth', floatSource, /\ndefaultWidth =\n\s+(\d+)/);
 const FLOAT_HEIGHT = readConstant('defaultHeight', floatSource, /\ndefaultHeight =\n\s+(\d+)/);
 const WIDTH_MIN = readConstant('widthFence.min', floatSource, /widthFence =\n\s*\{[^}]*min = (\d+)/);
-const WIDTH_MAX = readConstant('widthFence.max', floatSource, /widthFence =\n\s*\{[^}]*max = (\d+)/);
 
 const FLOAT = '[data-tracker-float]';
 const STRIP = '#column-strip';
@@ -124,12 +123,10 @@ test.describe('the floating track map', () => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);
 
-    // The grip along the left edge is the width's, and the range the box can be
-    // taken between is said with `Range`.
+    // The grip along the left edge is the width's, and says which bar it is. The
+    // bounds the size is held between are the Elm's and are said nowhere on it.
     await expect(widthGrip(page)).toHaveAttribute('aria-orientation', 'vertical');
-    await expect(widthGrip(page)).toHaveAttribute('aria-valuemin', `${WIDTH_MIN}`);
-    await expect(widthGrip(page)).toHaveAttribute('aria-valuemax', `${WIDTH_MAX}`);
-    await expect(widthGrip(page)).toHaveAttribute('aria-valuenow', `${FLOAT_WIDTH}`);
+    await expect(widthGrip(page)).not.toHaveAttribute('aria-valuenow');
 
     // The pointer is the only way in: no key reaches the grip and it is no tab stop, so
     // the cursor along the edge is the whole affordance. Nothing lights under the
@@ -163,11 +160,18 @@ test.describe('the floating track map', () => {
     expect(taller.y + taller.height).toBeCloseTo(opened.y + opened.height, 0);
     await page.mouse.up();
 
+    // The fence the size is held between is the Elm's, and it bites: a travel past the
+    // narrowest leaves the box at it, and the anchor edge does not move.
+    await carryGrip(page, widthGrip(page), 400, 0);
+    const narrow = await box(page, FLOAT);
+    expect(narrow.width).toBeCloseTo(WIDTH_MIN, 0);
+    expect(narrow.x + narrow.width).toBeCloseTo(opened.x + opened.width, 0);
+    await page.mouse.up();
+
     // Neither of these two grips marks itself: the cursor along the edge is the whole
     // affordance here, unlike the standings' `⋮` along a column edge.
     await expect(widthGrip(page)).toHaveText('');
     await expect(heightGrip(page)).toHaveText('');
-
   });
 
   test('is carried round the page by its grip, at the size it was measured at', async ({ page }) => {
