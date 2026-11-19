@@ -6,25 +6,25 @@
 /// `get` and for the failure that has to say which column it failed on.
 ///
 /// SQLite types a value rather than a column, so a cell is what the driver
-/// found and not what the schema declared. `Sql`'s readings take what they can
-/// of that and say what they wanted in the failure they answer with.
-pub mod Db.Row {
+/// found and not what the schema declared. The readings take what they can of
+/// that and say what they wanted in the failure they answer with.
+pub mod Lite3fx.Row {
 
-    use Db.Value
+    use Lite3fx.SqlValue.SqlValue
 
     pub enum Row with Eq, ToString {
-        case Row(List[String], List[Value])
+        case Row(List[String], List[SqlValue])
     }
 
     /// The row a statement came back as, names and cells.
-    pub def of(columns: List[String], cells: List[Value]): Row =
+    pub def of(columns: List[String], cells: List[SqlValue]): Row =
         Row.Row(columns, cells)
 
     /// A row of cells and no names, for a reading that takes only positions.
-    pub def ofCells(cells: List[Value]): Row =
+    pub def ofCells(cells: List[SqlValue]): Row =
         Row.Row(Nil, cells)
 
-    pub def cells(row: Row): List[Value] =
+    pub def cells(row: Row): List[SqlValue] =
         let Row.Row(_, values) = row;
         values
 
@@ -42,7 +42,7 @@ pub mod Db.Row {
 
     /// The first cell, its column's name where the row carries names, and the
     /// row that is left.
-    pub def uncons(row: Row): Option[(String, Value, Row)] = match row {
+    pub def uncons(row: Row): Option[(String, SqlValue, Row)] = match row {
         case Row.Row(_, Nil) => None
         case Row.Row(labels, value :: rest) =>
             let (name, left) = match labels {
@@ -54,39 +54,19 @@ pub mod Db.Row {
 
     /// The cell under a name. Two columns of the same name -- a join naming
     /// one from each side -- answer with the first.
-    pub def get(row: Row, name: String): Option[Value] =
+    pub def get(row: Row, name: String): Option[SqlValue] =
         lookup(columnNames(row), cells(row), name)
 
-    def lookup(names: List[String], cells: List[Value], name: String): Option[Value] =
+    def lookup(names: List[String], cells: List[SqlValue], name: String): Option[SqlValue] =
         match (names, cells) {
             case (head :: tail, value :: rest) =>
                 if (head == name) Some(value) else lookup(tail, rest, name)
             case _ => None
         }
 
-    /// The cell as text, which is what every column of this schema was written
-    /// as: the load binds text, and SQLite keeps what it is given. A null has no
-    /// text, and the answer for one is the empty string.
-    pub def textOf(value: Value): String = match value {
-        case Value.Text(s)     => s
-        case Value.Integer(n)  => "${n}"
-        case Value.Real(n)     => "${n}"
-        case Value.Boolean(b)  => if (b) "1" else "0"
-        case Value.Json(xs)    => Db.jsonArray(xs)
-        case Value.Null        => ""
-        case Value.NullOf(_)   => ""
-    }
-
-    /// Whether the cell carries nothing.
-    pub def isNull(value: Value): Bool = match value {
-        case Value.Null      => true
-        case Value.NullOf(_) => true
-        case _               => false
-    }
-
     /// Whether every one of the first `n` cells carries nothing.
     pub def allNull(row: Row, n: Int32): Bool =
-        List.take(n, cells(row)) |> List.forAll(isNull)
+        List.take(n, cells(row)) |> List.forAll(SqlValue.isNull)
 
     /// The row without its first `n` cells.
     pub def drop(row: Row, n: Int32): Row =

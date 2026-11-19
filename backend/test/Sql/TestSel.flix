@@ -1,6 +1,7 @@
 pub mod Sql.TestSel {
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.SqlValue
 
-    use Db.Value
     use Sql.Sel
 
     def pair(): Sel[(String, Int32)] =
@@ -32,14 +33,14 @@ pub mod Sql.TestSel {
     def aNullUnderANonOptionalReadingNamesTheExpression(): Unit \ Assert =
         Assert.assertTrue(
             Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: None :: Nil))
-                == Err(Db.Error.Unread("column `lap_number` was null"))
+                == Err(DbErrorKind.DecodeError("lap_number", "was null"))
         )
 
     @Test
     def aCellThatIsNotANumberNamesTheExpression(): Unit \ Assert =
         Assert.assertTrue(
             Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: Some("7.5") :: Nil))
-                == Err(Db.Error.Unread("column `lap_number` is not a number: \"7.5\""))
+                == Err(DbErrorKind.DecodeError("lap_number", "is not a number: \"7.5\""))
         )
 
     @Test
@@ -64,18 +65,18 @@ pub mod Sql.TestSel {
         Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("0") :: Nil)) == Ok(false));
         Assert.assertTrue(
             Sql.decode(sel, TestCells.row(Some("true") :: Nil))
-                == Err(Db.Error.Unread("column `crossing_finish_line_in_pit` is not a boolean: \"true\""))
+                == Err(DbErrorKind.DecodeError("crossing_finish_line_in_pit", "is not a boolean: \"true\""))
         )
 
     @Test
     def andThenReadsAReadingFurther(): Unit \ Assert =
         let sel = Sql.int("k") |> Sql.andThen(label ->
-            if (label == 0) Ok("fastest lap") else Err(Db.Error.Unread("no record is labelled ${label}")));
+            if (label == 0) Ok("fastest lap") else Err(DbErrorKind.Other("no record is labelled ${label}")));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT k", Nil));
         Assert.assertTrue(Sql.decode(sel, TestCells.row(Some("0") :: Nil)) == Ok("fastest lap"));
         Assert.assertTrue(
             Sql.decode(sel, TestCells.row(Some("9") :: Nil))
-                == Err(Db.Error.Unread("no record is labelled 9"))
+                == Err(DbErrorKind.Other("no record is labelled 9"))
         )
 
     /// The far side of a `LEFT JOIN`: a null cell is the row the join did not
@@ -103,14 +104,14 @@ pub mod Sql.TestSel {
     def aRowLongerThanTheProjectionIsAnError(): Unit \ Assert =
         Assert.assertTrue(
             Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil))
-                == Err(Db.Error.Unread("the row carries 1 more columns than the projection reads"))
+                == Err(DbErrorKind.Other("the row carries 1 more columns than the projection reads"))
         )
 
     @Test
     def aRowShorterThanTheProjectionNamesWhereItEnded(): Unit \ Assert =
         Assert.assertTrue(
             Sql.decode(pair(), TestCells.row(Some("Will STEVENS") :: Nil))
-                == Err(Db.Error.Unread("the row ended before `lap_number`"))
+                == Err(DbErrorKind.Other("the row ended before `lap_number`"))
         )
 
     ///
@@ -121,13 +122,13 @@ pub mod Sql.TestSel {
     def concatenatingPiecesCarriesTheirValuesInOrder(): Unit \ Assert =
         let frag = Sql.frags(
             Sql.raw("FROM laps WHERE") ::
-            Sql.frag("season = ? AND round = ?", Value.Integer(2025) :: Value.Text("fuji_6h") :: Nil) ::
+            Sql.frag("season = ? AND round = ?", SqlValue.Int32(2025) :: SqlValue.Str("fuji_6h") :: Nil) ::
             Sql.raw("AND lap_number = ?") ::
-            Sql.frag("", Value.Integer(1) :: Nil) :: Nil
+            Sql.frag("", SqlValue.Int32(1) :: Nil) :: Nil
         );
         Assert.assertTrue(Sql.toSql(frag) == (
             "FROM laps WHERE season = ? AND round = ? AND lap_number = ?",
-            Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Nil
+            SqlValue.Int32(2025) :: SqlValue.Str("fuji_6h") :: SqlValue.Int32(1) :: Nil
         ))
 
     /// The clause is rendered before the rest of the query, so a projection
@@ -137,11 +138,11 @@ pub mod Sql.TestSel {
         let statement = Sql.rows(Sql.raw("laps"))
             |> Sql.filter(_ -> Sql.eq(Sql.column("season"), Sql.i32(2025)))
             |> Sql.map(_ -> Sql.optionalIntOf(
-                Sql.frag("(SELECT off FROM b WHERE k = ?)", Value.Integer(7) :: Nil)))
+                Sql.frag("(SELECT off FROM b WHERE k = ?)", SqlValue.Int32(7) :: Nil)))
             |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (
             "SELECT (SELECT off FROM b WHERE k = ?) FROM laps WHERE season = ?",
-            Value.Integer(7) :: Value.Integer(2025) :: Nil
+            SqlValue.Int32(7) :: SqlValue.Int32(2025) :: Nil
         ))
 
 }

@@ -6,13 +6,14 @@
 /// is the same on every lap of it, in every seat the archive holds, so the
 /// name is here and the lap carries the seat alone.
 pub mod Db.CarDrivers {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
 
     use Db.Drivers
     use Db.Drivers.Numbering
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
-    use Db.Value
     use Motorsport.Wec.RawLap
 
     pub def table(): String = "car_drivers"
@@ -146,7 +147,7 @@ pub mod Db.CarDrivers {
     pub def insertRows(rows_: List[CarDriverRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows_)
 
-    pub def values(row: CarDriverRow): List[Value] =
+    pub def values(row: CarDriverRow): List[SqlValue] =
         Schema.values(all(), row)
 
     pub def createTable(): String =

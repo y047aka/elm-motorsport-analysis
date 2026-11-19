@@ -1,4 +1,5 @@
 pub mod Sql.TestTagged {
+    use Lite3fx.DbError.DbErrorKind
 
     use Sql.Branch
 
@@ -44,6 +45,6 @@ pub mod Sql.TestTagged {
     @Test
     def aNumberNoArmAnswersToIsAnError(): Unit \ Assert =
         let (_, tag) = Sql.unionAllTagged("k", branches());
-        Assert.assertTrue(Sql.decode(tag, TestCells.row(Some("5") :: Nil)) == Err(Db.Error.Unread("no arm answers to `k` 5")))
+        Assert.assertTrue(Sql.decode(tag, TestCells.row(Some("5") :: Nil)) == Err(DbErrorKind.Other("no arm answers to `k` 5")))
 
 }

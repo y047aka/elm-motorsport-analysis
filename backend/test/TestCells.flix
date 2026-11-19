@@ -4,14 +4,14 @@
 /// A driver answers a column of this schema in text too, since that is what the
 /// load bound; `Db.TestJdbc` is where the typed answers are driven.
 pub mod TestCells {
-
-    use Db.Row.Row
-    use Db.Value
+    use Lite3fx.Row
+    use Lite3fx.Row.Row
+    use Lite3fx.SqlValue
 
     pub def row(cells: List[Option[String]]): Row =
         Row.ofCells(cells |> List.map(cell -> match cell {
-            case Some(text) => Value.Text(text)
-            case None       => Value.Null
+            case Some(text) => SqlValue.Str(text)
+            case None       => SqlValue.Null
         }))
 
 }

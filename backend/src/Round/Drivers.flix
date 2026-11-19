@@ -4,6 +4,9 @@
 /// that was. Read once for the round by whichever caller asked for it and
 /// handed to the readers, rather than fetched again by each of them.
 pub mod Round.Drivers {
+    use Lite3fx.DbErr
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
 
     use Db.CarDrivers
     use Db.Drivers
@@ -43,7 +46,7 @@ pub mod Round.Drivers {
     pub def nameOf(seats: Seats, carNumber: String, driverNumber: Int32): String \ DbErr =
         match Map.get((carNumber, driverNumber), seats) {
             case Some(name) => name
-            case None       => DbErr.raise(Db.Error.Incomplete(
+            case None       => DbErr.raise(DbErrorKind.Other(
                 "car ${carNumber} has laps from driver ${driverNumber}"
                     + " but is not one of the round's seats"))
         }

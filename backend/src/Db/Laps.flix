@@ -4,13 +4,14 @@
 /// and manufacturer, and `Db.CarDrivers` the seat's driver, none of which a
 /// round in the archive varies within a car.
 pub mod Db.Laps {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
 
     use Db.LapRow.LapRow
     use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
-    use Db.Value
     use Motorsport.Calendar.Entry
     use Sql.Sel
 
@@ -166,7 +167,7 @@ pub mod Db.Laps {
     pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
 
-    pub def values(row: LapRow): List[Value] =
+    pub def values(row: LapRow): List[SqlValue] =
         Schema.values(all(), row)
 
     /// The round's rows as a predicate, for a query reading them from inside

@@ -24,6 +24,8 @@
 /// HourElapsedOffset's baseline is the **first row of the whole file** (round-wide,
 /// not per-car): a bad lap 1 on one car does not cascade across the rest of that car.
 pub mod Cli.Load.Validation {
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
 
     use Db.Laps
     use Db.Schema
@@ -230,17 +232,17 @@ pub mod Cli.Load.Validation {
     def splitLabels(joined: String): List[String] =
         if (String.isEmpty(joined)) Nil else String.splitOn({substr = ","}, joined)
 
-    def positions(joined: String): Result[Db.Error, List[MiniSectorId]] =
+    def positions(joined: String): Result[DbErrorKind, List[MiniSectorId]] =
         splitLabels(joined) |> Result.traverse(text ->
             forM(
-                position <- Int32.fromString(text) |> Option.toOk(Db.Error.Unread("not a position: \"${text}\""));
+                position <- Int32.fromString(text) |> Option.toOk(DbErrorKind.Other("not a position: \"${text}\""));
                 id       <- miniSectorAt(position)
             ) yield id
         )
 
-    def miniSectorAt(position: Int32): Result[Db.Error, MiniSectorId] =
+    def miniSectorAt(position: Int32): Result[DbErrorKind, MiniSectorId] =
         MiniSector.atPosition(position)
-            |> Option.toOk(Db.Error.Unread("no mini-sector at position ${position}"))
+            |> Option.toOk(DbErrorKind.Other("no mini-sector at position ${position}"))
 
     // ---------------------------------------------------------------- format
 

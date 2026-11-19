@@ -1,8 +1,10 @@
 pub mod Db.TestLapRow {
+    use Lite3fx.SqlValue
+    use Lite3fx.SqlValue.NullType
 
+    use Db.Schema
     use Db.LapRow
     use Db.Laps
-    use Db.Value
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
     use csv::Csv.Decode
@@ -122,8 +124,8 @@ pub mod Db.TestLapRow {
 
     @Test
     def theJsonArrayKeepsTheBlanksInPlace(): Unit \ Assert =
-        Assert.assertTrue(Db.jsonArray(Some(1) :: None :: Some(3) :: Nil) == "[1,null,3]");
-        Assert.assertTrue(Db.jsonArray(Nil) == "[]")
+        Assert.assertTrue(Schema.jsonArray(Some(1) :: None :: Some(3) :: Nil) == "[1,null,3]");
+        Assert.assertTrue(Schema.jsonArray(Nil) == "[]")
 
     @Test
     def everyLapOfTheRoundBecomesARow(): Unit \ Assert =
@@ -143,8 +145,8 @@ pub mod Db.TestLapRow {
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
         let values = Laps.values(LapRow.fromRawLap(fujiId(), 1, plainLap()));
         Assert.assertTrue(List.take(3, values)
-            == Value.Integer(7) :: Value.Integer(1) :: Value.Text("12") :: Nil);
-        Assert.assertTrue(List.last(values) == Some(Value.NullOf(Db.NullType.Text)))
+            == SqlValue.Int32(7) :: SqlValue.Int32(1) :: SqlValue.Str("12") :: Nil);
+        Assert.assertTrue(List.last(values) == Some(SqlValue.NullOf(NullType.Json)))
 
     /// The cells the reading comes back as.
     def cells(): List[Option[String]] =

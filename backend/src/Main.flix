@@ -4,12 +4,17 @@ use Sys.Exit
 use Util.Files
 use Cli.Args
 use Cli.Args.Command
-use Db.Jdbc
+    use Lite3fx.Jdbc
 use Cli.Errors.CliError
 use Cli.Errors.checkDirectory
 use Cli.Load
 use Cli.Export
 
+    use Lite3fx.DbError
+    use Lite3fx.SqlRead
+    use Lite3fx.SqlWrite
+    use Lite3fx.SqlSavepoint
+    use Lite3fx.RawSql
 def main(): Unit \ {Env, IO, Exit, Console} =
     let code = match Args.parse(Env.getArgs()) {
         case Err(e) =>
@@ -38,14 +43,14 @@ def loadAndExport(csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> Int32 \ ef): Int32 \ (ef - Db) + Env + IO + Console =
+def onDirectories(dirs: List[String], database: Option[String], stage: Unit -> Int32 \ ef): Int32 \ (ef - {Lite3fx.Db, RawSql}) + Env + IO + Console =
     match Result.traverseX(checkDirectory, dirs) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");
             1
         case Ok(()) =>
             withDatabase(database, url ->
-                match Db.runWithError(() -> Jdbc.withConnection(url, stage)) {
+                match DbError.runWithKind(() -> Jdbc.withConnection(url, stage)) {
                     case Ok(code) => code
                     case Err(e)   =>
                         Console.eprintln("Error: ${e}");

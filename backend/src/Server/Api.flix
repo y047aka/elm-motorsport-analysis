@@ -1,6 +1,14 @@
 /// The rounds, served rather than exported. An endpoint answers with what
 /// `Cli.Export` writes to a file, byte for byte.
 pub mod Server.Api {
+    use Lite3fx.DbErr
+    use Lite3fx.DbError
+    use Lite3fx.DbError.Failure
+    use Lite3fx.DbError.TransientKind
+    use Lite3fx.DbRead
+    use Lite3fx.RawSql
+    use Lite3fx.SqlRead
+    use Lite3fx.TransientDbErr
 
     use Round.Index
     use Round.Laps
@@ -92,22 +100,22 @@ pub mod Server.Api {
         { status = 404, contentType = "text/plain", body = reason, cause = None }
 
     def body(contentType: String, render: Unit -> Option[String] \ ef): Response \ (ef - {TransientDbErr, DbErr}) =
-        match Db.attempt(render) {
+        match DbError.runWithFailure(render) {
             case Ok(Some(rendered)) => ok(contentType, rendered)
             case Ok(None)           => notFound("round not loaded")
             case Err(cause)         => failed(cause)
         }
 
     /// 503 rather than 500 where the failure is a transient one: the round can
-    /// be served, and not now. Which failures those are is `Db.Failure`'s to
+    /// be served, and not now. Which failures those are is `Failure`'s to
     /// say, not a list kept here beside it.
     ///
     /// `pub` reaches `Server`, which answers a connection it could not open
     /// with the same words rather than its own.
-    pub def failed(cause: Db.Failure): Response =
+    pub def failed(cause: Failure): Response =
         let (status, reason) = match cause {
-            case Db.Failure.Transient(Db.Transient.Unreachable(_)) => (503, "the database could not be reached")
-            case Db.Failure.Transient(Db.Transient.Busy(_))        => (503, "the database is busy")
+            case Failure.Transient(TransientKind.Unreachable(_)) => (503, "the database could not be reached")
+            case Failure.Transient(TransientKind.Busy(_))        => (503, "the database is busy")
             case _                                                 => (500, "the round could not be read")
         };
         { status = status, contentType = "text/plain", body = reason, cause = Some("${cause}") }

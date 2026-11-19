@@ -3,6 +3,10 @@
 /// a reading of the laps per kind of event, and what they add up to is
 /// `Motorsport.Timeline`'s.
 pub mod Round.Timeline {
+    use Lite3fx.DbErr
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
+    use Lite3fx.SqlValue
 
     use Db.Cars
     use Db.Entries
@@ -10,7 +14,6 @@ pub mod Round.Timeline {
     use Db.Schema
     use Db.TimelineEvents
     use Db.TimelineEvents.EventRow
-    use Db.Value
     use Motorsport.Calendar.Entry
     use Motorsport.Index
     use Motorsport.Index.Record
@@ -57,7 +60,7 @@ pub mod Round.Timeline {
     def event(r: EventRow): Timeline.Event \ DbErr =
         match TimelineEvents.toEvent(r) {
             case Some(e) => e
-            case None    => DbErr.raise(Db.Error.Incomplete(
+            case None    => DbErr.raise(DbErrorKind.Other(
                 "timeline event ${r#seq} is a \"${r#event}\" carrying nothing that spells one"))
         }
 
@@ -365,7 +368,7 @@ pub mod Round.Timeline {
             event = event,
             detail = Option.flatMap(lap -> match Map.get(lap, cells) {
                 case Some(r) => Some(detail(seats, index, event#elapsed, fst(lap), r))
-                case None    => DbErr.raise(Db.Error.Incomplete(
+                case None    => DbErr.raise(DbErrorKind.Other(
                     "the timeline names lap ${snd(lap)} of car ${fst(lap)}, which the laps are not"))
             }, lapOf(event))
         }
@@ -495,7 +498,7 @@ pub mod Round.Timeline {
     def namedLaps(named: List[(String, Int32)]): Sql.Expr[Bool] =
         let placeholders = named |> List.map(_ -> "(?, ?)") |> List.join(", ");
         let params = named |> List.flatMap(match (carNumber, lapNumber) ->
-            List#{Value.Text(carNumber), Value.Integer(lapNumber)});
+            List#{SqlValue.Str(carNumber), SqlValue.Int32(lapNumber)});
         Sql.written(Sql.frag("(car_number, lap_number) IN (${placeholders})", params))
 
     /// A lap the events fell on, its own times and its car's best of each, the

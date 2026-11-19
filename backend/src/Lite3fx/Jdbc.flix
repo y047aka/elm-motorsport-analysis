@@ -1,12 +1,14 @@
-pub mod Db.Jdbc {
+/// The handler that answers the effects with `org.xerial:sqlite-jdbc`.
+///
+/// `java.sql` is imported here and in `Lite3fx.JdbcConvert` alone.
+pub mod Lite3fx.Jdbc {
 
     import java.sql.Connection
     import java.sql.DriverManager
     import java.sql.PreparedStatement
     import java.sql.ResultSet
-    import java.sql.Savepoint
     import java.sql.SQLException
-    import java.sql.Types
+    import java.sql.Savepoint
 
     import java.lang.Throwable
 
@@ -14,23 +16,29 @@ pub mod Db.Jdbc {
 
     import org.sqlite.JDBC
 
-    use Db.Error
-    use Db.JdbcConvert
-    use Db.Row.Row
-    use Db.Savepoint
-    use Db.Value
+    use Lite3fx.DbErr
+    use Lite3fx.RawSql
+    use Lite3fx.SqlRead
+    use Lite3fx.SqlSavepoint
+    use Lite3fx.SqlWrite
+    use Lite3fx.TransientDbErr
+    use Lite3fx.DbError
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.JdbcConvert
+    use Lite3fx.Row.Row
+    use Lite3fx.Savepoint
+    use Lite3fx.SqlValue.SqlValue
 
     def batchSize(): Int32 = 1000
 
     /// The driver registers itself through `META-INF/services` when the JDBC jar
     /// is on the application class path. It is not on the one Flix runs with, so
-    /// without `registerDriver` this reports that no driver matches the URL —
+    /// without `registerDriver` this reports that no driver matches the URL --
     /// at run time, from a program that compiled and whose `import` resolved.
     ///
     /// SQLite creates the database file and not the directory holding it, so a
-    /// URL naming one that does not exist reports that the file cannot be
-    /// opened.
-    pub def connect(url: String): Result[Error, Connection] \ IO =
+    /// URL naming one that does not exist reports that the file cannot be opened.
+    pub def connect(url: String): Result[DbErrorKind, Connection] \ IO =
         try {
             DriverManager.registerDriver(new JDBC());
             makeParentDirectory(url);
@@ -39,7 +47,7 @@ pub mod Db.Jdbc {
             conn.setAutoCommit(false);
             Ok(conn)
         } catch {
-            case e: SQLException => Err(Db.unreachable("${e.getMessage()}"))
+            case e: SQLException => Err(DbError.unreachable("${e.getMessage()}"))
         }
 
     def makeParentDirectory(url: String): Unit \ IO =
@@ -52,10 +60,9 @@ pub mod Db.Jdbc {
             case _ => ()
         }
 
-    /// The server answers on a pool of eight and connects per request, so a
-    /// read has to run beside a writing run rather than behind it. Set before
-    /// the first transaction opens: `journal_mode` cannot be changed inside
-    /// one.
+    /// The server answers on a pool of eight and connects per request, so a read
+    /// has to run beside a writing run rather than behind it. Set before the
+    /// first transaction opens: `journal_mode` cannot be changed inside one.
     def pragmas(conn: Connection): Unit \ IO =
         let stmt = conn.createStatement();
         discard stmt.execute("PRAGMA journal_mode = WAL");
@@ -69,33 +76,33 @@ pub mod Db.Jdbc {
             case _e: SQLException => ()
         }
 
-    /// A database opened, read or written, and closed however that went --
-    /// which is the whole of what a run or a test does with one.
+    /// A database opened, read or written, and closed however that went -- which
+    /// is the whole of what a run or a test does with one.
     ///
-    /// The close is on every way out, including the one that throws: a
-    /// connection left open holds a read on the database until the process ends.
-    pub def withConnection(url: String, f: Unit -> a \ ef): a \ (ef - Db) + IO + {TransientDbErr, DbErr} =
-        let conn = Db.orRaise(connect(url));
+    /// The close is on every way out, including the one that throws: a connection
+    /// left open holds a read on the database until the process ends.
+    pub def withConnection(url: String, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, SqlSavepoint, RawSql}) + IO + {TransientDbErr, DbErr} =
+        let conn = Lite3fx.Sql.orRaise(connect(url));
         let outcome = try {
-            Db.runWithError(() -> Db.guard(() -> runWith(conn, f)))
+            DbError.runWithKind(() -> Lite3fx.Db.guard(() -> runWith(conn, f)))
         } catch {
-            case error: Throwable => close(conn); Db.rethrowing(Err(error))
+            case error: Throwable => close(conn); Lite3fx.Db.rethrowing(Err(error))
         };
         close(conn);
-        Db.orRaise(outcome)
+        Lite3fx.Sql.orRaise(outcome)
 
-    /// A driver's failure that is not an `SQLException` is still a failure of
-    /// the database, and a fatal one is not a failure to keep.
-    def guarded(f: Unit -> Result[Error, a] \ IO): Result[Error, a] \ IO =
-        match Db.catchAll(f) {
+    /// A driver's failure that is not an `SQLException` is still a failure of the
+    /// database, and a fatal one is not a failure to keep.
+    def guarded(f: Unit -> Result[DbErrorKind, a] \ IO): Result[DbErrorKind, a] \ IO =
+        match Lite3fx.Db.catchAll(f) {
             case Ok(result) => result
             case Err(error) =>
-                if (Db.isFatal(error)) Db.rethrowing(Err(error))
-                else Err(Db.Error.Other(Db.describeThrowable(error)))
+                if (Lite3fx.Db.isFatal(error)) Lite3fx.Db.rethrowing(Err(error))
+                else Err(DbErrorKind.Other(Lite3fx.Db.describeThrowable(error)))
         }
 
     pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {RawSql, SqlRead, SqlWrite, SqlSavepoint}) + IO =
-        RawSql.runWithAllow(() -> run {
+        Lite3fx.RawSql.runWithAllow(() -> run {
             run {
                 runWriting(conn, f)
             } with handler SqlRead {
@@ -106,8 +113,8 @@ pub mod Db.Jdbc {
                 k(guarded(() -> executeStatement(conn, Savepoint.toSql(command), Nil) |> Result.map(_ -> ())))
         })
 
-    /// The connection as a read alone, which is what the server answers a
-    /// request through.
+    /// The connection as a read alone, which is what the server answers a request
+    /// through.
     pub def runReading(conn: Connection, f: Unit -> a \ ef): a \ (ef - SqlRead) + IO =
         run {
             f()
@@ -120,21 +127,42 @@ pub mod Db.Jdbc {
             f()
         } with handler SqlWrite {
             def execute(sql, params, k) = k(guarded(() -> executeStatement(conn, sql, params)))
+            def executeReturning(sql, params, k) = k(guarded(() -> returningRows(conn, sql, params)))
             def insertMany(sql, rows, k) = k(guarded(() -> insertRows(conn, sql, rows)))
             def commit(k) = k(guarded(() -> endTransaction(conn, c -> c.commit())))
             def rollback(k) = k(guarded(() -> endTransaction(conn, c -> c.rollback())))
         }
 
-    /// The statement is closed on every way out, including the one that throws:
-    /// a statement left open holds the read on the database until the process
-    /// ends, which is what a server that answers one request at a time would
-    /// then never come back from.
-    def fetchRows(conn: Connection, sql: String, params: List[Value]): Result[Error, List[Row]] \ IO =
+    /// The statement is closed on every way out, including the one that throws: a
+    /// statement left open holds the read on the database until the process ends,
+    /// which is what a server that answers one request at a time would then never
+    /// come back from.
+    def fetchRows(conn: Connection, sql: String, params: List[SqlValue]): Result[DbErrorKind, List[Row]] \ IO =
         let stmt = conn.prepareStatement(sql);
         let outcome = try {
             bind(stmt, params);
             let rs = stmt.executeQuery();
             Ok(readRows(rs, JdbcConvert.labels(rs), Nil))
+        } catch {
+            case e: SQLException => Err(refusal(e))
+        };
+        discard guarded(() -> {
+            stmt.close();
+            Ok()
+        });
+        outcome
+
+    /// A statement written `RETURNING`. `execute` says whether a result set came
+    /// with the statement, which is what a write answering with rows does and a
+    /// write answering with a count does not.
+    def returningRows(conn: Connection, sql: String, params: List[SqlValue]): Result[DbErrorKind, List[Row]] \ IO =
+        let stmt = conn.prepareStatement(sql);
+        let outcome = try {
+            bind(stmt, params);
+            if (stmt.execute())
+                Ok(readRows(stmt.getResultSet(), JdbcConvert.labels(stmt.getResultSet()), Nil))
+            else
+                Ok(Nil)
         } catch {
             case e: SQLException => Err(refusal(e))
         };
@@ -150,14 +178,14 @@ pub mod Db.Jdbc {
         else
             List.reverse(acc)
 
-    def readCells(rs: ResultSet, index: Int32, width: Int32, acc: List[Value]): List[Value] \ IO =
+    def readCells(rs: ResultSet, index: Int32, width: Int32, acc: List[SqlValue]): List[SqlValue] \ IO =
         if (index > width)
             List.reverse(acc)
         else
             readCells(rs, index + 1, width, JdbcConvert.cell(rs, index) :: acc)
 
     /// The statement is closed on every way out, including the one that throws.
-    def executeStatement(conn: Connection, sql: String, params: List[Value]): Result[Error, Int32] \ IO =
+    def executeStatement(conn: Connection, sql: String, params: List[SqlValue]): Result[DbErrorKind, Int32] \ IO =
         let stmt = conn.prepareStatement(sql);
         let outcome = try {
             bind(stmt, params);
@@ -171,11 +199,11 @@ pub mod Db.Jdbc {
         });
         outcome
 
-    /// The rows go out in batches, so a refusal partway through has already
-    /// sent some of them. They are undone against a savepoint rather than by
-    /// rolling the transaction back: what a run loaded before this call is
-    /// still to be committed.
-    def insertRows(conn: Connection, sql: String, rows: List[List[Value]]): Result[Error, Int32] \ IO =
+    /// The rows go out in batches, so a refusal partway through has already sent
+    /// some of them. They are undone against a savepoint rather than by rolling
+    /// the transaction back: what a run loaded before this call is still to be
+    /// committed.
+    def insertRows(conn: Connection, sql: String, rows: List[List[SqlValue]]): Result[DbErrorKind, Int32] \ IO =
         match savepoint(conn) {
             case Err(e) => Err(e)
             case Ok(mark) =>
@@ -202,7 +230,7 @@ pub mod Db.Jdbc {
                 }
         }
 
-    def savepoint(conn: Connection): Result[Error, Savepoint] \ IO =
+    def savepoint(conn: Connection): Result[DbErrorKind, Savepoint] \ IO =
         try {
             Ok(conn.setSavepoint())
         } catch {
@@ -223,10 +251,10 @@ pub mod Db.Jdbc {
             case _e: SQLException => ()
         }
 
-    def bind(pstmt: PreparedStatement, values: List[Value]): Unit \ IO =
+    def bind(pstmt: PreparedStatement, values: List[SqlValue]): Unit \ IO =
         List.forEachWithIndex((index, value) -> JdbcConvert.bind(pstmt, index + 1, value), values)
 
-    def endTransaction(conn: Connection, end: Connection -> Unit \ IO): Result[Error, Unit] \ IO =
+    def endTransaction(conn: Connection, end: Connection -> Unit \ IO): Result[DbErrorKind, Unit] \ IO =
         try {
             end(conn);
             Ok()
@@ -234,11 +262,12 @@ pub mod Db.Jdbc {
             case e: SQLException => Err(refusal(e))
         }
 
-    /// What a refusal was. The code is the driver's own; the message is what it
-    /// said, which for some failures of its own it leaves unsaid.
-    def refusal(e: SQLException): Error \ IO =
+    /// What a refusal was. The code is the driver's own, dropped onto which
+    /// failure it is; the message is what it said, which for some failures of its
+    /// own it leaves unsaid.
+    def refusal(e: SQLException): DbErrorKind \ IO =
         let message: String = e.getMessage();
         let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;
-        Db.Sqlite.classify({code = e.getErrorCode(), message = said})
+        Lite3fx.SqliteState.classify({code = e.getErrorCode(), message = said})
 
 }

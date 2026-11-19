@@ -1,4 +1,5 @@
 pub mod Cli.Errors {
+    use Lite3fx.DbError.Failure
 
     use Util.Files
     use Util.Files.FileError
@@ -9,7 +10,7 @@ pub mod Cli.Errors {
         case EmptyFile(String)
         case File(FileError)
         case Csv({ path = String, message = String })
-        case Database(Db.Failure)
+        case Database(Failure)
         case RoundNotLoaded
     }
 
