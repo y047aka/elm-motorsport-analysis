@@ -22,8 +22,8 @@ pub mod Db.TestDbTest {
     /// reading made of them.
     @Test
     def aQueryAndItsReadingAreAnsweredWithTheRowsItIsGiven(): Unit \ Assert =
-        let rows = TestCells.row(Some("1:35.365") :: Nil)
-            :: TestCells.row(Some("1:36.101") :: Nil)
+        let rows = TestCells.answering(Sql.text("lap_time"), Some("1:35.365") :: Nil)
+            :: TestCells.answering(Sql.text("lap_time"), Some("1:36.101") :: Nil)
             :: Nil;
         Assert.assertTrue(
             DbTest.runWithRows(rows, () -> DbError.runWithKind(() -> Sql.selectAll(lapTimes(7))))
@@ -36,9 +36,9 @@ pub mod Db.TestDbTest {
     def eachStatementIsAnsweredByItsOwnText(): Unit \ Assert =
         let rowsFor = sql ->
             if (String.startsWith({prefix = "SELECT driver_name"}, sql))
-                Some(TestCells.row(Some("Will STEVENS") :: Nil) :: Nil)
+                Some(TestCells.answering(Sql.text("driver_name"), Some("Will STEVENS") :: Nil) :: Nil)
             else
-                Some(TestCells.row(Some("7") :: Nil) :: Nil);
+                Some(TestCells.answering(Sql.text("lap_time"), Some("7") :: Nil) :: Nil);
         let (drivers, times) = DbTest.runWithTable(rowsFor, () ->
             (DbError.runWithKind(() -> Sql.selectAll(driverNames())),
              DbError.runWithKind(() -> Sql.selectAll(lapTimes(7)))));
@@ -67,7 +67,7 @@ pub mod Db.TestDbTest {
     /// case a test of this has to be able to draw.
     @Test
     def aReadIsAnsweredWhereTheWriteWasRefused(): Unit \ Assert =
-        let outcome = DbTest.runWithRows(TestCells.row(Some("1:35.365") :: Nil) :: Nil, () ->
+        let outcome = DbTest.runWithRows(TestCells.answering(Sql.text("lap_time"), Some("1:35.365") :: Nil) :: Nil, () ->
             DbTest.runFailingWrite(DbError.busy("database is locked"), () -> (
                 DbError.runWithKind(() -> discard Lite3fx.Sql.execute("INSERT INTO laps VALUES (1)", Nil)),
                 DbError.runWithKind(() -> Sql.selectAll(lapTimes(7)))
@@ -79,7 +79,7 @@ pub mod Db.TestDbTest {
     /// the round it just wrote needs.
     @Test
     def aWriteAndTheReadAfterItAreDrivenTogether(): Unit \ Assert =
-        let rows = TestCells.row(Some("1:35.365") :: Nil) :: Nil;
+        let rows = TestCells.answering(Sql.text("lap_time"), Some("1:35.365") :: Nil) :: Nil;
         let ((written, readBack), sent) = DbTest.runRecording(rows, 1, () -> (
             DbError.runWithKind(() -> discard Lite3fx.Sql.execute("UPDATE laps SET lap_time = '1:35.365'", Nil)),
             DbError.runWithKind(() -> Sql.selectAll(lapTimes(7)))));
@@ -104,9 +104,9 @@ pub mod Db.TestDbTest {
     def eachQueryIsAnsweredByItsOwnTextWhileAllAreKept(): Unit \ Assert =
         let rowsFor = sql ->
             if (String.startsWith({prefix = "SELECT driver_name"}, sql))
-                Some(TestCells.row(Some("Will STEVENS") :: Nil) :: Nil)
+                Some(TestCells.answering(Sql.text("driver_name"), Some("Will STEVENS") :: Nil) :: Nil)
             else
-                Some(TestCells.row(Some("1:35.365") :: Nil) :: Nil);
+                Some(TestCells.answering(Sql.text("lap_time"), Some("1:35.365") :: Nil) :: Nil);
         let (both, sent) = DbTest.runRecordingWith(rowsFor, 0, () -> (
             DbError.runWithKind(() -> Sql.selectAll(driverNames())),
             DbError.runWithKind(() -> Sql.selectAll(lapTimes(7)))));

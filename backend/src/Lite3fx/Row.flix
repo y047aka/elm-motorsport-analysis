@@ -1,9 +1,8 @@
 /// A row as the database sent it: the columns it came under, and the cells
 /// under them.
 ///
-/// The readings go by position -- a query projects what it names, in that
-/// order, and the cells come back in the same -- and the names are carried for
-/// `get` and for the failure that has to say which column it failed on.
+/// The labels are the driver's, which is what a reading looks a cell up by, and
+/// they are what a failure names when it says which column it failed on.
 ///
 /// SQLite types a value rather than a column, so a cell is what the driver
 /// found and not what the schema declared. The readings take what they can of
@@ -20,7 +19,8 @@ pub mod Lite3fx.Row {
     pub def of(columns: List[String], cells: List[SqlValue]): Row =
         Row.Row(columns, cells)
 
-    /// A row of cells and no names, for a reading that takes only positions.
+    /// A row of cells and no labels, which is what a reading is handed once the
+    /// cells have been put in the order its projection names them.
     pub def ofCells(cells: List[SqlValue]): Row =
         Row.Row(Nil, cells)
 
@@ -32,9 +32,6 @@ pub mod Lite3fx.Row {
     pub def columnNames(row: Row): List[String] =
         let Row.Row(labels, _) = row;
         labels
-
-    pub def isEmpty(row: Row): Bool =
-        cells(row) == Nil
 
     /// The number of cells the row still carries.
     pub def size(row: Row): Int32 =

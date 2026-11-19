@@ -10,9 +10,10 @@
 /// whatever else is given an instance, as `Db.Laps` gives its columns one -- so
 /// the clause and the value that comes back are the one expression read twice.
 ///
-/// A reading stops at the first cell it cannot read: it consumes the cells
-/// before it, so past a failure there is no longer a position to report the
-/// next problem at.
+/// A row is read by the label each projected expression comes back under, which
+/// the same expression writes into the clause; see `label`. Within the row put in
+/// that order a reading stops at the first cell it cannot read, so past a failure
+/// there is no longer a position to report the next problem at.
 pub mod Sql {
     use Lite3fx.DbErr
     use Lite3fx.DbError.DbErrorKind
@@ -227,14 +228,97 @@ pub mod Sql {
         let Sel.Sel(columns, _) = sel;
         frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
 
+    /// The labels a projection's columns come back under, in the order the clause
+    /// writes them.
+    pub def labels(sel: Sel[a]): List[String] =
+        let Sel.Sel(columns, _) = sel;
+        columns |> List.map(column -> { let Frag.Frag(text, _) = column; label(text) })
+
+    /// The row a query reads: its cells put in the order the projection names
+    /// them, and then read as the projection reads them.
     pub def decode(sel: Sel[a], row: Row): Result[DbErrorKind, a] =
         let Sel.Sel(_, decodeCells) = sel;
-        decodeCells(row) |> Result.flatMap(match (value, rest) ->
-            if (Row.isEmpty(rest))
-                Ok(value)
-            else
-                Err(DbErrorKind.Other("the row carries ${Row.size(rest)} more columns than the projection reads"))
-        )
+        let names = labels(sel);
+        let width = List.length(names);
+        if (width != Row.size(row))
+            Err(DbErrorKind.SchemaMismatch(
+                "the projection names ${width} columns and the row carries ${Row.size(row)}"))
+        else
+            align(names, List.zip(Row.columnNames(row), Row.cells(row)))
+                |> Result.flatMap(cells -> decodeCells(Row.ofCells(cells)))
+                |> Result.map(match (value, _) -> value)
+
+    /// The label a projection comes back under.
+    ///
+    /// SQLite answers a column named through its qualifier by the name alone --
+    /// `SELECT l.key` comes back under `key` -- and an expression by the very
+    /// text it was written with, spaces and all. So the text that goes into the
+    /// clause is the key into the row that comes back, which is what lets the
+    /// clause and the reading stay the one value.
+    def label(text: String): String =
+        match aliased(text) {
+            case Some(name) => name
+            case None       => match qualified(text) {
+                case Some(name) => name
+                case None       => text
+            }
+        }
+
+    /// `expr AS name` comes back under `name`.
+    def aliased(text: String): Option[String] =
+        match List.reverse(String.splitOn({substr = " AS "}, text)) {
+            case Nil       => None
+            case _ :: Nil  => None
+            case name :: _ => Some(String.trim(name))
+        }
+
+    /// `qualifier.name` comes back under `name`. Only a text that is nothing but
+    /// the two, since `m.key + 1` comes back as the whole of it.
+    def qualified(text: String): Option[String] =
+        match String.splitOn({substr = "."}, text) {
+            case qualifier :: name :: Nil if isName(qualifier) and isName(name) => Some(name)
+            case _                                                                => None
+        }
+
+    def isName(text: String): Bool =
+        not String.isEmpty(text)
+            and (String.toList(text)
+                |> List.forAll(c -> Char.isLetter(c) or Char.isDigit(c) or c == '_'))
+
+    /// The cells the projection names, taken out of the row in that order. A
+    /// projection taking a label the row does not carry fails by naming itself.
+    ///
+    /// Two projections under one label -- a join naming both sides' `elapsed_ms`
+    /// -- are answered in the order the clause writes them, which is the one
+    /// order the row cannot contradict.
+    def align(
+        names: List[String],
+        given: List[(String, SqlValue)]
+    ): Result[DbErrorKind, List[SqlValue]] =
+        match names {
+            case Nil => Ok(Nil)
+            case name :: rest => match take(name, given, Nil) {
+                case None                 => Err(DbErrorKind.SchemaMismatch(
+                    "no column of the row answers to the projected `${name}`"))
+                case Some((cell, left))   => align(rest, left) |> Result.map(more -> cell :: more)
+            }
+        }
+
+    /// The cell under `name`, and the pairs that are left with it gone. The ones
+    /// walked past keep their place.
+    def take(
+        name: String,
+        given: List[(String, SqlValue)],
+        passed: List[(String, SqlValue)]
+    ): Option[(SqlValue, List[(String, SqlValue)])] =
+        match given {
+            case Nil                          => None
+            case (head, cell) :: rest         =>
+                if (head == name)
+                    Some((cell, List.append(List.reverse(passed), rest)))
+                else
+                    take(name, rest, (head, cell) :: passed)
+        }
 
     ///
     /// ===== PROJECTIONS =====

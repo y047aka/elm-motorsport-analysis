@@ -358,7 +358,14 @@ A row is `Lite3fx.Row.Row`: the labels the driver reported, and the cells as
 driver found and not what the schema declared.
 `Lite3fx.JdbcConvert` is the only file that turns a `SqlValue` into a binding and
 a `ResultSet` cell back into one.
-`Sql.Sel` reads a `Row` positionally, as the statements are built positionally, and `Row.get` is there for the readings that name a column.
+`Sql.decode` puts a row's cells in the order its projection names them, and the
+reading then goes by position within that, so a clause and a reading that
+disagree -- a column renamed on one side of the two -- fail by naming the column
+rather than by answering with the cell beside the one they wanted. The name a
+projection comes back under is the text the clause writes it under, since SQLite
+answers a qualified column by its name alone and an expression by that very text;
+two projections under one label, a join naming both sides' `elapsed_ms`, are
+answered in the order the clause writes them.
 
 `Server.Api` is the one that reads the kind. `Unreachable` and `Busy` are answered
 503 and everything else 500, which is the difference between a round that
