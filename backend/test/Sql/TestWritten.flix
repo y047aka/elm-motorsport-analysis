@@ -3,6 +3,7 @@
 pub mod Sql.TestWritten {
 
     use Lite3fx.DbErr
+    use Lite3fx.DbError
     use Lite3fx.DbError.DbErrorKind
     use Lite3fx.SqlValue
 
@@ -13,7 +14,7 @@ pub mod Sql.TestWritten {
     /// The statement, and the values its holes bound -- or the sentence saying a
     /// name is missing from one side or the other.
     def rendered(statement: Unit -> Sql.Query[a] \ DbErr): Result[DbErrorKind, (String, List[SqlValue])] =
-        Lite3fx.DbError.runWithKind(statement) |> Result.map(Sql.toStatement >> Sql.toSql)
+        DbError.runWithKind(statement) |> Result.map(Sql.toStatement >> Sql.toSql)
 
     @Test
     def theClauseIsRenderedFromTheProjectionAndLandsWhereTheMarkerStands(): Unit \ Assert =
@@ -47,7 +48,7 @@ pub mod Sql.TestWritten {
     @Test
     def aHoleNamedLaterThanAnotherStillComesOutWhereItStands(): Unit \ Assert =
         Assert.assertTrue(
-            Lite3fx.DbError.runWithKind(() -> Sql.spliced(
+            DbError.runWithKind(() -> Sql.spliced(
                 "(SELECT car_number FROM laps WHERE {{scope}} AND lap_number > {{lap}})" :: Nil,
                 Map#{ "lap" => Sql.frag("?", SqlValue.Int32(2) :: Nil), "scope" => scoped() }))
                 |> Result.map(Sql.toSql)
@@ -61,7 +62,7 @@ pub mod Sql.TestWritten {
     /// will not recognise.
     @Test
     def aHoleWithNothingToPutInItNamesTheMissingOne(): Unit \ Assert =
-        Assert.assertTrue(sentence(Lite3fx.DbError.runWithKind(() -> Sql.statement(
+        Assert.assertTrue(sentence(DbError.runWithKind(() -> Sql.statement(
             "SELECT %% FROM laps WHERE round_id = {{scope}} AND lap_number = {{lap}}" :: Nil,
             Map#{ "scope" => scoped() },
             Sql.int("lap_number"))))
@@ -72,7 +73,7 @@ pub mod Sql.TestWritten {
     /// leave its values bound to nothing.
     @Test
     def aPieceTheStatementNeverNamesSaysSo(): Unit \ Assert =
-        Assert.assertTrue(sentence(Lite3fx.DbError.runWithKind(() -> Sql.statement(
+        Assert.assertTrue(sentence(DbError.runWithKind(() -> Sql.statement(
             "SELECT %% FROM laps WHERE round_id = {{scope}}" :: Nil,
             Map#{ "scope" => scoped(), "season" => Sql.frag("?", SqlValue.Str("2025") :: Nil) },
             Sql.int("lap_number"))))
@@ -81,7 +82,7 @@ pub mod Sql.TestWritten {
 
     @Test
     def aStatementWithNoPlaceForItsClauseNamesItself(): Unit \ Assert =
-        Assert.assertTrue(sentence(Lite3fx.DbError.runWithKind(() -> Sql.statement(
+        Assert.assertTrue(sentence(DbError.runWithKind(() -> Sql.statement(
             "SELECT car_number FROM laps WHERE round_id = {{scope}}" :: Nil,
             Map#{ "scope" => scoped() },
             Sql.int("lap_number"))))
@@ -90,7 +91,7 @@ pub mod Sql.TestWritten {
 
     @Test
     def aPieceWithAMissingHoleNamesTheMissingOne(): Unit \ Assert =
-        Assert.assertTrue(sentence(Lite3fx.DbError.runWithKind(() ->
+        Assert.assertTrue(sentence(DbError.runWithKind(() ->
             Sql.spliced("round_id = {{scope}} AND season = {{season}}" :: Nil,
                 Map#{ "scope" => scoped() })))
             == "the piece names `{{season}}` and gives nothing for it:"

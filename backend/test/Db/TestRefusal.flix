@@ -5,13 +5,14 @@
 /// written out needs.
 pub mod Db.TestRefusal {
 
+    use Lite3fx.DbError
     use Lite3fx.DbError.DbErrorKind
     use Lite3fx.Jdbc
     use Round.TestSupport
 
     @Test
     def aRefusalCarriesTheStatementItWasAskedIn(): Unit \ Assert + IO =
-        let outcome = Lite3fx.DbError.runWithKind(() -> Jdbc.withConnection(TestSupport.url(), () ->
+        let outcome = DbError.runWithKind(() -> Jdbc.withConnection(TestSupport.url(), () ->
             Lite3fx.Sql.fetch("SELECT nope FROM laps WHERE round_id = 1", Nil)
         ));
         match outcome {
