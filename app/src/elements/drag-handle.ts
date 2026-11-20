@@ -4,6 +4,11 @@
  * Captured, every move and the release come back to this element, for a mouse
  * and a finger alike, so Elm listens here and nowhere else.
  *
+ * An ancestor would hear the pointer just as well -- a captured pointer's events
+ * bubble, and a release past the document's edge reaches the document either way --
+ * and is not listened on because then every element the pointer crosses takes its
+ * hover, which the column strip is thick with.
+ *
  * Capture is released when the element leaves the document, so what it sits in
  * must not be moved while it is held.
  *

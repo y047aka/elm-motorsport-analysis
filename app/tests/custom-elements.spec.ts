@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { COTA, waitForPageReady } from './helpers';
 
 /**
  * The contract between the Elm wrappers and the custom elements, which
@@ -255,4 +256,23 @@ test('the drag handle reports a pointer it held as cancelled when it leaves the 
   await page.mouse.up();
   expect(pressed).toBeDefined();
   expect(cancelled).toBe(pressed);
+});
+
+/**
+ * What the element no longer does. `touch-action` is the grip's own class now, so a
+ * tenant that forgets it scrolls the page under a finger rather than drags the size it
+ * bounds. The float's five grips are stood only once the box is opened, hence the press.
+ */
+test('every grip the app stands keeps a finger off the page scroll', async ({ page }) => {
+  await page.goto(`/wec/${COTA}`, { waitUntil: 'load' });
+  await waitForPageReady(page, 'text=Lone Star Le Mans');
+  await page.getByRole('button', { name: 'Float the track map over the columns' }).click();
+
+  const missed = await page.evaluate(() =>
+    [...document.querySelectorAll('drag-handle')]
+      .filter((el) => getComputedStyle(el).touchAction !== 'none')
+      .map((el) => el.id || el.tagName)
+  );
+  expect(await page.locator('drag-handle').count()).toBeGreaterThan(5);
+  expect(missed).toEqual([]);
 });
