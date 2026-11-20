@@ -1,7 +1,7 @@
 module Page.Wec.Float exposing (Model, Msg(..), init, update, view, trigger)
 
 {-| The track map floated over the columns: hidden until the tracker column's `◱`
-asks for it, sized by a grip along each of its four edges and at each of its four corners, carried by a drag anywhere on the drawing -- which is what the `↻` hands to the camera instead -- and taking part in none of the strip's grid.
+asks for it, sized by a grip along each of its four edges and at each of its four corners, carried by a drag anywhere on the drawing -- which the `↻` in its corner hands to the camera instead -- and taking part in none of the strip's grid.
 
 The box is a `popover`, and a `manual` one: the browser keeps whether it is open, the two presses only name it, and nothing here can be closed by a press outside it -- the columns are worked while the map is up.
 
