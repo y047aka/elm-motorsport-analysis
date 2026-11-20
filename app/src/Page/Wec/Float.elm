@@ -126,64 +126,45 @@ type alias Side =
     }
 
 
-left : Side
-left =
-    { name = "left"
-    , at = "-left-2.5"
+{-| One edge of the box, named: its grip's id and the words it is labelled with are the name.
+
+`at` is written out rather than composed from it -- Tailwind reads a class off the source
+text and invents nothing.
+
+-}
+side : String -> String -> Handle.Axis -> Resize.Grows -> Resize.Fence -> Side
+side name at axis grows fence =
+    { name = name
+    , at = at
     , edge =
-        { axis = Handle.Across
-        , grows = Resize.AgainstPointer
-        , fence = widthFence
-        , id = "tracker-float-left-grip"
-        , label = "Resize the floating track map from the left"
+        { axis = axis
+        , grows = grows
+        , fence = fence
+        , id = "tracker-float-" ++ name ++ "-grip"
+        , label = "Resize the floating track map from the " ++ name
         , glyph = ""
         }
     }
+
+
+left : Side
+left =
+    side "left" "-left-2.5" Handle.Across Resize.AgainstPointer widthFence
 
 
 right : Side
 right =
-    { name = "right"
-    , at = "-right-2.5"
-    , edge =
-        { axis = Handle.Across
-        , grows = Resize.WithPointer
-        , fence = widthFence
-        , id = "tracker-float-right-grip"
-        , label = "Resize the floating track map from the right"
-        , glyph = ""
-        }
-    }
+    side "right" "-right-2.5" Handle.Across Resize.WithPointer widthFence
 
 
 top : Side
 top =
-    { name = "top"
-    , at = "-top-2.5"
-    , edge =
-        { axis = Handle.Down
-        , grows = Resize.AgainstPointer
-        , fence = heightFence
-        , id = "tracker-float-top-grip"
-        , label = "Resize the floating track map from the top"
-        , glyph = ""
-        }
-    }
+    side "top" "-top-2.5" Handle.Down Resize.AgainstPointer heightFence
 
 
 bottom : Side
 bottom =
-    { name = "bottom"
-    , at = "-bottom-2.5"
-    , edge =
-        { axis = Handle.Down
-        , grows = Resize.WithPointer
-        , fence = heightFence
-        , id = "tracker-float-bottom-grip"
-        , label = "Resize the floating track map from the bottom"
-        , glyph = ""
-        }
-    }
+    side "bottom" "-bottom-2.5" Handle.Down Resize.WithPointer heightFence
 
 
 {-| The eight grips the box is sized by. An edge moves one size; a corner is the meeting
@@ -206,11 +187,11 @@ type alias GripInfo =
 grip : Grip -> GripInfo
 grip g =
     case g of
-        Edge side ->
-            { id = side.edge.id
-            , label = side.edge.label
-            , at = side.at
-            , moves = [ side ]
+        Edge s ->
+            { id = s.edge.id
+            , label = s.edge.label
+            , at = s.at
+            , moves = [ s ]
             }
 
         Corner width height ->
@@ -300,25 +281,25 @@ type alias Drag =
 
 
 along : Side -> Model -> Drag
-along side m =
-    case side.edge.axis of
+along s m =
+    case s.edge.axis of
         Handle.Across ->
-            { side = side, size = m.width, shift = m.shift.x, window = m.window.width }
+            { side = s, size = m.width, shift = m.shift.x, window = m.window.width }
 
         Handle.Down ->
-            { side = side, size = m.height, shift = m.shift.y, window = m.window.height }
+            { side = s, size = m.height, shift = m.shift.y, window = m.window.height }
 
 
 {-| The axis the side is read along says which pair of the box's two the size and the
 shift are written back through. A grip that carries no box writes its shift back unchanged.
 -}
 writeBack : Side -> Resize.Model -> Float -> Model -> Model
-writeBack side size shift m =
+writeBack s size shift m =
     let
         offset =
             m.shift
     in
-    case side.edge.axis of
+    case s.edge.axis of
         Handle.Across ->
             { m | width = size, shift = { offset | x = shift } }
 
@@ -331,8 +312,8 @@ axis and a grip there moves the box by its own travel, while a grip at the other
 leaves it stood -- which is what `Grows` already says, so the two cannot disagree.
 -}
 carried : Side -> Bool
-carried side =
-    side.edge.grows == Resize.WithPointer
+carried s =
+    s.edge.grows == Resize.WithPointer
 
 
 {-| How far the edge held can travel before it lands on the window's own edge: the window
@@ -356,13 +337,13 @@ because size and shift both grow by the travel. A corner is two of these, one pe
 moves.
 -}
 grow : String -> Resize.Msg -> Side -> Model -> Model
-grow gripId sub side m =
+grow gripId sub s m =
     let
         d =
-            along side m
+            along s m
 
         base =
-            side.edge
+            s.edge
 
         ceiling =
             d.size.size + room d
@@ -386,13 +367,13 @@ grow gripId sub side m =
             Resize.update edge sub d.size
 
         shift =
-            if carried side then
+            if carried s then
                 d.shift + size.size - d.size.size
 
             else
                 d.shift
     in
-    writeBack side size shift m
+    writeBack s size shift m
 
 
 {-| How far the window goes, read from the browser. The ceiling a drag stops at is the
@@ -423,14 +404,14 @@ so. An edge moves one, a corner the two that meet there.
 -}
 holds : GripInfo -> Model -> Bool
 holds g m =
-    List.any (\side -> (along side m).size.grip == Just g.id) g.moves
+    List.any (\s -> (along s m).size.grip == Just g.id) g.moves
 
 
 {-| The track an edge grip stands in: a bar along the side it bounds.
 -}
 edgeTrack : Side -> String
-edgeTrack side =
-    case side.edge.axis of
+edgeTrack s =
+    case s.edge.axis of
         Handle.Across ->
             "top-0 z-10 grid h-full w-2.5 place-items-center"
 
@@ -450,9 +431,9 @@ Three of the UA's popover sheet reach this box and each is answered: `inset: 0` 
 view : Model -> (Html Msg -> List (Html Msg) -> Html Msg) -> Track -> Snapshot -> Html Msg
 view m frame track snapshot =
     let
-        edgeGrip side =
-            div [ Attributes.class ("absolute " ++ side.at ++ " " ++ edgeTrack side) ]
-                [ Html.map (Grow (Edge side)) (Resize.grip side.edge (along side m).size) ]
+        edgeGrip s =
+            div [ Attributes.class ("absolute " ++ s.at ++ " " ++ edgeTrack s) ]
+                [ Html.map (Grow (Edge s)) (Resize.grip s.edge (along s m).size) ]
 
         cornerGrip width height =
             let
