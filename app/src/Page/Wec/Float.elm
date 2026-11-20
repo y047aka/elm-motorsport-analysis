@@ -111,30 +111,32 @@ heightFence =
 `bottom-2.5 right-2.5`, since a popover in the top layer is inset from the _viewport_
 and not from `mainGrid` -- the same reason `inset: 0` is answered with `top-auto
 left-auto`.
-
-Every edge grows until its own far edge lands on the window's, and this is what the two
-at the anchored corner grow along: the other two start from the window and grow inward.
-
 -}
 cornerRoom : Float
 cornerRoom =
     10
 
 
-{-| An edge the box keeps a size by, and whether the box is anchored at it. The box is
-stood at its bottom right, so those two edges grow into the room the corner left and
-take the box along with the size; the other two grow away from a box that stays where it
-stands.
+{-| An edge the box keeps a size by: the words its grip is called by, where that grip
+stands, and the size it moves.
+
+The box is pinned at its bottom right, so the two edges there are `WithPointer` and take
+the box along with the size, and the other two are `AgainstPointer` and grow away from a
+box that stays where it stands. Which end the grip bounds is therefore one fact and not
+two: the grip at the pinned end is the one that carries the box.
+
 -}
 type alias Side =
-    { anchored : Bool
+    { name : String
+    , at : String
     , edge : Resize.Edge
     }
 
 
 left : Side
 left =
-    { anchored = False
+    { name = "left"
+    , at = "-left-2.5"
     , edge =
         { axis = Handle.Across
         , grows = Resize.AgainstPointer
@@ -148,7 +150,8 @@ left =
 
 right : Side
 right =
-    { anchored = True
+    { name = "right"
+    , at = "-right-2.5"
     , edge =
         { axis = Handle.Across
         , grows = Resize.WithPointer
@@ -162,7 +165,8 @@ right =
 
 top : Side
 top =
-    { anchored = False
+    { name = "top"
+    , at = "-top-2.5"
     , edge =
         { axis = Handle.Down
         , grows = Resize.AgainstPointer
@@ -176,7 +180,8 @@ top =
 
 bottom : Side
 bottom =
-    { anchored = True
+    { name = "bottom"
+    , at = "-bottom-2.5"
     , edge =
         { axis = Handle.Down
         , grows = Resize.WithPointer
@@ -192,8 +197,7 @@ bottom =
 once, so it holds both under one id, and that id is what the two sizes are then said to
 be held by.
 
-`at` is where the grip stands, outside the box by the same 10px the edge grips stand out
-by.
+Its id, its words and where its grip stands are all the two edges it is the meeting of.
 
 -}
 type alias Corner =
@@ -207,38 +211,30 @@ type alias Corner =
 
 corner : Handle.Direction -> Corner
 corner direction =
-    case direction of
-        Handle.NorthWest ->
-            { id = "tracker-float-top-left-grip"
-            , label = "Resize the floating track map from its top-left corner"
-            , at = "-top-2.5 -left-2.5"
-            , width = left
-            , height = top
-            }
+    let
+        ( width, height ) =
+            case direction of
+                Handle.NorthWest ->
+                    ( left, top )
 
-        Handle.NorthEast ->
-            { id = "tracker-float-top-right-grip"
-            , label = "Resize the floating track map from its top-right corner"
-            , at = "-top-2.5 -right-2.5"
-            , width = right
-            , height = top
-            }
+                Handle.NorthEast ->
+                    ( right, top )
 
-        Handle.SouthWest ->
-            { id = "tracker-float-bottom-left-grip"
-            , label = "Resize the floating track map from its bottom-left corner"
-            , at = "-bottom-2.5 -left-2.5"
-            , width = left
-            , height = bottom
-            }
+                Handle.SouthWest ->
+                    ( left, bottom )
 
-        Handle.SouthEast ->
-            { id = "tracker-float-bottom-right-grip"
-            , label = "Resize the floating track map from its bottom-right corner"
-            , at = "-bottom-2.5 -right-2.5"
-            , width = right
-            , height = bottom
-            }
+                Handle.SouthEast ->
+                    ( right, bottom )
+
+        names =
+            height.name ++ "-" ++ width.name
+    in
+    { id = "tracker-float-" ++ names ++ "-grip"
+    , label = "Resize the floating track map from its " ++ names ++ " corner"
+    , at = height.at ++ " " ++ width.at
+    , width = width
+    , height = height
+    }
 
 
 {-| `boxId` is what the travel is measured against at every pick, and what both
@@ -354,15 +350,33 @@ alongY side m =
     { side = side, size = m.height, shift = m.shift.y, window = m.window.height }
 
 
-{-| One axis of a drag on a size, by the grip named `gripId`.
+{-| Whether the box is carried along by the growth. The box is pinned at one end of each
+axis and a grip there moves the box by its own travel, while a grip at the other end
+leaves it stood -- which is what `Grows` already says, so the two cannot disagree.
+-}
+carried : Side -> Bool
+carried side =
+    side.edge.grows == Resize.WithPointer
 
-The ceiling is where the box's own edge along that axis lands on the window's. The two
-edges the box is anchored at grow into the room the corner left and take the box along by
-the same travel the size grew -- the edge opposite the grip held stays where it was. The
-other two leave the box stood and grow until their own edge reaches the far side. Either
-way the ceiling is the same at every move of one drag, because size and shift both grow by
-the travel.
 
+{-| How far the edge held can travel before it lands on the window's own edge: the window
+on the far side, zero on the near one. The box stands at `bottom-2.5 right-2.5` and is
+then carried by `shift`, so its far end sits at `window - cornerRoom + shift`.
+-}
+room : Drag -> Float
+room d =
+    case d.side.edge.grows of
+        Resize.WithPointer ->
+            cornerRoom - d.shift
+
+        Resize.AgainstPointer ->
+            d.window - cornerRoom + d.shift - d.size.size
+
+
+{-| One axis of a drag on a size, by the grip named `gripId`: the edge held travels to the
+window's own edge and no further, and the box goes along only when the grip is at the end
+the box is pinned at. Either way the ceiling is the same at every move of one drag,
+because size and shift both grow by the travel.
 -}
 grow : String -> Drag -> Resize.Msg -> { size : Resize.Model, shift : Float }
 grow gripId d msg =
@@ -371,11 +385,7 @@ grow gripId d msg =
             d.side.edge
 
         ceiling =
-            if d.side.anchored then
-                d.size.size + cornerRoom - d.shift
-
-            else
-                d.window - cornerRoom + d.shift
+            d.size.size + room d
 
         edge =
             { base
@@ -397,7 +407,7 @@ grow gripId d msg =
     in
     { size = size
     , shift =
-        if d.side.anchored then
+        if carried d.side then
             d.shift + size.size - d.size.size
 
         else
@@ -498,13 +508,13 @@ view m frame track snapshot =
                 text ""
             )
             [ Html.map ShiftMsg (Shift.handle box m.shift), closer ]
-        , div [ Attributes.class "absolute -left-2.5 top-0 z-10 grid h-full w-2.5 place-items-center" ]
+        , div [ Attributes.class ("absolute " ++ left.at ++ " top-0 z-10 grid h-full w-2.5 place-items-center") ]
             [ Html.map LeftMsg (Resize.grip left.edge m.width) ]
-        , div [ Attributes.class "absolute -right-2.5 top-0 z-10 grid h-full w-2.5 place-items-center" ]
+        , div [ Attributes.class ("absolute " ++ right.at ++ " top-0 z-10 grid h-full w-2.5 place-items-center") ]
             [ Html.map RightMsg (Resize.grip right.edge m.width) ]
-        , div [ Attributes.class "absolute -top-2.5 left-0 z-10 grid h-2.5 w-full content-center" ]
+        , div [ Attributes.class ("absolute " ++ top.at ++ " left-0 z-10 grid h-2.5 w-full content-center") ]
             [ Html.map TopMsg (Resize.grip top.edge m.height) ]
-        , div [ Attributes.class "absolute -bottom-2.5 left-0 z-10 grid h-2.5 w-full content-center" ]
+        , div [ Attributes.class ("absolute " ++ bottom.at ++ " left-0 z-10 grid h-2.5 w-full content-center") ]
             [ Html.map BottomMsg (Resize.grip bottom.edge m.height) ]
         , cornerGrip Handle.NorthWest
         , cornerGrip Handle.NorthEast
