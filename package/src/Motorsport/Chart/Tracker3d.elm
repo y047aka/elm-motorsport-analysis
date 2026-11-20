@@ -57,10 +57,8 @@ init =
     }
 
 
-{-| `Grab` and `Turn` carry the pointer's own page position, and `Turn` turns the map
-by the travel since the last turn -- so how far it goes is the reader's drag and
-nothing else's. `Step` rolls the map towards the right by, and lifts the eye towards
-overhead by, the radians given.
+{-| `Grab` and `Turn` carry the pointer's own client position (`clientX`/`clientY`), and `Turn` turns the map by the travel since the last turn -- so how far it goes is the reader's drag and nothing else's.
+`Step` rolls the map towards the right by, and lifts the eye towards overhead by, the radians given.
 -}
 type Msg
     = Grab Float Float
