@@ -48,9 +48,12 @@ type alias Model =
     }
 
 
+{-| The bounds a size is held between. A size may have no top of its own: a floated box is
+held only by how small it may go, the page being what stops it growing.
+-}
 type alias Fence =
     { min : Float
-    , max : Float
+    , max : Maybe Float
     }
 
 
@@ -148,17 +151,32 @@ signed grows travel =
 
 
 clampTo : Fence -> Float -> Float
-clampTo fence =
-    clamp fence.min fence.max
+clampTo fence size =
+    case fence.max of
+        Just top ->
+            clamp fence.min top size
+
+        Nothing ->
+            max fence.min size
 
 
 {-| The edge with its `Fence`'s top taken down to a ceiling the caller knows. A size
 is bounded by its `Fence` and sometimes by something of the page's besides: a floated
-box cannot grow past the window its corner stands in.
+box cannot grow past the window its corner stands in. An edge with no top of its own
+takes the ceiling as its top.
 -}
 cappedTo : Float -> Edge -> Edge
 cappedTo ceiling edge =
-    { edge | fence = { min = edge.fence.min, max = min edge.fence.max ceiling } }
+    let
+        top =
+            case edge.fence.max of
+                Just max ->
+                    min max ceiling
+
+                Nothing ->
+                    ceiling
+    in
+    { edge | fence = { min = edge.fence.min, max = Just top } }
 
 
 {-| The grip along the edge, held when it is the one that took the size up.

@@ -287,6 +287,51 @@ test.describe('the floating track map', () => {
     await page.mouse.up();
   });
 
+  test('grows as far as the window, and no further', async ({ page }) => {
+    await floatTrigger(page).click();
+    const { width: windowW, height: windowH } = (await page.viewportSize())!;
+
+    // The fences say how small the box may go and nothing more: the window is the only
+    // ceiling, and it stops every edge on its own. So a corner pulled far up and left
+    // leaves the box standing on the window's own corner, filling it.
+    await carryGrip(page, northWestGrip(page), -1400, -1000);
+    const filled = await box(page, FLOAT);
+    expect(filled.width).toBeCloseTo(windowW - CORNER_ROOM, 0);
+    expect(filled.height).toBeCloseTo(windowH - CORNER_ROOM, 0);
+    expect(filled.x).toBeCloseTo(0, 0);
+    expect(filled.y).toBeCloseTo(0, 0);
+    await page.mouse.up();
+  });
+
+  test('the drawing keeps the shape of the box it is stood in', async ({ page }) => {
+    await floatTrigger(page).click();
+
+    /**
+     * A fixed viewBox letterboxes inside a box of another shape, and the letterbox is
+     * invisible in a screenshot of a box that happens to be the same shape as the
+     * drawing. So what is asserted is the drawing's own proportions against the box it
+     * was fitted to -- at the box the map opens at, and after the reader makes it
+     * another shape.
+     */
+    const proportions = async () => {
+      const viewBox = (await page.locator(`${FLOAT} svg`).first().getAttribute('viewBox'))!;
+      const [, , w, h] = viewBox.split(' ').map(Number);
+      const stood = (await page.locator(`${FLOAT} [aria-label^="Turn the track map"]`).boundingBox())!;
+      return { drawing: w / h, stood: stood.width / stood.height };
+    };
+
+    const opened = await proportions();
+    expect(opened.drawing).toBeCloseTo(opened.stood, 1);
+
+    // A taller box is a taller drawing, not the same drawing standing in the middle of a
+    // taller box.
+    await carryGrip(page, topGrip(page), 0, -200);
+    await page.mouse.up();
+    const taller = await proportions();
+    expect(taller.drawing).toBeCloseTo(taller.stood, 1);
+    expect(taller.drawing).toBeLessThan(opened.drawing - 1);
+  });
+
   test('is carried round the page by its grip, at the size it was measured at', async ({ page }) => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);

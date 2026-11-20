@@ -79,7 +79,7 @@ standingsEdge =
 standingsFence : Resize.Fence
 standingsFence =
     { min = LiveStandings.minWidth
-    , max = LiveStandings.maxWidth
+    , max = Just LiveStandings.maxWidth
     }
 
 

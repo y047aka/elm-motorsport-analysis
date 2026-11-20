@@ -18,13 +18,16 @@ import Motorsport.Chart.Tracker3d as Track3d exposing (Model, Msg)
 import Motorsport.Race.Snapshot exposing (Snapshot)
 
 
-{-| The page holds the way the map is looked at; the view keeps nothing of its own.
+{-| The page holds the way the map is looked at, and the box it is stood in: the drawing
+is fitted to that box's proportions, in the page's own pixels. The view keeps nothing of
+its own.
 -}
 type alias Config msg =
     { model : Model
     , toMsg : Msg -> msg
     , track : Track
     , snapshot : Snapshot
+    , size : { width : Float, height : Float }
     }
 
 
@@ -32,7 +35,7 @@ type alias Config msg =
 and a step at a time by the arrow keys once it has the focus.
 -}
 surface : Config msg -> Html msg
-surface { model, toMsg, track, snapshot } =
+surface { model, toMsg, track, snapshot, size } =
     Html.node "drag-handle"
         ([ class
             ("absolute inset-0 grid touch-none select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring "
@@ -54,7 +57,7 @@ surface { model, toMsg, track, snapshot } =
          ]
             ++ moves toMsg model
         )
-        [ Track3d.view model track snapshot ]
+        [ Track3d.view size model track snapshot ]
 
 
 dragging : Model -> Bool

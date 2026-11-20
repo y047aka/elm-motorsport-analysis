@@ -9,7 +9,14 @@ import Test exposing (Test, describe, test)
 
 fence : Resize.Fence
 fence =
-    { min = 200, max = 600 }
+    { min = 200, max = Just 600 }
+
+
+{-| The fence's top, said as the number a size stops at.
+-}
+top : Float
+top =
+    Maybe.withDefault 0 fence.max
 
 
 edge : Resize.Edge
@@ -63,7 +70,7 @@ suite =
                             m
                                 |> step (Carrying (pointer 1 900))
                                 |> .size
-                                |> Expect.equal fence.max
+                                |> Expect.equal top
                         , \m ->
                             m
                                 |> step (Carrying (pointer 1 -100))
@@ -71,6 +78,11 @@ suite =
                                 |> Expect.equal fence.min
                         ]
                         (startAt 300)
+            , test "a size with no top of its own goes as far as the pointer takes it" <|
+                \_ ->
+                    Resize.update { edge | fence = { min = fence.min, max = Nothing } } (Carrying (pointer 1 9000)) (startAt 300)
+                        |> .size
+                        |> Expect.equal 9000
             , test "another pointer's moves are not the carry's business" <|
                 \_ ->
                     startAt 300

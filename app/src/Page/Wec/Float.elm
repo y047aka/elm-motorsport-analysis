@@ -11,6 +11,7 @@ The camera belongs here: this is the one drawing raised off the ground it was su
 
 -}
 
+import Browser.Dom
 import Drag.Handle as Handle
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes exposing (attribute)
@@ -22,6 +23,7 @@ import Motorsport.Race.Snapshot exposing (Snapshot)
 import Page.Wec.Columns as Columns
 import Page.Wec.Resize as Resize
 import Page.Wec.Shift as Shift
+import Task
 import View.CarDetail.Header as Header
 import View.TrackMap3d as TrackMap3d
 
@@ -32,6 +34,7 @@ type alias Model =
     , height : Resize.Model
     , shift : Shift.Model
     , camera : Track3d.Model
+    , window : { width : Float, height : Float }
     }
 
 
@@ -42,7 +45,17 @@ init =
     , height = Resize.init defaultHeight
     , shift = Shift.init
     , camera = Track3d.init
+    , window = unmeasured
     }
+
+
+{-| No window has been read yet. Nothing grows against it: a grip lies on a popover the
+UA keeps hidden until the column asks, and the open reads the window before any grip can
+be pressed.
+-}
+unmeasured : { width : Float, height : Float }
+unmeasured =
+    { width = 4000, height = 4000 }
 
 
 {-| `Shown` mirrors what the popover said of itself; the presses themselves are the
@@ -58,12 +71,13 @@ type Msg
     | CarryCorner Handle.Direction Handle.Place
     | DropCorner Handle.Direction Handle.Place
     | CancelCorner Handle.Direction Int
+    | Window { width : Float, height : Float }
     | ShiftMsg Shift.Msg
     | CameraMsg Track3d.Msg
 
 
 {-| The box the floating map opens at.
-480 by 180 is `Tracker3d.box`'s own three to one once the card's 32px of padding is gone, and a box of that shape is the one the drawing fills exactly; letterboxing is what a box of another proportion costs.
+480 by 180 is `Tracker3d.box`'s own three to one once the card's padding is gone.
 The map is stood at the bottom right of the page, and every one of its four edges is a grip: the two away from the corner it is stood at grow `AgainstPointer`, and the two at it are `WithPointer` and take the box along with the size, so the edge opposite the one held stays where it was.
 -}
 defaultWidth : Float
@@ -76,25 +90,31 @@ defaultHeight =
     180
 
 
+{-| How small each size may go, and nothing more: how far it may go is the window's, and
+`grow` reads it there.
+-}
 widthFence : Resize.Fence
 widthFence =
     { min = 280
-    , max = 960
+    , max = Nothing
     }
 
 
 heightFence : Resize.Fence
 heightFence =
     { min = 120
-    , max = 480
+    , max = Nothing
     }
 
 
 {-| The room between the corner the box is stood at and the window's: the box's own
 `bottom-2.5 right-2.5`, since a popover in the top layer is inset from the _viewport_
 and not from `mainGrid` -- the same reason `inset: 0` is answered with `top-auto
-left-auto`. The two grips at the anchored edges grow the box along it, and stop there:
-the box's own edges stop at the window's, as they do under a carry.
+left-auto`.
+
+Every edge grows until its own far edge lands on the window's, and this is what the two
+at the anchored corner grow along: the other two start from the window and grow inward.
+
 -}
 cornerRoom : Float
 cornerRoom =
@@ -236,44 +256,53 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg m =
     case msg of
         Shown shown ->
-            ( { m | shown = shown }, Cmd.none )
+            ( { m | shown = shown }
+            , if shown then
+                measure
+
+              else
+                Cmd.none
+            )
+
+        Window window ->
+            ( { m | window = window }, Cmd.none )
 
         LeftMsg sub ->
             let
                 grown =
-                    grow left.edge.id left sub m.width m.shift.x
+                    grow left.edge.id (alongX left m) sub
             in
-            ( { m | width = grown.size }, Cmd.none )
+            ( { m | width = grown.size }, measureOn sub )
 
         RightMsg sub ->
             let
                 grown =
-                    grow right.edge.id right sub m.width m.shift.x
+                    grow right.edge.id (alongX right m) sub
 
                 shift =
                     m.shift
             in
-            ( { m | width = grown.size, shift = { shift | x = grown.shift } }, Cmd.none )
+            ( { m | width = grown.size, shift = { shift | x = grown.shift } }, measureOn sub )
 
         TopMsg sub ->
             let
                 grown =
-                    grow top.edge.id top sub m.height m.shift.y
+                    grow top.edge.id (alongY top m) sub
             in
-            ( { m | height = grown.size }, Cmd.none )
+            ( { m | height = grown.size }, measureOn sub )
 
         BottomMsg sub ->
             let
                 grown =
-                    grow bottom.edge.id bottom sub m.height m.shift.y
+                    grow bottom.edge.id (alongY bottom m) sub
 
                 shift =
                     m.shift
             in
-            ( { m | height = grown.size, shift = { shift | y = grown.shift } }, Cmd.none )
+            ( { m | height = grown.size, shift = { shift | y = grown.shift } }, measureOn sub )
 
         GrabCorner direction place ->
-            ( growCorner direction Resize.Grab place m, Cmd.none )
+            ( growCorner direction Resize.Grab place m, measure )
 
         CarryCorner direction place ->
             ( growCorner direction Resize.Carrying place m, Cmd.none )
@@ -304,41 +333,63 @@ update msg m =
             ( { m | camera = Track3d.update sub m.camera }, Cmd.none )
 
 
-{-| One axis of a drag on a size, by the grip named `gripId`. The two edges the box is
-anchored at grow into the room the corner left of the window, and take the box along by
-the same travel the size grew -- the edge opposite the grip held stays where it was, and
-the ceiling is the same at every move of one drag because size and shift both grow.
+{-| One axis of a drag: the side being grown, the size it holds, how far the box has gone
+along that axis, and how far the window goes along it.
+-}
+type alias Drag =
+    { side : Side
+    , size : Resize.Model
+    , shift : Float
+    , window : Float
+    }
 
-The other two leave the box stood and are bounded by nothing but their `Fence`.
+
+alongX : Side -> Model -> Drag
+alongX side m =
+    { side = side, size = m.width, shift = m.shift.x, window = m.window.width }
+
+
+alongY : Side -> Model -> Drag
+alongY side m =
+    { side = side, size = m.height, shift = m.shift.y, window = m.window.height }
+
+
+{-| One axis of a drag on a size, by the grip named `gripId`.
+
+The ceiling is where the box's own edge along that axis lands on the window's. The two
+edges the box is anchored at grow into the room the corner left and take the box along by
+the same travel the size grew -- the edge opposite the grip held stays where it was. The
+other two leave the box stood and grow until their own edge reaches the far side. Either
+way the ceiling is the same at every move of one drag, because size and shift both grow by
+the travel.
 
 -}
-grow : String -> Side -> Resize.Msg -> Resize.Model -> Float -> { size : Resize.Model, shift : Float }
-grow gripId side msg model shift =
+grow : String -> Drag -> Resize.Msg -> { size : Resize.Model, shift : Float }
+grow gripId d msg =
     let
         base =
-            side.edge
+            d.side.edge
 
         edge =
             { base | id = gripId }
 
-        size =
-            Resize.update
-                (if side.anchored then
-                    Resize.cappedTo (model.size + cornerRoom - shift) edge
+        ceiling =
+            if d.side.anchored then
+                d.size.size + cornerRoom - d.shift
 
-                 else
-                    edge
-                )
-                msg
-                model
+            else
+                d.window - cornerRoom + d.shift
+
+        size =
+            Resize.update (Resize.cappedTo ceiling edge) msg d.size
     in
     { size = size
     , shift =
-        if side.anchored then
-            shift + size.size - model.size
+        if d.side.anchored then
+            d.shift + size.size - d.size.size
 
         else
-            shift
+            d.shift
     }
 
 
@@ -352,15 +403,38 @@ growCorner direction toMsg place m =
             corner direction
 
         width =
-            grow c.id c.width (toMsg { id = place.id, along = place.x }) m.width m.shift.x
+            grow c.id (alongX c.width m) (toMsg { id = place.id, along = place.x })
 
         height =
-            grow c.id c.height (toMsg { id = place.id, along = place.y }) m.height m.shift.y
+            grow c.id (alongY c.height m) (toMsg { id = place.id, along = place.y })
 
         shift =
             m.shift
     in
     { m | width = width.size, height = height.size, shift = { shift | x = width.shift, y = height.shift } }
+
+
+{-| How far the window goes, read from the browser. The ceiling a drag stops at is the
+window's and the window can have been resized since the last reading, so the window is
+read again when a grip takes a size up -- the way a carry measures the box it is about to
+move.
+-}
+measure : Cmd Msg
+measure =
+    Browser.Dom.getViewport
+        |> Task.map (\{ viewport } -> Window { width = viewport.width, height = viewport.height })
+        |> Task.onError (\_ -> Task.succeed (Window unmeasured))
+        |> Task.perform identity
+
+
+measureOn : Resize.Msg -> Cmd Msg
+measureOn msg =
+    case msg of
+        Resize.Grab _ ->
+            measure
+
+        _ ->
+            Cmd.none
 
 
 {-| The map floated over the columns, drawn into the card the page hands it.
@@ -433,9 +507,26 @@ toggled =
         |> Decode.map (\state -> Shown (state == "open"))
 
 
+{-| The card takes 16px of padding off each side of the box, and the box keeps a 1px
+border, before the drawing has anything to say about its own size.
+-}
+cardLoss : Float
+cardLoss =
+    34
+
+
 surface : Model -> Track -> Snapshot -> Html Msg
 surface m track snapshot =
-    TrackMap3d.surface { model = m.camera, toMsg = CameraMsg, track = track, snapshot = snapshot }
+    TrackMap3d.surface
+        { model = m.camera
+        , toMsg = CameraMsg
+        , track = track
+        , snapshot = snapshot
+        , size =
+            { width = m.width.size - cardLoss
+            , height = m.height.size - cardLoss
+            }
+        }
 
 
 {-| The press that floats the map over the columns, standing in the tracker
