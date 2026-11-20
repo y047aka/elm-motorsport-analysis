@@ -90,9 +90,12 @@ export const TRACKER_COLUMN = '[data-tracker-column]';
  * fails when the ring is drawn; what moved is the shape of the race. The ring's
  * lap is a circle and the surveyed lap is a polygon, which the ring's drawing has
  * none of, so the polygon says a drawing was chosen -- no baseline needed.
+ *
+ * The second argument is which tracker to read: the column it opens in, or the row
+ * the circuit is raised into.
  */
-export async function expectSurveyedLap(page: Page) {
-  await expect(page.locator(`${TRACKER_COLUMN} svg polygon`)).toHaveCount(1);
+export async function expectSurveyedLap(page: Page, tracker = TRACKER_COLUMN) {
+  await expect(page.locator(`${tracker} svg polygon`)).toHaveCount(1);
 }
 
 /** `h:mm:ss.fff` or `m:ss.fff`, as the summary spells an elapsed time. */
