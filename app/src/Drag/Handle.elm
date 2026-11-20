@@ -264,6 +264,9 @@ type alias Grip msg =
 implicit row track cannot shrink below the glyph's line box, and `place-items`
 centres an item within its own track -- which is nothing at all where the glyph
 is taller than the 8px an edge grip is, and the row hangs below the grip.
+
+Every grip is `touch-none`: a finger resting on one would otherwise scroll the page
+rather than carry the size it bounds.
 -}
 grip : Kind -> Grip msg -> Html msg
 grip kind g =
@@ -287,7 +290,7 @@ grip kind g =
             )
          , class
             (g.classes
-                ++ " "
+                ++ " touch-none "
                 ++ g.cursor
                 ++ (if g.held then
                         " bg-accent text-accent-foreground"

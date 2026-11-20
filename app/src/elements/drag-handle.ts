@@ -6,6 +6,9 @@
  *
  * Capture is released when the element leaves the document, so what it sits in
  * must not be moved while it is held.
+ *
+ * A finger is kept from scrolling the page instead of dragging by `touch-none` on
+ * the class of whoever stands the grip, not here.
  */
 export class DragHandle extends HTMLElement {
   #held = new Set<number>();
@@ -20,14 +23,6 @@ export class DragHandle extends HTMLElement {
     this.addEventListener("lostpointercapture", (e) => {
       this.#held.delete(e.pointerId);
     });
-  }
-
-  connectedCallback() {
-    // Not in the constructor, which may not add an attribute: an element whose
-    // constructor does is handed back as an `HTMLUnknownElement`, silently.
-    //
-    // A finger on the grip would otherwise scroll the page instead.
-    this.style.touchAction = "none";
   }
 
   disconnectedCallback() {
