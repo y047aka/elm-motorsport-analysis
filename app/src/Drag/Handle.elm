@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, carry)
+module Drag.Handle exposing (Axis(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, carry, eventsAcross, arrowKeys)
 
 {-| A grip that carries something: along a line, or across the page in both directions at
 once -- by the pointer, or a step at a time by the arrow keys for the grips that
@@ -9,7 +9,12 @@ behind it is `Drag`'s business. What the grip adds is the pointer's path: the
 `drag-handle` custom element calls `setPointerCapture`, which Elm cannot, so every move and the release come back to the grip even once the pointer has left
 it.
 
-@docs Axis, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, carry
+A drawing the reader drags anywhere on is not a grip and stands on its own -- it wants no
+glyph, no emphasis, and its own words -- but it reads the pointer the same way, and so takes
+[`eventsAcross`](#eventsAcross) and [`arrowKeys`](#arrowKeys) rather than one of the four
+grips here.
+
+@docs Axis, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, carry, eventsAcross, arrowKeys
 
 -}
 
@@ -321,6 +326,14 @@ stepWith decoder toMsg =
     preventDefaultOn "keydown" (Decode.map (\step -> ( toMsg step, True )) decoder)
 
 
+{-| The four arrow keys, stepping whichever axis each of them lies along, and no other key
+reaching the message at all.
+-}
+arrowKeys : (Steps -> msg) -> Html.Attribute msg
+arrowKeys =
+    stepWith bothArrows
+
+
 {-| The pointer's events of a grip read along one axis. A move is listened for only
 while one is held, and the release is listened for always: the pointer can be let go
 of before the frame that would have added a move.
@@ -353,6 +366,12 @@ eventsAlong axis config =
 
 {-| The pointer's events of a grip read in both directions at once. The row stays open
 because the grip that carries a box steps by the arrow keys as well.
+
+A move is listened for only while one is held, and the release always: a turn let go of
+before the frame that would have added a move has reported no moves at all. The pointer's own
+id rides along on every one of them, which is what lets the caller refuse a second pointer
+taking over a carry the first one has.
+
 -}
 eventsAcross :
     { g | held : Bool, onGrab : Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }

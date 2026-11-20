@@ -5,7 +5,7 @@ asks for it, sized by a grip along each of its four edges and at each of its fou
 
 The box is a `popover`, and a `manual` one: the browser keeps whether it is open, the two presses only name it, and nothing here can be closed by a press outside it -- the columns are worked while the map is up.
 
-The camera belongs here: this is the one drawing raised off the ground it was surveyed on.
+The camera belongs here: this is the one drawing raised off the ground it was surveyed on. Which pointer is turning it, `Page.Wec.Camera` holds.
 
 @docs Model, Msg, init, update, view, trigger
 
@@ -18,8 +18,8 @@ import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (on)
 import Json.Decode as Decode
 import Motorsport.Chart.Tracker exposing (Track)
-import Motorsport.Chart.Tracker3d as Track3d
 import Motorsport.Race.Snapshot exposing (Snapshot)
+import Page.Wec.Camera as Camera
 import Page.Wec.Columns as Columns
 import Page.Wec.Resize as Resize
 import Page.Wec.Shift as Shift
@@ -33,7 +33,7 @@ type alias Model =
     , width : Resize.Model
     , height : Resize.Model
     , shift : Shift.Model
-    , camera : Track3d.Model
+    , camera : Camera.Model
     , window : { width : Float, height : Float }
     }
 
@@ -44,7 +44,7 @@ init =
     , width = Resize.init defaultWidth
     , height = Resize.init defaultHeight
     , shift = Shift.init
-    , camera = Track3d.init
+    , camera = Camera.init
     , window = unmeasured
     }
 
@@ -66,7 +66,7 @@ type Msg
     | Grow Grip Resize.Msg
     | Window { width : Float, height : Float }
     | ShiftMsg Shift.Msg
-    | CameraMsg Track3d.Msg
+    | CamMsg Camera.Msg
 
 
 {-| The box the floating map opens at.
@@ -265,8 +265,8 @@ update msg m =
             in
             ( { m | shift = shift }, Cmd.map ShiftMsg cmd )
 
-        CameraMsg sub ->
-            ( { m | camera = Track3d.update sub m.camera }, Cmd.none )
+        CamMsg sub ->
+            ( { m | camera = Camera.update sub m.camera }, Cmd.none )
 
 
 {-| One axis of a drag: the side being grown, the size it holds, how far the box has gone
@@ -501,14 +501,20 @@ cardLoss =
 surface : Model -> Track -> Snapshot -> Html Msg
 surface m track snapshot =
     TrackMap3d.surface
-        { model = m.camera
-        , toMsg = CameraMsg
+        { model = m.camera.eye
         , track = track
         , snapshot = snapshot
         , size =
             { width = m.width.size - cardLoss
             , height = m.height.size - cardLoss
             }
+        , label = "Turn the track map: drag it, or press the arrow keys"
+        , keys = CamMsg << Camera.Step
+        , held = Camera.held m.camera
+        , onGrab = CamMsg << Camera.Grab
+        , onMove = CamMsg << Camera.Move
+        , onDrop = CamMsg << Camera.Release
+        , onCancel = CamMsg << Camera.Cancel
         }
 
 

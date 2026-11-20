@@ -1,4 +1,4 @@
-module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, box, projected, band)
+module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, box, projected, band, perPixel)
 
 {-| The circuit raised off the ground it was surveyed on and seen through a
 perspective camera, so the side of the loop standing near comes out wide and the
@@ -12,7 +12,7 @@ turns it is a frame, and what draws it is SVG, projected point by point.
 Everything the drawing measures is a share of the lap's own size, so one set of
 lengths serves every circuit and the ring it falls back to.
 
-@docs Model, Msg, init, update, view, box, projected, band
+@docs Model, Msg, init, update, view, box, projected, band, perPixel
 
 -}
 
@@ -35,14 +35,13 @@ import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, s
 -- HOW THE MAP IS HELD
 
 
-{-| How the map is looked at, and whether a pointer is on it. The azimuth spins the map
-round the vertical and the elevation lifts the eye towards overhead; together they are
-the whole pose -- there is no scale to set, the drawing being fitted to its box.
+{-| How the map is looked at. The azimuth spins the map round the vertical and the
+elevation lifts the eye towards overhead; together they are the whole pose -- there is no
+scale to set, the drawing being fitted to its box.
 -}
 type alias Model =
     { azimuth : Float
     , elevation : Float
-    , drag : Maybe { x : Float, y : Float }
     }
 
 
@@ -53,59 +52,35 @@ init : Model
 init =
     { azimuth = -pi / 2
     , elevation = degrees 26
-    , drag = Nothing
     }
 
 
-{-| `Grab` and `Turn` carry the pointer's own client position (`clientX`/`clientY`), and `Turn` turns the map by the travel since the last turn -- so how far it goes is the reader's drag and nothing else's.
-`Step` rolls the map towards the right by, and lifts the eye towards overhead by, the radians given.
+{-| Roll the map towards the right by, and lift the eye towards overhead by, the radians
+given. The pointer's travel and the arrow keys are both asked for in the reader's own
+directions, so the drawing answers one message either way.
 -}
 type Msg
-    = Grab Float Float
-    | Turn Float Float
-    | Release
-    | Cancel
-    | Step Float Float
+    = Roll Float Float
 
 
-{-| The azimuth runs the other way round from the pointer's `x`: a thing rolled to the
-right carries the side standing near to the right with it, and that is the azimuth
-running down. Both the drag and the arrow keys are asked for in the reader's own
-directions -- `Turn` is the pointer's travel, `Step` a roll towards the right -- so the
-reversal is made here and nowhere else.
+{-| The azimuth runs the other way round from a roll towards the right: a thing rolled to
+the right carries the side standing near to the right with it, and that is the azimuth
+running down. The reversal is made here and nowhere else, so whoever asks for a roll says it
+in the reader's own directions.
 -}
 update : Msg -> Model -> Model
 update msg m =
     case msg of
-        Grab x y ->
-            { m | drag = Just { x = x, y = y } }
-
-        Turn x y ->
-            case m.drag of
-                Nothing ->
-                    m
-
-                Just from ->
-                    { m
-                        | azimuth = m.azimuth - (x - from.x) * turn
-                        , elevation = lifted (m.elevation + (y - from.y) * turn)
-                        , drag = Just { x = x, y = y }
-                    }
-
-        Release ->
-            { m | drag = Nothing }
-
-        Cancel ->
-            { m | drag = Nothing }
-
-        Step roll rise ->
+        Roll roll rise ->
             { m | azimuth = m.azimuth - roll, elevation = lifted (m.elevation + rise) }
 
 
-{-| Radians per pixel of the pointer's travel.
+{-| The radians a pixel of the pointer's travel is worth. The drag is measured in the
+reader's pixels and the pose is kept in radians, and the one is turned into the other where
+the pointer is read.
 -}
-turn : Float
-turn =
+perPixel : Float
+perPixel =
     degrees 0.45
 
 
