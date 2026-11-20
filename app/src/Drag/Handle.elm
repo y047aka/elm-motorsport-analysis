@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Pointer, Place, Steps, Config, Stepped, Config2, resize, view, carry)
+module Drag.Handle exposing (Axis(..), Direction(..), Pointer, Place, Steps, Config, Stepped, Config2, Placed, resize, corner, view, carry)
 
 {-| A grip that carries something: along a line, or across the page in both directions at
 once -- by the pointer, or a step at a time by the arrow keys for the grips that
@@ -9,7 +9,7 @@ behind it is `Drag`'s business. What the grip adds is the pointer's path: the
 `drag-handle` custom element calls `setPointerCapture`, which Elm cannot, so every move and the release come back to the grip even once the pointer has left
 it.
 
-@docs Axis, Pointer, Place, Steps, Config, Stepped, Config2, resize, view, carry
+@docs Axis, Direction, Pointer, Place, Steps, Config, Stepped, Config2, Placed, resize, corner, view, carry
 
 -}
 
@@ -34,6 +34,16 @@ type alias Pointer =
     { id : Int
     , along : Float
     }
+
+
+{-| Which corner of a box a grip stands at. It says which way the box grows, and so
+which way the cursor turns: the two corners of one diagonal share a cursor.
+-}
+type Direction
+    = NorthWest
+    | NorthEast
+    | SouthWest
+    | SouthEast
 
 
 {-| Which pointer, and where it is in both directions at once: what the grip that
@@ -88,6 +98,19 @@ type alias Stepped msg =
     , onDrop : Pointer -> msg
     , onCancel : Int -> msg
     , onStep : Int -> msg
+    }
+
+
+{-| The same, for a grip that reads both directions at once and answers to no keys.
+-}
+type alias Placed msg =
+    { id : String
+    , label : String
+    , held : Bool
+    , onGrab : Place -> msg
+    , onMove : Place -> msg
+    , onDrop : Place -> msg
+    , onCancel : Int -> msg
     }
 
 
@@ -196,9 +219,45 @@ resize axis glyph config =
         }
 
 
+{-| The grip at a corner, growing both sizes at once: the pointer is read along both
+axes and the caller decides which of them moves what. Which diagonal it lies along is
+the cursor's.
+-}
+corner : Direction -> Placed msg -> Html msg
+corner direction config =
+    grip
+        Corner
+        { id = config.id
+        , label = config.label
+        , held = config.held
+        , hint = ""
+        , classes = "grid h-2.5 w-2.5 select-none transition-colors"
+        , cursor =
+            if config.held then
+                "cursor-grabbing"
+
+            else
+                case direction of
+                    NorthWest ->
+                        "cursor-nwse-resize"
+
+                    SouthEast ->
+                        "cursor-nwse-resize"
+
+                    NorthEast ->
+                        "cursor-nesw-resize"
+
+                    SouthWest ->
+                        "cursor-nesw-resize"
+        , glyph = ""
+        , events = eventsAcross config
+        }
+
+
 {-| What the grip is to a reader: `Carry` moves a thing and answers as a button,
 and the `String` is the arrows it answers to; `Splitter` is the bar a size is bounded
-by, and says which bar it is.
+by, and says which bar it is; `Corner` is where two of those bars meet, and grows both
+sizes at once.
 
 The distinction is the ARIA's: a thing a screen reader is told to press has to do
 something when pressed, which a splitter does not.
@@ -207,6 +266,7 @@ something when pressed, which a splitter does not.
 type Kind
     = Carry String
     | Splitter Axis
+    | Corner
 
 
 {-| What every grip is made of: the a11y attributes, the class, the glyph, and the
@@ -316,9 +376,12 @@ eventsAlong axis config =
            )
 
 
-{-| The pointer's events of a grip read in both directions at once.
+{-| The pointer's events of a grip read in both directions at once. The row stays open
+because the corner grip reads the same pointer and answers to no keys.
 -}
-eventsAcross : Config2 msg -> List (Html.Attribute msg)
+eventsAcross :
+    { g | held : Bool, onGrab : Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
+    -> List (Html.Attribute msg)
 eventsAcross config =
     [ on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab place))
     , on "pointerup" (Decode.map config.onDrop place)
@@ -370,6 +433,11 @@ role kind =
                         "horizontal"
                 )
             ]
+
+        Corner ->
+            -- A separator still, and one that is neither bar: `aria-orientation` has
+            -- no word for a corner.
+            [ attribute "role" "separator" ]
 
 
 coordinate : Axis -> Decoder Float

@@ -36,9 +36,9 @@ type Grows
 {-| The size the thing stands at and the carry that moves it: the size follows the
 pointer's travel from the size `Drag` was picked up with.
 
-A size has a grip along each of its two edges and one `Model` between them, so which
-of the two holds it is kept beside the carry: `grip` is the id of the one that does,
-and `Nothing` is none.
+A size has grips -- along each of its two edges, and at the corners where those meet --
+and one `Model` between them, so which of them holds it is kept beside the carry: `grip`
+is the id of the one that does, and `Nothing` is none.
 
 -}
 type alias Model =
@@ -46,8 +46,6 @@ type alias Model =
     , carried : Drag.State Float
     , grip : Maybe String
     }
-    -- `grip` names which grip has the size in hand rather than saying that one does: a
-    -- size has two grips now, and the one drawn held is the one taken up.
 
 
 type alias Fence =

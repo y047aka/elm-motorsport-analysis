@@ -40,6 +40,17 @@ const rightGrip = (page: Page): Locator => edgeGrip(page, 'right');
 const topGrip = (page: Page): Locator => edgeGrip(page, 'top');
 const bottomGrip = (page: Page): Locator => edgeGrip(page, 'bottom');
 
+/** The four corners, each the meeting of two edges and the one grip that grows both
+ * sizes at once. The cursor says which diagonal it lies along; the two corners of one
+ * diagonal share it.
+ */
+const cornerGrip = (page: Page, corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'): Locator =>
+  page.getByRole('separator', { name: `Resize the floating track map from its ${corner} corner` });
+const northWestGrip = (page: Page): Locator => cornerGrip(page, 'top-left');
+const northEastGrip = (page: Page): Locator => cornerGrip(page, 'top-right');
+const southWestGrip = (page: Page): Locator => cornerGrip(page, 'bottom-left');
+const southEastGrip = (page: Page): Locator => cornerGrip(page, 'bottom-right');
+
 /** The grip the box is carried by. The circuit itself takes a drag to turn, so the
  * two drags have to be told apart by where they are pressed. */
 const moveGrip = (page: Page): Locator =>
@@ -214,6 +225,65 @@ test.describe('the floating track map', () => {
     const taller = await box(page, FLOAT);
     expect(taller.height).toBeCloseTo(FLOAT_HEIGHT + 150, 0);
     expect(taller.y).toBeCloseTo(stood.y, 0);
+    await page.mouse.up();
+  });
+
+  test('grows both ways at once from a corner, and says which diagonal it is', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+
+    // The pointer is the only way in, as along the edges: no key reaches a corner, it is
+    // no tab stop, and it marks nothing. What it does say is which way the box grows.
+    await expect(northWestGrip(page)).toHaveCSS('cursor', 'nwse-resize');
+    await expect(southEastGrip(page)).toHaveCSS('cursor', 'nwse-resize');
+    await expect(northEastGrip(page)).toHaveCSS('cursor', 'nesw-resize');
+    await expect(southWestGrip(page)).toHaveCSS('cursor', 'nesw-resize');
+    await expect(northWestGrip(page)).toHaveText('');
+    await expect(northWestGrip(page)).not.toHaveAttribute('tabindex');
+
+    // A corner is where two bars meet, and `aria-orientation` has no word for it.
+    await expect(northWestGrip(page)).not.toHaveAttribute('aria-orientation');
+
+    // One press, one pointer, and both sizes go by their own axis's travel. The two edges
+    // the box is anchored at stay where they were: this corner is away from them.
+    await carryGrip(page, northWestGrip(page), -80, -60);
+    const grown = await box(page, FLOAT);
+    expect(grown.width).toBeCloseTo(FLOAT_WIDTH + 80, 0);
+    expect(grown.height).toBeCloseTo(FLOAT_HEIGHT + 60, 0);
+    expect(grown.x + grown.width).toBeCloseTo(opened.x + opened.width, 0);
+    expect(grown.y + grown.height).toBeCloseTo(opened.y + opened.height, 0);
+    await page.mouse.up();
+  });
+
+  test('stops at the window on both axes at once, at the corner it is stood at', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+
+    // The corner the box is stood at grows into the room its corner left of the window and
+    // no further, each axis on its own: the box's own edges land on the window's, and the
+    // corner opposite stays where it was. The pointer goes far past both ceilings.
+    await carryGrip(page, southEastGrip(page), 300, 300);
+    const clamped = await box(page, FLOAT);
+    expect(clamped.width).toBeCloseTo(FLOAT_WIDTH + CORNER_ROOM, 0);
+    expect(clamped.height).toBeCloseTo(FLOAT_HEIGHT + CORNER_ROOM, 0);
+    expect(clamped.x).toBeCloseTo(opened.x, 0);
+    expect(clamped.y).toBeCloseTo(opened.y, 0);
+    expect(clamped.x + clamped.width).toBeCloseTo(opened.x + opened.width + CORNER_ROOM, 0);
+    expect(clamped.y + clamped.height).toBeCloseTo(opened.y + opened.height + CORNER_ROOM, 0);
+    await page.mouse.up();
+
+    // Carried away from the corner, the same grip has the room the carry left, and the
+    // corner the box now stands at again stays.
+    await carryGrip(page, moveGrip(page), -300, -200);
+    await page.mouse.up();
+    const stood = await box(page, FLOAT);
+
+    await carryGrip(page, southEastGrip(page), 150, 100);
+    const grown = await box(page, FLOAT);
+    expect(grown.width).toBeCloseTo(FLOAT_WIDTH + CORNER_ROOM + 150, 0);
+    expect(grown.height).toBeCloseTo(FLOAT_HEIGHT + CORNER_ROOM + 100, 0);
+    expect(grown.x).toBeCloseTo(stood.x, 0);
+    expect(grown.y).toBeCloseTo(stood.y, 0);
     await page.mouse.up();
   });
 
