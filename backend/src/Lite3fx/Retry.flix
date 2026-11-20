@@ -1,8 +1,17 @@
-pub mod Db.Retry {
+/// Answering a transient failure by sending the same thing again.
+pub mod Lite3fx.Retry {
 
     import java.lang.Thread
     import java.util.concurrent.ThreadLocalRandom
 
+    use Lite3fx.RawSql
+    use Lite3fx.SqlRead
+    use Lite3fx.SqlSavepoint
+    use Lite3fx.SqlWrite
+    use Lite3fx.DbError
+    use Lite3fx.DbError.Failure
+    use Lite3fx.DbErr
+    use Lite3fx.TransientDbErr
     use Util.Duration
 
     /// How many tries an operation gets, and the shape of the wait between them.
@@ -11,6 +20,10 @@ pub mod Db.Retry {
         base     = Duration,
         cap      = Duration
     }
+
+    /// The effects a retried body needs of the database, spelled rather than
+    /// named by the alias, which is also the name of a module here.
+    pub type alias All = {SqlRead, SqlWrite, SqlSavepoint, TransientDbErr, DbErr, RawSql}
 
     pub def default(): Policy =
         { attempts = 4, base = Util.Duration.fromMillis(1000), cap = Util.Duration.fromMillis(30000) }
@@ -25,7 +38,7 @@ pub mod Db.Retry {
     /// Only a transient failure is worth another try; a permanent one comes back
     /// at once. A `Busy` failure is retried here, which is only right when `f`
     /// opens the transaction itself -- see `retryingSavepoint`.
-    pub def retrying(p: Policy, f: Unit -> a \ ef): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
+    pub def retrying(p: Policy, f: Unit -> a \ ef): Result[Failure, a] \ ((ef - {TransientDbErr, DbErr}) + IO) =
         retryingWith(p, sleepMs, draw, f)
 
     /// The wait between tries, and the draw the jitter is made from. Both are given
@@ -36,7 +49,7 @@ pub mod Db.Retry {
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
         f: Unit -> a \ ef
-    ): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + ef2 + ef3) =
+    ): Result[Failure, a] \ ((ef - {TransientDbErr, DbErr}) + ef2 + ef3) =
         loopWith(p, 1, wait, jitter, f)
 
     def loopWith(
@@ -45,8 +58,8 @@ pub mod Db.Retry {
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
         f: Unit -> a \ ef
-    ): Result[Db.Failure, a] \ ((ef - {TransientDbErr, DbErr}) + ef2 + ef3) =
-        match Db.attempt(f) {
+    ): Result[Failure, a] \ ((ef - {TransientDbErr, DbErr}) + ef2 + ef3) =
+        match DbError.runWithFailure(f) {
             case Ok(v) => Ok(v)
             case Err(failure) =>
                 if (attempt >= p#attempts or not worthTrying(failure))
@@ -64,7 +77,7 @@ pub mod Db.Retry {
         name: String,
         p: Policy,
         f: Unit -> a \ ef
-    ): Result[Db.Failure, a] \ (ef + Db + IO) =
+    ): Result[Failure, a] \ (ef + All + IO) =
         retryingSavepointWith(name, p, sleepMs, draw, f)
 
     /// As `retryingWith`, of a savepoint.
@@ -74,7 +87,7 @@ pub mod Db.Retry {
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
         f: Unit -> a \ ef
-    ): Result[Db.Failure, a] \ (ef + Db + ef2 + ef3) =
+    ): Result[Failure, a] \ (ef + All + ef2 + ef3) =
         loopSavepoint(name, p, 1, wait, jitter, f)
 
     def loopSavepoint(
@@ -84,8 +97,8 @@ pub mod Db.Retry {
         wait: Int32 -> Unit \ ef2,
         jitter: Unit -> Int32 \ ef3,
         f: Unit -> a \ ef
-    ): Result[Db.Failure, a] \ (ef + Db + ef2 + ef3) =
-        match Db.withSavepoint(name, f) {
+    ): Result[Failure, a] \ (ef + All + ef2 + ef3) =
+        match Lite3fx.Tx.withSavepoint(name, f) {
             case Ok(v) => Ok(v)
             case Err(failure) =>
                 if (attempt >= p#attempts or not worthTrying(failure))
@@ -120,10 +133,10 @@ pub mod Db.Retry {
         if (jitter < 0) 0 else if (jitter > 999) 999 else jitter
 
     /// Whether trying the same statement again could get past.
-    def worthTrying(failure: Db.Failure): Bool =
+    def worthTrying(failure: Failure): Bool =
         match failure {
-            case Db.Failure.Transient(_) => true
-            case Db.Failure.Permanent(_) => false
+            case Failure.Transient(_)  => true
+            case Failure.Permanent(_)  => false
         }
 
     def sleepMs(ms: Int32): Unit \ IO =

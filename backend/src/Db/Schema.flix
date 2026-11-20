@@ -8,9 +8,10 @@
 /// own: a `Bool` is stored as the 1 or 0 the driver binds it as, and a column
 /// taking an `Option` is the nullable one.
 pub mod Db.Schema {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
+    use Lite3fx.SqlValue.NullType
 
-    use Db.NullType
-    use Db.Value
     use Sql.Sel
 
     /// A column of the table whose row is `r`, reading back as `a`.
@@ -18,12 +19,12 @@ pub mod Db.Schema {
     /// The reading is of a name rather than of this column's, so a column
     /// read from another source is this one under that source's name.
     pub enum Column[r, a] {
-        case Column({ name = String, sqlType = String, bind = r -> Value, reading = String -> Sel[a] })
+        case Column({ name = String, sqlType = String, bind = r -> SqlValue, reading = String -> Sel[a] })
     }
 
     /// A column with its reading forgotten. A table's columns do not share a
     /// type, so this is what an ordered list of them can hold.
-    pub type alias Bound[r] = { name = String, sqlType = String, bind = r -> Value }
+    pub type alias Bound[r] = { name = String, sqlType = String, bind = r -> SqlValue }
 
     /// A column as the schema declares it, which is all a `CREATE TABLE` needs
     /// and all a computed column has.
@@ -96,7 +97,7 @@ pub mod Db.Schema {
     /// Nothing binds such a column -- a derived source answers with rows and no row
     /// writes it -- so the `bind` is the one field of it no query reaches.
     pub def derived(name: String, sqlType: String, reading: String -> Sel[a]): Column[r, a] =
-        column(name, sqlType, _ -> Value.Null, reading)
+        column(name, sqlType, _ -> SqlValue.Null, reading)
 
     /// A statement written out names a column by its name and nothing else, so this
     /// is what `${c#carNumber}` puts between the keywords: the name, while the value
@@ -134,8 +135,8 @@ pub mod Db.Schema {
         keys: List[Sql.Key[Bound[r]]],
         storage: Sql.Storage
     ): Unit \ DbWrite =
-        discard Db.execute(Sql.dropTableIfExists(table), Nil);
-        discard Db.execute(createTable(table, columns, computed, keys, storage), Nil)
+        discard Lite3fx.Sql.execute(Sql.dropTableIfExists(table), Nil);
+        discard Lite3fx.Sql.execute(createTable(table, columns, computed, keys, storage), Nil)
 
     /// The columns a row binds, then the ones the database makes: a computed
     /// column is declared like any other and is not in the ordering the insert
@@ -160,57 +161,65 @@ pub mod Db.Schema {
         Sql.createIndex(indexName(table, over), table, over |> List.map(declare))
 
     pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite =
-        discard Db.execute(createIndex(table, over), Nil)
+        discard Lite3fx.Sql.execute(createIndex(table, over), Nil)
 
     def indexName(table: String, over: List[Bound[r]]): String =
         columnNames(over) |> List.foldLeft((acc, name) -> acc + "_" + name, table)
 
     pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
         let (statement, bound_) = Sql.insertRows(table, columns, rows);
-        Db.insertMany(statement, bound_)
+        Lite3fx.Sql.insertMany(statement, bound_)
 
     /// In the order the columns are named, which is the order the insert binds
     /// them.
-    pub def values(columns: List[Bound[r]], row: r): List[Value] =
+    pub def values(columns: List[Bound[r]], row: r): List[SqlValue] =
         columns |> List.map(c -> (c#bind)(row))
 
     // ------------------------------------------------------- constructors
 
-    def column(name: String, sqlType: String, bind: r -> Value, reading: String -> Sel[a]): Column[r, a] =
+    def column(name: String, sqlType: String, bind: r -> SqlValue, reading: String -> Sel[a]): Column[r, a] =
         Column.Column({ name = name, sqlType = sqlType, bind = bind, reading = reading })
 
     pub def integer(name: String, get: r -> Int32): Column[r, Int32] =
-        column(name, "int not null", row -> Value.Integer(get(row)), Sql.int)
+        column(name, "int not null", row -> SqlValue.Int32(get(row)), Sql.int)
 
     /// The table's own integer primary key. Declared `integer` rather than
     /// `int` because SQLite makes such a column an alias for the row's own id
     /// only where the type is spelled exactly that -- and where it does, the
     /// rows are that key's tree and no second one is built over them.
     pub def identity(name: String, get: r -> Int32): Column[r, Int32] =
-        column(name, "integer not null", row -> Value.Integer(get(row)), Sql.int)
+        column(name, "integer not null", row -> SqlValue.Int32(get(row)), Sql.int)
 
     pub def text(name: String, get: r -> String): Column[r, String] =
-        column(name, "text not null", row -> Value.Text(get(row)), Sql.text)
+        column(name, "text not null", row -> SqlValue.Str(get(row)), Sql.text)
 
     /// The allowed values are written into the schema rather than bound, so
     /// they are the program's own: nothing a file said can reach here.
     pub def checkedText(name: String, allowed: List[String], get: r -> String): Column[r, String] =
         let inSet = allowed |> List.map(value -> "'${value}'") |> List.join(", ");
-        column(name, "text not null check (${name} in (${inSet}))", row -> Value.Text(get(row)), Sql.text)
+        column(name, "text not null check (${name} in (${inSet}))", row -> SqlValue.Str(get(row)), Sql.text)
 
     pub def boolean(name: String, get: r -> Bool): Column[r, Bool] =
-        column(name, "int not null", row -> Value.Boolean(get(row)), Sql.bool)
+        column(name, "int not null", row -> SqlValue.Bool(get(row)), Sql.bool)
 
     pub def nullableText(name: String, get: r -> Option[String]): Column[r, Option[String]] =
         column(name, "text",
-            row -> Db.ofNull(get(row) |> Option.map(Value.Text), NullType.Text), Sql.optionalText)
+            row -> SqlValue.ofOption(NullType.Str, get(row) |> Option.map(SqlValue.Str)), Sql.optionalText)
 
     pub def nullableInteger(name: String, get: r -> Option[Int32]): Column[r, Option[Int32]] =
         column(name, "int",
-            row -> Db.ofNull(get(row) |> Option.map(Value.Integer), NullType.Integer), Sql.optionalInt)
+            row -> SqlValue.ofOption(NullType.Int32, get(row) |> Option.map(SqlValue.Int32)), Sql.optionalInt)
 
     pub def nullableIntArray(name: String, get: r -> Option[List[Option[Int32]]]): Column[r, Option[List[Option[Int32]]]] =
         column(name, "text",
-            row -> Db.ofNull(get(row) |> Option.map(Value.Json), NullType.Text), Sql.optionalIntArray)
+            row -> SqlValue.ofOption(NullType.Json, get(row) |> Option.map(values -> SqlValue.Json(jsonArray(values)))), Sql.optionalIntArray)
+
+    /// The text a nullable-int-array column holds, which `json_each` reads back
+    /// as one row per element.
+    pub def jsonArray(values: List[Option[Int32]]): String =
+        "[" + (values |> List.map(v -> match v {
+            case Some(n) => "${n}"
+            case None    => "null"
+        }) |> List.join(",")) + "]"
 
 }

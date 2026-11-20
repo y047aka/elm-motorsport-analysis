@@ -1,9 +1,10 @@
 pub mod Db.TestEntries {
+    use Lite3fx.SqlValue
+    use Lite3fx.SqlValue.NullType
 
     use Db.CarRow
     use Db.Entries
     use Db.TestLapRow
-    use Db.Value
 
     def season(): Int32 = 2025
 
@@ -88,9 +89,9 @@ pub mod Db.TestEntries {
         Assert.assertTrue(
             Entries.values({ entryId = 3, season = 2025, carNumber = "7", class = "HYPERCAR",
                              carGroup = None, team = "Toyota Gazoo Racing", manufacturer = "Toyota" })
-                == Value.Integer(3) :: Value.Integer(2025) :: Value.Text("7") ::
-                   Value.Text("HYPERCAR") :: Value.NullOf(Db.NullType.Text) ::
-                   Value.Text("Toyota Gazoo Racing") :: Value.Text("Toyota") :: Nil
+                == SqlValue.Int32(3) :: SqlValue.Int32(2025) :: SqlValue.Str("7") ::
+                   SqlValue.Str("HYPERCAR") :: SqlValue.NullOf(NullType.Str) ::
+                   SqlValue.Str("Toyota Gazoo Racing") :: SqlValue.Str("Toyota") :: Nil
         )
 
     /// The reading names every column the load bound, and in that order:

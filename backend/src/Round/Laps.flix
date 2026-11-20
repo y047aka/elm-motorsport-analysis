@@ -1,5 +1,9 @@
 /// The round's laps, read back out of the rows it was loaded into.
 pub mod Round.Laps {
+    use Lite3fx.DbErr
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
+    use Lite3fx.TransientDbErr
 
     use Db.LapRow
     use Db.LapRow.LapRow
@@ -68,13 +72,13 @@ pub mod Round.Laps {
     def rawLap(cars: Map[String, RawCar], seats: Seats): LapRow -> RawLap \ {DbErr, TransientDbErr} =
         row ->
             match Map.get(row#carNumber, cars) {
-                case None      => DbErr.raise(Db.Error.Incomplete(
+                case None      => DbErr.raise(DbErrorKind.Other(
                     "car ${row#carNumber} has laps but is not one of the round's cars"))
                 case Some(car) =>
                     let driver = Drivers.nameOf(seats, row#carNumber, row#driverNumber);
                     LapRow.toRawLap(car, driver, row)
-                        |> Result.mapErr(Db.Error.Unread)
-                        |> Db.orRaise
+                        |> Result.mapErr(DbErrorKind.Other)
+                        |> Lite3fx.Sql.orRaise
             }
 
 }

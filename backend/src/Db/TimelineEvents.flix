@@ -10,12 +10,13 @@
 /// does: a stop ending as the flag falls has to leave the car classified rather
 /// than in the pits.
 pub mod Db.TimelineEvents {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
 
     use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
-    use Db.Value
     use Motorsport.Calendar.Entry
     use Motorsport.Timeline
     use Motorsport.Timeline.Event
@@ -126,7 +127,7 @@ pub mod Db.TimelineEvents {
     pub def insertRows(rows_: List[EventRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows_)
 
-    pub def values(r: EventRow): List[Value] =
+    pub def values(r: EventRow): List[SqlValue] =
         Schema.values(all(), r)
 
     /// Taken of the columns the query was handed rather than of this table's

@@ -2,7 +2,7 @@
 ///
 /// A name is the one value that reaches the statement's text rather than a
 /// placeholder, so it is the one value with a rule of its own.
-pub mod Db.Savepoint {
+pub mod Lite3fx.Savepoint {
 
     /// The three statements a savepoint is.
     pub enum Command with Eq, ToString {
@@ -21,8 +21,8 @@ pub mod Db.Savepoint {
 
     /// The statement, in the spelling SQLite takes.
     pub def toSql(command: Command): String = match command {
-        case Command.Mark(name)      => "SAVEPOINT ${name}"
-        case Command.Release(name)   => "RELEASE SAVEPOINT ${name}"
+        case Command.Mark(name)       => "SAVEPOINT ${name}"
+        case Command.Release(name)    => "RELEASE SAVEPOINT ${name}"
         case Command.RollbackTo(name) => "ROLLBACK TO SAVEPOINT ${name}"
     }
 

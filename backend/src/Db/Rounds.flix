@@ -6,11 +6,12 @@
 /// used -- so this table is that calendar written down rather than a second
 /// one. What it adds is an id.
 pub mod Db.Rounds {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
 
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
-    use Db.Value
     use Motorsport.Calendar.Entry
 
     pub def table(): String = "rounds"
@@ -73,7 +74,7 @@ pub mod Db.Rounds {
         Sql.written(Sql.frag(
             "(SELECT ${Schema.name(c#roundId)} FROM ${table()} WHERE"
                 + " ${Schema.name(c#season)} = ? AND ${Schema.name(c#roundKey)} = ?)",
-            Value.Integer(entry#season) :: Value.Text(entry#id) :: Nil
+            SqlValue.Int32(entry#season) :: SqlValue.Str(entry#id) :: Nil
         ))
 
     /// The rows of one round, as the given column has its id. A join's side
@@ -98,7 +99,7 @@ pub mod Db.Rounds {
     pub def insertRows(rows_: List[RoundRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows_)
 
-    pub def values(row: RoundRow): List[Value] =
+    pub def values(row: RoundRow): List[SqlValue] =
         Schema.values(all(), row)
 
     /// The entries in the order given, numbered from one.

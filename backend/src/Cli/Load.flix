@@ -1,4 +1,14 @@
 pub mod Cli.Load {
+    use Lite3fx.DbErr
+    use Lite3fx.DbError
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
+    use Lite3fx.DbWrite
+    use Lite3fx.RawSql
+    use Lite3fx.SqlRead
+    use Lite3fx.SqlSavepoint
+    use Lite3fx.SqlWrite
+    use Lite3fx.Tx
 
     use Db.CarDrivers
     use Db.Cars
@@ -8,7 +18,6 @@ pub mod Cli.Load {
     use Db.Rounds
     use Db.Rounds.RoundRow
     use Db.TimelineEvents
-
     use Sys.Console
     use Util.Files
     use Db.CarRow
@@ -50,7 +59,7 @@ pub mod Cli.Load {
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
     pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint, RawSql} =
-        let rebuild = Db.attempt(() -> Db.transact(() -> {
+        let rebuild = DbError.runWithFailure(() -> Tx.transact(() -> {
             let rounds = createTables();
             convertRounds(root, rounds)
         }));
@@ -83,7 +92,7 @@ pub mod Cli.Load {
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Db} =
+    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Lite3fx.Db} =
         let tasks = FileTask.inputs(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(rounds, acc#numbered, task) {
@@ -129,7 +138,7 @@ pub mod Cli.Load {
         rounds: List[RoundRow],
         numbering: Numbered,
         task: FileTask.Input
-    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, Db} =
+    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, Lite3fx.Db} =
         match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
             case Err(e) => (Err(e), numbering)
             case Ok(rawLaps) =>
@@ -141,7 +150,7 @@ pub mod Cli.Load {
                     numbering#entries, task#entry#season, CarRow.firstMentions(rawLaps));
                 reportEntryDisagreements(task, differing);
                 let numbered = { drivers = drivers, entries = entries };
-                let outcome = Db.withSavepoint("round", () -> reportViolations(
+                let outcome = Tx.withSavepoint("round", () -> reportViolations(
                         task, load(rounds, numbered, newDrivers, newEntries, seats, task, rawLaps)))
                     |> Result.mapErr(CliError.Database);
                 (outcome, if (Result.isOk(outcome)) numbered else numbering)
@@ -181,19 +190,19 @@ pub mod Cli.Load {
         rawLaps: List[RawLap]
     ): Loaded \ DbRead + SqlWrite =
         match Rounds.idIn(rounds, task#entry) {
-            case None => DbErr.raise(Db.Error.Incomplete(
+            case None => DbErr.raise(DbErrorKind.Other(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
             case Some(roundId) =>
                 discard Drivers.insertRows(newDrivers);
                 let entries = Entries.insertRows(newEntries);
                 match CarDrivers.fromSeats(roundId, numbering#drivers, seats) {
-                    case None => DbErr.raise(Db.Error.Incomplete(
+                    case None => DbErr.raise(DbErrorKind.Other(
                         "round ${FileTask.label(task)} names a driver the run did not number"))
                     case Some(seatRows) =>
                         let seatCount = CarDrivers.insertRows(seatRows);
                         match CarRow.fromRawLaps(
                                 roundId, task#entry#season, numbering#entries, rawLaps) {
-                            case None => DbErr.raise(Db.Error.Incomplete(
+                            case None => DbErr.raise(DbErrorKind.Other(
                                 "round ${FileTask.label(task)} names a car the run did not number"))
                             case Some(carRows) =>
                                 let cars = Cars.insertRows(carRows);
@@ -205,7 +214,7 @@ pub mod Cli.Load {
                 }
         }
 
-    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ (Db - {SqlSavepoint}) =
+    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ (Lite3fx.Db - {Lite3fx.SqlSavepoint}) =
         TimelineEvents.insertRows(TimelineEvents.fromEvents(
             roundId,
             Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)

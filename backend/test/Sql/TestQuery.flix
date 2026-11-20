@@ -1,8 +1,8 @@
 pub mod Sql.TestQuery {
+    use Lite3fx.SqlValue
 
     use Db.Laps
     use Db.Schema
-    use Db.Value
 
     def laps(): Sql.Rows[Laps.Columns] =
         Sql.access(Sql.raw("laps"), Laps.columns())
@@ -21,7 +21,7 @@ pub mod Sql.TestQuery {
         Assert.assertTrue(Sql.toSql(statement) == (
             "SELECT lap_number FROM laps WHERE round_id = ?"
                 + " GROUP BY lap_number ORDER BY source_row",
-            Value.Integer(3) :: Nil
+            SqlValue.Int32(3) :: Nil
         ))
 
     /// A clause with nothing to say is left out, since `WHERE` with nothing
@@ -40,7 +40,7 @@ pub mod Sql.TestQuery {
             |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (
             "SELECT lap_number FROM laps WHERE round_id = ? AND s1_ms IS NOT NULL LIMIT 1",
-            Value.Integer(3) :: Nil
+            SqlValue.Int32(3) :: Nil
         ))
 
     /// The common table expressions come before the SELECT, and so do the
@@ -50,9 +50,9 @@ pub mod Sql.TestQuery {
     def theCommonTableExpressionsAreJoinedAndTheirValuesComeFirst(): Unit \ Assert =
         let statement = Sql.rows(Sql.raw("c JOIN d ON d.n = c.n"))
             |> Sql.using(Sql.frag("c AS (SELECT 1 AS n FROM laps WHERE round = ?)",
-                Value.Text("le_mans_24h") :: Nil))
+                SqlValue.Str("le_mans_24h") :: Nil))
             |> Sql.using(Sql.frag("d AS (SELECT 2 AS n FROM laps WHERE round = ?)",
-                Value.Text("fuji_6h") :: Nil))
+                SqlValue.Str("fuji_6h") :: Nil))
             |> Sql.filter(_ -> Sql.eq(Sql.column("season"), Sql.i32(2025)))
             |> Sql.map(_ -> lapNumbers())
             |> Sql.toStatement;
@@ -60,7 +60,7 @@ pub mod Sql.TestQuery {
             "WITH c AS (SELECT 1 AS n FROM laps WHERE round = ?),"
                 + " d AS (SELECT 2 AS n FROM laps WHERE round = ?)"
                 + " SELECT lap_number FROM c JOIN d ON d.n = c.n WHERE season = ?",
-            Value.Text("le_mans_24h") :: Value.Text("fuji_6h") :: Value.Integer(2025) :: Nil
+            SqlValue.Str("le_mans_24h") :: SqlValue.Str("fuji_6h") :: SqlValue.Int32(2025) :: Nil
         ))
 
 }

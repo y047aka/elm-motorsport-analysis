@@ -1,9 +1,9 @@
 pub mod Db.TestCarDrivers {
+    use Lite3fx.SqlValue
 
     use Db.CarDrivers
     use Db.Drivers
     use Db.TestLapRow
-    use Db.Value
     use Motorsport.Wec.RawLap
 
     def roundId(): Int32 = 7
@@ -115,11 +115,11 @@ pub mod Db.TestCarDrivers {
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
         Assert.assertTrue(
             CarDrivers.values({ roundId = 7, carNumber = "12", driverNumber = 2, driverId = 5 })
-                == Value.Integer(7) :: Value.Text("12") :: Value.Integer(2) :: Value.Integer(5) :: Nil
+                == SqlValue.Int32(7) :: SqlValue.Str("12") :: SqlValue.Int32(2) :: SqlValue.Int32(5) :: Nil
         );
         Assert.assertTrue(
             Drivers.values({ driverId = 5, name = "Will STEVENS" })
-                == Value.Integer(5) :: Value.Text("Will STEVENS") :: Nil
+                == SqlValue.Int32(5) :: SqlValue.Str("Will STEVENS") :: Nil
         )
 
 }

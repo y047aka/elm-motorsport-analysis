@@ -10,14 +10,17 @@
 /// whatever else is given an instance, as `Db.Laps` gives its columns one -- so
 /// the clause and the value that comes back are the one expression read twice.
 ///
-/// A reading stops at the first cell it cannot read: it consumes the cells
-/// before it, so past a failure there is no longer a position to report the
-/// next problem at.
+/// A row is read by the label each projected expression comes back under, which
+/// the same expression writes into the clause; see `label`. Within the row put in
+/// that order a reading stops at the first cell it cannot read, so past a failure
+/// there is no longer a position to report the next problem at.
 pub mod Sql {
-
-    use Db.Error
-    use Db.Row.Row
-    use Db.Value
+    use Lite3fx.DbErr
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
+    use Lite3fx.Row
+    use Lite3fx.Row.Row
+    use Lite3fx.SqlValue
 
     ///
     /// ===== FRAGMENTS =====
@@ -27,7 +30,7 @@ pub mod Sql {
     /// together so that concatenating two pieces cannot put a value under the
     /// wrong placeholder.
     pub enum Frag {
-        case Frag(String, List[Value])
+        case Frag(String, List[SqlValue])
     }
 
     /// A piece of a query binding nothing.
@@ -35,7 +38,7 @@ pub mod Sql {
         Frag.Frag(sql, Nil)
 
     /// A piece of a query whose `?` placeholders bind `params`, left to right.
-    pub def frag(sql: String, params: List[Value]): Frag =
+    pub def frag(sql: String, params: List[SqlValue]): Frag =
         Frag.Frag(sql, params)
 
     /// The pieces in order, separated by a space where both sides have one.
@@ -52,7 +55,7 @@ pub mod Sql {
         let params = pieces |> List.flatMap(piece -> { let Frag.Frag(_, values) = piece; values });
         Frag.Frag(sql, params)
 
-    pub def toSql(fragment: Frag): (String, List[Value]) =
+    pub def toSql(fragment: Frag): (String, List[SqlValue]) =
         let Frag.Frag(sql, params) = fragment;
         (sql, params)
 
@@ -94,10 +97,10 @@ pub mod Sql {
         Expr.Expr(fragment)
 
     pub def i32(value: Int32): Expr[Int32] =
-        Expr.Expr(Frag.Frag("?", Value.Integer(value) :: Nil))
+        Expr.Expr(Frag.Frag("?", SqlValue.Int32(value) :: Nil))
 
     pub def str(value: String): Expr[String] =
-        Expr.Expr(Frag.Frag("?", Value.Text(value) :: Nil))
+        Expr.Expr(Frag.Frag("?", SqlValue.Str(value) :: Nil))
 
     pub def eq(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("=", left, right)
     pub def ne(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<>", left, right)
@@ -131,25 +134,25 @@ pub mod Sql {
     /// The expressions of the SELECT clause, and a reading of the cells they
     /// come back as which answers with what is left of the row.
     pub enum Sel[a] {
-        case Sel(List[Frag], Row -> Result[Error, (a, Row)])
+        case Sel(List[Frag], Row -> Result[DbErrorKind, (a, Row)])
     }
 
-    def cell(expr: Frag, read: String -> Value -> Result[Error, a]): Sel[a] =
+    def cell(expr: Frag, read: String -> SqlValue -> Result[DbErrorKind, a]): Sel[a] =
         let Frag.Frag(text, _) = expr;
         Sel.Sel(expr :: Nil, row -> match Row.uncons(row) {
             case Some((_, value, rest)) => read(text, value) |> Result.map(read_ -> (read_, rest))
-            case None                   => Err(Error.Unread("the row ended before `${text}`"))
+            case None                   => Err(DbErrorKind.Other("the row ended before `${text}`"))
         })
 
     /// A cell the reading wants as text. The schema binds text and SQLite keeps
     /// what it is given, so a column is asked for as text whatever the driver
     /// answered it in -- which is also how an expression's cell arrives.
     pub def text(expr: String): Sel[String] =
-        cell(raw(expr), (name, v) -> nonNull(name, v) |> Result.map(Row.textOf))
+        cell(raw(expr), (name, v) -> nonNull(name, v) |> Result.map(SqlValue.textOf))
 
     pub def optionalText(expr: String): Sel[Option[String]] =
         cell(raw(expr), (_, v) ->
-            if (Row.isNull(v)) Ok(None) else Ok(Some(Row.textOf(v))))
+            if (SqlValue.isNull(v)) Ok(None) else Ok(Some(SqlValue.textOf(v))))
 
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
@@ -159,22 +162,23 @@ pub mod Sql {
     /// A number the driver answered in another type -- a `SUM`, a `json_each`
     /// element -- is read from its text, which is the one form every cell has.
     pub def intOf(expr: Frag): Sel[Int32] =
-        cell(expr, (name, v) -> match v {
-            case Value.Integer(n) => Ok(n)
-            case Value.Null       => Err(Error.Unread("column `${name}` was null"))
-            case _                => parseInt(name, Row.textOf(v))
-        })
+        cell(expr, (name, v) ->
+            if (SqlValue.isNull(v)) Err(DbErrorKind.DecodeError(name, "was null"))
+            else match SqlValue.int32Of(v) {
+                case Some(n) => Ok(n)
+                case None    => parseInt(name, SqlValue.textOf(v))
+            })
 
     /// A truth value is stored as the 1 or 0 the driver bound it as.
     pub def bool(expr: String): Sel[Bool] =
         cell(raw(expr), (name, v) -> match v {
-            case Value.Integer(1) => Ok(true)
-            case Value.Integer(0) => Ok(false)
-            case Value.Null       => Err(Error.Unread("column `${name}` was null"))
-            case _ => match Row.textOf(v) {
+            case SqlValue.Int32(1)  => Ok(true)
+            case SqlValue.Int32(0)  => Ok(false)
+            case SqlValue.Null      => Err(DbErrorKind.DecodeError(name, "was null"))
+            case _ => match SqlValue.textOf(v) {
                 case "1" => Ok(true)
                 case "0" => Ok(false)
-                case t   => Err(Error.Unread("column `${name}` is not a boolean: \"${t}\""))
+                case t   => Err(DbErrorKind.DecodeError(name, "is not a boolean: \"${t}\""))
             }
         })
 
@@ -183,31 +187,30 @@ pub mod Sql {
 
     /// As `optionalInt`, where the expression binds values of its own.
     pub def optionalIntOf(expr: Frag): Sel[Option[Int32]] =
-        cell(expr, (name, v) -> match v {
-            case Value.Integer(n) => Ok(Some(n))
-            case Value.Null       => Ok(None)
-            case _                => parseInt(name, Row.textOf(v)) |> Result.map(Some)
-        })
+        cell(expr, (name, v) ->
+            if (SqlValue.isNull(v)) Ok(None)
+            else match SqlValue.int32Of(v) {
+                case Some(n) => Ok(Some(n))
+                case None    => parseInt(name, SqlValue.textOf(v)) |> Result.map(Some)
+            })
 
     /// A mini-sector column arrives as the JSON array it was written as.
     pub def optionalIntArray(expr: String): Sel[Option[List[Option[Int32]]]] =
-        cell(raw(expr), (name, v) -> match v {
-            case Value.Json(xs) => Ok(Some(xs))
-            case Value.Null     => Ok(None)
-            case _              => parseIntArray(name, Row.textOf(v)) |> Result.map(Some)
-        })
+        cell(raw(expr), (name, v) ->
+            if (SqlValue.isNull(v)) Ok(None)
+            else parseIntArray(name, SqlValue.textOf(v)) |> Result.map(Some))
 
     /// The failure a cell that carries nothing is, in the words the reading has
     /// always used for one.
-    def nonNull(name: String, value: Value): Result[Error, Value] =
-        if (Row.isNull(value)) Err(Error.Unread("column `${name}` was null")) else Ok(value)
+    def nonNull(name: String, value: SqlValue): Result[DbErrorKind, SqlValue] =
+        if (SqlValue.isNull(value)) Err(DbErrorKind.DecodeError(name, "was null")) else Ok(value)
 
-    def parseInt(expr: String, text: String): Result[Error, Int32] =
-        Int32.fromString(text) |> Option.toOk(Error.Unread("column `${expr}` is not a number: \"${text}\""))
+    def parseInt(expr: String, text: String): Result[DbErrorKind, Int32] =
+        Int32.fromString(text) |> Option.toOk(DbErrorKind.DecodeError(expr, "is not a number: \"${text}\""))
 
-    def parseIntArray(expr: String, text: String): Result[Error, List[Option[Int32]]] =
+    def parseIntArray(expr: String, text: String): Result[DbErrorKind, List[Option[Int32]]] =
         match String.stripPrefix({substr = "["}, text) |> Option.flatMap(String.stripSuffix({substr = "]"})) {
-            case None       => Err(Error.Unread("column `${expr}` is not a JSON array: \"${text}\""))
+            case None       => Err(DbErrorKind.DecodeError(expr, "is not a JSON array: \"${text}\""))
             case Some("")   => Ok(Nil)
             case Some(body) =>
                 String.splitOn({substr = ","}, body) |> Result.traverse(element -> match element {
@@ -216,7 +219,7 @@ pub mod Sql {
                 })
         }
 
-    pub def andThen(transform: a -> Result[Error, b], sel: Sel[a]): Sel[b] =
+    pub def andThen(transform: a -> Result[DbErrorKind, b], sel: Sel[a]): Sel[b] =
         let Sel.Sel(columns, decodeCells) = sel;
         Sel.Sel(columns, cells ->
             decodeCells(cells) |> Result.flatMap(match (value, rest) ->
@@ -246,14 +249,97 @@ pub mod Sql {
         let Sel.Sel(columns, _) = Project.sel(p);
         joinFrags(", ", columns)
 
-    pub def decode(sel: Sel[a], row: Row): Result[Error, a] =
+    /// The labels a projection's columns come back under, in the order the clause
+    /// writes them.
+    pub def labels(sel: Sel[a]): List[String] =
+        let Sel.Sel(columns, _) = sel;
+        columns |> List.map(column -> { let Frag.Frag(text, _) = column; label(text) })
+
+    /// The row a query reads: its cells put in the order the projection names
+    /// them, and then read as the projection reads them.
+    pub def decode(sel: Sel[a], row: Row): Result[DbErrorKind, a] =
         let Sel.Sel(_, decodeCells) = sel;
-        decodeCells(row) |> Result.flatMap(match (value, rest) ->
-            if (Row.isEmpty(rest))
-                Ok(value)
-            else
-                Err(Error.Unread("the row carries ${Row.size(rest)} more columns than the projection reads"))
-        )
+        let names = labels(sel);
+        let width = List.length(names);
+        if (width != Row.size(row))
+            Err(DbErrorKind.SchemaMismatch(
+                "the projection names ${width} columns and the row carries ${Row.size(row)}"))
+        else
+            align(names, List.zip(Row.columnNames(row), Row.cells(row)))
+                |> Result.flatMap(cells -> decodeCells(Row.ofCells(cells)))
+                |> Result.map(match (value, _) -> value)
+
+    /// The label a projection comes back under.
+    ///
+    /// SQLite answers a column named through its qualifier by the name alone --
+    /// `SELECT l.key` comes back under `key` -- and an expression by the very
+    /// text it was written with, spaces and all. So the text that goes into the
+    /// clause is the key into the row that comes back, which is what lets the
+    /// clause and the reading stay the one value.
+    def label(text: String): String =
+        match aliasOf(text) {
+            case Some(name) => name
+            case None       => match qualified(text) {
+                case Some(name) => name
+                case None       => text
+            }
+        }
+
+    /// `expr AS name` comes back under `name`.
+    def aliasOf(text: String): Option[String] =
+        match List.reverse(String.splitOn({substr = " AS "}, text)) {
+            case Nil       => None
+            case _ :: Nil  => None
+            case name :: _ => Some(String.trim(name))
+        }
+
+    /// `qualifier.name` comes back under `name`. Only a text that is nothing but
+    /// the two, since `m.key + 1` comes back as the whole of it.
+    def qualified(text: String): Option[String] =
+        match String.splitOn({substr = "."}, text) {
+            case qualifier :: name :: Nil if isName(qualifier) and isName(name) => Some(name)
+            case _                                                                => None
+        }
+
+    def isName(text: String): Bool =
+        not String.isEmpty(text)
+            and (String.toList(text)
+                |> List.forAll(c -> Char.isLetter(c) or Char.isDigit(c) or c == '_'))
+
+    /// The cells the projection names, taken out of the row in that order. A
+    /// projection taking a label the row does not carry fails by naming itself.
+    ///
+    /// Two projections under one label -- a join naming both sides' `elapsed_ms`
+    /// -- are answered in the order the clause writes them, which is the one
+    /// order the row cannot contradict.
+    def align(
+        names: List[String],
+        given: List[(String, SqlValue)]
+    ): Result[DbErrorKind, List[SqlValue]] =
+        match names {
+            case Nil => Ok(Nil)
+            case name :: rest => match take(name, given, Nil) {
+                case None                 => Err(DbErrorKind.SchemaMismatch(
+                    "no column of the row answers to the projected `${name}`"))
+                case Some((cell, left))   => align(rest, left) |> Result.map(more -> cell :: more)
+            }
+        }
+
+    /// The cell under `name`, and the pairs that are left with it gone. The ones
+    /// walked past keep their place.
+    def take(
+        name: String,
+        given: List[(String, SqlValue)],
+        passed: List[(String, SqlValue)]
+    ): Option[(SqlValue, List[(String, SqlValue)])] =
+        match given {
+            case Nil                          => None
+            case (head, cell) :: rest         =>
+                if (head == name)
+                    Some((cell, List.append(List.reverse(passed), rest)))
+                else
+                    take(name, rest, (head, cell) :: passed)
+        }
 
     ///
     /// ===== PROJECTIONS =====
@@ -353,7 +439,7 @@ pub mod Sql {
     pub def opt(p: p): Sel[Option[Project.Out[p]]] with Project[p] =
         let Sel.Sel(columns, decode) = Project.sel(p);
         Sel.Sel(columns, row -> match List.head(Row.cells(row)) {
-            case Some(value) if Row.isNull(value) => Ok((None, Row.drop(row, 1)))
+            case Some(value) if SqlValue.isNull(value) => Ok((None, Row.drop(row, 1)))
             case _ => decode(row) |> Result.map(match (value, rest) -> (Some(value), rest))
         })
 
@@ -619,11 +705,11 @@ pub mod Sql {
                 let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
                 let unused = List.filter(name -> not List.exists(k -> k == name, named), given);
                 match (missing, unused) {
-                    case (name :: _, _) => DbErr.raise(Error.Other(
+                    case (name :: _, _) => DbErr.raise(DbErrorKind.Other(
                         "the statement names `{{${name}}}` and gives nothing for it:"
                             + " ${String.take(120, template)}"
                     ))
-                    case (Nil, name :: _) => DbErr.raise(Error.Other(
+                    case (Nil, name :: _) => DbErr.raise(DbErrorKind.Other(
                         "the statement never names `{{${name}}}`: ${String.take(120, template)}"
                     ))
                     case (Nil, Nil) => joinFrags(
@@ -634,7 +720,7 @@ pub mod Sql {
                         Nil
                     )
                 }
-            case _ => DbErr.raise(Error.Other(
+            case _ => DbErr.raise(DbErrorKind.Other(
                 "the statement has no `%%` for its SELECT clause: ${String.take(120, template)}"
             ))
         }
@@ -649,11 +735,11 @@ pub mod Sql {
         let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
         let unused = List.filter(name -> not List.exists(k -> k == name, named), given);
         match (missing, unused) {
-            case (name :: _, _) => DbErr.raise(Error.Other(
+            case (name :: _, _) => DbErr.raise(DbErrorKind.Other(
                 "the piece names `{{${name}}}` and gives nothing for it:"
                     + " ${String.take(120, template)}"
             ))
-            case (Nil, name :: _) => DbErr.raise(Error.Other(
+            case (Nil, name :: _) => DbErr.raise(DbErrorKind.Other(
                 "the piece never names `{{${name}}}`: ${String.take(120, template)}"
             ))
             case (Nil, Nil) => holesFilled(template, holes, template)
@@ -702,14 +788,14 @@ pub mod Sql {
     ///
 
     pub def selectAll(q: Query[a]): List[a] \ DbRead =
-        fetched(q) |> List.map(row -> Db.orRaise(decode(projectionOf(q), row)))
+        fetched(q) |> List.map(row -> Lite3fx.Sql.orRaise(decode(projectionOf(q), row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
     pub def selectOne(subject: String, q: Query[a]): a \ DbRead =
         match fetched(q) {
-            case row :: _ => Db.orRaise(decode(projectionOf(q), row))
-            case Nil      => DbErr.raise(Error.NoRow(subject))
+            case row :: _ => Lite3fx.Sql.orRaise(decode(projectionOf(q), row))
+            case Nil      => DbErr.raise(DbErrorKind.NoRow(subject))
         }
 
     def projectionOf(q: Query[a]): Sel[a] =
@@ -720,7 +806,7 @@ pub mod Sql {
 
     def fetched(q: Query[a]): List[Row] \ DbRead =
         let Frag.Frag(sql, params) = toStatement(q);
-        Db.fetch(sql, params)
+        Lite3fx.Sql.fetch(sql, params)
 
     ///
     /// ===== STATEMENTS =====
@@ -801,9 +887,9 @@ pub mod Sql {
     /// statement does not name, and there is a `?` for each value and no more.
     pub def insertRows(
         table: String,
-        columns: List[{name = String, bind = row -> Value | r}],
+        columns: List[{name = String, bind = row -> SqlValue | r}],
         rows: List[row]
-    ): (String, List[List[Value]]) =
+    ): (String, List[List[SqlValue]]) =
         let statement = "INSERT INTO " + table
             + " (" + (columns |> List.map(c -> c#name) |> List.join(", ")) + ")"
             + " VALUES (" + (columns |> List.map(_ -> "?") |> List.join(", ")) + ")";
@@ -839,7 +925,7 @@ pub mod Sql {
             |> List.map(match (base, branch) -> arm(label, base, branch))
             |> joinFrags(" UNION ALL ");
         let tag = int(label) |> andThen(n ->
-            tagOf(numbered, n) |> Option.toOk(Error.Unread("no arm answers to `${label}` ${n}")));
+            tagOf(numbered, n) |> Option.toOk(DbErrorKind.Other("no arm answers to `${label}` ${n}")));
         (rows, tag)
 
     def number_(base: Int32, branches: List[Branch[t]]): List[(Int32, Branch[t])] =

@@ -1,7 +1,7 @@
 pub mod Db.TestRounds {
+    use Lite3fx.SqlValue
 
     use Db.Rounds
-    use Db.Value
     use Motorsport.Calendar
     use Motorsport.Calendar.Entry
 
@@ -40,8 +40,8 @@ pub mod Db.TestRounds {
         match Rounds.rowsFor(fuji() :: Nil) {
             case row :: _ =>
                 Assert.assertTrue(Rounds.values(row)
-                    == Value.Integer(1) :: Value.Integer(2025) ::
-                       Value.Text("fuji_6h") :: Value.Text("2025-09-28") :: Nil)
+                    == SqlValue.Int32(1) :: SqlValue.Int32(2025) ::
+                       SqlValue.Str("fuji_6h") :: SqlValue.Str("2025-09-28") :: Nil)
             case Nil => Assert.assertTrue(false)
         }
 

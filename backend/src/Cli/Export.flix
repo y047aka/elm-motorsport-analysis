@@ -1,5 +1,9 @@
 /// The rounds written out as files, read back out of the rows a run sent.
 pub mod Cli.Export {
+    use Lite3fx.DbError
+    use Lite3fx.DbRead
+    use Lite3fx.RawSql
+    use Lite3fx.SqlRead
 
     use Sys.Console
     use Util.Files
@@ -59,7 +63,7 @@ pub mod Cli.Export {
         if (errors == 0) 0 else 1
 
     def exportRound(task: FileTask.Output): Result[CliError, Rendered] \ {IO, SqlRead, RawSql} =
-        match Db.attempt(() -> read(task)) {
+        match DbError.runWithFailure(() -> read(task)) {
             case Err(cause)  => Err(CliError.Database(cause))
             case Ok(outcome) => outcome |> Result.flatMap(rendered ->
                 writeRound(task, rendered) |> Result.map(_ -> rendered)
