@@ -332,17 +332,12 @@ whichButton =
             )
 
 
-{-| The four arrow keys, stepping whichever axis each of them lies along, and whether
-`Shift` was held with them -- the keyboard's own secondary button. No other key reaches
-the message at all.
+{-| The four arrow keys, stepping whichever axis each of them lies along, and no other key
+reaching the message at all.
 -}
-arrowKeys : (Bool -> Steps -> msg) -> Html.Attribute msg
-arrowKeys toMsg =
-    preventDefaultOn "keydown"
-        (Decode.map2 (\shifted steps -> ( toMsg shifted steps, True ))
-            (Decode.field "shiftKey" Decode.bool)
-            bothArrows
-        )
+arrowKeys : (Steps -> msg) -> Html.Attribute msg
+arrowKeys =
+    stepWith bothArrows
 
 
 {-| The pointer's events of a grip read along one axis.

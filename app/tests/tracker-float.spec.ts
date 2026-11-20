@@ -441,22 +441,6 @@ test.describe('the floating track map', () => {
     expect(after.y).toBeCloseTo(before.y, 0);
   });
 
-  test('turns under the arrow keys held with Shift, and the box stays where it stood', async ({
-    page,
-  }) => {
-    await floatTrigger(page).click();
-    const before = await box(page, FLOAT);
-    const drawn = await drawnBytes(page);
-
-    await surface(page).focus();
-    await page.keyboard.press('Shift+ArrowLeft');
-
-    await expect.poll(() => drawnBytes(page), { timeout: 2000 }).not.toBe(drawn);
-    const after = await box(page, FLOAT);
-    expect(after.x).toBeCloseTo(before.x, 0);
-    expect(after.y).toBeCloseTo(before.y, 0);
-  });
-
   test('opens from the column corner and closes from its own', async ({ page }) => {
     await expect(floatTrigger(page)).toHaveCount(1);
 

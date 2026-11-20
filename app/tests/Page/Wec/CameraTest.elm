@@ -39,7 +39,7 @@ suite =
             \_ ->
                 (moved 100 0 held).eye.azimuth
                     |> Expect.within (Expect.Absolute 0.0001)
-                        (Tracker3d.init.azimuth - 100 * Tracker3d.perPixel)
+                        (Tracker3d.init.azimuth + 100 * Tracker3d.perPixel)
         , test "a second finger does not turn the map the first is turning" <|
             \_ ->
                 (Camera.update (Move (press 2 300 300)) held).eye.azimuth

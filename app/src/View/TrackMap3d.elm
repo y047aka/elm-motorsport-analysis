@@ -30,7 +30,7 @@ type alias Config msg =
     , snapshot : Snapshot
     , size : { width : Float, height : Float }
     , label : String
-    , keys : Bool -> Handle.Steps -> msg
+    , keys : Handle.Steps -> msg
     , wheel : { x : Float, y : Float } -> msg
     , held : Bool
     , onGrab : Handle.Button -> Handle.Place -> msg

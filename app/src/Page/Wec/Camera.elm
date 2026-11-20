@@ -10,7 +10,7 @@ the first one's turn.
 
 -}
 
-import Drag.Handle as Handle exposing (Place, Steps)
+import Drag.Handle as Handle exposing (Place)
 import Motorsport.Chart.Tracker3d as Track3d
 
 
@@ -34,7 +34,6 @@ type Msg
     | Move Place
     | Release Place
     | Cancel Int
-    | Step Steps
     | Wheel { x : Float, y : Float }
 
 
@@ -91,9 +90,6 @@ update msg m =
         Cancel pointerId ->
             ended pointerId m
 
-        Step steps ->
-            { m | eye = Track3d.update (Track3d.Roll (toFloat steps.x * keyStep) (negate (toFloat steps.y) * keyStep)) m.eye }
-
         Wheel travel ->
             { m | eye = Track3d.update (turned (travel.x * wheelRate) (travel.y * wheelRate)) m.eye }
 
@@ -102,7 +98,7 @@ update msg m =
 -}
 turned : Float -> Float -> Track3d.Msg
 turned x y =
-    Track3d.Roll (x * Track3d.perPixel) (y * Track3d.perPixel)
+    Track3d.Roll (negate (x * Track3d.perPixel)) (negate (y * Track3d.perPixel))
 
 
 ended : Int -> Model -> Model
@@ -117,11 +113,6 @@ ended pointerId m =
 
         Nothing ->
             m
-
-
-keyStep : Float
-keyStep =
-    degrees 5
 
 
 {-| A two-finger scroll is taken at a third of the rate a drag is: a mouse wheel's notch is

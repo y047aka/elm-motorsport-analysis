@@ -492,7 +492,7 @@ cardLoss =
 
 
 {-| The drawing, and what each input is asked for: the left button carries the box, the right
-one turns the map, a two-finger scroll turns it, and `Shift` with the arrow keys turns it.
+one turns the map, and a two-finger scroll turns it.
 -}
 surface : Model -> Track -> Snapshot -> Html Msg
 surface m track snapshot =
@@ -504,7 +504,7 @@ surface m track snapshot =
             { width = m.width.size - cardLoss
             , height = m.height.size - cardLoss
             }
-        , label = "Move the floating track map: drag it, or press the arrow keys; with Shift, the arrows turn it"
+        , label = "Move the floating track map: drag it, or press the arrow keys"
         , held = Shift.carried m.shift || Camera.held m.camera
         , onGrab =
             \which place ->
@@ -535,13 +535,7 @@ surface m track snapshot =
 
                 else
                     ShiftMsg (Shift.Cancel pointerId)
-        , keys =
-            \shifted steps ->
-                if shifted then
-                    CamMsg (Camera.Step steps)
-
-                else
-                    ShiftMsg (Shift.Step steps)
+        , keys = ShiftMsg << Shift.Step
         , wheel = CamMsg << Camera.Wheel
         }
 
