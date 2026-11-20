@@ -157,7 +157,7 @@ mark's own axis only: `justify-content: center` sizes a track to its content, an
 `place-content-center`.
 
 -}
-resize : Axis -> String -> Config msg -> Html msg
+resize : Axis -> String -> Placed msg -> Html msg
 resize axis glyph config =
     let
         ( classes, cursor ) =
@@ -186,7 +186,7 @@ resize axis glyph config =
             else
                 cursor
         , glyph = glyph
-        , events = eventsAlong axis config
+        , events = eventsAcross config
         }
 
 
@@ -267,6 +267,7 @@ is taller than the 8px an edge grip is, and the row hangs below the grip.
 
 Every grip is `touch-none`: a finger resting on one would otherwise scroll the page
 rather than carry the size it bounds.
+
 -}
 grip : Kind -> Grip msg -> Html msg
 grip kind g =
@@ -351,7 +352,7 @@ eventsAlong axis config =
 
 
 {-| The pointer's events of a grip read in both directions at once. The row stays open
-because the corner grip reads the same pointer and answers to no keys.
+because the grip that carries a box steps by the arrow keys as well.
 -}
 eventsAcross :
     { g | held : Bool, onGrab : Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }

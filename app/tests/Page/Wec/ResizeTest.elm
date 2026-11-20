@@ -1,7 +1,7 @@
 module Page.Wec.ResizeTest exposing (suite)
 
 import Drag
-import Drag.Handle as Handle exposing (Pointer)
+import Drag.Handle as Handle exposing (Place)
 import Expect
 import Page.Wec.Resize as Resize exposing (Msg(..))
 import Test exposing (Test, describe, test)
@@ -38,12 +38,12 @@ suite =
                 \_ ->
                     let
                         refused =
-                            startAt 300 |> step (Grab (pointer 2 100))
+                            startAt 300 |> step (Grab (place 2 100))
                     in
                     Expect.all
                         [ \m -> Expect.equal (startAt 300) m
                         , \m ->
-                            step (Carrying (pointer 1 340)) m
+                            step (Carrying (place 1 340)) m
                                 |> .size
                                 |> Expect.equal 340
                         ]
@@ -51,7 +51,7 @@ suite =
             , test "a carry moves the size from where it was picked up" <|
                 \_ ->
                     startAt 300
-                        |> step (Carrying (pointer 1 340))
+                        |> step (Carrying (place 1 340))
                         |> .size
                         |> Expect.equal 340
             , test "the grip that took the size up is the one said to hold it" <|
@@ -60,7 +60,7 @@ suite =
                         [ \m ->
                             Expect.equal (Just edge.id) m.grip
                         , \m ->
-                            m |> step (Release (pointer 1 300)) |> .grip |> Expect.equal Nothing
+                            m |> step (Release (place 1 300)) |> .grip |> Expect.equal Nothing
                         ]
                         (startAt 300)
             , test "the size stops at the fence on either side" <|
@@ -68,25 +68,25 @@ suite =
                     Expect.all
                         [ \m ->
                             m
-                                |> step (Carrying (pointer 1 900))
+                                |> step (Carrying (place 1 900))
                                 |> .size
                                 |> Expect.equal top
                         , \m ->
                             m
-                                |> step (Carrying (pointer 1 -100))
+                                |> step (Carrying (place 1 -100))
                                 |> .size
                                 |> Expect.equal fence.min
                         ]
                         (startAt 300)
             , test "a size with no top of its own goes as far as the pointer takes it" <|
                 \_ ->
-                    Resize.update { edge | fence = { min = fence.min, max = Nothing } } (Carrying (pointer 1 9000)) (startAt 300)
+                    Resize.update { edge | fence = { min = fence.min, max = Nothing } } (Carrying (place 1 9000)) (startAt 300)
                         |> .size
                         |> Expect.equal 9000
             , test "another pointer's moves are not the carry's business" <|
                 \_ ->
                     startAt 300
-                        |> step (Carrying (pointer 2 500))
+                        |> step (Carrying (place 2 500))
                         |> .size
                         |> Expect.equal 300
             ]
@@ -96,8 +96,8 @@ suite =
                     let
                         after =
                             startAt 300
-                                |> step (Carrying (pointer 1 340))
-                                |> step (Release (pointer 1 340))
+                                |> step (Carrying (place 1 340))
+                                |> step (Release (place 1 340))
                     in
                     Expect.all
                         [ \m -> Expect.equal 340 m.size
@@ -107,7 +107,7 @@ suite =
             , test "a cancel leaves the size where the last move left it" <|
                 \_ ->
                     startAt 300
-                        |> step (Carrying (pointer 1 340))
+                        |> step (Carrying (place 1 340))
                         |> step (Cancel 1)
                         |> .size
                         |> Expect.equal 340
@@ -115,7 +115,7 @@ suite =
                 \_ ->
                     let
                         released =
-                            startAt 300 |> step (Release (pointer 1 400))
+                            startAt 300 |> step (Release (place 1 400))
                     in
                     step (Cancel 1) released
                         |> Expect.equal released
@@ -129,7 +129,7 @@ suite =
 
 startAt : Float -> Resize.Model
 startAt size =
-    Resize.init size |> step (Grab (pointer 1 size))
+    Resize.init size |> step (Grab (place 1 size))
 
 
 step : Msg -> Resize.Model -> Resize.Model
@@ -137,6 +137,6 @@ step msg model =
     Resize.update edge msg model
 
 
-pointer : Int -> Float -> Pointer
-pointer id x =
-    { id = id, along = x }
+place : Int -> Float -> Place
+place id x =
+    { id = id, x = x, y = 0 }

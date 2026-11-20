@@ -63,14 +63,7 @@ browser's, and reach no message at all.
 -}
 type Msg
     = Shown Bool
-    | LeftMsg Resize.Msg
-    | RightMsg Resize.Msg
-    | TopMsg Resize.Msg
-    | BottomMsg Resize.Msg
-    | GrabCorner Handle.Direction Handle.Place
-    | CarryCorner Handle.Direction Handle.Place
-    | DropCorner Handle.Direction Handle.Place
-    | CancelCorner Handle.Direction Int
+    | Grow Grip Resize.Msg
     | Window { width : Float, height : Float }
     | ShiftMsg Shift.Msg
     | CameraMsg Track3d.Msg
@@ -193,48 +186,62 @@ bottom =
     }
 
 
-{-| The corner grips. A corner is the meeting of two edges and grows both sizes at
-once, so it holds both under one id, and that id is what the two sizes are then said to
-be held by.
-
-Its id, its words and where its grip stands are all the two edges it is the meeting of.
-
+{-| The eight grips the box is sized by. An edge moves one size; a corner is the meeting
+of two edges and moves both, holding them under one id -- which is then what both sizes
+are said to be held by, and what draws the grip held.
 -}
-type alias Corner =
+type Grip
+    = Edge Side
+    | Corner Side Side
+
+
+type alias GripInfo =
     { id : String
     , label : String
     , at : String
-    , width : Side
-    , height : Side
+    , moves : List Side
     }
 
 
-corner : Handle.Direction -> Corner
-corner direction =
-    let
-        ( width, height ) =
-            case direction of
-                Handle.NorthWest ->
-                    ( left, top )
+grip : Grip -> GripInfo
+grip g =
+    case g of
+        Edge side ->
+            { id = side.edge.id
+            , label = side.edge.label
+            , at = side.at
+            , moves = [ side ]
+            }
 
-                Handle.NorthEast ->
-                    ( right, top )
+        Corner width height ->
+            let
+                names =
+                    height.name ++ "-" ++ width.name
+            in
+            { id = "tracker-float-" ++ names ++ "-grip"
+            , label = "Resize the floating track map from its " ++ names ++ " corner"
+            , at = height.at ++ " " ++ width.at
+            , moves = [ width, height ]
+            }
 
-                Handle.SouthWest ->
-                    ( left, bottom )
 
-                Handle.SouthEast ->
-                    ( right, bottom )
+{-| Which diagonal a corner lies along -- the cursor says it, and the two edges it is the
+meeting of say which.
+-}
+diagonal : Side -> Side -> Handle.Direction
+diagonal width height =
+    case ( width.edge.grows, height.edge.grows ) of
+        ( Resize.AgainstPointer, Resize.AgainstPointer ) ->
+            Handle.NorthWest
 
-        names =
-            height.name ++ "-" ++ width.name
-    in
-    { id = "tracker-float-" ++ names ++ "-grip"
-    , label = "Resize the floating track map from its " ++ names ++ " corner"
-    , at = height.at ++ " " ++ width.at
-    , width = width
-    , height = height
-    }
+        ( Resize.WithPointer, Resize.AgainstPointer ) ->
+            Handle.NorthEast
+
+        ( Resize.AgainstPointer, Resize.WithPointer ) ->
+            Handle.SouthWest
+
+        ( Resize.WithPointer, Resize.WithPointer ) ->
+            Handle.SouthEast
 
 
 {-| `boxId` is what the travel is measured against at every pick, and what both
@@ -263,60 +270,12 @@ update msg m =
         Window window ->
             ( { m | window = window }, Cmd.none )
 
-        LeftMsg sub ->
+        Grow choice sub ->
             let
-                grown =
-                    grow left.edge.id (alongX left m) sub
+                g =
+                    grip choice
             in
-            ( { m | width = grown.size }, measureOn sub )
-
-        RightMsg sub ->
-            let
-                grown =
-                    grow right.edge.id (alongX right m) sub
-
-                shift =
-                    m.shift
-            in
-            ( { m | width = grown.size, shift = { shift | x = grown.shift } }, measureOn sub )
-
-        TopMsg sub ->
-            let
-                grown =
-                    grow top.edge.id (alongY top m) sub
-            in
-            ( { m | height = grown.size }, measureOn sub )
-
-        BottomMsg sub ->
-            let
-                grown =
-                    grow bottom.edge.id (alongY bottom m) sub
-
-                shift =
-                    m.shift
-            in
-            ( { m | height = grown.size, shift = { shift | y = grown.shift } }, measureOn sub )
-
-        GrabCorner direction place ->
-            ( growCorner direction Resize.Grab place m, measure )
-
-        CarryCorner direction place ->
-            ( growCorner direction Resize.Carrying place m, Cmd.none )
-
-        DropCorner direction place ->
-            ( growCorner direction Resize.Release place m, Cmd.none )
-
-        CancelCorner direction pointerId ->
-            let
-                c =
-                    corner direction
-            in
-            ( { m
-                | width = Resize.update c.width.edge (Resize.Cancel pointerId) m.width
-                , height = Resize.update c.height.edge (Resize.Cancel pointerId) m.height
-              }
-            , Cmd.none
-            )
+            ( List.foldl (grow g.id sub) m g.moves, measureOn sub )
 
         ShiftMsg sub ->
             let
@@ -340,14 +299,31 @@ type alias Drag =
     }
 
 
-alongX : Side -> Model -> Drag
-alongX side m =
-    { side = side, size = m.width, shift = m.shift.x, window = m.window.width }
+along : Side -> Model -> Drag
+along side m =
+    case side.edge.axis of
+        Handle.Across ->
+            { side = side, size = m.width, shift = m.shift.x, window = m.window.width }
+
+        Handle.Down ->
+            { side = side, size = m.height, shift = m.shift.y, window = m.window.height }
 
 
-alongY : Side -> Model -> Drag
-alongY side m =
-    { side = side, size = m.height, shift = m.shift.y, window = m.window.height }
+{-| The axis the side is read along says which pair of the box's two the size and the
+shift are written back through. A grip that carries no box writes its shift back unchanged.
+-}
+writeBack : Side -> Resize.Model -> Float -> Model -> Model
+writeBack side size shift m =
+    let
+        offset =
+            m.shift
+    in
+    case side.edge.axis of
+        Handle.Across ->
+            { m | width = size, shift = { offset | x = shift } }
+
+        Handle.Down ->
+            { m | height = size, shift = { offset | y = shift } }
 
 
 {-| Whether the box is carried along by the growth. The box is pinned at one end of each
@@ -376,13 +352,17 @@ room d =
 {-| One axis of a drag on a size, by the grip named `gripId`: the edge held travels to the
 window's own edge and no further, and the box goes along only when the grip is at the end
 the box is pinned at. Either way the ceiling is the same at every move of one drag,
-because size and shift both grow by the travel.
+because size and shift both grow by the travel. A corner is two of these, one per size it
+moves.
 -}
-grow : String -> Drag -> Resize.Msg -> { size : Resize.Model, shift : Float }
-grow gripId d msg =
+grow : String -> Resize.Msg -> Side -> Model -> Model
+grow gripId sub side m =
     let
+        d =
+            along side m
+
         base =
-            d.side.edge
+            side.edge
 
         ceiling =
             d.size.size + room d
@@ -403,37 +383,16 @@ grow gripId d msg =
             }
 
         size =
-            Resize.update edge msg d.size
-    in
-    { size = size
-    , shift =
-        if carried d.side then
-            d.shift + size.size - d.size.size
-
-        else
-            d.shift
-    }
-
-
-{-| One pointer event of a corner, read along both axes and applied to both sizes it
-holds: each axis does on its own what it would do to one edge grip.
--}
-growCorner : Handle.Direction -> (Handle.Pointer -> Resize.Msg) -> Handle.Place -> Model -> Model
-growCorner direction toMsg place m =
-    let
-        c =
-            corner direction
-
-        width =
-            grow c.id (alongX c.width m) (toMsg { id = place.id, along = place.x })
-
-        height =
-            grow c.id (alongY c.height m) (toMsg { id = place.id, along = place.y })
+            Resize.update edge sub d.size
 
         shift =
-            m.shift
+            if carried side then
+                d.shift + size.size - d.size.size
+
+            else
+                d.shift
     in
-    { m | width = width.size, height = height.size, shift = { shift | x = width.shift, y = height.shift } }
+    writeBack side size shift m
 
 
 {-| How far the window goes, read from the browser. The ceiling a drag stops at is the
@@ -459,6 +418,26 @@ measureOn msg =
             Cmd.none
 
 
+{-| Whether a grip is drawn held: it is the one holding a size when any size it moves says
+so. An edge moves one, a corner the two that meet there.
+-}
+holds : GripInfo -> Model -> Bool
+holds g m =
+    List.any (\side -> (along side m).size.grip == Just g.id) g.moves
+
+
+{-| The track an edge grip stands in: a bar along the side it bounds.
+-}
+edgeTrack : Side -> String
+edgeTrack side =
+    case side.edge.axis of
+        Handle.Across ->
+            "top-0 z-10 grid h-full w-2.5 place-items-center"
+
+        Handle.Down ->
+            "left-0 z-10 grid h-2.5 w-full content-center"
+
+
 {-| The map floated over the columns, drawn into the card the page hands it.
 
 The box stands on the page whether or not it is open -- a `popovertarget` resolves by id, so the element has to be there to be shown -- and the UA keeps a closed popover out of layout. What is not built while it is closed is the drawing itself, which is recomputed every frame of the race.
@@ -471,22 +450,27 @@ Three of the UA's popover sheet reach this box and each is answered: `inset: 0` 
 view : Model -> (Html Msg -> List (Html Msg) -> Html Msg) -> Track -> Snapshot -> Html Msg
 view m frame track snapshot =
     let
-        -- A corner grows both sizes, so it is drawn held when either of them says it
-        -- holds -- and it is then the one the moves come back to.
-        cornerGrip direction =
+        edgeGrip side =
+            div [ Attributes.class ("absolute " ++ side.at ++ " " ++ edgeTrack side) ]
+                [ Html.map (Grow (Edge side)) (Resize.grip side.edge (along side m).size) ]
+
+        cornerGrip width height =
             let
-                c =
-                    corner direction
+                g =
+                    grip (Corner width height)
+
+                toMsg =
+                    Grow (Corner width height)
             in
-            div [ Attributes.class ("absolute " ++ c.at ++ " z-20") ]
-                [ Handle.corner direction
-                    { id = c.id
-                    , label = c.label
-                    , held = m.width.grip == Just c.id || m.height.grip == Just c.id
-                    , onGrab = GrabCorner direction
-                    , onMove = CarryCorner direction
-                    , onDrop = DropCorner direction
-                    , onCancel = \pointerId -> CancelCorner direction pointerId
+            div [ Attributes.class ("absolute " ++ g.at ++ " z-20") ]
+                [ Handle.corner (diagonal width height)
+                    { id = g.id
+                    , label = g.label
+                    , held = holds g m
+                    , onGrab = toMsg << Resize.Grab
+                    , onMove = toMsg << Resize.Carrying
+                    , onDrop = toMsg << Resize.Release
+                    , onCancel = toMsg << Resize.Cancel
                     }
                 ]
     in
@@ -508,18 +492,14 @@ view m frame track snapshot =
                 text ""
             )
             [ Html.map ShiftMsg (Shift.handle box m.shift), closer ]
-        , div [ Attributes.class ("absolute " ++ left.at ++ " top-0 z-10 grid h-full w-2.5 place-items-center") ]
-            [ Html.map LeftMsg (Resize.grip left.edge m.width) ]
-        , div [ Attributes.class ("absolute " ++ right.at ++ " top-0 z-10 grid h-full w-2.5 place-items-center") ]
-            [ Html.map RightMsg (Resize.grip right.edge m.width) ]
-        , div [ Attributes.class ("absolute " ++ top.at ++ " left-0 z-10 grid h-2.5 w-full content-center") ]
-            [ Html.map TopMsg (Resize.grip top.edge m.height) ]
-        , div [ Attributes.class ("absolute " ++ bottom.at ++ " left-0 z-10 grid h-2.5 w-full content-center") ]
-            [ Html.map BottomMsg (Resize.grip bottom.edge m.height) ]
-        , cornerGrip Handle.NorthWest
-        , cornerGrip Handle.NorthEast
-        , cornerGrip Handle.SouthWest
-        , cornerGrip Handle.SouthEast
+        , edgeGrip left
+        , edgeGrip right
+        , edgeGrip top
+        , edgeGrip bottom
+        , cornerGrip left top
+        , cornerGrip right top
+        , cornerGrip left bottom
+        , cornerGrip right bottom
         ]
 
 

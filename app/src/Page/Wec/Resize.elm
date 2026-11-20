@@ -13,7 +13,7 @@ size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
 -}
 
 import Drag
-import Drag.Handle as Handle exposing (Pointer)
+import Drag.Handle as Handle exposing (Place)
 import Html exposing (Html)
 
 
@@ -81,10 +81,27 @@ init size =
 
 
 type Msg
-    = Grab Pointer
-    | Carrying Pointer
-    | Release Pointer
+    = Grab Place
+    | Carrying Place
+    | Release Place
     | Cancel Int
+
+
+{-| The place read along the axis this edge is read along. A size is moved by one
+coordinate, and the grip at a corner reports both -- which is why the event carries a
+place and the edge picks the one it reads.
+-}
+along : Edge -> Place -> Handle.Pointer
+along edge place =
+    { id = place.id
+    , along =
+        case edge.axis of
+            Handle.Across ->
+                place.x
+
+            Handle.Down ->
+                place.y
+    }
 
 
 {-| The size follows `Drag`, and a `Cancel` leaves it where the last move left
@@ -93,18 +110,18 @@ it -- unlike a carried column, a resize has nothing to put back.
 update : Edge -> Msg -> Model -> Model
 update edge msg m =
     case msg of
-        Grab pointer ->
+        Grab place ->
             case m.grip of
                 Just _ ->
                     m
 
                 Nothing ->
-                    { m | carried = Tuple.first (Drag.update (Drag.Pick m.size pointer) m.carried), grip = Just edge.id }
+                    { m | carried = Tuple.first (Drag.update (Drag.Pick m.size (along edge place)) m.carried), grip = Just edge.id }
 
-        Carrying pointer ->
+        Carrying place ->
             let
                 ( carried, _ ) =
-                    Drag.update (Drag.Move pointer) m.carried
+                    Drag.update (Drag.Move (along edge place)) m.carried
             in
             case Drag.carrying carried of
                 Just carry ->
@@ -113,10 +130,10 @@ update edge msg m =
                 Nothing ->
                     { m | carried = carried }
 
-        Release pointer ->
+        Release place ->
             let
                 ( carried, _ ) =
-                    Drag.update (Drag.Drop pointer) m.carried
+                    Drag.update (Drag.Drop (along edge place)) m.carried
             in
             { m | carried = carried, grip = holding (Drag.isCarrying carried) m.grip }
 
