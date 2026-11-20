@@ -47,7 +47,6 @@ suite =
         , test "a second finger is no pick while one is held" <|
             \_ ->
                 let
-                    -- The first finger is still down, so the second is no pick at all.
                     taken =
                         Camera.update (Grab (press 2 500 500)) held
                 in

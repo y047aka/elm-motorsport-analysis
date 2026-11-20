@@ -7,12 +7,12 @@ answer to them.
 The grip holds no state of its own -- `held` is the caller's, and the carry
 behind it is `Drag`'s business. What the grip adds is the pointer's path: the
 `drag-handle` custom element calls `setPointerCapture`, which Elm cannot, so every move and the release come back to the grip even once the pointer has left
-it.
+it. A move is listened for only while `held` says one is, and the release is listened for
+always: the pointer can be let go of before the frame that would have added a move.
 
-A drawing the reader drags anywhere on is not a grip and stands on its own -- it wants no
-glyph, no emphasis, and its own words -- but it reads the pointer the same way, and so takes
-[`eventsAcross`](#eventsAcross) and [`arrowKeys`](#arrowKeys) rather than one of the four
-grips here.
+A drawing the reader drags anywhere on is no grip -- it wants none of what a grip is made
+of -- but it reads the pointer the same way, and so takes [`eventsAcross`](#eventsAcross)
+and [`arrowKeys`](#arrowKeys).
 
 @docs Axis, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, carry, eventsAcross, arrowKeys
 
@@ -51,8 +51,8 @@ type Direction
     | SouthEast
 
 
-{-| Which pointer, and where it is in both directions at once: what the grip that
-carries a box across the page reads.
+{-| Which pointer, and where it is in both directions at once: what a grip reading across
+the page, rather than along a line, reports.
 -}
 type alias Place =
     { id : Int
@@ -334,9 +334,7 @@ arrowKeys =
     stepWith bothArrows
 
 
-{-| The pointer's events of a grip read along one axis. A move is listened for only
-while one is held, and the release is listened for always: the pointer can be let go
-of before the frame that would have added a move.
+{-| The pointer's events of a grip read along one axis.
 
 The row stays open because the grip that steps along the axis is handed over too, and
 its `onStep` is the grip's own business.
@@ -365,12 +363,7 @@ eventsAlong axis config =
 
 
 {-| The pointer's events of a grip read in both directions at once. The row stays open
-because the grip that carries a box steps by the arrow keys as well.
-
-A move is listened for only while one is held, and the release always: a turn let go of
-before the frame that would have added a move has reported no moves at all. The pointer's own
-id rides along on every one of them, which is what lets the caller refuse a second pointer
-taking over a carry the first one has.
+because what reads these events may step by the arrow keys as well.
 
 -}
 eventsAcross :

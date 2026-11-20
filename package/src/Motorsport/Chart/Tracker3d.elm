@@ -56,8 +56,7 @@ init =
 
 
 {-| Roll the map towards the right by, and lift the eye towards overhead by, the radians
-given. The pointer's travel and the arrow keys are both asked for in the reader's own
-directions, so the drawing answers one message either way.
+given.
 -}
 type Msg
     = Roll Float Float
@@ -65,8 +64,7 @@ type Msg
 
 {-| The azimuth runs the other way round from a roll towards the right: a thing rolled to
 the right carries the side standing near to the right with it, and that is the azimuth
-running down. The reversal is made here and nowhere else, so whoever asks for a roll says it
-in the reader's own directions.
+running down. The reversal is made here and nowhere else.
 -}
 update : Msg -> Model -> Model
 update msg m =
@@ -75,9 +73,7 @@ update msg m =
             { m | azimuth = m.azimuth - roll, elevation = lifted (m.elevation + rise) }
 
 
-{-| The radians a pixel of the pointer's travel is worth. The drag is measured in the
-reader's pixels and the pose is kept in radians, and the one is turned into the other where
-the pointer is read.
+{-| The radians a pixel of the pointer's travel is worth.
 -}
 perPixel : Float
 perPixel =

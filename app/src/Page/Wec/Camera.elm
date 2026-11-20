@@ -2,10 +2,9 @@ module Page.Wec.Camera exposing (Model, Msg(..), init, held, update)
 
 {-| The camera the raised map is turned with, and the pointer turning it.
 
-A turn is the pointer's travel since the last move, so the camera keeps where that pointer was
-last read -- and which pointer it is, since a second finger landing on the drawing is not the
-first one's turn. A `Grab` while one is held is refused, and a move or a release from any
-other pointer is not the turn's business at all.
+A turn is the pointer's travel since the last move, so the camera keeps which pointer is
+turning it and where that one was last read: a second finger landing on the drawing is not
+the first one's turn.
 
 @docs Model, Msg, init, held, update
 
@@ -15,8 +14,7 @@ import Drag.Handle as Handle exposing (Place, Steps)
 import Motorsport.Chart.Tracker3d as Track3d
 
 
-{-| The way the map is looked at, and the pointer holding it up to the eye now: the place it
-was last read, so the next move is measured from there.
+{-| The way the map is looked at, and the pointer holding it up to the eye now.
 -}
 type alias Model =
     { eye : Track3d.Model
@@ -24,8 +22,6 @@ type alias Model =
     }
 
 
-{-| Which pointer is turning the map, and where it was last read.
--}
 type alias Hold =
     { pointerId : Int
     , x : Float
@@ -48,8 +44,7 @@ init =
     }
 
 
-{-| Whether a pointer is turning the map now, which is what says whether the cursor is
-grabbing.
+{-| Whether a pointer is turning the map now.
 -}
 held : Model -> Bool
 held m =

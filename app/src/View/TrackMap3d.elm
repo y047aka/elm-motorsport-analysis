@@ -19,8 +19,7 @@ import Motorsport.Race.Snapshot exposing (Snapshot)
 
 {-| The page holds the way the map is looked at, and the box it is stood in: the drawing
 is fitted to that box's proportions, in the page's own pixels. The view keeps nothing of
-its own -- which pointer is turning it, and whether one is, are the page's, and the travel
-comes back off the pointer in the page's messages.
+its own.
 -}
 type alias Config msg =
     { model : Model

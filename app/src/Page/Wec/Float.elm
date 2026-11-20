@@ -1,7 +1,7 @@
 module Page.Wec.Float exposing (Model, Msg(..), init, update, view, trigger)
 
 {-| The track map floated over the columns: hidden until the tracker column's `◱`
-asks for it, sized by a grip along each of its four edges and at each of its four corners, carried by a fifth, and taking part in none of the strip's grid.
+asks for it, sized by a grip along each of its four edges and at each of its four corners, carried by a grip of its own, and taking part in none of the strip's grid.
 
 The box is a `popover`, and a `manual` one: the browser keeps whether it is open, the two presses only name it, and nothing here can be closed by a press outside it -- the columns are worked while the map is up.
 
@@ -110,8 +110,7 @@ cornerRoom =
     10
 
 
-{-| An edge the box keeps a size by: the words its grip is called by, where that grip
-stands, and the size it moves.
+{-| An edge the box keeps a size by.
 
 The box is pinned at its bottom right, so the two edges there are `WithPointer` and take
 the box along with the size, and the other two are `AgainstPointer` and grow away from a
@@ -126,11 +125,8 @@ type alias Side =
     }
 
 
-{-| One edge of the box, named: its grip's id and the words it is labelled with are the name.
-
-`at` is written out rather than composed from it -- Tailwind reads a class off the source
-text and invents nothing.
-
+{-| `at` is written out rather than composed from the name -- Tailwind reads a class off the
+source text and invents nothing.
 -}
 side : String -> String -> Handle.Axis -> Resize.Grows -> Resize.Fence -> Side
 side name at axis grows fence =
@@ -425,7 +421,7 @@ The box stands on the page whether or not it is open -- a `popovertarget` resolv
 
 It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at. `card-elements.ts` owns every class the card itself has, which leaves the wrapper the one thing here that can carry a surface.
 
-Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the four size grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- the box needs `grid` to lay its card out, and an author `display` silently wins over the UA's hiding of a closed popover.
+Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the eight size grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- the box needs `grid` to lay its card out, and an author `display` silently wins over the UA's hiding of a closed popover.
 
 -}
 view : Model -> (Html Msg -> List (Html Msg) -> Html Msg) -> Track -> Snapshot -> Html Msg

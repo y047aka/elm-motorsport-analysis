@@ -88,8 +88,7 @@ type Msg
 
 
 {-| The place read along the axis this edge is read along. A size is moved by one
-coordinate, and the grip at a corner reports both -- which is why the event carries a
-place and the edge picks the one it reads.
+coordinate, and the grip at a corner reports both.
 -}
 along : Edge -> Place -> Handle.Pointer
 along edge place =
