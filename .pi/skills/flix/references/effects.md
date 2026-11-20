@@ -56,15 +56,15 @@ The way out, which is the shape of `Db`: the operation **answers with a
 
 ```flix
 pub eff SqlRead {
-    def fetch(sql: String, params: List[Db.Value]): Result[Db.Error, ...]
+    def fetch(sql: String, params: List[SqlValue]): Result[DbErrorKind, ...]
 }
 
-// mod Db -- the caller reaches this, never the op
+// mod Lite3fx.Sql -- the caller reaches this, never the op
 pub def fetch(sql: String, params: List[Value]): ... \ DbRead =
     SqlRead.fetch(sql, params) |> orRaise
 ```
 
-`Db.orRaise` is that step. Nothing outside `mod Db` calls an operation.
+`Lite3fx.Sql.orRaise` is that step. Nothing outside `Lite3fx.Sql` calls an operation.
 
 ### Subtraction takes a set or an alias
 
@@ -77,9 +77,9 @@ formulas that differ only by that term.
 
 ### A failure effect wants one op, not one per kind
 
-Each of `DbErr` and `TransientDbErr` has a single `raise(error: Db.Error): Void`.
+Each of `DbErr` and `TransientDbErr` has a single `raise(kind: DbErrorKind): Void`.
 An operation returning `Void` does not resume, so the caller's code is written as
-though it always succeeds, and `Db.runWithError` turns it back into a `Result` at
+though it always succeeds, and `Lite3fx.DbError.runWithKind` turns it back into a `Result` at
 the boundary.
 
 An op per error kind buys partial handling — catching one kind and letting the
@@ -90,7 +90,7 @@ that might see it.
 
 ### `bug!` takes a `String`
 
-`bug!(cause)` where `cause` is a `Db.Error` does not compile; `bug!("${cause}")`
+`bug!(cause)` where `cause` is a `DbErrorKind` does not compile; `bug!("${cause}")`
 does.
 
 ### A signature's effects are one braced set
@@ -134,7 +134,7 @@ From `ababup1192/sqlfx`'s `docs/spikes.md` (same compiler version):
 - `spawn`'s body is limited to `(Chan + IO + NonDet) & e0`; a custom effect
   cannot be raised inside one.
 - Handlers can be chained on one `run` — `run { } with handler A { } with
-  handler B { }` — rather than nested. `Db.runRecording` nests two `run`s and
+  handler B { }` — rather than nested. `Lite3fx.Recording.statements` nests two `run`s and
   compiles; the chained form is untried here.
 - Measured handler overhead: a recording handler costs ~0.6µs per operation and
   a logging handler that forwards ~1.3µs, both two orders below a JDBC round

@@ -3,11 +3,12 @@
 /// A name is the whole of what the feed gives of a driver, so it is the key as
 /// well as the value. 308 of them are named on 130,017 laps.
 pub mod Db.Drivers {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
 
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
-    use Db.Value
 
     pub def table(): String = "drivers"
 
@@ -72,7 +73,7 @@ pub mod Db.Drivers {
     pub def insertRows(rows_: List[DriverRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows_)
 
-    pub def values(row: DriverRow): List[Value] =
+    pub def values(row: DriverRow): List[SqlValue] =
         Schema.values(all(), row)
 
     pub def createTable(): String =

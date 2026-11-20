@@ -10,14 +10,17 @@
 /// whatever else is given an instance, as `Db.Laps` gives its columns one -- so
 /// the clause and the value that comes back are the one expression read twice.
 ///
-/// A reading stops at the first cell it cannot read: it consumes the cells
-/// before it, so past a failure there is no longer a position to report the
-/// next problem at.
+/// A row is read by the label each projected expression comes back under, which
+/// the same expression writes into the clause; see `label`. Within the row put in
+/// that order a reading stops at the first cell it cannot read, so past a failure
+/// there is no longer a position to report the next problem at.
 pub mod Sql {
-
-    use Db.Error
-    use Db.Row.Row
-    use Db.Value
+    use Lite3fx.DbErr
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
+    use Lite3fx.Row
+    use Lite3fx.Row.Row
+    use Lite3fx.SqlValue
 
     ///
     /// ===== FRAGMENTS =====
@@ -27,7 +30,7 @@ pub mod Sql {
     /// together so that concatenating two pieces cannot put a value under the
     /// wrong placeholder.
     pub enum Frag {
-        case Frag(String, List[Value])
+        case Frag(String, List[SqlValue])
     }
 
     /// A piece of a query binding nothing.
@@ -35,7 +38,7 @@ pub mod Sql {
         Frag.Frag(sql, Nil)
 
     /// A piece of a query whose `?` placeholders bind `params`, left to right.
-    pub def frag(sql: String, params: List[Value]): Frag =
+    pub def frag(sql: String, params: List[SqlValue]): Frag =
         Frag.Frag(sql, params)
 
     /// The pieces in order, separated by a space where both sides have one.
@@ -52,9 +55,23 @@ pub mod Sql {
         let params = pieces |> List.flatMap(piece -> { let Frag.Frag(_, values) = piece; values });
         Frag.Frag(sql, params)
 
-    pub def toSql(fragment: Frag): (String, List[Value]) =
+    pub def toSql(fragment: Frag): (String, List[SqlValue]) =
         let Frag.Frag(sql, params) = fragment;
         (sql, params)
+
+    /// The text of a projection, which is what a statement written out interpolates: a
+    /// column's name, an aggregate over declared columns, a window's clauses.
+    ///
+    /// A projection that binds values has nowhere else they could go, and its text says how many it binds rather than pretending they are not there.
+    pub def sqlOf(p: p): String with Project[p] =
+        sqlText(columnsOf(p))
+
+    def sqlText(fragment: Frag): String =
+        let Frag.Frag(sql, params) = fragment;
+        if (List.isEmpty(params))
+            sql
+        else
+            "${sql} /* binds ${List.length(params)} */"
 
     ///
     /// ===== EXPRESSIONS =====
@@ -80,15 +97,16 @@ pub mod Sql {
         Expr.Expr(fragment)
 
     pub def i32(value: Int32): Expr[Int32] =
-        Expr.Expr(Frag.Frag("?", Value.Integer(value) :: Nil))
+        Expr.Expr(Frag.Frag("?", SqlValue.Int32(value) :: Nil))
 
     pub def str(value: String): Expr[String] =
-        Expr.Expr(Frag.Frag("?", Value.Text(value) :: Nil))
+        Expr.Expr(Frag.Frag("?", SqlValue.Str(value) :: Nil))
 
     pub def eq(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("=", left, right)
     pub def ne(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<>", left, right)
     pub def lte(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<=", left, right)
     pub def isNotNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NOT NULL", expr)
+    pub def isNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NULL", expr)
 
     /// The predicates, ANDed. Nothing asked is `1 = 1` rather than an empty
     /// fragment: this goes where a predicate is expected, and a caller ANDing
@@ -116,25 +134,25 @@ pub mod Sql {
     /// The expressions of the SELECT clause, and a reading of the cells they
     /// come back as which answers with what is left of the row.
     pub enum Sel[a] {
-        case Sel(List[Frag], Row -> Result[Error, (a, Row)])
+        case Sel(List[Frag], Row -> Result[DbErrorKind, (a, Row)])
     }
 
-    def cell(expr: Frag, read: String -> Value -> Result[Error, a]): Sel[a] =
+    def cell(expr: Frag, read: String -> SqlValue -> Result[DbErrorKind, a]): Sel[a] =
         let Frag.Frag(text, _) = expr;
         Sel.Sel(expr :: Nil, row -> match Row.uncons(row) {
             case Some((_, value, rest)) => read(text, value) |> Result.map(read_ -> (read_, rest))
-            case None                   => Err(Error.Unread("the row ended before `${text}`"))
+            case None                   => Err(DbErrorKind.Other("the row ended before `${text}`"))
         })
 
     /// A cell the reading wants as text. The schema binds text and SQLite keeps
     /// what it is given, so a column is asked for as text whatever the driver
     /// answered it in -- which is also how an expression's cell arrives.
     pub def text(expr: String): Sel[String] =
-        cell(raw(expr), (name, v) -> nonNull(name, v) |> Result.map(Row.textOf))
+        cell(raw(expr), (name, v) -> nonNull(name, v) |> Result.map(SqlValue.textOf))
 
     pub def optionalText(expr: String): Sel[Option[String]] =
         cell(raw(expr), (_, v) ->
-            if (Row.isNull(v)) Ok(None) else Ok(Some(Row.textOf(v))))
+            if (SqlValue.isNull(v)) Ok(None) else Ok(Some(SqlValue.textOf(v))))
 
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
@@ -144,22 +162,23 @@ pub mod Sql {
     /// A number the driver answered in another type -- a `SUM`, a `json_each`
     /// element -- is read from its text, which is the one form every cell has.
     pub def intOf(expr: Frag): Sel[Int32] =
-        cell(expr, (name, v) -> match v {
-            case Value.Integer(n) => Ok(n)
-            case Value.Null       => Err(Error.Unread("column `${name}` was null"))
-            case _                => parseInt(name, Row.textOf(v))
-        })
+        cell(expr, (name, v) ->
+            if (SqlValue.isNull(v)) Err(DbErrorKind.DecodeError(name, "was null"))
+            else match SqlValue.int32Of(v) {
+                case Some(n) => Ok(n)
+                case None    => parseInt(name, SqlValue.textOf(v))
+            })
 
     /// A truth value is stored as the 1 or 0 the driver bound it as.
     pub def bool(expr: String): Sel[Bool] =
         cell(raw(expr), (name, v) -> match v {
-            case Value.Integer(1) => Ok(true)
-            case Value.Integer(0) => Ok(false)
-            case Value.Null       => Err(Error.Unread("column `${name}` was null"))
-            case _ => match Row.textOf(v) {
+            case SqlValue.Int32(1)  => Ok(true)
+            case SqlValue.Int32(0)  => Ok(false)
+            case SqlValue.Null      => Err(DbErrorKind.DecodeError(name, "was null"))
+            case _ => match SqlValue.textOf(v) {
                 case "1" => Ok(true)
                 case "0" => Ok(false)
-                case t   => Err(Error.Unread("column `${name}` is not a boolean: \"${t}\""))
+                case t   => Err(DbErrorKind.DecodeError(name, "is not a boolean: \"${t}\""))
             }
         })
 
@@ -168,31 +187,30 @@ pub mod Sql {
 
     /// As `optionalInt`, where the expression binds values of its own.
     pub def optionalIntOf(expr: Frag): Sel[Option[Int32]] =
-        cell(expr, (name, v) -> match v {
-            case Value.Integer(n) => Ok(Some(n))
-            case Value.Null       => Ok(None)
-            case _                => parseInt(name, Row.textOf(v)) |> Result.map(Some)
-        })
+        cell(expr, (name, v) ->
+            if (SqlValue.isNull(v)) Ok(None)
+            else match SqlValue.int32Of(v) {
+                case Some(n) => Ok(Some(n))
+                case None    => parseInt(name, SqlValue.textOf(v)) |> Result.map(Some)
+            })
 
     /// A mini-sector column arrives as the JSON array it was written as.
     pub def optionalIntArray(expr: String): Sel[Option[List[Option[Int32]]]] =
-        cell(raw(expr), (name, v) -> match v {
-            case Value.Json(xs) => Ok(Some(xs))
-            case Value.Null     => Ok(None)
-            case _              => parseIntArray(name, Row.textOf(v)) |> Result.map(Some)
-        })
+        cell(raw(expr), (name, v) ->
+            if (SqlValue.isNull(v)) Ok(None)
+            else parseIntArray(name, SqlValue.textOf(v)) |> Result.map(Some))
 
     /// The failure a cell that carries nothing is, in the words the reading has
     /// always used for one.
-    def nonNull(name: String, value: Value): Result[Error, Value] =
-        if (Row.isNull(value)) Err(Error.Unread("column `${name}` was null")) else Ok(value)
+    def nonNull(name: String, value: SqlValue): Result[DbErrorKind, SqlValue] =
+        if (SqlValue.isNull(value)) Err(DbErrorKind.DecodeError(name, "was null")) else Ok(value)
 
-    def parseInt(expr: String, text: String): Result[Error, Int32] =
-        Int32.fromString(text) |> Option.toOk(Error.Unread("column `${expr}` is not a number: \"${text}\""))
+    def parseInt(expr: String, text: String): Result[DbErrorKind, Int32] =
+        Int32.fromString(text) |> Option.toOk(DbErrorKind.DecodeError(expr, "is not a number: \"${text}\""))
 
-    def parseIntArray(expr: String, text: String): Result[Error, List[Option[Int32]]] =
+    def parseIntArray(expr: String, text: String): Result[DbErrorKind, List[Option[Int32]]] =
         match String.stripPrefix({substr = "["}, text) |> Option.flatMap(String.stripSuffix({substr = "]"})) {
-            case None       => Err(Error.Unread("column `${expr}` is not a JSON array: \"${text}\""))
+            case None       => Err(DbErrorKind.DecodeError(expr, "is not a JSON array: \"${text}\""))
             case Some("")   => Ok(Nil)
             case Some(body) =>
                 String.splitOn({substr = ","}, body) |> Result.traverse(element -> match element {
@@ -201,7 +219,7 @@ pub mod Sql {
                 })
         }
 
-    pub def andThen(transform: a -> Result[Error, b], sel: Sel[a]): Sel[b] =
+    pub def andThen(transform: a -> Result[DbErrorKind, b], sel: Sel[a]): Sel[b] =
         let Sel.Sel(columns, decodeCells) = sel;
         Sel.Sel(columns, cells ->
             decodeCells(cells) |> Result.flatMap(match (value, rest) ->
@@ -222,17 +240,112 @@ pub mod Sql {
         andThen(value -> Ok(transform(value)), sel)
 
     pub def clause(sel: Sel[a]): Frag =
-        let Sel.Sel(columns, _) = sel;
-        frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
+        frags(raw("SELECT") :: columnsOf(sel) :: Nil)
 
-    pub def decode(sel: Sel[a], row: Row): Result[Error, a] =
+    /// The expressions a projection names, as the `SELECT` clause spells them and
+    /// without the keyword -- the piece a statement written out puts between
+    /// `SELECT` and `FROM`.
+    pub def columnsOf(p: p): Frag with Project[p] =
+        let Sel.Sel(columns, _) = Project.sel(p);
+        joinFrags(", ", columns)
+
+    /// The labels a projection's columns come back under, in the order the clause
+    /// writes them.
+    pub def labels(sel: Sel[a]): List[String] =
+        let Sel.Sel(columns, _) = sel;
+        columns |> List.map(column -> { let Frag.Frag(text, _) = column; label(text) })
+
+    /// The row a query reads: its cells put in the order the projection names
+    /// them, and then read as the projection reads them.
+    pub def decode(sel: Sel[a], row: Row): Result[DbErrorKind, a] =
         let Sel.Sel(_, decodeCells) = sel;
-        decodeCells(row) |> Result.flatMap(match (value, rest) ->
-            if (Row.isEmpty(rest))
-                Ok(value)
-            else
-                Err(Error.Unread("the row carries ${Row.size(rest)} more columns than the projection reads"))
-        )
+        let names = labels(sel);
+        let width = List.length(names);
+        if (width != Row.size(row))
+            Err(DbErrorKind.SchemaMismatch(
+                "the projection names ${width} columns and the row carries ${Row.size(row)}"))
+        else
+            align(names, List.zip(Row.columnNames(row), Row.cells(row)))
+                |> Result.flatMap(cells -> decodeCells(Row.ofCells(cells)))
+                |> Result.map(match (value, _) -> value)
+
+    /// The label a projection comes back under.
+    ///
+    /// SQLite answers a column named through its qualifier by the name alone --
+    /// `SELECT l.key` comes back under `key` -- and an expression by the very
+    /// text it was written with, spaces and all. So the text that goes into the
+    /// clause is the key into the row that comes back, which is what lets the
+    /// clause and the reading stay the one value.
+    def label(text: String): String =
+        match aliasOf(text) {
+            case Some(name) => name
+            case None       => match qualified(text) {
+                case Some(name) => name
+                case None       => text
+            }
+        }
+
+    /// `expr AS name` comes back under `name`.
+    ///
+    /// The last ` AS ` anywhere in the text, so a projection written as a
+    /// subquery that aliases something inside itself is labelled by that inner
+    /// name rather than by the whole text. Nothing declared is written that way;
+    /// a column authored as a subquery has to be read at the name its own `AS`
+    /// gives it.
+    def aliasOf(text: String): Option[String] =
+        match List.reverse(String.splitOn({substr = " AS "}, text)) {
+            case Nil       => None
+            case _ :: Nil  => None
+            case name :: _ => Some(String.trim(name))
+        }
+
+    /// `qualifier.name` comes back under `name`. Only a text that is nothing but
+    /// the two, since `m.key + 1` comes back as the whole of it.
+    def qualified(text: String): Option[String] =
+        match String.splitOn({substr = "."}, text) {
+            case qualifier :: name :: Nil if isName(qualifier) and isName(name) => Some(name)
+            case _                                                                => None
+        }
+
+    def isName(text: String): Bool =
+        not String.isEmpty(text)
+            and (String.toList(text)
+                |> List.forAll(c -> Char.isLetter(c) or Char.isDigit(c) or c == '_'))
+
+    /// The cells the projection names, taken out of the row in that order. A
+    /// projection taking a label the row does not carry fails by naming itself.
+    ///
+    /// Two projections under one label -- a join naming both sides' `elapsed_ms`
+    /// -- are answered in the order the clause writes them, which is the one
+    /// order the row cannot contradict.
+    def align(
+        names: List[String],
+        given: List[(String, SqlValue)]
+    ): Result[DbErrorKind, List[SqlValue]] =
+        match names {
+            case Nil => Ok(Nil)
+            case name :: rest => match take(name, given, Nil) {
+                case None                 => Err(DbErrorKind.SchemaMismatch(
+                    "no column of the row answers to the projected `${name}`"))
+                case Some((cell, left))   => align(rest, left) |> Result.map(more -> cell :: more)
+            }
+        }
+
+    /// The cell under `name`, and the pairs that are left with it gone. The ones
+    /// walked past keep their place.
+    def take(
+        name: String,
+        given: List[(String, SqlValue)],
+        passed: List[(String, SqlValue)]
+    ): Option[(SqlValue, List[(String, SqlValue)])] =
+        match given {
+            case Nil                          => None
+            case (head, cell) :: rest         =>
+                if (head == name)
+                    Some((cell, List.append(List.reverse(passed), rest)))
+                else
+                    take(name, rest, (head, cell) :: passed)
+        }
 
     ///
     /// ===== PROJECTIONS =====
@@ -283,6 +396,167 @@ pub mod Sql {
         both(rest, Project.sel(pick)) |> selMap(match (r, value) -> add(r, value))
 
     ///
+    /// ===== AGGREGATES AND WINDOWS =====
+    ///
+    /// An aggregate or a window is written over a projection and read back as that
+    /// projection reads, which is what `Project` already says how to do: `min(c#s1Ms)`
+    /// reads as an `Option[Int32]` because `s1_ms` is one.
+    ///
+    /// The reading is carried through; only the text is wrapped.
+    ///
+
+    /// The pieces a list is made of, separated as SQL separates them.
+    pub def joined(pieces: List[Frag]): Frag =
+        joinFrags(", ", pieces)
+
+    /// The piece of a statement a projection contributes, values and all.
+    pub def fragment(sel: Sel[a]): Frag =
+        joinFrags(", ", selColumns(sel))
+
+    def selColumns(sel: Sel[a]): List[Frag] =
+        let Sel.Sel(columns, _) = sel;
+        columns
+
+    /// Pieces run together with nothing between them, where the text itself puts the
+    /// separation -- inside a function's parentheses, around a window's.
+    def glued(pieces: List[Frag]): Frag =
+        joinFrags("", pieces)
+
+    /// The function named, over what `arg` is.
+    def call(name: String, arg: Sel[a]): Sel[a] =
+        let Sel.Sel(_, decode) = arg;
+        Sel.Sel(glued(raw("${name}(") :: joinFrags(", ", selColumns(arg)) :: raw(")") :: Nil) :: Nil, decode)
+
+    pub def sum(p: p): Sel[Project.Out[p]] with Project[p] = call("SUM", Project.sel(p))
+    pub def min(p: p): Sel[Project.Out[p]] with Project[p] = call("MIN", Project.sel(p))
+    pub def max(p: p): Sel[Project.Out[p]] with Project[p] = call("MAX", Project.sel(p))
+    pub def firstValue(p: p): Sel[Project.Out[p]] with Project[p] = call("FIRST_VALUE", Project.sel(p))
+
+    /// A count is never null and never the argument's type, so it is the one aggregate
+    /// whose reading is its own.
+    pub def count(p: p): Sel[Int32] with Project[p] =
+        intOf(glued(raw("COUNT(") :: joinFrags(", ", selColumns(Project.sel(p))) :: raw(")") :: Nil))
+
+    /// The same columns read as possibly nothing.
+    ///
+    /// Two things answer with a null the argument's own type does not predict: an
+    /// aggregate over a group holding no rows, and the predecessor `lag` names for the
+    /// first row of a window.
+    pub def opt(p: p): Sel[Option[Project.Out[p]]] with Project[p] =
+        let Sel.Sel(columns, decode) = Project.sel(p);
+        Sel.Sel(columns, row -> match List.head(Row.cells(row)) {
+            case Some(value) if SqlValue.isNull(value) => Ok((None, Row.drop(row, 1)))
+            case _ => decode(row) |> Result.map(match (value, rest) -> (Some(value), rest))
+        })
+
+    /// `COALESCE`, the nullable side first.
+    ///
+    /// The reading is the fallback's, which is what answers when the first side carries
+    /// nothing.
+    pub def coalesce(nullable: Sel[Option[a]], fallback: Sel[a]): Sel[a] =
+        let Sel.Sel(_, decode) = fallback;
+        Sel.Sel(
+            glued(
+                raw("COALESCE(") :: joinFrags(", ", selColumns(nullable)) ::
+                raw(", ") :: joinFrags(", ", selColumns(fallback)) :: raw(")") :: Nil
+            ) :: Nil,
+            decode
+        )
+
+    /// A projected expression under the name the query gives it.
+    pub def aliased(name: String, sel: Sel[a]): Frag =
+        frags(joinFrags(", ", selColumns(sel)) :: raw("AS ${name}") :: Nil)
+
+    // ------------------------------------------------------------------ windows
+
+    /// How far a window reaches from the row being read.
+    pub enum Frame {
+        case UnboundedPreceding
+        case Preceding(Int32)
+        case CurrentRow
+        case Following(Int32)
+        case UnboundedFollowing
+    }
+
+    /// What a window is: the name the query gives it when it reads the window more
+    /// than once, the rows it is split into, the order it walks them in, and how far
+    /// it reaches.
+    ///
+    /// A name set means the clauses are spelled once, in the `WINDOW` clause, and every
+    /// use refers back to it.
+    pub type alias Window = {
+        name      = Option[String],
+        partition = List[Frag],
+        order     = List[Frag],
+        frame     = Option[Frag]
+    }
+
+    /// A window read once: spelled where it is used.
+    pub def window(partition: List[Frag], order: List[Frag], frame: Option[Frag]): Window =
+        { name = None, partition = partition, order = order, frame = frame }
+
+    /// A window read more than once: named, spelled once, and referred to by that name
+    /// everywhere else.
+    pub def namedWindow(
+        name: String,
+        partition: List[Frag],
+        order: List[Frag],
+        frame: Option[Frag]
+    ): Window =
+        { name = Some(name), partition = partition, order = order, frame = frame }
+
+    /// `ROWS BETWEEN ... AND ...`.
+    pub def rowsBetween(start: Frame, end: Frame): Option[Frag] =
+        Some(raw("ROWS BETWEEN ${textOf(start)} AND ${textOf(end)}"))
+
+    def textOf(frame: Frame): String = match frame {
+        case Frame.UnboundedPreceding  => "UNBOUNDED PRECEDING"
+        case Frame.Preceding(n)        => "${n} PRECEDING"
+        case Frame.CurrentRow          => "CURRENT ROW"
+        case Frame.Following(n)        => "${n} FOLLOWING"
+        case Frame.UnboundedFollowing  => "UNBOUNDED FOLLOWING"
+    }
+
+    /// The clauses between the `OVER (` and its `)`.
+    ///
+    /// A clause with nothing to say is left out, as every other clause of a query is.
+    def overClause(w: Window): Frag =
+        let parts =
+            (if (List.isEmpty(w#partition)) Nil
+             else frags(raw("PARTITION BY") :: joinFrags(", ", w#partition) :: Nil) :: Nil) ++
+            (if (List.isEmpty(w#order)) Nil
+             else frags(raw("ORDER BY") :: joinFrags(", ", w#order) :: Nil) :: Nil) ++
+            (match w#frame { case None => Nil case Some(f) => f :: Nil });
+        joinFrags(" ", parts)
+
+    /// What follows `OVER`: the name the query gave the window, or its clauses.
+    def overTarget(w: Window): Frag = match w#name {
+        case Some(name) => raw("OVER ${name}")
+        case None       => glued(raw("OVER (") :: overClause(w) :: raw(")") :: Nil)
+    }
+
+    /// The expression, over its window.
+    pub def over(p: p, w: Window): Sel[Project.Out[p]] with Project[p] =
+        let Sel.Sel(columns, decode) = Project.sel(p);
+        Sel.Sel(frags(joinFrags(", ", columns) :: overTarget(w) :: Nil) :: Nil, decode)
+
+    /// `WINDOW w AS (...)`, the clause a named `OVER w` refers back to.
+    ///
+    /// Nothing for a window no query named.
+    pub def windowClause(w: Window): Option[Frag] =
+        Option.map(name -> glued(raw("WINDOW ${name} AS (") :: overClause(w) :: raw(")") :: Nil), w#name)
+
+    /// The row's place within its partition, counted from one.
+    pub def rowNumber(w: Window): Sel[Int32] =
+        intOf(frags(raw("ROW_NUMBER()") :: overTarget(w) :: Nil))
+
+    /// The value the previous row of the window had.
+    ///
+    /// Nothing for the first row, which is what the reading is an `Option` for.
+    pub def lag(p: p, w: Window): Sel[Option[Project.Out[p]]] with Project[p] =
+        opt(over(call("LAG", Project.sel(p)), w))
+
+    ///
     /// ===== QUERIES =====
     ///
 
@@ -305,7 +579,12 @@ pub mod Sql {
 
     /// Rows and the reading of one.
     pub enum Query[a] {
-        case Query(Clauses, Sel[a])
+        /// The clauses a query was built with, and the reading of them.
+        case Built(Clauses, Sel[a])
+
+        /// A statement written out, and the reading of the rows it answers with.
+        /// As `Built`, what it projects and what it reads back are one value.
+        case Written(Frag, Sel[a])
     }
 
     /// `source` is what follows `FROM`: a table, a derived table, or tables
@@ -358,17 +637,24 @@ pub mod Sql {
     /// comes back are both read off what `pick` returned.
     pub def map(pick: c -> p, rows: Rows[c]): Query[Project.Out[p]] with Project[p] =
         let Rows.Rows(r, columns) = rows;
-        Query.Query(r, Project.sel(pick(columns)))
+        Query.Built(r, Project.sel(pick(columns)))
 
     /// What the row read means, which is the caller's own type rather than
     /// the tuple the columns came back as.
     pub def reading(transform: a -> b, q: Query[a]): Query[b] =
-        let Query.Query(r, sel) = q;
-        Query.Query(r, selMap(transform, sel))
+        match q {
+            case Query.Built(r, sel)     => Query.Built(r, selMap(transform, sel))
+            case Query.Written(sql, sel) => Query.Written(sql, selMap(transform, sel))
+        }
 
     /// What the query is, which is settled without a database.
     pub def toStatement(q: Query[a]): Frag =
-        let Query.Query(r, sel) = q;
+        match q {
+            case Query.Written(sql, _) => sql
+            case Query.Built(r, sel)   => built(r, sel)
+        }
+
+    def built(r: Clauses, sel: Sel[a]): Frag =
         frags(
             keyword("WITH", ", ", r#ctes) ::
             clause(sel) ::
@@ -392,25 +678,141 @@ pub mod Sql {
             frags(raw(word) :: joinFrags(separator, terms) :: Nil)
 
     ///
+    /// ===== STATEMENTS WRITTEN OUT =====
+    ///
+
+    /// A statement the caller wrote, and the reading of the rows it answers with.
+    ///
+    /// `{{name}}` is where each of `holes` goes, and `%%` is where the `SELECT` clause
+    /// goes -- which `columnsOf` renders from the projection that reads it back, so a
+    /// statement written out names its columns and reads them off the one value, as a
+    /// built query does.
+    ///
+    /// A hole is named rather than counted, so a statement and its pieces disagreeing
+    /// says which name is missing, or which name nothing was given for, and not how
+    /// many of each there happened to be.
+    pub def statement(
+        lines: List[String],
+        holes: Map[String, Frag],
+        projection: p
+    ): Query[Project.Out[p]] \ DbErr with Project[p] =
+        Query.Written(filled(spaced(lines), holes, columnsOf(projection)), Project.sel(projection))
+
+    /// The statement, the holes filled.
+    ///
+    /// The template carries no values of its own -- a value goes out bound, which is
+    /// why it is a hole and not text -- so the values come out in the order the `?`s
+    /// they bind stand in, the `SELECT` clause's own among them.
+    def filled(template: String, holes: Map[String, Frag], clause: Frag): Frag \ DbErr =
+        match String.splitOn({substr = "%%"}, template) {
+            case before :: after :: Nil =>
+                let named = holeNames(template);
+                let given = holes |> Map.toList |> List.map(match (name, _) -> name);
+                let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
+                let unused = List.filter(name -> not List.exists(k -> k == name, named), given);
+                match (missing, unused) {
+                    case (name :: _, _) => DbErr.raise(DbErrorKind.Other(
+                        "the statement names `{{${name}}}` and gives nothing for it:"
+                            + " ${String.take(120, template)}"
+                    ))
+                    case (Nil, name :: _) => DbErr.raise(DbErrorKind.Other(
+                        "the statement never names `{{${name}}}`: ${String.take(120, template)}"
+                    ))
+                    case (Nil, Nil) => joinFrags(
+                        "",
+                        holesFilled(before, holes, template) ::
+                        clause ::
+                        holesFilled(after, holes, template) ::
+                        Nil
+                    )
+                }
+            case _ => DbErr.raise(DbErrorKind.Other(
+                "the statement has no `%%` for its SELECT clause: ${String.take(120, template)}"
+            ))
+        }
+
+    /// A piece of a statement written out, with `{{name}}` where each of `holes` goes
+    /// and no clause in it: a common table expression, an arm of a `UNION ALL`, a
+    /// scalar subquery.
+    pub def spliced(lines: List[String], holes: Map[String, Frag]): Frag \ DbErr =
+        let template = spaced(lines);
+        let named = holeNames(template);
+        let given = holes |> Map.toList |> List.map(match (name, _) -> name);
+        let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
+        let unused = List.filter(name -> not List.exists(k -> k == name, named), given);
+        match (missing, unused) {
+            case (name :: _, _) => DbErr.raise(DbErrorKind.Other(
+                "the piece names `{{${name}}}` and gives nothing for it:"
+                    + " ${String.take(120, template)}"
+            ))
+            case (Nil, name :: _) => DbErr.raise(DbErrorKind.Other(
+                "the piece never names `{{${name}}}`: ${String.take(120, template)}"
+            ))
+            case (Nil, Nil) => holesFilled(template, holes, template)
+        }
+
+    /// The lines of a written statement, or of a piece of one, run together where SQL puts a space.
+    ///
+    /// Flix has no multi-line string literal, which is why a statement is written one clause per line and put back into one string here.
+    pub def spaced(lines: List[String]): String =
+        List.join(" ", lines)
+
+    /// Every hole a template names, in the order it names them.
+    def holeNames(text: String): List[String] =
+        match String.splitOn({substr = "{{"}, text) {
+            case Nil       => Nil
+            case _ :: Nil  => Nil
+            case _ :: rest =>
+                match String.splitOn({substr = "}}"}, List.join("{{", rest)) {
+                    case Nil          => Nil
+                    case name :: more => name :: holeNames(List.join("}}", more))
+                }
+        }
+
+    /// The text, its named holes spliced in, the values coming out in the order the
+    /// `?`s they bind stand in.
+    def holesFilled(text: String, holes: Map[String, Frag], template: String): Frag \ DbErr =
+        match String.splitOn({substr = "{{"}, text) {
+            case Nil          => raw("")
+            case only :: Nil  => raw(only)
+            case before :: rest =>
+                match String.splitOn({substr = "}}"}, List.join("{{", rest)) {
+                    case Nil => raw(before)
+                    case name :: more =>
+                        let Frag.Frag(holeText, holeParams) = Map.getWithDefault(name, raw(""), holes);
+                        let Frag.Frag(tailText, tailParams) =
+                            holesFilled(List.join("}}", more), holes, template);
+                        Frag.Frag(
+                            before + holeText + tailText,
+                            holeParams ++ tailParams
+                        )
+                }
+        }
+
+    ///
     /// ===== RUNNING =====
     ///
 
     pub def selectAll(q: Query[a]): List[a] \ DbRead =
-        let Query.Query(_, sel) = q;
-        fetched(q) |> List.map(row -> Db.orRaise(decode(sel, row)))
+        fetched(q) |> List.map(row -> Lite3fx.Sql.orRaise(decode(projectionOf(q), row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
     pub def selectOne(subject: String, q: Query[a]): a \ DbRead =
-        let Query.Query(_, sel) = q;
         match fetched(q) {
-            case row :: _ => Db.orRaise(decode(sel, row))
-            case Nil      => DbErr.raise(Error.NoRow(subject))
+            case row :: _ => Lite3fx.Sql.orRaise(decode(projectionOf(q), row))
+            case Nil      => DbErr.raise(DbErrorKind.NoRow(subject))
+        }
+
+    def projectionOf(q: Query[a]): Sel[a] =
+        match q {
+            case Query.Built(_, sel)   => sel
+            case Query.Written(_, sel) => sel
         }
 
     def fetched(q: Query[a]): List[Row] \ DbRead =
         let Frag.Frag(sql, params) = toStatement(q);
-        Db.fetch(sql, params)
+        Lite3fx.Sql.fetch(sql, params)
 
     ///
     /// ===== STATEMENTS =====
@@ -491,9 +893,9 @@ pub mod Sql {
     /// statement does not name, and there is a `?` for each value and no more.
     pub def insertRows(
         table: String,
-        columns: List[{name = String, bind = row -> Value | r}],
+        columns: List[{name = String, bind = row -> SqlValue | r}],
         rows: List[row]
-    ): (String, List[List[Value]]) =
+    ): (String, List[List[SqlValue]]) =
         let statement = "INSERT INTO " + table
             + " (" + (columns |> List.map(c -> c#name) |> List.join(", ")) + ")"
             + " VALUES (" + (columns |> List.map(_ -> "?") |> List.join(", ")) + ")";
@@ -529,7 +931,7 @@ pub mod Sql {
             |> List.map(match (base, branch) -> arm(label, base, branch))
             |> joinFrags(" UNION ALL ");
         let tag = int(label) |> andThen(n ->
-            tagOf(numbered, n) |> Option.toOk(Error.Unread("no arm answers to `${label}` ${n}")));
+            tagOf(numbered, n) |> Option.toOk(DbErrorKind.Other("no arm answers to `${label}` ${n}")));
         (rows, tag)
 
     def number_(base: Int32, branches: List[Branch[t]]): List[(Int32, Branch[t])] =

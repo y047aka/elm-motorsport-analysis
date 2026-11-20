@@ -2,13 +2,14 @@
 /// the season's entries each was. What the feed says about a car is
 /// `Db.Entries`; this is the rounds it ran.
 pub mod Db.Cars {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
 
     use Db.CarRow.CarRow
     use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
-    use Db.Value
     use Motorsport.Calendar.Entry
     use Sql.Sel
 
@@ -69,7 +70,7 @@ pub mod Db.Cars {
     pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
 
-    pub def values(row: CarRow): List[Value] =
+    pub def values(row: CarRow): List[SqlValue] =
         Schema.values(all(), row)
 
     /// Taken of the columns the query was handed rather than of this table's
