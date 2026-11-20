@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Direction(..), Pointer, Place, Steps, Config, Stepped, Config2, Placed, resize, corner, view, carry)
+module Drag.Handle exposing (Axis(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, carry)
 
 {-| A grip that carries something: along a line, or across the page in both directions at
 once -- by the pointer, or a step at a time by the arrow keys for the grips that
@@ -9,7 +9,7 @@ behind it is `Drag`'s business. What the grip adds is the pointer's path: the
 `drag-handle` custom element calls `setPointerCapture`, which Elm cannot, so every move and the release come back to the grip even once the pointer has left
 it.
 
-@docs Axis, Direction, Pointer, Place, Steps, Config, Stepped, Config2, Placed, resize, corner, view, carry
+@docs Axis, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, carry
 
 -}
 
@@ -86,22 +86,7 @@ type alias Config msg =
     }
 
 
-{-| The same, for a grip the arrow keys step once it has the focus. The step comes
-for every other key as nothing.
--}
-type alias Stepped msg =
-    { id : String
-    , label : String
-    , held : Bool
-    , onGrab : Pointer -> msg
-    , onMove : Pointer -> msg
-    , onDrop : Pointer -> msg
-    , onCancel : Int -> msg
-    , onStep : Int -> msg
-    }
-
-
-{-| The same, for a grip that reads both directions at once and answers to no keys.
+{-| The same, for a grip that reads both directions at once.
 -}
 type alias Placed msg =
     { id : String
@@ -114,26 +99,11 @@ type alias Placed msg =
     }
 
 
-{-| The same, for the grip that carries a thing across the page: both directions
-are read, and the arrow keys step both. The pointer still arrives with its id, and
-a carry belongs to the pointer that picked it up.
+{-| The grip for carrying a thing along, stepped by the arrow keys once it has the
+focus.
 -}
-type alias Config2 msg =
-    { id : String
-    , label : String
-    , held : Bool
-    , onGrab : Place -> msg
-    , onMove : Place -> msg
-    , onDrop : Place -> msg
-    , onCancel : Int -> msg
-    , onStep : Steps -> msg
-    }
-
-
-{-| The grip for carrying a thing along.
--}
-view : Stepped msg -> Html msg
-view config =
+view : (Int -> msg) -> Config msg -> Html msg
+view step config =
     grip
         (Carry "ArrowLeft ArrowRight")
         { id = config.id
@@ -148,14 +118,15 @@ view config =
             else
                 "cursor-grab"
         , glyph = "⠿"
-        , events = eventsAlong Across config ++ [ stepWith leftRight config.onStep ]
+        , events = eventsAlong Across config ++ [ stepWith leftRight step ]
         }
 
 
-{-| The grip for carrying a thing across the page, in both directions at once.
+{-| The grip for carrying a thing across the page, in both directions at once, and
+stepped by the arrow keys.
 -}
-carry : Config2 msg -> Html msg
-carry config =
+carry : (Steps -> msg) -> Placed msg -> Html msg
+carry step config =
     grip
         (Carry "ArrowLeft ArrowRight ArrowUp ArrowDown")
         { id = config.id
@@ -170,7 +141,7 @@ carry config =
             else
                 "cursor-grab"
         , glyph = "⠿"
-        , events = eventsAcross config ++ [ stepWith bothArrows config.onStep ]
+        , events = eventsAcross config ++ [ stepWith bothArrows step ]
         }
 
 

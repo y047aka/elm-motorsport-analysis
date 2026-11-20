@@ -370,9 +370,6 @@ grow gripId d msg =
         base =
             d.side.edge
 
-        edge =
-            { base | id = gripId }
-
         ceiling =
             if d.side.anchored then
                 d.size.size + cornerRoom - d.shift
@@ -380,8 +377,23 @@ grow gripId d msg =
             else
                 d.window - cornerRoom + d.shift
 
+        edge =
+            { base
+                | id = gripId
+                , fence =
+                    { min = base.fence.min
+                    , max =
+                        case base.fence.max of
+                            Just cap ->
+                                Just (min cap ceiling)
+
+                            Nothing ->
+                                Just ceiling
+                    }
+            }
+
         size =
-            Resize.update (Resize.cappedTo ceiling edge) msg d.size
+            Resize.update edge msg d.size
     in
     { size = size
     , shift =

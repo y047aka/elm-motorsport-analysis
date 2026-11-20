@@ -503,6 +503,7 @@ columnStrip cell track timeline keys m pitCycles replay snapshot =
 columnGrip : Bool -> Columns.StripKey -> Html Msg
 columnGrip held key =
     Handle.view
+        (Columns.Step key >> ColumnsMsg)
         { id = Columns.gripId key
         , label = "Move this column"
         , held = held
@@ -510,7 +511,6 @@ columnGrip held key =
         , onMove = Columns.Carrying >> ColumnsMsg
         , onDrop = Columns.Release >> ColumnsMsg
         , onCancel = Columns.Cancel >> ColumnsMsg
-        , onStep = Columns.Step key >> ColumnsMsg
         }
 
 

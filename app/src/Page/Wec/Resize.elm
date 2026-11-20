@@ -1,4 +1,4 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, cappedTo)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip)
 
 {-| A size the reader sets -- the width of the standings, the box a floated map keeps
 -- and the grip along the edge that moves it. The page holds one `Model` per size and
@@ -8,7 +8,7 @@ Which edge the grip lies along -- the axis its pointer is read along, the way th
 size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
 `Model` holds the size and the carry.
 
-@docs Model, Msg, Fence, Edge, Grows, init, update, grip, cappedTo
+@docs Model, Msg, Fence, Edge, Grows, init, update, grip
 
 -}
 
@@ -158,25 +158,6 @@ clampTo fence size =
 
         Nothing ->
             max fence.min size
-
-
-{-| The edge with its `Fence`'s top taken down to a ceiling the caller knows. A size
-is bounded by its `Fence` and sometimes by something of the page's besides: a floated
-box cannot grow past the window its corner stands in. An edge with no top of its own
-takes the ceiling as its top.
--}
-cappedTo : Float -> Edge -> Edge
-cappedTo ceiling edge =
-    let
-        top =
-            case edge.fence.max of
-                Just max ->
-                    min max ceiling
-
-                Nothing ->
-                    ceiling
-    in
-    { edge | fence = { min = edge.fence.min, max = Just top } }
 
 
 {-| The grip along the edge, held when it is the one that took the size up.

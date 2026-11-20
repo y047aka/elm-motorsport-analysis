@@ -210,6 +210,7 @@ once it has the focus.
 handle : Box -> Model -> Html Msg
 handle box m =
     Handle.carry
+        Step
         { id = box.gripId
         , label = box.label
         , held = m.carried /= Nothing
@@ -217,5 +218,4 @@ handle box m =
         , onMove = Carry
         , onDrop = Release
         , onCancel = Cancel
-        , onStep = Step
         }
