@@ -51,18 +51,9 @@ const northEastGrip = (page: Page): Locator => cornerGrip(page, 'top-right');
 const southWestGrip = (page: Page): Locator => cornerGrip(page, 'bottom-left');
 const southEastGrip = (page: Page): Locator => cornerGrip(page, 'bottom-right');
 
-/** The keyboard's way of moving the box. A pointer needs no grip: a drag anywhere on the
- * drawing carries the box, PiP-like, until the `↻` hands the drawing to the camera. */
-const moveGrip = (page: Page): Locator =>
-  page.getByRole('button', { name: 'Move the floating track map' });
-
-/** The drawing itself: the surface a pointer is read on, whichever way the `⟳` is set. */
+/** The drawing itself: the surface a pointer is read on. A drag anywhere on it carries the
+ * box, PiP-like; the right button's drag and a two-finger scroll turn the map instead. */
 const surface = (page: Page): Locator => page.locator(`${FLOAT} [data-tracker-surface]`);
-
-/** The `↻` that decides what a drag on the drawing is: unpressed it carries the box, pressed
- * it turns the map. */
-const turnToggle = (page: Page): Locator =>
-  page.getByRole('button', { name: 'Turn the track map by dragging it' });
 
 /** What the circuit is drawn as. The bytes change when the camera is turned and not when the
  * box is carried, which is how the two drags are told apart here. */
@@ -227,7 +218,7 @@ test.describe('the floating track map', () => {
     await page.mouse.up();
 
     // Carried away from the corner, the two anchored grips have the room the carry left.
-    await carryGrip(page, moveGrip(page), -400, -200);
+    await carryGrip(page, surface(page), -400, -200);
     await page.mouse.up();
     const stood = await box(page, FLOAT);
 
@@ -290,7 +281,7 @@ test.describe('the floating track map', () => {
 
     // Carried away from the corner, the same grip has the room the carry left, and the
     // corner the box now stands at again stays.
-    await carryGrip(page, moveGrip(page), -300, -200);
+    await carryGrip(page, surface(page), -300, -200);
     await page.mouse.up();
     const stood = await box(page, FLOAT);
 
@@ -348,25 +339,25 @@ test.describe('the floating track map', () => {
     expect(taller.drawing).toBeLessThan(opened.drawing - 1);
   });
 
-  test('is carried round the page by its grip, at the size it was measured at', async ({ page }) => {
+  test('is carried by a drag anywhere on the drawing, PiP-like, at the size it was measured at', async ({
+    page,
+  }) => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);
+    const drawn = await drawnBytes(page);
 
-    // The grip still carries, though it is no longer the only way the box goes: the drawing
-    // under it answers to the same drag now the turn lives behind the `↻`.
-    await expect(moveGrip(page)).toHaveCount(1);
-    await carryGrip(page, moveGrip(page), -180, -120);
-
+    await carryGrip(page, surface(page), -180, -120);
     await expectBox(page, { x: opened.x - 180, y: opened.y - 120 });
     const moved = await box(page, FLOAT);
 
-    // A carry moves the box and resizes nothing.
+    // A carry moves the box, resizes nothing, and leaves the circuit facing the way it was.
     expect(moved.width).toBeCloseTo(FLOAT_WIDTH, 0);
     expect(moved.height).toBeCloseTo(FLOAT_HEIGHT, 0);
+    expect(await drawnBytes(page), 'the map did not turn').toBe(drawn);
     await page.mouse.up();
 
     // The next carry starts from where the box was left, not from the corner.
-    await carryGrip(page, moveGrip(page), 60, 40);
+    await carryGrip(page, surface(page), 60, 40);
     await expectBox(page, { x: opened.x - 180 + 60, y: opened.y - 120 + 40 });
     await page.mouse.up();
   });
@@ -377,13 +368,13 @@ test.describe('the floating track map', () => {
 
     // Past the corner it is stood at there is only the gutter it is stood in, and the
     // window's own edge is where the box stops.
-    await carryGrip(page, moveGrip(page), 400, 400);
+    await carryGrip(page, surface(page), 400, 400);
     await expectBox(page, { x: opened.x + 10, y: opened.y + 10 });
     await page.mouse.up();
 
     // The other way: a pointer thrown 5000px away leaves the box whole, its own
     // corner on the window's.
-    await carryGrip(page, moveGrip(page), -5000, -5000);
+    await carryGrip(page, surface(page), -5000, -5000);
     await expectBox(page, { x: 0, y: 0 });
     const moved = await box(page, FLOAT);
     expect(moved.width).toBeCloseTo(FLOAT_WIDTH, 0);
@@ -391,24 +382,8 @@ test.describe('the floating track map', () => {
     await page.mouse.up();
 
     // And back the way it came is free: the clamp stops the box, not the carry.
-    await carryGrip(page, moveGrip(page), 400, 400);
+    await carryGrip(page, surface(page), 400, 400);
     await expectBox(page, { x: 400, y: 400 });
-    await page.mouse.up();
-  });
-
-  test('is carried by a drag anywhere on the drawing, PiP-like', async ({ page }) => {
-    await floatTrigger(page).click();
-    const opened = await box(page, FLOAT);
-    const drawn = await drawnBytes(page);
-
-    await carryGrip(page, surface(page), -180, -120);
-    await expectBox(page, { x: opened.x - 180, y: opened.y - 120 });
-
-    // The box moved and the circuit did not: a drag is one operation or the other.
-    const moved = await box(page, FLOAT);
-    expect(moved.width).toBeCloseTo(FLOAT_WIDTH, 0);
-    expect(moved.height).toBeCloseTo(FLOAT_HEIGHT, 0);
-    expect(await drawnBytes(page)).toBe(drawn);
     await page.mouse.up();
   });
 
@@ -418,41 +393,6 @@ test.describe('the floating track map', () => {
 
     await surface(page).focus();
     await page.keyboard.press('ArrowLeft');
-    await expectBox(page, { x: opened.x - MOVE_STEP, y: opened.y });
-  });
-
-  test('turns under a drag on the circuit itself once the ↻ is pressed, and does not slide', async ({ page }) => {
-    await floatTrigger(page).click();
-    const before = await box(page, FLOAT);
-
-    await expect(turnToggle(page)).toHaveAttribute('aria-pressed', 'false');
-    await turnToggle(page).click();
-    await expect(turnToggle(page)).toHaveAttribute('aria-pressed', 'true');
-
-    const drawn = await drawnBytes(page);
-    const stood = (await surface(page).boundingBox())!;
-    await page.mouse.move(stood.x + stood.width / 2, stood.y + stood.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(stood.x + stood.width / 2 + 200, stood.y + stood.height / 2 + 120, {
-      steps: 10,
-    });
-    await page.mouse.up();
-
-    // The map turned...
-    expect(await drawnBytes(page)).not.toBe(drawn);
-
-    // ...and nothing slid: the turn took the drag the box was carried by.
-    const after = await box(page, FLOAT);
-    expect(after.x).toBeCloseTo(before.x, 0);
-    expect(after.y).toBeCloseTo(before.y, 0);
-  });
-
-  test('steps the box by the arrow keys its own grip answers to', async ({ page }) => {
-    await floatTrigger(page).click();
-    const opened = await box(page, FLOAT);
-
-    await moveGrip(page).focus();
-    await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('ArrowUp');
     await expectBox(page, { x: opened.x - MOVE_STEP, y: opened.y - MOVE_STEP });
 
@@ -460,6 +400,61 @@ test.describe('the floating track map', () => {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
     await expectBox(page, { x: opened.x, y: opened.y });
+  });
+
+  test('turns under a drag with the right button, and the box stays where it stood', async ({
+    page,
+  }) => {
+    await floatTrigger(page).click();
+    const before = await box(page, FLOAT);
+    const drawn = await drawnBytes(page);
+    const stood = (await surface(page).boundingBox())!;
+    const cx = stood.x + stood.width / 2
+    const cy = stood.y + stood.height / 2
+
+    await page.mouse.move(cx, cy)
+    await page.mouse.down({ button: 'right' })
+    await page.mouse.move(cx + 200, cy + 120, { steps: 10 })
+    await page.mouse.up({ button: 'right' })
+
+    // The map turned...
+    await expect.poll(() => drawnBytes(page), { timeout: 2000 }).not.toBe(drawn);
+
+    // ...and nothing slid: the right button's drag is the turn, the left one the carry.
+    const after = await box(page, FLOAT);
+    expect(after.x).toBeCloseTo(before.x, 0);
+    expect(after.y).toBeCloseTo(before.y, 0);
+  });
+
+  test('turns under a two-finger scroll, and the box stays where it stood', async ({ page }) => {
+    await floatTrigger(page).click();
+    const before = await box(page, FLOAT);
+    const drawn = await drawnBytes(page);
+    const stood = (await surface(page).boundingBox())!;
+
+    await page.mouse.move(stood.x + stood.width / 2, stood.y + stood.height / 2);
+    await page.mouse.wheel(240, 0);
+
+    await expect.poll(() => drawnBytes(page), { timeout: 2000 }).not.toBe(drawn);
+    const after = await box(page, FLOAT);
+    expect(after.x).toBeCloseTo(before.x, 0);
+    expect(after.y).toBeCloseTo(before.y, 0);
+  });
+
+  test('turns under the arrow keys held with Shift, and the box stays where it stood', async ({
+    page,
+  }) => {
+    await floatTrigger(page).click();
+    const before = await box(page, FLOAT);
+    const drawn = await drawnBytes(page);
+
+    await surface(page).focus();
+    await page.keyboard.press('Shift+ArrowLeft');
+
+    await expect.poll(() => drawnBytes(page), { timeout: 2000 }).not.toBe(drawn);
+    const after = await box(page, FLOAT);
+    expect(after.x).toBeCloseTo(before.x, 0);
+    expect(after.y).toBeCloseTo(before.y, 0);
   });
 
   test('opens from the column corner and closes from its own', async ({ page }) => {

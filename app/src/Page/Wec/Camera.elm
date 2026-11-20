@@ -1,4 +1,4 @@
-module Page.Wec.Camera exposing (Model, Msg(..), init, held, update)
+module Page.Wec.Camera exposing (Model, Msg(..), init, held, holds, update)
 
 {-| The camera the raised map is turned with, and the pointer turning it.
 
@@ -6,7 +6,7 @@ A turn is the pointer's travel since the last move, so the camera keeps which po
 turning it and where that one was last read: a second finger landing on the drawing is not
 the first one's turn.
 
-@docs Model, Msg, init, held, update
+@docs Model, Msg, init, held, holds, update
 
 -}
 
@@ -35,6 +35,7 @@ type Msg
     | Release Place
     | Cancel Int
     | Step Steps
+    | Wheel { x : Float, y : Float }
 
 
 init : Model
@@ -49,6 +50,13 @@ init =
 held : Model -> Bool
 held m =
     m.held /= Nothing
+
+
+{-| Whether that pointer is the one turning the map.
+-}
+holds : Int -> Model -> Bool
+holds pointerId m =
+    Maybe.map .pointerId m.held == Just pointerId
 
 
 update : Msg -> Model -> Model
@@ -86,6 +94,9 @@ update msg m =
         Step steps ->
             { m | eye = Track3d.update (Track3d.Roll (toFloat steps.x * keyStep) (negate (toFloat steps.y) * keyStep)) m.eye }
 
+        Wheel travel ->
+            { m | eye = Track3d.update (turned (travel.x * wheelRate) (travel.y * wheelRate)) m.eye }
+
 
 {-| The pointer's travel since the last reading, in the reader's own pixels.
 -}
@@ -111,3 +122,11 @@ ended pointerId m =
 keyStep : Float
 keyStep =
     degrees 5
+
+
+{-| A two-finger scroll is taken at a third of the rate a drag is: a mouse wheel's notch is
+a hundred pixels at once, where a trackpad's are a few at a time and many a second.
+-}
+wheelRate : Float
+wheelRate =
+    1 / 3

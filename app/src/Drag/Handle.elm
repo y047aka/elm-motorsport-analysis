@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, carry, eventsAcross, arrowKeys)
+module Drag.Handle exposing (Axis(..), Button(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys)
 
 {-| A grip that carries something: along a line, or across the page in both directions at
 once -- by the pointer, or a step at a time by the arrow keys for the grips that
@@ -11,10 +11,11 @@ it. A move is listened for only while `held` says one is, and the release is lis
 always: the pointer can be let go of before the frame that would have added a move.
 
 A drawing the reader drags anywhere on is no grip -- it wants none of what a grip is made
-of -- but it reads the pointer the same way, and so takes [`eventsAcross`](#eventsAcross)
-and [`arrowKeys`](#arrowKeys).
+of -- but it reads the pointer the same way, and so takes
+[`eventsByButton`](#eventsByButton) and [`arrowKeys`](#arrowKeys). Such a surface is where the
+two buttons split: the left carries the thing, the right turns what it shows.
 
-@docs Axis, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, carry, eventsAcross, arrowKeys
+@docs Axis, Button, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys
 
 -}
 
@@ -30,6 +31,15 @@ The grip that answers to keys steps along them too -- `Across` is ← →, `Down
 type Axis
     = Across
     | Down
+
+
+{-| Which button took the pointer up. `Secondary` -- the right one, which on a trackpad is
+the two-finger drag -- is what a drawing hands to the operation the reader is not doing,
+and the page says what each of the two starts. The middle button starts nothing.
+-}
+type Button
+    = Primary
+    | Secondary
 
 
 {-| Which pointer, and where it is along the axis its grip reads. Two fingers can
@@ -124,29 +134,6 @@ view step config =
                 "cursor-grab"
         , glyph = "⠿"
         , events = eventsAlong Across config ++ [ stepWith leftRight step ]
-        }
-
-
-{-| The grip for carrying a thing across the page, in both directions at once, and
-stepped by the arrow keys.
--}
-carry : (Steps -> msg) -> Placed msg -> Html msg
-carry step config =
-    grip
-        (Carry "ArrowLeft ArrowRight ArrowUp ArrowDown")
-        { id = config.id
-        , label = config.label
-        , held = config.held
-        , hint = "← → ↑ ↓"
-        , classes = "grid place-content-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
-        , cursor =
-            if config.held then
-                "cursor-grabbing"
-
-            else
-                "cursor-grab"
-        , glyph = "⠿"
-        , events = eventsAcross config ++ [ stepWith bothArrows step ]
         }
 
 
@@ -326,12 +313,36 @@ stepWith decoder toMsg =
     preventDefaultOn "keydown" (Decode.map (\step -> ( toMsg step, True )) decoder)
 
 
-{-| The four arrow keys, stepping whichever axis each of them lies along, and no other key
-reaching the message at all.
+{-| Which of the two buttons a grip is read by took the pointer up.
 -}
-arrowKeys : (Steps -> msg) -> Html.Attribute msg
-arrowKeys =
-    stepWith bothArrows
+whichButton : Decoder Button
+whichButton =
+    Decode.field "button" Decode.int
+        |> Decode.andThen
+            (\which ->
+                case which of
+                    0 ->
+                        Decode.succeed Primary
+
+                    2 ->
+                        Decode.succeed Secondary
+
+                    _ ->
+                        Decode.fail "neither button a grip is read by"
+            )
+
+
+{-| The four arrow keys, stepping whichever axis each of them lies along, and whether
+`Shift` was held with them -- the keyboard's own secondary button. No other key reaches
+the message at all.
+-}
+arrowKeys : (Bool -> Steps -> msg) -> Html.Attribute msg
+arrowKeys toMsg =
+    preventDefaultOn "keydown"
+        (Decode.map2 (\shifted steps -> ( toMsg shifted steps, True ))
+            (Decode.field "shiftKey" Decode.bool)
+            bothArrows
+        )
 
 
 {-| The pointer's events of a grip read along one axis.
@@ -362,14 +373,43 @@ eventsAlong axis config =
            )
 
 
-{-| The pointer's events of a grip read in both directions at once. The row stays open
-because what reads these events may step by the arrow keys as well.
+{-| The pointer's events of a grip read in both directions at once, taken up by the primary
+button alone. The row stays open because what reads these events may step by the arrow keys
+as well.
 -}
 eventsAcross :
     { g | held : Bool, onGrab : Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
     -> List (Html.Attribute msg)
 eventsAcross config =
-    [ on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab place))
+    pressAndMoves config
+        (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab place))
+
+
+{-| The pointer's events of a surface read in both directions at once, where which button took
+the pointer up says which operation the drag is.
+
+The page says what each button starts, which is why one element can carry a box by the left
+button and turn a map by the right: the two never cross because each keeps its own pointer id,
+and a move goes back to whichever holds it.
+
+-}
+eventsByButton :
+    { g | held : Bool, onGrab : Button -> Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
+    -> List (Html.Attribute msg)
+eventsByButton config =
+    pressAndMoves config
+        (whichButton |> Decode.andThen (\which -> Decode.map (config.onGrab which) place))
+
+
+{-| The press, the moves, the release and the taking-back -- what every grip answers to, however
+the press itself was read.
+-}
+pressAndMoves :
+    { c | held : Bool, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
+    -> Decoder msg
+    -> List (Html.Attribute msg)
+pressAndMoves config press =
+    [ on "pointerdown" press
     , on "pointerup" (Decode.map config.onDrop place)
     , on "pointercancel" (Decode.map config.onCancel pointerId)
     , on "lostpointercapture" (Decode.map config.onCancel pointerId)

@@ -258,6 +258,33 @@ test('the drag handle reports a pointer it held as cancelled when it leaves the 
   expect(cancelled).toBe(pressed);
 });
 
+test('the drag handle takes a drag of the right button, and keeps the menu off it', async ({ page }) => {
+  await page.evaluate(() => {
+    const el = document.createElement('drag-handle');
+    el.id = 'handle';
+    el.style.cssText = 'position:fixed;left:0;top:0;width:60px;height:60px;display:block;z-index:9999';
+    el.addEventListener('pointermove', (e) => {
+      el.dataset.moves = String(Number(el.dataset.moves ?? 0) + 1);
+    });
+    // The element's own listener runs first, so what it decided is what is read back.
+    el.addEventListener('contextmenu', (e) => {
+      el.dataset.menu = String(e.defaultPrevented);
+    });
+    document.body.appendChild(el);
+  });
+  const handle = page.locator('#handle');
+  await page.mouse.move(30, 30);
+  await page.mouse.down({ button: 'right' });
+  await handle.evaluate((el) => (el.dataset.moves = '0'));
+  // Out of the element and along: only a captured pointer keeps coming back to it.
+  await page.mouse.move(400, 300, { steps: 5 });
+  const moves = await handle.evaluate((el) => Number(el.dataset.moves));
+  await page.mouse.up({ button: 'right' });
+  const menu = await handle.evaluate((el) => el.dataset.menu);
+  expect(moves).toBeGreaterThan(0);
+  expect(menu).toBe('true');
+});
+
 /**
  * What the element no longer does. `touch-action` is the grip's own class now, so a
  * tenant that forgets it scrolls the page under a finger rather than drags the size it

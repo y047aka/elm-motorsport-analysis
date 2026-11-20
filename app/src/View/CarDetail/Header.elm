@@ -1,9 +1,9 @@
-module View.CarDetail.Header exposing (closeButton, cornerButton, cornerPopover, cornerToggle, view)
+module View.CarDetail.Header exposing (closeButton, cornerButton, cornerPopover, view)
 
 {-| The line a classification prints for one car, and the ✕ that closes a
 column when the reader has several open.
 
-@docs closeButton, cornerButton, cornerPopover, cornerToggle, view
+@docs closeButton, cornerButton, cornerPopover, view
 
 -}
 
@@ -106,35 +106,6 @@ cornerButton { onPress, label, glyph } =
         , attribute "aria-label" label
         , title label
         , class cornerClass
-        ]
-        [ text glyph ]
-
-
-{-| The same button holding a state: `aria-pressed` says whether it is on, and the accent
-it takes while it is is the one the grip takes while held.
--}
-cornerToggle : { onPress : msg, label : String, glyph : String, pressed : Bool } -> Html msg
-cornerToggle { onPress, label, glyph, pressed } =
-    button
-        [ onClick onPress
-        , attribute "aria-label" label
-        , title label
-        , attribute "aria-pressed"
-            (if pressed then
-                "true"
-
-             else
-                "false"
-            )
-        , class
-            ("grid place-items-center w-5 h-5 rounded-md text-[11px] cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground "
-                ++ (if pressed then
-                        "bg-accent text-accent-foreground"
-
-                    else
-                        "text-muted-foreground"
-                   )
-            )
         ]
         [ text glyph ]
 

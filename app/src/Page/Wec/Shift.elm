@@ -1,18 +1,18 @@
-module Page.Wec.Shift exposing (Model, Msg(..), Box, init, update, handle, carried)
+module Page.Wec.Shift exposing (Model, Msg(..), init, update, carried, holds)
 
-{-| Where a box stood before anything moved it, and the grip that carries it across
+{-| Where a box stood before anything moved it, and the pointer that carries it across
 the page in both directions at once.
 
 The box cannot be carried out of the window.
-The travel it may take is measured off the box itself when the grip is picked up, and every move is clamped to what that leaves: the box's own edges stop at the window's.
+The travel it may take is measured off the box itself when a pointer takes it up, and every
+move is clamped to what that leaves: the box's own edges stop at the window's.
 
-@docs Model, Msg, Box, init, update, handle, carried
+@docs Model, Msg, init, update, carried, holds
 
 -}
 
 import Browser.Dom
 import Drag.Handle as Handle
-import Html exposing (Html)
 import Task
 
 
@@ -49,16 +49,6 @@ type alias Bounds =
     }
 
 
-{-| Which box the grip carries: the id the travel is measured against, the id the
-grip answers to, and the words it is labelled with.
--}
-type alias Box =
-    { boxId : String
-    , gripId : String
-    , label : String
-    }
-
-
 unmeasured : Bounds
 unmeasured =
     { minX = -4000, maxX = 4000, minY = -4000, maxY = 4000 }
@@ -81,6 +71,13 @@ carried m =
     m.carried /= Nothing
 
 
+{-| Whether that pointer is the one carrying the box.
+-}
+holds : Int -> Model -> Bool
+holds pointerId m =
+    Maybe.map .pointerId m.carried == Just pointerId
+
+
 type Msg
     = Grab Handle.Place
     | Carry Handle.Place
@@ -97,8 +94,8 @@ A carry belongs to the pointer that picked it up: a second finger on the box nei
 picks it up again nor moves it nor lets it go.
 
 -}
-update : Box -> Msg -> Model -> ( Model, Cmd Msg )
-update box msg m =
+update : String -> Msg -> Model -> ( Model, Cmd Msg )
+update boxId msg m =
     case msg of
         Grab place ->
             let
@@ -111,7 +108,7 @@ update box msg m =
 
                 Nothing ->
                     ( { m | carried = Just { pointerId = place.id, pointer = pointer, from = { x = m.x, y = m.y } } }
-                    , Browser.Dom.getElement box.boxId
+                    , Browser.Dom.getElement boxId
                         |> Task.map (boundsFrom { x = m.x, y = m.y })
                         |> Task.onError (\_ -> Task.succeed unmeasured)
                         |> Task.perform Travel
@@ -210,20 +207,3 @@ boundsFrom { x, y } { element, viewport } =
 step : Float
 step =
     20
-
-
-{-| The grip a box is carried by: the pointer held by `drag-handle`, the arrow keys
-once it has the focus.
--}
-handle : Box -> Model -> Html Msg
-handle box m =
-    Handle.carry
-        Step
-        { id = box.gripId
-        , label = box.label
-        , held = m.carried /= Nothing
-        , onGrab = Grab
-        , onMove = Carry
-        , onDrop = Release
-        , onCancel = Cancel
-        }

@@ -14,6 +14,12 @@
  *
  * A finger is kept from scrolling the page instead of dragging by `touch-none` on
  * the class of whoever stands the grip, not here.
+ *
+ * The right button is captured as the left is: a drawing hands that drag to the operation
+ * the left one is not -- on a trackpad it is the two-finger drag -- and a turn needs its
+ * moves back the same way. The menu a right press would open is stopped here, since Elm
+ * can only `preventDefault` by sending a message it then has to answer to, and there is
+ * nothing worth answering on a grip.
  */
 export class DragHandle extends HTMLElement {
   #held = new Set<number>();
@@ -21,9 +27,12 @@ export class DragHandle extends HTMLElement {
   constructor() {
     super();
     this.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 && e.button !== 2) return;
       this.setPointerCapture(e.pointerId);
       this.#held.add(e.pointerId);
+    });
+    this.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
     });
     this.addEventListener("lostpointercapture", (e) => {
       this.#held.delete(e.pointerId);
