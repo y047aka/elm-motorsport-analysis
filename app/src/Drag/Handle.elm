@@ -364,7 +364,6 @@ eventsAlong axis config =
 
 {-| The pointer's events of a grip read in both directions at once. The row stays open
 because what reads these events may step by the arrow keys as well.
-
 -}
 eventsAcross :
     { g | held : Bool, onGrab : Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }

@@ -1,7 +1,7 @@
 module Page.Wec.Float exposing (Model, Msg(..), init, update, view, trigger)
 
 {-| The track map floated over the columns: hidden until the tracker column's `◱`
-asks for it, sized by a grip along each of its four edges and at each of its four corners, carried by a grip of its own, and taking part in none of the strip's grid.
+asks for it, sized by a grip along each of its four edges and at each of its four corners, carried by a drag anywhere on the drawing -- which is what the `↻` hands to the camera instead -- and taking part in none of the strip's grid.
 
 The box is a `popover`, and a `manual` one: the browser keeps whether it is open, the two presses only name it, and nothing here can be closed by a press outside it -- the columns are worked while the map is up.
 
@@ -34,6 +34,7 @@ type alias Model =
     , height : Resize.Model
     , shift : Shift.Model
     , camera : Camera.Model
+    , turning : Bool
     , window : { width : Float, height : Float }
     }
 
@@ -45,6 +46,7 @@ init =
     , height = Resize.init defaultHeight
     , shift = Shift.init
     , camera = Camera.init
+    , turning = False
     , window = unmeasured
     }
 
@@ -67,6 +69,7 @@ type Msg
     | Window { width : Float, height : Float }
     | ShiftMsg Shift.Msg
     | CamMsg Camera.Msg
+    | Turning Bool
 
 
 {-| The box the floating map opens at.
@@ -263,6 +266,9 @@ update msg m =
 
         CamMsg sub ->
             ( { m | camera = Camera.update sub m.camera }, Cmd.none )
+
+        Turning turning ->
+            ( { m | turning = turning }, Cmd.none )
 
 
 {-| One axis of a drag: the side being grown, the size it holds, how far the box has gone
@@ -468,7 +474,7 @@ view m frame track snapshot =
              else
                 text ""
             )
-            [ Html.map ShiftMsg (Shift.handle box m.shift), closer ]
+            [ turnToggle m.turning, Html.map ShiftMsg (Shift.handle box m.shift), closer ]
         , edgeGrip left
         , edgeGrip right
         , edgeGrip top
@@ -494,8 +500,34 @@ cardLoss =
     34
 
 
+{-| The drawing, and what a drag on it is asked for: the box is carried by default, and the
+map turned when the `↻` says so. The two answers are the same message shape, so the fork is
+one and not seven.
+-}
 surface : Model -> Track -> Snapshot -> Html Msg
 surface m track snapshot =
+    let
+        drag =
+            if m.turning then
+                { label = "Turn the track map: drag it, or press the arrow keys"
+                , held = Camera.held m.camera
+                , onGrab = CamMsg << Camera.Grab
+                , onMove = CamMsg << Camera.Move
+                , onDrop = CamMsg << Camera.Release
+                , onCancel = CamMsg << Camera.Cancel
+                , keys = CamMsg << Camera.Step
+                }
+
+            else
+                { label = "Move the floating track map: drag it, or press the arrow keys"
+                , held = Shift.carried m.shift
+                , onGrab = ShiftMsg << Shift.Grab
+                , onMove = ShiftMsg << Shift.Carry
+                , onDrop = ShiftMsg << Shift.Release
+                , onCancel = ShiftMsg << Shift.Cancel
+                , keys = ShiftMsg << Shift.Step
+                }
+    in
     TrackMap3d.surface
         { model = m.camera.eye
         , track = track
@@ -504,13 +536,26 @@ surface m track snapshot =
             { width = m.width.size - cardLoss
             , height = m.height.size - cardLoss
             }
-        , label = "Turn the track map: drag it, or press the arrow keys"
-        , keys = CamMsg << Camera.Step
-        , held = Camera.held m.camera
-        , onGrab = CamMsg << Camera.Grab
-        , onMove = CamMsg << Camera.Move
-        , onDrop = CamMsg << Camera.Release
-        , onCancel = CamMsg << Camera.Cancel
+        , label = drag.label
+        , held = drag.held
+        , onGrab = drag.onGrab
+        , onMove = drag.onMove
+        , onDrop = drag.onDrop
+        , onCancel = drag.onCancel
+        , keys = drag.keys
+        }
+
+
+{-| The `⟳` that hands a drag on the drawing to the camera. Unpressed -- which is how the
+box opens -- a drag anywhere on the drawing carries it.
+-}
+turnToggle : Bool -> Html Msg
+turnToggle turning =
+    Header.cornerToggle
+        { onPress = Turning (not turning)
+        , label = "Turn the track map by dragging it"
+        , glyph = "↻"
+        , pressed = turning
         }
 
 

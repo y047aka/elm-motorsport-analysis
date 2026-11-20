@@ -1,9 +1,10 @@
 module View.TrackMap3d exposing (Config, surface)
 
-{-| The track map raised in space and the pointer that turns it.
+{-| The track map raised in space, and the surface a pointer is read on -- whether it turns
+the map or carries the box is the page's.
 
-The surface is a `drag-handle`: turned without pointer capture, the map stops the
-moment the pointer leaves the card -- which a turn round the lap does, twice.
+The surface is a `drag-handle`: read without pointer capture, the drag stops the moment the
+pointer leaves the card, which a turn round the lap does twice over.
 
 @docs Config, surface
 
@@ -52,6 +53,7 @@ surface ({ model, track, snapshot, size, label, keys } as config) =
                    )
             )
          , attribute "tabindex" "0"
+         , attribute "data-tracker-surface" ""
          , attribute "aria-label" label
          , attribute "aria-roledescription" "turnable map"
          ]

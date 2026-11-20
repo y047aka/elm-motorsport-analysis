@@ -51,10 +51,26 @@ const northEastGrip = (page: Page): Locator => cornerGrip(page, 'top-right');
 const southWestGrip = (page: Page): Locator => cornerGrip(page, 'bottom-left');
 const southEastGrip = (page: Page): Locator => cornerGrip(page, 'bottom-right');
 
-/** The grip the box is carried by. The circuit itself takes a drag to turn, so the
- * two drags have to be told apart by where they are pressed. */
+/** The keyboard's way of moving the box. A pointer needs no grip: a drag anywhere on the
+ * drawing carries the box, PiP-like, until the `↻` hands the drawing to the camera. */
 const moveGrip = (page: Page): Locator =>
   page.getByRole('button', { name: 'Move the floating track map' });
+
+/** The drawing itself: the surface a pointer is read on, whichever way the `⟳` is set. */
+const surface = (page: Page): Locator => page.locator(`${FLOAT} [data-tracker-surface]`);
+
+/** The `↻` that decides what a drag on the drawing is: unpressed it carries the box, pressed
+ * it turns the map. */
+const turnToggle = (page: Page): Locator =>
+  page.getByRole('button', { name: 'Turn the track map by dragging it' });
+
+/** What the circuit is drawn as. The bytes change when the camera is turned and not when the
+ * box is carried, which is how the two drags are told apart here. */
+const drawnBytes = async (page: Page): Promise<string> =>
+  await page
+    .locator(`${FLOAT} svg`)
+    .first()
+    .innerHTML();
 
 const box = async (page: Page, selector: string) => (await page.locator(selector).boundingBox())!;
 
@@ -316,7 +332,7 @@ test.describe('the floating track map', () => {
     const proportions = async () => {
       const viewBox = (await page.locator(`${FLOAT} svg`).first().getAttribute('viewBox'))!;
       const [, , w, h] = viewBox.split(' ').map(Number);
-      const stood = (await page.locator(`${FLOAT} [aria-label^="Turn the track map"]`).boundingBox())!;
+      const stood = (await page.locator(`${FLOAT} [data-tracker-surface]`).boundingBox())!;
       return { drawing: w / h, stood: stood.width / stood.height };
     };
 
@@ -336,8 +352,8 @@ test.describe('the floating track map', () => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);
 
-    // The grip is the only place a carry starts: the circuit under the pointer takes
-    // a drag to turn, so the two drags are told apart by where they are pressed.
+    // The grip still carries, though it is no longer the only way the box goes: the drawing
+    // under it answers to the same drag now the turn lives behind the `↻`.
     await expect(moveGrip(page)).toHaveCount(1);
     await carryGrip(page, moveGrip(page), -180, -120);
 
@@ -380,18 +396,52 @@ test.describe('the floating track map', () => {
     await page.mouse.up();
   });
 
-  test('turns under a drag on the circuit itself, and does not slide', async ({ page }) => {
+  test('is carried by a drag anywhere on the drawing, PiP-like', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+    const drawn = await drawnBytes(page);
+
+    await carryGrip(page, surface(page), -180, -120);
+    await expectBox(page, { x: opened.x - 180, y: opened.y - 120 });
+
+    // The box moved and the circuit did not: a drag is one operation or the other.
+    const moved = await box(page, FLOAT);
+    expect(moved.width).toBeCloseTo(FLOAT_WIDTH, 0);
+    expect(moved.height).toBeCloseTo(FLOAT_HEIGHT, 0);
+    expect(await drawnBytes(page)).toBe(drawn);
+    await page.mouse.up();
+  });
+
+  test('steps the box by the arrow keys the drawing answers to', async ({ page }) => {
+    await floatTrigger(page).click();
+    const opened = await box(page, FLOAT);
+
+    await surface(page).focus();
+    await page.keyboard.press('ArrowLeft');
+    await expectBox(page, { x: opened.x - MOVE_STEP, y: opened.y });
+  });
+
+  test('turns under a drag on the circuit itself once the ↻ is pressed, and does not slide', async ({ page }) => {
     await floatTrigger(page).click();
     const before = await box(page, FLOAT);
-    const drawing = (await page.locator(`${FLOAT} svg`).boundingBox())!;
 
-    await page.mouse.move(drawing.x + drawing.width / 2, drawing.y + drawing.height / 2);
+    await expect(turnToggle(page)).toHaveAttribute('aria-pressed', 'false');
+    await turnToggle(page).click();
+    await expect(turnToggle(page)).toHaveAttribute('aria-pressed', 'true');
+
+    const drawn = await drawnBytes(page);
+    const stood = (await surface(page).boundingBox())!;
+    await page.mouse.move(stood.x + stood.width / 2, stood.y + stood.height / 2);
     await page.mouse.down();
-    await page.mouse.move(drawing.x + drawing.width / 2 + 200, drawing.y + drawing.height / 2 + 120, {
+    await page.mouse.move(stood.x + stood.width / 2 + 200, stood.y + stood.height / 2 + 120, {
       steps: 10,
     });
     await page.mouse.up();
 
+    // The map turned...
+    expect(await drawnBytes(page)).not.toBe(drawn);
+
+    // ...and nothing slid: the turn took the drag the box was carried by.
     const after = await box(page, FLOAT);
     expect(after.x).toBeCloseTo(before.x, 0);
     expect(after.y).toBeCloseTo(before.y, 0);

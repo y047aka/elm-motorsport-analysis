@@ -1,4 +1,4 @@
-module Page.Wec.Shift exposing (Model, Msg(..), Box, init, update, handle)
+module Page.Wec.Shift exposing (Model, Msg(..), Box, init, update, handle, carried)
 
 {-| Where a box stood before anything moved it, and the grip that carries it across
 the page in both directions at once.
@@ -6,7 +6,7 @@ the page in both directions at once.
 The box cannot be carried out of the window.
 The travel it may take is measured off the box itself when the grip is picked up, and every move is clamped to what that leaves: the box's own edges stop at the window's.
 
-@docs Model, Msg, Box, init, update, handle
+@docs Model, Msg, Box, init, update, handle, carried
 
 -}
 
@@ -71,6 +71,14 @@ init =
     , carried = Nothing
     , bounds = unmeasured
     }
+
+
+{-| Whether a pointer carries the box now, which is what says whether the grip is drawn
+held.
+-}
+carried : Model -> Bool
+carried m =
+    m.carried /= Nothing
 
 
 type Msg
@@ -149,8 +157,8 @@ update box msg m =
 {-| The carry, when the pointer named is the one holding the box.
 -}
 heldBy : Int -> Maybe Hold -> Maybe Hold
-heldBy id carried =
-    case carried of
+heldBy id held =
+    case held of
         Just hold ->
             if hold.pointerId == id then
                 Just hold

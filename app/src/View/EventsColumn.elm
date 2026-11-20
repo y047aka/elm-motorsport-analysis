@@ -223,7 +223,6 @@ body event theCar =
 everything here is off the event's own `lap`, which the backend attached -- so a lap
 keeps its strip even where the field has no row for the car, and asks the field for
 nothing a second time.
-
 -}
 fastestLap : TimelineEvent -> Html msg
 fastestLap event =
@@ -260,7 +259,6 @@ fastestLap event =
 
 
 {-| `Nothing` where there is no time to rate, which is a segment the lap has none of.
-
 -}
 rate : TimelineEvent.Rated -> Maybe Performance.RatedTime
 rate rated =
@@ -270,7 +268,6 @@ rate rated =
 
 {-| The moment the event fell, and the lap it fell on -- one behind the lap a timing
 sheet has the car on, which is what the event's own line calls it.
-
 -}
 stamp : TimelineEvent -> String
 stamp event =
