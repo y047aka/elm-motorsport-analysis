@@ -203,7 +203,7 @@ corner direction config =
         , label = config.label
         , held = config.held
         , hint = ""
-        , classes = "grid h-2.5 w-2.5 select-none transition-colors"
+        , classes = "grid h-full w-full select-none transition-colors"
         , cursor =
             if config.held then
                 "cursor-grabbing"

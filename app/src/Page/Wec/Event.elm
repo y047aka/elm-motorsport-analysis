@@ -273,11 +273,10 @@ headerTitle shared =
         |> Maybe.withDefault ""
 
 
-{-| The card a tracker drawing is drawn in: the drawing filling whatever box it is
-given, and the controls floating over its top right corner.
+{-| The card the tracker column's drawing is drawn in: the drawing filling whatever box
+it is given, and the controls floating over its top right corner.
 
-It carries `data-tracker-column` or `data-tracker-float-card`, which is what the
-visual tests locate each drawing by.
+It carries `data-tracker-column`, which is what the visual tests locate the drawing by.
 
 -}
 trackerFrame : String -> Html msg -> List (Html msg) -> Html msg
@@ -327,7 +326,7 @@ mainGrid round keys m =
         [ Attributes.class "row-start-2 h-full min-h-0 relative grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]" ]
         [ standingsCell "col-start-1 min-h-0 grid relative" keys m round.energy snapshot replay.race.cars
         , columnStrip "col-start-2" round.track round.timeline keys m round.pitCycles replay snapshot
-        , Html.map FloatMsg (Float.view m.float (trackerFrame "data-tracker-float-card") round.track snapshot)
+        , Html.map FloatMsg (Float.view m.float round.track snapshot)
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]

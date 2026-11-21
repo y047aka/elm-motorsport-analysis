@@ -70,7 +70,7 @@ type Msg
 
 
 {-| The box the floating map opens at.
-480 by 180 is `Tracker3d.box`'s own three to one once the card's padding is gone.
+480 by 180 is `Tracker3d.box`'s own three to one, and the drawing fills the box, so the map opens at that ratio outright.
 The map is stood at the bottom right of the page, and every one of its four edges is a grip: the two away from the corner it is stood at grow `AgainstPointer`, and the two at it are `WithPointer` and take the box along with the size, so the edge opposite the one held stays where it was.
 -}
 defaultWidth : Float
@@ -121,17 +121,20 @@ two: the grip at the pinned end is the one that carries the box.
 type alias Side =
     { name : String
     , at : String
+    , pad : String
     , edge : Resize.Edge
     }
 
 
-{-| `at` is written out rather than composed from the name -- Tailwind reads a class off the
-source text and invents nothing.
+{-| `at` is where a side's own track stands, inside the box; `pad` is where a corner
+straddles it. Both are written out rather than composed from the name -- Tailwind reads a
+class off the source text and invents nothing.
 -}
-side : String -> String -> Handle.Axis -> Resize.Grows -> Resize.Fence -> Side
-side name at axis grows fence =
+side : String -> String -> String -> Handle.Axis -> Resize.Grows -> Resize.Fence -> Side
+side name at pad axis grows fence =
     { name = name
     , at = at
+    , pad = pad
     , edge =
         { axis = axis
         , grows = grows
@@ -145,22 +148,22 @@ side name at axis grows fence =
 
 left : Side
 left =
-    side "left" "-left-2.5" Handle.Across Resize.AgainstPointer widthFence
+    side "left" "left-0" "-left-1" Handle.Across Resize.AgainstPointer widthFence
 
 
 right : Side
 right =
-    side "right" "-right-2.5" Handle.Across Resize.WithPointer widthFence
+    side "right" "right-0" "-right-1" Handle.Across Resize.WithPointer widthFence
 
 
 top : Side
 top =
-    side "top" "-top-2.5" Handle.Down Resize.AgainstPointer heightFence
+    side "top" "top-0" "-top-1" Handle.Down Resize.AgainstPointer heightFence
 
 
 bottom : Side
 bottom =
-    side "bottom" "-bottom-2.5" Handle.Down Resize.WithPointer heightFence
+    side "bottom" "bottom-0" "-bottom-1" Handle.Down Resize.WithPointer heightFence
 
 
 {-| The eight grips the box is sized by. An edge moves one size; a corner is the meeting
@@ -197,7 +200,7 @@ grip g =
             in
             { id = "tracker-float-" ++ names ++ "-grip"
             , label = "Resize the floating track map from its " ++ names ++ " corner"
-            , at = height.at ++ " " ++ width.at
+            , at = height.pad ++ " " ++ width.pad
             , moves = [ width, height ]
             }
 
@@ -412,17 +415,19 @@ edgeTrack s =
             "left-0 z-10 grid h-2.5 w-full content-center"
 
 
-{-| The map floated over the columns, drawn into the card the page hands it.
+{-| The map floated over the columns, filling the box it is stood in.
 
 The box stands on the page whether or not it is open -- a `popovertarget` resolves by id, so the element has to be there to be shown -- and the UA keeps a closed popover out of layout. What is not built while it is closed is the drawing itself, which is recomputed every frame of the race.
 
-It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at. `card-elements.ts` owns every class the card itself has, which leaves the wrapper the one thing here that can carry a surface.
+It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at.
 
-Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the eight size grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- the box needs `grid` to lay its card out, and an author `display` silently wins over the UA's hiding of a closed popover.
+Nothing lies between the box and the drawing, so every point of the box is a point of the map, and the size grips are laid over the drawing: the four edges inside the box, the four corners straddling it. A band of box that sized nothing would else be a place where neither operation answers.
+
+Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the four corner grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
 
 -}
-view : Model -> (Html Msg -> List (Html Msg) -> Html Msg) -> Track -> Snapshot -> Html Msg
-view m frame track snapshot =
+view : Model -> Track -> Snapshot -> Html Msg
+view m track snapshot =
     let
         edgeGrip s =
             div [ Attributes.class ("absolute " ++ s.at ++ " " ++ edgeTrack s) ]
@@ -436,7 +441,7 @@ view m frame track snapshot =
                 toMsg =
                     Grow (Corner width height)
             in
-            div [ Attributes.class ("absolute " ++ g.at ++ " z-20") ]
+            div [ Attributes.class ("absolute " ++ g.at ++ " z-20 h-4 w-4") ]
                 [ Handle.corner (diagonal width height)
                     { id = g.id
                     , label = g.label
@@ -458,14 +463,12 @@ view m frame track snapshot =
         , on "toggle" toggled
         , attribute "data-tracker-float" ""
         ]
-        [ frame
-            (if m.shown then
-                surface m track snapshot
+        [ if m.shown then
+            surface m track snapshot
 
-             else
-                text ""
-            )
-            [ chrome [ closer ] ]
+          else
+            text ""
+        , chrome [ closer ]
         , edgeGrip left
         , edgeGrip right
         , edgeGrip top
@@ -483,14 +486,6 @@ toggled =
         |> Decode.map (\state -> Shown (state == "open"))
 
 
-{-| The card takes 16px of padding off each side of the box, and the box keeps a 1px
-border, before the drawing has anything to say about its own size.
--}
-cardLoss : Float
-cardLoss =
-    34
-
-
 {-| The drawing, and what each input is asked for: the left button carries the box, the right
 one turns the map, and a two-finger scroll turns it.
 -}
@@ -501,9 +496,7 @@ surface m track snapshot =
         , track = track
         , snapshot = snapshot
         , size =
-            { width = m.width.size - cardLoss
-            , height = m.height.size - cardLoss
-            }
+            { width = m.width.size, height = m.height.size }
         , label = "Move the floating track map: drag it, or press the arrow keys"
         , held = Shift.carried m.shift || Camera.held m.camera
         , onGrab =
@@ -565,14 +558,16 @@ then seen.
 chrome : List (Html Msg) -> Html Msg
 chrome controls =
     div
-        [ Attributes.class "pointer-events-none flex items-start gap-x-1 opacity-0 transition-opacity duration-300 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+        [ Attributes.class "absolute top-1 right-1 z-10 pointer-events-none flex items-start gap-x-1 opacity-0 transition-opacity duration-300 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
         , attribute "data-tracker-chrome" ""
         ]
         controls
 
 
-{-| The ✕ in the map's own corner. It is the only way back, which is why the
-popover is `manual`: nothing outside it closes it.
+{-| The ✕ in the map's own corner, stood one step in from it: the corner grip straddles the
+corner and is the larger of the two, and a control whose centre lies under a grip is a
+control the pointer cannot reach. It is the only way back, which is why the popover is
+`manual`: nothing outside it closes it.
 -}
 closer : Html Msg
 closer =

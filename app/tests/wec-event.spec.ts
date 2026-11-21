@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { waitForPageReady, setLapCount, expectSurveyedLap, TRACKER_COLUMN, LE_MANS } from './helpers';
 
-const FLOAT_CARD = '[data-tracker-float-card]';
+const FLOAT = '[data-tracker-float]';
 
 test.describe('Le Mans 2025 Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -39,17 +39,17 @@ test.describe('Le Mans 2025 Visual Tests', () => {
       .locator(TRACKER_COLUMN)
       .getByRole('button', { name: 'Float the track map over the columns' })
       .click();
-    await expect(page.locator(FLOAT_CARD)).toHaveCount(1);
+    await expect(page.locator(FLOAT)).toHaveCount(1);
 
     // The box drew the circuit and not the ring, apart from the pixels: a round
     // exported before the summary named its circuit raises a ring into space, and a
     // raised ring still looks like a track.
-    await expectSurveyedLap(page, FLOAT_CARD);
+    await expectSurveyedLap(page, FLOAT);
 
     // The chrome is the pointer's, and the pointer is still where the `◱` was pressed: the
     // shot is the box at rest, with no navigation over the map.
     await page.mouse.move(0, 0);
 
-    await expect(page.locator(FLOAT_CARD)).toHaveScreenshot('tracker-3d-float.png');
+    await expect(page.locator(FLOAT)).toHaveScreenshot('tracker-3d-float.png');
   });
 });
