@@ -12,6 +12,7 @@ The camera belongs here: this is the one drawing raised off the ground it was su
 -}
 
 import Browser.Dom
+import Drag
 import Drag.Handle as Handle
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes exposing (attribute)
@@ -43,7 +44,7 @@ init =
     { shown = False
     , width = Resize.init defaultWidth
     , height = Resize.init defaultHeight
-    , shift = Shift.init
+    , shift = Shift.init boxId
     , camera = Camera.init
     , window = unmeasured
     }
@@ -269,7 +270,7 @@ update msg m =
         ShiftMsg sub ->
             let
                 ( shift, cmd ) =
-                    Shift.update boxId sub m.shift
+                    Shift.update sub m.shift
             in
             ( { m | shift = shift }, Cmd.map ShiftMsg cmd )
 
@@ -511,7 +512,7 @@ surface m track snapshot =
         , size =
             { width = m.width.size, height = m.height.size }
         , label = "Move the floating track map: drag it, or press the arrow keys"
-        , held = Shift.carried m.shift || Camera.held m.camera
+        , held = Drag.isCarrying m.shift.carried || Drag.isCarrying m.camera.carried
         , onGrab =
             \which device place ->
                 case which of
@@ -522,21 +523,21 @@ surface m track snapshot =
                         CamMsg (Camera.Grab device place)
         , onMove =
             \place ->
-                if Camera.holds place.id m.camera then
+                if Drag.holds place.id m.camera.carried then
                     CamMsg (Camera.Move place)
 
                 else
-                    ShiftMsg (Shift.Carry place)
+                    ShiftMsg (Shift.Move place)
         , onDrop =
             \place ->
-                if Camera.holds place.id m.camera then
-                    CamMsg (Camera.Release place)
+                if Drag.holds place.id m.camera.carried then
+                    CamMsg (Camera.Drop place)
 
                 else
-                    ShiftMsg (Shift.Release place)
+                    ShiftMsg (Shift.Drop place)
         , onCancel =
             \pointerId ->
-                if Camera.holds pointerId m.camera then
+                if Drag.holds pointerId m.camera.carried then
                     CamMsg (Camera.Cancel pointerId)
 
                 else

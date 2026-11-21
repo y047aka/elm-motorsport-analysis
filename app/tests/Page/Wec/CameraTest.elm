@@ -1,5 +1,6 @@
 module Page.Wec.CameraTest exposing (suite)
 
+import Drag
 import Drag.Handle exposing (Device(..), Place)
 import Expect
 import Motorsport.Chart.Tracker3d as Tracker3d
@@ -68,18 +69,19 @@ suite =
                     |> Expect.within (Expect.Absolute 0.0001) held.eye.azimuth
         , test "the finger that is not turning lets go of nothing" <|
             \_ ->
-                Camera.update (Release (press 2 0 0)) held
-                    |> Camera.held
+                Camera.update (Drop (press 2 0 0)) held
+                    |> .carried
+                    |> Drag.isCarrying
                     |> Expect.equal True
         , test "letting go keeps the angle the drag reached" <|
             \_ ->
                 let
                     released =
                         moved 100 0 held
-                            |> Camera.update (Release (press 1 100 0))
+                            |> Camera.update (Drop (press 1 100 0))
                 in
                 Expect.all
-                    [ Camera.held >> Expect.equal False
+                    [ .carried >> Drag.isCarrying >> Expect.equal False
                     , \m ->
                         Expect.within (Expect.Absolute 0.0001)
                             m.eye.azimuth

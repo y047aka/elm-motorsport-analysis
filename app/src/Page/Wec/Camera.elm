@@ -1,15 +1,16 @@
-module Page.Wec.Camera exposing (Model, Msg(..), init, held, holds, update)
+module Page.Wec.Camera exposing (Model, Msg(..), init, update)
 
 {-| The camera the raised map is turned with, and the pointer turning it.
 
-A turn is the pointer's travel since the last move, so the camera keeps which pointer is
-turning it, what it is, and where that one was last read: a second finger landing on the
-drawing is not the first one's turn.
+A turn is the pointer's travel since the last move, and `Drag` keeps the carry that says
+it: which pointer is turning the map, what it is, and where that one was last read. The
+device rides along as the thing carried, since it is what says which way the travel counts.
 
-@docs Model, Msg, init, held, holds, update
+@docs Model, Msg, init, update
 
 -}
 
+import Drag
 import Drag.Handle as Handle exposing (Place)
 import Motorsport.Chart.Tracker3d as Track3d
 
@@ -18,22 +19,14 @@ import Motorsport.Chart.Tracker3d as Track3d
 -}
 type alias Model =
     { eye : Track3d.Model
-    , held : Maybe Hold
-    }
-
-
-type alias Hold =
-    { pointerId : Int
-    , x : Float
-    , y : Float
-    , device : Handle.Device
+    , carried : Drag.State Handle.Device
     }
 
 
 type Msg
     = Grab Handle.Device Place
     | Move Place
-    | Release Place
+    | Drop Place
     | Cancel Int
     | Wheel { x : Float, y : Float }
 
@@ -41,58 +34,35 @@ type Msg
 init : Model
 init =
     { eye = Track3d.init
-    , held = Nothing
+    , carried = Drag.init
     }
-
-
-{-| Whether a pointer is turning the map now.
--}
-held : Model -> Bool
-held m =
-    m.held /= Nothing
-
-
-{-| Whether that pointer is the one turning the map.
--}
-holds : Int -> Model -> Bool
-holds pointerId m =
-    Maybe.map .pointerId m.held == Just pointerId
 
 
 update : Msg -> Model -> Model
 update msg m =
     case msg of
         Grab what place ->
-            case m.held of
-                Nothing ->
-                    { m | held = Just { pointerId = place.id, x = place.x, y = place.y, device = what } }
-
-                Just _ ->
-                    m
+            { m | carried = Tuple.first (Drag.update (Drag.Grab what place) m.carried) }
 
         Move place ->
-            case m.held of
-                Just h ->
-                    if h.pointerId == place.id then
-                        { m
-                            | eye =
-                                Track3d.update
-                                    (turned (runs h.device * (place.x - h.x)) (runs h.device * (place.y - h.y)))
-                                    m.eye
-                            , held = Just { h | x = place.x, y = place.y }
-                        }
+            case Drag.update (Drag.Move place) m.carried of
+                ( carried, Drag.Stepped turn ) ->
+                    { m
+                        | carried = carried
+                        , eye =
+                            Track3d.update
+                                (turned (runs turn.location * (place.x - turn.at.x)) (runs turn.location * (place.y - turn.at.y)))
+                                m.eye
+                    }
 
-                    else
-                        m
+                ( carried, _ ) ->
+                    { m | carried = carried }
 
-                Nothing ->
-                    m
-
-        Release place ->
-            ended place.id m
+        Drop place ->
+            { m | carried = Tuple.first (Drag.update (Drag.Drop place) m.carried) }
 
         Cancel pointerId ->
-            ended pointerId m
+            { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }
 
         Wheel travel ->
             { m | eye = Track3d.update (turned (travel.x * wheelRate) (travel.y * wheelRate)) m.eye }
@@ -116,20 +86,6 @@ runs what =
 turned : Float -> Float -> Track3d.Msg
 turned x y =
     Track3d.Roll (negate (x * Track3d.perPixel)) (negate (y * Track3d.perPixel))
-
-
-ended : Int -> Model -> Model
-ended pointerId m =
-    case m.held of
-        Just h ->
-            if h.pointerId == pointerId then
-                { m | held = Nothing }
-
-            else
-                m
-
-        Nothing ->
-            m
 
 
 {-| A two-finger scroll is taken at a third of the rate a drag is: a mouse wheel's notch is

@@ -1,4 +1,4 @@
-module Drag exposing (State, Msg(..), Carry, Done, Outcome(..), init, update, carrying, travel, isCarrying)
+module Drag exposing (State, Msg(..), Carry, Done, Outcome(..), init, update, carrying, travel, isCarrying, holds)
 
 {-| The state of one thing being carried by a pointer: picked up, tracked,
 let go of, or taken away by the browser. The thing carried is whatever the
@@ -16,7 +16,7 @@ The pointer is read in both directions at once, and it is the caller that
 cares about one of them: a column is moved by `x` alone, a floated box by
 both. Which of them a size moves along is the edge's, and stays there.
 
-@docs State, Msg, Carry, Done, Outcome, init, update, carrying, travel, isCarrying
+@docs State, Msg, Carry, Done, Outcome, init, update, carrying, travel, isCarrying, holds
 
 -}
 
@@ -183,6 +183,19 @@ travel carry =
     { x = carry.at.x - carry.from.x
     , y = carry.at.y - carry.from.y
     }
+
+
+{-| Whether that pointer is the one carrying. The message a pointer sends is answered
+only when it is, which is what lets two fingers hold two grips at once.
+-}
+holds : Int -> State location -> Bool
+holds pointerId state =
+    case state of
+        Dragging carry ->
+            carry.pointerId == pointerId
+
+        Idle ->
+            False
 
 
 {-| Whether a carry is in progress.

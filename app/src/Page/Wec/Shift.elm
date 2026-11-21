@@ -1,40 +1,33 @@
-module Page.Wec.Shift exposing (Model, Msg(..), init, update, carried, holds)
+module Page.Wec.Shift exposing (Model, Msg(..), init, update)
 
 {-| Where a box stood before anything moved it, and the pointer that carries it across
 the page in both directions at once.
 
-The box cannot be carried out of the window.
-The travel it may take is measured off the box itself when a pointer takes it up, and every
-move is clamped to what that leaves: the box's own edges stop at the window's.
+The box cannot be carried out of the window. The travel it may take is measured off
+the box itself when a pointer takes it up, and every move is clamped to what that
+leaves: the box's own edges stop at the window's.
 
-@docs Model, Msg, init, update, carried, holds
+@docs Model, Msg, init, update
 
 -}
 
 import Browser.Dom
-import Drag.Handle as Handle
+import Drag
+import Drag.Handle as Handle exposing (Place, Point)
 import Task
 
 
-{-| How far the box has been taken from where it is stood, and whether a pointer
-holds it now. `bounds` is what the last pick measured; `unmeasured` is what it holds
-before any pick has happened, and after one whose read failed.
+{-| How far the box has been taken from where it is stood, and which pointer carries it.
+`bounds` is what the last pick measured; `unmeasured` is what it holds before any pick
+has happened, and after one whose read failed. `boxId` is what the travel is measured
+against, and changes never.
 -}
 type alias Model =
     { x : Float
     , y : Float
-    , carried : Maybe Hold
+    , carried : Drag.State Point
     , bounds : Bounds
-    }
-
-
-{-| The two ends of a carry: which pointer holds the box, where it was picked up,
-and where the box stood when that happened.
--}
-type alias Hold =
-    { pointerId : Int
-    , pointer : { x : Float, y : Float }
-    , from : { x : Float, y : Float }
+    , boxId : String
     }
 
 
@@ -54,84 +47,62 @@ unmeasured =
     { minX = -4000, maxX = 4000, minY = -4000, maxY = 4000 }
 
 
-init : Model
-init =
+init : String -> Model
+init boxId =
     { x = 0
     , y = 0
-    , carried = Nothing
+    , carried = Drag.init
     , bounds = unmeasured
+    , boxId = boxId
     }
 
 
-{-| Whether a pointer carries the box now, which is what says whether the grip is drawn
-held.
--}
-carried : Model -> Bool
-carried m =
-    m.carried /= Nothing
-
-
-{-| Whether that pointer is the one carrying the box.
--}
-holds : Int -> Model -> Bool
-holds pointerId m =
-    Maybe.map .pointerId m.carried == Just pointerId
-
-
 type Msg
-    = Grab Handle.Place
-    | Carry Handle.Place
-    | Release Handle.Place
+    = Grab Place
+    | Move Place
+    | Drop Place
     | Cancel Int
     | Travel Bounds
     | Step Handle.Steps
 
 
-{-| A box that has gone missing leaves the bounds wide, since a grip on it cannot
-be held anyway.
+{-| The box's own place when the pointer took it up is what the travel is added to, so a
+carry that starts where the box stands ends where the box stands.
 
-A carry belongs to the pointer that picked it up: a second finger on the box neither
-picks it up again nor moves it nor lets it go.
+A box that has gone missing leaves the bounds wide, since a grip on it cannot be held
+anyway.
 
 -}
-update : String -> Msg -> Model -> ( Model, Cmd Msg )
-update boxId msg m =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg m =
     case msg of
         Grab place ->
-            let
-                pointer =
-                    { x = place.x, y = place.y }
-            in
-            case m.carried of
-                Just _ ->
-                    ( m, Cmd.none )
+            ( { m | carried = Tuple.first (Drag.update (Drag.Grab { x = m.x, y = m.y } place) m.carried) }
+            , Browser.Dom.getElement m.boxId
+                |> Task.map (boundsFrom { x = m.x, y = m.y })
+                |> Task.onError (\_ -> Task.succeed unmeasured)
+                |> Task.perform Travel
+            )
 
-                Nothing ->
-                    ( { m | carried = Just { pointerId = place.id, pointer = pointer, from = { x = m.x, y = m.y } } }
-                    , Browser.Dom.getElement boxId
-                        |> Task.map (boundsFrom { x = m.x, y = m.y })
-                        |> Task.onError (\_ -> Task.succeed unmeasured)
-                        |> Task.perform Travel
-                    )
-
-        Carry place ->
-            case heldBy place.id m.carried of
-                Nothing ->
-                    ( m, Cmd.none )
-
-                Just hold ->
+        Move place ->
+            case Drag.update (Drag.Move place) m.carried of
+                ( carried, Drag.Stepped hold ) ->
                     ( { m
-                        | x = clamp m.bounds.minX m.bounds.maxX (hold.from.x + place.x - hold.pointer.x)
-                        , y = clamp m.bounds.minY m.bounds.maxY (hold.from.y + place.y - hold.pointer.y)
+                        | carried = carried
+                        , x = clamp m.bounds.minX m.bounds.maxX (hold.location.x + place.x - hold.from.x)
+                        , y = clamp m.bounds.minY m.bounds.maxY (hold.location.y + place.y - hold.from.y)
                       }
                     , Cmd.none
                     )
 
-        Release place ->
-            ( { m | carried = Maybe.andThen (keptUnless place.id) m.carried }, Cmd.none )
+                ( carried, _ ) ->
+                    ( { m | carried = carried }, Cmd.none )
 
-        Cancel id ->
-            ( { m | carried = Maybe.andThen (keptUnless id) m.carried }, Cmd.none )
+        Drop place ->
+            ( { m | carried = Tuple.first (Drag.update (Drag.Drop place) m.carried) }, Cmd.none )
+
+        Cancel pointerId ->
+            ( { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }, Cmd.none )
 
         Travel bounds ->
             ( { m
@@ -149,34 +120,6 @@ update boxId msg m =
               }
             , Cmd.none
             )
-
-
-{-| The carry, when the pointer named is the one holding the box.
--}
-heldBy : Int -> Maybe Hold -> Maybe Hold
-heldBy id held =
-    case held of
-        Just hold ->
-            if hold.pointerId == id then
-                Just hold
-
-            else
-                Nothing
-
-        Nothing ->
-            Nothing
-
-
-{-| The carry let go of, when the pointer named is the one holding it; a second
-finger's release leaves the first holding on.
--}
-keptUnless : Int -> Hold -> Maybe Hold
-keptUnless id hold =
-    if hold.pointerId == id then
-        Nothing
-
-    else
-        Just hold
 
 
 {-| The four shifts the window leaves a box, said in the shift's own units rather
