@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Button(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys)
+module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys)
 
 {-| A grip that carries something: along a line, or across the page in both directions at
 once -- by the pointer, or a step at a time by the arrow keys for the grips that
@@ -15,7 +15,7 @@ of -- but it reads the pointer the same way, and so takes
 [`eventsByButton`](#eventsByButton) and [`arrowKeys`](#arrowKeys). Such a surface is where the
 two buttons split: the left carries the thing, the right turns what it shows.
 
-@docs Axis, Button, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys
+@docs Axis, Button, Device, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys
 
 -}
 
@@ -40,6 +40,15 @@ and the page says what each of the two starts. The middle button starts nothing.
 type Button
     = Primary
     | Secondary
+
+
+{-| What the pointer is. `Touch` is the surface itself being touched -- a finger, a pen --
+and the world is moved under it; `Mouse` is a device the hand moves, and a drawing answers
+it the other way.
+-}
+type Device
+    = Mouse
+    | Touch
 
 
 {-| Which pointer, and where it is along the axis its grip reads. Two fingers can
@@ -332,6 +341,22 @@ whichButton =
             )
 
 
+{-| What took the pointer down. Anything that is not a mouse is a surface being touched.
+-}
+device : Decoder Device
+device =
+    Decode.field "pointerType" Decode.string
+        |> Decode.andThen
+            (\what ->
+                case what of
+                    "mouse" ->
+                        Decode.succeed Mouse
+
+                    _ ->
+                        Decode.succeed Touch
+            )
+
+
 {-| The four arrow keys, stepping whichever axis each of them lies along, and no other key
 reaching the message at all.
 -}
@@ -389,11 +414,11 @@ and a move goes back to whichever holds it.
 
 -}
 eventsByButton :
-    { g | held : Bool, onGrab : Button -> Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
+    { g | held : Bool, onGrab : Button -> Device -> Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
     -> List (Html.Attribute msg)
 eventsByButton config =
     pressAndMoves config
-        (whichButton |> Decode.andThen (\which -> Decode.map (config.onGrab which) place))
+        (Decode.map3 (\which what -> config.onGrab which what) whichButton device place)
 
 
 {-| The press, the moves, the release and the taking-back -- what every grip answers to, however

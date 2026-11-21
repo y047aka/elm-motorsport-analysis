@@ -33,7 +33,7 @@ type alias Config msg =
     , keys : Handle.Steps -> msg
     , wheel : { x : Float, y : Float } -> msg
     , held : Bool
-    , onGrab : Handle.Button -> Handle.Place -> msg
+    , onGrab : Handle.Button -> Handle.Device -> Handle.Place -> msg
     , onMove : Handle.Place -> msg
     , onDrop : Handle.Place -> msg
     , onCancel : Int -> msg

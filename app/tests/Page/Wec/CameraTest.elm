@@ -1,6 +1,6 @@
 module Page.Wec.CameraTest exposing (suite)
 
-import Drag.Handle exposing (Place)
+import Drag.Handle exposing (Device(..), Place)
 import Expect
 import Motorsport.Chart.Tracker3d as Tracker3d
 import Page.Wec.Camera as Camera exposing (Msg(..))
@@ -14,11 +14,11 @@ press id x y =
     { id = id, x = x, y = y }
 
 
-{-| The camera with one pointer down at the origin.
+{-| The camera with one finger down at the origin.
 -}
 held : Camera.Model
 held =
-    Camera.update (Grab (press 1 0 0)) Camera.init
+    Camera.update (Grab Touch (press 1 0 0)) Camera.init
 
 
 {-| The one camera after a move of its pointer to `x`, `y`.
@@ -40,6 +40,20 @@ suite =
                 (moved 100 0 held).eye.azimuth
                     |> Expect.within (Expect.Absolute 0.0001)
                         (Tracker3d.init.azimuth + 100 * Tracker3d.perPixel)
+        , test "a mouse turns the map the other way from a finger" <|
+            \_ ->
+                let
+                    gripped =
+                        Camera.update (Grab Mouse (press 1 0 0)) Camera.init
+                in
+                (Camera.update (Move (press 1 100 0)) gripped).eye.azimuth
+                    |> Expect.within (Expect.Absolute 0.0001)
+                        (Tracker3d.init.azimuth - 100 * Tracker3d.perPixel)
+        , test "a scroll keeps its own way, whatever turned the map last" <|
+            \_ ->
+                (Camera.update (Wheel { x = 100, y = 0 }) Camera.init).eye.azimuth
+                    |> Expect.within (Expect.Absolute 0.0001)
+                        (Tracker3d.init.azimuth + 100 * (1 / 3) * Tracker3d.perPixel)
         , test "a second finger does not turn the map the first is turning" <|
             \_ ->
                 (Camera.update (Move (press 2 300 300)) held).eye.azimuth
@@ -48,7 +62,7 @@ suite =
             \_ ->
                 let
                     taken =
-                        Camera.update (Grab (press 2 500 500)) held
+                        Camera.update (Grab Touch (press 2 500 500)) held
                 in
                 (Camera.update (Move (press 2 900 500)) taken).eye.azimuth
                     |> Expect.within (Expect.Absolute 0.0001) held.eye.azimuth

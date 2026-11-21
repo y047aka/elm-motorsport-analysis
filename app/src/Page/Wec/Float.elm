@@ -507,13 +507,13 @@ surface m track snapshot =
         , label = "Move the floating track map: drag it, or press the arrow keys"
         , held = Shift.carried m.shift || Camera.held m.camera
         , onGrab =
-            \which place ->
+            \which device place ->
                 case which of
                     Handle.Primary ->
                         ShiftMsg (Shift.Grab place)
 
                     Handle.Secondary ->
-                        CamMsg (Camera.Grab place)
+                        CamMsg (Camera.Grab device place)
         , onMove =
             \place ->
                 if Camera.holds place.id m.camera then
@@ -560,6 +560,7 @@ drag begun there would otherwise close the box rather than carry it -- PiP's chr
 merely unseen while the window is untouched, it is unpressable. `focus-within` is the
 keyboard's way of the same call: a button no pointer is over is still reached by `Tab`, and is
 then seen.
+
 -}
 chrome : List (Html Msg) -> Html Msg
 chrome controls =

@@ -3,8 +3,8 @@ module Page.Wec.Camera exposing (Model, Msg(..), init, held, holds, update)
 {-| The camera the raised map is turned with, and the pointer turning it.
 
 A turn is the pointer's travel since the last move, so the camera keeps which pointer is
-turning it and where that one was last read: a second finger landing on the drawing is not
-the first one's turn.
+turning it, what it is, and where that one was last read: a second finger landing on the
+drawing is not the first one's turn.
 
 @docs Model, Msg, init, held, holds, update
 
@@ -26,11 +26,12 @@ type alias Hold =
     { pointerId : Int
     , x : Float
     , y : Float
+    , device : Handle.Device
     }
 
 
 type Msg
-    = Grab Place
+    = Grab Handle.Device Place
     | Move Place
     | Release Place
     | Cancel Int
@@ -61,10 +62,10 @@ holds pointerId m =
 update : Msg -> Model -> Model
 update msg m =
     case msg of
-        Grab place ->
+        Grab what place ->
             case m.held of
                 Nothing ->
-                    { m | held = Just { pointerId = place.id, x = place.x, y = place.y } }
+                    { m | held = Just { pointerId = place.id, x = place.x, y = place.y, device = what } }
 
                 Just _ ->
                     m
@@ -74,7 +75,10 @@ update msg m =
                 Just h ->
                     if h.pointerId == place.id then
                         { m
-                            | eye = Track3d.update (turned (place.x - h.x) (place.y - h.y)) m.eye
+                            | eye =
+                                Track3d.update
+                                    (turned (runs h.device * (place.x - h.x)) (runs h.device * (place.y - h.y)))
+                                    m.eye
                             , held = Just { h | x = place.x, y = place.y }
                         }
 
@@ -92,6 +96,19 @@ update msg m =
 
         Wheel travel ->
             { m | eye = Track3d.update (turned (travel.x * wheelRate) (travel.y * wheelRate)) m.eye }
+
+
+{-| Which way the pointer's travel counts, by what the pointer is: the mouse is the device
+the hand moves, and the map turns the other way for it than for a finger on the surface.
+-}
+runs : Handle.Device -> Float
+runs what =
+    case what of
+        Handle.Mouse ->
+            -1
+
+        Handle.Touch ->
+            1
 
 
 {-| The pointer's travel since the last reading, in the reader's own pixels.
