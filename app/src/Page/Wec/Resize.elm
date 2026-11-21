@@ -1,4 +1,4 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, clampTo, unmeasured)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, clampTo, unmeasured, diagonal)
 
 {-| A size the reader sets -- the width of the standings, the box a floated map keeps
 -- and the grip along the edge that moves it. The page holds one `Model` per size and
@@ -8,13 +8,32 @@ Which edge the grip lies along -- the axis its pointer is read along, the way th
 size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
 `Model` holds the size and the carry.
 
-@docs Model, Msg, Fence, Edge, Grows, init, update, grip, clampTo, unmeasured
+@docs Model, Msg, Fence, Edge, Grows, init, update, grip, clampTo, unmeasured, diagonal
 
 -}
 
 import Drag
 import Drag.Handle as Handle exposing (Place)
 import Html exposing (Html)
+
+
+{-| Which diagonal the meeting of two edges lies along -- the cursor says it, and the two
+edges it is the meeting of say which.
+-}
+diagonal : Edge -> Edge -> Handle.Direction
+diagonal width height =
+    case ( width.grows, height.grows ) of
+        ( AgainstPointer, AgainstPointer ) ->
+            Handle.NorthWest
+
+        ( WithPointer, AgainstPointer ) ->
+            Handle.NorthEast
+
+        ( AgainstPointer, WithPointer ) ->
+            Handle.SouthWest
+
+        ( WithPointer, WithPointer ) ->
+            Handle.SouthEast
 
 
 {-| Which way the size moves when the pointer travels along the axis: `WithPointer`

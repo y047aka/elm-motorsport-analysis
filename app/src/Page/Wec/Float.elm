@@ -218,25 +218,6 @@ grip g =
             }
 
 
-{-| Which diagonal a corner lies along -- the cursor says it, and the two edges it is the
-meeting of say which.
--}
-diagonal : Side -> Side -> Handle.Direction
-diagonal width height =
-    case ( width.edge.grows, height.edge.grows ) of
-        ( Resize.AgainstPointer, Resize.AgainstPointer ) ->
-            Handle.NorthWest
-
-        ( Resize.WithPointer, Resize.AgainstPointer ) ->
-            Handle.NorthEast
-
-        ( Resize.AgainstPointer, Resize.WithPointer ) ->
-            Handle.SouthWest
-
-        ( Resize.WithPointer, Resize.WithPointer ) ->
-            Handle.SouthEast
-
-
 {-| `boxId` is what the travel is measured against at every pick, and what both
 presses point their `popovertarget` at.
 -}
@@ -455,7 +436,7 @@ view m track snapshot =
                     Grow (Corner width height)
             in
             div [ Attributes.class ("absolute " ++ g.at ++ " z-20 h-4 w-4") ]
-                [ Handle.corner (diagonal width height)
+                [ Handle.corner (Resize.diagonal width.edge height.edge)
                     { id = g.id
                     , label = g.label
                     , held = holds g m
