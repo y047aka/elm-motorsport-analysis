@@ -23,6 +23,7 @@ import Page.Wec.Camera as Camera
 import Page.Wec.Columns as Columns
 import Page.Wec.Resize as Resize
 import Page.Wec.Shift as Shift
+import Process
 import Task
 import View.CarDetail.Header as Header
 import View.TrackMap3d as TrackMap3d
@@ -34,6 +35,7 @@ type alias Model =
     , height : Resize.Model
     , shift : Shift.Model
     , camera : Camera.Model
+    , chrome : Chrome
     , window : { width : Float, height : Float }
     }
 
@@ -45,7 +47,21 @@ init =
     , height = Resize.init defaultHeight
     , shift = Shift.init
     , camera = Camera.init
+    , chrome = { shown = False, timer = 0 }
     , window = unmeasured
+    }
+
+
+{-| The box's navigation: whether the pointer has been seen recently enough for it to be
+seen, and which timer is the current one.
+
+Every move over the box arms a timer of its own, so the one armed before the last move is
+already retired -- it is answered to by its number, and only the newest is believed.
+
+-}
+type alias Chrome =
+    { shown : Bool
+    , timer : Int
     }
 
 
@@ -60,6 +76,10 @@ unmeasured =
 
 {-| `Shown` mirrors what the popover said of itself; the presses themselves are the
 browser's, and reach no message at all.
+
+`PointerSeen` is any move over the box, which calls the chrome out and retires the timer
+armed before it; `ChromeFaded` is a timer going off, and the number says which.
+
 -}
 type Msg
     = Shown Bool
@@ -67,6 +87,25 @@ type Msg
     | Window { width : Float, height : Float }
     | ShiftMsg Shift.Msg
     | CamMsg Camera.Msg
+    | PointerSeen
+    | ChromeFaded Int
+
+
+{-| How long after the pointer stops the chrome goes -- PiP's own pause.
+-}
+fadeTime : Float
+fadeTime =
+    2500
+
+
+{-| The timer that puts the chrome away. It carries the number it was armed under, so a
+move after it retires it rather than leaving it to hide the chrome the newer move called
+out.
+-}
+fade : Int -> Cmd Msg
+fade timer =
+    Process.sleep fadeTime
+        |> Task.perform (always (ChromeFaded timer))
 
 
 {-| The box the floating map opens at.
@@ -260,6 +299,16 @@ update msg m =
 
         CamMsg sub ->
             ( { m | camera = Camera.update sub m.camera }, Cmd.none )
+
+        PointerSeen ->
+            let
+                timer =
+                    m.chrome.timer + 1
+            in
+            ( { m | chrome = { shown = True, timer = timer } }, fade timer )
+
+        ChromeFaded timer ->
+            ( { m | chrome = { shown = timer /= m.chrome.timer, timer = m.chrome.timer } }, Cmd.none )
 
 
 {-| One axis of a drag: the side being grown, the size it holds, how far the box has gone
@@ -456,6 +505,7 @@ view m frame track snapshot =
         , Attributes.style "height" (Columns.px m.height.size)
         , Attributes.style "transform" ("translate(" ++ Columns.px m.shift.x ++ ", " ++ Columns.px m.shift.y ++ ")")
         , on "toggle" toggled
+        , on "pointermove" (Decode.succeed PointerSeen)
         , attribute "data-tracker-float" ""
         ]
         [ frame
@@ -465,7 +515,7 @@ view m frame track snapshot =
              else
                 text ""
             )
-            [ chrome [ closer ] ]
+            [ chrome m.chrome.shown [ closer ] ]
         , edgeGrip left
         , edgeGrip right
         , edgeGrip top
@@ -553,18 +603,27 @@ trigger =
         }
 
 
-{-| The box's navigation, which the pointer over it calls out.
+{-| The box's navigation, which the pointer over it calls out -- and which it puts away
+again a pause after stopping, `shown` saying which of the two the box is in.
 
 The `pointer-events` go with the opacity and not after it: the `✕` lies over the drawing, and a
 drag begun there would otherwise close the box rather than carry it -- PiP's chrome is not
-merely unseen while the window is untouched, it is unpressable. `focus-within` is the
-keyboard's way of the same call: a button no pointer is over is still reached by `Tab`, and is
-then seen.
+merely unseen, it is unpressable. `focus-within` answers to no timer at all: a button reached by
+`Tab` is seen however still the pointer lies.
+
 -}
-chrome : List (Html Msg) -> Html Msg
-chrome controls =
+chrome : Bool -> List (Html Msg) -> Html Msg
+chrome shown controls =
     div
-        [ Attributes.class "pointer-events-none flex items-start gap-x-1 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+        [ Attributes.class
+            ("pointer-events-none flex items-start gap-x-1 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 "
+                ++ (if shown then
+                        "group-hover:pointer-events-auto group-hover:opacity-100"
+
+                    else
+                        "group-hover:pointer-events-none group-hover:opacity-0"
+                   )
+            )
         , attribute "data-tracker-chrome" ""
         ]
         controls

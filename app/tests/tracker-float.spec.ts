@@ -455,6 +455,25 @@ test.describe('the floating track map', () => {
     await expect(chrome(page)).toHaveCSS('pointer-events', 'auto');
   });
 
+  test('its navigation goes away while the pointer rests, and a move calls it back', async ({
+    page,
+  }) => {
+    await floatTrigger(page).click();
+    const stood = await box(page, FLOAT);
+    const x = stood.x + stood.width / 2;
+    const y = stood.y + stood.height / 2;
+
+    await page.mouse.move(x, y);
+    await expect(chrome(page)).toHaveCSS('opacity', '1');
+
+    // The pointer lies still over the box, and the chrome goes: PiP's pause, not the
+    // pointer leaving.
+    await expect(chrome(page)).toHaveCSS('opacity', '0', { timeout: 8000 });
+
+    await page.mouse.move(x + 20, y);
+    await expect(chrome(page)).toHaveCSS('opacity', '1');
+  });
+
   test('opens from the column corner and closes from its own', async ({ page }) => {
     await expect(floatTrigger(page)).toHaveCount(1);
 
