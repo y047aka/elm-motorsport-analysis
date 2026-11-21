@@ -179,7 +179,7 @@ bottom =
     side "bottom" "-bottom-1" "-bottom-2" Handle.Down Resize.WithPointer heightFence
 
 
-{-| The eight grips the box is sized by. An edge moves one size; a corner is the meeting
+{-| The grips the box is sized by. An edge moves one size; a corner is the meeting
 of two edges and moves both, holding them under one id -- which is then what both sizes
 are said to be held by, and what draws the grip held.
 -}

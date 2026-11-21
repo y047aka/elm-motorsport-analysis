@@ -55,9 +55,8 @@ type Grows
 {-| The size the thing stands at and the carry that moves it: the size follows the
 pointer's travel from the size `Drag` was picked up with.
 
-A size has grips -- along each of its two edges, and at the corners where those meet --
-and one `Model` between them, so which of them took the size up rides along on the carry,
-where it cannot outlive the carry.
+A size has several grips and one `Model` between them, so the pick rides on the carry,
+where it cannot outlive it.
 -}
 type alias Model =
     { size : Float
@@ -218,7 +217,7 @@ held gripId m =
             False
 
 
-{-| How far one arrow key takes a size. Shift is five of them, which `Handle` says.
+{-| How far one arrow key takes a size. Shift is `Handle`'s coarse step.
 -}
 sizeStep : Float
 sizeStep =

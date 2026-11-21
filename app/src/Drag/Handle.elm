@@ -106,8 +106,7 @@ type alias Fence =
 
 
 {-| How many steps the arrow keys took a thing along each axis. The keys come one at
-a time, so a caller never sees both moved. Shift is the coarse step, five of them at a
-press.
+a time, so a caller never sees both moved.
 -}
 type alias Steps =
     { x : Int
@@ -179,9 +178,6 @@ view step config =
 {-| The same grip lying along an edge to resize what it bounds: the pointer's
 travel is the size's, and the arrow keys step it once the grip has the focus. `Across`
 lies along a column edge, `Down` along a row edge.
-
-The `size` is what the splitter says about itself -- the ARIA's `aria-valuenow` and its
-two ends -- since a size only the pointer can reach is a size no reader hears.
 
 The `glyph` is the mark drawn along the edge. An empty one leaves the cursor the
 only thing saying where the grip is -- and asks the wrapper to centre along the

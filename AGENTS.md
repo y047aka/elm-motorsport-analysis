@@ -97,7 +97,7 @@ diagnosing a Flix build failure by reading code.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, ...)
 - `Page/` one module per page, plain TEA · `View/` what a page is laid out of · `Data/` the shape of the feed · `UI/` `Notice` and the `Shadcn/` wrappers
-- `Drag`/`Drag.Handle` — carrying a thing by a pointer: the state machine and the grip that reports it. The pointer is read in both directions at once, and which of them a size moves along is the caller's — `Resize` says it for a size, and a carry keeps the box's own place as what the travel is added to. `elements/` holds the one custom element that is not shadcn's, `<drag-handle>`, which does the one thing Elm cannot, `setPointerCapture`
+- `Drag`/`Drag.Handle` — carrying a thing by a pointer: the state machine and the grip that reports it. The pointer is read in both directions at once, and which of them a size moves along is the caller's — `Resize` says it for a size, and `Shift` where the box's travel is added to. `elements/` holds the one custom element that is not shadcn's, `<drag-handle>`, which does the one thing Elm cannot, `setPointerCapture`
 
 A table the cars are decoded against is read where the cars decode rather than where they are drawn — `Data.Wec.eventDecoder` hands `Car.Metadata` the resolved colour, badge and photograph — so a widget handed a car has everything it draws and asks nothing a second time.
 

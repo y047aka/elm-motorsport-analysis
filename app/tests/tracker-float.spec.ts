@@ -330,9 +330,8 @@ test.describe('the floating track map', () => {
     expect(filled.x).toBeCloseTo(0, 0);
     expect(filled.y).toBeCloseTo(0, 0);
 
-    // And back the way it came is free: the window stops the size, not the carry. Were the
-    // ceiling the drag stops at recomputed from the size it stops, it would move with that
-    // size, and the corner would stay glued to the window's own edge.
+    // And back the way it came is free here too: `grow` says the ceiling a drag stops at does
+    // not move during the drag.
     await page.mouse.move(pick.x - 900, pick.y - 650, { steps: 10 });
     await expectBox(page, { x: opened.x - 900, y: opened.y - 650 });
     await page.mouse.up();

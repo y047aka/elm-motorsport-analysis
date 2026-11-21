@@ -159,7 +159,8 @@ ended carry =
     Ended { location = carry.location, travel = travel carry }
 
 
-{-| How far the pointer has gone since it came down, to wherever it let go.
+{-| The travel since the pointer came down, to a place the caller names rather than to
+where the carry last stood.
 -}
 travelTo : Place -> Carry location -> Point
 travelTo place carry =
@@ -189,8 +190,7 @@ travel carry =
     }
 
 
-{-| Whether that pointer is the one carrying. The message a pointer sends is answered
-only when it is, which is what lets two fingers hold two grips at once.
+{-| Whether that pointer is the one carrying.
 -}
 holds : Int -> State location -> Bool
 holds pointerId state =

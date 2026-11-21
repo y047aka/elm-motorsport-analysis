@@ -7,9 +7,8 @@ import Page.Wec.Shift as Shift
 import Test exposing (Test, describe, test)
 
 
-{-| The box is carried by `Drag`; these are the carrying the box asks on top of it. That the
-travel is added to where the box stands, that the window holds it without pinning it, and
-that the pointers that are not carrying it get nothing.
+{-| The box is carried by `Drag`; these are what the box asks on top of that carry -- that the
+window holds it without pinning it, and that a pointer which is not carrying it gets nothing.
 -}
 suite : Test
 suite =
