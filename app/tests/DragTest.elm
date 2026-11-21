@@ -1,7 +1,7 @@
 module DragTest exposing (suite)
 
 import Drag exposing (Msg(..), Outcome(..))
-import Drag.Handle exposing (Place)
+import Drag.Handle as Handle exposing (Place)
 import Expect
 import Test exposing (Test, describe, test)
 
@@ -14,7 +14,7 @@ suite =
                 \_ ->
                     Drag.update (Grab "3" (place 1 100 0)) Drag.init
                         |> Tuple.second
-                        |> Expect.equal (Began { location = "3", pointerId = 1, from = place 1 100 0, at = place 1 100 0 })
+                        |> Expect.equal (Began { location = "3", pointerId = 1, from = point 100 0, at = point 100 0 })
             , test "a second pointer's grab is refused while one is carried" <|
                 \_ ->
                     Drag.init
@@ -44,7 +44,7 @@ suite =
                         |> Tuple.first
                         |> Drag.update (Move (place 1 150 0))
                         |> Tuple.second
-                        |> Expect.equal (Stepped { location = (), pointerId = 1, from = place 1 100 0, at = place 1 140 0 })
+                        |> Expect.equal (Stepped { location = (), pointerId = 1, from = point 100 0, at = point 140 0 })
             , test "another pointer's moves are not the carry's business" <|
                 \_ ->
                     Drag.init
@@ -119,3 +119,8 @@ suite =
 place : Int -> Float -> Float -> Place
 place id x y =
     { id = id, x = x, y = y }
+
+
+point : Float -> Float -> Handle.Point
+point x y =
+    { x = x, y = y }

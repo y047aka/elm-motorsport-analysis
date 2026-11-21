@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Place, Point, Steps, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys)
+module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Place, Point, point, Steps, Fence, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys)
 
 {-| A grip that carries something: one along a line, one at a corner, and a surface that
 is dragged anywhere on -- by the pointer, or a step at a time by the arrow keys for the
@@ -18,7 +18,7 @@ of -- but it reads the pointer the same way, and so takes
 [`eventsByButton`](#eventsByButton) and [`arrowKeys`](#arrowKeys). Such a surface is where the
 two buttons split: the left carries the thing, the right turns what it shows.
 
-@docs Axis, Button, Device, Direction, Place, Point, Steps, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys
+@docs Axis, Button, Device, Direction, Place, Point, point, Steps, Fence, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys
 
 -}
 
@@ -86,6 +86,25 @@ type alias Point =
     }
 
 
+{-| The place, without the pointer attached to it.
+-}
+point : Place -> Point
+point p =
+    { x = p.x, y = p.y }
+
+
+{-| The bounds a size is held between. A size may have no top of its own: a floated box is
+held only by how small it may go, the page being what stops it growing.
+
+A travel is held between two of them too -- how far a box may be shifted along one axis is
+said the same way as how wide it may be grown.
+-}
+type alias Fence =
+    { min : Float
+    , max : Maybe Float
+    }
+
+
 {-| How many steps the arrow keys took a thing along each axis. The keys come one at
 a time, so a caller never sees both moved. Shift is the coarse step, five of them at a
 press.
@@ -96,13 +115,12 @@ type alias Steps =
     }
 
 
-{-| The size a splitter bounds, and the bounds it is held between. A reader hears these
+{-| The size a splitter bounds, and the fence it is held between. A reader hears these
 when the grip takes the focus; otherwise a size is nothing but what the thing looks.
 -}
 type alias Size =
     { now : Float
-    , min : Float
-    , max : Maybe Float
+    , fence : Fence
     }
 
 
@@ -486,10 +504,10 @@ values kind size =
     case ( kind, size ) of
         ( Splitter axis, Just v ) ->
             [ attribute "aria-valuenow" (said v.now)
-            , attribute "aria-valuemin" (said v.min)
+            , attribute "aria-valuemin" (said v.fence.min)
             , attribute "aria-valuetext" (said v.now ++ " pixels " ++ word axis)
             ]
-                ++ (case v.max of
+                ++ (case v.fence.max of
                         Just top ->
                             [ attribute "aria-valuemax" (said top) ]
 

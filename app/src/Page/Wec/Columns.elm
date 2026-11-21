@@ -523,18 +523,15 @@ reveal keys index =
 
 grab : StripKey -> Place -> Model -> ( Model, Cmd Msg )
 grab key place m =
-    if Drag.isCarrying m.carried then
-        ( m, Cmd.none )
+    case Drag.update (Drag.Grab key place) m.carried of
+        ( carried, Drag.Began _ ) ->
+            ( { m | carried = carried, stripScroll = { from = 0, to = 0 } }
+            , Browser.Dom.getViewportOf stripId
+                |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
+            )
 
-    else
-        let
-            ( carried, _ ) =
-                Drag.update (Drag.Grab key place) m.carried
-        in
-        ( { m | carried = carried, stripScroll = { from = 0, to = 0 } }
-        , Browser.Dom.getViewportOf stripId
-            |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
-        )
+        _ ->
+            ( m, Cmd.none )
 
 
 release : Maybe Snapshot -> Place -> Model -> ( Model, Cmd Msg )

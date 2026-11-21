@@ -1,4 +1,4 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, clampTo, unmeasured, diagonal)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, clampTo, unmeasured, diagonal, held)
 
 {-| A size the reader sets -- the width of the standings, the box a floated map keeps
 -- and the grip along the edge that moves it. The page holds one `Model` per size and
@@ -8,7 +8,7 @@ Which edge the grip lies along -- the axis its pointer is read along, the way th
 size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
 `Model` holds the size and the carry.
 
-@docs Model, Msg, Fence, Edge, Grows, init, update, grip, clampTo, unmeasured, diagonal
+@docs Model, Msg, Fence, Edge, Grows, init, update, grip, clampTo, unmeasured, diagonal, held
 
 -}
 
@@ -56,28 +56,27 @@ type Grows
 pointer's travel from the size `Drag` was picked up with.
 
 A size has grips -- along each of its two edges, and at the corners where those meet --
-and one `Model` between them, so which of them holds it is kept beside the carry: `grip`
-is the id of the one that does, and `Nothing` is none.
-
+and one `Model` between them, so which of them took the size up rides along on the carry,
+where it cannot outlive the carry.
 -}
 type alias Model =
     { size : Float
-    , carried : Drag.State Float
-    , grip : Maybe String
+    , carried : Drag.State Picked
     }
 
 
-{-| The bounds a size is held between. A size may have no top of its own: a floated box is
-held only by how small it may go, the page being what stops it growing.
+{-| What the carry holds: the size as the grip took it up, and which grip did.
+-}
+type alias Picked =
+    { size : Float
+    , by : String
+    }
 
-A travel is held between two of them too -- how far a box may be shifted along one axis is
-said the same way as how wide it may be grown.
 
+{-| `Handle.Fence`, under the name the sizes know it by.
 -}
 type alias Fence =
-    { min : Float
-    , max : Maybe Float
-    }
+    Handle.Fence
 
 
 {-| What nothing has been read yet leaves: wide enough that no window a drag could stop at
@@ -109,7 +108,6 @@ init : Float -> Model
 init size =
     { size = size
     , carried = Drag.init
-    , grip = Nothing
     }
 
 
@@ -141,12 +139,12 @@ update : Edge -> Msg -> Model -> Model
 update edge msg m =
     case msg of
         Grab place ->
-            case m.grip of
-                Just _ ->
-                    m
+            case Drag.update (Drag.Grab { size = m.size, by = edge.id } place) m.carried of
+                ( carried, Drag.Began _ ) ->
+                    { m | carried = carried }
 
-                Nothing ->
-                    { m | carried = Tuple.first (Drag.update (Drag.Grab m.size place) m.carried), grip = Just edge.id }
+                _ ->
+                    m
 
         Move place ->
             let
@@ -155,51 +153,37 @@ update edge msg m =
             in
             case outcome of
                 Drag.Stepped carry ->
-                    { m | carried = carried, size = clampTo edge.fence (carry.location + signed edge.grows (along edge place - along edge carry.from)) }
+                    { m | carried = carried, size = clampTo edge.fence (carry.location.size + signed edge.grows (along edge place - along edge carry.from)) }
 
                 _ ->
                     { m | carried = carried }
 
         Drop place ->
-            let
-                ( carried, _ ) =
-                    Drag.update (Drag.Drop place) m.carried
-            in
-            { m | carried = carried, grip = holding (Drag.isCarrying carried) m.grip }
+            { m | carried = Tuple.first (Drag.update (Drag.Drop place) m.carried) }
 
         Cancel pointerId ->
-            let
-                ( carried, _ ) =
-                    Drag.update (Drag.Cancel pointerId) m.carried
-            in
-            { m | carried = carried, grip = holding (Drag.isCarrying carried) m.grip }
+            { m | carried = Tuple.first (Drag.update (Drag.Cancel pointerId) m.carried) }
 
         Step steps ->
-            let
-                travel =
-                    toFloat
-                        (case edge.axis of
-                            Handle.Across ->
-                                steps.x
+            if Drag.isCarrying m.carried then
+                -- A step would move the size under the pointer that is carrying it, and the
+                -- next move would take the size back to where the pick measured it from.
+                m
 
-                            Handle.Down ->
-                                steps.y
-                        )
-                        * sizeStep
-            in
-            { m | size = clampTo edge.fence (m.size + signed edge.grows travel) }
+            else
+                let
+                    travel =
+                        toFloat
+                            (case edge.axis of
+                                Handle.Across ->
+                                    steps.x
 
-
-{-| The grip holding the size, until nothing is carried any more. A second pointer's
-release leaves the first holding on, and `Drag` says so.
--}
-holding : Bool -> Maybe String -> Maybe String
-holding stillCarried held =
-    if stillCarried then
-        held
-
-    else
-        Nothing
+                                Handle.Down ->
+                                    steps.y
+                            )
+                            * sizeStep
+                in
+                { m | size = clampTo edge.fence (m.size + signed edge.grows travel) }
 
 
 signed : Grows -> Float -> Float
@@ -222,6 +206,18 @@ clampTo fence size =
             max fence.min size
 
 
+{-| Whether the grip named is the one the size is carried by.
+-}
+held : String -> Model -> Bool
+held gripId m =
+    case Drag.carrying m.carried of
+        Just carry ->
+            carry.location.by == gripId
+
+        Nothing ->
+            False
+
+
 {-| How far one arrow key takes a size. Shift is five of them, which `Handle` says.
 -}
 sizeStep : Float
@@ -236,12 +232,12 @@ grip edge m =
     Handle.resize edge.axis
         { glyph = edge.glyph
         , cursor = edge.cursor
-        , size = { now = m.size, min = edge.fence.min, max = edge.fence.max }
+        , size = { now = m.size, fence = edge.fence }
         , onStep = Step
         }
         { id = edge.id
         , label = edge.label
-        , held = m.grip == Just edge.id
+        , held = held edge.id m
         , marks = edge.marks
         , onGrab = Grab
         , onMove = Move

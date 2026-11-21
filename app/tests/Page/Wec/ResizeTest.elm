@@ -59,12 +59,24 @@ suite =
             , test "the grip that took the size up is the one said to hold it" <|
                 \_ ->
                     Expect.all
-                        [ \m ->
-                            Expect.equal (Just edge.id) m.grip
-                        , \m ->
-                            m |> step (Drop (place 1 300)) |> .grip |> Expect.equal Nothing
+                        [ \m -> Resize.held edge.id m |> Expect.equal True
+                        , \m -> m |> step (Drop (place 1 300)) |> Resize.held edge.id |> Expect.equal False
                         ]
                         (startAt 300)
+            , test "a second grip cannot take the size up" <|
+                \_ ->
+                    startAt 300
+                        |> step (Grab (place 1 300))
+                        |> step (Grab (place 2 300))
+                        |> Resize.held edge.id
+                        |> Expect.equal True
+            , test "an arrow key does not move the size under a carried grip" <|
+                \_ ->
+                    startAt 300
+                        |> step (Grab (place 1 300))
+                        |> step (Step { x = 1, y = 0 })
+                        |> .size
+                        |> Expect.equal 300
             , test "the size stops at the fence on either side" <|
                 \_ ->
                     Expect.all

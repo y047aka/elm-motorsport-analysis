@@ -20,7 +20,7 @@ moves along is the edge's, and stays there.
 
 -}
 
-import Drag.Handle exposing (Place, Point)
+import Drag.Handle as Handle exposing (Place, Point)
 
 
 {-| What a grip reports. `Grab` takes the pointer up with something; `Move`
@@ -42,8 +42,8 @@ thing being carried as the grab handed it over.
 type alias Carry location =
     { location : location
     , pointerId : Int
-    , from : Place
-    , at : Place
+    , from : Point
+    , at : Point
     }
 
 
@@ -99,8 +99,11 @@ update msg state =
     case msg of
         Grab location place ->
             let
+                at =
+                    Handle.point place
+
                 carry =
-                    { location = location, pointerId = place.id, from = place, at = place }
+                    { location = location, pointerId = place.id, from = at, at = at }
             in
             case state of
                 Idle ->
@@ -113,7 +116,7 @@ update msg state =
             case state of
                 Dragging carry ->
                     if carry.pointerId == place.id then
-                        ( Dragging { carry | at = place }, Stepped carry )
+                        ( Dragging { carry | at = Handle.point place }, Stepped carry )
 
                     else
                         ( state, Kept )
@@ -142,15 +145,7 @@ endsWith place pointerId state =
     case state of
         Dragging carry ->
             if carry.pointerId == pointerId then
-                ( Idle
-                , Ended
-                    { location = carry.location
-                    , travel =
-                        { x = place.x - carry.from.x
-                        , y = place.y - carry.from.y
-                        }
-                    }
-                )
+                ( Idle, Ended { location = carry.location, travel = travelTo place carry } )
 
             else
                 ( state, Kept )
@@ -162,6 +157,15 @@ endsWith place pointerId state =
 ended : Carry location -> Outcome location
 ended carry =
     Ended { location = carry.location, travel = travel carry }
+
+
+{-| How far the pointer has gone since it came down, to wherever it let go.
+-}
+travelTo : Place -> Carry location -> Point
+travelTo place carry =
+    { x = place.x - carry.from.x
+    , y = place.y - carry.from.y
+    }
 
 
 {-| The carry in progress, if there is one.

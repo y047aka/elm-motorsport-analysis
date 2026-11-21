@@ -95,6 +95,7 @@ async function carryGrip(page: Page, handle: Locator, dx: number, dy: number) {
   await page.mouse.down();
   await expect(handle).toHaveClass(/cursor-grabbing/);
   await page.mouse.move(x + dx, y + dy, { steps: 10 });
+  return { x, y };
 }
 
 test.describe('the floating track map', () => {
@@ -321,12 +322,19 @@ test.describe('the floating track map', () => {
     // The fences say how small the box may go and nothing more: the window is the only
     // ceiling, and it stops every edge on its own. So a corner pulled far up and left
     // leaves the box standing on the window's own corner, filling it.
-    await carryGrip(page, northWestGrip(page), -1400, -1000);
+    const opened = await box(page, FLOAT);
+    const pick = await carryGrip(page, northWestGrip(page), -1400, -1000);
     const filled = await box(page, FLOAT);
     expect(filled.width).toBeCloseTo(windowW - CORNER_ROOM, 0);
     expect(filled.height).toBeCloseTo(windowH - CORNER_ROOM, 0);
     expect(filled.x).toBeCloseTo(0, 0);
     expect(filled.y).toBeCloseTo(0, 0);
+
+    // And back the way it came is free: the window stops the size, not the carry. Were the
+    // ceiling the drag stops at recomputed from the size it stops, it would move with that
+    // size, and the corner would stay glued to the window's own edge.
+    await page.mouse.move(pick.x - 900, pick.y - 650, { steps: 10 });
+    await expectBox(page, { x: opened.x - 900, y: opened.y - 650 });
     await page.mouse.up();
   });
 

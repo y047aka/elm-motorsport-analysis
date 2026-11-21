@@ -394,7 +394,7 @@ so. An edge moves one, a corner the two that meet there.
 -}
 holds : GripInfo -> Model -> Bool
 holds g m =
-    List.any (\s -> (along s m).size.grip == Just g.id) g.moves
+    List.any (\s -> Resize.held g.id (along s m).size) g.moves
 
 
 {-| The track an edge grip stands in: a bar along the side it bounds.
