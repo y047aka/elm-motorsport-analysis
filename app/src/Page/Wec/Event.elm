@@ -508,9 +508,10 @@ columnGrip held key =
         { id = Columns.gripId key
         , label = "Move this column"
         , held = held
+        , marks = True
         , onGrab = Columns.Grab key >> ColumnsMsg
-        , onMove = Columns.Carrying >> ColumnsMsg
-        , onDrop = Columns.Release >> ColumnsMsg
+        , onMove = Columns.Move >> ColumnsMsg
+        , onDrop = Columns.Drop >> ColumnsMsg
         , onCancel = Columns.Cancel >> ColumnsMsg
         }
 

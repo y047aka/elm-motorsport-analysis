@@ -84,25 +84,22 @@ init size =
 
 type Msg
     = Grab Place
-    | Carrying Place
-    | Release Place
+    | Move Place
+    | Drop Place
     | Cancel Int
 
 
 {-| The place read along the axis this edge is read along. A size is moved by one
 coordinate, and the grip at a corner reports both.
 -}
-along : Edge -> Place -> Handle.Pointer
-along edge place =
-    { id = place.id
-    , along =
-        case edge.axis of
-            Handle.Across ->
-                place.x
+along : Edge -> { p | x : Float, y : Float } -> Float
+along edge p =
+    case edge.axis of
+        Handle.Across ->
+            p.x
 
-            Handle.Down ->
-                place.y
-    }
+        Handle.Down ->
+            p.y
 
 
 {-| The size follows `Drag`, and a `Cancel` leaves it where the last move left
@@ -117,24 +114,24 @@ update edge msg m =
                     m
 
                 Nothing ->
-                    { m | carried = Tuple.first (Drag.update (Drag.Pick m.size (along edge place)) m.carried), grip = Just edge.id }
+                    { m | carried = Tuple.first (Drag.update (Drag.Grab m.size place) m.carried), grip = Just edge.id }
 
-        Carrying place ->
+        Move place ->
             let
-                ( carried, _ ) =
-                    Drag.update (Drag.Move (along edge place)) m.carried
+                ( carried, outcome ) =
+                    Drag.update (Drag.Move place) m.carried
             in
-            case Drag.carrying carried of
-                Just carry ->
-                    { m | carried = carried, size = clampTo edge.fence (carry.location + signed edge.grows (Drag.travel carry)) }
+            case outcome of
+                Drag.Stepped carry ->
+                    { m | carried = carried, size = clampTo edge.fence (carry.location + signed edge.grows (along edge place - along edge carry.from)) }
 
-                Nothing ->
+                _ ->
                     { m | carried = carried }
 
-        Release place ->
+        Drop place ->
             let
                 ( carried, _ ) =
-                    Drag.update (Drag.Drop (along edge place)) m.carried
+                    Drag.update (Drag.Drop place) m.carried
             in
             { m | carried = carried, grip = holding (Drag.isCarrying carried) m.grip }
 
@@ -189,7 +186,7 @@ grip edge m =
         , held = m.grip == Just edge.id
         , marks = edge.marks
         , onGrab = Grab
-        , onMove = Carrying
-        , onDrop = Release
+        , onMove = Move
+        , onDrop = Drop
         , onCancel = Cancel
         }

@@ -460,8 +460,8 @@ view m track snapshot =
                     , held = holds g m
                     , marks = False
                     , onGrab = toMsg << Resize.Grab
-                    , onMove = toMsg << Resize.Carrying
-                    , onDrop = toMsg << Resize.Release
+                    , onMove = toMsg << Resize.Move
+                    , onDrop = toMsg << Resize.Drop
                     , onCancel = toMsg << Resize.Cancel
                     }
                 ]

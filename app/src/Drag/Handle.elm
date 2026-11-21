@@ -1,8 +1,11 @@
-module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys)
+module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Place, Point, Steps, Config, resize, corner, view, events, eventsByButton, arrowKeys)
 
-{-| A grip that carries something: along a line, or across the page in both directions at
-once -- by the pointer, or a step at a time by the arrow keys for the grips that
-answer to them.
+{-| A grip that carries something: one along a line, one at a corner, and a surface that
+is dragged anywhere on -- by the pointer, or a step at a time by the arrow keys for the
+grips that answer to them.
+
+Every grip reads the pointer in both directions at once. Which of the two a size moves
+along is the caller's, and `Axis` is where it says so.
 
 The grip holds no state of its own -- `held` is the caller's, and the carry
 behind it is `Drag`'s business. What the grip adds is the pointer's path: the
@@ -15,7 +18,7 @@ of -- but it reads the pointer the same way, and so takes
 [`eventsByButton`](#eventsByButton) and [`arrowKeys`](#arrowKeys). Such a surface is where the
 two buttons split: the left carries the thing, the right turns what it shows.
 
-@docs Axis, Button, Device, Direction, Pointer, Place, Steps, Config, Placed, resize, corner, view, eventsAcross, eventsByButton, arrowKeys
+@docs Axis, Button, Device, Direction, Place, Point, Steps, Config, resize, corner, view, events, eventsByButton, arrowKeys
 
 -}
 
@@ -51,15 +54,6 @@ type Device
     | Touch
 
 
-{-| Which pointer, and where it is along the axis its grip reads. Two fingers can
-hold two grips at once, and each reports its own release.
--}
-type alias Pointer =
-    { id : Int
-    , along : Float
-    }
-
-
 {-| Which corner of a box a grip stands at. It says which way the box grows, and so
 which way the cursor turns: the two corners of one diagonal share a cursor.
 -}
@@ -70,12 +64,20 @@ type Direction
     | SouthEast
 
 
-{-| Which pointer, and where it is in both directions at once: what a grip reading across
-the page, rather than along a line, reports.
+{-| Which pointer, and where it is. Two fingers can hold two grips at once, and each
+reports its own release.
 -}
 type alias Place =
     { id : Int
     , x : Float
+    , y : Float
+    }
+
+
+{-| How far apart two places are -- a travel, with no pointer to say whose it is.
+-}
+type alias Point =
+    { x : Float
     , y : Float
     }
 
@@ -89,7 +91,9 @@ type alias Steps =
     }
 
 
-{-| A grip's own state is the caller's: `held` says whether this grip is the
+{-| What every grip is wired with, whichever of them it is.
+
+A grip's own state is the caller's: `held` says whether this grip is the
 one being carried, and moves are only reported while it is. The release is
 reported always, and says where it happened: a carry let go of before the
 next frame has reported no moves at all.
@@ -98,25 +102,11 @@ next frame has reported no moves at all.
 the pointer for itself, or the grip leaving the document. It also follows
 every `onDrop`, and both arrive whether or not anything is held.
 
--}
-type alias Config msg =
-    { id : String
-    , label : String
-    , held : Bool
-    , onGrab : Pointer -> msg
-    , onMove : Pointer -> msg
-    , onDrop : Pointer -> msg
-    , onCancel : Int -> msg
-    }
-
-
-{-| The same, for a grip that reads both directions at once.
-
 `marks` says whether the grip marks itself: a `title` the pointer reads out, and a light
 while it is held.
 
 -}
-type alias Placed msg =
+type alias Config msg =
     { id : String
     , label : String
     , held : Bool
@@ -138,7 +128,7 @@ view step config =
         { id = config.id
         , label = config.label
         , held = config.held
-        , marks = True
+        , marks = config.marks
         , hint = "← →"
         , classes = "grid place-content-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
         , cursor =
@@ -148,7 +138,7 @@ view step config =
             else
                 "cursor-grab"
         , glyph = "⠿"
-        , events = eventsAlong Across config ++ [ stepWith leftRight step ]
+        , events = events config ++ [ stepWith leftRight step ]
         }
 
 
@@ -167,7 +157,7 @@ The `cursor` is the caller's: the axis says which way the grip travels, not what
 bounds.
 
 -}
-resize : Axis -> { glyph : String, cursor : String } -> Placed msg -> Html msg
+resize : Axis -> { glyph : String, cursor : String } -> Config msg -> Html msg
 resize axis look config =
     let
         classes =
@@ -193,7 +183,7 @@ resize axis look config =
             else
                 look.cursor
         , glyph = look.glyph
-        , events = eventsAcross config
+        , events = events config
         }
 
 
@@ -202,7 +192,7 @@ axes and the caller decides which of them moves what. Which diagonal it lies alo
 the cursor's -- the two ends of it, since a corner pulls both. It fills the box it is set
 in, which is what sizes the corner.
 -}
-corner : Direction -> Placed msg -> Html msg
+corner : Direction -> Config msg -> Html msg
 corner direction config =
     grip
         Corner
@@ -230,7 +220,7 @@ corner direction config =
                     SouthWest ->
                         "cursor-nesw-resize"
         , glyph = ""
-        , events = eventsAcross config
+        , events = events config
         }
 
 
@@ -381,42 +371,17 @@ arrowKeys =
     stepWith bothArrows
 
 
-{-| The pointer's events of a grip read along one axis.
+{-| The pointer's events of a grip: the press, the moves, the release and the taking-back.
+The press is taken by the primary button alone.
 
-The row stays open because the grip that steps along the axis is handed over too, and
-its `onStep` is the grip's own business.
+The row stays open because the grip that steps by the arrow keys is handed over too, and
+its keys are the grip's own business.
 
 -}
-eventsAlong :
-    Axis
-    -> { g | held : Bool, onGrab : Pointer -> msg, onMove : Pointer -> msg, onDrop : Pointer -> msg, onCancel : Int -> msg }
-    -> List (Html.Attribute msg)
-eventsAlong axis config =
-    let
-        read =
-            pointer axis
-    in
-    [ on "pointerdown" (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab read))
-    , on "pointerup" (Decode.map config.onDrop read)
-    , on "pointercancel" (Decode.map config.onCancel pointerId)
-    , on "lostpointercapture" (Decode.map config.onCancel pointerId)
-    ]
-        ++ (if config.held then
-                [ on "pointermove" (Decode.map config.onMove read) ]
-
-            else
-                []
-           )
-
-
-{-| The pointer's events of a grip read in both directions at once, taken up by the primary
-button alone. The row stays open because what reads these events may step by the arrow keys
-as well.
--}
-eventsAcross :
+events :
     { g | held : Bool, onGrab : Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
     -> List (Html.Attribute msg)
-eventsAcross config =
+events config =
     pressAndMoves config
         (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab place))
 
@@ -458,11 +423,6 @@ pressAndMoves config press =
            )
 
 
-pointer : Axis -> Decoder Pointer
-pointer axis =
-    Decode.map2 Pointer pointerId (coordinate axis)
-
-
 place : Decoder Place
 place =
     Decode.map3 Place pointerId (Decode.field "clientX" Decode.float) (Decode.field "clientY" Decode.float)
@@ -500,19 +460,6 @@ role kind =
             -- A separator still, and one that is neither bar: `aria-orientation` has
             -- no word for a corner.
             [ attribute "role" "separator" ]
-
-
-coordinate : Axis -> Decoder Float
-coordinate axis =
-    Decode.field
-        (case axis of
-            Across ->
-                "clientX"
-
-            Down ->
-                "clientY"
-        )
-        Decode.float
 
 
 pointerId : Decoder Int
