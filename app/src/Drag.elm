@@ -12,9 +12,9 @@ and a `Cancel` after every `Drop` and whenever the browser takes the pointer.
 `update` is total over that, so a page can wire a grip's messages straight in
 and check nothing first.
 
-The pointer is read in both directions at once, and it is the caller that
-cares about one of them: a column is moved by `x` alone, a floated box by
-both. Which of them a size moves along is the edge's, and stays there.
+A column is moved by `x` alone, a floated box by both, so the carry keeps the
+`Place` at both ends and the caller projects what it needs. Which axis a size
+moves along is the edge's, and stays there.
 
 @docs State, Msg, Carry, Done, Outcome, init, update, carrying, travel, isCarrying, holds
 

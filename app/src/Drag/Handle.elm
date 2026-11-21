@@ -395,14 +395,8 @@ arrowKeys =
 
 {-| The pointer's events of a grip: the press, the moves, the release and the taking-back.
 The press is taken by the primary button alone.
-
-The row stays open because the grip that steps by the arrow keys is handed over too, and
-its keys are the grip's own business.
-
 -}
-events :
-    { g | held : Bool, onGrab : Place -> msg, onMove : Place -> msg, onDrop : Place -> msg, onCancel : Int -> msg }
-    -> List (Html.Attribute msg)
+events : Config msg -> List (Html.Attribute msg)
 events config =
     pressAndMoves config
         (primaryButton |> Decode.andThen (\_ -> Decode.map config.onGrab place))

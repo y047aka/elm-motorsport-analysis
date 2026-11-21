@@ -212,8 +212,6 @@ signed grows travel =
             negate travel
 
 
-{-| The size, kept inside the bounds. A fence with no top is held only from below.
--}
 clampTo : Fence -> Float -> Float
 clampTo fence size =
     case fence.max of

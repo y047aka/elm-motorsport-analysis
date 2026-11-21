@@ -70,8 +70,8 @@ type Msg
     | Step Handle.Steps
 
 
-{-| The box's own place when the pointer took it up is what the travel is added to, so a
-carry that starts where the box stands ends where the box stands.
+{-| The box's own place at the pick is the thing carried, so the travel is added to where
+the box stands rather than to where the pointer came down.
 
 A box that has gone missing leaves the bounds wide, since a grip on it cannot be held
 anyway.
