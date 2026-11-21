@@ -27,6 +27,7 @@ edge =
     , id = "test-resize-grip"
     , label = "Resize the test thing"
     , glyph = ""
+    , cursor = "cursor-col-resize"
     }
 
 

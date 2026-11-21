@@ -69,6 +69,7 @@ type alias Edge =
     , id : String
     , label : String
     , glyph : String
+    , cursor : String
     }
 
 
@@ -181,7 +182,7 @@ clampTo fence size =
 grip : Edge -> Model -> Html Msg
 grip edge m =
     Handle.resize edge.axis
-        edge.glyph
+        { glyph = edge.glyph, cursor = edge.cursor }
         { id = edge.id
         , label = edge.label
         , held = m.grip == Just edge.id

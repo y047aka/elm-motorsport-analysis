@@ -73,6 +73,7 @@ standingsEdge =
     , id = "standings-resize-grip"
     , label = "Resize the standings column"
     , glyph = "⋮"
+    , cursor = "cursor-col-resize"
     }
 
 

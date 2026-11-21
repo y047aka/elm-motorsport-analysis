@@ -44,8 +44,8 @@ const topGrip = (page: Page): Locator => edgeGrip(page, 'top');
 const bottomGrip = (page: Page): Locator => edgeGrip(page, 'bottom');
 
 /** The four corners, each the meeting of two edges and the one grip that grows both
- * sizes at once. The cursor says which diagonal it lies along; the two corners of one
- * diagonal share it.
+ * sizes at once. The cursor says which corner it is: no two of the four share one, as
+ * no two of them grow the box the same way.
  */
 const cornerGrip = (page: Page, corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'): Locator =>
   page.getByRole('separator', { name: `Resize the floating track map from its ${corner} corner` });
@@ -158,7 +158,7 @@ test.describe('the floating track map', () => {
     // The pointer is the only way in: no key reaches the grip and it is no tab stop, so
     // the cursor along the edge is the whole affordance. Nothing lights under the
     // pointer, and the grip takes a background only while it is held.
-    await expect(leftGrip(page)).toHaveCSS('cursor', 'col-resize');
+    await expect(leftGrip(page)).toHaveCSS('cursor', 'ew-resize');
     await expect(leftGrip(page)).not.toHaveAttribute('tabindex');
     await leftGrip(page).hover();
     await expect(leftGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
@@ -238,16 +238,16 @@ test.describe('the floating track map', () => {
     await page.mouse.up();
   });
 
-  test('grows both ways at once from a corner, and says which diagonal it is', async ({ page }) => {
+  test('grows both ways at once from a corner, and says which corner it is', async ({ page }) => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);
 
     // The pointer is the only way in, as along the edges: no key reaches a corner, it is
     // no tab stop, and it marks nothing. What it does say is which way the box grows.
-    await expect(northWestGrip(page)).toHaveCSS('cursor', 'nwse-resize');
-    await expect(southEastGrip(page)).toHaveCSS('cursor', 'nwse-resize');
-    await expect(northEastGrip(page)).toHaveCSS('cursor', 'nesw-resize');
-    await expect(southWestGrip(page)).toHaveCSS('cursor', 'nesw-resize');
+    await expect(northWestGrip(page)).toHaveCSS('cursor', 'nw-resize');
+    await expect(southEastGrip(page)).toHaveCSS('cursor', 'se-resize');
+    await expect(northEastGrip(page)).toHaveCSS('cursor', 'ne-resize');
+    await expect(southWestGrip(page)).toHaveCSS('cursor', 'sw-resize');
     await expect(northWestGrip(page)).toHaveText('');
     await expect(northWestGrip(page)).not.toHaveAttribute('tabindex');
 

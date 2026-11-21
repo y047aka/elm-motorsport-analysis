@@ -132,6 +132,15 @@ class off the source text and invents nothing.
 -}
 side : String -> String -> String -> Handle.Axis -> Resize.Grows -> Resize.Fence -> Side
 side name at pad axis grows fence =
+    let
+        cursor =
+            case axis of
+                Handle.Across ->
+                    "cursor-ew-resize"
+
+                Handle.Down ->
+                    "cursor-ns-resize"
+    in
     { name = name
     , at = at
     , pad = pad
@@ -142,6 +151,7 @@ side name at pad axis grows fence =
         , id = "tracker-float-" ++ name ++ "-grip"
         , label = "Resize the floating track map from the " ++ name
         , glyph = ""
+        , cursor = cursor
         }
     }
 
@@ -205,11 +215,11 @@ grip g =
             }
 
 
-{-| Which diagonal a corner lies along -- the cursor says it, and the two edges it is the
-meeting of say which.
+{-| Which corner it is: the two edges it is the meeting of say, and the cursor wears the
+word.
 -}
-diagonal : Side -> Side -> Handle.Direction
-diagonal width height =
+quadrant : Side -> Side -> Handle.Direction
+quadrant width height =
     case ( width.edge.grows, height.edge.grows ) of
         ( Resize.AgainstPointer, Resize.AgainstPointer ) ->
             Handle.NorthWest
@@ -442,7 +452,7 @@ view m track snapshot =
                     Grow (Corner width height)
             in
             div [ Attributes.class ("absolute " ++ g.at ++ " z-20 h-4 w-4") ]
-                [ Handle.corner (diagonal width height)
+                [ Handle.corner (quadrant width height)
                     { id = g.id
                     , label = g.label
                     , held = holds g m

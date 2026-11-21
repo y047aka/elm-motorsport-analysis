@@ -151,27 +151,27 @@ travel is the size's, and no key reaches it. `Across` lies along a column
 edge, `Down` along a row edge. It answers as the splitter it is, and how far the
 size can go is said nowhere on the element.
 
-The `String` is the mark drawn along the edge. An empty one leaves the cursor the
+The `glyph` is the mark drawn along the edge. An empty one leaves the cursor the
 only thing saying where the grip is -- and asks the wrapper to centre along the
 mark's own axis only: `justify-content: center` sizes a track to its content, and a
 `w-full` grip with no mark then has no width to be, so `content-center` rather than
 `place-content-center`.
 
+The `cursor` is the caller's, since the axis says which way the grip travels and not
+what the thing bounded is: a column's edge says `cursor-col-resize`, the edge of a box
+grown from either end says `cursor-ew-resize`.
+
 -}
-resize : Axis -> String -> Placed msg -> Html msg
-resize axis glyph config =
+resize : Axis -> { glyph : String, cursor : String } -> Placed msg -> Html msg
+resize axis look config =
     let
-        ( classes, cursor ) =
+        classes =
             case axis of
                 Across ->
-                    ( "grid place-content-center w-2 h-full text-[11px] select-none transition-colors"
-                    , "cursor-col-resize"
-                    )
+                    "grid place-content-center w-2 h-full text-[11px] select-none transition-colors"
 
                 Down ->
-                    ( "grid place-content-center h-2 w-full text-[11px] select-none transition-colors"
-                    , "cursor-row-resize"
-                    )
+                    "grid place-content-center h-2 w-full text-[11px] select-none transition-colors"
     in
     grip
         (Splitter axis)
@@ -185,15 +185,15 @@ resize axis glyph config =
                 "cursor-grabbing"
 
             else
-                cursor
-        , glyph = glyph
+                look.cursor
+        , glyph = look.glyph
         , events = eventsAcross config
         }
 
 
 {-| The grip at a corner, growing both sizes at once: the pointer is read along both
-axes and the caller decides which of them moves what. Which diagonal it lies along is
-the cursor's. It fills the box it is set in, which is what sizes the corner.
+axes and the caller decides which of them moves what. Which corner it is, the cursor
+says. It fills the box it is set in, which is what sizes the corner.
 -}
 corner : Direction -> Placed msg -> Html msg
 corner direction config =
@@ -211,16 +211,16 @@ corner direction config =
             else
                 case direction of
                     NorthWest ->
-                        "cursor-nwse-resize"
-
-                    SouthEast ->
-                        "cursor-nwse-resize"
+                        "cursor-nw-resize"
 
                     NorthEast ->
-                        "cursor-nesw-resize"
+                        "cursor-ne-resize"
 
                     SouthWest ->
-                        "cursor-nesw-resize"
+                        "cursor-sw-resize"
+
+                    SouthEast ->
+                        "cursor-se-resize"
         , glyph = ""
         , events = eventsAcross config
         }
