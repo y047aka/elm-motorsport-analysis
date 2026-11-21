@@ -122,6 +122,21 @@ suite =
                     step (Cancel 1) released
                         |> Expect.equal released
             ]
+        , describe "the arrow keys stepping it"
+            [ test "one press takes one step, and Shift takes five" <|
+                \_ ->
+                    Resize.init 300
+                        |> step (Step { x = 1, y = 0 })
+                        |> step (Step { x = 5, y = 0 })
+                        |> .size
+                        |> Expect.equal 360
+            , test "the fence the pointer is held by holds the keys too" <|
+                \_ ->
+                    Resize.init 300
+                        |> step (Step { x = 100, y = 0 })
+                        |> .size
+                        |> Expect.equal top
+            ]
         ]
 
 

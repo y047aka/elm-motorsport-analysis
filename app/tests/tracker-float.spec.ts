@@ -150,19 +150,33 @@ test.describe('the floating track map', () => {
     await floatTrigger(page).click();
     const opened = await box(page, FLOAT);
 
-    // The grip along the left edge says which bar it is. The bounds the size is held
-    // between are the Elm's and are said nowhere on it.
+    // The grip along the left edge says which bar it is, and says the size it bounds and
+    // what it is held between: a size only the pointer can reach is a size no reader hears.
     await expect(leftGrip(page)).toHaveAttribute('aria-orientation', 'vertical');
-    await expect(leftGrip(page)).not.toHaveAttribute('aria-valuenow');
+    await expect(leftGrip(page)).toHaveAttribute('aria-valuenow', String(FLOAT_WIDTH));
+    await expect(leftGrip(page)).toHaveAttribute('aria-valuemin', String(WIDTH_MIN));
+    await expect(leftGrip(page)).toHaveAttribute('aria-valuetext', `${FLOAT_WIDTH} pixels wide`);
 
-    // The pointer is the only way in: no key reaches the grip and it is no tab stop, so
-    // the cursor along the edge is the whole affordance. Nothing lights under the
-    // pointer, and the grip says nothing there either -- the box growing is the feedback.
+    // Nothing lights under the pointer, and the grip says nothing there either -- the box
+    // growing is the feedback. The keys it answers to are said by the size it steps.
     await expect(leftGrip(page)).toHaveCSS('cursor', 'ew-resize');
-    await expect(leftGrip(page)).not.toHaveAttribute('tabindex');
+    await expect(leftGrip(page)).toHaveAttribute('tabindex', '0');
     await expect(leftGrip(page)).not.toHaveAttribute('title');
     await leftGrip(page).hover();
     await expect(leftGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+
+    // Left is away from the corner the box is stood at, so a travel left widens it --
+    // and the arrow keys step it the same way, one step at a time and five with Shift.
+    await leftGrip(page).focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(leftGrip(page)).toHaveAttribute('aria-valuenow', String(FLOAT_WIDTH + 10));
+    await page.keyboard.press('Shift+ArrowLeft');
+    await expect(leftGrip(page)).toHaveAttribute('aria-valuenow', String(FLOAT_WIDTH + 60));
+    await page.keyboard.press('ArrowRight');
+    await expect(leftGrip(page)).toHaveAttribute('aria-valuenow', String(FLOAT_WIDTH + 50));
+
+    // The size the keys left the box at is what the drag is measured from.
+    const keyed = await box(page, FLOAT);
 
     // Left is away from the corner the box is stood at, so a travel left widens
     // it -- and the right edge, the anchor, does not move.
@@ -170,7 +184,7 @@ test.describe('the floating track map', () => {
 
     await expect(leftGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     const wider = await box(page, FLOAT);
-    expect(wider.width).toBeCloseTo(FLOAT_WIDTH + 120, 0);
+    expect(wider.width).toBeCloseTo(keyed.width + 120, 0);
     expect(wider.x + wider.width).toBeCloseTo(opened.x + opened.width, 0);
     expect(wider.y).toBeCloseTo(opened.y, 0);
     await page.mouse.up();

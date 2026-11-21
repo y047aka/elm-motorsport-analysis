@@ -99,6 +99,7 @@ type Msg
     | Move Place
     | Drop Place
     | Cancel Int
+    | Step Handle.Steps
 
 
 {-| The place read along the axis this edge is read along. A size is moved by one
@@ -154,6 +155,21 @@ update edge msg m =
             in
             { m | carried = carried, grip = holding (Drag.isCarrying carried) m.grip }
 
+        Step steps ->
+            let
+                travel =
+                    toFloat
+                        (case edge.axis of
+                            Handle.Across ->
+                                steps.x
+
+                            Handle.Down ->
+                                steps.y
+                        )
+                        * sizeStep
+            in
+            { m | size = clampTo edge.fence (m.size + signed edge.grows travel) }
+
 
 {-| The grip holding the size, until nothing is carried any more. A second pointer's
 release leaves the first holding on, and `Drag` says so.
@@ -189,12 +205,23 @@ clampTo fence size =
             max fence.min size
 
 
+{-| How far one arrow key takes a size. Shift is five of them, which `Handle` says.
+-}
+sizeStep : Float
+sizeStep =
+    10
+
+
 {-| The grip along the edge, held when it is the one that took the size up.
 -}
 grip : Edge -> Model -> Html Msg
 grip edge m =
     Handle.resize edge.axis
-        { glyph = edge.glyph, cursor = edge.cursor }
+        { glyph = edge.glyph
+        , cursor = edge.cursor
+        , size = { now = m.size, min = edge.fence.min, max = edge.fence.max }
+        , onStep = Step
+        }
         { id = edge.id
         , label = edge.label
         , held = m.grip == Just edge.id

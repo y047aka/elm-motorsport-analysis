@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Place, Point, Steps, Config, resize, corner, view, events, eventsByButton, arrowKeys)
+module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Place, Point, Steps, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys)
 
 {-| A grip that carries something: one along a line, one at a corner, and a surface that
 is dragged anywhere on -- by the pointer, or a step at a time by the arrow keys for the
@@ -18,7 +18,7 @@ of -- but it reads the pointer the same way, and so takes
 [`eventsByButton`](#eventsByButton) and [`arrowKeys`](#arrowKeys). Such a surface is where the
 two buttons split: the left carries the thing, the right turns what it shows.
 
-@docs Axis, Button, Device, Direction, Place, Point, Steps, Config, resize, corner, view, events, eventsByButton, arrowKeys
+@docs Axis, Button, Device, Direction, Place, Point, Steps, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys
 
 -}
 
@@ -56,6 +56,10 @@ type Device
 
 {-| Which corner of a box a grip stands at. It says which way the box grows, and so
 which way the cursor turns: the two corners of one diagonal share a cursor.
+
+A corner grows both sizes at once, which is no one size for the grip to name, so it stays
+out of the arrow keys and says no `aria-valuenow`.
+
 -}
 type Direction
     = NorthWest
@@ -83,11 +87,22 @@ type alias Point =
 
 
 {-| How many steps the arrow keys took a thing along each axis. The keys come one at
-a time, so a caller never sees both moved.
+a time, so a caller never sees both moved. Shift is the coarse step, five of them at a
+press.
 -}
 type alias Steps =
     { x : Int
     , y : Int
+    }
+
+
+{-| The size a splitter bounds, and the bounds it is held between. A reader hears these
+when the grip takes the focus; otherwise a size is nothing but what the thing looks.
+-}
+type alias Size =
+    { now : Float
+    , min : Float
+    , max : Maybe Float
     }
 
 
@@ -129,6 +144,7 @@ view step config =
         , label = config.label
         , held = config.held
         , marks = config.marks
+        , size = Nothing
         , hint = "← →"
         , classes = "grid place-content-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
         , cursor =
@@ -143,9 +159,11 @@ view step config =
 
 
 {-| The same grip lying along an edge to resize what it bounds: the pointer's
-travel is the size's, and no key reaches it. `Across` lies along a column
-edge, `Down` along a row edge. It answers as the splitter it is, and how far the
-size can go is said nowhere on the element.
+travel is the size's, and the arrow keys step it once the grip has the focus. `Across`
+lies along a column edge, `Down` along a row edge.
+
+The `size` is what the splitter says about itself -- the ARIA's `aria-valuenow` and its
+two ends -- since a size only the pointer can reach is a size no reader hears.
 
 The `glyph` is the mark drawn along the edge. An empty one leaves the cursor the
 only thing saying where the grip is -- and asks the wrapper to centre along the
@@ -157,7 +175,7 @@ The `cursor` is the caller's: the axis says which way the grip travels, not what
 bounds.
 
 -}
-resize : Axis -> { glyph : String, cursor : String } -> Config msg -> Html msg
+resize : Axis -> { glyph : String, cursor : String, size : Size, onStep : Steps -> msg } -> Config msg -> Html msg
 resize axis look config =
     let
         classes =
@@ -174,7 +192,8 @@ resize axis look config =
         , label = config.label
         , held = config.held
         , marks = config.marks
-        , hint = ""
+        , size = Just look.size
+        , hint = keyHint axis
         , classes = classes
         , cursor =
             if config.held then
@@ -183,7 +202,7 @@ resize axis look config =
             else
                 look.cursor
         , glyph = look.glyph
-        , events = events config
+        , events = events config ++ [ stepWith bothArrows look.onStep ]
         }
 
 
@@ -200,6 +219,7 @@ corner direction config =
         , label = config.label
         , held = config.held
         , marks = config.marks
+        , size = Nothing
         , hint = ""
         , classes = "grid h-full w-full select-none transition-colors"
         , cursor =
@@ -252,6 +272,7 @@ type alias Grip msg =
     , label : String
     , held : Bool
     , marks : Bool
+    , size : Maybe Size
     , hint : String
     , classes : String
     , cursor : String
@@ -315,6 +336,7 @@ grip kind g =
                     []
                )
             ++ role kind
+            ++ values kind g.size
             ++ g.events
         )
         [ text g.glyph ]
@@ -439,8 +461,8 @@ role kind =
             [ attribute "role" "button"
 
             -- Said, because arrows move a column without the reader being on the
-            -- grip. A splitter answers to no keys at all, and `aria-keyshortcuts` is
-            -- for keys that work unfocused.
+            -- grip. A splitter's arrows need the focus, and are said in its own
+            -- `title`; `aria-keyshortcuts` is for keys that work unfocused.
             , attribute "aria-keyshortcuts" arrows
             ]
 
@@ -462,6 +484,44 @@ role kind =
             [ attribute "role" "separator" ]
 
 
+{-| What a splitter says about the size it bounds. `aria-valuenow` alone is a number with
+no unit, so the same number is said again in words.
+-}
+values : Kind -> Maybe Size -> List (Html.Attribute msg)
+values kind size =
+    case ( kind, size ) of
+        ( Splitter axis, Just v ) ->
+            [ attribute "aria-valuenow" (said v.now)
+            , attribute "aria-valuemin" (said v.min)
+            , attribute "aria-valuetext" (said v.now ++ " pixels " ++ word axis)
+            ]
+                ++ (case v.max of
+                        Just top ->
+                            [ attribute "aria-valuemax" (said top) ]
+
+                        Nothing ->
+                            []
+                   )
+
+        _ ->
+            []
+
+
+said : Float -> String
+said =
+    round >> String.fromInt
+
+
+word : Axis -> String
+word axis =
+    case axis of
+        Across ->
+            "wide"
+
+        Down ->
+            "tall"
+
+
 pointerId : Decoder Int
 pointerId =
     Decode.field "pointerId" Decode.int
@@ -480,6 +540,18 @@ primaryButton =
             )
 
 
+{-| The arrows a grip along an edge answers to, said the way the grip itself is drawn.
+-}
+keyHint : Axis -> String
+keyHint axis =
+    case axis of
+        Across ->
+            "← →"
+
+        Down ->
+            "↑ ↓"
+
+
 {-| Fails on every other key, so that Tab and the rest keep what they do.
 -}
 leftRight : Decoder Int
@@ -489,14 +561,30 @@ leftRight =
             (\key ->
                 case key of
                     "ArrowLeft" ->
-                        Decode.succeed -1
+                        Decode.map negate amount
 
                     "ArrowRight" ->
-                        Decode.succeed 1
+                        amount
 
                     _ ->
                         Decode.fail "not a step"
             )
+
+
+{-| How many steps one press takes: five with Shift, which is the coarse step every
+splitter's keys are read with.
+-}
+amount : Decoder Int
+amount =
+    Decode.map
+        (\coarse ->
+            if coarse then
+                5
+
+            else
+                1
+        )
+        (Decode.field "shiftKey" Decode.bool)
 
 
 {-| The same keys, stepping whichever axis each of them lies along.
@@ -508,16 +596,16 @@ bothArrows =
             (\key ->
                 case key of
                     "ArrowLeft" ->
-                        Decode.succeed { x = -1, y = 0 }
+                        Decode.map (\n -> { x = negate n, y = 0 }) amount
 
                     "ArrowRight" ->
-                        Decode.succeed { x = 1, y = 0 }
+                        Decode.map (\n -> { x = n, y = 0 }) amount
 
                     "ArrowUp" ->
-                        Decode.succeed { x = 0, y = -1 }
+                        Decode.map (\n -> { x = 0, y = negate n }) amount
 
                     "ArrowDown" ->
-                        Decode.succeed { x = 0, y = 1 }
+                        Decode.map (\n -> { x = 0, y = n }) amount
 
                     _ ->
                         Decode.fail "not a step"
