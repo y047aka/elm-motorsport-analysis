@@ -463,8 +463,7 @@ view m track snapshot =
         , on "toggle" toggled
         , attribute "data-tracker-float" ""
         ]
-        [ lift
-        , if m.shown then
+        [ if m.shown then
             surface m track snapshot
 
           else
@@ -485,18 +484,6 @@ toggled : Decode.Decoder Msg
 toggled =
     Decode.field "newState" Decode.string
         |> Decode.map (\state -> Shown (state == "open"))
-
-
-{-| The card's own lift, laid under the drawing: the panel is `bg-card` over the box's
-`bg-background/80`, and one element carries one background colour.
-
-It takes no pointer: a sheet over the map that could be pressed is a place where neither
-operation answers.
-
--}
-lift : Html Msg
-lift =
-    div [ Attributes.class "pointer-events-none absolute inset-0 rounded-xl bg-card" ] []
 
 
 {-| The drawing, and what each input is asked for: the left button carries the box, the right
