@@ -451,7 +451,7 @@ view m frame track snapshot =
     div
         [ Attributes.id boxId
         , attribute "popover" "manual"
-        , Attributes.class "absolute top-auto left-auto bottom-2.5 right-2.5 overflow-visible hidden [&:popover-open]:grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
+        , Attributes.class "group absolute top-auto left-auto bottom-2.5 right-2.5 overflow-visible hidden [&:popover-open]:grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
         , Attributes.style "width" (Columns.px m.width.size)
         , Attributes.style "height" (Columns.px m.height.size)
         , Attributes.style "transform" ("translate(" ++ Columns.px m.shift.x ++ ", " ++ Columns.px m.shift.y ++ ")")
@@ -465,7 +465,7 @@ view m frame track snapshot =
              else
                 text ""
             )
-            [ closer ]
+            [ chrome [ closer ] ]
         , edgeGrip left
         , edgeGrip right
         , edgeGrip top
@@ -551,6 +551,23 @@ trigger =
         , label = "Float the track map over the columns"
         , glyph = "◱"
         }
+
+
+{-| The box's navigation, which the pointer over it calls out.
+
+The `pointer-events` go with the opacity and not after it: the `✕` lies over the drawing, and a
+drag begun there would otherwise close the box rather than carry it -- PiP's chrome is not
+merely unseen while the window is untouched, it is unpressable. `focus-within` is the
+keyboard's way of the same call: a button no pointer is over is still reached by `Tab`, and is
+then seen.
+-}
+chrome : List (Html Msg) -> Html Msg
+chrome controls =
+    div
+        [ Attributes.class "pointer-events-none flex items-start gap-x-1 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+        , attribute "data-tracker-chrome" ""
+        ]
+        controls
 
 
 {-| The ✕ in the map's own corner. It is the only way back, which is why the

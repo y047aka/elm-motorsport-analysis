@@ -46,6 +46,10 @@ test.describe('Le Mans 2025 Visual Tests', () => {
     // raised ring still looks like a track.
     await expectSurveyedLap(page, FLOAT_CARD);
 
+    // The chrome is the pointer's, and the pointer is still where the `◱` was pressed: the
+    // shot is the box at rest, with no navigation over the map.
+    await page.mouse.move(0, 0);
+
     await expect(page.locator(FLOAT_CARD)).toHaveScreenshot('tracker-3d-float.png');
   });
 });

@@ -30,6 +30,9 @@ const floatTrigger = (page: Page) =>
 const floatClose = (page: Page) =>
   page.getByRole('button', { name: 'Close the floating track map' });
 
+/** The box's navigation, which the pointer over the box calls out, PiP-like. */
+const chrome = (page: Page): Locator => page.locator(`${FLOAT} [data-tracker-chrome]`);
+
 /** The four edges the box is sized by, found by the words they are called by. The two
  * away from the corner it is stood at grow it up and left; the two at that corner take
  * the box along with the size. */
@@ -441,6 +444,17 @@ test.describe('the floating track map', () => {
     expect(after.y).toBeCloseTo(before.y, 0);
   });
 
+  test('its navigation waits for the pointer over the box, PiP-like', async ({ page }) => {
+    await floatTrigger(page).click();
+    await page.mouse.move(0, 0);
+    await expect(chrome(page)).toHaveCSS('opacity', '0');
+    await expect(chrome(page)).toHaveCSS('pointer-events', 'none');
+
+    await page.locator(FLOAT).hover();
+    await expect(chrome(page)).toHaveCSS('opacity', '1');
+    await expect(chrome(page)).toHaveCSS('pointer-events', 'auto');
+  });
+
   test('opens from the column corner and closes from its own', async ({ page }) => {
     await expect(floatTrigger(page)).toHaveCount(1);
 
@@ -456,7 +470,9 @@ test.describe('the floating track map', () => {
     await expect(floatClose(page)).toHaveCount(1);
 
     // Nothing outside the map closes it: a `manual` popover is not dismissed by a
-    // press beside it, so the columns go on being worked while the map is up.
+    // press beside it, so the columns go on being worked while the map is up. The ✕ is the
+    // pointer's, and has to be called out by a hover before it can be pressed.
+    await page.locator(FLOAT).hover();
     await floatClose(page).click();
     await expect(page.locator(FLOAT)).toBeHidden();
     await expect(floatTrigger(page)).toHaveCount(1);
