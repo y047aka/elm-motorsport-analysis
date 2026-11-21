@@ -193,7 +193,7 @@ resize axis glyph config =
 
 {-| The grip at a corner, growing both sizes at once: the pointer is read along both
 axes and the caller decides which of them moves what. Which diagonal it lies along is
-the cursor's.
+the cursor's. It fills the box it is set in, which is what sizes the corner.
 -}
 corner : Direction -> Placed msg -> Html msg
 corner direction config =

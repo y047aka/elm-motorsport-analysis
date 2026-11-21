@@ -70,7 +70,7 @@ type Msg
 
 
 {-| The box the floating map opens at.
-480 by 180 is `Tracker3d.box`'s own three to one, and the drawing fills the box, so the map opens at that ratio outright.
+480 by 180 is `Tracker3d.box`'s own three to one.
 The map is stood at the bottom right of the page, and every one of its four edges is a grip: the two away from the corner it is stood at grow `AgainstPointer`, and the two at it are `WithPointer` and take the box along with the size, so the edge opposite the one held stays where it was.
 -}
 defaultWidth : Float
@@ -421,7 +421,7 @@ The box stands on the page whether or not it is open -- a `popovertarget` resolv
 
 It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at.
 
-Nothing lies between the box and the drawing, so every point of the box is a point of the map, and the size grips are laid over the drawing: the four edges inside the box, the four corners straddling it. A band of box that sized nothing would else be a place where neither operation answers.
+Nothing lies between the box and the drawing -- a band of box that sized nothing would be a place where neither operation answers -- and the size grips are laid over the drawing: the four edges inside the box, the four corners straddling it.
 
 Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the four corner grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
 
