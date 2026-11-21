@@ -469,7 +469,7 @@ view m track snapshot =
     div
         [ Attributes.id boxId
         , attribute "popover" "manual"
-        , Attributes.class "group absolute top-auto left-auto bottom-2.5 right-2.5 overflow-visible hidden [&:popover-open]:grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border ring-1 ring-inset ring-foreground/10 shadow-glass"
+        , Attributes.class "group absolute top-auto left-auto bottom-2.5 right-2.5 overflow-visible hidden [&:popover-open]:grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border ring-1 ring-inset ring-foreground/10 shadow-float"
         , Attributes.style "width" (Columns.px m.width.size)
         , Attributes.style "height" (Columns.px m.height.size)
         , Attributes.style "transform" ("translate(" ++ Columns.px m.shift.x ++ ", " ++ Columns.px m.shift.y ++ ")")
