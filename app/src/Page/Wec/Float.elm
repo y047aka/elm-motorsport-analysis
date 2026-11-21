@@ -126,8 +126,8 @@ type alias Side =
     }
 
 
-{-| Every grip stands half in and half out of the box, its offset being half its own size:
-`at` is where a side's track goes, `pad` where a corner's box goes. Both are written out
+{-| `at` is where a side's track goes, `pad` where a corner's box goes -- each offset half
+its own size, so a grip is centred on the edge or corner it sizes from. Both are written out
 rather than composed from the name -- Tailwind reads a class off the source text and invents
 nothing.
 -}
@@ -433,9 +433,9 @@ The box stands on the page whether or not it is open -- a `popovertarget` resolv
 
 It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at.
 
-Nothing lies between the box and the drawing -- a band of box that sized nothing would be a place where neither operation answers -- and the size grips are laid over it, each one straddling the edge or corner it sizes from.
+Nothing lies between the box and the drawing: a band of box that sized nothing would be a place where neither operation answers.
 
-Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because every grip stands outside the box by half its own size, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
+Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
 
 -}
 view : Model -> Track -> Snapshot -> Html Msg
@@ -577,10 +577,9 @@ chrome controls =
         controls
 
 
-{-| The ✕ in the map's own corner, stood one step in from it: the corner grip straddles the
-corner and is the larger of the two, and a control whose centre lies under a grip is a
-control the pointer cannot reach. It is the only way back, which is why the popover is
-`manual`: nothing outside it closes it.
+{-| The ✕ in the map's own corner, stood one step in from it: a control whose centre lies
+under a grip is a control the pointer cannot reach. It is the only way back, which is why the
+popover is `manual`: nothing outside it closes it.
 -}
 closer : Html Msg
 closer =

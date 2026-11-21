@@ -112,8 +112,8 @@ type alias Config msg =
 
 {-| The same, for a grip that reads both directions at once.
 
-`marks` says whether the grip marks itself at all: a `title` the pointer reads out, and a
-light while it is held.
+`marks` says whether the grip marks itself: a `title` the pointer reads out, and a light
+while it is held.
 
 -}
 type alias Placed msg =
@@ -163,9 +163,8 @@ mark's own axis only: `justify-content: center` sizes a track to its content, an
 `w-full` grip with no mark then has no width to be, so `content-center` rather than
 `place-content-center`.
 
-The `cursor` is the caller's, since the axis says which way the grip travels and not
-what the thing bounded is: a column's edge says `cursor-col-resize`, the edge of a box
-grown from either end says `cursor-ew-resize`.
+The `cursor` is the caller's: the axis says which way the grip travels, not what it
+bounds.
 
 -}
 resize : Axis -> { glyph : String, cursor : String } -> Placed msg -> Html msg

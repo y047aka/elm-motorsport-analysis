@@ -168,7 +168,6 @@ test.describe('the floating track map', () => {
     // it -- and the right edge, the anchor, does not move.
     await carryGrip(page, leftGrip(page), -120, 0);
 
-    // Held, and still no light: the box growing is what the reader watches.
     await expect(leftGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     const wider = await box(page, FLOAT);
     expect(wider.width).toBeCloseTo(FLOAT_WIDTH + 120, 0);
