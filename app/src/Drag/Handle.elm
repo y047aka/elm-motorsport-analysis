@@ -192,8 +192,9 @@ resize axis look config =
 
 
 {-| The grip at a corner, growing both sizes at once: the pointer is read along both
-axes and the caller decides which of them moves what. Which corner it is, the cursor
-says. It fills the box it is set in, which is what sizes the corner.
+axes and the caller decides which of them moves what. Which diagonal it lies along is
+the cursor's -- the two ends of it, since a corner pulls both. It fills the box it is set
+in, which is what sizes the corner.
 -}
 corner : Direction -> Placed msg -> Html msg
 corner direction config =
@@ -211,16 +212,16 @@ corner direction config =
             else
                 case direction of
                     NorthWest ->
-                        "cursor-nw-resize"
-
-                    NorthEast ->
-                        "cursor-ne-resize"
-
-                    SouthWest ->
-                        "cursor-sw-resize"
+                        "cursor-nwse-resize"
 
                     SouthEast ->
-                        "cursor-se-resize"
+                        "cursor-nwse-resize"
+
+                    NorthEast ->
+                        "cursor-nesw-resize"
+
+                    SouthWest ->
+                        "cursor-nesw-resize"
         , glyph = ""
         , events = eventsAcross config
         }

@@ -215,11 +215,11 @@ grip g =
             }
 
 
-{-| Which corner it is: the two edges it is the meeting of say, and the cursor wears the
-word.
+{-| Which diagonal a corner lies along -- the cursor says it, and the two edges it is the
+meeting of say which.
 -}
-quadrant : Side -> Side -> Handle.Direction
-quadrant width height =
+diagonal : Side -> Side -> Handle.Direction
+diagonal width height =
     case ( width.edge.grows, height.edge.grows ) of
         ( Resize.AgainstPointer, Resize.AgainstPointer ) ->
             Handle.NorthWest
@@ -452,7 +452,7 @@ view m track snapshot =
                     Grow (Corner width height)
             in
             div [ Attributes.class ("absolute " ++ g.at ++ " z-20 h-4 w-4") ]
-                [ Handle.corner (quadrant width height)
+                [ Handle.corner (diagonal width height)
                     { id = g.id
                     , label = g.label
                     , held = holds g m
