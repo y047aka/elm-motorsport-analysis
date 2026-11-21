@@ -28,6 +28,7 @@ edge =
     , label = "Resize the test thing"
     , glyph = ""
     , cursor = "cursor-col-resize"
+    , marks = True
     }
 
 

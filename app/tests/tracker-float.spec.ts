@@ -157,15 +157,19 @@ test.describe('the floating track map', () => {
 
     // The pointer is the only way in: no key reaches the grip and it is no tab stop, so
     // the cursor along the edge is the whole affordance. Nothing lights under the
-    // pointer, and the grip takes a background only while it is held.
+    // pointer, and the grip says nothing there either -- the box growing is the feedback.
     await expect(leftGrip(page)).toHaveCSS('cursor', 'ew-resize');
     await expect(leftGrip(page)).not.toHaveAttribute('tabindex');
+    await expect(leftGrip(page)).not.toHaveAttribute('title');
     await leftGrip(page).hover();
     await expect(leftGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
     // Left is away from the corner the box is stood at, so a travel left widens
     // it -- and the right edge, the anchor, does not move.
     await carryGrip(page, leftGrip(page), -120, 0);
+
+    // Held, and still no light: the box growing is what the reader watches.
+    await expect(leftGrip(page)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     const wider = await box(page, FLOAT);
     expect(wider.width).toBeCloseTo(FLOAT_WIDTH + 120, 0);
     expect(wider.x + wider.width).toBeCloseTo(opened.x + opened.width, 0);

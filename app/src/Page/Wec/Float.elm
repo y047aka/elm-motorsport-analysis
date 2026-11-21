@@ -153,6 +153,7 @@ side name at pad axis grows fence =
         , label = "Resize the floating track map from the " ++ name
         , glyph = ""
         , cursor = cursor
+        , marks = False
         }
     }
 
@@ -457,6 +458,7 @@ view m track snapshot =
                     { id = g.id
                     , label = g.label
                     , held = holds g m
+                    , marks = False
                     , onGrab = toMsg << Resize.Grab
                     , onMove = toMsg << Resize.Carrying
                     , onDrop = toMsg << Resize.Release

@@ -70,6 +70,7 @@ type alias Edge =
     , label : String
     , glyph : String
     , cursor : String
+    , marks : Bool
     }
 
 
@@ -186,6 +187,7 @@ grip edge m =
         { id = edge.id
         , label = edge.label
         , held = m.grip == Just edge.id
+        , marks = edge.marks
         , onGrab = Grab
         , onMove = Carrying
         , onDrop = Release

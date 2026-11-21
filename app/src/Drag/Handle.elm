@@ -111,11 +111,16 @@ type alias Config msg =
 
 
 {-| The same, for a grip that reads both directions at once.
+
+`marks` says whether the grip marks itself at all: a `title` the pointer reads out, and a
+light while it is held.
+
 -}
 type alias Placed msg =
     { id : String
     , label : String
     , held : Bool
+    , marks : Bool
     , onGrab : Place -> msg
     , onMove : Place -> msg
     , onDrop : Place -> msg
@@ -133,6 +138,7 @@ view step config =
         { id = config.id
         , label = config.label
         , held = config.held
+        , marks = True
         , hint = "← →"
         , classes = "grid place-content-center w-5 h-5 rounded-md text-[11px] select-none transition-colors hover:bg-accent hover:text-accent-foreground"
         , cursor =
@@ -178,6 +184,7 @@ resize axis look config =
         { id = config.id
         , label = config.label
         , held = config.held
+        , marks = config.marks
         , hint = ""
         , classes = classes
         , cursor =
@@ -203,6 +210,7 @@ corner direction config =
         { id = config.id
         , label = config.label
         , held = config.held
+        , marks = config.marks
         , hint = ""
         , classes = "grid h-full w-full select-none transition-colors"
         , cursor =
@@ -254,6 +262,7 @@ type alias Grip msg =
     { id : String
     , label : String
     , held : Bool
+    , marks : Bool
     , hint : String
     , classes : String
     , cursor : String
@@ -281,28 +290,35 @@ grip kind g =
         ([ id g.id
          , attribute "aria-roledescription" "drag handle"
          , attribute "aria-label" g.label
-         , title
-            (g.label
-                ++ ": drag it"
-                ++ (if keys then
-                        ", or press " ++ g.hint
-
-                    else
-                        ""
-                   )
-            )
-         , class
-            (g.classes
-                ++ " touch-none "
-                ++ g.cursor
-                ++ (if g.held then
-                        " bg-accent text-accent-foreground"
-
-                    else
-                        " text-muted-foreground"
-                   )
-            )
          ]
+            ++ (if g.marks then
+                    [ title
+                        (g.label
+                            ++ ": drag it"
+                            ++ (if keys then
+                                    ", or press " ++ g.hint
+
+                                else
+                                    ""
+                               )
+                        )
+                    ]
+
+                else
+                    []
+               )
+            ++ [ class
+                    (g.classes
+                        ++ " touch-none "
+                        ++ g.cursor
+                        ++ (if g.held && g.marks then
+                                " bg-accent text-accent-foreground"
+
+                            else
+                                " text-muted-foreground"
+                           )
+                    )
+               ]
             ++ (if keys then
                     [ attribute "tabindex" "0" ]
 

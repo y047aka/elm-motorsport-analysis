@@ -74,6 +74,7 @@ standingsEdge =
     , label = "Resize the standings column"
     , glyph = "⋮"
     , cursor = "cursor-col-resize"
+    , marks = True
     }
 
 
