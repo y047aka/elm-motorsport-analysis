@@ -126,9 +126,10 @@ type alias Side =
     }
 
 
-{-| `at` is where a side's own track stands, inside the box; `pad` is where a corner
-straddles it. Both are written out rather than composed from the name -- Tailwind reads a
-class off the source text and invents nothing.
+{-| Every grip stands half in and half out of the box, its offset being half its own size:
+`at` is where a side's track goes, `pad` where a corner's box goes. Both are written out
+rather than composed from the name -- Tailwind reads a class off the source text and invents
+nothing.
 -}
 side : String -> String -> String -> Handle.Axis -> Resize.Grows -> Resize.Fence -> Side
 side name at pad axis grows fence =
@@ -158,22 +159,22 @@ side name at pad axis grows fence =
 
 left : Side
 left =
-    side "left" "left-0" "-left-1" Handle.Across Resize.AgainstPointer widthFence
+    side "left" "-left-1" "-left-2" Handle.Across Resize.AgainstPointer widthFence
 
 
 right : Side
 right =
-    side "right" "right-0" "-right-1" Handle.Across Resize.WithPointer widthFence
+    side "right" "-right-1" "-right-2" Handle.Across Resize.WithPointer widthFence
 
 
 top : Side
 top =
-    side "top" "top-0" "-top-1" Handle.Down Resize.AgainstPointer heightFence
+    side "top" "-top-1" "-top-2" Handle.Down Resize.AgainstPointer heightFence
 
 
 bottom : Side
 bottom =
-    side "bottom" "bottom-0" "-bottom-1" Handle.Down Resize.WithPointer heightFence
+    side "bottom" "-bottom-1" "-bottom-2" Handle.Down Resize.WithPointer heightFence
 
 
 {-| The eight grips the box is sized by. An edge moves one size; a corner is the meeting
@@ -419,10 +420,10 @@ edgeTrack : Side -> String
 edgeTrack s =
     case s.edge.axis of
         Handle.Across ->
-            "top-0 z-10 grid h-full w-2.5 place-items-center"
+            "top-0 z-10 grid h-full w-2 place-items-center"
 
         Handle.Down ->
-            "left-0 z-10 grid h-2.5 w-full content-center"
+            "left-0 z-10 grid h-2 w-full content-center"
 
 
 {-| The map floated over the columns, filling the box it is stood in.
@@ -431,9 +432,9 @@ The box stands on the page whether or not it is open -- a `popovertarget` resolv
 
 It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at.
 
-Nothing lies between the box and the drawing -- a band of box that sized nothing would be a place where neither operation answers -- and the size grips are laid over the drawing: the four edges inside the box, the four corners straddling it.
+Nothing lies between the box and the drawing -- a band of box that sized nothing would be a place where neither operation answers -- and the size grips are laid over it, each one straddling the edge or corner it sizes from.
 
-Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the four corner grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
+Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because every grip stands outside the box by half its own size, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
 
 -}
 view : Model -> Track -> Snapshot -> Html Msg
