@@ -1,4 +1,4 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, clampTo, unmeasured)
 
 {-| A size the reader sets -- the width of the standings, the box a floated map keeps
 -- and the grip along the edge that moves it. The page holds one `Model` per size and
@@ -8,7 +8,7 @@ Which edge the grip lies along -- the axis its pointer is read along, the way th
 size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
 `Model` holds the size and the carry.
 
-@docs Model, Msg, Fence, Edge, Grows, init, update, grip
+@docs Model, Msg, Fence, Edge, Grows, init, update, grip, clampTo, unmeasured
 
 -}
 
@@ -50,11 +50,23 @@ type alias Model =
 
 {-| The bounds a size is held between. A size may have no top of its own: a floated box is
 held only by how small it may go, the page being what stops it growing.
+
+A travel is held between two of them too -- how far a box may be shifted along one axis is
+said the same way as how wide it may be grown.
+
 -}
 type alias Fence =
     { min : Float
     , max : Maybe Float
     }
+
+
+{-| What nothing has been read yet leaves: wide enough that no window a drag could stop at
+is outside it.
+-}
+unmeasured : Float
+unmeasured =
+    4000
 
 
 {-| Which edge the grip lies along: the axis its pointer is read along, the way the size
@@ -165,6 +177,8 @@ signed grows travel =
             negate travel
 
 
+{-| The size, kept inside the bounds. A fence with no top is held only from below.
+-}
 clampTo : Fence -> Float -> Float
 clampTo fence size =
     case fence.max of

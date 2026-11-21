@@ -14,6 +14,7 @@ leaves: the box's own edges stop at the window's.
 import Browser.Dom
 import Drag
 import Drag.Handle as Handle exposing (Place, Point)
+import Page.Wec.Resize as Resize
 import Task
 
 
@@ -31,20 +32,23 @@ type alias Model =
     }
 
 
-{-| How far the box may go along each axis from where it is stood, the four of them
-measured so its own edges land on the window's.
+{-| How far the box may go along each axis from where it is stood, each of them measured so
+its own edge lands on the window's.
 -}
 type alias Bounds =
-    { minX : Float
-    , maxX : Float
-    , minY : Float
-    , maxY : Float
+    { x : Resize.Fence
+    , y : Resize.Fence
     }
 
 
 unmeasured : Bounds
 unmeasured =
-    { minX = -4000, maxX = 4000, minY = -4000, maxY = 4000 }
+    { x = wide, y = wide }
+
+
+wide : Resize.Fence
+wide =
+    { min = negate Resize.unmeasured, max = Just Resize.unmeasured }
 
 
 init : String -> Model
@@ -89,8 +93,8 @@ update msg m =
                 ( carried, Drag.Stepped hold ) ->
                     ( { m
                         | carried = carried
-                        , x = clamp m.bounds.minX m.bounds.maxX (hold.location.x + place.x - hold.from.x)
-                        , y = clamp m.bounds.minY m.bounds.maxY (hold.location.y + place.y - hold.from.y)
+                        , x = Resize.clampTo m.bounds.x (hold.location.x + place.x - hold.from.x)
+                        , y = Resize.clampTo m.bounds.y (hold.location.y + place.y - hold.from.y)
                       }
                     , Cmd.none
                     )
@@ -107,16 +111,16 @@ update msg m =
         Travel bounds ->
             ( { m
                 | bounds = bounds
-                , x = clamp bounds.minX bounds.maxX m.x
-                , y = clamp bounds.minY bounds.maxY m.y
+                , x = Resize.clampTo bounds.x m.x
+                , y = Resize.clampTo bounds.y m.y
               }
             , Cmd.none
             )
 
         Step steps ->
             ( { m
-                | x = clamp m.bounds.minX m.bounds.maxX (m.x + toFloat steps.x * step)
-                , y = clamp m.bounds.minY m.bounds.maxY (m.y + toFloat steps.y * step)
+                | x = Resize.clampTo m.bounds.x (m.x + toFloat steps.x * step)
+                , y = Resize.clampTo m.bounds.y (m.y + toFloat steps.y * step)
               }
             , Cmd.none
             )
@@ -140,10 +144,8 @@ boundsFrom { x, y } { element, viewport } =
         anchorY =
             element.y - viewport.y - y
     in
-    { minX = negate anchorX
-    , maxX = viewport.width - element.width - anchorX
-    , minY = negate anchorY
-    , maxY = viewport.height - element.height - anchorY
+    { x = { min = negate anchorX, max = Just (viewport.width - element.width - anchorX) }
+    , y = { min = negate anchorY, max = Just (viewport.height - element.height - anchorY) }
     }
 
 

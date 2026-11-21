@@ -56,7 +56,7 @@ be pressed.
 -}
 unmeasured : { width : Float, height : Float }
 unmeasured =
-    { width = 4000, height = 4000 }
+    { width = Resize.unmeasured, height = Resize.unmeasured }
 
 
 {-| `Shown` mirrors what the popover said of itself; the presses themselves are the
