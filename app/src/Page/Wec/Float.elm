@@ -456,14 +456,15 @@ view m track snapshot =
     div
         [ Attributes.id boxId
         , attribute "popover" "manual"
-        , Attributes.class "group absolute top-auto left-auto bottom-2.5 right-2.5 overflow-visible hidden [&:popover-open]:grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
+        , Attributes.class "group absolute top-auto left-auto bottom-2.5 right-2.5 overflow-visible hidden [&:popover-open]:grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border ring-1 ring-inset ring-foreground/10 shadow-glass"
         , Attributes.style "width" (Columns.px m.width.size)
         , Attributes.style "height" (Columns.px m.height.size)
         , Attributes.style "transform" ("translate(" ++ Columns.px m.shift.x ++ ", " ++ Columns.px m.shift.y ++ ")")
         , on "toggle" toggled
         , attribute "data-tracker-float" ""
         ]
-        [ if m.shown then
+        [ lift
+        , if m.shown then
             surface m track snapshot
 
           else
@@ -484,6 +485,18 @@ toggled : Decode.Decoder Msg
 toggled =
     Decode.field "newState" Decode.string
         |> Decode.map (\state -> Shown (state == "open"))
+
+
+{-| The card's own lift, laid under the drawing: the panel is `bg-card` over the box's
+`bg-background/80`, and one element carries one background colour.
+
+It takes no pointer: a sheet over the map that could be pressed is a place where neither
+operation answers.
+
+-}
+lift : Html Msg
+lift =
+    div [ Attributes.class "pointer-events-none absolute inset-0 rounded-xl bg-card" ] []
 
 
 {-| The drawing, and what each input is asked for: the left button carries the box, the right
