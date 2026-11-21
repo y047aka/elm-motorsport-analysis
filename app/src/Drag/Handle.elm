@@ -1,4 +1,4 @@
-module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Place, Point, point, Steps, Fence, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys)
+module Drag.Handle exposing (Axis(..), Button(..), Device(..), Direction(..), Place, Point, point, Steps, Fence, clampTo, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys)
 
 {-| A grip that carries something: one along a line, one at a corner, and a surface that
 is dragged anywhere on -- by the pointer, or a step at a time by the arrow keys for the
@@ -18,7 +18,7 @@ of -- but it reads the pointer the same way, and so takes
 [`eventsByButton`](#eventsByButton) and [`arrowKeys`](#arrowKeys). Such a surface is where the
 two buttons split: the left carries the thing, the right turns what it shows.
 
-@docs Axis, Button, Device, Direction, Place, Point, point, Steps, Fence, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys
+@docs Axis, Button, Device, Direction, Place, Point, point, Steps, Fence, clampTo, Size, Config, resize, corner, view, events, eventsByButton, arrowKeys
 
 -}
 
@@ -112,6 +112,18 @@ type alias Steps =
     { x : Int
     , y : Int
     }
+
+
+{-| A size, or a travel, held inside a fence. A fence with no top holds it from one side only.
+-}
+clampTo : Fence -> Float -> Float
+clampTo fence size =
+    case fence.max of
+        Just top ->
+            clamp fence.min top size
+
+        Nothing ->
+            max fence.min size
 
 
 {-| The size a splitter bounds, and the fence it is held between. A reader hears these

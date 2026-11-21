@@ -58,6 +58,10 @@ surface ({ model, track, snapshot, size, label, keys, wheel } as config) =
          , attribute "tabindex" "0"
          , attribute "data-tracker-surface" ""
          , attribute "aria-label" label
+
+         -- `application`, since a roledescription has to describe a role, and the keys this
+         -- surface answers to are the surface's own and not the reader's.
+         , attribute "role" "application"
          , attribute "aria-roledescription" "turnable map"
          ]
             ++ Handle.eventsByButton config

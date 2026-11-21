@@ -85,7 +85,7 @@ defaultHeight =
 
 
 {-| How small each size may go, and nothing more: how far it may go is the window's, and
-`grow` reads it there.
+`bounded` reads it there.
 -}
 widthFence : Resize.Fence
 widthFence =
@@ -320,11 +320,8 @@ room d =
             d.window - cornerRoom + d.shift - d.size.size
 
 
-{-| One axis of a drag on a size, by the grip named `gripId`: the edge held travels to the
-window's own edge and no further, and the box goes along only when the grip is at the end
-the box is pinned at. Either way the ceiling is the same at every move of one drag,
-because size and shift both grow by the travel. A corner is two of these, one per size it
-moves.
+{-| One axis of a drag on a size, by the grip named `gripId`: the box goes along only when
+the grip is at the end the box is pinned at. A corner is two of these, one per size it moves.
 -}
 grow : String -> Resize.Msg -> Side -> Model -> Model
 grow gripId sub s m =
@@ -333,25 +330,10 @@ grow gripId sub s m =
             along s m
 
         base =
-            s.edge
-
-        ceiling =
-            d.size.size + room d
+            edgeOf s m
 
         edge =
-            { base
-                | id = gripId
-                , fence =
-                    { min = base.fence.min
-                    , max =
-                        case base.fence.max of
-                            Just cap ->
-                                Just (min cap ceiling)
-
-                            Nothing ->
-                                Just ceiling
-                    }
-            }
+            { base | id = gripId }
 
         size =
             Resize.update edge sub d.size
@@ -394,7 +376,48 @@ so. An edge moves one, a corner the two that meet there.
 -}
 holds : GripInfo -> Model -> Bool
 holds g m =
-    List.any (\s -> Resize.held g.id (along s m).size) g.moves
+    List.any (\s -> Resize.heldBy g.id (along s m).size) g.moves
+
+
+{-| The fence one side is grown between: the size's own floor, and the window's own edge as
+its top.
+
+The top is the same at every move of one drag, because a box grown by a grip at its pinned
+end grows its shift by the same travel -- which is why a throw past the window pulls back
+freely rather than sticking.
+-}
+bounded : Side -> Model -> Resize.Fence
+bounded s m =
+    let
+        d =
+            along s m
+
+        ceiling =
+            d.size.size + room d
+    in
+    { min = s.edge.fence.min
+    , max =
+        Just
+            (case s.edge.fence.max of
+                Just cap ->
+                    min cap ceiling
+
+                Nothing ->
+                    ceiling
+            )
+    }
+
+
+{-| The edge a side's grip is drawn by and grown by: its own, with the window read into the
+fence.
+-}
+edgeOf : Side -> Model -> Resize.Edge
+edgeOf s m =
+    let
+        base =
+            s.edge
+    in
+    { base | fence = bounded s m }
 
 
 {-| The track an edge grip stands in: a bar along the side it bounds.
@@ -425,7 +448,7 @@ view m track snapshot =
     let
         edgeGrip s =
             div [ Attributes.class ("absolute " ++ s.at ++ " " ++ edgeTrack s) ]
-                [ Html.map (Grow (Edge s)) (Resize.grip s.edge (along s m).size) ]
+                [ Html.map (Grow (Edge s)) (Resize.grip (edgeOf s m) (along s m).size) ]
 
         cornerGrip width height =
             let

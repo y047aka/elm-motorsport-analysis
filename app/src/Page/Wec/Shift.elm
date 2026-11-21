@@ -93,8 +93,8 @@ update msg m =
                 ( carried, Drag.Stepped hold ) ->
                     ( { m
                         | carried = carried
-                        , x = Resize.clampTo m.bounds.x (hold.location.x + place.x - hold.from.x)
-                        , y = Resize.clampTo m.bounds.y (hold.location.y + place.y - hold.from.y)
+                        , x = Handle.clampTo m.bounds.x (hold.location.x + place.x - hold.from.x)
+                        , y = Handle.clampTo m.bounds.y (hold.location.y + place.y - hold.from.y)
                       }
                     , Cmd.none
                     )
@@ -111,19 +111,25 @@ update msg m =
         Travel bounds ->
             ( { m
                 | bounds = bounds
-                , x = Resize.clampTo bounds.x m.x
-                , y = Resize.clampTo bounds.y m.y
+                , x = Handle.clampTo bounds.x m.x
+                , y = Handle.clampTo bounds.y m.y
               }
             , Cmd.none
             )
 
         Step steps ->
-            ( { m
-                | x = Resize.clampTo m.bounds.x (m.x + toFloat steps.x * step)
-                , y = Resize.clampTo m.bounds.y (m.y + toFloat steps.y * step)
-              }
-            , Cmd.none
-            )
+            if Drag.isCarrying m.carried then
+                -- A step would move the box under the pointer carrying it, and the next move
+                -- would take the box back to where the pick measured it from.
+                ( m, Cmd.none )
+
+            else
+                ( { m
+                    | x = Handle.clampTo m.bounds.x (m.x + toFloat steps.x * step)
+                    , y = Handle.clampTo m.bounds.y (m.y + toFloat steps.y * step)
+                  }
+                , Cmd.none
+                )
 
 
 {-| The four shifts the window leaves a box, said in the shift's own units rather

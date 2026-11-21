@@ -1,7 +1,9 @@
 module View.CarDetail.Header exposing (closeButton, cornerButton, cornerPopover, view)
 
 {-| The line a classification prints for one car, and the ✕ that closes a
-column when the reader has several open.
+column when the reader has several open. The icon button a column's corner
+hangs its controls on is drawn here, and the floated map's `◱` and `✕` are
+that button.
 
 @docs closeButton, cornerButton, cornerPopover, view
 

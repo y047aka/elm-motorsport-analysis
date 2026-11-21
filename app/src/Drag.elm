@@ -13,7 +13,7 @@ and a `Cancel` after every `Drop` and whenever the browser takes the pointer.
 and check nothing first.
 
 A column is moved by `x` alone, a floated box by both, so the carry keeps the
-`Place` at both ends and the caller projects what it needs. Which axis a size
+`Point` at both ends and the caller projects what it needs. Which axis a size
 moves along is the edge's, and stays there.
 
 @docs State, Msg, Carry, Done, Outcome, init, update, carrying, travel, isCarrying, holds

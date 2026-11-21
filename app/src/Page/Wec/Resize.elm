@@ -1,4 +1,4 @@
-module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, clampTo, unmeasured, diagonal, held)
+module Page.Wec.Resize exposing (Model, Msg(..), Fence, Edge, Grows(..), init, update, grip, unmeasured, diagonal, heldBy)
 
 {-| A size the reader sets -- the width of the standings, the box a floated map keeps
 -- and the grip along the edge that moves it. The page holds one `Model` per size and
@@ -8,7 +8,7 @@ Which edge the grip lies along -- the axis its pointer is read along, the way th
 size moves along it, the bounds it holds it between -- is all the `Edge`'s; the
 `Model` holds the size and the carry.
 
-@docs Model, Msg, Fence, Edge, Grows, init, update, grip, clampTo, unmeasured, diagonal, held
+@docs Model, Msg, Fence, Edge, Grows, init, update, grip, unmeasured, diagonal, heldBy
 
 -}
 
@@ -152,7 +152,7 @@ update edge msg m =
             in
             case outcome of
                 Drag.Stepped carry ->
-                    { m | carried = carried, size = clampTo edge.fence (carry.location.size + signed edge.grows (along edge place - along edge carry.from)) }
+                    { m | carried = carried, size = Handle.clampTo edge.fence (carry.location.size + signed edge.grows (along edge place - along edge carry.from)) }
 
                 _ ->
                     { m | carried = carried }
@@ -182,7 +182,7 @@ update edge msg m =
                             )
                             * sizeStep
                 in
-                { m | size = clampTo edge.fence (m.size + signed edge.grows travel) }
+                { m | size = Handle.clampTo edge.fence (m.size + signed edge.grows travel) }
 
 
 signed : Grows -> Float -> Float
@@ -195,20 +195,10 @@ signed grows travel =
             negate travel
 
 
-clampTo : Fence -> Float -> Float
-clampTo fence size =
-    case fence.max of
-        Just top ->
-            clamp fence.min top size
-
-        Nothing ->
-            max fence.min size
-
-
 {-| Whether the grip named is the one the size is carried by.
 -}
-held : String -> Model -> Bool
-held gripId m =
+heldBy : String -> Model -> Bool
+heldBy gripId m =
     case Drag.carrying m.carried of
         Just carry ->
             carry.location.by == gripId
@@ -236,7 +226,7 @@ grip edge m =
         }
         { id = edge.id
         , label = edge.label
-        , held = held edge.id m
+        , held = heldBy edge.id m
         , marks = edge.marks
         , onGrab = Grab
         , onMove = Move

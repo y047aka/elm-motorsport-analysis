@@ -43,6 +43,13 @@ suite =
                     |> go (Shift.Move (place 1 150 100))
                     |> .x
                     |> Expect.equal 70
+        , test "an arrow key does not move the box under a carried grip" <|
+            \_ ->
+                Shift.init "box"
+                    |> go (Shift.Grab (place 1 0 0))
+                    |> go (Shift.Step { x = 1, y = 0 })
+                    |> .x
+                    |> Expect.equal 0
         , test "another pointer's release leaves the box carried" <|
             \_ ->
                 Shift.init "box"

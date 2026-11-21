@@ -158,6 +158,11 @@ test.describe('the floating track map', () => {
     await expect(leftGrip(page)).toHaveAttribute('aria-valuemin', String(WIDTH_MIN));
     await expect(leftGrip(page)).toHaveAttribute('aria-valuetext', `${FLOAT_WIDTH} pixels wide`);
 
+    // ARIA's default top is 100, so a splitter whose top the window sets has to say it: a
+    // `valuenow` of 480 under an unwritten max of 100 is a value outside its own bounds.
+    const boundsTop = Number(await leftGrip(page).getAttribute('aria-valuemax'));
+    expect(boundsTop).toBeGreaterThan(FLOAT_WIDTH);
+
     // Nothing lights under the pointer, and the grip says nothing there either -- the box
     // growing is the feedback. The keys it answers to are said by the size it steps.
     await expect(leftGrip(page)).toHaveCSS('cursor', 'ew-resize');
@@ -330,8 +335,10 @@ test.describe('the floating track map', () => {
     expect(filled.x).toBeCloseTo(0, 0);
     expect(filled.y).toBeCloseTo(0, 0);
 
-    // And back the way it came is free here too: `grow` says the ceiling a drag stops at does
-    // not move during the drag.
+    // And back the way it came is free here too: `bounded` says the ceiling a drag stops at
+    // does not move during the drag. The return leg is aimed inside the window -- a
+    // `mouse.move` to coordinates outside the viewport is never delivered, and the box simply
+    // never comes back.
     await page.mouse.move(pick.x - 900, pick.y - 650, { steps: 10 });
     await expectBox(page, { x: opened.x - 900, y: opened.y - 650 });
     await page.mouse.up();
