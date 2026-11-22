@@ -1,1 +1,1 @@
-ALTER TABLE sqlfx_mig_test ADD COLUMN y INT;
+ALTER TABLE sqlitefx_mig_test ADD COLUMN y INT;

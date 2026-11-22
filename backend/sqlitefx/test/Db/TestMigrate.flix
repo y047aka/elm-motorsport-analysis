@@ -59,7 +59,7 @@ def testNoTransactionMarker(): Unit \ Assert =
     Assert.assertEq(
         expected = List#{true, true, false, false},
         List#{
-            Migrate.hasNoTransactionMarker("-- sqlitefx:no-transaction\nCREATE INDEX CONCURRENTLY ..."),
+            Migrate.hasNoTransactionMarker("-- sqlitefx:no-transaction\nVACUUM"),
             Migrate.hasNoTransactionMarker("\n\n  -- sqlitefx:no-transaction  \nCREATE INDEX ..."),
             Migrate.hasNoTransactionMarker("CREATE INDEX ...\n-- sqlitefx:no-transaction"),
             Migrate.hasNoTransactionMarker("-- users\nCREATE TABLE ...")

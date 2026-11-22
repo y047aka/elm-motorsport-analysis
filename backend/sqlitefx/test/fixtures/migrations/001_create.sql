@@ -1,6 +1,6 @@
--- migrate のテスト用。本体の test/Pg/TestMigrate.flix が当てる
-CREATE TABLE sqlfx_mig_test (
-    id BIGSERIAL PRIMARY KEY,
+-- migrate のテスト用。本体の test/Sqlite/TestMigrate.flix が当てる
+CREATE TABLE sqlitefx_mig_test (
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL
 );
-INSERT INTO sqlfx_mig_test (name) VALUES ('first');
+INSERT INTO sqlitefx_mig_test (name) VALUES ('first');

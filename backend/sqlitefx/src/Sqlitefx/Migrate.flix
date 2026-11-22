@@ -1,9 +1,12 @@
 ///
-/// migrations/*.sql を DB に当てる。適用済みは `sqlfx_migrations` に記録し、前進のみ、1 ファイル 1 Tx、同時実行は advisory lock で 1 つ。
-/// 生成器 `gen` と同じファイルを読むが、パーサは通さず JDBC の Statement にそのまま渡す（関数やトリガも当たる）。
+/// migrations/*.sql を DB に当てる。適用済みは `sqlitefx_migrations` に記録し、前進のみ、1 ファイル 1 Tx。
+/// 同時に走る migrate どうしは、ファイルごとに `BEGIN IMMEDIATE` で書き込みのロックを取り、取った後で記録を読み直して並ぶ。
+/// 生成器 `gen` と同じファイルを読むが、パーサは通さず JDBC の Statement にそのまま渡す（トリガも当たる）。
 ///
-/// WhyNot: `Sql.execute` を使わないのは、`$n` を `?` に書き換える経路なので `$$` の関数本体が壊れるから。
-/// WhyNot: プールの接続で当てないのは、advisory lock が接続に紐づき、解放漏れの接続が戻ると次の migrate が永久に待つから。
+/// WhyNot: `Sql.execute` を使わないのは、`$n` を `?` に書き換える経路なので、文字列リテラルの外の `$` を含む文が壊れるから。
+///
+/// WhyNot: PG のように migrate 全体を 1 つのロックで囲まないのは、SQLite に接続を跨いで持てる advisory lock が無く、持てる一番近い物が書き込みのロックで、それを全体で持つと 1 ファイル 1 Tx でなくなるから。
+/// ファイルごとにロックを取り、取った後で「もう当たっているか」を読み直せば、2 つの migrate が同じファイルを 2 回当てる事は無い。
 ///
 pub mod Sqlitefx.Migrate {
 
@@ -14,7 +17,6 @@ pub mod Sqlitefx.Migrate {
     use Sqlitefx.SqlValue
     use Sqlitefx.Timestamp
     use Sqlitefx.TransientDbErr
-    use Sqlitefx.Tx
 
     import java.sql.Connection
     import java.sql.Statement
@@ -45,12 +47,12 @@ pub mod Sqlitefx.Migrate {
     /// 接続先と、DDL がロックを待つ上限。
     ///
     /// - `connection`: 専用の接続を 1 本開く先
-    /// - `lockTimeoutMs`: `SET lock_timeout`。ALTER TABLE が長い SELECT の後ろで待ち続けて、他の全クエリを詰まらせないため
+    /// - `lockTimeoutMs`: `busy_timeout`。書き込みのロックを待つ上限。他の migrate や長い書き込みの後ろで待ち続けないため
     ///
     pub type alias Config = { connection = Jdbc.ConnectionConfig, lockTimeoutMs = Int32 }
 
     ///
-    /// 既定は lock_timeout 10 秒。
+    /// 既定はロックの待ち 10 秒。
     ///
     pub def defaultConfig(connection: Jdbc.ConnectionConfig): Config =
         { connection = connection, lockTimeoutMs = 10000 }
@@ -79,31 +81,21 @@ pub mod Sqlitefx.Migrate {
     ///
     type alias Applied = { version = String, checksum = String, appliedAt = Timestamp.Timestamp, executionMs = Int32 }
 
-    /// advisory lock のキー。固定値。
-    def lockKey(): Int64 = 8151602112i64
-
     // ---- 入口 ----
 
     ///
-    /// 未適用のファイルを番号順に当て、当てた version を返す。専用の接続を開き、lock を取り、必ず閉じる。
+    /// 未適用のファイルを番号順に当て、当てた version を返す。専用の接続を開き、必ず閉じる。
     /// 適用済みのファイルが書き換わっていれば何も当てずに checksumMismatch。
+    /// 同時に走った別の migrate が先に当てたファイルは、当てずに飛ばす（返す version に入らない）。
     ///
     pub def apply(config: Config, dir: String): List[String] \ {IO, Fs.ReadFile.ReadFile, Fs.DirList.DirList, TransientDbErr, DbErr, MigrateErr} =
         let files = loadFiles(dir);
-        Jdbc.withConnection(config#connection, conn -> {
-            executeRaw(conn, "SET lock_timeout = ${config#lockTimeoutMs}");
-            executeRaw(conn, "SELECT pg_advisory_lock(${lockKey()})");
-            let outcome = DbError.runWithKind(() -> {
-                ensureTable(conn);
-                let applied = readApplied(conn);
-                verifyApplied(files, applied);
-                pendingOf(files, applied) |> List.map(file -> { applyOne(conn, file); file#version })
-            });
-            executeRaw(conn, "SELECT pg_advisory_unlock(${lockKey()})");
-            match outcome {
-                case Ok(versions) => versions
-                case Err(kind) => DbError.raise(kind)
-            }
+        let connection = { pragmas = config#connection#pragmas ::: List#{"busy_timeout = ${config#lockTimeoutMs}"} | config#connection };
+        Jdbc.withConnection(connection, conn -> {
+            ensureTable(conn);
+            let applied = readApplied(conn);
+            verifyApplied(files, applied);
+            pendingOf(files, applied) |> List.filter(file -> applyOne(conn, file)) |> List.map(file -> file#version)
         })
 
     ///
@@ -256,7 +248,7 @@ pub mod Sqlitefx.Migrate {
     // ---- 記録 ----
 
     def ensureTable(conn: Connection): Unit \ {IO, TransientDbErr, DbErr} =
-        executeRaw(conn, "CREATE TABLE IF NOT EXISTS sqlfx_migrations (version TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TIMESTAMPTZ NOT NULL DEFAULT now(), execution_ms INTEGER NOT NULL, applied_by TEXT NOT NULL DEFAULT current_user)")
+        executeRaw(conn, "CREATE TABLE IF NOT EXISTS sqlitefx_migrations (version TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at INTEGER NOT NULL, execution_ms INTEGER NOT NULL)")
 
     def readApplied(conn: Connection): List[Applied] \ {IO, TransientDbErr, DbErr} =
         let decoder = forA (
@@ -265,7 +257,7 @@ pub mod Sqlitefx.Migrate {
             appliedAt <- Decoder.timestamp("applied_at");
             executionMs <- Decoder.int32("execution_ms")
         ) yield { version = version, checksum = sum, appliedAt = appliedAt, executionMs = executionMs };
-        let rows = Jdbc.fetchRows(conn, "SELECT version, checksum, applied_at, execution_ms FROM sqlfx_migrations ORDER BY version", Nil);
+        let rows = Jdbc.fetchRows(conn, "SELECT version, checksum, applied_at, execution_ms FROM sqlitefx_migrations ORDER BY version", Nil);
         match Decoder.decodeRows(decoder, rows) {
             case Ok(applied) => applied
             case Err(error) => DbErr.decodeError(Decoder.errorColumn(error), Decoder.describeError(error))
@@ -287,28 +279,45 @@ pub mod Sqlitefx.Migrate {
         List.filter(file -> not List.exists(row -> row#version == file#version, applied), files)
 
     ///
-    /// 1 ファイルを当てて記録する。Tx ありなら全文と記録の INSERT を同じ Tx に入れる。
+    /// 1 ファイルを当てて記録し、当てたかを返す。Tx ありなら書き込みのロックを取り、もう記録があれば当てずに false。
+    /// 全文と記録の INSERT は同じ Tx に入る。
     ///
-    def applyOne(conn: Connection, file: MigrationFile): Unit \ {IO, TransientDbErr, DbErr} =
+    /// WhyNot: `Tx.withTx` で囲まないのは、それが `setAutoCommit(false)` の deferred な BEGIN で、最初の読みでは書き込みのロックを取らないから。記録を読み直した後で 2 つの migrate がどちらも書こうとすると、片方が BUSY になる。
+    ///
+    /// WhyNot: no-transaction のファイルを並ばせないのは、`VACUUM` のように Tx の中で走らない文のための印で、ロックを持ったまま当てられないから。同時に走る migrate が同じファイルを当てうるので、そういう文は何度当てても同じ形に書く。
+    ///
+    /// WhyNot: `applied_at` を DB の `DEFAULT` でなくこちらの時刻で入れるのは、SQLite に PG の `now()` に当たるマイクロ秒の時刻を返す関数が無いから。
+    ///
+    def applyOne(conn: Connection, file: MigrationFile): Bool \ {IO, TransientDbErr, DbErr} =
         let started = System.currentTimeMillis();
-        let record = () -> {
-            let elapsed = Int64.clampToInt32(min = 0, max = Int32.maxValue(), System.currentTimeMillis() - started);
-            discard Jdbc.executeStatement(conn, "INSERT INTO sqlfx_migrations (version, checksum, execution_ms) VALUES ($1, $2, $3)",
-                List#{SqlValue.Str(file#version), SqlValue.Str(file#checksum), SqlValue.Int32(elapsed)})
-        };
-        if (file#noTransaction) {
+        let apply = () -> if (isApplied(conn, file#version)) false else {
             executeRaw(conn, file#sql);
-            record()
-        } else
-            Tx.withTx(conn, () -> { executeRaw(conn, file#sql); record() })
+            let finished = System.currentTimeMillis();
+            let elapsed = Int64.clampToInt32(min = 0, max = Int32.maxValue(), finished - started);
+            discard Jdbc.executeStatement(conn, "INSERT INTO sqlitefx_migrations (version, checksum, applied_at, execution_ms) VALUES ($1, $2, $3, $4)",
+                List#{SqlValue.Str(file#version), SqlValue.Str(file#checksum), SqlValue.Timestamp(finished * 1000i64), SqlValue.Int32(elapsed)});
+            true
+        };
+        if (file#noTransaction)
+            apply()
+        else {
+            executeRaw(conn, "BEGIN IMMEDIATE");
+            match DbError.runWithKind(apply) {
+                case Ok(applied) => { executeRaw(conn, "COMMIT"); applied }
+                case Err(kind) => { discard DbError.runWithKind(() -> executeRaw(conn, "ROLLBACK")); DbError.raise(kind) }
+            }
+        }
+
+    def isApplied(conn: Connection, version: String): Bool \ {IO, TransientDbErr, DbErr} =
+        not List.isEmpty(Jdbc.fetchRows(conn, "SELECT 1 FROM sqlitefx_migrations WHERE version = $1", List#{SqlValue.Str(version)}))
 
     ///
-    /// 生 SQL を JDBC の Statement にそのまま渡す。複数文でも可（pgjdbc が `;` で分ける）。
+    /// 生 SQL を JDBC の Statement にそのまま渡す。`;` で区切った複数文も全部当たる（`TestMigrate.testMigrateApplyThenNoop` の 001）。
     ///
     def executeRaw(conn: Connection, sql: String): Unit \ {IO, TransientDbErr, DbErr} =
         try {
             let statement: Statement = conn.createStatement();
-            discard statement.execute(sql);
+            discard statement.executeUpdate(sql);
             statement.close()
         } catch {
             case e: SQLException => Jdbc.raiseSqlException(e)

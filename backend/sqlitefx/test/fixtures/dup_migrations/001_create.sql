@@ -1,1 +1,1 @@
-CREATE TABLE sqlfx_dup_test (id BIGINT);
+CREATE TABLE sqlitefx_dup_test (id BIGINT);

@@ -1,2 +1,3 @@
--- sqlfx:no-transaction
-CREATE INDEX CONCURRENTLY IF NOT EXISTS sqlfx_mig_test_name_idx ON sqlfx_mig_test (name);
+-- sqlitefx:no-transaction
+CREATE INDEX IF NOT EXISTS sqlitefx_mig_test_name_idx ON sqlitefx_mig_test (name);
+VACUUM;
