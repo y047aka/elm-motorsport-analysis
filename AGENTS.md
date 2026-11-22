@@ -53,7 +53,7 @@ Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
 | Elm under `app/` or `package/` | `.#format`, `.#test`, `.#review-app` / `.#review-package` | `.#test` only |
 | TypeScript under `app/` | `.#typecheck` | yes |
 | `backend/` | `.#flix-test`; a file `circuits/` symlinks also `.#geometry-test` (`backend/README.md`) | yes |
-| `backend/sqlitefx/` | `.#sqlitefx-test` | yes |
+| `backend/sqlitefx/` | `.#sqlitefx-test`, and `.#flix-test` for the files `backend/src/Sqlitefx/` links | yes |
 | `circuits/` | `.#geometry-test`; a kept geometry also re-surveys byte for byte | yes |
 | Anything drawn, or `app/src/shadcn/` | `.#test-vrt`; a baseline lands through `.#update-snapshots-ci`, never `.#update-snapshots-vrt` | yes (`playwright.yml`) |
 | Comments or docs | `/skill:distill-docs`'s after-a-change pass | no |

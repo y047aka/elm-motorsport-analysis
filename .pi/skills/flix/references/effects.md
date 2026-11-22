@@ -51,7 +51,7 @@ An operation raised inside a handler body does not reach the handlers the
 caller installed inside that `run` — it passes them and lands outside. So an
 operation that can fail cannot raise the failure from the handler.
 
-The way out, which is the shape of every op of `Lite3fx`: the operation **answers
+The way out, which is the shape of every op of `Sqlitefx`: the operation **answers
 with a `Result`**, and a thin wrapper raises it in the caller's own context.
 
 ```flix
@@ -59,19 +59,21 @@ pub eff SqlRead {
     def fetch(sql: String, params: List[SqlValue]): Result[DbErrorKind, ...]
 }
 
-// mod Lite3fx.Sql -- the caller reaches this, never the op
+// mod Sqlitefx.Sql -- the caller reaches this, never the op
 pub def fetch(sql: String, params: List[SqlValue]): ... \ DbRead + RawSql =
     SqlRead.fetch(sql, params) |> orRaise
 ```
 
-`Lite3fx.Sql.orRaise` is that step.
+`Sqlitefx.Sql`'s private `orRaise` is that step, and `backend`'s `Sql.orRaise` the same for a reading's `Result`.
 
 ### Subtraction takes a set or an alias
 
 `ef - DbErr`, `ef - {SqlRead, SqlWrite}` and `ef - Db` (an alias of a set) all
 work. Prefer the alias where one exists, and remember that a boundary that
-handles the error effect too has to subtract it as well: `withConnection` is
-`(ef - Db) + IO + {TransientDbErr, DbErr}`, and leaving one of the two out of the
+handles the error effect too has to subtract it as well: `Db.TestJdbc.connectedTo`
+handles the statements and the failures alike and is `(ef - Db.DbAll) + IO`, while
+`Sqlitefx.Jdbc.withConnection`, which raises the failures on, is
+`(ef - {SqlRead, SqlWrite, SqlSavepoint}) + {IO, TransientDbErr, DbErr}`; leaving one of the two out of the
 subtraction fails as `E6469 Unable to unify the effect formulas` with two
 formulas that differ only by that term.
 
@@ -79,7 +81,7 @@ formulas that differ only by that term.
 
 Each of `DbErr` and `TransientDbErr` has a single `raise(kind: DbErrorKind): Void`.
 An operation returning `Void` does not resume, so the caller's code is written as
-though it always succeeds, and `Lite3fx.DbError.runWithKind` turns it back into a `Result` at
+though it always succeeds, and `Sqlitefx.DbError.runWithKind` turns it back into a `Result` at
 the boundary.
 
 An op per error kind buys partial handling — catching one kind and letting the
@@ -134,8 +136,8 @@ From `ababup1192/sqlfx`'s `docs/spikes.md` (same compiler version):
 - `spawn`'s body is limited to `(Chan + IO + NonDet) & e0`; a custom effect
   cannot be raised inside one.
 - Handlers can be chained on one `run` — `run { } with handler A { } with
-  handler B { }` — rather than nested. `Lite3fx.Recording.statements` nests two `run`s and
-  compiles; the chained form is untried here.
+  handler B { }` — rather than nested. `Sqlitefx.Jdbc.runWithConnectionWatched` chains three
+  on one `run` and compiles.
 - Measured handler overhead: a recording handler costs ~0.6µs per operation and
   a logging handler that forwards ~1.3µs, both two orders below a JDBC round
   trip. Layering handlers is not a performance question.

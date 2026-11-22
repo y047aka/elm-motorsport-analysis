@@ -1,6 +1,6 @@
 # sqlitefx
 
-The SQLite port of sqlfx that `backend` is to reach SQLite through; `README.md` says what it is, how it differs from sqlfx, and where its boundary with `backend` runs.
+The SQLite port of sqlfx that `backend` reaches SQLite through; `README.md` says what it is, how it differs from sqlfx, and where its boundary with `backend` runs.
 The repository's `AGENTS.md` applies here too, with the one difference below.
 
 ## Comments

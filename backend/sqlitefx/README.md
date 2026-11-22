@@ -39,22 +39,13 @@ Three things are still sqlfx's and still PostgreSQL's:
 
 ## The boundary with `backend`
 
-`backend` reaches SQLite today through `Lite3fx` (`backend/src/Lite3fx/`), which `backend/README.md` describes. sqlitefx is to replace it, and the line between the two is where `Lite3fx`'s already is:
+`backend` reaches SQLite through this library, and the line between the two is:
 
 - **sqlitefx** reaches a database and knows nothing about what is in one: the effects and their aliases, the failure kinds, values and rows, connections, transactions, savepoints, the pool, migrations, and the handlers tests run under. No module names a table or a column.
 - **`backend`** keeps `Sql` (its query builder), `Db.Schema`, the `Db.*` tables and rows, and everything above them. `Db` is the whole of what the application tells the library about itself.
 
-What `backend` may name is the effects (`Sqlitefx.DbRead`, `DbWrite`, `Db`, `RawSql`), `DbError`, `SqlValue`, `Row`, `Sql`'s statement functions, `Tx`, `Jdbc.withConnection`, and `DbTest`. `JdbcConvert`, `SqlState`, `Jdbc`'s other functions and `Db`'s guards are the library's own.
+What `backend` names is the effects, `DbError`, `SqlValue`, `Row`, `Sql`'s statement functions, `Tx`, `Jdbc.withConnection`, and `DbTest`. `JdbcConvert`, `SqlState`, `Jdbc`'s other functions and `Db`'s guards are the library's own.
 
-Flix has no local path dependency, so `backend` compiles sqlitefx the way `circuits/` compiles `backend`: a symlink per file, never per directory (`circuits/README.md` says why), from `backend/src/Sqlitefx/` into `src/Sqlitefx/`. Only what `backend` reads is linked: not `Q/`, not `Main.flix`.
+`backend/src/Sqlitefx/` is a symlink per file into `src/Sqlitefx/`, since Flix has no local path dependency, and only what `backend` reads is linked: a module that starts importing one not yet linked fails `backend`'s build by name until the link is added. `backend/README.md` holds which modules those are, and what `backend` decided where it uses this library differently from how sqlfx's README does.
 
-## Switching `backend` from Lite3fx
-
-Each of these is a decision the switch has to make, since Lite3fx and sqlfx answer it differently:
-
-- **`insertMany`.** Lite3fx's `SqlWrite` has it, since laps arrive a thousand at a time; sqlfx's does not. Either the op is added here, or the load writes multi-row `INSERT`s through `execute`.
-- **`commit` and `rollback`.** They are `SqlWrite` operations in Lite3fx, so a recording handler sees a commit go by (`Cli.Load.runAll` is its one caller); sqlfx's `Tx.withTx` commits on the connection it is handed.
-- **Recording.** `Lite3fx.Recording.statements` answers the server's statement-free routes; `DbTest.runRecording` is the nearest here, and is handed the rows to answer with.
-- **Failure names.** Lite3fx's `Busy` and `Unreachable` are `Timeout` and `ConnectionLost` here; `Server.Api` turns both into a 503.
-- **Pragmas.** `backend` runs with `journal_mode = WAL` and with `foreign_keys` off (`backend/README.md`), so it passes its own list rather than `Jdbc.config`'s.
-- **Autocommit.** Lite3fx turns it off on every connection; sqlitefx leaves it on outside `Tx`.
+A change here is checked by both suites: `nix run .#sqlitefx-test`, and `nix run .#flix-test`, which compiles the linked files against `backend`.
