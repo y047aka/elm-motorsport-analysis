@@ -1,5 +1,5 @@
 pub mod Db.TestCarDrivers {
-    use Lite3fx.SqlValue
+    use Sqlitefx.SqlValue
 
     use Db.CarDrivers
     use Db.Drivers

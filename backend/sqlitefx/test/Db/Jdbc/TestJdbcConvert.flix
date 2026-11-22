@@ -1,0 +1,59 @@
+use Sqlitefx.JdbcConvert
+use Sqlitefx.SqlValue
+
+use Sqlitefx.SqlValue.SqlValue
+
+// JdbcConvert: `$n` → `?` の書き換え（純粋）。
+
+/// `$1` `$2` は出現順に `?` になり、パラメータは出現順に並ぶ。
+@Test
+def testRewriteInOrder(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Some(("SELECT * FROM t WHERE a = ? AND b = ?", List#{SqlValue.Int64(1i64), SqlValue.Str("x")})),
+        JdbcConvert.rewritePlaceholders("SELECT * FROM t WHERE a = $1 AND b = $2", List#{SqlValue.Int64(1i64), SqlValue.Str("x")}))
+
+/// 同じ `$1` を 2 回使えば値も 2 回並ぶ。順序が逆でも値は `$n` に従う。
+@Test
+def testRewriteRepeatAndReorder(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Some(("? ? ?", List#{SqlValue.Str("b"), SqlValue.Str("a"), SqlValue.Str("b")})),
+        JdbcConvert.rewritePlaceholders("$2 $1 $2", List#{SqlValue.Str("a"), SqlValue.Str("b")}))
+
+/// 文字列リテラルの中の `$1` と、数字が続かない `$` は触らない。2 桁の `$10` も読める。
+@Test
+def testRewriteSkipsQuotesAndBareDollar(): Unit \ Assert =
+    let params = List.range(1, 11) |> List.map(i -> SqlValue.Int32(i));
+    Assert.assertEq(
+        expected = Some(("SELECT '$1', $$, ?", List#{SqlValue.Int32(10)})),
+        JdbcConvert.rewritePlaceholders("SELECT '$1', $$, $10", params))
+
+/// params に無い `$n` は None。
+@Test
+def testRewriteOutOfRange(): Unit \ Assert =
+    Assert.assertEq(expected = None, JdbcConvert.rewritePlaceholders("SELECT $2", List#{SqlValue.Int32(1)}))
+
+/// `--` コメントは落ち、コメント中の `'` と `$1` は見ない。引用符の中の `--` は残る。
+@Test
+def testRewriteDropsLineComments(): Unit \ Assert =
+    let rewritten = JdbcConvert.rewritePlaceholders("SELECT 'a--b' -- it's $9\nFROM t WHERE id = $1", List#{SqlValue.Int64(1i64)});
+    Assert.assertEq(expected = Some(("SELECT 'a--b' \nFROM t WHERE id = ?", List#{SqlValue.Int64(1i64)})), rewritten)
+
+/// `$n` が無ければ、引用符の外の `?` を出てきた順に params に当てる。引用符の中の `?` は数えない。
+@Test
+def testPositionalQuestionMarks(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Some(("SELECT '?' WHERE a = ? AND b = ?", List#{SqlValue.Int32(1), SqlValue.Str("x")})),
+        JdbcConvert.rewritePlaceholders("SELECT '?' WHERE a = ? AND b = ?", List#{SqlValue.Int32(1), SqlValue.Str("x")}))
+
+/// `?` と params の数が違えば None、`$n` と `?` が混ざっていても None。
+///
+///   ? ? に 1 つ → None      $1 と ? → None      ? も $n も無く params も無い → そのまま
+@Test
+def testPositionalMismatches(): Unit \ Assert =
+    Assert.assertEq(
+        expected = (None, None, Some(("SELECT 1", Nil))),
+        (
+            JdbcConvert.rewritePlaceholders("SELECT ? , ?", List#{SqlValue.Int32(1)}),
+            JdbcConvert.rewritePlaceholders("SELECT $1, ?", List#{SqlValue.Int32(1), SqlValue.Int32(2)}),
+            JdbcConvert.rewritePlaceholders("SELECT 1", Nil)
+        ))

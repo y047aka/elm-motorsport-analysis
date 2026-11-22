@@ -6,8 +6,8 @@
 /// is the same on every lap of it, in every seat the archive holds, so the
 /// name is here and the lap carries the seat alone.
 pub mod Db.CarDrivers {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
 
     use Db.Drivers
     use Db.Drivers.Numbering

@@ -1,14 +1,14 @@
 /// The rounds, served rather than exported. An endpoint answers with what
 /// `Cli.Export` writes to a file, byte for byte.
 pub mod Server.Api {
-    use Lite3fx.DbErr
-    use Lite3fx.DbError
-    use Lite3fx.DbError.Failure
-    use Lite3fx.DbError.TransientKind
-    use Lite3fx.DbRead
-    use Lite3fx.RawSql
-    use Lite3fx.SqlRead
-    use Lite3fx.TransientDbErr
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.DbError.Failure
+    use Sqlitefx.DbError.TransientKind
+    use Db.DbRead
+    use Sqlitefx.RawSql
+    use Sqlitefx.SqlRead
+    use Sqlitefx.TransientDbErr
 
     use Round.Index
     use Round.Laps
@@ -114,11 +114,11 @@ pub mod Server.Api {
     /// with the same words rather than its own.
     pub def failed(cause: Failure): Response =
         let (status, reason) = match cause {
-            case Failure.Transient(TransientKind.Unreachable(_)) => (503, "the database could not be reached")
-            case Failure.Transient(TransientKind.Busy(_))        => (503, "the database is busy")
+            case Failure.Transient(TransientKind.ConnectionLost(_)) => (503, "the database could not be reached")
+            case Failure.Transient(_)                              => (503, "the database is busy")
             case _                                                 => (500, "the round could not be read")
         };
-        { status = status, contentType = "text/plain", body = reason, cause = Some("${cause}") }
+        { status = status, contentType = "text/plain", body = reason, cause = Some(DbError.describeFailure(cause)) }
 
     def calendar(): String =
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))

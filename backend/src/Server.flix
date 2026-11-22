@@ -1,9 +1,9 @@
 pub mod Server {
-    use Lite3fx.DbError
-    use Lite3fx.DbTest
-    use Lite3fx.Jdbc
-    use Lite3fx.RawSql
-    use Lite3fx.Recording
+    use Sqlitefx.DbError
+    use Sqlitefx.DbTest
+    use Sqlitefx.Jdbc
+    use Sqlitefx.RawSql
+    use Sqlitefx.Tx
 
     import com.sun.net.httpserver.HttpExchange
     import com.sun.net.httpserver.HttpHandler
@@ -60,27 +60,22 @@ pub mod Server {
         if (Api.needsDatabase(route))
             fromDatabase(databaseUrl, route)
         else
-            // Nothing is sent, so there is nothing for the recording to hold.
-            match Recording.statements(() -> Api.respond(route)) {
-                case (answered, _) => answered
-            }
+            // Nothing is read, so there is nothing for the rows to answer with.
+            DbTest.runWithRows(Nil, () -> Api.respond(route))
 
     /// A connection per request. `java.sql.Connection` is not thread-safe, and
     /// the requests are answered on a pool.
     ///
-    /// A connection a thrown request left behind holds a read on the database
-    /// until the process ends, so the close is outside the catch.
+    /// The answer is read in one transaction, so every statement of it sees the database as it stood when the first was sent: a run committing in the middle would otherwise hand one request the summary of one load and the laps of the next.
     def fromDatabase(databaseUrl: String, route: Route): Response \ {IO, RawSql} =
-        match Jdbc.connect(databaseUrl) {
-            case Err(cause) => Api.failed(DbError.toFailure(cause))
-            case Ok(conn)   =>
-                let answered = try {
-                    Jdbc.runReading(conn, () -> Api.respond(route))
-                } catch {
-                    case e: Throwable => failed(e)
-                };
-                Jdbc.close(conn);
-                answered
+        let answered = try {
+            DbError.runWithFailure(() -> Jdbc.withConnection(Db.connection(databaseUrl), conn -> Tx.withTx(conn, () -> Api.respond(route))))
+        } catch {
+            case e: Throwable => Ok(failed(e))
+        };
+        match answered {
+            case Ok(response) => response
+            case Err(cause)   => Api.failed(cause)
         }
 
     def failed(e: Throwable): Response \ IO =

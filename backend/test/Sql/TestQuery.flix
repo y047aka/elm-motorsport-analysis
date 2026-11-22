@@ -1,5 +1,5 @@
 pub mod Sql.TestQuery {
-    use Lite3fx.SqlValue
+    use Sqlitefx.SqlValue
 
     use Db.Laps
     use Db.Schema

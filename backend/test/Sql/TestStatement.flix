@@ -1,5 +1,5 @@
 pub mod Sql.TestStatement {
-    use Lite3fx.SqlValue
+    use Sqlitefx.SqlValue
 
     use Sql.Key
 
@@ -62,22 +62,19 @@ pub mod Sql.TestStatement {
     def droppingATableThatIsNotThereIsNotAnError(): Unit \ Assert =
         Assert.assertTrue(Sql.dropTableIfExists("laps") == "DROP TABLE IF EXISTS laps")
 
-    /// The statement names the columns and the rows are bound in that order,
-    /// both read off the one list.
+    /// The statement names the columns and a group of placeholders per row, and the rows are bound in that order, both read off the one list.
     @Test
     def anInsertBindsEachRowInTheOrderItNamesTheColumns(): Unit \ Assert =
-        let (statement, bound) = Sql.insertRows("laps", columns(),
+        let inserted = Sql.insertRows("laps", columns(),
             { round = "le_mans_24h", lapNumber = 1 } :: { round = "fuji_6h", lapNumber = 12 } :: Nil);
-        Assert.assertTrue(statement == "INSERT INTO laps (round, lap_number) VALUES (?, ?)");
-        Assert.assertTrue(bound == (
-            (SqlValue.Str("le_mans_24h") :: SqlValue.Int32(1) :: Nil) ::
-            (SqlValue.Str("fuji_6h") :: SqlValue.Int32(12) :: Nil) :: Nil
-        ))
+        Assert.assertTrue(inserted == Some((
+            "INSERT INTO laps (round, lap_number) VALUES (?, ?), (?, ?)",
+            SqlValue.Str("le_mans_24h") :: SqlValue.Int32(1) :: SqlValue.Str("fuji_6h") :: SqlValue.Int32(12) :: Nil
+        )))
 
+    /// An `INSERT` with no `VALUES` is no statement at all.
     @Test
-    def anInsertOfNoRowsIsStillTheStatement(): Unit \ Assert =
-        let (statement, bound) = Sql.insertRows("laps", columns(), (Nil: List[Row]));
-        Assert.assertTrue(statement == "INSERT INTO laps (round, lap_number) VALUES (?, ?)");
-        Assert.assertTrue(bound == Nil)
+    def anInsertOfNoRowsIsNoStatement(): Unit \ Assert =
+        Assert.assertTrue(Sql.insertRows("laps", columns(), (Nil: List[Row])) == None)
 
 }

@@ -6,8 +6,8 @@
 /// used -- so this table is that calendar written down rather than a second
 /// one. What it adds is an id.
 pub mod Db.Rounds {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
 
     use Db.Schema
     use Db.Schema.Bound

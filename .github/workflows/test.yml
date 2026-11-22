@@ -28,14 +28,17 @@ jobs:
         with:
           path: |
             backend/lib
+            backend/sqlitefx/lib
             circuits/lib
-          key: flix-deps-${{ runner.os }}-${{ hashFiles('backend/flix.toml', 'circuits/flix.toml') }}
+          key: flix-deps-${{ runner.os }}-${{ hashFiles('backend/flix.toml', 'backend/sqlitefx/flix.toml', 'circuits/flix.toml') }}
           restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: none of these commands touches node_modules.
       - name: Elm tests
         run: nix run .#test
       - name: CLI tests
         run: nix run .#flix-test
+      - name: Database library tests
+        run: nix run .#sqlitefx-test
       - name: Geometry command tests
         run: nix run .#geometry-test
       # The byte fence, over every kept answer. A fresh asking

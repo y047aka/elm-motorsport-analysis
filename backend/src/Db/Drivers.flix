@@ -3,8 +3,8 @@
 /// A name is the whole of what the feed gives of a driver, so it is the key as
 /// well as the value. 308 of them are named on 130,017 laps.
 pub mod Db.Drivers {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
 
     use Db.Schema
     use Db.Schema.Bound

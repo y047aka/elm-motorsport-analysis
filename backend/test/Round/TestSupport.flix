@@ -4,8 +4,9 @@
 /// What it sends is what `Cli.Load` sends, the timeline included, so a reader
 /// tested here is tested against the rows a run makes.
 pub mod Round.TestSupport {
-    use Lite3fx.DbError
-    use Lite3fx.Jdbc
+    use Sqlitefx.DbError
+    use Sqlitefx.Jdbc
+    use Sqlitefx.RawSql
 
     use Db.CarDrivers
     use Db.Cars
@@ -23,16 +24,16 @@ pub mod Round.TestSupport {
     /// archive a working copy has.
     pub def url(): String = "jdbc:sqlite::memory:"
 
-    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Lite3fx.Db) + IO =
+    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Db.DbAll) + IO =
         onRows(entry, laps, true, read)
 
     /// As `onRound`, with the round's cars left out: what a round only half in
     /// the database reads as.
-    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Lite3fx.Db) + IO =
+    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Db.DbAll) + IO =
         onRows(entry, laps, false, read)
 
-    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - Lite3fx.Db) + IO =
-        let outcome = DbError.runWithKind(() -> Jdbc.withConnection(url(), () -> {
+    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - Db.DbAll) + IO =
+        let outcome = DbError.runWithKind(() -> RawSql.runWithAllow(() -> Jdbc.withConnection(Db.connection(url()), _ -> {
             let rounds = Rounds.create(entry :: Nil);
             Drivers.create();
             CarDrivers.create();
@@ -64,7 +65,7 @@ pub mod Round.TestSupport {
                 Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)
             ));
             read()
-        }));
+        })));
         match outcome {
             case Ok(value)  => value
             case Err(cause) => bug!("${cause}")

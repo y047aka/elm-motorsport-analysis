@@ -13,13 +13,13 @@ What follows is what the code cannot say for itself.
 ## The server
 
 `Server` is `com.sun.net.httpserver` reached through Java interop: the handler is an anonymous `HttpHandler`, and `main` blocks on a latch because returning from it would take the JVM with it.
-Requests are answered on a pool of eight, and each opens a connection of its own — `java.sql.Connection` is not thread-safe. `Lite3fx.Jdbc.connect` puts the database in WAL mode, so those reads run beside a writing run rather than behind it.
+Requests are answered on a pool of eight, and each opens a connection of its own — `java.sql.Connection` is not thread-safe. `Db.connection` puts the database in WAL mode, so those reads run beside a writing run rather than behind it.
 
-`Server.Api` decides nothing about a round and renders none of one: `Server.Api.respond` runs under `Lite3fx.Jdbc.runReading` and makes the same calls `Cli.Export` makes, so what is served and what is written are the same bytes.
+`Server.Api` decides nothing about a round and renders none of one: `Server.Api.respond` reads alone (`\ {SqlRead, RawSql}`), runs in one transaction so it reads one state of the database, and makes the same calls `Cli.Export` makes, so what is served and what is written are the same bytes.
 An answer reads only what it is made of, rather than reading a round's laps to throw them away.
 The timeline's answer reads `Round.Index` too and walks every lap, and `Server.flix` computes the `ETag` off the rendered bytes, so even a request that comes back 304 pays for the walk.
 
-A route that reads nothing is answered before connecting at all, through `Lite3fx.Recording.statements`: the calendar is `Motorsport.Calendar` rather than a count of the rows, so a database that is down stops a round being opened and not the app being used.
+A route that reads nothing is answered before connecting at all, under `Sqlitefx.DbTest.runWithRows`: the calendar is `Motorsport.Calendar` rather than a count of the rows, so a database that is down stops a round being opened and not the app being used.
 
 A 200 carries a CRC32 `ETag` that a reload revalidates into a 304, and a body goes out gzipped where the request accepts it — Le Mans's laps are 25MB, and 3.4MB on the wire.
 
@@ -65,7 +65,7 @@ The reader numbers it one to n per round, so nothing is keyed by it; a unique in
 `car_drivers` carries the one declared index, over `driver_id`: its key leads with the round, and without the index the seats one driver sat in are a scan of every lap.
 
 No foreign key is declared and `PRAGMA foreign_keys` is off; the load's own numbering fails a missing round, car or seat by name.
-Turning them on costs two rewrites: with the pragma on, `DROP TABLE` runs an implicit `DELETE FROM`, so the drops must run children first; and the pragma is a silent no-op inside a transaction, so it belongs in `Lite3fx.Jdbc.connect`. `Round.TestSupport.onLapsAlone` — laps with no cars — is the fixture a `laps`→`cars` key would make unbuildable.
+Turning them on costs two rewrites: with the pragma on, `DROP TABLE` runs an implicit `DELETE FROM`, so the drops must run children first; and the pragma is a silent no-op inside a transaction, so it belongs in `Db.connection`'s pragmas. `Round.TestSupport.onLapsAlone` — laps with no cars — is the fixture a `laps`→`cars` key would make unbuildable.
 
 Le Mans's mini-sectors are two JSON array columns rather than thirty more, since one round in the archive has them.
 They hold the fifteen of `Motorsport.MiniSector.all()` in track order, a null being a marker the feed left blank. `json_each` reads one back keyed from zero, where `Motorsport.MiniSector.positionOf` counts from one.
@@ -116,62 +116,53 @@ What is left is one writer and reads that are whole-round scans, `GROUP BY`, win
 DuckDB is the near miss — its `LIST` types fit the mini-sectors better — but its files lock per process, and `.#serve-api` stays up across a `.#cli-run`.
 Twenty seasons of the WEC are on the order of 1.5 million laps and 150MB.
 
-## `Lite3fx`, the SQLite3 port of sqlfx
+## `Sqlitefx`, the database library
 
-[sqlfx](https://github.com/ababup1192/sqlfx) is a PostgreSQL library for Flix, and `src/Lite3fx/` is its shape — the same effects and aliases — over `org.xerial:sqlite-jdbc`.
-sqlfx 0.7.0 cannot be a dependency: Flix 0.79 rejects the `name` and `description` entries in its `flix.toml`, and its JDBC layer imports `org.postgresql.*`.
+The database is reached through `backend/sqlitefx`, a SQLite port of [sqlfx](https://github.com/ababup1192/sqlfx) with a README of its own: what it is, where it differs from sqlfx, and where its line with this project runs.
+`src/Sqlitefx/` is a symlink per file into it, the way `circuits/` reaches this `src` (`circuits/README.md` says why a link is never a directory), so `.#flix-test` compiles the library and `.#sqlitefx-test` tests it.
+Only what this project reads is linked, and what that reads: not the pool, migrations, retry, fragments or the `.q` generator. A module the library starts importing is linked by hand, and a link left out fails as an undefined name.
 
-What the port leaves out:
-
-- `NullType` is six rather than fifteen, and only `Str`, `Int32` and `Json` are ever bound.
 - No `Pool`: the CLI opens one connection per run and the server one per request, which WAL mode makes work.
 - No migrations: the `DROP TABLE`s are the migration.
-- No `.q` generator: most statements are built with `Sql`, and the written ones are checked by running every one against the in-memory database `Round.TestSupport` builds (`Round.TestReadersResolve` makes every reader answer with a row, so its projection runs). sqlfx's parser is PostgreSQL's and refuses `WITH RECURSIVE` and a `WITH` inside a CTE, which is where the hardest statements here live.
+- No `.q` generator: most statements are built with `Sql`, and the written ones are checked by running every one against the in-memory database `Round.TestSupport` builds (`Round.TestReadersResolve` makes every reader answer with a row, so its projection runs). The generator's parser is PostgreSQL's and refuses `WITH RECURSIVE` and a `WITH` inside a CTE, which is where the hardest statements here live.
 
-`commit` and `rollback` stay operations of `SqlWrite` rather than of `Tx`, so a recording handler sees a commit go by, and `insertMany` is an operation of its own, since laps arrive a thousand at a time.
-`RawSql` is inside the aliases rather than added to each signature, because every function here reaches a statement.
+`Db` is the seam: its table modules and row types are the whole of what the application tells `Sqlitefx` about itself, and `Db.connection` the whole of how it opens one.
 
-`Db` is the seam: its table modules and row types are the whole of what the application tells `Lite3fx` about itself.
-
-The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved into the gitignored `lib/` by `flix build`.
+The JDBC driver arrives through `[mvn-dependencies]`, resolved into the gitignored `lib/` by `flix build`, and is named twice: in this `flix.toml` and in `sqlitefx/flix.toml`. **The two versions move together** — this project runs the library's code on whichever driver its own `flix.toml` resolves, and the library's tests ran on the other.
 `/skill:update-deps` does not reach it, so it is raised by hand against `org.xerial:sqlite-jdbc`'s `maven-metadata.xml`. Its version is the SQLite it carries plus a build number: `3.53.4.0` is SQLite 3.53.4.
 
 ## The database effects
 
-Reaching a database is an effect, so what a round would send can be read back without one: `Lite3fx.Recording.statements` keeps the statements and answers a read with the error that nothing was sent, `Lite3fx.DbTest.runFailing` answers every statement with one error the caller chose, and `Lite3fx.DbTest.runWithRows` answers a read with rows the caller named.
-`java.sql` is imported by `Lite3fx.Jdbc` and `Lite3fx.JdbcConvert` alone, and no effect names a table or a column.
+Reaching a database is an effect, so what a round would send can be read back without one: `Sqlitefx.DbTest.runRecording` keeps the statements and answers a write with the count it is handed, and `runWithRows` answers every read with the rows the caller named.
+`java.sql` is imported by `Sqlitefx.Jdbc` and `Sqlitefx.JdbcConvert`; this project names `java.sql.Connection` only to hand the one `Jdbc.withConnection` opened to `Tx.withTx`, and no effect names a table or a column.
 
-Reading and writing are two effects: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a statement that changes the database, and `Lite3fx.Jdbc.runReading` installs the read alone.
+Reading and writing are two effects: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a statement that changes the database.
 
 `DbErr` and `TransientDbErr` are what a reader does not carry a `Result` for: their one operation does not return, so `Round.Summary.read` answers with a `Metadata` and the failure travels to the boundary that asked.
-`Lite3fx.DbError.runWithKind` is where a raised failure comes back as a value, and `runWithFailure` the same with the transient ones folded into `DbError.Failure`.
+`Sqlitefx.DbError.runWithKind` is where a raised failure comes back as a value, and `runWithFailure` the same with the transient ones folded into `DbError.Failure`.
 Which of the two a failure travels by is read off its `DbErrorKind` constructor (`DbError.raise` routes it), so a new kind meets a pattern that has to say which.
 
-`\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db` adds `SqlSavepoint`.
-Flix has no subeffecting here — a `\ DbRead` function is not a `\ Db` one — so a caller taking a reading as an argument names the half it uses (`Cli.Load.loadRound`: `DbRead + SqlWrite`) or the whole it hands over (`Main.onDirectories`, `Round.TestSupport.onRound`: `Db`).
+`\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db.DbAll` is both with `SqlSavepoint`: `Db`'s own, since sqlfx's leave `RawSql` out and `Db.flix` says why these do not.
+Flix has no subeffecting here — a `\ DbRead` function is not a `\ Db.DbAll` one — so a caller taking a reading as an argument names the half it uses (`Cli.Load.loadRound`: `DbRead + SqlWrite`) or the whole it hands over (`Main.onDirectories`, `Round.TestSupport.onRound`: `Db.DbAll`).
 
-The statement effects still answer with a `Result`; `Lite3fx.flix`'s `SqlRead` header says why. `Lite3fx.Sql.orRaise` turns it into a raised failure, so nothing outside `Lite3fx` calls an operation: the wrappers of `Lite3fx.Sql` are what `Sql` and `Db.Schema` reach.
-`Lite3fx.Jdbc.withConnection` opens, works in and closes a database for a run, a test and the server alike.
+The statement effects still answer with a `Result`; the `SqlRead` header in `sqlitefx/src/Sqlitefx.flix` says why. `Sql.orRaise` turns a reading's into a raised failure, so nothing outside the library calls an operation: the wrappers of `Sqlitefx.Sql` are what `Sql` and `Db.Schema` reach.
+`Sqlitefx.Jdbc.withConnection` opens, works in and closes a database for a run, a test and the server alike, and the connection is in autocommit outside a transaction.
 
-A failure is a `DbErrorKind`, and the sentence is its `ToString`'s.
-The transient ones are `Unreachable` (no database reached) and `Busy` (a lock SQLite waited out rather than got, read off the driver's result code by `Lite3fx.SqliteState`).
-Constraint violations are named from the driver's sentence: `UNIQUE constraint failed: laps.round_id` becomes `UniqueViolation("laps.round_id")`.
-`SchemaMismatch` is a table or column the database has not got, `DecodeError` a cell the reading could not read, `NoRow` a query that had to answer with one and did not, and `Other` the rest — what the JVM threw, and rows that came back whole and describe no round.
-`Lite3fx.Retry` would answer a transient one by sending again; nothing sends on it yet.
+A failure is a `DbErrorKind`, and the sentence is `DbError.describe`'s.
+The transient ones are `ConnectionLost` (no database reached) and `Timeout` (a lock SQLite waited out rather than got); `sqlitefx/README.md` holds the table of result codes.
+Constraint violations name what SQLite names: `UNIQUE constraint failed: laps.round_id` becomes `UniqueViolation("laps.round_id")`.
+`SchemaMismatch` is a table or column the database has not got, `DecodeError` a cell the reading could not read, and `Other` the rest — what the JVM threw, a query that had to answer with a row and did not, and rows that came back whole and describe no round.
 
-`Server.Api` answers `Unreachable` and `Busy` with 503 and everything else with 500.
+`Server.Api` answers a transient failure with 503 and everything else with 500.
 A failure names tables and files in its own words, so those ride in the response's `cause`, which `Server.send` logs and does not send.
 
-A row is `Lite3fx.Row.Row`: the labels the driver reported and the cells as `SqlValue`. SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared.
-`Lite3fx.JdbcConvert` is the only file that converts between `SqlValue` and JDBC.
+A row is `Sqlitefx.Row.Row`: the labels the driver reported and the cells as `SqlValue`. SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared.
 `Sql.decode` puts a row's cells in the order its projection names them, so a clause and a reading that disagree fail by naming the column rather than by answering with the cell beside it. Two projections under one label — a join naming both sides' `elapsed_ms` — are answered in the order the clause writes them.
 
-`Lite3fx.Tx.transact` is the only sender of a commit, and rolls a raised failure back before raising it again.
-`Cli.Load.runAll` is its one caller, so the rebuild of every table is a single transaction: a run killed partway leaves the rounds it was rebuilding from.
-`Lite3fx.Tx.withSavepoint` is `transact` of a part of one; its name is checked against `Lite3fx.Savepoint`'s rule, since it goes into a statement as text.
+`Tx.withTx` in `Cli.Load.runAll` is the one commit of a load, and rolls a raised failure back before raising it again, so the rebuild of every table is a single transaction: a run killed partway leaves the rounds it was rebuilding from.
+`Tx.withSavepoint` is a part of one; its name is checked against `Sqlitefx.Savepoint`'s rule, since it goes into a statement as text.
 `Cli.Load` marks one per round, so a round the database refuses is reported without taking the run with it, and frees the names it numbered — advancing past it would leave a name numbered and unwritten for every later round to reference.
-`Lite3fx.Jdbc`'s insert marks one of its own inside that, since rows go out a thousand at a time and a refusal partway has already sent some.
-A read commits nothing, and closing a connection rolls back the transaction it opened.
+A table's rows go out a thousand to a statement (`Db.Schema.insertRows`), and SQLite takes or refuses each statement whole.
 
 ## `Db.Schema`, and the two declarations
 
@@ -213,7 +204,7 @@ Which statements are written is told by the call sites of `Sql.statement`; a `GR
 What stays text is a column no declaration reaches — the fifteen `b0`..`b14` a mini-sector best is gathered out of, the `m.key` and `m.value` of a `json_each`, and the window clauses themselves.
 
 **A written statement is checked by the database, not the build**: SQLite resolves names when it prepares a statement, so a missed rename is a refusal at run time.
-`Lite3fx.Jdbc.refusal` carries the statement into `SchemaMismatch` and `Other` (a mistyped keyword is `Other`), whose messages otherwise say nowhere to look.
+`Sqlitefx.Jdbc.raiseRefusal` carries the statement into `SchemaMismatch` and `Other` (a mistyped keyword is `Other`), whose messages otherwise say nowhere to look.
 
 A column a CTE makes up is `Schema.derived`; `Round.Timeline.crossings` declares them, and `Schema.qualified` reads a column under each name a source gives it (`l`, `led`, `stop`, `between_`, `c`, `l1`). `Sql.column` is a column no declaration reaches, typed by the caller's word.
 What a `LEFT JOIN` does to the far side is `Sql.orNull`, needed for a column the table has on every row, not for one nullable in its own right.
@@ -231,5 +222,5 @@ A `Sql.Key` is declared columns, so a key over an undeclared column does not typ
 - **A reading with no database** — a CSV feed, an Overpass answer, a circuit's published timing lines — is driven under `circuits/` by `nix run .#geometry-test`, which compiles its links to this `src` and tests nothing else of it. The circuit words the summary sends are the one list both projects hold; `circuits/test/check-sources.mjs` lays the two copies together.
 - **A clean build** — `flix build` and `flix test` are incremental and CI is not: a compile that only fails from cold passes locally until `backend/build` is removed. `rm -rf backend/build` before believing a green run.
 - **The type checker's stack** — it recurses once per expression, and Linux gives its thread a smaller stack than macOS, so a deep enough chain compiles here and overflows in CI. Check with `java -Xss704k -jar <flix.jar> build` from `backend/`: 704k builds the tree as it stands and 672k does not, so a change that raises that number is the one to look at. What sets it is `Motorsport.Wec.decoder`, whose sixteen fields are a curried lambda, a record literal and a pipeline apiece; stubbing it out takes the build under 576k.
-- **The database** — a test drives JDBC against the in-memory database `Round.TestSupport.url` names, a connection of its own per test. A test that reaches no database fails rather than skipping. `Db.TestJdbc` drives a file database too, under a directory that does not exist yet: the directory `connect` makes, the journal mode it sets, and two connections at once are reached no other way.
-  What a caller does about a failure is decided off the kind, so it is tested without a database: `Server.TestApi` is where a `Busy` becomes a 503 and a `SchemaMismatch` a 500 with the driver's words kept out of the body, and `Lite3fx.SqliteState` is where the code is read.
+- **The database** — a test drives JDBC against the in-memory database `Round.TestSupport.url` names, a connection of its own per test. A test that reaches no database fails rather than skipping. `Db.TestJdbc` drives a file database too, under a directory that does not exist yet: the directory `connect` makes, the journal mode `Db.connection` sets, and two connections at once are reached no other way.
+  What a caller does about a failure is decided off the kind, so it is tested without a database: `Server.TestApi` is where a `Timeout` becomes a 503 and a `SchemaMismatch` a 500 with the driver's words kept out of the body; how a result code becomes a kind is `sqlitefx`'s tests'.

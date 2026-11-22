@@ -3,8 +3,8 @@
 /// grid order, the time limit, the shape of the circuit -- and each of those
 /// decisions stays in `Motorsport`: this reads, and hands over.
 pub mod Round.Summary {
-    use Lite3fx.DbErr
-    use Lite3fx.DbRead
+    use Sqlitefx.DbErr
+    use Db.DbRead
 
     use Db.Cars
     use Db.Entries

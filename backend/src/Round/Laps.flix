@@ -1,9 +1,9 @@
 /// The round's laps, read back out of the rows it was loaded into.
 pub mod Round.Laps {
-    use Lite3fx.DbErr
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.DbRead
-    use Lite3fx.TransientDbErr
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError.DbErrorKind
+    use Db.DbRead
+    use Sqlitefx.TransientDbErr
 
     use Db.LapRow
     use Db.LapRow.LapRow
@@ -78,7 +78,7 @@ pub mod Round.Laps {
                     let driver = Drivers.nameOf(seats, row#carNumber, row#driverNumber);
                     LapRow.toRawLap(car, driver, row)
                         |> Result.mapErr(DbErrorKind.Other)
-                        |> Lite3fx.Sql.orRaise
+                        |> Sql.orRaise
             }
 
 }

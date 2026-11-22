@@ -597,7 +597,7 @@ pub mod Round.TestTimeline {
             lap("7", 2, "3:00.000") ::
             Nil,
             () -> {
-                discard Lite3fx.Sql.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
+                discard Sqlitefx.Sql.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
                     + " WHERE event = 'finished'", Nil);
                 Timeline.read(entry())
             });

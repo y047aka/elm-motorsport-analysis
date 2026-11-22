@@ -3,10 +3,10 @@
 /// a reading of the laps per kind of event, and what they add up to is
 /// `Motorsport.Timeline`'s.
 pub mod Round.Timeline {
-    use Lite3fx.DbErr
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.DbRead
-    use Lite3fx.SqlValue
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError.DbErrorKind
+    use Db.DbRead
+    use Sqlitefx.SqlValue
 
     use Db.Cars
     use Db.Entries

@@ -1,6 +1,6 @@
 pub mod Db.TestEntries {
-    use Lite3fx.SqlValue
-    use Lite3fx.SqlValue.NullType
+    use Sqlitefx.SqlValue
+    use Sqlitefx.SqlValue.NullType
 
     use Db.CarRow
     use Db.Entries

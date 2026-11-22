@@ -36,6 +36,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#geometry-test` | The project's `flix test` — readings off fixtures, no network, no database, no files written — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
 | `nix run .#geometry-timing-lines` | The `timing-lines` word on its own, computing in no database: `<season>/<id> [--against <season>] [--tolerance <metres>]` |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/backend`, both the CLI and the server |
+| `nix run .#sqlitefx-test` | Test `backend/sqlitefx`, the database library (`backend/sqlitefx/README.md`) |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
 | `nix run .#serve-api` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
@@ -52,6 +53,7 @@ Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
 | Elm under `app/` or `package/` | `.#format`, `.#test`, `.#review-app` / `.#review-package` | `.#test` only |
 | TypeScript under `app/` | `.#typecheck` | yes |
 | `backend/` | `.#flix-test`; a file `circuits/` symlinks also `.#geometry-test` (`backend/README.md`) | yes |
+| `backend/sqlitefx/` | `.#sqlitefx-test`, and `.#flix-test` for the files `backend/src/Sqlitefx/` links | yes |
 | `circuits/` | `.#geometry-test`; a kept geometry also re-surveys byte for byte | yes |
 | Anything drawn, or `app/src/shadcn/` | `.#test-vrt`; a baseline lands through `.#update-snapshots-ci`, never `.#update-snapshots-vrt` | yes (`playwright.yml`) |
 | Comments or docs | `/skill:distill-docs`'s after-a-change pass | no |

@@ -24,8 +24,8 @@
 /// HourElapsedOffset's baseline is the **first row of the whole file** (round-wide,
 /// not per-car): a bad lap 1 on one car does not cascade across the rest of that car.
 pub mod Cli.Load.Validation {
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.DbRead
+    use Sqlitefx.DbError.DbErrorKind
+    use Db.DbRead
 
     use Db.Laps
     use Db.Schema

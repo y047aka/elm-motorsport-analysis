@@ -1,8 +1,9 @@
 pub mod Server.TestApi {
-    use Lite3fx.DbError
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.DbTest
-    use Lite3fx.Recording
+    use Sqlitefx.DbError
+    use Sqlitefx.DbError.DbErrorKind
+    use Sqlitefx.DbTest
+    use Sqlitefx.RawSql
+    use Sqlitefx.SqlRead
 
     use Server.Api
     use Server.Api.Response
@@ -20,12 +21,9 @@ pub mod Server.TestApi {
 
     def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
 
-    /// Answered without reaching a database, which is what `runRecording` is
-    /// for.
+    /// Answered with nothing behind it, which is how `Server` answers a route that reads nothing.
     def offline(route: Route): Response =
-        match Recording.statements(() -> Api.respond(route)) {
-            case (response, _) => response
-        }
+        RawSql.runWithAllow(() -> DbTest.runWithRows(Nil, () -> Api.respond(route)))
 
     @Test
     def theHealthPathIsItsOwnRoute(): Unit \ Assert =
@@ -63,14 +61,18 @@ pub mod Server.TestApi {
     /// A database that answers, and answers with a failure. `offline` is the
     /// other kind -- nothing behind the request at all.
     def failing(error: DbErrorKind, route: Route): Response =
-        DbTest.runFailing(error, () -> Api.respond(route))
+        RawSql.runWithAllow(() -> run { Api.respond(route) } with handler SqlRead {
+            def fetch(_sql, _params, resume) = resume(Err(error))
+        })
+
+    def unreachable(): DbErrorKind = DbErrorKind.Transient(DbError.TransientKind.ConnectionLost("no database"))
 
     /// A lock the database waited out is the same answer as one that could not
     /// be reached: the request is the caller's to make again.
     @Test
     def aLockedDatabaseIsA503(): Unit \ Assert =
         Assert.assertTrue(
-            failing(DbError.busy("database is locked"), Route.Summary(2025, "fuji_6h"))#status == 503)
+            failing(DbErrorKind.Transient(DbError.TransientKind.Timeout(0)), Route.Summary(2025, "fuji_6h"))#status == 503)
 
     /// A statement the database refused is the round's fault and not the
     /// request's, and what it was refused for is the log's.
@@ -79,21 +81,21 @@ pub mod Server.TestApi {
         let answered = failing(DbErrorKind.Other("no such table: laps"), Route.Laps(2025, "fuji_6h"));
         Assert.assertTrue(answered#status == 500);
         Assert.assertTrue(answered#body == "the round could not be read");
-        Assert.assertTrue(answered#cause == Some("no such table: laps"))
+        Assert.assertTrue(answered#cause == Some("other no such table: laps"))
 
     /// The round is the calendar's; what is missing is the database.
     @Test
     def aRoundWithNoDatabaseBehindItIsA503(): Unit \ Assert =
-        Assert.assertTrue(offline(Route.Summary(2025, "fuji_6h"))#status == 503);
-        Assert.assertTrue(offline(Route.Laps(2025, "fuji_6h"))#status == 503)
+        Assert.assertTrue(failing(unreachable(), Route.Summary(2025, "fuji_6h"))#status == 503);
+        Assert.assertTrue(failing(unreachable(), Route.Laps(2025, "fuji_6h"))#status == 503)
 
     /// The database's own words name tables and files, so they are kept for
     /// the log and the caller is told what it can do about it.
     @Test
     def aFailureIsAnsweredWithoutTheDatabasesWords(): Unit \ Assert =
-        let answered = offline(Route.Summary(2025, "fuji_6h"));
+        let answered = failing(unreachable(), Route.Summary(2025, "fuji_6h"));
         Assert.assertTrue(answered#body == "the database could not be reached");
-        Assert.assertTrue(answered#cause == Some("no database (nothing was sent, so nothing can be read back)"))
+        Assert.assertTrue(answered#cause == Some("connectionLost no database"))
 
     @Test
     def notFoundIsAnsweredWithA404(): Unit \ Assert =

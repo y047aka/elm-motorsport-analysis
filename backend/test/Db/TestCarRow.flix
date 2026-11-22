@@ -1,5 +1,5 @@
 pub mod Db.TestCarRow {
-    use Lite3fx.SqlValue
+    use Sqlitefx.SqlValue
 
     use Db.CarRow
     use Db.Cars

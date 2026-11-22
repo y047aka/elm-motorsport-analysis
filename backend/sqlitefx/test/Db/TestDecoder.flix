@@ -1,0 +1,223 @@
+use Sqlitefx.Date
+use Sqlitefx.Decoder
+use Sqlitefx.Row
+use Sqlitefx.SqlValue
+use Sqlitefx.Timestamp
+use Sqlitefx.Uuid
+
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.Decoder.DecodeError
+
+// Decoder: 列を型付きで取り出し、複数列をレコードへ組む。
+
+/// テスト用の 1 行。
+///
+///   id | name  | age  | score
+///    1 | alice | NULL | 1.5
+def sampleRow(): Row.Row =
+    Row.makeRows(
+        List#{"id", "name", "age", "score"},
+        List#{List#{SqlValue.Int64(1i64), SqlValue.Str("alice"), SqlValue.Null, SqlValue.Decimal(1.5ff)}})
+        |> List.head
+        |> Option.getWithDefault(Row.empty())
+
+// ---- 列 1 つ ----
+
+/// int64 / str は列を型付きで返す。
+@Test
+def testTypedColumns(): Unit \ Assert =
+    Assert.assertEq(
+        expected = (Ok(1i64), Ok("alice"), Ok(1.5ff)),
+        (
+            Decoder.decodeRow(Decoder.int64("id"), sampleRow()),
+            Decoder.decodeRow(Decoder.str("name"), sampleRow()),
+            Decoder.decodeRow(Decoder.decimal("score"), sampleRow())
+        ))
+
+/// 無い列は MissingColumn。
+@Test
+def testMissingColumn(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Err(DecodeError.MissingColumn("email")),
+        Decoder.decodeRow(Decoder.str("email"), sampleRow()))
+
+/// 型が違う列は TypeMismatch（列名・期待した型・実際の型）。
+@Test
+def testTypeMismatch(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Err(DecodeError.TypeMismatch("name", "Int64", "Str")),
+        Decoder.decodeRow(Decoder.int64("name"), sampleRow()))
+
+/// NULL を許さないデコーダに NULL が来たら UnexpectedNull。
+@Test
+def testUnexpectedNull(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Err(DecodeError.UnexpectedNull("age")),
+        Decoder.decodeRow(Decoder.int32("age"), sampleRow()))
+
+/// opt は NULL を None に、値を Some にする。型違いはそのままエラー。
+@Test
+def testOpt(): Unit \ Assert =
+    Assert.assertEq(
+        expected = (Ok(None), Ok(Some("alice")), Err(DecodeError.TypeMismatch("name", "Int64", "Str"))),
+        (
+            Decoder.decodeRow(Decoder.opt(Decoder.int32("age")), sampleRow()),
+            Decoder.decodeRow(Decoder.opt(Decoder.str("name")), sampleRow()),
+            Decoder.decodeRow(Decoder.opt(Decoder.int64("name")), sampleRow())
+        ))
+
+// ---- 合成 ----
+
+/// pure + ap で複数列を 1 つのレコードへ組む。
+@Test
+def testApBuildsRecord(): Unit \ Assert =
+    let decoder =
+        Decoder.pure(id -> name -> age -> { id = id, name = name, age = age })
+            |> Decoder.ap(Decoder.int64("id"))
+            |> Decoder.ap(Decoder.str("name"))
+            |> Decoder.ap(Decoder.opt(Decoder.int32("age")));
+    Assert.assertEq(
+        expected = Ok((1i64, "alice", None)),
+        Decoder.decodeRow(decoder, sampleRow()) |> Result.map(user -> (user#id, user#name, user#age)))
+
+/// ap の途中で失敗したら、その列のエラーで止まる。
+@Test
+def testApStopsAtFirstError(): Unit \ Assert =
+    let decoder =
+        Decoder.pure(id -> email -> (id, email))
+            |> Decoder.ap(Decoder.int64("id"))
+            |> Decoder.ap(Decoder.str("email"));
+    Assert.assertEq(
+        expected = Err(DecodeError.MissingColumn("email")),
+        Decoder.decodeRow(decoder, sampleRow()))
+
+/// map はデコード結果を変換する。
+@Test
+def testMap(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Ok("ALICE"),
+        Decoder.decodeRow(Decoder.str("name") |> Decoder.map(String.toUpperCase), sampleRow()))
+
+/// decodeRows は全行を順にデコードし、失敗した行のエラーを返す。
+///
+///   id
+///    1
+///   "x"  ← 2 行目で型違い
+@Test
+def testDecodeRowsFirstError(): Unit \ Assert =
+    let rows = Row.makeRows(List#{"id"}, List#{List#{SqlValue.Int64(1i64)}, List#{SqlValue.Str("x")}});
+    Assert.assertEq(
+        expected = (Ok(List#{1i64}), Err(DecodeError.TypeMismatch("id", "Int64", "Str"))),
+        (
+            Decoder.decodeRows(Decoder.int64("id"), List.take(1, rows)),
+            Decoder.decodeRows(Decoder.int64("id"), rows)
+        ))
+
+/// describeError は列名を含む 1 行のメッセージを返す。
+@Test
+def testDescribeError(): Unit \ Assert =
+    Assert.assertEq(
+        expected = "column 'name' is Str, expected Int64",
+        Decoder.describeError(DecodeError.TypeMismatch("name", "Int64", "Str")))
+
+// ---- SELECT 句 ----
+
+/// forA に並べた順で SELECT 句の断片が並び、pure |> ap で組んでも同じ。opt は列を変えない。
+@Test
+def testSelectListFollowsForAOrder(): Unit \ Assert =
+    let viaForA = forA (
+        id <- Decoder.int64("id");
+        name <- Decoder.str("name");
+        email <- Decoder.opt(Decoder.str("email"))
+    ) yield (id, name, email);
+    let viaAp = Decoder.pure(id -> name -> email -> (id, name, email))
+        |> Decoder.ap(Decoder.int64("id"))
+        |> Decoder.ap(Decoder.str("name"))
+        |> Decoder.ap(Decoder.opt(Decoder.str("email")));
+    Assert.assertEq(
+        expected = (List#{"id", "name", "email"}, "id, name, email"),
+        (Decoder.selectList(viaForA), Decoder.selectClause(viaAp)))
+
+/// selectExpr は式を `expr AS label` として SELECT 句に出し、読むのはラベルの列。同じ列を 2 回読んでも SELECT 句には 1 回。
+@Test
+def testSelectExprAndDedupe(): Unit \ Assert =
+    let count = Decoder.selectExpr("count(*)::bigint", Decoder.int64("total"));
+    let twice = forA (a <- Decoder.int64("id"); b <- Decoder.int64("id")) yield a + b;
+    let row = Row.makeRows(List#{"total"}, List#{List#{SqlValue.Int64(3i64)}}) |> List.head |> Option.getWithDefault(Row.empty());
+    Assert.assertEq(
+        expected = (List#{"count(*)::bigint AS total"}, Ok(3i64), List#{"id"}),
+        (Decoder.selectList(count), Decoder.decodeRow(count, row), Decoder.selectList(twice)))
+
+/// attempt: 型違いは Err の値として残り行は落ちない。NULL と列が無いのは握らず、今まで通り落ちる。
+///
+///   views = "x"（型違い）→ Ok(Err(TypeMismatch)) / views = NULL → Err(UnexpectedNull) / 列無し → Err(MissingColumn)
+@Test
+def testRecoverKeepsTypeMismatchAsValue(): Unit \ Assert =
+    let broken = Row.makeRows(List#{"views"}, List#{List#{SqlValue.Str("x")}}) |> List.head |> Option.getWithDefault(Row.empty());
+    let nulled = Row.makeRows(List#{"views"}, List#{List#{SqlValue.Null}}) |> List.head |> Option.getWithDefault(Row.empty());
+    let missing = Row.makeRows(List#{"other"}, List#{List#{SqlValue.Int32(1)}}) |> List.head |> Option.getWithDefault(Row.empty());
+    let decoder = Decoder.attempt(Decoder.int32("views"));
+    Assert.assertEq(
+        expected = (Ok(Err(DecodeError.TypeMismatch("views", "Int32", "Str"))), Err(DecodeError.UnexpectedNull("views")), Err(DecodeError.MissingColumn("views"))),
+        (Decoder.decodeRow(decoder, broken), Decoder.decodeRow(decoder, nulled), Decoder.decodeRow(decoder, missing)))
+
+// ---- 意味を持つ型 ----
+
+/// timestamp / date / uuid は意味を持つ型で返る。json は parse し、壊れていれば InvalidJson。jsonAs は FromJson の型へ。
+///
+///   created_at = 2026-09-06T01:00:00Z / born = 2026-09-06 / meta = {"n": 1} / broken = "{"
+@Test
+def testSemanticTypes(): Unit \ Assert =
+    let row = Row.makeRows(
+        List#{"created_at", "born", "key", "meta", "broken"},
+        List#{List#{SqlValue.Timestamp(1788656400000000i64), SqlValue.Date(20702), SqlValue.Uuid("550e8400-e29b-41d4-a716-446655440000"), SqlValue.Json("{\"n\": 1}"), SqlValue.Json("{")}})
+        |> List.head
+        |> Option.getWithDefault(Row.empty());
+    Assert.assertEq(
+        expected = (Ok("2026-09-06T01:00:00Z"), Ok("2026-09-06"), Ok("550e8400-e29b-41d4-a716-446655440000"), Ok(Ok(1)), true, Ok("{\"n\":1}")),
+        (Decoder.decodeRow(Decoder.timestamp("created_at"), row) |> Result.map(Timestamp.toIso8601),
+         Decoder.decodeRow(Decoder.date("born"), row) |> Result.map(Date.toIso8601),
+         Decoder.decodeRow(Decoder.uuid("key"), row) |> Result.map(Uuid.toText),
+         Decoder.decodeRow(Decoder.json("meta"), row) |> Result.map(j -> Util.Json.FromJson.decodeAtKey("n", j) |> Result.map(n -> { let m: Int32 = n; m })),
+         Decoder.decodeRow(Decoder.json("broken"), row) |> Result.mapErr(Decoder.errorColumn) == Err("broken"),
+         Decoder.decodeRow(Decoder.json("meta"), row) |> Result.map(Util.Json.toCompactString)))
+
+/// jsonAs は FromJson のある型へ。形が合わなければ InvalidJson（列名付き）。
+///
+///   meta = {"n": 1} → Map[String, Int32] / list = [1, 2] → Vector[Int32] / meta を Vector で読むと InvalidJson
+@Test
+def testJsonAs(): Unit \ Assert =
+    let row = Row.makeRows(
+        List#{"meta", "list"},
+        List#{List#{SqlValue.Json("{\"n\": 1}"), SqlValue.Json("[1, 2]")}})
+        |> List.head
+        |> Option.getWithDefault(Row.empty());
+    let asMap: Result[DecodeError, Map[String, Int32]] = Decoder.decodeRow(Decoder.jsonAs("meta"), row);
+    let asVector: Result[DecodeError, Vector[Int32]] = Decoder.decodeRow(Decoder.jsonAs("list"), row);
+    let mismatch: Result[DecodeError, Vector[Int32]] = Decoder.decodeRow(Decoder.jsonAs("meta"), row);
+    Assert.assertEq(
+        expected = (Ok(Map#{"n" => 1}), Ok(Vector#{1, 2}), Err("meta")),
+        (asMap, asVector, mismatch |> Result.mapErr(Decoder.errorColumn)))
+
+// ---- 配列 ----
+
+/// jsonArray は JSONB[] の各要素を Json に parse し、int32Array は INTEGER[] をそのまま返す。1 つでも読めない要素があれば InvalidJson。
+///
+///   js = {"{\"n\": 1}", "[2]"} / bad = {"{", "[]"} / ns = {7, -3}
+@Test
+def testArrayDecoders(): Unit \ Assert =
+    let row = Row.makeRows(
+            List#{"js", "bad", "ns"},
+            List#{List#{SqlValue.JsonArray(List#{"{\"n\": 1}", "[2]"}), SqlValue.JsonArray(List#{"{", "[]"}), SqlValue.Int32Array(List#{7, -3})}})
+        |> List.head
+        |> Option.getWithDefault(Row.empty());
+    Assert.assertEq(
+        expected = (
+            Ok(List#{Util.Json.Json.JObject(Map#{"n" => Util.Json.Json.JNumber(1ff)}), Util.Json.Json.JArray(Vector#{Util.Json.Json.JNumber(2ff)})}),
+            true,
+            Ok(List#{7, -3})),
+        (
+            Decoder.decodeRow(Decoder.jsonArray("js"), row),
+            Decoder.decodeRow(Decoder.jsonArray("bad"), row) |> Result.mapErr(Decoder.errorColumn) == Err("bad"),
+            Decoder.decodeRow(Decoder.int32Array("ns"), row)
+        ))

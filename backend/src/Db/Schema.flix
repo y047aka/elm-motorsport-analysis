@@ -8,9 +8,9 @@
 /// own: a `Bool` is stored as the 1 or 0 the driver binds it as, and a column
 /// taking an `Option` is the nullable one.
 pub mod Db.Schema {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
-    use Lite3fx.SqlValue.NullType
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
+    use Sqlitefx.SqlValue.NullType
 
     use Sql.Sel
 
@@ -135,8 +135,8 @@ pub mod Db.Schema {
         keys: List[Sql.Key[Bound[r]]],
         storage: Sql.Storage
     ): Unit \ DbWrite =
-        discard Lite3fx.Sql.execute(Sql.dropTableIfExists(table), Nil);
-        discard Lite3fx.Sql.execute(createTable(table, columns, computed, keys, storage), Nil)
+        discard Sqlitefx.Sql.execute(Sql.dropTableIfExists(table), Nil);
+        discard Sqlitefx.Sql.execute(createTable(table, columns, computed, keys, storage), Nil)
 
     /// The columns a row binds, then the ones the database makes: a computed
     /// column is declared like any other and is not in the ordering the insert
@@ -161,14 +161,25 @@ pub mod Db.Schema {
         Sql.createIndex(indexName(table, over), table, over |> List.map(declare))
 
     pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite =
-        discard Lite3fx.Sql.execute(createIndex(table, over), Nil)
+        discard Sqlitefx.Sql.execute(createIndex(table, over), Nil)
 
     def indexName(table: String, over: List[Bound[r]]): String =
         columnNames(over) |> List.foldLeft((acc, name) -> acc + "_" + name, table)
 
+    /// The rows go out as one `INSERT` per thousand, each a statement SQLite takes or refuses whole, so a refusal leaves none of that statement's rows behind and the round's savepoint takes back the statements before it.
+    ///
+    /// A thousand rows is fewer where the table is wide: a statement binds at most 32,766 values, SQLite's own limit.
     pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
-        let (statement, bound_) = Sql.insertRows(table, columns, rows);
-        Lite3fx.Sql.insertMany(statement, bound_)
+        let perStatement = Int32.max(1, Int32.min(1000, 32766 / Int32.max(1, List.length(columns))));
+        chunks(perStatement, rows) |> List.foldLeft((taken, chunk) -> match Sql.insertRows(table, columns, chunk) {
+            case None => taken
+            case Some((statement, bound_)) => taken + Sqlitefx.Sql.execute(statement, bound_)
+        }, 0)
+
+    def chunks(size: Int32, rows: List[r]): List[List[r]] = match rows {
+        case Nil => Nil
+        case _   => List.take(size, rows) :: chunks(size, List.drop(size, rows))
+    }
 
     /// In the order the columns are named, which is the order the insert binds
     /// them.
@@ -204,15 +215,15 @@ pub mod Db.Schema {
 
     pub def nullableText(name: String, get: r -> Option[String]): Column[r, Option[String]] =
         column(name, "text",
-            row -> SqlValue.ofOption(NullType.Str, get(row) |> Option.map(SqlValue.Str)), Sql.optionalText)
+            row -> SqlValue.ofOption(NullType.Str, SqlValue.Str, get(row)), Sql.optionalText)
 
     pub def nullableInteger(name: String, get: r -> Option[Int32]): Column[r, Option[Int32]] =
         column(name, "int",
-            row -> SqlValue.ofOption(NullType.Int32, get(row) |> Option.map(SqlValue.Int32)), Sql.optionalInt)
+            row -> SqlValue.ofOption(NullType.Int32, SqlValue.Int32, get(row)), Sql.optionalInt)
 
     pub def nullableIntArray(name: String, get: r -> Option[List[Option[Int32]]]): Column[r, Option[List[Option[Int32]]]] =
         column(name, "text",
-            row -> SqlValue.ofOption(NullType.Json, get(row) |> Option.map(values -> SqlValue.Json(jsonArray(values)))), Sql.optionalIntArray)
+            row -> SqlValue.ofOption(NullType.Json, values -> SqlValue.Json(jsonArray(values)), get(row)), Sql.optionalIntArray)
 
     /// The text a nullable-int-array column holds, which `json_each` reads back
     /// as one row per element.

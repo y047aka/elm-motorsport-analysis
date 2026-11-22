@@ -8,12 +8,12 @@
 /// reading looks a cell up by; `answering` takes them off the projection the
 /// test decodes, which is what a database answers it with.
 pub mod TestCells {
-    use Lite3fx.Row
-    use Lite3fx.Row.Row
-    use Lite3fx.SqlValue
+    use Sqlitefx.Row
+    use Sqlitefx.Row.Row
+    use Sqlitefx.SqlValue
 
     pub def row(names: List[String], cells: List[Option[String]]): Row =
-        Row.of(names, values(cells))
+        Row.makeRows(names, values(cells) :: Nil) |> List.head |> Option.getWithDefault(Row.empty())
 
     /// The cells under the labels `sel` names its own columns by.
     pub def answering(sel: Sql.Sel[a], cells: List[Option[String]]): Row =

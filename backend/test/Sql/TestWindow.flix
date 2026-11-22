@@ -5,7 +5,7 @@ pub mod Sql.TestWindow {
 
     use Db.Laps
     use Db.Schema
-    use Lite3fx.SqlValue
+    use Sqlitefx.SqlValue
     use Sql.Frame
     use Sql.Sel
 

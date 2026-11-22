@@ -6,8 +6,8 @@
 /// different one across seasons -- number 12 was three teams' over the three
 /// the archive holds -- so the season is half of what names one.
 pub mod Db.Entries {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
 
     use Db.Schema
     use Db.Schema.Bound

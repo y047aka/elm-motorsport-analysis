@@ -1,5 +1,5 @@
 pub mod Sql.TestExpr {
-    use Lite3fx.SqlValue
+    use Sqlitefx.SqlValue
 
     use Db.Cars
     use Db.Laps
