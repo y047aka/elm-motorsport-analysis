@@ -165,6 +165,21 @@ def testMissingTableIsSchemaMismatch(): Unit \ {Assert, IO} =
         |> Result.mapErr(failure -> String.startsWith(prefix = "schemaMismatch", DbError.describeFailure(failure)));
     Assert.assertEq(expected = Err(true), result)
 
+/// 断られた文が SchemaMismatch に載る: SQLite は解決できなかった列を言うだけなので、どの文だったかはこちらが足す。
+/// 制約違反には載せない（違反した列を自分で名指す）。
+@Test
+def testRefusalCarriesTheStatement(): Unit \ {Assert, IO} =
+    let missing = withDb("refusal", () -> Sql.fetch("SELECT nope FROM sqlitefx_test_users", Nil) |> List.length);
+    let violated = withDb("refusal_unique", () -> {
+        resetUsers();
+        discard Sql.execute("INSERT INTO sqlitefx_test_users (id, name, created_at) VALUES (1, 'a', 0), (1, 'b', 0)", Nil)
+    });
+    let missingNamesStatement = match missing {
+        case Err(Failure.Permanent(DbErrorKind.SchemaMismatch(detail))) => String.endsWith(suffix = ": SELECT nope FROM sqlitefx_test_users", detail)
+        case _ => false
+    };
+    Assert.assertEq(expected = (true, Err(Failure.Permanent(DbErrorKind.UniqueViolation("sqlitefx_test_users.id")))), (missingNamesStatement, violated))
+
 /// 開けないファイル（`/dev/null` の下には作れない）は Transient の connectionLost。
 @Test
 def testUnopenableFileIsConnectionLost(): Unit \ {Assert, IO} =

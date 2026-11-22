@@ -27,7 +27,8 @@ The differences below are what that guide says that is not true here.
 | Pool | pgjdbc's DataSource | sqlite-jdbc's, and the pragmas are sent on every borrow |
 | Concurrent `Migrate.apply` | one advisory lock over the run | `BEGIN IMMEDIATE` per file, the record read again under it |
 | Migration record | `sqlfx_migrations`, `applied_by` | `sqlitefx_migrations`, `applied_at` in epoch microseconds, no `applied_by` |
-| Placeholders | `$n` | `$n`, rewritten to `?` |
+| Placeholders | `$n` | `$n`, or positional `?` when a statement has no `$n`; never both |
+| A statement refused | the driver's sentence | for `SchemaMismatch` and `Other`, the sentence and the statement's head and tail, since SQLite names what it could not resolve and never where |
 
 Three things are still sqlfx's and still PostgreSQL's:
 
@@ -50,11 +51,9 @@ Flix has no local path dependency, so `backend` compiles sqlitefx the way `circu
 
 Each of these is a decision the switch has to make, since Lite3fx and sqlfx answer it differently:
 
-- **Placeholders.** `backend`'s `Sql` writes `?`; sqlitefx binds by the `$n` it rewrites, so a `?` it was handed binds nothing. Either the builder numbers what it writes, or the rewrite learns to pass `?` through in order.
 - **`insertMany`.** Lite3fx's `SqlWrite` has it, since laps arrive a thousand at a time; sqlfx's does not. Either the op is added here, or the load writes multi-row `INSERT`s through `execute`.
 - **`commit` and `rollback`.** They are `SqlWrite` operations in Lite3fx, so a recording handler sees a commit go by (`Cli.Load.runAll` is its one caller); sqlfx's `Tx.withTx` commits on the connection it is handed.
 - **Recording.** `Lite3fx.Recording.statements` answers the server's statement-free routes; `DbTest.runRecording` is the nearest here, and is handed the rows to answer with.
-- **The statement in a failure.** `Lite3fx.Jdbc.refusal` carries the statement into `SchemaMismatch` and `Other`, since the driver names what it could not resolve and never where; sqlitefx carries the driver's sentence alone.
 - **Failure names.** Lite3fx's `Busy` and `Unreachable` are `Timeout` and `ConnectionLost` here; `Server.Api` turns both into a 503.
 - **Pragmas.** `backend` runs with `journal_mode = WAL` and with `foreign_keys` off (`backend/README.md`), so it passes its own list rather than `Jdbc.config`'s.
 - **Autocommit.** Lite3fx turns it off on every connection; sqlitefx leaves it on outside `Tx`.

@@ -198,7 +198,7 @@ pub mod Sqlitefx.Jdbc {
     ///
     pub def fetchRows(conn: Connection, sql: String, params: List[SqlValue]): List[Row] \ {IO, TransientDbErr, DbErr} =
         let (jdbcSql, ordered) = rewriteOrFail(sql, params);
-        let statement = prepare(conn, jdbcSql);
+        let statement = prepare(conn, sql, jdbcSql);
         try {
             JdbcConvert.bindParams(statement, ordered);
             let resultSet: ResultSet = statement.executeQuery();
@@ -207,7 +207,7 @@ pub mod Sqlitefx.Jdbc {
             statement.close();
             rows
         } catch {
-            case e: SQLException => { closeQuietly(statement); raiseSqlException(e) }
+            case e: SQLException => { closeQuietly(statement); raiseRefusal(sql, e) }
         }
 
     ///
@@ -215,14 +215,14 @@ pub mod Sqlitefx.Jdbc {
     ///
     pub def executeStatement(conn: Connection, sql: String, params: List[SqlValue]): Int32 \ {IO, TransientDbErr, DbErr} =
         let (jdbcSql, ordered) = rewriteOrFail(sql, params);
-        let statement = prepare(conn, jdbcSql);
+        let statement = prepare(conn, sql, jdbcSql);
         try {
             JdbcConvert.bindParams(statement, ordered);
             let affected: Int32 = statement.executeUpdate();
             statement.close();
             affected
         } catch {
-            case e: SQLException => { closeQuietly(statement); raiseSqlException(e) }
+            case e: SQLException => { closeQuietly(statement); raiseRefusal(sql, e) }
         }
 
     ///
@@ -234,11 +234,11 @@ pub mod Sqlitefx.Jdbc {
     ///
     /// PreparedStatement を作る。ここで失敗したら閉じる物は無い。
     ///
-    def prepare(conn: Connection, jdbcSql: String): PreparedStatement \ {IO, TransientDbErr, DbErr} =
+    def prepare(conn: Connection, sql: String, jdbcSql: String): PreparedStatement \ {IO, TransientDbErr, DbErr} =
         try {
             conn.prepareStatement(jdbcSql)
         } catch {
-            case e: SQLException => raiseSqlException(e)
+            case e: SQLException => raiseRefusal(sql, e)
         }
 
     ///
@@ -257,7 +257,7 @@ pub mod Sqlitefx.Jdbc {
     def rewriteOrFail(sql: String, params: List[SqlValue]): (String, List[SqlValue]) \ DbErr =
         match JdbcConvert.rewritePlaceholders(sql, params) {
             case Some(rewritten) => rewritten
-            case None => DbErr.other("placeholder out of range (${List.length(params)} params): ${sql}")
+            case None => DbErr.other("placeholders do not match ${List.length(params)} params ($n out of range, $n mixed with ?, or a ? count that differs): ${sql}")
         }
 
     ///
@@ -269,5 +269,33 @@ pub mod Sqlitefx.Jdbc {
         let message: String = e.getMessage();
         let said = if (Object.isNull(message)) e.getClass().getName() else message;
         DbError.raise(SqlState.classify({ code = e.getErrorCode(), message = said }))
+
+    ///
+    /// 文を送って断られた SQLException を翻訳して投げる。SchemaMismatch と Other には、断られた文の頭と尻尾を付ける。
+    ///
+    /// WhyNot: 文を全部の kind に付けないのは、制約違反は違反した物を自分で名指し、文が無くても探せるから。
+    /// SQLite は解決できなかった名前（`no such column: led.hled`）を言うだけで、どの文だったかを言わないので、
+    /// 名前と構文の失敗には文が無いと探す所が無い。
+    ///
+    /// WhyNot: 頭と尻尾を残すのは、`WITH` で始まる長い文どうしを分けるのが、最後の `SELECT` と `WHERE` の方だから。
+    ///
+    pub def raiseRefusal(sql: String, e: SQLException): a \ {IO, TransientDbErr, DbErr} =
+        let message: String = e.getMessage();
+        let said = if (Object.isNull(message)) e.getClass().getName() else message;
+        let carried = "${said}: ${identify(sql)}";
+        DbError.raise(match SqlState.classify({ code = e.getErrorCode(), message = said }) {
+            case DbError.DbErrorKind.SchemaMismatch(_) => DbError.DbErrorKind.SchemaMismatch(carried)
+            case DbError.DbErrorKind.Other(_)          => DbError.DbErrorKind.Other(carried)
+            case kind                                  => kind
+        })
+
+    ///
+    /// 文の頭と尻尾、110 文字ずつ。短ければ全部。
+    ///
+    pub def identify(sql: String): String =
+        let ends = 110;
+        let length = String.length(sql);
+        if (length <= 2 * ends) sql
+        else "${String.takeLeft(ends, sql)} … ${String.dropLeft(length - ends, sql)}"
 
 }

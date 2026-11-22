@@ -37,3 +37,23 @@ def testRewriteOutOfRange(): Unit \ Assert =
 def testRewriteDropsLineComments(): Unit \ Assert =
     let rewritten = JdbcConvert.rewritePlaceholders("SELECT 'a--b' -- it's $9\nFROM t WHERE id = $1", List#{SqlValue.Int64(1i64)});
     Assert.assertEq(expected = Some(("SELECT 'a--b' \nFROM t WHERE id = ?", List#{SqlValue.Int64(1i64)})), rewritten)
+
+/// `$n` が無ければ、引用符の外の `?` を出てきた順に params に当てる。引用符の中の `?` は数えない。
+@Test
+def testPositionalQuestionMarks(): Unit \ Assert =
+    Assert.assertEq(
+        expected = Some(("SELECT '?' WHERE a = ? AND b = ?", List#{SqlValue.Int32(1), SqlValue.Str("x")})),
+        JdbcConvert.rewritePlaceholders("SELECT '?' WHERE a = ? AND b = ?", List#{SqlValue.Int32(1), SqlValue.Str("x")}))
+
+/// `?` と params の数が違えば None、`$n` と `?` が混ざっていても None。
+///
+///   ? ? に 1 つ → None      $1 と ? → None      ? も $n も無く params も無い → そのまま
+@Test
+def testPositionalMismatches(): Unit \ Assert =
+    Assert.assertEq(
+        expected = (None, None, Some(("SELECT 1", Nil))),
+        (
+            JdbcConvert.rewritePlaceholders("SELECT ? , ?", List#{SqlValue.Int32(1)}),
+            JdbcConvert.rewritePlaceholders("SELECT $1, ?", List#{SqlValue.Int32(1), SqlValue.Int32(2)}),
+            JdbcConvert.rewritePlaceholders("SELECT 1", Nil)
+        ))
