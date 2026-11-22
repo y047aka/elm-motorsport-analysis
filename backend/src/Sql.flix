@@ -289,9 +289,7 @@ pub mod Sql {
     ///
     /// The last ` AS ` anywhere in the text, so a projection written as a
     /// subquery that aliases something inside itself is labelled by that inner
-    /// name rather than by the whole text. Nothing declared is written that way;
-    /// a column authored as a subquery has to be read at the name its own `AS`
-    /// gives it.
+    /// name rather than by the whole text, and has to be read at that name.
     def aliasOf(text: String): Option[String] =
         match List.reverse(String.splitOn({substr = " AS "}, text)) {
             case Nil       => None

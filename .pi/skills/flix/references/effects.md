@@ -51,8 +51,8 @@ An operation raised inside a handler body does not reach the handlers the
 caller installed inside that `run` — it passes them and lands outside. So an
 operation that can fail cannot raise the failure from the handler.
 
-The way out, which is the shape of `Db`: the operation **answers with a
-`Result`**, and a thin wrapper raises it in the caller's own context.
+The way out, which is the shape of every op of `Lite3fx`: the operation **answers
+with a `Result`**, and a thin wrapper raises it in the caller's own context.
 
 ```flix
 pub eff SqlRead {
@@ -60,11 +60,11 @@ pub eff SqlRead {
 }
 
 // mod Lite3fx.Sql -- the caller reaches this, never the op
-pub def fetch(sql: String, params: List[Value]): ... \ DbRead =
+pub def fetch(sql: String, params: List[SqlValue]): ... \ DbRead + RawSql =
     SqlRead.fetch(sql, params) |> orRaise
 ```
 
-`Lite3fx.Sql.orRaise` is that step. Nothing outside `Lite3fx.Sql` calls an operation.
+`Lite3fx.Sql.orRaise` is that step.
 
 ### Subtraction takes a set or an alias
 

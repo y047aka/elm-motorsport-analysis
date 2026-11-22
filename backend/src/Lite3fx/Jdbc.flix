@@ -282,8 +282,7 @@ pub mod Lite3fx.Jdbc {
     /// leaves unsaid.
     ///
     /// The driver names what it could not resolve and never the statement it was
-    /// written into, which is why `statement` rides along onto the one kind a
-    /// statement written out fails by.
+    /// written into, which is why `statement` rides along.
     def refusal(statement: String, e: SQLException): DbErrorKind \ IO =
         let message: String = e.getMessage();
         let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;

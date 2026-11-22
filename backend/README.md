@@ -300,15 +300,14 @@ binds rather than sqlfx's fifteen. `Pool` is absent: the CLI opens one
 connection per run and the server one per request, which is what WAL mode is
 there to make work. `commit` and `rollback` stay operations of `SqlWrite`
 rather than moving into `Tx`, so a recording handler sees a commit go by, and
-`insertMany` is a third operation of `SqlWrite`, since a lap arrives a
+`insertMany` is an operation of `SqlWrite` of its own, since a lap arrives a
 thousand at a time rather than one at a time. `RawSql` is inside the aliases
 rather than added to each signature, because every function of this
 repository's reaches a statement -- see below.
 
-`Db` is the seam: `Lite3fx` reaches a database and names no table, and the
-`Db` table modules and the row types beside them are the whole of what the
-application tells them about itself, which is the same line Acadia draws
-between `Transaction`, `Rows` and a `Table`.
+`Db` is the seam: the `Db` table modules and the row types beside them are the
+whole of what the application tells `Lite3fx` about itself, which is the same
+line Acadia draws between `Transaction`, `Rows` and a `Table`.
 
 ## The database effects
 
@@ -329,25 +328,23 @@ Everything between those and the statement is written as though the database alw
 Which of the two effects a failure travels by is read off its `DbErrorKind` constructor -- `DbError.raise` routes it there -- so a kind added to either side meets a pattern that has to say which it is.
 
 What a signature says is the alias rather than the effect: `\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db` adds `SqlSavepoint`.
-Every one of them already says a statement goes out, which is what `RawSql` marks: `Lite3fx.Sql.fetch`, `Lite3fx.Sql.execute` and `Lite3fx.Sql.insertMany` raise it, and `RawSql`'s own header says who closes it.
+Every one of them already says a statement goes out, which is what `RawSql` marks: every reader and writer of `Lite3fx.Sql` raises it, and `RawSql`'s own header says who closes it.
 Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller taking a reading as an argument names the half it uses, as `Cli.Load.loadRound` does with `DbRead + SqlWrite`, or the whole it hands over, as `Main.onDirectories` and `Round.TestSupport.onRound` do with `Db`.
 
 The two statement effects answer with a `Result` even so, and that is not a
-choice: a Flix handler body is evaluated outside the `run` it belongs to, so a
-failure raised inside `Lite3fx.Jdbc`'s handler would pass every handler its caller
-had installed. `Lite3fx.Sql.orRaise` is where the value becomes a raised failure, in
-the caller's own context.
+choice -- `Lite3fx.flix`'s `SqlRead` header says why. `Lite3fx.Sql.orRaise` is
+where the value becomes a raised failure, in the caller's own context.
 
-So nothing outside `Lite3fx` calls an operation: `Lite3fx.Sql.fetch`,
-`Lite3fx.Sql.execute` and `Lite3fx.Sql.insertMany` are the same statements with
-that step already taken, and they are what `Sql` and `Db.Schema` reach.
+So nothing outside `Lite3fx` calls an operation: the wrappers of `Lite3fx.Sql`
+are the same statements with that step already taken, and they are what `Sql` and
+`Db.Schema` reach.
 `Lite3fx.Jdbc.withConnection` is the other one -- a database opened, worked in,
 and closed however that went, for a run, a test and the server alike.
 
 What a failure is is a `DbErrorKind` rather than a sentence.
 The transient ones travel apart from the rest: `Unreachable` is no database reached at all, and `Busy` is the one refusal that may go through next time -- a lock SQLite waited out rather than got, which `Lite3fx.SqliteState` reads off the driver's result code and is tested without a database.
 The constraint violations are named, which is what a PostgreSQL SQLSTATE gives sqlfx and the driver's own sentence gives here: `UNIQUE constraint failed: laps.round_id` becomes `UniqueViolation("laps.round_id")`, and the primary code alone -- which is what the driver answers most constraints with -- is read out of the message.
-The rest say where the fix is: `SchemaMismatch` is a table or a column the database has not got, `DecodeError` is a cell the reading could not read, `NoRow` is a query that had to answer with one and did not, and `Other` is what the JVM threw rather than said, and the rows that came back whole and do not describe a round.
+The rest say where the fix is: `SchemaMismatch` is a table or a column the database has not got, `DecodeError` is a cell the reading could not read, and `NoRow` is a query that had to answer with one and did not. `Other` is the rest -- what the JVM threw rather than said, and what this repository raises when rows came back whole and describe no round.
 The sentence is `ToString`'s, so the wording is in one place and the kind is what a caller reads.
 
 `DbError.Failure` is both failings in one value, `Transient` and `Permanent`, and it is what a boundary takes back.
@@ -361,10 +358,9 @@ a `ResultSet` cell back into one.
 `Sql.decode` puts a row's cells in the order its projection names them, and the
 reading then goes by position within that, so a clause and a reading that
 disagree -- a column renamed on one side of the two -- fail by naming the column
-rather than by answering with the cell beside the one they wanted. The name a
-projection comes back under is the text the clause writes it under, since SQLite
-answers a qualified column by its name alone and an expression by that very text;
-two projections under one label, a join naming both sides' `elapsed_ms`, are
+rather than by answering with the cell beside the one they wanted. `Sql.label`
+says what a projection comes back under; two projections under one label, a join
+naming both sides' `elapsed_ms`, are
 answered in the order the clause writes them.
 
 `Server.Api` is the one that reads the kind. `Unreachable` and `Busy` are answered
@@ -489,7 +485,7 @@ a query is can be read back without a database.
 
 An aggregate and a window are written over a projection and read back as that projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and `lag(l#carNumber, w)` is an `Option` because the first row of a window has no predecessor. `opt` is the same fact from the other side: an aggregate over a group holding no rows answers null too. A `Sql.Window` is a value, and a named one is spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which is how nineteen running minima are one clause. What a statement written out interpolates is the same value: `${l#carNumber}` puts a declared column's name between the keywords, and `Sql.sqlOf` -- which takes a projection, the way `%%` does -- puts an aggregate's or a window's text there.
 
-Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement one clause per line -- Flix has no multi-line string literal, and `spaced` puts the lines back where SQL puts a space -- with `{{name}}` where each piece it cannot write for itself goes, the round it is scoped to and the laps the events fell on, and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. So a written statement names its columns and reads them off the one value, as a built query does, and its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
+Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement one clause per line -- Flix has no multi-line string literal, and `spaced` puts the lines back where SQL puts a space -- with `{{name}}` where each piece it cannot write for itself goes, the round it is scoped to and the laps the events fell on, and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. Its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
 
 The bargain written statements are accepted on is that the database checks them: SQLite resolves a statement's names where it prepares it, so a rename that missed a reference is a refusal the run raises and not a build that fails. `Lite3fx.Jdbc.refusal` carries the statement into that refusal, which is the half the driver's message lacks; it rides onto `SchemaMismatch`, the kind a statement written out fails by.
 
