@@ -142,7 +142,7 @@ def testDbErrRunWithResultKeepsKind(): Unit \ Assert =
 @Test
 def testGuardTurnsExceptionsIntoOther(): Unit \ {Assert, IO} =
     let thunks: List[Unit -> Int32 \ IO] = List#{
-        () -> 1,
+        () -> checked_ecast(1),
         () -> throw new RuntimeException("boom"),
         () -> throw new RuntimeException(),
         () -> throw new StackOverflowError("deep")
@@ -275,8 +275,8 @@ def testGuardOutsideHandlerTable(): Unit \ {Assert, IO} =
 @Test
 def testGuardKeepsDbEffectsAsIs(): Unit \ {Assert, IO} =
     let thunks: List[Unit -> Int32 \ {DbErr, TransientDbErr}] = List#{
-        () -> DbErr.uniqueViolation("users_email_key"),
-        () -> TransientDbErr.deadlock()
+        () -> checked_ecast(DbErr.uniqueViolation("users_email_key")),
+        () -> checked_ecast(TransientDbErr.deadlock())
     };
     Assert.assertEq(
         expected = List#{

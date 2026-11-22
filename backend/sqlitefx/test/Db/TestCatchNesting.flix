@@ -98,6 +98,19 @@ mod TestCatchNesting {
         });
         Assert.assertEq(expected = "caught in handler body", seen)
 
+    def measure(thunk: Unit -> Unit \ ef): (String, Result[String, Unit]) \ (ef - {Inner, Outer}) + IO = {
+        let inBody = Ref.fresh(Static, "not reached");
+        let outer = attempt(() -> withOuter(() -> run thunk() with handler Inner {
+            def inner(resume) =
+                try {
+                    resume(())
+                } catch {
+                    case _: Throwable => Ref.put("caught in handler body", inBody)
+                }
+        }));
+        (Ref.get(inBody), outer)
+    }
+
     /// 7: handler の本体の try の中で resume した時、その先で thunk が投げた物がその try に届くか。
     /// resume の後で thunk が外の handler へ op を投げると素通りし、投げなければ本体の try が thunk の例外まで拾う。
     /// 拾うかどうかが thunk の書き方で変わり、拾った時は利用側の例外を handler が飲み込むので、resume は try の外で呼ぶ。
@@ -108,18 +121,6 @@ mod TestCatchNesting {
     ///   c. inner(); outer(); throw              素通り       拾う
     @Test
     def testResumeInsideTryInHandlerBodyTable(): Unit \ {Assert, IO} =
-        let measure = (thunk: Unit -> Unit \ {Inner, Outer, IO}) -> {
-            let inBody = Ref.fresh(Static, "not reached");
-            let outer = attempt(() -> withOuter(() -> run thunk() with handler Inner {
-                def inner(resume) =
-                    try {
-                        resume(())
-                    } catch {
-                        case _: Throwable => Ref.put("caught in handler body", inBody)
-                    }
-            }));
-            (Ref.get(inBody), outer)
-        };
         let rows = List#{
             measure(() -> { TestCatchNesting.Inner.inner(); blow() }),
             measure(() -> { TestCatchNesting.Outer.outer(); TestCatchNesting.Inner.inner(); blow() }),
@@ -170,7 +171,7 @@ mod TestCatchNesting {
     /// Pool の形: 外の try [ Inner の handler（Pool の SqlWrite の役）[ 内の try（Db.guard の役）[ 利用側の thunk ] ] ]。
     /// 受けた所を返す: "inner"（内の try）/ "around"（handler の run を外から包む try）/ "escaped"（どちらも飛ばした）。
     ///
-    def poolShape(user: Unit -> Unit \ {Inner, Outer, IO}): String \ IO =
+    def poolShape(user: Unit -> Unit \ ef): String \ (ef - {Inner, Outer}) + IO =
         try {
             withOuter(() ->
                 try {

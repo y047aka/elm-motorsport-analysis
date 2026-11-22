@@ -77,7 +77,7 @@ pub mod Sqlitefx.Jdbc {
     ///
     /// fatal を拾っても何もしない（接続が呼び手の物で、捨てられない所）。
     ///
-    pub def unwatched(): Watch \ IO = { onFatal = () -> (), driverFailed = Ref.fresh(Static, false) }
+    pub def unwatched(): Watch \ IO = { onFatal = () -> checked_ecast(()), driverFailed = Ref.fresh(Static, false) }
 
     ///
     /// thunk を走らせ、JVM の例外を拾う。fatal は `onFatal` を呼んでから同じ物を投げ直す（値にしない）。
