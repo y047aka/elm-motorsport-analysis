@@ -282,14 +282,29 @@ pub mod Lite3fx.Jdbc {
     /// leaves unsaid.
     ///
     /// The driver names what it could not resolve and never the statement it was
-    /// written into, which is why `statement` rides along.
+    /// written into, which is why `statement` rides along. It rides along onto the
+    /// kinds whose message says nothing about where to look -- a missing name, a
+    /// sentence SQLite gave no name to at all -- and not onto a constraint, which
+    /// names itself and needs no clause to be found.
     def refusal(statement: String, e: SQLException): DbErrorKind \ IO =
         let message: String = e.getMessage();
         let said: String = if (Object.isNull(message)) "${e.getClass().getName()}" else message;
+        let carried: String = "${said}: ${identify(statement)}";
         match Lite3fx.SqliteState.classify({code = e.getErrorCode(), message = said}) {
-            case DbErrorKind.SchemaMismatch(why) => DbErrorKind.SchemaMismatch(
-                "${why}: ${String.take(220, statement)}")
-            case other                           => other
+            case DbErrorKind.SchemaMismatch(_) => DbErrorKind.SchemaMismatch(carried)
+            case DbErrorKind.Other(_)          => DbErrorKind.Other(carried)
+            case other                         => other
         }
+
+    /// The part of a statement that says which one it was. Every written statement
+    /// here begins `WITH`, and the clauses that tell two apart stand at the end, so
+    /// the head and the tail are both kept.
+    def identify(statement: String): String =
+        let ends = 110;
+        let length = String.length(statement);
+        if (length <= 2 * ends)
+            statement
+        else
+            "${String.take(ends, statement)} … ${String.drop(length - ends, statement)}"
 
 }
