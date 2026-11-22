@@ -6,7 +6,8 @@
 /// is the same on every lap of it, in every seat the archive holds, so the
 /// name is here and the lap carries the seat alone.
 pub mod Db.CarDrivers {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.Drivers
@@ -140,11 +141,11 @@ pub mod Db.CarDrivers {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage());
         Schema.addIndex(table(), byDriver())
 
-    pub def insertRows(rows_: List[CarDriverRow]): Int32 \ DbWrite =
+    pub def insertRows(rows_: List[CarDriverRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows_)
 
     pub def values(row: CarDriverRow): List[SqlValue] =

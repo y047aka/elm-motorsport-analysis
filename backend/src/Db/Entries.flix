@@ -6,13 +6,15 @@
 /// different one across seasons -- number 12 was three teams' over the three
 /// the archive holds -- so the season is half of what names one.
 pub mod Db.Entries {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
     use Motorsport.Wec.RawCar
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     pub def table(): String = "entries"
@@ -141,7 +143,7 @@ pub mod Db.Entries {
     /// An entry as the table holds it, a field at a time: each line names the
     /// column and the field its cell lands in, and a field left out is not an
     /// `EntryRow`.
-    pub def selection(): Sel[EntryRow] =
+    pub def selection(): Decoder[EntryRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#entryId, (row, value) -> { +entryId = value | row })
@@ -167,10 +169,10 @@ pub mod Db.Entries {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage())
 
-    pub def insertRows(rows_: List[EntryRow]): Int32 \ DbWrite =
+    pub def insertRows(rows_: List[EntryRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows_)
 
     pub def values(row: EntryRow): List[SqlValue] =

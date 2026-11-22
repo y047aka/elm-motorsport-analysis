@@ -15,7 +15,7 @@ pub mod Db.TestDb {
         LapRow.fromRawLaps(roundId(), TestLapRow.sampleLap() :: TestLapRow.sampleLap() :: Nil)
 
     /// What the statements a load sends would be, with no database behind them: each write answers that it took `affected` rows.
-    def recorded(affected: Int32, f: Unit -> a \ ef): (Result[DbError.DbErrorKind, a], List[Statement]) \ ef - Db.DbAll =
+    def recorded(affected: Int32, f: Unit -> a \ ef): (Result[DbError.DbErrorKind, a], List[Statement]) \ ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql} =
         RawSql.runWithAllow(() -> DbTest.runRecording(Nil, affected, () -> DbError.runWithKind(f)))
 
     @Test

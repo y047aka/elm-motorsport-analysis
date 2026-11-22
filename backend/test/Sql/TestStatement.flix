@@ -68,7 +68,7 @@ pub mod Sql.TestStatement {
         let inserted = Sql.insertRows("laps", columns(),
             { round = "le_mans_24h", lapNumber = 1 } :: { round = "fuji_6h", lapNumber = 12 } :: Nil);
         Assert.assertTrue(inserted == Some((
-            "INSERT INTO laps (round, lap_number) VALUES (?, ?), (?, ?)",
+            "INSERT INTO laps (round, lap_number) VALUES ($1, $2), ($3, $4)",
             SqlValue.Str("le_mans_24h") :: SqlValue.Int32(1) :: SqlValue.Str("fuji_6h") :: SqlValue.Int32(12) :: Nil
         )))
 
@@ -76,5 +76,17 @@ pub mod Sql.TestStatement {
     @Test
     def anInsertOfNoRowsIsNoStatement(): Unit \ Assert =
         Assert.assertTrue(Sql.insertRows("laps", columns(), (Nil: List[Row])) == None)
+
+    /// A statement goes out with its `?`s numbered left to right, and a `?` inside a quoted string is text.
+    @Test
+    def aStatementIsNumberedInTheOrderItsValuesWereBound(): Unit \ Assert =
+        let piece = Sql.frags(
+            Sql.frag("SELECT '?' FROM laps WHERE lap_number = ?", SqlValue.Int32(1) :: Nil)
+            :: Sql.frag("AND car_number = ?", SqlValue.Str("7") :: Nil)
+            :: Nil);
+        Assert.assertTrue(Sql.numbered(piece) == (
+            "SELECT '?' FROM laps WHERE lap_number = $1 AND car_number = $2",
+            SqlValue.Int32(1) :: SqlValue.Str("7") :: Nil
+        ))
 
 }

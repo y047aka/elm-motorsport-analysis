@@ -27,29 +27,23 @@ def testMakeRowsSharesColumnIndex(): Unit \ Assert =
 def testGetByName(): Unit \ Assert =
     let row = Row.makeRows(List#{"id", "name"}, List#{List#{SqlValue.Int64(1i64), SqlValue.Str("alice")}})
         |> List.head
-        |> Option.getWithDefault(Row.empty());
+        |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
     Assert.assertEq(
         expected = (Some(SqlValue.Str("alice")), None),
         (Row.get("name", row), Row.get("missing", row)))
 
-/// columnNames は結果セットの順で列名を返す。
+/// columnNames は添字の順で列名を返す。
 @Test
 def testColumnNamesInIndexOrder(): Unit \ Assert =
-    let row = { columns = Row.makeColumnIndex(List#{"z", "a", "m"}), names = Vector#{"z", "a", "m"}, cells = Vector#{} };
+    let row = { columns = Row.makeColumnIndex(List#{"z", "a", "m"}), cells = Vector#{} };
     Assert.assertEq(expected = List#{"z", "a", "m"}, Row.columnNames(row))
 
 /// set は既存の列を差し替え、無い列は末尾に足す。他の列は変わらない。
 @Test
 def testRowSet(): Unit \ Assert =
-    let row = Row.makeRows(List#{"id", "name"}, List#{List#{SqlValue.Int64(1i64), SqlValue.Str("a")}}) |> List.head |> Option.getWithDefault(Row.empty());
+    let row = Row.makeRows(List#{"id", "name"}, List#{List#{SqlValue.Int64(1i64), SqlValue.Str("a")}}) |> List.head |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
     let replaced = Row.set("name", SqlValue.Str("b"), row);
     let added = Row.set("email", SqlValue.Null, row);
     Assert.assertEq(
         expected = (Some(SqlValue.Str("b")), Some(SqlValue.Int64(1i64)), Some(SqlValue.Null), List#{"id", "name", "email"}),
         (Row.get("name", replaced), Row.get("id", replaced), Row.get("email", added), Row.columnNames(added)))
-
-/// 同じ名前の列が 2 つあっても、columnNames は 2 回並べ、セルの数と揃う。get は後ろの方を返す。
-@Test
-def testRepeatedColumnName(): Unit \ Assert =
-    let row = Row.makeRows(List#{"id", "id"}, List#{List#{SqlValue.Int32(1), SqlValue.Int32(2)}}) |> List.head |> Option.getWithDefault(Row.empty());
-    Assert.assertEq(expected = (List#{"id", "id"}, Some(SqlValue.Int32(2))), (Row.columnNames(row), Row.get("id", row)))

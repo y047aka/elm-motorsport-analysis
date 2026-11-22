@@ -2,7 +2,8 @@
 pub mod Round.Laps {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
     use Sqlitefx.TransientDbErr
 
     use Db.LapRow
@@ -18,7 +19,7 @@ pub mod Round.Laps {
 
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
-    pub def loaded(entry: Entry): Bool \ DbRead =
+    pub def loaded(entry: Entry): Bool \ DbRead + RawSql =
         let found = Laps.rows(entry)
             |> Sql.limit(1)
             |> Sql.map(_ -> Sql.int("1"))
@@ -34,7 +35,7 @@ pub mod Round.Laps {
         position = Int32
     }
 
-    pub def read(entry: Entry, seats: Seats): List[Placed] \ DbRead =
+    pub def read(entry: Entry, seats: Seats): List[Placed] \ DbRead + RawSql =
         let cars = Cars.read(entry);
         Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
@@ -52,15 +53,15 @@ pub mod Round.Laps {
     def fieldOrder(): Sql.Window =
         let c = Laps.columns();
         Sql.window(
-            Schema.term(c#lapNumber) :: Nil,
-            Schema.term(c#elapsedMs) :: Schema.term(c#sourceRow) :: Nil,
+            Schema.name(c#lapNumber) :: Nil,
+            Schema.name(c#elapsedMs) :: Schema.name(c#sourceRow) :: Nil,
             None
         )
 
     /// The place in the field, counted from nought where `ROW_NUMBER` counts from
     /// one.
     def place(): Sql.Sel[Int32] =
-        Sql.intOf(Sql.frags(Sql.fragment(Sql.rowNumber(fieldOrder())) :: Sql.raw("- 1") :: Nil))
+        Sql.labelled("place", Sql.int("${Sql.sqlOf(Sql.rowNumber(fieldOrder()))} - 1"))
 
     def placed(cars: Map[String, RawCar], seats: Seats): ((LapRow, Int32)) -> Placed \ {DbErr, TransientDbErr} =
         row -> match row {

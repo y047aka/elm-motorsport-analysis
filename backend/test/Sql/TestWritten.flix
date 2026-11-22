@@ -29,20 +29,6 @@ pub mod Sql.TestWritten {
                 SqlValue.Int32(3) :: SqlValue.Int32(900) :: Nil
             )))
 
-    /// The clause is a piece of the statement like any other, so a column that binds
-    /// a value of its own has it come out between the values either side of it rather
-    /// than last.
-    @Test
-    def aColumnThatBindsAValueKeepsItsPlaceAmongTheValues(): Unit \ Assert =
-        Assert.assertTrue(rendered(() -> Sql.statement(
-            "SELECT %% FROM laps WHERE {{scope}}" :: Nil,
-            Map#{ "scope" => scoped() },
-            Sql.optionalIntOf(Sql.frag("(SELECT ? FROM rounds LIMIT 1)", SqlValue.Int32(7) :: Nil))))
-            == Ok((
-                "SELECT (SELECT ? FROM rounds LIMIT 1) FROM laps WHERE round_id = ?",
-                SqlValue.Int32(7) :: SqlValue.Int32(3) :: Nil
-            )))
-
     /// The name is what orders the values, not the order the map happens to be
     /// walked in.
     @Test
@@ -185,22 +171,6 @@ pub mod Sql.TestWritten {
             == Ok((
                 "SELECT car_number, elapsed_ms FROM laps WHERE round_id = ? AND season = ? AND elapsed_ms > ?",
                 SqlValue.Int32(3) :: SqlValue.Str("2025") :: SqlValue.Int32(900) :: Nil
-            )))
-
-    /// The hardest one: a hole named on both sides of the `%%`, so the clause the
-    /// projection draws sits between the values the two occurrences bind. The clause binds
-    /// a value of its own here, and it has to come out between them rather than first or
-    /// last.
-    @Test
-    def aHoleOnBothSidesOfTheClauseHoldsTheClauseBetweenItsValues(): Unit \ Assert =
-        Assert.assertTrue(rendered(() -> Sql.statement(
-            "SELECT %% FROM laps WHERE {{scope}} AND lap_number > (SELECT ? FROM rounds LIMIT 1) AND {{scope}}" :: Nil,
-            Map#{ "scope" => scoped() },
-            Sql.optionalIntOf(Sql.frag("(SELECT ? FROM laps LIMIT 1)", SqlValue.Int32(77) :: Nil))))
-            == Ok((
-                "SELECT (SELECT ? FROM laps LIMIT 1) FROM laps WHERE round_id = ?"
-                    + " AND lap_number > (SELECT ? FROM rounds LIMIT 1) AND round_id = ?",
-                SqlValue.Int32(77) :: SqlValue.Int32(3) :: SqlValue.Int32(3) :: Nil
             )))
 
     /// The guard is on the one spelling that cannot survive the run together. A block

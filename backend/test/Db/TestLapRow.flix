@@ -149,12 +149,12 @@ pub mod Db.TestLapRow {
         Assert.assertTrue(List.last(values) == Some(SqlValue.NullOf(NullType.Json)))
 
     /// The cells the reading comes back as.
-    def cells(): List[Option[String]] =
-        Some("7") :: Some("1") :: Some("12") :: Some("1") ::
-        Some("1") :: Some("95365") :: Some("0") :: Some("0") ::
-        Some("23155") :: Some("0") :: Some("29928") :: Some("0") :: Some("42282") ::
-        Some("2") :: Some("160.7") :: Some("95365") :: Some("39720000") :: Some("310.5") ::
-        None :: Some("SF") :: None :: None :: Nil
+    def cells(): List[SqlValue.SqlValue] =
+        SqlValue.Int32(7) :: SqlValue.Int32(1) :: SqlValue.Str("12") :: SqlValue.Int32(1) ::
+        SqlValue.Int32(1) :: SqlValue.Int32(95365) :: SqlValue.Int32(0) :: SqlValue.Int32(0) ::
+        SqlValue.Int32(23155) :: SqlValue.Int32(0) :: SqlValue.Int32(29928) :: SqlValue.Int32(0) :: SqlValue.Int32(42282) ::
+        SqlValue.Int32(2) :: SqlValue.Str("160.7") :: SqlValue.Int32(95365) :: SqlValue.Int32(39720000) :: SqlValue.Str("310.5") ::
+        SqlValue.Null :: SqlValue.Str("SF") :: SqlValue.Null :: SqlValue.Null :: Nil
 
     @Test
     def theRowIsReadInTheOrderTheColumnsAreNamed(): Unit \ Assert =
@@ -168,7 +168,7 @@ pub mod Db.TestLapRow {
     def anArrayCellKeepsTheBlanksInPlace(): Unit \ Assert =
         let withMiniSectors = List.append(
             List.take(20, cells()),
-            Some("[20708,null]") :: Some("[20708,null]") :: Nil
+            SqlValue.Str("[20708,null]") :: SqlValue.Str("[20708,null]") :: Nil
         );
         match Sql.decode(Laps.selection(), TestCells.answering(Laps.selection(), withMiniSectors)) {
             case Err(_)  => Assert.assertTrue(false)

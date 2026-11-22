@@ -5,7 +5,8 @@
 pub mod Round.Timeline {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.Cars
@@ -27,6 +28,7 @@ pub mod Round.Timeline {
     use Motorsport.Timeline
     use Motorsport.Timeline.CarEvent
     use Motorsport.Timeline.EventType
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
     use Util.Duration.Duration
 
@@ -35,7 +37,7 @@ pub mod Round.Timeline {
     ///
     /// Sorted rather than read in the key's order, so that a row corrected in SQL comes
     /// back at its new moment rather than at its old one.
-    pub def read(entry: Entry): List[Timeline.Event] \ DbRead =
+    pub def read(entry: Entry): List[Timeline.Event] \ DbRead + RawSql =
         let c = TimelineEvents.columns();
         TimelineEvents.rows(entry)
             |> Sql.orderBy(Schema.term(c#elapsedMs) :: Schema.term(c#seq) :: Nil)
@@ -52,7 +54,7 @@ pub mod Round.Timeline {
         entry: Entry,
         seats: Round.Drivers.Seats,
         index: Index.Index
-    ): List[Detailed] \ DbRead =
+    ): List[Detailed] \ DbRead + RawSql =
         let happening = read(entry);
         let cells = lapCells(entry, List.filterMap(lapOf, happening));
         happening |> List.map(beside(seats, index, cells))
@@ -70,7 +72,7 @@ pub mod Round.Timeline {
     /// `timeLimit` is `Metadata`'s reading of how far the race was scheduled to
     /// run -- the one thing here the laps do not say -- so the round's
     /// particulars are read first and hand it over.
-    pub def fromLaps(entry: Entry, timeLimit: Duration): List[Timeline.Event] \ DbRead =
+    pub def fromLaps(entry: Entry, timeLimit: Duration): List[Timeline.Event] \ DbRead + RawSql =
         Timeline.fromReadings({
             timeLimit     = timeLimit,
             cars          = cars(entry),
@@ -88,7 +90,7 @@ pub mod Round.Timeline {
     ///
     /// A car's laps only ever run forwards, so its latest crossing is the one its
     /// last lap made, and its highest lap number is the same row's.
-    def cars(entry: Entry): List[(String, Duration, Int32)] \ DbRead =
+    def cars(entry: Entry): List[(String, Duration, Int32)] \ DbRead + RawSql =
         let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.groupBy(Schema.term(c#carNumber) :: Nil)
@@ -106,7 +108,7 @@ pub mod Round.Timeline {
     ///
     /// Not lap 1, for the reason `Round.Index` leaves it out of the fastest lap. A
     /// lap the feed did not time is written `0.000` and is no lap at all.
-    def fastestLaps(entry: Entry): List[Timeline.FastestLap] \ DbRead =
+    def fastestLaps(entry: Entry): List[Timeline.FastestLap] \ DbRead + RawSql =
         let c = Laps.columns();
         Sql.statement(
             "WITH timed AS (SELECT ${Laps.table()}.car_number, elapsed_ms, lap_number, lap_time_ms," ::
@@ -133,7 +135,7 @@ pub mod Round.Timeline {
     /// that lap before's crossing: the lap in progress from there on is the new
     /// driver's, which is when the app reads the car as theirs. Not only out-laps,
     /// though every change in the rounds loaded falls on one.
-    def driverChanges(entry: Entry): List[Timeline.DriverChange] \ DbRead =
+    def driverChanges(entry: Entry): List[Timeline.DriverChange] \ DbRead + RawSql =
         let c = Laps.columns();
         let handed = {
             at  = Schema.derived("handed_at", "int", Sql.int),
@@ -177,7 +179,7 @@ pub mod Round.Timeline {
     /// that crossed it as either half of a stop was not overtaken -- the stop is
     /// `leadersInPit`'s event -- and nor was one that never crossed it, having
     /// retired.
-    def overtakes(entry: Entry): List[Timeline.Overtake] \ DbRead =
+    def overtakes(entry: Entry): List[Timeline.Overtake] \ DbRead + RawSql =
         let x = crossings();
         let l = seen("l", x);
         let led = seen("led", x);
@@ -213,7 +215,7 @@ pub mod Round.Timeline {
     /// pit lane, made by a car that led its class on that lap or the lap before it.
     /// A stop is counted at its out-lap, for `Db.Laps.pitOutLap`'s reason, and timed
     /// at its in-lap.
-    def leadersInPit(entry: Entry): List[Timeline.InPit] \ DbRead =
+    def leadersInPit(entry: Entry): List[Timeline.InPit] \ DbRead + RawSql =
         let x = crossings();
         let l = seen("l", x);
         let led = seen("led", x);
@@ -312,16 +314,16 @@ pub mod Round.Timeline {
     def firstAcross(c: Crossings): Sql.Window =
         let l = Laps.columns();
         Sql.window(
-            Schema.term(Schema.qualified(Entries.table(), Entries.columns()#carClass)) ::
-            Schema.term(c#lapNumber) :: Nil,
-            Schema.term(l#elapsedMs) :: Schema.term(l#sourceRow) :: Nil,
+            Schema.name(Schema.qualified(Entries.table(), Entries.columns()#carClass)) ::
+            Schema.name(c#lapNumber) :: Nil,
+            Schema.name(l#elapsedMs) :: Schema.name(l#sourceRow) :: Nil,
             None
         )
 
     /// The order a class's leads were taken in: its own laps, in the order they were
     /// run.
     def classLeads(c: Crossings): Sql.Window =
-        Sql.window(Schema.term(c#carClass) :: Nil, Schema.term(c#lapNumber) :: Nil, None)
+        Sql.window(Schema.name(c#carClass) :: Nil, Schema.name(c#lapNumber) :: Nil, None)
 
     /// The laps, each beside the class of the car that ran it. A lap with no row in
     /// `cars` has no class and is dropped; the load writes the cars first.
@@ -410,7 +412,7 @@ pub mod Round.Timeline {
         }
 
     /// The laps the events fell on, keyed by the pair that names one.
-    def lapCells(entry: Entry, named: List[(String, Int32)]): Map[(String, Int32), Cells] \ DbRead =
+    def lapCells(entry: Entry, named: List[(String, Int32)]): Map[(String, Int32), Cells] \ DbRead + RawSql =
         if (List.isEmpty(named))
             Map.empty()
         else
@@ -572,7 +574,7 @@ pub mod Round.Timeline {
     /// A lap the events fell on, its own times and its car's best of each, the
     /// fifteen mini-sector bests gathered back into one JSON array so the reading is
     /// thirteen columns and not twenty-seven.
-    def cellSelection(): Sel[Cells] =
+    def cellSelection(): Decoder[Cells] =
         let c = Laps.columns();
         Sql.record({})
             |> Sql.field(c#carNumber, (r, value) -> { +carNumber = value | r })
@@ -587,7 +589,7 @@ pub mod Round.Timeline {
             |> Sql.field(Sql.optionalInt("s1_best"), (r, value) -> { +s1Best = value | r })
             |> Sql.field(Sql.optionalInt("s2_best"), (r, value) -> { +s2Best = value | r })
             |> Sql.field(Sql.optionalInt("s3_best"), (r, value) -> { +s3Best = value | r })
-            |> Sql.field(Sql.optionalIntArray("json_array(${miniBests()}) AS mini_best"),
+            |> Sql.field(Sql.labelled("mini_best", Sql.optionalIntArray("json_array(${miniBests()})")),
                 (r, value) -> { +miniBests = value | r })
 
 }

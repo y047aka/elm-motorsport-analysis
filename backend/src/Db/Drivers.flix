@@ -3,7 +3,8 @@
 /// A name is the whole of what the feed gives of a driver, so it is the key as
 /// well as the value. 308 of them are named on 130,017 laps.
 pub mod Db.Drivers {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.Schema
@@ -67,10 +68,10 @@ pub mod Db.Drivers {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage())
 
-    pub def insertRows(rows_: List[DriverRow]): Int32 \ DbWrite =
+    pub def insertRows(rows_: List[DriverRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows_)
 
     pub def values(row: DriverRow): List[SqlValue] =

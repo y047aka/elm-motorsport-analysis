@@ -23,7 +23,7 @@ A route that reads nothing is answered before connecting at all, under `Sqlitefx
 
 A 200 carries a CRC32 `ETag` that a reload revalidates into a 304, and a body goes out gzipped where the request accepts it — Le Mans's laps are 25MB, and 3.4MB on the wire.
 
-`Round` is one round on its way out of the tables. `Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars` take an `Entry` and the `DbRead` effect and read it; `Round.Render` is pure and turns what they returned into bytes. None of them knows whether a file or a request is waiting.
+`Round` is one round on its way out of the tables. `Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars` take an `Entry` and read it under `DbRead + RawSql`; `Round.Render` is pure and turns what they returned into bytes. None of them knows whether a file or a request is waiting.
 Those that name a driver take a `Round.Drivers` as well, read once per round.
 `Round.loaded` is what both callers ask first, and it asks `laps` and `cars`: laps without cars is a round half in the database, and answered off the laps alone it would be a race whose grid was empty.
 
@@ -142,8 +142,8 @@ Reading and writing are two effects: `Round`'s readers, `Server.Api` and `Cli.Ex
 `Sqlitefx.DbError.runWithKind` is where a raised failure comes back as a value, and `runWithFailure` the same with the transient ones folded into `DbError.Failure`.
 Which of the two a failure travels by is read off its `DbErrorKind` constructor (`DbError.raise` routes it), so a new kind meets a pattern that has to say which.
 
-`\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db.DbAll` is both with `SqlSavepoint`: `Db`'s own, since sqlfx's leave `RawSql` out and `Db.flix` says why these do not.
-Flix has no subeffecting here — a `\ DbRead` function is not a `\ Db.DbAll` one — so a caller taking a reading as an argument names the half it uses (`Cli.Load.loadRound`: `DbRead + SqlWrite`) or the whole it hands over (`Main.onDirectories`, `Round.TestSupport.onRound`: `Db.DbAll`).
+A reading is `\ DbRead + RawSql` and a write `\ DbWrite + RawSql`: sqlfx's aliases, with the marker sqlfx puts on every function that hands it SQL as a string, which every function here does.
+Flix has no subeffecting here — a `\ DbRead` function is not a `\ Sqlitefx.Db` one — so a caller taking a reading as an argument names the half it uses (`Cli.Load.loadRound`: `DbRead + SqlWrite + RawSql`) or the whole it hands over (`Main.onDirectories`, `Round.TestSupport.onRound`: `{Sqlitefx.Db, SqlSavepoint, RawSql}`).
 
 The statement effects still answer with a `Result`; the `SqlRead` header in `sqlitefx/src/Sqlitefx.flix` says why. `Sql.orRaise` turns a reading's into a raised failure, so nothing outside the library calls an operation: the wrappers of `Sqlitefx.Sql` are what `Sql` and `Db.Schema` reach.
 `Sqlitefx.Jdbc.withConnection` opens, works in and closes a database for a run, a test and the server alike, and the connection is in autocommit outside a transaction.
@@ -156,8 +156,8 @@ Constraint violations name what SQLite names: `UNIQUE constraint failed: laps.ro
 `Server.Api` answers a transient failure with 503 and everything else with 500.
 A failure names tables and files in its own words, so those ride in the response's `cause`, which `Server.send` logs and does not send.
 
-A row is `Sqlitefx.Row.Row`: the labels the driver reported and the cells as `SqlValue`. SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared.
-`Sql.decode` puts a row's cells in the order its projection names them, so a clause and a reading that disagree fail by naming the column rather than by answering with the cell beside it. Two projections under one label — a join naming both sides' `elapsed_ms` — are answered in the order the clause writes them.
+A row is `Sqlitefx.Row.Row`, read by label through sqlfx's `Decoder`, and every label is one the clause wrote: an expression that is not a bare name goes out as `expr AS label`, so `l1.elapsed_ms` and `l2.elapsed_ms` come back as two columns and not two `elapsed_ms`. A clause and a reading that disagree fail by naming the missing label, and a row carrying one name twice is refused (`Sql.selectAll`) rather than read by whichever the lookup finds.
+SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared. It is read with sqlfx's own `Decoder.int32`, `str` and `bool`, so a value kept in another class than the one it was bound as fails as a `TypeMismatch` naming the column; only a mini-sector array is read here, since `Decoder.int32Array` has no place for the nulls it holds.
 
 `Tx.withTx` in `Cli.Load.runAll` is the one commit of a load, and rolls a raised failure back before raising it again, so the rebuild of every table is a single transaction: a run killed partway leaves the rounds it was rebuilding from.
 `Tx.withSavepoint` is a part of one; its name is checked against `Sqlitefx.Savepoint`'s rule, since it goes into a statement as text.
@@ -176,13 +176,15 @@ A query reading from a common table expression cannot use a declared column, sin
 
 ## `Sql`, the query language
 
-`Sql` is the repository's query builder over this database. A `Sql.Sel` is one projection and its reading held in the same value, so the clause is rendered from the readings and a column is named once.
-A `Sql.Project` is a column, a reading or a tuple of them; `Sql.map` takes the columns and hands back what to read, and `Sql.reading` turns the tuple into the caller's type.
+`Sql` is the repository's query builder over this database. A `Sql.Sel` is one expression of the `SELECT` clause, its label and its reading held in the same value, so the clause is rendered from the readings and a column is named once.
+A `Sql.Project` is a column, a `Sel`, a tuple of them or a `Decoder`, and becomes one `Decoder`; `Sql.map` takes the columns and hands back what to read, and `Sql.reading` turns the tuple into the caller's type.
+A projection binds nothing: `Decoder`'s select list is text, so a value goes in the source or the `WHERE`.
 
-A row read as a record is `Sql.record` extended a field at a time with `Sql.field`, as `Db.Laps.selection` is: a field left out is not a `LapRow`, and one named twice does not typecheck.
-It is also the only form past eight columns, and the cheaper one for the type checker — two dozen curried readings need a 2m stack where the record needs 512k.
+A row read as a record is `Sql.record` extended a field at a time with `Sql.field`, a `Decoder` as `Db.Laps.selection` is: a field left out is not a `LapRow`, and one named twice does not typecheck.
+It is also the only form past eight columns, and the cheaper one for the type checker, which a curried constructor over two dozen readings takes deeper than CI's stack (see Testing).
 
 A value is bound, never written in: a `Sql.Frag` is SQL and the values its `?` placeholders take, so concatenating two pieces carries both.
+The statement goes out with them numbered `$1`, `$2`, ... (`Sql.numbered`), since `$n` is the only placeholder sqlfx takes.
 
 `filter` takes a `Sql.Expr[Bool]` of the columns the source declared, so a column of another source cannot scope this query.
 **The round is applied where the rows come from**: `Db.Laps.rows` and `Db.Cars.rows` take the round and hand back rows already filtered by it, so a reader cannot forget the scope. A reader ANDs its own onto them.
@@ -194,6 +196,7 @@ Nullability is in the type: `Sql.isNotNull` asks for an `Expr[Option[_]]`.
 A built query is `Sql.rows` (or `Sql.access`, where the caller says what columns the source has) with `filter`, `groupBy`, `orderBy`, `limit` and `using` in any order, `map`, and `selectAll` or `selectOne`. Clauses come out in SQL's order, an empty one is left out, and `filter` twice asks both. `Sql.toStatement` is pure.
 
 An aggregate or a window reads back as its projection does, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one, and `lag(l#carNumber, w)` is an `Option` because a window's first row has no predecessor. `opt` is the same from the other side: an aggregate over an empty group answers null.
+Its label is its own — `MIN(s1_ms) AS min_s1_ms` — so it never answers under the name of the column it is over, which an `ORDER BY` of that name would read instead.
 A named `Sql.Window` is spelled once in the `WINDOW` clause, which is how nineteen running minima are one clause.
 `Sql.unionAllTagged` stacks the arms of a `UNION ALL` under numbers it picks; `Round.Index` is the caller, and nothing in it names a number.
 
@@ -221,6 +224,6 @@ A `Sql.Key` is declared columns, so a key over an undeclared column does not typ
 - **Where a test lives** — `test/Motorsport/` drives the domain's decisions given the readings they are made from and needs no database; `test/Round/` and `test/Server/TestApi.flix` drive the reading and need one. A subject with both has a file in each, named for the module it drives.
 - **A reading with no database** — a CSV feed, an Overpass answer, a circuit's published timing lines — is driven under `circuits/` by `nix run .#geometry-test`, which compiles its links to this `src` and tests nothing else of it. The circuit words the summary sends are the one list both projects hold; `circuits/test/check-sources.mjs` lays the two copies together.
 - **A clean build** — `flix build` and `flix test` are incremental and CI is not: a compile that only fails from cold passes locally until `backend/build` is removed. `rm -rf backend/build` before believing a green run.
-- **The type checker's stack** — it recurses once per expression, and Linux gives its thread a smaller stack than macOS, so a deep enough chain compiles here and overflows in CI. Check with `java -Xss704k -jar <flix.jar> build` from `backend/`: 704k builds the tree as it stands and 672k does not, so a change that raises that number is the one to look at. What sets it is `Motorsport.Wec.decoder`, whose sixteen fields are a curried lambda, a record literal and a pipeline apiece; stubbing it out takes the build under 576k.
+- **The type checker's stack** — it recurses once per expression, and Linux gives its thread a smaller stack than macOS, so a deep enough chain compiles here and overflows in CI. It cannot be measured here: on macOS `-Xss` does not reach the type checker, and a cold build passes at 256k, and the JVM will not start at 160k. CI is the check, and a long curried lambda or pipeline is what to suspect when it overflows.
 - **The database** — a test drives JDBC against the in-memory database `Round.TestSupport.url` names, a connection of its own per test. A test that reaches no database fails rather than skipping. `Db.TestJdbc` drives a file database too, under a directory that does not exist yet: the directory `connect` makes, the journal mode `Db.connection` sets, and two connections at once are reached no other way.
   What a caller does about a failure is decided off the kind, so it is tested without a database: `Server.TestApi` is where a `Timeout` becomes a 503 and a `SchemaMismatch` a 500 with the driver's words kept out of the body; how a result code becomes a kind is `sqlitefx`'s tests'.

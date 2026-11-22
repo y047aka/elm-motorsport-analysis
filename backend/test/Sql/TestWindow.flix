@@ -18,14 +18,12 @@ pub mod Sql.TestWindow {
     def anAggregateOverANullableColumnReadsAsThatColumnReads(): Unit \ Assert =
         let fastest = Sql.min(columns()#s1Ms);
         Assert.assertTrue(Sql.toSql(Sql.fragment(fastest)) == ("MIN(s1_ms)", Nil));
-        Assert.assertTrue(Sql.decode(fastest, TestCells.answering(fastest, Some("61234") :: Nil)) == Ok(Some(61234)))
+        Assert.assertTrue(Sql.decode(fastest, TestCells.answering(fastest, SqlValue.Int32(61234) :: Nil)) == Ok(Some(61234)))
 
+    /// An aggregate answers under a label of its own, so it never comes back under the name of the column it is over.
     @Test
-    def anAggregateNamesItsArgumentAndKeepsTheValuesItBinds(): Unit \ Assert =
-        let statement = Sql.sum(Sql.intOf(Sql.frag("lap_time_ms + ?", SqlValue.Int32(1) :: Nil)));
-        Assert.assertTrue(
-            Sql.toSql(Sql.fragment(statement)) == ("SUM(lap_time_ms + ?)", SqlValue.Int32(1) :: Nil)
-        )
+    def anAggregateIsLabelledForTheFunctionAndItsArgument(): Unit \ Assert =
+        Assert.assertTrue(Sql.toSql(Sql.clause(Sql.min(columns()#s1Ms))) == ("SELECT MIN(s1_ms) AS min_s1_ms", Nil))
 
     @Test
     def countingCounts(): Unit \ Assert =
@@ -39,16 +37,12 @@ pub mod Sql.TestWindow {
     @Test
     def theFrameReachingEveryRowBeforeThisOne(): Unit \ Assert =
         let frame = Sql.rowsBetween(Frame.UnboundedPreceding, Frame.Preceding(1));
-        Assert.assertTrue(Sql.toSql(Option.getWithDefault(Sql.raw(""), frame)) == (
-            "ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING", Nil
-        ))
+        Assert.assertTrue(frame == Some("ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING"))
 
     @Test
     def theFrameReachingEveryRowOfThePartitionUpToThisOne(): Unit \ Assert =
         let frame = Sql.rowsBetween(Frame.UnboundedPreceding, Frame.CurrentRow);
-        Assert.assertTrue(Sql.toSql(Option.getWithDefault(Sql.raw(""), frame)) == (
-            "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW", Nil
-        ))
+        Assert.assertTrue(frame == Some("ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW"))
 
     // ------------------------------------------------------------------ windows
 
@@ -56,8 +50,8 @@ pub mod Sql.TestWindow {
         Sql.over(
             Sql.min(Sql.text("t")),
             Sql.window(
-                Sql.raw("k") :: Nil,
-                Schema.term(columns()#elapsedMs) :: Schema.term(columns()#sourceRow) :: Nil,
+                "k" :: Nil,
+                Schema.name(columns()#elapsedMs) :: Schema.name(columns()#sourceRow) :: Nil,
                 Sql.rowsBetween(Frame.UnboundedPreceding, Frame.Preceding(1))
             )
         )
@@ -76,7 +70,7 @@ pub mod Sql.TestWindow {
     /// parentheses' worth of clauses.
     @Test
     def aWindowAskingNothingCarriesNoPartitionAndNoOrder(): Unit \ Assert =
-        let first = Sql.rowNumber(Sql.window(Nil, Schema.term(columns()#sourceRow) :: Nil, None));
+        let first = Sql.rowNumber(Sql.window(Nil, Schema.name(columns()#sourceRow) :: Nil, None));
         Assert.assertTrue(
             Sql.toSql(Sql.fragment(first)) == ("ROW_NUMBER() OVER (ORDER BY source_row)", Nil)
         )
@@ -87,8 +81,8 @@ pub mod Sql.TestWindow {
     def aWindowTheQueryNamesIsReferredToRatherThanRepeated(): Unit \ Assert =
         let car = Sql.namedWindow(
             "w",
-            Schema.term(columns()#carNumber) :: Nil,
-            Schema.term(columns()#lapNumber) :: Nil,
+            Schema.name(columns()#carNumber) :: Nil,
+            Schema.name(columns()#lapNumber) :: Nil,
             Sql.rowsBetween(Frame.UnboundedPreceding, Frame.CurrentRow)
         );
         Assert.assertTrue(Sql.toSql(Sql.fragment(Sql.over(Sql.min(columns()#s1Ms), car))) == (
@@ -105,7 +99,7 @@ pub mod Sql.TestWindow {
     @Test
     def aWindowNobodyNamedContributesNoWindowClause(): Unit \ Assert =
         Assert.assertTrue(
-            Option.map(Sql.toSql, Sql.windowClause(Sql.window(Nil, Schema.term(columns()#sourceRow) :: Nil, None))) == None
+            Option.map(Sql.toSql, Sql.windowClause(Sql.window(Nil, Schema.name(columns()#sourceRow) :: Nil, None))) == None
         )
 
     // ------------------------------------------------------------- predecessors
@@ -115,26 +109,26 @@ pub mod Sql.TestWindow {
     @Test
     def thePredecessorTheFirstRowHasNotIsNothingRatherThanAFailedReading(): Unit \ Assert =
         let prior = Sql.lag(columns()#flagAtFl, Sql.window(
-            Nil, Schema.term(columns()#elapsedMs) :: Nil, None
+            Nil, Schema.name(columns()#elapsedMs) :: Nil, None
         ));
         Assert.assertTrue(Sql.toSql(Sql.fragment(prior)) == (
             "LAG(flag_at_fl) OVER (ORDER BY elapsed_ms)", Nil
         ));
-        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, None :: Nil)) == Ok(None));
-        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, Some("SF") :: Nil)) == Ok(Some("SF")))
+        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, SqlValue.Null :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, SqlValue.Str("SF") :: Nil)) == Ok(Some("SF")))
 
     /// The maximum over no rows is the other thing `opt` is for.
     @Test
     def anAggregateOverNoRowsReadsAsNothing(): Unit \ Assert =
         let laps = Sql.opt(Sql.max(columns()#elapsedMs));
         Assert.assertTrue(Sql.toSql(Sql.fragment(laps)) == ("MAX(elapsed_ms)", Nil));
-        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, None :: Nil)) == Ok(None));
-        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, Some("5400000") :: Nil)) == Ok(Some(5400000)))
+        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, SqlValue.Null :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, SqlValue.Int32(5400000) :: Nil)) == Ok(Some(5400000)))
 
     @Test
     def theStandingFlagIsTheGreenTheRaceStartsOnWhereThereIsNoPredecessor(): Unit \ Assert =
         let prior = Sql.lag(columns()#flagAtFl, Sql.window(
-            Nil, Schema.term(columns()#elapsedMs) :: Nil, None
+            Nil, Schema.name(columns()#elapsedMs) :: Nil, None
         ));
         Assert.assertTrue(
             Sql.toSql(Sql.fragment(Sql.coalesce(prior, Sql.text("'Green'")))) == (

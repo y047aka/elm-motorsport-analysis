@@ -40,44 +40,20 @@ pub mod Sqlitefx.JdbcConvert {
     /// 同じ `$n` が 2 回出れば同じ値を 2 回並べる。単一引用符の文字列リテラルの中は触らない。
     /// 存在しない `$n` を参照していたら None（バインド時の範囲外エラーより先に、ここで派手に落とす）。
     ///
-    /// `$n` が 1 つも無く、引用符の外の `?` が params と同じ数だけあれば、`?` を出てきた順に params に当てる（SQLite の位置のプレースホルダ）。
-    /// `$n` と `?` が 1 つの文に混ざっていれば None、`?` の数と params の数が違っても None。
-    ///
-    /// WhyNot: sqlfx と同じく `$n` を正としながら `?` も受けるのは、文を断片から組み立てる側（値と `?` を対にして繋ぐ）が、
-    /// 番号を振り直さずに渡せるから。番号は組み上がった文の中でしか決まらない。
+    /// WhyNot: 利用側に `?` を書かせないのは、`$1` のままなら SQL をそのまま sqlite3 / EXPLAIN に貼れるから。
     ///
     pub def rewritePlaceholders(sql: String, params: List[SqlValue]): Option[(String, List[SqlValue])] =
-        let stripped = stripLineComments(sql);
         let paramVector = List.toVector(params);
-        let (chars, refs, _, pending) = String.toList(stripped) |> List.foldLeft(step, (Nil, Nil, false, None));
+        let (chars, refs, _, pending) = String.toList(stripLineComments(sql)) |> List.foldLeft(step, (Nil, Nil, false, None));
         let (flushedChars, flushedRefs) = flushDigits(chars, refs, pending);
-        let positional = bareQuestionMarks(stripped);
         let sqlOut = region rc {
             let sb = StringBuilder.empty(rc);
             List.forEach(ch -> StringBuilder.append(ch, sb), List.reverse(flushedChars));
             StringBuilder.toString(sb)
         };
-        match (flushedRefs, positional) {
-            case (Nil, 0) => Some((sqlOut, Nil))
-            case (Nil, n) => if (n == List.length(params)) Some((sqlOut, params)) else None
-            case (_, 0)   =>
-                List.reverse(flushedRefs)
-                    |> List.traverse(n -> Vector.nth(n - 1, paramVector))
-                    |> Option.map(ordered -> (sqlOut, ordered))
-            case _        => None
-        }
-
-    ///
-    /// 単一引用符の外の `?` の数。
-    ///
-    def bareQuestionMarks(sql: String): Int32 =
-        let (count, _) = String.toList(sql) |> List.foldLeft((acc, ch) -> {
-            let (n, inQuote) = acc;
-            if (ch == '\'') (n, not inQuote)
-            else if (ch == '?' and not inQuote) (n + 1, inQuote)
-            else (n, inQuote)
-        }, (0, false));
-        count
+        List.reverse(flushedRefs)
+            |> List.traverse(n -> Vector.nth(n - 1, paramVector))
+            |> Option.map(ordered -> (sqlOut, ordered))
 
     ///
     /// 1 文字ずつ見て (出力文字の逆順, 参照した $n の逆順, 引用符の中か, 読みかけの $n の数字)。
@@ -183,15 +159,15 @@ pub mod Sqlitefx.JdbcConvert {
         let indices = List.range(1, count + 1);
         let names = indices |> List.map(i -> { let label: String = metadata.getColumnLabel(i); label });
         let columns = Row.makeColumnIndex(names);
-        readRows(resultSet, columns, List.toVector(names), indices, Nil)
+        readRows(resultSet, columns, indices, Nil)
 
     ///
     /// 1 行ずつ next() で進めながら読む。先頭に積んで最後に反転する。
     ///
-    def readRows(resultSet: ResultSet, columns: Row.ColumnIndex, names: Vector[String], indices: List[Int32], acc: List[Row]): List[Row] \ IO =
+    def readRows(resultSet: ResultSet, columns: Row.ColumnIndex, indices: List[Int32], acc: List[Row]): List[Row] \ IO =
         if (resultSet.next()) {
             let cells = indices |> List.map(i -> cell(resultSet, i)) |> List.toVector;
-            readRows(resultSet, columns, names, indices, { columns = columns, names = names, cells = cells } :: acc)
+            readRows(resultSet, columns, indices, { columns = columns, cells = cells } :: acc)
         } else
             List.reverse(acc)
 

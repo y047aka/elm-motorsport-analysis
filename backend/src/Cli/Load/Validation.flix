@@ -25,10 +25,12 @@
 /// not per-car): a bad lap 1 on one car does not cascade across the rest of that car.
 pub mod Cli.Load.Validation {
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
 
     use Db.Laps
     use Db.Schema
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
@@ -60,10 +62,10 @@ pub mod Cli.Load.Validation {
         case MiniSectorElapsedMonotonic(Lap, MiniSectorId, Duration, MiniSectorId, Duration)
     }
 
-    pub def validate(entry: Entry): List[String] \ DbRead =
+    pub def validate(entry: Entry): List[String] \ DbRead + RawSql =
         detect(entry) |> List.map(formatViolation(entry#id))
 
-    pub def detect(entry: Entry): List[Violation] \ DbRead =
+    pub def detect(entry: Entry): List[Violation] \ DbRead + RawSql =
         let sectorSum = sectorSumViolations(entry);
         let drift = elapsedDriftViolations(entry);
         let hour = hourOffsetViolations(entry);
@@ -72,11 +74,11 @@ pub mod Cli.Load.Validation {
 
     // ------------------------------------------------------------------ rules
 
-    def sectorSumViolations(entry: Entry): List[Violation] \ DbRead =
+    def sectorSumViolations(entry: Entry): List[Violation] \ DbRead + RawSql =
         Laps.rows(entry)
             |> Sql.filter(c -> Sql.ne(sectorSum(), Schema.expr(c#lapTimeMs)))
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
-            |> Sql.map(c -> (lapOf(), c#lapTimeMs, Sql.intOf(Sql.term(sectorSum())), blanks()))
+            |> Sql.map(c -> (lapOf(), c#lapTimeMs, Sql.labelled("sector_sum", Sql.int(sectorSumText())), blanks()))
             |> Sql.reading(match (lap, lapTime, sum, blank) ->
                 Violation.SectorSum(lap, duration(lapTime), duration(sum), splitLabels(blank)))
             |> Sql.selectAll
@@ -87,18 +89,21 @@ pub mod Cli.Load.Validation {
         "json_each(" + Laps.table() + "." + Schema.name(Laps.columns()#miniSectorTimeMs) + ") t"
 
     def sectorSum(): Sql.Expr[Int32] =
-        Sql.column("COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0)")
+        Sql.column(sectorSumText())
+
+    def sectorSumText(): String =
+        "COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0)"
 
     /// The sectors the feed left blank, named as the report names them.
     def blanks(): Sel[String] =
-        Sql.text(
+        Sql.labelled("blanks", Sql.text(
             "TRIM("
                 + "   CASE WHEN s1_ms IS NULL THEN 's1,' ELSE '' END ||"
                 + "   CASE WHEN s2_ms IS NULL THEN 's2,' ELSE '' END ||"
                 + "   CASE WHEN s3_ms IS NULL THEN 's3,' ELSE '' END, ',')"
-        )
+        ))
 
-    def elapsedDriftViolations(entry: Entry): List[Violation] \ DbRead =
+    def elapsedDriftViolations(entry: Entry): List[Violation] \ DbRead + RawSql =
         Sql.statement(
             "WITH c AS (SELECT car_number, lap_number, elapsed_ms," ::
             "SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running," ::
@@ -113,7 +118,7 @@ pub mod Cli.Load.Validation {
 
     def offset(): String = Schema.nameOf(Laps.hourOffsetMs())
 
-    def hourOffsetViolations(entry: Entry): List[Violation] \ DbRead =
+    def hourOffsetViolations(entry: Entry): List[Violation] \ DbRead + RawSql =
         Sql.statement(
             "WITH o AS (SELECT car_number, lap_number, source_row, ${offset()}," ::
             "FIRST_VALUE(${offset()}) OVER (ORDER BY source_row) AS base" ::
@@ -127,14 +132,14 @@ pub mod Cli.Load.Validation {
 
     /// A lap's two mini-sector rules are reported together, so they are read
     /// back tagged with the row they came from and merged on it.
-    def miniSectorViolations(entry: Entry): List[Violation] \ DbRead =
+    def miniSectorViolations(entry: Entry): List[Violation] \ DbRead + RawSql =
         let sums = miniSectorSumViolations(entry);
         let mono = miniSectorMonotonicViolations(entry);
         List.append(sums, mono)
             |> List.sortBy(entry2 -> match entry2 { case (sourceRow, ord, _) => (sourceRow, ord) })
             |> List.map(entry2 -> match entry2 { case (_, _, violation) => violation })
 
-    def miniSectorSumViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead =
+    def miniSectorSumViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead + RawSql =
         Sql.statement(
             "WITH m AS (SELECT car_number, lap_number, source_row, lap_time_ms," ::
             "crossing_finish_line_in_pit, pit_time_ms," ::
@@ -156,13 +161,13 @@ pub mod Cli.Load.Validation {
                 Sql.int("source_row"),
                 Sql.int("lap_time_ms"),
                 Sql.int("sum_ms"),
-                Sql.text("blanks") |> Sql.andThen(positions)
+                Sql.text("blanks") |> Sql.refine("mini-sector positions", positions)
             ))
             |> Sql.reading(match (lap, sourceRow, lapTime, sum, ids) ->
                 (sourceRow, 0, Violation.MiniSectorSum(lap, duration(lapTime), duration(sum), ids)))
             |> Sql.selectAll
 
-    def miniSectorMonotonicViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead =
+    def miniSectorMonotonicViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead + RawSql =
         Sql.statement(
             "WITH e AS (SELECT car_number, lap_number, source_row," ::
             "x.key + 1 AS ord, x.value AS v," ::
@@ -179,10 +184,10 @@ pub mod Cli.Load.Validation {
             (
                 lapOf(),
                 Sql.int("source_row"),
-                Sql.int("prev_ord") |> Sql.andThen(miniSectorAt),
+                Sql.int("prev_ord") |> Sql.refine("a mini-sector position", MiniSector.atPosition),
                 Sql.int("prev_v"),
                 Sql.int("ord"),
-                Sql.int("ord") |> Sql.andThen(miniSectorAt),
+                Sql.int("ord") |> Sql.refine("a mini-sector position", MiniSector.atPosition),
                 Sql.int("v")
             ))
             |> Sql.reading(match (lap, sourceRow, prevId, prevElapsed, ord, currId, elapsed) ->
@@ -204,7 +209,7 @@ pub mod Cli.Load.Validation {
 
     // ---------------------------------------------------------------- decode
 
-    def lapOf(): Sel[Lap] =
+    def lapOf(): Decoder[Lap] =
         Sql.record({})
             |> Sql.field(Sql.text("car_number"), (row, value) -> { +carNumber = value | row })
             |> Sql.field(Sql.int("lap_number"), (row, value) -> { +lapNumber = value | row })
@@ -215,17 +220,9 @@ pub mod Cli.Load.Validation {
     def splitLabels(joined: String): List[String] =
         if (String.isEmpty(joined)) Nil else String.splitOn({substr = ","}, joined)
 
-    def positions(joined: String): Result[DbErrorKind, List[MiniSectorId]] =
-        splitLabels(joined) |> Result.traverse(text ->
-            forM(
-                position <- Int32.fromString(text) |> Option.toOk(DbErrorKind.Other("not a position: \"${text}\""));
-                id       <- miniSectorAt(position)
-            ) yield id
-        )
-
-    def miniSectorAt(position: Int32): Result[DbErrorKind, MiniSectorId] =
-        MiniSector.atPosition(position)
-            |> Option.toOk(DbErrorKind.Other("no mini-sector at position ${position}"))
+    def positions(joined: String): Option[List[MiniSectorId]] =
+        splitLabels(joined) |> Option.traverse(text ->
+            Int32.fromString(text) |> Option.flatMap(MiniSector.atPosition))
 
     // ---------------------------------------------------------------- format
 

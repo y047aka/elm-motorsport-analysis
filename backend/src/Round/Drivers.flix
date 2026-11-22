@@ -6,7 +6,8 @@
 pub mod Round.Drivers {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
 
     use Db.CarDrivers
     use Db.Drivers
@@ -17,7 +18,7 @@ pub mod Round.Drivers {
     /// Keyed by the seat a lap names.
     pub type alias Seats = Map[(String, Int32), String]
 
-    pub def read(entry: Entry): Seats \ DbRead =
+    pub def read(entry: Entry): Seats \ DbRead + RawSql =
         let seat = CarDrivers.columns();
         let driver = Drivers.columns();
         Sql.access(

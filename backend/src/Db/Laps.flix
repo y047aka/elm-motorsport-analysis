@@ -4,7 +4,8 @@
 /// and manufacturer, and `Db.CarDrivers` the seat's driver, none of which a
 /// round in the archive varies within a car.
 pub mod Db.Laps {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.LapRow.LapRow
@@ -13,6 +14,7 @@ pub mod Db.Laps {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Motorsport.Calendar.Entry
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     /// The table these columns are of.
@@ -102,7 +104,7 @@ pub mod Db.Laps {
     /// A round's laps as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out
     /// is not a `LapRow`.
-    pub def selection(): Sel[LapRow] =
+    pub def selection(): Decoder[LapRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
@@ -161,10 +163,10 @@ pub mod Db.Laps {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), computed(), keys(), storage())
 
-    pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite =
+    pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows)
 
     pub def values(row: LapRow): List[SqlValue] =

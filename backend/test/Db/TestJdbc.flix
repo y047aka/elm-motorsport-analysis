@@ -5,7 +5,7 @@ pub mod Db.TestJdbc {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
     use Sqlitefx.Jdbc
     use Sqlitefx.RawSql
     use Sqlitefx.Row.Row
@@ -24,10 +24,10 @@ pub mod Db.TestJdbc {
     def cells(rows: Result[DbErrorKind, List[Row]]): Result[DbErrorKind, List[List[SqlValue]]] =
         Result.map(List.map(row -> Vector.toList(row#cells)), rows)
 
-    def connectedTo(url: String, f: Connection -> a \ ef): Result[DbErrorKind, a] \ (ef - Db.DbAll) + IO =
+    def connectedTo(url: String, f: Connection -> a \ ef): Result[DbErrorKind, a] \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         DbError.runWithKind(() -> RawSql.runWithAllow(() -> Jdbc.withConnection(Db.connection(url), f)))
 
-    def connected(f: Unit -> a \ ef): Result[DbErrorKind, a] \ (ef - Db.DbAll) + IO =
+    def connected(f: Unit -> a \ ef): Result[DbErrorKind, a] \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         connectedTo(TestSupport.url(), _ -> f())
 
     /// A round of a load sends rows to several tables under one savepoint, so a failure at the last of them has to leave none of the others behind, and the round after it still lands.
@@ -98,22 +98,30 @@ pub mod Db.TestJdbc {
     /// schema declared, and a reading takes it without going through text.
     @Test
     def aNumberTheDriverFoundIsReadAsOne(): Unit \ {Assert, IO} =
-        let sel = Sql.intOf(Sql.raw("total"));
-        let result = connected(() -> Sqlitefx.Sql.fetch("select 3 + 4 as total", Nil));
+        let sel = Sql.int("3 + 4");
+        let result = connected(() -> Sqlitefx.Sql.fetch("SELECT ${Sql.sqlOf(sel)} AS c_3_4", Nil));
         match Result.map(List.head, result) {
             case Ok(Some(row)) => Assert.assertTrue(Sql.decode(sel, row) == Ok(7))
             case _             => Assert.assertTrue(false)
         }
 
-    /// A join projecting a column of each side under one name reads each at its own place.
+    /// A join projecting a column of each side reads each under the label the clause gave it.
     @Test
-    def twoColumnsOfOneNameAreReadInTheOrderProjected(): Unit \ {Assert, IO} =
-        let sel = Sql.Project.sel((Sql.intOf(Sql.raw("a.n")), Sql.intOf(Sql.raw("b.n"))));
-        let result = connected(() -> Sqlitefx.Sql.fetch("SELECT a.n, b.n FROM (SELECT 1 AS n) a, (SELECT 2 AS n) b", Nil));
-        match Result.map(List.head, result) {
-            case Ok(Some(row)) => Assert.assertTrue(Sql.decode(sel, row) == Ok((1, 2)))
-            case _             => Assert.assertTrue(false)
-        }
+    def twoColumnsOfOneNameAreReadUnderTheirOwnLabels(): Unit \ {Assert, IO} =
+        let projection = (Sql.int("a.n"), Sql.int("b.n"));
+        let result = connected(() -> Sql.rows(Sql.raw("(SELECT 1 AS n) a, (SELECT 2 AS n) b"))
+            |> Sql.map(_ -> projection)
+            |> Sql.selectAll);
+        Assert.assertTrue(result == Ok((1, 2) :: Nil))
+
+    /// A clause writing one label twice is refused before it is sent, rather than read by whichever of the two the lookup finds.
+    @Test
+    def aRowCarryingANameTwiceIsRefused(): Unit \ {Assert, IO} =
+        let result = connected(() -> Sql.rows(Sql.raw("(SELECT 1 AS n) a, (SELECT 2 AS n) b"))
+            |> Sql.map(_ -> (Sql.labelled("n", Sql.int("a.n")), Sql.labelled("n", Sql.int("b.n"))))
+            |> Sql.selectAll);
+        Assert.assertTrue(result == Err(DbErrorKind.SchemaMismatch(
+            "the clause writes the label `n` twice, so a reading by name cannot tell them apart")))
 
     // --------------------------------------------------------- a file database
 
@@ -123,7 +131,7 @@ pub mod Db.TestJdbc {
 
     /// A database of its own per test, under a directory that does not exist,
     /// which is what a working copy's `.db` is on a first run.
-    def onFile(f: Connection -> a \ ef): (String, Result[DbErrorKind, a]) \ (ef - Db.DbAll) + IO =
+    def onFile(f: Connection -> a \ ef): (String, Result[DbErrorKind, a]) \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         let stem = File.createTempFile("motorsport-test", "");
         discard stem.delete();
         let path = "${stem.getPath()}/motorsport.sqlite";
@@ -173,11 +181,11 @@ pub mod Db.TestJdbc {
 
     /// A round loaded and then judged unfit, which is a transaction answering
     /// with an error.
-    def refuse(): Int32 \ DbWrite =
+    def refuse(): Int32 \ DbWrite + RawSql =
         discard load();
         DbErr.raise(DbErrorKind.Other("the round was not what it should have been"))
 
-    def load(): Int32 \ DbWrite =
+    def load(): Int32 \ DbWrite + RawSql =
         Laps.create();
         Laps.insertRows(LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil))
 

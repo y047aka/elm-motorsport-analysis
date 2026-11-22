@@ -2,7 +2,8 @@
 /// the season's entries each was. What the feed says about a car is
 /// `Db.Entries`; this is the rounds it ran.
 pub mod Db.Cars {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.CarRow.CarRow
@@ -11,6 +12,7 @@ pub mod Db.Cars {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Motorsport.Calendar.Entry
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     pub def table(): String = "cars"
@@ -43,7 +45,7 @@ pub mod Db.Cars {
     /// A round's cars as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out
     /// is not a `CarRow`.
-    pub def selection(): Sel[CarRow] =
+    pub def selection(): Decoder[CarRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
@@ -64,10 +66,10 @@ pub mod Db.Cars {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage())
 
-    pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite =
+    pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows)
 
     pub def values(row: CarRow): List[SqlValue] =

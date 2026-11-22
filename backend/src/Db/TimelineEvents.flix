@@ -10,7 +10,8 @@
 /// does: a stop ending as the flag falls has to leave the car classified rather
 /// than in the pits.
 pub mod Db.TimelineEvents {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.Rounds
@@ -20,6 +21,7 @@ pub mod Db.TimelineEvents {
     use Motorsport.Calendar.Entry
     use Motorsport.Timeline
     use Motorsport.Timeline.Event
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     pub def table(): String = "timeline_events"
@@ -97,7 +99,7 @@ pub mod Db.TimelineEvents {
     /// A round's events as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out
     /// is not an `EventRow`.
-    pub def selection(): Sel[EventRow] =
+    pub def selection(): Decoder[EventRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#roundId, (r, value) -> { +roundId = value | r })
@@ -121,10 +123,10 @@ pub mod Db.TimelineEvents {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage())
 
-    pub def insertRows(rows_: List[EventRow]): Int32 \ DbWrite =
+    pub def insertRows(rows_: List[EventRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows_)
 
     pub def values(r: EventRow): List[SqlValue] =

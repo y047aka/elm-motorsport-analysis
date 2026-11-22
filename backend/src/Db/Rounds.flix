@@ -6,7 +6,8 @@
 /// used -- so this table is that calendar written down rather than a second
 /// one. What it adds is an id.
 pub mod Db.Rounds {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.Schema
@@ -90,13 +91,13 @@ pub mod Db.Rounds {
     /// Which rounds those are is the caller's -- `Motorsport.Calendar`'s for a
     /// run, and one made-up round for a test -- since an id means nothing
     /// outside the database it was written into.
-    pub def create(entries: List[Entry]): List[RoundRow] \ DbWrite =
+    pub def create(entries: List[Entry]): List[RoundRow] \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage());
         let rows_ = rowsFor(entries);
         discard insertRows(rows_);
         rows_
 
-    pub def insertRows(rows_: List[RoundRow]): Int32 \ DbWrite =
+    pub def insertRows(rows_: List[RoundRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows_)
 
     pub def values(row: RoundRow): List[SqlValue] =

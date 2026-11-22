@@ -8,9 +8,12 @@
 /// own: a `Bool` is stored as the 1 or 0 the driver binds it as, and a column
 /// taking an `Option` is the nullable one.
 pub mod Db.Schema {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
     use Sqlitefx.SqlValue.NullType
+
+    use Sqlitefx.Decoder.Decoder
 
     use Sql.Sel
 
@@ -64,9 +67,14 @@ pub mod Db.Schema {
         Sql.column(nameOf(computed))
 
     /// A computed column is one of the things a query may project.
+    instance Sql.Pick[Computed[a]] {
+        type Out = a
+        pub def pick(x: Computed[a]): Sel[a] = Db.Schema.readOf(x)
+    }
+
     instance Sql.Project[Computed[a]] {
         type Out = a
-        pub def sel(x: Computed[a]): Sel[a] = Db.Schema.readOf(x)
+        pub def decoder(x: Computed[a]): Decoder[a] = Sql.decoderOf(Db.Schema.readOf(x))
     }
 
     def declare(column: Bound[r]): Declared =
@@ -108,9 +116,14 @@ pub mod Db.Schema {
     }
 
     /// A column is one of the things a query may project.
+    instance Sql.Pick[Column[r, a]] {
+        type Out = a
+        pub def pick(x: Column[r, a]): Sel[a] = Db.Schema.read(x)
+    }
+
     instance Sql.Project[Column[r, a]] {
         type Out = a
-        pub def sel(x: Column[r, a]): Sel[a] = Db.Schema.read(x)
+        pub def decoder(x: Column[r, a]): Decoder[a] = Sql.decoderOf(Db.Schema.read(x))
     }
 
     /// The column as a term of a comparison, in the type it takes.
@@ -134,7 +147,7 @@ pub mod Db.Schema {
         computed: List[Declared],
         keys: List[Sql.Key[Bound[r]]],
         storage: Sql.Storage
-    ): Unit \ DbWrite =
+    ): Unit \ DbWrite + RawSql =
         discard Sqlitefx.Sql.execute(Sql.dropTableIfExists(table), Nil);
         discard Sqlitefx.Sql.execute(createTable(table, columns, computed, keys, storage), Nil)
 
@@ -160,7 +173,7 @@ pub mod Db.Schema {
     pub def createIndex(table: String, over: List[Bound[r]]): String =
         Sql.createIndex(indexName(table, over), table, over |> List.map(declare))
 
-    pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite =
+    pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite + RawSql =
         discard Sqlitefx.Sql.execute(createIndex(table, over), Nil)
 
     def indexName(table: String, over: List[Bound[r]]): String =
@@ -169,7 +182,7 @@ pub mod Db.Schema {
     /// The rows go out as one `INSERT` per thousand, each a statement SQLite takes or refuses whole, so a refusal leaves none of that statement's rows behind and the round's savepoint takes back the statements before it.
     ///
     /// A thousand rows is fewer where the table is wide: a statement binds at most 32,766 values, SQLite's own limit.
-    pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
+    pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite + RawSql =
         let perStatement = Int32.max(1, Int32.min(1000, 32766 / Int32.max(1, List.length(columns))));
         chunks(perStatement, rows) |> List.foldLeft((taken, chunk) -> match Sql.insertRows(table, columns, chunk) {
             case None => taken
