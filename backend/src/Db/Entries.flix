@@ -14,6 +14,7 @@ pub mod Db.Entries {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Motorsport.Wec.RawCar
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     pub def table(): String = "entries"
@@ -142,7 +143,7 @@ pub mod Db.Entries {
     /// An entry as the table holds it, a field at a time: each line names the
     /// column and the field its cell lands in, and a field left out is not an
     /// `EntryRow`.
-    pub def selection(): Sel[EntryRow] =
+    pub def selection(): Decoder[EntryRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#entryId, (row, value) -> { +entryId = value | row })

@@ -13,6 +13,8 @@ pub mod Db.Schema {
     use Sqlitefx.SqlValue
     use Sqlitefx.SqlValue.NullType
 
+    use Sqlitefx.Decoder.Decoder
+
     use Sql.Sel
 
     /// A column of the table whose row is `r`, reading back as `a`.
@@ -65,9 +67,14 @@ pub mod Db.Schema {
         Sql.column(nameOf(computed))
 
     /// A computed column is one of the things a query may project.
+    instance Sql.Pick[Computed[a]] {
+        type Out = a
+        pub def pick(x: Computed[a]): Sel[a] = Db.Schema.readOf(x)
+    }
+
     instance Sql.Project[Computed[a]] {
         type Out = a
-        pub def sel(x: Computed[a]): Sel[a] = Db.Schema.readOf(x)
+        pub def decoder(x: Computed[a]): Decoder[a] = Sql.decoderOf(Db.Schema.readOf(x))
     }
 
     def declare(column: Bound[r]): Declared =
@@ -109,9 +116,14 @@ pub mod Db.Schema {
     }
 
     /// A column is one of the things a query may project.
+    instance Sql.Pick[Column[r, a]] {
+        type Out = a
+        pub def pick(x: Column[r, a]): Sel[a] = Db.Schema.read(x)
+    }
+
     instance Sql.Project[Column[r, a]] {
         type Out = a
-        pub def sel(x: Column[r, a]): Sel[a] = Db.Schema.read(x)
+        pub def decoder(x: Column[r, a]): Decoder[a] = Sql.decoderOf(Db.Schema.read(x))
     }
 
     /// The column as a term of a comparison, in the type it takes.

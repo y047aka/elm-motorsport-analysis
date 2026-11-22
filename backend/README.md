@@ -157,7 +157,7 @@ Constraint violations name what SQLite names: `UNIQUE constraint failed: laps.ro
 A failure names tables and files in its own words, so those ride in the response's `cause`, which `Server.send` logs and does not send.
 
 A row is `Sqlitefx.Row.Row`: the labels the driver reported and the cells as `SqlValue`. SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared.
-`Sql.decode` puts a row's cells in the order its projection names them, so a clause and a reading that disagree fail by naming the column rather than by answering with the cell beside it. Two projections under one label — a join naming both sides' `elapsed_ms` — are answered in the order the clause writes them.
+A row is read by label through sqlfx's `Decoder`, and every label is one the clause wrote: an expression that is not a bare name goes out as `expr AS label`, so `l1.elapsed_ms` and `l2.elapsed_ms` come back as two columns and not two `elapsed_ms`. A clause and a reading that disagree fail by naming the missing label, and a row carrying one name twice is refused (`Sql.selectAll`) rather than read by whichever the lookup finds.
 
 `Tx.withTx` in `Cli.Load.runAll` is the one commit of a load, and rolls a raised failure back before raising it again, so the rebuild of every table is a single transaction: a run killed partway leaves the rounds it was rebuilding from.
 `Tx.withSavepoint` is a part of one; its name is checked against `Sqlitefx.Savepoint`'s rule, since it goes into a statement as text.
@@ -176,10 +176,12 @@ A query reading from a common table expression cannot use a declared column, sin
 
 ## `Sql`, the query language
 
-`Sql` is the repository's query builder over this database. A `Sql.Sel` is one projection and its reading held in the same value, so the clause is rendered from the readings and a column is named once.
-A `Sql.Project` is a column, a reading or a tuple of them; `Sql.map` takes the columns and hands back what to read, and `Sql.reading` turns the tuple into the caller's type.
+`Sql` is the repository's query builder over this database. A `Sql.Sel` is one expression of the `SELECT` clause, its label and its reading held in the same value, so the clause is rendered from the readings and a column is named once.
+A `Sql.Project` is a column, a `Sel`, a tuple of them or a `Decoder`, and becomes one `Decoder`; `Sql.map` takes the columns and hands back what to read, and `Sql.reading` turns the tuple into the caller's type.
+An aggregate or a window over a `Sel` (`Sql.min`, `Sql.over`) is labelled for itself — `MIN(s1_ms) AS min_s1_ms` — so it never answers under the name of the column it is over, which an `ORDER BY` of that name would read instead.
+A projection binds nothing: `Decoder`'s select list is text, so a value goes in the source or the `WHERE`.
 
-A row read as a record is `Sql.record` extended a field at a time with `Sql.field`, as `Db.Laps.selection` is: a field left out is not a `LapRow`, and one named twice does not typecheck.
+A row read as a record is `Sql.record` extended a field at a time with `Sql.field`, a `Decoder` as `Db.Laps.selection` is: a field left out is not a `LapRow`, and one named twice does not typecheck.
 It is also the only form past eight columns, and the cheaper one for the type checker — two dozen curried readings need a 2m stack where the record needs 512k.
 
 A value is bound, never written in: a `Sql.Frag` is SQL and the values its `?` placeholders take, so concatenating two pieces carries both.

@@ -12,6 +12,7 @@ pub mod Db.Cars {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Motorsport.Calendar.Entry
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     pub def table(): String = "cars"
@@ -44,7 +45,7 @@ pub mod Db.Cars {
     /// A round's cars as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out
     /// is not a `CarRow`.
-    pub def selection(): Sel[CarRow] =
+    pub def selection(): Decoder[CarRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })

@@ -45,6 +45,6 @@ pub mod Sql.TestTagged {
     @Test
     def aNumberNoArmAnswersToIsAnError(): Unit \ Assert =
         let (_, tag) = Sql.unionAllTagged("k", branches());
-        Assert.assertTrue(Sql.decode(tag, TestCells.answering(tag, Some("5") :: Nil)) == Err(DbErrorKind.Other("no arm answers to `k` 5")))
+        Assert.assertTrue(Sql.decode(tag, TestCells.answering(tag, Some("5") :: Nil)) == Err(DbErrorKind.DecodeError("k", "column 'k' is 5, expected the number of an arm")))
 
 }

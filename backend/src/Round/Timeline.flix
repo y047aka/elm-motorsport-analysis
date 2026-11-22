@@ -28,6 +28,7 @@ pub mod Round.Timeline {
     use Motorsport.Timeline
     use Motorsport.Timeline.CarEvent
     use Motorsport.Timeline.EventType
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
     use Util.Duration.Duration
 
@@ -313,16 +314,16 @@ pub mod Round.Timeline {
     def firstAcross(c: Crossings): Sql.Window =
         let l = Laps.columns();
         Sql.window(
-            Schema.term(Schema.qualified(Entries.table(), Entries.columns()#carClass)) ::
-            Schema.term(c#lapNumber) :: Nil,
-            Schema.term(l#elapsedMs) :: Schema.term(l#sourceRow) :: Nil,
+            Schema.name(Schema.qualified(Entries.table(), Entries.columns()#carClass)) ::
+            Schema.name(c#lapNumber) :: Nil,
+            Schema.name(l#elapsedMs) :: Schema.name(l#sourceRow) :: Nil,
             None
         )
 
     /// The order a class's leads were taken in: its own laps, in the order they were
     /// run.
     def classLeads(c: Crossings): Sql.Window =
-        Sql.window(Schema.term(c#carClass) :: Nil, Schema.term(c#lapNumber) :: Nil, None)
+        Sql.window(Schema.name(c#carClass) :: Nil, Schema.name(c#lapNumber) :: Nil, None)
 
     /// The laps, each beside the class of the car that ran it. A lap with no row in
     /// `cars` has no class and is dropped; the load writes the cars first.
@@ -573,7 +574,7 @@ pub mod Round.Timeline {
     /// A lap the events fell on, its own times and its car's best of each, the
     /// fifteen mini-sector bests gathered back into one JSON array so the reading is
     /// thirteen columns and not twenty-seven.
-    def cellSelection(): Sel[Cells] =
+    def cellSelection(): Decoder[Cells] =
         let c = Laps.columns();
         Sql.record({})
             |> Sql.field(c#carNumber, (r, value) -> { +carNumber = value | r })
@@ -588,7 +589,7 @@ pub mod Round.Timeline {
             |> Sql.field(Sql.optionalInt("s1_best"), (r, value) -> { +s1Best = value | r })
             |> Sql.field(Sql.optionalInt("s2_best"), (r, value) -> { +s2Best = value | r })
             |> Sql.field(Sql.optionalInt("s3_best"), (r, value) -> { +s3Best = value | r })
-            |> Sql.field(Sql.optionalIntArray("json_array(${miniBests()}) AS mini_best"),
+            |> Sql.field(Sql.labelled("mini_best", Sql.optionalIntArray("json_array(${miniBests()})")),
                 (r, value) -> { +miniBests = value | r })
 
 }

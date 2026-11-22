@@ -98,22 +98,30 @@ pub mod Db.TestJdbc {
     /// schema declared, and a reading takes it without going through text.
     @Test
     def aNumberTheDriverFoundIsReadAsOne(): Unit \ {Assert, IO} =
-        let sel = Sql.intOf(Sql.raw("total"));
-        let result = connected(() -> Sqlitefx.Sql.fetch("select 3 + 4 as total", Nil));
+        let sel = Sql.int("3 + 4");
+        let result = connected(() -> Sqlitefx.Sql.fetch("SELECT ${Sql.sqlOf(sel)} AS c_3_4", Nil));
         match Result.map(List.head, result) {
             case Ok(Some(row)) => Assert.assertTrue(Sql.decode(sel, row) == Ok(7))
             case _             => Assert.assertTrue(false)
         }
 
-    /// A join projecting a column of each side under one name reads each at its own place.
+    /// A join projecting a column of each side reads each under the label the clause gave it.
     @Test
-    def twoColumnsOfOneNameAreReadInTheOrderProjected(): Unit \ {Assert, IO} =
-        let sel = Sql.Project.sel((Sql.intOf(Sql.raw("a.n")), Sql.intOf(Sql.raw("b.n"))));
-        let result = connected(() -> Sqlitefx.Sql.fetch("SELECT a.n, b.n FROM (SELECT 1 AS n) a, (SELECT 2 AS n) b", Nil));
-        match Result.map(List.head, result) {
-            case Ok(Some(row)) => Assert.assertTrue(Sql.decode(sel, row) == Ok((1, 2)))
-            case _             => Assert.assertTrue(false)
-        }
+    def twoColumnsOfOneNameAreReadUnderTheirOwnLabels(): Unit \ {Assert, IO} =
+        let projection = (Sql.int("a.n"), Sql.int("b.n"));
+        let result = connected(() -> Sql.rows(Sql.raw("(SELECT 1 AS n) a, (SELECT 2 AS n) b"))
+            |> Sql.map(_ -> projection)
+            |> Sql.selectAll);
+        Assert.assertTrue(result == Ok((1, 2) :: Nil))
+
+    /// A row carrying one name twice is refused rather than read by whichever of the two the lookup finds.
+    @Test
+    def aRowCarryingANameTwiceIsRefused(): Unit \ {Assert, IO} =
+        let result = connected(() -> Sql.rows(Sql.raw("(SELECT 1 AS n) a, (SELECT 2 AS n) b"))
+            |> Sql.map(_ -> (Sql.labelled("n", Sql.int("a.n")), Sql.labelled("n", Sql.int("b.n"))))
+            |> Sql.selectAll);
+        Assert.assertTrue(result == Err(DbErrorKind.SchemaMismatch(
+            "the row carries `n` more than once, so a reading by name cannot tell them apart")))
 
     // --------------------------------------------------------- a file database
 

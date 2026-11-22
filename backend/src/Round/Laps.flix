@@ -53,15 +53,15 @@ pub mod Round.Laps {
     def fieldOrder(): Sql.Window =
         let c = Laps.columns();
         Sql.window(
-            Schema.term(c#lapNumber) :: Nil,
-            Schema.term(c#elapsedMs) :: Schema.term(c#sourceRow) :: Nil,
+            Schema.name(c#lapNumber) :: Nil,
+            Schema.name(c#elapsedMs) :: Schema.name(c#sourceRow) :: Nil,
             None
         )
 
     /// The place in the field, counted from nought where `ROW_NUMBER` counts from
     /// one.
     def place(): Sql.Sel[Int32] =
-        Sql.intOf(Sql.frags(Sql.fragment(Sql.rowNumber(fieldOrder())) :: Sql.raw("- 1") :: Nil))
+        Sql.labelled("place", Sql.int("${Sql.sqlOf(Sql.rowNumber(fieldOrder()))} - 1"))
 
     def placed(cars: Map[String, RawCar], seats: Seats): ((LapRow, Int32)) -> Placed \ {DbErr, TransientDbErr} =
         row -> match row {

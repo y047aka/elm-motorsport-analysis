@@ -14,6 +14,7 @@ pub mod Db.Laps {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Motorsport.Calendar.Entry
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     /// The table these columns are of.
@@ -103,7 +104,7 @@ pub mod Db.Laps {
     /// A round's laps as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out
     /// is not a `LapRow`.
-    pub def selection(): Sel[LapRow] =
+    pub def selection(): Decoder[LapRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })

@@ -33,15 +33,14 @@ pub mod Round.Summary {
 
     /// `pub` reaches the load, which wants the time limit and not the grid.
     pub def particulars(entry: Entry): Metadata.Particulars \ DbRead + RawSql =
-        let start = startedAt(entry);
+        let started = startedAt(entry);
         let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.map(_ -> (
-                start,
                 Sql.opt(Sql.max(c#elapsedMs)),
                 Sql.opt(Sql.max(c#lapNumber))
             ))
-            |> Sql.reading(match (started, duration, lapTotal) -> Metadata.particulars(
+            |> Sql.reading(match (duration, lapTotal) -> Metadata.particulars(
                 Option.map(ms -> Hour.Hour(ms), started),
                 Util.Duration.fromMillis(Option.getWithDefault(0, duration)),
                 Option.getWithDefault(0, lapTotal)
@@ -50,11 +49,14 @@ pub mod Round.Summary {
 
     /// The round's start time, which is the offset the file's first lap
     /// carries.
-    def startedAt(entry: Entry): Sel[Option[Int32]] \ DbErr =
-        Sql.optionalIntOf(Sql.spliced(
-            "(SELECT ${Schema.nameOf(Laps.hourOffsetMs())}" ::
-            "FROM ${Laps.table()} WHERE {{scope}} ORDER BY source_row LIMIT 1)" :: Nil,
-            Map#{ "scope" => Laps.scope(entry, Nil) }))
+    def startedAt(entry: Entry): Option[Int32] \ DbRead + RawSql =
+        Laps.rows(entry)
+            |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
+            |> Sql.limit(1)
+            |> Sql.map(_ -> Sql.opt(Laps.hourOffsetMs()))
+            |> Sql.selectAll
+            |> List.head
+            |> Option.flatten
 
     // ----------------------------------------------------------------- cars
 

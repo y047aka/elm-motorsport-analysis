@@ -21,6 +21,7 @@ pub mod Db.TimelineEvents {
     use Motorsport.Calendar.Entry
     use Motorsport.Timeline
     use Motorsport.Timeline.Event
+    use Sqlitefx.Decoder.Decoder
     use Sql.Sel
 
     pub def table(): String = "timeline_events"
@@ -98,7 +99,7 @@ pub mod Db.TimelineEvents {
     /// A round's events as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out
     /// is not an `EventRow`.
-    pub def selection(): Sel[EventRow] =
+    pub def selection(): Decoder[EventRow] =
         let c = columns();
         Sql.record({})
             |> Sql.field(c#roundId, (r, value) -> { +roundId = value | r })
