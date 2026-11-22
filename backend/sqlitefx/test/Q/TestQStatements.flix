@@ -1,6 +1,6 @@
 ///
 /// QStatements: query ごとの文の一覧（`gen --statements` が書く JSON の中身）。文の名前・種類・書き込み先・書くカラム・
-/// `ON CONFLICT DO UPDATE SET` の左辺。利用側の check（nextcms の entry-touch）が SQL のパーサを持たずに済むようにする。
+/// `ON CONFLICT DO UPDATE SET` の左辺。利用側の check が SQL のパーサを持たずに済むようにする。
 ///
 mod TestQStatements {
 

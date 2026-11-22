@@ -204,7 +204,7 @@ def resolveCteError(source: String): Result[ResolveError, Int32] =
         |> Result.flatMap(queries -> Result.traverse(QResolve.resolve(cteSchema()), queries))
         |> Result.map(List.length)
 
-/// nextcms の entries.q の 3 つ（設計の 1.3）。touch を書き込みの CTE と 1 文にした形。
+/// 書き込みの CTE を持つ 3 つの query。touch を書き込みの CTE と 1 文にした形。
 def entriesCteQueries(): String =
     "query upsertContent(entryId: String, stage: String, typeId: Int64, data: Json, dataFold: Json, projectId: Int64) -> exec {\n"
         + "    WITH written AS (\n"
@@ -246,7 +246,7 @@ def entriesCteQueries(): String =
         + "}\n"
 
 ///
-/// CTE の型付け（設計の 1.5 / 1.6）。CTE の本文には今の規則をそのまま当て、前の CTE は仮想の表として読む。
+/// CTE の型付け。CTE の本文には今の規則をそのまま当て、前の CTE は仮想の表として読む。
 /// writes は本文か CTE のどれかが書けば true。
 ///
 ///   a: CTE の表のカラム                              → DDL の型と NULL 可否（email は NULL 可）
@@ -258,7 +258,7 @@ def entriesCteQueries(): String =
 ///   g: 書き込みの CTE + RETURNING 無しの本文（exec） → カラム無し、writes
 ///   h: 書き込みの CTE を SELECT で読む               → writes（DbWrite にする）
 ///   i: INSERT ... SELECT ... FROM <CTE> RETURNING id → RETURNING は書き込み先（posts）だけで引く
-///   j: WITH 無しの INSERT ... SELECT ... FROM users RETURNING id → 同じく posts だけ（0.5.0 は AmbiguousColumn）
+///   j: WITH 無しの INSERT ... SELECT ... FROM users RETURNING id → 同じく posts だけ
 ///
 @Test
 def testResolveCteColumns(): Unit \ Assert =
@@ -286,7 +286,7 @@ def testResolveCteColumns(): Unit \ Assert =
         ("j", List#{("id", SqlType.Int64, false)}, true)
     }), result)
 
-/// 設計の 1.3 の 3 つ: upsertContent は exec、fillMissingField / upsertContents は本文が SELECT でも CTE が書くので writes。
+/// 書き込みの CTE を持つ 3 つ: upsertContent は exec、fillMissingField / upsertContents は本文が SELECT でも CTE が書くので writes。
 @Test
 def testResolveEntriesCteQueries(): Unit \ Assert =
     Assert.assertEq(expected = Ok(List#{
@@ -296,7 +296,7 @@ def testResolveEntriesCteQueries(): Unit \ Assert =
     }), resolveCte(entriesCteQueries()))
 
 ///
-/// CTE の失敗（設計の 1.2 / 1.4 / 1.6 / 1.7）。
+/// CTE の失敗。
 ///
 @Test
 def testResolveCteErrors(): Unit \ Assert =
@@ -321,7 +321,7 @@ def testResolveCteErrors(): Unit \ Assert =
     Assert.assertEq(expected = table |> List.map(snd), table |> List.map(fst) |> List.map(resolveCteError))
 
 ///
-/// 失敗の 1 line（規則・受け取った値・直し方。設計の 1.9）。
+/// 失敗の 1 line（規則・受け取った値・直し方）。
 ///
 @Test
 def testDescribeCteErrors(): Unit \ Assert =

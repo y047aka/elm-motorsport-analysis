@@ -1,5 +1,5 @@
 ///
-/// try / catch と `run … with handler` の入れ子で、中で飛んだ JVM の例外がどこで受かるか（実測の表。設計 docs/design/cte-and-fatal.md の 2.2）。
+/// try / catch と `run … with handler` の入れ子で、中で飛んだ JVM の例外がどこで受かるか（実測の表）。
 /// fatal の後始末（Pool の A / B / C / D の catch）はこの表を前提に置いてある。コンパイラを上げたら最初にこれを回す。
 ///
 ///   #  形                                                                    受かるか
@@ -41,7 +41,7 @@ mod TestCatchNesting {
             case _: Throwable => Err("caught")
         }
 
-    /// Throwable を値にする（設計の D の形の catch）。
+    /// Throwable を値にする（利用側の thunk を包む所の catch）。
     def catchAll(thunk: Unit -> a \ ef): Result[Throwable, a] \ ef =
         try {
             Ok(thunk())

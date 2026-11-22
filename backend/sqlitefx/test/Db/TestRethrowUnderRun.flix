@@ -1,5 +1,5 @@
 ///
-/// sqlitefx が利用側の thunk を包んで handler を張る所（設計の D）は、その `run` の直下で例外を拾い、`run` を抜けてから
+/// sqlitefx が利用側の thunk を包んで handler を張る所は、その `run` の直下で例外を拾い、`run` を抜けてから
 /// 同じ物を投げ直す。そうしないと、thunk が外の handler へ op を投げた後で投げた物は、外側の catch（`Pool.withLazyTx` の
 /// `Db.guard`）を素通りする（TestCatchNesting の 4 番目の形）。
 ///

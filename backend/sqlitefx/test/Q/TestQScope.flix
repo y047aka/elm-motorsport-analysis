@@ -51,7 +51,7 @@ def testScopeRejectsMissingColumn(): Unit \ Assert =
             + "query b(id: Int64) -> one { SELECT id FROM entries WHERE id = :id }\n"
             + "query c(id: Int64) -> exec { DELETE FROM entries WHERE id = :id }"))
 
-/// scope のカラムの名前が `/* */` のコメントか dollar quote の中にしか無い query は止まる（0.5.0 では通っていた）。
+/// scope のカラムの名前が `/* */` のコメントか dollar quote の中にしか無い query は止まる。
 @Test
 def testScopeIgnoresCommentAndDollarQuote(): Unit \ Assert =
     Assert.assertEq(
@@ -226,7 +226,7 @@ def testPlanMultipleScopes(): Unit \ Assert =
 
 // ---- WITH の無い query の触る表（USING とカンマの続き）----
 
-/// `DELETE … USING` と `FROM a, b` の続きの表も、触る表に数える（0.5.0 では数えず素通りしていた）。
+/// `DELETE … USING` と `FROM a, b` の続きの表も、触る表に数える。
 @Test
 def testScopeCountsUsingAndCommaSources(): Unit \ Assert =
     Assert.assertEq(
@@ -261,7 +261,7 @@ def goneQuery(): String =
         + "    UPDATE entries SET updated_at = now() WHERE project_id = :projectId AND id = ANY(ARRAY(SELECT entry_id FROM gone))\n"
         + "}\n"
 
-/// 設計の 1.3 の 3 つは通り、注入は projectId の 1 つ。
+/// 書き込みの CTE を持つ 3 つの query は通り、注入は projectId の 1 つ。
 @Test
 def testCteEntriesQueriesPass(): Unit \ Assert =
     Assert.assertEq(
@@ -269,7 +269,7 @@ def testCteEntriesQueriesPass(): Unit \ Assert =
         planCte(entriesCteQueries()))
 
 ///
-/// WITH を含む query の各文（設計の 1.8 の表）。
+/// WITH を含む query の各文。
 ///
 ///   #    形                                                                        期待
 ///   1    CTE の DELETE に条件無し、本文に条件                                      Unscoped in CTE gone
@@ -321,7 +321,7 @@ def testCteStatementsTable(): Unit \ Assert =
     Assert.assertEq(expected = table |> List.map(snd), table |> List.map(fst) |> List.map(planCte))
 
 ///
-/// WITH を含む query の `// unscoped:` は文を名指しする（設計の 1.8 の決め 3）。
+/// WITH を含む query の `// unscoped:` は文を名指しする。
 ///
 ///   1 の形に // unscoped: in gone 理由            → 通る
 ///   1 の形に // unscoped: 理由（in 無し）          → UnscopedMarkerNeedsStatement
@@ -345,7 +345,7 @@ def testCteMarkers(): Unit \ Assert =
     };
     Assert.assertEq(expected = table |> List.map(snd), table |> List.map(fst) |> List.map(planCte))
 
-/// 失敗の 1 line（設計の 1.9）。
+/// 失敗の 1 line。
 @Test
 def testDescribeCteScopeErrors(): Unit \ Assert =
     Assert.assertEq(

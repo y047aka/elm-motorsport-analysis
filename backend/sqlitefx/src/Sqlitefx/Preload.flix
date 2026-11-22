@@ -3,7 +3,7 @@
 /// 子は元の順のまま（クエリの ORDER BY がそのまま効く）、子の無い親は Nil。
 ///
 /// WhyNot: Map の畳み込みを利用者に書かせないのは、`insertWith` の引数順と逆順の反転を毎回考えることになるから。
-/// `keyed` からの preloader 生成（フェーズ 3）もこれを呼ぶ。
+/// `keyed` からの preloader 生成もこれを呼ぶ。
 ///
 pub mod Sqlitefx.Preload {
 

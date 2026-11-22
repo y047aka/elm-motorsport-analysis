@@ -77,8 +77,6 @@ query postsByUsers(ids: List[Int64]) -> many keyed(user_id) {
 CI時(実 PostgreSQL に全クエリ PREPARE。実行なし。sqlx 相当)/
 起動時(スキーマハッシュ照合 → 不一致は Fatal)。
 
-LSP はロードマップに含める(パーサ=LSP の土台。ブロック内は SQL としてカラム補完)。
-
 ## 4. エフェクト体系
 
 ### 4.1 DB境界
@@ -220,39 +218,3 @@ belongs-to は素直に JOIN を書く(行が増えないので)。has-many を�
 
 方針: `\ SqlRead/SqlWrite` を持つ関数は薄く、ロジックは純粋関数へ。
 クエリ数テストは実装詳細への結合を避け、上限 + O(1)/O(n) のプロパティ形式で書く。
-
-## 10. 実装ロードマップ(段階導入)
-
-```
-v0(層0):  SqlRead/SqlWrite + エラー2分類 + jdbcHandler + 生SQL型付き実行
-          + テストハンドラ3種   ← ここだけで思想の核は全部動く
-v1(層1):  .q パーサ + codegen(スキーマ解決・PREPARE検証・エフェクト自動付与)
-          + 断片DSL(Pred/Order 最小)
-v2(層2):  keyed preloader + JSON集約 + withTx 完成
-v3:       マイグレーション同梱(plan/dry/impact) + 起動時ハッシュ
-v4:       LSP + EXPLAIN テスト統合 + ドキュメント
-```
-
-スパイクで検証すべき技術リスクと、そのタイミング:
-- v0 の前: (a) エフェクト集合の `type alias` が書けるか (b) `spawn` 本体に自作エフェクトを
-  置けるか(置けなければ Tx 内並行は言語側で禁止済み) (c) Maven 依存の `org.postgresql.Driver`
-  を直接ロードして接続できるか
-- v0 の完了条件に含める: 多層ハンドラ(ログ → 計測 → JDBC)の実行性能の計測
-- v2 の前: 行多相 + trait 越しの型推論とエラーメッセージ(preloader がフィールドを型に生やす形)
-
-## 11. 競合との位置づけ(要約)
-
-- sqlc/sqlx: SQL の中の検証は同格〜(PREPARE導入で)同等。動的クエリ・N+1・
-  エラー層規律・DB境界可視性・テストで上回る。「sqlc の後継」ポジション
-- Kysely/jOOQ: フル内部DSLとは戦わない。動的クエリの極端なケースは譲る
-- Ecto: preload 忘れが実行時エラー vs 本ライブラリはコンパイルエラー
-- 弱点は変わらずエコシステム。sqlc 互換の書き味と SQL ファイル資産の持ち込みが梯子
-
-## 12. 設計上の未決事項(実装時に決める)
-
-- Tx ネストの扱い(セーブポイント vs 型エラー)。v0 では型エラー固定
-- 断片DSLの演算子セット。列と値・列と列・isNull までは入れた。式（算術・関数）は未着手
-- `Pred[users]` の row 型の付け方(codegen が吐くマーカー型の設計)
-- streamQuery の each に許すエフェクトの範囲
-- reclassify ハンドラの API 形状
-- .q の with 節に Order 以外(limit句スロット等)をどこまで許すか

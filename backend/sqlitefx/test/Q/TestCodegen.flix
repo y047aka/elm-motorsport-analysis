@@ -340,7 +340,7 @@ def testRenderCteEffects(): Unit \ Assert =
         "        RawSql.runWithAllow(() -> Sql.fetchAs(readPostsDecoder(), sql, params))"
     }), lines)
 
-/// 設計の 1.3 の 3 つを --scope project_id:Tenant で生成した署名と、呼ぶ Sql の関数。
+/// 書き込みの CTE を持つ 3 つの query を --scope project_id:Tenant で生成した署名と、呼ぶ Sql の関数。
 @Test
 def testRenderEntriesCteQueries(): Unit \ Assert =
     let source = entriesCteQueries();
