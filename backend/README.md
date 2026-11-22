@@ -183,6 +183,7 @@ A row read as a record is `Sql.record` extended a field at a time with `Sql.fiel
 It is also the only form past eight columns, and the cheaper one for the type checker — two dozen curried readings need a 2m stack where the record needs 512k.
 
 A value is bound, never written in: a `Sql.Frag` is SQL and the values its `?` placeholders take, so concatenating two pieces carries both.
+The statement goes out with them numbered `$1`, `$2`, ... (`Sql.numbered`), since `$n` is the only placeholder sqlfx takes.
 
 `filter` takes a `Sql.Expr[Bool]` of the columns the source declared, so a column of another source cannot scope this query.
 **The round is applied where the rows come from**: `Db.Laps.rows` and `Db.Cars.rows` take the round and hand back rows already filtered by it, so a reader cannot forget the scope. A reader ANDs its own onto them.

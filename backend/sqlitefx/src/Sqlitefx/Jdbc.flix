@@ -257,7 +257,7 @@ pub mod Sqlitefx.Jdbc {
     def rewriteOrFail(sql: String, params: List[SqlValue]): (String, List[SqlValue]) \ DbErr =
         match JdbcConvert.rewritePlaceholders(sql, params) {
             case Some(rewritten) => rewritten
-            case None => DbErr.other("placeholders do not match ${List.length(params)} params ($n out of range, $n mixed with ?, or a ? count that differs): ${sql}")
+            case None => DbErr.other("placeholder $n out of range of ${List.length(params)} params: ${sql}")
         }
 
     ///

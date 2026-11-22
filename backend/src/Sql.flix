@@ -917,8 +917,29 @@ pub mod Sql {
         }
 
     def fetched(q: Query[a]): List[Row] \ DbRead + RawSql =
-        let Frag.Frag(sql, params) = toStatement(q);
+        let (sql, params) = numbered(toStatement(q));
         Sqlitefx.Sql.fetch(sql, params)
+
+    /// The statement as sqlfx takes it: each `?` outside a quoted string becomes `$1`, `$2`, ... in the order the values were bound.
+    ///
+    /// A piece keeps its `?`s, since where its values fall among the statement's is known only once the pieces are joined.
+    pub def numbered(fragment: Frag): (String, List[SqlValue]) =
+        let Frag.Frag(sql, params) = fragment;
+        let text = region rc {
+            let sb = StringBuilder.empty(rc);
+            discard String.toList(sql) |> List.foldLeft((acc, ch) -> {
+                let (next, inQuote) = acc;
+                if (ch == '?' and not inQuote) {
+                    StringBuilder.append("$${next}", sb);
+                    (next + 1, inQuote)
+                } else {
+                    StringBuilder.append(ch, sb);
+                    (next, if (ch == '\'') not inQuote else inQuote)
+                }
+            }, (1, false));
+            StringBuilder.toString(sb)
+        };
+        (text, params)
 
     ///
     /// ===== STATEMENTS =====
@@ -996,7 +1017,7 @@ pub mod Sql {
 
     /// The statement and the rows bound to it, both drawn from the columns in
     /// the order they are given: a row cannot come to be bound in an order the
-    /// statement does not name, and there is a `?` for each value and no more.
+    /// statement does not name, and there is a `$n` for each value and no more.
     pub def insertRows(
         table: String,
         columns: List[{name = String, bind = row -> SqlValue | r}],
@@ -1005,10 +1026,11 @@ pub mod Sql {
         if (List.isEmpty(rows))
             None
         else {
-            let group = "(" + (columns |> List.map(_ -> "?") |> List.join(", ")) + ")";
+            let width = List.length(columns);
+            let group = i -> "(" + (List.range(1, width + 1) |> List.map(c -> "$${i * width + c}") |> List.join(", ")) + ")";
             let statement = "INSERT INTO " + table
                 + " (" + (columns |> List.map(c -> c#name) |> List.join(", ")) + ")"
-                + " VALUES " + (rows |> List.map(_ -> group) |> List.join(", "));
+                + " VALUES " + (List.range(0, List.length(rows)) |> List.map(group) |> List.join(", "));
             Some((statement, rows |> List.flatMap(row -> columns |> List.map(c -> (c#bind)(row)))))
         }
 
