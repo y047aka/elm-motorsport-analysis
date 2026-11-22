@@ -13,11 +13,6 @@ pub mod Lite3fx.Db {
     import java.lang.Throwable
     import java.lang.VirtualMachineError
 
-    /// The failure, whichever of the two effects carried it. This is where a
-    /// reading stops being a value and starts being a `Result`.
-    pub def attempt(f: Unit -> a \ ef): Result[Lite3fx.DbError.Failure, a] \ (ef - {TransientDbErr, DbErr}) =
-        Lite3fx.DbError.runWithFailure(f)
-
     /// `f` run, and whatever it threw kept as a value -- the same throwable,
     /// untouched. Whether it was a database's failure or the JVM's is the
     /// caller's to decide, and a fatal one is not a failure to keep.

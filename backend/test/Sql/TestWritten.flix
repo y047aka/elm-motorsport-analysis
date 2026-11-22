@@ -151,6 +151,58 @@ pub mod Sql.TestWritten {
                 SqlValue.Int32(3) :: Nil
             )))
 
+    /// The order the values come out in is decided twice over: `holeNames` reads the
+    /// template for the names it mentions, and `holesFilled` splices them in. They agree
+    /// on every statement here, and these are the shapes where they could disagree.
+    ///
+    /// The same hole named twice binds its values twice, in the order the two occurrences
+    /// stand -- and the `missing`/`unused` checks see one name on each side either way.
+    @Test
+    def aHoleNamedTwiceBindsItsValuesTwiceInOrder(): Unit \ Assert =
+        Assert.assertTrue(rendered(() -> Sql.statement(
+            "SELECT %% FROM laps WHERE {{scope}} OR elapsed_ms > {{since}} OR {{scope}}" :: Nil,
+            Map#{
+                "scope" => scoped(),
+                "since" => Sql.frag("?", SqlValue.Int32(900) :: Nil)
+            },
+            (Sql.text("car_number"), Sql.int("elapsed_ms"))))
+            == Ok((
+                "SELECT car_number, elapsed_ms FROM laps WHERE round_id = ? OR elapsed_ms > ? OR round_id = ?",
+                SqlValue.Int32(3) :: SqlValue.Int32(900) :: SqlValue.Int32(3) :: Nil
+            )))
+
+    /// A hole is a piece and not a value, so a piece binding several keeps them together
+    /// and in its own order, wherever it lands.
+    @Test
+    def aHoleBindingSeveralValuesKeepsThemTogether(): Unit \ Assert =
+        Assert.assertTrue(rendered(() -> Sql.statement(
+            "SELECT %% FROM laps WHERE {{pair}} AND elapsed_ms > {{since}}" :: Nil,
+            Map#{
+                "pair" => Sql.frag("round_id = ? AND season = ?", SqlValue.Int32(3) :: SqlValue.Str("2025") :: Nil),
+                "since" => Sql.term(Sql.i32(900))
+            },
+            (Sql.text("car_number"), Sql.int("elapsed_ms"))))
+            == Ok((
+                "SELECT car_number, elapsed_ms FROM laps WHERE round_id = ? AND season = ? AND elapsed_ms > ?",
+                SqlValue.Int32(3) :: SqlValue.Str("2025") :: SqlValue.Int32(900) :: Nil
+            )))
+
+    /// The hardest one: a hole named on both sides of the `%%`, so the clause the
+    /// projection draws sits between the values the two occurrences bind. The clause binds
+    /// a value of its own here, and it has to come out between them rather than first or
+    /// last.
+    @Test
+    def aHoleOnBothSidesOfTheClauseHoldsTheClauseBetweenItsValues(): Unit \ Assert =
+        Assert.assertTrue(rendered(() -> Sql.statement(
+            "SELECT %% FROM laps WHERE {{scope}} AND lap_number > (SELECT ? FROM rounds LIMIT 1) AND {{scope}}" :: Nil,
+            Map#{ "scope" => scoped() },
+            Sql.optionalIntOf(Sql.frag("(SELECT ? FROM laps LIMIT 1)", SqlValue.Int32(77) :: Nil))))
+            == Ok((
+                "SELECT (SELECT ? FROM laps LIMIT 1) FROM laps WHERE round_id = ?"
+                    + " AND lap_number > (SELECT ? FROM rounds LIMIT 1) AND round_id = ?",
+                SqlValue.Int32(77) :: SqlValue.Int32(3) :: SqlValue.Int32(3) :: Nil
+            )))
+
     /// The guard is on the one spelling that cannot survive the run together. A block
     /// comment closes itself and costs nothing, which is what a written statement is to
     /// use instead.

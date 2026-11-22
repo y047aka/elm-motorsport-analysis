@@ -320,7 +320,7 @@ installs the read alone, and a write reaches no handler through it.
 
 `DbErr` and `TransientDbErr` are the third and fourth, and they are what a reader does not carry a `Result` for.
 Their one operation does not return, so `Round.Summary.read` answers with a `Metadata` rather than with whether it could read one, and the failure travels by itself to the boundary that asked.
-`Lite3fx.DbError.runWithKind` is where a raised failure comes back as a value, and `Lite3fx.Db.attempt` the same with the transient ones folded into `DbError.Failure`.
+`Lite3fx.DbError.runWithKind` is where a raised failure comes back as a value, and `Lite3fx.DbError.runWithFailure` the same with the transient ones folded into `DbError.Failure`.
 Everything between those and the statement is written as though the database always answers.
 Which of the two effects a failure travels by is read off its `DbErrorKind` constructor -- `DbError.raise` routes it there -- so a kind added to either side meets a pattern that has to say which it is.
 

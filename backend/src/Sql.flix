@@ -464,10 +464,6 @@ pub mod Sql {
             decode
         )
 
-    /// A projected expression under the name the query gives it.
-    pub def aliased(name: String, sel: Sel[a]): Frag =
-        frags(joinFrags(", ", selColumns(sel)) :: raw("AS ${name}") :: Nil)
-
     // ------------------------------------------------------------------ windows
 
     /// How far a window reaches from the row being read.

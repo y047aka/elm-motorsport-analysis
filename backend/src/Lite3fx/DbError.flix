@@ -99,10 +99,6 @@ pub mod Lite3fx.DbError {
     pub def busy(cause: String): DbErrorKind =
         DbErrorKind.Transient(TransientKind.Busy(cause))
 
-    /// A cell the reading could not read.
-    pub def decodeError(column: String, detail: String): DbErrorKind =
-        DbErrorKind.DecodeError(column, detail)
-
     /// The failure, out of whichever effect carried it.
     pub def toFailure(kind: DbErrorKind): Failure = match kind {
         case DbErrorKind.Transient(t) => Failure.Transient(t)
