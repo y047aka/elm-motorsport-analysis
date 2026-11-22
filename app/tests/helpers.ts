@@ -91,7 +91,7 @@ export const TRACKER_COLUMN = '[data-tracker-column]';
  * lap is a circle and the surveyed lap is a polygon, which the ring's drawing has
  * none of, so the polygon says a drawing was chosen -- no baseline needed.
  *
- * The second argument is which tracker to read: the column it opens in, or the row
+ * The second argument is which tracker to read: the column it opens in, or the box
  * the circuit is raised into.
  */
 export async function expectSurveyedLap(page: Page, tracker = TRACKER_COLUMN) {

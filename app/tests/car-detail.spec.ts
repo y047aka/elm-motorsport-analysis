@@ -25,14 +25,11 @@ const COLUMN_WIDTH = readConstant('Columns.width', columnsSource, /\nwidth =\n\s
 const GAP = readConstant('Columns.gap', columnsSource, /gap =\n\s+(\d+)/);
 const PITCH = COLUMN_WIDTH + GAP;
 
-/** The standings' width and its two bounds, and the width one arrow key
- * step is worth. */
+/** The standings' width and its two bounds. */
 const standingsSource = readFileSync(new URL('../src/View/LiveStandings.elm', import.meta.url), 'utf8');
 const STANDINGS_WIDTH = readConstant('LiveStandings.width', standingsSource, /\nwidth =\n\s+(\d+)/);
 const STANDINGS_MIN = readConstant('LiveStandings.minWidth', standingsSource, /\nminWidth =\n\s+(\d+)/);
 const STANDINGS_MAX = readConstant('LiveStandings.maxWidth', standingsSource, /\nmaxWidth =\n\s+(\d+)/);
-const eventSource = readFileSync(new URL('../src/Page/Wec/Event.elm', import.meta.url), 'utf8');
-const RESIZE_STEP = readConstant('standingsFence.step', eventSource, /standingsFence =\n\s*\{[\s\S]*?step = (\d+)/);
 
 /** The row curves the picker offers, read off the Elm that names them --
  * `data-row-trace` and the `value` of each option are both `traceName`. */
@@ -854,16 +851,6 @@ test.describe('Car Detail Columns', () => {
     await expect(standings).toHaveCSS('width', `${STANDINGS_MAX}px`);
     await page.mouse.up();
     await expect(standings).toHaveCSS('width', `${STANDINGS_MAX}px`);
-  });
-
-  test('should step the standings width by the arrow keys', async ({ page }) => {
-    const standings = standingsCell(page);
-    await standingsGrip(page).focus();
-    await page.keyboard.press('ArrowLeft');
-    await expect(standings).toHaveCSS('width', `${STANDINGS_WIDTH - RESIZE_STEP}px`);
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowRight');
-    await expect(standings).toHaveCSS('width', `${STANDINGS_WIDTH + RESIZE_STEP}px`);
   });
 
   test('should leave the last column off the edge, reachable by scrolling', async ({ page }) => {

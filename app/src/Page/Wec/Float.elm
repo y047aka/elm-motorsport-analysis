@@ -1,0 +1,596 @@
+module Page.Wec.Float exposing (Model, Msg(..), init, update, view, trigger)
+
+{-| The track map floated over the columns: hidden until the tracker column's `◱`
+asks for it, sized by a grip along each of its four edges and at each of its four corners, carried by a drag anywhere on the drawing and turned by the right button's drag or a two-finger scroll -- and taking part in none of the strip's grid.
+
+The box is a `popover`, and a `manual` one: the browser keeps whether it is open, the two presses only name it, and nothing here can be closed by a press outside it -- the columns are worked while the map is up.
+
+The camera belongs here: this is the one drawing raised off the ground it was surveyed on. Which pointer is turning it, `Page.Wec.Camera` holds.
+
+@docs Model, Msg, init, update, view, trigger
+
+-}
+
+import Browser.Dom
+import Drag
+import Drag.Handle as Handle
+import Html exposing (Html, div, text)
+import Html.Attributes as Attributes exposing (attribute)
+import Html.Events exposing (on)
+import Json.Decode as Decode
+import Motorsport.Chart.Tracker exposing (Track)
+import Motorsport.Race.Snapshot exposing (Snapshot)
+import Page.Wec.Camera as Camera
+import Page.Wec.Columns as Columns
+import Page.Wec.Resize as Resize
+import Page.Wec.Shift as Shift
+import Task
+import View.CarDetail.Header as Header
+import View.TrackMap3d as TrackMap3d
+
+
+type alias Model =
+    { shown : Bool
+    , width : Resize.Model
+    , height : Resize.Model
+    , shift : Shift.Model
+    , camera : Camera.Model
+    , window : { width : Float, height : Float }
+    }
+
+
+init : Model
+init =
+    { shown = False
+    , width = Resize.init defaultWidth
+    , height = Resize.init defaultHeight
+    , shift = Shift.init boxId
+    , camera = Camera.init
+    , window = unmeasured
+    }
+
+
+{-| No window has been read yet. Nothing grows against it: a grip lies on a popover the
+UA keeps hidden until the column asks, and the open reads the window before any grip can
+be pressed.
+-}
+unmeasured : { width : Float, height : Float }
+unmeasured =
+    { width = Resize.unmeasured, height = Resize.unmeasured }
+
+
+{-| `Shown` mirrors what the popover said of itself; the presses themselves are the
+browser's, and reach no message at all.
+-}
+type Msg
+    = Shown Bool
+    | Grow Grip Resize.Msg
+    | Window { width : Float, height : Float }
+    | ShiftMsg Shift.Msg
+    | CamMsg Camera.Msg
+
+
+{-| The box the floating map opens at.
+480 by 180 is `Tracker3d.box`'s own three to one.
+The map is stood at the bottom right of the page, and every one of its four edges is a grip: the two away from the corner it is stood at grow `AgainstPointer`, and the two at it are `WithPointer` and take the box along with the size, so the edge opposite the one held stays where it was.
+-}
+defaultWidth : Float
+defaultWidth =
+    480
+
+
+defaultHeight : Float
+defaultHeight =
+    180
+
+
+{-| How small each size may go, and nothing more: how far it may go is the window's, and
+`bounded` reads it there.
+-}
+widthFence : Resize.Fence
+widthFence =
+    { min = 280
+    , max = Nothing
+    }
+
+
+heightFence : Resize.Fence
+heightFence =
+    { min = 120
+    , max = Nothing
+    }
+
+
+{-| The room between the corner the box is stood at and the window's: the box's own
+`bottom-2.5 right-2.5`, since a popover in the top layer is inset from the _viewport_
+and not from `mainGrid` -- the same reason `inset: 0` is answered with `top-auto
+left-auto`.
+-}
+cornerRoom : Float
+cornerRoom =
+    10
+
+
+{-| An edge the box keeps a size by.
+
+The box is pinned at its bottom right, so the two edges there are `WithPointer` and take
+the box along with the size, and the other two are `AgainstPointer` and grow away from a
+box that stays where it stands. Which end the grip bounds is therefore one fact and not
+two: the grip at the pinned end is the one that carries the box.
+
+-}
+type alias Side =
+    { name : String
+    , at : String
+    , pad : String
+    , edge : Resize.Edge
+    }
+
+
+{-| `at` is where a side's track goes, `pad` where a corner's box goes -- each offset half
+its own size, so a grip is centred on the edge or corner it sizes from. Both are written out
+rather than composed from the name -- Tailwind reads a class off the source text and invents
+nothing.
+-}
+side : String -> String -> String -> Handle.Axis -> Resize.Grows -> Resize.Fence -> Side
+side name at pad axis grows fence =
+    let
+        cursor =
+            case axis of
+                Handle.Across ->
+                    "cursor-ew-resize"
+
+                Handle.Down ->
+                    "cursor-ns-resize"
+    in
+    { name = name
+    , at = at
+    , pad = pad
+    , edge =
+        { axis = axis
+        , grows = grows
+        , fence = fence
+        , id = "tracker-float-" ++ name ++ "-grip"
+        , label = "Resize the floating track map from the " ++ name
+        , glyph = ""
+        , cursor = cursor
+        , marks = False
+        }
+    }
+
+
+left : Side
+left =
+    side "left" "-left-1" "-left-2" Handle.Across Resize.AgainstPointer widthFence
+
+
+right : Side
+right =
+    side "right" "-right-1" "-right-2" Handle.Across Resize.WithPointer widthFence
+
+
+top : Side
+top =
+    side "top" "-top-1" "-top-2" Handle.Down Resize.AgainstPointer heightFence
+
+
+bottom : Side
+bottom =
+    side "bottom" "-bottom-1" "-bottom-2" Handle.Down Resize.WithPointer heightFence
+
+
+{-| The grips the box is sized by. An edge moves one size; a corner is the meeting
+of two edges and moves both, holding them under one id -- which is then what both sizes
+are said to be held by, and what draws the grip held.
+-}
+type Grip
+    = Edge Side
+    | Corner Side Side
+
+
+type alias GripInfo =
+    { id : String
+    , label : String
+    , at : String
+    , moves : List Side
+    }
+
+
+grip : Grip -> GripInfo
+grip g =
+    case g of
+        Edge s ->
+            { id = s.edge.id
+            , label = s.edge.label
+            , at = s.at
+            , moves = [ s ]
+            }
+
+        Corner width height ->
+            let
+                names =
+                    height.name ++ "-" ++ width.name
+            in
+            { id = "tracker-float-" ++ names ++ "-grip"
+            , label = "Resize the floating track map from its " ++ names ++ " corner"
+            , at = height.pad ++ " " ++ width.pad
+            , moves = [ width, height ]
+            }
+
+
+{-| `boxId` is what the travel is measured against at every pick, and what both
+presses point their `popovertarget` at.
+-}
+boxId : String
+boxId =
+    "tracker-float-box"
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg m =
+    case msg of
+        Shown shown ->
+            ( { m | shown = shown }
+            , if shown then
+                measure
+
+              else
+                Cmd.none
+            )
+
+        Window window ->
+            ( { m | window = window }, Cmd.none )
+
+        Grow choice sub ->
+            let
+                g =
+                    grip choice
+            in
+            ( List.foldl (grow g.id sub) m g.moves, measureOn sub )
+
+        ShiftMsg sub ->
+            let
+                ( shift, cmd ) =
+                    Shift.update sub m.shift
+            in
+            ( { m | shift = shift }, Cmd.map ShiftMsg cmd )
+
+        CamMsg sub ->
+            ( { m | camera = Camera.update sub m.camera }, Cmd.none )
+
+
+{-| One axis of a drag: the side being grown, the size it holds, how far the box has gone
+along that axis, and how far the window goes along it.
+-}
+type alias Drag =
+    { side : Side
+    , size : Resize.Model
+    , shift : Float
+    , window : Float
+    }
+
+
+along : Side -> Model -> Drag
+along s m =
+    case s.edge.axis of
+        Handle.Across ->
+            { side = s, size = m.width, shift = m.shift.x, window = m.window.width }
+
+        Handle.Down ->
+            { side = s, size = m.height, shift = m.shift.y, window = m.window.height }
+
+
+{-| The axis the side is read along says which pair of the box's two the size and the
+shift are written back through. A grip that carries no box writes its shift back unchanged.
+-}
+writeBack : Side -> Resize.Model -> Float -> Model -> Model
+writeBack s size shift m =
+    let
+        offset =
+            m.shift
+    in
+    case s.edge.axis of
+        Handle.Across ->
+            { m | width = size, shift = { offset | x = shift } }
+
+        Handle.Down ->
+            { m | height = size, shift = { offset | y = shift } }
+
+
+{-| Whether the box is carried along by the growth. The box is pinned at one end of each
+axis and a grip there moves the box by its own travel, while a grip at the other end
+leaves it stood -- which is what `Grows` already says, so the two cannot disagree.
+-}
+carried : Side -> Bool
+carried s =
+    s.edge.grows == Resize.WithPointer
+
+
+{-| How far the edge held can travel before it lands on the window's own edge: the window
+on the far side, zero on the near one. The box stands at `bottom-2.5 right-2.5` and is
+then carried by `shift`, so its far end sits at `window - cornerRoom + shift`.
+-}
+room : Drag -> Float
+room d =
+    case d.side.edge.grows of
+        Resize.WithPointer ->
+            cornerRoom - d.shift
+
+        Resize.AgainstPointer ->
+            d.window - cornerRoom + d.shift - d.size.size
+
+
+{-| One axis of a drag on a size, by the grip named `gripId`: the box goes along only when
+the grip is at the end the box is pinned at. A corner is two of these, one per size it moves.
+-}
+grow : String -> Resize.Msg -> Side -> Model -> Model
+grow gripId sub s m =
+    let
+        d =
+            along s m
+
+        base =
+            edgeOf s m
+
+        edge =
+            { base | id = gripId }
+
+        size =
+            Resize.update edge sub d.size
+
+        shift =
+            if carried s then
+                d.shift + size.size - d.size.size
+
+            else
+                d.shift
+    in
+    writeBack s size shift m
+
+
+{-| How far the window goes, read from the browser. The ceiling a drag stops at is the
+window's and the window can have been resized since the last reading, so the window is
+read again when a grip takes a size up -- the way a carry measures the box it is about to
+move.
+-}
+measure : Cmd Msg
+measure =
+    Browser.Dom.getViewport
+        |> Task.map (\{ viewport } -> Window { width = viewport.width, height = viewport.height })
+        |> Task.onError (\_ -> Task.succeed (Window unmeasured))
+        |> Task.perform identity
+
+
+measureOn : Resize.Msg -> Cmd Msg
+measureOn msg =
+    case msg of
+        Resize.Grab _ ->
+            measure
+
+        _ ->
+            Cmd.none
+
+
+{-| Whether a grip is drawn held: it is the one holding a size when any size it moves says
+so. An edge moves one, a corner the two that meet there.
+-}
+holds : GripInfo -> Model -> Bool
+holds g m =
+    List.any (\s -> Resize.heldBy g.id (along s m).size) g.moves
+
+
+{-| The fence one side is grown between: the size's own floor, and the window's own edge as
+its top.
+
+The top is the same at every move of one drag, because a box grown by a grip at its pinned
+end grows its shift by the same travel -- which is why a throw past the window pulls back
+freely rather than sticking.
+-}
+bounded : Side -> Model -> Resize.Fence
+bounded s m =
+    let
+        d =
+            along s m
+
+        ceiling =
+            d.size.size + room d
+    in
+    { min = s.edge.fence.min
+    , max =
+        Just
+            (case s.edge.fence.max of
+                Just cap ->
+                    min cap ceiling
+
+                Nothing ->
+                    ceiling
+            )
+    }
+
+
+{-| The edge a side's grip is drawn by and grown by: its own, with the window read into the
+fence.
+-}
+edgeOf : Side -> Model -> Resize.Edge
+edgeOf s m =
+    let
+        base =
+            s.edge
+    in
+    { base | fence = bounded s m }
+
+
+{-| The track an edge grip stands in: a bar along the side it bounds.
+-}
+edgeTrack : Side -> String
+edgeTrack s =
+    case s.edge.axis of
+        Handle.Across ->
+            "top-0 z-10 grid h-full w-2 place-items-center"
+
+        Handle.Down ->
+            "left-0 z-10 grid h-2 w-full content-center"
+
+
+{-| The map floated over the columns, filling the box it is stood in.
+
+The box stands on the page whether or not it is open -- a `popovertarget` resolves by id, so the element has to be there to be shown -- and the UA keeps a closed popover out of layout. What is not built while it is closed is the drawing itself, which is recomputed every frame of the race.
+
+It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at.
+
+Nothing lies between the box and the drawing: a band of box that sized nothing would be a place where neither operation answers.
+
+Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
+
+-}
+view : Model -> Track -> Snapshot -> Html Msg
+view m track snapshot =
+    let
+        edgeGrip s =
+            div [ Attributes.class ("absolute " ++ s.at ++ " " ++ edgeTrack s) ]
+                [ Html.map (Grow (Edge s)) (Resize.grip (edgeOf s m) (along s m).size) ]
+
+        cornerGrip width height =
+            let
+                g =
+                    grip (Corner width height)
+
+                toMsg =
+                    Grow (Corner width height)
+            in
+            div [ Attributes.class ("absolute " ++ g.at ++ " z-20 h-4 w-4") ]
+                [ Handle.corner (Resize.diagonal width.edge height.edge)
+                    { id = g.id
+                    , label = g.label
+                    , held = holds g m
+                    , marks = False
+                    , onGrab = toMsg << Resize.Grab
+                    , onMove = toMsg << Resize.Move
+                    , onDrop = toMsg << Resize.Drop
+                    , onCancel = toMsg << Resize.Cancel
+                    }
+                ]
+    in
+    div
+        [ Attributes.id boxId
+        , attribute "popover" "manual"
+        , Attributes.class "group absolute top-auto left-auto bottom-2.5 right-2.5 overflow-visible hidden [&:popover-open]:grid rounded-xl bg-background/80 text-popover-foreground backdrop-blur-lg border border-border ring-1 ring-inset ring-foreground/10 shadow-float"
+        , Attributes.style "width" (Columns.px m.width.size)
+        , Attributes.style "height" (Columns.px m.height.size)
+        , Attributes.style "transform" ("translate(" ++ Columns.px m.shift.x ++ ", " ++ Columns.px m.shift.y ++ ")")
+        , on "toggle" toggled
+        , attribute "data-tracker-float" ""
+        ]
+        [ if m.shown then
+            surface m track snapshot
+
+          else
+            text ""
+        , chrome [ closer ]
+        , edgeGrip left
+        , edgeGrip right
+        , edgeGrip top
+        , edgeGrip bottom
+        , cornerGrip left top
+        , cornerGrip right top
+        , cornerGrip left bottom
+        , cornerGrip right bottom
+        ]
+
+
+toggled : Decode.Decoder Msg
+toggled =
+    Decode.field "newState" Decode.string
+        |> Decode.map (\state -> Shown (state == "open"))
+
+
+{-| The drawing, and what each input is asked for: the left button carries the box, the right
+one turns the map, and a two-finger scroll turns it.
+-}
+surface : Model -> Track -> Snapshot -> Html Msg
+surface m track snapshot =
+    TrackMap3d.surface
+        { model = m.camera.eye
+        , track = track
+        , snapshot = snapshot
+        , size =
+            { width = m.width.size, height = m.height.size }
+        , label = "Move the floating track map: drag it, or press the arrow keys"
+        , held = Drag.isCarrying m.shift.carried || Drag.isCarrying m.camera.carried
+        , onGrab =
+            \which device place ->
+                case which of
+                    Handle.Primary ->
+                        ShiftMsg (Shift.Grab place)
+
+                    Handle.Secondary ->
+                        CamMsg (Camera.Grab device place)
+        , onMove =
+            \place ->
+                if Drag.holds place.id m.camera.carried then
+                    CamMsg (Camera.Move place)
+
+                else
+                    ShiftMsg (Shift.Move place)
+        , onDrop =
+            \place ->
+                if Drag.holds place.id m.camera.carried then
+                    CamMsg (Camera.Drop place)
+
+                else
+                    ShiftMsg (Shift.Drop place)
+        , onCancel =
+            \pointerId ->
+                if Drag.holds pointerId m.camera.carried then
+                    CamMsg (Camera.Cancel pointerId)
+
+                else
+                    ShiftMsg (Shift.Cancel pointerId)
+        , keys = ShiftMsg << Shift.Step
+        , wheel = CamMsg << Camera.Wheel
+        }
+
+
+{-| The press that floats the map over the columns, standing in the tracker
+column's corner and staying `◱` however many times it is pressed.
+-}
+trigger : Html Msg
+trigger =
+    Header.cornerPopover
+        { popover = boxId
+        , action = "show"
+        , label = "Float the track map over the columns"
+        , glyph = "◱"
+        }
+
+
+{-| The box's navigation, which the pointer over it calls out.
+
+The `pointer-events` go with the opacity and not after it: the `✕` lies over the drawing, and a
+drag begun there would otherwise close the box rather than carry it -- PiP's chrome is not
+merely unseen while the window is untouched, it is unpressable. `focus-within` is the
+keyboard's way of the same call: a button no pointer is over is still reached by `Tab`, and is
+then seen.
+
+-}
+chrome : List (Html Msg) -> Html Msg
+chrome controls =
+    div
+        [ Attributes.class "absolute top-1 right-1 z-10 pointer-events-none flex items-start gap-x-1 opacity-0 transition-opacity duration-300 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+        , attribute "data-tracker-chrome" ""
+        ]
+        controls
+
+
+{-| The ✕ in the map's own corner, stood one step in from it: a control whose centre lies
+under a grip is a control the pointer cannot reach. It is the only way back, which is why the
+popover is `manual`: nothing outside it closes it.
+-}
+closer : Html Msg
+closer =
+    Header.cornerPopover
+        { popover = boxId
+        , action = "hide"
+        , label = "Close the floating track map"
+        , glyph = "✕"
+        }

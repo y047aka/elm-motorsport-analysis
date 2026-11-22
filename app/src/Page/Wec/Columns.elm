@@ -30,7 +30,7 @@ The names sort into five shelves:
 import Browser.Dom
 import Dict exposing (Dict)
 import Drag
-import Drag.Handle exposing (Pointer)
+import Drag.Handle exposing (Place)
 import Html
 import Html.Attributes as Attributes
 import List.Extra
@@ -314,7 +314,7 @@ placements measure underPointer keys =
 carrying : Model -> Maybe ( StripKey, Float )
 carrying m =
     Drag.carrying m.carried
-        |> Maybe.map (\carry -> ( carry.location, withScroll m (Drag.travel carry) ))
+        |> Maybe.map (\carry -> ( carry.location, withScroll m (Drag.travel carry).x ))
 
 
 isCarried : Placement -> Bool
@@ -396,9 +396,9 @@ init =
 type Msg
     = Open StripKey
     | Close StripKey
-    | Grab StripKey Pointer
-    | Carrying Pointer
-    | Release Pointer
+    | Grab StripKey Place
+    | Move Place
+    | Drop Place
     | Cancel Int
     | StripScrolledFrom Float
     | StripScrolled Float
@@ -434,18 +434,18 @@ update field msg m =
                         }
                     )
 
-        Grab key pointer ->
-            grab key pointer m
+        Grab key place ->
+            grab key place m
 
-        Carrying pointer ->
+        Move place ->
             let
                 ( carried, _ ) =
-                    Drag.update (Drag.Move pointer) m.carried
+                    Drag.update (Drag.Move place) m.carried
             in
             ( { m | carried = carried }, Cmd.none )
 
-        Release pointer ->
-            release field pointer m
+        Drop place ->
+            release field place m
 
         Cancel pointerId ->
             let
@@ -521,26 +521,23 @@ reveal keys index =
                 |> Task.attempt (\_ -> Settled)
 
 
-grab : StripKey -> Pointer -> Model -> ( Model, Cmd Msg )
-grab key pointer m =
-    if Drag.isCarrying m.carried then
-        ( m, Cmd.none )
+grab : StripKey -> Place -> Model -> ( Model, Cmd Msg )
+grab key place m =
+    case Drag.update (Drag.Grab key place) m.carried of
+        ( carried, Drag.Began _ ) ->
+            ( { m | carried = carried, stripScroll = { from = 0, to = 0 } }
+            , Browser.Dom.getViewportOf stripId
+                |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
+            )
 
-    else
-        let
-            ( carried, _ ) =
-                Drag.update (Drag.Pick key pointer) m.carried
-        in
-        ( { m | carried = carried, stripScroll = { from = 0, to = 0 } }
-        , Browser.Dom.getViewportOf stripId
-            |> Task.attempt (Result.map (.viewport >> .x >> StripScrolledFrom) >> Result.withDefault Settled)
-        )
+        _ ->
+            ( m, Cmd.none )
 
 
-release : Maybe Snapshot -> Pointer -> Model -> ( Model, Cmd Msg )
-release field pointer m =
-    case Drag.update (Drag.Drop pointer) m.carried of
-        ( carried, Just done ) ->
+release : Maybe Snapshot -> Place -> Model -> ( Model, Cmd Msg )
+release field place m =
+    case Drag.update (Drag.Drop place) m.carried of
+        ( carried, Drag.Ended done ) ->
             let
                 after =
                     { m | carried = carried }
@@ -549,7 +546,7 @@ release field pointer m =
                 Just round ->
                     let
                         moved =
-                            move done.location (columnsCarried (withScroll after done.travel)) round m.order
+                            move done.location (columnsCarried (withScroll after done.travel.x)) round m.order
                     in
                     if moved == m.order then
                         ( after, Cmd.none )
@@ -560,7 +557,7 @@ release field pointer m =
                 Nothing ->
                     ( after, Cmd.none )
 
-        ( carried, Nothing ) ->
+        ( carried, _ ) ->
             ( { m | carried = carried }, Cmd.none )
 
 

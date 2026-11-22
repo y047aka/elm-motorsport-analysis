@@ -1,4 +1,4 @@
-module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), band, box, init, projected, update, view)
+module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, box, projected, band, perPixel)
 
 {-| The circuit raised off the ground it was surveyed on and seen through a
 perspective camera, so the side of the loop standing near comes out wide and the
@@ -12,7 +12,7 @@ turns it is a frame, and what draws it is SVG, projected point by point.
 Everything the drawing measures is a share of the lap's own size, so one set of
 lengths serves every circuit and the ring it falls back to.
 
-@docs Model, Msg, init, update, view, box, projected, band
+@docs Model, Msg, init, update, view, box, projected, band, perPixel
 
 -}
 
@@ -35,14 +35,13 @@ import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, s
 -- HOW THE MAP IS HELD
 
 
-{-| How the map is looked at, and whether a pointer is on it. The azimuth spins the map
-round the vertical and the elevation lifts the eye towards overhead; together they are
-the whole pose -- there is no scale to set, the drawing being fitted to its box.
+{-| How the map is looked at. The azimuth spins the map round the vertical and the
+elevation lifts the eye towards overhead; together they are the whole pose -- there is no
+scale to set, the drawing being fitted to its box.
 -}
 type alias Model =
     { azimuth : Float
     , elevation : Float
-    , drag : Maybe { x : Float, y : Float }
     }
 
 
@@ -53,62 +52,31 @@ init : Model
 init =
     { azimuth = -pi / 2
     , elevation = degrees 26
-    , drag = Nothing
     }
 
 
-{-| `Grab` and `Turn` carry the pointer's own page position, and `Turn` turns the map
-by the travel since the last turn -- so how far it goes is the reader's drag and
-nothing else's. `Step` rolls the map towards the right by, and lifts the eye towards
-overhead by, the radians given.
-
+{-| Roll the map towards the right by, and lift the eye towards overhead by, the radians
+given.
 -}
 type Msg
-    = Grab Float Float
-    | Turn Float Float
-    | Release
-    | Cancel
-    | Step Float Float
+    = Roll Float Float
 
 
-{-| The azimuth runs the other way round from the pointer's `x`: a thing rolled to the
-right carries the side standing near to the right with it, and that is the azimuth
-running down. Both the drag and the arrow keys are asked for in the reader's own
-directions -- `Turn` is the pointer's travel, `Step` a roll towards the right -- so the
-reversal is made here and nowhere else.
+{-| The azimuth runs the other way round from a roll towards the right: a thing rolled to
+the right carries the side standing near to the right with it, and that is the azimuth
+running down. The reversal is made here and nowhere else.
 -}
 update : Msg -> Model -> Model
 update msg m =
     case msg of
-        Grab x y ->
-            { m | drag = Just { x = x, y = y } }
-
-        Turn x y ->
-            case m.drag of
-                Nothing ->
-                    m
-
-                Just from ->
-                    { m
-                        | azimuth = m.azimuth - (x - from.x) * turn
-                        , elevation = lifted (m.elevation + (y - from.y) * turn)
-                        , drag = Just { x = x, y = y }
-                    }
-
-        Release ->
-            { m | drag = Nothing }
-
-        Cancel ->
-            { m | drag = Nothing }
-
-        Step roll rise ->
+        Roll roll rise ->
             { m | azimuth = m.azimuth - roll, elevation = lifted (m.elevation + rise) }
 
 
-{-| Radians per pixel of the pointer's travel.
+{-| The radians a pixel of the pointer's travel is worth.
 -}
-turn : Float
-turn =
+perPixel : Float
+perPixel =
     degrees 0.45
 
 
@@ -128,6 +96,7 @@ size is scaled by that same depth while already carrying its class position at 1
 place. The standing alone is therefore worth about two places of that encoding, and a
 nearer eye would drown it. Zooming is another matter: the row is there to show the
 whole lap.
+
 -}
 eyeDistance : Float
 eyeDistance =
@@ -140,20 +109,35 @@ eyeDistance =
 
 {-| Nothing claims a coordinate frame for the scene: the units are unitless and the
 coordinates are nobody's.
-
 -}
 type alias Space =
     ()
 
 
-{-| The box the scene is projected into: three across to one high, which is how the row
-it stands in is shaped and how a lap turned towards the eye comes out. The svg keeps
-these proportions, and the card it stands in keeps its own; how much of the card the
-drawing takes is the fit's doing, not this box's.
+{-| The screen the scene is projected onto: three across to one high, which is how a lap
+turned towards the eye comes out.
+
+The drawing is not kept to these proportions -- the fit reaches whatever box the map is
+stood in, however the reader shaped it -- but every projected point is said against this
+screen, and `projected` and `band` are read in its units.
+
 -}
 box : { w : Float, h : Float }
 box =
     { w = 1800, h = 600 }
+
+
+{-| The box the drawing is fitted into, from the box it is stood in on the page.
+
+The width stays `box`'s own whatever the shape the reader made, so a stroke or a car
+sized in these units keeps its thickness as the box is grown along that axis; only the
+height follows the box, and the fit fills it. A box of another proportion then costs
+nothing: the drawing is fitted to it rather than letterboxed inside it.
+
+-}
+frameOf : { width : Float, height : Float } -> { w : Float, h : Float }
+frameOf { width, height } =
+    { w = box.w, h = box.w * height / width }
 
 
 {-| The screen the camera projects onto: `box` centred on the origin, so a projected
@@ -215,20 +199,23 @@ atDepth eye shot =
 
 
 {-| The projected coordinates are centred on the origin, and the box is not: `k` and the
-two offsets are what carry one into the other.
+two offsets are what carry one into the other. `frame` is the box the drawing is fitted
+into, kept beside the fit that reaches it so nothing downstream is told which box it is
+drawing.
 -}
 type alias Place =
     { k : Float
     , dx : Float
     , dy : Float
+    , frame : { w : Float, h : Float }
     }
 
 
-fitOf : List Shot -> Place
-fitOf shots =
+fitOf : { w : Float, h : Float } -> List Shot -> Place
+fitOf frame shots =
     case ( List.map .x shots, List.map .y shots ) of
         ( [], _ ) ->
-            { k = 1, dx = 0, dy = 0 }
+            { k = 1, dx = 0, dy = 0, frame = frame }
 
         ( xs, ys ) ->
             let
@@ -245,10 +232,11 @@ fitOf shots =
                     Maybe.withDefault 0 (List.maximum ys)
             in
             { k =
-                min (box.w * room / max (x1 - x0) 0.001)
-                    (box.h * room / max (y1 - y0) 0.001)
+                min (frame.w * room / max (x1 - x0) 0.001)
+                    (frame.h * room / max (y1 - y0) 0.001)
             , dx = -(x0 + x1) / 2
             , dy = -(y0 + y1) / 2
+            , frame = frame
             }
 
 
@@ -260,8 +248,8 @@ room =
 
 
 place : Place -> Shot -> Shot
-place { k, dx, dy } shot =
-    { x = box.w / 2 + k * (shot.x + dx), y = box.h / 2 + k * (shot.y + dy), depth = shot.depth }
+place { k, dx, dy, frame } shot =
+    { x = frame.w / 2 + k * (shot.x + dx), y = frame.h / 2 + k * (shot.y + dy), depth = shot.depth }
 
 
 lineTo : Place -> ( Shot, Shot ) -> ( Shot, Shot )
@@ -282,8 +270,8 @@ type alias Stance =
     }
 
 
-stance : Model -> List Point -> Stance
-stance model points =
+stance : { w : Float, h : Float } -> Model -> List Point -> Stance
+stance frame model points =
     let
         eye =
             camera model
@@ -326,7 +314,7 @@ stance model points =
     , fit =
         -- Never the cars: the field moving round the lap cannot breathe the drawing bigger
         -- and smaller between frames.
-        fitOf (marks ++ crown)
+        fitOf frame (marks ++ crown)
     }
 
 
@@ -343,7 +331,7 @@ projected : Model -> List Point -> List Shot
 projected model points =
     let
         { ground, fit } =
-            stance model points
+            stance box model points
     in
     List.map (place fit) ground
 
@@ -352,12 +340,13 @@ projected model points =
 the box's own units.
 
 @docs band
+
 -}
 band : Model -> List Point -> List Shot
 band model points =
     let
         scene =
-            stance model points
+            stance box model points
     in
     List.map (place scene.fit) scene.ribbon
 
@@ -392,7 +381,7 @@ type alias Car =
         , uy : Float
         , vx : Float
         , vy : Float
-    }
+        }
     , radius : Float
     , colour : String
     , number : String
@@ -463,14 +452,14 @@ labelSize =
     0.045
 
 
-view : Model -> Track -> Snapshot -> Svg msg
-view model shown standings =
+view : { width : Float, height : Float } -> Model -> Track -> Snapshot -> Svg msg
+view surface model shown standings =
     let
         g =
             Tracker.ground shown
 
         { eye, size, ground, ribbon, fit } =
-            stance model g.lap
+            stance (frameOf surface) model g.lap
 
         acrossBand : Float -> Shape.Position -> ( Shot, Shot )
         acrossBand width position =
@@ -623,6 +612,7 @@ wide, and reads as a line rather than a surface.
 Both edges run one mark past the end. The mark the lap closes at is a seam like any
 other, and a polygon closes only the two ends of the list it is handed: leave the edges
 short of it and the band has a wedge missing where the finish line stands.
+
 -}
 bandOf : { centre : Point, half : Float } -> List Point -> List Point
 bandOf size ring =
@@ -741,7 +731,7 @@ sizeOf points =
 draw : Place -> Scene -> Svg msg
 draw fit scene =
     svg
-        [ viewBox ("0 0 " ++ String.fromFloat box.w ++ " " ++ String.fromFloat box.h)
+        [ viewBox ("0 0 " ++ String.fromFloat fit.frame.w ++ " " ++ String.fromFloat fit.frame.h)
         , class "h-full w-full"
         ]
         [ polysegment "oklch(1 0 0 / 0.14)" 3 (closed (List.map (place fit) scene.ground))

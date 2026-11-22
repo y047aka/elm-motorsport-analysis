@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { waitForPageReady, setLapCount, expectSurveyedLap, TRACKER_COLUMN, LE_MANS } from './helpers';
 
-const TRACKER_TOGGLE = '[data-tracker-toggle]';
-const EXPANDED = '[data-tracker-expanded]';
+const FLOAT = '[data-tracker-float]';
 
 test.describe('Le Mans 2025 Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -34,16 +33,23 @@ test.describe('Le Mans 2025 Visual Tests', () => {
   // the band, the pit lane riding on it, the sector lines, and the field drawn as
   // the discs the cars stand on. Nothing turns it here -- the pose is the one the
   // model opens at -- so the pixels follow the lap data alone.
-  test('should render the raised circuit opened below the columns', async ({ page }) => {
+  test('should render the raised circuit floated over the columns', async ({ page }) => {
     await setLapCount(page, LE_MANS, 180);
-    await page.locator(`${TRACKER_COLUMN} ${TRACKER_TOGGLE}`).click();
-    await expect(page.locator(EXPANDED)).toHaveCount(1);
+    await page
+      .locator(TRACKER_COLUMN)
+      .getByRole('button', { name: 'Float the track map over the columns' })
+      .click();
+    await expect(page.locator(FLOAT)).toHaveCount(1);
 
-    // The row drew the circuit and not the ring, apart from the pixels: a round
+    // The box drew the circuit and not the ring, apart from the pixels: a round
     // exported before the summary named its circuit raises a ring into space, and a
     // raised ring still looks like a track.
-    await expectSurveyedLap(page, EXPANDED);
+    await expectSurveyedLap(page, FLOAT);
 
-    await expect(page.locator(EXPANDED)).toHaveScreenshot('tracker-3d-row.png');
+    // The chrome is the pointer's, and the pointer is still where the `◱` was pressed: the
+    // shot is the box at rest, with no navigation over the map.
+    await page.mouse.move(0, 0);
+
+    await expect(page.locator(FLOAT)).toHaveScreenshot('tracker-3d-float.png');
   });
 });

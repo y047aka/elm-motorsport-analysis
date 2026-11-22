@@ -1,55 +1,81 @@
-module Drag exposing (State, Msg(..), Carry, Done, init, update, carrying, travel, isCarrying)
+module Drag exposing (State, Msg(..), Carry, Done, Outcome(..), init, update, carrying, travel, isCarrying, holds)
 
 {-| The state of one thing being carried by a pointer: picked up, tracked,
 let go of, or taken away by the browser. The thing carried is whatever the
-caller names -- a column, the size a grip found -- and rides along untouched,
-coming back with the pointer's travel when the carry ends.
+caller names -- a column, the size a grip found, the box a floated map keeps
+-- and rides along untouched, coming back with the pointer's travel when the
+carry ends.
 
 `Drag.Handle` is the event source this is read from: the grip reports a
-`Pick`, moves only while it is held, a `Drop` wherever the pointer lets go,
+`Grab`, moves only while it is held, a `Drop` wherever the pointer lets go,
 and a `Cancel` after every `Drop` and whenever the browser takes the pointer.
 `update` is total over that, so a page can wire a grip's messages straight in
 and check nothing first.
 
-@docs State, Msg, Carry, Done, init, update, carrying, travel, isCarrying
+A column is moved by `x` alone, a floated box by both, so the carry keeps the
+`Point` at both ends and the caller projects what it needs. Which axis a size
+moves along is the edge's, and stays there.
+
+@docs State, Msg, Carry, Done, Outcome, init, update, carrying, travel, isCarrying, holds
 
 -}
 
-import Drag.Handle exposing (Pointer)
+import Drag.Handle as Handle exposing (Place, Point)
 
 
-{-| What a grip reports. `Pick` takes the pointer up with something; `Move`
+{-| What a grip reports. `Grab` takes the pointer up with something; `Move`
 follows it, but only while it is held. `Drop` is the pointer let go of, at
 wherever it was then. `Cancel` is a carry ending without that: the browser
 taking the pointer, the grip leaving the document, or the release already
 having been reported as a `Drop`.
 -}
 type Msg location
-    = Pick location Pointer
-    | Move Pointer
-    | Drop Pointer
+    = Grab location Place
+    | Move Place
+    | Drop Place
     | Cancel Int
 
 
 {-| A carry in progress: the two ends of the pointer's path so far, and the
-thing being carried as the pick handed it over.
+thing being carried as the grab handed it over.
 -}
 type alias Carry location =
     { location : location
     , pointerId : Int
-    , from : Float
-    , at : Float
+    , from : Point
+    , at : Point
     }
 
 
 {-| A carry that has ended: the thing carried, and how far the pointer
-carried it -- to the `Drop` pointer's own position for a release, to the last
+carried it -- to the `Drop` place's own position for a release, to the last
 `Move` for a cancel.
 -}
 type alias Done location =
     { location : location
-    , travel : Float
+    , travel : Point
     }
+
+
+{-| What one message did to the carry, so that no caller has to ask who is
+carrying.
+
+`Began` is a pointer taking a thing up. `Kept` is nothing at all: the message
+came from a pointer that is not the one carrying, or nothing is carried, or
+the `Cancel` followed the `Drop` that had already ended the carry. `Ended` is
+the carry over, with the thing carried and the whole of its travel.
+
+`Stepped` hands the carry the move happened in **as it stood before the
+reading**, which is what the caller measures the reading against: the place
+minus `carry.at` is the travel since the last reading, and the place minus
+`carry.from` the travel since the pointer came down.
+
+-}
+type Outcome location
+    = Began (Carry location)
+    | Kept
+    | Stepped (Carry location)
+    | Ended (Done location)
 
 
 {-| Whether something is being carried, and by which pointer.
@@ -64,67 +90,83 @@ init =
     Idle
 
 
-{-| The one transition. A `Pick` while one is already carried is refused, and
+{-| The one transition. A `Grab` while one is already carried is refused, and
 a `Move`, `Drop` or `Cancel` from a pointer that is not the one carrying is
-not the carry's business at all. A `Drop` or `Cancel` that ends a carry
-reports a `Done`; `Cancel` arrives after every `Drop` as well, which is why
-the answer to it here is often nothing.
+not the carry's business at all.
 -}
-update : Msg location -> State location -> ( State location, Maybe (Done location) )
+update : Msg location -> State location -> ( State location, Outcome location )
 update msg state =
     case msg of
-        Pick location pointer ->
+        Grab location place ->
+            let
+                at =
+                    Handle.point place
+
+                carry =
+                    { location = location, pointerId = place.id, from = at, at = at }
+            in
             case state of
                 Idle ->
-                    ( Dragging { location = location, pointerId = pointer.id, from = pointer.along, at = pointer.along }
-                    , Nothing
-                    )
+                    ( Dragging carry, Began carry )
 
                 Dragging _ ->
-                    ( state, Nothing )
+                    ( state, Kept )
 
-        Move pointer ->
-            ( case state of
+        Move place ->
+            case state of
                 Dragging carry ->
-                    if carry.pointerId == pointer.id then
-                        Dragging { carry | at = pointer.along }
+                    if carry.pointerId == place.id then
+                        ( Dragging { carry | at = Handle.point place }, Stepped carry )
 
                     else
-                        state
+                        ( state, Kept )
 
                 Idle ->
-                    state
-            , Nothing
-            )
+                    ( state, Kept )
 
-        Drop pointer ->
-            endsWith pointer.along pointer.id state
+        Drop place ->
+            endsWith place place.id state
 
         Cancel pointerId ->
             case state of
                 Dragging carry ->
                     if carry.pointerId == pointerId then
-                        ( Idle, Just { location = carry.location, travel = carry.at - carry.from } )
+                        ( Idle, ended carry )
 
                     else
-                        ( state, Nothing )
+                        ( state, Kept )
 
                 Idle ->
-                    ( state, Nothing )
+                    ( state, Kept )
 
 
-endsWith : Float -> Int -> State location -> ( State location, Maybe (Done location) )
-endsWith along pointerId state =
+endsWith : Place -> Int -> State location -> ( State location, Outcome location )
+endsWith place pointerId state =
     case state of
         Dragging carry ->
             if carry.pointerId == pointerId then
-                ( Idle, Just { location = carry.location, travel = along - carry.from } )
+                ( Idle, Ended { location = carry.location, travel = travelTo place carry } )
 
             else
-                ( state, Nothing )
+                ( state, Kept )
 
         Idle ->
-            ( state, Nothing )
+            ( state, Kept )
+
+
+ended : Carry location -> Outcome location
+ended carry =
+    Ended { location = carry.location, travel = travel carry }
+
+
+{-| The travel since the pointer came down, to a place the caller names rather than to
+where the carry last stood.
+-}
+travelTo : Place -> Carry location -> Point
+travelTo place carry =
+    { x = place.x - carry.from.x
+    , y = place.y - carry.from.y
+    }
 
 
 {-| The carry in progress, if there is one.
@@ -141,9 +183,23 @@ carrying state =
 
 {-| How far the pointer has carried since it came down.
 -}
-travel : Carry location -> Float
+travel : Carry location -> Point
 travel carry =
-    carry.at - carry.from
+    { x = carry.at.x - carry.from.x
+    , y = carry.at.y - carry.from.y
+    }
+
+
+{-| Whether that pointer is the one carrying.
+-}
+holds : Int -> State location -> Bool
+holds pointerId state =
+    case state of
+        Dragging carry ->
+            carry.pointerId == pointerId
+
+        Idle ->
+            False
 
 
 {-| Whether a carry is in progress.

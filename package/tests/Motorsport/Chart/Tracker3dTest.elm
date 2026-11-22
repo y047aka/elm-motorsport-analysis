@@ -23,21 +23,6 @@ tests =
                     Expect.within (Expect.Absolute 0.0001)
                         (drag 200 0).azimuth
                         (Tracker3d.init.azimuth + 2 * ((drag 100 0).azimuth - Tracker3d.init.azimuth))
-            , test "no turn reaches a map with no pointer held on it" <|
-                \_ ->
-                    (Tracker3d.update (Tracker3d.Turn 400 30) Tracker3d.init).azimuth
-                        |> Expect.within (Expect.Absolute 0.0001) Tracker3d.init.azimuth
-            , test "letting go keeps the angle the drag reached" <|
-                \_ ->
-                    let
-                        released =
-                            Tracker3d.update Tracker3d.Release (drag 120 -60)
-                    in
-                    Expect.all
-                        [ \_ -> Expect.equal Nothing released.drag
-                        , \_ -> Expect.within (Expect.Absolute 0.0001) released.azimuth ((drag 120 -60).azimuth)
-                        ]
-                        ()
             , fuzz2 Fuzz.float Fuzz.float "the eye stops short of the frame that turns the circuit over" <|
                 \dx dy ->
                     Expect.within (Expect.Absolute 0.0001)
@@ -181,11 +166,11 @@ tests =
         ]
 
 
-{-| A press at the origin and one move: the model after a drag of `x`, `y` pixels.
+{-| The model after one turn of `x`, `y` pixels.
 -}
 drag : Float -> Float -> Tracker3d.Model
 drag x y =
-    Tracker3d.update (Tracker3d.Turn x y) (Tracker3d.update (Tracker3d.Grab 0 0) Tracker3d.init)
+    Tracker3d.update (Tracker3d.Roll (x * Tracker3d.perPixel) (y * Tracker3d.perPixel)) Tracker3d.init
 
 
 overhead : Tracker3d.Model

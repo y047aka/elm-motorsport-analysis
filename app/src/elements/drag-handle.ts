@@ -4,8 +4,22 @@
  * Captured, every move and the release come back to this element, for a mouse
  * and a finger alike, so Elm listens here and nowhere else.
  *
+ * An ancestor would hear the pointer just as well -- a captured pointer's events
+ * bubble, and a release past the document's edge reaches the document either way --
+ * and is not listened on because then every element the pointer crosses takes its
+ * hover, which the column strip is thick with.
+ *
  * Capture is released when the element leaves the document, so what it sits in
  * must not be moved while it is held.
+ *
+ * A finger is kept from scrolling the page instead of dragging by `touch-none` on
+ * the class of whoever stands the grip, not here.
+ *
+ * The right button is captured as the left is: a drawing hands that drag to the operation
+ * the left one is not -- on a trackpad it is the two-finger drag -- and a turn needs its
+ * moves back the same way. The menu a right press would open is stopped here, since Elm
+ * can only `preventDefault` by sending a message it then has to answer to, and there is
+ * nothing worth answering on a grip.
  */
 export class DragHandle extends HTMLElement {
   #held = new Set<number>();
@@ -13,21 +27,16 @@ export class DragHandle extends HTMLElement {
   constructor() {
     super();
     this.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 && e.button !== 2) return;
       this.setPointerCapture(e.pointerId);
       this.#held.add(e.pointerId);
+    });
+    this.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
     });
     this.addEventListener("lostpointercapture", (e) => {
       this.#held.delete(e.pointerId);
     });
-  }
-
-  connectedCallback() {
-    // Not in the constructor, which may not add an attribute: an element whose
-    // constructor does is handed back as an `HTMLUnknownElement`, silently.
-    //
-    // A finger on the grip would otherwise scroll the page instead.
-    this.style.touchAction = "none";
   }
 
   disconnectedCallback() {

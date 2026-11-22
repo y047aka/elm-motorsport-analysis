@@ -1,7 +1,7 @@
 module Page.Wec.ColumnsTest exposing (suite)
 
 import Dict
-import Drag.Handle exposing (Pointer)
+import Drag.Handle exposing (Place)
 import Expect
 import Internal.ChangePoints as ChangePoints
 import List.Extra
@@ -35,14 +35,14 @@ suite =
             [ test "picking a column up changes nothing" <|
                 \_ ->
                     Columns.init
-                        |> step (Grab (Car "1") (pointer 1 0))
+                        |> step (Grab (Car "1") (place 1 0))
                         |> keys
                         |> Expect.equal (classColumns ++ [ Tracker, Events ])
             , test "a carry let go of where it began leaves the strip where it stood" <|
                 \_ ->
                     Columns.init
-                        |> step (Grab (Car "1") (pointer 1 0))
-                        |> step (Release (pointer 1 0))
+                        |> step (Grab (Car "1") (place 1 0))
+                        |> step (Drop (place 1 0))
                         |> .order
                         |> Expect.equal Columns.init.order
             , test "a carry that lands among the cars fixes the tracker there" <|
@@ -52,9 +52,9 @@ suite =
                     case classColumns of
                         headKey :: nextKey :: _ ->
                             Columns.init
-                                |> step (Grab headKey (pointer 1 0))
-                                |> step (Carrying (pointer 1 Columns.width))
-                                |> step (Release (pointer 1 Columns.width))
+                                |> step (Grab headKey (place 1 0))
+                                |> step (Move (place 1 Columns.width))
+                                |> step (Drop (place 1 Columns.width))
                                 |> keys
                                 |> Expect.equal
                                     ([ nextKey, headKey ] ++ List.drop 2 classColumns ++ [ Tracker, Events ])
@@ -134,14 +134,14 @@ suite =
                         grabbed =
                             Columns.init
                                 |> step (Open (Car "9"))
-                                |> step (Grab (Car "9") (pointer 1 0))
+                                |> step (Grab (Car "9") (place 1 0))
                     in
                     step (Step (Car "9") -1) grabbed
                         |> .order
                         |> Expect.equal grabbed.order
             , test "a release of a pointer holding nothing does nothing" <|
                 \_ ->
-                    Columns.update (Just field) (Release (pointer 7 100)) Columns.init
+                    Columns.update (Just field) (Drop (place 7 100)) Columns.init
                         |> Expect.equal ( Columns.init, Cmd.none )
             , test "closing the carried column is not undone by letting go" <|
                 \_ ->
@@ -151,9 +151,9 @@ suite =
                     case classColumns of
                         headKey :: _ ->
                             Columns.init
-                                |> step (Grab headKey (pointer 1 0))
+                                |> step (Grab headKey (place 1 0))
                                 |> step (Close headKey)
-                                |> step (Release (pointer 1 0))
+                                |> step (Drop (place 1 0))
                                 |> keys
                                 |> List.member headKey
                                 |> Expect.equal False
@@ -205,8 +205,8 @@ suite =
 
                                 carrying =
                                     Columns.init
-                                        |> step (Grab secondKey (pointer 1 0))
-                                        |> step (Carrying (pointer 1 (-2 * Columns.pitch)))
+                                        |> step (Grab secondKey (place 1 0))
+                                        |> step (Move (place 1 (-2 * Columns.pitch)))
 
                                 placed =
                                     Columns.placements narrow (Columns.carrying carrying) (keysOf carrying)
@@ -264,9 +264,9 @@ classColumnOf name =
     ClassColumn (classOf name)
 
 
-pointer : Int -> Float -> Pointer
-pointer id x =
-    { id = id, along = x }
+place : Int -> Float -> Place
+place id x =
+    { id = id, x = x, y = 0 }
 
 
 
