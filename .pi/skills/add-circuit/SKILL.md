@@ -84,7 +84,7 @@ These hold the circuits as written-down inventories rather than readings, so a n
 - `circuits/test/TestRegenerate.flix` — the expected `drawn`/`words` lists over `Circuit.circuits()`.
 - `circuits/test/TestTimingMap.flix` — `cases()` must name every case of the report's enum, and a test counts them.
 - `app/tests/geometry-contract.spec.ts` — it reads the words out of the sources for the cross-checks, but one assertion freezes the whole inventory: `expect(drawnNames().sort()).toEqual([...])`.
-- `circuits/README.md` states the kinds as fact — which relations are tagged which way, and which circuits author no timing map — and each drawn circuit's own `Layout` header says which kind it authors. A new circuit joins the README's sentence and adds a header of its own; `AGENTS.md` holds no circuit inventory, and a change that puts one back there should be refused.
+- How a circuit's relation is tagged is its own config comment in `circuits/src/Circuit.flix`; `circuits/README.md`'s timing-lines section names the circuits that author no timing map, and each drawn circuit's own `Layout` header says which kind it authors. A new circuit joins the README's list if it authors no map, and adds a config comment and a header of its own; neither README holds the tagging inventory, and `AGENTS.md` holds no circuit inventory at all.
 
 ## 7. Verify — in this order
 

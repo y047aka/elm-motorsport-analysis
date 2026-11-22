@@ -266,7 +266,10 @@ const plainly = (name) => name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").tr
 
 /** The grid page showing a season other than the one it opened on. The
  * component is given back the props it was rendered with -- they carry a
- * checksum this cannot compute -- and the season as the one value changed. */
+ * checksum this cannot compute -- and the season as the one value changed.
+ * The filter answers for seasons the page no longer offers: 2024 is reached
+ * this way and nowhere else, `/en/car/2024` being a redirect to the current
+ * season. */
 async function showing(grid, season) {
   const seasons = await json(`${api}/seasons`, asThePageAsks);
   const found = seasons.member.filter((s) => String(s.year) === String(season));

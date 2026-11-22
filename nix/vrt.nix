@@ -1,6 +1,6 @@
 # What the visual regression tests render with, and what refreshes their
 # baselines. A command belongs here rather than in `flake.nix` when it is
-# about a screenshot; `AGENTS.md` holds the reasoning behind the whole scheme.
+# about a screenshot; the `vrt` skill holds the reasoning behind the whole scheme.
 { pkgs, elmTools }:
 
 let

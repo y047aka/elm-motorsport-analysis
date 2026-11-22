@@ -1,601 +1,235 @@
 # backend
 
-Two things rather than one: the CLI that moves CSV through SQLite into
-JSON/JSONL, and the server that answers `/api` out of the same rows, both out
-of the same jar. They are run through the repository's Nix flake, which the
-root `AGENTS.md` lists in full: `nix run .#flix-build`, `.#flix-test`,
-`.#cli-run`, `.#cli-load`, `.#cli-export`, `.#serve-api`.
+Two things out of one jar: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows.
+The flake's commands for it are `nix run .#flix-build`, `.#flix-test`, `.#cli-run`, `.#cli-load`, `.#cli-export` and `.#serve-api`.
 
-The timing-lines report is not a command of this jar, nor is the probe: both are words of the `circuits/` project, which links some sources here rather than resolving them.
+The timing-lines report and the probe are not commands of this jar: both are words of the `circuits/` project, which links some sources here rather than resolving them.
 Editing one of those linked files is compiled and tested twice, by `nix run .#flix-test` and by `nix run .#geometry-test`, and moving or renaming one breaks both until its link moves too.
-Which files the links reach, which modules the report holds its own of and why, why a link is never a directory, and where the report's timings come from are `circuits/README.md`'s.
+Which files the links reach, and why a link is never a directory, are `circuits/README.md`'s.
 
-Adding a round — a timing CSV through the calendar and the CLI into the rows and the files — is `/skill:add-round`'s to say, step by step.
+Adding a round is `/skill:add-round`'s.
 What follows is what the code cannot say for itself.
 
 ## The server
 
-`Server` is `com.sun.net.httpserver` reached through Java interop: the
-handler is an anonymous `HttpHandler`, and `main` blocks on a latch because
-returning from it would take the JVM with it. Requests are answered on a pool
-of eight, and each one opens a connection of its own —
-`java.sql.Connection` is not thread-safe. `Lite3fx.Jdbc.connect` puts the database
-in WAL mode, so those reads run beside a writing run rather than behind it.
+`Server` is `com.sun.net.httpserver` reached through Java interop: the handler is an anonymous `HttpHandler`, and `main` blocks on a latch because returning from it would take the JVM with it.
+Requests are answered on a pool of eight, and each opens a connection of its own — `java.sql.Connection` is not thread-safe. `Lite3fx.Jdbc.connect` puts the database in WAL mode, so those reads run beside a writing run rather than behind it.
 
-A Flix effect handler runs inside a request, which is why the endpoints reuse
-`Round`'s readers rather than restating them: `Server.Api.respond` runs under
-`Lite3fx.Jdbc.runReading` and calls `Round.Summary.read` unchanged. A route that reads
-nothing is answered before connecting at all, through `Lite3fx.Recording.statements`: the
-calendar is `Motorsport.Calendar` rather than a count of the rows, so a
-database that is down stops a round being opened and not the app being used.
+`Server.Api` decides nothing about a round and renders none of one: `Server.Api.respond` runs under `Lite3fx.Jdbc.runReading` and makes the same calls `Cli.Export` makes, so what is served and what is written are the same bytes.
+An answer reads only what it is made of, rather than reading a round's laps to throw them away.
+The timeline's answer reads `Round.Index` too and walks every lap, and `Server.flix` computes the `ETag` off the rendered bytes, so even a request that comes back 304 pays for the walk.
 
-An answer is tagged and compressed: a round is the same bytes until a run
-loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
-a 304, and a body goes out gzipped where the request accepts it — Le Mans's
-laps are 25MB, and 3.4MB on the wire.
+A route that reads nothing is answered before connecting at all, through `Lite3fx.Recording.statements`: the calendar is `Motorsport.Calendar` rather than a count of the rows, so a database that is down stops a round being opened and not the app being used.
 
-`Round` is one round on its way out of the tables, both halves of the trip:
-`Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars`
-take an `Entry` and the `DbRead` effect and read it; `Round.Render` takes what
-they returned, is pure, and turns it into the bytes that go out. None of the six
-knows whether a file or a request is waiting at the other end. Those that name a
-driver take a `Round.Drivers` as well -- who sat in the seat a lap names -- because
-it is read once for the round by whichever answer names one rather than once by
-each of them. `Round.loaded` is what both ask first, and it
-asks `laps` and `cars`:
-laps without cars is a round half in the database, and answered off the laps
-alone it would be a race whose grid was empty.
+A 200 carries a CRC32 `ETag` that a reload revalidates into a 304, and a body goes out gzipped where the request accepts it — Le Mans's laps are 25MB, and 3.4MB on the wire.
 
-`Server.Api` decides nothing about a round, then, and renders none of one
-either: it makes the same calls `Cli.Export` makes, so what is served and what
-is written are the same bytes rather than two renderings that agree. An answer
-carrying one of the three reads only what that one is made of, rather than
-reading a round's laps to throw them away, which is the one thing the two
-callers do differently. What a timeline line is made of now includes the records
-its lap reads against, so that answer reads `Round.Index` too and walks every lap
-as the summary's does -- and `Server.flix` computes the `ETag` off the rendered
-bytes, which means even a request that comes back 304 pays for the walk.
+`Round` is one round on its way out of the tables. `Round.Summary`, `Round.Index`, `Round.Timeline`, `Round.Laps` and `Round.Cars` take an `Entry` and the `DbRead` effect and read it; `Round.Render` is pure and turns what they returned into bytes. None of them knows whether a file or a request is waiting.
+Those that name a driver take a `Round.Drivers` as well, read once per round.
+`Round.loaded` is what both callers ask first, and it asks `laps` and `cars`: laps without cars is a round half in the database, and answered off the laps alone it would be a race whose grid was empty.
 
-The root is the one thing that differs, and it is asserted rather than
-assumed: `Server.TestApi` compares the served calendar against `Manifest`
-rendered with `Cli.Export`'s root, because the dev server's fallback and a
-bundle's own calendar are built on one path being the other with
-`/static/wec` and `/api/wec` swapped, and neither would notice that failing.
-`Manifest.toJson` is the rendering either root goes through, and it is the
-only module of that name: `Cli.Export.urlRoot` and `Server.Api.urlRoot` are
-what the two sides hand it.
+The root is the one thing the two callers differ by, and `Server.TestApi` asserts it: it compares the served calendar against `Manifest` rendered with `Cli.Export`'s root, because the dev server's fallback and a bundle's own calendar rely on one path being the other with `/static/wec` and `/api/wec` swapped.
+`Manifest.toJson` is the rendering either root goes through; `Cli.Export.urlRoot` and `Server.Api.urlRoot` are what the two sides hand it.
 
 ## The tables
 
-Seven of them, dropped and rebuilt each time as the JSON files are rewritten
-each time. Four hold what a round did: `laps` is one lap of one car, `cars` is
-one car of one round, `car_drivers` is one seat of one car, and
-`timeline_events` is one thing that happened. Three hold what those name rather
-than spell: `rounds` is the calendar written down, `drivers` the names the feed
-repeats over every lap, and `entries` the cars a season was contested by.
+Seven, dropped and rebuilt on every load.
+Four hold what a round did: `laps` (one lap of one car), `cars` (one car of one round), `car_drivers` (one seat of one car) and `timeline_events` (one thing that happened).
+Three hold what those name: `rounds` is the calendar written down, `drivers` the names the feed repeats over every lap, and `entries` the cars a season was contested by.
+A lap carries its car's number and its seat and nothing else about either, which is also all the JSONL writes out.
 
-`timeline_events` is the one that is not a reading of the file. Its rows are
-the laps counted and then weighed against a time limit no row carries, so the
-load decides it once and the two readers read back what it decided rather than
-each deciding it again.
+`timeline_events` is the one that is not a reading of the file: its rows are the laps counted and weighed against a time limit no row carries, so the load decides it once and the readers read back what it decided.
 
-The archive is what says the three can be split off: no car of a round in it is
-described two ways, and no seat of one is named two ways. A lap carries its
-car's number and the seat that ran it and nothing else about either, which is
-also all the JSONL writes out.
+An id means nothing outside the database a run put it in, and no reader computes one.
+`Db.Drivers.add` numbers a name, carried between the rounds of a run since a driver turns up in several, and `Db.Rounds.scope` reads a round's id back inside the scope it builds, so a database written under another calendar scopes to no rows rather than to another round's.
 
-An id means nothing outside the database a run put it in, and no reader computes
-one. `Db.Drivers.add` gives a name its number -- carried between the rounds of a
-run rather than read back between them, since a driver turns up in several --
-and `Db.Rounds.scope` reads a round's id back inside the scope it builds, so a
-database written under another calendar scopes to no rows rather than to another
-round's.
+A car number names a different entry in each season, so `entries` is keyed by season and number together; `Db.Entries` says why the number alone will not do.
 
-A car number is an entry within its season and a different one across seasons, so
-`entries` is keyed by the season and the number together. What such an entry
-is, and why the number alone will not name one, is `Db.Entries`'s to say.
+`cars` holds no fact the other tables do not: its rows are `DISTINCT round_id, car_number` over `laps`, and its `entry_id` follows from the round's season and the number. It is a join the tables keep, knowingly not in BCNF.
+`car_drivers` looks the same and is not: its `driver_id` is nowhere in `laps`.
 
-`cars` holds no fact the other tables do not. Its rows are `DISTINCT round_id,
-car_number` over `laps`, by construction as much as in the archive, and the
-`entry_id` on them follows from the round's season and the car's number -- which
-the `car_number` beside it follows from in turn, so the table is not in BCNF and
-knowingly: `Round.Summary` joins the round's cars to `MIN(source_row)` and to
-lap 1 by that number, and both are readings of `laps`. It is a join the tables
-keep rather than an entity they hold. `car_drivers` looks the same and is not:
-its rows are the laps' distinct seats too, but the `driver_id` on them is
-nowhere in `laps`.
+**A file that describes one car two ways, or names one seat two ways, loses the second silently.**
+Each table keeps the first mention, so `Db.CarRow.disagreements` and `Db.CarDrivers.disagreements` are read before the insert and `Cli.Load` prints what they found — no query over the tables can find it afterwards.
+A seat's disagreement changes what the rows mean: the second name's laps are credited to the first, in the grid and in the records alike.
+Within a round the archive has none; between rounds it has: 2026's Le Mans file spells cars 61 and 79 `Mercedes-AMG` where that season's other rounds spell them `Mercedes`. `Db.Entries.add` keeps the first round's description and reports the later one's.
 
-What one row per car cannot hold is a file that describes one car two ways, and
-one row per seat a file that names one seat two ways. Each keeps the first
-mention and the second reaches no column, so `Db.CarRow.disagreements` and
-`Db.CarDrivers.disagreements` are read before the insert and `Cli.Load` prints
-what they found: said there or nowhere, since no query over the tables can find
-it afterwards. Neither has happened within a round in the archive. A seat is the
-one of the two that changes what the rows mean rather than how they read: the
-second name's laps are credited to the first, in the grid and in the records
-alike.
+A column takes the type its Flix value already has — a `Duration` is its milliseconds, `kph` and `topSpeed` stay the feed's text — so the load parses nothing the decoder did not.
+`flag_at_fl` is checked against `Motorsport.Wec.flags`, and `car_group` is nullable because the feed spells a car with no sub-class as an empty group.
+`hour_offset_ms` is `(hour - elapsed) mod 24h`, a `VIRTUAL` column the database makes; that is what `Db.Schema.Computed` is, and why it is not a `Column` and never reaches a table's `all`.
 
-Between rounds it has, which is what holding the description once per season
-finds: 2026's Le Mans file spells cars 61 and 79 `Mercedes-AMG` where that
-season's other three rounds spell them `Mercedes`. `Db.Entries.add` keeps the
-first round's description and reports the later round's, and the export carries
-the season's spelling rather than each round's.
+Where a table's rows are stored is declared beside its keys.
+A table keyed by more than a number takes `Sql.Storage.WithoutRowid`; one keyed by a number declares the column with `Db.Schema.identity`, which spells it `integer` — the one spelling SQLite reads as an alias for the row id, so no second tree is built. The DDL does not show this; `Db.TestJdbc` asks a database that took it.
 
-A column takes the type its Flix value already has -- a `Duration` is the
-milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave -- so
-the load parses nothing the decoder did not. Two say more than the type:
-`flag_at_fl` is checked against `Motorsport.Wec.flags` rather than against a
-list written beside it, and `car_group` is nullable because the feed spells a
-car with no sub-class as one whose group is empty, an absence rather than a
-value. `hour_offset_ms` is the one no row binds: `(hour - elapsed) mod 24h` is a
-column the database makes, which is what `Db.Schema.Computed` is and why it is
-not a `Column` -- there is no row to bind it from, so it cannot reach a table's
-`all`, the ordering the insert follows. `VIRTUAL`, so the rows are no larger for
-it.
+`source_row` is the position the file listed the lap in, which nothing else recovers: the validator's baseline is the file's first row, and a car's drivers and the grid are in the order the file first showed them.
+The reader numbers it one to n per round, so nothing is keyed by it; a unique index asserting that cost 1.88MB and bought nothing.
 
-Where a table's rows are stored is declared beside its keys, and the key is what
-decides it. A table keyed by more than a number takes `Sql.Storage.WithoutRowid`
-and is that key's tree outright. One keyed by a number leaves SQLite's own
-arrangement alone and declares the column with `Db.Schema.identity`, which
-spells it `integer` -- the one spelling SQLite reads as an alias for the row's
-own id, and so the one that has it build no second tree over the first. Either
-way there is one tree and not two, which is a thing the DDL does not state:
-`Db.TestJdbc` asks a database that took it.
+`car_drivers` carries the one declared index, over `driver_id`: its key leads with the round, and without the index the seats one driver sat in are a scan of every lap.
 
-`source_row` carries the position the file listed the lap in, which nothing else
-in the tables recovers. It is what makes `laps` an image of the CSV rather than
-a set of it, and every reading that would move off Flix needs it: the
-validator's baseline is the file's first row, a car's drivers are in the order
-the file first showed them, and so is the grid. Nothing is keyed by it: the
-reader numbers it one to n over the round's laps, so no two of them can share a
-place, and a unique index asserting that cost 1.88MB and no time.
+No foreign key is declared and `PRAGMA foreign_keys` is off; the load's own numbering fails a missing round, car or seat by name.
+Turning them on costs two rewrites: with the pragma on, `DROP TABLE` runs an implicit `DELETE FROM`, so the drops must run children first; and the pragma is a silent no-op inside a transaction, so it belongs in `Lite3fx.Jdbc.connect`. `Round.TestSupport.onLapsAlone` — laps with no cars — is the fixture a `laps`→`cars` key would make unbuildable.
 
-`car_drivers` carries the one index the tables declare, over `driver_id`. Its
-key leads with the round, so nothing in it reaches the seats one driver sat in,
-which is the reading `drivers` was separated out for and a scan of every lap in
-the archive without it.
+Le Mans's mini-sectors are two JSON array columns rather than thirty more, since one round in the archive has them.
+They hold the fifteen of `Motorsport.MiniSector.all()` in track order, a null being a marker the feed left blank. `json_each` reads one back keyed from zero, where `Motorsport.MiniSector.positionOf` counts from one.
 
-No foreign key is declared and `PRAGMA foreign_keys` is left off. A declaration
-would add one check the code does not already make: every `round_id` is
-`Db.Rounds.idIn`'s and a car or a seat the run did not number fails the same
-way, both by name rather than by constraint, but nothing beyond the load's own
-numbering says a `driver_id` has a row. Turning them on costs two rewrites,
-neither of them the declarations: with the pragma on, `DROP TABLE` runs an
-implicit `DELETE FROM`, so the drops have to run children first while the
-creates run parents first, and the pragma is a silent no-op inside a
-transaction, so it belongs in `Lite3fx.Jdbc.connect` beside the journal mode. The one
-fixture in the way is `Round.TestSupport.onLapsAlone` -- laps with no cars,
-which is what `Round.loaded` asks about and what a `laps` to `cars` key would
-make unbuildable.
+## Counting in SQL, deciding in Flix
 
-Le Mans's mini-sectors are two JSON array columns rather than thirty more: only
-one round in the archive has them. They hold the fifteen of
-`Motorsport.MiniSector.all()` in track order, so a subscript is a place on the
-circuit and a null is a marker the feed left blank. `json_each` is what a query
-reads one back with, one row per marker, keyed from zero where
-`Motorsport.MiniSector.positionOf` counts from one. That is the shape a query
-wants rather than the shape the JSON output has, which is the whole reason they
-are not the object `Motorsport.Wec` writes.
+`Motorsport.Metadata` and `Motorsport.Track` choose the grid's basis, break its ties and divide the lap; they take the readings rather than the laps, and neither imports `Motorsport.Wec`.
 
-SQL does the counting, not the deciding. `Motorsport.Metadata` and
-`Motorsport.Track` choose the grid's basis, break its ties, and divide the lap;
-they take the readings those decisions are made from rather than the laps they
-were counted out of, and neither imports `Motorsport.Wec`.
+`Cli.Load.Validation` runs its five rules as SQL over the round just loaded, leaving only the messages in Flix.
+`Round.Index` reads the two indices a race is read at a moment through — when the lap counter went up (a `GROUP BY`), and when each of the nineteen records changed hands (one window over every record's readings stacked into a column). They ride in the summary.
 
-`Cli.Load.Validation` runs its five rules as SQL
-over the round just loaded, leaving only the message formatting in Flix: three
-are a comparison per row, and the two that walk a lap need the mini-sectors in
-track order, which is what those columns are for. `Round.Index` reads the two
-indices a race is read at a moment through -- when the lap counter went up, and
-when each of the nineteen records changed hands -- which are a walk of every lap
-of the round each: a `GROUP BY` for the first, and for the second one window
-over every record's readings stacked into a single column. They ride in the
-summary.
+`Round.Timeline` is the third walk, and is written to a file of its own, a line at a time.
+`Round.Timeline.fromLaps` is the load's; `Round.Timeline.read` sorts the rows by `elapsed_ms` with `seq` only as the tie, not by their key, which stops agreeing once a row is corrected in SQL.
+`Round.Timeline.detailed` reads each event beside its lap and is handed the `Round.Index` the answer already has; the car's own best of each time is nineteen running minima per car, read off `laps`.
 
-`Round.Timeline` is the third such walk and does not: it is written a line at a
-time as the laps are, and a round is three files and three URLs. It is also the
-only one of the walks a reader does not make:
-`Round.Timeline.fromLaps` is the load's, and `Round.Timeline.read` is the
-round's own rows, sorted by `elapsed_ms` and taking `seq` only as the tie --
-rather than read in their key's order, which is the same list until a row is
-corrected in SQL and then is the list that moment used to be in.
+A class's lead is `ROW_NUMBER` picking the class's first crossing of each lap with `LAG` asking who held the one before — two queries, since SQLite settles a `WHERE` before either window.
+The top class's lead is the field's in every round loaded, so the field's is not counted beside it.
+An overtake is about whoever crossed the next lap first, a leader in the pits about the car that led; a boundary the leader's stop settled is no overtake.
+A stop is counted at its out-lap and timed at its in-lap (`Db.Laps.pitOutLap`). The field's stops are not events: the app counts them off the laps in `Motorsport.Race.Stint`.
 
-`Round.Timeline.detailed` reads those rows beside the lap each event fell on,
-which the row names by number and `laps` still holds every cell of. It is handed
-the `Round.Index` the answer already has rather than counting the records again,
-and the one figure no row carries is the car's own best of each time: nineteen
-running minima per car, read off `laps`.
+`Motorsport.Timeline` weighs each car's last crossing against the time limit, `Metadata`'s estimate, so `Round.Summary.particulars` is read first.
+It also fixes the order events sharing an instant come back in: `List.sortBy` is not stable, so the gathering order rides in the sort key and lands in `seq`.
+`Motorsport.Timeline.parts` is where the line written out and the row meet; a row that spells no event is `DbErrorKind.Other`.
 
-Each car's last crossing is one `GROUP BY`, and a class's lead is
-`ROW_NUMBER` picking the class's first crossing of each lap with `LAG` asking who
-held the one before -- two queries rather than one, since SQLite settles a `WHERE`
-before either window. The class is the car's entry's, joined through `cars`; the
-top class's lead is the field's in every round loaded, so the field's is not
-counted beside it. A change of flag and a driver change are a `LAG` each, and a
-class's fastest lap is `Round.Index`'s running minimum partitioned by class.
-
-The lead is read twice, about two different cars: an overtake is about whoever
-crossed the next lap first, a leader in the pits about the car that led and turned
-down the pit lane. A boundary the leader's stop settled is no overtake. The stop is
-counted at its out-lap and timed at its in-lap, `Db.Laps.pitOutLap` saying why; the
-field's stops are not events, since the app counts them off the laps itself in
-`Motorsport.Race.Stint`. `Db.Laps.pitLap` is either half of a stop, and is what
-`Cli.Load.Validation` skips a pit lap over too.
-
-What is left in Flix is the deciding: `Motorsport.Timeline` weighs each car's last
-crossing against the time limit, which is `Metadata`'s estimate and the one reading
-here the laps do not carry, so `Round.Summary.particulars` is read first and hands
-it over -- the whole of what the load wants a summary for. It also fixes the order
-events sharing an instant come back in: `List.sortBy` is not stable, and a report
-the load counted has to read back in the order it was written, which is why the
-gathering order rides in the sort key and lands in `seq`.
-
-`Motorsport.Timeline.parts` is where the line written out and the row meet, so
-the JSON, the column's `check` and the reading back cannot disagree about what
-an event is called or which fields it carries. A row that spells none is
-`DbErrorKind.Other` rather than an event with either made up.
-
-`Round.Laps` takes one window function beside the reading for where the car
-stood in the field as it crossed the line -- a reading of the round rather than
-of any row of it, so it rides beside the lap rather than in it. `Round.Cars` and
-`Round.Drivers` hand the others the round's cars keyed by number and who sat in
-each seat -- read once for the round rather than once a lap, and the two that
-say when a round is loaded by halves: a car with laps and no row in `cars`, or a
-lap from a seat with none in `car_drivers`, is said so rather than written out
-as a car with no name.
+`Round.Laps` reads where the car stood in the field as it crossed the line with a window beside the lap.
+`Round.Cars` and `Round.Drivers` say when a round is loaded by halves: a car with laps and no `cars` row, or a seat with none in `car_drivers`, is reported rather than written out as a car with no name.
 
 ## Two stages, one database, and the jar
 
 `Cli` runs in two stages: the load reads each round's CSV — of every round `Motorsport.Calendar` lists, under `--csv` — and rebuilds every table off it, and the export writes out of the rows alone, under `--out`, a round's summary `.json`, its laps `_laps.jsonl` one lap per line, its timeline `_timeline.jsonl` one event per line, and `index.json` beside them, in the same season directories.
 `--load` and `--export` are those stages singly, and `--export-only <season>/<id>` narrows the writing stage alone, repeated to name more than one; a name no round on the calendar answers to fails the run before anything is written.
 
-That the writing stage reads no CSV is the point: the files are an image of the rows and of nothing else, a row corrected in SQL is exported, and re-exporting after a change to a renderer costs no decoding.
-A round no run has loaded fails the export rather than being written out as a race that never ran, the files it would have replaced are left alone, and `/api` answers it with a 404: `Round.loaded` is what both ask.
+The writing stage reads no CSV: the files are an image of the rows, a row corrected in SQL is exported, and re-exporting after a renderer change costs no decoding.
+A round no run has loaded fails the export rather than being written out as a race that never ran, the files it would have replaced are left alone, and `/api` answers it with a 404.
 
-Both stages and the server compute in SQLite, so all three need one database: `--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made in a shell, and the flake's commands name `backend/.db/motorsport.sqlite` when neither does.
+Both stages and the server compute in one SQLite database: `--database <jdbc url>` names it, `DATABASE_URL` says the same to every run in a shell, and the flake's commands name `backend/.db/motorsport.sqlite` when neither does.
 One that reaches none does nothing rather than opening an empty database of its own.
-The file is in the working copy rather than under /tmp, so what a run left there is still there to be queried — and the flag is reached as `nix run .#cli-run -- --database ...`, since the flake forwards what follows.
-The integrity checks are read back out of the rows a round was just loaded into, and so is everything the export writes and the server answers with.
+The file is in the working copy so it can be queried after a run, and the flag is reached as `nix run .#cli-run -- --database ...`.
 
-The server's operating form is the jar: `flix run` takes the JVM down with `main` and the server's `main` does not return.
-`flix build-jar` leaves the Maven dependencies out of what it writes, so the JDBC driver is named on the class path beside the jar rather than bundled in it.
+The server runs as the jar: `flix run` takes the JVM down with `main`, and the server's `main` does not return.
+`flix build-jar` leaves the Maven dependencies out, so the JDBC driver is named on the class path beside the jar.
 `.#serve-api` answers `/api/health`, `/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json`, `_laps.jsonl` and `_timeline.jsonl`.
 
 ## Why SQLite
 
-The database is not a system of record. It is a cache derived from the CSV, and
-dropping every table on each run is the design saying so, which is what takes
-durability, replication, migration and availability out of the question
-entirely. What is left is one writer, no point lookups, no concurrent writes,
-no transactions between users, and reads that are whole-round scans, `GROUP
-BY`, window functions and `json_each`. SQLite answers all of it from one file
-in the working copy.
-
-DuckDB is the near miss worth recording, since its column store and native
-`LIST` types fit the mini-sectors better than JSON text does: its files lock
-per process, so nothing reads one while a run writes it, and
-`.#serve-api` staying up across a `.#cli-run` is exactly that. A document store
-is what the export already is -- one round, one file -- and moving the tables
-there would take the window functions the indices are counted with. NewSQL
-solves distributed writes and horizontal scale, and there is one writer and one
-region here.
-
-Nothing about the scale argues otherwise later, either: the whole of the WEC,
-twenty seasons of it, is on the order of 1.5 million laps and 150MB in these
-tables, and adding other series keeps it in the low gigabytes.
+The database is a cache derived from the CSV, not a system of record: every table is dropped each run, so durability, replication and migration are out of the question.
+What is left is one writer and reads that are whole-round scans, `GROUP BY`, window functions and `json_each`.
+DuckDB is the near miss — its `LIST` types fit the mini-sectors better — but its files lock per process, and `.#serve-api` stays up across a `.#cli-run`.
+Twenty seasons of the WEC are on the order of 1.5 million laps and 150MB.
 
 ## `Lite3fx`, the SQLite3 port of sqlfx
 
-sqlfx is a PostgreSQL library for Flix: the effects a database is reached
-through, the failure an op carries, and the row and the value a statement
-comes back as. It is what this layer is shaped on, and its 0.7.0 cannot be a
-dependency here -- Flix 0.79 rejects the `name` and `description` entries in
-its `flix.toml`, and its JDBC layer imports `org.postgresql.*` -- so the
-shape is kept and the driver is not: `src/Lite3fx/` is the same effects, the
-same aliases, and a handler over `org.xerial:sqlite-jdbc`.
+[sqlfx](https://github.com/ababup1192/sqlfx) is a PostgreSQL library for Flix, and `src/Lite3fx/` is its shape — the same effects and aliases — over `org.xerial:sqlite-jdbc`.
+sqlfx 0.7.0 cannot be a dependency: Flix 0.79 rejects the `name` and `description` entries in its `flix.toml`, and its JDBC layer imports `org.postgresql.*`.
 
-What the port keeps back is what SQLite has no answer to, or this
-repository no use for. `NullType` is six rather than sqlfx's fifteen, and only three of the six -- `Str`, `Int32`, `Json` -- are ever bound. `Pool` is absent: the CLI opens one connection per run and the server one per request, which is what WAL mode is there to make work. `commit` and `rollback` stay operations of `SqlWrite`
-rather than moving into `Tx`, so a recording handler sees a commit go by, and
-`insertMany` is an operation of `SqlWrite` of its own, since a lap arrives a
-thousand at a time rather than one at a time. `RawSql` is inside the aliases
-rather than added to each signature, because every function of this
-repository's reaches a statement -- see below.
+What the port leaves out:
 
-`Db` is the seam: the `Db` table modules and the row types beside them are the
-whole of what the application tells `Lite3fx` about itself, which is the same
-line Acadia draws between `Transaction`, `Rows` and a `Table`.
+- `NullType` is six rather than fifteen, and only `Str`, `Int32` and `Json` are ever bound.
+- No `Pool`: the CLI opens one connection per run and the server one per request, which WAL mode makes work.
+- No migrations: the `DROP TABLE`s are the migration.
+- No `.q` generator: most statements are built with `Sql`, and the written ones are checked by running every one against the in-memory database `Round.TestSupport` builds (`Round.TestReadersResolve` makes every reader answer with a row, so its projection runs). sqlfx's parser is PostgreSQL's and refuses `WITH RECURSIVE` and a `WITH` inside a CTE, which is where the hardest statements here live.
+
+`commit` and `rollback` stay operations of `SqlWrite` rather than of `Tx`, so a recording handler sees a commit go by, and `insertMany` is an operation of its own, since laps arrive a thousand at a time.
+`RawSql` is inside the aliases rather than added to each signature, because every function here reaches a statement.
+
+`Db` is the seam: its table modules and row types are the whole of what the application tells `Lite3fx` about itself.
+
+The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved into the gitignored `lib/` by `flix build`.
+`/skill:update-deps` does not reach it, so it is raised by hand against `org.xerial:sqlite-jdbc`'s `maven-metadata.xml`. Its version is the SQLite it carries plus a build number: `3.53.4.0` is SQLite 3.53.4.
 
 ## The database effects
 
-Reaching a database is an effect rather than a module of functions, so that what a round would send can be read back without a server: `Lite3fx.Recording.statements` keeps the statements and answers a read with the error that nothing was sent, `Lite3fx.DbTest.runFailing` answers every statement with one error the caller chose, and `Lite3fx.DbTest.runWithRows` answers a read with rows the caller named. `java.sql` is imported by `Lite3fx.Jdbc` and `Lite3fx.JdbcConvert` alone.
-No effect here names a table or a column, so the handlers, those two files and `Sql` are together a database and a query language and nothing of this application.
+Reaching a database is an effect, so what a round would send can be read back without one: `Lite3fx.Recording.statements` keeps the statements and answers a read with the error that nothing was sent, `Lite3fx.DbTest.runFailing` answers every statement with one error the caller chose, and `Lite3fx.DbTest.runWithRows` answers a read with rows the caller named.
+`java.sql` is imported by `Lite3fx.Jdbc` and `Lite3fx.JdbcConvert` alone, and no effect names a table or a column.
 
-Reading and writing are two effects because the sides of this repository are
-two: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a
-statement that changes the database in them, and the table modules and
-`Cli.Load.load` are the other half. The handlers are split the same way, so
-what the type says of the server the connection says too: `Lite3fx.Jdbc.runReading`
-installs the read alone, and a write reaches no handler through it.
+Reading and writing are two effects: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a statement that changes the database, and `Lite3fx.Jdbc.runReading` installs the read alone.
 
-`DbErr` and `TransientDbErr` are the third and fourth, and they are what a reader does not carry a `Result` for.
-Their one operation does not return, so `Round.Summary.read` answers with a `Metadata` rather than with whether it could read one, and the failure travels by itself to the boundary that asked.
-`Lite3fx.DbError.runWithKind` is where a raised failure comes back as a value, and `Lite3fx.DbError.runWithFailure` the same with the transient ones folded into `DbError.Failure`.
-Everything between those and the statement is written as though the database always answers.
-Which of the two effects a failure travels by is read off its `DbErrorKind` constructor -- `DbError.raise` routes it there -- so a kind added to either side meets a pattern that has to say which it is.
+`DbErr` and `TransientDbErr` are what a reader does not carry a `Result` for: their one operation does not return, so `Round.Summary.read` answers with a `Metadata` and the failure travels to the boundary that asked.
+`Lite3fx.DbError.runWithKind` is where a raised failure comes back as a value, and `runWithFailure` the same with the transient ones folded into `DbError.Failure`.
+Which of the two a failure travels by is read off its `DbErrorKind` constructor (`DbError.raise` routes it), so a new kind meets a pattern that has to say which.
 
-What a signature says is the alias rather than the effect: `\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db` adds `SqlSavepoint`.
-Every one of them already says a statement goes out, which is what `RawSql` marks: every reader and writer of `Lite3fx.Sql` raises it, and `RawSql`'s own header says who closes it.
-Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller taking a reading as an argument names the half it uses, as `Cli.Load.loadRound` does with `DbRead + SqlWrite`, or the whole it hands over, as `Main.onDirectories` and `Round.TestSupport.onRound` do with `Db`.
+`\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db` adds `SqlSavepoint`.
+Flix has no subeffecting here — a `\ DbRead` function is not a `\ Db` one — so a caller taking a reading as an argument names the half it uses (`Cli.Load.loadRound`: `DbRead + SqlWrite`) or the whole it hands over (`Main.onDirectories`, `Round.TestSupport.onRound`: `Db`).
 
-The two statement effects answer with a `Result` even so, and that is not a
-choice -- `Lite3fx.flix`'s `SqlRead` header says why. `Lite3fx.Sql.orRaise` is
-where the value becomes a raised failure, in the caller's own context.
+The statement effects still answer with a `Result`; `Lite3fx.flix`'s `SqlRead` header says why. `Lite3fx.Sql.orRaise` turns it into a raised failure, so nothing outside `Lite3fx` calls an operation: the wrappers of `Lite3fx.Sql` are what `Sql` and `Db.Schema` reach.
+`Lite3fx.Jdbc.withConnection` opens, works in and closes a database for a run, a test and the server alike.
 
-So nothing outside `Lite3fx` calls an operation: the wrappers of `Lite3fx.Sql`
-are the same statements with that step already taken, and they are what `Sql` and
-`Db.Schema` reach.
-`Lite3fx.Jdbc.withConnection` is the other one -- a database opened, worked in,
-and closed however that went, for a run, a test and the server alike.
+A failure is a `DbErrorKind`, and the sentence is its `ToString`'s.
+The transient ones are `Unreachable` (no database reached) and `Busy` (a lock SQLite waited out rather than got, read off the driver's result code by `Lite3fx.SqliteState`).
+Constraint violations are named from the driver's sentence: `UNIQUE constraint failed: laps.round_id` becomes `UniqueViolation("laps.round_id")`.
+`SchemaMismatch` is a table or column the database has not got, `DecodeError` a cell the reading could not read, `NoRow` a query that had to answer with one and did not, and `Other` the rest — what the JVM threw, and rows that came back whole and describe no round.
+`Lite3fx.Retry` would answer a transient one by sending again; nothing sends on it yet.
 
-What a failure is is a `DbErrorKind` rather than a sentence.
-The transient ones travel apart from the rest: `Unreachable` is no database reached at all, and `Busy` is the one refusal that may go through next time -- a lock SQLite waited out rather than got, which `Lite3fx.SqliteState` reads off the driver's result code and is tested without a database.
-The constraint violations are named, which is what a PostgreSQL SQLSTATE gives sqlfx and the driver's own sentence gives here: `UNIQUE constraint failed: laps.round_id` becomes `UniqueViolation("laps.round_id")`, and the primary code alone -- which is what the driver answers most constraints with -- is read out of the message.
-The rest say where the fix is: `SchemaMismatch` is a table or a column the database has not got, `DecodeError` is a cell the reading could not read, and `NoRow` is a query that had to answer with one and did not. `Other` is the rest -- what the JVM threw rather than said, and what this repository raises when rows came back whole and describe no round.
-The sentence is `ToString`'s, so the wording is in one place and the kind is what a caller reads.
+`Server.Api` answers `Unreachable` and `Busy` with 503 and everything else with 500.
+A failure names tables and files in its own words, so those ride in the response's `cause`, which `Server.send` logs and does not send.
 
-`DbError.Failure` is both failings in one value, `Transient` and `Permanent`, and it is what a boundary takes back.
-`Lite3fx.Retry` is what would answer a transient one by sending again: `retrying` waits out a full-jitter backoff between tries, and `retryingSavepoint` takes back to a savepoint before the next. Nothing sends on it yet.
+A row is `Lite3fx.Row.Row`: the labels the driver reported and the cells as `SqlValue`. SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared.
+`Lite3fx.JdbcConvert` is the only file that converts between `SqlValue` and JDBC.
+`Sql.decode` puts a row's cells in the order its projection names them, so a clause and a reading that disagree fail by naming the column rather than by answering with the cell beside it. Two projections under one label — a join naming both sides' `elapsed_ms` — are answered in the order the clause writes them.
 
-A row is `Lite3fx.Row.Row`: the labels the driver reported, and the cells as
-`SqlValue`. SQLite types a value rather than a column, so a cell is what the
-driver found and not what the schema declared.
-`Lite3fx.JdbcConvert` is the only file that turns a `SqlValue` into a binding and
-a `ResultSet` cell back into one.
-`Sql.decode` puts a row's cells in the order its projection names them, and the
-reading then goes by position within that, so a clause and a reading that
-disagree -- a column renamed on one side of the two -- fail by naming the column
-rather than by answering with the cell beside the one they wanted. `Sql.label`
-says what a projection comes back under; two projections under one label, a join
-naming both sides' `elapsed_ms`, are
-answered in the order the clause writes them.
-
-`Server.Api` is the one that reads the kind. `Unreachable` and `Busy` are answered
-503 and everything else 500, which is the difference between a round that
-cannot be served now and one that cannot be served. What the answer carries is
-that sentence and not the database's: a failure names tables and files in its
-own words, so those ride in the response's `cause`, which `Server.send` logs
-and does not send.
-
-Nothing a statement sends is kept until a commit, and `Lite3fx.Tx.transact` is the
-only sender of one: it commits what its caller sent when the caller returns, and
-rolls a raised failure back before raising it again, the rollback being what it did
-about the failure rather than what it answers. `Cli.Load.runAll` is the one
-caller, so the rebuild of every table is a single transaction -- the
-`DROP TABLE`s it opens with land only if the run reaches its end, and a run
-killed partway leaves the rounds it was rebuilding from rather than three of
-them.
-
-A round the database refuses is still counted and reported rather than taking
-the run with it, and `Lite3fx.Tx.withSavepoint` is the boundary that makes it so: it is `transact` of a part of one, marking a savepoint of SQLite's own -- its name checked against the rule `Lite3fx.Savepoint` states, since it is the one name that goes into a statement as text -- so what a round sent is undone together and what the run sent before it is still to be committed.
-`Cli.Load` marks one per round, which is also what lets the
-numbering follow the rows -- a round that failed frees the names it took, and
-advancing past it would leave a name numbered and unwritten for every later
-round to reference. `Lite3fx.Jdbc`'s insert marks one of the driver's inside that,
-and that one is the batch's alone: the rows go out a thousand at a time, and a
-refusal partway through has already sent some of them. A read commits nothing,
-and closing a connection rolls back the transaction it opened.
-
-The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
-into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
-`/update-deps` does not reach it, so it is the one dependency raised by hand,
-against `org.xerial:sqlite-jdbc`'s `maven-metadata.xml`. Its version is the
-SQLite it carries with a build number after it, so the pin says which engine
-the queries run on: `3.53.4.0` is SQLite 3.53.4.
+`Lite3fx.Tx.transact` is the only sender of a commit, and rolls a raised failure back before raising it again.
+`Cli.Load.runAll` is its one caller, so the rebuild of every table is a single transaction: a run killed partway leaves the rounds it was rebuilding from.
+`Lite3fx.Tx.withSavepoint` is `transact` of a part of one; its name is checked against `Lite3fx.Savepoint`'s rule, since it goes into a statement as text.
+`Cli.Load` marks one per round, so a round the database refuses is reported without taking the run with it, and frees the names it numbered — advancing past it would leave a name numbered and unwritten for every later round to reference.
+`Lite3fx.Jdbc`'s insert marks one of its own inside that, since rows go out a thousand at a time and a refusal partway has already sent some.
+A read commits nothing, and closing a connection rolls back the transaction it opened.
 
 ## `Db.Schema`, and the two declarations
 
-`Db.Schema` is a table declared as its columns, and `Db.Laps` and `Db.Cars` are
-each one such declaration: a column's name, the type it takes there, how a row
-binds it and how it reads back are one record, and a table's `all`, its DDL,
-its insert, its `values` and what a projection picks from are all views of it.
-A `Column` carries the row type it binds as well as the type it reads back, so
-a column of one table cannot be bound from a row of the other. The table's name
-and its keys are declared there too, so the `CREATE TABLE` names no column the
-declaration does not have, and a query reads `Db.Laps.table` rather than
-spelling it.
+`Db.Schema` is a table declared as its columns, and `Db.Laps` and `Db.Cars` are each one declaration: a column's name, type, binding and reading are one record, and a table's `all`, DDL, insert and projection are views of it.
+A `Column` carries the row type it binds, so a column of one table cannot be bound from a row of the other, and a query reads `Db.Laps.table` rather than spelling it.
 
-What it does not reach is the ordering: `all` and `selection` name the same
-columns twice, which is the one pairing no compiler sees and `Db.TestLapRow`
-and `Db.TestCarRow` assert. Both are declared here rather than beside the row
-they build, so the two orderings are read in one file; `Db.LapRow` and
-`Db.CarRow` are the feed's side of the trip and name neither `Db` nor `Sql`.
-Flix cannot read a record's fields, so `all` restates each name the
-declaration already has; only the `bind` beside it is checked against the row
-type. A column drawn from the declaration is the checked way to name one, and
-`Round.Index.lapCompletions` is the shape of that
--- but a query reading from a common table expression cannot use it, since the
-expression's own `SELECT` is text and would not follow a rename.
+**`all` and `selection` name the same columns twice, in an order no compiler checks**: `Db.TestLapRow` and `Db.TestCarRow` assert it, and both are declared in one file so the two orderings are read together.
+Flix cannot read a record's fields, so `all` restates each name; only the `bind` is checked against the row type.
+`Db.LapRow` and `Db.CarRow` are the feed's side and name neither `Db` nor `Sql`.
+A query reading from a common table expression cannot use a declared column, since the expression's `SELECT` is text and would not follow a rename.
 
 ## `Sql`, the query language
 
-Every one of those readers builds its SELECT with `Sql`, the repository's own
-query builder over this database and no particular one of its tables. A
-`Sql.Sel` is one projection and the reading of it held in the same value, so
-the clause is rendered from the readings rather than written beside them, and
-a column is named once. What a query projects is a
-`Sql.Project` -- a column, a reading, or a tuple of them -- which is why
-`Sql.map` takes the columns and hands back what to read of them, as Acadia's
-`map` does; the tuple that comes back becomes the caller's own type through
-`Sql.reading`.
+`Sql` is the repository's query builder over this database. A `Sql.Sel` is one projection and its reading held in the same value, so the clause is rendered from the readings and a column is named once.
+A `Sql.Project` is a column, a reading or a tuple of them; `Sql.map` takes the columns and hands back what to read, and `Sql.reading` turns the tuple into the caller's type.
 
-A row read as a record rather than a tuple is `Sql.record` extended a field at
-a time with `Sql.field`, which is what `Db.Laps.selection` is: each line
-names a column and the field its cell lands in, so the two cannot be paired
-wrongly, a field left out is not a `LapRow`, and a field named twice does not
-typecheck. It is also the only form a row of more than eight has, an instance
-head being written per arity. A curried constructor with the readings piped
-into it in turn holds none of that, and the type checker cannot afford it
-either: two dozen of those need a 2m stack where the record needs 512k.
+A row read as a record is `Sql.record` extended a field at a time with `Sql.field`, as `Db.Laps.selection` is: a field left out is not a `LapRow`, and one named twice does not typecheck.
+It is also the only form past eight columns, and the cheaper one for the type checker — two dozen curried readings need a 2m stack where the record needs 512k.
 
-A value a query compares against is bound rather than written into it: a
-`Sql.Frag` is a piece of SQL and the values its `?` placeholders take, and
-concatenating two pieces carries both, so a value cannot come to sit under
-another piece's placeholder.
+A value is bound, never written in: a `Sql.Frag` is SQL and the values its `?` placeholders take, so concatenating two pieces carries both.
 
-What a query asks of its rows is a `Sql.Expr[Bool]`, and `filter` takes it of
-the columns the source declared rather than on its own: the predicate is a
-function of what `map` would be handed, as Acadia's `filter` is of the row, so
-a column of another source is not one this query can be scoped by.
-The round is what every reading of a table keyed by one is scoped by, and it is
-applied where the rows come from rather than by the reader: `Db.Laps.rows` and
-`Db.Cars.rows` take the round and hand back rows already filtered by it, so rows
-of a table at large are not something those modules hand out and a reader cannot
-forget the scope. A reader ANDs its own onto them. A statement written out is the one
-place the scope can be left out and the statement still be well formed -- it names no
-hole the caller forgot to fill, because it names no hole at all -- so `Sql.statement`
-refuses one that binds no value. That catches a statement naming no round; it does not
-prove the value bound is the round's, and `Sql.refuseUnscoped` says so. Both carry a `round_id`, so a
-scope built from the wrong one would bind to whichever side of a join happened
-to have one; the records do not unify, so it does not compile. What a query builds
-itself needs no `WHERE` written as text: `Db.Laps.scope` is the same predicate had on
-its own, plus whatever else the statement asks, as the piece that goes into a `WHERE`
-the caller wrote. Each names the table it is of, and a source that renames it
-says so itself: `Db.Rounds.scope` takes the column under that name, which is
-what `Round.Summary.carBuilds` hands its `c`. The type is what carries
-nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
-asked of `mini_sector_time_ms` and not of `lap_time_ms`.
+`filter` takes a `Sql.Expr[Bool]` of the columns the source declared, so a column of another source cannot scope this query.
+**The round is applied where the rows come from**: `Db.Laps.rows` and `Db.Cars.rows` take the round and hand back rows already filtered by it, so a reader cannot forget the scope. A reader ANDs its own onto them.
+A written statement is the one place the scope can be left out and still be well formed, so `Sql.statement` refuses one that binds no value. That catches a statement naming no round; it does not prove the value is the round's (`Sql.refuseUnscoped`).
+Two sides of a join both carry a `round_id`, but their records do not unify, so a scope built from the wrong one does not compile.
+`Db.Laps.scope` is the same predicate as a piece for a `WHERE` the caller wrote, and `Db.Rounds.scope` takes the column under the name its source gives it, as `Round.Summary.carBuilds` hands its `c`.
+Nullability is in the type: `Sql.isNotNull` asks for an `Expr[Option[_]]`.
 
-A column a common table expression made up is `Schema.derived`: the name the expression gives it, the type the expression it selects has, and that name's reading. `Round.Timeline.crossings` is where they are declared, and `Schema.qualified` reads them under each name the sources give them -- `l`, `led`, `stop`, `between_` -- which is what makes a name spelled once. What no declaration reaches at all is `Sql.column`, and its type is the caller's word.
+A built query is `Sql.rows` (or `Sql.access`, where the caller says what columns the source has) with `filter`, `groupBy`, `orderBy`, `limit` and `using` in any order, `map`, and `selectAll` or `selectOne`. Clauses come out in SQL's order, an empty one is left out, and `filter` twice asks both. `Sql.toStatement` is pure.
 
-`Sql.unionAllTagged` stacks arms of a `UNION ALL` and labels each with a number
-it picks, handing back a reading of that number as the thing the arm was about.
-`Round.Index` is the caller: its nineteen records are four arms of one reading
-each and one arm of fifteen, and neither the arms nor the reading names a
-number.
+An aggregate or a window reads back as its projection does, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one, and `lag(l#carNumber, w)` is an `Option` because a window's first row has no predecessor. `opt` is the same from the other side: an aggregate over an empty group answers null.
+A named `Sql.Window` is spelled once in the `WINDOW` clause, which is how nineteen running minima are one clause.
+`Sql.unionAllTagged` stacks the arms of a `UNION ALL` under numbers it picks; `Round.Index` is the caller, and nothing in it names a number.
 
-A query is built rather than written: `Sql.rows` names what follows `FROM`
-(`Sql.access` where the caller says what columns it has, which is what
-`Db.Laps.rows` hands a reader), `filter`, `groupBy`, `orderBy`, `limit` and
-`using` add to it in any order, `map` says what to read of a row and
-`selectAll` or `selectOne` runs it -- the shape Acadia's own queries have. The
-clauses come out in the order SQL wants them rather than the order they were
-asked for, a clause with nothing to say is left out, and `filter` asked twice
-asks both. `Sql.toStatement` is pure, so what
-a query is can be read back without a database.
+**Some queries are written rather than built**: a `WITH`, a window or a correlated subquery is past the builder's reach, which takes the projection and the four outer clauses.
+`Sql.statement` takes such a statement one clause per line — Flix has no multi-line string literal — with `{{name}}` for each piece it cannot write itself and `%%` for the `SELECT` clause, which `columnsOf` renders from the projection that reads it back. Values bind in the order their `?`s stand. `Sql.spliced` is the same for a piece: a CTE, a `UNION ALL` arm, a scalar subquery.
+`${l#carNumber}` interpolates a declared column's name, and `Sql.sqlOf` an aggregate's or a window's text.
+Which statements are written is told by the call sites of `Sql.statement`; a `GROUP BY` or a plain scan stays built.
+What stays text is a column no declaration reaches — the fifteen `b0`..`b14` a mini-sector best is gathered out of, the `m.key` and `m.value` of a `json_each`, and the window clauses themselves.
 
-An aggregate and a window are written over a projection and read back as that projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and `lag(l#carNumber, w)` is an `Option` because the first row of a window has no predecessor. `opt` is the same fact from the other side: an aggregate over a group holding no rows answers null too. A `Sql.Window` is a value, and a named one is spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which is how nineteen running minima are one clause. What a statement written out interpolates is the same value: `${l#carNumber}` puts a declared column's name between the keywords, and `Sql.sqlOf` -- which takes a projection, the way `%%` does -- puts an aggregate's or a window's text there.
+**A written statement is checked by the database, not the build**: SQLite resolves names when it prepares a statement, so a missed rename is a refusal at run time.
+`Lite3fx.Jdbc.refusal` carries the statement into `SchemaMismatch` and `Other` (a mistyped keyword is `Other`), whose messages otherwise say nowhere to look.
 
-Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement one clause per line -- Flix has no multi-line string literal, and `spaced` puts the lines back where SQL puts a space -- with `{{name}}` where each piece it cannot write for itself goes, the round it is scoped to and the laps the events fell on, and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. Its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
+A column a CTE makes up is `Schema.derived`; `Round.Timeline.crossings` declares them, and `Schema.qualified` reads a column under each name a source gives it (`l`, `led`, `stop`, `between_`, `c`, `l1`). `Sql.column` is a column no declaration reaches, typed by the caller's word.
+What a `LEFT JOIN` does to the far side is `Sql.orNull`, needed for a column the table has on every row, not for one nullable in its own right.
 
-The bargain written statements are accepted on is that the database checks them: SQLite resolves a statement's names where it prepares it, so a rename that missed a reference is a refusal the run raises and not a build that fails. `Lite3fx.Jdbc.refusal` carries the statement into that refusal, which is the half the driver's message lacks. It rides onto the two kinds whose own message says nowhere to look -- `SchemaMismatch`, the name the database has not got, and `Other`, the sentence SQLite gave no name to at all, which is what a mistyped keyword of a hand-written statement is -- and not onto a constraint, which names itself.
+`Sql.access`'s columns are the caller's word that the source text has them, and a wrong word fails where the query runs. `Db.Laps.rows` and `Db.Laps.rowsBeside` (the table beside a `json_each` of its own) are the two that cannot be wrong.
 
-Which statements are written is told by the call sites of `Sql.statement`. The readings that are a `GROUP BY` or a plain scan stay built, which is where the declared columns and the scoped source earn their keep. The line between them is a clause's, not a statement's: what is written is the statement's shape, and the pieces interpolated into it are declared columns, aggregates over them, and windows over those. What stays text is a column no declaration reaches -- the fifteen `b0`..`b14` a mini-sector best is gathered out of, the `m.key` and `m.value` a `json_each` answers with.
+The load's statements are `Sql.createTable`, `Sql.dropTableIfExists` and `Sql.insertRows`, which binds each row in the order the statement names its columns, both read off one list.
+A `Sql.Key` is declared columns, so a key over an undeclared column does not typecheck; that its columns are in `all` is `Db.TestLapRow`'s.
 
-So is what the load writes. `Sql.createTable` takes the columns and the keys
-over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns
-and the rows -- and that last one hands back the statement and each row bound
-in the order the statement names its columns, both read off the one list, so a
-row cannot come to be bound in an order the statement does not name. A
-`Sql.Key` is declared columns rather than their names, as Acadia's
-`primary = .id` is the field rather than a string, so a key over a column the
-table has not declared does not typecheck. What it does not reach is `all`:
-that ordering is restated by hand, and `Db.TestLapRow` is what says the key's
-columns are in it. `Db.Schema` declares; `Sql` renders.
-
-What the query does not reach is its source. The source is text however it is
-named, so the columns `Sql.access` carries are the caller's word that the text
-has them, and a word about the wrong source fails where the query runs rather
-than where it is built. `Db.Laps.rows` and `Db.Laps.rowsBeside` are the two
-that cannot be wrong -- the round's rows of the table itself, and of the table
-read alongside a `json_each` of its own -- so a join names the columns its sides
-have, which is what `Round.Drivers.read` does with the four of two tables. A
-source that has none is `Sql.column` as before.
-
-`Round.Summary.carBuilds` joins `cars` to `entries` and to two of those, and writes
-the join it joins them with. What its sides have is still said as declared columns:
-`Db.Schema.qualified` is a column of a table under the name a source gives it, so
-`c.car_number` and `l1.elapsed_ms` are read and compared as that source's, and the
-projection names them rather than spelling them. What a `LEFT JOIN` does to the far side is
-`Sql.orNull`, which reads a null cell as nothing rather than as a reading that
-failed -- needed for a column the table has of every row, and not for one that
-is null in its own right. The records naming each side are still written out,
-Flix having no way to carry a table's columns through a rename. The window
-clauses -- `ROW_NUMBER`, `LAG`, `FIRST_VALUE`, `WINDOW w AS` -- are text.
-
-`Sql` is one file. A Flix module cannot span two of them, so splitting it
-means submodules -- which its own types would not stand in the way of, a
-module and a type being free to share a name. What does is that Flix has no
-wildcard `use`: every call would grow a segment, or every caller a `use` line
-per name, which is what Acadia's `import Rows exposing (..)` saves it from
-paying for the same split.
+`Sql` is one file: splitting it means submodules, and Flix has no wildcard `use`, so every call would grow a segment or every caller a `use` line per name.
 
 ## Testing
 
-- **Where a test lives** — `test/Motorsport/` drives the domain's decisions
-  given the readings they are made from (the grid's basis and its tie-breaks,
-  how the lap divides) and needs no database; `test/Round/` and
-  `test/Server/TestApi.flix` drive the reading, and need one. A subject with
-  both has a file in each, named for the module it drives.
-- **A reading with no database** — the readings that are not this project's — a CSV feed, an Overpass answer, what a circuit publishes about the lines its lap is timed to — are driven under `circuits/`, by `nix run .#geometry-test`, which compiles its links to this `src` and tests nothing else of it.
-  What this `src` keeps of a circuit is the word its summary sends, and that word is the one figure-list the two projects each hold; `circuits/test/check-sources.mjs` lays the two copies together.
-- **A clean build** — `flix build` and `flix test` are incremental, and CI is
-  not: a compile that only fails from cold passes locally until `backend/build`
-  is removed. `rm -rf backend/build` before believing a green run.
-- **The type checker's stack** — it recurses once per expression, and the
-  thread it runs on gets a smaller stack on Linux than on macOS, so a chain
-  deep enough compiles here and overflows in CI. `flix` is a jar, so the check
-  is to run it with the stack cut down: `java -Xss704k -jar <flix.jar> build`
-  from `backend/`. 704k is where the tree as it stands builds and 672k where it
-  does not, so a change that raises that number is the one to look at. What
-  sets it is `Motorsport.Wec.decoder`, whose sixteen fields are a curried
-  lambda, a record literal and a pipeline apiece: stubbing it out takes the
-  build under 576k. A reading of many columns is the runner-up rather than the
-  ceiling, which is one of the reasons `Db.Laps.selection` is a record extended
-  a field at a time.
-- **The database** — a test drives JDBC rather than a handler standing in for
-  it, against the in-memory database `Round.TestSupport.url` names: a
-  connection of its own per test, so what one loads is never the archive a
-  working copy has. A test that reaches no database fails rather than skipping:
-  the boundary is the thing it is there to check. What an in-memory database is
-  not is a file, so `Db.TestJdbc` drives one of those too, under a temporary
-  directory that does not exist yet — the directory `connect` has to make and
-  the journal mode it sets are reached no other way, and two connections at
-  once are not reached at all by a database each connection makes afresh.
-
-  What no database is asked for is what a caller does about a failure, since
-  that is decided off the kind rather than off any row: `Lite3fx.DbTest.runFailing`
-  is a database that answers with the one it was given, and `Server.TestApi` is
-  where a `Busy` becomes a 503 and a `SchemaMismatch` a 500 with the driver's
-  words kept out of the body. The two halves of that are otherwise only met
-  apart -- `Lite3fx.SqliteState` reads the code, and a round read over a real
-  database never fails.
-
-## What sqlfx has above the base
-
-[sqlfx](https://github.com/ababup1192/sqlfx) is a Flix database library for PostgreSQL, written over the same months as this and arriving at the same base, which `Lite3fx` now keeps by port rather than by convergence: `SqlRead` and `SqlWrite` split apart, `DbRead` and `DbWrite` as the aliases over them, a failure carried as an effect and turned into a value once at a boundary, the transient ones kept in an effect of their own, and a marker naming the functions that put a statement's text on the wire.
-Statements answer with a `Result` for the reason above, rows carry the type the driver found each cell in, and handlers are swapped to run the same code without a database -- including one answering a read with rows the caller named.
-Where it goes the other way is the SQL itself, which it writes rather than builds: raw statements in `.q` files, checked against a migration's DDL and turned into typed functions by a generator. Its author's account of it is [the article](https://zenn.dev/ababup1192/articles/0c29f21fe1ab8f).
-
-What it has above that base is not here, and none of it rests on which way the SQL is written:
-
-- **The `.q` generator and the parser beside it.** sqlfx writes statements in files and
-  checks them against a migration's DDL; this builds most of them and writes the
-  hardest ones out. What it keeps of sqlfx's idea is the check rather than the parser:
-  every statement goes out against the in-memory SQLite `Round.TestSupport` builds, so a
-  column no table declares fails a test by name, and `Round.TestReadersResolve` makes
-  every reader answer with a row, since a reader that answers with nothing never runs
-  the projection it reads with. A parser reading the DDL would catch
-  that at compile time, and is a PostgreSQL one: the dialect it reads has no `json_each`
-  to read, and sqlfx refuses `WITH RECURSIVE` and a `WITH` inside a CTE, which is where
-  the hardest of these statements live. The
-  `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape this keeps.
-- **A pool, and forward-only migrations.** One file, rebuilt from CSV by
-  `Cli.Load` each run, has no connection to pool and no schema to migrate
-  forward -- the `DROP TABLE`s are the migration.
-- **PostgreSQL's own facts.** sqlstate read down to the constraint name, a
-  generator turning a DDL's named constraints into an enum a `match` must cover,
-  dates, times and UUIDs with their driver's semantics. SQLite's driver answers
-  the first with a result code and a sentence, which is what
-  `Lite3fx.SqliteState` reads; the second needs the generator; and no column of
-  this schema is a date, a time or a UUID.
+- **Where a test lives** — `test/Motorsport/` drives the domain's decisions given the readings they are made from and needs no database; `test/Round/` and `test/Server/TestApi.flix` drive the reading and need one. A subject with both has a file in each, named for the module it drives.
+- **A reading with no database** — a CSV feed, an Overpass answer, a circuit's published timing lines — is driven under `circuits/` by `nix run .#geometry-test`, which compiles its links to this `src` and tests nothing else of it. The circuit words the summary sends are the one list both projects hold; `circuits/test/check-sources.mjs` lays the two copies together.
+- **A clean build** — `flix build` and `flix test` are incremental and CI is not: a compile that only fails from cold passes locally until `backend/build` is removed. `rm -rf backend/build` before believing a green run.
+- **The type checker's stack** — it recurses once per expression, and Linux gives its thread a smaller stack than macOS, so a deep enough chain compiles here and overflows in CI. Check with `java -Xss704k -jar <flix.jar> build` from `backend/`: 704k builds the tree as it stands and 672k does not, so a change that raises that number is the one to look at. What sets it is `Motorsport.Wec.decoder`, whose sixteen fields are a curried lambda, a record literal and a pipeline apiece; stubbing it out takes the build under 576k.
+- **The database** — a test drives JDBC against the in-memory database `Round.TestSupport.url` names, a connection of its own per test. A test that reaches no database fails rather than skipping. `Db.TestJdbc` drives a file database too, under a directory that does not exist yet: the directory `connect` makes, the journal mode it sets, and two connections at once are reached no other way.
+  What a caller does about a failure is decided off the kind, so it is tested without a database: `Server.TestApi` is where a `Busy` becomes a 503 and a `SchemaMismatch` a 500 with the driver's words kept out of the body, and `Lite3fx.SqliteState` is where the code is read.

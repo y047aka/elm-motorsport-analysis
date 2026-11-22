@@ -1,6 +1,6 @@
 ---
 name: distill-docs
-description: "Distill documentation and comments down to what survives: find where a fact is written down twice, cut what over-documents, leave a pointer where prose was removed, and verify what remains against the code. Use when asked to distill, trim, prune, condense, tidy or audit documentation, when re-reading the comments and docstrings a change added, and when the same fact appears to be written down twice. This skill only takes documentation down — writing new documentation, restructuring it, or moving knowledge into a new skill is the job of the document being written."
+description: "Distill documentation and comments down to what survives: find where a fact is written down twice, cut what over-documents, leave a pointer where prose was removed, and verify what remains against the code. Use when asked to distill, trim, prune, condense, tidy or audit documentation, when re-reading the comments and docstrings a change added, and when the same fact appears to be written down twice, and whenever a change adds to AGENTS.md. This skill takes documentation down, and moves a fact toward the code it describes when that is where it belongs; writing new documentation, or moving knowledge into a new skill, is the job of the document being written."
 ---
 
 # Distilling documentation
@@ -15,7 +15,29 @@ The target of every pass is a fact written in prose in two places: it must move 
 
 - **Where a fact is duplicated, the copy closer to the thing it describes owns it** — a comment over a header, a header over a README, a README over `AGENTS.md`. Keep the owner's copy; leave one line pointing at it where the others were.
 - **A pointer is a one-line mention of the thing, not of its contents.** "the steps are `/skill:add-circuit`'s", "`backend/README.md` holds the rest". Prose moves; pointers hold.
-- **A cut is only a cut when the fact still lives somewhere.** Find where the removed sentence lives now before removing it; if nowhere does, that is a relocation someone else decides, not a distillation.
+- **A cut is only a cut when the fact still lives somewhere.** Find where the removed sentence lives now before removing it; if nowhere does and the fact has an owner closer to the code — a module header, a README, a skill — move it there first, then cut. Moving a fact toward the thing it describes is distillation; moving it away is not.
+
+## AGENTS.md is the home of last resort
+
+Every other document is read when its subject is touched; `AGENTS.md` is loaded whole into every session, so every line in it is paid for by every task.
+Its admission test is therefore stricter than *does any reader do the wrong thing without it?* — a line can pass that and still belong elsewhere.
+
+**Name the one file that would own it.** If one module, README or skill could hold the fact, it goes there, and `AGENTS.md` keeps at most a pointer.
+What survives that question is one of four kinds:
+
+- **A command or a check** — what to run, and what gates a change.
+- **A repository-wide rule** — the comment rules, a naming convention, where a new module goes.
+- **A hazard that spans owners** — one no single file can hold because the mistake happens between two of them (`LeMansMiniSectors` is load-bearing in three modules at once).
+- **A pointer** — which document to read before touching a subject.
+
+A hazard inside one module is that module's header's, however serious it is: being a hazard licenses the sentence, not the placement.
+What one module is, how one subsystem is designed, and the narrative of a feature are never `AGENTS.md`'s.
+
+**It grows by feature commits, not by distillation passes.** An agent that has just built something writes its understanding where it is sure to be read, and that is `AGENTS.md`; the paragraph usually restates the header the same change wrote.
+So the after-a-change pass below reads every line a change added to `AGENTS.md`, not only its comments.
+
+**Budget: 2,500 words** (`wc -w AGENTS.md`). A tree pass that ends above it is not finished, and a change that pushes the file past it pays for its paragraph by relocating another.
+The number is not the goal — the four kinds are — but it is the signal that a pass is due, which the passes alone never gave.
 
 ## The three distillations, and when each applies
 
@@ -37,6 +59,7 @@ The shapes below name, where it differs, which distillation each one asks for.
 - **A misplaced explanation.** A method's doc that describes one line inside the method — the explanation belongs above that line, or nowhere. A reader who meets the code first never meets the comment.
 - **Unanchored vocabulary.** A comment whose nouns belong to no identifier in the code below it — the reader cannot find the thing it names, and a rename of that thing leaves no trace to follow. Say it in the words the code uses.
 - **The half-truth that deepens the mystery.** "this class is no longer used by the screen" — and the reader asks *then where, and why is it still here?* A hazard comment that does not answer the next question it provokes is a tease: finish it or cut it.
+- **The architecture tour.** An `AGENTS.md` paragraph walking through one feature's modules — what the box is, which button turns it, which module holds the camera. Each module's header already says it; prune the tour, and move into the header any sentence it does not already hold.
 - **A section per thought.** A README heading over one paragraph that the module's own header already heads — prune the heading.
 - **Defense paragraphs.** Three sentences explaining why a short docstring is short — the one shape that asks for condensing: drop the defense, let the docstring stand.
 - **Procedure in a comment.** "when adding X, also edit Y" next to one of the places X joins — the trip belongs elsewhere; cut down to the hazard that stays true outside it, or to nothing.
@@ -48,10 +71,11 @@ The shapes below name, where it differs, which distillation each one asks for.
 ## The passes
 
 **After a change.** Re-read every comment and doc line the change added, cut what `AGENTS.md`'s list forbids, then ask of each survivor: *what wrong thing would the next reader do without this line?* No answer — cut.
+Every line the change added to `AGENTS.md` takes the admission test above as well: name the file that would own it, and move it there if one does.
 Then read it once as prose, not as a scan: does the sentence actually parse, is the reference unambiguous, do its terms appear in the code beneath it?
 A comment that reads as "probably fine" at a glance is exactly the failure a second, slower reading catches.
 
-**When distilling a tree.** Inventory the prose (`AGENTS.md`, each `README.md`, each skill, each module header worth more than three lines); for each fact asked to shrink, `rg` its distinctive phrase, its numbers ("three", "two rounds"), and any frozen list it mirrors; then prune the copies to the one owner, and trim a pointer where each copy stood.
+**When distilling a tree.** Start with `AGENTS.md`, a paragraph at a time: name its owner, and move what has one. Then inventory the prose (`AGENTS.md`, each `README.md`, each skill, each module header worth more than three lines); for each fact asked to shrink, `rg` its distinctive phrase, its numbers ("three", "two rounds"), and any frozen list it mirrors; then prune the copies to the one owner, and trim a pointer where each copy stood.
 
 **Auditing a doc against reality — lay it against a real change.** Diff the runbook's file list against the last merge that did the work:
 

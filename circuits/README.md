@@ -1,363 +1,108 @@
 # circuits
 
-The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out,
-and one directory per circuit — the Overpass answer the geometry was written
-from and the atlas line measured against it, kept beside the config that
-surveyed them.
-The commands are the flake's — one app for the pipeline taking the word it runs, beside
-`.#geometry-timing-lines` and `.#geometry-test`; the table in `AGENTS.md` lists the words.
-The pipeline itself is the Flix project at this directory's root: it asks OpenStreetMap,
-surveys a circuit out of an answer, and writes the file the app serves. Its `-- probe` word is
-the same question OpenStreetMap answers, asked before a circuit has a config to
-author; its `-- timing-lines` word is the timing report, reading
-the feed the load reads with the decoder the load decodes it with.
-What follows is what no
-single module's header says for itself; what a module can say at its own call
-site, its header says there and is not repeated here.
+The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out, and one directory per circuit keeping the evidence — the Overpass answer the geometry was written from, and the atlas line measured against it.
+It is the Flix project at this directory's root, run through the flake: `.#geometry -- <word>`, `.#geometry-timing-lines` and `.#geometry-test`, whose words `AGENTS.md`'s table lists.
+`-- probe` asks OpenStreetMap before a circuit has a config; `-- timing-lines` reads the timing feed with the decoder the load decodes it with.
+Each module's header says what it reads and refuses; what follows is what crosses them.
 
-OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; every
-geometry and module here is a derivative of it, and the written files carry the
-source relation and the license in their own properties.
+OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; every geometry and module here is a derivative of it, and the written files carry the source relation and the license in their own properties.
 
 ## One pipeline, one thin config per circuit
 
-A circuit joins as a record in `src/Circuit.flix` — the relation, or the box of
-raceway ground where OpenStreetMap tags no relation, the member role naming the
-line the lap is measured from, the published length the surveyed line is
-stretched to, the prose the geometry file is documented with —
-and as a directory named by the word the summaries send for it, which keeps
-only the evidence: the kept Overpass answer and, where one has been measured,
-the kept atlas line. What it writes is not a build artifact but a served
-one: the app reads `app/static/geometry/<word>.geojson` at load, through
-`Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the
-bytes as they arrive, and the `Layout` module beside it holds what the file
-cannot know — the drawing's lengths and timing lines. Nothing generates Elm
-from the geometry.
+A circuit joins as a record in `src/Circuit.flix` — the relation, or a box of raceway ground where OpenStreetMap tags no relation, the member role naming the line the lap is measured from, the published lap length the surveyed line is stretched to, and the timing line's published coordinates — and as a directory named by the word the summaries send for it.
+How each circuit is actually tagged is its config comment's to say.
+The config's timing-line coordinates are what make a run answering the wrong role fail before it writes anything, rather than drawing every car early.
+
+What the pipeline writes is a served file, not a build artifact: the app reads `app/static/geometry/<word>.geojson` through `Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the bytes, and the `Layout` module beside it holds what the file cannot know — the drawing's lengths and timing lines. Nothing generates Elm from the geometry.
+
+The steps of adding a circuit are `/skill:add-circuit`'s.
 
 ## The fence
 
-The Elm tests cannot hold a survey: the pipeline stretches whatever degrees it
-gets to the circuit's published lap length whatever the degrees say, so a point
-moved 20 m passes every Elm test and leaves the tracker's pixels where they
-were. `.#geometry -- regenerate` holds it instead, re-running the pipeline over
-each circuit's kept Overpass answer — kept in the circuit's own directory —
-and failing unless it reproduces the kept geometry, every fenced property
-exactly and `surveyed_at` alone exempt.
+The Elm tests cannot hold a survey: the pipeline stretches whatever degrees it gets to the published lap length, so a point moved 20 m passes every Elm test and leaves the tracker's pixels where they were.
+`.#geometry -- regenerate` holds it instead, re-running the pipeline over each circuit's kept Overpass answer and failing unless it reproduces the kept geometry, every fenced property exactly and `surveyed_at` alone exempt.
+CI runs that comparison for every circuit and never passes `--write`: a fence that rewrites what it fences passes by construction.
 
-A regeneration is read as a diff of the geometry itself — `nix run
-.#geometry -- diff` lays the moved file against the kept one and prints the
-metres between them. A survey that moved by metres then takes a re-baseline
-of the tracker's VRT with it, since every tracker baseline is drawn on those
-degrees — but the size of a move is measured on the GeoJSON, and the pixels
-only follow it.
+The fence's property list is the writer's own (`Geometry.Write.claims`) less that one exemption; `TestRegenerate` holds both directions — every claim the writer lays is fenced or exempt, and every fenced name is a claim the writer lays.
+
+A regeneration is read with `.#geometry -- diff`, which lays the moved file against the kept one in metres.
+A survey that moved takes a re-baseline of the tracker's VRT with it, since every tracker baseline is drawn on those degrees; the size of a move is measured on the GeoJSON, and the pixels only follow it.
+
+`--fetch` asks OpenStreetMap now and keeps the answer only once the survey can read it — an answer that surveys nothing is evidence nobody can re-run. Keeping an answer is `--fetch`'s alone and laying the geometry `--write`'s alone, so `--fetch` without `--write` answers whether a fresh survey moves the served bytes and writes nothing else.
 
 ## What the bytes are kept to
 
-Every surveyed point is held in the degrees OpenStreetMap gives it, with how
-far round the lap it stands, and `Circuit/Layout` projects those degrees into
-the drawing through the `Circuit.Geodesy.Frame` the generator writes beside
-them — to the tenth of a metre the survey is kept to, which is the tenth every
-VRT baseline was rendered at. The frame's origin is the north-west corner of
-the survey, so the drawing never falls below its own zero, and a test holds
-every projected place clear of the half-tenth its rounding turns on — measured
-before the rounding, since a rounded place is clear of every boundary by
-construction. The tightest place stands 113 micrometres clear at Le Mans and
-39 at COTA, which is what lets the metres be projected rather than written
-down. Every circuit's generator writes the same frame, out of the parallel it
-scales east-west at and the north-west corner of what it surveyed, and adds
-nothing to `Circuit/`.
+Every surveyed point is held in OpenStreetMap's degrees with how far round the lap it stands, and `Circuit/Layout` projects them through the `Circuit.Geodesy.Frame` written beside them, to the tenth of a metre every VRT baseline was rendered at.
+The frame's origin is the survey's north-west corner, so the drawing never falls below zero.
+A test holds every projected place clear of the half-tenth its rounding turns on, measured before the rounding; the tightest stands 113 micrometres clear at Le Mans and 39 at COTA, which is what lets the metres be projected rather than written down.
 
-## Authoring a circuit
-
-The steps are `/skill:add-circuit`'s. What belongs here is what those steps rest on.
-
-OpenStreetMap holds a circuit however whoever mapped it tagged it, and the five
-here are grounded two ways. The four relations are tagged differently: Le Mans's
-relation names one node `start-finish`,
-COTA's names two, 297 m apart along the lap, Barcelona stands in two
-relations — the no-chicane layout the WEC races, surveyed here, beside the
-chicane layout it grew and F1 kept — whose line is checked against the atlas
-marker, the circuit publishing no distance of its own, and Monza's roles name a traffic-signal node instead of its line, so
-no `timingLine` can be authored for it at all and its drawn zero stands where
-the pit exit light stands. Fuji has no relation for anyone to tag at all, so it
-stands outside that list: its ground is a box of `highway=raceway` ways, and its
-line is authored from a track atlas because OpenStreetMap marks no line there.
-A circuit's config carries
-the timing line's published coordinates, so a run that answers the wrong role
-fails before it writes anything rather than drawing every car early; how each
-relation is actually tagged is the circuit's own config comment to say.
-
-A circuit OpenStreetMap holds as loose raceway ways rather than a relation — Fuji
-is mapped that way — authors a `box` instead, and the survey then reads the ground
-where a relation's roles would have said it.
-Which way is the lap, which hanging lines are the pit and where the zero turns —
-the projection of the authored line's place onto the lap, which no surveyed node
-need stand under — is `Survey.flix`'s `surveying a box` section to say.
-Where a complex hangs more than one line off the lap the config names the pit's
-ways by id, as a relation's members do.
-The geometry's `source` claim is the search bbox rather than a relation, and the
-same byte fence holds all of it.
+`Motorsport.Circuit.Geodesy` re-runs this project's projection app-side, and nothing compares the two: a Geodesy on another sphere lays a drawing whose metres are not the survey's.
 
 ## The timing lines, and where their distances come from
 
-Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit
-map for that race, and differ by season; the maps are not to be redistributed,
-so they are not in the repository. COTA's are its own track sector map's, and
-are one set used for every season here, since no later map has been read. Which
-of the kinds a circuit's map is belongs to its config, as its `sectors` — one set
-`published` for every season, `perSeason`, or neither where no map has been read
-at authoring, as at Barcelona, Monza and Fuji: the geometry then writes no stretches and the
-report reads the circuit as publishing no lines. `nix run
-.#geometry-timing-lines` refuses a round on the second kind by quoting the
-circuit's own reason. Nothing in a
-round's own times picks one placement of those lines out of
-another — a sector's share of a lap is not a share of its distance, and every
-placement has a mean speed of its own — so what they rest on is that the
-circuit published them as the lines it times to, beside the lap length they
-add up to.
+Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit map for that race, and differ by season; the maps are not to be redistributed, so they are not in the repository.
+COTA's are its own track sector map's, one set for every season here.
+A circuit's config says which kind its map is, as its `sectors`: `published` for every season, `perSeason`, or neither where no map has been read (Barcelona, Monza, Fuji), in which case the geometry writes no stretches.
+`nix run .#geometry-timing-lines` refuses a round on a per-season map by quoting the circuit's own reason.
 
-What the times can answer is whether the lines have moved, and `nix run
-.#geometry-timing-lines -- 2026/cota_6h --against 2025` reads that: the two
-rounds here agree within half a percent of a lap — the only evidence there is
-that one map serves both. How the shares become distances, and what they may be
-judged against, is the report's own header to say. The export is confirmed where
-it is written — `.#cli-run` reads its own integrity checks back out of the rows
-it wrote the export from.
+Nothing in a round's times picks one placement of the lines out of another — a sector's share of a lap is not a share of its distance — so what they rest on is that the circuit published them.
+What the times can answer is whether the lines moved: `nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025` finds the two seasons agree within half a percent of a lap, the only evidence one map serves both.
+Where a line stands against the drawn line itself is `regenerate`'s and `diff`'s to say: that is how COTA's second line was found 6.7 m off the circuit's own map, though its two seasons agree within 40 m.
 
-The geometry publishes what the circuit itself publishes about its lines: the
-authored stretches travel in the geometry as `sectors`, which is what the
-drawing places its cars between. The report reads those same figures rather than
-the geometry, because what the report answers is a season against another
-season, which no geometry file holds — reading the served bytes would make the
-report's input whatever a survey happened to lay down. A lap length and its
-stretches are authored once, in the circuit's config, and
-`test/TestTimingMap.flix` reads the derivation they are derived by: the
-published stretches carried whole, a re-issued map refused with the config's own
-reason, a word no config authors publishing nothing. The circuit words
-are the one figure-list the two projects still each hold, and the report's own copy of
-them is its own section's to describe. What is not answerable this
-way is where a place the shares imply stands against the drawn line itself —
-that is `.#geometry -- regenerate`'s and `-- diff`'s to say, measuring the
-geometry rather than a season. It is how COTA's second line was found standing
-6.7 m off the circuit's own map, which is how far a round whose two seasons agree
-to within 40 m can still be drawn wrong by. How the drawing places a line the map
-gives no distance for is app-side — `Tracker.Config.lapScale`, and the
-`ConfigTest` combinations that hold it.
+A lap length and its stretches are authored once, in the circuit's config. The geometry carries them as `sectors`; the report reads the config rather than the geometry, because it answers a season against another season, which no geometry file holds.
+`test/TestTimingMap.flix` reads that derivation.
+How the drawing places a line the map gives no distance for is app-side: `Tracker.Config.lapScale`.
 
-## The report, and the links it reads through
+## The links into `backend/src`
 
-The report is a word of the pipeline, not a project: `src/TimingLines.flix` reads
-the arguments and prints what the two readings come to, `Main.flix` hands the word
-over, and `src/TimingLines/Feed.flix` reads the feeds themselves.
-Nothing compiled here can name a database: no `Db` effect among the project's
-sources, no argument flag for one, and no JDBC driver resolved.
+Nothing compiled here can name a database: no `Db` effect, no flag for one, no JDBC driver.
 
-Five sources are symlinks into `backend/src`: the durations, `Motorsport/`'s `Events.flix` and `Calendar.flix`,
-and the parent stubs `Cli.flix` and `Motorsport.flix`, which
-are compiled because Flix will not enter a module whose parent it has never
-seen. Compiled twice, held once. The CSV decoding is not among them: it is
-`github:y047aka/csv`, named by both projects' `flix.toml`. `Motorsport/`'s `Circuit.flix` is not
-among them either: the report holds its own file — the same enum and `jsonValue` body the export sends,
-and nothing of the timing figures, which the config derives. What no compiler can see
-across those two copies, and no `@Test` can reach now that no project compiles both, is
-`test/check-sources.mjs`'s to read from outside both.
+Five sources are symlinks into `backend/src`: the durations, `Motorsport/`'s `Events.flix` and `Calendar.flix`, and the parent stubs `Cli.flix` and `Motorsport.flix`, compiled because Flix will not enter a module whose parent it has never seen.
+The CSV decoding is not among them: it is `github:y047aka/csv`, named by both projects' `flix.toml`.
+`Motorsport/Circuit.flix` is not among them either: the report holds its own copy — the same enum and `jsonValue` body the export sends — and `test/check-sources.mjs` is what lays the two copies together, since no project compiles both.
 
-**A link compiles every function a module holds for the few one command calls,**
-and the links are held to that rate. What the report reads through is linked; what
-belongs to the commands that compute in a database is held again on this side,
-smaller — `Cli/Errors.flix` and `TimingLines/Files.flix` each say at their own
-header what they hold, and why the two file readings are named apart. A database is
-what this side has no source for: `Db.flix` is reached from no call in the project.
+A link compiles every function a module holds, so only what the report reads through is linked; what the database commands need is held again here, smaller, in `Cli/Errors.flix` and `TimingLines/Files.flix`, whose headers say what they hold.
+`Calendar.find` and `Events.circuit` are called once each and stay links: a copy of either would be a second calendar or a second table of circuit words.
 
-Two of the links are called at one point each and stay links for that: `Calendar.find`
-is what refuses a round the calendar does not list, and the calendar's rounds are the
-thing the report cannot hold a second copy of; `Events.circuit` says which ground a
-round was run on, which is the word the export sends and the drawing matches —
-a copy here would be a second table with one reader.
+**A symlink per file, never one per directory.** Flix's source walker does not descend a symlinked directory: one link at `src/Util` compiles as nothing and fails as an undefined name in the module that needed it.
+Copies are no alternative: Flix has no local path dependency and `flix build` takes no source directory, so what two projects share is a symlinked file or a released package.
+Per-file links show in `git ls-files -s` as mode `120000`.
 
-So the two `Cli.Errors` — the CLI's and this project's smaller one — are each
-compiled from their own file. What they keep in common is a
-wording: one bad `--csv` is answered in the same words at either command.
+`.#geometry-test` and `.#flix-test` compile the linked files on either side, which is what proves the links survived the checkout.
 
-**A symlink per file, never one per directory.** Flix's source walker does not
-descend a symlinked directory: one link at `src/Util` compiles as nothing and fails as
-an undefined name in the module that needed the link, reported there rather than in the
-link itself. Copies are no easier for what is shared: Flix has no
-local path dependency, answering anything but `github:username/projectname` with a
-format error, and `flix build` takes no source directory as an argument — so what the
-two projects share is a symlinked file or a released package, never a second copy. Per-file
-links also leave each shared source visible in `git ls-files -s` as mode `120000`.
+## The probe, and OpenStreetMap's answers
 
-`nix run .#geometry-test` runs the project's own `flix test`, and `.#flix-test`
-compiles the same files on the link's other side, which is what proves the
-links survived the checkout as well as
-that the readings are right. Nothing walks the
-links, or the full set of sources the project compiles, from outside it; the
-sharing, the `flix.toml` and the flake's apps are reviewed by reading them.
+`Overpass.flix` spells the runners, a run's name and the backoff once, for the probe's question and the survey's alike; its `flix test` pins that only the survey asks for `node(w)`.
+**A proxy answers a timed-out request as 200 with an HTML page**, so the reading of what a service answered with — beside `Geodesy.earthMetres` — is held to one spelling by `test/check-sources.mjs`: a second reading asking only the status would hand HTML on as a geometry.
 
-## The probe is a word of the pipeline
+## Wiring a test cannot see
 
-`-- probe` opens no file at all — it asks something of a network rather than of a database: `src/Probe.flix` reads the arguments and prints, `src/Overpass/Query.flix` spells the questions, `src/Overpass.flix` walks the runners, `src/Overpass/Answer.flix` gives what comes back the shape of an answer, and `src/Candidates.flix` reads an answer already got — which tags could name a circuit, and what a relation's roles measure.
-Their `flix test` runs under `nix run .#geometry-test`: the asking is one call and the reading is a fixture.
-The two questions that walk a relation — each recursing to `way(r)`, and only the survey asking for `node(w)`, the difference between drawing a lap and lengthening one — are pinned by that test, `Overpass.flix` having written the asking once.
+The sources the project holds, what it resolves, the flake apps that reach it and the directory paths resolve against are invisible to a Flix test run from inside; they are judged by reading `flake.nix` and `.github/workflows/test.yml`.
 
-**One asking, two answers.** Which runners there are, what a run calls itself, and how long one that just failed is left alone are facts about OpenStreetMap, and `Overpass.flix` spells them once, walking the probe's question and the pipeline's through the same runners.
-What a service *answered with* is the same one reading for both, and that reading — beside the sphere `Geodesy.earthMetres` that every metre is measured on — is held to one spelling by `test/check-sources.mjs`, since an `@Test` can build no `HttpResponse` and meets no source file: a proxy answers a timed-out request as 200 with an HTML page, so a second reading that asked only the status would hand HTML on as a geometry.
-What nothing compares is the app's own number, in `Motorsport.Circuit.Geodesy`: neither compiler reaches into the other project's sources, and a Geodesy on another sphere lays a drawing whose metres are not the survey's.
+**The runner changes directory.** `flix` must start inside the project to find its `flix.toml`, while a reader names paths from outside, so the flake exports `GEOMETRY_FROM` as the directory the command was asked from and `Util/Files.flix` resolves every path there. Rename the variable in either place and every typed path is a file not found.
 
-## The pipeline is the project at this directory's root
+**A file that will not read is a failure, not an absence.** `Util/Files.flix`'s `exists` and `isDirectory` answer a stat that answers nothing as a failure rather than `false`: an unreadable kept answer must not read as a circuit "not surveyed yet", nor an unlistable served directory as a warning with nothing to say, both of which would exit 0. `test/check-sources.mjs` holds that shape, because no test here meets a file.
 
-The geometry pipeline is the Flix package at `circuits/`, one module per reading
-named in the sections above, with `src/Main.flix` holding the words the commands go
-by and `src/Cli/Args.flix` the exit code each of them comes to.
+**The repository's layout is said once, in `Circuit.flix`**: the evidence directory, the served directory and the names a circuit's directory keeps its evidence under. The warning listing kept files that answer no circuit reads those functions; a name spelled again beside a writer is a directory the warning stops calling out. `TestCircuit` holds a circuit's geometry path to the word the app reaches for.
 
-**What is written once, and what is written twice.** The pipeline is written once: the
-asking of two paths, the report and the overlay are `Diff.flix`'s; the comparison of two
-lines is `Apart.flix`'s, which the diff samples and the atlas reading samples; the atlas
-file's shapes and guards are `Midline.flix`'s; the survey of an answer, the reading of a
-kept file and the bytes a geometry is written in are `Survey.flix`, `Geometry.flix` and
-`Geometry/Write.flix`, each one the only spelling; the chain from an answer's text to a
-surveyed geometry is `Survey.geometry`'s, asked whole by the live survey, by the
-guard a fetched answer passes before it is kept, and by the regeneration fence,
-so all three fail in one reading's words. The sentence a transport failure is printed in is spelled once too.
-The ground those readings are taken on is `Geodesy.flix` alone — the
-radius, the parallel two lines are laid on, the projection that keeps `y` south, the
-north-west corner a drawing is measured from, the metres a line accumulates from its
-own zero and the tenth a distance is kept to — which the survey, the probe, the atlas
-reading and the diff all read and none of them holds. So is the shape an element comes
-back as, read once in `Overpass/Answer.flix`: the `--fetch`ed answer and the kept one are
-read alike, and a question cannot drift from the reading that works it. Two modules read
-the two files
-a circuit's directory keeps, named for the two different things those files are:
-`Geometry.flix` the served outline, a survey stretched to a published length, and
-`Midline.flix` the atlas file's line, measured from imagery and stretched to nothing.
-And the timing figures are authored once, in `src/Circuit.flix`.
-`nix run .#geometry -- survey cota` reads `circuits/cota/overpass.json`, finds the relation by
-the role naming the line the lap is timed from, chains the ways into a closed lap and a pit
-lane, stretches the surveyed length to the published one, thins it at a metre, and answers
-whether what it would write is the file the app serves; `--write` writes it. The
-network is a flag and not a word: `--fetch` asks OpenStreetMap now, keeps the answer
-at `--answer` or beside the circuit — and keeps it only once the survey can read it,
-since an answer that surveys nothing is evidence nobody can re-run — and then travels
-on through exactly the survey a kept answer travels through. Keeping an answer is
-`--fetch`'s alone and laying the geometry is `--write`'s alone, so a `--fetch` with no
-`--write` keeps the fresh evidence and then answers, writing nothing else, whether the
-fresh survey moves the served bytes. CI runs the
-comparison for every circuit and never passes `--write`: a fence that rewrites
-what it fences passes by construction. The wiring around the project — the
-sources it holds, what it resolves, the flake apps that reach it, the directory
-a reader's paths resolve against — is everything a Flix test run from inside
-the project cannot see, and nothing reads it from outside either; it is judged
-by reading `flake.nix` and `.github/workflows/test.yml`.
-
-**A byte comparison and a property comparison, kept because they answer different
-questions.** The fence compares parsed properties because asking OpenStreetMap now takes a
-newer survey while every degree stands still, and `surveyed_at` alone is exempt; the byte
-comparison reads the very answer whose stamp the property carries, so the stamp it would
-write is the stamp it reads — and a metre that lands on a different digit is a drawing
-that moved. The
-fence's list of compared properties is the writer's own list (`Geometry.Write.claims`) less that
-one exemption, so a claim added to the profile is asked of both files at its own place
-in a drift line rather than in the unordered tail everything unnamed falls into; the
-two directions — every claim the writer lays is fenced or exempt, and every name in
-the fence's list is a claim the writer lays — are `TestRegenerate`'s.
-
-**The layout of the repository is said once, in `Circuit.flix`.** The evidence
-directory, the served directory, and the names a circuit's own directory keeps its
-evidence under are functions there, and the warning that lists kept files answering
-no circuit reads them from those functions rather than naming the files again — a
-name spelled a second time beside the writer of one of those files is a directory the
-warning stops calling out, and a fence that stays green. A circuit's own geometry path
-stays authored in its config, the way its timing figures are authored there too; what
-holds it to the word the app reaches for is `TestCircuit`.
-
-**Its runner changes directory, and says so.** `flix` has to start inside the project to
-find its `flix.toml`, and a reader names `app/static/geometry/le_mans.geojson` from
-outside it, so the flake exports `GEOMETRY_FROM` as the directory the command was asked
-from and `Util/Files.flix` resolves every path there. Rename the variable in either
-place and every path a reader types is a file not found, with the name they typed in the
-message.
-
-**A file that will not read is a failure, and not an absence.**
-`Cli/Errors.flix` is the reporting and `Util/Files.flix` holds the branching
-questions, `exists` and `isDirectory`, a stat that answers nothing being a
-failure rather than the `false` that ends a walk quietly. An unreadable kept
-answer must not read as a circuit "not surveyed yet", and a served directory
-that will not list must not read as a warning with nothing to say — both would
-answer as silence and exit 0. `test/check-sources.mjs` holds that
-shape — one discarded-failure arm left in the project, on a parse refusal
-another reading said first — because no test of this project ever meets a
-file.
-
-## The atlas readings
-
-`nix run .#geometry -- atlas <circuit>` is the geometry project's own: `Midline.flix`
-reads the foreign file's shapes and refuses what they contradict, `Atlas.flix`
-reads the layer and asks its home only on `--fetch`, and the apartness is the
-diff's `Apart.flix` sampling the same pair of lines. It reads the track-atlas
-line — a midline measured from orthoimagery, not a survey stretched to a
-published length, at 5,500.2 m against the 5,515 m this app draws — and keeps
-it as `<circuit>/atlas.geojson` with `stretched: false`, beside the survey it
-is judged against rather than in what gets served. For a circuit this
-repository has not surveyed yet, the atlas's `start_finish` point is a
-surveyed coordinate to seed a config's `timingLine` with; whether the lines
-the times are read against stand where the seeded line puts them is `nix run
-.#geometry-timing-lines`'s to answer, once a round has been loaded.
-
-`nix run .#geometry -- diff` lays any two kept geometries against each other —
-mean and maximum apartness, and an SVG overlay on request — so a fresh survey
-is read against the old one, or the atlas line against either, with no script
-in between. Neither writes Elm: drawing on a measured line would move every
-tracker baseline and re-open where the timing lines stand, which is its own
-change judged on that report.
+**One place decides an exit code**: every command is `arguments` over its own flag table and `asking` over its readings, and `Cli.Args.comeTo` turns either into a code. A `Verdict` — the drawing moved, a line moved a season later — is the negative answer the reader came for, said on stdout at 1; `Failed` is a run that never got to answer, said on stderr.
+`--help` is a value in `Parsed`, so `TestUsage.flix` asserts which answer a run of tokens comes to without running anything.
 
 ## The readings, and their tests
 
-Every tool is two things: the asking, and the reading of an answer. The asking —
-Overpass, the atlas layer, a CSV, a geometry file — stays in the command; the reading
-moved into a module beside it that opens nothing, so `nix run .#geometry-test` can
-hand it a fixture: `TimingLines.Feed` turns feed text into rows, fastest sectors,
-shares and implied lines; `Candidates.flix` reads a probe answer; `Survey.flix` chains
-a kept answer and is held to the bytes the app serves rather than by a shared source, and
-is where the `survey` word asks — the asking of a circuit sits with the reading of one, as
-it does for the atlas;
-`Geometry.flix` is the one reader of every kept file, and `Geometry/Write.flix` the one
-writer of them — the outline's layout, the property list and the JSON spelling, with no
-asking in it at all, which is what lets the `survey` word, the regeneration fence and the
-atlas line be written by one profile rather than by whichever command got there first;
-`Midline.flix` holds the atlas
-file's shape checks and its two guards; and the comparison the fence makes is
-`Regenerate.flix`'s. Nothing asks OpenStreetMap from outside this project at all.
-Printing stays with the command — what a reading is worth is what it
-answers, not how its table is padded. The exit code is the one thing no reading
-decides for itself: every command is `arguments` over its own flag table and `asking`
-over its own readings, and `Cli.Args.comeTo` is the only place either of the two
-becomes a code. A reading hands back a `Result` and the run they add up to hands back
-an `Outcome`, of which `Verdict` — the drawing moved, one line moved a season later —
-is the negative answer the reader came for and is said on stdout at 1, while `Failed`
-is a run that never got to answer and is said on stderr. `--help` is a value in that
-`Parsed` rather than a printing, which is why `TestUsage.flix` can read the answering
-at all: which of its three answers a run of tokens comes to is asserted there, and
-nothing is run. The one test handed no fixture reads none on
-purpose: `TestTimingMap` reads the derivation of the report's timing answer
-from the config that authors its figures, and the real authors are what it is
-given. What is judged
-against the repository's real bytes stays this file's other sections': the fence,
-the contract specs, the VRT.
+Every tool is the asking and the reading of an answer; the asking stays in the command, and the reading sits in a module that opens nothing, so `.#geometry-test` hands it a fixture.
+`TestTimingMap` is the one test handed no fixture: it reads the derivation from the real configs.
+What is judged against the repository's real bytes is the fence, the contract specs and the VRT.
+
+## The atlas readings
+
+`.#geometry -- atlas <circuit>` keeps the track-atlas line — a midline measured from orthoimagery, not stretched (5,500.2 m against the 5,515 m drawn at COTA) — as `<circuit>/atlas.geojson` with `stretched: false`, beside the survey and never served.
+For a circuit not surveyed yet, the atlas's `start_finish` point is a coordinate to seed a config's `timingLine` with; whether the times agree with it is `.#geometry-timing-lines`'s to answer once a round is loaded.
+Nothing draws on the atlas line: that would move every tracker baseline and re-open where the timing lines stand, which is its own change.
 
 ## Where the app reads this
 
-The geometries are kept because the app reads them, and as the line other
-datasets are measured against. A drawn circuit is two lists in `Shared` — the
-words `trackOf` matches and `decoderFor` decodes — and a geometry file at
-`app/static/geometry/<word>.geojson`, and `app/tests/geometry-contract.spec.ts`
-reads the served file against those words: that it stands where the app reaches
-for it, and that the circuit's directory under this one is named by that same
-word. Whether the file's own contents are honest — metres ascending and ending
-at the published lap, sectors adding up to it, a pit lane beside it — is a
-refusal of `Geometry.outline` and `Geometry.pitLane`, pinned by `TestGeometry`
-and re-asked of the real bytes by the byte fence on every CI run. Which words the two Elm lists hold, and which word
-the Flix summary sends, nothing compares — no compiler reaches from one side
-of that seam to the other, and a rename on one side alone is a round drawn as
-the ring with nothing red. What neither project can see from inside itself
-is `test/check-sources.mjs`'s, held to one source each.
+A drawn circuit is two lists in `Shared` — the words `trackOf` matches and `decoderFor` decodes — and a file at `app/static/geometry/<word>.geojson`.
+`app/tests/geometry-contract.spec.ts` checks that the file stands where the app reaches for it and that this directory's circuit is named by the same word.
+Whether the file's contents are honest — metres ascending to the published lap, sectors adding up to it, a pit lane beside it — is `Geometry.outline`'s and `Geometry.pitLane`'s refusal, pinned by `TestGeometry` and re-asked of the real bytes by the fence on every CI run.
+**Nothing compares the two Elm lists with the word the Flix summary sends**: a rename on one side alone is a round drawn as the ring with nothing red.
