@@ -702,6 +702,7 @@ pub mod Sql {
     /// why it is a hole and not text -- so the values come out in the order the `?`s
     /// they bind stand in, the `SELECT` clause's own among them.
     def filled(template: String, holes: Map[String, Frag], clause: Frag): Frag \ DbErr =
+        refuseLineComment("the statement", template);
         match String.splitOn({substr = "%%"}, template) {
             case before :: after :: Nil =>
                 let named = holeNames(template);
@@ -734,6 +735,7 @@ pub mod Sql {
     /// scalar subquery.
     pub def spliced(lines: List[String], holes: Map[String, Frag]): Frag \ DbErr =
         let template = spaced(lines);
+        refuseLineComment("the piece", template);
         let named = holeNames(template);
         let given = holes |> Map.toList |> List.map(match (name, _) -> name);
         let missing = List.filter(name -> not List.exists(k -> k == name, given), named);
@@ -754,6 +756,24 @@ pub mod Sql {
     /// Flix has no multi-line string literal, which is why a statement is written one clause per line and put back into one string here.
     pub def spaced(lines: List[String]): String =
         List.join(" ", lines)
+
+    /// A written statement holds no `--`.
+    ///
+    /// The run together is what makes this worth a check: a clause per line reads as a
+    /// place a comment belongs, and `spaced` puts the statement back onto one line, so
+    /// the comment reaches the database still open. What it deletes behind itself is not
+    /// a syntax error -- the statement still runs, and answers with the wrong rows in
+    /// the wrong order, and the bound values still count out. A `/* */` survives the
+    /// run together and is what to write instead.
+    def refuseLineComment(place: String, template: String): Unit \ DbErr =
+        if (String.contains({substr = "--"}, template))
+            DbErr.raise(DbErrorKind.Other(
+                "${place} holds a `--`, and its lines are run together into one, so the comment"
+                    + " reaches the database still open and has commented out every clause behind"
+                    + " it: ${String.take(120, template)}"
+            ))
+        else
+            ()
 
     /// Every hole a template names, in the order it names them.
     def holeNames(text: String): List[String] =

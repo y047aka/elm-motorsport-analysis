@@ -97,6 +97,46 @@ pub mod Sql.TestWritten {
             == "the piece names `{{season}}` and gives nothing for it:"
                 + " round_id = {{scope}} AND season = {{season}}")
 
+    /// A comment written at the end of a clause is the one mistake a written statement
+    /// can make that no database reports. `spaced` puts the statement back onto one
+    /// line, so the comment reaches the database still open, and what it deletes behind
+    /// itself -- here the `ORDER BY`, and in another statement the predicate next to it
+    /// -- leaves a statement that runs and answers with the wrong rows.
+    @Test
+    def aLineCommentIsRefusedRatherThanRunOntoTheStatement(): Unit \ Assert =
+        Assert.assertTrue(sentence(DbError.runWithKind(() -> Sql.statement(
+            "SELECT %% FROM laps WHERE {{scope}}" ::
+            "-- the round's own rows" ::
+            "ORDER BY elapsed_ms ASC" :: Nil,
+            Map#{ "scope" => scoped() },
+            (Sql.text("car_number"), Sql.int("elapsed_ms")))))
+            == "the statement holds a `--`, and its lines are run together into one, so the comment"
+                + " reaches the database still open and has commented out every clause behind"
+                + " it: SELECT %% FROM laps WHERE {{scope}} -- the round's own rows ORDER BY elapsed_ms ASC")
+
+    @Test
+    def aLineCommentInAPieceIsRefusedToo(): Unit \ Assert =
+        Assert.assertTrue(sentence(DbError.runWithKind(() ->
+            Sql.spliced("round_id = ? -- the round" :: "AND lap_number > 3" :: Nil,
+                Map#{ "unused" => scoped() })))
+            == "the piece holds a `--`, and its lines are run together into one, so the comment"
+                + " reaches the database still open and has commented out every clause behind"
+                + " it: round_id = ? -- the round AND lap_number > 3")
+
+    /// The guard is on the one spelling that cannot survive the run together. A block
+    /// comment closes itself and costs nothing, which is what a written statement is to
+    /// use instead.
+    @Test
+    def aBlockCommentSurvivesTheRunTogetherAndIsNotRefused(): Unit \ Assert =
+        Assert.assertTrue(rendered(() -> Sql.statement(
+            "SELECT %% FROM laps /* the round's own rows */ WHERE {{scope}}" :: Nil,
+            Map#{ "scope" => scoped() },
+            (Sql.text("car_number"), Sql.int("elapsed_ms"))))
+            == Ok((
+                "SELECT car_number, elapsed_ms FROM laps /* the round's own rows */ WHERE round_id = ?",
+                SqlValue.Int32(3) :: Nil
+            )))
+
     /// The sentence a statement with its holes wrong is reported by.
     def sentence(outcome: Result[DbErrorKind, a]): String =
         match outcome {
