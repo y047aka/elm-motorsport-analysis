@@ -35,6 +35,14 @@ keyword.
 The error is usually a parse error at a distance rather than anything naming the
 word.
 
+How far the distance gets: a `def refuseLineComment(where: String, template: String)`
+in `Sql.flix` answered with **275 errors in `Cli.Load.Validation` and `Db/CarDrivers`**
+-- `Missing instance: 'Project'`, `Undefined name 'Sql.selectAll'` -- and not one line
+naming `where` or pointing at `Sql.flix`. Renaming the parameter fixed all 275. A
+parameter is a cheaper place to pay for this than a `where_` at the top of a def, so
+when a build fails in files that were not touched, look at the identifiers introduced
+in the file that was.
+
 ### A doc comment cannot go inside a record type alias
 
 ```
