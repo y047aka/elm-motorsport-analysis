@@ -1,0 +1,12 @@
+[package]
+name        = "sqlfx"
+description = "A PostgreSQL database library for Flix. It does not abstract SQL away; it types what happens between queries with effects"
+version     = "0.7.0"
+flix        = "0.75.3"
+authors     = ["abab <ababup1192@gmail.com>"]
+
+[mvn-dependencies]
+"org.postgresql:postgresql" = "42.7.4"
+"com.zaxxer:HikariCP" = "5.1.0"
+# WhyNot: HikariCP は SLF4J で書くので、束縛が無いと最初の利用時に警告を標準エラーへ出し、Flix のテストが失敗扱いになる
+"org.slf4j:slf4j-nop" = "1.7.36"

@@ -1,0 +1,9 @@
+sqlitefx
+
+Derived from sqlfx (https://github.com/ababup1192/sqlfx), version 0.7.0,
+commit ff792251ee5b9303f49b8c5545ac68406e28950d, by abab (ababup1192),
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The files have been modified from that version: the PostgreSQL parts are being
+rewritten for SQLite 3. The changes are recorded in this repository's history
+under backend/sqlitefx.

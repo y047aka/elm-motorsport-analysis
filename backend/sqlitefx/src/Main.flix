@@ -1,0 +1,274 @@
+use Sqlfx.Q.QScope
+
+///
+/// `bin/flix run -- gen [--scope <column>[:<effect>]]... <migrations/> <queries/> <out/>`: migrations でスキーマを組み、queries の .q から Flix を生成する。
+/// `--scope project_id` を付けると、その列を持つ表を触る query に列の条件が無ければ生成を止める（QScope）。
+/// `--scope project_id:Tenant` なら、さらにその列の camelCase の引数（`projectId: Int64`）を生成関数から外し、`Tenant.currentId()` で埋める。
+/// `gen --check ...` は書かずに、生成物が最新かだけを確かめる（CI 用。古ければ終了コード 1）。
+/// `gen --statements <path> ...` は、query ごとの文の一覧（QStatements）を path に JSON で書く。`--check` はその中身も突き合わせる。
+/// `migrate [--check | --status] <migrations/>`: migrations を DB に当てる。接続先は環境変数 SQLFX_DSN / SQLFX_USER / SQLFX_PASSWORD。
+/// `migrate new <migrations/> <name>`: 次の番号でファイルを作る（DB は使わない）。
+/// 生成器を別プロジェクトにしないのは、flix.toml にローカルパス依存が無いから（PLAN フェーズ 2-3）。
+///
+def main(): Unit \ {IO, Sys.Env.Env, Sys.Exit.Exit, Fs.DirList.DirList, Fs.FileRead.FileRead, Fs.FileWrite.FileWrite} =
+    run {
+        match Sys.Env.getArgs() {
+            case "gen" :: rest => match genArgs(rest) {
+                case Some((false, dirs)) => Gen.generateAll(dirs)
+                case Some((true, dirs))  => Gen.checkAll(dirs)
+                case None                => usage()
+            }
+            case "migrate" :: migrationsDir :: Nil => MigrateCli.applyAll(migrationsDir)
+            case "migrate" :: "--check" :: migrationsDir :: Nil => MigrateCli.checkAll(migrationsDir)
+            case "migrate" :: "--status" :: migrationsDir :: Nil => MigrateCli.showStatus(migrationsDir)
+            case "migrate" :: "new" :: migrationsDir :: name :: Nil => MigrateCli.newFile(migrationsDir, name)
+            case _ => usage()
+        }
+    } with Fs.ReadFile.runWithFileRead
+      with Fs.WriteFile.runWithFileWrite
+      with Fs.MkDirs.runWithFileWrite
+
+def usage(): Unit \ {IO, Sys.Exit.Exit} =
+    println("usage: bin/flix run -- gen [--check] [--scope <column>[:<effect>]]... [--statements <json path>] <migrations dir> <queries dir> <out dir>");
+    println("       bin/flix run -- migrate [--check | --status] <migrations dir>   (SQLFX_DSN / SQLFX_USER / SQLFX_PASSWORD)");
+    println("       bin/flix run -- migrate new <migrations dir> <name>");
+    Sys.Exit.exit(2)
+
+///
+/// `gen` の引数。`--check` と `--scope <column>[:<effect>]`（繰り返し可）はどの順でもよく、残りは 3 つのディレクトリ。
+///
+def genArgs(args: List[String]): Option[(Bool, Gen.Dirs)] =
+    def loop(rest, check, scopes, statements, dirs) = match rest {
+        case Nil                            => Some((check, List.reverse(scopes), statements, List.reverse(dirs)))
+        case "--check" :: more              => loop(more, true, scopes, statements, dirs)
+        case "--scope" :: spec :: more      => loop(more, check, scopeSpec(spec) :: scopes, statements, dirs)
+        case "--statements" :: path :: more => loop(more, check, scopes, Some(path), dirs)
+        case dir :: more                    => loop(more, check, scopes, statements, dir :: dirs)
+    };
+    match loop(args, false, Nil, None, Nil) {
+        case Some((check, scopes, statements, migrationsDir :: queriesDir :: outDir :: Nil)) =>
+            Some((check, { migrations = migrationsDir, queries = queriesDir, out = outDir, scopes = scopes, statements = statements }))
+        case _ => None
+    }
+
+///
+/// `project_id` → 検査だけ、`project_id:Tenant` → 検査と注入。effect の名前は `Cms.Tenant` のように名前空間を含んでよい。
+///
+def scopeSpec(spec: String): QScope.Scope =
+    match String.splitOn(substr = ":", spec) {
+        case column :: effect :: Nil if not String.isEmpty(effect) => { column = column, effect = Some(effect) }
+        case column :: _ => { column = column, effect = None }
+        case Nil => { column = spec, effect = None }
+    }
+
+mod MigrateCli {
+
+    use Sqlfx.DbErr
+    use Sqlfx.DbError
+    use Sqlfx.Jdbc
+    use Sqlfx.Migrate
+    use Sqlfx.Timestamp
+    use Sqlfx.TransientDbErr
+
+    use Sqlfx.Migrate.Status
+
+    ///
+    /// 未適用を当てて、当てた version を表示する。失敗は表示して終了コード 1。
+    ///
+    pub def applyAll(dir: String): Unit \ {IO, Sys.Env.Env, Sys.Exit.Exit, Fs.DirList.DirList, Fs.ReadFile.ReadFile} =
+        let config = Migrate.defaultConfig(connectionFromEnv());
+        match runToResult(() -> Migrate.apply(config, dir)) {
+            case Ok(Nil) => println("up to date")
+            case Ok(applied) => List.forEach(version -> println("applied ${version}"), applied)
+            case Err(message) => { println("error: ${message}"); Sys.Exit.exit(1) }
+        }
+
+    ///
+    /// 未適用・不一致・欠落があれば表示して終了コード 1。CI と起動前の確認用。
+    ///
+    pub def checkAll(dir: String): Unit \ {IO, Sys.Env.Env, Sys.Exit.Exit, Fs.DirList.DirList, Fs.ReadFile.ReadFile} =
+        match runToResult(() -> Jdbc.withConnection(connectionFromEnv(), conn -> Migrate.check(conn, dir))) {
+            case Ok(()) => println("up to date")
+            case Err(message) => { println("error: ${message}"); Sys.Exit.exit(1) }
+        }
+
+    ///
+    /// 全ファイルの状態を並べる。常に終了コード 0。
+    ///
+    pub def showStatus(dir: String): Unit \ {IO, Sys.Env.Env, Sys.Exit.Exit, Fs.DirList.DirList, Fs.ReadFile.ReadFile} =
+        match runToResult(() -> Jdbc.withConnection(connectionFromEnv(), conn -> Migrate.status(conn, dir))) {
+            case Ok(statuses) => List.forEach(status -> println(describe(status)), statuses)
+            case Err(message) => { println("error: ${message}"); Sys.Exit.exit(1) }
+        }
+
+    ///
+    /// 今ある最大の番号 + 1 で `NNN_name.sql` を作る。名前は小文字・数字・`_` だけ。
+    ///
+    pub def newFile(dir: String, name: String): Unit \ {IO, Sys.Exit.Exit, Fs.DirList.DirList, Fs.WriteFile.WriteFile} =
+        if (not Migrate.isValidMigrationName(name)) {
+            println("error: invalid name: ${name} (lowercase letters, digits and _ only)");
+            Sys.Exit.exit(1)
+        } else {
+            match DbError.runWithFailure(() -> Migrate.listSqlFiles(dir)) {
+                case Err(failure) => { println("error: ${failure}"); Sys.Exit.exit(1) }
+                case Ok(names) => {
+                    let path = "${dir}/${Migrate.nextFileName(names, name)}";
+                    match Fs.WriteFile.write(str = "-- ${name}\n", path) {
+                        case Ok(()) => println("wrote ${path}")
+                        case Err(e) => { println("error: cannot write ${path}: ${e}"); Sys.Exit.exit(1) }
+                    }
+                }
+            }
+        }
+
+    def describe(status: Status): String = match status {
+        case Status.Applied(version, at, ms) => "applied  ${version}  ${Timestamp.toIso8601(at)}  (${ms} ms)"
+        case Status.Pending(version) => "pending  ${version}"
+    }
+
+    def runToResult(thunk: Unit -> a \ ef): Result[String, a] \ ef - {Migrate.MigrateErr, TransientDbErr, DbErr} =
+        Migrate.runWithResult(() -> DbError.runWithFailure(thunk) |> Result.mapErr(failure -> "${failure}"))
+            |> Result.flatMap(identity)
+
+    def connectionFromEnv(): Jdbc.ConnectionConfig \ {IO, Sys.Env.Env, Sys.Exit.Exit} =
+        match Sys.Env.getVar("SQLFX_DSN") {
+            case Some(url) => {
+                url = url,
+                user = Sys.Env.getVar("SQLFX_USER") |> Option.getWithDefault(""),
+                password = Sys.Env.getVar("SQLFX_PASSWORD") |> Option.getWithDefault("")
+            }
+            case None => { println("error: SQLFX_DSN is not set (jdbc:postgresql://host:port/db)"); Sys.Exit.exit(2) }
+        }
+
+}
+
+mod Gen {
+
+    use Sqlfx.Q.Codegen
+    use Sqlfx.Q.DdlParser
+    use Sqlfx.Q.QLint
+    use Sqlfx.Q.QParser
+    use Sqlfx.Q.QResolve
+    use Sqlfx.Q.QScope
+    use Sqlfx.Q.QStatements
+    use Sqlfx.Q.QueryDef
+    use Sqlfx.Q.Schema
+
+    ///
+    /// 生成の入出力。3 つともディレクトリのパスなので、並べずに名前で持つ。
+    ///
+    /// - `migrations`: DDL の場所
+    /// - `queries`: .q の場所
+    /// - `out`: 生成物を書く場所
+    /// - `scopes`: テナントの列（と effect）。あれば QScope の検査と注入を通す
+    /// - `statements`: あれば、query ごとの文の一覧（QStatements）をこのパスに JSON で書く
+    ///
+    pub type alias Dirs = { migrations = String, queries = String, out = String, scopes = List[QScope.Scope], statements = Option[String] }
+
+    ///
+    /// 生成の本体。失敗は 1 つ目を表示して終了コード 1。
+    ///
+    pub def generateAll(dirs: Dirs): Unit \ {IO, Sys.Exit.Exit, Fs.ReadFile.ReadFile, Fs.WriteFile.WriteFile, Fs.DirList.DirList, Fs.MkDirs.MkDirs} =
+        match generate(dirs) {
+            case Ok(written) => List.forEach(path -> println("wrote ${path}"), written)
+            case Err(message) => {
+                println("error: ${message}");
+                Sys.Exit.exit(1)
+            }
+        }
+
+    ///
+    /// 生成物が最新か。古い（無い・中身が違う）ファイルを表示して終了コード 1。
+    ///
+    pub def checkAll(dirs: Dirs): Unit \ {IO, Sys.Exit.Exit, Fs.ReadFile.ReadFile, Fs.DirList.DirList} =
+        match staleFiles(dirs) {
+            case Ok(Nil) => println("up to date")
+            case Ok(stale) => {
+                List.forEach(path -> println("stale: ${path}"), stale);
+                Sys.Exit.exit(1)
+            }
+            case Err(message) => {
+                println("error: ${message}");
+                Sys.Exit.exit(1)
+            }
+        }
+
+    ///
+    /// 今の生成器で作った物と outDir の現物が違うファイル。全部一致なら Nil。テストと CI がこれを使う。
+    ///
+    pub def staleFiles(dirs: Dirs): Result[String, List[String]] \ {IO, Fs.ReadFile.ReadFile, Fs.DirList.DirList} =
+        render(dirs)
+            |> Result.map(files -> files |> List.filterMap(file -> {
+                let (path, code) = file;
+                if (Fs.ReadFile.read(path) == Ok(code)) None else Some(path)
+            }))
+
+    ///
+    /// 書いたファイルの一覧を返す。
+    ///
+    def generate(dirs: Dirs): Result[String, List[String]] \ {IO, Fs.ReadFile.ReadFile, Fs.WriteFile.WriteFile, Fs.DirList.DirList, Fs.MkDirs.MkDirs} =
+        forM (
+            files <- render(dirs);
+            _ <- Fs.MkDirs.mkDirs(dirs#out) |> Result.mapErr(e -> "cannot create ${dirs#out}: ${e}");
+            written <- Result.traverse(file -> { let (path, code) = file; writeFile(path, code) }, files)
+        ) yield written
+
+    ///
+    /// 出力先のパスと中身を全部作る。書かない。
+    ///
+    def render(dirs: Dirs): Result[String, List[(String, String)]] \ {IO, Fs.ReadFile.ReadFile, Fs.DirList.DirList} =
+        forM (
+            sqlFiles <- listFiles(dirs#migrations, ".sql");
+            schema <- buildSchema(sqlFiles);
+            qFiles <- listFiles(dirs#queries, ".q");
+            rendered <- Result.traverse(path -> renderOne(schema, dirs#scopes, path, dirs#out), qFiles);
+            tables <- Codegen.renderTables(schema) |> Result.mapErr(error -> "Tables.flix: ${error}")
+        ) yield {
+            let queryFiles = List.map(fst, rendered);
+            let statements = dirs#statements |> Option.map(path -> (path, QStatements.toJson(List.flatMap(snd, rendered)))) |> Option.toList;
+            ("${dirs#out}/Tables.flix", tables) :: queryFiles ::: statements
+        }
+
+    ///
+    /// migrations をファイル名順に適用する。読めない DDL は警告として表示する。
+    ///
+    def buildSchema(sqlFiles: List[String]): Result[String, Schema.Schema] \ {IO, Fs.ReadFile.ReadFile} =
+        Result.foldLeftM((schema, path) ->
+            forM (
+                sql <- readFile(path);
+                applied <- DdlParser.apply(sql, schema) |> Result.mapErr(e -> "${path}: ${e}")
+            ) yield {
+                let (next, warnings) = applied;
+                List.forEach(warning -> println("warning: ${path}: ${warning}"), warnings);
+                next
+            }, Schema.empty(), sqlFiles)
+
+    ///
+    /// 1 つの .q → 1 つの .flix（出力先のパスと中身）。QLint の注意書きは表示するだけで、生成は止めない。
+    ///
+    def renderOne(schema: Schema.Schema, scopes: List[QScope.Scope], path: String, outDir: String): Result[String, ((String, String), List[(String, QueryDef.Query)])] \ {IO, Fs.ReadFile.ReadFile} =
+        let fileName = String.splitOn(substr = "/", path) |> List.last |> Option.getWithDefault(path);
+        forM (
+            source <- readFile(path);
+            queries <- QParser.parseFile(source) |> Result.mapErr(e -> "${path}: ${e}");
+            _ <- Ok(List.forEach(warning -> println("warning: ${path}: ${warning}"), QLint.warnings(queries)));
+            injections <- QScope.plan(scopes, schema, source, queries) |> Result.mapErr(e -> "${path}: ${QScope.describe(e)}");
+            resolved <- Result.traverse(QResolve.resolve(schema), queries) |> Result.mapErr(e -> "${path}: ${QResolve.describe(e)}");
+            code <- Codegen.renderQueriesWith({ fileName = fileName, source = source }, injections, resolved) |> Result.mapErr(e -> "${path}: ${e}")
+        ) yield (("${outDir}/${Codegen.moduleNameOf(fileName)}.flix", code), List.map(queryDef -> (fileName, queryDef), queries))
+
+    ///
+    /// ディレクトリ直下の、拡張子が合うファイルを名前順に。
+    ///
+    def listFiles(dir: String, extension: String): Result[String, List[String]] \ Fs.DirList.DirList =
+        Fs.DirList.list(dir)
+            |> Result.mapErr(e -> "cannot list ${dir}: ${e}")
+            |> Result.map(entries -> entries |> List.filter(name -> String.endsWith(suffix = extension, name)) |> List.sort |> List.map(name -> "${dir}/${name}"))
+
+    def readFile(path: String): Result[String, String] \ Fs.ReadFile.ReadFile =
+        Fs.ReadFile.read(path) |> Result.mapErr(e -> "cannot read ${path}: ${e}")
+
+    def writeFile(path: String, content: String): Result[String, String] \ Fs.WriteFile.WriteFile =
+        Fs.WriteFile.write(str = content, path) |> Result.mapErr(e -> "cannot write ${path}: ${e}") |> Result.map(_ -> path)
+
+}
