@@ -5,7 +5,7 @@ pub mod Db.TestJdbc {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
     use Sqlitefx.Jdbc
     use Sqlitefx.RawSql
     use Sqlitefx.Row.Row
@@ -24,10 +24,10 @@ pub mod Db.TestJdbc {
     def cells(rows: Result[DbErrorKind, List[Row]]): Result[DbErrorKind, List[List[SqlValue]]] =
         Result.map(List.map(row -> Vector.toList(row#cells)), rows)
 
-    def connectedTo(url: String, f: Connection -> a \ ef): Result[DbErrorKind, a] \ (ef - Db.DbAll) + IO =
+    def connectedTo(url: String, f: Connection -> a \ ef): Result[DbErrorKind, a] \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         DbError.runWithKind(() -> RawSql.runWithAllow(() -> Jdbc.withConnection(Db.connection(url), f)))
 
-    def connected(f: Unit -> a \ ef): Result[DbErrorKind, a] \ (ef - Db.DbAll) + IO =
+    def connected(f: Unit -> a \ ef): Result[DbErrorKind, a] \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         connectedTo(TestSupport.url(), _ -> f())
 
     /// A round of a load sends rows to several tables under one savepoint, so a failure at the last of them has to leave none of the others behind, and the round after it still lands.
@@ -123,7 +123,7 @@ pub mod Db.TestJdbc {
 
     /// A database of its own per test, under a directory that does not exist,
     /// which is what a working copy's `.db` is on a first run.
-    def onFile(f: Connection -> a \ ef): (String, Result[DbErrorKind, a]) \ (ef - Db.DbAll) + IO =
+    def onFile(f: Connection -> a \ ef): (String, Result[DbErrorKind, a]) \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         let stem = File.createTempFile("motorsport-test", "");
         discard stem.delete();
         let path = "${stem.getPath()}/motorsport.sqlite";
@@ -173,11 +173,11 @@ pub mod Db.TestJdbc {
 
     /// A round loaded and then judged unfit, which is a transaction answering
     /// with an error.
-    def refuse(): Int32 \ DbWrite =
+    def refuse(): Int32 \ DbWrite + RawSql =
         discard load();
         DbErr.raise(DbErrorKind.Other("the round was not what it should have been"))
 
-    def load(): Int32 \ DbWrite =
+    def load(): Int32 \ DbWrite + RawSql =
         Laps.create();
         Laps.insertRows(LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil))
 

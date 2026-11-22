@@ -1,7 +1,7 @@
 /// The rounds written out as files, read back out of the rows a run sent.
 pub mod Cli.Export {
     use Sqlitefx.DbError
-    use Db.DbRead
+    use Sqlitefx.DbRead
     use Sqlitefx.RawSql
     use Sqlitefx.SqlRead
 
@@ -76,7 +76,7 @@ pub mod Cli.Export {
     ///
     /// `pub` reaches no further than `Cli.TestExport`, which drives it without
     /// a directory to write into.
-    pub def read(task: FileTask.Output): Result[CliError, Rendered] \ DbRead =
+    pub def read(task: FileTask.Output): Result[CliError, Rendered] \ DbRead + RawSql =
         if (not Round.loaded(task#entry))
             Err(CliError.RoundNotLoaded)
         else

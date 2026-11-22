@@ -4,7 +4,8 @@
 /// decisions stays in `Motorsport`: this reads, and hands over.
 pub mod Round.Summary {
     use Sqlitefx.DbErr
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
 
     use Db.Cars
     use Db.Entries
@@ -23,7 +24,7 @@ pub mod Round.Summary {
     use Util.Duration.Duration
     use Util.HourClock.Hour
 
-    pub def read(entry: Entry, seats: Round.Drivers.Seats): Metadata.Metadata \ DbRead =
+    pub def read(entry: Entry, seats: Round.Drivers.Seats): Metadata.Metadata \ DbRead + RawSql =
         let race = particulars(entry);
         let shape = track(entry);
         Metadata.fromReadings(entry, race, shape, cars(entry, seats))
@@ -31,7 +32,7 @@ pub mod Round.Summary {
     // ---------------------------------------------------------- particulars
 
     /// `pub` reaches the load, which wants the time limit and not the grid.
-    pub def particulars(entry: Entry): Metadata.Particulars \ DbRead =
+    pub def particulars(entry: Entry): Metadata.Particulars \ DbRead + RawSql =
         let start = startedAt(entry);
         let c = Laps.columns();
         Laps.rows(entry)
@@ -57,14 +58,14 @@ pub mod Round.Summary {
 
     // ----------------------------------------------------------------- cars
 
-    def cars(entry: Entry, seats: Round.Drivers.Seats): List[CarBuild] \ DbRead =
+    def cars(entry: Entry, seats: Round.Drivers.Seats): List[CarBuild] \ DbRead + RawSql =
         carBuilds(entry, driverNames(entry, seats))
 
     /// `(car number, driver name)` in the order the file first showed each
     /// seat, which is the order a car's drivers are listed in. The order is
     /// the laps' and the name is `car_drivers`', so the reading is of the one
     /// and the naming of the other.
-    def driverNames(entry: Entry, seats: Round.Drivers.Seats): List[(String, String)] \ DbRead =
+    def driverNames(entry: Entry, seats: Round.Drivers.Seats): List[(String, String)] \ DbRead + RawSql =
         let c = Laps.columns();
         Sql.statement(
             "SELECT %% FROM (SELECT car_number, driver_number, MIN(source_row) AS first_seen" ::
@@ -81,7 +82,7 @@ pub mod Round.Summary {
     ///
     /// `elapsed_ms` is a column the table has of every lap, and is read through
     /// `Sql.orNull` because the `LEFT JOIN` is the one place a car can have no lap 1.
-    def carBuilds(entry: Entry, drivers: List[(String, String)]): List[CarBuild] \ DbRead =
+    def carBuilds(entry: Entry, drivers: List[(String, String)]): List[CarBuild] \ DbRead + RawSql =
         let car = Cars.columns();
         let entered = Entries.columns();
         let laps = Laps.columns();
@@ -141,7 +142,7 @@ pub mod Round.Summary {
 
     // ---------------------------------------------------------------- track
 
-    def track(entry: Entry): Track.Track \ DbRead =
+    def track(entry: Entry): Track.Track \ DbRead + RawSql =
         let sectors = fastestSectors(entry);
         let mini = fastestMiniSectors(entry);
         match sectors {
@@ -159,7 +160,7 @@ pub mod Round.Summary {
                 Track.fromFastest(Events.circuit(entry#id), sectorTime, miniSectorTime)
         }
 
-    def fastestSectors(entry: Entry): (Option[Duration], Option[Duration], Option[Duration], Bool) \ DbRead =
+    def fastestSectors(entry: Entry): (Option[Duration], Option[Duration], Option[Duration], Bool) \ DbRead + RawSql =
         let c = Laps.columns();
         Laps.rows(entry)
             |> Sql.map(_ -> (
@@ -179,7 +180,7 @@ pub mod Round.Summary {
     def recorded(c: Laps.Columns): Sql.Expr[Bool] =
         Sql.ne(Schema.expr(c#lapTimeMs), Sql.i32(0))
 
-    def fastestMiniSectors(entry: Entry): Map[Int32, Duration] \ DbRead =
+    def fastestMiniSectors(entry: Entry): Map[Int32, Duration] \ DbRead + RawSql =
         Laps.rowsBeside(entry, Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
             |> Sql.filter(recorded)
             |> Sql.filter(_ -> Sql.isNotNull(Sql.column("m.value")))

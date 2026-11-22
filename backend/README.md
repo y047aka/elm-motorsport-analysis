@@ -142,8 +142,8 @@ Reading and writing are two effects: `Round`'s readers, `Server.Api` and `Cli.Ex
 `Sqlitefx.DbError.runWithKind` is where a raised failure comes back as a value, and `runWithFailure` the same with the transient ones folded into `DbError.Failure`.
 Which of the two a failure travels by is read off its `DbErrorKind` constructor (`DbError.raise` routes it), so a new kind meets a pattern that has to say which.
 
-`\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db.DbAll` is both with `SqlSavepoint`: `Db`'s own, since sqlfx's leave `RawSql` out and `Db.flix` says why these do not.
-Flix has no subeffecting here — a `\ DbRead` function is not a `\ Db.DbAll` one — so a caller taking a reading as an argument names the half it uses (`Cli.Load.loadRound`: `DbRead + SqlWrite`) or the whole it hands over (`Main.onDirectories`, `Round.TestSupport.onRound`: `Db.DbAll`).
+A reading is `\ DbRead + RawSql` and a write `\ DbWrite + RawSql`: sqlfx's aliases, with the marker sqlfx puts on every function that hands it SQL as a string, which every function here does.
+Flix has no subeffecting here — a `\ DbRead` function is not a `\ Sqlitefx.Db` one — so a caller taking a reading as an argument names the half it uses (`Cli.Load.loadRound`: `DbRead + SqlWrite + RawSql`) or the whole it hands over (`Main.onDirectories`, `Round.TestSupport.onRound`: `{Sqlitefx.Db, SqlSavepoint, RawSql}`).
 
 The statement effects still answer with a `Result`; the `SqlRead` header in `sqlitefx/src/Sqlitefx.flix` says why. `Sql.orRaise` turns a reading's into a raised failure, so nothing outside the library calls an operation: the wrappers of `Sqlitefx.Sql` are what `Sql` and `Db.Schema` reach.
 `Sqlitefx.Jdbc.withConnection` opens, works in and closes a database for a run, a test and the server alike, and the connection is in autocommit outside a transaction.

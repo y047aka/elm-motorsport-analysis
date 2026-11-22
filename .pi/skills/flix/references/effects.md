@@ -71,7 +71,7 @@ pub def fetch(sql: String, params: List[SqlValue]): ... \ DbRead + RawSql =
 `ef - DbErr`, `ef - {SqlRead, SqlWrite}` and `ef - Db` (an alias of a set) all
 work. Prefer the alias where one exists, and remember that a boundary that
 handles the error effect too has to subtract it as well: `Db.TestJdbc.connectedTo`
-handles the statements and the failures alike and is `(ef - Db.DbAll) + IO`, while
+handles the statements and the failures alike and is `(ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO`, while
 `Sqlitefx.Jdbc.withConnection`, which raises the failures on, is
 `(ef - {SqlRead, SqlWrite, SqlSavepoint}) + {IO, TransientDbErr, DbErr}`; leaving one of the two out of the
 subtraction fails as `E6469 Unable to unify the effect formulas` with two

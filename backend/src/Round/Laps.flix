@@ -2,7 +2,8 @@
 pub mod Round.Laps {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
     use Sqlitefx.TransientDbErr
 
     use Db.LapRow
@@ -18,7 +19,7 @@ pub mod Round.Laps {
 
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
-    pub def loaded(entry: Entry): Bool \ DbRead =
+    pub def loaded(entry: Entry): Bool \ DbRead + RawSql =
         let found = Laps.rows(entry)
             |> Sql.limit(1)
             |> Sql.map(_ -> Sql.int("1"))
@@ -34,7 +35,7 @@ pub mod Round.Laps {
         position = Int32
     }
 
-    pub def read(entry: Entry, seats: Seats): List[Placed] \ DbRead =
+    pub def read(entry: Entry, seats: Seats): List[Placed] \ DbRead + RawSql =
         let cars = Cars.read(entry);
         Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)

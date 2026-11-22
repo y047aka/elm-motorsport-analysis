@@ -5,7 +5,8 @@
 /// record is stays in `Motorsport.Index`.
 pub mod Round.Index {
     use Sqlitefx.DbErr
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
 
     use Db.LapRow.LapRow
     use Db.Laps
@@ -21,7 +22,7 @@ pub mod Round.Index {
     use Motorsport.Wec
     use Util.Duration.Duration
 
-    pub def read(entry: Entry, seats: Round.Drivers.Seats): Index.Index \ DbRead =
+    pub def read(entry: Entry, seats: Round.Drivers.Seats): Index.Index \ DbRead + RawSql =
         let completions = lapCompletions(entry);
         let changes = bestTimes(entry, seats);
         {
@@ -34,7 +35,7 @@ pub mod Round.Index {
 
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
-    def lapCompletions(entry: Entry): List[(Int32, Duration)] \ DbRead =
+    def lapCompletions(entry: Entry): List[(Int32, Duration)] \ DbRead + RawSql =
         Laps.rows(entry)
             |> Sql.groupBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.orderBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
@@ -51,7 +52,7 @@ pub mod Round.Index {
     ///
     /// Counted here for the summary, and handed to `Round.Timeline` for the
     /// flag events it writes at the load.
-    pub def flags(entry: Entry): List[FlagShown] \ DbRead =
+    pub def flags(entry: Entry): List[FlagShown] \ DbRead + RawSql =
         let green = Wec.flagToString(Wec.Flag.Green);
         let finish = Wec.flagToString(Wec.Flag.Finish);
         let c = Laps.columns();
@@ -110,7 +111,7 @@ pub mod Round.Index {
     def notLapOne(): Sql.Expr[Bool] =
         Sql.ne(Schema.expr(Laps.columns()#lapNumber), Sql.i32(1))
 
-    def bestTimes(entry: Entry, seats: Round.Drivers.Seats): List[(Record, Change)] \ DbRead =
+    def bestTimes(entry: Entry, seats: Round.Drivers.Seats): List[(Record, Change)] \ DbRead + RawSql =
         let w = walked();
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.statement(

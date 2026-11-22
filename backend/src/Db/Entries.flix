@@ -6,7 +6,8 @@
 /// different one across seasons -- number 12 was three teams' over the three
 /// the archive holds -- so the season is half of what names one.
 pub mod Db.Entries {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.Schema
@@ -167,10 +168,10 @@ pub mod Db.Entries {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage())
 
-    pub def insertRows(rows_: List[EntryRow]): Int32 \ DbWrite =
+    pub def insertRows(rows_: List[EntryRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows_)
 
     pub def values(row: EntryRow): List[SqlValue] =

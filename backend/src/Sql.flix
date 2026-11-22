@@ -18,7 +18,8 @@ pub mod Sql {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
     use Sqlitefx.Row
     use Sqlitefx.Row.Row
     use Sqlitefx.SqlValue
@@ -898,12 +899,12 @@ pub mod Sql {
     /// ===== RUNNING =====
     ///
 
-    pub def selectAll(q: Query[a]): List[a] \ DbRead =
+    pub def selectAll(q: Query[a]): List[a] \ DbRead + RawSql =
         fetched(q) |> List.map(row -> Sql.orRaise(decode(projectionOf(q), row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
-    pub def selectOne(subject: String, q: Query[a]): a \ DbRead =
+    pub def selectOne(subject: String, q: Query[a]): a \ DbRead + RawSql =
         match fetched(q) {
             case row :: _ => Sql.orRaise(decode(projectionOf(q), row))
             case Nil      => DbErr.raise(DbErrorKind.Other("${subject} came back with no row"))
@@ -915,7 +916,7 @@ pub mod Sql {
             case Query.Written(_, sel) => sel
         }
 
-    def fetched(q: Query[a]): List[Row] \ DbRead =
+    def fetched(q: Query[a]): List[Row] \ DbRead + RawSql =
         let Frag.Frag(sql, params) = toStatement(q);
         Sqlitefx.Sql.fetch(sql, params)
 

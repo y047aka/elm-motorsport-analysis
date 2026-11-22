@@ -2,8 +2,8 @@ pub mod Cli.Load {
     use Sqlitefx.DbErr
     use Sqlitefx.DbError
     use Sqlitefx.DbError.DbErrorKind
-    use Db.DbRead
-    use Db.DbWrite
+    use Sqlitefx.DbRead
+    use Sqlitefx.DbWrite
     use Sqlitefx.RawSql
     use Sqlitefx.SqlRead
     use Sqlitefx.SqlSavepoint
@@ -80,7 +80,7 @@ pub mod Cli.Load {
     /// two carry of a round is an id out of it. The rows come back because
     /// that id is read off them: the reader looks it up in the table, and the
     /// load has nothing to look it up with until the table is written.
-    def createTables(): List[RoundRow] \ DbWrite =
+    def createTables(): List[RoundRow] \ DbWrite + RawSql =
         let rounds = Rounds.create(Motorsport.Calendar.entries());
         Drivers.create();
         CarDrivers.create();
@@ -94,7 +94,7 @@ pub mod Cli.Load {
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Db.DbAll} =
+    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Sqlitefx.Db, SqlSavepoint, RawSql} =
         let tasks = FileTask.inputs(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(rounds, acc#numbered, task) {
@@ -140,7 +140,7 @@ pub mod Cli.Load {
         rounds: List[RoundRow],
         numbering: Numbered,
         task: FileTask.Input
-    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, Db.DbAll} =
+    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, Sqlitefx.Db, SqlSavepoint, RawSql} =
         match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
             case Err(e) => (Err(e), numbering)
             case Ok(rawLaps) =>
@@ -190,7 +190,7 @@ pub mod Cli.Load {
         seats: List[CarDrivers.Seat],
         task: FileTask.Input,
         rawLaps: List[RawLap]
-    ): Loaded \ DbRead + SqlWrite =
+    ): Loaded \ DbRead + SqlWrite + RawSql =
         match Rounds.idIn(rounds, task#entry) {
             case None => DbErr.raise(DbErrorKind.Other(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
@@ -216,7 +216,7 @@ pub mod Cli.Load {
                 }
         }
 
-    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ (Db.DbAll - {Sqlitefx.SqlSavepoint}) =
+    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ Sqlitefx.Db + RawSql =
         TimelineEvents.insertRows(TimelineEvents.fromEvents(
             roundId,
             Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)
@@ -233,7 +233,7 @@ pub mod Cli.Load {
             "${task#entry#id}: [car ${d#carNumber}] season-${d#season} entry: "
                 + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""))
 
-    def reportViolations(task: FileTask.Input, loaded: Loaded): Loaded \ {Console, DbRead} =
+    def reportViolations(task: FileTask.Input, loaded: Loaded): Loaded \ {Console, DbRead, RawSql} =
         Validation.validate(task#entry) |> List.forEach(Console.eprintln);
         loaded
 

@@ -5,7 +5,7 @@ pub mod Server.Api {
     use Sqlitefx.DbError
     use Sqlitefx.DbError.Failure
     use Sqlitefx.DbError.TransientKind
-    use Db.DbRead
+    use Sqlitefx.DbRead
     use Sqlitefx.RawSql
     use Sqlitefx.SqlRead
     use Sqlitefx.TransientDbErr
@@ -123,17 +123,17 @@ pub mod Server.Api {
     def calendar(): String =
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
 
-    def summary(season: Int32, id: String): Option[String] \ DbRead =
+    def summary(season: Int32, id: String): Option[String] \ DbRead + RawSql =
         answer(season, id, e ->
             let seats = Round.Drivers.read(e);
             Render.renderSummary(Summary.read(e, seats), Index.read(e, seats)))
 
-    def timeline(season: Int32, id: String): Option[String] \ DbRead =
+    def timeline(season: Int32, id: String): Option[String] \ DbRead + RawSql =
         answer(season, id, e ->
             let seats = Round.Drivers.read(e);
             Render.renderTimelineJsonl(Timeline.detailed(e, seats, Index.read(e, seats))))
 
-    def laps(season: Int32, id: String): Option[String] \ DbRead =
+    def laps(season: Int32, id: String): Option[String] \ DbRead + RawSql =
         answer(season, id, e -> Render.renderJsonl(Laps.read(e, Round.Drivers.read(e))))
 
     /// `None` is a round no answer is served for: one the calendar does not
@@ -143,8 +143,8 @@ pub mod Server.Api {
     def answer(
         season: Int32,
         id: String,
-        render: Entry -> String \ DbRead
-    ): Option[String] \ DbRead =
+        render: Entry -> String \ DbRead + RawSql
+    ): Option[String] \ DbRead + RawSql =
         match Calendar.find(season, id) {
             case None        => None
             case Some(round) =>

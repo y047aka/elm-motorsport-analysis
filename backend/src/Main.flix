@@ -44,7 +44,7 @@ def loadAndExport(conn: Connection, csv: String, out: String, rounds: Cli.FileTa
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onDirectories(dirs: List[String], database: Option[String], stage: Connection -> Int32 \ ef): Int32 \ (ef - {Db.DbAll}) + Env + IO + Console =
+def onDirectories(dirs: List[String], database: Option[String], stage: Connection -> Int32 \ ef): Int32 \ (ef - {Sqlitefx.Db, SqlSavepoint, RawSql}) + Env + IO + Console =
     match Result.traverseX(checkDirectory, dirs) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");

@@ -4,7 +4,8 @@
 /// and manufacturer, and `Db.CarDrivers` the seat's driver, none of which a
 /// round in the archive varies within a car.
 pub mod Db.Laps {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.LapRow.LapRow
@@ -161,10 +162,10 @@ pub mod Db.Laps {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), computed(), keys(), storage())
 
-    pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite =
+    pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows)
 
     pub def values(row: LapRow): List[SqlValue] =

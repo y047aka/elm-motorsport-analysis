@@ -1,6 +1,7 @@
 /// The round's cars, read back out of the rows it was loaded into.
 pub mod Round.Cars {
-    use Db.DbRead
+    use Sqlitefx.DbRead
+    use Sqlitefx.RawSql
 
     use Db.Cars
     use Db.Entries
@@ -10,7 +11,7 @@ pub mod Round.Cars {
     use Motorsport.Wec.RawCar
 
     /// Whether a run has loaded the round's cars, asked rather than read back.
-    pub def loaded(entry: Entry): Bool \ DbRead =
+    pub def loaded(entry: Entry): Bool \ DbRead + RawSql =
         let found = Cars.rows(entry)
             |> Sql.limit(1)
             |> Sql.map(_ -> Sql.int("1"))
@@ -20,7 +21,7 @@ pub mod Round.Cars {
     /// Keyed by car number, which is the whole of what a lap carries of its
     /// car. What the feed said of one is its season's entry, so the rounds a
     /// car ran and the description of it are read together.
-    pub def read(entry: Entry): Map[String, RawCar] \ DbRead =
+    pub def read(entry: Entry): Map[String, RawCar] \ DbRead + RawSql =
         let car = Cars.columns();
         let e = Entries.columns();
         Sql.access(

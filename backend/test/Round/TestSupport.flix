@@ -24,15 +24,15 @@ pub mod Round.TestSupport {
     /// archive a working copy has.
     pub def url(): String = "jdbc:sqlite::memory:"
 
-    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Db.DbAll) + IO =
+    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         onRows(entry, laps, true, read)
 
     /// As `onRound`, with the round's cars left out: what a round only half in
     /// the database reads as.
-    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - Db.DbAll) + IO =
+    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         onRows(entry, laps, false, read)
 
-    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - Db.DbAll) + IO =
+    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - {Sqlitefx.Db, Sqlitefx.SqlSavepoint, RawSql}) + IO =
         let outcome = DbError.runWithKind(() -> RawSql.runWithAllow(() -> Jdbc.withConnection(Db.connection(url()), _ -> {
             let rounds = Rounds.create(entry :: Nil);
             Drivers.create();

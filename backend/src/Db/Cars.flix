@@ -2,7 +2,8 @@
 /// the season's entries each was. What the feed says about a car is
 /// `Db.Entries`; this is the rounds it ran.
 pub mod Db.Cars {
-    use Db.DbWrite
+    use Sqlitefx.DbWrite
+    use Sqlitefx.RawSql
     use Sqlitefx.SqlValue
 
     use Db.CarRow.CarRow
@@ -64,10 +65,10 @@ pub mod Db.Cars {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Unit \ DbWrite =
+    pub def create(): Unit \ DbWrite + RawSql =
         Schema.recreate(table(), all(), Nil, keys(), storage())
 
-    pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite =
+    pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite + RawSql =
         Schema.insertRows(table(), all(), rows)
 
     pub def values(row: CarRow): List[SqlValue] =
