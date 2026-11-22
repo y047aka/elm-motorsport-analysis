@@ -53,4 +53,35 @@ pub mod Db.TestRefusal {
             case _ => Assert.assertTrue(false)
         }
 
+    /// A name is resolved at the preparing of a statement, which is before any value
+    /// is bound -- so a statement refused there is refused before the statement is in
+    /// hand at all, unless the preparing stands inside the `try` that catches it. A
+    /// write answering with rows is the one operation that prepares itself rather than
+    /// through `prepared`.
+    @Test
+    def aWriteAnsweringWithRowsIsRefusedWithItsStatement(): Unit \ Assert + IO =
+        match Lite3fx.DbError.runWithKind(() -> Jdbc.withConnection(TestSupport.url(), () ->
+            Lite3fx.Sql.executeReturning("UPDATE nope SET a = 1 RETURNING b", Nil)
+        )) {
+            case Err(DbErrorKind.SchemaMismatch(why)) => Assert.assertTrue(String.endsWith(
+                {suffix = ": UPDATE nope SET a = 1 RETURNING b"}, why
+            ))
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// The batch insert is the load path, and the one statement here no one wrote.
+    @Test
+    def aBatchInsertIsRefusedWithItsStatement(): Unit \ Assert + IO =
+        match Lite3fx.DbError.runWithKind(() -> Jdbc.withConnection(TestSupport.url(), () ->
+            Lite3fx.Sql.insertMany(
+                "INSERT INTO nope VALUES (?)",
+                (Lite3fx.SqlValue.Int32(1) :: Nil) :: Nil
+            )
+        )) {
+            case Err(DbErrorKind.SchemaMismatch(why)) => Assert.assertTrue(String.endsWith(
+                {suffix = ": INSERT INTO nope VALUES (?)"}, why
+            ))
+            case _ => Assert.assertTrue(false)
+        }
+
 }

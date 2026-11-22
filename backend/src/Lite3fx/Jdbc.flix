@@ -159,21 +159,24 @@ pub mod Lite3fx.Jdbc {
     /// with the statement, which is what a write answering with rows does and a
     /// write answering with a count does not.
     def returningRows(conn: Connection, sql: String, params: List[SqlValue]): Result[DbErrorKind, List[Row]] \ IO =
-        let stmt = conn.prepareStatement(sql);
-        let outcome = try {
-            bind(stmt, params);
-            if (stmt.execute())
-                Ok(readRows(stmt.getResultSet(), JdbcConvert.labels(stmt.getResultSet()), Nil))
-            else
-                Ok(Nil)
-        } catch {
-            case e: SQLException => Err(refusal(sql, e))
-        };
-        discard guarded(() -> {
-            stmt.close();
-            Ok()
-        });
-        outcome
+        match prepared(conn, sql) {
+            case Err(failure) => Err(failure)
+            case Ok(stmt) =>
+                let outcome = try {
+                    bind(stmt, params);
+                    if (stmt.execute())
+                        Ok(readRows(stmt.getResultSet(), JdbcConvert.labels(stmt.getResultSet()), Nil))
+                    else
+                        Ok(Nil)
+                } catch {
+                    case e: SQLException => Err(refusal(sql, e))
+                };
+                discard guarded(() -> {
+                    stmt.close();
+                    Ok()
+                });
+                outcome
+        }
 
     def readRows(rs: ResultSet, names: List[String], acc: List[Row]): List[Row] \ IO =
         if (rs.next())
@@ -222,26 +225,29 @@ pub mod Lite3fx.Jdbc {
         match savepoint(conn) {
             case Err(e) => Err(e)
             case Ok(mark) =>
-                let pstmt = conn.prepareStatement(sql);
-                let outcome = try {
-                    let count = List.foldLeft((sent, row) -> {
-                        bind(pstmt, row);
-                        pstmt.addBatch();
-                        if (Int32.remainder(sent + 1, batchSize()) == 0) discard pstmt.executeBatch() else ();
-                        sent + 1
-                    }, 0, rows);
-                    discard pstmt.executeBatch();
-                    Ok(count)
-                } catch {
-                    case e: SQLException => Err(refusal(sql, e))
-                };
-                discard guarded(() -> {
-                    pstmt.close();
-                    Ok()
-                });
-                match outcome {
-                    case Ok(count) => release(conn, mark); Ok(count)
-                    case Err(e)    => undo(conn, mark); Err(e)
+                match prepared(conn, sql) {
+                    case Err(e) => Err(e)
+                    case Ok(pstmt) =>
+                        let outcome = try {
+                            let count = List.foldLeft((sent, row) -> {
+                                bind(pstmt, row);
+                                pstmt.addBatch();
+                                if (Int32.remainder(sent + 1, batchSize()) == 0) discard pstmt.executeBatch() else ();
+                                sent + 1
+                            }, 0, rows);
+                            discard pstmt.executeBatch();
+                            Ok(count)
+                        } catch {
+                            case e: SQLException => Err(refusal(sql, e))
+                        };
+                        discard guarded(() -> {
+                            pstmt.close();
+                            Ok()
+                        });
+                        match outcome {
+                            case Ok(count) => release(conn, mark); Ok(count)
+                            case Err(e)    => undo(conn, mark); Err(e)
+                        }
                 }
         }
 
