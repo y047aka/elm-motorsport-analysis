@@ -40,10 +40,11 @@ pub mod Sqlitefx.JdbcConvert {
     /// 同じ `$n` が 2 回出れば同じ値を 2 回並べる。単一引用符の文字列リテラルの中は触らない。
     /// 存在しない `$n` を参照していたら None（バインド時の範囲外エラーより先に、ここで派手に落とす）。
     ///
+    /// WhyNot: 利用側に `?` を書かせないのは、`$1` のままなら SQL をそのまま sqlite3 / EXPLAIN に貼れるから。
+    ///
     pub def rewritePlaceholders(sql: String, params: List[SqlValue]): Option[(String, List[SqlValue])] =
-        let stripped = stripLineComments(sql);
         let paramVector = List.toVector(params);
-        let (chars, refs, _, pending) = String.toList(stripped) |> List.foldLeft(step, (Nil, Nil, false, None));
+        let (chars, refs, _, pending) = String.toList(stripLineComments(sql)) |> List.foldLeft(step, (Nil, Nil, false, None));
         let (flushedChars, flushedRefs) = flushDigits(chars, refs, pending);
         let sqlOut = region rc {
             let sb = StringBuilder.empty(rc);
