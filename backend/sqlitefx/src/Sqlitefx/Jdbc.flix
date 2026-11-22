@@ -57,7 +57,7 @@ pub mod Sqlitefx.Jdbc {
     ///
     /// 1 本の接続を開き、pragma を送る。開けなければ TransientDbErr.connectionLost。
     ///
-    /// WhyNot: `DriverManager.getConnection` を使わないのは、Flix の Maven クラスローダではドライバの自動登録が効かないから（docs/spikes.md (c)）。`JDBC` を直接 new する。
+    /// WhyNot: `DriverManager.getConnection` を使わないのは、Flix の Maven クラスローダではドライバの自動登録が効かないから。`JDBC` を直接 new する。
     ///
     /// WhyNot: ファイルの親ディレクトリを作るのは、SQLite はファイルを作ってもディレクトリは作らず、無いディレクトリを指す url が「開けない」になるから。
     ///

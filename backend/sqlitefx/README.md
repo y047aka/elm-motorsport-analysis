@@ -10,7 +10,6 @@ It is not published: it lives in this repository, and `backend` is what it is fo
 
 The API is sqlfx's, and [sqlfx 0.7.0's README](https://github.com/ababup1192/sqlfx/blob/v0.7.0/README.md) is its guide: the effects, `Decoder`, `Sql`, `Fragment`, `Tx`, `Pool`, `Migrate` and `DbTest` read as it says, with every `Sqlfx` read as `Sqlitefx`.
 The differences below are what that guide says that is not true here.
-`docs/` is sqlfx's design notes as released, and speaks of PostgreSQL throughout.
 
 ## What differs from sqlfx
 

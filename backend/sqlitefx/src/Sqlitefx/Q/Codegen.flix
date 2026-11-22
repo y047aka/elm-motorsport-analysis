@@ -474,7 +474,7 @@ pub mod Sqlitefx.Q.Codegen {
         String.toUpperCase(String.takeLeft(1, word)) + String.dropLeft(1, word)
 
     ///
-    /// docs/flix-conventions.md の予約語（レコードのフィールド名でも落ちる物）。
+    /// Flix の予約語（レコードのフィールド名でも落ちる物）。
     ///
     def isReserved(word: String): Bool =
         List.memberOf(word, List#{
