@@ -123,6 +123,34 @@ pub mod Sql.TestWritten {
                 + " reaches the database still open and has commented out every clause behind"
                 + " it: round_id = ? -- the round AND lap_number > 3")
 
+    /// The scope a written statement narrows to is a bound value, not a clause, so a
+    /// statement binding nothing reads every round the database holds. Nothing else can
+    /// see it: the statement is well formed and every hole it names is filled -- it names
+    /// none -- and it fails by answering with another round's rows, which on a database
+    /// holding one round is not even visible.
+    @Test
+    def aStatementBindingNoValueReadsEveryRoundAndIsRefused(): Unit \ Assert =
+        Assert.assertTrue(sentence(DbError.runWithKind(() -> Sql.statement(
+            "SELECT %% FROM laps ORDER BY elapsed_ms ASC" :: Nil,
+            Map.empty(),
+            (Sql.text("car_number"), Sql.int("elapsed_ms")))))
+            == "the statement binds no value, so it names no round and reads every round the"
+                + " database holds -- the scope is not one of the holes, it is a value:"
+                + " SELECT %% FROM laps ORDER BY elapsed_ms ASC")
+
+    /// A statement whose only bound value arrives through a piece is scoped, which is how
+    /// `Round.Index.bestTimes` reads: it names `{{readings}}` and no scope of its own.
+    @Test
+    def aValueArrivingThroughAPieceCountsAsTheScope(): Unit \ Assert =
+        Assert.assertTrue(rendered(() -> Sql.statement(
+            "SELECT %% FROM laps WHERE {{scope}} AND lap_number > 3" :: Nil,
+            Map#{ "scope" => scoped() },
+            (Sql.text("car_number"), Sql.int("elapsed_ms"))))
+            == Ok((
+                "SELECT car_number, elapsed_ms FROM laps WHERE round_id = ? AND lap_number > 3",
+                SqlValue.Int32(3) :: Nil
+            )))
+
     /// The guard is on the one spelling that cannot survive the run together. A block
     /// comment closes itself and costs nothing, which is what a written statement is to
     /// use instead.

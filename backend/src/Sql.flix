@@ -717,13 +717,16 @@ pub mod Sql {
                     case (Nil, name :: _) => DbErr.raise(DbErrorKind.Other(
                         "the statement never names `{{${name}}}`: ${String.take(120, template)}"
                     ))
-                    case (Nil, Nil) => joinFrags(
-                        "",
-                        holesFilled(before, holes, template) ::
-                        clause ::
-                        holesFilled(after, holes, template) ::
-                        Nil
-                    )
+                    case (Nil, Nil) =>
+                        let written = joinFrags(
+                            "",
+                            holesFilled(before, holes, template) ::
+                            clause ::
+                            holesFilled(after, holes, template) ::
+                            Nil
+                        );
+                        refuseUnscoped(template, written);
+                        written
                 }
             case _ => DbErr.raise(DbErrorKind.Other(
                 "the statement has no `%%` for its SELECT clause: ${String.take(120, template)}"
@@ -771,6 +774,29 @@ pub mod Sql {
                 "${place} holds a `--`, and its lines are run together into one, so the comment"
                     + " reaches the database still open and has commented out every clause behind"
                     + " it: ${String.take(120, template)}"
+            ))
+        else
+            ()
+
+    /// A written statement binds at least one value.
+    ///
+    /// Every one of them narrows to a round, and the only way any of them does it is by
+    /// binding that round's id -- through `Laps.scope` or `Rounds.scope` directly, or
+    /// through a piece that does. So a statement binding nothing reads every round the
+    /// database holds, and no other check can see it: there is no hole left unfilled, the
+    /// statement is well formed, and it fails only by answering with another round's
+    /// rows -- which on a database holding one round is not even visible.
+    ///
+    /// What this catches is a statement that names no round at all. A statement binding
+    /// some other value and no round id still reads every round, and still passes; the
+    /// rule is a tripwire on the mistake already made, not a proof of the scope.
+    def refuseUnscoped(template: String, written: Frag): Unit \ DbErr =
+        let Frag.Frag(_, values) = written;
+        if (List.isEmpty(values))
+            DbErr.raise(DbErrorKind.Other(
+                "the statement binds no value, so it names no round and reads every round the"
+                    + " database holds -- the scope is not one of the holes, it is a value:"
+                    + " ${String.take(120, template)}"
             ))
         else
             ()
