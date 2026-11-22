@@ -31,10 +31,9 @@ The differences below are what that guide says that is not true here.
 | A repeated column name (`a.id, b.id`) | lost by `Row.columnNames`, so there are fewer names than cells | kept: `Row` carries `names` in result-set order |
 | A statement refused | the driver's sentence | for `SchemaMismatch` and `Other`, the sentence and the statement's head and tail, since SQLite names what it could not resolve and never where |
 
-Three things are still sqlfx's and still PostgreSQL's:
+Two things are still sqlfx's and still PostgreSQL's:
 
 - **The `.q` generator** — `Sqlitefx/Q/` and `Main.flix`'s `gen`. Its parser and its DDL reader are PostgreSQL's dialect, and refuse `WITH RECURSIVE` and a `WITH` inside a CTE, so it does not read this repository's hardest statements either way.
-- **`examples/blog`** — the generator's snapshot: `test/Q/TestGen.flix` regenerates it and compares. Its own `Makefile` and `test/Pg/` are sqlfx's and are not run here.
 - **The pool's fault-injection suites** (`TestPoolFatal`, `TestPoolLeaks`, `TestPoolAbortedTx`, `TestEvictProcedure`), which wrapped pgjdbc's DataSource. The paths they covered are the code sqlfx shipped, unchanged except for the DataSource, and untested against SQLite.
 
 ## The boundary with `backend`

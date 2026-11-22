@@ -13,7 +13,7 @@ use Sqlitefx.Sql
 use Sqlitefx.SqlValue
 use Sqlitefx.Timestamp
 
-// Codegen: 生成コードの形。全文のスナップショットは examples/blog/src/Gen が兼ねる（`flix run -- gen examples/blog/migrations examples/blog/queries examples/blog/src/Gen` で再生成して差分を見る）。
+// Codegen: 生成コードの形。
 
 /// 列名は camelCase に、予約語は末尾 `_`。
 @Test

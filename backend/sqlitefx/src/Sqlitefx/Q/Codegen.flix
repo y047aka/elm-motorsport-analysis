@@ -63,7 +63,7 @@ pub mod Sqlitefx.Q.Codegen {
     }
 
     ///
-    /// `.q` の中身のハッシュ。生成物に埋める。`gen --check`（と examples の生成物を突き合わせるテスト）が生成物ごと現物と照合する。
+    /// `.q` の中身のハッシュ。生成物に埋める。`gen --check` が生成物ごと現物と照合する。
     ///
     pub def sourceHash(source: String): Int32 = Hash.hash(source)
 

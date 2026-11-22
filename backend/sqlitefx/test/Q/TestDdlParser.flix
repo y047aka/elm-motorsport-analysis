@@ -8,7 +8,7 @@ use Sqlitefx.Q.Schema.ConstraintKind
 
 // DdlParser: migrations の DDL から机上のスキーマを組む。
 
-/// examples/blog と同じ形の DDL。
+/// users / posts のブログの DDL。
 def blogDdl(): String =
     "-- users\n"
         + "CREATE TABLE users (\n"
