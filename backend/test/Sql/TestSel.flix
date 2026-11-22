@@ -13,7 +13,7 @@ pub mod Sql.TestSel {
     @Test
     def aReadingTakesTheCellUnderItsOwnLabel(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), TestCells.answering(pair(), Some("Will STEVENS") :: Some("7") :: Nil))
+            Sql.decode(pair(), TestCells.answering(pair(), SqlValue.Str("Will STEVENS") :: SqlValue.Int32(7) :: Nil))
                 == Ok(("Will STEVENS", 7))
         )
 
@@ -24,47 +24,56 @@ pub mod Sql.TestSel {
         let sel = Sql.Project.decoder((pair(), Sql.text("flag_at_fl")));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT driver_name, lap_number, flag_at_fl", Nil));
         Assert.assertTrue(
-            Sql.decode(sel, TestCells.answering(sel, Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil))
+            Sql.decode(sel, TestCells.answering(sel, SqlValue.Str("Will STEVENS") :: SqlValue.Int32(7) :: SqlValue.Str("SF") :: Nil))
                 == Ok((("Will STEVENS", 7), "SF"))
         )
 
     @Test
     def aNullUnderANonOptionalReadingNamesTheLabel(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), TestCells.answering(pair(), Some("Will STEVENS") :: None :: Nil))
+            Sql.decode(pair(), TestCells.answering(pair(), SqlValue.Str("Will STEVENS") :: SqlValue.Null :: Nil))
                 == Err(DbErrorKind.DecodeError("lap_number", "column 'lap_number' is NULL"))
         )
 
     @Test
     def aCellThatIsNotANumberNamesTheLabel(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), TestCells.answering(pair(), Some("Will STEVENS") :: Some("7.5") :: Nil))
-                == Err(DbErrorKind.DecodeError("lap_number", "column 'lap_number' is Str, expected an integer"))
+            Sql.decode(pair(), TestCells.answering(pair(), SqlValue.Str("Will STEVENS") :: SqlValue.Str("7.5") :: Nil))
+                == Err(DbErrorKind.DecodeError("lap_number", "column 'lap_number' is Str, expected Int32"))
         )
 
     @Test
     def anOptionalReadingTakesANullAsNothing(): Unit \ Assert =
         let sel = Sql.optionalInt("pit_time_ms");
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, None :: Nil)) == Ok(None));
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, Some("31000") :: Nil)) == Ok(Some(31000)))
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Null :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Int32(31000) :: Nil)) == Ok(Some(31000)))
 
     @Test
     def anArrayReadingKeepsTheBlanksInPlace(): Unit \ Assert =
         let sel = Sql.optionalIntArray("mini_sector_time_ms");
         Assert.assertTrue(
-            Sql.decode(sel, TestCells.answering(sel, Some("[20708,null]") :: Nil))
+            Sql.decode(sel, TestCells.answering(sel, SqlValue.Str("[20708,null]") :: Nil))
                 == Ok(Some(Some(20708) :: None :: Nil))
         );
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, Some("[]") :: Nil)) == Ok(Some(Nil)))
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Str("[]") :: Nil)) == Ok(Some(Nil)))
+
+    /// A cell kept in a class other than the one the column was bound as is refused rather than read through its text.
+    @Test
+    def aNumberKeptAsTextIsRefused(): Unit \ Assert =
+        let sel = Sql.int("lap_number");
+        Assert.assertTrue(
+            Sql.decode(sel, TestCells.answering(sel, SqlValue.Str("7") :: Nil))
+                == Err(DbErrorKind.DecodeError("lap_number", "column 'lap_number' is Str, expected Int32"))
+        )
 
     @Test
     def aBooleanIsTheOneOrZeroTheDriverBoundIt(): Unit \ Assert =
         let sel = Sql.bool("crossing_finish_line_in_pit");
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, Some("1") :: Nil)) == Ok(true));
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, Some("0") :: Nil)) == Ok(false));
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Int32(1) :: Nil)) == Ok(true));
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Int32(0) :: Nil)) == Ok(false));
         Assert.assertTrue(
-            Sql.decode(sel, TestCells.answering(sel, Some("true") :: Nil))
-                == Err(DbErrorKind.DecodeError("crossing_finish_line_in_pit", "column 'crossing_finish_line_in_pit' is Str, expected 1 or 0"))
+            Sql.decode(sel, TestCells.answering(sel, SqlValue.Str("true") :: Nil))
+                == Err(DbErrorKind.DecodeError("crossing_finish_line_in_pit", "column 'crossing_finish_line_in_pit' is Str, expected Bool"))
         )
 
     @Test
@@ -72,9 +81,9 @@ pub mod Sql.TestSel {
         let sel = Sql.int("k") |> Sql.refine("a record's label", label ->
             if (label == 0) Some("fastest lap") else None);
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT k", Nil));
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, Some("0") :: Nil)) == Ok("fastest lap"));
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Int32(0) :: Nil)) == Ok("fastest lap"));
         Assert.assertTrue(
-            Sql.decode(sel, TestCells.answering(sel, Some("9") :: Nil))
+            Sql.decode(sel, TestCells.answering(sel, SqlValue.Int32(9) :: Nil))
                 == Err(DbErrorKind.DecodeError("k", "column 'k' is 9, expected a record's label"))
         )
 
@@ -84,8 +93,8 @@ pub mod Sql.TestSel {
     def aReadingOfTheFarSideOfAJoinTakesANullAsNothing(): Unit \ Assert =
         let sel = Sql.orNull(Sql.int("l1.elapsed_ms"));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT l1.elapsed_ms AS l1_elapsed_ms", Nil));
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, None :: Nil)) == Ok(None));
-        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, Some("95365") :: Nil)) == Ok(Some(95365)))
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Null :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(sel, TestCells.answering(sel, SqlValue.Int32(95365) :: Nil)) == Ok(Some(95365)))
 
     /// A projection the row does not answer is refused by its label, rather than reading the cell beside the one it wanted.
     @Test
@@ -93,7 +102,7 @@ pub mod Sql.TestSel {
         Assert.assertTrue(
             Sql.decode(pair(), TestCells.row(
                 "driver_name" :: "lap" :: Nil,
-                Some("Will STEVENS") :: Some("7") :: Nil))
+                SqlValue.Str("Will STEVENS") :: SqlValue.Int32(7) :: Nil))
                 == Err(DbErrorKind.DecodeError("lap_number", "column 'lap_number' is missing"))
         )
 
@@ -103,7 +112,7 @@ pub mod Sql.TestSel {
         Assert.assertTrue(
             Sql.decode(pair(), TestCells.row(
                 "lap_number" :: "driver_name" :: Nil,
-                Some("7") :: Some("Will STEVENS") :: Nil))
+                SqlValue.Int32(7) :: SqlValue.Str("Will STEVENS") :: Nil))
                 == Ok(("Will STEVENS", 7))
         )
 
@@ -114,7 +123,7 @@ pub mod Sql.TestSel {
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == (
             "SELECT l1.elapsed_ms AS l1_elapsed_ms, l2.elapsed_ms AS l2_elapsed_ms", Nil));
         Assert.assertTrue(
-            Sql.decode(sel, TestCells.answering(sel, Some("95365") :: Some("102813") :: Nil))
+            Sql.decode(sel, TestCells.answering(sel, SqlValue.Int32(95365) :: SqlValue.Int32(102813) :: Nil))
                 == Ok((95365, 102813))
         )
 
@@ -124,7 +133,7 @@ pub mod Sql.TestSel {
         let sel = Sql.labelled("mini_best", Sql.optionalIntArray("json_array(1, 2)"));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT json_array(1, 2) AS mini_best", Nil));
         Assert.assertTrue(
-            Sql.decode(sel, TestCells.row("mini_best" :: Nil, Some("[20708,null]") :: Nil))
+            Sql.decode(sel, TestCells.row("mini_best" :: Nil, SqlValue.Str("[20708,null]") :: Nil))
                 == Ok(Some(Some(20708) :: None :: Nil))
         )
 

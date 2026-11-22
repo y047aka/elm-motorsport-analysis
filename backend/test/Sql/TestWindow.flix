@@ -5,6 +5,7 @@ pub mod Sql.TestWindow {
 
     use Db.Laps
     use Db.Schema
+    use Sqlitefx.SqlValue
     use Sql.Frame
     use Sql.Sel
 
@@ -17,7 +18,7 @@ pub mod Sql.TestWindow {
     def anAggregateOverANullableColumnReadsAsThatColumnReads(): Unit \ Assert =
         let fastest = Sql.min(columns()#s1Ms);
         Assert.assertTrue(Sql.toSql(Sql.fragment(fastest)) == ("MIN(s1_ms)", Nil));
-        Assert.assertTrue(Sql.decode(fastest, TestCells.answering(fastest, Some("61234") :: Nil)) == Ok(Some(61234)))
+        Assert.assertTrue(Sql.decode(fastest, TestCells.answering(fastest, SqlValue.Int32(61234) :: Nil)) == Ok(Some(61234)))
 
     /// An aggregate answers under a label of its own, so it never comes back under the name of the column it is over.
     @Test
@@ -113,16 +114,16 @@ pub mod Sql.TestWindow {
         Assert.assertTrue(Sql.toSql(Sql.fragment(prior)) == (
             "LAG(flag_at_fl) OVER (ORDER BY elapsed_ms)", Nil
         ));
-        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, None :: Nil)) == Ok(None));
-        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, Some("SF") :: Nil)) == Ok(Some("SF")))
+        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, SqlValue.Null :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(prior, TestCells.answering(prior, SqlValue.Str("SF") :: Nil)) == Ok(Some("SF")))
 
     /// The maximum over no rows is the other thing `opt` is for.
     @Test
     def anAggregateOverNoRowsReadsAsNothing(): Unit \ Assert =
         let laps = Sql.opt(Sql.max(columns()#elapsedMs));
         Assert.assertTrue(Sql.toSql(Sql.fragment(laps)) == ("MAX(elapsed_ms)", Nil));
-        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, None :: Nil)) == Ok(None));
-        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, Some("5400000") :: Nil)) == Ok(Some(5400000)))
+        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, SqlValue.Null :: Nil)) == Ok(None));
+        Assert.assertTrue(Sql.decode(laps, TestCells.answering(laps, SqlValue.Int32(5400000) :: Nil)) == Ok(Some(5400000)))
 
     @Test
     def theStandingFlagIsTheGreenTheRaceStartsOnWhereThereIsNoPredecessor(): Unit \ Assert =

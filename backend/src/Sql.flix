@@ -173,54 +173,15 @@ pub mod Sql {
         let Sel.Sel(expr, label, read) = s;
         if (expr == label) read(label) else Decoder.selectExpr(expr, read(label))
 
-    /// The text a cell carries, which is how a number SQLite answered in another type is read: a `SUM`, a `json_each` element.
-    def cellText(value: SqlValue): String = match value {
-        case SqlValue.Str(s)     => s
-        case SqlValue.Json(text) => text
-        case SqlValue.Int32(n)   => "${n}"
-        case SqlValue.Int64(n)   => "${n}"
-        case SqlValue.Float64(n) => "${n}"
-        case SqlValue.Bool(b)    => if (b) "1" else "0"
-        case SqlValue.Null       => ""
-        case SqlValue.NullOf(_)  => ""
-        case other               => "${other}"
-    }
-
-    /// The number a cell carries, where the driver answered it in a wider type than the column holds. Beyond what an `int` column holds there is no number to give, and the answer is none rather than a wrapped-around one.
-    def int32Of(value: SqlValue): Option[Int32] = match value {
-        case SqlValue.Bool(true)  => Some(1)
-        case SqlValue.Bool(false) => Some(0)
-        case SqlValue.Int32(_)    => SqlValue.asInt32(value)
-        case SqlValue.Int64(_)    => SqlValue.asInt32(value)
-        case _                    => Int32.fromString(cellText(value))
-    }
-
     /// A reading's result, raised in the reader's own context.
     pub def orRaise(result: Result[DbErrorKind, a]): a \ {Sqlitefx.TransientDbErr, DbErr} = match result {
         case Ok(value) => value
         case Err(kind) => DbError.raise(kind)
     }
 
-    def textCell(label: String): Decoder[String] =
-        Decoder.typed({ name = label, expected = "text" }, v -> Some(cellText(v)))
-
-    def intCell(label: String): Decoder[Int32] =
-        Decoder.typed({ name = label, expected = "an integer" }, int32Of)
-
-    /// A truth value is stored as the 1 or 0 the driver bound it as.
-    def boolCell(label: String): Decoder[Bool] =
-        Decoder.typed({ name = label, expected = "1 or 0" }, v -> match SqlValue.asBool(v) {
-            case Some(b) => Some(b)
-            case None    => match cellText(v) {
-                case "1" => Some(true)
-                case "0" => Some(false)
-                case _   => None
-            }
-        })
-
-    /// A mini-sector column holds the JSON array it was written as, a null where the feed left a marker out.
+    /// A mini-sector column holds the JSON array it was written as, a null where the feed left a marker out, which `Decoder.int32Array` has no place for.
     def intArrayCell(label: String): Decoder[List[Option[Int32]]] =
-        Decoder.typed({ name = label, expected = "a JSON array of integers" }, v -> parseIntArray(cellText(v)))
+        Decoder.typed({ name = label, expected = "a JSON array of integers" }, v -> SqlValue.asStr(v) |> Option.flatMap(parseIntArray))
 
     def parseIntArray(text: String): Option[List[Option[Int32]]] =
         match String.stripPrefix({substr = "["}, text) |> Option.flatMap(String.stripSuffix({substr = "]"})) {
@@ -233,17 +194,17 @@ pub mod Sql {
                 })
         }
 
-    /// A cell the reading wants as text, which is any cell that is not null: the schema binds text and SQLite keeps what it is given.
-    pub def text(expr: String): Sel[String] = sel(expr, textCell)
+    /// A cell is read as the class SQLite kept it in, so a column that comes back in another than the one it was bound as fails as a `TypeMismatch` rather than being read through.
+    pub def text(expr: String): Sel[String] = sel(expr, Decoder.str)
 
-    pub def optionalText(expr: String): Sel[Option[String]] = sel(expr, l -> Decoder.opt(textCell(l)))
+    pub def optionalText(expr: String): Sel[Option[String]] = sel(expr, l -> Decoder.opt(Decoder.str(l)))
 
-    /// A number the driver answered in another type is read from its text, which is the one form every cell has.
-    pub def int(expr: String): Sel[Int32] = sel(expr, intCell)
+    pub def int(expr: String): Sel[Int32] = sel(expr, Decoder.int32)
 
-    pub def optionalInt(expr: String): Sel[Option[Int32]] = sel(expr, l -> Decoder.opt(intCell(l)))
+    pub def optionalInt(expr: String): Sel[Option[Int32]] = sel(expr, l -> Decoder.opt(Decoder.int32(l)))
 
-    pub def bool(expr: String): Sel[Bool] = sel(expr, boolCell)
+    /// A truth value is stored as the 1 or 0 the driver bound it as.
+    pub def bool(expr: String): Sel[Bool] = sel(expr, Decoder.bool)
 
     pub def optionalIntArray(expr: String): Sel[Option[List[Option[Int32]]]] = sel(expr, l -> Decoder.opt(intArrayCell(l)))
 
@@ -354,7 +315,7 @@ pub mod Sql {
     /// A count is never null and never the argument's type, so it is the one aggregate whose reading is its own.
     pub def count(p: p): Sel[Int32] with Pick[p] =
         let Sel.Sel(expr, label, _) = Pick.pick(p);
-        Sel.Sel("COUNT(${expr})", "count_${label}", intCell)
+        Sel.Sel("COUNT(${expr})", "count_${label}", Decoder.int32)
 
     /// `COALESCE`, the nullable side first.
     ///
@@ -449,7 +410,7 @@ pub mod Sql {
 
     /// The row's place within its partition, counted from one.
     pub def rowNumber(w: Window): Sel[Int32] =
-        Sel.Sel("ROW_NUMBER() ${overTarget(w)}", "row_number_${overLabel(w)}", intCell)
+        Sel.Sel("ROW_NUMBER() ${overTarget(w)}", "row_number_${overLabel(w)}", Decoder.int32)
 
     /// The value the previous row of the window had.
     ///

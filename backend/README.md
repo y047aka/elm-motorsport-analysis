@@ -156,7 +156,7 @@ Constraint violations name what SQLite names: `UNIQUE constraint failed: laps.ro
 `Server.Api` answers a transient failure with 503 and everything else with 500.
 A failure names tables and files in its own words, so those ride in the response's `cause`, which `Server.send` logs and does not send.
 
-A row is `Sqlitefx.Row.Row`: the labels the driver reported and the cells as `SqlValue`. SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared.
+A row is `Sqlitefx.Row.Row`: the labels the driver reported and the cells as `SqlValue`. SQLite types a value rather than a column, so a cell is what the driver found, not what the schema declared, and it is read with sqlfx's own `Decoder.int32`, `str` and `bool`: a value kept in another class than the one it was bound as fails as a `TypeMismatch` naming the column. Only a mini-sector array is read here, since `Decoder.int32Array` has no place for the nulls it holds.
 A row is read by label through sqlfx's `Decoder`, and every label is one the clause wrote: an expression that is not a bare name goes out as `expr AS label`, so `l1.elapsed_ms` and `l2.elapsed_ms` come back as two columns and not two `elapsed_ms`. A clause and a reading that disagree fail by naming the missing label, and a row carrying one name twice is refused (`Sql.selectAll`) rather than read by whichever the lookup finds.
 
 `Tx.withTx` in `Cli.Load.runAll` is the one commit of a load, and rolls a raised failure back before raising it again, so the rebuild of every table is a single transaction: a run killed partway leaves the rounds it was rebuilding from.
