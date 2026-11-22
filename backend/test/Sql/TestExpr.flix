@@ -1,16 +1,16 @@
 pub mod Sql.TestExpr {
+    use Lite3fx.SqlValue
 
     use Db.Cars
     use Db.Laps
     use Db.Schema
-    use Db.Value
     use Motorsport.Calendar.Entry
 
     @Test
     def aComparisonBindsTheValueItComparesAgainst(): Unit \ Assert =
         let expr = Sql.eq(Schema.expr(Laps.columns()#lapNumber), Sql.i32(1));
         Assert.assertTrue(
-            Sql.toSql(Sql.term(expr)) == ("lap_number = ?", Value.Integer(1) :: Nil)
+            Sql.toSql(Sql.term(expr)) == ("lap_number = ?", SqlValue.Int32(1) :: Nil)
         )
 
     /// `IS NULL` reads nothing, so it binds nothing.
@@ -30,7 +30,7 @@ pub mod Sql.TestExpr {
         );
         Assert.assertTrue(Sql.toSql(Sql.term(expr)) == (
             "round_id = ? AND lap_time_ms <> ? AND s1_ms IS NOT NULL",
-            Value.Integer(4) :: Value.Integer(0) :: Nil
+            SqlValue.Int32(4) :: SqlValue.Int32(0) :: Nil
         ))
 
     @Test
@@ -45,12 +45,12 @@ pub mod Sql.TestExpr {
         Assert.assertTrue(Schema.name(lap1) == "l1.car_number");
         Assert.assertTrue(
             Sql.toSql(Sql.term(Sql.eq(Schema.expr(lap1), Sql.str("12"))))
-                == ("l1.car_number = ?", Value.Text("12") :: Nil)
+                == ("l1.car_number = ?", SqlValue.Str("12") :: Nil)
         );
         Assert.assertTrue(
             Sql.toSql(Sql.clause(Schema.read(lap1))) == ("SELECT l1.car_number", Nil)
         );
-        Assert.assertTrue(Sql.decode(Schema.read(lap1), TestCells.row(Some("12") :: Nil)) == Ok("12"))
+        Assert.assertTrue(Sql.decode(Schema.read(lap1), TestCells.answering(Schema.read(lap1), Some("12") :: Nil)) == Ok("12"))
 
     def leMans(): Entry = { season = 2025, id = "le_mans_24h", date = "2025-06-14" }
 
@@ -67,7 +67,7 @@ pub mod Sql.TestExpr {
         let scope = source ->
             "${source}.round_id = (SELECT round_id FROM rounds"
                 + " WHERE season = ? AND round_key = ?)";
-        let named = Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil;
+        let named = SqlValue.Int32(2025) :: SqlValue.Str("le_mans_24h") :: Nil;
         let lapNumbers = Laps.rows(leMans()) |> Sql.map(c -> c#lapNumber) |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(lapNumbers) == (
             "SELECT lap_number FROM laps WHERE ${scope("laps")}", named
@@ -83,7 +83,7 @@ pub mod Sql.TestExpr {
     def theScopeIsAlsoHadAsAPredicate(): Unit \ Assert =
         Assert.assertTrue(Sql.toSql(Sql.term(Laps.inRound(leMans()))) == (
             "laps.round_id = (SELECT round_id FROM rounds WHERE season = ? AND round_key = ?)",
-            Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
+            SqlValue.Int32(2025) :: SqlValue.Str("le_mans_24h") :: Nil
         ))
 
     /// A source that renames the table names itself, which is what a join's
@@ -95,7 +95,7 @@ pub mod Sql.TestExpr {
             Sql.toSql(Sql.term(Db.Rounds.scope(Schema.qualified("c", c#roundId), leMans())))
                 == ("c.round_id = (SELECT round_id FROM rounds"
                         + " WHERE season = ? AND round_key = ?)",
-                    Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil)
+                    SqlValue.Int32(2025) :: SqlValue.Str("le_mans_24h") :: Nil)
         )
 
 }

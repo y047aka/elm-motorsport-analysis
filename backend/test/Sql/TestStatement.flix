@@ -1,19 +1,19 @@
 pub mod Sql.TestStatement {
+    use Lite3fx.SqlValue
 
-    use Db.Value
     use Sql.Key
 
     /// A column of a table that is not this application's: what the builders
     /// read of one is its name, the type it takes, and what it binds.
     type alias Row = {round = String, lapNumber = Int32}
 
-    type alias Col = {name = String, sqlType = String, bind = Row -> Value}
+    type alias Col = {name = String, sqlType = String, bind = Row -> SqlValue}
 
     def round_(): Col =
-        { name = "round", sqlType = "text not null", bind = r -> Value.Text(r#round) }
+        { name = "round", sqlType = "text not null", bind = r -> SqlValue.Str(r#round) }
 
     def lapNumber(): Col =
-        { name = "lap_number", sqlType = "int not null", bind = r -> Value.Integer(r#lapNumber) }
+        { name = "lap_number", sqlType = "int not null", bind = r -> SqlValue.Int32(r#lapNumber) }
 
     def columns(): List[Col] =
         round_() :: lapNumber() :: Nil
@@ -70,8 +70,8 @@ pub mod Sql.TestStatement {
             { round = "le_mans_24h", lapNumber = 1 } :: { round = "fuji_6h", lapNumber = 12 } :: Nil);
         Assert.assertTrue(statement == "INSERT INTO laps (round, lap_number) VALUES (?, ?)");
         Assert.assertTrue(bound == (
-            (Value.Text("le_mans_24h") :: Value.Integer(1) :: Nil) ::
-            (Value.Text("fuji_6h") :: Value.Integer(12) :: Nil) :: Nil
+            (SqlValue.Str("le_mans_24h") :: SqlValue.Int32(1) :: Nil) ::
+            (SqlValue.Str("fuji_6h") :: SqlValue.Int32(12) :: Nil) :: Nil
         ))
 
     @Test

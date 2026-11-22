@@ -1,5 +1,9 @@
 /// The round's laps, read back out of the rows it was loaded into.
 pub mod Round.Laps {
+    use Lite3fx.DbErr
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
+    use Lite3fx.TransientDbErr
 
     use Db.LapRow
     use Db.LapRow.LapRow
@@ -34,19 +38,29 @@ pub mod Round.Laps {
         let cars = Cars.read(entry);
         Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
-            |> Sql.map(_ -> (Laps.selection(), Sql.int(placeInField())))
+            |> Sql.map(_ -> (Laps.selection(), place()))
             |> Sql.selectAll
             |> List.map(placed(cars, seats))
 
-    /// Counted from nought. A window runs over the rows the round was scoped
-    /// to, so the field is this round's and not the table's. Ties on the clock
-    /// are broken by the file's order, which no two rows share.
+    /// The rows are already the round's, so the field needs no partition of its
+    /// own. Ties on the clock are broken by the file's order, which no two rows
+    /// share.
     ///
     /// `Round.Timeline` counts the same order again, within each class, to find
     /// who led each lap: a place on the lap rides beside it, and the lead is a
     /// change between laps, so neither reading is the other's to hand over.
-    def placeInField(): String =
-        "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) - 1"
+    def fieldOrder(): Sql.Window =
+        let c = Laps.columns();
+        Sql.window(
+            Schema.term(c#lapNumber) :: Nil,
+            Schema.term(c#elapsedMs) :: Schema.term(c#sourceRow) :: Nil,
+            None
+        )
+
+    /// The place in the field, counted from nought where `ROW_NUMBER` counts from
+    /// one.
+    def place(): Sql.Sel[Int32] =
+        Sql.intOf(Sql.frags(Sql.fragment(Sql.rowNumber(fieldOrder())) :: Sql.raw("- 1") :: Nil))
 
     def placed(cars: Map[String, RawCar], seats: Seats): ((LapRow, Int32)) -> Placed \ {DbErr, TransientDbErr} =
         row -> match row {
@@ -58,13 +72,13 @@ pub mod Round.Laps {
     def rawLap(cars: Map[String, RawCar], seats: Seats): LapRow -> RawLap \ {DbErr, TransientDbErr} =
         row ->
             match Map.get(row#carNumber, cars) {
-                case None      => DbErr.raise(Db.Error.Incomplete(
+                case None      => DbErr.raise(DbErrorKind.Other(
                     "car ${row#carNumber} has laps but is not one of the round's cars"))
                 case Some(car) =>
                     let driver = Drivers.nameOf(seats, row#carNumber, row#driverNumber);
                     LapRow.toRawLap(car, driver, row)
-                        |> Result.mapErr(Db.Error.Unread)
-                        |> Db.orRaise
+                        |> Result.mapErr(DbErrorKind.Other)
+                        |> Lite3fx.Sql.orRaise
             }
 
 }

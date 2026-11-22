@@ -1,10 +1,10 @@
 pub mod Db.TestCarRow {
+    use Lite3fx.SqlValue
 
     use Db.CarRow
     use Db.Cars
     use Db.Entries
     use Db.TestLapRow
-    use Db.Value
 
     /// The id a run gave the round; see `Db.TestLapRow`.
     def fujiId(): Int32 = 7
@@ -56,7 +56,7 @@ pub mod Db.TestCarRow {
         match rows() {
             case row :: _ =>
                 Assert.assertTrue(Cars.values(row)
-                    == Value.Integer(7) :: Value.Text("12") :: Value.Integer(row#entryId) :: Nil)
+                    == SqlValue.Int32(7) :: SqlValue.Str("12") :: SqlValue.Int32(row#entryId) :: Nil)
             case Nil => Assert.assertTrue(false)
         }
 

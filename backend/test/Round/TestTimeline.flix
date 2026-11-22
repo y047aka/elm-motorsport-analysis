@@ -565,7 +565,6 @@ pub mod Round.TestTimeline {
         let times = events |> List.map(event -> event#elapsed);
         Assert.assertTrue(times == List.sort(times))
 
-
     // ----------------------------------------------------------------- rows
 
     /// The timeline the load wrote, and the one it counted to write it.
@@ -598,7 +597,7 @@ pub mod Round.TestTimeline {
             lap("7", 2, "3:00.000") ::
             Nil,
             () -> {
-                discard Db.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
+                discard Lite3fx.Sql.execute("UPDATE ${Db.TimelineEvents.table()} SET elapsed_ms = 250000"
                     + " WHERE event = 'finished'", Nil);
                 Timeline.read(entry())
             });

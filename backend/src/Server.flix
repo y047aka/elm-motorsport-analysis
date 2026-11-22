@@ -1,4 +1,9 @@
 pub mod Server {
+    use Lite3fx.DbError
+    use Lite3fx.DbTest
+    use Lite3fx.Jdbc
+    use Lite3fx.RawSql
+    use Lite3fx.Recording
 
     import com.sun.net.httpserver.HttpExchange
     import com.sun.net.httpserver.HttpHandler
@@ -16,7 +21,6 @@ pub mod Server {
     use Server.Api
     use Server.Api.Response
     use Server.Api.Route
-    use Db.Jdbc
 
     def threads(): Int32 = 8
 
@@ -57,7 +61,7 @@ pub mod Server {
             fromDatabase(databaseUrl, route)
         else
             // Nothing is sent, so there is nothing for the recording to hold.
-            match Db.runRecording(() -> Api.respond(route)) {
+            match Recording.statements(() -> Api.respond(route)) {
                 case (answered, _) => answered
             }
 
@@ -68,7 +72,7 @@ pub mod Server {
     /// until the process ends, so the close is outside the catch.
     def fromDatabase(databaseUrl: String, route: Route): Response \ {IO, RawSql} =
         match Jdbc.connect(databaseUrl) {
-            case Err(cause) => Api.failed(Db.toFailure(cause))
+            case Err(cause) => Api.failed(DbError.toFailure(cause))
             case Ok(conn)   =>
                 let answered = try {
                     Jdbc.runReading(conn, () -> Api.respond(route))

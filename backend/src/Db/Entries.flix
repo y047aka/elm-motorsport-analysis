@@ -6,11 +6,12 @@
 /// different one across seasons -- number 12 was three teams' over the three
 /// the archive holds -- so the season is half of what names one.
 pub mod Db.Entries {
+    use Lite3fx.DbWrite
+    use Lite3fx.SqlValue
 
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
-    use Db.Value
     use Motorsport.Wec.RawCar
     use Sql.Sel
 
@@ -172,7 +173,7 @@ pub mod Db.Entries {
     pub def insertRows(rows_: List[EntryRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows_)
 
-    pub def values(row: EntryRow): List[Value] =
+    pub def values(row: EntryRow): List[SqlValue] =
         Schema.values(all(), row)
 
     pub def createTable(): String =

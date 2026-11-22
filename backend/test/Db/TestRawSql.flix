@@ -1,4 +1,9 @@
 pub mod Db.TestRawSql {
+    use Lite3fx.DbError
+    use Lite3fx.RawSql
+    use Lite3fx.SqlRead
+    use Lite3fx.SqlValue
+    use Lite3fx.SqlWrite
 
     /// The marker is raised for each statement as it goes out, which is the
     /// whole of what it does -- and `runWithAllow` is what closes it, so a
@@ -8,9 +13,9 @@ pub mod Db.TestRawSql {
         region rc {
             let seen = Ref.fresh(rc, (Nil: List[String]));
             discard run {
-                Db.runWithError(() -> {
-                    discard Db.execute("SAVEPOINT round", Nil);
-                    Db.execute("RELEASE SAVEPOINT round", Nil)
+                DbError.runWithKind(() -> {
+                    discard Lite3fx.Sql.execute("SAVEPOINT round", Nil);
+                    Lite3fx.Sql.execute("RELEASE SAVEPOINT round", Nil)
                 })
             } with handler RawSql {
                 def allow(sql, k) = {
@@ -19,6 +24,7 @@ pub mod Db.TestRawSql {
                 }
             } with handler SqlWrite {
                 def execute(_sql, _params, k) = k(Ok(0))
+                def executeReturning(_sql, _params, k) = k(Ok(Nil))
                 def insertMany(_sql, _rows, k) = k(Ok(0))
                 def commit(k) = k(Ok())
                 def rollback(k) = k(Ok())
@@ -34,8 +40,8 @@ pub mod Db.TestRawSql {
         region rc {
             let seen = Ref.fresh(rc, (Nil: List[String]));
             discard run {
-                Db.runWithError(() -> discard Db.fetch("SELECT n FROM t WHERE round_id = ?",
-                    Db.Value.Integer(7) :: Nil))
+                DbError.runWithKind(() -> discard Lite3fx.Sql.fetch("SELECT n FROM t WHERE round_id = ?",
+                    SqlValue.Int32(7) :: Nil))
             } with handler RawSql {
                 def allow(sql, k) = {
                     Ref.put(sql :: Ref.get(seen), seen);

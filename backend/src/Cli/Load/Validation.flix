@@ -24,6 +24,8 @@
 /// HourElapsedOffset's baseline is the **first row of the whole file** (round-wide,
 /// not per-car): a bad lap 1 on one car does not cascade across the rest of that car.
 pub mod Cli.Load.Validation {
+    use Lite3fx.DbError.DbErrorKind
+    use Lite3fx.DbRead
 
     use Db.Laps
     use Db.Schema
@@ -97,18 +99,14 @@ pub mod Cli.Load.Validation {
         )
 
     def elapsedDriftViolations(entry: Entry): List[Violation] \ DbRead =
-        Sql.rows(Sql.raw("c"))
-            |> Sql.using(Sql.frags(
-                Sql.raw("c AS (SELECT car_number, lap_number, elapsed_ms,"
-                    + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
-                    + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
-                    + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Nil) ::
-                Sql.raw(")") :: Nil
-            ))
-            |> Sql.filter(_ -> Sql.ne(Sql.column("running"), Sql.column("elapsed_ms")))
-            |> Sql.orderBy(Sql.raw("first_seen") :: Sql.raw("lap_number") :: Nil)
-            |> Sql.map(_ -> (lapOf(), Sql.int("running"), Sql.int("elapsed_ms")))
+        Sql.statement(
+            "WITH c AS (SELECT car_number, lap_number, elapsed_ms," ::
+            "SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running," ::
+            "MIN(source_row) OVER (PARTITION BY car_number) AS first_seen" ::
+            "FROM ${Laps.table()} WHERE {{scope}})" ::
+            "SELECT %% FROM c WHERE running <> elapsed_ms ORDER BY first_seen, lap_number" :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
+            (lapOf(), Sql.int("running"), Sql.int("elapsed_ms")))
             |> Sql.reading(match (lap, expected, actual) ->
                 Violation.ElapsedDrift(lap, duration(expected), duration(actual)))
             |> Sql.selectAll
@@ -116,17 +114,13 @@ pub mod Cli.Load.Validation {
     def offset(): String = Schema.nameOf(Laps.hourOffsetMs())
 
     def hourOffsetViolations(entry: Entry): List[Violation] \ DbRead =
-        Sql.rows(Sql.raw("o"))
-            |> Sql.using(Sql.frags(
-                Sql.raw("o AS (SELECT car_number, lap_number, source_row, ${offset()},"
-                    + " FIRST_VALUE(${offset()}) OVER (ORDER BY source_row) AS base"
-                    + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Nil) ::
-                Sql.raw(")") :: Nil
-            ))
-            |> Sql.filter(_ -> Sql.ne(Schema.exprOf(Laps.hourOffsetMs()), Sql.column("base")))
-            |> Sql.orderBy(Sql.raw("source_row") :: Nil)
-            |> Sql.map(_ -> (lapOf(), Sql.int("base"), Laps.hourOffsetMs()))
+        Sql.statement(
+            "WITH o AS (SELECT car_number, lap_number, source_row, ${offset()}," ::
+            "FIRST_VALUE(${offset()}) OVER (ORDER BY source_row) AS base" ::
+            "FROM ${Laps.table()} WHERE {{scope}})" ::
+            "SELECT %% FROM o WHERE ${offset()} <> base ORDER BY source_row" :: Nil,
+            Map#{ "scope" => Laps.scope(entry, Nil) },
+            (lapOf(), Sql.int("base"), Laps.hourOffsetMs()))
             |> Sql.reading(match (lap, base, actual) ->
                 Violation.HourElapsedOffset(lap, base, actual))
             |> Sql.selectAll
@@ -141,24 +135,23 @@ pub mod Cli.Load.Validation {
             |> List.map(entry2 -> match entry2 { case (_, _, violation) => violation })
 
     def miniSectorSumViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead =
-        Sql.rows(Sql.raw("m"))
-            |> Sql.using(Sql.frags(
-                Sql.raw("m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
-                    + " crossing_finish_line_in_pit, pit_time_ms,"
-                    + " (SELECT COALESCE(SUM(t.value), 0)"
-                    + "  FROM " + miniSectorTimes() + ") AS sum_ms,"
-                    + " COALESCE((SELECT GROUP_CONCAT(t.key + 1, ',' ORDER BY t.key)"
-                    + "  FROM " + miniSectorTimes()
-                    + "  WHERE t.value IS NULL), '') AS blanks"
-                    + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorTimeMs)) :: Nil) ::
-                Sql.raw(")") :: Nil
-            ))
-            |> Sql.filter(_ -> Sql.column("NOT ${Laps.pitLap()}"))
-            |> Sql.filter(_ -> Sql.ne(Sql.column("sum_ms"), Sql.column("lap_time_ms")))
-            |> Sql.filter(_ -> Sql.every(trackLimitsExclusions()))
-            |> Sql.orderBy(Sql.raw("source_row") :: Nil)
-            |> Sql.map(_ -> (
+        Sql.statement(
+            "WITH m AS (SELECT car_number, lap_number, source_row, lap_time_ms," ::
+            "crossing_finish_line_in_pit, pit_time_ms," ::
+            "(SELECT COALESCE(SUM(t.value), 0)" ::
+            " FROM ${miniSectorTimes()}) AS sum_ms," ::
+            "COALESCE((SELECT GROUP_CONCAT(t.key + 1, ',' ORDER BY t.key)" ::
+            " FROM ${miniSectorTimes()}" ::
+            " WHERE t.value IS NULL), '') AS blanks" ::
+            "FROM ${Laps.table()} WHERE {{scope}})" ::
+            "SELECT %% FROM m" ::
+            "WHERE NOT ${Laps.pitLap()} AND sum_ms <> lap_time_ms AND {{exclusions}}" ::
+            "ORDER BY source_row" :: Nil,
+            Map#{
+                "scope"     => Laps.scope(entry, Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorTimeMs)) :: Nil),
+                "exclusions" => Sql.term(Sql.every(trackLimitsExclusions()))
+            },
+            (
                 lapOf(),
                 Sql.int("source_row"),
                 Sql.int("lap_time_ms"),
@@ -170,23 +163,20 @@ pub mod Cli.Load.Validation {
             |> Sql.selectAll
 
     def miniSectorMonotonicViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead =
-        Sql.rows(Sql.raw("e"))
-            |> Sql.using(Sql.frags(
-                Sql.raw("e AS (SELECT car_number, lap_number, source_row,"
-                    + " x.key + 1 AS ord, x.value AS v,"
-                    + " LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v"
-                    + " FROM " + Laps.table()
-                    + ", json_each(" + Laps.table() + ".mini_sector_elapsed_ms) x"
-                    + " WHERE") ::
-                where_(entry,
+        Sql.statement(
+            "WITH e AS (SELECT car_number, lap_number, source_row," ::
+            "x.key + 1 AS ord, x.value AS v," ::
+            "LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v" ::
+            "FROM ${Laps.table()}" ::
+            ", json_each(${Laps.table()}.mini_sector_elapsed_ms) x WHERE {{scope}}" ::
+            "WINDOW w AS (PARTITION BY source_row ORDER BY x.key))" ::
+            "SELECT %% FROM e WHERE prev_v IS NOT NULL AND v <= prev_v" ::
+            "ORDER BY source_row, ord" :: Nil,
+            Map#{ "scope" =>
+                Laps.scope(entry,
                     Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorElapsedMs)) ::
-                    Sql.isNotNull(Sql.column("x.value")) :: Nil) ::
-                Sql.raw("WINDOW w AS (PARTITION BY source_row ORDER BY x.key))") :: Nil
-            ))
-            |> Sql.filter(_ -> Sql.isNotNull(Sql.column("prev_v")))
-            |> Sql.filter(_ -> Sql.lte(Sql.column("v"), Sql.column("prev_v")))
-            |> Sql.orderBy(Sql.raw("source_row") :: Sql.raw("ord") :: Nil)
-            |> Sql.map(_ -> (
+                    Sql.isNotNull(Sql.column("x.value")) :: Nil) },
+            (
                 lapOf(),
                 Sql.int("source_row"),
                 Sql.int("prev_ord") |> Sql.andThen(miniSectorAt),
@@ -201,11 +191,6 @@ pub mod Cli.Load.Validation {
             |> Sql.selectAll
 
     // ------------------------------------------------------------------- sql
-
-    /// The round's rows as a fragment, for the rules reading them from inside
-    /// a common table expression of their own.
-    def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
-        Sql.term(Sql.every(Laps.inRound(entry) :: predicates))
 
     /// Built from `Motorsport.MiniSector` rather than written out, so the
     /// signatures are named in one place and the positions follow track order.
@@ -230,17 +215,17 @@ pub mod Cli.Load.Validation {
     def splitLabels(joined: String): List[String] =
         if (String.isEmpty(joined)) Nil else String.splitOn({substr = ","}, joined)
 
-    def positions(joined: String): Result[Db.Error, List[MiniSectorId]] =
+    def positions(joined: String): Result[DbErrorKind, List[MiniSectorId]] =
         splitLabels(joined) |> Result.traverse(text ->
             forM(
-                position <- Int32.fromString(text) |> Option.toOk(Db.Error.Unread("not a position: \"${text}\""));
+                position <- Int32.fromString(text) |> Option.toOk(DbErrorKind.Other("not a position: \"${text}\""));
                 id       <- miniSectorAt(position)
             ) yield id
         )
 
-    def miniSectorAt(position: Int32): Result[Db.Error, MiniSectorId] =
+    def miniSectorAt(position: Int32): Result[DbErrorKind, MiniSectorId] =
         MiniSector.atPosition(position)
-            |> Option.toOk(Db.Error.Unread("no mini-sector at position ${position}"))
+            |> Option.toOk(DbErrorKind.Other("no mini-sector at position ${position}"))
 
     // ---------------------------------------------------------------- format
 

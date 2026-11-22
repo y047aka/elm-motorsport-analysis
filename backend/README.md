@@ -19,13 +19,13 @@ What follows is what the code cannot say for itself.
 handler is an anonymous `HttpHandler`, and `main` blocks on a latch because
 returning from it would take the JVM with it. Requests are answered on a pool
 of eight, and each one opens a connection of its own —
-`java.sql.Connection` is not thread-safe. `Db.Jdbc.connect` puts the database
+`java.sql.Connection` is not thread-safe. `Lite3fx.Jdbc.connect` puts the database
 in WAL mode, so those reads run beside a writing run rather than behind it.
 
 A Flix effect handler runs inside a request, which is why the endpoints reuse
 `Round`'s readers rather than restating them: `Server.Api.respond` runs under
-`Db.Jdbc.runReading` and calls `Round.Summary.read` unchanged. A route that reads
-nothing is answered before connecting at all, through `Db.runRecording`: the
+`Lite3fx.Jdbc.runReading` and calls `Round.Summary.read` unchanged. A route that reads
+nothing is answered before connecting at all, through `Lite3fx.Recording.statements`: the
 calendar is `Motorsport.Calendar` rather than a count of the rows, so a
 database that is down stops a round being opened and not the app being used.
 
@@ -163,7 +163,7 @@ numbering says a `driver_id` has a row. Turning them on costs two rewrites,
 neither of them the declarations: with the pragma on, `DROP TABLE` runs an
 implicit `DELETE FROM`, so the drops have to run children first while the
 creates run parents first, and the pragma is a silent no-op inside a
-transaction, so it belongs in `Db.Jdbc.connect` beside the journal mode. The one
+transaction, so it belongs in `Lite3fx.Jdbc.connect` beside the journal mode. The one
 fixture in the way is `Round.TestSupport.onLapsAlone` -- laps with no cars,
 which is what `Round.loaded` asks about and what a `laps` to `cars` key would
 make unbuildable.
@@ -233,7 +233,7 @@ gathering order rides in the sort key and lands in `seq`.
 `Motorsport.Timeline.parts` is where the line written out and the row meet, so
 the JSON, the column's `check` and the reading back cannot disagree about what
 an event is called or which fields it carries. A row that spells none is
-`Db.Error.Incomplete` rather than an event with either made up.
+`DbErrorKind.Other` rather than an event with either made up.
 
 `Round.Laps` takes one window function beside the reading for where the car
 stood in the field as it crossed the line -- a reading of the round rather than
@@ -284,51 +284,81 @@ Nothing about the scale argues otherwise later, either: the whole of the WEC,
 twenty seasons of it, is on the order of 1.5 million laps and 150MB in these
 tables, and adding other series keeps it in the low gigabytes.
 
+## `Lite3fx`, the SQLite3 port of sqlfx
+
+sqlfx is a PostgreSQL library for Flix: the effects a database is reached
+through, the failure an op carries, and the row and the value a statement
+comes back as. It is what this layer is shaped on, and its 0.7.0 cannot be a
+dependency here -- Flix 0.79 rejects the `name` and `description` entries in
+its `flix.toml`, and its JDBC layer imports `org.postgresql.*` -- so the
+shape is kept and the driver is not: `src/Lite3fx/` is the same effects, the
+same aliases, and a handler over `org.xerial:sqlite-jdbc`.
+
+What the port keeps back is what SQLite has no answer to, or this
+repository no use for. `NullType` is six rather than sqlfx's fifteen, and only three of the six -- `Str`, `Int32`, `Json` -- are ever bound. `Pool` is absent: the CLI opens one connection per run and the server one per request, which is what WAL mode is there to make work. `commit` and `rollback` stay operations of `SqlWrite`
+rather than moving into `Tx`, so a recording handler sees a commit go by, and
+`insertMany` is an operation of `SqlWrite` of its own, since a lap arrives a
+thousand at a time rather than one at a time. `RawSql` is inside the aliases
+rather than added to each signature, because every function of this
+repository's reaches a statement -- see below.
+
+`Db` is the seam: the `Db` table modules and the row types beside them are the
+whole of what the application tells `Lite3fx` about itself, which is the same
+line Acadia draws between `Transaction`, `Rows` and a `Table`.
+
 ## The database effects
 
-Reaching a database is an effect rather than a module of functions, so that what a round would send can be read back without a server: `Db.runRecording` keeps the statements and answers a read with the error that nothing was sent, `Db.runFailing` answers every statement with one error the caller chose, and `Db.DbTest.runWithRows` answers a read with rows the caller named. `java.sql` is imported by `Db.Jdbc` and `Db.JdbcConvert` alone.
-No effect here names a table or a column, so the handlers, those two files and `Sql` are together a database and a query language and nothing of this application; the `Db` table modules and the row types beside them are the whole of what the application tells them about itself, which is the same line Acadia draws between `Transaction`, `Rows` and a `Table`.
+Reaching a database is an effect rather than a module of functions, so that what a round would send can be read back without a server: `Lite3fx.Recording.statements` keeps the statements and answers a read with the error that nothing was sent, `Lite3fx.DbTest.runFailing` answers every statement with one error the caller chose, and `Lite3fx.DbTest.runWithRows` answers a read with rows the caller named. `java.sql` is imported by `Lite3fx.Jdbc` and `Lite3fx.JdbcConvert` alone.
+No effect here names a table or a column, so the handlers, those two files and `Sql` are together a database and a query language and nothing of this application.
 
 Reading and writing are two effects because the sides of this repository are
 two: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a
 statement that changes the database in them, and the table modules and
 `Cli.Load.load` are the other half. The handlers are split the same way, so
-what the type says of the server the connection says too: `Db.Jdbc.runReading`
+what the type says of the server the connection says too: `Lite3fx.Jdbc.runReading`
 installs the read alone, and a write reaches no handler through it.
 
 `DbErr` and `TransientDbErr` are the third and fourth, and they are what a reader does not carry a `Result` for.
 Their one operation does not return, so `Round.Summary.read` answers with a `Metadata` rather than with whether it could read one, and the failure travels by itself to the boundary that asked.
-`Db.runWithError` is where a raised failure comes back as a value, and `Db.attempt` the same with the transient ones folded into `Db.Failure`.
+`Lite3fx.DbError.runWithKind` is where a raised failure comes back as a value, and `Lite3fx.DbError.runWithFailure` the same with the transient ones folded into `DbError.Failure`.
 Everything between those and the statement is written as though the database always answers.
-Which of the two effects a failure travels by is read off its `Error` constructor -- `Db.raise` routes it there -- so a kind added to either side meets a pattern that has to say which it is.
+Which of the two effects a failure travels by is read off its `DbErrorKind` constructor -- `DbError.raise` routes it there -- so a kind added to either side meets a pattern that has to say which it is.
 
 What a signature says is the alias rather than the effect: `\ DbRead` is `{SqlRead, TransientDbErr, DbErr, RawSql}`, `\ DbWrite` is `{SqlWrite, TransientDbErr, DbErr, RawSql}`, and `\ Db` adds `SqlSavepoint`.
-Every one of them already says a statement goes out, which is what `RawSql` marks: `Db.fetch`, `Db.execute` and `Db.insertMany` raise it, and `RawSql`'s own header says who closes it.
+Every one of them already says a statement goes out, which is what `RawSql` marks: every reader and writer of `Lite3fx.Sql` raises it, and `RawSql`'s own header says who closes it.
 Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller taking a reading as an argument names the half it uses, as `Cli.Load.loadRound` does with `DbRead + SqlWrite`, or the whole it hands over, as `Main.onDirectories` and `Round.TestSupport.onRound` do with `Db`.
 
 The two statement effects answer with a `Result` even so, and that is not a
-choice: a Flix handler body is evaluated outside the `run` it belongs to, so a
-failure raised inside `Db.Jdbc`'s handler would pass every handler its caller
-had installed. `Db.orRaise` is where the value becomes a raised failure, in the
-caller's own context. sqlfx found the same thing and answers it the same way.
+choice -- `Lite3fx.flix`'s `SqlRead` header says why. `Lite3fx.Sql.orRaise` is
+where the value becomes a raised failure, in the caller's own context.
 
-So nothing outside `Db` calls an operation: `Db.fetch`, `Db.execute` and
-`Db.insertMany` are the same statements with that step already taken, and they
-are what `Sql` and `Db.Schema` reach. `Db.Jdbc.withConnection` is the other
-one -- a database opened, worked in, and closed however that went, for a run,
-a test and the server alike.
+So nothing outside `Lite3fx` calls an operation: the wrappers of `Lite3fx.Sql`
+are the same statements with that step already taken, and they are what `Sql` and
+`Db.Schema` reach.
+`Lite3fx.Jdbc.withConnection` is the other one -- a database opened, worked in,
+and closed however that went, for a run, a test and the server alike.
 
-What a failure is is a `Db.Error` rather than a sentence.
-The transient ones travel apart from the rest: `Unreachable` is no database reached at all, and `Busy` is the one refusal that may go through next time -- a lock SQLite waited out rather than got, which `Db.Sqlite` reads off the driver's result code and is tested without a database.
-The others say where the fix is: `Refused` is what the driver said no to in its own words, `Unread` is a cell the reading could not read, `NoRow` is a query that had to answer with one and did not, `Incomplete` is rows that came back whole and do not describe a round, and `Other` is what the JVM threw rather than said.
+What a failure is is a `DbErrorKind` rather than a sentence.
+The transient ones travel apart from the rest: `Unreachable` is no database reached at all, and `Busy` is the one refusal that may go through next time -- a lock SQLite waited out rather than got, which `Lite3fx.SqliteState` reads off the driver's result code and is tested without a database.
+The constraint violations are named, which is what a PostgreSQL SQLSTATE gives sqlfx and the driver's own sentence gives here: `UNIQUE constraint failed: laps.round_id` becomes `UniqueViolation("laps.round_id")`, and the primary code alone -- which is what the driver answers most constraints with -- is read out of the message.
+The rest say where the fix is: `SchemaMismatch` is a table or a column the database has not got, `DecodeError` is a cell the reading could not read, and `NoRow` is a query that had to answer with one and did not. `Other` is the rest -- what the JVM threw rather than said, and what this repository raises when rows came back whole and describe no round.
 The sentence is `ToString`'s, so the wording is in one place and the kind is what a caller reads.
 
-`Db.Failure` is both failings in one value, `Transient` and `Permanent`, and it is what a boundary takes back.
-`Db.Retry` is what would answer a transient one by sending again: `retrying` waits out a full-jitter backoff between tries, and `retryingSavepoint` takes back to a savepoint before the next. Nothing sends on it yet.
+`DbError.Failure` is both failings in one value, `Transient` and `Permanent`, and it is what a boundary takes back.
+`Lite3fx.Retry` is what would answer a transient one by sending again: `retrying` waits out a full-jitter backoff between tries, and `retryingSavepoint` takes back to a savepoint before the next. Nothing sends on it yet.
 
-A row is `Db.Row.Row`: the labels the driver reported, and the cells as `Db.Value`.
-`Db.JdbcConvert` is the only file that turns a `Value` into a binding and a `ResultSet` cell back into one.
-`Sql.Sel` reads a `Row` positionally, as the statements are built positionally, and `Row.get` is there for the readings that name a column.
+A row is `Lite3fx.Row.Row`: the labels the driver reported, and the cells as
+`SqlValue`. SQLite types a value rather than a column, so a cell is what the
+driver found and not what the schema declared.
+`Lite3fx.JdbcConvert` is the only file that turns a `SqlValue` into a binding and
+a `ResultSet` cell back into one.
+`Sql.decode` puts a row's cells in the order its projection names them, and the
+reading then goes by position within that, so a clause and a reading that
+disagree -- a column renamed on one side of the two -- fail by naming the column
+rather than by answering with the cell beside the one they wanted. `Sql.label`
+says what a projection comes back under; two projections under one label, a join
+naming both sides' `elapsed_ms`, are
+answered in the order the clause writes them.
 
 `Server.Api` is the one that reads the kind. `Unreachable` and `Busy` are answered
 503 and everything else 500, which is the difference between a round that
@@ -337,8 +367,8 @@ that sentence and not the database's: a failure names tables and files in its
 own words, so those ride in the response's `cause`, which `Server.send` logs
 and does not send.
 
-Nothing a statement sends is kept until a commit, and `Db.transact` is the only
-sender of one: it commits what its caller sent when the caller returns, and
+Nothing a statement sends is kept until a commit, and `Lite3fx.Tx.transact` is the
+only sender of one: it commits what its caller sent when the caller returns, and
 rolls a raised failure back before raising it again, the rollback being what it did
 about the failure rather than what it answers. `Cli.Load.runAll` is the one
 caller, so the rebuild of every table is a single transaction -- the
@@ -347,11 +377,11 @@ killed partway leaves the rounds it was rebuilding from rather than three of
 them.
 
 A round the database refuses is still counted and reported rather than taking
-the run with it, and `Db.withSavepoint` is the boundary that makes it so: it is `transact` of a part of one, marking a savepoint of SQLite's own -- its name checked against the rule `Db.Savepoint` states, since it is the one name that goes into a statement as text -- so what a round sent is undone together and what the run sent before it is still to be committed.
+the run with it, and `Lite3fx.Tx.withSavepoint` is the boundary that makes it so: it is `transact` of a part of one, marking a savepoint of SQLite's own -- its name checked against the rule `Lite3fx.Savepoint` states, since it is the one name that goes into a statement as text -- so what a round sent is undone together and what the run sent before it is still to be committed.
 `Cli.Load` marks one per round, which is also what lets the
 numbering follow the rows -- a round that failed frees the names it took, and
 advancing past it would leave a name numbered and unwritten for every later
-round to reference. `Db.Jdbc`'s insert marks one of the driver's inside that,
+round to reference. `Lite3fx.Jdbc`'s insert marks one of the driver's inside that,
 and that one is the batch's alone: the rows go out a thousand at a time, and a
 refusal partway through has already sent some of them. A read commits nothing,
 and closing a connection rolls back the transaction it opened.
@@ -421,19 +451,22 @@ The round is what every reading of a table keyed by one is scoped by, and it is
 applied where the rows come from rather than by the reader: `Db.Laps.rows` and
 `Db.Cars.rows` take the round and hand back rows already filtered by it, so rows
 of a table at large are not something those modules hand out and a reader cannot
-forget the scope. A reader ANDs its own onto them. Both carry a `round_id`, so a
+forget the scope. A reader ANDs its own onto them. A statement written out is the one
+place the scope can be left out and the statement still be well formed -- it names no
+hole the caller forgot to fill, because it names no hole at all -- so `Sql.statement`
+refuses one that binds no value. That catches a statement naming no round; it does not
+prove the value bound is the round's, and `Sql.refuseUnscoped` says so. Both carry a `round_id`, so a
 scope built from the wrong one would bind to whichever side of a join happened
-to have one; the records do not unify, so it does not compile. What a query builds itself cannot reach a
-`WHERE` written into a common table expression, which is text and takes the
-table's own columns: `Db.Laps.inRound` is the same predicate had on its own,
-for the queries in `Round.Index`, `Round.Summary` and `Cli.Load.Validation`
-that write one. Each names the table it is of, and a source that renames it
+to have one; the records do not unify, so it does not compile. What a query builds
+itself needs no `WHERE` written as text: `Db.Laps.scope` is the same predicate had on
+its own, plus whatever else the statement asks, as the piece that goes into a `WHERE`
+the caller wrote. Each names the table it is of, and a source that renames it
 says so itself: `Db.Rounds.scope` takes the column under that name, which is
 what `Round.Summary.carBuilds` hands its `c`. The type is what carries
 nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
-asked of `mini_sector_time_ms` and not of `lap_time_ms`. A column a common
-table expression made up is `Sql.column`, named rather than drawn, and its type
-is the caller's word.
+asked of `mini_sector_time_ms` and not of `lap_time_ms`.
+
+A column a common table expression made up is `Schema.derived`: the name the expression gives it, the type the expression it selects has, and that name's reading. `Round.Timeline.crossings` is where they are declared, and `Schema.qualified` reads them under each name the sources give them -- `l`, `led`, `stop`, `between_` -- which is what makes a name spelled once. What no declaration reaches at all is `Sql.column`, and its type is the caller's word.
 
 `Sql.unionAllTagged` stacks arms of a `UNION ALL` and labels each with a number
 it picks, handing back a reading of that number as the thing the arm was about.
@@ -451,6 +484,14 @@ asked for, a clause with nothing to say is left out, and `filter` asked twice
 asks both. `Sql.toStatement` is pure, so what
 a query is can be read back without a database.
 
+An aggregate and a window are written over a projection and read back as that projection reads, so `min(c#s1Ms)` is an `Option[Int32]` because `s1_ms` is one and `lag(l#carNumber, w)` is an `Option` because the first row of a window has no predecessor. `opt` is the same fact from the other side: an aggregate over a group holding no rows answers null too. A `Sql.Window` is a value, and a named one is spelled once in the `WINDOW` clause and referred to by `OVER w` everywhere else, which is how nineteen running minima are one clause. What a statement written out interpolates is the same value: `${l#carNumber}` puts a declared column's name between the keywords, and `Sql.sqlOf` -- which takes a projection, the way `%%` does -- puts an aggregate's or a window's text there.
+
+Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement one clause per line -- Flix has no multi-line string literal, and `spaced` puts the lines back where SQL puts a space -- with `{{name}}` where each piece it cannot write for itself goes, the round it is scoped to and the laps the events fell on, and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. Its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
+
+The bargain written statements are accepted on is that the database checks them: SQLite resolves a statement's names where it prepares it, so a rename that missed a reference is a refusal the run raises and not a build that fails. `Lite3fx.Jdbc.refusal` carries the statement into that refusal, which is the half the driver's message lacks. It rides onto the two kinds whose own message says nowhere to look -- `SchemaMismatch`, the name the database has not got, and `Other`, the sentence SQLite gave no name to at all, which is what a mistyped keyword of a hand-written statement is -- and not onto a constraint, which names itself.
+
+Which statements are written is told by the call sites of `Sql.statement`. The readings that are a `GROUP BY` or a plain scan stay built, which is where the declared columns and the scoped source earn their keep. The line between them is a clause's, not a statement's: what is written is the statement's shape, and the pieces interpolated into it are declared columns, aggregates over them, and windows over those. What stays text is a column no declaration reaches -- the fifteen `b0`..`b14` a mini-sector best is gathered out of, the `m.key` and `m.value` a `json_each` answers with.
+
 So is what the load writes. `Sql.createTable` takes the columns and the keys
 over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns
 and the rows -- and that last one hands back the statement and each row bound
@@ -467,15 +508,15 @@ named, so the columns `Sql.access` carries are the caller's word that the text
 has them, and a word about the wrong source fails where the query runs rather
 than where it is built. `Db.Laps.rows` and `Db.Laps.rowsBeside` are the two
 that cannot be wrong -- the round's rows of the table itself, and of the table
-read alongside a `json_each` of its own -- so a derived table calls `Sql.access` and names the
-columns it selects, which is what `Round.Summary.driverNames` does with two of
-them. A source that has none is `Sql.column` as before.
+read alongside a `json_each` of its own -- so a join names the columns its sides
+have, which is what `Round.Drivers.read` does with the four of two tables. A
+source that has none is `Sql.column` as before.
 
-`Round.Summary.carBuilds` joins `cars` to `entries` and to two of those, and
-what its sides have is said the same way: `Db.Schema.qualified` is a column of a table under the
-name a source gives it, so `c.car_number` and `l1.elapsed_ms` are declared
-columns read and compared as that source's, and the join's `ON` is a comparison
-of two of them rather than text. What a `LEFT JOIN` does to the far side is
+`Round.Summary.carBuilds` joins `cars` to `entries` and to two of those, and writes
+the join it joins them with. What its sides have is still said as declared columns:
+`Db.Schema.qualified` is a column of a table under the name a source gives it, so
+`c.car_number` and `l1.elapsed_ms` are read and compared as that source's, and the
+projection names them rather than spelling them. What a `LEFT JOIN` does to the far side is
 `Sql.orNull`, which reads a null cell as nothing rather than as a reading that
 failed -- needed for a column the table has of every row, and not for one that
 is null in its own right. The records naming each side are still written out,
@@ -523,26 +564,38 @@ paying for the same split.
   once are not reached at all by a database each connection makes afresh.
 
   What no database is asked for is what a caller does about a failure, since
-  that is decided off the kind rather than off any row: `Db.runFailing` is a
-  database that answers with the one it was given, and `Server.TestApi` is
-  where a `Busy` becomes a 503 and a `Refused` a 500 with the driver's words
-  kept out of the body. The two halves of that are otherwise only met apart --
-  `Db.Sqlite` reads the code, and a round read over a real database
-  never fails.
+  that is decided off the kind rather than off any row: `Lite3fx.DbTest.runFailing`
+  is a database that answers with the one it was given, and `Server.TestApi` is
+  where a `Busy` becomes a 503 and a `SchemaMismatch` a 500 with the driver's
+  words kept out of the body. The two halves of that are otherwise only met
+  apart -- `Lite3fx.SqliteState` reads the code, and a round read over a real
+  database never fails.
 
-## What sqlfx does and this does not
+## What sqlfx has above the base
 
-[sqlfx](https://github.com/ababup1192/sqlfx) is a Flix database library for PostgreSQL, written over the same months as this and arriving at the same base: `SqlRead` and `SqlWrite` split apart, `DbRead` and `DbWrite` as the aliases over them, a failure carried as an effect and turned into a value once at a boundary, the transient ones kept in an effect of their own, and a marker naming the functions that put a statement's text on the wire.
+[sqlfx](https://github.com/ababup1192/sqlfx) is a Flix database library for PostgreSQL, written over the same months as this and arriving at the same base, which `Lite3fx` now keeps by port rather than by convergence: `SqlRead` and `SqlWrite` split apart, `DbRead` and `DbWrite` as the aliases over them, a failure carried as an effect and turned into a value once at a boundary, the transient ones kept in an effect of their own, and a marker naming the functions that put a statement's text on the wire.
 Statements answer with a `Result` for the reason above, rows carry the type the driver found each cell in, and handlers are swapped to run the same code without a database -- including one answering a read with rows the caller named.
 Where it goes the other way is the SQL itself, which it writes rather than builds: raw statements in `.q` files, checked against a migration's DDL and turned into typed functions by a generator. Its author's account of it is [the article](https://zenn.dev/ababup1192/articles/0c29f21fe1ab8f).
 
 What it has above that base is not here, and none of it rests on which way the SQL is written:
 
-- **The `.q` generator and the parser beside it.** sqlfx writes statements in files and checks them against a migration's DDL; this builds them. The `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape this keeps.
+- **The `.q` generator and the parser beside it.** sqlfx writes statements in files and
+  checks them against a migration's DDL; this builds most of them and writes the
+  hardest ones out. What it keeps of sqlfx's idea is the check rather than the parser:
+  every statement goes out against the in-memory SQLite `Round.TestSupport` builds, so a
+  column no table declares fails a test by name, and `Round.TestReadersResolve` makes
+  every reader answer with a row, since a reader that answers with nothing never runs
+  the projection it reads with. A parser reading the DDL would catch
+  that at compile time, and is a PostgreSQL one: the dialect it reads has no `json_each`
+  to read, and sqlfx refuses `WITH RECURSIVE` and a `WITH` inside a CTE, which is where
+  the hardest of these statements live. The
+  `Sql` combinators, `Db.Schema.Column` and the positional `Sel` are the shape this keeps.
 - **A pool, and forward-only migrations.** One file, rebuilt from CSV by
   `Cli.Load` each run, has no connection to pool and no schema to migrate
   forward -- the `DROP TABLE`s are the migration.
 - **PostgreSQL's own facts.** sqlstate read down to the constraint name, a
   generator turning a DDL's named constraints into an enum a `match` must cover,
-  dates, times and UUIDs with their driver's semantics. SQLite's driver does not
-  answer the first, and `Db.Sqlite`'s result codes are what this has instead.
+  dates, times and UUIDs with their driver's semantics. SQLite's driver answers
+  the first with a result code and a sentence, which is what
+  `Lite3fx.SqliteState` reads; the second needs the generator; and no column of
+  this schema is a date, a time or a UUID.
