@@ -4,7 +4,6 @@
 /// reading looks a cell up by; `answering` takes them off the projection the
 /// test decodes, which is what a database answers it with.
 pub mod TestCells {
-    use Sqlitefx.Decoder
     use Sqlitefx.Row
     use Sqlitefx.Row.Row
     use Sqlitefx.SqlValue
@@ -12,13 +11,8 @@ pub mod TestCells {
     pub def row(names: List[String], cells: List[SqlValue.SqlValue]): Row =
         Row.makeRows(names, cells :: Nil) |> List.head |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} })
 
-    /// The cells under the labels the projection's clause gives its columns: the text of each, or what follows its `AS`.
+    /// The cells under the labels the projection's clause gives its columns.
     pub def answering(p: p, cells: List[SqlValue.SqlValue]): Row with Sql.Project[p] =
-        let labels = Decoder.selectList(Sql.Project.decoder(p)) |> List.map(item ->
-            match List.reverse(String.splitOn({substr = " AS "}, item)) {
-                case label :: _ => label
-                case Nil        => item
-            });
-        row(labels, cells)
+        row(Sql.labels(p), cells)
 
 }

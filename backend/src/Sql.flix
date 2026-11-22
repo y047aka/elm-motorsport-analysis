@@ -702,40 +702,44 @@ pub mod Sql {
     ///
 
     pub def selectAll(q: Query[a]): List[a] \ DbRead + RawSql =
-        let d = projectionOf(q);
-        fetched(q) |> List.map(row -> Sql.orRaise(decode(d, row)))
+        let (d, sql, params) = prepared(q);
+        Sqlitefx.Sql.fetchAs(d, sql, params)
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
     pub def selectOne(subject: String, q: Query[a]): a \ DbRead + RawSql =
-        match fetched(q) {
-            case row :: _ => Sql.orRaise(decode(projectionOf(q), row))
-            case Nil      => DbErr.raise(DbErrorKind.Other("${subject} came back with no row"))
+        let (d, sql, params) = prepared(q);
+        match Sqlitefx.Sql.fetchOneAs(d, sql, params) {
+            case Some(value) => value
+            case None        => DbErr.raise(DbErrorKind.Other("${subject} came back with no row"))
         }
 
-    def projectionOf(q: Query[a]): Decoder[a] =
-        match q {
-            case Query.Built(_, d)   => d
-            case Query.Written(_, d) => d
+    /// The query's decoder and its statement as sqlfx takes them.
+    ///
+    /// A row is read by label, so a label the clause writes twice is a column the reading cannot tell from the other, and the query is refused before it is sent.
+    def prepared(q: Query[a]): (Decoder[a], String, List[SqlValue]) \ DbErr =
+        let d = match q {
+            case Query.Built(_, built_)  => built_
+            case Query.Written(_, written_) => written_
+        };
+        let given = labels(d);
+        match given |> List.find(l -> List.count(m -> m == l, given) > 1) {
+            case Some(label) => DbErr.raise(DbErrorKind.SchemaMismatch(
+                "the clause writes the label `${label}` twice, so a reading by name cannot tell them apart"))
+            case None =>
+                let (sql, params) = numbered(toStatement(q));
+                (d, sql, params)
         }
 
-    /// A row is read by name, so a name the row carries twice is a column the reading cannot tell from the other: the query is refused. A row's names are a map, so a name given twice shows as fewer names than cells.
-    def unambiguous(rows: List[Row]): List[Row] \ DbErr =
-        match List.head(rows) {
-            case None      => rows
-            case Some(row) =>
-                let names = Map.size(row#columns);
-                let cells = Vector.length(row#cells);
-                if (names < cells)
-                    DbErr.raise(DbErrorKind.SchemaMismatch(
-                        "the row carries ${cells} columns under ${names} names, so a reading by name cannot tell them apart"))
-                else
-                    rows
-        }
-
-    def fetched(q: Query[a]): List[Row] \ DbRead + RawSql =
-        let (sql, params) = numbered(toStatement(q));
-        unambiguous(Sqlitefx.Sql.fetch(sql, params))
+    /// The labels a projection's clause gives its columns, in its order.
+    ///
+    /// Every entry of the select list is written here as `label` or `expr AS label`, so the label is what follows the last ` AS `.
+    pub def labels(p: p): List[String] with Project[p] =
+        Decoder.selectList(Project.decoder(p)) |> List.map(item ->
+            match List.reverse(String.splitOn({substr = " AS "}, item)) {
+                case label :: _ => label
+                case Nil        => item
+            })
 
     /// The statement as sqlfx takes it: each `?` outside a quoted string becomes `$1`, `$2`, ... in the order the values were bound.
     ///

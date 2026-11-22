@@ -114,14 +114,14 @@ pub mod Db.TestJdbc {
             |> Sql.selectAll);
         Assert.assertTrue(result == Ok((1, 2) :: Nil))
 
-    /// A row carrying one name twice is refused rather than read by whichever of the two the lookup finds.
+    /// A clause writing one label twice is refused before it is sent, rather than read by whichever of the two the lookup finds.
     @Test
     def aRowCarryingANameTwiceIsRefused(): Unit \ {Assert, IO} =
         let result = connected(() -> Sql.rows(Sql.raw("(SELECT 1 AS n) a, (SELECT 2 AS n) b"))
             |> Sql.map(_ -> (Sql.labelled("n", Sql.int("a.n")), Sql.labelled("n", Sql.int("b.n"))))
             |> Sql.selectAll);
         Assert.assertTrue(result == Err(DbErrorKind.SchemaMismatch(
-            "the row carries 2 columns under 1 names, so a reading by name cannot tell them apart")))
+            "the clause writes the label `n` twice, so a reading by name cannot tell them apart")))
 
     // --------------------------------------------------------- a file database
 
