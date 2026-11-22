@@ -135,17 +135,6 @@ def testExecuteReturning(): Unit \ {Assert, IO} =
     });
     Assert.assertEq(expected = Ok(List#{1i64, 2i64}), result)
 
-/// 結合で両側の同じ名前の列を並べても、列名は結果セットの順に 2 回並ぶ（sqlite-jdbc はどちらも `id` と答える）。
-@Test
-def testJoinKeepsBothColumnNames(): Unit \ {Assert, IO} =
-    let result = withDb("join_names", () -> {
-        discard Sql.execute("CREATE TABLE a (id INTEGER)", Nil);
-        discard Sql.execute("CREATE TABLE b (id INTEGER)", Nil);
-        discard Sql.execute("INSERT INTO a VALUES (1)", Nil);
-        discard Sql.execute("INSERT INTO b VALUES (2)", Nil);
-        Sql.fetchOne("SELECT a.id, b.id FROM a, b", Nil) |> Option.map(row -> (Row.columnNames(row), row#cells |> Vector.toList))
-    });
-    Assert.assertEq(expected = Ok(Some((List#{"id", "id"}, List#{SqlValue.Int32(1), SqlValue.Int32(2)}))), result)
 
 // ---- 例外の翻訳 ----
 

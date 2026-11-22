@@ -26,7 +26,6 @@ The differences below are what that guide says that is not true here.
 | Pool | pgjdbc's DataSource | sqlite-jdbc's, and the pragmas are sent on every borrow |
 | Concurrent `Migrate.apply` | one advisory lock over the run | `BEGIN IMMEDIATE` per file, the record read again under it |
 | Migration record | `sqlfx_migrations`, `applied_by` | `sqlitefx_migrations`, `applied_at` in epoch microseconds, no `applied_by` |
-| A repeated column name (`a.id, b.id`) | lost by `Row.columnNames`, so there are fewer names than cells | kept: `Row` carries `names` in result-set order |
 | A statement refused | the driver's sentence | for `SchemaMismatch` and `Other`, the sentence and the statement's head and tail, since SQLite names what it could not resolve and never where |
 
 Two things are still sqlfx's and still PostgreSQL's:

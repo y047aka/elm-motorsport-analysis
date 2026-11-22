@@ -19,7 +19,7 @@ def sampleRow(): Row.Row =
         List#{"id", "name", "age", "score"},
         List#{List#{SqlValue.Int64(1i64), SqlValue.Str("alice"), SqlValue.Null, SqlValue.Decimal(1.5ff)}})
         |> List.head
-        |> Option.getWithDefault(Row.empty())
+        |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} })
 
 // ---- 列 1 つ ----
 
@@ -143,7 +143,7 @@ def testSelectListFollowsForAOrder(): Unit \ Assert =
 def testSelectExprAndDedupe(): Unit \ Assert =
     let count = Decoder.selectExpr("count(*)::bigint", Decoder.int64("total"));
     let twice = forA (a <- Decoder.int64("id"); b <- Decoder.int64("id")) yield a + b;
-    let row = Row.makeRows(List#{"total"}, List#{List#{SqlValue.Int64(3i64)}}) |> List.head |> Option.getWithDefault(Row.empty());
+    let row = Row.makeRows(List#{"total"}, List#{List#{SqlValue.Int64(3i64)}}) |> List.head |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
     Assert.assertEq(
         expected = (List#{"count(*)::bigint AS total"}, Ok(3i64), List#{"id"}),
         (Decoder.selectList(count), Decoder.decodeRow(count, row), Decoder.selectList(twice)))
@@ -153,9 +153,9 @@ def testSelectExprAndDedupe(): Unit \ Assert =
 ///   views = "x"（型違い）→ Ok(Err(TypeMismatch)) / views = NULL → Err(UnexpectedNull) / 列無し → Err(MissingColumn)
 @Test
 def testRecoverKeepsTypeMismatchAsValue(): Unit \ Assert =
-    let broken = Row.makeRows(List#{"views"}, List#{List#{SqlValue.Str("x")}}) |> List.head |> Option.getWithDefault(Row.empty());
-    let nulled = Row.makeRows(List#{"views"}, List#{List#{SqlValue.Null}}) |> List.head |> Option.getWithDefault(Row.empty());
-    let missing = Row.makeRows(List#{"other"}, List#{List#{SqlValue.Int32(1)}}) |> List.head |> Option.getWithDefault(Row.empty());
+    let broken = Row.makeRows(List#{"views"}, List#{List#{SqlValue.Str("x")}}) |> List.head |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
+    let nulled = Row.makeRows(List#{"views"}, List#{List#{SqlValue.Null}}) |> List.head |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
+    let missing = Row.makeRows(List#{"other"}, List#{List#{SqlValue.Int32(1)}}) |> List.head |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
     let decoder = Decoder.attempt(Decoder.int32("views"));
     Assert.assertEq(
         expected = (Ok(Err(DecodeError.TypeMismatch("views", "Int32", "Str"))), Err(DecodeError.UnexpectedNull("views")), Err(DecodeError.MissingColumn("views"))),
@@ -172,7 +172,7 @@ def testSemanticTypes(): Unit \ Assert =
         List#{"created_at", "born", "key", "meta", "broken"},
         List#{List#{SqlValue.Timestamp(1788656400000000i64), SqlValue.Date(20702), SqlValue.Uuid("550e8400-e29b-41d4-a716-446655440000"), SqlValue.Json("{\"n\": 1}"), SqlValue.Json("{")}})
         |> List.head
-        |> Option.getWithDefault(Row.empty());
+        |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
     Assert.assertEq(
         expected = (Ok("2026-09-06T01:00:00Z"), Ok("2026-09-06"), Ok("550e8400-e29b-41d4-a716-446655440000"), Ok(Ok(1)), true, Ok("{\"n\":1}")),
         (Decoder.decodeRow(Decoder.timestamp("created_at"), row) |> Result.map(Timestamp.toIso8601),
@@ -191,7 +191,7 @@ def testJsonAs(): Unit \ Assert =
         List#{"meta", "list"},
         List#{List#{SqlValue.Json("{\"n\": 1}"), SqlValue.Json("[1, 2]")}})
         |> List.head
-        |> Option.getWithDefault(Row.empty());
+        |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
     let asMap: Result[DecodeError, Map[String, Int32]] = Decoder.decodeRow(Decoder.jsonAs("meta"), row);
     let asVector: Result[DecodeError, Vector[Int32]] = Decoder.decodeRow(Decoder.jsonAs("list"), row);
     let mismatch: Result[DecodeError, Vector[Int32]] = Decoder.decodeRow(Decoder.jsonAs("meta"), row);
@@ -210,7 +210,7 @@ def testArrayDecoders(): Unit \ Assert =
             List#{"js", "bad", "ns"},
             List#{List#{SqlValue.JsonArray(List#{"{\"n\": 1}", "[2]"}), SqlValue.JsonArray(List#{"{", "[]"}), SqlValue.Int32Array(List#{7, -3})}})
         |> List.head
-        |> Option.getWithDefault(Row.empty());
+        |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} });
     Assert.assertEq(
         expected = (
             Ok(List#{Util.Json.Json.JObject(Map#{"n" => Util.Json.Json.JNumber(1ff)}), Util.Json.Json.JArray(Vector#{Util.Json.Json.JNumber(2ff)})}),

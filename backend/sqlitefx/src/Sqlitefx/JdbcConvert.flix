@@ -159,15 +159,15 @@ pub mod Sqlitefx.JdbcConvert {
         let indices = List.range(1, count + 1);
         let names = indices |> List.map(i -> { let label: String = metadata.getColumnLabel(i); label });
         let columns = Row.makeColumnIndex(names);
-        readRows(resultSet, columns, List.toVector(names), indices, Nil)
+        readRows(resultSet, columns, indices, Nil)
 
     ///
     /// 1 行ずつ next() で進めながら読む。先頭に積んで最後に反転する。
     ///
-    def readRows(resultSet: ResultSet, columns: Row.ColumnIndex, names: Vector[String], indices: List[Int32], acc: List[Row]): List[Row] \ IO =
+    def readRows(resultSet: ResultSet, columns: Row.ColumnIndex, indices: List[Int32], acc: List[Row]): List[Row] \ IO =
         if (resultSet.next()) {
             let cells = indices |> List.map(i -> cell(resultSet, i)) |> List.toVector;
-            readRows(resultSet, columns, names, indices, { columns = columns, names = names, cells = cells } :: acc)
+            readRows(resultSet, columns, indices, { columns = columns, cells = cells } :: acc)
         } else
             List.reverse(acc)
 

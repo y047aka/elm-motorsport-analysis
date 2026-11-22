@@ -14,7 +14,7 @@ pub mod TestCells {
     use Sqlitefx.SqlValue
 
     pub def row(names: List[String], cells: List[Option[String]]): Row =
-        Row.makeRows(names, values(cells) :: Nil) |> List.head |> Option.getWithDefault(Row.empty())
+        Row.makeRows(names, values(cells) :: Nil) |> List.head |> Option.getWithDefault({ columns = Map#{}, cells = Vector#{} })
 
     /// The cells under the labels the projection's clause gives its columns: the text of each, or what follows its `AS`.
     pub def answering(p: p, cells: List[Option[String]]): Row with Sql.Project[p] =

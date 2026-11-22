@@ -758,17 +758,18 @@ pub mod Sql {
             case Query.Written(_, d) => d
         }
 
-    /// A row is read by name, so a name the row carries twice is a column the reading cannot tell from the other: the query is refused, naming it.
+    /// A row is read by name, so a name the row carries twice is a column the reading cannot tell from the other: the query is refused. A row's names are a map, so a name given twice shows as fewer names than cells.
     def unambiguous(rows: List[Row]): List[Row] \ DbErr =
         match List.head(rows) {
             case None      => rows
             case Some(row) =>
-                let names = Vector.toList(row#names);
-                match names |> List.filter(n -> List.count(m -> m == n, names) > 1) |> List.head {
-                    case Some(name) => DbErr.raise(DbErrorKind.SchemaMismatch(
-                        "the row carries `${name}` more than once, so a reading by name cannot tell them apart"))
-                    case None => rows
-                }
+                let names = Map.size(row#columns);
+                let cells = Vector.length(row#cells);
+                if (names < cells)
+                    DbErr.raise(DbErrorKind.SchemaMismatch(
+                        "the row carries ${cells} columns under ${names} names, so a reading by name cannot tell them apart"))
+                else
+                    rows
         }
 
     def fetched(q: Query[a]): List[Row] \ DbRead + RawSql =

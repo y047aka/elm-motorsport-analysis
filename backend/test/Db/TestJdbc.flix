@@ -121,7 +121,7 @@ pub mod Db.TestJdbc {
             |> Sql.map(_ -> (Sql.labelled("n", Sql.int("a.n")), Sql.labelled("n", Sql.int("b.n"))))
             |> Sql.selectAll);
         Assert.assertTrue(result == Err(DbErrorKind.SchemaMismatch(
-            "the row carries `n` more than once, so a reading by name cannot tell them apart")))
+            "the row carries 2 columns under 1 names, so a reading by name cannot tell them apart")))
 
     // --------------------------------------------------------- a file database
 
