@@ -1,7 +1,7 @@
-use Sqlfx.Date
-use Sqlfx.Format
+use Sqlitefx.Date
+use Sqlitefx.Format
 
-use Sqlfx.Format.Format
+use Sqlitefx.Format.Format
 
 // Date: 年月日の検証、ISO 8601 の往復、日数の算術、表示。ゾーンには依存しない。
 

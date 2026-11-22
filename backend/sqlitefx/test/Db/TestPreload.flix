@@ -1,4 +1,4 @@
-use Sqlfx.Preload
+use Sqlitefx.Preload
 
 // Preload: 親と子をキーで束ねる（DB 無し）。
 

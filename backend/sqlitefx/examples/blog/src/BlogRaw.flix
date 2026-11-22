@@ -4,16 +4,16 @@
 ///
 mod BlogRaw {
 
-    use Sqlfx.DbRead
-    use Sqlfx.DbWrite
-    use Sqlfx.Decoder
-    use Sqlfx.Preload
-    use Sqlfx.RawSql
-    use Sqlfx.Sql
-    use Sqlfx.SqlValue
+    use Sqlitefx.DbRead
+    use Sqlitefx.DbWrite
+    use Sqlitefx.Decoder
+    use Sqlitefx.Preload
+    use Sqlitefx.RawSql
+    use Sqlitefx.Sql
+    use Sqlitefx.SqlValue
 
-    use Sqlfx.SqlValue.SqlValue
-    use Sqlfx.Decoder.Decoder
+    use Sqlitefx.SqlValue.SqlValue
+    use Sqlitefx.Decoder.Decoder
 
     ///
     /// 投稿者。

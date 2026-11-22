@@ -1,4 +1,4 @@
-use Sqlfx.Migrate
+use Sqlitefx.Migrate
 
 // Migrate: ファイル名の形式、no-transaction の印、checksum の正規化。DB は使わない。
 
@@ -59,9 +59,9 @@ def testNoTransactionMarker(): Unit \ Assert =
     Assert.assertEq(
         expected = List#{true, true, false, false},
         List#{
-            Migrate.hasNoTransactionMarker("-- sqlfx:no-transaction\nCREATE INDEX CONCURRENTLY ..."),
-            Migrate.hasNoTransactionMarker("\n\n  -- sqlfx:no-transaction  \nCREATE INDEX ..."),
-            Migrate.hasNoTransactionMarker("CREATE INDEX ...\n-- sqlfx:no-transaction"),
+            Migrate.hasNoTransactionMarker("-- sqlitefx:no-transaction\nCREATE INDEX CONCURRENTLY ..."),
+            Migrate.hasNoTransactionMarker("\n\n  -- sqlitefx:no-transaction  \nCREATE INDEX ..."),
+            Migrate.hasNoTransactionMarker("CREATE INDEX ...\n-- sqlitefx:no-transaction"),
             Migrate.hasNoTransactionMarker("-- users\nCREATE TABLE ...")
         })
 

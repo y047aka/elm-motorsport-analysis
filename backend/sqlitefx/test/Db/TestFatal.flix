@@ -3,7 +3,7 @@
 ///
 mod TestFatal {
 
-    use Sqlfx.Db
+    use Sqlitefx.Db
 
     import java.lang.IllegalStateException
     import java.lang.InternalError
@@ -76,7 +76,7 @@ mod TestFatal {
     ///
     ///   例外                                                          → 期待
     ///   先頭の frame が org.postgresql.core.v3.QueryExecutorImpl       → true（protocol の途中で出た物）
-    ///   先頭の frame が Sqlfx.JdbcConvert                              → false（sqlfx 側の変換の失敗）
+    ///   先頭の frame が Sqlitefx.JdbcConvert                              → false（sqlitefx 側の変換の失敗）
     ///   先頭の frame が org.postgresqlx.Other                          → false（区切りの `.` まで見る）
     ///   stack trace が無い                                             → false
     ///   PSQLException                                                  → true（class 名）
@@ -85,7 +85,7 @@ mod TestFatal {
     def testFromDriverTable(): Unit \ {Assert, IO} =
         let table: List[(Throwable, Bool)] = List#{
             (thrownAt("org.postgresql.core.v3.QueryExecutorImpl"), true),
-            (thrownAt("Sqlfx.JdbcConvert"), false),
+            (thrownAt("Sqlitefx.JdbcConvert"), false),
             (thrownAt("org.postgresqlx.Other"), false),
             (withoutFrames(), false),
             (psqlException(), true)

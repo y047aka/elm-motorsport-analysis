@@ -1,20 +1,20 @@
-use Sqlfx.Db
-use Sqlfx.DbError
-use Sqlfx.DbWrite
-use Sqlfx.Decoder
-use Sqlfx.Pool
-use Sqlfx.RawSql
-use Sqlfx.Retry
-use Sqlfx.Sql
-use Sqlfx.SqlValue
+use Sqlitefx.Db
+use Sqlitefx.DbError
+use Sqlitefx.DbWrite
+use Sqlitefx.Decoder
+use Sqlitefx.Pool
+use Sqlitefx.RawSql
+use Sqlitefx.Retry
+use Sqlitefx.Sql
+use Sqlitefx.SqlValue
 
 import java.lang.RuntimeException
 import java.lang.Thread
 
-use Sqlfx.SqlValue.SqlValue
-use Sqlfx.DbError.DbErrorKind
-use Sqlfx.DbError.Failure
-use Sqlfx.DbError.TransientKind
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.DbError.DbErrorKind
+use Sqlitefx.DbError.Failure
+use Sqlitefx.DbError.TransientKind
 
 // Pool の接続の漏れ: 失敗の道ごとに、接続がプールに戻り（active 0）、次の借りが待たずに通るかを実 PG で見る。
 // プールの大きさを 1 にするので、1 本でも漏れれば次の借りは borrowTimeoutMs の後に Timeout になる。

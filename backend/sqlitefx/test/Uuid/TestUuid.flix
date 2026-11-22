@@ -1,4 +1,4 @@
-use Sqlfx.Uuid
+use Sqlitefx.Uuid
 
 // Uuid: 形式の検証と random の形。
 

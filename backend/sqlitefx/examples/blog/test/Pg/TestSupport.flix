@@ -1,39 +1,39 @@
-use Sqlfx.SqlValue.SqlValue
-use Sqlfx.DbError.DbFailure
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.DbError.DbFailure
 
 // 実 PG のテストで共有する部品: 接続設定、migrations の適用、接続の開閉。
 
 mod BlogTestSupport {
 
-    use Sqlfx.Db
-    use Sqlfx.DbErr
-    use Sqlfx.DbError
-    use Sqlfx.DbRead
-    use Sqlfx.DbWrite
-    use Sqlfx.Jdbc
-    use Sqlfx.Migrate
-    use Sqlfx.RawSql
-    use Sqlfx.Sql
-    use Sqlfx.SqlRead
-    use Sqlfx.SqlWrite
-    use Sqlfx.TransientDbErr
+    use Sqlitefx.Db
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.DbRead
+    use Sqlitefx.DbWrite
+    use Sqlitefx.Jdbc
+    use Sqlitefx.Migrate
+    use Sqlitefx.RawSql
+    use Sqlitefx.Sql
+    use Sqlitefx.SqlRead
+    use Sqlitefx.SqlWrite
+    use Sqlitefx.TransientDbErr
 
     import java.sql.Connection
 
-    use Sqlfx.DbError.DbFailure
+    use Sqlitefx.DbError.DbFailure
 
     ///
-    /// 接続設定。SQLFX_TEST_DSN が無ければ即 panic。
+    /// 接続設定。SQLITEFX_TEST_DSN が無ければ即 panic。
     ///
     pub def pgConfig(): Jdbc.ConnectionConfig \ IO =
         run {
-            match Sys.Env.getVar("SQLFX_TEST_DSN") {
+            match Sys.Env.getVar("SQLITEFX_TEST_DSN") {
                 case Some(url) => {
                     url = url,
-                    user = Sys.Env.getVar("SQLFX_TEST_USER") |> Option.getWithDefault("flix"),
-                    password = Sys.Env.getVar("SQLFX_TEST_PASSWORD") |> Option.getWithDefault("flix")
+                    user = Sys.Env.getVar("SQLITEFX_TEST_USER") |> Option.getWithDefault("flix"),
+                    password = Sys.Env.getVar("SQLITEFX_TEST_PASSWORD") |> Option.getWithDefault("flix")
                 }
-                case None => bug!("SQLFX_TEST_DSN が無い。make test-pg で回す")
+                case None => bug!("SQLITEFX_TEST_DSN が無い。make test-pg で回す")
             }
         } with Sys.Env.runWithIO
 

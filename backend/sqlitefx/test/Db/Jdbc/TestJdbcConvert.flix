@@ -1,7 +1,7 @@
-use Sqlfx.JdbcConvert
-use Sqlfx.SqlValue
+use Sqlitefx.JdbcConvert
+use Sqlitefx.SqlValue
 
-use Sqlfx.SqlValue.SqlValue
+use Sqlitefx.SqlValue.SqlValue
 
 // JdbcConvert: `$n` → `?` の書き換え（純粋）。
 

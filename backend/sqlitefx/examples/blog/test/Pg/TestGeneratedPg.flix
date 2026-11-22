@@ -1,11 +1,11 @@
-use Sqlfx.DbError
-use Sqlfx.Fragment
-use Sqlfx.Sql
-use Sqlfx.Tx
+use Sqlitefx.DbError
+use Sqlitefx.Fragment
+use Sqlitefx.Sql
+use Sqlitefx.Tx
 
-use Sqlfx.Fragment.{===}
-use Sqlfx.DbError.DbFailure
-use Sqlfx.DbError.DbErrorKind
+use Sqlitefx.Fragment.{===}
+use Sqlitefx.DbError.DbFailure
+use Sqlitefx.DbError.DbErrorKind
 use Blog.RegisterFailure
 
 // Blog のユースケース（生成コード版）を実 PostgreSQL で通しで動かす。クエリ単体は TestQueriesPg。
@@ -86,7 +86,7 @@ def testPgDeletePostTouchingAuthor(): Unit \ {Assert, IO, Fs.FileRead.FileRead} 
         discard Sql.execute("UPDATE users SET updated_at = '2000-01-01T00:00:00Z'", Nil);
         let touched = PostsQueries.deletePostTouchingAuthor(3i64) |> List.map(row -> row#id);
         let postLeft = Sql.fetch("SELECT id FROM posts WHERE id = 3", Nil) |> List.length;
-        let moved = Sql.fetchAs(Sqlfx.Decoder.int64("id"), "SELECT id FROM users WHERE updated_at > '2000-01-01T00:00:00Z' ORDER BY id", Nil);
+        let moved = Sql.fetchAs(Sqlitefx.Decoder.int64("id"), "SELECT id FROM users WHERE updated_at > '2000-01-01T00:00:00Z' ORDER BY id", Nil);
         (touched, postLeft, moved)
     });
     Assert.assertEq(expected = Ok((List#{2i64}, 0, List#{2i64})), result)

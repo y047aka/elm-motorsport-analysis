@@ -3,7 +3,7 @@
 ///
 mod TestSqlTokens {
 
-    use Sqlfx.Q.SqlTokens
+    use Sqlitefx.Q.SqlTokens
 
     ///
     /// 入力 → 語の並び。

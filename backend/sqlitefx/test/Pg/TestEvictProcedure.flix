@@ -15,9 +15,9 @@
 ///
 mod TestEvictProcedure {
 
-    use Sqlfx.DbError
-    use Sqlfx.Jdbc
-    use Sqlfx.Pool
+    use Sqlitefx.DbError
+    use Sqlitefx.Jdbc
+    use Sqlitefx.Pool
 
     import com.zaxxer.hikari.HikariDataSource
     import java.lang.Class
@@ -131,8 +131,8 @@ mod TestEvictProcedure {
         DbError.runWithKind(() -> Jdbc.fetchRows(conn, "SELECT pg_backend_pid() AS pid", Nil))
             |> Result.toOption
             |> Option.flatMap(List.head)
-            |> Option.flatMap(row -> Sqlfx.Row.get("pid", row))
-            |> Option.flatMap(value -> match value { case Sqlfx.SqlValue.SqlValue.Int32(n) => Some(n) case _ => None })
+            |> Option.flatMap(row -> Sqlitefx.Row.get("pid", row))
+            |> Option.flatMap(value -> match value { case Sqlitefx.SqlValue.SqlValue.Int32(n) => Some(n) case _ => None })
             |> Option.getWithDefault(-1)
 
     /// 表を作り直す。

@@ -1,33 +1,33 @@
-use Sqlfx.Date
-use Sqlfx.Db
-use Sqlfx.DbError
-use Sqlfx.DbWrite
-use Sqlfx.Decoder
-use Sqlfx.Jdbc
-use Sqlfx.RawSql
-use Sqlfx.Row
-use Sqlfx.Sql
-use Sqlfx.SqlValue
-use Sqlfx.Timestamp
-use Sqlfx.Tx
-use Sqlfx.Uuid
+use Sqlitefx.Date
+use Sqlitefx.Db
+use Sqlitefx.DbError
+use Sqlitefx.DbWrite
+use Sqlitefx.Decoder
+use Sqlitefx.Jdbc
+use Sqlitefx.RawSql
+use Sqlitefx.Row
+use Sqlitefx.Sql
+use Sqlitefx.SqlValue
+use Sqlitefx.Timestamp
+use Sqlitefx.Tx
+use Sqlitefx.Uuid
 
-use Sqlfx.SqlValue.SqlValue
-use Sqlfx.DbError.DbErrorKind
-use Sqlfx.DbError.Failure
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.DbError.DbErrorKind
+use Sqlitefx.DbError.Failure
 
 // Jdbc: 実 PostgreSQL に当たる層 5 のテスト。test/ の外に置き、make test-pg がコンテナを立てて test/Pg/ へ写して回す。
 
-/// 環境変数から接続設定を組む。SQLFX_TEST_DSN が無ければ即 panic（黙って成功させない）。
+/// 環境変数から接続設定を組む。SQLITEFX_TEST_DSN が無ければ即 panic（黙って成功させない）。
 def pgConfig(): Jdbc.ConnectionConfig \ IO =
     run {
-        match Sys.Env.getVar("SQLFX_TEST_DSN") {
+        match Sys.Env.getVar("SQLITEFX_TEST_DSN") {
             case Some(url) => {
                 url = url,
-                user = Sys.Env.getVar("SQLFX_TEST_USER") |> Option.getWithDefault("flix"),
-                password = Sys.Env.getVar("SQLFX_TEST_PASSWORD") |> Option.getWithDefault("flix")
+                user = Sys.Env.getVar("SQLITEFX_TEST_USER") |> Option.getWithDefault("flix"),
+                password = Sys.Env.getVar("SQLITEFX_TEST_PASSWORD") |> Option.getWithDefault("flix")
             }
-            case None => bug!("SQLFX_TEST_DSN が無い。make test-pg で回す")
+            case None => bug!("SQLITEFX_TEST_DSN が無い。make test-pg で回す")
         }
     } with Sys.Env.runWithIO
 

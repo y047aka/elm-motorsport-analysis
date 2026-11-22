@@ -1,7 +1,7 @@
-use Sqlfx.Row
-use Sqlfx.SqlValue
+use Sqlitefx.Row
+use Sqlitefx.SqlValue
 
-use Sqlfx.SqlValue.SqlValue
+use Sqlitefx.SqlValue.SqlValue
 
 // Row: 列名 → 添字の共有インデックスと、列名での取り出し。
 

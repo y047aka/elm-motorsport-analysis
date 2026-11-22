@@ -1,10 +1,10 @@
-use Sqlfx.DbError
-use Sqlfx.Decoder
-use Sqlfx.Sql
-use Sqlfx.Tx
+use Sqlitefx.DbError
+use Sqlitefx.Decoder
+use Sqlitefx.Sql
+use Sqlitefx.Tx
 
-use Sqlfx.DbError.DbErrorKind
-use Sqlfx.DbError.Failure
+use Sqlitefx.DbError.DbErrorKind
+use Sqlitefx.DbError.Failure
 
 // 生 SQL 版（BlogRaw）を実 PostgreSQL で通しで動かす。生成コード版と同じ筋書き。
 

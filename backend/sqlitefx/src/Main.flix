@@ -1,4 +1,4 @@
-use Sqlfx.Q.QScope
+use Sqlitefx.Q.QScope
 
 ///
 /// `bin/flix run -- gen [--scope <column>[:<effect>]]... <migrations/> <queries/> <out/>`: migrations でスキーマを組み、queries の .q から Flix を生成する。
@@ -6,7 +6,7 @@ use Sqlfx.Q.QScope
 /// `--scope project_id:Tenant` なら、さらにその列の camelCase の引数（`projectId: Int64`）を生成関数から外し、`Tenant.currentId()` で埋める。
 /// `gen --check ...` は書かずに、生成物が最新かだけを確かめる（CI 用。古ければ終了コード 1）。
 /// `gen --statements <path> ...` は、query ごとの文の一覧（QStatements）を path に JSON で書く。`--check` はその中身も突き合わせる。
-/// `migrate [--check | --status] <migrations/>`: migrations を DB に当てる。接続先は環境変数 SQLFX_DSN / SQLFX_USER / SQLFX_PASSWORD。
+/// `migrate [--check | --status] <migrations/>`: migrations を DB に当てる。接続先は環境変数 SQLITEFX_DSN / SQLITEFX_USER / SQLITEFX_PASSWORD。
 /// `migrate new <migrations/> <name>`: 次の番号でファイルを作る（DB は使わない）。
 /// 生成器を別プロジェクトにしないのは、flix.toml にローカルパス依存が無いから（PLAN フェーズ 2-3）。
 ///
@@ -30,7 +30,7 @@ def main(): Unit \ {IO, Sys.Env.Env, Sys.Exit.Exit, Fs.DirList.DirList, Fs.FileR
 
 def usage(): Unit \ {IO, Sys.Exit.Exit} =
     println("usage: bin/flix run -- gen [--check] [--scope <column>[:<effect>]]... [--statements <json path>] <migrations dir> <queries dir> <out dir>");
-    println("       bin/flix run -- migrate [--check | --status] <migrations dir>   (SQLFX_DSN / SQLFX_USER / SQLFX_PASSWORD)");
+    println("       bin/flix run -- migrate [--check | --status] <migrations dir>   (SQLITEFX_DSN / SQLITEFX_USER / SQLITEFX_PASSWORD)");
     println("       bin/flix run -- migrate new <migrations dir> <name>");
     Sys.Exit.exit(2)
 
@@ -63,14 +63,14 @@ def scopeSpec(spec: String): QScope.Scope =
 
 mod MigrateCli {
 
-    use Sqlfx.DbErr
-    use Sqlfx.DbError
-    use Sqlfx.Jdbc
-    use Sqlfx.Migrate
-    use Sqlfx.Timestamp
-    use Sqlfx.TransientDbErr
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.Jdbc
+    use Sqlitefx.Migrate
+    use Sqlitefx.Timestamp
+    use Sqlitefx.TransientDbErr
 
-    use Sqlfx.Migrate.Status
+    use Sqlitefx.Migrate.Status
 
     ///
     /// 未適用を当てて、当てた version を表示する。失敗は表示して終了コード 1。
@@ -131,28 +131,28 @@ mod MigrateCli {
             |> Result.flatMap(identity)
 
     def connectionFromEnv(): Jdbc.ConnectionConfig \ {IO, Sys.Env.Env, Sys.Exit.Exit} =
-        match Sys.Env.getVar("SQLFX_DSN") {
+        match Sys.Env.getVar("SQLITEFX_DSN") {
             case Some(url) => {
                 url = url,
-                user = Sys.Env.getVar("SQLFX_USER") |> Option.getWithDefault(""),
-                password = Sys.Env.getVar("SQLFX_PASSWORD") |> Option.getWithDefault("")
+                user = Sys.Env.getVar("SQLITEFX_USER") |> Option.getWithDefault(""),
+                password = Sys.Env.getVar("SQLITEFX_PASSWORD") |> Option.getWithDefault("")
             }
-            case None => { println("error: SQLFX_DSN is not set (jdbc:postgresql://host:port/db)"); Sys.Exit.exit(2) }
+            case None => { println("error: SQLITEFX_DSN is not set (jdbc:postgresql://host:port/db)"); Sys.Exit.exit(2) }
         }
 
 }
 
 mod Gen {
 
-    use Sqlfx.Q.Codegen
-    use Sqlfx.Q.DdlParser
-    use Sqlfx.Q.QLint
-    use Sqlfx.Q.QParser
-    use Sqlfx.Q.QResolve
-    use Sqlfx.Q.QScope
-    use Sqlfx.Q.QStatements
-    use Sqlfx.Q.QueryDef
-    use Sqlfx.Q.Schema
+    use Sqlitefx.Q.Codegen
+    use Sqlitefx.Q.DdlParser
+    use Sqlitefx.Q.QLint
+    use Sqlitefx.Q.QParser
+    use Sqlitefx.Q.QResolve
+    use Sqlitefx.Q.QScope
+    use Sqlitefx.Q.QStatements
+    use Sqlitefx.Q.QueryDef
+    use Sqlitefx.Q.Schema
 
     ///
     /// 生成の入出力。3 つともディレクトリのパスなので、並べずに名前で持つ。

@@ -1,12 +1,12 @@
-use Sqlfx.Q.QParser
-use Sqlfx.Q.SqlType
-use Sqlfx.Timestamp
+use Sqlitefx.Q.QParser
+use Sqlitefx.Q.SqlType
+use Sqlitefx.Timestamp
 
-use Sqlfx.Q.QueryDef.Shape
-use Sqlfx.Q.SqlType.SqlType
-use Sqlfx.Q.QueryDef.SlotKind
-use Sqlfx.Q.QueryDef.Segment
-use Sqlfx.Q.QParser.ParseError
+use Sqlitefx.Q.QueryDef.Shape
+use Sqlitefx.Q.SqlType.SqlType
+use Sqlitefx.Q.QueryDef.SlotKind
+use Sqlitefx.Q.QueryDef.Segment
+use Sqlitefx.Q.QParser.ParseError
 
 // QParser: .q の外側の文法と、本文の :name / {slot} の切り出し。
 

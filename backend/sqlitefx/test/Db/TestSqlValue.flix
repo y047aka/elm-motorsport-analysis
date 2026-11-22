@@ -1,7 +1,7 @@
-use Sqlfx.SqlValue
-use Sqlfx.Timestamp
+use Sqlitefx.SqlValue
+use Sqlitefx.Timestamp
 
-use Sqlfx.SqlValue.SqlValue
+use Sqlitefx.SqlValue.SqlValue
 
 // SqlValue: 型ごとの取り出しと NULL 判定。
 

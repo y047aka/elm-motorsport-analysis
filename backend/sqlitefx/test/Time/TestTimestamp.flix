@@ -1,11 +1,11 @@
-use Sqlfx.Date
-use Sqlfx.Format
-use Sqlfx.TimeTest
-use Sqlfx.TimeZone
-use Sqlfx.Timestamp
-use Sqlfx.Zone
+use Sqlitefx.Date
+use Sqlitefx.Format
+use Sqlitefx.TimeTest
+use Sqlitefx.TimeZone
+use Sqlitefx.Timestamp
+use Sqlitefx.Zone
 
-use Sqlfx.Format.Format
+use Sqlitefx.Format.Format
 
 // Timestamp: ISO 8601 の往復、算術、TimeZone を通した暦の読み出しと表示。
 

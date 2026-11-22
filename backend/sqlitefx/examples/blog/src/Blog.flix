@@ -4,16 +4,16 @@
 ///
 mod Blog {
 
-    use Sqlfx.DbErr
-    use Sqlfx.DbError
-    use Sqlfx.DbRead
-    use Sqlfx.DbWrite
-    use Sqlfx.Fragment
-    use Sqlfx.Preload
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.DbRead
+    use Sqlitefx.DbWrite
+    use Sqlitefx.Fragment
+    use Sqlitefx.Preload
 
     use UsersQueries.SearchUsersRow
     use PostsQueries.PostsByUsersRow
-    use Sqlfx.DbError.DbErrorKind
+    use Sqlitefx.DbError.DbErrorKind
 
     ///
     /// 投稿者と、その人の記事。

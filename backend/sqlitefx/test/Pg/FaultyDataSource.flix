@@ -16,7 +16,7 @@
 ///
 mod FaultyDataSource {
 
-    use Sqlfx.Pool
+    use Sqlitefx.Pool
 
     import com.zaxxer.hikari.HikariConfig
     import com.zaxxer.hikari.HikariDataSource

@@ -1,8 +1,8 @@
-use Sqlfx.Db
-use Sqlfx.DbErr
-use Sqlfx.DbError
-use Sqlfx.Retry
-use Sqlfx.TransientDbErr
+use Sqlitefx.Db
+use Sqlitefx.DbErr
+use Sqlitefx.DbError
+use Sqlitefx.Retry
+use Sqlitefx.TransientDbErr
 
 import java.lang.RuntimeException
 // Retry: Transient を捕まえて thunk を呼び直す（DB 無し）。

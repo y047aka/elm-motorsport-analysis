@@ -1,9 +1,9 @@
-use Sqlfx.Q.QParser
-use Sqlfx.Q.QRender
+use Sqlitefx.Q.QParser
+use Sqlitefx.Q.QRender
 
-use Sqlfx.Q.QueryDef.Segment
-use Sqlfx.Q.QueryDef.SlotKind
-use Sqlfx.Q.QueryDef.Shape
+use Sqlitefx.Q.QueryDef.Segment
+use Sqlitefx.Q.QueryDef.SlotKind
+use Sqlitefx.Q.QueryDef.Shape
 
 // QRender: AST から完全な SQL への機械置換。
 

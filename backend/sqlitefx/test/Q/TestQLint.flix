@@ -1,6 +1,6 @@
-use Sqlfx.Q.QLint
-use Sqlfx.Q.QParser
-use Sqlfx.Timestamp
+use Sqlitefx.Q.QLint
+use Sqlitefx.Q.QParser
+use Sqlitefx.Timestamp
 
 // QLint: 生成を止めない注意書き。Option の引数を述語の `=` の右に置いた query を拾う。
 

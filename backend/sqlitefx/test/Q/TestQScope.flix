@@ -1,9 +1,9 @@
-use Sqlfx.Q.DdlParser
-use Sqlfx.Q.QParser
-use Sqlfx.Q.QScope
-use Sqlfx.Q.Schema
+use Sqlitefx.Q.DdlParser
+use Sqlitefx.Q.QParser
+use Sqlitefx.Q.QScope
+use Sqlitefx.Q.Schema
 
-use Sqlfx.Q.QScope.ScopeError
+use Sqlitefx.Q.QScope.ScopeError
 
 // QScope: テナントの列（project_id）を持つ表を触る query に、その列の名前が無ければ止める。
 

@@ -4,8 +4,8 @@
 ///
 mod TestQStatements {
 
-    use Sqlfx.Q.QParser
-    use Sqlfx.Q.QStatements
+    use Sqlitefx.Q.QParser
+    use Sqlitefx.Q.QStatements
 
     /// .q の query ごとの文を (名前, 種類, 書き込み先, カラム, conflictSet) にする。
     def statementsOf(source: String): Result[String, List[List[(String, String, Option[String], List[String], List[String])]]] =

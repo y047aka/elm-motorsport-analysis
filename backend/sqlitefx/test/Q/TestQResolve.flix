@@ -1,11 +1,11 @@
-use Sqlfx.Q.DdlParser
-use Sqlfx.Q.QParser
-use Sqlfx.Q.QResolve
-use Sqlfx.Q.Schema
-use Sqlfx.Q.SqlType
+use Sqlitefx.Q.DdlParser
+use Sqlitefx.Q.QParser
+use Sqlitefx.Q.QResolve
+use Sqlitefx.Q.Schema
+use Sqlitefx.Q.SqlType
 
-use Sqlfx.Q.SqlType.SqlType
-use Sqlfx.Q.QResolve.ResolveError
+use Sqlitefx.Q.SqlType.SqlType
+use Sqlitefx.Q.QResolve.ResolveError
 
 // QResolve: .q の SQL を机上のスキーマに当てて、結果の列を決める。
 

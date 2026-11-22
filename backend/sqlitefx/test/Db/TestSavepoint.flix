@@ -1,17 +1,17 @@
-use Sqlfx.DbErr
-use Sqlfx.DbError
-use Sqlfx.DbTest
-use Sqlfx.RawSql
-use Sqlfx.Row
-use Sqlfx.Savepoint
-use Sqlfx.Sql
-use Sqlfx.SqlSavepoint
-use Sqlfx.TransientDbErr
-use Sqlfx.Tx
+use Sqlitefx.DbErr
+use Sqlitefx.DbError
+use Sqlitefx.DbTest
+use Sqlitefx.RawSql
+use Sqlitefx.Row
+use Sqlitefx.Savepoint
+use Sqlitefx.Sql
+use Sqlitefx.SqlSavepoint
+use Sqlitefx.TransientDbErr
+use Sqlitefx.Tx
 
-use Sqlfx.DbError.DbErrorKind
-use Sqlfx.DbError.Failure
-use Sqlfx.Savepoint.Command
+use Sqlitefx.DbError.DbErrorKind
+use Sqlitefx.DbError.Failure
+use Sqlitefx.Savepoint.Command
 
 // Savepoint: 名前の検査と SQL 化（純粋）。Tx.withSavepoint の SQL の並び（DbTest.runRecording で見る）。
 

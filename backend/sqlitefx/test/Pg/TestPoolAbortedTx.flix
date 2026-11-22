@@ -1,10 +1,10 @@
-use Sqlfx.Db
-use Sqlfx.DbError
-use Sqlfx.Pool
-use Sqlfx.RawSql
+use Sqlitefx.Db
+use Sqlitefx.DbError
+use Sqlitefx.Pool
+use Sqlitefx.RawSql
 
-use Sqlfx.DbError.DbErrorKind
-use Sqlfx.DbError.Failure
+use Sqlitefx.DbError.DbErrorKind
+use Sqlitefx.DbError.Failure
 
 // ---- Tx の中で Db.attempt ----
 

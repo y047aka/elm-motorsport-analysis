@@ -1,9 +1,9 @@
-use Sqlfx.Fragment
-use Sqlfx.RawSql
-use Sqlfx.SqlValue
+use Sqlitefx.Fragment
+use Sqlitefx.RawSql
+use Sqlitefx.SqlValue
 
-use Sqlfx.SqlValue.SqlValue
-use Sqlfx.Fragment.{===, =!=, <<, <<=, >>, >>=}
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.Fragment.{===, =!=, <<, <<=, >>, >>=}
 
 // Fragment: 断片 DSL の組み立てと render。
 

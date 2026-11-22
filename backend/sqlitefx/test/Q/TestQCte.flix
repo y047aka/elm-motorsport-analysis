@@ -4,10 +4,10 @@
 ///
 mod TestQCte {
 
-    use Sqlfx.Q.QCte
-    use Sqlfx.Q.SqlTokens
+    use Sqlitefx.Q.QCte
+    use Sqlitefx.Q.SqlTokens
 
-    use Sqlfx.Q.QCte.CteError
+    use Sqlitefx.Q.QCte.CteError
 
     /// 切った結果を (CTE ごとの (名前, カラムの並び, 本文の語), 本文の語) にする。
     def shape(sql: String): Result[CteError, (List[(String, Option[List[String]], String)], String)] =

@@ -1,7 +1,7 @@
-use Sqlfx.SqlState
+use Sqlitefx.SqlState
 
-use Sqlfx.DbError.DbErrorKind
-use Sqlfx.DbError.TransientKind
+use Sqlitefx.DbError.DbErrorKind
+use Sqlitefx.DbError.TransientKind
 
 // SqlState: sqlstate → DbErrorKind の翻訳表。
 

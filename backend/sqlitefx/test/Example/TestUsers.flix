@@ -1,11 +1,11 @@
-use Sqlfx.DbError
-use Sqlfx.DbTest
-use Sqlfx.RawSql
-use Sqlfx.Row
-use Sqlfx.SqlValue
+use Sqlitefx.DbError
+use Sqlitefx.DbTest
+use Sqlitefx.RawSql
+use Sqlitefx.Row
+use Sqlitefx.SqlValue
 
-use Sqlfx.SqlValue.SqlValue
-use Sqlfx.Row.Row
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.Row.Row
 
 // ExampleUsers: ユースケース関数を DB 無しで検証する（層 2 / 層 3）。
 

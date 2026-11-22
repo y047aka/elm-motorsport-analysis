@@ -1,5 +1,5 @@
-use Sqlfx.DbError
-use Sqlfx.Pool
+use Sqlitefx.DbError
+use Sqlitefx.Pool
 
 // Pool: 開いただけのプールの数字（DB 無し。open は接続しない）。
 

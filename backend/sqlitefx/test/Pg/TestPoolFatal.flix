@@ -12,21 +12,21 @@
 ///
 mod TestPoolFatal {
 
-    use Sqlfx.Db
-    use Sqlfx.DbError
-    use Sqlfx.DbWrite
-    use Sqlfx.Pool
-    use Sqlfx.RawSql
-    use Sqlfx.Retry
-    use Sqlfx.Sql
-    use Sqlfx.Tx
+    use Sqlitefx.Db
+    use Sqlitefx.DbError
+    use Sqlitefx.DbWrite
+    use Sqlitefx.Pool
+    use Sqlitefx.RawSql
+    use Sqlitefx.Retry
+    use Sqlitefx.Sql
+    use Sqlitefx.Tx
 
     import java.lang.OutOfMemoryError
     import java.lang.RuntimeException
     import java.lang.Throwable
     import java.util.concurrent.CompletionException
 
-    use Sqlfx.DbError.Failure
+    use Sqlitefx.DbError.Failure
 
     /// 1 つの場面の結果。
     type alias Outcome = (String, Int32, Int32, String, Int32, Bool)
@@ -107,7 +107,7 @@ mod TestPoolFatal {
     /// WhyNot: RawSql.runWithAllow を withLazyTx の外に張らない。thunk が Tx の外の handler へ op を出すと、その後で投げた物は
     /// 形によって Pool の catch を全部飛ばし、接続が漏れる（testRawSqlOutsideTxLeaks）。ここでは保証できる形を見る。
     ///
-    def lazyTx(faulty: FaultyDataSource.Faulty, thunk: Unit -> Unit \ ef): String \ (ef - {Sqlfx.SqlRead, Sqlfx.SqlWrite, Sqlfx.SqlSavepoint, Sqlfx.TransientDbErr, Sqlfx.DbErr, Sqlfx.RawSql}) + IO =
+    def lazyTx(faulty: FaultyDataSource.Faulty, thunk: Unit -> Unit \ ef): String \ (ef - {Sqlitefx.SqlRead, Sqlitefx.SqlWrite, Sqlitefx.SqlSavepoint, Sqlitefx.TransientDbErr, Sqlitefx.DbErr, Sqlitefx.RawSql}) + IO =
         DbError.runWithFailure(() -> Pool.withLazyTx(faulty#pool, () -> RawSql.runWithAllow(thunk))) |> describe
 
     def evicted(thrown: String): Outcome = (thrown, 0, 0, "ok", 2, false)
@@ -258,7 +258,7 @@ mod TestPoolFatal {
             rows)
 
     /// Pool.withConnection で thunk を走らせ、値で返った結果を 1 語に。
-    def withConnection(faulty: FaultyDataSource.Faulty, thunk: Unit -> Unit \ ef): String \ (ef - {Sqlfx.SqlRead, Sqlfx.SqlWrite, Sqlfx.SqlSavepoint, Sqlfx.TransientDbErr, Sqlfx.DbErr, Sqlfx.RawSql}) + IO =
+    def withConnection(faulty: FaultyDataSource.Faulty, thunk: Unit -> Unit \ ef): String \ (ef - {Sqlitefx.SqlRead, Sqlitefx.SqlWrite, Sqlitefx.SqlSavepoint, Sqlitefx.TransientDbErr, Sqlitefx.DbErr, Sqlitefx.RawSql}) + IO =
         DbError.runWithFailure(() -> Pool.withConnection(faulty#pool, _ -> RawSql.runWithAllow(thunk))) |> describe
 
     ///

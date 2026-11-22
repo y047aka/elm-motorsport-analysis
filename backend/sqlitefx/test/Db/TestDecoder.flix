@@ -1,12 +1,12 @@
-use Sqlfx.Date
-use Sqlfx.Decoder
-use Sqlfx.Row
-use Sqlfx.SqlValue
-use Sqlfx.Timestamp
-use Sqlfx.Uuid
+use Sqlitefx.Date
+use Sqlitefx.Decoder
+use Sqlitefx.Row
+use Sqlitefx.SqlValue
+use Sqlitefx.Timestamp
+use Sqlitefx.Uuid
 
-use Sqlfx.SqlValue.SqlValue
-use Sqlfx.Decoder.DecodeError
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.Decoder.DecodeError
 
 // Decoder: 列を型付きで取り出し、複数列をレコードへ組む。
 

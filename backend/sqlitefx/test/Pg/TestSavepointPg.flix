@@ -1,18 +1,18 @@
-use Sqlfx.Db
-use Sqlfx.DbErr
-use Sqlfx.DbError
-use Sqlfx.DbRead
-use Sqlfx.Decoder
-use Sqlfx.Pool
-use Sqlfx.RawSql
-use Sqlfx.Sql
-use Sqlfx.SqlValue
-use Sqlfx.Tx
+use Sqlitefx.Db
+use Sqlitefx.DbErr
+use Sqlitefx.DbError
+use Sqlitefx.DbRead
+use Sqlitefx.Decoder
+use Sqlitefx.Pool
+use Sqlitefx.RawSql
+use Sqlitefx.Sql
+use Sqlitefx.SqlValue
+use Sqlitefx.Tx
 
-use Sqlfx.SqlValue.SqlValue
-use Sqlfx.DbError.DbErrorKind
-use Sqlfx.DbError.Failure
-use Sqlfx.DbError.TransientKind
+use Sqlitefx.SqlValue.SqlValue
+use Sqlitefx.DbError.DbErrorKind
+use Sqlitefx.DbError.Failure
+use Sqlitefx.DbError.TransientKind
 
 // Tx.withSavepoint を実 PG で: 中の失敗が外の Tx に及ばない事、印（set_config）と INSERT が戻る事、入れ子。
 // 表とプールは TestPoolLeaks の物（sqlfx_test_leaks、大きさ 1 のプール）。
@@ -29,11 +29,11 @@ def slowAggregate(): Int32 \ Db + RawSql =
 
 /// Tx の中だけ効く印を置く。
 def stamp(value: String): Unit \ DbRead + RawSql =
-    discard Sql.fetch("SELECT set_config('sqlfx.savepoint_test', $1, true)", List#{SqlValue.Str(value)})
+    discard Sql.fetch("SELECT set_config('sqlitefx.savepoint_test', $1, true)", List#{SqlValue.Str(value)})
 
 /// 今の印。置いていなければ空文字。
 def currentStamp(): String \ DbRead + RawSql =
-    Sql.fetchOneAs(Decoder.str("v"), "SELECT current_setting('sqlfx.savepoint_test', true) AS v", Nil) |> Option.getWithDefault("")
+    Sql.fetchOneAs(Decoder.str("v"), "SELECT current_setting('sqlitefx.savepoint_test', true) AS v", Nil) |> Option.getWithDefault("")
 
 /// (a) 中の statement_timeout（57014）は値になり、外の Tx は続きの INSERT を出して COMMIT できる。接続も返る。
 ///

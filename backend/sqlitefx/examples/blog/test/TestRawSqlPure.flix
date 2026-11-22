@@ -1,12 +1,12 @@
-use Sqlfx.DbError
-use Sqlfx.DbTest
-use Sqlfx.Decoder
-use Sqlfx.RawSql
-use Sqlfx.Row
-use Sqlfx.Sql
-use Sqlfx.SqlValue
+use Sqlitefx.DbError
+use Sqlitefx.DbTest
+use Sqlitefx.Decoder
+use Sqlitefx.RawSql
+use Sqlitefx.Row
+use Sqlitefx.Sql
+use Sqlitefx.SqlValue
 
-use Sqlfx.SqlValue.SqlValue
+use Sqlitefx.SqlValue.SqlValue
 
 // 生 SQL 版（BlogRaw）を DB 無しで: 手書きデコーダの結果と、preload のクエリ数。
 
