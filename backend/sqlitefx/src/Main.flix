@@ -1,14 +1,14 @@
 use Sqlitefx.Q.QScope
 
 ///
-/// `bin/flix run -- gen [--scope <column>[:<effect>]]... <migrations/> <queries/> <out/>`: migrations でスキーマを組み、queries の .q から Flix を生成する。
+/// `flix run -- gen [--scope <column>[:<effect>]]... <migrations/> <queries/> <out/>`: migrations でスキーマを組み、queries の .q から Flix を生成する。
 /// `--scope project_id` を付けると、その列を持つ表を触る query に列の条件が無ければ生成を止める（QScope）。
 /// `--scope project_id:Tenant` なら、さらにその列の camelCase の引数（`projectId: Int64`）を生成関数から外し、`Tenant.currentId()` で埋める。
 /// `gen --check ...` は書かずに、生成物が最新かだけを確かめる（CI 用。古ければ終了コード 1）。
 /// `gen --statements <path> ...` は、query ごとの文の一覧（QStatements）を path に JSON で書く。`--check` はその中身も突き合わせる。
-/// `migrate [--check | --status] <migrations/>`: migrations を DB に当てる。接続先は環境変数 SQLITEFX_DSN / SQLITEFX_USER / SQLITEFX_PASSWORD。
+/// `migrate [--check | --status] <migrations/>`: migrations を DB に当てる。接続先は環境変数 SQLITEFX_DSN（`jdbc:sqlite:path/to/file.db`）。
 /// `migrate new <migrations/> <name>`: 次の番号でファイルを作る（DB は使わない）。
-/// 生成器を別プロジェクトにしないのは、flix.toml にローカルパス依存が無いから（PLAN フェーズ 2-3）。
+/// 生成器を別プロジェクトにしないのは、flix.toml にローカルパス依存が無いから。
 ///
 def main(): Unit \ {IO, Sys.Env.Env, Sys.Exit.Exit, Fs.DirList.DirList, Fs.FileRead.FileRead, Fs.FileWrite.FileWrite} =
     run {
@@ -29,9 +29,9 @@ def main(): Unit \ {IO, Sys.Env.Env, Sys.Exit.Exit, Fs.DirList.DirList, Fs.FileR
       with Fs.MkDirs.runWithFileWrite
 
 def usage(): Unit \ {IO, Sys.Exit.Exit} =
-    println("usage: bin/flix run -- gen [--check] [--scope <column>[:<effect>]]... [--statements <json path>] <migrations dir> <queries dir> <out dir>");
-    println("       bin/flix run -- migrate [--check | --status] <migrations dir>   (SQLITEFX_DSN / SQLITEFX_USER / SQLITEFX_PASSWORD)");
-    println("       bin/flix run -- migrate new <migrations dir> <name>");
+    println("usage: flix run -- gen [--check] [--scope <column>[:<effect>]]... [--statements <json path>] <migrations dir> <queries dir> <out dir>");
+    println("       flix run -- migrate [--check | --status] <migrations dir>   (SQLITEFX_DSN = jdbc:sqlite:path/to/file.db)");
+    println("       flix run -- migrate new <migrations dir> <name>");
     Sys.Exit.exit(2)
 
 ///

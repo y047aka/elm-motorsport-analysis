@@ -28,7 +28,7 @@ pub mod Sqlitefx.Retry {
     ///
     /// TransientDbErr で失敗したら thunk を最初から呼び直す。attempts 回すべて失敗したら DbErr.retryExhausted。attempts が 1 未満なら 1 回。
     /// 待たずに即呼び直す。DB の再起動を跨ぎたいなら `withRetryWith`。
-    /// thunk は Tx 単位（`withTx` ごと）で渡す。PG はデッドロック後に Tx 全体が aborted になるので、文単位の再実行は意味を持たない。
+    /// thunk は Tx 単位（`withTx` ごと）で渡す。Tx の途中で BUSY になった時、その Tx が読んだ物は他の接続が書いた物より古く（`SQLITE_BUSY_SNAPSHOT`）、同じ Tx の中で文を送り直しても通らない。
     ///
     pub def withRetry(attempts: Int32, thunk: Unit -> a \ ef): a \ (ef - TransientDbErr) + DbErr =
         withRetryWith({ attempts = attempts, baseMs = 0, maxMs = 0 }, _ -> (), () -> 0.0, thunk)

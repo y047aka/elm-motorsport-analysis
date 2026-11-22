@@ -378,7 +378,7 @@ pub mod Sqlitefx.Fragment {
 
     ///
     /// SET 句の中身を、既にあるパラメータ列の後ろに繋ぐ。`title = $2, body = $3` の形で、`SET` は付けない。
-    /// 同じ列を 2 回代入していたら後の物だけ出す（PG は同じ列への複数代入をエラーにする）。`rawSet` は畳めないので、そのまま出す。
+    /// 同じ列を 2 回代入していたら後の物だけ出す（SQLite も後の代入を使うので結果は同じで、文が短くなる）。`rawSet` は畳めないので、そのまま出す。
     ///
     pub def appendChanges(changes: Changes[row], params: List[SqlValue]): (String, List[SqlValue]) =
         let Changes.Changes(assignments) = changes;

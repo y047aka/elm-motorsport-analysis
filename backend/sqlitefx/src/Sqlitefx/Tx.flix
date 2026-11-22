@@ -36,16 +36,15 @@ pub mod Sqlitefx.Tx {
     /// 読むだけ（`DbRead`）の Tx でも張れる。`RELEASE` / `ROLLBACK TO` 自体の失敗は値にせず、外の Tx の失敗として投げる。
     ///
     /// ```
-    /// Tx.withSavepoint("agg", () -> { discard Sql.execute("SET LOCAL statement_timeout = 5000", Nil); countEntries(scope) })
-    /// //   : Result[Failure, Int64] \ DbWrite + SqlSavepoint + RawSql
+    /// Tx.withSavepoint("import_row", () -> insertImportedRow(row))
+    /// //   : Result[Failure, Unit] \ DbWrite + SqlSavepoint + RawSql
     /// ```
     ///
     /// name は `Savepoint.isValidName`（`^[a-z_][a-z0-9_]*$`、63 文字まで）を通った物だけ SQL に入る。それ以外は SQL を出さずに `Err`。
     ///
     /// WhyNot: 名前が不正なときに `DbErr` を投げないのは、呼ぶ側にとっては「この部分の失敗」であって外の Tx を壊す理由が無いため。
     ///
-    /// WhyNot: `Db.attempt` と同じ `Failure` で返すのは、中で受けたい失敗の代表が statement_timeout（Transient）で、
-    /// 呼ぶ側が一時障害と永続の失敗を分けて扱えるようにするため。
+    /// WhyNot: `Db.attempt` と同じ `Failure` で返すのは、中で受けたい失敗に BUSY（Transient の Timeout）と制約違反（Permanent）の両方があり、呼ぶ側が一時障害と永続の失敗を分けて扱えるようにするため。
     ///
     pub def withSavepoint(name: String, thunk: Unit -> a \ ef): Result[DbError.Failure, a] \ (ef - {TransientDbErr, DbErr}) + {SqlSavepoint, TransientDbErr, DbErr} =
         if (not Savepoint.isValidName(name))

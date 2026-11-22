@@ -5,12 +5,12 @@ pub mod Sqlitefx.TransientDbErr {
     use Sqlitefx.DbError.DbErrorKind
 
     ///
-    /// デッドロック（PG は 40001 / 40P01）。
+    /// デッドロック。`SqlState.classify` はこれを出さない（SQLite でロックを待って取れなかった物は `timeout`）。利用側と `DbTest` が上げる。
     ///
     pub def deadlock(): a \ TransientDbErr = raiseTransient(DbError.TransientKind.Deadlock)
 
     ///
-    /// statement_timeout 等。ms は分かるときだけ、分からなければ 0。
+    /// ロックの待ち（`busy_timeout`）や借り待ちの上限。ms は分かるときだけ、分からなければ 0。
     ///
     pub def timeout(ms: Int32): a \ TransientDbErr = raiseTransient(DbError.TransientKind.Timeout(ms))
 

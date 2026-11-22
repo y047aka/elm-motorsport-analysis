@@ -10,9 +10,9 @@ pub mod Sqlitefx.DbError {
     /// Tx や接続の後始末はこれを受け取ってから op に戻す。
     ///
     pub enum TransientKind with Eq, Order, ToString {
-        /// デッドロック（PG は 40001 / 40P01）
+        /// デッドロック。`SqlState.classify` は出さない（SQLite でロックを待って取れなかった物は Timeout）
         case Deadlock
-        /// statement_timeout 等。ms は分かるときだけ、分からなければ 0
+        /// ロックの待ち（`busy_timeout`）や借り待ちの上限。ms は分かるときだけ、分からなければ 0
         case Timeout(Int32)
         /// 接続が切れた・届かない
         case ConnectionLost(String)

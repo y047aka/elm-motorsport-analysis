@@ -15,8 +15,7 @@ pub mod Sqlitefx.Savepoint {
     ///
     /// 名前が `^[a-z_][a-z0-9_]*$` で 63 文字までか。SQL の文面に入る唯一の値なので、これ以外は通さない。
     ///
-    /// WhyNot: 63 を超える名前を PG の切り詰めに任せないのは、切り詰めは NOTICE だけで失敗にならず、
-    /// 入れ子の 2 つの名前が同じ名前に潰れて、内側の ROLLBACK TO が外側まで戻してしまうため。
+    /// WhyNot: SQLite は長い名前も切り詰めずに受けるのに 63 文字で止めるのは、sqlfx が通す名前と同じ物だけを通し、片方で書いた `withSavepoint` がもう片方で `Err` にならないようにするため。
     ///
     pub def isValidName(name: String): Bool =
         match String.toList(name) {
@@ -38,7 +37,7 @@ pub mod Sqlitefx.Savepoint {
     ///
     pub def nameRule(): String = "expected ^[a-z_][a-z0-9_]*$, at most ${maxNameLength()} chars"
 
-    /// PG の識別子の上限（NAMEDATALEN - 1）。
+    /// sqlfx の上限（PG の識別子の上限、NAMEDATALEN - 1）。
     def maxNameLength(): Int32 = 63
 
     /// 先頭に置ける文字。ASCII の小文字と `_` だけ（`Char.isLetter` は ASCII 以外も通す）。

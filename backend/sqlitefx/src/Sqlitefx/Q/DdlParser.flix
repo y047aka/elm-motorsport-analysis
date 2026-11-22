@@ -1,6 +1,6 @@
 ///
 /// migrations の DDL を読んで机上のスキーマを進める。読むのは CREATE TABLE / ALTER TABLE ADD|DROP COLUMN / DROP TABLE と、
-/// 名前付きの制約（CONSTRAINT name ... / CREATE UNIQUE INDEX name）。それ以外は「読めない DDL」として警告に積む（design.md §3、PLAN フェーズ 2-2）。
+/// 名前付きの制約（CONSTRAINT name ... / CREATE UNIQUE INDEX name）。それ以外は「読めない DDL」として警告に積む（design.md §3）。
 ///
 /// 名前の無い UNIQUE / CHECK / FOREIGN KEY はエラーにする。違反が制約名で返るので、名前が無いと生成コードから参照できない。
 /// PRIMARY KEY だけは名前が無くてもよい（生成コードの対象にしない）。

@@ -1,33 +1,15 @@
-# sqlfx
+# sqlitefx
 
-Flix の PostgreSQL 向け DB ライブラリ。設計は [docs/design.md](docs/design.md)、
-実装の進め方は [PLAN.md](PLAN.md)。
+The SQLite port of sqlfx that `backend` is to reach SQLite through; `README.md` says what it is, how it differs from sqlfx, and where its boundary with `backend` runs.
+The repository's `AGENTS.md` applies here too, with the one difference below.
 
-## 会話ポリシー
+## Comments
 
-日本語で会話してください。途中報告なども含めて、日本語で回答してください。
+The sources keep sqlfx's convention, and a change continues it rather than mixing two: a comment is in Japanese, says the How in code, the What in a test, and above all the **WhyNot** — the alternative that looked as good, and why it was not taken.
+Where the alternative is sqlfx's PostgreSQL behaviour, name it: that contrast is what the next reader comparing the two needs.
+The Flix rules sqlfx wrote down (reserved words, comment placement, type design) are `docs/flix-conventions.md`'s.
 
-単語は業界の言葉をそのまま使う（カタカナ・英語のまま。和語へ言い換えない・造語を作らない）。
-説明は平易に書く。独自の比喩で名付けない。
+## Commands
 
-## Flix のお約束
-
-- **Flix を書く前・テストを書く前に `/flix-docs` を引く**（本文は `.claude/skills/flix-docs/SKILL.md`）
-- **コンパイルエラーが出たら `/compile-fix`**（本文は `.claude/skills/compile-fix/SKILL.md`）
-- 予約語・コメントの流儀・型の設計・二乗を書かない、の本文: [docs/flix-conventions.md](docs/flix-conventions.md)
-
-## コーディングポリシー
-
-コードには **How** / テストコードには **What** / コミットログには **Why** / コードコメントには **WhyNot**
-
-特にコードコメントは WhyNot を重視し、How・What を書かない。実装の由来や旧実装などの歴史背景も書かない。
-
-## ビルドと実行
-
-Flix コンパイラは flix_game_engine の devbox が持つ jar を借りる（`bin/flix` が解決する）。
-
-```bash
-bin/flix check   # 型検査
-bin/flix run     # 実行（初回は Maven 依存の取得で時間がかかる）
-bin/flix test    # テスト
-```
+`nix run .#sqlitefx-test` from the repository root; `flix build` and `flix test` inside this directory with the flake's Flix.
+A test that needs a database opens SQLite in memory (`file:<name>?mode=memory&cache=shared`, one name per test, since tests run in parallel) or, where locking matters, in a temporary file.

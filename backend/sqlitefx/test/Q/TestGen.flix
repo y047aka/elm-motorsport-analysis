@@ -1,4 +1,4 @@
-// Gen: examples/blog の生成物が今の生成器で作った物と一致する（make gen し忘れと生成器の版ずれの検知）。
+// Gen: examples/blog の生成物が今の生成器で作った物と一致する（`flix run -- gen examples/blog/migrations examples/blog/queries examples/blog/src/Gen` のし忘れと、生成器の版ずれの検知）。
 // ライブラリ側のテストなのは、生成物の形を決めているのが Codegen だから。examples 側では確かめない。
 
 /// examples/blog/src/Gen は migrations と .q から作り直した物と全ファイル一致する。

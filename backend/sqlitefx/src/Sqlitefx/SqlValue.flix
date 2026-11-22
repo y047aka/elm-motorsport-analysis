@@ -139,7 +139,7 @@ pub mod Sqlitefx.SqlValue {
     }
 
     ///
-    /// Int64 の値を取り出す。Int32 の列も広げて返す（SERIAL と BIGSERIAL を区別せず読めるように）。
+    /// Int64 の値を取り出す。Int32 も広げて返す（sqlite-jdbc は 32 bit に収まる整数を Integer で返すので、同じ列でも値によって Int32 で来る）。
     ///
     pub def asInt64(value: SqlValue): Option[Int64] = match value {
         case SqlValue.Int64(i) => Some(i)
