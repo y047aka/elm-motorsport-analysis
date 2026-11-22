@@ -232,9 +232,8 @@ pub mod TimingLines.Feed {
     // -------------------------------------------------------- the circuit's map
 
     /// The intermediate lines one circuit's published stretches imply, laid by
-    /// `Circuit.impliedLines` — the one spelling of the rule, in the one module the
-    /// atlas reading and this report both compile. A line is `s2` because the second
-    /// sector begins at it.
+    /// `Circuit.impliedLines`, where the rule is spelled beside the figures it is laid
+    /// from. A line is `s2` because the second sector begins at it.
     ///
     /// The only thing the stretches are trusted with is the lap length they add up
     /// to; where the times place them is `TimingLines`'s question.

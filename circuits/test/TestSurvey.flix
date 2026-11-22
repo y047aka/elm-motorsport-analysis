@@ -172,7 +172,6 @@ pub mod TestSurvey {
                     lap = cota#lap,
                     sectors = cota#sectors,
                     file = cota#file,
-                    atlas = cota#atlas,
                     survey = cota#survey
                 };
                 let unauthored = {
@@ -185,7 +184,6 @@ pub mod TestSurvey {
                     lap = narrowed#lap,
                     sectors = narrowed#sectors,
                     file = narrowed#file,
-                    atlas = narrowed#atlas,
                     survey = narrowed#survey
                 };
                 match Overpass.Answer.read(asking) {
@@ -456,7 +454,6 @@ pub mod TestSurvey {
         lap = lap,
         sectors = {published = None, eachSeason = None},
         file = "nowhere.geojson",
-        atlas = None,
         survey = "A square"
     }
 

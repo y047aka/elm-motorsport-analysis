@@ -1,6 +1,6 @@
 ---
 name: add-circuit
-description: "Add a new circuit's data end to end: probe OpenStreetMap for its relation, author its circuits config, keep the Overpass answer and atlas line, lay the served geometry, join the word on both wire copies, draw it app-side, and run every fence that judges the result. Use when asked to add, survey, or draw a new circuit, or when a new round's circuit has no geometry yet."
+description: "Add a new circuit's data end to end: probe OpenStreetMap for its relation, author its circuits config, keep the Overpass answer, lay the served geometry, join the word on both wire copies, draw it app-side, and run every fence that judges the result. Use when asked to add, survey, or draw a new circuit, or when a new round's circuit has no geometry yet."
 ---
 
 # Add a circuit
@@ -24,13 +24,7 @@ Prints each candidate relation with its roles' ways measured.
 The length is what tells the full circuit from the GP circuit standing beside it; the default 5 km box holds COTA and not a 13.6 km one — widen it for long circuits.
 The report is for a human, not for a name: read it before writing a config, and note how the relation tags its start/finish line — no two of the kept circuits tag it alike.
 
-Optionally measure the atlas line first — for a circuit that publishes no start/finish coordinate, its `start_finish` marker is the surveyed place a config's `timingLine` is seeded from:
-
-```bash
-nix run .#geometry -- atlas <word> --fetch   # keeps circuits/<word>/atlas.geojson
-```
-
-**When the probe comes back empty,** OpenStreetMap holds that circuit as loose `highway=raceway` ways rather than a relation — Fuji is mapped that way. Author the box grounding instead: `relation = None`, a `box` around the ground, and a `timingLine` seeded from the atlas's `start_finish` marker — the zero is the projection of that place onto the lap, so no surveyed node need stand there.
+**When the probe comes back empty,** OpenStreetMap holds that circuit as loose `highway=raceway` ways rather than a relation — Fuji is mapped that way. Author the box grounding instead: `relation = None`, a `box` around the ground, and a `timingLine` at the line's place — the zero is the projection of that place onto the lap, so no surveyed node need stand there, and nothing but that place says where the zero is.
 `survey <word> --fetch` reads the ground and names every refusal by way id: author the box loosely and let the refusals tell you what else the box holds.
 
 ## 2. Author the config — `circuits/src/Circuit.flix`
@@ -40,7 +34,7 @@ Fields worth a decision:
 
 - `relation` / `box` / `pit` — exactly one grounding: the relation the ways are named by, or the box whose raceway ways are chained by standing at the line. A box at a racing complex may hang more than one line off the lap, and the survey reads geometry and one-way tags rather than any way's `name`; `pit` names the pit lane's ways by id then, as a relation's members do.
 - `timedFrom` — the relation member naming the line the lap is timed across. Every metre is measured from whichever one was answered to.
-- `timingLine` — the published place (and the `within` the survey may allow), or the atlas seed, or `None` where the circuit tags nothing mistakable. A run that answers the wrong role fails before writing only when this is set; without it a wrong line just draws every car early.
+- `timingLine` — the published place (and the `within` the survey may allow), or `None` where the circuit tags nothing mistakable. The doc-comment says where the place came from, and whether that source measured it or took it off OpenStreetMap: a place taken off OpenStreetMap checks the survey against nothing but itself. A run that answers the wrong role fails before writing only when this is set; without it a wrong line just draws every car early.
 - `lap` — the published length the surveyed line is stretched to.
 - `sectors` — exactly one kind:
   - `published`: one map serves every season; the `stretches` must add up to `lap` within `stretchTolerance` (0.15 m) and travel into the geometry as `sectors`.
@@ -54,10 +48,10 @@ nix run .#geometry -- survey <word> --fetch            # asks OSM, keeps circuit
 nix run .#geometry -- survey <word> --fetch --write    # additionally lays app/static/geometry/<word>.geojson
 ```
 
-Commit the kept answer beside the atlas file — a kept `overpass.json` is always re-runnable evidence.
+Commit the kept answer — a kept `overpass.json` is always re-runnable evidence.
 The `.geojson` is a served file, not a build artifact: commit it too.
 
-To read a fresh survey against the old one, or the atlas line against either:
+To read a fresh survey against the old one:
 
 ```bash
 nix run .#geometry -- diff <a.geojson> <b.geojson> [--svg ...]

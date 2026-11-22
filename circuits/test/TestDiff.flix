@@ -64,9 +64,9 @@ pub mod TestDiff {
     @Test
     def testBaseNameIsTheNameAFileIsQuotedBy(): Unit \ Assert =
         Assert.assertTrue(Diff.baseName("app/static/geometry/le_mans.geojson") == "le_mans");
-        Assert.assertTrue(Diff.baseName("/tmp/atlas.geojson") == "atlas");
+        Assert.assertTrue(Diff.baseName("/tmp/earlier.geojson") == "earlier");
         // A file written with another extension keeps the name it was given.
-        Assert.assertTrue(Diff.baseName("atlas.json") == "atlas.json")
+        Assert.assertTrue(Diff.baseName("earlier.json") == "earlier.json")
 
     @Test
     def testQuotedSaysWhatAFileClaimsAboutItself(): Unit \ Assert =
@@ -75,12 +75,12 @@ pub mod TestDiff {
             Diff.quoted({name = "survey", props = surveyed#props, coords = Nil, metres = 0.0 :: 5515.0 :: Nil})
                 == "survey: basis osm-centreline, 5515.0 m — https://www.openstreetmap.org/relation/999"
         );
-        let measured = kept("atlas", "measured-midline", None);
-        Assert.assertTrueWithMsg(String.endsWith({suffix = "13630.0 m"}, Diff.quoted({name = "atlas", props = measured#props, coords = Nil, metres = 0.0 :: 13630.0 :: Nil})), "a line with no source says nothing about one, rather than a dash")
+        let unsourced = kept("earlier", "osm-centreline", None);
+        Assert.assertTrueWithMsg(String.endsWith({suffix = "13630.0 m"}, Diff.quoted({name = "earlier", props = unsourced#props, coords = Nil, metres = 0.0 :: 13630.0 :: Nil})), "a line with no source says nothing about one, rather than a dash")
 
     @Test
     def testSaidPrintsOneDirectionOfTheComparison(): Unit \ Assert =
-        let lines = kept("survey", "osm-centreline", None) :: kept("atlas", "measured-midline", None) :: Nil;
+        let lines = kept("survey", "osm-centreline", None) :: kept("earlier", "osm-centreline", None) :: Nil;
         let apart: Apart.Apartness = {
             count = 111,
             mean  = 0.6,
@@ -95,9 +95,9 @@ pub mod TestDiff {
     @Test
     def testOverlayDrawsBothLinesAndCarriesTheirProvenance(): Unit \ Assert =
         let survey = kept("survey", "osm-centreline", Some("https://www.openstreetmap.org/relation/999"));
-        let atlas = kept("atlas", "measured-midline", None);
+        let earlier = kept("earlier", "osm-centreline", None);
         let drawing = Diff.overlay(
-            (survey, atlas),
+            (survey, earlier),
             (sampled(0.0, 0.0, 100.0, 0.0), sampled(0.0, 0.0, 100.0, 50.0))
         );
         Assert.assertTrue(String.startsWith({prefix = "<?xml"}, drawing));
@@ -106,7 +106,7 @@ pub mod TestDiff {
         Assert.assertTrue(
             String.contains({substr = "<!-- survey: osm-centreline — https://www.openstreetmap.org/relation/999 -->"}, drawing)
         );
-        Assert.assertTrueWithMsg(String.contains({substr = "<!-- atlas: measured-midline — no source -->"}, drawing), "a line with no source says it has none");
+        Assert.assertTrueWithMsg(String.contains({substr = "<!-- earlier: osm-centreline — no source -->"}, drawing), "a line with no source says it has none");
         Assert.assertTrue(String.contains({substr = "Data: survey is © under ODbL."}, drawing));
         Assert.assertTrueWithMsg(String.contains({substr = "height=\"520\""}, drawing), "the margin twice, plus the span of both lines scaled to the fixed width");
         // The drawing ends with a newline, as every kept file does, so an overlay laid

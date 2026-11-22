@@ -14,7 +14,7 @@
 ///
 /// The `survey` word is answered here too, over an answer read from disk or asked of
 /// OpenStreetMap now; the bytes it lays or compares are `Geometry.Write`'s, which the
-/// regeneration fence and the atlas writer lay too.
+/// regeneration fence lays too.
 pub mod Survey {
 
     use Circuit.Circuit

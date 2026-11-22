@@ -23,9 +23,9 @@ pub mod TestCircuit {
 
     /// The warning that calls out a directory no circuit answers to looks for
     /// `keptNames` in a directory and prints paths under `evidenceDir`; the evidence
-    /// itself is written by `keptAnswer` and `keptAtlas`. Those two paths are made
-    /// from those two names here, so a name authored a third time — beside the writer
-    /// of one file, say — is the directory the warning stops calling out.
+    /// itself is written by `keptAnswer`. That path is made from that name here, so a
+    /// name authored a second time — beside the writer of the file, say — is the
+    /// directory the warning stops calling out.
     @Test
     def testTheWarningLooksForTheFilesTheBuildersWrite(): Unit \ Assert =
         foreach (circuit <- Circuit.circuits()) {
@@ -33,15 +33,11 @@ pub mod TestCircuit {
                 List.memberOf(Circuit.lastPart(Circuit.keptAnswer(circuit)), Circuit.keptNames())
             );
             Assert.assertTrue(
-                List.memberOf(Circuit.lastPart(Circuit.keptAtlas(circuit)), Circuit.keptNames())
-            );
-            Assert.assertTrue(
                 String.startsWith({prefix = "${Circuit.evidenceDir()}/${circuit#word}/"}, Circuit.keptAnswer(circuit))
             )
         }
 
-    /// Kept evidence and served bytes stand apart: the answer and the atlas line are
-    /// never served, and no served file is kept evidence. A name shared between the
+    /// Kept evidence and served bytes stand apart: the answer is never served, and no served file is kept evidence. A name shared between the
     /// two is a fence reading its own evidence as the drawing, or a warning calling a
     /// served file an unmapped circuit.
     @Test

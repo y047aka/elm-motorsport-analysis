@@ -1,4 +1,4 @@
-/// The comparison both the diff command and the atlas reading run on: the sampling
+/// The comparison the diff command runs on: the sampling
 /// bound, the tie, the nought-length stretch and the walk to a place along a line, each
 /// held to its fixture. The sphere these are measured on, the projection and the metre
 /// are `TestGeodesy`'s. `TestDiff` drives the arguments and the drawing that one of

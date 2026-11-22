@@ -6,15 +6,11 @@
 /// at the authored line — the length the lap is stretched to, where the circuit puts its
 /// own timing line, whose map the lines come
 /// from. The directory named by the circuit's word keeps the evidence — the kept Overpass
-/// answer and the kept atlas line — and no code. The timing report reads these
+/// answer — and no code. The timing report reads these
 /// same figures through this module's own `timingMap`, which derives the
 /// report's answer from them rather than restating them; the byte fence — `nix
 /// run .#geometry -- survey <word>` — lays them against the bytes the app is
 /// served.
-///
-/// A circuit's atlas layer is here as the URL of the layer itself: the track-atlas line
-/// is authored in no config, and the reading that measures it writes its own file beside
-/// the circuit — `Atlas.flix`'s, kept at `keptAtlas`.
 ///
 /// The steps a circuit joins by are the repository's `/skill:add-circuit` to say.
 pub mod Circuit {
@@ -42,8 +38,7 @@ pub mod Circuit {
     }
 
     /// The authored stretches, and the map they were copied from. The same pair a kept
-    /// geometry carries of them, which is what `Midline.sectorsClaimed` reads back out of
-    /// the file and what the timing report names its lines from.
+    /// geometry carries of them, and what the timing report names its lines from.
     pub type alias Publishes = {
         source    = String,
         stretches = List[Float64]
@@ -62,12 +57,9 @@ pub mod Circuit {
     /// not a line to place. The stretches are trusted with the lap length they add up
     /// to and nothing else, at `stretchTolerance`.
     ///
-    /// This is the one spelling of the rule, in the one module both readers compile:
-    /// `Midline.sectorLines` lays these for the drawing and
-    /// `TimingLines.Feed.publishedLines` for the report, each wrapping the refusal in
-    /// its own error type. The naming — `s2` for the second sector's start — is the
-    /// rule the geometry is written under and the report prints by, and they cannot
-    /// now disagree about it.
+    /// `TimingLines.Feed.publishedLines` lays these for the report, wrapping the refusal
+    /// in its own error type. The naming — `s2` for the second sector's start — is the
+    /// rule the geometry is written under and the report prints by.
     pub def impliedLines(stretches: List[Float64], lap: Float64): Result[String, List[ImpliedLine]] =
         let total = List.foldLeft((sum, stretch) -> sum + stretch, 0.0, stretches);
         if (Float64.abs(total - lap) > stretchTolerance())
@@ -123,16 +115,12 @@ pub mod Circuit {
         sectors  = Lines,
         // The geometry file, from the directory the command was asked from.
         file     = String,
-        // The track-atlas layer measured against this circuit's line, if one is read at
-        // all. It is the URL of the layer itself — the reading writes its own file.
-        atlas    = Option[String],
         // The prose the geometry file documents its survey with.
         survey   = String
     }
 
     /// How far a relation's node may stand from the published line and still be it: the
     /// relation tags the line itself, so the distance allowed is the map's own crosshair.
-    /// The atlas reading allows a wider distance — `Midline.measuredWithin`.
     pub def nodeWithin(): Float64 = 10.0
 
     /// How far a circuit's published stretches may miss the lap they are trusted to
@@ -158,7 +146,6 @@ pub mod Circuit {
         lap      = 13625.7,
         sectors  = {published = None, eachSeason = Some("the organiser's map is re-issued every year and its lines differ between seasons")},
         file     = "app/static/geometry/le_mans.geojson",
-        atlas    = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-de-la-sarthe/raw/layers/24h.geojson"),
         survey   = "The Circuit de la Sarthe"
     }
 
@@ -182,7 +169,6 @@ pub mod Circuit {
             eachSeason = None
         },
         file   = "app/static/geometry/cota.geojson",
-        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson"),
         survey = "The Circuit of the Americas"
     }
 
@@ -196,10 +182,10 @@ pub mod Circuit {
     ///
     /// The relation tags `start` and `finish` as two nodes carrying
     /// `raceway=start`/`raceway=finish`; the lap is timed across `finish`. The
-    /// circuit publishes no distance for the line, so its place is seeded from the
-    /// track-atlas line's `start_finish` marker, at that reading's
-    /// `measuredWithin` — the node stands about 15 m from the marker, which is
-    /// within it.
+    /// circuit publishes no distance for the line, so the place authored is the
+    /// `start_finish` marker of the tobi/track-atlas dataset — a point that dataset
+    /// placed on OpenStreetMap's own centreline, not a measurement of its own. The node
+    /// stands about 15 m from it, within the 25 m allowed.
     ///
     /// The distances the FIA issues round a lap here were never read at authoring: no
     /// stretches are authored, the geometry writes no `sectors`, and the timing report
@@ -214,20 +200,18 @@ pub mod Circuit {
         lap      = 4655.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/barcelona.geojson",
-        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/barcelona/raw/layers/gp.geojson"),
         survey = "The Circuit de Barcelona-Catalunya"
     }
 
     /// Monza. The relation `284565` carries its 20 lap ways under no role at all
     /// and names its pit under `pit_lane`. Its `start` and `finish` roles both name
     /// one node — and that node is a `highway=traffic_signals` point: the pit-exit
-    /// light, 197 m after the line the track-atlas reading measures off imagery and
-    /// calls `start_finish`. OSM holds no node where that line stands, so no role a
-    /// survey could answer does, and no `timingLine` can be authored without the
-    /// byte fence refusing every survey of the relation; the drawn zero and start
-    /// line of this circuit therefore stand at the pit-exit light. A node joined to
-    /// the relation at the atlas marker's place would fix the drawing without
-    /// moving a metre of the survey.
+    /// light, 197 m after the line the tobi/track-atlas dataset marks as `start_finish`.
+    /// OSM holds no node where that line stands, so no role a survey could answer does,
+    /// and no `timingLine` can be authored without the byte fence refusing every survey
+    /// of the relation; the drawn zero and start line of this circuit therefore stand
+    /// at the pit-exit light. A node joined to the relation at the line's place would
+    /// fix the drawing without moving a metre of the survey.
     ///
     /// The distances the FIA issues round a lap here were never read at authoring:
     /// no stretches are authored, the geometry writes no `sectors`, and the timing
@@ -242,7 +226,6 @@ pub mod Circuit {
         lap      = 5793.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/monza.geojson",
-        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/monza/raw/layers/gp.geojson"),
         survey = "The Autodromo Nazionale di Monza"
     }
 
@@ -252,10 +235,11 @@ pub mod Circuit {
     /// the `pit` field names — the other hanger is a 123 m unnamed connector — and the
     /// drift course, short circuit, kart track and abandoned stubs are what no line
     /// passes and a box survey therefore leaves out.
-    /// No node stands at the line — the lap's nearest is 207 m down it — so the authored
-    /// place is all the zero has to stand on; it is the track-atlas layer's
-    /// `start_finish` marker, the claim of the very layer whose outline was stitched
-    /// from these ways.
+    /// No node stands at the line — the lap's nearest is 207 m down it — so the zero
+    /// stands on the authored place alone, and a place better sourced than this one moves
+    /// the drawn zero and every Fuji baseline with it. It is the `start_finish` marker of
+    /// the tobi/track-atlas dataset, whose outline was stitched from these same ways: no
+    /// measurement independent of them.
     ///
     /// The distances the series issue round a lap here were never read at authoring:
     /// no stretches are authored, the geometry writes no `sectors`, and the timing
@@ -270,12 +254,11 @@ pub mod Circuit {
         // The grand prix lap as the championship measures it: the 2023 6 Hours of Fuji
         // ran 1,044.927 km over 229 laps, which divides to exactly 4,563 m. The surveyed
         // centreline measures 4,553.6 m, 0.2 percent short of it — within what `laidOut`
-        // lets a box miss by. Track atlases print 4,549; the race's own arithmetic is
+        // lets a box miss by. track-atlas prints 4,549; the race's own arithmetic is
         // the figure kept here, and it is this one the drawing is measured in.
         lap      = 4563.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/fuji.geojson",
-        atlas  = Some("https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/fuji/raw/layers/gp.geojson"),
         survey = "The Fuji Speedway"
     }
 
@@ -312,12 +295,6 @@ pub mod Circuit {
     pub def keptAnswer(circuit: Circuit): String =
         keptIn(circuit, keptAnswerName())
 
-    /// The measured line kept beside the same config: the atlas reading's own file,
-    /// in this repository's profile at the line's own length — kept beside the circuit
-    /// and never served.
-    pub def keptAtlas(circuit: Circuit): String =
-        keptIn(circuit, keptAtlasName())
-
     def keptIn(circuit: Circuit, name: String): String =
         "${evidenceDir()}/${circuit#word}/${name}"
 
@@ -338,17 +315,13 @@ pub mod Circuit {
     pub def keptAnswerName(): String =
         "overpass.json"
 
-    /// The name the measured atlas line is kept under beside it.
-    pub def keptAtlasName(): String =
-        "atlas.geojson"
-
-    /// The names that say a directory was made to keep a circuit's evidence — the ones
-    /// the two builders above write, and the ones the fence's warning looks for in a
+    /// The names that say a directory was made to keep a circuit's evidence — the one
+    /// `keptAnswer` writes, and the ones the fence's warning looks for in a
     /// directory it listed. The warning is the reading that can be wrong unnoticed: a
-    /// name spelled a third time somewhere is a directory it stops calling out, and a
+    /// name spelled a second time somewhere is a directory it stops calling out, and a
     /// fence that stays green.
     pub def keptNames(): List[String] =
-        keptAnswerName() :: keptAtlasName() :: Nil
+        keptAnswerName() :: Nil
 
     /// A path's last part: the name a file is known by where a directory has been
     /// listed rather than a path authored. Everything above the name is dropped rather

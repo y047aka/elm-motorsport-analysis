@@ -1,6 +1,6 @@
 /// The reading of this repository's own geometry-file profile: the outline as the line it
 /// claims to be — its points, its own metres, the properties a report quotes — and the pit
-/// lane beside it. The diff, the atlas reading, the regeneration fence and the survey's
+/// lane beside it. The diff, the regeneration fence and the survey's
 /// own comparison all read a kept file through this module, so what a file is refused
 /// for is one set of refusals wherever it is read.
 ///
@@ -46,14 +46,13 @@ pub mod Geometry {
         license = Option[String]
     }
 
-    /// The kinds of line a file of this profile may name as its `basis`: the
-    /// OpenStreetMap centreline, stretched to a published lap, and a midline
-    /// measured off orthoimagery at its own length. What a reader may trust a line
-    /// for turns on which of the two it is — one ends where the published lap says,
-    /// the other is not expected to — so a file naming a basis outside these is
-    /// either a kind of line no reader has been told about yet, or an edited file.
+    /// The kinds of line a file of this profile may name as its `basis`: so far only
+    /// the OpenStreetMap centreline, stretched to a published lap. What a reader may
+    /// trust a line for turns on which kind it is, so a file naming a basis outside
+    /// these is either a kind of line no reader has been told about yet, or an edited
+    /// file.
     pub def bases(): List[String] =
-        "osm-centreline" :: "measured-midline" :: Nil
+        "osm-centreline" :: Nil
 
     /// The outline of a kept file, read from its text.
     pub def outline(name: String, text: String): Result[String, Line] =
@@ -202,7 +201,7 @@ pub mod Geometry {
     /// position it stumbled at: a line read with a hole dropped in it is a shorter
     /// line, and a reader laying one against another could not tell a file surveyed
     /// shorter from one a reading thinned. This is the project's one reading of
-    /// coordinates — `Midline` measures an atlas line with it too.
+    /// coordinates.
     pub def places(role: String, positions: List[Json]): Result[String, List[Place]] =
         walked(role, Nil, positions, 1)
 

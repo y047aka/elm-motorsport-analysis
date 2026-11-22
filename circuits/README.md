@@ -1,6 +1,6 @@
 # circuits
 
-The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out, and one directory per circuit keeping the evidence — the Overpass answer the geometry was written from, and the atlas line measured against it.
+The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out, and one directory per circuit keeping the evidence — the Overpass answer the geometry was written from.
 It is the Flix project at this directory's root, run through the flake: `.#geometry -- <word>`, `.#geometry-timing-lines` and `.#geometry-test`, whose words `AGENTS.md`'s table lists.
 `-- probe` asks OpenStreetMap before a circuit has a config; `-- timing-lines` reads the timing feed with the decoder the load decodes it with.
 Each module's header says what it reads and refuses; what follows is what crosses them.
@@ -93,12 +93,6 @@ The sources the project holds, what it resolves, the flake apps that reach it an
 Every tool is the asking and the reading of an answer; the asking stays in the command, and the reading sits in a module that opens nothing, so `.#geometry-test` hands it a fixture.
 `TestTimingMap` is the one test handed no fixture: it reads the derivation from the real configs.
 What is judged against the repository's real bytes is the fence, the contract specs and the VRT.
-
-## The atlas readings
-
-`.#geometry -- atlas <circuit>` keeps the track-atlas line — a midline measured from orthoimagery, not stretched (5,500.2 m against the 5,515 m drawn at COTA) — as `<circuit>/atlas.geojson` with `stretched: false`, beside the survey and never served.
-For a circuit not surveyed yet, the atlas's `start_finish` point is a coordinate to seed a config's `timingLine` with; whether the times agree with it is `.#geometry-timing-lines`'s to answer once a round is loaded.
-Nothing draws on the atlas line: that would move every tracker baseline and re-open where the timing lines stand, which is its own change.
 
 ## Where the app reads this
 

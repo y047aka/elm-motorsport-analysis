@@ -1,8 +1,7 @@
 /// The reading of a kept geometry file: the outline as the line it claims to be, and the
 /// refusals a file with a survey that means something different to the reader than to the
 /// fence would otherwise pass unseen. Every command that reads a kept file reads it
-/// through the module these tests hold: the diff, the atlas reading, the regeneration
-/// fence.
+/// through the module these tests hold: the diff and the regeneration fence.
 pub mod TestGeometry {
 
     use Geometry.Line

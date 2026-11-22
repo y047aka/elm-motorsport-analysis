@@ -25,30 +25,27 @@ pub mod TestUsage {
     @Test
     def testEveryGeometryWordDeclaresItsHelpFlag(): Unit \ Assert =
         Assert.assertTrue(saysHelp(Survey.usage()));
-        Assert.assertTrue(saysHelp(Atlas.usage()));
         Assert.assertTrue(saysHelp(Diff.usage()));
         Assert.assertTrue(saysHelp(Regenerate.usage()));
         Assert.assertTrue(saysHelp(Probe.usage()));
         Assert.assertTrue(saysHelp(TimingLines.usage()))
 
-    /// The survey's and the atlas's usages are the one place a reader learns the
-    /// flag that raises the network: a descriptor dropped from the flag table drops
+    /// The survey's usage is the one place a reader learns the flag that raises the
+    /// network: a descriptor dropped from the flag table drops
     /// out of the help too, and the help line names the word it belongs to.
     @Test
     def testTheSurveyUsageNamesTheFlagThatRaisesTheNetwork(): Unit \ Assert =
         Assert.assertTrue(String.contains({substr = "-- survey <circuit>"}, Survey.usage()));
-        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Survey.usage()));
-        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Atlas.usage()))
+        Assert.assertTrue(String.contains({substr = "[--fetch]"}, Survey.usage()))
 
     /// One dialect at every usage: a reader who mistypes a word is answered with all
-    /// of them at once, so they should read as one command's help rather than as six
+    /// of them at once, so they should read as one command's help rather than as five
     /// programs'.
     @Test
     def testEveryUsageLineOpensTheSameWay(): Unit \ Assert =
         foreach (
             usage <-
                 Survey.usage() ::
-                    Atlas.usage() ::
                     Diff.usage() ::
                     Probe.usage() ::
                     Regenerate.usage() ::
@@ -58,13 +55,12 @@ pub mod TestUsage {
             Assert.assertTrue(String.startsWith({prefix = "usage: nix run .#geometry -- "}, usage))
 
     /// Every word answers `--help` before its own completing reads a word, which is
-    /// what makes `atlas --help` the help and not the refusal of a run that named no
+    /// what makes `survey --help` the help and not the refusal of a run that named no
     /// circuit, and `timing-lines --help` the help and not the refusal of a run that
     /// named no `--csv` nor a round.
     @Test
     def testEveryWordAnswersHelpBeforeItReadsAWordOfItsOwn(): Unit \ Assert =
         Assert.assertTrue(saysUsage(Survey.arguments("--help" :: Nil)));
-        Assert.assertTrue(saysUsage(Atlas.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Diff.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Probe.arguments("--help" :: Nil)));
         Assert.assertTrue(saysUsage(Regenerate.arguments("--help" :: Nil)));
@@ -83,7 +79,6 @@ pub mod TestUsage {
     @Test
     def testAWrongArgumentIsRefusedWithItsOwnUsage(): Unit \ Assert =
         Assert.assertTrue(refusedWith(Survey.usage(), Survey.arguments("cota" :: "--froze" :: Nil)));
-        Assert.assertTrue(refusedWith(Atlas.usage(), Atlas.arguments("cota" :: "--file" :: "--fetch" :: Nil)));
         Assert.assertTrue(refusedWith(TimingLines.usage(), TimingLines.arguments("--serve" :: "2026/cota_6h" :: Nil)))
 
     /// Arguments the command can ask with reach the run as the asking they are, which

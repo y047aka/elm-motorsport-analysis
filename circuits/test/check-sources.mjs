@@ -44,23 +44,12 @@ function spelling(re) {
   return sources.filter((path) => re.test(text(path)));
 }
 
-/** The `def` a piece of source stands in, which is how far a match arm's meaning
- * reaches: an arm that throws a failure away means something different in every
- * function. */
-function enclosingDef(source, needle) {
-  const at = source.indexOf(needle);
-  if (at < 0) throw new Error(`${needle} is not in the source`);
-  const defs = [...source.slice(0, at).matchAll(/^\s+(?:pub )?def (\w+)/gm)].map((found) => found[1]);
-  return defs[defs.length - 1] ?? '';
-}
-
 const utilFiles = 'circuits/src/Util/Files.flix';
 const cliErrors = 'circuits/src/Cli/Errors.flix';
 const timingLinesFiles = 'circuits/src/TimingLines/Files.flix';
 const regenerate = 'circuits/src/Regenerate.flix';
 const overpass = 'circuits/src/Overpass.flix';
 const geodesy = 'circuits/src/Geodesy.flix';
-const atlas = 'circuits/src/Atlas.flix';
 const backendCircuit = 'backend/src/Motorsport/Circuit.flix';
 const circuitsCircuit = 'circuits/src/Motorsport/Circuit.flix';
 
@@ -95,12 +84,8 @@ check('one source reads what a service answered with', () => {
   deepStrictEqual(reading, [overpass]);
 });
 
-check('the services asked are the survey runners and the atlas home', () => {
-  deepStrictEqual(spelling(/Https\.send\(/), [atlas, overpass]);
-});
-
-check('the atlas reads its answer where the survey reads its own', () => {
-  match(here('Atlas.flix'), /Overpass\.answered\(/);
+check('the services asked are the survey runners', () => {
+  deepStrictEqual(spelling(/Https\.send\(/), [overpass]);
 });
 
 check('the sentence a failed answer is printed in is spelled once', () => {
@@ -118,11 +103,7 @@ check('no run answers a failure by throwing it away', () => {
       .filter((line) => line.includes('Err(_)'))
       .map((line) => `${path}: ${line.trim()}`),
   );
-  // One arm answers a failure by discarding it, and the failure it discards is
-  // a parse another reading refused first: `claimed` reads an outline's
-  // properties out of the text `Geometry.outline` was already asked to parse.
-  deepStrictEqual(discarded, ['circuits/src/Atlas.flix: case Err(_)   => Map.empty()']);
-  equal(enclosingDef(here('Atlas.flix'), 'case Err(_)'), 'claimed');
+  deepStrictEqual(discarded, []);
 });
 
 check('a run asking whether a file is there asks the path it was given', () => {

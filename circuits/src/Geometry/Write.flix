@@ -3,7 +3,7 @@
 ///
 /// The profile is the one every reader of a kept file reads — `Geometry.flix` reads it
 /// back, `Regenerate.flix` compares it property by property, the app draws it: EPSG:4326
-/// throughout, as the Atlas keeps it; one `outline` LineString whose `metres` property
+/// throughout; one `outline` LineString whose `metres` property
 /// holds, point for point, how far round the lap each stands, in the circuit's published
 /// metres; one `pit_lane` LineString with no metres; the `direction` the chained survey
 /// runs; and the frame the degrees project through, whole, so the drawing's
@@ -16,9 +16,7 @@
 /// reads as two changed lines per feature.
 ///
 /// This is the writing only: which answer a file was surveyed from, where it is kept, and
-/// whether it is laid down at all are the `survey` word's, in `Survey.flix`. The atlas
-/// reading lays a different profile — a `measured-midline` that does not end at the
-/// published lap — out of this module's JSON spelling and none of its outline.
+/// whether it is laid down at all are the `survey` word's, in `Survey.flix`.
 pub mod Geometry.Write {
 
     use Circuit.Circuit

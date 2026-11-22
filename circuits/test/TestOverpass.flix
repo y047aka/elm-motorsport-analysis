@@ -34,9 +34,7 @@ pub mod TestOverpass {
         Assert.assertTrue(Duration.toMillis(pace()) == 1500i64)
 
     /// An answer is kept as the runner spelled it, once it is JSON at all — and an
-    /// HTML page behind a 200 is not. The refusal names the service that said it,
-    /// because the survey's runner and the atlas's repository are two places to go
-    /// back to and the sentence is the only thing saying which one did not answer.
+    /// HTML page behind a 200 is not. The refusal names the service that said it.
     @Test
     def testABodyIsKeptAsTheRunnerSpelledIt(): Unit \ Assert =
         let answer = "{\"elements\": []}";
@@ -47,10 +45,5 @@ pub mod TestOverpass {
         match Overpass.kept("<html><body>504 Gateway Timeout</body></html>", "Overpass") {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(problem == "Overpass answered with something that is not JSON")
-        };
-        let home = "https://raw.githubusercontent.com/tobi/track-atlas/main/tracks/circuit-of-the-americas/raw/layers/gp.geojson";
-        match Overpass.kept("<html>404: Not Found</html>", home) {
-            case Ok(_)        => Assert.assertTrue(false)
-            case Err(problem) => Assert.assertTrue(problem == "${home} answered with something that is not JSON")
         }
 }

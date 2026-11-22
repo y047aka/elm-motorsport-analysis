@@ -1,7 +1,6 @@
 // The circuit geometry pipeline, under one jar:
 //
 //     nix run .#geometry -- survey    <circuit> [--answer <overpass.json>] [--fetch] [--write]
-//     nix run .#geometry -- atlas     <circuit> [--file <atlas.geojson>]
 //     nix run .#geometry -- diff      <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
 //     nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]
 //     nix run .#geometry -- probe     <lat>,<lon> [...] [--radius <km>]
@@ -24,8 +23,6 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
         case "--help" :: _ =>
             Console.println(usage());
             Exit.exit(0)
-        case "atlas" :: rest =>
-            Exit.exit(Atlas.exitCode(rest))
         case "diff" :: rest =>
             Exit.exit(Diff.exitCode(rest))
         case "probe" :: rest =>
@@ -44,4 +41,4 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
 
 /// Each command's own usage: the flake app a reader types, beside the arguments it takes.
 def usage(): String =
-    Atlas.usage() + "\n${Diff.usage()}" + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Survey.usage()}" + "\n${TimingLines.usage()}"
+    Diff.usage() + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Survey.usage()}" + "\n${TimingLines.usage()}"

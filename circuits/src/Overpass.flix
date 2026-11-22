@@ -8,9 +8,7 @@
 ///
 /// What is asked is `Overpass.Query`'s and what comes back is `Overpass.Answer`'s; this
 /// module is the walking of the runners, the pace between the asks, and the one reading
-/// of what a service *answered with*. The atlas reading asks another service — a
-/// dataset's repository, once, with no list of runners to walk down — and reads its
-/// response here, so what an answer is is one reading for both services.
+/// of what a service *answered with*.
 ///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; an answer read
 /// here is a derivative of their tags.
@@ -120,9 +118,8 @@ pub mod Overpass {
     /// it answered with. Two things make a body no answer — a status that is no success,
     /// and text that is no JSON — and only the first of them is in the status: a service
     /// behind a proxy answers a request it let time out as 200 with an HTML page. `asked`
-    /// is who the failure names, since the runner to re-ask and the dataset's home to
-    /// re-ask are two different places to go back to.
-    pub def answered(response: HttpResponse, asked: String): Result[String, String] =
+    /// is who the failure names.
+    def answered(response: HttpResponse, asked: String): Result[String, String] =
         if (not Net.HttpResponse.isSuccess(response))
             Err("${asked} answered ${Net.HttpResponse.status(response)}")
         else
@@ -135,7 +132,7 @@ pub mod Overpass {
 
     /// A transport failure as the report prints it: which kind, and what the client
     /// said about it.
-    pub def worded(error: IoError): String = match error {
+    def worded(error: IoError): String = match error {
         case IoError(kind, message) => "${kind}: ${message}"
     }
 

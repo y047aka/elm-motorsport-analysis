@@ -163,8 +163,8 @@ pub mod Regenerate {
             List.map(word -> "${Circuit.evidenceDir()}/${word}: kept evidence for no circuit — is its word misspelled?", evidence)
                 ++ List.map(file -> "${Circuit.servedDir()}/${file}: geometry no config draws", served)
 
-    /// Directories under the evidence directory that hold a kept answer or a kept
-    /// atlas line under a name no config is authored for. A directory holding neither —
+    /// Directories under the evidence directory that hold a kept answer under a name no
+    /// config is authored for. A directory holding none —
     /// the project's own sources among them — keeps no evidence, and says nothing.
     def unwordedEvidence(): Result[String, List[String]] \ IO =
         forM(
@@ -181,8 +181,8 @@ pub mod Regenerate {
     def listed(dir: String): Result[String, List[String]] \ IO =
         Util.Files.list(dir) |> Result.mapErr(problem -> "${dir}: ${problem}")
 
-    /// The names under the evidence directory that keep a kept answer or a kept atlas
-    /// line, each in a list of its own. A plain file among them — this project's own
+    /// The names under the evidence directory that keep a kept answer, each in a list of
+    /// its own. A plain file among them — this project's own
     /// README, its config — keeps no evidence, which is what asking whether it is a
     /// directory answers; listing it and reading the failure for an empty directory would
     /// say the same thing for the wrong reason.

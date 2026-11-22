@@ -1,5 +1,5 @@
 /// Laying one line against another: how far a place stands from a line, and the
-/// apartness of two such lines. The diff and the atlas reading both sample these.
+/// apartness of two such lines, which the diff samples.
 ///
 /// Both lines are drawn on one plane — `Geodesy.parallelOf` takes the mean latitude of
 /// the two together, so neither is scaled at a rate of its own — and each line's own
