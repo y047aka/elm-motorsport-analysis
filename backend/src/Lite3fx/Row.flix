@@ -49,8 +49,12 @@ pub mod Lite3fx.Row {
             Some((name, value, Row.Row(left, rest)))
     }
 
-    /// The cell under a name. Two columns of the same name -- a join naming
-    /// one from each side -- answer with the first.
+    /// The cell under a name. Two columns of the same name -- a join naming one from
+    /// each side -- answer with the first.
+    ///
+    /// That is not how a projection is read. `Sql.decode` walks the projection and the
+    /// row's columns together, so each of two columns sharing a name is read at its own
+    /// place, which is what lets a statement project `ord` twice and get two answers.
     pub def get(row: Row, name: String): Option[SqlValue] =
         lookup(columnNames(row), cells(row), name)
 

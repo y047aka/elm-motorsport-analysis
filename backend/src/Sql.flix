@@ -287,9 +287,12 @@ pub mod Sql {
 
     /// `expr AS name` comes back under `name`.
     ///
-    /// The last ` AS ` anywhere in the text, so a projection written as a
-    /// subquery that aliases something inside itself is labelled by that inner
-    /// name rather than by the whole text, and has to be read at that name.
+    /// The label is everything after the last ` AS ` in the text, which is the alias
+    /// when the alias is the last one written. A projection written as a subquery that
+    /// aliases something inside itself is labelled with the whole tail -- `(SELECT max(v)
+    /// AS inner_ FROM t WHERE t.k = laps.k)` is labelled `inner_ FROM t WHERE t.k =
+    /// laps.k)` -- and no column of the row is named that, so the decode refuses rather
+    /// than reading a cell that happens to share a prefix.
     def aliasOf(text: String): Option[String] =
         match List.reverse(String.splitOn({substr = " AS "}, text)) {
             case Nil       => None

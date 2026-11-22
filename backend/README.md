@@ -295,10 +295,7 @@ shape is kept and the driver is not: `src/Lite3fx/` is the same effects, the
 same aliases, and a handler over `org.xerial:sqlite-jdbc`.
 
 What the port keeps back is what SQLite has no answer to, or this
-repository no use for. `NullType` is the six types a column of this schema
-binds rather than sqlfx's fifteen. `Pool` is absent: the CLI opens one
-connection per run and the server one per request, which is what WAL mode is
-there to make work. `commit` and `rollback` stay operations of `SqlWrite`
+repository no use for. `NullType` is six rather than sqlfx's fifteen, and only three of the six -- `Str`, `Int32`, `Json` -- are ever bound. `Pool` is absent: the CLI opens one connection per run and the server one per request, which is what WAL mode is there to make work. `commit` and `rollback` stay operations of `SqlWrite`
 rather than moving into `Tx`, so a recording handler sees a commit go by, and
 `insertMany` is an operation of `SqlWrite` of its own, since a lap arrives a
 thousand at a time rather than one at a time. `RawSql` is inside the aliases
@@ -454,7 +451,11 @@ The round is what every reading of a table keyed by one is scoped by, and it is
 applied where the rows come from rather than by the reader: `Db.Laps.rows` and
 `Db.Cars.rows` take the round and hand back rows already filtered by it, so rows
 of a table at large are not something those modules hand out and a reader cannot
-forget the scope. A reader ANDs its own onto them. Both carry a `round_id`, so a
+forget the scope. A reader ANDs its own onto them. A statement written out is the one
+place the scope can be left out and the statement still be well formed -- it names no
+hole the caller forgot to fill, because it names no hole at all -- so `Sql.statement`
+refuses one that binds no value. That catches a statement naming no round; it does not
+prove the value bound is the round's, and `Sql.refuseUnscoped` says so. Both carry a `round_id`, so a
 scope built from the wrong one would bind to whichever side of a join happened
 to have one; the records do not unify, so it does not compile. What a query builds
 itself needs no `WHERE` written as text: `Db.Laps.scope` is the same predicate had on
@@ -487,7 +488,7 @@ An aggregate and a window are written over a projection and read back as that pr
 
 Some queries are written rather than built, and the line is the builder's own reach: it takes the projection and the four outer clauses, and what it does not reach -- a `WITH`, a window, a correlated subquery -- was text whichever way the statement was put together. `Sql.statement` takes such a statement one clause per line -- Flix has no multi-line string literal, and `spaced` puts the lines back where SQL puts a space -- with `{{name}}` where each piece it cannot write for itself goes, the round it is scoped to and the laps the events fell on, and `%%` where the `SELECT` clause goes, which `columnsOf` renders from the projection that reads it back. Its values go out bound in the order the `?`s they bind stand in. `Sql.spliced` is the same for the piece of a statement: a common table expression, an arm of a `UNION ALL`, a scalar subquery.
 
-The bargain written statements are accepted on is that the database checks them: SQLite resolves a statement's names where it prepares it, so a rename that missed a reference is a refusal the run raises and not a build that fails. `Lite3fx.Jdbc.refusal` carries the statement into that refusal, which is the half the driver's message lacks; it rides onto `SchemaMismatch`, the kind a statement written out fails by.
+The bargain written statements are accepted on is that the database checks them: SQLite resolves a statement's names where it prepares it, so a rename that missed a reference is a refusal the run raises and not a build that fails. `Lite3fx.Jdbc.refusal` carries the statement into that refusal, which is the half the driver's message lacks. It rides onto the two kinds whose own message says nowhere to look -- `SchemaMismatch`, the name the database has not got, and `Other`, the sentence SQLite gave no name to at all, which is what a mistyped keyword of a hand-written statement is -- and not onto a constraint, which names itself.
 
 Which statements are written is told by the call sites of `Sql.statement`. The readings that are a `GROUP BY` or a plain scan stay built, which is where the declared columns and the scoped source earn their keep. The line between them is a clause's, not a statement's: what is written is the statement's shape, and the pieces interpolated into it are declared columns, aggregates over them, and windows over those. What stays text is a column no declaration reaches -- the fifteen `b0`..`b14` a mini-sector best is gathered out of, the `m.key` and `m.value` a `json_each` answers with.
 
