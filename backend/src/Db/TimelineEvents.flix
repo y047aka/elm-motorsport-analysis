@@ -10,8 +10,8 @@
 /// does: a stop ending as the flag falls has to leave the car classified rather
 /// than in the pits.
 pub mod Db.TimelineEvents {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
 
     use Db.Rounds
     use Db.Schema

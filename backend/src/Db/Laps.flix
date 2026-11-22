@@ -4,8 +4,8 @@
 /// and manufacturer, and `Db.CarDrivers` the seat's driver, none of which a
 /// round in the archive varies within a car.
 pub mod Db.Laps {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
 
     use Db.LapRow.LapRow
     use Db.Rounds

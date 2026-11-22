@@ -1,6 +1,6 @@
 pub mod Sql.TestSel {
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.SqlValue
+    use Sqlitefx.DbError.DbErrorKind
+    use Sqlitefx.SqlValue
 
     use Sql.Sel
 

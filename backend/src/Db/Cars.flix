@@ -2,8 +2,8 @@
 /// the season's entries each was. What the feed says about a car is
 /// `Db.Entries`; this is the rounds it ran.
 pub mod Db.Cars {
-    use Lite3fx.DbWrite
-    use Lite3fx.SqlValue
+    use Db.DbWrite
+    use Sqlitefx.SqlValue
 
     use Db.CarRow.CarRow
     use Db.Rounds

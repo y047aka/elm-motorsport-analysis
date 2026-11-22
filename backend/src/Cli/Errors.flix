@@ -1,5 +1,5 @@
 pub mod Cli.Errors {
-    use Lite3fx.DbError.Failure
+    use Sqlitefx.DbError.Failure
 
     use Util.Files
     use Util.Files.FileError

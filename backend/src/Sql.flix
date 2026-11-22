@@ -15,12 +15,14 @@
 /// that order a reading stops at the first cell it cannot read, so past a failure
 /// there is no longer a position to report the next problem at.
 pub mod Sql {
-    use Lite3fx.DbErr
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.DbRead
-    use Lite3fx.Row
-    use Lite3fx.Row.Row
-    use Lite3fx.SqlValue
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.DbError.DbErrorKind
+    use Db.DbRead
+    use Sqlitefx.Row
+    use Sqlitefx.Row.Row
+    use Sqlitefx.SqlValue
+    use Sqlitefx.SqlValue.SqlValue
 
     ///
     /// ===== FRAGMENTS =====
@@ -134,13 +136,72 @@ pub mod Sql {
     /// The expressions of the SELECT clause, and a reading of the cells they
     /// come back as which answers with what is left of the row.
     pub enum Sel[a] {
-        case Sel(List[Frag], Row -> Result[DbErrorKind, (a, Row)])
+        case Sel(List[Frag], Cells -> Result[DbErrorKind, (a, Cells)])
+    }
+
+    /// The cells a reading walks, each beside the label it came back under, in the order the clause wrote them.
+    ///
+    /// A reading takes cells off the front and hands on the rest, which is a position in the row and not a lookup by name: `Sqlitefx.Row` is looked up by name, and a join projecting two columns of one name has the same label twice.
+    pub enum Cells {
+        case Cells(List[String], List[SqlValue])
+    }
+
+    def cellsOf(row: Row): Cells =
+        Cells.Cells(Row.columnNames(row), Vector.toList(row#cells))
+
+    def unlabelled(values: List[SqlValue]): Cells = Cells.Cells(Nil, values)
+
+    def cellList(cells: Cells): List[SqlValue] =
+        let Cells.Cells(_, values) = cells;
+        values
+
+    def labelList(cells: Cells): List[String] =
+        let Cells.Cells(labels, _) = cells;
+        labels
+
+    def cellCount(cells: Cells): Int32 = List.length(cellList(cells))
+
+    def firstCell(cells: Cells): Option[(SqlValue, Cells)] = match cells {
+        case Cells.Cells(_, Nil) => None
+        case Cells.Cells(labels, value :: rest) => Some((value, Cells.Cells(List.drop(1, labels), rest)))
+    }
+
+    def dropCells(n: Int32, cells: Cells): Cells =
+        let Cells.Cells(labels, values) = cells;
+        Cells.Cells(List.drop(n, labels), List.drop(n, values))
+
+    /// The text a cell carries, which is what every column of this schema was written as: the load binds text, and SQLite keeps what it is given. A null has no text, and the answer for one is the empty string.
+    def cellText(value: SqlValue): String = match value {
+        case SqlValue.Str(s)     => s
+        case SqlValue.Json(text) => text
+        case SqlValue.Int32(n)   => "${n}"
+        case SqlValue.Int64(n)   => "${n}"
+        case SqlValue.Float64(n) => "${n}"
+        case SqlValue.Bool(b)    => if (b) "1" else "0"
+        case SqlValue.Null       => ""
+        case SqlValue.NullOf(_)  => ""
+        case other               => "${other}"
+    }
+
+    /// The number a cell carries, where the driver answered it in a wider type than the column holds. Beyond what an `int` column holds there is no number to give, and the answer is none rather than a wrapped-around one.
+    def int32Of(value: SqlValue): Option[Int32] = match value {
+        case SqlValue.Bool(true)  => Some(1)
+        case SqlValue.Bool(false) => Some(0)
+        case SqlValue.Int32(_)    => SqlValue.asInt32(value)
+        case SqlValue.Int64(_)    => SqlValue.asInt32(value)
+        case _                    => Int32.fromString(cellText(value))
+    }
+
+    /// A reading's result, raised in the reader's own context.
+    pub def orRaise(result: Result[DbErrorKind, a]): a \ {Sqlitefx.TransientDbErr, DbErr} = match result {
+        case Ok(value) => value
+        case Err(kind) => DbError.raise(kind)
     }
 
     def cell(expr: Frag, read: String -> SqlValue -> Result[DbErrorKind, a]): Sel[a] =
         let Frag.Frag(text, _) = expr;
-        Sel.Sel(expr :: Nil, row -> match Row.uncons(row) {
-            case Some((_, value, rest)) => read(text, value) |> Result.map(read_ -> (read_, rest))
+        Sel.Sel(expr :: Nil, row -> match firstCell(row) {
+            case Some((value, rest)) => read(text, value) |> Result.map(read_ -> (read_, rest))
             case None                   => Err(DbErrorKind.Other("the row ended before `${text}`"))
         })
 
@@ -148,11 +209,11 @@ pub mod Sql {
     /// what it is given, so a column is asked for as text whatever the driver
     /// answered it in -- which is also how an expression's cell arrives.
     pub def text(expr: String): Sel[String] =
-        cell(raw(expr), (name, v) -> nonNull(name, v) |> Result.map(SqlValue.textOf))
+        cell(raw(expr), (name, v) -> nonNull(name, v) |> Result.map(cellText))
 
     pub def optionalText(expr: String): Sel[Option[String]] =
         cell(raw(expr), (_, v) ->
-            if (SqlValue.isNull(v)) Ok(None) else Ok(Some(SqlValue.textOf(v))))
+            if (SqlValue.isNull(v)) Ok(None) else Ok(Some(cellText(v))))
 
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
@@ -164,9 +225,9 @@ pub mod Sql {
     pub def intOf(expr: Frag): Sel[Int32] =
         cell(expr, (name, v) ->
             if (SqlValue.isNull(v)) Err(DbErrorKind.DecodeError(name, "was null"))
-            else match SqlValue.int32Of(v) {
+            else match int32Of(v) {
                 case Some(n) => Ok(n)
-                case None    => parseInt(name, SqlValue.textOf(v))
+                case None    => parseInt(name, cellText(v))
             })
 
     /// A truth value is stored as the 1 or 0 the driver bound it as.
@@ -175,7 +236,7 @@ pub mod Sql {
             case SqlValue.Int32(1)  => Ok(true)
             case SqlValue.Int32(0)  => Ok(false)
             case SqlValue.Null      => Err(DbErrorKind.DecodeError(name, "was null"))
-            case _ => match SqlValue.textOf(v) {
+            case _ => match cellText(v) {
                 case "1" => Ok(true)
                 case "0" => Ok(false)
                 case t   => Err(DbErrorKind.DecodeError(name, "is not a boolean: \"${t}\""))
@@ -189,16 +250,16 @@ pub mod Sql {
     pub def optionalIntOf(expr: Frag): Sel[Option[Int32]] =
         cell(expr, (name, v) ->
             if (SqlValue.isNull(v)) Ok(None)
-            else match SqlValue.int32Of(v) {
+            else match int32Of(v) {
                 case Some(n) => Ok(Some(n))
-                case None    => parseInt(name, SqlValue.textOf(v)) |> Result.map(Some)
+                case None    => parseInt(name, cellText(v)) |> Result.map(Some)
             })
 
     /// A mini-sector column arrives as the JSON array it was written as.
     pub def optionalIntArray(expr: String): Sel[Option[List[Option[Int32]]]] =
         cell(raw(expr), (name, v) ->
             if (SqlValue.isNull(v)) Ok(None)
-            else parseIntArray(name, SqlValue.textOf(v)) |> Result.map(Some))
+            else parseIntArray(name, cellText(v)) |> Result.map(Some))
 
     /// The failure a cell that carries nothing is, in the words the reading has
     /// always used for one.
@@ -260,13 +321,14 @@ pub mod Sql {
     pub def decode(sel: Sel[a], row: Row): Result[DbErrorKind, a] =
         let Sel.Sel(_, decodeCells) = sel;
         let names = labels(sel);
-        let width = List.length(names);
-        if (width != Row.size(row))
+        let projected = List.length(names);
+        let given = cellsOf(row);
+        if (projected != cellCount(given))
             Err(DbErrorKind.SchemaMismatch(
-                "the projection names ${width} columns and the row carries ${Row.size(row)}"))
+                "the projection names ${projected} columns and the row carries ${cellCount(given)}"))
         else
-            align(names, List.zip(Row.columnNames(row), Row.cells(row)))
-                |> Result.flatMap(cells -> decodeCells(Row.ofCells(cells)))
+            align(names, List.zip(labelList(given), cellList(given)))
+                |> Result.flatMap(cells -> decodeCells(unlabelled(cells)))
                 |> Result.map(match (value, _) -> value)
 
     /// The label a projection comes back under.
@@ -374,8 +436,8 @@ pub mod Sql {
         let Sel.Sel(columns, decodeCells) = Project.sel(pick);
         let width = List.length(columns);
         Sel.Sel(columns, row ->
-            if (width > 0 and Row.size(row) >= width and Row.allNull(row, width))
-                Ok((None, Row.drop(row, width)))
+            if (width > 0 and cellCount(row) >= width and List.forAll(SqlValue.isNull, List.take(width, cellList(row))))
+                Ok((None, dropCells(width, row)))
             else
                 decodeCells(row) |> Result.map(match (value, rest) -> (Some(value), rest))
         )
@@ -445,8 +507,8 @@ pub mod Sql {
     /// first row of a window.
     pub def opt(p: p): Sel[Option[Project.Out[p]]] with Project[p] =
         let Sel.Sel(columns, decode) = Project.sel(p);
-        Sel.Sel(columns, row -> match List.head(Row.cells(row)) {
-            case Some(value) if SqlValue.isNull(value) => Ok((None, Row.drop(row, 1)))
+        Sel.Sel(columns, row -> match List.head(cellList(row)) {
+            case Some(value) if SqlValue.isNull(value) => Ok((None, dropCells(1, row)))
             case _ => decode(row) |> Result.map(match (value, rest) -> (Some(value), rest))
         })
 
@@ -837,14 +899,14 @@ pub mod Sql {
     ///
 
     pub def selectAll(q: Query[a]): List[a] \ DbRead =
-        fetched(q) |> List.map(row -> Lite3fx.Sql.orRaise(decode(projectionOf(q), row)))
+        fetched(q) |> List.map(row -> Sql.orRaise(decode(projectionOf(q), row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
     pub def selectOne(subject: String, q: Query[a]): a \ DbRead =
         match fetched(q) {
-            case row :: _ => Lite3fx.Sql.orRaise(decode(projectionOf(q), row))
-            case Nil      => DbErr.raise(DbErrorKind.NoRow(subject))
+            case row :: _ => Sql.orRaise(decode(projectionOf(q), row))
+            case Nil      => DbErr.raise(DbErrorKind.Other("${subject} came back with no row"))
         }
 
     def projectionOf(q: Query[a]): Sel[a] =
@@ -855,7 +917,7 @@ pub mod Sql {
 
     def fetched(q: Query[a]): List[Row] \ DbRead =
         let Frag.Frag(sql, params) = toStatement(q);
-        Lite3fx.Sql.fetch(sql, params)
+        Sqlitefx.Sql.fetch(sql, params)
 
     ///
     /// ===== STATEMENTS =====
@@ -938,11 +1000,16 @@ pub mod Sql {
         table: String,
         columns: List[{name = String, bind = row -> SqlValue | r}],
         rows: List[row]
-    ): (String, List[List[SqlValue]]) =
-        let statement = "INSERT INTO " + table
-            + " (" + (columns |> List.map(c -> c#name) |> List.join(", ")) + ")"
-            + " VALUES (" + (columns |> List.map(_ -> "?") |> List.join(", ")) + ")";
-        (statement, rows |> List.map(row -> columns |> List.map(c -> (c#bind)(row))))
+    ): Option[(String, List[SqlValue])] =
+        if (List.isEmpty(rows))
+            None
+        else {
+            let group = "(" + (columns |> List.map(_ -> "?") |> List.join(", ")) + ")";
+            let statement = "INSERT INTO " + table
+                + " (" + (columns |> List.map(c -> c#name) |> List.join(", ")) + ")"
+                + " VALUES " + (rows |> List.map(_ -> group) |> List.join(", "));
+            Some((statement, rows |> List.flatMap(row -> columns |> List.map(c -> (c#bind)(row)))))
+        }
 
     ///
     /// ===== TAGGED BRANCHES =====

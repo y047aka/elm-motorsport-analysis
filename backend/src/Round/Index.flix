@@ -4,8 +4,8 @@
 /// the standing one, is settled here beside the query that counts it. What a
 /// record is stays in `Motorsport.Index`.
 pub mod Round.Index {
-    use Lite3fx.DbErr
-    use Lite3fx.DbRead
+    use Sqlitefx.DbErr
+    use Db.DbRead
 
     use Db.LapRow.LapRow
     use Db.Laps

@@ -1,64 +1,51 @@
+/// The connection `Db.connection` configures, driven against SQLite itself: what the tables declare, what a round's savepoint takes back, and what a file database is opened as.
+///
+/// How the library binds, reads and refuses is `backend/sqlitefx`'s tests'.
 pub mod Db.TestJdbc {
-    use Lite3fx.DbErr
-    use Lite3fx.DbError
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.DbWrite
-    use Lite3fx.Jdbc
-    use Lite3fx.Row
-    use Lite3fx.Row.Row
-    use Lite3fx.SqlRead
-    use Lite3fx.SqlValue
-    use Lite3fx.Tx
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.DbError.DbErrorKind
+    use Db.DbWrite
+    use Sqlitefx.Jdbc
+    use Sqlitefx.RawSql
+    use Sqlitefx.Row.Row
+    use Sqlitefx.SqlValue
+    use Sqlitefx.Tx
 
     use Db.Laps
 
     import java.io.File
+    import java.sql.Connection
 
     use Db.LapRow
     use Db.TestLapRow
-    use Motorsport.Calendar.Entry
     use Round.TestSupport
 
-    /// The cells of the rows a fetch answered with. The names beside them are
-    /// the driver's own, and what these tests say is the cells.
     def cells(rows: Result[DbErrorKind, List[Row]]): Result[DbErrorKind, List[List[SqlValue]]] =
-        Result.map(List.map(Row.cells), rows)
+        Result.map(List.map(row -> Vector.toList(row#cells)), rows)
 
-    def connected(f: Unit -> Result[DbErrorKind, a] \ ef): Result[DbErrorKind, a] \ (ef - Lite3fx.Db) + IO =
-        match DbError.runWithKind(() -> Jdbc.withConnection(TestSupport.url(), f)) {
-            case Ok(result) => result
-            case Err(e)     => Err(e)
-        }
+    def connectedTo(url: String, f: Connection -> a \ ef): Result[DbErrorKind, a] \ (ef - Db.DbAll) + IO =
+        DbError.runWithKind(() -> RawSql.runWithAllow(() -> Jdbc.withConnection(Db.connection(url), f)))
 
-    @Test
-    def aFetchReadsBackTextAndNulls(): Unit \ {Assert, IO} =
-        let result = connected(() -> SqlRead.fetch("select 'a', null, 42, null", Nil));
-        Assert.assertTrue(cells(result) == Ok(
-            (SqlValue.Str("a") :: SqlValue.Null :: SqlValue.Int32(42) :: SqlValue.Null :: Nil) :: Nil
-        ))
+    def connected(f: Unit -> a \ ef): Result[DbErrorKind, a] \ (ef - Db.DbAll) + IO =
+        connectedTo(TestSupport.url(), _ -> f())
 
-    /// What `Db.atomically` marks is SQLite's own savepoint, so this is where
-    /// it is driven against one: a round of a load sends rows to several
-    /// tables, and a failure at the last of them has to leave none of the
-    /// others behind. `Jdbc`'s savepoint is the insert's alone and would
-    /// keep them.
+    /// A round of a load sends rows to several tables under one savepoint, so a failure at the last of them has to leave none of the others behind, and the round after it still lands.
     @Test
     def aFailedRoundLeavesNoneOfItsRowsBehind(): Unit \ {Assert, IO} =
         let refused = DbErrorKind.Other("the round was not what it should have been");
-        let counted = connected(() -> {
-            discard DbError.runWithKind(() -> {
-                discard Lite3fx.Sql.execute("CREATE TABLE t (n int not null)", Nil);
-                Lite3fx.Sql.execute("INSERT INTO t VALUES (1)", Nil)
-            });
+        let counted = connectedTo(TestSupport.url(), conn -> Tx.withTx(conn, () -> {
+            discard Sqlitefx.Sql.execute("CREATE TABLE t (n int not null)", Nil);
+            discard Sqlitefx.Sql.execute("INSERT INTO t VALUES (1)", Nil);
             discard Tx.withSavepoint("round", () -> {
-                discard Lite3fx.Sql.execute("INSERT INTO t VALUES (2)", Nil);
-                discard Lite3fx.Sql.execute("INSERT INTO t VALUES (3)", Nil);
+                discard Sqlitefx.Sql.execute("INSERT INTO t VALUES (2)", Nil);
+                discard Sqlitefx.Sql.execute("INSERT INTO t VALUES (3)", Nil);
                 DbErr.raise(refused)
             });
             discard Tx.withSavepoint("round", () ->
-                Lite3fx.Sql.execute("INSERT INTO t VALUES (4)", Nil));
-            SqlRead.fetch("SELECT n FROM t ORDER BY n", Nil)
-        });
+                Sqlitefx.Sql.execute("INSERT INTO t VALUES (4)", Nil));
+            Sqlitefx.Sql.fetch("SELECT n FROM t ORDER BY n", Nil)
+        }));
         Assert.assertTrue(cells(counted) == Ok(
             (SqlValue.Int32(1) :: Nil) :: (SqlValue.Int32(4) :: Nil) :: Nil
         ))
@@ -74,8 +61,8 @@ pub mod Db.TestJdbc {
     @Test
     def aPrimaryKeyBuildsNoIndexOfItsOwn(): Unit \ {Assert, IO} =
         let indexes = table -> connected(() -> {
-            discard DbError.runWithKind(() -> Lite3fx.Sql.execute(table, Nil));
-            SqlRead.fetch(
+            discard Sqlitefx.Sql.execute(table, Nil);
+            Sqlitefx.Sql.fetch(
                 "SELECT name FROM sqlite_master WHERE type = 'index'"
                     + " AND name LIKE 'sqlite_autoindex%' ORDER BY name", Nil)
         });
@@ -89,82 +76,22 @@ pub mod Db.TestJdbc {
         Assert.assertTrue(cells(indexes(Db.Cars.createTable())) == Ok(Nil));
         Assert.assertTrue(cells(indexes(Db.TimelineEvents.createTable())) == Ok(Nil))
 
-    /// The connection the server answers through.
-    @Test
-    def aReadingConnectionAnswersAFetch(): Unit \ {Assert, IO} =
-        let result = match Jdbc.connect(TestSupport.url()) {
-            case Err(e)   => Err(e)
-            case Ok(conn) =>
-                let value = Jdbc.runReading(conn, () -> SqlRead.fetch("select 1", Nil));
-                Jdbc.close(conn);
-                value
-        };
-        Assert.assertTrue(cells(result) == Ok((SqlValue.Int32(1) :: Nil) :: Nil))
-
-    @Test
-    def aFetchReadsEveryRowInTheOrderAsked(): Unit \ {Assert, IO} =
-        let result = connected(() -> SqlRead.fetch(
-            "select n from (select 1 as n union select 2 union select 3) order by n desc", Nil));
-        Assert.assertTrue(cells(result) == Ok(
-            (SqlValue.Int32(3) :: Nil) :: (SqlValue.Int32(2) :: Nil) :: (SqlValue.Int32(1) :: Nil) :: Nil
-        ))
-
-    /// A value reaches the database as a binding rather than as text, so a
-    /// round named with a quote in it is read rather than reported as a syntax
-    /// error.
-    @Test
-    def aFetchBindsItsParameters(): Unit \ {Assert, IO} =
-        let result = connected(() -> SqlRead.fetch(
-            "select ?, ?", SqlValue.Str("o'brien") :: SqlValue.Int32(42) :: Nil));
-        Assert.assertTrue(cells(result) == Ok(
-            (SqlValue.Str("o'brien") :: SqlValue.Int32(42) :: Nil) :: Nil
-        ))
-
-    /// A write binds its parameters the same way a read does, and answers with
-    /// how many rows the database took.
-    @Test
-    def aWriteBindsItsParametersAndCountsTheRows(): Unit \ {Assert, IO} =
-        let outcome = connected(() -> DbError.runWithKind(() -> {
-            discard Lite3fx.Sql.execute("CREATE TABLE t (n int not null)", Nil);
-            discard Lite3fx.Sql.execute("INSERT INTO t VALUES (?)", SqlValue.Int32(1) :: Nil);
-            discard Lite3fx.Sql.execute("INSERT INTO t VALUES (?)", SqlValue.Int32(2) :: Nil);
-            Lite3fx.Sql.execute("UPDATE t SET n = ? WHERE n = ?", SqlValue.Int32(9) :: SqlValue.Int32(1) :: Nil)
-        }));
-        Assert.assertTrue(outcome == Ok(1))
-
-    /// The load of a round is one statement, so a database that refuses it
-    /// leaves none of the round's rows behind rather than some of them.
+    /// A round's laps are one statement, so a database that refuses them leaves none of the round's rows behind rather than some of them.
     @Test
     def aRefusedLoadLeavesWhatWasThereAlone(): Unit \ {Assert, IO} =
         let rows = LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil);
         let outcome = connected(() -> {
             let accepted = DbError.runWithKind(() -> { Laps.create(); Laps.insertRows(rows) });
             let refused  = DbError.runWithKind(() -> Laps.insertRows(rows));
-            let counted  = SqlRead.fetch("SELECT COUNT(*) FROM laps", Nil);
-            Ok((accepted, refused, counted))
+            let counted  = Sqlitefx.Sql.fetch("SELECT COUNT(*) FROM laps", Nil) |> List.map(row -> Vector.toList(row#cells));
+            (accepted, refused, counted)
         });
         match outcome {
             case Ok((accepted, refused, counted)) =>
                 Assert.assertTrue(accepted == Ok(1));
-                match refused {
-                    case Ok(_)  => Assert.assertTrue(false)
-                    case Err(_) => Assert.assertTrue(true)
-                };
-                Assert.assertTrue(cells(counted) == Ok((SqlValue.Int32(1) :: Nil) :: Nil))
+                Assert.assertTrue(Result.isErr(refused));
+                Assert.assertTrue(counted == (SqlValue.Int32(1) :: Nil) :: Nil)
             case Err(_) => Assert.assertTrue(false)
-        }
-
-    /// The names come back as the driver reports them, which is what the query
-    /// aliased -- and a column read by name is the one thing position cannot do.
-    @Test
-    def aRowIsReadByTheNameTheQueryGaveIt(): Unit \ {Assert, IO} =
-        let result = connected(() -> SqlRead.fetch("select 42 as answer, 'text' as said", Nil));
-        match Result.map(List.head, result) {
-            case Ok(Some(row)) =>
-                Assert.assertTrue(Row.get(row, "answer") == Some(SqlValue.Int32(42)));
-                Assert.assertTrue(Row.get(row, "said") == Some(SqlValue.Str("text")));
-                Assert.assertTrue(Row.get(row, "absent") == None)
-            case _             => Assert.assertTrue(false)
         }
 
     /// An aggregate answers in a number the driver found rather than one the
@@ -172,39 +99,39 @@ pub mod Db.TestJdbc {
     @Test
     def aNumberTheDriverFoundIsReadAsOne(): Unit \ {Assert, IO} =
         let sel = Sql.intOf(Sql.raw("total"));
-        let result = connected(() -> SqlRead.fetch("select 3 + 4 as total", Nil));
+        let result = connected(() -> Sqlitefx.Sql.fetch("select 3 + 4 as total", Nil));
         match Result.map(List.head, result) {
             case Ok(Some(row)) => Assert.assertTrue(Sql.decode(sel, row) == Ok(7))
             case _             => Assert.assertTrue(false)
         }
 
+    /// A join projecting a column of each side under one name reads each at its own place.
     @Test
-    def aFetchWithNoRowsIsEmptyRatherThanAnError(): Unit \ {Assert, IO} =
-        let result = connected(() -> SqlRead.fetch("select 1 where 0", Nil));
-        Assert.assertTrue(result == Ok(Nil))
+    def twoColumnsOfOneNameAreReadInTheOrderProjected(): Unit \ {Assert, IO} =
+        let sel = Sql.Project.sel((Sql.intOf(Sql.raw("a.n")), Sql.intOf(Sql.raw("b.n"))));
+        let result = connected(() -> Sqlitefx.Sql.fetch("SELECT a.n, b.n FROM (SELECT 1 AS n) a, (SELECT 2 AS n) b", Nil));
+        match Result.map(List.head, result) {
+            case Ok(Some(row)) => Assert.assertTrue(Sql.decode(sel, row) == Ok((1, 2)))
+            case _             => Assert.assertTrue(false)
+        }
 
     // --------------------------------------------------------- a file database
 
     /// The tests above connect to an in-memory database, which is neither
     /// created on a path nor journalled. What a run computes in is a file, so
-    /// the two things `connect` does to reach one are driven here.
+    /// what `Db.connection` opens one as is driven here.
 
     /// A database of its own per test, under a directory that does not exist,
     /// which is what a working copy's `.db` is on a first run.
-    def onFile(f: Unit -> Result[DbErrorKind, a] \ ef): (String, Result[DbErrorKind, a]) \ (ef - Lite3fx.Db) + IO =
+    def onFile(f: Connection -> a \ ef): (String, Result[DbErrorKind, a]) \ (ef - Db.DbAll) + IO =
         let stem = File.createTempFile("motorsport-test", "");
         discard stem.delete();
         let path = "${stem.getPath()}/motorsport.sqlite";
-        let result = match DbError.runWithKind(() -> Jdbc.withConnection("jdbc:sqlite:${path}", f)) {
-            case Ok(value) => value
-            case Err(e)    => Err(e)
-        };
-        (path, result)
+        (path, connectedTo("jdbc:sqlite:${path}", f))
 
     def remove(path: String): Unit \ IO =
-        let file = new File(path);
-        discard file.delete();
-        match Object.toOption(file.getParentFile()) {
+        List.forEach(suffix -> discard new File("${path}${suffix}").delete(), "" :: "-wal" :: "-shm" :: Nil);
+        match Object.toOption(new File(path).getParentFile()) {
             case Some(parent) => discard parent.delete()
             case None         => ()
         }
@@ -213,7 +140,7 @@ pub mod Db.TestJdbc {
     /// naming one that does not exist reaches no database at all.
     @Test
     def connectingMakesTheDirectoryTheFileNeeds(): Unit \ {Assert, IO} =
-        let (path, result) = onFile(() -> SqlRead.fetch("select 1", Nil));
+        let (path, result) = onFile(_ -> Sqlitefx.Sql.fetch("select 1", Nil));
         Assert.assertTrue(cells(result) == Ok((SqlValue.Int32(1) :: Nil) :: Nil));
         Assert.assertTrue(new File(path).exists());
         remove(path)
@@ -222,7 +149,7 @@ pub mod Db.TestJdbc {
     /// run beside a writing run rather than behind it.
     @Test
     def aFileDatabaseIsJournalledForConcurrentReaders(): Unit \ {Assert, IO} =
-        let (path, result) = onFile(() -> SqlRead.fetch("PRAGMA journal_mode", Nil));
+        let (path, result) = onFile(_ -> Sqlitefx.Sql.fetch("PRAGMA journal_mode", Nil));
         Assert.assertTrue(cells(result) == Ok((SqlValue.Str("wal") :: Nil) :: Nil));
         remove(path)
 
@@ -230,34 +157,18 @@ pub mod Db.TestJdbc {
     /// connection to one is a database of its own.
     @Test
     def aSecondConnectionReadsWhatTheFirstCommitted(): Unit \ {Assert, IO} =
-        let (path, written) = onFile(() -> DbError.runWithKind(() -> Tx.transact(load)));
+        let (path, written) = onFile(conn -> Tx.withTx(conn, load));
         let readBack = counted(path);
         Assert.assertTrue(written == Ok(1));
         Assert.assertTrue(cells(readBack) == Ok((SqlValue.Int32(1) :: Nil) :: Nil));
         remove(path)
 
-    /// What a run that stopped partway left is what it started from: the
-    /// `DROP TABLE` a rebuild opens with is undone with the rows it did not
-    /// finish loading, so the table is not there to be read at all.
-    @Test
-    def whatWasNotCommittedIsNotThere(): Unit \ {Assert, IO} =
-        let (path, written) = onFile(() -> DbError.runWithKind(() -> discard load()));
-        Assert.assertTrue(written == Ok(()));
-        match counted(path) {
-            case Ok(_)  => Assert.assertTrue(false)
-            case Err(_) => Assert.assertTrue(true)
-        };
-        remove(path)
-
-    /// A transaction that answers with an error takes back what it sent.
+    /// A transaction that answers with an error takes back what it sent: the `DROP TABLE` a rebuild opens with is undone with the rows, so the table is not there to be read at all.
     @Test
     def aTransactionThatFailedTakesBackWhatItSent(): Unit \ {Assert, IO} =
-        let (path, written) = onFile(() -> DbError.runWithKind(() -> Tx.transact(refuse)));
+        let (path, written) = onFile(conn -> Tx.withTx(conn, refuse));
         Assert.assertTrue(written == Err(DbErrorKind.Other("the round was not what it should have been")));
-        match counted(path) {
-            case Ok(_)  => Assert.assertTrue(false)
-            case Err(_) => Assert.assertTrue(true)
-        };
+        Assert.assertTrue(Result.isErr(counted(path)));
         remove(path)
 
     /// A round loaded and then judged unfit, which is a transaction answering
@@ -272,12 +183,6 @@ pub mod Db.TestJdbc {
 
     /// From a connection of its own, so what it counts is what was committed.
     def counted(path: String): Result[DbErrorKind, List[Row]] \ IO =
-        match Jdbc.connect("jdbc:sqlite:${path}") {
-            case Err(e)   => Err(e)
-            case Ok(conn) =>
-                let value = Jdbc.runWith(conn, () -> SqlRead.fetch("SELECT COUNT(*) FROM laps", Nil));
-                Jdbc.close(conn);
-                value
-        }
+        connectedTo("jdbc:sqlite:${path}", _ -> Sqlitefx.Sql.fetch("SELECT COUNT(*) FROM laps", Nil))
 
 }

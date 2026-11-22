@@ -1,5 +1,5 @@
 pub mod Sql.TestTagged {
-    use Lite3fx.DbError.DbErrorKind
+    use Sqlitefx.DbError.DbErrorKind
 
     use Sql.Branch
 

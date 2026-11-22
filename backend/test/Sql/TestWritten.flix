@@ -2,10 +2,10 @@
 /// values the statement cannot write for itself come out in.
 pub mod Sql.TestWritten {
 
-    use Lite3fx.DbErr
-    use Lite3fx.DbError
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.SqlValue
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.DbError.DbErrorKind
+    use Sqlitefx.SqlValue
 
     /// The round's rows, as a statement that wrote its own `WHERE` puts them.
     def scoped(): Sql.Frag =

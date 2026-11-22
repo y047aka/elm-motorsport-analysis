@@ -1,14 +1,16 @@
 pub mod Cli.Load {
-    use Lite3fx.DbErr
-    use Lite3fx.DbError
-    use Lite3fx.DbError.DbErrorKind
-    use Lite3fx.DbRead
-    use Lite3fx.DbWrite
-    use Lite3fx.RawSql
-    use Lite3fx.SqlRead
-    use Lite3fx.SqlSavepoint
-    use Lite3fx.SqlWrite
-    use Lite3fx.Tx
+    use Sqlitefx.DbErr
+    use Sqlitefx.DbError
+    use Sqlitefx.DbError.DbErrorKind
+    use Db.DbRead
+    use Db.DbWrite
+    use Sqlitefx.RawSql
+    use Sqlitefx.SqlRead
+    use Sqlitefx.SqlSavepoint
+    use Sqlitefx.SqlWrite
+    use Sqlitefx.Tx
+
+    import java.sql.Connection
 
     use Db.CarDrivers
     use Db.Cars
@@ -58,14 +60,14 @@ pub mod Cli.Load {
     /// run that dies partway through leaves the rounds it was rebuilding from.
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
-    pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite, SqlSavepoint, RawSql} =
-        let rebuild = DbError.runWithFailure(() -> Tx.transact(() -> {
+    pub def runAll(conn: Connection, root: String): Int32 \ {IO, Console, RawSql} =
+        let rebuild = DbError.runWithFailure(() -> Tx.withTx(conn, () -> {
             let rounds = createTables();
             convertRounds(root, rounds)
         }));
         match rebuild {
             case Err(e) =>
-                Console.eprintln("Database: ${e}");
+                Console.eprintln("Database: ${DbError.describeFailure(e)}");
                 1
             case Ok(code) =>
                 code
@@ -92,7 +94,7 @@ pub mod Cli.Load {
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Lite3fx.Db} =
+    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Db.DbAll} =
         let tasks = FileTask.inputs(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(rounds, acc#numbered, task) {
@@ -138,7 +140,7 @@ pub mod Cli.Load {
         rounds: List[RoundRow],
         numbering: Numbered,
         task: FileTask.Input
-    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, Lite3fx.Db} =
+    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, Db.DbAll} =
         match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
             case Err(e) => (Err(e), numbering)
             case Ok(rawLaps) =>
@@ -214,7 +216,7 @@ pub mod Cli.Load {
                 }
         }
 
-    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ (Lite3fx.Db - {Lite3fx.SqlSavepoint}) =
+    def timeline(roundId: Int32, entry: Motorsport.Calendar.Entry): Int32 \ (Db.DbAll - {Sqlitefx.SqlSavepoint}) =
         TimelineEvents.insertRows(TimelineEvents.fromEvents(
             roundId,
             Round.Timeline.fromLaps(entry, Round.Summary.particulars(entry)#timeLimit)
