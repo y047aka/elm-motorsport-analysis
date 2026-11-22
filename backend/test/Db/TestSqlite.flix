@@ -73,7 +73,15 @@ pub mod Db.TestSqlite {
                 == DbErrorKind.NotNullViolation("laps.season"));
         Assert.assertTrue(
             SqliteState.classify({code = 19, message = "CHECK constraint failed: flag_at_fl"})
-                == DbErrorKind.CheckViolation("flag_at_fl"))
+                == DbErrorKind.CheckViolation("flag_at_fl"));
+        // The sentence the JDBC driver actually throws with the primary code alone,
+        // which is how most constraints arrive.
+        Assert.assertTrue(
+            SqliteState.classify({
+                code = 19,
+                message = "[SQLITE_CONSTRAINT_UNIQUE] A UNIQUE constraint failed (UNIQUE constraint failed: t.k)"
+            }) == DbErrorKind.UniqueViolation("t.k")
+        )
 
     @Test
     def everyOtherCodeIsTheDriversOwnSentence(): Unit \ Assert =

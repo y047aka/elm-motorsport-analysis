@@ -57,15 +57,20 @@ pub mod Lite3fx.SqliteState {
         case _                                 => kindFromMessage(message)
     }
 
-    /// The message's own words, which is where SQLite names the constraint.
+    /// The message's own words, which is where SQLite names the constraint. The
+    /// phrases are searched for rather than matched at the front, for the same reason
+    /// `missingSchema` does: the JDBC driver answers most of these with the primary
+    /// code alone and wraps SQLite's sentence in one of its own --
+    /// `[SQLITE_CONSTRAINT_UNIQUE] A UNIQUE constraint failed (UNIQUE constraint
+    /// failed: t.k)`.
     def kindFromMessage(message: String): DbErrorKind =
-        if (String.startsWith({prefix = "UNIQUE constraint failed"}, message))
+        if (String.contains({substr = "UNIQUE constraint failed"}, message))
             DbErrorKind.UniqueViolation(name(message))
-        else if (String.startsWith({prefix = "FOREIGN KEY constraint failed"}, message))
+        else if (String.contains({substr = "FOREIGN KEY constraint failed"}, message))
             DbErrorKind.ForeignKeyViolation(message)
-        else if (String.startsWith({prefix = "NOT NULL constraint failed"}, message))
+        else if (String.contains({substr = "NOT NULL constraint failed"}, message))
             DbErrorKind.NotNullViolation(name(message))
-        else if (String.startsWith({prefix = "CHECK constraint failed"}, message))
+        else if (String.contains({substr = "CHECK constraint failed"}, message))
             DbErrorKind.CheckViolation(name(message))
         else
             DbErrorKind.Other(message)
@@ -81,11 +86,15 @@ pub mod Lite3fx.SqliteState {
     /// The constraint or column named after `failed`, which is the one part of
     /// the sentence that says which. Where the message has no such part, the
     /// whole of it is kept rather than nothing.
+    ///
+    /// The name ends where a parenthesis does: the driver closes SQLite's own
+    /// sentence in one of its own, so the last `failed:` is followed by `t.k)`.
     def name(message: String): String =
-        match String.splitOn({substr = "failed:"}, message) {
-            case _ :: rest =>
-                String.trim(List.last(rest) |> Option.getWithDefault(message))
-            case Nil => message
-        }
+        let said = match String.splitOn({substr = "failed:"}, message) {
+            case _ :: rest => String.trim(List.last(rest) |> Option.getWithDefault(message))
+            case Nil       => message
+        };
+        let named = List.head(String.splitOn({substr = ")"}, said)) |> Option.getWithDefault(said);
+        String.trim(named)
 
 }
