@@ -12,11 +12,6 @@ pub mod Sqlitefx.Tx {
 
     import java.sql.Connection
     import java.sql.SQLException
-    import java.lang.Class
-    import java.lang.ClassNotFoundException
-    import java.lang.Object
-    import org.postgresql.core.BaseConnection
-    import org.postgresql.core.TransactionState
 
     ///
     /// BEGIN してから thunk を同じ接続で走らせ、正常なら COMMIT、Transient / DbErr のどちらかが飛べば ROLLBACK して再送出。
@@ -37,8 +32,7 @@ pub mod Sqlitefx.Tx {
 
     ///
     /// Tx の中の一部分だけを SAVEPOINT で囲む。`SAVEPOINT name` → thunk → 成功なら `RELEASE SAVEPOINT name` で `Ok`、
-    /// thunk が `TransientDbErr` / `DbErr` を投げたら `ROLLBACK TO SAVEPOINT name` で戻して `Err`。中の失敗（statement_timeout、
-    /// 制約違反、aborted）は外の Tx に及ばず、`SET LOCAL` / `set_config(..., true)` も SAVEPOINT の前の値に戻る。
+    /// thunk が `TransientDbErr` / `DbErr` を投げたら `ROLLBACK TO SAVEPOINT name` で戻して `Err`。中の失敗（BUSY、制約違反）は外の Tx に及ばない。
     /// 読むだけ（`DbRead`）の Tx でも張れる。`RELEASE` / `ROLLBACK TO` 自体の失敗は値にせず、外の Tx の失敗として投げる。
     ///
     /// ```
@@ -84,40 +78,18 @@ pub mod Sqlitefx.Tx {
         }
 
     ///
-    /// COMMIT して autocommit に戻す。COMMIT 自体の失敗（直列化失敗など）も翻訳する。
+    /// COMMIT して autocommit に戻す。COMMIT 自体の失敗（他の接続のロックで BUSY など）も翻訳する。
     /// 失敗したら ROLLBACK して autocommit に戻してから投げる。戻さないと、次の文が誰も COMMIT しない Tx に入る。
-    /// Tx の中の SQL が失敗して aborted のままなら（`Db.attempt` で失敗を値にした後など）、ROLLBACK して `DbErr.rollback`。
     ///
-    /// WhyNot: aborted な Tx をそのまま `conn.commit()` に渡さないのは、PG は aborted な Tx への COMMIT を ROLLBACK として
-    /// 受けるが pgjdbc は例外にしないので、書いた物が黙って消えたのに Ok で返ってしまうため。
+    /// WhyNot: PG のように COMMIT の前に Tx が aborted かを見ないのは、SQLite は失敗した文だけを巻き戻して Tx を続けるから。
+    /// Tx ごと巻き戻す失敗（SQLITE_FULL、SQLITE_IOERR など）の後では SQLite の側に Tx が無く、COMMIT が「no transaction is active」で失敗するので、書いた物が黙って消えたまま Ok で返る道は無い。
     ///
     pub def commit(conn: Connection): Unit \ {IO, TransientDbErr, DbErr} =
-        if (isAborted(conn)) {
-            discard rollback(conn);
-            DbErr.rollback()
-        } else
-            try {
-                conn.commit();
-                conn.setAutoCommit(true)
-            } catch {
-                case e: SQLException => { discard rollback(conn); Jdbc.raiseSqlException(e) }
-            }
-
-    ///
-    /// Tx の中の SQL が失敗して、これ以上の文が 25P02 になる状態か（pgjdbc の TransactionState.FAILED）。
-    /// pgjdbc の接続でなければ（HikariCP の proxy から unwrap できなければ）false。
-    ///
-    def isAborted(conn: Connection): Bool \ IO =
         try {
-            let target: Class[Object] = Class.forName("org.postgresql.core.BaseConnection");
-            let raw: Object = conn.unwrap(target);
-            let base: BaseConnection = unchecked_cast(raw as BaseConnection);
-            let state: TransactionState = base.getTransactionState();
-            let name: String = state.name();
-            name == "FAILED"
+            conn.commit();
+            conn.setAutoCommit(true)
         } catch {
-            case _: SQLException            => false
-            case _: ClassNotFoundException  => false
+            case e: SQLException => { discard rollback(conn); Jdbc.raiseSqlException(e) }
         }
 
     ///

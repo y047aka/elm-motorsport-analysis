@@ -1,5 +1,5 @@
 ///
-/// fatal の判定（`Db.isFatal`）と、pgjdbc の中から出た例外の判定（`Db.fromDriver`）。DB 無し。
+/// fatal の判定（`Db.isFatal`）と、sqlite-jdbc の中から出た例外の判定（`Db.fromDriver`）。DB 無し。
 ///
 mod TestFatal {
 
@@ -13,8 +13,8 @@ mod TestFatal {
     import java.lang.StackTraceElement
     import java.lang.Throwable
     import java.util.concurrent.CompletionException
-    import org.postgresql.util.PSQLException
-    import org.postgresql.util.PSQLState
+    import org.sqlite.SQLiteErrorCode
+    import org.sqlite.SQLiteException
 
     /// cause を depth 段だけ RuntimeException で包む。
     def wrapped(depth: Int32, inner: Throwable): Throwable \ IO =
@@ -59,10 +59,10 @@ mod TestFatal {
         error.setStackTrace(frames);
         checked_cast(error)
 
-    /// pgjdbc の例外。
-    def psqlException(): Throwable \ IO =
-        let state: PSQLState = PSQLState.UNKNOWN_STATE;
-        checked_cast(new PSQLException("x", state))
+    /// sqlite-jdbc の例外。
+    def sqliteException(): Throwable \ IO =
+        let code: SQLiteErrorCode = SQLiteErrorCode.SQLITE_ERROR;
+        checked_cast(new SQLiteException("x", code))
 
     /// stack trace の無い IllegalStateException。
     def withoutFrames(): Throwable \ IO =
@@ -72,23 +72,23 @@ mod TestFatal {
         checked_cast(error)
 
     ///
-    /// pgjdbc の中から出たか。例外の class 名か、stack trace の先頭の frame の class 名が `org.postgresql.` で始まる物。
+    /// sqlite-jdbc の中から出たか。例外の class 名か、stack trace の先頭の frame の class 名が `org.sqlite.` で始まる物。
     ///
-    ///   例外                                                          → 期待
-    ///   先頭の frame が org.postgresql.core.v3.QueryExecutorImpl       → true（protocol の途中で出た物）
-    ///   先頭の frame が Sqlitefx.JdbcConvert                              → false（sqlitefx 側の変換の失敗）
-    ///   先頭の frame が org.postgresqlx.Other                          → false（区切りの `.` まで見る）
-    ///   stack trace が無い                                             → false
-    ///   PSQLException                                                  → true（class 名）
+    ///   例外                                                  → 期待
+    ///   先頭の frame が org.sqlite.core.NativeDB               → true（native の呼び出しの途中で出た物）
+    ///   先頭の frame が Sqlitefx.JdbcConvert                   → false（sqlitefx 側の変換の失敗）
+    ///   先頭の frame が org.sqlitex.Other                      → false（区切りの `.` まで見る）
+    ///   stack trace が無い                                     → false
+    ///   SQLiteException                                        → true（class 名）
     ///
     @Test
     def testFromDriverTable(): Unit \ {Assert, IO} =
         let table: List[(Throwable, Bool)] = List#{
-            (thrownAt("org.postgresql.core.v3.QueryExecutorImpl"), true),
+            (thrownAt("org.sqlite.core.NativeDB"), true),
             (thrownAt("Sqlitefx.JdbcConvert"), false),
-            (thrownAt("org.postgresqlx.Other"), false),
+            (thrownAt("org.sqlitex.Other"), false),
             (withoutFrames(), false),
-            (psqlException(), true)
+            (sqliteException(), true)
         };
         Assert.assertEq(expected = table |> List.map(snd), table |> List.map(fst) |> List.map(Db.fromDriver))
 

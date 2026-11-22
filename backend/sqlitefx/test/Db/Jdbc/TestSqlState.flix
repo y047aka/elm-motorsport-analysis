@@ -3,80 +3,113 @@ use Sqlitefx.SqlState
 use Sqlitefx.DbError.DbErrorKind
 use Sqlitefx.DbError.TransientKind
 
-// SqlState: sqlstate → DbErrorKind の翻訳表。
+// SqlState: SQLite の result code とメッセージ → DbErrorKind の翻訳表。
 
-/// unique 違反と FK 違反は制約名付きの Domain。
-@Test
-def testClassifyDomain(): Unit \ Assert =
-    Assert.assertEq(
-        expected = (DbErrorKind.UniqueViolation("users_email_key"), DbErrorKind.ForeignKeyViolation("posts_user_id_fkey")),
-        (
-            SqlState.classify({ sqlState = "23505", message = "duplicate key value violates unique constraint \"users_email_key\"" }),
-            SqlState.classify({ sqlState = "23503", message = "insert or update on table \"posts\" violates foreign key constraint \"posts_user_id_fkey\"" })
-        ))
-
-/// デッドロック・直列化失敗・statement_timeout・lock_timeout・接続断・admin_shutdown（DB の再起動）は Transient。
+/// 拡張 code があれば code で、違反した物（表.列、名前付き CHECK は制約名）付きの違反に。
 ///
-///   40P01 → deadlock          40001 → deadlock
-///   57014 → timeout 0         55P03 → timeout 0
-///   08006 → connectionLost    57P01 → connectionLost
+///   2067 UNIQUE      → UniqueViolation("users.email")
+///   1555 PRIMARYKEY  → UniqueViolation("users.id")
+///   1299 NOTNULL     → NotNullViolation("users.name")
+///   275  CHECK       → CheckViolation("score_positive")
+///   787  FOREIGNKEY  → ForeignKeyViolation(メッセージ全体。SQLite は何も名指さない)
+@Test
+def testClassifyExtendedConstraint(): Unit \ Assert =
+    Assert.assertEq(
+        expected = List#{
+            DbErrorKind.UniqueViolation("users.email"),
+            DbErrorKind.UniqueViolation("users.id"),
+            DbErrorKind.NotNullViolation("users.name"),
+            DbErrorKind.CheckViolation("score_positive"),
+            DbErrorKind.ForeignKeyViolation("FOREIGN KEY constraint failed")
+        },
+        List#{
+            SqlState.classify({ code = 2067, message = "UNIQUE constraint failed: users.email" }),
+            SqlState.classify({ code = 1555, message = "UNIQUE constraint failed: users.id" }),
+            SqlState.classify({ code = 1299, message = "NOT NULL constraint failed: users.name" }),
+            SqlState.classify({ code = 275, message = "CHECK constraint failed: score_positive" }),
+            SqlState.classify({ code = 787, message = "FOREIGN KEY constraint failed" })
+        })
+
+/// 基本 code（19）だけなら文言で分ける。sqlite-jdbc が自分の文で包んだ物も、閉じる `)` の前まで。
+@Test
+def testClassifyPrimaryConstraint(): Unit \ Assert =
+    Assert.assertEq(
+        expected = List#{
+            DbErrorKind.UniqueViolation("t.k"),
+            DbErrorKind.UniqueViolation("users.email"),
+            DbErrorKind.NotNullViolation("users.name"),
+            DbErrorKind.CheckViolation("score_positive"),
+            DbErrorKind.ForeignKeyViolation("FOREIGN KEY constraint failed"),
+            DbErrorKind.Other("constraint failed")
+        },
+        List#{
+            SqlState.classify({ code = 19, message = "[SQLITE_CONSTRAINT_UNIQUE] A UNIQUE constraint failed (UNIQUE constraint failed: t.k)" }),
+            SqlState.classify({ code = 19, message = "UNIQUE constraint failed: users.email" }),
+            SqlState.classify({ code = 19, message = "NOT NULL constraint failed: users.name" }),
+            SqlState.classify({ code = 19, message = "CHECK constraint failed: score_positive" }),
+            SqlState.classify({ code = 19, message = "FOREIGN KEY constraint failed" }),
+            SqlState.classify({ code = 19, message = "constraint failed" })
+        })
+
+/// ロックを待って取れなかった物と、ファイルを開けない物は Transient。拡張 code は下位 1 バイトで読む。
+///
+///   5   BUSY          → timeout 0
+///   6   LOCKED        → timeout 0
+///   517 BUSY_SNAPSHOT → timeout 0
+///   14  CANTOPEN      → connectionLost
 @Test
 def testClassifyTransient(): Unit \ Assert =
     Assert.assertEq(
         expected = List#{
-            DbErrorKind.Transient(TransientKind.Deadlock),
-            DbErrorKind.Transient(TransientKind.Deadlock),
             DbErrorKind.Transient(TransientKind.Timeout(0)),
             DbErrorKind.Transient(TransientKind.Timeout(0)),
-            DbErrorKind.Transient(TransientKind.ConnectionLost("terminating connection")),
-            DbErrorKind.Transient(TransientKind.ConnectionLost("terminating connection due to administrator command"))
+            DbErrorKind.Transient(TransientKind.Timeout(0)),
+            DbErrorKind.Transient(TransientKind.ConnectionLost("unable to open database file"))
         },
         List#{
-            SqlState.classify({ sqlState = "40P01", message = "deadlock detected" }),
-            SqlState.classify({ sqlState = "40001", message = "could not serialize access" }),
-            SqlState.classify({ sqlState = "57014", message = "canceling statement due to statement timeout" }),
-            SqlState.classify({ sqlState = "55P03", message = "canceling statement due to lock timeout" }),
-            SqlState.classify({ sqlState = "08006", message = "terminating connection" }),
-            SqlState.classify({ sqlState = "57P01", message = "terminating connection due to administrator command" })
+            SqlState.classify({ code = 5, message = "database is locked" }),
+            SqlState.classify({ code = 6, message = "database table is locked" }),
+            SqlState.classify({ code = 517, message = "database is locked" }),
+            SqlState.classify({ code = 14, message = "unable to open database file" })
         })
 
-/// テーブルや列が無い・型が合わないは SchemaMismatch。知らない sqlstate は Corrupt にコードごと残す。
+/// 無い表・列・関数は SchemaMismatch。構文の誤りは同じ SQLITE_ERROR でも Other。
 @Test
-def testClassifyFatal(): Unit \ Assert =
+def testClassifySchemaMismatch(): Unit \ Assert =
+    let wrapped = "[SQLITE_ERROR] SQL error or missing database (no such column: led.hled)";
     Assert.assertEq(
-        expected = (DbErrorKind.SchemaMismatch("relation \"userz\" does not exist"), DbErrorKind.Other("XX000: internal error")),
-        (
-            SqlState.classify({ sqlState = "42P01", message = "relation \"userz\" does not exist" }),
-            SqlState.classify({ sqlState = "XX000", message = "internal error" })
-        ))
+        expected = List#{
+            DbErrorKind.SchemaMismatch("no such table: users"),
+            DbErrorKind.SchemaMismatch(wrapped),
+            DbErrorKind.SchemaMismatch("no such function: jsonb_build_object"),
+            DbErrorKind.SchemaMismatch("table users has no column named nickname"),
+            DbErrorKind.Other("near \"FORM\": syntax error")
+        },
+        List#{
+            SqlState.classify({ code = 1, message = "no such table: users" }),
+            SqlState.classify({ code = 1, message = wrapped }),
+            SqlState.classify({ code = 1, message = "no such function: jsonb_build_object" }),
+            SqlState.classify({ code = 1, message = "table users has no column named nickname" }),
+            SqlState.classify({ code = 1, message = "near \"FORM\": syntax error" })
+        })
 
-/// 制約名は最後の引用符の中。引用符が無ければメッセージ全体。
+/// それ以外は Other で、メッセージをそのまま持つ。
+@Test
+def testClassifyOther(): Unit \ Assert =
+    Assert.assertEq(
+        expected = DbErrorKind.Other("database or disk is full"),
+        SqlState.classify({ code = 13, message = "database or disk is full" }))
+
+/// `failed:` の後ろを、閉じる `)` の前まで。複数列の UNIQUE は列が `, ` で並ぶ。
+/// `failed:` が無ければ SQLite 自身の文（sqlite-jdbc が包んでいれば括弧の中）。
 @Test
 def testConstraintName(): Unit \ Assert =
     Assert.assertEq(
-        expected = ("users_email_key", "no quotes here"),
-        (SqlState.constraintName("violates unique constraint \"users_email_key\""), SqlState.constraintName("no quotes here")))
-
-/// サーバが制約名を返していればメッセージは見ない（日本語ロケールでは最後の引用符がテーブル名になる）。
-@Test
-def testClassifyPrefersServerConstraint(): Unit \ Assert =
-    Assert.assertEq(
-        expected = DbErrorKind.ForeignKeyViolation("posts_user_id_fkey"),
-        SqlState.classifyWith({ sqlState = "23503", message = "テーブル\"posts\"の挿入または更新は外部キー制約\"posts_user_id_fkey\"に違反しています キーはテーブル\"users\"に存在しません", constraint = Some("posts_user_id_fkey"), column = None }))
-
-/// CHECK 違反は制約名付き、NOT NULL 違反は列名付き。列名はメッセージの最後の引用符がテーブル名なので、サーバが返した列名を使う。
-@Test
-def testClassifyCheckAndNotNull(): Unit \ Assert =
-    Assert.assertEq(
-        expected = List#{DbErrorKind.CheckViolation("users_name_length"), DbErrorKind.NotNullViolation("email")},
+        expected = List#{"users.email", "t.a, t.b", "t.k", "FOREIGN KEY constraint failed", "FOREIGN KEY constraint failed"},
         List#{
-            SqlState.classifyWith({ sqlState = "23514", message = "new row for relation \"users\" violates check constraint \"users_name_length\"", constraint = Some("users_name_length"), column = None }),
-            SqlState.classifyWith({ sqlState = "23502", message = "null value in column \"email\" of relation \"users\" violates not-null constraint", constraint = None, column = Some("email") })
+            SqlState.constraintName("UNIQUE constraint failed: users.email"),
+            SqlState.constraintName("UNIQUE constraint failed: t.a, t.b"),
+            SqlState.constraintName("[SQLITE_CONSTRAINT_UNIQUE] A UNIQUE constraint failed (UNIQUE constraint failed: t.k)"),
+            SqlState.constraintName("FOREIGN KEY constraint failed"),
+            SqlState.constraintName("[SQLITE_CONSTRAINT_FOREIGNKEY] A foreign key constraint failed (FOREIGN KEY constraint failed)")
         })
-
-/// pgjdbc が列名を返さないとき（包み直された SQLException など）は、メッセージの最初の引用符を列名にする。最後の引用符はテーブル名。
-@Test
-def testNotNullFallsBackToFirstQuoted(): Unit \ Assert =
-    Assert.assertEq(
-        expected = DbErrorKind.NotNullViolation("email"),
-        SqlState.classifyWith({ sqlState = "23502", message = "null value in column \"email\" of relation \"users\" violates not-null constraint", constraint = None, column = None }))

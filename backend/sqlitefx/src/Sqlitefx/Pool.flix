@@ -20,19 +20,19 @@ pub mod Sqlitefx.Pool {
     import com.zaxxer.hikari.HikariConfig
     import com.zaxxer.hikari.HikariDataSource
     import com.zaxxer.hikari.HikariPoolMXBean
-    import org.postgresql.ds.PGSimpleDataSource
+    import org.sqlite.SQLiteDataSource
 
     ///
     /// 開いたプール。`open` で作り、`close` で全接続を閉じる。
     ///
     pub enum Pool {
-        case Pool(HikariDataSource)
+        case Pool(HikariDataSource, List[String])
     }
 
     ///
     /// プールの設定。
     ///
-    /// - `connection`: 接続先と認証
+    /// - `connection`: 接続先と、接続ごとに送る pragma
     /// - `maxConnections`: 同時に使う接続の上限。超えた分は `borrowTimeoutMs` まで待つ
     /// - `borrowTimeoutMs`: 借りるのを待つ上限。超えたら TransientDbErr.timeout
     /// - `leakDetectionThresholdMs`: 借りたまま返さない接続を HikariCP が SLF4J の warn に出すまでの ms。0 で無効。
@@ -68,21 +68,18 @@ pub mod Sqlitefx.Pool {
     /// WhyNot: `initializationFailTimeout` を -1 にするのは、既定の fail-fast だと `open` の時点で接続しに行き、
     /// 届かなければ Java の例外を投げて `TransientDbErr` の道を通らないため。届くかは最初の `borrow` で分かる。
     ///
-    /// WhyNot: HikariCP に `jdbcUrl` を渡さないのは、ドライバをクラス名で探す経路が Flix の Maven クラスローダで
-    /// 効かないから（`Jdbc.connect` と同じ理由）。pgjdbc の DataSource をこちらで作って渡す。
+    /// WhyNot: HikariCP に `jdbcUrl` を渡さないのは、ドライバをクラス名で探す経路が Flix の Maven クラスローダで効かないから（`Jdbc.connect` と同じ理由）。sqlite-jdbc の DataSource をこちらで作って渡す。
     ///
     pub def open(config: PoolConfig): Pool \ IO =
-        let source = new PGSimpleDataSource();
+        let source = new SQLiteDataSource();
         source.setUrl(config#connection#url);
-        source.setUser(config#connection#user);
-        source.setPassword(config#connection#password);
         let hikari = new HikariConfig();
         hikari.setDataSource(source);
         hikari.setMaximumPoolSize(config#maxConnections);
         hikari.setConnectionTimeout(Int32.toInt64(config#borrowTimeoutMs));
         hikari.setInitializationFailTimeout(-1i64);
         hikari.setLeakDetectionThreshold(Int32.toInt64(roundLeakDetectionThreshold(config#leakDetectionThresholdMs)));
-        Pool.Pool(new HikariDataSource(hikari))
+        Pool.Pool(new HikariDataSource(hikari), config#connection#pragmas)
 
     ///
     /// 0 以下は 0（無効）、それ以外は 2000 以上に丸める。
@@ -94,7 +91,7 @@ pub mod Sqlitefx.Pool {
     /// HikariCP に渡っている漏れ検出のしきい値（ms）。0 なら無効。
     ///
     pub def leakDetectionThresholdMs(pool: Pool): Int32 \ IO =
-        let Pool.Pool(source) = pool;
+        let Pool.Pool(source, _) = pool;
         let threshold: Int64 = source.getLeakDetectionThreshold();
         Int64.clampToInt32(min = 0, max = Int32.maxValue(), threshold)
 
@@ -105,7 +102,7 @@ pub mod Sqlitefx.Pool {
     /// 遅延している）時や閉じた後にも `/health` は読みに来るので、その時は「0 本」と答える方が扱いやすいため。
     ///
     pub def stats(pool: Pool): PoolStats \ IO =
-        let Pool.Pool(source) = pool;
+        let Pool.Pool(source, _) = pool;
         let max: Int32 = source.getMaximumPoolSize();
         let bean: HikariPoolMXBean = source.getHikariPoolMXBean();
         if (Object.isNull(bean))
@@ -117,18 +114,18 @@ pub mod Sqlitefx.Pool {
     /// 全接続を閉じる。終了時に 1 回。
     ///
     pub def close(pool: Pool): Unit \ IO =
-        let Pool.Pool(source) = pool;
+        let Pool.Pool(source, _) = pool;
         source.close()
 
     ///
-    /// 借りた接続をプールから外す。close は呼ばない（HikariCP が物理接続を別のスレッドで閉じ、PG がその Tx を ROLLBACK する）。
-    /// fatal の後や、pgjdbc の中の例外で接続の状態が分からない時に使う。自前の SqlRead / SqlWrite の handler を書く利用側向け。
+    /// 借りた接続をプールから外す。close は呼ばない（HikariCP が物理接続を別のスレッドで閉じ、SQLite がその Tx を ROLLBACK する）。
+    /// fatal の後や、sqlite-jdbc の中の例外で接続の状態が分からない時に使う。自前の SqlRead / SqlWrite の handler を書く利用側向け。
     ///
     /// WhyNot: evict の後に close を呼ばない。HikariCP 5.1.0 では close が本物の接続に ROLLBACK を送るか、
     /// `PoolBase.resetConnectionState` の NullPointerException になり、fatal がその NPE にすり替わる（`TestEvictProcedure`）。
     ///
     pub def evict(pool: Pool, conn: Connection): Unit \ IO =
-        let Pool.Pool(source) = pool;
+        let Pool.Pool(source, _) = pool;
         match Db.catchAll(() -> source.evictConnection(conn)) {
             case Ok(())     => ()
             // WhyNot: evict の失敗を投げない。呼ぶ所は元の失敗を投げ直す途中で、それを上書きしたくないため。fatal だけは投げ直す
@@ -139,47 +136,48 @@ pub mod Sqlitefx.Pool {
     /// 接続を借りる。上限まで使われていて `borrowTimeoutMs` 待っても空かなければ TransientDbErr.timeout、
     /// DB に繋げなければ TransientDbErr.connectionLost。
     ///
+    /// 設定の pragma は借りるたびに送る。
+    ///
+    /// WhyNot: HikariCP の `connectionInitSql` で新しい物理接続にだけ送らないのは、それが 1 文しか実行せず、`;` で繋いだ 2 つ目以降の pragma が黙って落ちるから（`TestPool.testPooledConnectionsGetThePragmas`）。
+    /// pragma 1 つは µs の桁で、借りる度に送っても借り待ちに比べて無いに等しい。
+    ///
     /// WhyNot: 例外の message で分けないのは、HikariCP が「借り待ちの上限」も「DB に届かない」も
     /// 同じ "request timed out" の文言で出すため。借りに失敗した時点の `stats` と cause の連鎖で分ける。
     ///
     pub def borrow(pool: Pool): Connection \ {IO, TransientDbErr} =
-        let Pool.Pool(source) = pool;
+        let Pool.Pool(source, pragmas) = pool;
         try {
-            source.getConnection()
+            let conn: Connection = source.getConnection();
+            try {
+                Jdbc.sendPragmas(conn, pragmas);
+                conn
+            } catch {
+                case e: SQLException => { evict(pool, conn); throw e }
+            }
         } catch {
             case e: SQLException =>
                 let msg: String = e.getMessage();
                 let text = if (Object.isNull(msg)) "" else msg;
-                let causes = causeClassNames(unchecked_cast(e as Throwable), maxCauseDepth());
-                TransientDbErr.raiseTransient(borrowFailureKind(text, causes, sqlStateOf(e), stats(pool)))
+                TransientDbErr.raiseTransient(borrowFailureKind(text, resultCodeOf(unchecked_cast(e as Throwable), maxCauseDepth()), stats(pool)))
         }
 
     ///
     /// borrow が失敗した理由を分ける（純粋）。
     ///
-    /// - cause の連鎖に接続の失敗（ConnectException / SocketTimeoutException / SQLState が "08" の PSQLException）があれば connectionLost
+    /// - cause の連鎖に SQLite の CANTOPEN（DB のファイルを開けない）があれば connectionLost
     /// - そうでなく pool が満杯（`active >= max`）なら timeout（借り待ちの上限）
     /// - それ以外は、pool は空いているのに接続が作れなかったので connectionLost
     ///
-    pub def borrowFailureKind(message: String, causes: List[String], sqlState: Option[String], poolStats: PoolStats): DbError.TransientKind =
-        if (isConnectionFailure(causes, sqlState))
+    pub def borrowFailureKind(message: String, resultCode: Option[Int32], poolStats: PoolStats): DbError.TransientKind =
+        if (resultCode |> Option.exists(code -> Int32.remainder(code, 256) == cantOpen()))
             DbError.TransientKind.ConnectionLost(message)
         else if (poolStats#max > 0 and poolStats#active >= poolStats#max)
             DbError.TransientKind.Timeout(0)
         else
             DbError.TransientKind.ConnectionLost(message)
 
-    ///
-    /// cause の連鎖が「DB に届かなかった」事を示すか。
-    ///
-    def isConnectionFailure(causes: List[String], sqlState: Option[String]): Bool =
-        let hasClass = name -> List.memberOf(name, causes);
-        let psqlIsConnectionClass =
-            hasClass("org.postgresql.util.PSQLException")
-                and sqlState |> Option.exists(state -> String.startsWith(prefix = "08", state));
-        hasClass("java.net.ConnectException")
-            or hasClass("java.net.SocketTimeoutException")
-            or psqlIsConnectionClass
+    /// SQLite の SQLITE_CANTOPEN。
+    def cantOpen(): Int32 = 14
 
     ///
     /// cause の連鎖をたどる上限。
@@ -187,37 +185,20 @@ pub mod Sqlitefx.Pool {
     def maxCauseDepth(): Int32 = 8
 
     ///
-    /// 例外とその cause の連鎖の class 名。
+    /// 連鎖をたどって最初の sqlite-jdbc の例外（`org.sqlite.SQLiteException`）の result code を取る。
     ///
-    def causeClassNames(t: Throwable, depth: Int32): List[String] \ IO =
-        if (depth <= 0 or Object.isNull(t))
-            Nil
-        else {
-            let name: String = t.getClass().getName();
-            name :: causeClassNames(t.getCause(), depth - 1)
-        }
-
+    /// WhyNot: 一番外の SQLException の `getErrorCode` を見ないのは、HikariCP が借りられなかった事を自分のSQLException で包み、ドライバの result code は cause の側に残るから。
     ///
-    /// 連鎖の中の pgjdbc の例外の SQLState。無ければ SQLException 自身の物。
-    ///
-    def sqlStateOf(e: SQLException): Option[String] \ IO =
-        let state: String = e.getSQLState();
-        if (Object.isNull(state)) psqlSqlState(e.getCause(), maxCauseDepth()) else Some(state)
-
-    ///
-    /// 連鎖をたどって最初の PSQLException の SQLState を取る。
-    ///
-    def psqlSqlState(t: Throwable, depth: Int32): Option[String] \ IO =
+    def resultCodeOf(t: Throwable, depth: Int32): Option[Int32] \ IO =
         if (depth <= 0 or Object.isNull(t))
             None
         else {
             let name: String = t.getClass().getName();
-            if (name == "org.postgresql.util.PSQLException") {
-                let psql: SQLException = unchecked_cast(t as SQLException);
-                let state: String = psql.getSQLState();
-                if (Object.isNull(state)) psqlSqlState(t.getCause(), depth - 1) else Some(state)
+            if (name == "org.sqlite.SQLiteException") {
+                let sqlite: SQLException = unchecked_cast(t as SQLException);
+                Some(sqlite.getErrorCode())
             } else
-                psqlSqlState(t.getCause(), depth - 1)
+                resultCodeOf(t.getCause(), depth - 1)
         }
 
     ///
@@ -241,7 +222,7 @@ pub mod Sqlitefx.Pool {
 
     ///
     /// 借りた接続で thunk を走らせ、成功でも失敗でも必ず返す。thunk の JVM の例外は `DbErr` の `Other`。
-    /// fatal は接続を evict してから投げ直す。pgjdbc の中の例外の後は、状態が分からないので返さずに evict する。
+    /// fatal は接続を evict してから投げ直す。sqlite-jdbc の中の例外の後は、状態が分からないので返さずに evict する。
     ///
     def runOnConnection(pool: Pool, conn: Connection, thunk: Connection -> a \ ef): a \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) + {IO, TransientDbErr, DbErr} =
         let watch = { onFatal = () -> evict(pool, conn), driverFailed = Ref.fresh(Static, false) };
@@ -374,7 +355,7 @@ pub mod Sqlitefx.Pool {
         }
 
     ///
-    /// pgjdbc の中の例外で接続を捨てた後の結果。thunk が失敗を値で受けて `Ok` を返していても、COMMIT していないので失敗にする。
+    /// sqlite-jdbc の中の例外で接続を捨てた後の結果。thunk が失敗を値で受けて `Ok` を返していても、COMMIT していないので失敗にする。
     ///
     def discarded(outcome: Result[DbError.DbErrorKind, Result[e, a]]): Result[DbError.DbErrorKind, Result[e, a]] = match outcome {
         case Ok(Ok(_)) => Err(DbError.DbErrorKind.Other("the connection was discarded after an exception inside the driver, so the transaction was not committed"))
@@ -383,7 +364,7 @@ pub mod Sqlitefx.Pool {
 
     ///
     /// COMMIT して返す。COMMIT の失敗（直列化失敗など）は `Tx.commit` が ROLLBACK してから値にする。
-    /// COMMIT の最中の fatal は、COMMIT が PG に届いたか分からないので marker を付け、evict してから投げ直す。
+    /// COMMIT の最中の fatal は、COMMIT がファイルに書かれたか分からないので marker を付け、evict してから投げ直す。
     ///
     def commitAndClose(pool: Pool, conn: Connection, outcome: Result[DbError.DbErrorKind, b]): Result[DbError.DbErrorKind, b] \ IO =
         match Db.catchAll(() -> DbError.runWithKind(() -> Tx.commit(conn))) {

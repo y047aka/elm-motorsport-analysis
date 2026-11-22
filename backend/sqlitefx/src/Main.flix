@@ -132,12 +132,8 @@ mod MigrateCli {
 
     def connectionFromEnv(): Jdbc.ConnectionConfig \ {IO, Sys.Env.Env, Sys.Exit.Exit} =
         match Sys.Env.getVar("SQLITEFX_DSN") {
-            case Some(url) => {
-                url = url,
-                user = Sys.Env.getVar("SQLITEFX_USER") |> Option.getWithDefault(""),
-                password = Sys.Env.getVar("SQLITEFX_PASSWORD") |> Option.getWithDefault("")
-            }
-            case None => { println("error: SQLITEFX_DSN is not set (jdbc:postgresql://host:port/db)"); Sys.Exit.exit(2) }
+            case Some(url) => Jdbc.config(url)
+            case None => { println("error: SQLITEFX_DSN is not set (jdbc:sqlite:path/to/file.db)"); Sys.Exit.exit(2) }
         }
 
 }

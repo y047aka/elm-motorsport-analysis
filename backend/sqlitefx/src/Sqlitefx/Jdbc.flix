@@ -16,14 +16,14 @@ pub mod Sqlitefx.Jdbc {
     use Sqlitefx.SqlWrite
     use Sqlitefx.TransientDbErr
 
+    import java.io.File
     import java.sql.Connection
     import java.sql.PreparedStatement
     import java.sql.ResultSet
     import java.sql.SQLException
-    import org.postgresql.util.PSQLException
-    import org.postgresql.util.ServerErrorMessage
+    import java.sql.Statement
     import java.util.Properties
-    import org.postgresql.Driver
+    import org.sqlite.JDBC
 
     use Sqlitefx.SqlValue.SqlValue
     use Sqlitefx.Row.Row
@@ -31,28 +31,71 @@ pub mod Sqlitefx.Jdbc {
     ///
     /// 接続の設定。
     ///
-    /// - `url`: `jdbc:postgresql://host:port/db`
-    /// - `user` / `password`: 認証
+    /// - `url`: `jdbc:sqlite:path/to/file.db`、メモリ上なら `jdbc:sqlite::memory:`
+    /// - `pragmas`: 開いた直後、最初の Tx より前に 1 つずつ送る `PRAGMA` の中身（`journal_mode = WAL` など）
     ///
-    pub type alias ConnectionConfig = { url = String, user = String, password = String }
+    /// WhyNot: user / password を持たないのは、SQLite が認証を持たず、ファイルに読み書きできるかが全てだから。
+    ///
+    pub type alias ConnectionConfig = { url = String, pragmas = List[String] }
 
     ///
-    /// 1 本の接続を開く。開けなければ TransientDbErr.connectionLost。
+    /// url に既定の pragma を付けた設定。
     ///
-    /// WhyNot: `DriverManager.getConnection` を使わないのは、Flix の Maven クラスローダでは
-    /// ドライバの自動登録が効かないから（docs/spikes.md (c)）。`Driver` を直接 new する。
+    pub def config(url: String): ConnectionConfig = { url = url, pragmas = defaultPragmas() }
+
+    ///
+    /// `foreign_keys = ON` と `busy_timeout = 5000`。
+    ///
+    /// WhyNot: `foreign_keys` を既定で入れるのは、SQLite は接続ごとに既定で外部キーを確かめず、`ForeignKeyViolation` が PG と同じ所で起きなくなるから。
+    ///
+    /// WhyNot: `busy_timeout` を既定で入れるのは、SQLite の既定が 0（他の接続が書いていれば待たずに BUSY）で、2 本目の接続がすぐ `Timeout` になるから。5 秒は待ってもらえるロックの長さの目安。
+    ///
+    /// WhyNot: `journal_mode = WAL` を既定にしないのは、ファイルに残る設定で、メモリ上の DB では効かず、読み手と書き手を並べたいかは利用側の都合だから。
+    ///
+    pub def defaultPragmas(): List[String] = List#{"foreign_keys = ON", "busy_timeout = 5000"}
+
+    ///
+    /// 1 本の接続を開き、pragma を送る。開けなければ TransientDbErr.connectionLost。
+    ///
+    /// WhyNot: `DriverManager.getConnection` を使わないのは、Flix の Maven クラスローダではドライバの自動登録が効かないから（docs/spikes.md (c)）。`JDBC` を直接 new する。
+    ///
+    /// WhyNot: ファイルの親ディレクトリを作るのは、SQLite はファイルを作ってもディレクトリは作らず、無いディレクトリを指す url が「開けない」になるから。
     ///
     pub def connect(config: ConnectionConfig): Connection \ {IO, TransientDbErr} =
         try {
-            let props = new Properties();
-            props.setProperty("user", config#user);
-            props.setProperty("password", config#password);
-            let driver = new Driver();
-            driver.connect(config#url, props)
+            makeParentDirectory(config#url);
+            let driver = new JDBC();
+            let conn: Connection = driver.connect(config#url, new Properties());
+            if (Object.isNull(conn))
+                TransientDbErr.connectionLost("not a SQLite JDBC url: ${config#url}")
+            else {
+                sendPragmas(conn, config#pragmas);
+                conn
+            }
         } catch {
             case e: SQLException =>
                 let msg: String = e.getMessage();
                 TransientDbErr.connectionLost(msg)
+        }
+
+    ///
+    /// pragma を 1 つずつ送る。Tx の外で呼ぶ（`journal_mode` は Tx の中では変えられない）。
+    ///
+    pub def sendPragmas(conn: Connection, pragmas: List[String]): Unit \ IO =
+        List.forEach(pragma -> {
+            let statement: Statement = conn.createStatement();
+            discard statement.execute("PRAGMA ${pragma}");
+            statement.close()
+        }, pragmas)
+
+    def makeParentDirectory(url: String): Unit \ IO =
+        match String.stripPrefix(substr = "jdbc:sqlite:", url) {
+            case Some(path) if not String.startsWith(prefix = ":", path) and not String.startsWith(prefix = "file:", path) =>
+                match Object.toOption(new File(path).getParentFile()) {
+                    case Some(parent) => discard parent.mkdirs()
+                    case None         => ()
+                }
+            case _ => ()
         }
 
     ///
@@ -69,7 +112,7 @@ pub mod Sqlitefx.Jdbc {
     /// handler の本体と、handler の `run` 全体で JVM の例外を拾った時の扱い。Tx の入口（Pool / Tx / withConnection）が渡す。
     ///
     /// - `onFatal`: fatal を拾った時に、投げ直す前に呼ぶ（借りた接続の evict、自前の接続なら close）
-    /// - `driverFailed`: fatal でない例外が pgjdbc の中から出た時に true にする。接続の protocol の状態が分からないので、
+    /// - `driverFailed`: fatal でない例外が sqlite-jdbc の中から出た時に true にする。接続の状態が分からないので、
     ///   受けた側は ROLLBACK を送らずに接続を捨てる
     ///
     pub type alias Watch = { onFatal = Unit -> Unit \ IO, driverFailed = Ref[Bool, Static] }
@@ -81,7 +124,7 @@ pub mod Sqlitefx.Jdbc {
 
     ///
     /// thunk を走らせ、JVM の例外を拾う。fatal は `onFatal` を呼んでから同じ物を投げ直す（値にしない）。
-    /// fatal でない物は `DbErrorKind.Other` の値にし、pgjdbc の中から出た物なら `driverFailed` を立てる。
+    /// fatal でない物は `DbErrorKind.Other` の値にし、sqlite-jdbc の中から出た物なら `driverFailed` を立てる。
     ///
     /// handler の本体（`resume` の前）と、handler の `run` 全体を外から包むのに使う。後者は、利用側の書き方で
     /// thunk の中の catch（`Db.guard`）を例外が飛ばした時に、op を受けた Pool の handler の所で拾う網。
@@ -138,7 +181,7 @@ pub mod Sqlitefx.Jdbc {
     ///
     /// 接続を開いて thunk を走らせ、成功でも失敗でも必ず閉じる。失敗はそのまま再送出する。
     /// 「開く → runWithConnection → 閉じる」を毎回書かないための入口。Tx が要るなら thunk の中で `Tx.withTx` を呼ぶ。
-    /// thunk の JVM の例外は `DbErr` の `Other`。fatal は接続を閉じてから投げ直す。pgjdbc の中から出た例外の後も閉じる。
+    /// thunk の JVM の例外は `DbErr` の `Other`。fatal は接続を閉じてから投げ直す。sqlite-jdbc の中から出た例外の後も閉じる。
     ///
     pub def withConnection(config: ConnectionConfig, thunk: Connection -> a \ ef): a \ (ef - {SqlRead, SqlWrite, SqlSavepoint}) + {IO, TransientDbErr, DbErr} =
         let conn = connect(config);
@@ -157,7 +200,7 @@ pub mod Sqlitefx.Jdbc {
         let (jdbcSql, ordered) = rewriteOrFail(sql, params);
         let statement = prepare(conn, jdbcSql);
         try {
-            JdbcConvert.bindParams(conn, statement, ordered);
+            JdbcConvert.bindParams(statement, ordered);
             let resultSet: ResultSet = statement.executeQuery();
             let rows = JdbcConvert.materialize(resultSet);
             resultSet.close();
@@ -174,7 +217,7 @@ pub mod Sqlitefx.Jdbc {
         let (jdbcSql, ordered) = rewriteOrFail(sql, params);
         let statement = prepare(conn, jdbcSql);
         try {
-            JdbcConvert.bindParams(conn, statement, ordered);
+            JdbcConvert.bindParams(statement, ordered);
             let affected: Int32 = statement.executeUpdate();
             statement.close();
             affected
@@ -218,35 +261,13 @@ pub mod Sqlitefx.Jdbc {
         }
 
     ///
-    /// SQLException を sqlstate で 3 分類に翻訳して投げる。sqlstate が無い（ドライバ内部の失敗）ときは空文字で Corrupt へ。
+    /// SQLException を result code で翻訳して投げる。翻訳表は `SqlState.classify`。
+    ///
+    /// WhyNot: message が null の時に class 名を入れるのは、sqlite-jdbc が自分の失敗の一部を message 無しで投げ、空の `Other` ではどこを見ればよいか分からないから。
     ///
     pub def raiseSqlException(e: SQLException): a \ {IO, TransientDbErr, DbErr} =
-        let state: String = e.getSQLState();
         let message: String = e.getMessage();
-        let safeState = if (Object.isNull(state)) "" else state;
-        let safeMessage = if (Object.isNull(message)) "" else message;
-        DbError.raise(SqlState.classifyWith({
-            sqlState = safeState,
-            message = safeMessage,
-            constraint = serverField(server -> server.getConstraint(), e),
-            column = serverField(server -> server.getColumn(), e)
-        }))
-
-    ///
-    /// pgjdbc の例外ならサーバが返したエラーの一部（制約名、列名）を取り出す。それ以外の SQLException や、その項目が無いエラーは None。
-    ///
-    def serverField(pick: ServerErrorMessage -> String \ IO, e: SQLException): Option[String] \ IO =
-        let className: String = e.getClass().getName();
-        if (className != "org.postgresql.util.PSQLException")
-            None
-        else {
-            let psql: PSQLException = unchecked_cast(e as PSQLException);
-            let server: ServerErrorMessage = psql.getServerErrorMessage();
-            if (Object.isNull(server)) None
-            else {
-                let value: String = pick(server);
-                if (Object.isNull(value)) None else Some(value)
-            }
-        }
+        let said = if (Object.isNull(message)) e.getClass().getName() else message;
+        DbError.raise(SqlState.classify({ code = e.getErrorCode(), message = said }))
 
 }

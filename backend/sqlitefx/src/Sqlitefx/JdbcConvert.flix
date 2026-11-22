@@ -1,41 +1,46 @@
 ///
 /// SqlValue と JDBC の型の変換。Java の型はこのモジュールの中に閉じる。
 ///
+/// SQLite は値ごとに 5 つの記憶クラス（NULL / INTEGER / REAL / TEXT / BLOB）のどれかで持つ。送る側は SqlValue の case ごとに記憶クラスを 1 つに決め、読む側は SQLite がその値を持っていた記憶クラスで返す。意味の型（Bool / Timestamp / Json …）への戻しは `SqlValue.as*` が記憶クラスから行う。
+///
+/// | SqlValue | 記憶クラス | 中身 |
+/// |---|---|---|
+/// | Bool | INTEGER | 0 / 1 |
+/// | Int32 / Int64 | INTEGER | |
+/// | Float64 | REAL | |
+/// | Decimal | TEXT | `toPlainString` |
+/// | Str / Uuid / Json | TEXT | |
+/// | Bytes | BLOB | |
+/// | Timestamp | INTEGER | UTC の epoch マイクロ秒 |
+/// | Date | INTEGER | 1970-01-01 からの日数 |
+/// | Int64Array / StrArray / Int32Array / JsonArray | TEXT | JSON の配列。`json_each(?)` で行に開ける |
+///
+/// WhyNot: Decimal を REAL で送らないのは、REAL は 64 bit 浮動小数で桁が落ちるから。TEXT 型の列なら書いた文字列のまま残る。
+///
+/// WhyNot: Timestamp を ISO 8601 の TEXT にしないのは、SqlValue の中身がもともと epoch マイクロ秒で、INTEGER なら往復に解析が要らず、大小比較もそのまま効くから。SQLite の日付関数に渡すなら `datetime(t / 1000000, 'unixepoch', 'subsec')`。
+///
+/// WhyNot: 配列を JSON にするのは、SQLite に配列型が無く、PG の `= ANY($1)` に当たる書き方が `IN (SELECT value FROM json_each($1))` だから。
+///
 pub mod Sqlitefx.JdbcConvert {
 
-    use Sqlitefx.Date
     use Sqlitefx.Row
     use Sqlitefx.SqlValue
-    use Sqlitefx.Timestamp
 
-    import java.lang.Integer
-    import java.lang.Long
-    import java.lang.Object
-
-    import java.sql.{Array => SqlArray}
-    import java.sql.Connection
-    import java.sql.{Date => SqlDate}
     import java.sql.PreparedStatement
     import java.sql.ResultSet
     import java.sql.ResultSetMetaData
-    import java.sql.{Timestamp => SqlTimestamp}
     import java.sql.Types
-    import java.time.Instant
-    import java.time.LocalDate
-    import java.time.OffsetDateTime
-    import java.time.ZoneOffset
-    import java.util.UUID
-    import org.postgresql.util.PGobject
 
     use Sqlitefx.SqlValue.SqlValue
     use Sqlitefx.Row.Row
+    use Util.Json.ToJson.ToJson
 
     ///
     /// `$1` 形式のプレースホルダを JDBC の `?` に書き換え、出現順に並べ直したパラメータを返す。
     /// 同じ `$n` が 2 回出れば同じ値を 2 回並べる。単一引用符の文字列リテラルの中は触らない。
     /// 存在しない `$n` を参照していたら None（バインド時の範囲外エラーより先に、ここで派手に落とす）。
     ///
-    /// WhyNot: 利用側に `?` を書かせないのは、`$1` のままなら SQL をそのまま psql / EXPLAIN に貼れるから（design.md §3）。
+    /// WhyNot: 利用側に `?` を書かせないのは、`$1` のままなら SQL をそのまま sqlite3 の `.parameter set $1 …` と `EXPLAIN QUERY PLAN` に貼れるから。
     ///
     pub def rewritePlaceholders(sql: String, params: List[SqlValue]): Option[(String, List[SqlValue])] =
         let paramVector = List.toVector(params);
@@ -113,77 +118,37 @@ pub mod Sqlitefx.JdbcConvert {
     ///
     /// プレースホルダに値を順に埋める。添字は JDBC に合わせて 1 始まり。
     ///
-    pub def bindParams(conn: Connection, statement: PreparedStatement, params: List[SqlValue]): Unit \ IO =
-        List.forEachWithIndex((index, value) -> bindParam(conn, statement, index + 1, value), params)
+    pub def bindParams(statement: PreparedStatement, params: List[SqlValue]): Unit \ IO =
+        List.forEachWithIndex((index, value) -> bindParam(statement, index + 1, value), params)
 
     ///
-    /// プレースホルダ 1 つに値を埋める。
+    /// プレースホルダ 1 つに値を埋める。記憶クラスはモジュールの表の通り。
     ///
-    /// WhyNot: Timestamp を `setTimestamp` にしないのは、あれは JVM のタイムゾーンで解釈されて
-    /// TIMESTAMPTZ の instant がずれるから。`OffsetDateTime` を `setObject` すれば pgjdbc が UTC のまま送る。
+    /// WhyNot: 型の付いた NULL も `Types.NULL` で送るのは、SQLite の NULL に型が無く、sqlite-jdbc が `setNull` の型を見ないから。
+    /// PG のように文脈から型を決められずに失敗する位置も無い。
     ///
-    def bindParam(conn: Connection, statement: PreparedStatement, index: Int32, value: SqlValue): Unit \ IO =
+    def bindParam(statement: PreparedStatement, index: Int32, value: SqlValue): Unit \ IO =
         match value {
             case SqlValue.Null => statement.setNull(index, Types.NULL)
-            case SqlValue.NullOf(nullType) => statement.setNull(index, jdbcType(nullType))
-            case SqlValue.Bool(b) => statement.setBoolean(index, b)
+            case SqlValue.NullOf(_) => statement.setNull(index, Types.NULL)
+            case SqlValue.Bool(b) => statement.setInt(index, if (b) 1 else 0)
             case SqlValue.Int32(i) => statement.setInt(index, i)
             case SqlValue.Int64(i) => statement.setLong(index, i)
             case SqlValue.Float64(f) => statement.setDouble(index, f)
-            case SqlValue.Decimal(d) => statement.setBigDecimal(index, d)
+            case SqlValue.Decimal(d) => statement.setString(index, d.toPlainString())
             case SqlValue.Str(s) => statement.setString(index, s)
             case SqlValue.Bytes(bytes) => region rc {
                 statement.setBytes(index, Vector.toArray(rc, bytes))
             }
-            case SqlValue.Timestamp(micros) => statement.setObject(index, toOffsetDateTime(micros))
-            case SqlValue.Date(days) => statement.setObject(index, LocalDate.ofEpochDay(Int32.toInt64(days)))
-            case SqlValue.Uuid(s) => statement.setObject(index, UUID.fromString(s))
-            case SqlValue.Json(s) => statement.setObject(index, toPgJsonb(s))
-            case SqlValue.Int64Array(xs) => region rc {
-                let boxed: Array[Object, rc] = Array.empty(rc, List.length(xs));
-                List.forEachWithIndex((i, x) -> Array.put(checked_cast(Long.valueOf(x)), i, boxed), xs);
-                statement.setArray(index, conn.createArrayOf("bigint", boxed))
-            }
-            case SqlValue.StrArray(xs) => region rc {
-                let boxed: Array[Object, rc] = Array.empty(rc, List.length(xs));
-                List.forEachWithIndex((i, x) -> Array.put(checked_cast(x), i, boxed), xs);
-                statement.setArray(index, conn.createArrayOf("text", boxed))
-            }
-            case SqlValue.Int32Array(xs) => region rc {
-                let boxed: Array[Object, rc] = Array.empty(rc, List.length(xs));
-                List.forEachWithIndex((i, x) -> Array.put(checked_cast(Integer.valueOf(x)), i, boxed), xs);
-                statement.setArray(index, conn.createArrayOf("integer", boxed))
-            }
-            case SqlValue.JsonArray(xs) => region rc {
-                let boxed: Array[Object, rc] = Array.empty(rc, List.length(xs));
-                List.forEachWithIndex((i, x) -> Array.put(checked_cast(x), i, boxed), xs);
-                statement.setArray(index, conn.createArrayOf("jsonb", boxed))
-            }
+            case SqlValue.Timestamp(micros) => statement.setLong(index, micros)
+            case SqlValue.Date(days) => statement.setInt(index, days)
+            case SqlValue.Uuid(s) => statement.setString(index, s)
+            case SqlValue.Json(s) => statement.setString(index, s)
+            case SqlValue.Int64Array(xs) => statement.setString(index, Util.Json.toCompactString(ToJson.toJson(xs)))
+            case SqlValue.StrArray(xs) => statement.setString(index, Util.Json.toCompactString(ToJson.toJson(xs)))
+            case SqlValue.Int32Array(xs) => statement.setString(index, Util.Json.toCompactString(ToJson.toJson(xs)))
+            case SqlValue.JsonArray(xs) => statement.setString(index, "[${String.intercalate(",", xs)}]")
         }
-
-    ///
-    /// 型の付いた NULL を送るときの `java.sql.Types`。pgjdbc がここから oid を決める。
-    ///
-    /// WhyNot: uuid / json / 配列を `Types.OTHER` にするのは、JDBC にその型の定数が無く、
-    /// pgjdbc が OTHER を「型を指定しない NULL」に写すから。列に入れる位置なら PG が列の型で解決する。
-    ///
-    def jdbcType(nullType: SqlValue.NullType): Int32 = match nullType {
-        case SqlValue.NullType.Bool => Types.BOOLEAN
-        case SqlValue.NullType.Int32 => Types.INTEGER
-        case SqlValue.NullType.Int64 => Types.BIGINT
-        case SqlValue.NullType.Float64 => Types.DOUBLE
-        case SqlValue.NullType.Decimal => Types.NUMERIC
-        case SqlValue.NullType.Str => Types.VARCHAR
-        case SqlValue.NullType.Bytes => Types.VARBINARY
-        case SqlValue.NullType.Timestamp => Types.TIMESTAMP_WITH_TIMEZONE
-        case SqlValue.NullType.Date => Types.DATE
-        case SqlValue.NullType.Uuid => Types.OTHER
-        case SqlValue.NullType.Json => Types.OTHER
-        case SqlValue.NullType.Int64Array => Types.ARRAY
-        case SqlValue.NullType.StrArray => Types.ARRAY
-        case SqlValue.NullType.Int32Array => Types.ARRAY
-        case SqlValue.NullType.JsonArray => Types.ARRAY
-    }
 
     ///
     /// 結果セットを全部読んで Row のリストにする。読み終わったら接続から独立した値になる。
@@ -194,128 +159,38 @@ pub mod Sqlitefx.JdbcConvert {
         let indices = List.range(1, count + 1);
         let names = indices |> List.map(i -> { let label: String = metadata.getColumnLabel(i); label });
         let columns = Row.makeColumnIndex(names);
-        let readers = indices |> List.map(i -> cellReader(metadata, i));
-        readRows(resultSet, columns, readers, Nil)
+        readRows(resultSet, columns, indices, Nil)
 
     ///
     /// 1 行ずつ next() で進めながら読む。先頭に積んで最後に反転する。
     ///
-    def readRows(resultSet: ResultSet, columns: Row.ColumnIndex, readers: List[ResultSet -> SqlValue \ IO], acc: List[Row]): List[Row] \ IO =
+    def readRows(resultSet: ResultSet, columns: Row.ColumnIndex, indices: List[Int32], acc: List[Row]): List[Row] \ IO =
         if (resultSet.next()) {
-            let cells = readers |> List.map(read -> read(resultSet)) |> List.toVector;
-            readRows(resultSet, columns, readers, { columns = columns, cells = cells } :: acc)
+            let cells = indices |> List.map(i -> cell(resultSet, i)) |> List.toVector;
+            readRows(resultSet, columns, indices, { columns = columns, cells = cells } :: acc)
         } else
             List.reverse(acc)
 
     ///
-    /// 列の JDBC 型から、その列を読む関数を 1 回だけ決める（行ごとに型を見ない）。
-    /// NULL 判定はどの型でも `wasNull` で行う。
+    /// 1 つのセルを、SQLite がその値を持っていた記憶クラスで読む。
     ///
-    /// WhyNot: 知らない型を `getString` で文字列にして返さないのは、静かな半壊（数値のつもりが文字列）を
-    /// 許さない方針だから。読めない型は Corrupt として派手に落とす。
+    /// WhyNot: PG のように列の型から読み方を列ごとに 1 回決めないのは、SQLite の型が列でなく値に付くから。
+    /// 宣言が INTEGER の列にも TEXT の値は入り、式の列には宣言が無い。sqlite-jdbc の `getObject` が値の記憶クラスでInteger / Long / Double / String / byte[] を返すので、それで分ける。
     ///
-    def cellReader(metadata: ResultSetMetaData, index: Int32): (ResultSet -> SqlValue \ IO) \ IO =
-        let jdbcType: Int32 = metadata.getColumnType(index);
-        let typeName: String = metadata.getColumnTypeName(index);
-        if (jdbcType == Types.BIT or jdbcType == Types.BOOLEAN)
-            rs -> nullOr(rs, SqlValue.Bool(rs.getBoolean(index)))
-        else if (jdbcType == Types.SMALLINT or jdbcType == Types.INTEGER or jdbcType == Types.TINYINT)
-            rs -> nullOr(rs, SqlValue.Int32(rs.getInt(index)))
-        else if (jdbcType == Types.BIGINT)
-            rs -> nullOr(rs, SqlValue.Int64(rs.getLong(index)))
-        else if (jdbcType == Types.NUMERIC or jdbcType == Types.DECIMAL)
-            rs -> { let d: BigDecimal = rs.getBigDecimal(index); nullOr(rs, SqlValue.Decimal(d)) }
-        else if (jdbcType == Types.REAL or jdbcType == Types.FLOAT or jdbcType == Types.DOUBLE)
-            rs -> nullOr(rs, SqlValue.Float64(rs.getDouble(index)))
-        else if (jdbcType == Types.CHAR or jdbcType == Types.VARCHAR or jdbcType == Types.LONGVARCHAR)
-            rs -> { let s: String = rs.getString(index); nullOr(rs, SqlValue.Str(s)) }
-        else if (jdbcType == Types.BINARY or jdbcType == Types.VARBINARY or jdbcType == Types.LONGVARBINARY)
-            rs -> { let bytes: Array[Int8, Static] = rs.getBytes(index); nullOrConvert(rs, () -> SqlValue.Bytes(Array.toVector(bytes))) }
-        else if (jdbcType == Types.TIMESTAMP or jdbcType == Types.TIMESTAMP_WITH_TIMEZONE)
-            rs -> { let t: SqlTimestamp = rs.getTimestamp(index); nullOrConvert(rs, () -> SqlValue.Timestamp(fromSqlTimestamp(t))) }
-        else if (jdbcType == Types.DATE)
-            rs -> { let d: SqlDate = rs.getDate(index); nullOrConvert(rs, () -> SqlValue.Date(fromSqlDate(d))) }
-        else if (jdbcType == Types.ARRAY and typeName == "_int8")
-            rs -> { let a: SqlArray = rs.getArray(index); nullOrConvert(rs, () -> SqlValue.Int64Array(readInt64Array(a))) }
-        else if (jdbcType == Types.ARRAY and typeName == "_text")
-            rs -> { let a: SqlArray = rs.getArray(index); nullOrConvert(rs, () -> SqlValue.StrArray(readStrArray(a))) }
-        else if (jdbcType == Types.ARRAY and typeName == "_int4")
-            rs -> { let a: SqlArray = rs.getArray(index); nullOrConvert(rs, () -> SqlValue.Int32Array(readInt32Array(a))) }
-        else if (jdbcType == Types.ARRAY and (typeName == "_jsonb" or typeName == "_json"))
-            rs -> { let a: SqlArray = rs.getArray(index); nullOrConvert(rs, () -> SqlValue.JsonArray(readStrArray(a))) }
-        else if (jdbcType == Types.OTHER and typeName == "uuid")
-            rs -> { let s: String = rs.getString(index); nullOr(rs, SqlValue.Uuid(s)) }
-        else if (jdbcType == Types.OTHER and (typeName == "json" or typeName == "jsonb"))
-            rs -> { let s: String = rs.getString(index); nullOr(rs, SqlValue.Json(s)) }
-        else
-            rs -> { let s: String = rs.getString(index); nullOr(rs, SqlValue.Str(s)) }
-
+    /// WhyNot: Integer を Int32、Long を Int64 にするのは、sqlite-jdbc が 32 bit に収まる整数を Integer で返すから。
+    /// `SqlValue.asInt64` は Int32 も広げて読む。
     ///
-    /// 直前の get* が NULL を読んでいたら Null、そうでなければ value。
-    /// value は先に評価されている（get* の呼び出しが wasNull より前に済んでいる）ことに依存する。
-    ///
-    def nullOr(resultSet: ResultSet, value: SqlValue): SqlValue \ IO =
-        if (resultSet.wasNull()) SqlValue.Null else value
-
-    ///
-    /// 変換が要る型用。NULL のときは変換を呼ばない（Java の null に触ると落ちる）。
-    ///
-    def nullOrConvert(resultSet: ResultSet, convert: Unit -> SqlValue \ IO): SqlValue \ IO =
-        if (resultSet.wasNull()) SqlValue.Null else convert()
-
-    ///
-    /// SQL の配列を ResultSet 経由で読む（Object[] のキャストを避ける）。2 列目が値。
-    ///
-    def readInt64Array(sqlArray: SqlArray): List[Int64] \ IO =
-        let rs: ResultSet = sqlArray.getResultSet();
-        readArrayElements(rs, r -> r.getLong(2), Nil)
-
-    def readInt32Array(sqlArray: SqlArray): List[Int32] \ IO =
-        let rs: ResultSet = sqlArray.getResultSet();
-        readArrayElements(rs, r -> r.getInt(2), Nil)
-
-    def readStrArray(sqlArray: SqlArray): List[String] \ IO =
-        let rs: ResultSet = sqlArray.getResultSet();
-        readArrayElements(rs, r -> { let s: String = r.getString(2); s }, Nil)
-
-    def readArrayElements(rs: ResultSet, read: ResultSet -> a \ IO, acc: List[a]): List[a] \ IO =
-        if (rs.next())
-            readArrayElements(rs, read, read(rs) :: acc)
-        else
-            List.reverse(acc)
-
-    ///
-    /// epoch マイクロ秒 → OffsetDateTime(UTC)。
-    ///
-    def toOffsetDateTime(micros: Int64): OffsetDateTime \ IO =
-        let seconds = micros / 1000000i64;
-        let nanos = (micros `Int64.remainder` 1000000i64) * 1000i64;
-        OffsetDateTime.ofInstant(Instant.ofEpochSecond(seconds, nanos), ZoneOffset.UTC)
-
-    ///
-    /// java.sql.Timestamp → epoch マイクロ秒。Instant 経由なら 1970 年より前でも秒と秒未満の符号が揃う。
-    ///
-    def fromSqlTimestamp(t: SqlTimestamp): Int64 \ IO =
-        let instant: Instant = t.toInstant();
-        let seconds: Int64 = instant.getEpochSecond();
-        let nanos: Int32 = instant.getNano();
-        seconds * 1000000i64 + Int32.toInt64(nanos) / 1000i64
-
-    ///
-    /// java.sql.Date → 1970-01-01 からの日数。
-    ///
-    def fromSqlDate(d: SqlDate): Int32 \ IO =
-        let local: LocalDate = d.toLocalDate();
-        let days: Int64 = local.toEpochDay();
-        Int64.clampToInt32(min = Int32.minValue(), max = Int32.maxValue(), days)
-
-    ///
-    /// jsonb として送る PGobject。
-    ///
-    def toPgJsonb(json: String): PGobject \ IO =
-        let obj = new PGobject();
-        obj.setType("jsonb");
-        obj.setValue(json);
-        obj
+    def cell(resultSet: ResultSet, index: Int32): SqlValue \ IO =
+        let found = resultSet.getObject(index);
+        if (Object.isNull(found))
+            SqlValue.Null
+        else match found.getClass().getName() {
+            case "java.lang.Integer" => SqlValue.Int32(resultSet.getInt(index))
+            case "java.lang.Long"    => SqlValue.Int64(resultSet.getLong(index))
+            case "java.lang.Double"  => SqlValue.Float64(resultSet.getDouble(index))
+            case "java.lang.Float"   => SqlValue.Float64(resultSet.getDouble(index))
+            case "[B"                => { let bytes = resultSet.getBytes(index); SqlValue.Bytes(Array.toVector(bytes)) }
+            case _                   => { let s: String = resultSet.getString(index); SqlValue.Str(s) }
+        }
 
 }

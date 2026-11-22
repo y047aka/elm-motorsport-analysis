@@ -115,7 +115,7 @@ pub mod Sqlitefx.Fragment {
     pub enum Assignment with Eq, Order, ToString {
         /// `col = $n`
         case Assign(String, SqlValue)
-        /// `col = NULL`。$n で Null を送っても動くが、psql に貼って読める形を取る
+        /// `col = NULL`。$n で Null を送っても動くが、sqlite3 に貼って読める形を取る
         case AssignNull(String)
         /// `col = col + $n`
         case Increment(String, SqlValue)

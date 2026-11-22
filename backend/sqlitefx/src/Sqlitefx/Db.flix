@@ -122,11 +122,10 @@ pub mod Sqlitefx.Db {
         }
 
     ///
-    /// pgjdbc の中から出た例外か。例外の class 名か、stack trace の先頭の frame の class 名が `org.postgresql.` で始まる物。
-    /// fatal でなくても、pgjdbc の中の例外は protocol の途中で出うるので、その接続は捨てる（ROLLBACK を送らない）。
+    /// sqlite-jdbc の中から出た例外か。例外の class 名か、stack trace の先頭の frame の class 名が `org.sqlite.` で始まる物。
+    /// fatal でなくても、sqlite-jdbc の中の例外は native の呼び出しの途中で出うるので、その接続は捨てる（ROLLBACK を送らない）。
     ///
-    /// WhyNot: fatal でない例外を全部「接続を捨てる」側に倒さないのは、sqlitefx 側の変換（JdbcConvert）の失敗は
-    /// 接続の protocol に触っておらず、ROLLBACK して返せば足りるため。
+    /// WhyNot: fatal でない例外を全部「接続を捨てる」側に倒さないのは、sqlitefx 側の変換（JdbcConvert）の失敗は接続の状態に触っておらず、ROLLBACK して返せば足りるため。
     ///
     pub def fromDriver(error: Throwable): Bool \ IO =
         let className: String = error.getClass().getName();
@@ -135,10 +134,10 @@ pub mod Sqlitefx.Db {
         isDriverClass(className) or isDriverClass(topFrame)
 
     ///
-    /// pgjdbc の class 名か。
+    /// sqlite-jdbc の class 名か。
     ///
     def isDriverClass(name: String): Bool =
-        String.startsWith(prefix = "org.postgresql.", name)
+        String.startsWith(prefix = "org.sqlite.", name)
 
     ///
     /// COMMIT の最中に fatal を受けた印の message の頭。
@@ -146,7 +145,7 @@ pub mod Sqlitefx.Db {
     def commitOutcomeUnknownPrefix(): String = "Sqlitefx.CommitOutcomeUnknown"
 
     ///
-    /// COMMIT の最中に受けた fatal に、COMMIT が PG に届いたか分からない事を示す marker を `addSuppressed` で足して返す。
+    /// COMMIT の最中に受けた fatal に、COMMIT がファイルに書かれたか分からない事を示す marker を `addSuppressed` で足して返す。
     /// fatal の型は変えない。marker を作れない（OOM の中で new できない）時は、付けずに元の物を返す。
     ///
     /// WhyNot: marker を Java の例外の class にしないのは、Flix から Throwable の子を定義できないため。
