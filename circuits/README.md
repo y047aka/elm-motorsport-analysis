@@ -81,10 +81,10 @@ Per-file links show in `git ls-files -s` as mode `120000`.
 
 ## The heights
 
-`elevation <word> --fetch` asks the source the circuit's config names for the height of every place the kept answer holds, and of the zero a turned lap opens at, which no node stands at; it keeps them as `circuits/<word>/elevation.json`.
-Only surveyed places are sampled: a height is never interpolated between two of them, so a long straight carries no height between its ends.
-Where the places have heights the line is thinned in three dimensions, to the same `Survey.tolerance`: a crest or a dip on a line straight on the plan is a point the drawing keeps, so sampling a circuit adds points to its drawing and takes a re-baseline of its VRT with it.
-What OpenStreetMap does not hold, no thinning can keep: COTA's climb to turn 1 has no node between 297 m and 562 m round the lap, so the geometry rises 17 m on one straight stretch.
+`elevation <word> --fetch` asks the source the circuit's config names for the height of every place the kept answer holds, and of every place the survey walks that no node stands at — the zero a turned lap opens at, and the places it walks between two nodes; it keeps them as `circuits/<word>/elevation.json`.
+OpenStreetMap puts a node where a line bends on the plan, so a straight climbing to a crest is held by its two ends alone: COTA's climb to turn 1 has no node between 297 m and 562 m round the lap.
+A line with heights is therefore walked at most `Survey.spacing` (10 m) between places, each on the straight line joining its two nodes in degrees, and the heights are sampled at those places; the kept answer is not touched, and the lap's length and its nodes' metres are measured over the nodes alone.
+The walked line is thinned in three dimensions, to the same `Survey.tolerance`: a crest or a dip on a line straight on the plan is a point the drawing keeps, so sampling a circuit adds points to its drawing and takes a re-baseline of its VRT with it.
 The survey and the fence read the kept samples as they read the kept answer, and the geometry carries an `elevation_m` per point of each line and the dataset and datum as `elevation`; the positions stay pairs of degrees.
 A circuit with no kept samples is drawn without heights.
 App-side, `Motorsport.Wec.Circuit.Geometry` reads `elevation_m` as optional and refuses heights out of step with their points, and the 3D map raises the lap by them, `Tracker3d.steep` times over.

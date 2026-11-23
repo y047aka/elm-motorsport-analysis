@@ -2,9 +2,11 @@
 /// Overpass answer they were asked for, and the heights a geometry carries point for
 /// point beside its degrees.
 ///
-/// What is sampled is every place the kept answer holds, and every place the survey keeps
-/// that no node stands at — the zero a turned lap opens at. A height is a source's reading
-/// at a surveyed place, never one interpolated here between two of them.
+/// What is sampled is every place the kept answer holds, and every place the survey walks
+/// that no node stands at: the zero a turned lap opens at, and the places it walks every
+/// `Survey.spacing` metres between two nodes further apart, on the straight line joining
+/// them. A height is a source's reading at one of those places, never one interpolated
+/// here between two of them.
 ///
 /// The samples are keyed by the degrees they were asked at, spelled as the geometry file
 /// spells them. An answer re-fetched with a node moved leaves that node unsampled, and the
@@ -101,11 +103,12 @@ pub mod Elevation {
     // ---------------------------------------------------------------- the places
 
     /// The places a circuit is sampled at: the answer's nodes in the order it holds them,
-    /// then whatever the survey keeps that no node stands at, each once.
+    /// then every place the survey walks that no node stands at — the zero a turned lap
+    /// opens at, and the places it walks between two nodes `Survey.spacing` apart — each
+    /// once.
     pub def placesOf(reading: Answer, geometry: Survey.Geometry): List[Place] =
         let nodes = reading#elements |> List.filter(each -> each#kind == "node") |> List.filterMap(each -> each#at);
-        let kept = List.append(List.map(each -> each#place, geometry#centreline), geometry#pitLane);
-        distinct(List.append(nodes, kept), Set.empty(), Nil)
+        distinct(List.append(nodes, geometry#walked), Set.empty(), Nil)
 
     def distinct(places: List[Place], seen: Set[String], kept: List[Place]): List[Place] =
         match places {

@@ -80,12 +80,14 @@ pub mod TestSurvey {
 
     // ------------------------------------------------------------------- the heights
 
-    /// The kept samples of a square, every place the survey asks for given a height of
-    /// its own — its order — less the places `dropped` names.
+    /// The kept samples of a square, every place the survey asks for less the places
+    /// `dropped` names, on ground rising a metre to the east every thousandth of a
+    /// degree: a plane, so the places between two nodes stand on the
+    /// straight line joining theirs and the thinning keeps no more than the corners.
     def heightsFor(places: List[Place], dropped: List[Place]): String =
-        List.zip(places, List.range(0, List.length(places)))
-            |> List.filter(pair -> match pair { case (at, _) => not List.memberOf(spelledAt(at), List.map(spelledAt, dropped)) })
-            |> List.map(pair -> match pair { case (at, n) => {place = at, metres = 100.0 + Int32.toFloat64(n), resolution = 1.0} })
+        places
+            |> List.filter(at -> not List.memberOf(spelledAt(at), List.map(spelledAt, dropped)))
+            |> List.map(at -> {place = at, metres = 100.0 + (at#lon + 97.6) * 1000.0, resolution = 1.0})
             |> Elevation.written(Elevation.datasetOf(Elevation.Source.Usgs3dep))
 
     def spelledAt(at: Place): String = Geometry.Write.coordinate(at#lon, at#lat)
@@ -105,10 +107,23 @@ pub mod TestSurvey {
                 // The six nodes the answer holds, then the zero the lap is turned at,
                 // which no node stands at: a height is asked there rather than drawn
                 // between the two nodes either side of it.
-                Assert.assertTrue(List.length(places) == 7);
-                Assert.assertTrue(Option.map(spelledAt, List.last(places)) == zero);
+                Assert.assertTrue(Option.map(spelledAt, List.nth(6, places)) == zero);
                 Assert.assertTrue(Option.map(z -> String.startsWith({prefix = "[-97.59"}, z), zero) == Some(true))
         }
+
+    @Test
+    def testALineIsWalkedNoFurtherThanTheSpacingBetweenTwoPlaces(): Unit \ Assert =
+        // Two nodes 963 m apart on the plan are walked in 97 steps of 9.9 m; two 7 m
+        // apart are walked in one. Every place stands on the straight line between its
+        // nodes, and the nodes themselves are walked where they stand.
+        let line = {lat = 30.0, lon = -97.6} :: {lat = 30.0, lon = -97.59} :: {lat = 30.0, lon = -97.58993} :: Nil;
+        let walked = Survey.densified(line);
+        let places = List.map(each -> each#place, walked);
+        let steps = List.zip(places, List.drop(1, places)) |> List.map(pair -> match pair { case (a, b) => Geodesy.apart(a, b) });
+        Assert.assertTrue(List.length(walked) == 99);
+        Assert.assertTrue(List.forAll(step -> step <= Survey.spacing() and step > 6.0, steps));
+        Assert.assertTrue(List.forAll(at -> at#lat == 30.0, places));
+        Assert.assertTrue(List.map(spelledAt, List.filter(each -> each#fall == 0.0, walked) |> List.map(each -> each#place)) == List.map(spelledAt, line))
 
     @Test
     def testEveryKeptPointCarriesItsHeight(): Unit \ Assert =
@@ -124,10 +139,10 @@ pub mod TestSurvey {
                         let file = Geometry.Write.file(circuit, figures, heighted#geometry);
                         // The zero first, at the height asked at its own degrees; then the
                         // nodes the lap turns through, each at its own.
-                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [106,101,102,103,100,106]"}, file));
+                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [104,110,110,100,100,104]"}, file));
                         Assert.assertTrue(String.contains({substr = "\"elevation\": {\"source\":\"USGS 3D Elevation Program (3DEP), best available\",\"license\":\"public domain\",\"datum\":\"NAVD88\"}"}, file));
                         // The pit lane carries its own, between its two nodes.
-                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [104,105]"}, file))
+                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [150,160]"}, file))
                 }
         }
 

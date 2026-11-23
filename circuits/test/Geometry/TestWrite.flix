@@ -36,7 +36,8 @@ pub mod Geometry.TestWrite {
         direction = Survey.counterClockwise(),
         surveyedAt = Some("2026-10-20T07:01:01Z"),
         surveyedLength = Some(5502.238574528194),
-        elevation = None
+        elevation = None,
+        walked = Nil
     }
 
     /// The same line from an answer that said nothing about itself.
@@ -47,7 +48,8 @@ pub mod Geometry.TestWrite {
         direction = Survey.clockwise(),
         surveyedAt = None,
         surveyedLength = None,
-        elevation = None
+        elevation = None,
+        walked = Nil
     }
 
     /// The file a circuit's survey would write, or the sentence that refused to write one.
