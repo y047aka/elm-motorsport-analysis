@@ -5,10 +5,12 @@ serves: the geometry checked through the drawing it is projected into.
 -}
 
 import Expect
-import Json.Decode as Decode
+import Motorsport.TestHelpers.Drawn as Drawn
+import Motorsport.TestHelpers.Map.Barcelona as MapBytes
 import Motorsport.TestHelpers.Survey.Barcelona as Survey
 import Motorsport.TestHelpers.SurveySuite as SurveySuite exposing (Survey)
 import Motorsport.Wec.Circuit.Barcelona.Layout as Layout
+import Motorsport.Wec.Circuit.Map as Map
 import Test exposing (Test, test)
 
 
@@ -16,18 +18,17 @@ import Test exposing (Test, test)
 -}
 survey : Result String Survey
 survey =
-    Decode.decodeString Layout.decoder Survey.text
+    Drawn.read Map.intermediatesDecoder Layout.decoder MapBytes.text Survey.text
         |> Result.map
-            (\geometry ->
+            (\( map, geometry ) ->
                 { name = "Motorsport.Wec.Circuit.Barcelona.Geometry, as served"
                 , box = { minLat = 41.55, maxLat = 41.59, minLon = 2.24, maxLon = 2.28 }
                 , frame = geometry.frame
                 , centreline = List.map (\point -> { lat = point.lat, lon = point.lon }) geometry.centreline
                 , pitLane = geometry.pitLane
-                , layout = Layout.layout geometry
+                , layout = Layout.layout map geometry
                 }
             )
-        |> Result.mapError Decode.errorToString
 
 
 tests : Test

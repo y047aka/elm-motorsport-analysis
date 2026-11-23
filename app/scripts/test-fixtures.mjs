@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Writes the served geometry bytes, and the circuit maps the bundle carries, out
+ * Writes the served geometry bytes, and the circuit maps served beside them, out
  * as the Elm modules the package's tests read, so those tests check the files
  * the app ships rather than a copy kept by hand beside them.
  *
@@ -23,7 +23,11 @@ const fixtures = [
   { module: "Survey.Fuji", file: "app/static/geometry/fuji.geojson" },
   { module: "Survey.LeMans", file: "app/static/geometry/le_mans.geojson" },
   { module: "Survey.Monza", file: "app/static/geometry/monza.geojson" },
-  { module: "Map.LeMans", file: "circuits/le_mans/map-2026.json" },
+  { module: "Map.Barcelona", file: "app/static/circuit-maps/barcelona.json" },
+  { module: "Map.Cota", file: "app/static/circuit-maps/cota.json" },
+  { module: "Map.Fuji", file: "app/static/circuit-maps/fuji.json" },
+  { module: "Map.LeMans", file: "app/static/circuit-maps/le_mans.json" },
+  { module: "Map.Monza", file: "app/static/circuit-maps/monza.json" },
 ];
 
 for (const { module, file } of fixtures) {

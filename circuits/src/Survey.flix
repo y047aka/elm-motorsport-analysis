@@ -71,23 +71,23 @@ pub mod Survey {
         geometry = Survey.Geometry
     }
 
-    pub def geometry(text: String, circuit: Circuit): Result[String, Read] =
+    pub def geometry(text: String, circuit: Circuit, figures: Circuit.Figures): Result[String, Read] =
         forM(
             reading  <- Overpass.Answer.read(text);
-            surveyed <- geometryOf(reading, circuit)
+            surveyed <- geometryOf(reading, circuit, figures)
         ) yield {text = text, answer = reading, geometry = surveyed}
 
     /// The lap, the pit lane and the frame, chained out of an answer already read. Two
     /// groundings arrive here: a relation's members, and a box's raceway ways.
-    pub def geometryOf(reading: Answer, circuit: Circuit): Result[String, Geometry] =
+    pub def geometryOf(reading: Answer, circuit: Circuit, figures: Circuit.Figures): Result[String, Geometry] =
         match circuit#relation {
-            case Some(id) => fromRelation(reading, circuit, id)
-            case None     => fromBox(reading, circuit)
+            case Some(id) => fromRelation(reading, circuit, figures#lap, id)
+            case None     => fromBox(reading, circuit, figures#lap)
         }
 
-    def fromRelation(reading: Answer, circuit: Circuit, relation: Int64): Result[String, Geometry] =
+    def fromRelation(reading: Answer, circuit: Circuit, lapLength: Float64, relation: Int64): Result[String, Geometry] =
         if (circuit#timedFrom == "")
-            turnedRelation(reading, circuit, relation)
+            turnedRelation(reading, circuit, lapLength, relation)
         else
             let nodes = Overpass.Answer.nodePlaces(reading#elements);
             let ways = reading#elements |> Overpass.Answer.byKind("way");
@@ -97,13 +97,13 @@ pub mod Survey {
                 _          <- standsAtLine(rel#members, nodes, start, circuit);
                 lap        <- chained(rel, ways, nodes, start);
                 pit        <- pitChained(rel, ways, nodes);
-                laid     <- laidOut(reading, nodes, lap, pit, circuit)
+                laid     <- laidOut(reading, nodes, lap, pit, circuit, lapLength)
             ) yield laid
 
     /// A relation whose config names no role tags no member at the line, so its lap is
     /// chained from the one-way node nearest the authored place and turned at that place,
     /// as a box's lap is.
-    def turnedRelation(reading: Answer, circuit: Circuit, relation: Int64): Result[String, Geometry] =
+    def turnedRelation(reading: Answer, circuit: Circuit, lapLength: Float64, relation: Int64): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
         match circuit#timingLine {
@@ -116,7 +116,7 @@ pub mod Survey {
                     walked   <- chain(segments, nodes, Some(nearestTo(oneWayNodes(segments), nodes, line#place)));
                     turned   <- turnAt(walked, nodes, line);
                     pit      <- pitChained(rel, ways, nodes);
-                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit)
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength)
                 ) yield laid
         }
 
@@ -374,7 +374,7 @@ pub mod Survey {
     /// out. The zero
     /// turns at the projection of the authored place onto the lap rather than at a
     /// node, because a circuit may cross its own line between two nodes.
-    def fromBox(reading: Answer, circuit: Circuit): Result[String, Geometry] =
+    def fromBox(reading: Answer, circuit: Circuit, lapLength: Float64): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
         match circuit#timingLine {
@@ -388,7 +388,7 @@ pub mod Survey {
                     walked   <- chain(lapWay :: Nil, nodes, Some(nearestTo(lapWay#nodes, nodes, line#place)));
                     turned   <- turnAt(walked, nodes, line);
                     pit      <- chain(pitSegs, nodes, None);
-                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit)
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength)
                 ) yield laid
         }
 
@@ -609,7 +609,7 @@ pub mod Survey {
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
     /// line thinned to what a drawing at a tenth of a metre cannot show.
-    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit): Result[String, Geometry] = {
+    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit, lapLength: Float64): Result[String, Geometry] = {
         let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
         let pitNodes = List.filterMap(id -> Map.get(id, nodes), pit);
         let both = List.append(lapNodes, pitNodes);
@@ -624,12 +624,12 @@ pub mod Survey {
                 // Only a box picks its lap by standing near the line alone, so only a
                 // box is held to what its pick measures; a relation's roles picked its
                 // lap before anything was measured.
-                if (circuit#relation == None and Float64.abs(measured - circuit#lap) > circuit#lap * Circuit.lengthTolerance())
+                if (circuit#relation == None and Float64.abs(measured - lapLength) > lapLength * Circuit.lengthTolerance())
                     Err(
-                        "the lap the line stands on measures ${Util.Format.whole(measured)} m, which is not within ${Util.Format.whole(Circuit.lengthTolerance() * 100.0)} percent of the ${Util.Format.whole(circuit#lap)} m the circuit publishes"
+                        "the lap the line stands on measures ${Util.Format.whole(measured)} m, which is not within ${Util.Format.whole(Circuit.lengthTolerance() * 100.0)} percent of the ${Util.Format.whole(lapLength)} m the circuit publishes"
                     )
                 else
-                    let stretch = circuit#lap / measured;
+                    let stretch = lapLength / measured;
                     let metres = List.map(each -> each * stretch, surveyed);
                     // The published metre each surveyed place stands at, in one list: the degrees
                     // and the metre are one pair from here on, and never looked up apart.
@@ -867,9 +867,10 @@ pub mod Survey {
             case Ok(Some(spelled)) =>
                 Cli.Args.outcomeOf(
                     forM(
-                        read <- surveyed(asked, spelled);
-                        _    <- if (asked#fetch) keep(asked, read) else Ok(())
-                    ) yield laid(asked, Geometry.Write.file(asked#circuit, read#geometry))
+                        figures <- MapRecord.read(asked#circuit) |> Result.mapErr(CliError.Reading);
+                        read    <- surveyed(asked, spelled, figures);
+                        _       <- if (asked#fetch) keep(asked, read) else Ok(())
+                    ) yield laid(asked, Geometry.Write.file(asked#circuit, figures, read#geometry))
                 )
         }
 
@@ -914,8 +915,8 @@ pub mod Survey {
     /// laying, so a runner's HTML page, a reply stopped half way through its JSON and
     /// an answer whose relation will not chain into a lap are each met in the words
     /// the survey itself would say them in.
-    def surveyed(asked: Request, spelled: String): Result[CliError, Read] =
-        match geometry(spelled, asked#circuit) {
+    def surveyed(asked: Request, spelled: String, figures: Circuit.Figures): Result[CliError, Read] =
+        match geometry(spelled, asked#circuit, figures) {
             case Ok(read) => Ok(read)
             case Err(problem) =>
                 if (asked#fetch)

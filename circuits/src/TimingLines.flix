@@ -16,7 +16,7 @@
 /// error of the method -- a line the organisers moved would show as hundreds of
 /// metres, and a changed Balance of Performance or a new tyre costs tens.
 ///
-/// The map's lines are the config's, derived by its own `Circuit.timingMap`,
+/// The map's lines are the circuit map's, derived by `Circuit.timingMapOf`,
 /// and the reading of the feed is the summary's: `Round.Summary`'s
 /// `fastestSectors` asks the database the same question of the same rows.
 ///
@@ -311,17 +311,26 @@ pub mod TimingLines {
     /// A circuit the organiser re-maps every year is refused rather than read:
     /// the question -- do one map's lines still stand a season later -- has no
     /// answer where there is no such thing as one map.
-    def publishedMap(asked: Request, circuit: Motorsport.Circuit.Circuit): Result[CliError, PublishedMap] =
-        match circuit |> Motorsport.Circuit.jsonValue |> Circuit.timingMap {
-            case TimingMap.Published(published) => Ok(published)
-            case TimingMap.PerSeason(reason)    =>
+    def publishedMap(asked: Request, circuit: Motorsport.Circuit.Circuit): Result[CliError, PublishedMap] \ IO =
+        match timingMapOf(circuit) |> Result.mapErr(CliError.Reading) {
+            case Err(problem)                       => Err(problem)
+            case Ok(TimingMap.Published(published)) => Ok(published)
+            case Ok(TimingMap.PerSeason(reason)) =>
                 Err(CliError.Reading(
                     "${asked#season}/${asked#id} is run on a circuit whose timing map is not one set of lines: ${reason}."
                 ))
-            case TimingMap.Unsurveyed =>
+            case Ok(TimingMap.Unsurveyed) =>
                 Err(CliError.Reading(
                     "no timing map is published for ${asked#season}/${asked#id}: circuits/ surveys the lines of only some circuits, and this circuit is not one of them."
                 ))
+        }
+
+    /// The circuit's answer, derived from its config and the figures of the map the app is
+    /// served; a circuit no config authors publishes nothing.
+    def timingMapOf(circuit: Motorsport.Circuit.Circuit): Result[String, TimingMap] \ IO =
+        match Circuit.byWord(Motorsport.Circuit.jsonValue(circuit)) {
+            case None         => Ok(TimingMap.Unsurveyed)
+            case Some(config) => MapRecord.read(config) |> Result.map(figures -> Circuit.timingMapOf(config, figures))
         }
 
     /// The intermediate lines the published stretches imply. The stretches are

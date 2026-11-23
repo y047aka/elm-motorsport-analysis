@@ -5,24 +5,25 @@ through the app's own decoder.
 -}
 
 import Expect
-import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.TestHelpers.Drawn as Drawn
 import Motorsport.TestHelpers.LeMans as LeMansFixture
+import Motorsport.TestHelpers.Map.Monza as MonzaMap
 import Motorsport.TestHelpers.Survey.Monza as MonzaBytes
-import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
+import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as Monza
 import Test exposing (Test, describe, test)
 
 
 tests : Test
 tests =
-    case ( read Monza.decoder MonzaBytes.text, LeMansFixture.layout ) of
-        ( Ok monza, Ok reference ) ->
+    case ( Drawn.read Map.intermediatesDecoder Monza.decoder MonzaMap.text MonzaBytes.text, LeMansFixture.layout ) of
+        ( Ok ( map, monza ), Ok reference ) ->
             let
                 drawing =
-                    Monza.layout monza
+                    Monza.layout map monza
             in
             describe "Motorsport.Wec.Circuit.Monza.Layout"
                 [ test "the lap is the length the circuit measures it at" <|
@@ -95,11 +96,6 @@ tests =
                     problems [ monzaRead ] ++ problems [ leMansRead ]
                         |> Expect.equal []
 
-
-read : Decoder Geometry -> String -> Result String Geometry
-read decoder text =
-    Decode.decodeString decoder text
-        |> Result.mapError Decode.errorToString
 
 
 problems : List (Result String a) -> List String

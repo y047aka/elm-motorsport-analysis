@@ -125,12 +125,7 @@ export default defineConfig({
   // `vite build` sets NODE_ENV=production (optimize defaults to true then).
   plugins: [elmPlugin({ debug: false }), staticAssets(), apiServer()],
   publicDir: "public",
-  // `index.ts` imports the circuit maps out of `circuits/`, which is outside the root the dev server serves files from.
-  server: {
-    port: 1234,
-    strictPort: true,
-    fs: { allow: [import.meta.dirname, resolve(import.meta.dirname, "../circuits")] },
-  },
+  server: { port: 1234, strictPort: true },
   build: {
     outDir: "dist",
     emptyOutDir: true,

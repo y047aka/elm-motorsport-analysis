@@ -179,7 +179,7 @@ A line a change adds to this file must name no closer owner: what one module, RE
 
 ## Testing hazards
 
-- **Elm** — `.#test` first runs `app/scripts/test-fixtures.mjs`, which writes the served geometry and the bundled circuit maps out as ignored Elm modules under `TestHelpers/Survey/` and `TestHelpers/Map/`; a bare `elm-test` without them fails to compile by name.
+- **Elm** — `.#test` first runs `app/scripts/test-fixtures.mjs`, which writes the served geometry and circuit maps out as ignored Elm modules under `TestHelpers/Survey/` and `TestHelpers/Map/`; a bare `elm-test` without them fails to compile by name.
   `elm-explorations/test` sits in the app's `dependencies` on purpose: hand-written `test-dependencies` read fine to elm-test but make every `elm make` fail with "dependencies edited by hand".
 - **TypeScript** — `/app/tests/` is outside the TS project on purpose: Playwright comes from the flake, so `@playwright/test` does not resolve for `tsc`.
 - **The Elm/element contract** (`app/tests/custom-elements.spec.ts`) reads the values Elm can send out of the wrapper sources, so a constructor without a matching variant in the vendored component fails there instead of shipping unstyled.

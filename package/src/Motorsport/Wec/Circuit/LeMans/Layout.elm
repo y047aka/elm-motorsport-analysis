@@ -18,9 +18,10 @@ import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Wec.Circuit.Map as Map
 
 
-{-| The figures of the circuit map the drawing is placed by, as `circuits/le_mans/map-<season>.json` records them.
+{-| The figures of the circuit map the drawing is placed by, as its record at `static/circuit-maps/le_mans.json` gives them.
 
 Every season is drawn on the one map the app is handed, which is the latest.
 
@@ -41,18 +42,13 @@ type alias CircuitMap =
 mapDecoder : Decoder CircuitMap
 mapDecoder =
     Decode.map7 CircuitMap
-        (Decode.at [ "lengths", "centerline", "metres" ] Decode.float)
-        (line "intermediate1")
-        (line "intermediate2")
-        (line "porscheIn")
-        (line "porscheOut")
-        (line "fordIn")
-        (line "fordOut")
-
-
-line : String -> Decoder Float
-line name =
-    Decode.at [ "lines", name, "metres" ] Decode.float
+        Map.centreline
+        (Map.line "intermediate1")
+        (Map.line "intermediate2")
+        (Map.line "porscheIn")
+        (Map.line "porscheOut")
+        (Map.line "fordIn")
+        (Map.line "fordOut")
 
 
 {-| Reading the served geometry, checked against the centreline the map gives.

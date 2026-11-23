@@ -20,13 +20,14 @@ import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
+import Motorsport.Wec.Circuit.Map exposing (Intermediates)
 
 
-{-| Reading the served geometry against the 5,513 m centreline of the series' 2026 map.
+{-| Reading the served geometry against the centreline its map gives, which is what the survey was stretched to.
 -}
-decoder : Decoder Geometry
-decoder =
-    Geometry.decoder { lapLength = 5513.0 }
+decoder : Intermediates -> Decoder Geometry
+decoder map =
+    Geometry.decoder { lapLength = map.centreline }
 
 
 {-| The circuit, on one set of timing lines for every season; see
@@ -36,8 +37,8 @@ The lap runs the direction its survey was chained in -- the word arrives with
 the geometry, as OpenStreetMap's own one-way tags say it.
 
 -}
-layout : Geometry -> Layout
-layout geometry =
+layout : Intermediates -> Geometry -> Layout
+layout map geometry =
     let
         lap =
             shape geometry
@@ -47,7 +48,7 @@ layout geometry =
     in
     { shape = lap
     , pitLane = pit
-    , timingLines = timingLines lap
+    , timingLines = timingLines map lap
     , lengths = lengths
     }
 
@@ -122,7 +123,7 @@ pitLane geometry =
     Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
-{-| The series' 2026 map (`circuits/cota/map-2026.json`): i1 at 1,311 m from the finish line and i2 at 3,568 m, of the 5,513 m centreline the served geometry stretches OpenStreetMap's 5,502 m survey to.
+{-| The map's intermediate lines, as far from the finish line as its record puts them.
 
 Every season here is drawn with that map, the latest. A season that moved its lines would be drawn with the wrong boundaries, and would place every car wrong between them.
 
@@ -139,17 +140,17 @@ this round, so a car between two of these lines is placed by the share of the
 time between them it has run.
 
 -}
-timingLines : Shape -> TimingLines
-timingLines lap =
+timingLines : Intermediates -> Shape -> TimingLines
+timingLines map lap =
     { sectors =
         Sector.initialize
             (\sector ->
                 case sector of
                     S1 ->
-                        1311
+                        map.intermediate1
 
                     S2 ->
-                        3568
+                        map.intermediate2
 
                     S3 ->
                         Shape.length lap

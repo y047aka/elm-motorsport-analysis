@@ -2,8 +2,9 @@
 /// writes into three directories and lists two of them looking for what no config
 /// names, so the directories and the names inside them are stated once, in
 /// `Circuit.flix`; the config still authors its own geometry path, the way it authors
-/// its timing figures twice over, and this is where those authored paths are laid
-/// against the words that name them.
+/// its timing line, and this is where those authored paths are laid
+/// against the words that name them, and where the map record a circuit's figures are
+/// read from is read.
 ///
 /// What is not tested here is the bytes a path leads to: that is the byte fence's and
 /// `app/tests/geometry-contract.spec.ts`'s, each of which reads a real file.
@@ -74,5 +75,46 @@ pub mod TestCircuit {
                 grounded,
                 "${circuit#word}: relation and box are not exactly one, or a box authors no line"
             )
+        }
+
+    /// A config's map record is the one the app is served under the circuit's word.
+    @Test
+    def testAMapRecordIsServedUnderTheCircuitsWord(): Unit \ Assert =
+        foreach (circuit <- Circuit.circuits()) {
+            Assert.assertTrue(Circuit.mapOf(circuit) == "app/static/circuit-maps/${circuit#word}.json")
+        }
+
+    /// A record as a map gives it: the centreline, and the two intermediate lines.
+    def record(lines: String): String =
+        "{\"circuit\": \"A circuit\", \"season\": 2026, \"lengths\": {\"centerline\": {\"metres\": 13625.70, \"printed\": \"Centerline: 13.625,70 m\"}}, \"lines\": {${lines}}}"
+
+    @Test
+    def testTheStretchesAreTheDistancesBetweenTheLinesAsTheMapPrintsThem(): Unit \ Assert =
+        let both = "\"intermediate1\": {\"metres\": 1900.70}, \"intermediate2\": {\"metres\": 7672.13}";
+        match Circuit.figuresOf(record(both)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(figures) =>
+                Assert.assertTrue(figures#lap == 13625.7);
+                // To the hundredth the map prints, not to the double a subtraction leaves.
+                Assert.assertTrue(
+                    Option.map(published -> published#stretches, figures#published) == Some(1900.7 :: 5771.43 :: 5953.57 :: Nil)
+                );
+                Assert.assertTrue(
+                    Option.map(published -> published#source, figures#published) == Some("the 2026 circuit map")
+                )
+        }
+
+    @Test
+    def testAMapPlacingOneIntermediateLinePublishesNoStretches(): Unit \ Assert =
+        match Circuit.figuresOf(record("\"intermediate1\": {\"metres\": 1900.70}")) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(figures)  => Assert.assertTrue(Option.isEmpty(figures#published))
+        }
+
+    @Test
+    def testARecordWithNoCentrelineIsRefused(): Unit \ Assert =
+        match Circuit.figuresOf("{\"season\": 2026, \"lengths\": {}, \"lines\": {}}") {
+            case Err(problem) => Assert.assertTrue(String.contains({substr = "lengths.centerline.metres"}, problem))
+            case Ok(_)        => Assert.assertTrue(false)
         }
 }

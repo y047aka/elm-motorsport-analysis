@@ -5,24 +5,25 @@ through the app's own decoder.
 -}
 
 import Expect
-import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.TestHelpers.Drawn as Drawn
 import Motorsport.TestHelpers.LeMans as LeMansFixture
+import Motorsport.TestHelpers.Map.Fuji as FujiMap
 import Motorsport.TestHelpers.Survey.Fuji as FujiBytes
 import Motorsport.Wec.Circuit.Fuji.Layout as Fuji
-import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
+import Motorsport.Wec.Circuit.Map as Map
 import Test exposing (Test, describe, test)
 
 
 tests : Test
 tests =
-    case ( read Fuji.decoder FujiBytes.text, LeMansFixture.layout ) of
-        ( Ok fuji, Ok reference ) ->
+    case ( Drawn.read Map.intermediatesDecoder Fuji.decoder FujiMap.text FujiBytes.text, LeMansFixture.layout ) of
+        ( Ok ( map, fuji ), Ok reference ) ->
             let
                 drawing =
-                    Fuji.layout fuji
+                    Fuji.layout map fuji
             in
             describe "Motorsport.Wec.Circuit.Fuji.Layout"
                 [ test "the lap is the length the circuit measures it at" <|
@@ -95,11 +96,6 @@ tests =
                     problems [ fujiRead ] ++ problems [ leMansRead ]
                         |> Expect.equal []
 
-
-read : Decoder Geometry -> String -> Result String Geometry
-read decoder text =
-    Decode.decodeString decoder text
-        |> Result.mapError Decode.errorToString
 
 
 problems : List (Result String a) -> List String

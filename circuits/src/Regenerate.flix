@@ -271,9 +271,12 @@ pub mod Regenerate {
     /// reading is the survey command's own, so a live survey and a fence over a
     /// kept answer fail in the same words.
     def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
-        match Survey.geometry(answer, circuit) {
+        match forM(
+            figures <- MapRecord.read(circuit);
+            read    <- Survey.geometry(answer, circuit, figures)
+        ) yield Geometry.Write.file(circuit, figures, read#geometry) {
             case Err(problem)  => Err("${circuit#word}: ${problem}")
-            case Ok(read)      => laid(circuit, Geometry.Write.file(circuit, read#geometry), answer, mode)
+            case Ok(written)   => laid(circuit, written, answer, mode)
         }
 
     def laid(circuit: Circuit, written: String, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =

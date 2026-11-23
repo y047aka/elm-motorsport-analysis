@@ -49,10 +49,16 @@ pub mod Geometry.TestWrite {
     }
 
     /// The file a circuit's survey would write, or the sentence that refused to write one.
+    /// The figures COTA's map gives: the lap the fixtures end at, and three stretches.
+    def figures(): Circuit.Figures = {
+        lap = 5513.0,
+        published = Some({source = "the 2026 circuit map", stretches = 1311.0 :: 2257.0 :: 1945.0 :: Nil})
+    }
+
     def written(word: String, geometry: Survey.Geometry): Result[String, String] =
         match Circuit.byWord(word) {
             case None       => Err("the test names no circuit")
-            case Some(circuit) => Ok(Geometry.Write.file(circuit, geometry))
+            case Some(circuit) => Ok(Geometry.Write.file(circuit, figures(), geometry))
         }
 
     /// A circuit whose organiser re-issues its map every season, which no config here is.
@@ -63,8 +69,7 @@ pub mod Geometry.TestWrite {
         word = "reissued",
         timedFrom = "start-finish",
         timingLine = None,
-        lap = 5513.0,
-        sectors = {published = None, eachSeason = Some("the map is re-issued every season")},
+        eachSeason = Some("the map is re-issued every season"),
         file = "nowhere.geojson",
         survey = "A circuit"
     }
@@ -144,10 +149,10 @@ pub mod Geometry.TestWrite {
         // that answers for one season only writes no `sectors` at all rather than one
         // season's lines as though they served every one.
         says(
-            "        \"sectors\": {\"source\":\"the series' 2026 circuit map\",\"stretches\":[1311,2257,1945]},\n",
+            "        \"sectors\": {\"source\":\"the 2026 circuit map\",\"stretches\":[1311,2257,1945]},\n",
             written("cota", drawn())
         );
-        saysNot("sectors", Ok(Geometry.Write.file(reissued(), drawn())))
+        saysNot("sectors", Ok(Geometry.Write.file(reissued(), figures(), drawn())))
 
     @Test
     def testAClaimNothingMadeIsLeftUnwritten(): Unit \ Assert =
