@@ -66,7 +66,7 @@ marked at 53 m, a car's number at 76.5 m, the lap stroked at 8.7 m.
 The margin is the one length not taken there: it is added to the box as well as to
 what stands in it, so a margin at the ratio would widen the box and shrink every
 other length with it. It stands at three tenths of Le Mans's -- 210 m against 700 --
-and `LayoutTest` holds every length but this one at the ratio. The
+and `CircuitsTest` holds every length but this one at the ratio. The
 mini-sector lengths are in the record because `Lengths` holds them, at the same
 ratio as the rest, and not because this lap has mini-sectors to name: it has
 none.

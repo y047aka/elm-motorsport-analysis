@@ -1,8 +1,7 @@
 module Motorsport.Wec.Circuit.GeometryTest exposing (tests)
 
 {-| What the decoder does with bytes it should not accept, on geometries
-written here; the kept files themselves are read by each circuit's own
-`GeometryTest`.
+written here; the kept files themselves are read by `CircuitsTest`.
 -}
 
 import Expect
@@ -33,6 +32,15 @@ tests =
             \_ ->
                 decode { outline | metres = [ 0, 5, 9.5 ] }
                     |> complainsAbout "not the published"
+        , test "the first metre must stand at the finish line" <|
+            \_ ->
+                decode { outline | metres = [ 1, 5, 10 ] }
+                    |> complainsAbout "does not start at the finish line"
+        , test "an outline that does not come back to where it started is no lap" <|
+            \_ ->
+                [ outlineFeature outline (line [ ( 47.9, 0.1 ), ( 47.9, 0.2 ), ( 47.91, 0.2 ) ]), pitLane ]
+                    |> decodeOf
+                    |> complainsAbout "does not close"
         , test "an outline that ends exactly where the circuit says is read" <|
             \_ ->
                 decode outline
@@ -66,7 +74,7 @@ tests =
 
 
 
--- A three-point lap of ten metres, in the shape `geoJsonString` writes.
+-- A three-point lap of ten metres, out and back to where it started, in the shape `geoJsonString` writes.
 
 
 type alias Lap =
@@ -94,7 +102,7 @@ frame =
 
 features : List Encode.Value -> Lap -> List Encode.Value
 features extra lap =
-    [ outlineFeature lap (line [ ( 47.9, 0.1 ), ( 47.9, 0.2 ), ( 47.91, 0.2 ) ]) ]
+    [ outlineFeature lap (line [ ( 47.9, 0.1 ), ( 47.9, 0.2 ), ( 47.9, 0.1 ) ]) ]
         ++ extra
 
 
