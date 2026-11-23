@@ -1,20 +1,36 @@
 ---
 name: add-circuit
-description: "Add a new circuit's data end to end: probe OpenStreetMap for its relation, author its circuits config, keep the Overpass answer, lay the served geometry, join the word on both wire copies, draw it app-side, and run every fence that judges the result. Use when asked to add, survey, or draw a new circuit, or when a new round's circuit has no geometry yet."
+description: "Add a new circuit's data end to end: read its official circuit map into a served map record, probe OpenStreetMap for its relation, author its circuits config, keep the Overpass answer, lay the served geometry, join the word on both wire copies, draw it app-side, and run every fence that judges the result. Also the steps for a circuit whose map is re-issued. Use when asked to add, survey, or draw a new circuit, when a new round's circuit has no geometry yet, or when a newer circuit map arrives for a circuit already here."
 ---
 
 # Add a circuit
 
-A circuit is one word, spelled in places no compiler reaches from one to the other.
+A circuit is one word, spelled in places no compiler reaches from one to the other, and two served files the app reads by that word: its map record and its geometry.
 `circuits/README.md` says *why* each part is what it is; this says *what to run, in what order, and what catches you when you skip a step*.
 
 The word is the stem the round ids share (`fuji_6h` → `fuji`), snake_case.
-It names the evidence directory, the served file, and the arm the app matches on.
-Choose it before anything else — everything downstream is named by it.
+It names the map record, the evidence directory, the served geometry, and the arm the app matches on.
+Choose it before anything else.
 
-Run every command below from the repository root: the flake exports `GEOMETRY_FROM` as the directory the command was asked from, and a reader types `app/static/geometry/...` relative to it.
+Run every command below from the repository root: the flake exports `GEOMETRY_FROM` as the directory the command was asked from, and every path here is relative to it.
 
-## 1. Probe before authoring
+## 1. Write the map record — `app/static/circuit-maps/<word>.json`
+
+The record is the one place the lap and its lines are written: the survey stretches the lap to it, the geometry carries its stretches, the report reads it, and the app checks the geometry against it.
+Write it before surveying; `survey` and `regenerate` read it and fail without it.
+
+Read the series' circuit map (the PDF stays out of the repository) into the shape the other records keep; `circuits/README.md`'s maps section says what each part holds.
+What the code reads, and so must be right:
+
+- `season` — the season of the map.
+- `lengths.centerline.metres` — the lap the survey is stretched to and the geometry is checked against.
+- `lines.intermediate1.metres` and `lines.intermediate2.metres` — both or neither: both imply the three stretches; neither leaves the circuit publishing no lines, and the app has no layout for that yet (`Map.intermediatesDecoder` requires both).
+
+Every figure is written twice, as `metres` and as the map printed it.
+Before going on, check by hand what no reader checks: each `printed` figure reads as its `metres`, and Lap by Pits comes back from the centreline, Pit In, Pit Out and the pit lane — a miss is recorded in the README, not corrected.
+The lines' order is checked by both readers: a record whose lines do not run 0 < i1 < i2 < centreline is refused.
+
+## 2. Probe before authoring
 
 ```bash
 nix run .#geometry -- probe <lat>,<lon> [--radius <km>]
@@ -24,82 +40,83 @@ Prints each candidate relation with its roles' ways measured.
 The length is what tells the full circuit from the GP circuit standing beside it; the default 5 km box holds COTA and not a 13.6 km one — widen it for long circuits.
 The report is for a human, not for a name: read it before writing a config, and note how the relation tags its start/finish line — no two of the kept circuits tag it alike.
 
-**When the probe comes back empty,** OpenStreetMap holds that circuit as loose `highway=raceway` ways rather than a relation — Fuji is mapped that way. Author the box grounding instead: `relation = None`, a `box` around the ground, and a `timingLine` at the line's place — the zero is the projection of that place onto the lap, so no surveyed node need stand there, and nothing but that place says where the zero is.
+**When the probe comes back empty,** OpenStreetMap holds that circuit as loose `highway=raceway` ways rather than a relation — Fuji is mapped that way.
+Author the box grounding instead: `relation = None`, a `box` around the ground, and a `timingLine` at the line's place.
 `survey <word> --fetch` reads the ground and names every refusal by way id: author the box loosely and let the refusals tell you what else the box holds.
 
-## 2. Author the config — `circuits/src/Circuit.flix`
+## 3. Author the config — `circuits/src/Circuit.flix`
 
-Add one `def <word>(): Circuit` and append it to `circuits()`. Its doc-comment is where *how the relation is actually tagged* belongs.
-Fields worth a decision:
+Add one `def <word>(): Circuit` and append it to `circuits()`.
+Its doc-comment is where *how the relation is actually tagged*, and where its line's place came from, belong.
 
 - `relation` / `box` / `pit` — exactly one grounding: the relation the ways are named by, or the box whose raceway ways are chained by standing at the line. A box at a racing complex may hang more than one line off the lap, and the survey reads geometry and one-way tags rather than any way's `name`; `pit` names the pit lane's ways by id then, as a relation's members do.
-- `timedFrom` — the relation member naming the line the lap is timed across. Every metre is measured from whichever one was answered to.
-- `timingLine` — the published place (and the `within` the survey may allow), or `None` where the circuit tags nothing mistakable. The doc-comment says where the place came from, and whether that source measured it or took it off OpenStreetMap: a place taken off OpenStreetMap checks the survey against nothing but itself. A run that answers the wrong role fails before writing only when this is set; without it a wrong line just draws every car early.
+- `timedFrom` — the relation member naming the line the lap is timed across; every metre is measured from it. Leave it `""` where the relation tags no member at the finish line (Monza's roles name the pit-exit light): the lap is then turned at `timingLine`'s place, as a box's is.
+- `timingLine` — the finish line's place (and the `within` the survey may allow). With a `timedFrom` it checks the tagged node; without one it *is* the zero.
 
-The lap and its lines are not the config's: write the circuit map's record at `app/static/circuit-maps/<word>.json`, in the shape the other records keep (`circuits/README.md`'s maps section). Its `lengths.centerline.metres` is the length the surveyed line is stretched to; `lines.intermediate1` and `lines.intermediate2`, where the map gives both, imply the stretches the geometry carries as `sectors` and the report reads.
+**The finish line's place.** The map gives every distance from its finish line and none of its degrees.
+Check a tagged line against the map's Start Line Offset: the relation's `start` node should stand that far after `finish` (Barcelona 127 m against 128, COTA 296.6 against 297).
+Where nothing tags the line, the place is read off the map's drawing laid over the survey, its drawn lines read against their printed distances; Monza's and Fuji's config comments say how, and that it is good to some 20 m.
+A place taken off OpenStreetMap or a third-party dataset checks the survey against nothing but itself — say so in the comment.
 
-## 3. Keep the evidence, lay the geometry
+## 4. Keep the evidence, lay the geometry
 
 ```bash
 nix run .#geometry -- survey <word> --fetch            # asks OSM, keeps circuits/<word>/overpass.json, writes nothing else
 nix run .#geometry -- survey <word> --fetch --write    # additionally lays app/static/geometry/<word>.geojson
 ```
 
-Commit the kept answer — a kept `overpass.json` is always re-runnable evidence.
-The `.geojson` is a served file, not a build artifact: commit it too.
+Commit the kept answer and the `.geojson`: the first is re-runnable evidence, the second a served file.
+To read a fresh survey against the old one: `nix run .#geometry -- diff <a.geojson> <b.geojson> [--svg ...]`.
 
-To read a fresh survey against the old one:
+## 5. Spell the word on both wire copies
 
-```bash
-nix run .#geometry -- diff <a.geojson> <b.geojson> [--svg ...]
-```
+- `backend/src/Motorsport/Circuit.flix` — enum case + `jsonValue`. Without it no summary can send the circuit, and the round draws as the ring.
+- `circuits/src/Motorsport/Circuit.flix` — the same enum and an *identical* `jsonValue` body; `check-sources.mjs` lays the two together.
 
-## 4. Spell the word on both wire copies
+## 6. Draw it app-side
 
-The word a summary sends and the word the report prints are two files that no project compiles together:
-
-- `backend/src/Motorsport/Circuit.flix` — enum case + `jsonValue`. Without this the calendar can name the round but no summary can send the circuit, and the round draws as the ring.
-- `circuits/src/Motorsport/Circuit.flix` — the same enum and an *identical* `jsonValue` body. `circuits/test/check-sources.mjs` lays the two bodies together; editing one alone fails `.#geometry-test`.
-
-## 5. Draw it app-side
-
-- `package/src/Motorsport/Wec/Circuit/<Word>/Layout.elm` — `decoder` takes the map record (`Map.Intermediates`, or a record of its own where the drawing needs more lines, as Le Mans's) and is `Geometry.decoder { lapLength = map.centreline }`; `layout` turns the map and the geometry into a `Circuit.Layout` with its `timingLines` and its `lengths`. Measure `Full` against Le Mans's reference set as COTA's doc-comment does (the width-fit ratio). Then add the circuit's row to `circuits` in `package/tests/Motorsport/Wec/Circuit/CircuitsTest.elm` — its name, the box it stands in, and its map record and geometry (`TestHelpers/Map/<Word>` and `TestHelpers/Survey/<Word>`, which `test-fixtures.mjs` writes, step 7): the row runs `SurveySuite` over the served bytes and holds every length at the ratio. A lap with no mini-sectors still fills those fields; nothing draws them.
+- `package/src/Motorsport/Wec/Circuit/<Word>/Layout.elm` — `decoder : Map.Intermediates -> Decoder Geometry` is `Geometry.decoder { lapLength = map.centreline }`; `layout` turns the map and the geometry into a `Circuit.Layout`, its `timingLines` from `map.intermediate1` and `map.intermediate2`. Copy Barcelona's. Measure `Full` against Le Mans's reference set as COTA's doc-comment does (the width-fit ratio). A drawing that needs more lines than the two takes a map record of its own, as Le Mans's `CircuitMap` does, held in order through `Map.inOrder`.
 - `app/src/Shared.elm` — add the word's arm to `drawingFor`, naming the map decoder, the geometry decoder and the layout.
+- `app/scripts/test-fixtures.mjs` — add `Survey.<Word>` and `Map.<Word>` to its list.
+- `package/tests/Motorsport/Wec/Circuit/CircuitsTest.elm` — add the circuit's row: its name, the box it stands in, and its map record and geometry read as `Shared` reads them. **Nothing fails without the row**: it is what runs `SurveySuite` over the served bytes and holds every length at the ratio.
 - If the circuit's lines are placed by time between lines, check `Tracker.Config.lapScale` covers the combination (the `ConfigTest` cases name the ones the catch-all holds).
 
-## 6. The lists that name every circuit
+## 7. The lists that name every circuit
 
-These hold the circuits as written-down inventories rather than readings, so a new circuit fails each of them by name until it joins:
+These freeze the inventory, so a new circuit fails each by name until it joins:
 
-- `circuits/test/TestSurvey.flix` — the refusal-message test carries the known words in its `"no circuit is surveyed under 'qatar': known are …"` assertion; a new word that joins unheralded fails there by name.
-- `circuits/test/TestRegenerate.flix` — the expected `drawn`/`words` lists over `Circuit.circuits()`.
-- `circuits/test/TestTimingMap.flix` — `cases()` must name every case of the report's enum, and a test counts them.
-- `app/tests/geometry-contract.spec.ts` — it reads the words out of the sources for the cross-checks, but one assertion freezes the whole inventory: `expect(drawnNames().sort()).toEqual([...])`.
-- How a circuit's relation is tagged is its own config comment in `circuits/src/Circuit.flix`; `circuits/README.md`'s timing-lines section names the circuits that author no timing map, and each drawn circuit's own `Layout` header says which kind it authors. A new circuit joins the README's list if it authors no map, and adds a config comment and a header of its own; neither README holds the tagging inventory, and `AGENTS.md` holds no circuit inventory at all.
+- `circuits/test/TestSurvey.flix` — the `known are …` refusal message.
+- `circuits/test/TestRegenerate.flix` — the `drawn`/`words` lists over `Circuit.circuits()`.
+- `circuits/test/TestTimingMap.flix` — `cases()` names every case of the report's enum, and a test counts them.
+- `app/tests/geometry-contract.spec.ts` — `expect(drawnNames().sort()).toEqual([...])`.
 
-## 7. Verify — in this order
+## 8. Verify — in this order
 
 | Command | What it catches |
 | --- | --- |
 | `nix run .#geometry-test` | the project's readings off fixtures; the two `jsonValue` bodies laid together; the source facts no `@Test` can see |
-| `nix run .#geometry -- survey <word>` | byte fence: the served file must come back identical, run with **no** `--write` — a metre on a different digit is a drawing that moved |
-| `nix run .#geometry -- regenerate` | property fence over *every* kept answer — a new config must not move another circuit |
-| `nix run .#test` | add `{ module: "Survey.<Word>", file: "app/static/geometry/<word>.geojson" }` and `{ module: "Map.<Word>", file: "app/static/circuit-maps/<word>.json" }` to `app/scripts/test-fixtures.mjs`'s list first, or the package's tests fail to compile by name; then Elm tests + verify-examples |
-| `nix run .#test-vrt` | `geometry-contract.spec.ts` reads the words out of `Shared.elm` and `backend/src/Motorsport/Circuit.flix` and finds both served files behind each — plus the inventory assertion of step 6 |
-| `nix run .#update-snapshots-ci` | only once a new drawing is in: every tracker baseline stands on these degrees — the `vrt` skill says how a baseline lands |
+| `nix run .#geometry -- survey <word>` | byte fence: the served file must come back identical, run with **no** `--write` |
+| `nix run .#geometry -- regenerate` | property fence over *every* kept answer and map record — a new circuit must not move another |
+| `nix run .#test` | the map record and geometry decoded as the app decodes them, and the circuit's `CircuitsTest` row |
+| `nix run .#test-vrt` | `geometry-contract.spec.ts`: every word `drawingFor` matches is one Flix sends, with both served files behind it, plus the inventory of step 7 |
+| `nix run .#update-snapshots-ci` | only once a new drawing is in a kept round's view — the `vrt` skill says how a baseline lands |
 
-A survey that moved an *existing* circuit's bytes is its own change: it takes a VRT re-baseline with it, and the move is measured in metres by `-- diff` before anyone reads the pixels.
+## 9. If a round joins with it
 
-## 8. If a round joins with it
+- Registering the round is `/skill:add-round`'s; the summary then carries `track.circuit`.
+- `nix run .#geometry-timing-lines -- <season>/<id> [--against <season>]` reads the round's sector times against the record's lines, and a second season against the first.
 
-- Registering the round is `/skill:add-round`'s — the calendar, `Events.displayName` and `Events.circuit`, where the CSV sits, and the two CLI stages. The summary then carries `track.circuit`, and of what the export writes only `index.json` is committed by default.
-- `nix run .#geometry-timing-lines -- <season>/<id> [--against <season>]` answers whether the lines stand where they stood.
-- A round whose geometry was never laid reads as unnamed and draws as the ring; a `track.circuit` no `drawingFor` arm knows is the rename-on-one-side mistake the contract spec exists to catch.
+## A newer map for a circuit already here
+
+1. Replace the record's figures, `season` and `issued` with the new map's, and check them as in step 1.
+2. `nix run .#geometry -- regenerate <word> --write` re-lays the geometry on the new lap and stretches; commit both files together. A record changed alone is a geometry the app's decoder refuses: the round fails to load.
+3. `nix run .#geometry-timing-lines -- <season>/<id> --against <previous season>` says whether the lines moved further than one map can answer for.
+4. `nix run .#test`, then `nix run .#test-vrt`; a kept round drawn on this circuit takes a re-baseline through `.#update-snapshots-ci`.
 
 ## Hazards
 
-- **A word renamed on one side alone** draws the round as the ring with nothing red: five places spell it (two Flix enums, two `Shared.elm` lists, the file and directory names) and only the contract spec reads across.
+- **A word renamed on one side alone** draws the round as the ring with nothing red: the two Flix enums, `drawingFor`, the map record, the geometry and the evidence directory all spell it, and only the contract spec reads across.
 - **An Overpass proxy answers a timed-out request as 200 with an HTML page.** `Overpass.answered` is the one reading of what a service answered with; never add a second reading that asks only the status.
 - **An unreadable file is a failure, not an absence.** New file-reading under `circuits/` branches via `Util/Files`' `exists`/`isDirectory` or reports via `Cli/Errors`; a discarded `Err(_)` fails `check-sources.mjs`.
 - **The geometry files carry the ODbL attribution** in their own properties — keep the writer's `claims` list and the fence's exemption list answering to `TestRegenerate` if a property is added.
-- Nothing Elm-side is generated from the geometry; if the drawing should not move, do not let a new survey touch a kept circuit's bytes.
+- **A survey that moves an existing circuit's bytes is its own change**: it takes a VRT re-baseline with it, and the move is measured in metres by `-- diff` before anyone reads the pixels.
