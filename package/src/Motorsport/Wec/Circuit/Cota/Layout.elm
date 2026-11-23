@@ -20,14 +20,14 @@ import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
+import Motorsport.Wec.Circuit.Map exposing (Intermediates)
 
 
-{-| Reading the served geometry against the 5,515 m the circuit's own sector
-map publishes.
+{-| Reading the served geometry against the centreline its map gives, which is what the survey was stretched to.
 -}
-decoder : Decoder Geometry
-decoder =
-    Geometry.decoder { lapLength = 5515.0 }
+decoder : Intermediates -> Decoder Geometry
+decoder map =
+    Geometry.decoder { lapLength = map.centreline }
 
 
 {-| The circuit, on one set of timing lines for every season; see
@@ -37,8 +37,8 @@ The lap runs the direction its survey was chained in -- the word arrives with
 the geometry, as OpenStreetMap's own one-way tags say it.
 
 -}
-layout : Geometry -> Layout
-layout geometry =
+layout : Intermediates -> Geometry -> Layout
+layout map geometry =
     let
         lap =
             shape geometry
@@ -48,7 +48,7 @@ layout geometry =
     in
     { shape = lap
     , pitLane = pit
-    , timingLines = timingLines lap
+    , timingLines = timingLines map lap
     , lengths = lengths
     }
 
@@ -66,7 +66,7 @@ marked at 53 m, a car's number at 76.5 m, the lap stroked at 8.7 m.
 The margin is the one length not taken there: it is added to the box as well as to
 what stands in it, so a margin at the ratio would widen the box and shrink every
 other length with it. It stands at three tenths of Le Mans's -- 210 m against 700 --
-and `LayoutTest` holds every length but this one at the ratio. The
+and `CircuitsTest` holds every length but this one at the ratio. The
 mini-sector lengths are in the record because `Lengths` holds them, at the same
 ratio as the rest, and not because this lap has mini-sectors to name: it has
 none.
@@ -123,16 +123,9 @@ pitLane geometry =
     Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
-{-| The circuit's own track sector map: 1,313.2 m from the finish line to the
-first intermediate line, 2,254.3 m further to the second, and 1,947.5 m home --
-which add up to the 5,515 m centreline the same map gives, and are what the
-served geometry stretches OpenStreetMap's 5,502 m survey to. The distances the series
-print for this circuit run 5,513 m, 2 m short of the map's own total; the map is
-quoted because every line above is measured along it.
+{-| The map's intermediate lines, as far from the finish line as its record puts them.
 
-The map is the April 2021 event's, and every season here is drawn with it, since
-no later map has been read. A season that moved its lines would be drawn with the
-wrong boundaries, and would place every car wrong between them.
+Every season here is drawn with that map, the latest. A season that moved its lines would be drawn with the wrong boundaries, and would place every car wrong between them.
 
 What a new season is checked against is the round's own splits, and for movement
 only: `nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025` reads each
@@ -147,17 +140,17 @@ this round, so a car between two of these lines is placed by the share of the
 time between them it has run.
 
 -}
-timingLines : Shape -> TimingLines
-timingLines lap =
+timingLines : Intermediates -> Shape -> TimingLines
+timingLines map lap =
     { sectors =
         Sector.initialize
             (\sector ->
                 case sector of
                     S1 ->
-                        1313.2
+                        map.intermediate1
 
                     S2 ->
-                        3567.5
+                        map.intermediate2
 
                     S3 ->
                         Shape.length lap

@@ -15,8 +15,8 @@
 /// copies state one thing in common — the words — and
 /// `test/check-sources.mjs` lays the two `jsonValue` bodies together, since no
 /// project compiles both. The timing figures are not held here at all: the
-/// report's answer is derived by `Circuit.timingMap` from the config the
-/// drawing is laid from. This module could not hold that derivation itself —
+/// report's answer is derived by `Circuit.timingMapOf` from the config and the
+/// circuit map the drawing is laid from. This module could not hold that derivation itself —
 /// its own `Circuit` shadows the config module of the same name, so
 /// `Circuit.byWord` reaches no further than the enum.
 pub mod Motorsport.Circuit {
@@ -65,16 +65,13 @@ pub mod Motorsport.Circuit {
     /// What a circuit publishes about the lines the lap is timed to.
     ///
     /// `Published` is the one map the circuit draws every season with, and the
-    /// stretches it puts round the lap; `PerSeason` is a circuit that re-issues
-    /// its map, so that no set of lines answers for two seasons and no reading
-    /// may lay one season's times against another's; `Unsurveyed` is a circuit
-    /// no config here authors, which therefore publishes nothing.
+    /// stretches it puts round the lap; `Unsurveyed` is a circuit whose map places
+    /// no intermediate lines, or that no config here authors.
     ///
-    /// The shape of an answer, not a copy of one: `Circuit.timingMap` derives
-    /// each circuit's from its authored `sectors`.
+    /// The shape of an answer, not a copy of one: `Circuit.timingMapOf` derives
+    /// each circuit's from its map's figures.
     pub enum TimingMap {
         case Published(PublishedMap)
-        case PerSeason(String)
         case Unsurveyed
     }
 

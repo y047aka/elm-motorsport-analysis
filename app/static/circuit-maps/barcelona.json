@@ -1,0 +1,25 @@
+{
+  "circuit": "Circuit de Barcelona-Catalunya",
+  "season": 2026,
+  "issued": "2026-08-26T12:25",
+  "lengths": {
+    "centerline": { "metres": 4657, "printed": "Centerline: 4.657 m." },
+    "lapByPits": { "metres": 4636, "printed": "Lap by Pits: 4.636 m." },
+    "pitInToPitOut": { "metres": 387.2, "printed": "Pit In - Pit Out: 387,2 m." },
+    "pitInToPitFinish": { "metres": 62.4, "printed": "Pit In - Pit FL: 62,4 m." }
+  },
+  "lines": {
+    "start": { "metres": 128, "printed": "Start Line Offset: 128 m." },
+    "pitOut": { "metres": 326, "printed": "Pit Out at: 326 m." },
+    "intermediate1": { "metres": 1627, "printed": "i1 at: 1.627 m." },
+    "intermediate2": { "metres": 3395, "printed": "i2 at: 3.395 m." },
+    "pitIn": { "metres": 4580, "printed": "Pit In at: 4.580 m." }
+  },
+  "drawn": ["FL", "Pit FL", "TS", "SCL 1", "SCL 2", "i1", "i2", "Pit in", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "FL", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "FL", "colour": "#e20258" }
+  ],
+  "corners": 14
+}

@@ -6,24 +6,22 @@ import { drawnNames, readSource } from './helpers';
 /**
  * The circuit seam: the served bytes stand where the app reaches for them.
  *
- * A drawn circuit is two lists in `Shared` — the words `trackOf` matches and the
- * words `decoderFor` decodes — a third list in Flix — the words
- * `Circuit.jsonValue` can send in a summary — and a geometry file at
- * `app/static/geometry/<word>.geojson` behind them. None of it compiles: a rename
- * on one side alone is a round drawn as the ring with nothing red, and a file
- * missing is a round that fails to load. The words come out of the sources and
- * the geometry out of the kept files; nothing needs a browser.
+ * A drawn circuit is a list in `Shared` — the words `drawingFor` matches — a
+ * second list in Flix — the words `Circuit.jsonValue` can send in a summary — and
+ * two files behind them, the map record at `app/static/circuit-maps/<word>.json`
+ * and the geometry at `app/static/geometry/<word>.geojson`. None of it compiles: a
+ * rename on one side alone is a round drawn as the ring with nothing red, and a
+ * file missing is a round that fails to load. The words come out of the sources
+ * and the files out of the kept ones; nothing needs a browser.
  *
- * The three word lists are compared here, one file's reading of the other two;
+ * The two word lists are compared here;
  * what is not compared is a geometry's contents. Whether those are internally
  * honest — a known basis, a direction, metres ascending that end at the
  * published lap, sectors adding up to it, a pit lane beside it — is a refusal of
  * `Geometry.outline` and `Geometry.pitLane`, pinned by
  * `circuits/test/TestGeometry.flix` and re-asked of the repository's real bytes
  * by every run of the byte fence (`nix run .#geometry -- survey <word>`), which
- * reproduces the served file from the kept Overpass answer. The figures the
- * geometry was authored from are a Flix-to-Flix reading —
- * `circuits/test/TestTimingMap.flix`.
+ * reproduces the served file from the kept Overpass answer.
  */
 
 type Features = { features: { properties?: Record<string, unknown> }[] };
@@ -57,11 +55,14 @@ test("a circuit's directory is named by the word the app draws it by", () => {
   }
 });
 
-test('the circuits drawn and decoded are one list', () => {
-  const shared = readSource('app/src/Shared.elm');
-  const decoded = [...clause(shared, 'decoderFor circuit =', '\n\n\n').matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
-  expect(decoded.length, 'decoderFor decodes no circuit name').toBeGreaterThan(0);
-  expect(decoded.sort(), 'decoderFor decodes something other than what trackOf draws').toEqual(drawnNames().sort());
+test('every circuit Shared draws has its map record where the app reaches for it', () => {
+  for (const name of drawnNames()) {
+    const record = JSON.parse(readSource(`app/static/circuit-maps/${name}.json`));
+    expect(
+      typeof record.lengths?.centerline?.metres,
+      `${name}: the map record gives no centreline to check the geometry against`,
+    ).toBe('number');
+  }
 });
 
 /** The words `Circuit.jsonValue` can send, which are the words a summary can
@@ -78,7 +79,7 @@ function sentNames(): string[] {
 test('every circuit Shared draws is one Flix can name', () => {
   const sent = sentNames();
   const drawn = drawnNames();
-  expect(drawn.length, 'Shared.trackOf matches no circuit name').toBeGreaterThan(0);
+  expect(drawn.length, 'Shared.drawingFor matches no circuit name').toBeGreaterThan(0);
   for (const name of drawn) {
     expect(sent, `Shared.elm draws "${name}", a circuit no summary can name`).toContain(name);
   }
@@ -87,10 +88,3 @@ test('every circuit Shared draws is one Flix can name', () => {
 test('the circuits with drawings here are drawn', () => {
   expect(drawnNames().sort()).toEqual(['barcelona', 'cota', 'fuji', 'le_mans', 'monza']);
 });
-
-/** The body of a top-level definition, up to the next one. */
-function clause(source: string, start: string, end: string): string {
-  const body = source.split(start)[1];
-  if (!body) throw new Error(`${start} not found in Shared.elm`);
-  return body.split(end)[0];
-}

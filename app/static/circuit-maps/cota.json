@@ -1,0 +1,24 @@
+{
+  "circuit": "Circuit of The Americas",
+  "season": 2026,
+  "issued": "2026-09-02T17:20",
+  "lengths": {
+    "centerline": { "metres": 5513, "printed": "Centerline: 5.513 m." },
+    "lapByPits": { "metres": 5454, "printed": "Lap by Pits: 5.454 m." },
+    "pitInToPitOut": { "metres": 412.9, "printed": "Pit In - Pit Out: 412,9 m." }
+  },
+  "lines": {
+    "start": { "metres": 297, "printed": "Start Line Offset: 297 m." },
+    "pitOut": { "metres": 389.3, "printed": "Pit Out at: 389,3 m." },
+    "intermediate1": { "metres": 1311, "printed": "i1 at: 1.311 m." },
+    "intermediate2": { "metres": 3568, "printed": "i2 at: 3.568 m." },
+    "pitIn": { "metres": 5430, "printed": "Pit In at: 5.430 m." }
+  },
+  "drawn": ["The Line", "Start Line", "TS", "SC L1", "SC L2", "i1", "i2", "Pit In", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "The Line", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "The Line", "colour": "#e20258" }
+  ],
+  "corners": 20
+}

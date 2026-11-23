@@ -11,39 +11,35 @@ are drawn through are
 [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-The drawn start line stands where the survey was chained, which is 197 m after
-the painted one -- OpenStreetMap tags the relation's `start` and `finish` roles
-on the pit-exit light and holds no node at the line itself. The circuit
-project's config says the whole of it at its own authoring.
+OpenStreetMap holds no node at the finish line, so the drawn one stands at a place the circuit project's config authors, and says how it was found.
 
 @docs decoder, layout
 
 -}
 
 import Json.Decode exposing (Decoder)
-import Motorsport.Chart.Tracker.Config exposing (Share)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
-import Motorsport.Sector as Sector exposing (BySector, Sector(..))
+import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
+import Motorsport.Wec.Circuit.Map exposing (Intermediates)
 
 
-{-| Reading the served geometry against the 5,793 m the circuit measures its
-lap at, which is what the survey was stretched to.
+{-| Reading the served geometry against the centreline its map gives, which is what the survey was stretched to.
 -}
-decoder : Decoder Geometry
-decoder =
-    Geometry.decoder { lapLength = 5793.0 }
+decoder : Intermediates -> Decoder Geometry
+decoder map =
+    Geometry.decoder { lapLength = map.centreline }
 
 
-{-| The circuit, on lines the round itself puts round the lap -- see
+{-| The circuit, on the lines its map puts round the lap -- see
 [`timingLines`](#timingLines).
 
 The lap runs the direction its survey was chained in -- the word arrives with
 the geometry, as OpenStreetMap's own one-way tags say it.
 -}
-layout : Geometry -> BySector Share -> Layout
-layout geometry shares =
+layout : Intermediates -> Geometry -> Layout
+layout map geometry =
     let
         lap =
             shape geometry
@@ -53,7 +49,7 @@ layout geometry shares =
     in
     { shape = lap
     , pitLane = pit
-    , timingLines = timingLines lap shares
+    , timingLines = timingLines map lap
     , lengths = lengths
     }
 
@@ -123,35 +119,25 @@ pitLane geometry =
     Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
-{-| Where the lines the round is timed at stand on the surveyed lap.
+{-| The map's intermediate lines, as far from the finish line as its record puts them.
 
-This circuit publishes no distances for them -- the served geometry carries no
-`sectors` -- so a line stands where the round's own share of its laps puts it,
-and a car between two of them is placed by the share of the time between the
-lines it has run: the reading the ring gives every undrawn round, on surveyed
-degrees. The shape is surveyed; the lines are the round's, and would move with
-a season that divided its laps differently.
-How the drawing places a car between two of these lines is `AGENTS.md`'s tracker section's;
-which circuits are drawn this way is `circuits/README.md`'s timing lines section.
+Every season here is drawn with that map, the latest. Nothing here splits the lap finer: the feed carries no mini-sector times for this circuit, so a car between two of these lines is placed by the share of the time between them it has run.
+
 -}
-timingLines : Shape -> BySector Share -> TimingLines
-timingLines lap shares =
-    let
-        lapLength =
-            Shape.length lap
+timingLines : Intermediates -> Shape -> TimingLines
+timingLines map lap =
+    { sectors =
+        Sector.initialize
+            (\sector ->
+                case sector of
+                    S1 ->
+                        map.intermediate1
 
-        line sector =
-            case sector of
-                S3 ->
-                    lapLength
+                    S2 ->
+                        map.intermediate2
 
-                _ ->
-                    let
-                        stretch =
-                            Sector.get sector shares
-                    in
-                    (stretch.start + stretch.share) * lapLength
-    in
-    { sectors = Sector.initialize line
+                    S3 ->
+                        Shape.length lap
+            )
     , miniSectors = SectorsOnly
     }

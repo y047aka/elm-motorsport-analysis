@@ -20,7 +20,7 @@ import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Http
-import Json.Decode exposing (Decoder)
+import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Chart.Tracker as Tracker
@@ -34,12 +34,15 @@ import Motorsport.Replay as Replay
 import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Fuji.Layout as FujiLayout
-import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
+import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
+import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
+import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as MonzaLayout
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era as Era
-import Shared.Msg exposing (Msg(..))
+import Shared.Msg exposing (Drawing, Msg(..))
+import Task exposing (Task)
 
 
 
@@ -53,7 +56,7 @@ type alias Model =
     { calendar : Catalogue
     , manufacturers : Maybe Manufacturers
     , carImages : Maybe CarImages
-    , geometry : Dict.Dict String Geometry
+    , drawings : Dict.Dict String Drawing
     , round : Round
     }
 
@@ -109,14 +112,14 @@ along beside it.
 -}
 type alias Partial =
     { files : Files
-    , geometry : Awaited
+    , drawing : Awaited
     , timeline : Maybe (List TimelineEvent)
     }
 
 
 {-| The summary and the laps, which arrive in either order and are what a round
-is. A round whose circuit has a drawing here waits on a third file -- its
-geometry -- so having both of these is a state rather than the move to `Loaded`,
+is. A round whose circuit has a drawing here waits on a third thing -- its
+drawing -- so having both of these is a state rather than the move to `Loaded`,
 and is held as `GotBoth` until that one arrives.
 
 The timeline is not one of the three and gates nothing, so it stays the `Maybe` it
@@ -131,7 +134,7 @@ type Files
     | GotBoth Wec.Event (List WecLaps.RawLap)
 
 
-{-| The geometry a circuit is drawn from, or how far waiting for it has got.
+{-| The drawing a circuit is put in, or how far waiting for it has got.
 `Unnamed` is a summary that named no circuit and `Undrawn` one this app draws
 as the ring; neither has a file to wait for.
 -}
@@ -139,12 +142,12 @@ type Awaited
     = Unnamed
     | Undrawn
     | Fetching String
-    | Decoded Geometry
+    | Drawn Drawing
 
 
 nothingYet : Partial
 nothingYet =
-    { files = NothingYet, geometry = Unnamed, timeline = Nothing }
+    { files = NothingYet, drawing = Unnamed, timeline = Nothing }
 
 
 {-| A loaded round, as the pages read it. The race itself is `replay.race`, a
@@ -173,7 +176,12 @@ the app opened on, and a round reached by its URL still draws on all three.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
-    ( { calendar = Arriving, manufacturers = Nothing, carImages = Nothing, geometry = Dict.empty, round = NoRound }
+    ( { calendar = Arriving
+      , manufacturers = Nothing
+      , carImages = Nothing
+      , drawings = Dict.empty
+      , round = NoRound
+      }
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
@@ -279,10 +287,10 @@ update msg m =
             resumeWaitingRound { m | round = Waiting params }
 
         JsonLoaded_Wec key (Ok summary) ->
-            case awaiting summary m.geometry of
+            case awaiting summary m.drawings of
                 ( awaited, Just circuit ) ->
                     ( { m | round = forRound key (withSummary summary awaited) m.round }
-                    , Effect.sendCmd (getGeometry key circuit)
+                    , Effect.sendCmd (getDrawing key circuit)
                     )
 
                 ( awaited, Nothing ) ->
@@ -308,10 +316,10 @@ update msg m =
             -- read its lap off its own line.
             ( m, Effect.none )
 
-        GeometryLoaded key circuit (Ok geometry) ->
-            ( { m | geometry = Dict.insert circuit geometry m.geometry, round = forRound key (geometryArrived circuit geometry) m.round }, Effect.none )
+        DrawingLoaded key circuit (Ok drawing) ->
+            ( { m | drawings = Dict.insert circuit drawing m.drawings, round = forRound key (drawingArrived circuit drawing) m.round }, Effect.none )
 
-        GeometryLoaded key _ (Err error) ->
+        DrawingLoaded key _ (Err error) ->
             -- A drawn round fails rather than falling back to the ring: a
             -- round drawn as a ring is a wrong drawing read back as a round
             -- that loaded.
@@ -413,7 +421,7 @@ forRound key step round =
 
 withSummary : Wec.Event -> Awaited -> RoundId -> Partial -> Round
 withSummary summary awaited id partial =
-    arriving id { partial | files = bothWith summary partial.files, geometry = awaited }
+    arriving id { partial | files = bothWith summary partial.files, drawing = awaited }
 
 
 withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
@@ -441,30 +449,30 @@ bothWithLaps rawLaps files =
             GotLaps rawLaps
 
 
-{-| A round is made once its files are here and its geometry is settled --
+{-| A round is made once its files are here and its drawing is settled --
 decoded, or not wanted. Whichever of them arrives last finds the others.
 -}
 arriving : RoundId -> Partial -> Round
 arriving id partial =
     case partial.files of
         GotBoth summary rawLaps ->
-            case partial.geometry of
+            case partial.drawing of
                 Fetching _ ->
                     Loading id partial
 
                 _ ->
-                    Loaded id (roundFrom id summary rawLaps (eventsOf partial) partial.geometry)
+                    Loaded id (roundFrom summary rawLaps (eventsOf partial) partial.drawing)
 
         _ ->
             Loading id partial
 
 
-geometryArrived : String -> Geometry -> RoundId -> Partial -> Round
-geometryArrived circuit geometry id partial =
-    case partial.geometry of
+drawingArrived : String -> Drawing -> RoundId -> Partial -> Round
+drawingArrived circuit drawing id partial =
+    case partial.drawing of
         Fetching asked ->
             if asked == circuit then
-                arriving id { partial | geometry = Decoded geometry }
+                arriving id { partial | drawing = Drawn drawing }
 
             else
                 Loading id partial
@@ -512,8 +520,8 @@ didNotArrive key error round =
         round
 
 
-roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
-roundFrom id summary rawLaps timelineEvents geometry =
+roundFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
+roundFrom summary rawLaps timelineEvents drawing =
     let
         replay =
             summary.startingGrid.entries
@@ -535,7 +543,7 @@ roundFrom id summary rawLaps timelineEvents geometry =
     , snapshot = snapshotOf replay
     , pitCycles = pitCycles
     , energy = energy
-    , track = trackOf id summary.track geometry
+    , track = trackOf summary.track drawing
     , timeline = Timeline.fromList timelineEvents
     }
 
@@ -563,60 +571,21 @@ pitCyclesOf race =
             Dict.empty
 
 
-{-| Which drawing of a circuit the round is put in, by the circuit the summary
-names for it -- `track.circuit`. The round id is still asked for,
-because which lines Le Mans is drawn with turns on the season.
+{-| The round's track: its circuit's drawing where one arrived, and otherwise the ring.
 
 A circuit this app has no drawing of is drawn as the ring -- the shape the
 proportions the summary carries can describe, run clockwise since nothing
 says otherwise; so is a round exported before the summary named its circuit.
-A circuit that has a drawing and whose geometry is not here falls to the ring
-too: the load gates on the geometry, so reaching this arm means a gate was
+A circuit that has a drawing and whose drawing is not here falls to the ring
+too: the load gates on the drawing, so reaching this arm means a gate was
 opened elsewhere.
 
 -}
-trackOf : RoundId -> Wec.Track -> Awaited -> Tracker.Track
-trackOf id track geometry =
-    case track.circuit of
-        Just "le_mans" ->
-            case geometry of
-                Decoded lap ->
-                    Tracker.onCircuit (LeMansLayout.layout id.season lap) { direction = lap.direction, config = track.config }
-
-                _ ->
-                    Tracker.fromConfig track.config
-
-        Just "cota" ->
-            case geometry of
-                Decoded lap ->
-                    Tracker.onCircuit (CotaLayout.layout lap) { direction = lap.direction, config = track.config }
-
-                _ ->
-                    Tracker.fromConfig track.config
-
-        Just "barcelona" ->
-            case geometry of
-                Decoded lap ->
-                    Tracker.onCircuit (BarcelonaLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
-
-                _ ->
-                    Tracker.fromConfig track.config
-
-        Just "monza" ->
-            case geometry of
-                Decoded lap ->
-                    Tracker.onCircuit (MonzaLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
-
-                _ ->
-                    Tracker.fromConfig track.config
-
-        Just "fuji" ->
-            case geometry of
-                Decoded lap ->
-                    Tracker.onCircuit (FujiLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
-
-                _ ->
-                    Tracker.fromConfig track.config
+trackOf : Wec.Track -> Awaited -> Tracker.Track
+trackOf track awaited =
+    case awaited of
+        Drawn drawing ->
+            Tracker.onCircuit drawing.layout { direction = drawing.direction, config = track.config }
 
         _ ->
             Tracker.fromConfig track.config
@@ -646,22 +615,22 @@ keyOf id =
     { season = id.season, id = id.id }
 
 
-{-| Whether the summary's circuit wants its geometry -- from the cache if it is
-already in one, from `/static/geometry/` if it is not -- or wants nothing, being
-a circuit with no decoder here.
+{-| Whether the summary's circuit wants its drawing -- from the cache if it is
+already in one, from `/static/` if it is not -- or wants nothing, being a
+circuit with no drawing here.
 -}
-awaiting : Wec.Event -> Dict.Dict String Geometry -> ( Awaited, Maybe String )
+awaiting : Wec.Event -> Dict.Dict String Drawing -> ( Awaited, Maybe String )
 awaiting summary cache =
     case summary.track.circuit of
         Just circuit ->
-            case decoderFor circuit of
+            case drawingFor circuit of
                 Nothing ->
                     ( Undrawn, Nothing )
 
                 Just _ ->
                     case Dict.get circuit cache of
-                        Just geometry ->
-                            ( Decoded geometry, Nothing )
+                        Just drawing ->
+                            ( Drawn drawing, Nothing )
 
                         Nothing ->
                             ( Fetching circuit, Just circuit )
@@ -670,43 +639,80 @@ awaiting summary cache =
             ( Unnamed, Nothing )
 
 
-{-| Which circuits are drawn to their own shape: one word, one decoder.
-`trackOf` matches the same words; `geometry-contract.spec.ts` keeps them in
-step, with the words Flix's `Circuit.jsonValue` can send.
+{-| Which circuits are drawn to their own shape, by the word the summary sends.
+`geometry-contract.spec.ts` keeps these words in step with the words Flix's `Circuit.jsonValue` can send, and with the files behind them.
 -}
-decoderFor : String -> Maybe (Decoder Geometry)
-decoderFor circuit =
+drawingFor : String -> Maybe (Task Http.Error Drawing)
+drawingFor circuit =
     case circuit of
         "barcelona" ->
-            Just BarcelonaLayout.decoder
+            Just (fetchDrawing circuit Map.intermediatesDecoder BarcelonaLayout.decoder BarcelonaLayout.layout)
 
         "cota" ->
-            Just CotaLayout.decoder
+            Just (fetchDrawing circuit Map.intermediatesDecoder CotaLayout.decoder CotaLayout.layout)
 
         "le_mans" ->
-            Just LeMansLayout.decoder
+            Just (fetchDrawing circuit LeMansLayout.mapDecoder LeMansLayout.decoder LeMansLayout.layout)
 
         "monza" ->
-            Just MonzaLayout.decoder
+            Just (fetchDrawing circuit Map.intermediatesDecoder MonzaLayout.decoder MonzaLayout.layout)
 
         "fuji" ->
-            Just FujiLayout.decoder
+            Just (fetchDrawing circuit Map.intermediatesDecoder FujiLayout.decoder FujiLayout.layout)
 
         _ ->
             Nothing
 
 
-{-| The geometry a drawn circuit reads itself from, at the same URL pattern the
-manufacturer table uses, named by the word the summary sends for it.
+{-| A circuit's map, then its geometry: the geometry is checked against the lap the map gives, so it waits for the map.
 -}
-getGeometry : { season : Int, id : String } -> String -> Cmd Msg
-getGeometry key circuit =
-    case decoderFor circuit of
-        Just decoder ->
-            Http.get
-                { url = "/static/geometry/" ++ circuit ++ ".geojson"
-                , expect = Http.expectJson (GeometryLoaded key circuit) decoder
-                }
+fetchDrawing : String -> Decoder map -> (map -> Decoder Geometry) -> (map -> Geometry -> Layout) -> Task Http.Error Drawing
+fetchDrawing circuit mapDecoder geometryDecoder layoutOf =
+    getJson ("/static/circuit-maps/" ++ circuit ++ ".json") mapDecoder
+        |> Task.andThen
+            (\map ->
+                getJson ("/static/geometry/" ++ circuit ++ ".geojson") (geometryDecoder map)
+                    |> Task.map (\geometry -> { layout = layoutOf map geometry, direction = geometry.direction })
+            )
+
+
+getJson : String -> Decoder a -> Task Http.Error a
+getJson url decoder =
+    Http.task
+        { method = "GET"
+        , headers = []
+        , url = url
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver (resolveJson decoder)
+        , timeout = Nothing
+        }
+
+
+resolveJson : Decoder a -> Http.Response String -> Result Http.Error a
+resolveJson decoder response =
+    case response of
+        Http.BadUrl_ url ->
+            Err (Http.BadUrl url)
+
+        Http.Timeout_ ->
+            Err Http.Timeout
+
+        Http.NetworkError_ ->
+            Err Http.NetworkError
+
+        Http.BadStatus_ metadata _ ->
+            Err (Http.BadStatus metadata.statusCode)
+
+        Http.GoodStatus_ _ body ->
+            Decode.decodeString decoder body
+                |> Result.mapError (Decode.errorToString >> Http.BadBody)
+
+
+getDrawing : { season : Int, id : String } -> String -> Cmd Msg
+getDrawing key circuit =
+    case drawingFor circuit of
+        Just task ->
+            Task.attempt (DrawingLoaded key circuit) task
 
         Nothing ->
             Cmd.none

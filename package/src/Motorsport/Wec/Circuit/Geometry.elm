@@ -50,8 +50,8 @@ type alias Geometry =
 
 
 {-| Read a served geometry, checking it against the lap length the circuit
-publishes: one metre per point, none going backwards, and the last one standing
-at the published length.
+publishes: one metre per point, the first at the finish line's 0, none going backwards, and the last one standing
+at the published length, back where the first one stood.
 
 The file's own `sectors` are not read or checked here: nothing in a drawing is
 placed by them, and `nix run .#geometry-timing-lines` is the reader that judges
@@ -151,25 +151,57 @@ find role =
 
 verify : Float -> List Float -> List Coordinate -> Maybe String
 verify lapLength metres coordinates =
-    if List.length metres /= List.length coordinates then
-        Just (String.fromInt (List.length metres) ++ " metres for " ++ String.fromInt (List.length coordinates) ++ " points")
+    [ \_ ->
+        if List.length metres /= List.length coordinates then
+            Just (String.fromInt (List.length metres) ++ " metres for " ++ String.fromInt (List.length coordinates) ++ " points")
 
-    else
-        case firstDrop metres Nothing 0 of
-            Just at ->
-                Just ("metres go backwards at point " ++ String.fromInt at)
+        else
+            Nothing
+    , \_ -> firstDrop metres Nothing 0 |> Maybe.map (\at -> "metres go backwards at point " ++ String.fromInt at)
+    , \_ -> endsAt lapLength (List.head (List.reverse metres))
+    , \_ ->
+        if List.head metres /= Just 0 then
+            Just "the outline does not start at the finish line's 0 m"
 
-            Nothing ->
-                case List.reverse metres of
-                    last :: _ ->
-                        if abs (last - lapLength) > 0.1 then
-                            Just ("the outline ends at " ++ String.fromFloat last ++ " m, not the published " ++ String.fromFloat lapLength ++ " m")
+        else
+            Nothing
+    , \_ ->
+        if List.head coordinates /= List.head (List.reverse coordinates) then
+            Just "the outline does not close: its last place is not its first"
 
-                        else
-                            Nothing
+        else
+            Nothing
+    ]
+        |> firstComplaint
 
-                    [] ->
-                        Just "the outline holds no points"
+
+firstComplaint : List (() -> Maybe String) -> Maybe String
+firstComplaint checks =
+    case checks of
+        [] ->
+            Nothing
+
+        check :: rest ->
+            case check () of
+                Just complaint ->
+                    Just complaint
+
+                Nothing ->
+                    firstComplaint rest
+
+
+endsAt : Float -> Maybe Float -> Maybe String
+endsAt lapLength last =
+    case last of
+        Nothing ->
+            Just "the outline holds no points"
+
+        Just metre ->
+            if abs (metre - lapLength) > 0.1 then
+                Just ("the outline ends at " ++ String.fromFloat metre ++ " m, not the published " ++ String.fromFloat lapLength ++ " m")
+
+            else
+                Nothing
 
 
 firstDrop : List Float -> Maybe Float -> Int -> Maybe Int

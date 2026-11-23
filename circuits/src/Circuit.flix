@@ -3,20 +3,20 @@
 ///
 /// A circuit's config is authored once, here: the relation surveyed — or, where
 /// OpenStreetMap holds no relation, the box whose raceway ways are chained by standing
-/// at the authored line — the length the lap is stretched to, where the circuit puts its
-/// own timing line, whose map the lines come
-/// from. The directory named by the circuit's word keeps the evidence — the kept Overpass
-/// answer — and no code. The timing report reads these
-/// same figures through this module's own `timingMap`, which derives the
-/// report's answer from them rather than restating them; the byte fence — `nix
-/// run .#geometry -- survey <word>` — lays them against the bytes the app is
-/// served.
+/// at the authored line — and where the circuit puts its own timing line.
+/// The length the lap is stretched to and the stretches it is timed in are the circuit
+/// map's, read from the record the app is served (`mapOf`) as `Figures`.
+/// The directory named by the circuit's word keeps the evidence — the kept Overpass
+/// answer — and no code. The timing report derives its answer from the figures through
+/// `timingMapOf`; the byte fence — `nix run .#geometry -- survey <word>`
+/// — lays them against the bytes the app is served.
 ///
 /// The steps a circuit joins by are the repository's `/skill:add-circuit` to say.
 pub mod Circuit {
 
     use Geodesy.Place
     use Motorsport.Circuit.TimingMap
+    use Util.Json.Json
 
     /// Where the line the lap is measured from is put by the circuit itself. A circuit that
     /// publishes no place tags nothing a survey could mistake for it, and is asked nothing.
@@ -25,16 +25,11 @@ pub mod Circuit {
         within = Option[Float64]
     }
 
-    /// Whose map the lines the lap is timed to come from. `published` is one map the circuit
-    /// itself publishes — its stretches add up to the lap, and it travels into the geometry as
-    /// `sectors`, so a check of the lines reads the file rather than a config; `eachSeason`
-    /// says why the organiser's map answers for one season only, and is what the timing report
-    /// quotes when it refuses a round here. Only one of the two is ever filled — or
-    /// neither, for a circuit whose map has never been read: it writes no `sectors` and
-    /// the report reads it as publishing nothing.
-    pub type alias Lines = {
-        published  = Option[Publishes],
-        eachSeason = Option[String]
+    /// What a circuit map gives: the length the lap is stretched to, and the stretches its
+    /// intermediate lines imply, which travel into the geometry as `sectors`.
+    pub type alias Figures = {
+        lap       = Float64,
+        published = Option[Publishes]
     }
 
     /// The authored stretches, and the map they were copied from. The same pair a kept
@@ -107,12 +102,10 @@ pub mod Circuit {
         word     = String,
         // The relation member the lap is measured from. A relation may tag more than one
         // line, and every metre is measured from whichever one was answered to. A box
-        // names no members, and its line is the `timingLine`'s place itself.
+        // names no members, and neither does a relation that tags no member at its line:
+        // either one's line is the `timingLine`'s place itself.
         timedFrom = String,
         timingLine = Option[TimingLine],
-        // The length the surveyed line is stretched to, in the circuit's own metres.
-        lap      = Float64,
-        sectors  = Lines,
         // The geometry file, from the directory the command was asked from.
         file     = String,
         // The prose the geometry file documents its survey with.
@@ -134,8 +127,7 @@ pub mod Circuit {
     pub def lengthTolerance(): Float64 = 0.02
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser
-    /// measures from and so where the lap's zero stands; its map is re-issued every season
-    /// and its lines differ between them, so no `sectors` travel in the geometry.
+    /// measures from and so where the lap's zero stands.
     def leMans(): Circuit = {
         relation = Some(2126739i64),
         box      = None,
@@ -143,16 +135,14 @@ pub mod Circuit {
         word     = "le_mans",
         timedFrom = "start-finish",
         timingLine = None,
-        lap      = 13625.7,
-        sectors  = {published = None, eachSeason = Some("the organiser's map is re-issued every year and its lines differ between seasons")},
         file     = "app/static/geometry/le_mans.geojson",
         survey   = "The Circuit de la Sarthe"
     }
 
-    /// The Circuit of the Americas. The relation tags two nodes 297 m apart along the lap,
-    /// and `finish` is the one the lap is timed across; the circuit's own sector map puts
-    /// that line at the place below, and its three stretches — which add up to the lap
-    /// exactly — travel in the geometry because one map serves every season here.
+    /// The Circuit of the Americas. The relation tags two nodes 297 m apart along the lap —
+    /// the series' 2026 map gives the start line the same offset — and `finish` is the one
+    /// the lap is timed across; the circuit's own sector map puts that line at the place
+    /// below.
     def cota(): Circuit = {
         relation = Some(6537729i64),
         box      = None,
@@ -160,14 +150,6 @@ pub mod Circuit {
         word     = "cota",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -97.6422583, lat = 30.1335278}, within = Some(10.0)}),
-        lap      = 5515.0,
-        sectors  = {
-            published = Some({
-                source = "the circuit's own track sector map",
-                stretches = 1313.2 :: 2254.3 :: 1947.5 :: Nil
-            }),
-            eachSeason = None
-        },
         file   = "app/static/geometry/cota.geojson",
         survey = "The Circuit of the Americas"
     }
@@ -186,10 +168,6 @@ pub mod Circuit {
     /// `start_finish` marker of the tobi/track-atlas dataset — a point that dataset
     /// placed on OpenStreetMap's own centreline, not a measurement of its own. The node
     /// stands about 15 m from it, within the 25 m allowed.
-    ///
-    /// The distances the FIA issues round a lap here were never read at authoring: no
-    /// stretches are authored, the geometry writes no `sectors`, and the timing report
-    /// reads this circuit as publishing no lines of its own.
     def barcelona(): Circuit = {
         relation = Some(284540i64),
         box      = None,
@@ -197,34 +175,25 @@ pub mod Circuit {
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        lap      = 4655.0,
-        sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/barcelona.geojson",
         survey = "The Circuit de Barcelona-Catalunya"
     }
 
     /// Monza. The relation `284565` carries its 20 lap ways under no role at all
     /// and names its pit under `pit_lane`. Its `start` and `finish` roles both name
-    /// one node — and that node is a `highway=traffic_signals` point: the pit-exit
-    /// light, 197 m after the line the tobi/track-atlas dataset marks as `start_finish`.
-    /// OSM holds no node where that line stands, so no role a survey could answer does,
-    /// and no `timingLine` can be authored without the byte fence refusing every survey
-    /// of the relation; the drawn zero and start line of this circuit therefore stand
-    /// at the pit-exit light. A node joined to the relation at the line's place would
-    /// fix the drawing without moving a metre of the survey.
-    ///
-    /// The distances the FIA issues round a lap here were never read at authoring:
-    /// no stretches are authored, the geometry writes no `sectors`, and the timing
-    /// report reads this circuit as publishing no lines of its own.
+    /// one node — and that node is a `highway=traffic_signals` point, the pit-exit
+    /// light — so no role is named, and the lap is turned at the authored place.
+    /// That place is the series' 2026 map's finish line, which no source gives in degrees:
+    /// the map, laid over the survey, puts its finish line, its pit-in line and i2 between
+    /// 298 and 334 m before the light, and the place is the survey's point 320 m before it.
+    /// The map is drawn wider than the circuit, so the place is good to some 20 m.
     def monza(): Circuit = {
         relation = Some(284565i64),
         box      = None,
         pit      = None,
         word     = "monza",
-        timedFrom = "finish",
-        timingLine = None,
-        lap      = 5793.0,
-        sectors  = {published = None, eachSeason = None},
+        timedFrom = "",
+        timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
         file   = "app/static/geometry/monza.geojson",
         survey = "The Autodromo Nazionale di Monza"
     }
@@ -235,29 +204,19 @@ pub mod Circuit {
     /// the `pit` field names — the other hanger is a 123 m unnamed connector — and the
     /// drift course, short circuit, kart track and abandoned stubs are what no line
     /// passes and a box survey therefore leaves out.
-    /// No node stands at the line — the lap's nearest is 207 m down it — so the zero
-    /// stands on the authored place alone, and a place better sourced than this one moves
-    /// the drawn zero and every Fuji baseline with it. It is the `start_finish` marker of
-    /// the tobi/track-atlas dataset, whose outline was stitched from these same ways: no
-    /// measurement independent of them.
-    ///
-    /// The distances the series issue round a lap here were never read at authoring:
-    /// no stretches are authored, the geometry writes no `sectors`, and the timing
-    /// report reads this circuit as publishing no lines of its own.
+    /// No node stands at the line, so the zero stands on the authored place alone, and a
+    /// place better sourced than this one moves the drawn zero and every Fuji baseline with it.
+    /// That place is the series' 2026 map's finish line, which no source gives in degrees:
+    /// the map, laid over the survey, puts its finish line, start line, i1 and i2 between 59
+    /// and 99 m before the tobi/track-atlas `start_finish` marker the zero stood at, and
+    /// the place is the survey's point 80 m before that marker, good to some 20 m.
     def fuji(): Circuit = {
         relation = None,
         box      = Some({south = 35.3397, west = 138.8927, north = 35.3997, east = 138.9527}),
         pit      = Some(148621414i64 :: Nil),
         word     = "fuji",
         timedFrom = "",
-        timingLine = Some({place = {lon = 138.927423, lat = 35.372405}, within = Some(25.0)}),
-        // The grand prix lap as the championship measures it: the 2023 6 Hours of Fuji
-        // ran 1,044.927 km over 229 laps, which divides to exactly 4,563 m. The surveyed
-        // centreline measures 4,553.6 m, 0.2 percent short of it — within what `laidOut`
-        // lets a box miss by. track-atlas prints 4,549; the race's own arithmetic is
-        // the figure kept here, and it is this one the drawing is measured in.
-        lap      = 4563.0,
-        sectors  = {published = None, eachSeason = None},
+        timingLine = Some({place = {lon = 138.926737, lat = 35.371955}, within = Some(25.0)}),
         file   = "app/static/geometry/fuji.geojson",
         survey = "The Fuji Speedway"
     }
@@ -271,24 +230,94 @@ pub mod Circuit {
     pub def byWord(word: String): Option[Circuit] =
         List.find(circuit -> circuit#word == word, circuits())
 
-    /// What the timing report lays its sector shares against, derived from this
-    /// config: the published stretches with the lap they add up to, a refusal
-    /// quoting the circuit's own reason where its map is re-issued every season,
-    /// and `Unsurveyed` for a word no config authors.
-    pub def timingMap(word: String): TimingMap =
-        match byWord(word) {
-            case None => TimingMap.Unsurveyed
-            case Some(circuit) =>
-                match circuit#sectors#published {
-                    case Some(publishes) =>
-                        TimingMap.Published({lapLength = circuit#lap, stretches = publishes#stretches})
-                    case None =>
-                        match circuit#sectors#eachSeason {
-                            case Some(reason) => TimingMap.PerSeason(reason)
-                            case None         => TimingMap.Unsurveyed
-                        }
+    /// What the timing report lays its sector shares against: the map's stretches with the
+    /// lap they add up to, or nothing where the map places no intermediate lines.
+    pub def timingMapOf(figures: Figures): TimingMap =
+        match figures#published {
+            case Some(publishes) => TimingMap.Published({lapLength = figures#lap, stretches = publishes#stretches})
+            case None            => TimingMap.Unsurveyed
+        }
+
+    // ------------------------------------------------------------- the circuit's map
+
+    /// The record of a circuit's map: the file the app is served it from, named by the
+    /// circuit's word.
+    pub def mapOf(circuit: Circuit): String =
+        "${mapDir()}/${circuit#word}.json"
+
+    /// The directory the app is served the circuit maps from.
+    pub def mapDir(): String =
+        "app/static/circuit-maps"
+
+    /// A map record read: the centreline is the lap, and the intermediate lines, where the
+    /// map gives both, imply the three stretches. Lines out of order are refused.
+    /// A stretch is the difference of two printed distances, and is held to the hundredth
+    /// of a metre the most precise map prints, so that it is written as the map prints it
+    /// and not as the double the subtraction left.
+    pub def figuresOf(text: String): Result[String, Figures] =
+        match Util.Json.parse(text) {
+            case Err(problem) => Err("the map record is no JSON: ${problem}")
+            case Ok(json) =>
+                forM(
+                    season <- wholeAt("season" :: Nil, json);
+                    lap    <- metresAt("lengths" :: "centerline" :: "metres" :: Nil, json);
+                    i1     <- optionalMetresAt("lines" :: "intermediate1" :: "metres" :: Nil, json);
+                    i2     <- optionalMetresAt("lines" :: "intermediate2" :: "metres" :: Nil, json);
+                    _      <- inOrder(lap, List.filterMap(identity, i1 :: i2 :: Nil))
+                ) yield {
+                    lap = lap,
+                    published = match (i1, i2) {
+                        case (Some(first), Some(second)) =>
+                            Some({
+                                source = "the ${season} circuit map",
+                                stretches = List.map(hundredth, first :: (second - first) :: (lap - second) :: Nil)
+                            })
+                        case _ => None
+                    }
                 }
         }
+
+    /// The lines a record places stand in the order a car reaches them, all of them before the
+    /// finish line closes the lap: a survey laid from lines out of order fails nowhere else.
+    def inOrder(lap: Float64, lines: List[Float64]): Result[String, Unit] =
+        let stops = List.append(0.0 :: lines, lap :: Nil);
+        if (List.forAll(pair -> match pair { case (one, next) => one < next }, List.zip(stops, List.drop(1, stops))))
+            Ok(())
+        else
+            Err("the map's lines do not stand in order round its ${Util.Format.whole(lap)} m lap")
+
+    def hundredth(metres: Float64): Float64 =
+        Float64.round(metres * 100.0) / 100.0
+
+    def at(path: List[String], json: Json): Option[Json] =
+        match path {
+            case Nil => Some(json)
+            case key :: rest =>
+                match json {
+                    case Json.JObject(members) => Map.get(key, members) |> Option.flatMap(at(rest))
+                    case _                               => None
+                }
+        }
+
+    def numberAt(path: List[String], json: Json): Result[String, Option[Float64]] =
+        match at(path, json) {
+            case None => Ok(None)
+            case Some(Json.JNumber(spelled)) =>
+                match Float64.fromString(BigDecimal.toPlainString(spelled)) {
+                    case Some(number) => Ok(Some(number))
+                    case None         => Err("the map record's ${String.intercalate(".", path)} is a number no double reads")
+                }
+            case Some(_) => Err("the map record's ${String.intercalate(".", path)} is not a number")
+        }
+
+    def metresAt(path: List[String], json: Json): Result[String, Float64] =
+        numberAt(path, json) |> Result.flatMap(found -> Option.toOk("the map record gives no ${String.intercalate(".", path)}", found))
+
+    def optionalMetresAt(path: List[String], json: Json): Result[String, Option[Float64]] =
+        numberAt(path, json)
+
+    def wholeAt(path: List[String], json: Json): Result[String, Int64] =
+        metresAt(path, json) |> Result.map(number -> Float64.truncateToInt64(Float64.round(number)))
 
     /// The Overpass answer a kept geometry was drawn from, kept beside the config that
     /// surveyed it: evidence the regeneration fence reads, never bytes the app asks for.

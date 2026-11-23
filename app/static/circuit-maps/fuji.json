@@ -1,0 +1,24 @@
+{
+  "circuit": "Fuji Speedway",
+  "season": 2026,
+  "issued": "2025-12-03T14:25",
+  "lengths": {
+    "centerline": { "metres": 4563, "printed": "Centerline: 4.563 m." },
+    "lapByPits": { "metres": 4571, "printed": "Lap by Pits: 4.571 m." },
+    "pitInToPitOut": { "metres": 487.2, "printed": "Pit In - Pit Out: 487,2m." }
+  },
+  "lines": {
+    "start": { "metres": 307, "printed": "Start Line Offset: 307 m." },
+    "pitOut": { "metres": 451.2, "printed": "Pit Out at: 451,2 m." },
+    "intermediate1": { "metres": 1305, "printed": "i1 at: 1.305 m." },
+    "intermediate2": { "metres": 2828, "printed": "i2 at: 2.828 m." },
+    "pitIn": { "metres": 4526, "printed": "Pit In at: 4.526 m." }
+  },
+  "drawn": ["FL", "Start Line", "TS", "SC L1", "SC L2", "i1", "i2", "Pit in", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "FL", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "FL", "colour": "#e20258" }
+  ],
+  "corners": 16
+}

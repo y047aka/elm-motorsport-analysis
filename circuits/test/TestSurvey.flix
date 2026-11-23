@@ -90,8 +90,17 @@ pub mod TestSurvey {
             case Some(circuit) =>
                 match Overpass.Answer.read(text) {
                     case Err(problem) => Err(problem)
-                    case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, geometry), Survey.geometryOf(reading, circuit))
+                    case Ok(reading) =>
+                        let figures = {lap = lapOf(word), published = None};
+                        Result.map(geometry -> Geometry.Write.file(circuit, figures, geometry), Survey.geometryOf(reading, circuit, figures))
                 }
+        }
+
+    /// The lap a real circuit's map gives, which these fixtures stretch the square to.
+    def lapOf(word: String): Float64 =
+        match word {
+            case "le_mans" => 13625.7
+            case _         => 5513.0
         }
 
     def refused(phrase: String, read: Result[String, a]): Bool =
@@ -169,8 +178,6 @@ pub mod TestSurvey {
                     word = cota#word,
                     timedFrom = cota#timedFrom,
                     timingLine = Some({place = place, within = Some(5.0)}),
-                    lap = cota#lap,
-                    sectors = cota#sectors,
                     file = cota#file,
                     survey = cota#survey
                 };
@@ -181,8 +188,6 @@ pub mod TestSurvey {
                     word = narrowed#word,
                     timedFrom = narrowed#timedFrom,
                     timingLine = Some({place = place, within = None}),
-                    lap = narrowed#lap,
-                    sectors = narrowed#sectors,
                     file = narrowed#file,
                     survey = narrowed#survey
                 };
@@ -190,10 +195,10 @@ pub mod TestSurvey {
                     case Err(problem) => Assert.assertTrueWithMsg(false, "read the answer: ${problem}")
                     case Ok(reading) =>
                         // Authored: the distance the circuit names is the distance kept.
-                        Assert.assertTrue(refused("which is not within 5 m", Survey.geometryOf(reading, narrowed)));
+                        Assert.assertTrue(refused("which is not within 5 m", Survey.geometryOf(reading, narrowed, {lap = 5513.0, published = None})));
                         // Named none: the ten metres every node is held to, quoted in
                         // the refusal and not the authored figure it leaves behind.
-                        Assert.assertTrue(refused("which is not within 10 m", Survey.geometryOf(reading, unauthored)))
+                        Assert.assertTrue(refused("which is not within 10 m", Survey.geometryOf(reading, unauthored, {lap = 5513.0, published = None})))
                 }
         }
 
@@ -442,8 +447,7 @@ pub mod TestSurvey {
     /// square's measured 4,149.7 m rounded, which is what the length guard lets stand.
     def boxCircuit(
         pit: Option[List[Int64]],
-        timingLine: Option[{place = Place, within = Option[Float64]}],
-        lap: Float64
+        timingLine: Option[{place = Place, within = Option[Float64]}]
     ): Circuit = {
         relation = None,
         box = Some({south = 29.98, west = -97.62, north = 30.06, east = -97.53}),
@@ -451,8 +455,6 @@ pub mod TestSurvey {
         word = "boxy",
         timedFrom = "",
         timingLine = timingLine,
-        lap = lap,
-        sectors = {published = None, eachSeason = None},
         file = "nowhere.geojson",
         survey = "A square"
     }
@@ -462,14 +464,15 @@ pub mod TestSurvey {
         {place = {lat = 30.0, lon = -97.596}, within = Some(25.0)}
 
     /// A given config over a given answer: the file it writes, or the sentence it refuses.
-    def writtenOf(circuit: Circuit, text: String): Result[String, String] =
+    def writtenOf(circuit: Circuit, lap: Float64, text: String): Result[String, String] =
+        let figures = {lap = lap, published = None};
         match Overpass.Answer.read(text) {
             case Err(problem) => Err(problem)
-            case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, geometry), Survey.geometryOf(reading, circuit))
+            case Ok(reading) => Result.map(geometry -> Geometry.Write.file(circuit, figures, geometry), Survey.geometryOf(reading, circuit, figures))
         }
 
     def boxWritten(pit: Option[List[Int64]], extra: List[String]): Result[String, String] =
-        writtenOf(boxCircuit(pit, Some(boxLine()), 4150.0), answer(boxGround(extra)))
+        writtenOf(boxCircuit(pit, Some(boxLine())), 4150.0, answer(boxGround(extra)))
 
     @Test
     def testABoxSurveysTheClosedWayItsLineStandsOn(): Unit \ Assert =
@@ -490,7 +493,7 @@ pub mod TestSurvey {
         Assert.assertTrue(
             refused(
                 "no closed raceway way",
-                writtenOf(boxCircuit(None, Some(off), 4150.0), answer(boxGround(Nil)))
+                writtenOf(boxCircuit(None, Some(off)), 4150.0, answer(boxGround(Nil)))
             )
         )
 
@@ -510,7 +513,7 @@ pub mod TestSurvey {
             refused(
                 "hang off the lap at one end and not the other",
                 writtenOf(
-                    boxCircuit(Some(31i64 :: Nil), Some(boxLine()), 4150.0),
+                    boxCircuit(Some(31i64 :: Nil), Some(boxLine())), 4150.0,
                     answer(boxGround(node(7, 29.9, -97.5) :: raceway(34, true, 3 :: 7 :: Nil) :: Nil))
                 )
             )
@@ -543,9 +546,37 @@ pub mod TestSurvey {
         Assert.assertTrue(
             refused(
                 "authors no timing line",
-                writtenOf(boxCircuit(None, None, 4150.0), answer(boxGround(Nil)))
+                writtenOf(boxCircuit(None, None), 4150.0, answer(boxGround(Nil)))
             )
         )
+
+    /// The square's relation, configured to name no role: the line stands where the box's
+    /// does, four tenths along the one-way first stretch, and no member is tagged there.
+    def turnedRelationCircuit(timingLine: Option[{place = Place, within = Option[Float64]}]): Circuit = {
+        relation = Some(7i64),
+        box = None,
+        pit = None,
+        word = "turned",
+        timedFrom = "",
+        timingLine = timingLine,
+        file = "nowhere.geojson",
+        survey = "A square"
+    }
+
+    @Test
+    def testARelationNamingNoRoleIsTurnedAtTheAuthoredLine(): Unit \ Assert =
+        match writtenOf(turnedRelationCircuit(Some(boxLine())), 4150.0, square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the relation refused its own square: ${problem}")
+            case Ok(file) =>
+                // The lap opens at the authored place, between nodes 1 and 2, and not at
+                // the node the relation tags `start-finish`.
+                Assert.assertTrue(String.contains({substr = "\"coordinates\":[[-97.596"}, file));
+                Assert.assertTrue(String.contains({substr = "\"direction\": \"clockwise\""}, file))
+        }
+
+    @Test
+    def testARelationNamingNoRoleAuthorsNothingWithoutATimingLine(): Unit \ Assert =
+        Assert.assertTrue(refused("names no role and authors no timing line", writtenOf(turnedRelationCircuit(None), 4150.0, square(7))))
 
     @Test
     def testAClosedRingIsGroundAndNeverAPitLane(): Unit \ Assert =
@@ -560,7 +591,7 @@ pub mod TestSurvey {
                 :: raceway(37, true, 1 :: 8 :: 9 :: 1 :: Nil)
                 :: Nil
         );
-        match writtenOf(boxCircuit(None, Some(boxLine()), 4150.0), answer(ground)) {
+        match writtenOf(boxCircuit(None, Some(boxLine())), 4150.0, answer(ground)) {
             case Err(problem) => Assert.assertTrue(String.contains({substr = "holds no way at all"}, problem))
             case Ok(file) => Assert.assertTrueWithMsg(false, "wrote a file: ${String.take(200, file)}")
         }
@@ -572,7 +603,7 @@ pub mod TestSurvey {
         Assert.assertTrue(
             refused(
                 "is not within 2 percent of the 6000 m the circuit publishes",
-                writtenOf(boxCircuit(None, Some(boxLine()), 6000.0), answer(boxGround(Nil)))
+                writtenOf(boxCircuit(None, Some(boxLine())), 6000.0, answer(boxGround(Nil)))
             )
         )
 

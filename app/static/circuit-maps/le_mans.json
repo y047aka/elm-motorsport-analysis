@@ -1,0 +1,75 @@
+{
+  "circuit": "Circuit de la Sarthe",
+  "season": 2026,
+  "issued": "2026-06-03T10:05",
+  "lengths": {
+    "centerline": { "metres": 13625.70, "printed": "Centerline: 13.625,70 m" },
+    "lapByPits": { "metres": 13597.27, "printed": "Lap by Pits: 13.597,27 m" },
+    "pitInToPitOut": { "metres": 532.08, "printed": "Pit In - Pit Out: 532,08 m" }
+  },
+  "lines": {
+    "start": { "metres": 144.86, "printed": "Start Line at 144,86 m" },
+    "pitOut": { "metres": 394.56, "printed": "Pit Out at 394,56" },
+    "intermediate1": { "metres": 1900.70, "printed": "i1 at 1.900,70 m" },
+    "topSpeed": { "metres": 3754.13, "printed": "Top Speed at 3.754,13 m" },
+    "intermediate2": { "metres": 7672.13, "printed": "i2 at 7.672,13 m" },
+    "porscheIn": { "metres": 11475.77, "printed": "Porsche In at 11.475,77 m" },
+    "porscheOut": { "metres": 12507.09, "printed": "Porsche Out at 12.507,09 m" },
+    "fordIn": { "metres": 13246.35, "printed": "Ford In at 13.246,35 m" },
+    "pitIn": { "metres": 13459.75, "printed": "Pit In at 13.459,75 m" },
+    "fordOut": { "metres": 13470.88, "printed": "Ford Out at 13.470,88 m" }
+  },
+  "timingLoops": [
+    "FINISH LINE",
+    "START LINE",
+    "SAFETY CAR LINE 2",
+    "LOOP Z4",
+    "INTERMEDIATE 1",
+    "VMAX 1",
+    "VMAX 2",
+    "LOOP Z12",
+    "SAFETY CAR LINE C",
+    "A7-1",
+    "INTERMEDIATE 2",
+    "A8-1",
+    "SAFETY CAR LINE B",
+    "PORSCHE IN",
+    "PORSCHE OUT",
+    "SAFETY CAR LINE 1 / FORD IN",
+    "FORD OUT",
+    "PIT IN",
+    "PIT FINISH LINE",
+    "PIT OUT"
+  ],
+  "performanceLoops": [
+    "S6-1", "S6-2",
+    "A6-1", "A6-2", "A6-3",
+    "S7-1", "S7-2",
+    "A7-1", "A7-2", "A7-3",
+    "S8-1", "S8-2",
+    "A8-1", "A8-2", "A8-3",
+    "S9-1", "S9-2",
+    "A11-1", "A11-2", "A11-3"
+  ],
+  "drawn": [
+    "FINISH LINE", "START LINE", "PIT IN", "PIT OUT", "PIT REF",
+    "SCLA-1", "SCLA-2", "SCL-B", "SCL-C", "SCA", "SCB", "SCC",
+    "INT1", "IP-1", "INT2", "IP-2", "Z4", "Z12", "V-MAX 1", "V-MAX 2",
+    "PORSCHE IN", "PORSCHE OUT", "FORD OUT",
+    "S6-1", "S6-2", "A6-1", "A6-2", "A6-3", "S7-1", "S7-2", "A7-1", "A7-2", "A7-3",
+    "S8-1", "S8-2", "A8-1", "A8-2", "A8-3", "S9-1", "S9-2", "A11-1", "A11-2", "A11-3"
+  ],
+  "corners": 33,
+  "miniPoints": 35,
+  "zones": [
+    { "name": "ZONE 1", "from": "FINISH LINE", "to": "Z4", "colour": "#e67f80" },
+    { "name": "ZONE 2", "from": "Z4", "to": "IP-1", "colour": "#9282af" },
+    { "name": "ZONE 3", "from": "IP-1", "to": "Z12", "colour": "#d4dd4e" },
+    { "name": "ZONE 4", "from": "Z12", "to": "A7-1", "colour": "#51b8a5" },
+    { "name": "ZONE 5", "from": "A7-1", "to": "A8-1", "colour": "#eb894a" },
+    { "name": "ZONE 6", "from": "A8-1", "to": "SCL-B", "colour": "#71bb66" },
+    { "name": "ZONE 7", "from": "SCL-B", "to": "PORSCHE IN", "colour": "#ee9597" },
+    { "name": "ZONE 8", "from": "PORSCHE IN", "to": "PORSCHE OUT", "colour": "#78bddd" },
+    { "name": "ZONE 9", "from": "PORSCHE OUT", "to": "FINISH LINE", "colour": "#40498c" }
+  ]
+}

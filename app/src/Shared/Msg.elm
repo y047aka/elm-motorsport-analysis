@@ -1,9 +1,9 @@
-module Shared.Msg exposing (Msg(..))
+module Shared.Msg exposing (Msg(..), Drawing)
 
 {-| The Shared messages are defined in their own module so that `Effect` can
 refer to them without creating an import cycle with `Shared`.
 
-@docs Msg
+@docs Msg, Drawing
 
 -}
 
@@ -13,9 +13,10 @@ import Data.Wec.CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer exposing (Manufacturers)
 import Http
+import Motorsport.Circuit.Direction exposing (Direction)
 import Motorsport.Race.TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
+import Motorsport.Wec.Circuit.Layout exposing (Layout)
 
 
 {-| The file responses carry the round they were asked for.
@@ -33,5 +34,11 @@ type Msg
     | JsonLoaded_Wec { season : Int, id : String } (Result Http.Error Wec.Event)
     | LapsLoaded_Wec { season : Int, id : String } (Result Http.Error (List WecLaps.RawLap))
     | TimelineLoaded_Wec { season : Int, id : String } (Result Http.Error (List TimelineEvent))
-    | GeometryLoaded { season : Int, id : String } String (Result Http.Error Geometry)
+    | DrawingLoaded { season : Int, id : String } String (Result Http.Error Drawing)
     | ReplayMsg Replay.Msg
+
+
+type alias Drawing =
+    { layout : Layout
+    , direction : Direction
+    }

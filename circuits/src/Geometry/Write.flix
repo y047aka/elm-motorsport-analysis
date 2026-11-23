@@ -9,7 +9,7 @@
 /// runs; and the frame the degrees project through, whole, so the drawing's
 /// `Circuit.Geodesy` is a copy of it and not a re-derivation. A `basis` says what kind of
 /// line it is, and the ODbL copyright travels in `source` and `license`. Where the circuit
-/// itself publishes the lines it times to, those authored stretches travel as `sectors`.
+/// itself publishes the lines it times to, its map's stretches travel as `sectors`.
 ///
 /// Coordinates, metres and every other array are written on one line each, so a kept
 /// geometry is one line per property rather than one per number, and a refreshed survey
@@ -26,8 +26,8 @@ pub mod Geometry.Write {
     /// The file as the app reads it: one FeatureCollection of the outline and the pit
     /// lane, in that order, the outline first because it is the line the drawing is
     /// measured along.
-    pub def file(circuit: Circuit, geometry: Survey.Geometry): String =
-        let outline = feature(outlineOf(circuit, geometry), lineOf(geometry#centreline));
+    pub def file(circuit: Circuit, figures: Circuit.Figures, geometry: Survey.Geometry): String =
+        let outline = feature(outlineOf(circuit, figures, geometry), lineOf(geometry#centreline));
         let pit = feature(pitOf(circuit), pitLineOf(geometry#pitLane));
         "{\"type\": \"FeatureCollection\", \"features\": [\n${outline},\n${pit}\n]}\n"
 
@@ -36,14 +36,14 @@ pub mod Geometry.Write {
     /// What the outline says it is, in the order the file says it in. A kept geometry is
     /// diffed by people as much as read by the app, so the order is the file's own, and
     /// `Regenerate` takes the order of its drift report from the same list.
-    def outlineOf(circuit: Circuit, geometry: Survey.Geometry): List[String] =
+    def outlineOf(circuit: Circuit, figures: Circuit.Figures, geometry: Survey.Geometry): List[String] =
         claims()
-            |> List.filterMap(name -> pair(name, circuit, geometry))
+            |> List.filterMap(name -> pair(name, circuit, figures, geometry))
             |> List.map(property)
 
     /// A property's name beside the value the outline claims for it, where it claims one.
-    def pair(name: String, circuit: Circuit, geometry: Survey.Geometry): Option[(String, String)] =
-        Option.map(value -> (name, value), claim(name, circuit, geometry))
+    def pair(name: String, circuit: Circuit, figures: Circuit.Figures, geometry: Survey.Geometry): Option[(String, String)] =
+        Option.map(value -> (name, value), claim(name, circuit, figures, geometry))
 
     /// The properties the outline is written with, in the order the file lays them.
     /// The regeneration fence compares in this order, so a claim added to the profile
@@ -56,7 +56,7 @@ pub mod Geometry.Write {
     /// What the outline claims for one of its properties, where this geometry can say
     /// it. A claim a circuit cannot make — no stamp on the answer, no map of its own —
     /// is `None` and writes no line at all in the file, rather than a null.
-    def claim(name: String, circuit: Circuit, geometry: Survey.Geometry): Option[String] =
+    def claim(name: String, circuit: Circuit, figures: Circuit.Figures, geometry: Survey.Geometry): Option[String] =
         match name {
             case "role"              => Some(text("outline"))
             case "circuit"           => Some(text(circuit#word))
@@ -65,11 +65,11 @@ pub mod Geometry.Write {
             case "license"           => Some(licence())
             case "surveyed_at"       => Option.map(text, geometry#surveyedAt)
             case "direction"         => Some(text(geometry#direction))
-            case "lap_length_m"      => Some(number(circuit#lap))
+            case "lap_length_m"      => Some(number(figures#lap))
             // The survey's own length, as the double it summed to rather than a rounded
             // reading of it: it is the figure the stretching was done with.
             case "surveyed_length_m" => Option.map(number, geometry#surveyedLength)
-            case "sectors"           => Option.map(published, circuit#sectors#published)
+            case "sectors"           => Option.map(published, figures#published)
             case "frame"             => Some(frame(geometry#frame))
             case "metres"            => Some(metres(geometry#centreline))
             // A name no `claims` lays, so a property this profile is not written with.

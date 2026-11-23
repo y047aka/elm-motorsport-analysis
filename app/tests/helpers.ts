@@ -24,14 +24,14 @@ export function readConstant(name: string, source: string, pattern: RegExp): num
 }
 
 /**
- * Which circuits `Shared` draws to their own shape: the words it matches in `trackOf`,
- * which are the words it asks `/static/geometry/<word>.geojson` for and the words
- * Flix's `Circuit.jsonValue` sends.
+ * Which circuits `Shared` draws to their own shape: the words it matches in `drawingFor`,
+ * which are the words it asks `/static/circuit-maps/<word>.json` and
+ * `/static/geometry/<word>.geojson` for and the words Flix's `Circuit.jsonValue` sends.
  */
 export function drawnNames(): string[] {
-  const body = readSource('app/src/Shared.elm').split('trackOf :')[1];
-  if (!body) throw new Error('trackOf not found in Shared.elm');
-  return [...body.split('\nmapLoaded')[0].matchAll(/Just "([a-z_]+)" ->/g)].map((m) => m[1]);
+  const body = readSource('app/src/Shared.elm').split('drawingFor circuit =')[1];
+  if (!body) throw new Error('drawingFor not found in Shared.elm');
+  return [...body.split('\n\n\n')[0].matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
 }
 
 /** The rounds a checkout keeps, spelled as the calendar spells them. */

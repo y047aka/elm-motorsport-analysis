@@ -1,50 +1,75 @@
-module Motorsport.Wec.Circuit.LeMans.Layout exposing (decoder, layout)
+module Motorsport.Wec.Circuit.LeMans.Layout exposing (CircuitMap, mapDecoder, decoder, layout)
 
 {-| The Circuit de la Sarthe as a map draws it: the lap, the pit lane beside
 it, and where round the lap the lines it is timed at stand.
 
 The lap itself arrives as the served geometry -- `static/geometry/le_mans.geojson`,
 decoded and checked by [`Motorsport.Wec.Circuit.Geometry`](Motorsport-Wec-Circuit-Geometry).
-What is written here is the season's distances and the drawing's lengths; the
-record they are written into and the projection the degrees are drawn through
-are [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
-circuit is drawn out of.
+Where its lines stand is the circuit map's, handed in as a [`CircuitMap`](#CircuitMap), and what is written here is the drawing's lengths.
+The record they are written into and the projection the degrees are drawn through are [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every circuit is drawn out of.
 
-@docs decoder, layout
+@docs CircuitMap, mapDecoder, decoder, layout
 
 -}
 
-import Json.Decode exposing (Decoder)
+import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Wec.Circuit.Map as Map
 
 
-{-| Reading the served geometry, checked against the 13,625.7 m Al Kamel's maps
-give the centreline in every season from 2024.
+{-| The figures of the circuit map the drawing is placed by, as its record at `static/circuit-maps/le_mans.json` gives them.
+
+Every season is drawn on the record's map, the latest.
+
 -}
-decoder : Decoder Geometry
-decoder =
-    Geometry.decoder { lapLength = 13625.7 }
+type alias CircuitMap =
+    { centreline : Float
+    , intermediate1 : Float
+    , intermediate2 : Float
+    , porscheIn : Float
+    , porscheOut : Float
+    , fordIn : Float
+    , fordOut : Float
+    }
 
 
-{-| The circuit as a season's race was timed on it. A season after the last one
-here is read as that one.
+{-| Reading a map record, which has to give every figure in [`CircuitMap`](#CircuitMap), in the order a car reaches them.
 -}
-layout : Int -> Geometry -> Layout
-layout season geometry =
+mapDecoder : Decoder CircuitMap
+mapDecoder =
+    Decode.map7 CircuitMap
+        Map.centreline
+        (Map.line "intermediate1")
+        (Map.line "intermediate2")
+        (Map.line "porscheIn")
+        (Map.line "porscheOut")
+        (Map.line "fordIn")
+        (Map.line "fordOut")
+        |> Decode.andThen (\map -> Map.inOrder map.centreline [ map.intermediate1, map.intermediate2, map.porscheIn, map.porscheOut, map.fordIn, map.fordOut ] map)
+
+
+{-| Reading the served geometry, checked against the centreline the map gives.
+-}
+decoder : CircuitMap -> Decoder Geometry
+decoder map =
+    Geometry.decoder { lapLength = map.centreline }
+
+
+{-| The circuit as the map places its lines.
+-}
+layout : CircuitMap -> Geometry -> Layout
+layout map geometry =
     let
         lap =
             shape geometry
-
-        pit =
-            pitLane geometry
     in
     { shape = lap
-    , pitLane = pit
-    , timingLines = timingLines season lap
+    , pitLane = pitLane geometry
+    , timingLines = timingLines map lap
     , lengths = lengths
     }
 
@@ -101,57 +126,10 @@ pitLane geometry =
     Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
-{-| The "Approximate Distances" of Al Kamel's circuit map for each race, which
-name six of the lines and not the rest. 2024's map gives Ford In apart from
-Safety Car Line 1, and does not place the latter.
+{-| The map names six of the feed's fifteen lines, and places the rest nowhere.
 -}
-timingLines : Int -> Shape -> TimingLines
-timingLines season lap =
-    if season <= 2024 then
-        published
-            { intermediate1 = 1899.09
-            , intermediate2 = 7670.63
-            , porscheIn = 11475.05
-            , porscheOut = 12504.4
-            , safetyCarLine1 = Nothing
-            , fordOut = 13469.78
-            }
-            lap
-
-    else if season == 2025 then
-        published
-            { intermediate1 = 1899.1
-            , intermediate2 = 7670.63
-            , porscheIn = 11475.05
-            , porscheOut = 12504.4
-            , safetyCarLine1 = Just 13251.0
-            , fordOut = 13469.78
-            }
-            lap
-
-    else
-        published
-            { intermediate1 = 1900.7
-            , intermediate2 = 7672.13
-            , porscheIn = 11475.77
-            , porscheOut = 12507.09
-            , safetyCarLine1 = Just 13246.35
-            , fordOut = 13470.88
-            }
-            lap
-
-
-published :
-    { intermediate1 : Float
-    , intermediate2 : Float
-    , porscheIn : Float
-    , porscheOut : Float
-    , safetyCarLine1 : Maybe Float
-    , fordOut : Float
-    }
-    -> Shape
-    -> TimingLines
-published lines lap =
+timingLines : CircuitMap -> Shape -> TimingLines
+timingLines map lap =
     let
         finishLine =
             Shape.length lap
@@ -161,10 +139,10 @@ published lines lap =
             (\sector ->
                 case sector of
                     S1 ->
-                        lines.intermediate1
+                        map.intermediate1
 
                     S2 ->
-                        lines.intermediate2
+                        map.intermediate2
 
                     S3 ->
                         finishLine
@@ -181,7 +159,7 @@ published lines lap =
                             Nothing
 
                         IP1 ->
-                            Just lines.intermediate1
+                            Just map.intermediate1
 
                         Z12 ->
                             Nothing
@@ -193,7 +171,7 @@ published lines lap =
                             Nothing
 
                         IP2 ->
-                            Just lines.intermediate2
+                            Just map.intermediate2
 
                         A8_1 ->
                             Nothing
@@ -202,19 +180,20 @@ published lines lap =
                             Nothing
 
                         PORIN ->
-                            Just lines.porscheIn
+                            Just map.porscheIn
 
                         POROUT ->
-                            Just lines.porscheOut
+                            Just map.porscheOut
 
                         PITREF ->
                             Nothing
 
+                        -- The map's timing loops name one line "SAFETY CAR LINE 1 / FORD IN".
                         SCL1 ->
-                            lines.safetyCarLine1
+                            Just map.fordIn
 
                         FORDOUT ->
-                            Just lines.fordOut
+                            Just map.fordOut
 
                         FL ->
                             Just finishLine

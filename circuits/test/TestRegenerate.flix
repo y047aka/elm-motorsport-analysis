@@ -167,7 +167,7 @@ pub mod TestRegenerate {
     def writtenFile(): String =
         match Circuit.byWord("cota") {
             case None          => ""
-            case Some(circuit) => Geometry.Write.file(circuit, drawn())
+            case Some(circuit) => Geometry.Write.file(circuit, {lap = 5515.0, published = Some({source = "the 2026 circuit map", stretches = 1313.2 :: 2254.3 :: 1947.5 :: Nil})}, drawn())
         }
 
     def lap(): List[Geodesy.Metred] =
