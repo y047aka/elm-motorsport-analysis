@@ -138,7 +138,7 @@ pub mod Circuit {
         word     = "le_mans",
         timedFrom = "start-finish",
         timingLine = None,
-        elevation = None,
+        elevation = Some(Elevation.Source.IgnLidarHd),
         file     = "app/static/geometry/le_mans.geojson",
         survey   = "The Circuit de la Sarthe"
     }
@@ -180,7 +180,7 @@ pub mod Circuit {
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        elevation = None,
+        elevation = Some(Elevation.Source.IgnEspanaMdt05),
         file   = "app/static/geometry/barcelona.geojson",
         survey = "The Circuit de Barcelona-Catalunya"
     }
@@ -200,7 +200,7 @@ pub mod Circuit {
         word     = "monza",
         timedFrom = "",
         timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
-        elevation = None,
+        elevation = Some(Elevation.Source.LombardiaDtm5),
         file   = "app/static/geometry/monza.geojson",
         survey = "The Autodromo Nazionale di Monza"
     }
@@ -224,7 +224,7 @@ pub mod Circuit {
         word     = "fuji",
         timedFrom = "",
         timingLine = Some({place = {lon = 138.926737, lat = 35.371955}, within = Some(25.0)}),
-        elevation = None,
+        elevation = Some(Elevation.Source.GsiDem),
         file   = "app/static/geometry/fuji.geojson",
         survey = "The Fuji Speedway"
     }

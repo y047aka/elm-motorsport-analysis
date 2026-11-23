@@ -191,7 +191,7 @@ pub mod TestRegenerate {
         direction = Survey.counterClockwise(),
         surveyedAt = Some("2026-10-20T07:01:01Z"),
         surveyedLength = Some(5502.238574528194),
-        elevation = Some({dataset = Elevation.Usgs.dataset(), outline = 154.86 :: 154.9 :: 160.04 :: Nil, pitLane = 152.8 :: 153.1 :: Nil})
+        elevation = Some({dataset = Elevation.datasetOf(Elevation.Source.Usgs3dep), outline = 154.86 :: 154.9 :: 160.04 :: Nil, pitLane = 152.8 :: 153.1 :: Nil})
     }
 
     /// The outline's property keys — a parsed file keeps them sorted, not in the

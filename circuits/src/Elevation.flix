@@ -24,9 +24,14 @@ pub mod Elevation {
     use Util.GetOpt.OptionDescr
     use Util.Json.Json
 
-    /// The sources a circuit's places can be sampled from.
+    /// The sources a circuit's places can be sampled from: each a terrain model of the
+    /// bare earth, and each covering one country or one region of it.
     pub enum Source with Eq {
         case Usgs3dep
+        case IgnLidarHd
+        case IgnEspanaMdt05
+        case LombardiaDtm5
+        case GsiDem
     }
 
     /// What a source says of itself, in the kept file and, less the service, in the
@@ -39,7 +44,36 @@ pub mod Elevation {
     }
 
     pub def datasetOf(source: Source): Dataset = match source {
-        case Source.Usgs3dep => Elevation.Usgs.dataset()
+        case Source.Usgs3dep => {
+            name    = "USGS 3D Elevation Program (3DEP), best available",
+            license = "public domain",
+            datum   = "NAVD88",
+            service = "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer"
+        }
+        case Source.IgnLidarHd => {
+            name    = "IGN LiDAR HD, MNT (© IGN)",
+            license = "Licence Ouverte 2.0",
+            datum   = "NGF-IGN69",
+            service = Elevation.Geopf.service()
+        }
+        case Source.IgnEspanaMdt05 => {
+            name    = "MDT05 (© Instituto Geográfico Nacional)",
+            license = "CC BY 4.0",
+            datum   = "mean sea level at Alicante",
+            service = Elevation.Idee.service()
+        }
+        case Source.LombardiaDtm5 => {
+            name    = "DTM 5x5 (© Regione Lombardia)",
+            license = "CC BY 4.0",
+            datum   = "Genova 1942",
+            service = "https://www.cartografia.servizirl.it/arcgis2/rest/services/BaseMap/DTM5_RL_img/ImageServer"
+        }
+        case Source.GsiDem => {
+            name    = "GSI digital elevation model (© 国土地理院)",
+            license = "GSI content terms of use (CC BY 4.0 compatible)",
+            datum   = "Tokyo Bay mean sea level",
+            service = Elevation.Gsi.service()
+        }
     }
 
     /// One place's height above the datum, and the resolution of the model it was read
@@ -166,9 +200,44 @@ pub mod Elevation {
 
     /// Every place asked of the circuit's source.
     def ask(source: Source, places: List[Place]): Result[String, List[Sample]] \ { IO, Clock } =
-        match source {
-            case Source.Usgs3dep => Service.paced(() -> Elevation.Usgs.sample(places))
+        Service.paced(() -> match source {
+            case Source.Usgs3dep       => Elevation.ArcGis.sample(datasetOf(source)#service, "USGS 3DEP", places)
+            case Source.LombardiaDtm5  => Elevation.ArcGis.sample(datasetOf(source)#service, "Lombardia DTM 5x5", places)
+            case Source.IgnLidarHd     => Elevation.Geopf.sample(places)
+            case Source.IgnEspanaMdt05 => Elevation.Idee.sample(places)
+            case Source.GsiDem         => Elevation.Gsi.sample(places)
+        })
+
+    /// How many times a request is asked before the run gives up: a source answers 504
+    /// for minutes at a time.
+    pub def tries(): Int32 = 3
+
+    /// One request, asked again after a failure, left longer each time.
+    pub def sent(request: Net.HttpRequest.HttpRequest, who: String): Result[String, String] \ { IO, Net.Https.Https } =
+        retried(() -> Service.send(request, who), 1)
+
+    /// The same, of a service answering in text that holds `holding`.
+    pub def sentHolding(request: Net.HttpRequest.HttpRequest, who: String, holding: String): Result[String, String] \ { IO, Net.Https.Https } =
+        retried(() -> Service.sendHolding(request, who, holding), 1)
+
+    def retried(asking: Unit -> Result[String, String] \ Net.Https.Https, attempt: Int32): Result[String, String] \ { IO, Net.Https.Https } =
+        match asking() {
+            case Ok(text) => Ok(text)
+            case Err(problem) =>
+                if (attempt >= tries())
+                    Err(problem)
+                else {
+                    Net.HttpLayer.sleep(Time.Duration.toMillis(Overpass.backoff(attempt)));
+                    retried(asking, attempt + 1)
+                }
         }
+
+    /// The places in batches of `size`, in order.
+    pub def batches(size: Int32, places: List[a]): List[List[a]] =
+        if (List.isEmpty(places))
+            Nil
+        else
+            List.take(size, places) :: batches(size, List.drop(size, places))
 
     // ---------------------------------------------------------------- the word
 

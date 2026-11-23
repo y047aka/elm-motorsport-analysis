@@ -91,7 +91,8 @@ App-side, `Motorsport.Wec.Circuit.Geometry` reads `elevation_m` as optional and 
 
 **The samples are keyed by the degrees they were asked at.** An answer re-fetched with any node moved leaves that place unsampled, and the survey and the fence refuse the circuit until `elevation <word> --fetch` samples it again; re-fetching an answer and re-sampling it are one change.
 
-A source covers one country: COTA's is USGS 3DEP, a 1 m LiDAR model of the bare earth, whose service answers 504 for minutes at a time.
+A source covers one country or region, and each is a model of the bare earth: USGS 3DEP for COTA, IGN's LiDAR HD for Le Mans, IGN España's MDT05 for Barcelona, Regione Lombardia's DTM 5x5 for Monza and GSI's elevation API for Fuji, each with its licence and datum in `Elevation.datasetOf`.
+Their services answer 504 for minutes at a time, so a request is asked three times; GSI answers one place per request, so sampling Fuji takes some twenty minutes.
 A source whose model is of surfaces rather than the ground — Copernicus GLO-30 — reads grandstands and trees into the lap: at COTA it summed a lap's climbing to 92 m against 3DEP's 66.
 
 ## The probe, and OpenStreetMap's answers

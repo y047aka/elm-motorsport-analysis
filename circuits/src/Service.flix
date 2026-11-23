@@ -34,20 +34,32 @@ pub mod Service {
 
     /// One request sent, and what came back read: `asked` is who a failure names.
     pub def send(request: HttpRequest, asked: String): Result[String, String] \ Https =
+        sendFor(request, asked, body -> kept(body, asked))
+
+    /// One request sent to a service that answers in something other than JSON, and its
+    /// body kept only where it holds `holding`: the HTML page a proxy answers with holds
+    /// no such word.
+    pub def sendHolding(request: HttpRequest, asked: String, holding: String): Result[String, String] \ Https =
+        sendFor(request, asked, body ->
+            if (String.contains({substr = holding}, body)) Ok(body)
+            else Err("${asked} answered with something that holds no ${holding}")
+        )
+
+    def sendFor(request: HttpRequest, asked: String, read: String -> Result[String, String]): Result[String, String] \ Https =
         match Https.send(request) {
             case Err(error)   => Err(worded(error))
-            case Ok(response) => answered(response, asked)
+            case Ok(response) => answered(response, asked, read)
         }
 
     /// A response, read: the body a service sent when it answered in JSON, or the sentence
     /// it answered with. Two things make a body no answer — a status that is no success,
     /// and text that is no JSON — and only the first of them is in the status: a service
     /// behind a proxy answers a request it let time out as 200 with an HTML page.
-    def answered(response: HttpResponse, asked: String): Result[String, String] =
+    def answered(response: HttpResponse, asked: String, read: String -> Result[String, String]): Result[String, String] =
         if (not Net.HttpResponse.isSuccess(response))
             Err("${asked} answered ${Net.HttpResponse.status(response)}")
         else
-            kept(Net.HttpResponse.body(response), asked)
+            read(Net.HttpResponse.body(response))
 
     /// A transport failure as the report prints it: which kind, and what the client
     /// said about it.

@@ -405,13 +405,12 @@ bandWidth =
     0.03
 
 
-{-| How many times over a circuit's heights are drawn. A lap is some kilometres across
-and its heights some tens of metres apart, which drawn true is a lap that looks flat;
-the drawing says so beside it, since it is the one length here not drawn to scale.
+{-| How many times over a circuit's heights are drawn. At any other figure than 1 the
+drawing says so beside it, since it is then the one length here not drawn to scale.
 -}
 steep : Float
 steep =
-    5
+    1
 
 
 carSize : Float
@@ -615,7 +614,12 @@ view surface model shown standings =
                     )
                     g.sectors
             , cars = cars
-            , steep = Maybe.map (\_ -> steep) g.relief
+            , steep =
+                if steep /= 1 then
+                    Maybe.map (\_ -> steep) g.relief
+
+                else
+                    Nothing
             }
     in
     draw fit scene

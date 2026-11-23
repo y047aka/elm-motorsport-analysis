@@ -86,7 +86,7 @@ pub mod TestSurvey {
         List.zip(places, List.range(0, List.length(places)))
             |> List.filter(pair -> match pair { case (at, _) => not List.memberOf(spelledAt(at), List.map(spelledAt, dropped)) })
             |> List.map(pair -> match pair { case (at, n) => {place = at, metres = 100.0 + Int32.toFloat64(n), resolution = 1.0} })
-            |> Elevation.written(Elevation.Usgs.dataset())
+            |> Elevation.written(Elevation.datasetOf(Elevation.Source.Usgs3dep))
 
     def spelledAt(at: Place): String = Geometry.Write.coordinate(at#lon, at#lat)
 
