@@ -58,7 +58,7 @@ pub mod Survey {
     pub def counterClockwise(): String = "counter_clockwise"
 
     /// Metres a thinned line may stray from the surveyed one.
-    pub def tolerance(): Float64 = 1.0
+    pub def tolerance(): Float64 = 0.25
 
     /// An answer read and surveyed: the text a run was handed, the answer it reads as and
     /// the geometry the file is written from. The live survey, the guard a fetched answer
@@ -608,7 +608,7 @@ pub mod Survey {
 
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
-    /// line thinned to what a drawing at a tenth of a metre cannot show.
+    /// line thinned to `tolerance`.
     def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit, lapLength: Float64): Result[String, Geometry] = {
         let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
         let pitNodes = List.filterMap(id -> Map.get(id, nodes), pit);

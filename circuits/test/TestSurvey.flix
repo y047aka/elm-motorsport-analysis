@@ -289,12 +289,12 @@ pub mod TestSurvey {
 
     @Test
     def testSimplifyThinsALineToWhatADrawingCannotShow(): Unit \ Assert =
-        // A side that runs straight keeps its two ends and nothing between them; a bend of
-        // half a metre is a bend no drawing measured at a metre can see, and a bend of
-        // twenty metres is a corner that stays.
+        // A side that runs straight keeps its two ends and nothing between them; a bend under
+        // `Survey.tolerance` goes the same way, and a bend of twenty metres is a corner that
+        // stays.
         let straight = line((0.0, 0.0) :: (25.0, 0.0) :: (50.0, 0.0) :: (75.0, 0.0) :: (100.0, 0.0) :: Nil);
         Assert.assertTrue(Survey.simplify(straight, 0, 4) == 0 :: 4 :: Nil);
-        let shallow = line((0.0, 0.0) :: (50.0, 0.5) :: (100.0, 0.0) :: Nil);
+        let shallow = line((0.0, 0.0) :: (50.0, 0.1) :: (100.0, 0.0) :: Nil);
         Assert.assertTrue(Survey.simplify(shallow, 0, 2) == 0 :: 2 :: Nil);
         let corner = line((0.0, 0.0) :: (50.0, 20.0) :: (100.0, 0.0) :: Nil);
         Assert.assertTrue(Survey.simplify(corner, 0, 2) == 0 :: 1 :: 2 :: Nil)

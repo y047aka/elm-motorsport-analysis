@@ -137,8 +137,8 @@ fromAHalfTenth value =
 
 {-| A projection is a handful of digits wide and two languages round its last
 one differently, so a place closer than this to a half-tenth is a place the
-drawing cannot decide. The tightest place of either survey here stands 39
-micrometres clear; a closer one is worth redrawing the survey from, not
+drawing cannot decide. The tightest place of these surveys stands 3
+micrometres clear at COTA; a closer one is worth redrawing the survey from, not
 relaxing.
 -}
 tenthTolerance : Float

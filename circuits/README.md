@@ -34,7 +34,7 @@ A survey that moved takes a re-baseline of the tracker's VRT with it, since ever
 
 Every surveyed point is held in OpenStreetMap's degrees with how far round the lap it stands, and `Circuit/Layout` projects them through the `Circuit.Geodesy.Frame` written beside them, to the tenth of a metre every VRT baseline was rendered at.
 The frame's origin is the survey's north-west corner, so the drawing never falls below zero.
-A test holds every projected place clear of the half-tenth its rounding turns on, measured before the rounding; the tightest stands 113 micrometres clear at Le Mans and 39 at COTA, which is what lets the metres be projected rather than written down.
+A test holds every projected place clear of the half-tenth its rounding turns on, measured before the rounding; the tightest stands 42 micrometres clear at Le Mans and 3 at COTA, which is what lets the metres be projected rather than written down.
 
 `Motorsport.Circuit.Geodesy` re-runs this project's projection app-side, and nothing compares the two: a Geodesy on another sphere lays a drawing whose metres are not the survey's.
 
