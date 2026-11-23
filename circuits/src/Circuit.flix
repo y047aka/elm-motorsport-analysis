@@ -180,7 +180,7 @@ pub mod Circuit {
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        elevation = Some(Elevation.Source.IgnEspanaMdt05),
+        elevation = Some(Elevation.Source.IcgcMet2),
         file   = "app/static/geometry/barcelona.geojson",
         survey = "The Circuit de Barcelona-Catalunya"
     }

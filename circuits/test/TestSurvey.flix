@@ -126,6 +126,21 @@ pub mod TestSurvey {
         Assert.assertTrue(List.map(spelledAt, List.filter(each -> each#fall == 0.0, walked) |> List.map(each -> each#place)) == List.map(spelledAt, line))
 
     @Test
+    def testASpikeIsTheMedianAroundItAndASlopeIsLeftAsSampled(): Unit \ Assert =
+        // A pit five metres deep and one place wide, where a road passes under: it is the
+        // height of the climb either side of it. The steady climb itself, a metre every ten,
+        // stands on the line its neighbours draw and keeps its sampled heights.
+        let along = List.map(i -> Int32.toFloat64(i) * 10.0, List.range(0, 11));
+        let climb = 100.0 :: 101.0 :: 102.0 :: 103.0 :: 104.0 :: 100.0 :: 106.0 :: 107.0 :: 108.0 :: 109.0 :: 110.0 :: Nil;
+        Assert.assertTrue(Survey.despiked(None, along, climb) == 100.0 :: 101.0 :: 102.0 :: 103.0 :: 104.0 :: 105.0 :: 106.0 :: 107.0 :: 108.0 :: 109.0 :: 110.0 :: Nil);
+        // Half a metre off its median is the model's own unevenness, and is kept.
+        let rough = 100.0 :: 100.5 :: 100.0 :: 100.5 :: 100.0 :: Nil;
+        Assert.assertTrue(Survey.despiked(None, List.take(5, along), rough) == rough);
+        // Round a lap, the places either side of the finish line are neighbours.
+        let lap = 103.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 103.0 :: Nil;
+        Assert.assertTrue(List.head(Survey.despiked(Some(100.0), along, lap)) == Some(100.0))
+
+    @Test
     def testEveryKeptPointCarriesItsHeight(): Unit \ Assert =
         let circuit = turnedRelationCircuit(Some(boxLine()));
         let figures = {lap = 4150.0, published = None};

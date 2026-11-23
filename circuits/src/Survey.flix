@@ -735,8 +735,13 @@ pub mod Survey {
                     let walkedPit = List.map(pointOf(pitAt), walking#pit);
                     let lapMetres = Geodesy.together(List.map(each -> each#place, walking#lap), List.map(metreOf(metresAt), walking#lap));
                     let half = midpointOf(walking#lap, List.length(lapPoints) / 2);
-                    let lapHeights = Option.map(each -> each#lap, lines);
-                    let pitHeights = Option.map(each -> each#pit, lines);
+                    let despikedLines = Option.map(each -> {
+                        dataset = each#dataset,
+                        lap = despiked(Some(lapLength), List.map(metreOf(metresAt), walking#lap), each#lap),
+                        pit = despiked(None, cumulative(walkedPit), each#pit)
+                    }, lines);
+                    let lapHeights = Option.map(each -> each#lap, despikedLines);
+                    let pitHeights = Option.map(each -> each#pit, despikedLines);
                     let kept = thinned(walkedLap, lapHeights, half);
                     let keptPit = simplifyOver(walkedPit, pitHeights, 0, lastIndex(walkedPit));
                     Ok({
@@ -750,11 +755,60 @@ pub mod Survey {
                             dataset = each#dataset,
                             outline = List.filterMap(at -> List.nth(at, each#lap), kept),
                             pitLane = List.filterMap(at -> List.nth(at, each#pit), keptPit)
-                        }, lines),
+                        }, despikedLines),
                         walked = Nil
                     })
         }
     }
+
+    /// How far along a line the heights a spike is judged against reach, either way.
+    pub def spikeReach(): Float64 = 50.0
+
+    /// How far a height may stand from the median of those around it before it is a spike.
+    pub def spikeTolerance(): Float64 = 1.0
+
+    /// A line's heights with its spikes taken out. Each height is laid against the line
+    /// joining the median of the heights within `spikeReach` before it to the median of
+    /// those within `spikeReach` after it, each at the median of their distances; one
+    /// standing further than `spikeTolerance` off that line is that line's height there,
+    /// and every other is its own. A terrain model reads the ground under a bridge where the
+    /// road crosses it, a pit some metres deep and a place or two wide; a slope or a crest
+    /// stands on the line its neighbours draw, and is left as it was sampled. `along` is
+    /// how far along the line each height stands; a lap's distances run round to its own
+    /// `length` again, and the ends of an open line are left as they were sampled.
+    pub def despiked(length: Option[Float64], along: List[Float64], heights: List[Float64]): List[Float64] =
+        let offset = (here, there) -> {
+            let d = there - here;
+            match length {
+                case Some(lap) => if (d > lap / 2.0) d - lap else if (d <= -lap / 2.0) d + lap else d
+                case None      => d
+            }
+        };
+        let pairs = List.zip(along, heights);
+        List.zip(along, heights) |> List.map(own -> match own {
+            case (here, height) =>
+                let near = pairs
+                    |> List.map(pair -> match pair { case (there, h) => (offset(here, there), h) })
+                    |> List.filter(pair -> match pair { case (d, _) => d != 0.0 and Float64.abs(d) <= spikeReach() });
+                let before = List.filter(pair -> fst(pair) < 0.0, near);
+                let after = List.filter(pair -> fst(pair) > 0.0, near);
+                match (medianOf(List.map(fst, before)), medianOf(List.map(snd, before)), medianOf(List.map(fst, after)), medianOf(List.map(snd, after))) {
+                    case (Some(db), Some(hb), Some(da), Some(ha)) =>
+                        let line = hb + (0.0 - db) / (da - db) * (ha - hb);
+                        if (Float64.abs(height - line) > spikeTolerance()) line else height
+                    case _ => height
+                }
+        })
+
+    def medianOf(values: List[Float64]): Option[Float64] =
+        let sorted = List.toVector(List.sort(values));
+        let n = Vector.length(sorted);
+        if (n == 0)
+            None
+        else if (Int32.remainder(n, 2) == 1)
+            Vector.nth(n / 2, sorted)
+        else
+            Option.flatMap(a -> Option.map(b -> (a + b) / 2.0, Vector.nth(n / 2, sorted)), Vector.nth(n / 2 - 1, sorted))
 
     /// Where a walked place stands on the drawing's plane: its node's point, or as far on
     /// towards the next node's as it stands in degrees.

@@ -84,6 +84,7 @@ Per-file links show in `git ls-files -s` as mode `120000`.
 `elevation <word> --fetch` asks the source the circuit's config names for the height of every place the kept answer holds, and of every place the survey walks that no node stands at — the zero a turned lap opens at, and the places it walks between two nodes; it keeps them as `circuits/<word>/elevation.json`.
 OpenStreetMap puts a node where a line bends on the plan, so a straight climbing to a crest is held by its two ends alone: COTA's climb to turn 1 has no node between 297 m and 562 m round the lap.
 A line with heights is therefore walked at most `Survey.spacing` (10 m) between places, each on the straight line joining its two nodes in degrees, and the heights are sampled at those places; the kept answer is not touched, and the lap's length and its nodes' metres are measured over the nodes alone.
+Before it is thinned, a line's heights have their spikes taken out (`Survey.despiked`): a terrain model reads the ground under a bridge or over a tunnel where the road crosses it, a pit or a bump some metres high and a place or a few wide, which OpenStreetMap tags at one crossing of Monza's four. A height standing more than `Survey.spikeTolerance` (1 m) off the line its neighbours within `Survey.spikeReach` (50 m) either side draw is replaced by that line; a reach of 80 m already cuts COTA's crest at turn 1.
 The walked line is thinned on the plan to `Survey.tolerance` (0.25 m) and in height to `Survey.heightTolerance` (0.5 m), a point kept that strays further than either: a crest or a dip on a line straight on the plan is a point the drawing keeps, and the tenths of a metre a terrain model rises and falls along a level road are not, so sampling a circuit adds points to its drawing and takes a re-baseline of its VRT with it.
 The survey and the fence read the kept samples as they read the kept answer, and the geometry carries an `elevation_m` per point of each line and the dataset and datum as `elevation`; the positions stay pairs of degrees.
 A circuit with no kept samples is drawn without heights.
@@ -91,8 +92,9 @@ App-side, `Motorsport.Wec.Circuit.Geometry` reads `elevation_m` as optional and 
 
 **The samples are keyed by the degrees they were asked at.** An answer re-fetched with any node moved leaves that place unsampled, and the survey and the fence refuse the circuit until `elevation <word> --fetch` samples it again; re-fetching an answer and re-sampling it are one change.
 
-A source covers one country or region, and each is a model of the bare earth: USGS 3DEP for COTA, IGN's LiDAR HD for Le Mans, IGN España's MDT05 for Barcelona, Regione Lombardia's DTM 5x5 for Monza and GSI's elevation API for Fuji, each with its licence and datum in `Elevation.datasetOf`.
-Their services answer 504 for minutes at a time, so a request is asked three times; GSI answers one place per request, so sampling Fuji takes some twenty minutes.
+A source covers one country or region, and each is a model of the bare earth: USGS 3DEP for COTA, IGN's LiDAR HD for Le Mans, ICGC's MET-2 for Barcelona, Regione Lombardia's DTM 5x5 for Monza and GSI's elevation API for Fuji, each with its licence and datum in `Elevation.datasetOf`.
+Their services answer 504 for minutes at a time, so a request is asked three times; ICGC and GSI answer one place per request, so sampling Barcelona takes some twenty minutes and Fuji thirty.
+IGN España's MDT05 was Barcelona's first source and is no longer asked: the IDEE serves it in whole metres, terraces a metre high and some 50 m long that read as bumps on a level road.
 A source whose model is of surfaces rather than the ground — Copernicus GLO-30 — reads grandstands and trees into the lap: at COTA it summed a lap's climbing to 92 m against 3DEP's 66.
 
 ## The probe, and OpenStreetMap's answers

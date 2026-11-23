@@ -66,23 +66,17 @@ pub mod TestElevation {
         };
         Assert.assertTrue(refused("holds no height", Elevation.Gsi.sampleOf(at, "{\"elevation\":\"-----\",\"hsrc\":\"-----\"}")))
 
-    /// A grid of three by two cells a hundredth of a degree across, as the WCS answers it.
-    def grid(): String =
-        "\r\n--wcs\r\nContent-Type: application/asc\r\n\r\nncols        3\nnrows        2\nxllcorner    2.0\nyllcorner    41.0\ncellsize     0.01\n 100 110 120\n 200 210 220\n\r\n--wcs--\r\n"
-
     @Test
-    def testAPlaceIsReadOffTheGridBetweenTheFourCellCentresRoundIt(): Unit \ Assert =
-        match Elevation.Idee.gridOf(grid()) {
+    def testIcgcAnswersThePixelAtThePlaceAsALineOfText(): Unit \ Assert =
+        let at = {lat = 41.571101, lon = 2.262122};
+        // Latitude first, the place at the middle of a box a thousandth of a degree across.
+        Assert.assertTrue(String.contains({substr = "&BBOX=41.5706"}, Elevation.Icgc.urlOf(at)));
+        Assert.assertTrue(String.contains({substr = "&WIDTH=101&HEIGHT=101&I=50&J=50&"}, Elevation.Icgc.urlOf(at)));
+        match Elevation.Icgc.sampleOf(at, "@MET2m Stretch.Pixel Value; 120.430000; ") {
             case Err(problem) => Assert.assertTrueWithMsg(false, problem)
-            case Ok(read) =>
-                // The north row first: a quarter of the way from the north-west centre
-                // to each of its neighbours, and halfway between four centres.
-                Assert.assertTrue(near(127.5, Elevation.Idee.heightOn(read, {lon = 2.0075, lat = 41.0125})));
-                Assert.assertTrue(near(155.0, Elevation.Idee.heightOn(read, {lon = 2.01, lat = 41.01})));
-                // Beyond the outer centres there are not four cells round a place.
-                Assert.assertTrue(refused("holds no height", Elevation.Idee.heightOn(read, {lon = 2.001, lat = 41.01})))
+            case Ok(read)     => Assert.assertTrue(read#metres == 120.43 and read#resolution == 2.0)
         };
-        Assert.assertTrue(refused("gave 5 heights for a grid of 3 by 2", Elevation.Idee.gridOf("ncols 3\nnrows 2\nxllcorner 2.0\nyllcorner 41.0\ncellsize 0.01\n1 2 3 4 5\n")))
+        Assert.assertTrue(refused("holds no height", Elevation.Icgc.sampleOf(at, "@MET2m Stretch.Pixel Value; NoData; ")))
 
     // ---------------------------------------------------------------- the kept file
 
@@ -108,12 +102,6 @@ pub mod TestElevation {
         let text = "{\"source\": \"s\", \"license\": \"l\", \"datum\": \"d\", \"service\": \"u\", \"samples\": [\n{\"lon\":-97.64,\"lat\":30.13}\n]}";
         Assert.assertTrue(refused("sample 1 is not a place and a height", Elevation.read(text)));
         Assert.assertTrue(refused("names no datum", Elevation.read("{\"source\": \"s\", \"license\": \"l\", \"service\": \"u\", \"samples\": []}")))
-
-    def near(metres: Float64, read: Result[String, Elevation.Sample]): Bool =
-        match read {
-            case Ok(sample) => Float64.abs(sample#metres - metres) < 1.0e-9
-            case Err(_)     => false
-        }
 
     def spelled(at: Place): String = Geometry.Write.coordinate(at#lon, at#lat)
 

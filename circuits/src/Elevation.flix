@@ -31,7 +31,7 @@ pub mod Elevation {
     pub enum Source with Eq {
         case Usgs3dep
         case IgnLidarHd
-        case IgnEspanaMdt05
+        case IcgcMet2
         case LombardiaDtm5
         case GsiDem
     }
@@ -58,11 +58,11 @@ pub mod Elevation {
             datum   = "NGF-IGN69",
             service = Elevation.Geopf.service()
         }
-        case Source.IgnEspanaMdt05 => {
-            name    = "MDT05 (© Instituto Geográfico Nacional)",
+        case Source.IcgcMet2 => {
+            name    = "MET-2 (© Institut Cartogràfic i Geològic de Catalunya)",
             license = "CC BY 4.0",
             datum   = "mean sea level at Alicante",
-            service = Elevation.Idee.service()
+            service = Elevation.Icgc.service()
         }
         case Source.LombardiaDtm5 => {
             name    = "DTM 5x5 (© Regione Lombardia)",
@@ -207,7 +207,7 @@ pub mod Elevation {
             case Source.Usgs3dep       => Elevation.ArcGis.sample(datasetOf(source)#service, "USGS 3DEP", places)
             case Source.LombardiaDtm5  => Elevation.ArcGis.sample(datasetOf(source)#service, "Lombardia DTM 5x5", places)
             case Source.IgnLidarHd     => Elevation.Geopf.sample(places)
-            case Source.IgnEspanaMdt05 => Elevation.Idee.sample(places)
+            case Source.IcgcMet2       => Elevation.Icgc.sample(places)
             case Source.GsiDem         => Elevation.Gsi.sample(places)
         })
 
