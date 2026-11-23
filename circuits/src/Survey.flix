@@ -59,13 +59,9 @@ pub mod Survey {
 
     pub def counterClockwise(): String = "counter_clockwise"
 
-    /// Metres a thinned line may stray from the surveyed one on the plan.
+    /// Metres a thinned line may stray from the surveyed one, on the plan and in height
+    /// alike.
     pub def tolerance(): Float64 = 0.25
-
-    /// Metres a thinned line with heights may stray from the surveyed one's heights. A
-    /// terrain model read every 10 m rises and falls by tenths of a metre where the road
-    /// does not, and those are no points for a drawing to keep.
-    pub def heightTolerance(): Float64 = 0.5
 
     /// The longest stretch a line's heights are left unsampled along: OpenStreetMap puts a
     /// node where a line bends on the plan, and a straight climbing to a crest is held by
@@ -891,9 +887,8 @@ pub mod Survey {
         simplifyOver(points, None, lo, hi)
 
     /// The same over points with a height each, where a point is kept that stands further
-    /// off the line than `tolerance` on the plan or than `heightTolerance` above or below
-    /// it: each distance is read as a share of its own tolerance, and the larger share is
-    /// the one weighed.
+    /// than `tolerance` off the line on the plan or above or below it, the larger of the
+    /// two distances being the one weighed.
     pub def simplifyOver(points: List[Point], heights: Option[List[Float64]], lo: Int32, hi: Int32): List[Int32] =
         match (List.nth(lo, points), List.nth(hi, points)) {
             case (Some(a), Some(b)) =>
@@ -902,8 +897,7 @@ pub mod Survey {
                 let norm = hypot(dx, dy);
                 match furthest(points, heights, lo, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
                     case (best, at) =>
-                        let limit = if (Option.isEmpty(heights)) tolerance() else 1.0;
-                        if (best <= limit or at < 0) lo :: hi :: Nil
+                        if (best <= tolerance() or at < 0) lo :: hi :: Nil
                         else List.append(withoutLast(simplifyOver(points, heights, lo, at)), simplifyOver(points, heights, at, hi))
                 }
             case _ => Nil
@@ -936,8 +930,8 @@ pub mod Survey {
                         case None    => offLine(p, a, b, dx, dy, norm)
                         case Some(z) =>
                             Float64.max(
-                                offLine(p, a, b, dx, dy, norm) / tolerance(),
-                                offHeight(p, a, dx, dy, norm, heightAt(every, z), heightAt(lo, z), heightAt(hi, z)) / heightTolerance()
+                                offLine(p, a, b, dx, dy, norm),
+                                offHeight(p, a, dx, dy, norm, heightAt(every, z), heightAt(lo, z), heightAt(hi, z))
                             )
                     };
                     if (distance > best)

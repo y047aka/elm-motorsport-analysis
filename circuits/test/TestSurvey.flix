@@ -435,8 +435,8 @@ pub mod TestSurvey {
         Assert.assertTrue(Survey.simplifyOver(straight, None, 0, 2) == 0 :: 2 :: Nil);
         Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 151.0 :: 150.0 :: Nil), 0, 2) == 0 :: 1 :: 2 :: Nil);
         Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 155.0 :: 160.0 :: Nil), 0, 2) == 0 :: 2 :: Nil);
-        // A rise under `Survey.heightTolerance` is the model's own unevenness, and goes.
-        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 150.4 :: 150.0 :: Nil), 0, 2) == 0 :: 2 :: Nil)
+        // A rise under `Survey.tolerance` goes, as a bend under it on the plan does.
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 150.2 :: 150.0 :: Nil), 0, 2) == 0 :: 2 :: Nil)
 
     @Test
     def testDirectionIsWhichWayTheSurveyRuns(): Unit \ Assert =
