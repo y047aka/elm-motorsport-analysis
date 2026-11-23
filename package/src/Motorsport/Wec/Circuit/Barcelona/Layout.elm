@@ -16,9 +16,8 @@ circuit is drawn out of.
 -}
 
 import Json.Decode exposing (Decoder)
-import Motorsport.Chart.Tracker.Config exposing (Share)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
-import Motorsport.Sector as Sector exposing (BySector, Sector(..))
+import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 
@@ -30,14 +29,14 @@ decoder =
     Geometry.decoder { lapLength = 4657.0 }
 
 
-{-| The circuit, on lines the round itself puts round the lap -- see
+{-| The circuit, on the lines the series' 2026 map puts round the lap -- see
 [`timingLines`](#timingLines).
 
 The lap runs the direction its survey was chained in -- the word arrives with
 the geometry, as OpenStreetMap's own one-way tags say it.
 -}
-layout : Geometry -> BySector Share -> Layout
-layout geometry shares =
+layout : Geometry -> Layout
+layout geometry =
     let
         lap =
             shape geometry
@@ -47,7 +46,7 @@ layout geometry shares =
     in
     { shape = lap
     , pitLane = pit
-    , timingLines = timingLines lap shares
+    , timingLines = timingLines lap
     , lengths = lengths
     }
 
@@ -116,35 +115,25 @@ pitLane geometry =
     Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
-{-| Where the lines the round is timed at stand on the surveyed lap.
+{-| The series' 2026 map (`circuits/barcelona/map-2026.json`): i1 at 1,627 m from the finish line and i2 at 3,395 m, of the 4,657 m centreline the served geometry is stretched to.
 
-This circuit publishes no distances for them -- the served geometry carries no
-`sectors` -- so a line stands where the round's own share of its laps puts it,
-and a car between two of them is placed by the share of the time between the
-lines it has run: the reading the ring gives every undrawn round, on surveyed
-degrees. The shape is surveyed; the lines are the round's, and would move with
-a season that divided its laps differently.
-How the drawing places a car between two of these lines is `AGENTS.md`'s tracker section's;
-which circuits are drawn this way is `circuits/README.md`'s timing lines section.
+Every season here is drawn with that map, the latest. Nothing here splits the lap finer: the feed carries no mini-sector times for this circuit, so a car between two of these lines is placed by the share of the time between them it has run.
+
 -}
-timingLines : Shape -> BySector Share -> TimingLines
-timingLines lap shares =
-    let
-        lapLength =
-            Shape.length lap
+timingLines : Shape -> TimingLines
+timingLines lap =
+    { sectors =
+        Sector.initialize
+            (\sector ->
+                case sector of
+                    S1 ->
+                        1627
 
-        line sector =
-            case sector of
-                S3 ->
-                    lapLength
+                    S2 ->
+                        3395
 
-                _ ->
-                    let
-                        stretch =
-                            Sector.get sector shares
-                    in
-                    (stretch.start + stretch.share) * lapLength
-    in
-    { sectors = Sector.initialize line
+                    S3 ->
+                        Shape.length lap
+            )
     , miniSectors = SectorsOnly
     }

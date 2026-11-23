@@ -6,31 +6,10 @@ serves: the geometry checked through the drawing it is projected into.
 
 import Expect
 import Json.Decode as Decode
-import Motorsport.Chart.Tracker.Config exposing (Share)
-import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 import Motorsport.TestHelpers.Survey.Fuji as Survey
 import Motorsport.TestHelpers.SurveySuite as SurveySuite exposing (Survey)
 import Motorsport.Wec.Circuit.Fuji.Layout as Layout
 import Test exposing (Test, test)
-
-
-{-| The 2026 round's sector shares -- this circuit's lines are placed by a
-round's own divisions. The suite checks the drawing, not the season.
--}
-shares : BySector Share
-shares =
-    Sector.initialize
-        (\sector ->
-            case sector of
-                S1 ->
-                    { start = 0, share = 0.24390513449594414 }
-
-                S2 ->
-                    { start = 0.24390513449594414, share = 0.31201511836085144 }
-
-                S3 ->
-                    { start = 0.5559202528567956, share = 0.44407974714320453 }
-        )
 
 
 {-| The box is Fuji's, near 35.37 N 138.93 E.
@@ -45,7 +24,7 @@ survey =
                 , frame = geometry.frame
                 , centreline = List.map (\point -> { lat = point.lat, lon = point.lon }) geometry.centreline
                 , pitLane = geometry.pitLane
-                , layout = Layout.layout geometry shares
+                , layout = Layout.layout geometry
                 }
             )
         |> Result.mapError Decode.errorToString

@@ -42,8 +42,8 @@ A test holds every projected place clear of the half-tenth its rounding turns on
 
 Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit map for that race, and differ by season; the maps are not to be redistributed, so they are not in the repository.
 The app draws every season on the latest of them, `le_mans/map-2026.json`, which `app/index.ts` imports into the bundle; the config here still refuses Le Mans as `perSeason`.
-COTA's are the series' 2026 map's, one set for every season here.
-A circuit's config says which kind its map is, as its `sectors`: `published` for every season, `perSeason`, or neither where no map has been read (Barcelona, Monza, Fuji), in which case the geometry writes no stretches.
+COTA's, Barcelona's, Monza's and Fuji's are the series' 2026 maps', one set for every season here.
+A circuit's config says which kind its map is, as its `sectors`: `published` for every season, `perSeason`, or neither where no map has been read, in which case the geometry writes no stretches.
 `nix run .#geometry-timing-lines` refuses a round on a per-season map by quoting the circuit's own reason.
 
 Nothing in a round's times picks one placement of the lines out of another — a sector's share of a lap is not a share of its distance — so what they rest on is that the circuit published them.

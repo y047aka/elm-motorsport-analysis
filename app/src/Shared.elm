@@ -614,7 +614,7 @@ trackOf maps track geometry =
         Just "barcelona" ->
             case geometry of
                 Decoded lap ->
-                    Tracker.onCircuit (BarcelonaLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
+                    Tracker.onCircuit (BarcelonaLayout.layout lap) { direction = lap.direction, config = track.config }
 
                 _ ->
                     Tracker.fromConfig track.config
@@ -622,7 +622,7 @@ trackOf maps track geometry =
         Just "monza" ->
             case geometry of
                 Decoded lap ->
-                    Tracker.onCircuit (MonzaLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
+                    Tracker.onCircuit (MonzaLayout.layout lap) { direction = lap.direction, config = track.config }
 
                 _ ->
                     Tracker.fromConfig track.config
@@ -630,7 +630,7 @@ trackOf maps track geometry =
         Just "fuji" ->
             case geometry of
                 Decoded lap ->
-                    Tracker.onCircuit (FujiLayout.layout lap track.config.sectors) { direction = lap.direction, config = track.config }
+                    Tracker.onCircuit (FujiLayout.layout lap) { direction = lap.direction, config = track.config }
 
                 _ ->
                     Tracker.fromConfig track.config

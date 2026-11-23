@@ -2,18 +2,12 @@ module Motorsport.Wec.Circuit.Monza.LayoutTest exposing (tests)
 
 {-| The Monza drawing, built from the geometry bytes the app serves, read
 through the app's own decoder.
-
-The shares handed to `layout` are the 2026 round's fastest lap's: the circuit
-publishes no line distances, so a round's own divisions place its lines. They
-are the drawing's input, not its expectation -- what is checked is the order and
-the bounds of the lines, not where this season's times put them.
 -}
 
 import Expect
 import Json.Decode as Decode exposing (Decoder)
-import Motorsport.Chart.Tracker.Config exposing (Share)
 import Motorsport.Circuit.Shape as Shape
-import Motorsport.Sector as Sector exposing (BySector, Sector(..))
+import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.TestHelpers.LeMans as LeMansFixture
 import Motorsport.TestHelpers.Survey.Monza as MonzaBytes
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
@@ -22,29 +16,13 @@ import Motorsport.Wec.Circuit.Monza.Layout as Monza
 import Test exposing (Test, describe, test)
 
 
-shares : BySector Share
-shares =
-    Sector.initialize
-        (\sector ->
-            case sector of
-                S1 ->
-                    { start = 0, share = 0.3192478813559322 }
-
-                S2 ->
-                    { start = 0.3192478813559322, share = 0.3407521186440678 }
-
-                S3 ->
-                    { start = 0.66, share = 0.34 }
-        )
-
-
 tests : Test
 tests =
     case ( read Monza.decoder MonzaBytes.text, LeMansFixture.layout ) of
         ( Ok monza, Ok reference ) ->
             let
                 drawing =
-                    Monza.layout monza shares
+                    Monza.layout monza
             in
             describe "Motorsport.Wec.Circuit.Monza.Layout"
                 [ test "the lap is the length the circuit measures it at" <|
@@ -65,6 +43,10 @@ tests =
                                 [ \( first, last ) -> Maybe.map .lat first |> Expect.equal (Maybe.map .lat last)
                                 , \( first, last ) -> Maybe.map .lon first |> Expect.equal (Maybe.map .lon last)
                                 ]
+                , test "the sectors end where the 2026 map puts its intermediates" <|
+                    \_ ->
+                        Sector.values drawing.timingLines.sectors
+                            |> Expect.equal [ 2055, 3727, Shape.length drawing.shape ]
                 , test "the lines stand in the order a car reaches them" <|
                     \_ ->
                         Sector.values drawing.timingLines.sectors

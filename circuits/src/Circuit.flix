@@ -191,9 +191,8 @@ pub mod Circuit {
     /// placed on OpenStreetMap's own centreline, not a measurement of its own. The node
     /// stands about 15 m from it, within the 25 m allowed.
     ///
-    /// Of the series' map only the lap is authored: no stretches are, the geometry writes
-    /// no `sectors`, and the timing report reads this circuit as publishing no lines of its
-    /// own.
+    /// The lap and its three stretches are the series' 2026 map's (`barcelona/map-2026.json`):
+    /// i1 at 1,627 m and i2 at 3,395 m of a 4,657 m lap.
     def barcelona(): Circuit = {
         relation = Some(284540i64),
         box      = None,
@@ -201,9 +200,14 @@ pub mod Circuit {
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        // The series' 2026 map's centreline (`barcelona/map-2026.json`).
         lap      = 4657.0,
-        sectors  = {published = None, eachSeason = None},
+        sectors  = {
+            published = Some({
+                source = "the series' 2026 circuit map",
+                stretches = 1627.0 :: 1768.0 :: 1262.0 :: Nil
+            }),
+            eachSeason = None
+        },
         file   = "app/static/geometry/barcelona.geojson",
         survey = "The Circuit de Barcelona-Catalunya"
     }
@@ -217,9 +221,8 @@ pub mod Circuit {
     /// 298 and 334 m before the light, and the place is the survey's point 320 m before it.
     /// The map is drawn wider than the circuit, so the place is good to some 20 m.
     ///
-    /// The distances the FIA issues round a lap here were never read at authoring:
-    /// no stretches are authored, the geometry writes no `sectors`, and the timing
-    /// report reads this circuit as publishing no lines of its own.
+    /// The lap and its three stretches are the same map's (`monza/map-2026.json`): i1 at
+    /// 2,055 m and i2 at 3,727 m of a 5,793 m lap.
     def monza(): Circuit = {
         relation = Some(284565i64),
         box      = None,
@@ -228,7 +231,13 @@ pub mod Circuit {
         timedFrom = "",
         timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
         lap      = 5793.0,
-        sectors  = {published = None, eachSeason = None},
+        sectors  = {
+            published = Some({
+                source = "the series' 2026 circuit map",
+                stretches = 2055.0 :: 1672.0 :: 2066.0 :: Nil
+            }),
+            eachSeason = None
+        },
         file   = "app/static/geometry/monza.geojson",
         survey = "The Autodromo Nazionale di Monza"
     }
@@ -246,9 +255,8 @@ pub mod Circuit {
     /// and 99 m before the tobi/track-atlas `start_finish` marker the zero stood at, and
     /// the place is the survey's point 80 m before that marker, good to some 20 m.
     ///
-    /// The distances the series issue round a lap here were never read at authoring:
-    /// no stretches are authored, the geometry writes no `sectors`, and the timing
-    /// report reads this circuit as publishing no lines of its own.
+    /// The three stretches are the same map's (`fuji/map-2026.json`): i1 at 1,305 m and i2
+    /// at 2,828 m of the 4,563 m lap, which the map's centreline gives too.
     def fuji(): Circuit = {
         relation = None,
         box      = Some({south = 35.3397, west = 138.8927, north = 35.3997, east = 138.9527}),
@@ -262,7 +270,13 @@ pub mod Circuit {
         // lets a box miss by. track-atlas prints 4,549; the race's own arithmetic is
         // the figure kept here, and it is this one the drawing is measured in.
         lap      = 4563.0,
-        sectors  = {published = None, eachSeason = None},
+        sectors  = {
+            published = Some({
+                source = "the series' 2026 circuit map",
+                stretches = 1305.0 :: 1523.0 :: 1735.0 :: Nil
+            }),
+            eachSeason = None
+        },
         file   = "app/static/geometry/fuji.geojson",
         survey = "The Fuji Speedway"
     }
