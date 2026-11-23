@@ -35,7 +35,6 @@ Fields worth a decision:
 - `relation` / `box` / `pit` — exactly one grounding: the relation the ways are named by, or the box whose raceway ways are chained by standing at the line. A box at a racing complex may hang more than one line off the lap, and the survey reads geometry and one-way tags rather than any way's `name`; `pit` names the pit lane's ways by id then, as a relation's members do.
 - `timedFrom` — the relation member naming the line the lap is timed across. Every metre is measured from whichever one was answered to.
 - `timingLine` — the published place (and the `within` the survey may allow), or `None` where the circuit tags nothing mistakable. The doc-comment says where the place came from, and whether that source measured it or took it off OpenStreetMap: a place taken off OpenStreetMap checks the survey against nothing but itself. A run that answers the wrong role fails before writing only when this is set; without it a wrong line just draws every car early.
-- `eachSeason` — `None`, unless the organiser's map answers for one season only; then the reason the timing report will quote when it refuses a round, and the geometry writes no `sectors`.
 
 The lap and its lines are not the config's: write the circuit map's record at `app/static/circuit-maps/<word>.json`, in the shape the other records keep (`circuits/README.md`'s maps section). Its `lengths.centerline.metres` is the length the surveyed line is stretched to; `lines.intermediate1` and `lines.intermediate2`, where the map gives both, imply the stretches the geometry carries as `sectors` and the report reads.
 
@@ -94,7 +93,7 @@ A survey that moved an *existing* circuit's bytes is its own change: it takes a 
 ## 8. If a round joins with it
 
 - Registering the round is `/skill:add-round`'s — the calendar, `Events.displayName` and `Events.circuit`, where the CSV sits, and the two CLI stages. The summary then carries `track.circuit`, and of what the export writes only `index.json` is committed by default.
-- `nix run .#geometry-timing-lines -- <season>/<id> [--against <season>]` answers whether the lines stand where they stood. It refuses an `eachSeason` circuit by quoting the config's own reason — that is the expected answer there, not a failure.
+- `nix run .#geometry-timing-lines -- <season>/<id> [--against <season>]` answers whether the lines stand where they stood.
 - A round whose geometry was never laid reads as unnamed and draws as the ring; a `track.circuit` no `drawingFor` arm knows is the rename-on-one-side mistake the contract spec exists to catch.
 
 ## Hazards

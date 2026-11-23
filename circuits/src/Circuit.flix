@@ -8,8 +8,8 @@
 /// map's, read from the record the app is served (`mapOf`) as `Figures`, so the drawing,
 /// the survey and the timing report read one set of figures.
 /// The directory named by the circuit's word keeps the evidence — the kept Overpass
-/// answer — and no code. The timing report derives its answer from the config and the
-/// figures through `timingMapOf`; the byte fence — `nix run .#geometry -- survey <word>`
+/// answer — and no code. The timing report derives its answer from the figures through
+/// `timingMapOf`; the byte fence — `nix run .#geometry -- survey <word>`
 /// — lays them against the bytes the app is served.
 ///
 /// The steps a circuit joins by are the repository's `/skill:add-circuit` to say.
@@ -109,9 +109,6 @@ pub mod Circuit {
         // either one's line is the `timingLine`'s place itself.
         timedFrom = String,
         timingLine = Option[TimingLine],
-        // Why the organiser's map answers for one season only, which the timing report quotes
-        // when it refuses a round here; a circuit that names a reason writes no `sectors`.
-        eachSeason = Option[String],
         // The geometry file, from the directory the command was asked from.
         file     = String,
         // The prose the geometry file documents its survey with.
@@ -143,7 +140,6 @@ pub mod Circuit {
         word     = "le_mans",
         timedFrom = "start-finish",
         timingLine = None,
-        eachSeason = None,
         file     = "app/static/geometry/le_mans.geojson",
         survey   = "The Circuit de la Sarthe"
     }
@@ -159,7 +155,6 @@ pub mod Circuit {
         word     = "cota",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -97.6422583, lat = 30.1335278}, within = Some(10.0)}),
-        eachSeason = None,
         file   = "app/static/geometry/cota.geojson",
         survey = "The Circuit of the Americas"
     }
@@ -185,7 +180,6 @@ pub mod Circuit {
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        eachSeason = None,
         file   = "app/static/geometry/barcelona.geojson",
         survey = "The Circuit de Barcelona-Catalunya"
     }
@@ -205,7 +199,6 @@ pub mod Circuit {
         word     = "monza",
         timedFrom = "",
         timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
-        eachSeason = None,
         file   = "app/static/geometry/monza.geojson",
         survey = "The Autodromo Nazionale di Monza"
     }
@@ -229,7 +222,6 @@ pub mod Circuit {
         word     = "fuji",
         timedFrom = "",
         timingLine = Some({place = {lon = 138.926737, lat = 35.371955}, within = Some(25.0)}),
-        eachSeason = None,
         file   = "app/static/geometry/fuji.geojson",
         survey = "The Fuji Speedway"
     }
@@ -243,25 +235,12 @@ pub mod Circuit {
     pub def byWord(word: String): Option[Circuit] =
         List.find(circuit -> circuit#word == word, circuits())
 
-    /// What the timing report lays its sector shares against, derived from a config and
-    /// its map's figures: the published stretches with the lap they add up to, or a refusal
-    /// quoting the circuit's own reason where its map is re-issued every season.
-    pub def timingMapOf(circuit: Circuit, figures: Figures): TimingMap =
-        match circuit#eachSeason {
-            case Some(reason) => TimingMap.PerSeason(reason)
-            case None =>
-                match figures#published {
-                    case Some(publishes) => TimingMap.Published({lapLength = figures#lap, stretches = publishes#stretches})
-                    case None            => TimingMap.Unsurveyed
-                }
-        }
-
-    /// The stretches a circuit's geometry carries: the map's, unless the circuit says its
-    /// map answers for one season only.
-    pub def publishedOf(circuit: Circuit, figures: Figures): Option[Publishes] =
-        match circuit#eachSeason {
-            case Some(_) => None
-            case None    => figures#published
+    /// What the timing report lays its sector shares against: the map's stretches with the
+    /// lap they add up to, or nothing where the map places no intermediate lines.
+    pub def timingMapOf(figures: Figures): TimingMap =
+        match figures#published {
+            case Some(publishes) => TimingMap.Published({lapLength = figures#lap, stretches = publishes#stretches})
+            case None            => TimingMap.Unsurveyed
         }
 
     // ------------------------------------------------------------- the circuit's map

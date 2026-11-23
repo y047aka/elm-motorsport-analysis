@@ -307,30 +307,22 @@ pub mod TimingLines {
         )
 
     /// The circuit's published map, or why this is not a question it can answer.
-    ///
-    /// A circuit the organiser re-maps every year is refused rather than read:
-    /// the question -- do one map's lines still stand a season later -- has no
-    /// answer where there is no such thing as one map.
     def publishedMap(asked: Request, circuit: Motorsport.Circuit.Circuit): Result[CliError, PublishedMap] \ IO =
         match timingMapOf(circuit) |> Result.mapErr(CliError.Reading) {
             case Err(problem)                       => Err(problem)
             case Ok(TimingMap.Published(published)) => Ok(published)
-            case Ok(TimingMap.PerSeason(reason)) =>
-                Err(CliError.Reading(
-                    "${asked#season}/${asked#id} is run on a circuit whose timing map is not one set of lines: ${reason}."
-                ))
             case Ok(TimingMap.Unsurveyed) =>
                 Err(CliError.Reading(
                     "no timing map is published for ${asked#season}/${asked#id}: circuits/ surveys the lines of only some circuits, and this circuit is not one of them."
                 ))
         }
 
-    /// The circuit's answer, derived from its config and the figures of the map the app is
-    /// served; a circuit no config authors publishes nothing.
+    /// The circuit's answer, derived from the figures of the map the app is served; a circuit
+    /// no config authors publishes nothing.
     def timingMapOf(circuit: Motorsport.Circuit.Circuit): Result[String, TimingMap] \ IO =
         match Circuit.byWord(Motorsport.Circuit.jsonValue(circuit)) {
             case None         => Ok(TimingMap.Unsurveyed)
-            case Some(config) => MapRecord.read(config) |> Result.map(figures -> Circuit.timingMapOf(config, figures))
+            case Some(config) => MapRecord.read(config) |> Result.map(Circuit.timingMapOf)
         }
 
     /// The intermediate lines the published stretches imply. The stretches are

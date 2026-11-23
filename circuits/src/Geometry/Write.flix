@@ -69,7 +69,7 @@ pub mod Geometry.Write {
             // The survey's own length, as the double it summed to rather than a rounded
             // reading of it: it is the figure the stretching was done with.
             case "surveyed_length_m" => Option.map(number, geometry#surveyedLength)
-            case "sectors"           => Option.map(published, Circuit.publishedOf(circuit, figures))
+            case "sectors"           => Option.map(published, figures#published)
             case "frame"             => Some(frame(geometry#frame))
             case "metres"            => Some(metres(geometry#centreline))
             // A name no `claims` lays, so a property this profile is not written with.

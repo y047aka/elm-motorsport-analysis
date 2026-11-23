@@ -178,7 +178,6 @@ pub mod TestSurvey {
                     word = cota#word,
                     timedFrom = cota#timedFrom,
                     timingLine = Some({place = place, within = Some(5.0)}),
-                    eachSeason = cota#eachSeason,
                     file = cota#file,
                     survey = cota#survey
                 };
@@ -189,7 +188,6 @@ pub mod TestSurvey {
                     word = narrowed#word,
                     timedFrom = narrowed#timedFrom,
                     timingLine = Some({place = place, within = None}),
-                    eachSeason = narrowed#eachSeason,
                     file = narrowed#file,
                     survey = narrowed#survey
                 };
@@ -457,7 +455,6 @@ pub mod TestSurvey {
         word = "boxy",
         timedFrom = "",
         timingLine = timingLine,
-        eachSeason = None,
         file = "nowhere.geojson",
         survey = "A square"
     }
@@ -562,7 +559,6 @@ pub mod TestSurvey {
         word = "turned",
         timedFrom = "",
         timingLine = timingLine,
-        eachSeason = None,
         file = "nowhere.geojson",
         survey = "A square"
     }

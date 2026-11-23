@@ -65,16 +65,13 @@ pub mod Motorsport.Circuit {
     /// What a circuit publishes about the lines the lap is timed to.
     ///
     /// `Published` is the one map the circuit draws every season with, and the
-    /// stretches it puts round the lap; `PerSeason` is a circuit that re-issues
-    /// its map, so that no set of lines answers for two seasons and no reading
-    /// may lay one season's times against another's; `Unsurveyed` is a circuit
-    /// whose map places no intermediate lines, or that no config here authors.
+    /// stretches it puts round the lap; `Unsurveyed` is a circuit whose map places
+    /// no intermediate lines, or that no config here authors.
     ///
     /// The shape of an answer, not a copy of one: `Circuit.timingMapOf` derives
-    /// each circuit's from its config and its map's figures.
+    /// each circuit's from its map's figures.
     pub enum TimingMap {
         case Published(PublishedMap)
-        case PerSeason(String)
         case Unsurveyed
     }
 

@@ -55,24 +55,11 @@ pub mod Geometry.TestWrite {
         published = Some({source = "the 2026 circuit map", stretches = 1311.0 :: 2257.0 :: 1945.0 :: Nil})
     }
 
-    def written(word: String, geometry: Survey.Geometry): Result[String, String] =
+    def written(word: String, given: Circuit.Figures, geometry: Survey.Geometry): Result[String, String] =
         match Circuit.byWord(word) {
             case None       => Err("the test names no circuit")
-            case Some(circuit) => Ok(Geometry.Write.file(circuit, figures(), geometry))
+            case Some(circuit) => Ok(Geometry.Write.file(circuit, given, geometry))
         }
-
-    /// A circuit whose organiser re-issues its map every season, which no config here is.
-    def reissued(): Circuit = {
-        relation = Some(1i64),
-        box = None,
-        pit = None,
-        word = "reissued",
-        timedFrom = "start-finish",
-        timingLine = None,
-        eachSeason = Some("the map is re-issued every season"),
-        file = "nowhere.geojson",
-        survey = "A circuit"
-    }
 
     def says(phrase: String, text: Result[String, String]): Unit \ Assert =
         match text {
@@ -112,7 +99,7 @@ pub mod Geometry.TestWrite {
 
     @Test
     def testTheFileIsOneCollectionOfTwoFeatures(): Unit \ Assert =
-        let file = written("cota", drawn());
+        let file = written("cota", figures(), drawn());
         // The outline first, because it is the line the drawing is measured along.
         says("{\"type\": \"FeatureCollection\", \"features\": [\n    {\n      \"type\": \"Feature\",\n", file);
         says("\n]}\n", file);
@@ -129,7 +116,7 @@ pub mod Geometry.TestWrite {
 
     @Test
     def testTheOutlineClaimsWhatTheSurveyKnows(): Unit \ Assert =
-        let file = written("cota", drawn());
+        let file = written("cota", figures(), drawn());
         // The claims are in the file's own order, and the order is the file's: a kept
         // geometry is diffed by people as much as read by the app.
         says(
@@ -145,18 +132,17 @@ pub mod Geometry.TestWrite {
 
     @Test
     def testTheTimingLinesTravelWithTheGeometryOnlyWhenTheCircuitPublishesThem(): Unit \ Assert =
-        // COTA publishes one map for every season, so its authored stretches travel; a map
-        // that answers for one season only writes no `sectors` at all rather than one
-        // season's lines as though they served every one.
+        // A map that places both intermediate lines has its stretches travel; one that
+        // places neither writes no `sectors` at all rather than an empty claim.
         says(
             "        \"sectors\": {\"source\":\"the 2026 circuit map\",\"stretches\":[1311,2257,1945]},\n",
-            written("cota", drawn())
+            written("cota", figures(), drawn())
         );
-        saysNot("sectors", Ok(Geometry.Write.file(reissued(), figures(), drawn())))
+        saysNot("sectors", written("cota", {lap = 5513.0, published = None}, drawn()))
 
     @Test
     def testAClaimNothingMadeIsLeftUnwritten(): Unit \ Assert =
-        let file = written("le_mans", unstamped());
+        let file = written("le_mans", figures(), unstamped());
         // Absent rather than null: a null is a claim about what the answer said, and these
         // are claims no answer made.
         saysNot("surveyed_at", file);

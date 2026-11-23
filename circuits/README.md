@@ -42,7 +42,6 @@ A test holds every projected place clear of the half-tenth its rounding turns on
 
 Every circuit's timing lines are the "Approximate Distances" of the series' circuit map, and every season is read on the latest map, whose record is `app/static/circuit-maps/<word>.json`; the maps themselves are not to be redistributed, so they are not in the repository.
 Le Mans's organiser re-issues its map every season and moves its lines by a few metres, and `--against` finds the 2024 and 2025 rounds' lines within 30 m of the 2026 map's.
-A config that names an `eachSeason` reason reads its map for one season only: the geometry writes no stretches, and `nix run .#geometry-timing-lines` refuses its rounds by quoting the reason. No circuit names one now.
 
 Nothing in a round's times picks one placement of the lines out of another — a sector's share of a lap is not a share of its distance — so what they rest on is that the circuit published them.
 What the times can answer is whether the lines moved: `nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025` finds the two seasons agree within half a percent of a lap, the only evidence one map serves both.
