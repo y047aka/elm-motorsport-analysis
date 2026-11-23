@@ -402,11 +402,13 @@ pub mod TestSurvey {
     @Test
     def testACrestOnAStraightIsKeptWhereThePointsHaveHeights(): Unit \ Assert =
         // Straight on the plan: without heights the middle point goes. A crest a metre up
-        // stands off the line in three dimensions and stays; a steady grade does not.
+        // stands off the line in height and stays; a steady grade does not.
         let straight = line((0.0, 0.0) :: (50.0, 0.0) :: (100.0, 0.0) :: Nil);
         Assert.assertTrue(Survey.simplifyOver(straight, None, 0, 2) == 0 :: 2 :: Nil);
         Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 151.0 :: 150.0 :: Nil), 0, 2) == 0 :: 1 :: 2 :: Nil);
-        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 155.0 :: 160.0 :: Nil), 0, 2) == 0 :: 2 :: Nil)
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 155.0 :: 160.0 :: Nil), 0, 2) == 0 :: 2 :: Nil);
+        // A rise under `Survey.heightTolerance` is the model's own unevenness, and goes.
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 150.4 :: 150.0 :: Nil), 0, 2) == 0 :: 2 :: Nil)
 
     @Test
     def testDirectionIsWhichWayTheSurveyRuns(): Unit \ Assert =

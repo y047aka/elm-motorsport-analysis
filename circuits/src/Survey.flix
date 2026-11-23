@@ -59,8 +59,13 @@ pub mod Survey {
 
     pub def counterClockwise(): String = "counter_clockwise"
 
-    /// Metres a thinned line may stray from the surveyed one.
+    /// Metres a thinned line may stray from the surveyed one on the plan.
     pub def tolerance(): Float64 = 0.25
+
+    /// Metres a thinned line with heights may stray from the surveyed one's heights. A
+    /// terrain model read every 10 m rises and falls by tenths of a metre where the road
+    /// does not, and those are no points for a drawing to keep.
+    pub def heightTolerance(): Float64 = 0.5
 
     /// The longest stretch a line's heights are left unsampled along: OpenStreetMap puts a
     /// node where a line bends on the plan, and a straight climbing to a crest is held by
@@ -800,8 +805,10 @@ pub mod Survey {
     pub def simplify(points: List[Point], lo: Int32, hi: Int32): List[Int32] =
         simplifyOver(points, None, lo, hi)
 
-    /// The same over points with a height each, where the distance a point stands off
-    /// the line is measured in three dimensions.
+    /// The same over points with a height each, where a point is kept that stands further
+    /// off the line than `tolerance` on the plan or than `heightTolerance` above or below
+    /// it: each distance is read as a share of its own tolerance, and the larger share is
+    /// the one weighed.
     pub def simplifyOver(points: List[Point], heights: Option[List[Float64]], lo: Int32, hi: Int32): List[Int32] =
         match (List.nth(lo, points), List.nth(hi, points)) {
             case (Some(a), Some(b)) =>
@@ -810,7 +817,8 @@ pub mod Survey {
                 let norm = hypot(dx, dy);
                 match furthest(points, heights, lo, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
                     case (best, at) =>
-                        if (best <= tolerance() or at < 0) lo :: hi :: Nil
+                        let limit = if (Option.isEmpty(heights)) tolerance() else 1.0;
+                        if (best <= limit or at < 0) lo :: hi :: Nil
                         else List.append(withoutLast(simplifyOver(points, heights, lo, at)), simplifyOver(points, heights, at, hi))
                 }
             case _ => Nil
@@ -841,7 +849,11 @@ pub mod Survey {
                 case Some(p) =>
                     let distance = match heights {
                         case None    => offLine(p, a, b, dx, dy, norm)
-                        case Some(z) => offLine3(p, a, b, heightAt(every, z), heightAt(lo, z), heightAt(hi, z))
+                        case Some(z) =>
+                            Float64.max(
+                                offLine(p, a, b, dx, dy, norm) / tolerance(),
+                                offHeight(p, a, dx, dy, norm, heightAt(every, z), heightAt(lo, z), heightAt(hi, z)) / heightTolerance()
+                            )
                     };
                     if (distance > best)
                         furthest(points, heights, lo, hi, a, b, dx, dy, norm, distance, every, every + 1)
@@ -855,20 +867,11 @@ pub mod Survey {
         else
             Float64.abs((dy * p#x) - (dx * p#y) + (b#x * a#y) - (b#y * a#x)) / norm
 
-    /// How far a point stands off the line through two others, in three dimensions: the
-    /// cross product of the line and the point's offset, over the line's own length.
-    def offLine3(p: Point, a: Point, b: Point, zp: Float64, za: Float64, zb: Float64): Float64 =
-        let ux = b#x - a#x;
-        let uy = b#y - a#y;
-        let uz = zb - za;
-        let wx = p#x - a#x;
-        let wy = p#y - a#y;
-        let wz = zp - za;
-        let norm = hypot(hypot(ux, uy), uz);
-        if (norm == 0.0)
-            hypot(hypot(wx, wy), wz)
-        else
-            hypot(hypot(uy * wz - uz * wy, uz * wx - ux * wz), ux * wy - uy * wx) / norm
+    /// How far a point stands above or below the line through two others: its height
+    /// against the line's height where the point falls along it on the plan.
+    def offHeight(p: Point, a: Point, dx: Float64, dy: Float64, norm: Float64, zp: Float64, za: Float64, zb: Float64): Float64 =
+        let fall = if (norm == 0.0) 0.0 else ((p#x - a#x) * dx + (p#y - a#y) * dy) / (norm * norm);
+        Float64.abs(zp - (za + fall * (zb - za)))
 
     def heightAt(at: Int32, heights: List[Float64]): Float64 =
         List.nth(at, heights) |> Option.getWithDefault(0.0)
