@@ -42,7 +42,7 @@ A test holds every projected place clear of the half-tenth its rounding turns on
 
 Le Mans's timing lines are the "Approximate Distances" of Al Kamel's circuit map for that race, and differ by season; the maps are not to be redistributed, so they are not in the repository.
 The app draws every season on the latest of them, `le_mans/map-2026.json`, which `app/index.ts` imports into the bundle; the config here still refuses Le Mans as `perSeason`.
-COTA's are its own track sector map's, one set for every season here.
+COTA's are the series' 2026 map's, one set for every season here.
 A circuit's config says which kind its map is, as its `sectors`: `published` for every season, `perSeason`, or neither where no map has been read (Barcelona, Monza, Fuji), in which case the geometry writes no stretches.
 `nix run .#geometry-timing-lines` refuses a round on a per-season map by quoting the circuit's own reason.
 
@@ -57,7 +57,7 @@ How the drawing places a line the map gives no distance for is app-side: `Tracke
 ## The maps' figures, kept as read
 
 `<word>/map-<season>.json` is what one of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository, and the record keeps the date the map was issued and the circuit's full name.
-The app reads Le Mans's alone; every other circuit's config and `Layout` module still hold their own figures, and where the two disagree the record is not yet the one obeyed.
+The app reads Le Mans's alone; the other circuits' configs and `Layout` modules hold their own copies of the figures, which are the records' for COTA's and Barcelona's laps and COTA's lines, and not yet for Monza's and Fuji's zero, which stands where OpenStreetMap or track-atlas put a line rather than at the map's finish line.
 Every figure is kept twice, as `metres` and as the map printed it, because the print carries the precision the map was written to (0.01 m at Le Mans, whole metres elsewhere) and its decimal comma.
 `lengths` and `lines` hold only what the map gives a distance for, every line measured from the finish line; `drawn` names what it draws without one, and lists such as Le Mans's timing loops are kept in the map's own order.
 `sectors` and Le Mans's `zones` are the stretches the map colours, each bounded by the drawn labels its colour changes at; a colour is sampled off the stretch's own label, since the shared template's labels print one colour on every map where its lines are rendered a little differently on each.

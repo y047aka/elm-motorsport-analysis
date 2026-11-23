@@ -22,12 +22,11 @@ import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 
 
-{-| Reading the served geometry against the 5,515 m the circuit's own sector
-map publishes.
+{-| Reading the served geometry against the 5,513 m centreline of the series' 2026 map.
 -}
 decoder : Decoder Geometry
 decoder =
-    Geometry.decoder { lapLength = 5515.0 }
+    Geometry.decoder { lapLength = 5513.0 }
 
 
 {-| The circuit, on one set of timing lines for every season; see
@@ -123,16 +122,9 @@ pitLane geometry =
     Circuit.pitLaneOf geometry.frame geometry.pitLane
 
 
-{-| The circuit's own track sector map: 1,313.2 m from the finish line to the
-first intermediate line, 2,254.3 m further to the second, and 1,947.5 m home --
-which add up to the 5,515 m centreline the same map gives, and are what the
-served geometry stretches OpenStreetMap's 5,502 m survey to. The distances the series
-print for this circuit run 5,513 m, 2 m short of the map's own total; the map is
-quoted because every line above is measured along it.
+{-| The series' 2026 map (`circuits/cota/map-2026.json`): i1 at 1,311 m from the finish line and i2 at 3,568 m, of the 5,513 m centreline the served geometry stretches OpenStreetMap's 5,502 m survey to.
 
-The map is the April 2021 event's, and every season here is drawn with it, since
-no later map has been read. A season that moved its lines would be drawn with the
-wrong boundaries, and would place every car wrong between them.
+Every season here is drawn with that map, the latest. A season that moved its lines would be drawn with the wrong boundaries, and would place every car wrong between them.
 
 What a new season is checked against is the round's own splits, and for movement
 only: `nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025` reads each
@@ -154,10 +146,10 @@ timingLines lap =
             (\sector ->
                 case sector of
                     S1 ->
-                        1313.2
+                        1311
 
                     S2 ->
-                        3567.5
+                        3568
 
                     S3 ->
                         Shape.length lap

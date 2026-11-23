@@ -17,7 +17,7 @@ pub mod Geometry.TestWrite {
         {place = {lat = 30.1394338, lon = -97.6434495}, metre = 0.0} :: {
             place = {lat = 30.1335278, lon = -97.6422583},
             metre = 27.8
-        } :: {place = {lat = 30.1, lon = -97.6}, metre = 5515.0} :: Nil
+        } :: {place = {lat = 30.1, lon = -97.6}, metre = 5513.0} :: Nil
 
     /// The pit lane, which carries no metres because nothing times along it.
     def pit(): List[Place] =
@@ -114,13 +114,13 @@ pub mod Geometry.TestWrite {
         // The claims are in the file's own order, and the order is the file's: a kept
         // geometry is diffed by people as much as read by the app.
         says(
-            "        \"role\": \"outline\",\n        \"circuit\": \"cota\",\n        \"basis\": \"osm-centreline\",\n        \"source\": \"https://www.openstreetmap.org/relation/6537729\",\n        \"license\": \"ODbL\",\n        \"surveyed_at\": \"2026-10-20T07:01:01Z\",\n        \"direction\": \"counter_clockwise\",\n        \"lap_length_m\": 5515,\n        \"surveyed_length_m\": 5502.238574528194,\n",
+            "        \"role\": \"outline\",\n        \"circuit\": \"cota\",\n        \"basis\": \"osm-centreline\",\n        \"source\": \"https://www.openstreetmap.org/relation/6537729\",\n        \"license\": \"ODbL\",\n        \"surveyed_at\": \"2026-10-20T07:01:01Z\",\n        \"direction\": \"counter_clockwise\",\n        \"lap_length_m\": 5513,\n        \"surveyed_length_m\": 5502.238574528194,\n",
             file
         );
         // The frame the degrees project through, whole, and the metres point for point
         // beside the places they were measured to.
         says("        \"frame\": {\"origin\":{\"lat\":30.1394338,\"lon\":-97.6434495},\"parallel\":30.135089049999973},\n", file);
-        says("        \"metres\": [0,27.8,5515]\n", file);
+        says("        \"metres\": [0,27.8,5513]\n", file);
         // The degrees, lon before lat, the lap closing back onto its own first place.
         says("      \"geometry\": {\"type\":\"LineString\",\"coordinates\":[[-97.6434495,30.1394338],[-97.6422583,30.1335278],[-97.6,30.1]]}\n", file)
 
@@ -130,7 +130,7 @@ pub mod Geometry.TestWrite {
         // Mans's map answers for one season only, and its geometry writes no `sectors` at
         // all rather than one season's lines as though they served every one.
         says(
-            "        \"sectors\": {\"source\":\"the circuit's own track sector map\",\"stretches\":[1313.2,2254.3,1947.5]},\n",
+            "        \"sectors\": {\"source\":\"the series' 2026 circuit map\",\"stretches\":[1311,2257,1945]},\n",
             written("cota", drawn())
         );
         saysNot("sectors", written("le_mans", drawn()))

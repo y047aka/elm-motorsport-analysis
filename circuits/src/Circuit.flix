@@ -149,10 +149,13 @@ pub mod Circuit {
         survey   = "The Circuit de la Sarthe"
     }
 
-    /// The Circuit of the Americas. The relation tags two nodes 297 m apart along the lap,
-    /// and `finish` is the one the lap is timed across; the circuit's own sector map puts
-    /// that line at the place below, and its three stretches — which add up to the lap
-    /// exactly — travel in the geometry because one map serves every season here.
+    /// The Circuit of the Americas. The relation tags two nodes 297 m apart along the lap —
+    /// the series' 2026 map gives the start line the same offset — and `finish` is the one
+    /// the lap is timed across; the circuit's own sector map puts that line at the place
+    /// below.
+    /// The lap and its three stretches are the series' 2026 map's (`cota/map-2026.json`):
+    /// i1 at 1,311 m and i2 at 3,568 m of a 5,513 m lap. They travel in the geometry because
+    /// the timing report finds one map serving every season here.
     def cota(): Circuit = {
         relation = Some(6537729i64),
         box      = None,
@@ -160,11 +163,11 @@ pub mod Circuit {
         word     = "cota",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -97.6422583, lat = 30.1335278}, within = Some(10.0)}),
-        lap      = 5515.0,
+        lap      = 5513.0,
         sectors  = {
             published = Some({
-                source = "the circuit's own track sector map",
-                stretches = 1313.2 :: 2254.3 :: 1947.5 :: Nil
+                source = "the series' 2026 circuit map",
+                stretches = 1311.0 :: 2257.0 :: 1945.0 :: Nil
             }),
             eachSeason = None
         },
@@ -187,9 +190,9 @@ pub mod Circuit {
     /// placed on OpenStreetMap's own centreline, not a measurement of its own. The node
     /// stands about 15 m from it, within the 25 m allowed.
     ///
-    /// The distances the FIA issues round a lap here were never read at authoring: no
-    /// stretches are authored, the geometry writes no `sectors`, and the timing report
-    /// reads this circuit as publishing no lines of its own.
+    /// Of the series' map only the lap is authored: no stretches are, the geometry writes
+    /// no `sectors`, and the timing report reads this circuit as publishing no lines of its
+    /// own.
     def barcelona(): Circuit = {
         relation = Some(284540i64),
         box      = None,
@@ -197,7 +200,8 @@ pub mod Circuit {
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
-        lap      = 4655.0,
+        // The series' 2026 map's centreline (`barcelona/map-2026.json`).
+        lap      = 4657.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/barcelona.geojson",
         survey = "The Circuit de Barcelona-Catalunya"

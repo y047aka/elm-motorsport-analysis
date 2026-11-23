@@ -28,7 +28,7 @@ tests =
                 [ test "the lap is the length the circuit measures it at" <|
                     \_ ->
                         Shape.length drawing.shape
-                            |> Expect.within (Expect.Absolute 0.05) 5515.0
+                            |> Expect.within (Expect.Absolute 0.05) 5513.0
                 , test "the centreline runs forward round the lap, from the finish line" <|
                     \_ ->
                         List.map .metres cota.centreline
