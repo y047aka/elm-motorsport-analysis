@@ -78,6 +78,118 @@ pub mod TestSurvey {
             :: member("way", "pit_lane", 20)
             :: Nil
 
+    // ------------------------------------------------------------------- the heights
+
+    /// The kept samples of a square, every place the survey asks for less the places
+    /// `dropped` names, on ground rising a metre to the east every thousandth of a
+    /// degree: a plane, so the places between two nodes stand on the
+    /// straight line joining theirs and the thinning keeps no more than the corners.
+    def heightsFor(places: List[Place], dropped: List[Place]): String =
+        places
+            |> List.filter(at -> not List.memberOf(spelledAt(at), List.map(spelledAt, dropped)))
+            |> List.map(at -> {place = at, metres = 100.0 + (at#lon + 97.6) * 1000.0, resolution = 1.0})
+            |> Elevation.written(Elevation.datasetOf(Elevation.Source.Usgs3dep))
+
+    def spelledAt(at: Place): String = Geometry.Write.coordinate(at#lon, at#lat)
+
+    /// The square's survey with no heights, and the places a sampling of it asks for.
+    def unheighted(circuit: Circuit, text: String): Result[String, Survey.Read] =
+        Survey.geometry(text, None, circuit, {lap = 4150.0, published = None})
+
+    @Test
+    def testATurnedZeroIsSampledAtItsOwnDegrees(): Unit \ Assert =
+        let circuit = turnedRelationCircuit(Some(boxLine()));
+        match unheighted(circuit, square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
+            case Ok(read) =>
+                let places = Elevation.placesOf(read#answer, read#geometry);
+                let zero = read#geometry#centreline |> List.head |> Option.map(each -> spelledAt(each#place));
+                // The six nodes the answer holds, then the zero the lap is turned at,
+                // which no node stands at: a height is asked there rather than drawn
+                // between the two nodes either side of it.
+                Assert.assertTrue(Option.map(spelledAt, List.nth(6, places)) == zero);
+                Assert.assertTrue(Option.map(z -> String.startsWith({prefix = "[-97.59"}, z), zero) == Some(true))
+        }
+
+    @Test
+    def testALineIsWalkedNoFurtherThanTheSpacingBetweenTwoPlaces(): Unit \ Assert =
+        // Two nodes 963 m apart on the plan are walked in 97 steps of 9.9 m; two 7 m
+        // apart are walked in one. Every place stands on the straight line between its
+        // nodes, and the nodes themselves are walked where they stand.
+        let line = {lat = 30.0, lon = -97.6} :: {lat = 30.0, lon = -97.59} :: {lat = 30.0, lon = -97.58993} :: Nil;
+        let walked = Survey.densified(line);
+        let places = List.map(each -> each#place, walked);
+        let steps = List.zip(places, List.drop(1, places)) |> List.map(pair -> match pair { case (a, b) => Geodesy.apart(a, b) });
+        Assert.assertTrue(List.length(walked) == 99);
+        Assert.assertTrue(List.forAll(step -> step <= Survey.spacing() and step > 6.0, steps));
+        Assert.assertTrue(List.forAll(at -> at#lat == 30.0, places));
+        Assert.assertTrue(List.map(spelledAt, List.filter(each -> each#fall == 0.0, walked) |> List.map(each -> each#place)) == List.map(spelledAt, line))
+
+    @Test
+    def testASpikeIsTheMedianAroundItAndASlopeIsLeftAsSampled(): Unit \ Assert =
+        // A pit five metres deep and one place wide, where a road passes under: it is the
+        // height of the climb either side of it. The steady climb itself, a metre every ten,
+        // stands on the line its neighbours draw and keeps its sampled heights.
+        let along = List.map(i -> Int32.toFloat64(i) * 10.0, List.range(0, 11));
+        let climb = 100.0 :: 101.0 :: 102.0 :: 103.0 :: 104.0 :: 100.0 :: 106.0 :: 107.0 :: 108.0 :: 109.0 :: 110.0 :: Nil;
+        Assert.assertTrue(Survey.despiked(None, along, climb) == 100.0 :: 101.0 :: 102.0 :: 103.0 :: 104.0 :: 105.0 :: 106.0 :: 107.0 :: 108.0 :: 109.0 :: 110.0 :: Nil);
+        // Half a metre off its median is the model's own unevenness, and is kept.
+        let rough = 100.0 :: 100.5 :: 100.0 :: 100.5 :: 100.0 :: Nil;
+        Assert.assertTrue(Survey.despiked(None, List.take(5, along), rough) == rough);
+        // Round a lap, the places either side of the finish line are neighbours.
+        let lap = 103.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 100.0 :: 103.0 :: Nil;
+        Assert.assertTrue(List.head(Survey.despiked(Some(100.0), along, lap)) == Some(100.0))
+
+    @Test
+    def testSmoothingFlattensASawtoothAndKeepsASlope(): Unit \ Assert =
+        let along = List.map(i -> Int32.toFloat64(i) * 10.0, List.range(0, 21));
+        let middle = (heights: List[Float64]) -> List.nth(10, heights) |> Option.getWithDefault(0.0);
+        // Nought is the heights as they came.
+        let saw = List.map(i -> if (Int32.remainder(i, 2) == 0) 181.2 else 180.1, List.range(0, 21));
+        Assert.assertTrue(Survey.smoothed(None, along, 0.0, saw) == saw);
+        // A metre's sawtooth every ten metres is all but gone at twenty.
+        Assert.assertTrue(Float64.abs(middle(Survey.smoothed(None, along, 20.0, saw)) - 180.65) < 0.05);
+        // A steady slope stands where it was away from the ends of the line.
+        let slope = List.map(i -> 100.0 + Int32.toFloat64(i) * 0.5, List.range(0, 21));
+        Assert.assertTrue(Float64.abs(middle(Survey.smoothed(None, along, 20.0, slope)) - 105.0) < 1.0e-9)
+
+    @Test
+    def testEveryKeptPointCarriesItsHeight(): Unit \ Assert =
+        let circuit = turnedRelationCircuit(Some(boxLine()));
+        let figures = {lap = 4150.0, published = None};
+        match unheighted(circuit, square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
+            case Ok(read) =>
+                let places = Elevation.placesOf(read#answer, read#geometry);
+                match Survey.geometry(square(7), Some(heightsFor(places, Nil)), circuit, figures) {
+                    case Err(problem) => Assert.assertTrueWithMsg(false, "the heights were refused: ${problem}")
+                    case Ok(heighted) =>
+                        let file = Geometry.Write.file(circuit, figures, heighted#geometry);
+                        // The zero first, at the height asked at its own degrees; then the
+                        // nodes the lap turns through, each at its own.
+                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [104,110,110,100,100,104]"}, file));
+                        Assert.assertTrue(String.contains({substr = "\"elevation\": {\"source\":\"USGS 3D Elevation Program (3DEP), best available\",\"license\":\"public domain\",\"datum\":\"NAVD88\"}"}, file));
+                        // The pit lane carries its own, between its two nodes.
+                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [150,160]"}, file))
+                }
+        }
+
+    @Test
+    def testAPlaceTheSamplesDoNotCoverRefusesTheCircuit(): Unit \ Assert =
+        let circuit = turnedRelationCircuit(Some(boxLine()));
+        match unheighted(circuit, square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
+            case Ok(read) =>
+                let places = Elevation.placesOf(read#answer, read#geometry);
+                let moved = read#geometry#centreline |> List.take(1) |> List.map(each -> each#place);
+                match Survey.geometry(square(7), Some(heightsFor(places, moved)), circuit, {lap = 4150.0, published = None}) {
+                    case Ok(_) => Assert.assertTrueWithMsg(false, "a place with no height was drawn")
+                    case Err(problem) =>
+                        Assert.assertTrue(String.contains({substr = "no height for 2 of the places the survey walks, the first at [-97.59"}, problem));
+                        Assert.assertTrue(String.contains({substr = "`elevation turned --fetch`"}, problem))
+                }
+        }
+
     /// The answer of the square circuit, as the relation named.
     def square(id: Int32): String =
         answer(relation(id, members()) :: List.append(places(), List.append(lapWays(), pitWays())))
@@ -178,6 +290,7 @@ pub mod TestSurvey {
                     word = cota#word,
                     timedFrom = cota#timedFrom,
                     timingLine = Some({place = place, within = Some(5.0)}),
+                    elevation = cota#elevation,
                     file = cota#file,
                     survey = cota#survey
                 };
@@ -188,6 +301,7 @@ pub mod TestSurvey {
                     word = narrowed#word,
                     timedFrom = narrowed#timedFrom,
                     timingLine = Some({place = place, within = None}),
+                    elevation = narrowed#elevation,
                     file = narrowed#file,
                     survey = narrowed#survey
                 };
@@ -312,6 +426,17 @@ pub mod TestSurvey {
         // another at its end holds that point once: the ends are written before anything is
         // measured between them.
         Assert.assertTrue(Survey.simplify(line((0.0, 0.0) :: Nil), 0, 0) == 0 :: 0 :: Nil)
+
+    @Test
+    def testACrestOnAStraightIsKeptWhereThePointsHaveHeights(): Unit \ Assert =
+        // Straight on the plan: without heights the middle point goes. A crest a metre up
+        // stands off the line in height and stays; a steady grade does not.
+        let straight = line((0.0, 0.0) :: (50.0, 0.0) :: (100.0, 0.0) :: Nil);
+        Assert.assertTrue(Survey.simplifyOver(straight, None, 0, 2) == 0 :: 2 :: Nil);
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 151.0 :: 150.0 :: Nil), 0, 2) == 0 :: 1 :: 2 :: Nil);
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 155.0 :: 160.0 :: Nil), 0, 2) == 0 :: 2 :: Nil);
+        // A rise under `Survey.tolerance` goes, as a bend under it on the plan does.
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 150.2 :: 150.0 :: Nil), 0, 2) == 0 :: 2 :: Nil)
 
     @Test
     def testDirectionIsWhichWayTheSurveyRuns(): Unit \ Assert =
@@ -455,6 +580,7 @@ pub mod TestSurvey {
         word = "boxy",
         timedFrom = "",
         timingLine = timingLine,
+        elevation = None,
         file = "nowhere.geojson",
         survey = "A square"
     }
@@ -559,6 +685,7 @@ pub mod TestSurvey {
         word = "turned",
         timedFrom = "",
         timingLine = timingLine,
+        elevation = None,
         file = "nowhere.geojson",
         survey = "A square"
     }

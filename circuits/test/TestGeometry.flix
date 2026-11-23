@@ -113,6 +113,25 @@ pub mod TestGeometry {
         )
 
     @Test
+    def testHeightsOutOfStepWithTheirPointsAreRefused(): Unit \ Assert =
+        // Heights are optional, but where a line carries them there is one per point.
+        Assert.assertTrue(
+            refused(
+                "cota: the outline's 1 heights are for 2 points",
+                outlineRefusing("\"basis\": \"osm-centreline\", \"metres\": [0, 100], \"elevation_m\": [154.8]", "[0, 0], [100, 0]")
+            )
+        );
+        Assert.assertTrue(
+            Result.isOk(outlineRefusing("\"basis\": \"osm-centreline\", \"metres\": [0, 100], \"elevation_m\": [154.8, 155]", "[0, 0], [100, 0]"))
+        );
+        let pit = file(
+            outlineWith("\"basis\": \"osm-centreline\", \"metres\": [0, 100]", line("[0, 0], [100, 0]"))
+                + ", "
+                + feature("pit_lane", "\"elevation_m\": [1, 2, 3]", line("[0, 0], [10, 0]"))
+        );
+        Assert.assertTrue(refused("cota: the pit lane's 3 heights are for 2 points", Geometry.pitLane("cota", pit)))
+
+    @Test
     def testOutlineRefusesAFileWithNoOutlineAtAll(): Unit \ Assert =
         Assert.assertTrue(
             refused(

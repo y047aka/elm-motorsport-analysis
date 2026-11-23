@@ -273,22 +273,27 @@ pub mod Regenerate {
     def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
         match forM(
             figures <- MapRecord.read(circuit);
-            read    <- Survey.geometry(answer, circuit, figures)
+            _       <- if (mode == Mode.Freeze) frozen(circuit, answer, figures) else Ok(());
+            heights <- Elevation.keptText(circuit);
+            read    <- Survey.geometry(answer, heights, circuit, figures) |> Result.mapErr(problem -> if (mode == Mode.Freeze) "the fresh answer is kept, and ${problem}" else problem)
         ) yield Geometry.Write.file(circuit, figures, read#geometry) {
             case Err(problem)  => Err("${circuit#word}: ${problem}")
-            case Ok(written)   => laid(circuit, written, answer, mode)
+            case Ok(written)   => laid(circuit, written, mode)
         }
 
-    def laid(circuit: Circuit, written: String, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
+    /// A freeze's answer, kept before the geometry is laid: a freeze keeps one reading of
+    /// OpenStreetMap, and a geometry whose answer did not reach disk would be evidence for
+    /// no future run. It is kept once it surveys with no heights, since a node
+    /// OpenStreetMap moved has none until `elevation --fetch` samples the kept answer.
+    def frozen(circuit: Circuit, answer: String, figures: Circuit.Figures): Result[String, Unit] \ IO =
+        forM(
+            _ <- Survey.geometry(answer, None, circuit, figures);
+            _ <- Cli.Errors.writeFile(Circuit.keptAnswer(circuit), answer) |> Result.mapErr(problem -> "${problem}")
+        ) yield ()
+
+    def laid(circuit: Circuit, written: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
         match mode {
-            // The answer is kept before the geometry is laid: a freeze keeps one
-            // reading of OpenStreetMap, and a geometry whose answer did not reach disk
-            // would be evidence for no future run.
-            case Mode.Freeze =>
-                match Cli.Errors.writeFile(Circuit.keptAnswer(circuit), answer) {
-                    case Err(problem) => Err("${problem}")
-                    case Ok(_)        => writing(circuit, written, "a fresh survey")
-                }
+            case Mode.Freeze  => writing(circuit, written, "a fresh survey")
             case Mode.Write   => writing(circuit, written, "the kept answer")
             case Mode.Compare => fenced(circuit, written)
         }

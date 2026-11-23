@@ -59,7 +59,7 @@ pub mod Overpass.Answer {
     }
 
     /// An answer's text, read. What is no JSON at all failed to answer, and says so with
-    /// the parser's own words; whether a body is an answer at all is `Overpass.kept`,
+    /// the parser's own words; whether a body is an answer at all is `Service.kept`,
     /// which is asked of a service's body before this is given it.
     pub def read(text: String): Result[String, Answer] =
         match Util.Json.parse(text) {

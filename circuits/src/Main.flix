@@ -2,6 +2,7 @@
 //
 //     nix run .#geometry -- survey    <circuit> [--answer <overpass.json>] [--fetch] [--write]
 //     nix run .#geometry -- diff      <a.geojson> <b.geojson> [--every <m>] [--svg <out.svg>]
+//     nix run .#geometry -- elevation <circuit> [--fetch]
 //     nix run .#geometry -- regenerate [<circuit> ...] [--write | --freeze]
 //     nix run .#geometry -- probe     <lat>,<lon> [...] [--radius <km>]
 //     nix run .#geometry -- timing-lines --csv <dir> <season>/<id> [--against <season>] [--tolerance <metres>]
@@ -25,6 +26,8 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
             Exit.exit(0)
         case "diff" :: rest =>
             Exit.exit(Diff.exitCode(rest))
+        case "elevation" :: rest =>
+            Exit.exit(Elevation.exitCode(rest))
         case "probe" :: rest =>
             Exit.exit(Probe.exitCode(rest))
         case "regenerate" :: rest =>
@@ -41,4 +44,4 @@ def main(): Unit \ { Env, IO, Clock, Exit, Console } =
 
 /// Each command's own usage: the flake app a reader types, beside the arguments it takes.
 def usage(): String =
-    Diff.usage() + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Survey.usage()}" + "\n${TimingLines.usage()}"
+    Diff.usage() + "\n${Elevation.usage()}" + "\n${Probe.usage()}" + "\n${Regenerate.usage()}" + "\n${Survey.usage()}" + "\n${TimingLines.usage()}"

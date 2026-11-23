@@ -49,7 +49,9 @@ pub mod Survey {
         frame          = Frame,
         direction      = String,
         surveyedAt     = Option[String],
-        surveyedLength = Option[Float64]
+        surveyedLength = Option[Float64],
+        elevation      = Option[Elevation.Profile],
+        walked         = List[Place]
     }
 
     /// Which way a car goes round the drawing, as the geometry says it goes.
@@ -57,8 +59,14 @@ pub mod Survey {
 
     pub def counterClockwise(): String = "counter_clockwise"
 
-    /// Metres a thinned line may stray from the surveyed one.
+    /// Metres a thinned line may stray from the surveyed one, on the plan and in height
+    /// alike.
     pub def tolerance(): Float64 = 0.25
+
+    /// The longest stretch a line's heights are left unsampled along: OpenStreetMap puts a
+    /// node where a line bends on the plan, and a straight climbing to a crest is held by
+    /// its two ends alone.
+    pub def spacing(): Float64 = 10.0
 
     /// An answer read and surveyed: the text a run was handed, the answer it reads as and
     /// the geometry the file is written from. The live survey, the guard a fetched answer
@@ -71,23 +79,39 @@ pub mod Survey {
         geometry = Survey.Geometry
     }
 
-    pub def geometry(text: String, circuit: Circuit, figures: Circuit.Figures): Result[String, Read] =
+    ///
+    /// `elevation` is the kept samples' text, where the circuit keeps any: every place
+    /// either line runs through is given its height out of them, or the circuit is
+    /// refused.
+    pub def geometry(text: String, elevation: Option[String], circuit: Circuit, figures: Circuit.Figures): Result[String, Read] =
         forM(
             reading  <- Overpass.Answer.read(text);
-            surveyed <- geometryOf(reading, circuit, figures)
+            heights  <- keptHeights(elevation);
+            surveyed <- heightedOf(reading, circuit, figures, heights)
         ) yield {text = text, answer = reading, geometry = surveyed}
+
+    def keptHeights(elevation: Option[String]): Result[String, Option[Elevation.Kept]] =
+        match elevation {
+            case None       => Ok(None)
+            case Some(text) => Elevation.read(text) |> Result.map(kept -> Some(kept))
+        }
 
     /// The lap, the pit lane and the frame, chained out of an answer already read. Two
     /// groundings arrive here: a relation's members, and a box's raceway ways.
     pub def geometryOf(reading: Answer, circuit: Circuit, figures: Circuit.Figures): Result[String, Geometry] =
+        heightedOf(reading, circuit, figures, None)
+
+    /// The same, with every place given its height out of the kept samples where there are
+    /// any.
+    pub def heightedOf(reading: Answer, circuit: Circuit, figures: Circuit.Figures, heights: Option[Elevation.Kept]): Result[String, Geometry] =
         match circuit#relation {
-            case Some(id) => fromRelation(reading, circuit, figures#lap, id)
-            case None     => fromBox(reading, circuit, figures#lap)
+            case Some(id) => fromRelation(reading, circuit, figures#lap, heights, id)
+            case None     => fromBox(reading, circuit, figures#lap, heights)
         }
 
-    def fromRelation(reading: Answer, circuit: Circuit, lapLength: Float64, relation: Int64): Result[String, Geometry] =
+    def fromRelation(reading: Answer, circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept], relation: Int64): Result[String, Geometry] =
         if (circuit#timedFrom == "")
-            turnedRelation(reading, circuit, lapLength, relation)
+            turnedRelation(reading, circuit, lapLength, heights, relation)
         else
             let nodes = Overpass.Answer.nodePlaces(reading#elements);
             let ways = reading#elements |> Overpass.Answer.byKind("way");
@@ -97,13 +121,13 @@ pub mod Survey {
                 _          <- standsAtLine(rel#members, nodes, start, circuit);
                 lap        <- chained(rel, ways, nodes, start);
                 pit        <- pitChained(rel, ways, nodes);
-                laid     <- laidOut(reading, nodes, lap, pit, circuit, lapLength)
+                laid     <- laidOut(reading, nodes, lap, pit, circuit, lapLength, heights)
             ) yield laid
 
     /// A relation whose config names no role tags no member at the line, so its lap is
     /// chained from the one-way node nearest the authored place and turned at that place,
     /// as a box's lap is.
-    def turnedRelation(reading: Answer, circuit: Circuit, lapLength: Float64, relation: Int64): Result[String, Geometry] =
+    def turnedRelation(reading: Answer, circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept], relation: Int64): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
         match circuit#timingLine {
@@ -116,7 +140,7 @@ pub mod Survey {
                     walked   <- chain(segments, nodes, Some(nearestTo(oneWayNodes(segments), nodes, line#place)));
                     turned   <- turnAt(walked, nodes, line);
                     pit      <- pitChained(rel, ways, nodes);
-                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength)
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength, heights)
                 ) yield laid
         }
 
@@ -374,7 +398,7 @@ pub mod Survey {
     /// out. The zero
     /// turns at the projection of the authored place onto the lap rather than at a
     /// node, because a circuit may cross its own line between two nodes.
-    def fromBox(reading: Answer, circuit: Circuit, lapLength: Float64): Result[String, Geometry] =
+    def fromBox(reading: Answer, circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept]): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
         match circuit#timingLine {
@@ -388,7 +412,7 @@ pub mod Survey {
                     walked   <- chain(lapWay :: Nil, nodes, Some(nearestTo(lapWay#nodes, nodes, line#place)));
                     turned   <- turnAt(walked, nodes, line);
                     pit      <- chain(pitSegs, nodes, None);
-                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength)
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength, heights)
                 ) yield laid
         }
 
@@ -609,10 +633,77 @@ pub mod Survey {
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
     /// line thinned to `tolerance`.
-    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit, lapLength: Float64): Result[String, Geometry] = {
+    ///
+    /// A line with heights is walked at places `spacing` apart (`densified`), its heights
+    /// `despiked` and `smoothed`, and thinned over those places on the plan and in height,
+    /// so that a crest or a dip on a line straight on the plan is a point the drawing keeps.
+    /// Its length and its nodes' metres are measured over the nodes, as a line without
+    /// heights is.
+    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept]): Result[String, Geometry] = {
         let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
         let pitNodes = List.filterMap(id -> Map.get(id, nodes), pit);
         let both = List.append(lapNodes, pitNodes);
+        let lapDense = densified(lapNodes);
+        let pitDense = densified(pitNodes);
+        let placesOf = List.map((each: Between) -> each#place);
+        match heightsAlong(circuit, heights, placesOf(lapDense), placesOf(pitDense)) {
+            case Err(problem) => Err(problem)
+            case Ok(lines) =>
+                let walking = match lines {
+                    case None    => {lap = asNodes(lapNodes), pit = asNodes(pitNodes)}
+                    case Some(_) => {lap = lapDense, pit = pitDense}
+                };
+                laidWith(reading, lapNodes, pitNodes, both, circuit, lapLength, lines, walking)
+                    |> Result.map(laid -> {walked = List.append(placesOf(lapDense), placesOf(pitDense)) | laid})
+        }
+    }
+
+    /// A place of a line as the thinning walks it: the node it stands at or after, and how
+    /// far on from that node towards the next it stands.
+    pub type alias Between = {
+        place = Place,
+        node  = Int32,
+        fall  = Float64
+    }
+
+    def asNodes(places: List[Place]): List[Between] =
+        List.mapWithIndex((at, place) -> {place = place, node = at, fall = 0.0}, places)
+
+    /// A line's nodes, with places between any two standing further apart than
+    /// `spacing`, evenly, on the straight line joining them in degrees.
+    pub def densified(places: List[Place]): List[Between] =
+        let stretches = List.zip(places, List.drop(1, places));
+        let between = List.mapWithIndex((at, pair) -> match pair {
+            case (a, b) =>
+                let steps = Int32.max(1, Float64.truncateToInt32(Float64.ceil(apart(a, b) / spacing())));
+                List.map(k -> {
+                    let fall = Int32.toFloat64(k) / Int32.toFloat64(steps);
+                    if (k == 0)
+                        {place = a, node = at, fall = 0.0}
+                    else
+                        {place = {lat = a#lat + fall * (b#lat - a#lat), lon = a#lon + fall * (b#lon - a#lon)}, node = at, fall = fall}
+                }, List.range(0, steps))
+        }, stretches);
+        List.append(List.flatten(between), asNodes(places) |> List.drop(List.length(places) - 1))
+
+    /// Each line's heights, where the circuit keeps samples of them.
+    type alias Heights = {
+        dataset = Elevation.Dataset,
+        lap     = List[Float64],
+        pit     = List[Float64]
+    }
+
+    def heightsAlong(circuit: Circuit, heights: Option[Elevation.Kept], lapNodes: List[Place], pitNodes: List[Place]): Result[String, Option[Heights]] =
+        match heights {
+            case None => Ok(None)
+            case Some(kept) =>
+                forM(
+                    lap <- Elevation.heightsOf(circuit, kept, lapNodes);
+                    pit <- Elevation.heightsOf(circuit, kept, pitNodes)
+                ) yield Some({dataset = kept#dataset, lap = lap, pit = pit})
+        }
+
+    def laidWith(reading: Answer, lapNodes: List[Place], pitNodes: List[Place], both: List[Place], circuit: Circuit, lapLength: Float64, lines: Option[Heights], walking: {lap = List[Between], pit = List[Between]}): Result[String, Geometry] = {
         match parallelOf(both) {
             case None =>
                 Err("the answer holds no place of this lap, so there is no parallel to lay either line on")
@@ -633,20 +724,166 @@ pub mod Survey {
                     let metres = List.map(each -> each * stretch, surveyed);
                     // The published metre each surveyed place stands at, in one list: the degrees
                     // and the metre are one pair from here on, and never looked up apart.
-                    let lapMetres = Geodesy.together(lapNodes, metres);
-                    let half = List.length(lapPoints) / 2;
-                    let kept = thinned(lapPoints, half);
-                    let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
+                    let lapAt = List.toVector(lapPoints);
+                    let pitAt = List.toVector(pitPoints);
+                    let metresAt = List.toVector(metres);
+                    let walkedLap = List.map(pointOf(lapAt), walking#lap);
+                    let walkedPit = List.map(pointOf(pitAt), walking#pit);
+                    let lapMetres = Geodesy.together(List.map(each -> each#place, walking#lap), List.map(metreOf(metresAt), walking#lap));
+                    let half = midpointOf(walking#lap, List.length(lapPoints) / 2);
+                    let lapAlong = List.map(metreOf(metresAt), walking#lap);
+                    let pitAlong = cumulative(walkedPit);
+                    let despikedLines = Option.map(each -> {
+                        dataset = each#dataset,
+                        lap = roundTheLap((along, heights) -> smoothed(Some(lapLength), along, sigmaOf(each#dataset), despiked(Some(lapLength), along, heights)), lapAlong, each#lap),
+                        pit = smoothed(None, pitAlong, sigmaOf(each#dataset), despiked(None, pitAlong, each#pit))
+                    }, lines);
+                    let lapHeights = Option.map(each -> each#lap, despikedLines);
+                    let pitHeights = Option.map(each -> each#pit, despikedLines);
+                    let kept = thinned(walkedLap, lapHeights, half);
+                    let keptPit = simplifyOver(walkedPit, pitHeights, 0, lastIndex(walkedPit));
                     Ok({
                         centreline = List.map(at -> metred(at, lapMetres), kept),
-                        pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
+                        pitLane = List.filterMap(at -> List.nth(at, walking#pit) |> Option.map(each -> each#place), keptPit),
                         frame = {origin = northWest(both), parallel = parallel},
                         direction = turnDirection(lapPoints),
                         surveyedAt = reading#surveyedAt,
-                        surveyedLength = Some(measured)
+                        surveyedLength = Some(measured),
+                        elevation = Option.map(each -> {
+                            dataset = each#dataset,
+                            outline = List.filterMap(at -> List.nth(at, each#lap), kept),
+                            pitLane = List.filterMap(at -> List.nth(at, each#pit), keptPit)
+                        }, despikedLines),
+                        walked = Nil
                     })
         }
     }
+
+    /// How far the kept heights are smoothed: by what their own dataset is, rather than by
+    /// what the circuit's config names, since a config may name a source its kept heights
+    /// were not yet sampled from.
+    def sigmaOf(dataset: Elevation.Dataset): Float64 =
+        Elevation.sourceOf(dataset) |> Option.map(Elevation.smoothingOf) |> Option.getWithDefault(0.0)
+
+    /// A lap's heights through a filter that reads round the lap: the lap's closing place
+    /// is its first again, at the lap's own length, and read twice it would weigh twice
+    /// in every reading round the finish line; it is left out and given the first's height.
+    def roundTheLap(filter: (List[Float64], List[Float64]) -> List[Float64], along: List[Float64], heights: List[Float64]): List[Float64] =
+        match (List.init(along), List.init(heights)) {
+            case (Some(open), Some(read)) =>
+                let filtered = filter(open, read);
+                List.append(filtered, List.take(1, filtered))
+            case _ => heights
+        }
+
+    /// How far along a line the heights a spike is judged against reach, either way: wide
+    /// enough for the pit 60 m long Le Mans reads at 11.9 km, and at 80 m already cutting
+    /// COTA's crest at turn 1.
+    pub def spikeReach(): Float64 = 50.0
+
+    /// How far a height may stand off the line its neighbours draw before it is a spike.
+    pub def spikeTolerance(): Float64 = 1.0
+
+    /// A line's heights with its spikes taken out. Each height is laid against the line
+    /// joining the median of the heights within `spikeReach` before it to the median of
+    /// those within `spikeReach` after it, each at the median of their distances; one
+    /// standing further than `spikeTolerance` off that line is that line's height there,
+    /// and every other is its own. A terrain model reads the ground under a bridge where the
+    /// road crosses it, a pit some metres deep and a place or two wide, and OpenStreetMap
+    /// tags one of Monza's four such crossings, so the heights are read rather than the
+    /// tags. A slope or a crest stands on the line its neighbours draw, and is left as it
+    /// was sampled. `along` is
+    /// how far along the line each height stands; a lap's distances run round to its own
+    /// `length` again, and the ends of an open line are left as they were sampled.
+    pub def despiked(length: Option[Float64], along: List[Float64], heights: List[Float64]): List[Float64] =
+        let offset = (here, there) -> {
+            let d = there - here;
+            match length {
+                case Some(lap) => if (d > lap / 2.0) d - lap else if (d <= -lap / 2.0) d + lap else d
+                case None      => d
+            }
+        };
+        let pairs = List.zip(along, heights);
+        List.zip(along, heights) |> List.map(own -> match own {
+            case (here, height) =>
+                let near = pairs
+                    |> List.map(pair -> match pair { case (there, h) => (offset(here, there), h) })
+                    |> List.filter(pair -> match pair { case (d, _) => d != 0.0 and Float64.abs(d) <= spikeReach() });
+                let before = List.filter(pair -> fst(pair) < 0.0, near);
+                let after = List.filter(pair -> fst(pair) > 0.0, near);
+                match (medianOf(List.map(fst, before)), medianOf(List.map(snd, before)), medianOf(List.map(fst, after)), medianOf(List.map(snd, after))) {
+                    case (Some(db), Some(hb), Some(da), Some(ha)) =>
+                        let line = hb + (0.0 - db) / (da - db) * (ha - hb);
+                        if (Float64.abs(height - line) > spikeTolerance()) line else height
+                    case _ => height
+                }
+        })
+
+    /// A line's heights smoothed by a Gaussian of `sigma` metres along it, reaching three
+    /// of them either way: each height is the mean of those around it, weighed by how near
+    /// they stand. At an end of an open line the weights are those of the heights there
+    /// are. A `sigma` of nought is the heights as they came.
+    pub def smoothed(length: Option[Float64], along: List[Float64], sigma: Float64, heights: List[Float64]): List[Float64] =
+        if (sigma <= 0.0)
+            heights
+        else
+            let pairs = List.zip(along, heights);
+            let apartBy = (a, b) -> {
+                let d = Float64.abs(a - b);
+                match length {
+                    case Some(lap) => Float64.min(d, lap - d)
+                    case None      => d
+                }
+            };
+            List.map(here -> {
+                let weighed = pairs
+                    |> List.filter(pair -> apartBy(here, fst(pair)) <= 3.0 * sigma)
+                    |> List.map(pair -> {
+                        let d = apartBy(here, fst(pair));
+                        let w = Float64.exp(0.0 - (d * d) / (2.0 * sigma * sigma));
+                        (w, w * snd(pair))
+                    });
+                let total = List.foldLeft((sum, each) -> sum + fst(each), 0.0, weighed);
+                List.foldLeft((sum, each) -> sum + snd(each), 0.0, weighed) / total
+            }, along)
+
+    def medianOf(values: List[Float64]): Option[Float64] =
+        let sorted = List.toVector(List.sort(values));
+        let n = Vector.length(sorted);
+        if (n == 0)
+            None
+        else if (Int32.remainder(n, 2) == 1)
+            Vector.nth(n / 2, sorted)
+        else
+            Option.flatMap(a -> Option.map(b -> (a + b) / 2.0, Vector.nth(n / 2, sorted)), Vector.nth(n / 2 - 1, sorted))
+
+    /// Where a walked place stands on the drawing's plane: its node's point, or as far on
+    /// towards the next node's as it stands in degrees.
+    def pointOf(points: Vector[Point], at: Between): Point =
+        match (Vector.nth(at#node, points), Vector.nth(at#node + 1, points)) {
+            case (Some(a), _) if at#fall == 0.0 => a
+            case (Some(a), Some(b))             => {x = a#x + at#fall * (b#x - a#x), y = a#y + at#fall * (b#y - a#y)}
+            case _                              => Geodesy.zero()
+        }
+
+    /// The published metre a walked place stands at, as far on between its two nodes'.
+    def metreOf(metres: Vector[Float64], at: Between): Float64 =
+        match (Vector.nth(at#node, metres), Vector.nth(at#node + 1, metres)) {
+            case (Some(a), _) if at#fall == 0.0 => a
+            case (Some(a), Some(b))             => a + at#fall * (b - a)
+            case _                              => 0.0
+        }
+
+    /// The index of the walked place standing at the node the lap is split at for its
+    /// thinning, so that a line walked over its nodes alone is split where it always was.
+    def midpointOf(walk: List[Between], node: Int32): Int32 =
+        nodeAt(walk, node, 0)
+
+    def nodeAt(walk: List[Between], node: Int32, at: Int32): Int32 =
+        match walk {
+            case Nil => node
+            case one :: more => if (one#node == node and one#fall == 0.0) at else nodeAt(more, node, at + 1)
+        }
 
     /// One kept point: the degrees it was surveyed at, and the published metre it stands
     /// at — both from the one place the lap's zipped metres are looked up at. A kept
@@ -660,22 +897,28 @@ pub mod Survey {
     /// The lap thinned: split at its own middle, so that the place the lap starts and ends at
     /// is not the pivot of both halves at once, and the halves joined at their meeting point
     /// rather than holding it twice.
-    def thinned(points: List[Point], half: Int32): List[Int32] =
-        List.append(withoutLast(simplify(points, 0, half)), simplify(points, half, lastIndex(points)))
+    def thinned(points: List[Point], heights: Option[List[Float64]], half: Int32): List[Int32] =
+        List.append(withoutLast(simplifyOver(points, heights, 0, half)), simplifyOver(points, heights, half, lastIndex(points)))
 
     /// Ramer–Douglas–Peucker over indices, so a kept point keeps the distance it was
     /// surveyed at rather than the shorter one the thinned line would give it. Of two
     /// points equally far, the first is the one turned on.
     pub def simplify(points: List[Point], lo: Int32, hi: Int32): List[Int32] =
+        simplifyOver(points, None, lo, hi)
+
+    /// The same over points with a height each, where a point is kept that stands further
+    /// than `tolerance` off the line on the plan or above or below it, the larger of the
+    /// two distances being the one weighed.
+    pub def simplifyOver(points: List[Point], heights: Option[List[Float64]], lo: Int32, hi: Int32): List[Int32] =
         match (List.nth(lo, points), List.nth(hi, points)) {
             case (Some(a), Some(b)) =>
                 let dx = b#x - a#x;
                 let dy = b#y - a#y;
                 let norm = hypot(dx, dy);
-                match furthest(points, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
+                match furthest(points, heights, lo, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
                     case (best, at) =>
                         if (best <= tolerance() or at < 0) lo :: hi :: Nil
-                        else List.append(withoutLast(simplify(points, lo, at)), simplify(points, at, hi))
+                        else List.append(withoutLast(simplifyOver(points, heights, lo, at)), simplifyOver(points, heights, at, hi))
                 }
             case _ => Nil
         }
@@ -685,6 +928,8 @@ pub mod Survey {
     /// height of the triangle and not the hypotenuse of anything.
     def furthest(
         points: List[Point],
+        heights: Option[List[Float64]],
+        lo: Int32,
         hi: Int32,
         a: Point,
         b: Point,
@@ -701,11 +946,18 @@ pub mod Survey {
             match List.nth(every, points) {
                 case None => (best, at)
                 case Some(p) =>
-                    let distance = offLine(p, a, b, dx, dy, norm);
+                    let distance = match heights {
+                        case None    => offLine(p, a, b, dx, dy, norm)
+                        case Some(z) =>
+                            Float64.max(
+                                offLine(p, a, b, dx, dy, norm),
+                                offHeight(p, a, dx, dy, norm, heightAt(every, z), heightAt(lo, z), heightAt(hi, z))
+                            )
+                    };
                     if (distance > best)
-                        furthest(points, hi, a, b, dx, dy, norm, distance, every, every + 1)
+                        furthest(points, heights, lo, hi, a, b, dx, dy, norm, distance, every, every + 1)
                     else
-                        furthest(points, hi, a, b, dx, dy, norm, best, at, every + 1)
+                        furthest(points, heights, lo, hi, a, b, dx, dy, norm, best, at, every + 1)
             }
 
     def offLine(p: Point, a: Point, b: Point, dx: Float64, dy: Float64, norm: Float64): Float64 =
@@ -713,6 +965,15 @@ pub mod Survey {
             hypot(p#x - a#x, p#y - a#y)
         else
             Float64.abs((dy * p#x) - (dx * p#y) + (b#x * a#y) - (b#y * a#x)) / norm
+
+    /// How far a point stands above or below the line through two others: its height
+    /// against the line's height where the point falls along it on the plan.
+    def offHeight(p: Point, a: Point, dx: Float64, dy: Float64, norm: Float64, zp: Float64, za: Float64, zb: Float64): Float64 =
+        let fall = if (norm == 0.0) 0.0 else ((p#x - a#x) * dx + (p#y - a#y) * dy) / (norm * norm);
+        Float64.abs(zp - (za + fall * (zb - za)))
+
+    def heightAt(at: Int32, heights: List[Float64]): Float64 =
+        List.nth(at, heights) |> Option.getWithDefault(0.0)
 
     /// Which way the closed line runs, from the shoelace sum in the drawing's own metres:
     /// positive is clockwise, because this projection's `y` runs south.
@@ -868,8 +1129,9 @@ pub mod Survey {
                 Cli.Args.outcomeOf(
                     forM(
                         figures <- MapRecord.read(asked#circuit) |> Result.mapErr(CliError.Reading);
-                        read    <- surveyed(asked, spelled, figures);
-                        _       <- if (asked#fetch) keep(asked, read) else Ok(())
+                        _       <- if (asked#fetch) surveyed(asked, spelled, None, figures) |> Result.flatMap(keep(asked)) else Ok(());
+                        heights <- Elevation.keptText(asked#circuit) |> Result.mapErr(CliError.Reading);
+                        read    <- surveyed(asked, spelled, heights, figures)
                     ) yield laid(asked, Geometry.Write.file(asked#circuit, figures, read#geometry))
                 )
         }
@@ -911,18 +1173,23 @@ pub mod Survey {
 
     /// The survey every answer travels through, however its text arrived, which is
     /// what makes a live survey and a comparison of a kept one fail and reproduce in
-    /// the same words. One reading of the text serves both the keeping and the
-    /// laying, so a runner's HTML page, a reply stopped half way through its JSON and
-    /// an answer whose relation will not chain into a lap are each met in the words
-    /// the survey itself would say them in.
-    def surveyed(asked: Request, spelled: String, figures: Circuit.Figures): Result[CliError, Read] =
-        match geometry(spelled, asked#circuit, figures) {
+    /// the same words, so a runner's HTML page, a reply stopped half way through its
+    /// JSON and an answer whose relation will not chain into a lap are each met in the
+    /// words the survey itself would say them in.
+    ///
+    /// A fetched answer is surveyed twice: with no heights, to say it surveys at all
+    /// before it is kept, and then with the kept heights, to lay it. The kept heights
+    /// cannot guard the keeping, since a node OpenStreetMap moved has none until
+    /// `elevation --fetch` samples the kept answer, and it samples nothing else.
+    def surveyed(asked: Request, spelled: String, heights: Option[String], figures: Circuit.Figures): Result[CliError, Read] =
+        match geometry(spelled, heights, asked#circuit, figures) {
             case Ok(read) => Ok(read)
             case Err(problem) =>
-                if (asked#fetch)
-                    Err(CliError.Reading("${asked#answer}: the answer surveys nothing: ${problem}"))
-                else
-                    Err(CliError.Reading("${asked#answer}: ${problem}"))
+                match (asked#fetch, heights) {
+                    case (true, None)    => Err(CliError.Reading("${asked#answer}: the answer surveys nothing: ${problem}"))
+                    case (true, Some(_)) => Err(CliError.Reading("${asked#answer}: the answer is kept, and ${problem}"))
+                    case _               => Err(CliError.Reading("${asked#answer}: ${problem}"))
+                }
         }
 
     /// `--fetch`'s keeping: the answer where `--answer` points — the circuit's own

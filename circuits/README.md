@@ -1,6 +1,6 @@
 # circuits
 
-The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out, and one directory per circuit keeping the evidence — the Overpass answer the geometry was written from.
+The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out, and one directory per circuit keeping the evidence — the Overpass answer the geometry was written from, and where a circuit has them, the heights its places were sampled at.
 It is the Flix project at this directory's root, run through the flake: `.#geometry -- <word>`, `.#geometry-timing-lines` and `.#geometry-test`, whose words `AGENTS.md`'s table lists.
 `-- probe` asks OpenStreetMap before a circuit has a config; `-- timing-lines` reads the timing feed with the decoder the load decodes it with.
 Each module's header says what it reads and refuses; what follows is what crosses them.
@@ -79,10 +79,20 @@ Per-file links show in `git ls-files -s` as mode `120000`.
 
 `.#geometry-test` and `.#flix-test` compile the linked files on either side, which is what proves the links survived the checkout.
 
+## The heights
+
+`elevation <word> --fetch` samples the places a survey walks (`Elevation.placesOf`) from the source the circuit's config names, and keeps the source's own values as `circuits/<word>/elevation.json`.
+The survey and the fence read them as they read the kept answer; how they are despiked, smoothed and thinned is `Survey.laidOut`'s, and a circuit keeping none is drawn without heights.
+
+**The samples are keyed by the degrees they were asked at.** An answer re-fetched with any node moved leaves that place unsampled, and the survey and the fence refuse the circuit until `elevation <word> --fetch` samples it again; re-fetching an answer and re-sampling it are one change.
+
+**Sampling a circuit adds points to its drawing**: a crest or a dip on a line straight on the plan is a point the thinning keeps, so a circuit sampled again takes a re-baseline of its VRT with it.
+
 ## The probe, and OpenStreetMap's answers
 
-`Overpass.flix` spells the runners, a run's name and the backoff once, for the probe's question and the survey's alike; its `flix test` pins that only the survey asks for `node(w)`.
-**A proxy answers a timed-out request as 200 with an HTML page**, so the reading of what a service answered with — beside `Geodesy.earthMetres` — is held to one spelling by `test/check-sources.mjs`: a second reading asking only the status would hand HTML on as a geometry.
+`Overpass.flix` spells the runners and the backoff once, for the probe's question and the survey's alike; its `flix test` pins that only the survey asks for `node(w)`.
+`Service.flix` spells a run's name, its pace and the reading of what a service answered with, for Overpass and the elevation sources alike.
+**A proxy answers a timed-out request as 200 with an HTML page**, so that reading — beside `Geodesy.earthMetres` — is held to one spelling by `test/check-sources.mjs`: a second reading asking only the status would hand HTML on as a geometry.
 
 ## Wiring a test cannot see
 
@@ -107,4 +117,5 @@ What is judged against the repository's real bytes is the fence, the contract sp
 
 A drawn circuit is the list of words `Shared.drawingFor` matches, a map record at `app/static/circuit-maps/<word>.json` and a geometry at `app/static/geometry/<word>.geojson`.
 `app/tests/geometry-contract.spec.ts` checks that both files stand where the app reaches for them and that the words are ones this directory and the Flix summary name.
-Whether the file's contents are honest — metres ascending to the published lap, sectors adding up to it, a pit lane beside it — is `Geometry.outline`'s and `Geometry.pitLane`'s refusal, pinned by `TestGeometry` and re-asked of the real bytes by the fence on every CI run.
+Whether the file's contents are honest — metres ascending to the published lap, sectors adding up to it, a pit lane beside it, a height per point where it carries any — is `Geometry.outline`'s and `Geometry.pitLane`'s refusal, pinned by `TestGeometry` and re-asked of the real bytes by the fence on every CI run.
+App-side, `Motorsport.Wec.Circuit.Geometry` refuses the same heights out of step, and `Tracker3d` draws them.

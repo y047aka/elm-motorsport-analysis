@@ -66,6 +66,14 @@ nix run .#geometry -- survey <word> --fetch --write    # additionally lays app/s
 ```
 
 Commit the kept answer and the `.geojson`: the first is re-runnable evidence, the second a served file.
+
+Where a source covers the circuit's country, name it as the config's `elevation` and sample the kept answer before laying the geometry:
+
+```bash
+nix run .#geometry -- elevation <word> --fetch         # keeps circuits/<word>/elevation.json
+```
+
+Commit `elevation.json` beside the answer; every later `--fetch` of the answer needs it re-sampled.
 To read a fresh survey against the old one: `nix run .#geometry -- diff <a.geojson> <b.geojson> [--svg ...]`.
 
 ## 5. Spell the word on both wire copies
@@ -116,7 +124,7 @@ These freeze the inventory, so a new circuit fails each by name until it joins:
 ## Hazards
 
 - **A word renamed on one side alone** draws the round as the ring with nothing red: the two Flix enums, `drawingFor`, the map record, the geometry and the evidence directory all spell it, and only the contract spec reads across.
-- **An Overpass proxy answers a timed-out request as 200 with an HTML page.** `Overpass.answered` is the one reading of what a service answered with; never add a second reading that asks only the status.
+- **An Overpass proxy answers a timed-out request as 200 with an HTML page.** `Service.answered` is the one reading of what a service answered with; never add a second reading that asks only the status.
 - **An unreadable file is a failure, not an absence.** New file-reading under `circuits/` branches via `Util/Files`' `exists`/`isDirectory` or reports via `Cli/Errors`; a discarded `Err(_)` fails `check-sources.mjs`.
 - **The geometry files carry the ODbL attribution** in their own properties — keep the writer's `claims` list and the fence's exemption list answering to `TestRegenerate` if a property is added.
 - **A survey that moves an existing circuit's bytes is its own change**: it takes a VRT re-baseline with it, and the move is measured in metres by `-- diff` before anyone reads the pixels.

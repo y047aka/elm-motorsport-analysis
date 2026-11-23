@@ -12,6 +12,7 @@ module Motorsport.Chart.Tracker exposing
 
 import Motorsport.Chart.Tracker.Config as Config exposing (LapScale, TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
+import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
@@ -145,6 +146,7 @@ type alias Circuit =
     , config : TrackConfig
     , shape : Shape
     , pitLane : List Point
+    , relief : Maybe Relief
     , scale : LapScale
     , bounds : Bounds
     , lengths : { compact : Lengths, full : Lengths }
@@ -186,6 +188,7 @@ onCircuit layout { direction, config } =
         , config = config
         , shape = layout.shape
         , pitLane = layout.pitLane
+        , relief = layout.relief
         , scale = Config.lapScale layout.timingLines config
         , lengths = layout.lengths
         , bounds =
@@ -204,6 +207,10 @@ circuit, viewBox units for the ring -- so a second reading of the same track ask
 its questions of both. The ring is sampled into the shape it traces; it has no pit
 lane, because it draws none.
 
+`relief` is how high the lines stand, in metres above their datum, for a circuit
+whose geometry carries heights: one per point of `lap` and of `pitLane`, and `at` a
+progress round the lap. The ring has none.
+
 @docs Ground, ground
 
 -}
@@ -214,6 +221,13 @@ type alias Ground =
     , progressOf : CarAt -> Float
     , boundaries : List Float
     , sectors : List { progress : Float, label : String }
+    , relief :
+        Maybe
+            { lap : List Float
+            , pitLane : List Float
+            , at : Float -> Float
+            , lowest : Float
+            }
     }
 
 
@@ -251,6 +265,7 @@ ground shown =
             , progressOf = Config.computeProgress config
             , boundaries = Config.calcSectorBoundaries config
             , sectors = sectorMarks config
+            , relief = Nothing
             }
 
         OnCircuit circuit ->
@@ -260,6 +275,16 @@ ground shown =
             , progressOf = Config.computeProgress circuit.config
             , boundaries = Config.calcSectorBoundaries circuit.config
             , sectors = sectorMarks circuit.config
+            , relief =
+                Maybe.map
+                    (\relief ->
+                        { lap = Relief.lap relief
+                        , pitLane = Relief.pitLane relief
+                        , at = \progress -> Relief.at (Config.toMetres circuit.scale progress) relief
+                        , lowest = Relief.lowest relief
+                        }
+                    )
+                    circuit.relief
             }
 
 

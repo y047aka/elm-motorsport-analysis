@@ -35,6 +35,7 @@ decoder map =
 
 The lap runs the direction its survey was chained in -- the word arrives with
 the geometry, as OpenStreetMap's own one-way tags say it.
+
 -}
 layout : Intermediates -> Geometry -> Layout
 layout map geometry =
@@ -47,6 +48,7 @@ layout map geometry =
     in
     { shape = lap
     , pitLane = pit
+    , relief = Circuit.reliefOf geometry.centreline geometry.heights
     , timingLines = timingLines map lap
     , lengths = lengths
     }
@@ -70,6 +72,7 @@ has none.
 same set COTA authored compact with. Nothing draws that detail, and the
 compacts of these circuits are fitted on different axes, so there is no one
 ratio to read it from. It is the set to measure when a compact tracker is drawn.
+
 -}
 lengths : { compact : Circuit.Lengths, full : Circuit.Lengths }
 lengths =

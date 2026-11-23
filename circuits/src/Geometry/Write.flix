@@ -7,7 +7,11 @@
 /// holds, point for point, how far round the lap each stands, in the circuit's published
 /// metres; one `pit_lane` LineString with no metres; the `direction` the chained survey
 /// runs; and the frame the degrees project through, whole, so the drawing's
-/// `Circuit.Geodesy` is a copy of it and not a re-derivation. A `basis` says what kind of
+/// `Circuit.Geodesy` is a copy of it and not a re-derivation. Where the circuit keeps
+/// sampled heights, each line carries an `elevation_m` point for point, and the outline
+/// names the dataset and datum they were read from as `elevation`; the positions stay
+/// pairs, since a third number in them is a height every reader of a position would
+/// have to be told about. A `basis` says what kind of
 /// line it is, and the ODbL copyright travels in `source` and `license`. Where the circuit
 /// itself publishes the lines it times to, its map's stretches travel as `sectors`.
 ///
@@ -28,7 +32,7 @@ pub mod Geometry.Write {
     /// measured along.
     pub def file(circuit: Circuit, figures: Circuit.Figures, geometry: Survey.Geometry): String =
         let outline = feature(outlineOf(circuit, figures, geometry), lineOf(geometry#centreline));
-        let pit = feature(pitOf(circuit), pitLineOf(geometry#pitLane));
+        let pit = feature(pitOf(circuit, geometry), pitLineOf(geometry#pitLane));
         "{\"type\": \"FeatureCollection\", \"features\": [\n${outline},\n${pit}\n]}\n"
 
     // ---------------------------------------------------------------- the properties
@@ -51,7 +55,7 @@ pub mod Geometry.Write {
     pub def claims(): List[String] =
         "role" :: "circuit" :: "basis" :: "source" :: "license" :: "surveyed_at" ::
         "direction" :: "lap_length_m" :: "surveyed_length_m" :: "sectors" :: "frame" ::
-        "metres" :: Nil
+        "metres" :: "elevation" :: "elevation_m" :: Nil
 
     /// What the outline claims for one of its properties, where this geometry can say
     /// it. A claim a circuit cannot make — no stamp on the answer, no map of its own —
@@ -72,19 +76,26 @@ pub mod Geometry.Write {
             case "sectors"           => Option.map(published, figures#published)
             case "frame"             => Some(frame(geometry#frame))
             case "metres"            => Some(metres(geometry#centreline))
+            case "elevation"         => Option.map(profile -> heightSource(profile#dataset), geometry#elevation)
+            case "elevation_m"       => Option.map(profile -> heights(profile#outline), geometry#elevation)
             // A name no `claims` lays, so a property this profile is not written with.
             case _                   => None
         }
 
-    /// The pit lane, which claims only what every centreline claims of itself.
-    def pitOf(circuit: Circuit): List[String] =
+    /// The pit lane, which claims what every centreline claims of itself, and its
+    /// heights where the outline carries its own.
+    def pitOf(circuit: Circuit, geometry: Survey.Geometry): List[String] =
+        let heightsOf = match geometry#elevation {
+            case None          => Nil
+            case Some(profile) => ("elevation_m", heights(profile#pitLane)) :: Nil
+        };
         List.map(
             property,
             ("role", text("pit_lane"))
                 :: ("circuit", text(circuit#word))
                 :: ("basis", centreline())
                 :: ("license", licence())
-                :: Nil
+                :: heightsOf
         )
 
     /// The kind of line this is: the OpenStreetMap centreline stretched to a published
@@ -116,6 +127,15 @@ pub mod Geometry.Write {
     /// survey measured it, not as a rounded box around it.
     def frame(laid: Frame): String =
         "{\"origin\":{\"lat\":${number(laid#origin#lat)},\"lon\":${number(laid#origin#lon)}},\"parallel\":${number(laid#parallel)}}"
+
+    /// Where the heights were read off: the dataset, its licence and the datum they stand
+    /// above.
+    def heightSource(dataset: Elevation.Dataset): String =
+        "{\"source\":${text(dataset#name)},\"license\":${text(dataset#license)},\"datum\":${text(dataset#datum)}}"
+
+    /// Each point's height, to the tenth of a metre the metres are kept to.
+    def heights(metres: List[Float64]): String =
+        "[${String.intercalate(",", List.map(each -> number(Geodesy.roundTenth(each)), metres))}]"
 
     /// How far round the lap each place stands.
     def metres(places: List[Geodesy.Metred]): String =

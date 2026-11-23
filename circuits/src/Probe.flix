@@ -126,7 +126,7 @@ pub mod Probe {
     /// OpenStreetMap is. The first question no runner answers ends the run: the next
     /// place would be refused for the same reason.
     def asking(request: Request): Outcome \ { Clock, Console, IO } =
-        Overpass.paced(
+        Service.paced(
             () ->
                 request#places
                     |> Result.traverse(probePlace(request#radius))

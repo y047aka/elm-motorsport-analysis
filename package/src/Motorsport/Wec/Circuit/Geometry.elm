@@ -17,7 +17,8 @@ given it.
 
 The RFC layer is `mgold/elm-geojson`; what is read here is what that cannot
 know: the `role`s this file uses, the metres beside the points, the frame, the
-direction the survey runs, the published length.
+direction the survey runs, the published length, and the heights a circuit whose
+places were sampled carries beside its points as `elevation_m`.
 
 @docs Geometry, LapPoint, decoder
 
@@ -39,13 +40,15 @@ type alias LapPoint =
     }
 
 
-{-| One circuit's drawn lines and the frame they project through.
+{-| One circuit's drawn lines and the frame they project through, and the heights of
+both lines' points where the file carries them.
 -}
 type alias Geometry =
     { frame : Frame
     , direction : Direction
     , centreline : List LapPoint
     , pitLane : List Coordinate
+    , heights : Maybe { centreline : List Float, pitLane : List Float }
     }
 
 
@@ -83,6 +86,7 @@ line feature =
                 { role = role
                 , coordinates = coordinates
                 , metres = Decode.decodeValue (Decode.field "metres" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
+                , heights = Decode.decodeValue (Decode.field "elevation_m" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
                 , frame = Decode.decodeValue frame feature.properties |> Result.toMaybe
                 , direction = Decode.decodeValue (Decode.maybe (Decode.field "direction" Decode.string)) feature.properties |> Result.withDefault Nothing
                 }
@@ -105,6 +109,7 @@ type alias Feature =
     { role : String
     , coordinates : List Coordinate
     , metres : Maybe (List Float)
+    , heights : Maybe (List Float)
     , frame : Maybe Frame
     , direction : Maybe String
     }
@@ -121,11 +126,14 @@ assemble lapLength features =
                             Decode.fail complaint
 
                         Ok whichWay ->
-                            case verify lapLength metres outline.coordinates of
-                                Just complaint ->
+                            case ( verify lapLength metres outline.coordinates, heightsOf outline pitLane ) of
+                                ( Just complaint, _ ) ->
                                     Decode.fail complaint
 
-                                Nothing ->
+                                ( Nothing, Err complaint ) ->
+                                    Decode.fail complaint
+
+                                ( Nothing, Ok heights ) ->
                                     Decode.succeed
                                         { frame = projected
                                         , direction = whichWay
@@ -135,6 +143,7 @@ assemble lapLength features =
                                                 outline.coordinates
                                                 metres
                                         , pitLane = pitLane.coordinates
+                                        , heights = heights
                                         }
 
                 _ ->
@@ -142,6 +151,29 @@ assemble lapLength features =
 
         _ ->
             Decode.fail "the geometry holds no outline or no pit lane"
+
+
+{-| Both lines' heights, or neither's: one per point of each, since a height out of
+step with its point is drawn at another point's place.
+-}
+heightsOf : Feature -> Feature -> Result String (Maybe { centreline : List Float, pitLane : List Float })
+heightsOf outline pitLane =
+    case ( outline.heights, pitLane.heights ) of
+        ( Nothing, Nothing ) ->
+            Ok Nothing
+
+        ( Just lap, Just pit ) ->
+            if List.length lap /= List.length outline.coordinates then
+                Err (String.fromInt (List.length lap) ++ " heights for the outline's " ++ String.fromInt (List.length outline.coordinates) ++ " points")
+
+            else if List.length pit /= List.length pitLane.coordinates then
+                Err (String.fromInt (List.length pit) ++ " heights for the pit lane's " ++ String.fromInt (List.length pitLane.coordinates) ++ " points")
+
+            else
+                Ok (Just { centreline = lap, pitLane = pit })
+
+        _ ->
+            Err "one line carries heights and the other does not"
 
 
 find : String -> List Feature -> Maybe Feature
