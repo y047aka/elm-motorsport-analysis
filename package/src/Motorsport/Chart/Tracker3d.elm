@@ -369,7 +369,6 @@ type alias Scene =
     , finish : ( Shot, Shot )
     , labels : List ( Shot, Float, String )
     , cars : List Car
-    , steep : Maybe Float
     }
 
 
@@ -405,8 +404,8 @@ bandWidth =
     0.03
 
 
-{-| How many times over a circuit's heights are drawn. At any other figure than 1 the
-drawing says so beside it, since it is then the one length here not drawn to scale.
+{-| How many times over a circuit's heights are drawn. At any other figure than 1 they
+are the one length here not drawn to scale, and the drawing has nothing yet that says so.
 -}
 steep : Float
 steep =
@@ -614,12 +613,6 @@ view surface model shown standings =
                     )
                     g.sectors
             , cars = cars
-            , steep =
-                if steep /= 1 then
-                    Maybe.map (\_ -> steep) g.relief
-
-                else
-                    Nothing
             }
     in
     draw fit scene
@@ -835,26 +828,7 @@ draw fit scene =
                 |> List.sortBy (.at >> .depth >> negate)
                 |> List.map (carMarker fit)
             )
-        , case scene.steep of
-            Just times ->
-                text_
-                    [ Svg.Attributes.x (String.fromFloat (fit.frame.w * 0.015))
-                    , Svg.Attributes.y (String.fromFloat (fit.frame.h - fit.frame.w * 0.015))
-                    , Svg.Attributes.fontSize (String.fromFloat (fit.frame.w * captionSize))
-                    , fill "oklch(1 0 0 / 0.45)"
-                    ]
-                    [ text ("Heights ×" ++ String.fromFloat times) ]
-
-            Nothing ->
-                g [] []
         ]
-
-
-{-| The caption's size, as a share of the box's width.
--}
-captionSize : Float
-captionSize =
-    0.016
 
 
 closed : List a -> List a

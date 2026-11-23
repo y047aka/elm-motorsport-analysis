@@ -51,7 +51,8 @@ pub mod Elevation.ArcGis {
         }
 
     /// One sample: the index it was asked at, and its height and resolution where the
-    /// model holds one.
+    /// model holds one. A resolution the service leaves out is nought, an unknown one,
+    /// rather than a place with no height.
     def sampleOf(who: String, json: Json): Result[String, (Int32, Option[(Float64, Float64)])] =
         match json {
             case Json.JObject(members) =>
@@ -60,10 +61,10 @@ pub mod Elevation.ArcGis {
                     case Some(Json.JString(spelled)) => Float64.fromString(spelled)
                     case _                           => None
                 };
-                let resolution = Map.get("resolution", members) |> Option.flatMap(Geometry.number);
+                let resolution = Map.get("resolution", members) |> Option.flatMap(Geometry.number) |> Option.getWithDefault(0.0);
                 match at {
                     case None     => Err("${who} answered a sample with no locationId")
-                    case Some(id) => Ok((id, Option.flatMap(h -> Option.map(r -> (h, r), resolution), height)))
+                    case Some(id) => Ok((id, Option.map(h -> (h, resolution), height)))
                 }
             case _ => Err("${who} answered a sample that is no object")
         }

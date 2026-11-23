@@ -44,6 +44,21 @@ pub mod TestElevation {
         // ArcGIS refuses a request as 200 with an `error` member.
         Assert.assertTrue(refused("refused the request", Elevation.ArcGis.samplesOf("USGS 3DEP", places(), "{\"error\":{\"code\":400,\"message\":\"Unable to complete operation.\"}}")))
 
+    @Test
+    def testAResolutionLeftOutIsNoMissingHeight(): Unit \ Assert =
+        let bare = "{\"samples\":[{\"locationId\":0,\"value\":\"154.8\"},{\"locationId\":1,\"value\":\"155.1\"}]}";
+        match Elevation.ArcGis.samplesOf("USGS 3DEP", places(), bare) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(read)     => Assert.assertTrue(List.map(each -> each#resolution, read) == 0.0 :: 0.0 :: Nil)
+        }
+
+    @Test
+    def testAKeptDatasetIsKnownByItsService(): Unit \ Assert =
+        // The smoothing a kept file is given follows from the source it names, so every
+        // source is found again from its own dataset, and no two share a service.
+        Assert.assertTrue(List.forAll(source -> Elevation.sourceOf(Elevation.datasetOf(source)) == Some(source), Elevation.sources()));
+        Assert.assertTrue(Elevation.sourceOf({name = "n", license = "l", datum = "d", service = "https://example.org"}) == None)
+
     // ---------------------------------------------------------------- the other sources
 
     @Test

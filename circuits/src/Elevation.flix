@@ -46,6 +46,14 @@ pub mod Elevation {
         service = String
     }
 
+    /// Every source, in no order a reader depends on.
+    pub def sources(): List[Source] =
+        Source.Usgs3dep :: Source.IgnLidarHd :: Source.IcgcMet2 :: Source.LombardiaDtm5 :: Source.GsiDem :: Nil
+
+    /// The source a kept dataset was sampled from, known by its service.
+    pub def sourceOf(dataset: Dataset): Option[Source] =
+        List.find(source -> datasetOf(source)#service == dataset#service, sources())
+
     pub def datasetOf(source: Source): Dataset = match source {
         case Source.Usgs3dep => {
             name    = "USGS 3D Elevation Program (3DEP), best available",

@@ -731,13 +731,12 @@ pub mod Survey {
                     let walkedPit = List.map(pointOf(pitAt), walking#pit);
                     let lapMetres = Geodesy.together(List.map(each -> each#place, walking#lap), List.map(metreOf(metresAt), walking#lap));
                     let half = midpointOf(walking#lap, List.length(lapPoints) / 2);
-                    let sigma = circuit#elevation |> Option.map(Elevation.smoothingOf) |> Option.getWithDefault(0.0);
                     let lapAlong = List.map(metreOf(metresAt), walking#lap);
                     let pitAlong = cumulative(walkedPit);
                     let despikedLines = Option.map(each -> {
                         dataset = each#dataset,
-                        lap = smoothed(Some(lapLength), lapAlong, sigma, despiked(Some(lapLength), lapAlong, each#lap)),
-                        pit = smoothed(None, pitAlong, sigma, despiked(None, pitAlong, each#pit))
+                        lap = roundTheLap((along, heights) -> smoothed(Some(lapLength), along, sigmaOf(each#dataset), despiked(Some(lapLength), along, heights)), lapAlong, each#lap),
+                        pit = smoothed(None, pitAlong, sigmaOf(each#dataset), despiked(None, pitAlong, each#pit))
                     }, lines);
                     let lapHeights = Option.map(each -> each#lap, despikedLines);
                     let pitHeights = Option.map(each -> each#pit, despikedLines);
@@ -759,6 +758,23 @@ pub mod Survey {
                     })
         }
     }
+
+    /// How far the kept heights are smoothed: by what their own dataset is, rather than by
+    /// what the circuit's config names, since a config may name a source its kept heights
+    /// were not yet sampled from.
+    def sigmaOf(dataset: Elevation.Dataset): Float64 =
+        Elevation.sourceOf(dataset) |> Option.map(Elevation.smoothingOf) |> Option.getWithDefault(0.0)
+
+    /// A lap's heights through a filter that reads round the lap: the lap's closing place
+    /// is its first again, at the lap's own length, and read twice it would weigh twice
+    /// in every reading round the finish line; it is left out and given the first's height.
+    def roundTheLap(filter: (List[Float64], List[Float64]) -> List[Float64], along: List[Float64], heights: List[Float64]): List[Float64] =
+        match (List.init(along), List.init(heights)) {
+            case (Some(open), Some(read)) =>
+                let filtered = filter(open, read);
+                List.append(filtered, List.take(1, filtered))
+            case _ => heights
+        }
 
     /// How far along a line the heights a spike is judged against reach, either way: wide
     /// enough for the pit 60 m long Le Mans reads at 11.9 km, and at 80 m already cutting
