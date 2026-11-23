@@ -78,6 +78,16 @@ pub mod Elevation {
         }
     }
 
+    /// How far, in metres, a source's heights are smoothed along a line before it is
+    /// thinned (`Survey.smoothed`): nothing, but for a model that stays uneven by a metre
+    /// along a level road once its spikes are out. Regione Lombardia's DTM 5x5 is pieced
+    /// together from LiDAR, a 20 m model and the topographic database's triangles, and its
+    /// seams and triangles read as bumps along Monza's straights.
+    pub def smoothingOf(source: Source): Float64 = match source {
+        case Source.LombardiaDtm5 => 10.0
+        case _                    => 0.0
+    }
+
     /// One place's height above the datum, and the resolution of the model it was read
     /// off, in metres.
     pub type alias Sample = {

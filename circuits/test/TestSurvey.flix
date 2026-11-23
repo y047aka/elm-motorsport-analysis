@@ -141,6 +141,19 @@ pub mod TestSurvey {
         Assert.assertTrue(List.head(Survey.despiked(Some(100.0), along, lap)) == Some(100.0))
 
     @Test
+    def testSmoothingFlattensASawtoothAndKeepsASlope(): Unit \ Assert =
+        let along = List.map(i -> Int32.toFloat64(i) * 10.0, List.range(0, 21));
+        let middle = (heights: List[Float64]) -> List.nth(10, heights) |> Option.getWithDefault(0.0);
+        // Nought is the heights as they came.
+        let saw = List.map(i -> if (Int32.remainder(i, 2) == 0) 181.2 else 180.1, List.range(0, 21));
+        Assert.assertTrue(Survey.smoothed(None, along, 0.0, saw) == saw);
+        // A metre's sawtooth every ten metres is all but gone at twenty.
+        Assert.assertTrue(Float64.abs(middle(Survey.smoothed(None, along, 20.0, saw)) - 180.65) < 0.05);
+        // A steady slope stands where it was away from the ends of the line.
+        let slope = List.map(i -> 100.0 + Int32.toFloat64(i) * 0.5, List.range(0, 21));
+        Assert.assertTrue(Float64.abs(middle(Survey.smoothed(None, along, 20.0, slope)) - 105.0) < 1.0e-9)
+
+    @Test
     def testEveryKeptPointCarriesItsHeight(): Unit \ Assert =
         let circuit = turnedRelationCircuit(Some(boxLine()));
         let figures = {lap = 4150.0, published = None};

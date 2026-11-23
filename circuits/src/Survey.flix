@@ -735,10 +735,13 @@ pub mod Survey {
                     let walkedPit = List.map(pointOf(pitAt), walking#pit);
                     let lapMetres = Geodesy.together(List.map(each -> each#place, walking#lap), List.map(metreOf(metresAt), walking#lap));
                     let half = midpointOf(walking#lap, List.length(lapPoints) / 2);
+                    let sigma = circuit#elevation |> Option.map(Elevation.smoothingOf) |> Option.getWithDefault(0.0);
+                    let lapAlong = List.map(metreOf(metresAt), walking#lap);
+                    let pitAlong = cumulative(walkedPit);
                     let despikedLines = Option.map(each -> {
                         dataset = each#dataset,
-                        lap = despiked(Some(lapLength), List.map(metreOf(metresAt), walking#lap), each#lap),
-                        pit = despiked(None, cumulative(walkedPit), each#pit)
+                        lap = smoothed(Some(lapLength), lapAlong, sigma, despiked(Some(lapLength), lapAlong, each#lap)),
+                        pit = smoothed(None, pitAlong, sigma, despiked(None, pitAlong, each#pit))
                     }, lines);
                     let lapHeights = Option.map(each -> each#lap, despikedLines);
                     let pitHeights = Option.map(each -> each#pit, despikedLines);
@@ -799,6 +802,34 @@ pub mod Survey {
                     case _ => height
                 }
         })
+
+    /// A line's heights smoothed by a Gaussian of `sigma` metres along it, reaching three
+    /// of them either way: each height is the mean of those around it, weighed by how near
+    /// they stand. At an end of an open line the weights are those of the heights there
+    /// are. A `sigma` of nought is the heights as they came.
+    pub def smoothed(length: Option[Float64], along: List[Float64], sigma: Float64, heights: List[Float64]): List[Float64] =
+        if (sigma <= 0.0)
+            heights
+        else
+            let pairs = List.zip(along, heights);
+            let apartBy = (a, b) -> {
+                let d = Float64.abs(a - b);
+                match length {
+                    case Some(lap) => Float64.min(d, lap - d)
+                    case None      => d
+                }
+            };
+            List.map(here -> {
+                let weighed = pairs
+                    |> List.filter(pair -> apartBy(here, fst(pair)) <= 3.0 * sigma)
+                    |> List.map(pair -> {
+                        let d = apartBy(here, fst(pair));
+                        let w = Float64.exp(0.0 - (d * d) / (2.0 * sigma * sigma));
+                        (w, w * snd(pair))
+                    });
+                let total = List.foldLeft((sum, each) -> sum + fst(each), 0.0, weighed);
+                List.foldLeft((sum, each) -> sum + snd(each), 0.0, weighed) / total
+            }, along)
 
     def medianOf(values: List[Float64]): Option[Float64] =
         let sorted = List.toVector(List.sort(values));
