@@ -632,12 +632,12 @@ pub mod Survey {
 
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
-    /// line thinned to `tolerance` — in three dimensions where the places have heights, so
-    /// that a crest or a dip on a line straight on the plan is a point the drawing keeps.
+    /// line thinned to `tolerance`.
     ///
-    /// A line with heights is thinned over its places `spacing` apart rather than over its
-    /// nodes alone, the places between two nodes standing on the straight line joining them;
-    /// its length and its nodes' metres are measured over the nodes, as a line without
+    /// A line with heights is walked at places `spacing` apart (`densified`), its heights
+    /// `despiked` and `smoothed`, and thinned over those places on the plan and in height,
+    /// so that a crest or a dip on a line straight on the plan is a point the drawing keeps.
+    /// Its length and its nodes' metres are measured over the nodes, as a line without
     /// heights is.
     def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept]): Result[String, Geometry] = {
         let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
@@ -760,10 +760,12 @@ pub mod Survey {
         }
     }
 
-    /// How far along a line the heights a spike is judged against reach, either way.
+    /// How far along a line the heights a spike is judged against reach, either way: wide
+    /// enough for the pit 60 m long Le Mans reads at 11.9 km, and at 80 m already cutting
+    /// COTA's crest at turn 1.
     pub def spikeReach(): Float64 = 50.0
 
-    /// How far a height may stand from the median of those around it before it is a spike.
+    /// How far a height may stand off the line its neighbours draw before it is a spike.
     pub def spikeTolerance(): Float64 = 1.0
 
     /// A line's heights with its spikes taken out. Each height is laid against the line
@@ -771,8 +773,10 @@ pub mod Survey {
     /// those within `spikeReach` after it, each at the median of their distances; one
     /// standing further than `spikeTolerance` off that line is that line's height there,
     /// and every other is its own. A terrain model reads the ground under a bridge where the
-    /// road crosses it, a pit some metres deep and a place or two wide; a slope or a crest
-    /// stands on the line its neighbours draw, and is left as it was sampled. `along` is
+    /// road crosses it, a pit some metres deep and a place or two wide, and OpenStreetMap
+    /// tags one of Monza's four such crossings, so the heights are read rather than the
+    /// tags. A slope or a crest stands on the line its neighbours draw, and is left as it
+    /// was sampled. `along` is
     /// how far along the line each height stands; a lap's distances run round to its own
     /// `length` again, and the ends of an open line are left as they were sampled.
     pub def despiked(length: Option[Float64], along: List[Float64], heights: List[Float64]): List[Float64] =

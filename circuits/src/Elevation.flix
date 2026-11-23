@@ -2,11 +2,9 @@
 /// Overpass answer they were asked for, and the heights a geometry carries point for
 /// point beside its degrees.
 ///
-/// What is sampled is every place the kept answer holds, and every place the survey walks
-/// that no node stands at: the zero a turned lap opens at, and the places it walks every
-/// `Survey.spacing` metres between two nodes further apart, on the straight line joining
-/// them. A height is a source's reading at one of those places, never one interpolated
-/// here between two of them.
+/// What is sampled is `placesOf`'s; a height is a source's reading at one of those places,
+/// never one interpolated here between two of them. ICGC and GSI answer one place per
+/// request, so sampling Barcelona takes some twenty minutes and Fuji thirty.
 ///
 /// The samples are keyed by the degrees they were asked at, spelled as the geometry file
 /// spells them. An answer re-fetched with a node moved leaves that node unsampled, and the
@@ -27,7 +25,10 @@ pub mod Elevation {
     use Util.Json.Json
 
     /// The sources a circuit's places can be sampled from: each a terrain model of the
-    /// bare earth, and each covering one country or one region of it.
+    /// bare earth, and each covering one country or one region of it. A model of surfaces
+    /// (Copernicus GLO-30) reads grandstands and trees into the lap, and summed COTA's
+    /// climbing to 92 m against 3DEP's 66; IGN España's MDT05 is served in whole metres,
+    /// terraces a metre high that read as bumps on a level road, so Barcelona's is ICGC's.
     pub enum Source with Eq {
         case Usgs3dep
         case IgnLidarHd

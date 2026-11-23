@@ -2,9 +2,6 @@
 /// model at one place per request — at Fuji, a 1 m laser survey — and which model that
 /// was, as `hsrc` (`1m（レーザ）`, `5m（写真測量）`, ...). A place it holds nothing for comes
 /// back as `-----`.
-///
-/// One place per request at the run's pace is a slow run: Fuji's answer asks some twenty
-/// minutes of it.
 pub mod Elevation.Gsi {
 
     use Geodesy.Place
