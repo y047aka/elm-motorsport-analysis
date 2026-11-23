@@ -1113,9 +1113,9 @@ pub mod Survey {
                 Cli.Args.outcomeOf(
                     forM(
                         figures <- MapRecord.read(asked#circuit) |> Result.mapErr(CliError.Reading);
+                        _       <- if (asked#fetch) surveyed(asked, spelled, None, figures) |> Result.flatMap(keep(asked)) else Ok(());
                         heights <- Elevation.keptText(asked#circuit) |> Result.mapErr(CliError.Reading);
-                        read    <- surveyed(asked, spelled, heights, figures);
-                        _       <- if (asked#fetch) keep(asked, read) else Ok(())
+                        read    <- surveyed(asked, spelled, heights, figures)
                     ) yield laid(asked, Geometry.Write.file(asked#circuit, figures, read#geometry))
                 )
         }
@@ -1157,18 +1157,23 @@ pub mod Survey {
 
     /// The survey every answer travels through, however its text arrived, which is
     /// what makes a live survey and a comparison of a kept one fail and reproduce in
-    /// the same words. One reading of the text serves both the keeping and the
-    /// laying, so a runner's HTML page, a reply stopped half way through its JSON and
-    /// an answer whose relation will not chain into a lap are each met in the words
-    /// the survey itself would say them in.
+    /// the same words, so a runner's HTML page, a reply stopped half way through its
+    /// JSON and an answer whose relation will not chain into a lap are each met in the
+    /// words the survey itself would say them in.
+    ///
+    /// A fetched answer is surveyed twice: with no heights, to say it surveys at all
+    /// before it is kept, and then with the kept heights, to lay it. The kept heights
+    /// cannot guard the keeping, since a node OpenStreetMap moved has none until
+    /// `elevation --fetch` samples the kept answer, and it samples nothing else.
     def surveyed(asked: Request, spelled: String, heights: Option[String], figures: Circuit.Figures): Result[CliError, Read] =
         match geometry(spelled, heights, asked#circuit, figures) {
             case Ok(read) => Ok(read)
             case Err(problem) =>
-                if (asked#fetch)
-                    Err(CliError.Reading("${asked#answer}: the answer surveys nothing: ${problem}"))
-                else
-                    Err(CliError.Reading("${asked#answer}: ${problem}"))
+                match (asked#fetch, heights) {
+                    case (true, None)    => Err(CliError.Reading("${asked#answer}: the answer surveys nothing: ${problem}"))
+                    case (true, Some(_)) => Err(CliError.Reading("${asked#answer}: the answer is kept, and ${problem}"))
+                    case _               => Err(CliError.Reading("${asked#answer}: ${problem}"))
+                }
         }
 
     /// `--fetch`'s keeping: the answer where `--answer` points — the circuit's own
