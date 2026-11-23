@@ -1,10 +1,9 @@
 /// The layout of this repository's own files, held to one spelling. The pipeline
 /// writes into three directories and lists two of them looking for what no config
 /// names, so the directories and the names inside them are stated once, in
-/// `Circuit.flix`; the config still authors its own geometry path, the way it authors
-/// its timing line, and this is where those authored paths are laid
-/// against the words that name them, and where the map record a circuit's figures are
-/// read from is read.
+/// `Circuit.flix`; the config still authors its own geometry path, and this is where
+/// those authored paths are laid against the words that name them, and how a circuit's
+/// map record is read.
 ///
 /// What is not tested here is the bytes a path leads to: that is the byte fence's and
 /// `app/tests/geometry-contract.spec.ts`'s, each of which reads a real file.

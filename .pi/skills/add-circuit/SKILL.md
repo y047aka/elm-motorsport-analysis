@@ -85,7 +85,7 @@ These hold the circuits as written-down inventories rather than readings, so a n
 | `nix run .#geometry -- survey <word>` | byte fence: the served file must come back identical, run with **no** `--write` — a metre on a different digit is a drawing that moved |
 | `nix run .#geometry -- regenerate` | property fence over *every* kept answer — a new config must not move another circuit |
 | `nix run .#test` | add `{ module: "Survey.<Word>", file: "app/static/geometry/<word>.geojson" }` and `{ module: "Map.<Word>", file: "app/static/circuit-maps/<word>.json" }` to `app/scripts/test-fixtures.mjs`'s list first, or the package's tests fail to compile by name; then Elm tests + verify-examples |
-| `nix run .#test-vrt` | `geometry-contract.spec.ts` reads the words out of `Shared.elm`, `backend/src/Motorsport/Circuit.flix` and the served file — three lists, one word — plus the inventory assertion of step 6 |
+| `nix run .#test-vrt` | `geometry-contract.spec.ts` reads the words out of `Shared.elm` and `backend/src/Motorsport/Circuit.flix` and finds both served files behind each — plus the inventory assertion of step 6 |
 | `nix run .#update-snapshots-ci` | only once a new drawing is in: every tracker baseline stands on these degrees — the `vrt` skill says how a baseline lands |
 
 A survey that moved an *existing* circuit's bytes is its own change: it takes a VRT re-baseline with it, and the move is measured in metres by `-- diff` before anyone reads the pixels.

@@ -5,8 +5,7 @@
 /// OpenStreetMap holds no relation, the box whose raceway ways are chained by standing
 /// at the authored line — and where the circuit puts its own timing line.
 /// The length the lap is stretched to and the stretches it is timed in are the circuit
-/// map's, read from the record the app is served (`mapOf`) as `Figures`, so the drawing,
-/// the survey and the timing report read one set of figures.
+/// map's, read from the record the app is served (`mapOf`) as `Figures`.
 /// The directory named by the circuit's word keeps the evidence — the kept Overpass
 /// answer — and no code. The timing report derives its answer from the figures through
 /// `timingMapOf`; the byte fence — `nix run .#geometry -- survey <word>`
@@ -27,9 +26,7 @@ pub mod Circuit {
     }
 
     /// What a circuit map gives: the length the lap is stretched to, and the stretches its
-    /// intermediate lines imply, which travel into the geometry as `sectors`. A map that
-    /// places no intermediate lines publishes no stretches: it writes no `sectors`, and the
-    /// report reads it as publishing nothing.
+    /// intermediate lines imply, which travel into the geometry as `sectors`.
     pub type alias Figures = {
         lap       = Float64,
         published = Option[Publishes]
@@ -131,8 +128,6 @@ pub mod Circuit {
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser
     /// measures from and so where the lap's zero stands.
-    /// The organiser re-issues its map every season and moves its lines by a few metres
-    /// between them; the latest map's figures serve every season.
     def leMans(): Circuit = {
         relation = Some(2126739i64),
         box      = None,

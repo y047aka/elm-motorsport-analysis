@@ -16,7 +16,7 @@
 /// error of the method -- a line the organisers moved would show as hundreds of
 /// metres, and a changed Balance of Performance or a new tyre costs tens.
 ///
-/// The map's lines are the circuit map's, derived by `Circuit.timingMapOf`,
+/// The lines are the circuit map record's, derived by `Circuit.timingMapOf`,
 /// and the reading of the feed is the summary's: `Round.Summary`'s
 /// `fastestSectors` asks the database the same question of the same rows.
 ///

@@ -40,12 +40,12 @@ A test holds every projected place clear of the half-tenth its rounding turns on
 
 ## The timing lines, and where their distances come from
 
-Every circuit's timing lines are the "Approximate Distances" of the series' circuit map, and every season is read on the latest map, whose record is `app/static/circuit-maps/<word>.json`; the maps themselves are not to be redistributed, so they are not in the repository.
+Every circuit's timing lines are the "Approximate Distances" of the series' circuit map, and every season is read on the latest map's record (the maps section below).
 Le Mans's organiser re-issues its map every season and moves its lines by a few metres, and `--against` finds the 2024 and 2025 rounds' lines within 30 m of the 2026 map's.
 
 Nothing in a round's times picks one placement of the lines out of another — a sector's share of a lap is not a share of its distance — so what they rest on is that the circuit published them.
-What the times can answer is whether the lines moved: `nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025` finds the two seasons agree within half a percent of a lap, the only evidence one map serves both.
-Where a line stands against the drawn line itself is `regenerate`'s and `diff`'s to say: that is how COTA's second line was found 6.7 m off the circuit's own map, though its two seasons agree within 40 m.
+What the times can answer is whether the lines moved: `nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025` is the only evidence one map serves both seasons.
+Where a line stands against the drawn line itself is `regenerate`'s and `diff`'s to say.
 
 A lap length and its stretches are written once, in the circuit's map record: `Circuit.figuresOf` reads them, the survey stretches the lap to the one, and the geometry carries the others as `sectors`. The report reads the record rather than the geometry, because it answers a season against another season, which no geometry file holds.
 `test/TestTimingMap.flix` reads the derivation, and the regeneration fence reads the real records, which no `@Test` can.
@@ -53,10 +53,10 @@ How the drawing places a line the map gives no distance for is app-side: `Tracke
 
 ## The maps' figures, kept as read
 
-`app/static/circuit-maps/<word>.json` is what the latest of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository, and the record keeps the season, the date the map was issued and the circuit's full name.
+`app/static/circuit-maps/<word>.json` is what the latest of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository, since the maps are not to be redistributed, and the record keeps the season, the date the map was issued and the circuit's full name.
 It is served beside the geometry because the app reads it too: `Shared` asks for a circuit's record before its geometry, and checks the geometry against the record's centreline. A new map replaces the record, and the geometry is re-laid from it with `regenerate --write`.
 Both readers refuse a record whose lines do not stand in the order a car reaches them, every one before the finish line closes the lap: `Circuit.figuresOf` here, and the map decoders in `Motorsport.Wec.Circuit.Map` app-side.
-A map gives its finish line no degrees, so where OpenStreetMap tags none at the line (Monza, Fuji) the authored place is read off the map itself: the map's drawing laid over the survey, and its drawn lines read against their printed distances, which places the line to some 20 m.
+A map gives its finish line no degrees, so where OpenStreetMap tags none at the line the authored place is read off the map's drawing laid over the survey; the config of each such circuit (Monza, Fuji) says how, and how near.
 Every figure is kept twice, as `metres` and as the map printed it, because the print carries the precision the map was written to (0.01 m at Le Mans, whole metres elsewhere) and its decimal comma.
 `lengths` and `lines` hold only what the map gives a distance for, every line measured from the finish line; `drawn` names what it draws without one, and lists such as Le Mans's timing loops are kept in the map's own order.
 `sectors` and Le Mans's `zones` are the stretches the map colours, each bounded by the drawn labels its colour changes at; a colour is sampled off the stretch's own label, since the shared template's labels print one colour on every map where its lines are rendered a little differently on each.
@@ -106,6 +106,5 @@ What is judged against the repository's real bytes is the fence, the contract sp
 ## Where the app reads this
 
 A drawn circuit is the list of words `Shared.drawingFor` matches, a map record at `app/static/circuit-maps/<word>.json` and a geometry at `app/static/geometry/<word>.geojson`.
-`app/tests/geometry-contract.spec.ts` checks that the file stands where the app reaches for it and that this directory's circuit is named by the same word.
+`app/tests/geometry-contract.spec.ts` checks that both files stand where the app reaches for them and that the words are ones this directory and the Flix summary name.
 Whether the file's contents are honest — metres ascending to the published lap, sectors adding up to it, a pit lane beside it — is `Geometry.outline`'s and `Geometry.pitLane`'s refusal, pinned by `TestGeometry` and re-asked of the real bytes by the fence on every CI run.
-**Nothing compares the two Elm lists with the word the Flix summary sends**: a rename on one side alone is a round drawn as the ring with nothing red.

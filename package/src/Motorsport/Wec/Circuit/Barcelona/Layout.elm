@@ -30,7 +30,7 @@ decoder map =
     Geometry.decoder { lapLength = map.centreline }
 
 
-{-| The circuit, on the lines the series' 2026 map puts round the lap -- see
+{-| The circuit, on the lines its map puts round the lap -- see
 [`timingLines`](#timingLines).
 
 The lap runs the direction its survey was chained in -- the word arrives with

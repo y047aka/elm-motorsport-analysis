@@ -639,7 +639,7 @@ awaiting summary cache =
             ( Unnamed, Nothing )
 
 
-{-| Which circuits are drawn to their own shape, by the word the summary sends: each is its map's record read, and then the geometry checked against that map's lap and laid out on its lines.
+{-| Which circuits are drawn to their own shape, by the word the summary sends.
 `geometry-contract.spec.ts` keeps these words in step with the words Flix's `Circuit.jsonValue` can send, and with the files behind them.
 -}
 drawingFor : String -> Maybe (Task Http.Error Drawing)

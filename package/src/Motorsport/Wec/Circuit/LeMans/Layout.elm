@@ -23,7 +23,7 @@ import Motorsport.Wec.Circuit.Map as Map
 
 {-| The figures of the circuit map the drawing is placed by, as its record at `static/circuit-maps/le_mans.json` gives them.
 
-Every season is drawn on the one map the app is handed, which is the latest.
+Every season is drawn on the record's map, the latest.
 
 -}
 type alias CircuitMap =

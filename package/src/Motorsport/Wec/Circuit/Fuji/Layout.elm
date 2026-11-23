@@ -11,7 +11,7 @@ are drawn through are
 [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-Fuji is surveyed from a box of raceway ways rather than a relation; its drawn zero stands where the series' 2026 map puts the finish line, as nearly as that map can be laid over the survey, between two surveyed nodes rather than on one. The circuit project's config holds the whole of that authoring.
+Fuji is surveyed from a box of raceway ways rather than a relation; its drawn zero stands at a place the circuit project's config authors, between two surveyed nodes rather than on one, and says how it was found.
 
 @docs decoder, layout
 
@@ -32,7 +32,7 @@ decoder map =
     Geometry.decoder { lapLength = map.centreline }
 
 
-{-| The circuit, on the lines the series' 2026 map puts round the lap -- see
+{-| The circuit, on the lines its map puts round the lap -- see
 [`timingLines`](#timingLines).
 
 The lap runs the direction its survey was chained in -- the word arrives with

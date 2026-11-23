@@ -21,9 +21,7 @@ import { drawnNames, readSource } from './helpers';
  * `Geometry.outline` and `Geometry.pitLane`, pinned by
  * `circuits/test/TestGeometry.flix` and re-asked of the repository's real bytes
  * by every run of the byte fence (`nix run .#geometry -- survey <word>`), which
- * reproduces the served file from the kept Overpass answer. The figures the
- * geometry was authored from are a Flix-to-Flix reading —
- * `circuits/test/TestTimingMap.flix`.
+ * reproduces the served file from the kept Overpass answer.
  */
 
 type Features = { features: { properties?: Record<string, unknown> }[] };

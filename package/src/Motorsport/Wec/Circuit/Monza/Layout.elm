@@ -11,7 +11,7 @@ are drawn through are
 [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-The drawn finish line stands where the series' 2026 map puts it, as nearly as that map can be laid over the survey: OpenStreetMap holds no node at the line, so the place is authored, and the circuit project's config says how it was found.
+OpenStreetMap holds no node at the finish line, so the drawn one stands at a place the circuit project's config authors, and says how it was found.
 
 @docs decoder, layout
 
@@ -32,7 +32,7 @@ decoder map =
     Geometry.decoder { lapLength = map.centreline }
 
 
-{-| The circuit, on the lines the series' 2026 map puts round the lap -- see
+{-| The circuit, on the lines its map puts round the lap -- see
 [`timingLines`](#timingLines).
 
 The lap runs the direction its survey was chained in -- the word arrives with

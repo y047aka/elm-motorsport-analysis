@@ -38,8 +38,6 @@ type Msg
     | ReplayMsg Replay.Msg
 
 
-{-| A circuit as the tracker draws it: its layout, and the way round it is driven.
--}
 type alias Drawing =
     { layout : Layout
     , direction : Direction
