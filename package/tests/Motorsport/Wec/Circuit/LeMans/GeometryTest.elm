@@ -5,10 +5,8 @@ serves: the geometry checked through the drawing it is projected into.
 -}
 
 import Expect
-import Json.Decode as Decode
-import Motorsport.TestHelpers.Survey.LeMans as Survey
+import Motorsport.TestHelpers.LeMans as LeMansFixture
 import Motorsport.TestHelpers.SurveySuite as SurveySuite exposing (Survey)
-import Motorsport.Wec.Circuit.LeMans.Layout as Layout
 import Test exposing (Test, test)
 
 
@@ -16,18 +14,18 @@ import Test exposing (Test, test)
 -}
 survey : Result String Survey
 survey =
-    Decode.decodeString Layout.decoder Survey.text
-        |> Result.map
-            (\geometry ->
-                { name = "Motorsport.Wec.Circuit.LeMans.Geometry, as served"
-                , box = { minLat = 47.9, maxLat = 48.0, minLon = 0.1, maxLon = 0.3 }
-                , frame = geometry.frame
-                , centreline = List.map (\point -> { lat = point.lat, lon = point.lon }) geometry.centreline
-                , pitLane = geometry.pitLane
-                , layout = Layout.layout 2025 geometry
-                }
-            )
-        |> Result.mapError Decode.errorToString
+    Result.map2
+        (\geometry layout ->
+            { name = "Motorsport.Wec.Circuit.LeMans.Geometry, as served"
+            , box = { minLat = 47.9, maxLat = 48.0, minLon = 0.1, maxLon = 0.3 }
+            , frame = geometry.frame
+            , centreline = List.map (\point -> { lat = point.lat, lon = point.lon }) geometry.centreline
+            , pitLane = geometry.pitLane
+            , layout = layout
+            }
+        )
+        LeMansFixture.geometry
+        LeMansFixture.layout
 
 
 tests : Test

@@ -14,6 +14,7 @@ import Dict
 import Expect
 import Http
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Motorsport.Instant as Instant
 import Motorsport.Race.Timeline as Timeline
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
@@ -249,7 +250,7 @@ carImages =
 
 fresh : Shared.Model
 fresh =
-    Shared.init () |> Tuple.first
+    Shared.init (Encode.object []) |> Tuple.first
 
 
 {-| Reached the way a link from the index page reaches it: the calendar was

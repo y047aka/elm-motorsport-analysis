@@ -14,12 +14,11 @@ import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Chart.Tracker.Config exposing (Share)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
+import Motorsport.TestHelpers.LeMans as LeMansFixture
 import Motorsport.TestHelpers.Survey.Fuji as FujiBytes
-import Motorsport.TestHelpers.Survey.LeMans as LeMansBytes
 import Motorsport.Wec.Circuit.Fuji.Layout as Fuji
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
-import Motorsport.Wec.Circuit.LeMans.Layout as LeMans
 import Test exposing (Test, describe, test)
 
 
@@ -41,14 +40,11 @@ shares =
 
 tests : Test
 tests =
-    case ( read Fuji.decoder FujiBytes.text, read LeMans.decoder LeMansBytes.text ) of
-        ( Ok fuji, Ok leMans ) ->
+    case ( read Fuji.decoder FujiBytes.text, LeMansFixture.layout ) of
+        ( Ok fuji, Ok reference ) ->
             let
                 drawing =
                     Fuji.layout fuji shares
-
-                reference =
-                    LeMans.layout 2025 leMans
             in
             describe "Motorsport.Wec.Circuit.Fuji.Layout"
                 [ test "the lap is the length the circuit measures it at" <|
@@ -114,7 +110,7 @@ tests =
         ( fujiRead, leMansRead ) ->
             test "the geometry the app serves decodes" <|
                 \_ ->
-                    problems [ fujiRead, leMansRead ]
+                    problems [ fujiRead ] ++ problems [ leMansRead ]
                         |> Expect.equal []
 
 

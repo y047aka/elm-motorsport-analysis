@@ -20,7 +20,7 @@ import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Http
-import Json.Decode exposing (Decoder)
+import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Chart.Tracker as Tracker
@@ -54,7 +54,18 @@ type alias Model =
     , manufacturers : Maybe Manufacturers
     , carImages : Maybe CarImages
     , geometry : Dict.Dict String Geometry
+    , circuitMaps : CircuitMaps
     , round : Round
+    }
+
+
+{-| The circuit maps the bundle carries, handed in as the app's flags by `index.ts`.
+
+A map that does not decode leaves its circuit drawn as the ring; the package's tests decode the same file, so `nix run .#test` is where a broken one fails.
+
+-}
+type alias CircuitMaps =
+    { leMans : Maybe LeMansLayout.CircuitMap
     }
 
 
@@ -171,9 +182,15 @@ type alias LoadedRound =
 rather than by the pages that read them: they are the same files whichever route
 the app opened on, and a round reached by its URL still draws on all three.
 -}
-init : flags -> ( Model, Effect Msg )
-init _ =
-    ( { calendar = Arriving, manufacturers = Nothing, carImages = Nothing, geometry = Dict.empty, round = NoRound }
+init : Decode.Value -> ( Model, Effect Msg )
+init flags =
+    ( { calendar = Arriving
+      , manufacturers = Nothing
+      , carImages = Nothing
+      , geometry = Dict.empty
+      , circuitMaps = { leMans = Decode.decodeValue (Decode.field "leMans" LeMansLayout.mapDecoder) flags |> Result.toMaybe }
+      , round = NoRound
+      }
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
@@ -279,20 +296,20 @@ update msg m =
             resumeWaitingRound { m | round = Waiting params }
 
         JsonLoaded_Wec key (Ok summary) ->
-            case awaiting summary m.geometry of
+            case awaiting m.circuitMaps summary m.geometry of
                 ( awaited, Just circuit ) ->
-                    ( { m | round = forRound key (withSummary summary awaited) m.round }
-                    , Effect.sendCmd (getGeometry key circuit)
+                    ( { m | round = forRound key (withSummary m.circuitMaps summary awaited) m.round }
+                    , Effect.sendCmd (getGeometry m.circuitMaps key circuit)
                     )
 
                 ( awaited, Nothing ) ->
-                    ( { m | round = forRound key (withSummary summary awaited) m.round }, Effect.none )
+                    ( { m | round = forRound key (withSummary m.circuitMaps summary awaited) m.round }, Effect.none )
 
         JsonLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         LapsLoaded_Wec key (Ok rawLaps) ->
-            ( { m | round = forRound key (withLaps rawLaps) m.round }, Effect.none )
+            ( { m | round = forRound key (withLaps m.circuitMaps rawLaps) m.round }, Effect.none )
 
         LapsLoaded_Wec key (Err error) ->
             ( { m | round = didNotArrive key error m.round }, Effect.none )
@@ -309,7 +326,7 @@ update msg m =
             ( m, Effect.none )
 
         GeometryLoaded key circuit (Ok geometry) ->
-            ( { m | geometry = Dict.insert circuit geometry m.geometry, round = forRound key (geometryArrived circuit geometry) m.round }, Effect.none )
+            ( { m | geometry = Dict.insert circuit geometry m.geometry, round = forRound key (geometryArrived m.circuitMaps circuit geometry) m.round }, Effect.none )
 
         GeometryLoaded key _ (Err error) ->
             -- A drawn round fails rather than falling back to the ring: a
@@ -411,14 +428,14 @@ forRound key step round =
             round
 
 
-withSummary : Wec.Event -> Awaited -> RoundId -> Partial -> Round
-withSummary summary awaited id partial =
-    arriving id { partial | files = bothWith summary partial.files, geometry = awaited }
+withSummary : CircuitMaps -> Wec.Event -> Awaited -> RoundId -> Partial -> Round
+withSummary maps summary awaited id partial =
+    arriving maps id { partial | files = bothWith summary partial.files, geometry = awaited }
 
 
-withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
-withLaps rawLaps id partial =
-    arriving id { partial | files = bothWithLaps rawLaps partial.files }
+withLaps : CircuitMaps -> List WecLaps.RawLap -> RoundId -> Partial -> Round
+withLaps maps rawLaps id partial =
+    arriving maps id { partial | files = bothWithLaps rawLaps partial.files }
 
 
 bothWith : Wec.Event -> Files -> Files
@@ -444,8 +461,8 @@ bothWithLaps rawLaps files =
 {-| A round is made once its files are here and its geometry is settled --
 decoded, or not wanted. Whichever of them arrives last finds the others.
 -}
-arriving : RoundId -> Partial -> Round
-arriving id partial =
+arriving : CircuitMaps -> RoundId -> Partial -> Round
+arriving maps id partial =
     case partial.files of
         GotBoth summary rawLaps ->
             case partial.geometry of
@@ -453,18 +470,18 @@ arriving id partial =
                     Loading id partial
 
                 _ ->
-                    Loaded id (roundFrom id summary rawLaps (eventsOf partial) partial.geometry)
+                    Loaded id (roundFrom maps summary rawLaps (eventsOf partial) partial.geometry)
 
         _ ->
             Loading id partial
 
 
-geometryArrived : String -> Geometry -> RoundId -> Partial -> Round
-geometryArrived circuit geometry id partial =
+geometryArrived : CircuitMaps -> String -> Geometry -> RoundId -> Partial -> Round
+geometryArrived maps circuit geometry id partial =
     case partial.geometry of
         Fetching asked ->
             if asked == circuit then
-                arriving id { partial | geometry = Decoded geometry }
+                arriving maps id { partial | geometry = Decoded geometry }
 
             else
                 Loading id partial
@@ -512,8 +529,8 @@ didNotArrive key error round =
         round
 
 
-roundFrom : RoundId -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
-roundFrom id summary rawLaps timelineEvents geometry =
+roundFrom : CircuitMaps -> Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
+roundFrom maps summary rawLaps timelineEvents geometry =
     let
         replay =
             summary.startingGrid.entries
@@ -535,7 +552,7 @@ roundFrom id summary rawLaps timelineEvents geometry =
     , snapshot = snapshotOf replay
     , pitCycles = pitCycles
     , energy = energy
-    , track = trackOf id summary.track geometry
+    , track = trackOf maps summary.track geometry
     , timeline = Timeline.fromList timelineEvents
     }
 
@@ -575,13 +592,13 @@ too: the load gates on the geometry, so reaching this arm means a gate was
 opened elsewhere.
 
 -}
-trackOf : RoundId -> Wec.Track -> Awaited -> Tracker.Track
-trackOf id track geometry =
+trackOf : CircuitMaps -> Wec.Track -> Awaited -> Tracker.Track
+trackOf maps track geometry =
     case track.circuit of
         Just "le_mans" ->
-            case geometry of
-                Decoded lap ->
-                    Tracker.onCircuit (LeMansLayout.layout id.season lap) { direction = lap.direction, config = track.config }
+            case ( maps.leMans, geometry ) of
+                ( Just map, Decoded lap ) ->
+                    Tracker.onCircuit (LeMansLayout.layout map lap) { direction = lap.direction, config = track.config }
 
                 _ ->
                     Tracker.fromConfig track.config
@@ -650,11 +667,11 @@ keyOf id =
 already in one, from `/static/geometry/` if it is not -- or wants nothing, being
 a circuit with no decoder here.
 -}
-awaiting : Wec.Event -> Dict.Dict String Geometry -> ( Awaited, Maybe String )
-awaiting summary cache =
+awaiting : CircuitMaps -> Wec.Event -> Dict.Dict String Geometry -> ( Awaited, Maybe String )
+awaiting maps summary cache =
     case summary.track.circuit of
         Just circuit ->
-            case decoderFor circuit of
+            case decoderFor maps circuit of
                 Nothing ->
                     ( Undrawn, Nothing )
 
@@ -674,8 +691,8 @@ awaiting summary cache =
 `trackOf` matches the same words; `geometry-contract.spec.ts` keeps them in
 step, with the words Flix's `Circuit.jsonValue` can send.
 -}
-decoderFor : String -> Maybe (Decoder Geometry)
-decoderFor circuit =
+decoderFor : CircuitMaps -> String -> Maybe (Decoder Geometry)
+decoderFor maps circuit =
     case circuit of
         "barcelona" ->
             Just BarcelonaLayout.decoder
@@ -684,7 +701,7 @@ decoderFor circuit =
             Just CotaLayout.decoder
 
         "le_mans" ->
-            Just LeMansLayout.decoder
+            Maybe.map LeMansLayout.decoder maps.leMans
 
         "monza" ->
             Just MonzaLayout.decoder
@@ -699,9 +716,9 @@ decoderFor circuit =
 {-| The geometry a drawn circuit reads itself from, at the same URL pattern the
 manufacturer table uses, named by the word the summary sends for it.
 -}
-getGeometry : { season : Int, id : String } -> String -> Cmd Msg
-getGeometry key circuit =
-    case decoderFor circuit of
+getGeometry : CircuitMaps -> { season : Int, id : String } -> String -> Cmd Msg
+getGeometry maps key circuit =
+    case decoderFor maps circuit of
         Just decoder ->
             Http.get
                 { url = "/static/geometry/" ++ circuit ++ ".geojson"

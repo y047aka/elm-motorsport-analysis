@@ -59,7 +59,7 @@ test("a circuit's directory is named by the word the app draws it by", () => {
 
 test('the circuits drawn and decoded are one list', () => {
   const shared = readSource('app/src/Shared.elm');
-  const decoded = [...clause(shared, 'decoderFor circuit =', '\n\n\n').matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
+  const decoded = [...clause(shared, 'decoderFor maps circuit =', '\n\n\n').matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
   expect(decoded.length, 'decoderFor decodes no circuit name').toBeGreaterThan(0);
   expect(decoded.sort(), 'decoderFor decodes something other than what trackOf draws').toEqual(drawnNames().sort());
 });

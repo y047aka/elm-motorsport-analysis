@@ -8,25 +8,21 @@ import Expect
 import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector
+import Motorsport.TestHelpers.LeMans as LeMansFixture
 import Motorsport.TestHelpers.Survey.Cota as CotaBytes
-import Motorsport.TestHelpers.Survey.LeMans as LeMansBytes
 import Motorsport.Wec.Circuit.Cota.Layout as Cota
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
-import Motorsport.Wec.Circuit.LeMans.Layout as LeMans
 import Test exposing (Test, describe, test)
 
 
 tests : Test
 tests =
-    case ( read Cota.decoder CotaBytes.text, read LeMans.decoder LeMansBytes.text ) of
-        ( Ok cota, Ok leMans ) ->
+    case ( read Cota.decoder CotaBytes.text, LeMansFixture.layout ) of
+        ( Ok cota, Ok reference ) ->
             let
                 drawing =
                     Cota.layout cota
-
-                reference =
-                    LeMans.layout 2025 leMans
             in
             describe "Motorsport.Wec.Circuit.Cota.Layout"
                 [ test "the lap is the length the circuit measures it at" <|
@@ -88,7 +84,7 @@ tests =
         ( cotaRead, leMansRead ) ->
             test "the geometry the app serves decodes" <|
                 \_ ->
-                    problems [ cotaRead, leMansRead ]
+                    problems [ cotaRead ] ++ problems [ leMansRead ]
                         |> Expect.equal []
 
 

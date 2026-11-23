@@ -14,11 +14,10 @@ import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Chart.Tracker.Config exposing (Share)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
-import Motorsport.TestHelpers.Survey.LeMans as LeMansBytes
+import Motorsport.TestHelpers.LeMans as LeMansFixture
 import Motorsport.TestHelpers.Survey.Monza as MonzaBytes
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
-import Motorsport.Wec.Circuit.LeMans.Layout as LeMans
 import Motorsport.Wec.Circuit.Monza.Layout as Monza
 import Test exposing (Test, describe, test)
 
@@ -41,14 +40,11 @@ shares =
 
 tests : Test
 tests =
-    case ( read Monza.decoder MonzaBytes.text, read LeMans.decoder LeMansBytes.text ) of
-        ( Ok monza, Ok leMans ) ->
+    case ( read Monza.decoder MonzaBytes.text, LeMansFixture.layout ) of
+        ( Ok monza, Ok reference ) ->
             let
                 drawing =
                     Monza.layout monza shares
-
-                reference =
-                    LeMans.layout 2025 leMans
             in
             describe "Motorsport.Wec.Circuit.Monza.Layout"
                 [ test "the lap is the length the circuit measures it at" <|
@@ -114,7 +110,7 @@ tests =
         ( monzaRead, leMansRead ) ->
             test "the geometry the app serves decodes" <|
                 \_ ->
-                    problems [ monzaRead, leMansRead ]
+                    problems [ monzaRead ] ++ problems [ leMansRead ]
                         |> Expect.equal []
 
 

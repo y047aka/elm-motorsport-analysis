@@ -1,15 +1,12 @@
 module Motorsport.Wec.Circuit.LeMans.LayoutTest exposing (tests)
 
-{-| The Le Mans drawing, built from the geometry bytes the app serves, read
-through the app's own decoder.
+{-| The Le Mans drawing, built from the geometry bytes the app serves and the map record its bundle carries, read through the app's own decoders.
 -}
 
 import Expect
-import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Sector as Sector
-import Motorsport.TestHelpers.Survey.LeMans as LeMansBytes
-import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
+import Motorsport.TestHelpers.LeMans as LeMansFixture
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..))
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
@@ -18,16 +15,16 @@ import Test exposing (Test, describe, test)
 
 tests : Test
 tests =
-    case read LeMansBytes.text of
-        Ok leMans ->
+    case ( LeMansFixture.map, LeMansFixture.geometry ) of
+        ( Ok map, Ok leMans ) ->
             let
-                layout season =
-                    LeMansLayout.layout season leMans
+                drawing =
+                    LeMansLayout.layout map leMans
             in
             describe "Motorsport.Wec.Circuit.LeMans.Layout"
                 [ test "the lap is the length Al Kamel measures it at" <|
                     \_ ->
-                        Shape.length (layout 2025).shape
+                        Shape.length drawing.shape
                             |> Expect.within (Expect.Absolute 0.05) 13625.7
                 , test "the centreline runs forward round the lap, from the finish line" <|
                     \_ ->
@@ -43,25 +40,22 @@ tests =
                                 [ \( first, last ) -> Maybe.map .lat first |> Expect.equal (Maybe.map .lat last)
                                 , \( first, last ) -> Maybe.map .lon first |> Expect.equal (Maybe.map .lon last)
                                 ]
-                , test "every season's lines stand in the order a car reaches them" <|
+                , test "the sectors end where the 2026 map puts its intermediates" <|
                     \_ ->
-                        [ 2024, 2025, 2026 ]
-                            |> List.map
-                                (\season ->
-                                    let
-                                        lines =
-                                            (layout season).timingLines
-                                    in
-                                    increasing (Sector.values lines.sectors)
-                                        && increasing (List.filterMap identity (distances lines.miniSectors))
-                                )
-                            |> Expect.equal [ True, True, True ]
+                        Sector.values drawing.timingLines.sectors
+                            |> Expect.equal [ 1900.7, 7672.13, Shape.length drawing.shape ]
+                , test "the map's lines stand in the order a car reaches them" <|
+                    \_ ->
+                        ( increasing (Sector.values drawing.timingLines.sectors)
+                        , increasing (List.filterMap identity (distances drawing.timingLines.miniSectors))
+                        )
+                            |> Expect.equal ( True, True )
                 , test "the lengths it is drawn at are the ones the tracker was measured at" <|
                     \_ ->
                         -- The reference set: every other circuit's lengths are read as
                         -- a fraction of these, and a Le Mans snapshot moves with any of
                         -- them.
-                        (layout 2025).lengths
+                        drawing.lengths
                             |> Expect.equal
                                 { compact =
                                     { margin = 150
@@ -96,16 +90,15 @@ tests =
                                 }
                 ]
 
-        Err problem ->
-            test "the geometry the app serves decodes" <|
+        ( Err problem, _ ) ->
+            test "the map record the bundle carries decodes" <|
                 \_ ->
                     Expect.fail problem
 
-
-read : String -> Result String Geometry
-read text =
-    Decode.decodeString LeMansLayout.decoder text
-        |> Result.mapError Decode.errorToString
+        ( _, Err problem ) ->
+            test "the geometry the app serves decodes" <|
+                \_ ->
+                    Expect.fail problem
 
 
 increasing : List Float -> Bool
