@@ -1,14 +1,7 @@
 {
-  "circuit": "le_mans",
+  "circuit": "Circuit des 24 Heures du Mans",
   "season": 2026,
-  "document": {
-    "file": "Circuit_Map_2026.pdf",
-    "event": "24h Le Mans",
-    "circuit": "Le Mans",
-    "version": "V3-2026",
-    "issued": "2026-06-03T10:05",
-    "printed": "V3-2026 3/6/2026 10:05"
-  },
+  "issued": "2026-06-03T10:05",
   "lengths": {
     "centerline": { "metres": 13625.70, "printed": "Centerline: 13.625,70 m" },
     "lapByPits": { "metres": 13597.27, "printed": "Lap by Pits: 13.597,27 m" },
@@ -68,5 +61,15 @@
   ],
   "corners": 33,
   "miniPoints": 35,
-  "zones": 9
+  "zones": [
+    { "name": "ZONE 1", "from": "FINISH LINE", "to": "Z4", "colour": "#e67f80" },
+    { "name": "ZONE 2", "from": "Z4", "to": "IP-1", "colour": "#9282af" },
+    { "name": "ZONE 3", "from": "IP-1", "to": "Z12", "colour": "#d4dd4e" },
+    { "name": "ZONE 4", "from": "Z12", "to": "A7-1", "colour": "#51b8a5" },
+    { "name": "ZONE 5", "from": "A7-1", "to": "A8-1", "colour": "#eb894a" },
+    { "name": "ZONE 6", "from": "A8-1", "to": "SCL-B", "colour": "#71bb66" },
+    { "name": "ZONE 7", "from": "SCL-B", "to": "PORSCHE IN", "colour": "#ee9597" },
+    { "name": "ZONE 8", "from": "PORSCHE IN", "to": "PORSCHE OUT", "colour": "#78bddd" },
+    { "name": "ZONE 9", "from": "PORSCHE OUT", "to": "FINISH LINE", "colour": "#40498c" }
+  ]
 }

@@ -1,14 +1,7 @@
 {
-  "circuit": "monza",
+  "circuit": "Autodromo Nazionale Monza",
   "season": 2026,
-  "document": {
-    "file": "Circuit_Map_v2.pdf",
-    "event": "6 Hours of Monza 2026",
-    "circuit": "Monza",
-    "version": "v2",
-    "issued": "2026-08-26T12:25",
-    "printed": "v2. 26.08.2026 12:25"
-  },
+  "issued": "2026-08-26T12:25",
   "lengths": {
     "centerline": { "metres": 5793, "printed": "Centerline: 5.793 m." },
     "lapByPits": { "metres": 5792, "printed": "Lap by Pits: 5.792 m." },
@@ -22,5 +15,10 @@
     "pitIn": { "metres": 5707, "printed": "Pit In at 5.707 m." }
   },
   "drawn": ["FL", "Pit FL", "TS", "i1", "i2", "Pit In", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "FL", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "FL", "colour": "#e20258" }
+  ],
   "corners": 11
 }

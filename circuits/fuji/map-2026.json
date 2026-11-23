@@ -1,14 +1,7 @@
 {
-  "circuit": "fuji",
+  "circuit": "Fuji Speedway",
   "season": 2026,
-  "document": {
-    "file": "Fuji_v1.pdf",
-    "event": "6 Hours of Fuji 2026",
-    "circuit": "Fuji Speedway",
-    "version": "v1",
-    "issued": "2025-12-03T14:25",
-    "printed": "v1 3.12.2025 14:25"
-  },
+  "issued": "2025-12-03T14:25",
   "lengths": {
     "centerline": { "metres": 4563, "printed": "Centerline: 4.563 m." },
     "lapByPits": { "metres": 4571, "printed": "Lap by Pits: 4.571 m." },
@@ -22,5 +15,10 @@
     "pitIn": { "metres": 4526, "printed": "Pit In at: 4.526 m." }
   },
   "drawn": ["FL", "Start Line", "TS", "SC L1", "SC L2", "i1", "i2", "Pit in", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "FL", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "FL", "colour": "#e20258" }
+  ],
   "corners": 16
 }

@@ -1,14 +1,7 @@
 {
-  "circuit": "barcelona",
+  "circuit": "Circuit de Barcelona-Catalunya",
   "season": 2026,
-  "document": {
-    "file": "Circuit_Map_v1.pdf",
-    "event": "6 Hours of Barcelona 2026",
-    "circuit": "Barcelona-Catalunya",
-    "version": "v1",
-    "issued": "2026-08-26T12:25",
-    "printed": "v1 26.08.2026 12:25"
-  },
+  "issued": "2026-08-26T12:25",
   "lengths": {
     "centerline": { "metres": 4657, "printed": "Centerline: 4.657 m." },
     "lapByPits": { "metres": 4636, "printed": "Lap by Pits: 4.636 m." },
@@ -23,5 +16,10 @@
     "pitIn": { "metres": 4580, "printed": "Pit In at: 4.580 m." }
   },
   "drawn": ["FL", "Pit FL", "TS", "SCL 1", "SCL 2", "i1", "i2", "Pit in", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "FL", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "FL", "colour": "#e20258" }
+  ],
   "corners": 14
 }

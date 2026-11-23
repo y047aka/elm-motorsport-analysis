@@ -55,10 +55,11 @@ How the drawing places a line the map gives no distance for is app-side: `Tracke
 
 ## The maps' figures, kept as read
 
-`<word>/map-<season>.json` is what one of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository and the record names it, its version and the date it was issued.
+`<word>/map-<season>.json` is what one of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository, and the record keeps the date the map was issued and the circuit's full name.
 Nothing reads these files yet: the configs and the `Layout` modules still hold their own figures, and where the two disagree the record is not yet the one obeyed.
 Every figure is kept twice, as `metres` and as the map printed it, because the print carries the precision the map was written to (0.01 m at Le Mans, whole metres elsewhere) and its decimal comma.
 `lengths` and `lines` hold only what the map gives a distance for, every line measured from the finish line; `drawn` names what it draws without one, and lists such as Le Mans's timing loops are kept in the map's own order.
+`sectors` and Le Mans's `zones` are the stretches the map colours, each bounded by the drawn labels its colour changes at; a colour is sampled off the stretch's own label, since the shared template's labels print one colour on every map where its lines are rendered a little differently on each.
 A map's figures need not agree with one another: Lap by Pits should be the centreline less the track between Pit In and Pit Out plus the pit lane, and 2026's Fuji map misses that by 9 m and Barcelona's by 5.2 m.
 
 ## The links into `backend/src`

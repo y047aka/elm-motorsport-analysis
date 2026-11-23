@@ -1,14 +1,7 @@
 {
-  "circuit": "cota",
+  "circuit": "Circuit of The Americas",
   "season": 2026,
-  "document": {
-    "file": "Circuit_Map_v3.pdf",
-    "event": "Lone Star Le Mans 2026",
-    "circuit": "Circuit of The Americas",
-    "version": "v3",
-    "issued": "2026-09-02T17:20",
-    "printed": "v3 2.09.26 17:20"
-  },
+  "issued": "2026-09-02T17:20",
   "lengths": {
     "centerline": { "metres": 5513, "printed": "Centerline: 5.513 m." },
     "lapByPits": { "metres": 5454, "printed": "Lap by Pits: 5.454 m." },
@@ -22,5 +15,10 @@
     "pitIn": { "metres": 5430, "printed": "Pit In at: 5.430 m." }
   },
   "drawn": ["The Line", "Start Line", "TS", "SC L1", "SC L2", "i1", "i2", "Pit In", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "The Line", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "The Line", "colour": "#e20258" }
+  ],
   "corners": 20
 }
