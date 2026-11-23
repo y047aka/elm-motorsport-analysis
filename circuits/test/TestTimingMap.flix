@@ -85,25 +85,28 @@ pub mod TestTimingMap {
     /// quotes it, which is what makes the refusal readable as the circuit's
     /// claim rather than the report's invention.
     @Test
-    def testTheDerivedMapRefusesLeMansWithTheAuthoredReason(): Unit \ Assert =
-        match (Circuit.byWord("le_mans"), mapOf("le_mans")) {
-            case (Some(leMans), Some(TimingMap.PerSeason(reason))) =>
-                match leMans#sectors#eachSeason {
-                    case Some(authored) =>
-                        Assert.assertTrueWithMsg(
-                            reason == authored,
-                            "the derivation quotes a different refusal from the one the config states"
-                        )
-                    case None =>
-                        Assert.assertTrueWithMsg(false, "Le Mans's config names no reason for re-issuing")
-                }
-            case (Some(_), Some(_)) =>
+    def testTheDerivedMapRefusesAReissuedMapWithTheAuthoredReason(): Unit \ Assert =
+        let reason = "the map is re-issued every season";
+        let reissued = {
+            relation = Some(1i64),
+            box = None,
+            pit = None,
+            word = "reissued",
+            timedFrom = "start-finish",
+            timingLine = None,
+            lap = 5513.0,
+            sectors = {published = None, eachSeason = Some(reason)},
+            file = "nowhere.geojson",
+            survey = "A circuit"
+        };
+        match Circuit.timingMapOf(reissued) {
+            case TimingMap.PerSeason(quoted) =>
                 Assert.assertTrueWithMsg(
-                    false,
-                    "the derivation answers Le Mans with something other than a refusal"
+                    quoted == reason,
+                    "the derivation quotes a different refusal from the one the config states"
                 )
             case _ =>
-                Assert.assertTrueWithMsg(false, "no Le Mans is authored, or no case answers the word it authors")
+                Assert.assertTrueWithMsg(false, "the derivation answers a re-issued map with something other than a refusal")
         }
 
     /// The words a config authors and the cases a report answers for name each

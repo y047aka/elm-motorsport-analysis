@@ -58,7 +58,7 @@ SELECT DISTINCT class FROM entries;          -- against the era's grid
 
 - **A manufacturer the hand-written table has no row for stops nothing** — the car keeps the feed's name and takes a colour from its number, and no build fails. Add a row to `manufacturers.json`.
 - **A Le Mans feed split other than fifteen mini-sectors** reads as `NoMiniSectors` (`byMiniSectorDecoder` requires all fifteen keys) — check the mini-sector columns of a new-season Le Mans CSV before believing a round drawn without them.
-- **Whether the circuit's timing lines still stand** is `nix run .#geometry-timing-lines -- <season>/<id> --against <prev-season>`, answered once the round is loaded. An `eachSeason` circuit like Le Mans is refused by quoting the config's reason — the expected answer, not a failure.
+- **Whether the circuit's timing lines still stand** is `nix run .#geometry-timing-lines -- <season>/<id> --against <prev-season>`, answered once the round is loaded. An `eachSeason` circuit is refused by quoting the config's reason — the expected answer, not a failure.
 
 ## 5. Photographs and kept files
 

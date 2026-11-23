@@ -135,8 +135,11 @@ pub mod Circuit {
     pub def lengthTolerance(): Float64 = 0.02
 
     /// Le Mans. The relation tags one node `start-finish`, which is where the organiser
-    /// measures from and so where the lap's zero stands; its map is re-issued every season
-    /// and its lines differ between them, so no `sectors` travel in the geometry.
+    /// measures from and so where the lap's zero stands.
+    /// The organiser re-issues its map every season and moves its lines by a few metres
+    /// between them; the lap and its three stretches are the latest map's
+    /// (`le_mans/map-2026.json`), i1 at 1,900.70 m and i2 at 7,672.13 m, and serve every
+    /// season.
     def leMans(): Circuit = {
         relation = Some(2126739i64),
         box      = None,
@@ -145,7 +148,13 @@ pub mod Circuit {
         timedFrom = "start-finish",
         timingLine = None,
         lap      = 13625.7,
-        sectors  = {published = None, eachSeason = Some("the organiser's map is re-issued every year and its lines differ between seasons")},
+        sectors  = {
+            published = Some({
+                source = "the organiser's 2026 circuit map",
+                stretches = 1900.7 :: 5771.43 :: 5953.57 :: Nil
+            }),
+            eachSeason = None
+        },
         file     = "app/static/geometry/le_mans.geojson",
         survey   = "The Circuit de la Sarthe"
     }
@@ -296,16 +305,19 @@ pub mod Circuit {
     /// and `Unsurveyed` for a word no config authors.
     pub def timingMap(word: String): TimingMap =
         match byWord(word) {
-            case None => TimingMap.Unsurveyed
-            case Some(circuit) =>
-                match circuit#sectors#published {
-                    case Some(publishes) =>
-                        TimingMap.Published({lapLength = circuit#lap, stretches = publishes#stretches})
-                    case None =>
-                        match circuit#sectors#eachSeason {
-                            case Some(reason) => TimingMap.PerSeason(reason)
-                            case None         => TimingMap.Unsurveyed
-                        }
+            case None          => TimingMap.Unsurveyed
+            case Some(circuit) => timingMapOf(circuit)
+        }
+
+    /// One config's answer, derived the way `timingMap` derives it for a word.
+    pub def timingMapOf(circuit: Circuit): TimingMap =
+        match circuit#sectors#published {
+            case Some(publishes) =>
+                TimingMap.Published({lapLength = circuit#lap, stretches = publishes#stretches})
+            case None =>
+                match circuit#sectors#eachSeason {
+                    case Some(reason) => TimingMap.PerSeason(reason)
+                    case None         => TimingMap.Unsurveyed
                 }
         }
 

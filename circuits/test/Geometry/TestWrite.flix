@@ -55,6 +55,20 @@ pub mod Geometry.TestWrite {
             case Some(circuit) => Ok(Geometry.Write.file(circuit, geometry))
         }
 
+    /// A circuit whose organiser re-issues its map every season, which no config here is.
+    def reissued(): Circuit = {
+        relation = Some(1i64),
+        box = None,
+        pit = None,
+        word = "reissued",
+        timedFrom = "start-finish",
+        timingLine = None,
+        lap = 5513.0,
+        sectors = {published = None, eachSeason = Some("the map is re-issued every season")},
+        file = "nowhere.geojson",
+        survey = "A circuit"
+    }
+
     def says(phrase: String, text: Result[String, String]): Unit \ Assert =
         match text {
             case Ok(file) => Assert.assertTrue(String.contains({substr = phrase}, file))
@@ -126,14 +140,14 @@ pub mod Geometry.TestWrite {
 
     @Test
     def testTheTimingLinesTravelWithTheGeometryOnlyWhenTheCircuitPublishesThem(): Unit \ Assert =
-        // COTA publishes one map for every season, so its authored stretches travel; Le
-        // Mans's map answers for one season only, and its geometry writes no `sectors` at
-        // all rather than one season's lines as though they served every one.
+        // COTA publishes one map for every season, so its authored stretches travel; a map
+        // that answers for one season only writes no `sectors` at all rather than one
+        // season's lines as though they served every one.
         says(
             "        \"sectors\": {\"source\":\"the series' 2026 circuit map\",\"stretches\":[1311,2257,1945]},\n",
             written("cota", drawn())
         );
-        saysNot("sectors", written("le_mans", drawn()))
+        saysNot("sectors", Ok(Geometry.Write.file(reissued(), drawn())))
 
     @Test
     def testAClaimNothingMadeIsLeftUnwritten(): Unit \ Assert =
