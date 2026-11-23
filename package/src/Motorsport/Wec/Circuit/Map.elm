@@ -1,9 +1,9 @@
-module Motorsport.Wec.Circuit.Map exposing (Intermediates, intermediatesDecoder, centreline, line)
+module Motorsport.Wec.Circuit.Map exposing (Intermediates, intermediatesDecoder, centreline, line, inOrder)
 
 {-| A circuit map's record, as the app is served it at `static/circuit-maps/<word>.json`: the figures the map prints, kept by hand off the series' circuit map.
 The circuits project reads the same file for the lap it stretches a survey to and the stretches its geometry carries, so the drawing and the geometry are laid from one set of figures.
 
-@docs Intermediates, intermediatesDecoder, centreline, line
+@docs Intermediates, intermediatesDecoder, centreline, line, inOrder
 
 -}
 
@@ -19,7 +19,7 @@ type alias Intermediates =
     }
 
 
-{-| Reading a record that has to give all three of [`Intermediates`](#Intermediates).
+{-| Reading a record that has to give all three of [`Intermediates`](#Intermediates), in the order a car reaches them.
 -}
 intermediatesDecoder : Decoder Intermediates
 intermediatesDecoder =
@@ -27,6 +27,7 @@ intermediatesDecoder =
         centreline
         (line "intermediate1")
         (line "intermediate2")
+        |> Decode.andThen (\map -> inOrder map.centreline [ map.intermediate1, map.intermediate2 ] map)
 
 
 {-| The lap's length, as the map's `Centerline`.
@@ -41,3 +42,19 @@ centreline =
 line : String -> Decoder Float
 line name =
     Decode.at [ "lines", name, "metres" ] Decode.float
+
+
+{-| A record's figures, refused unless its lines stand in the order a car reaches them and all of them before the finish line closes the lap.
+A drawing laid from lines out of order places every car between them wrong without failing anywhere else.
+-}
+inOrder : Float -> List Float -> a -> Decoder a
+inOrder lap lines figures =
+    let
+        stops =
+            0 :: lines ++ [ lap ]
+    in
+    if List.all identity (List.map2 (<) stops (List.drop 1 stops)) then
+        Decode.succeed figures
+
+    else
+        Decode.fail ("the map's lines do not stand in order round its " ++ String.fromFloat lap ++ " m lap: " ++ String.join ", " (List.map String.fromFloat lines))

@@ -276,7 +276,7 @@ pub mod Circuit {
         "app/static/circuit-maps"
 
     /// A map record read: the centreline is the lap, and the intermediate lines, where the
-    /// map gives both, imply the three stretches.
+    /// map gives both, imply the three stretches. Lines out of order are refused.
     /// A stretch is the difference of two printed distances, and is held to the hundredth
     /// of a metre the most precise map prints, so that it is written as the map prints it
     /// and not as the double the subtraction left.
@@ -288,7 +288,8 @@ pub mod Circuit {
                     season <- wholeAt("season" :: Nil, json);
                     lap    <- metresAt("lengths" :: "centerline" :: "metres" :: Nil, json);
                     i1     <- optionalMetresAt("lines" :: "intermediate1" :: "metres" :: Nil, json);
-                    i2     <- optionalMetresAt("lines" :: "intermediate2" :: "metres" :: Nil, json)
+                    i2     <- optionalMetresAt("lines" :: "intermediate2" :: "metres" :: Nil, json);
+                    _      <- inOrder(lap, List.filterMap(identity, i1 :: i2 :: Nil))
                 ) yield {
                     lap = lap,
                     published = match (i1, i2) {
@@ -301,6 +302,15 @@ pub mod Circuit {
                     }
                 }
         }
+
+    /// The lines a record places stand in the order a car reaches them, all of them before the
+    /// finish line closes the lap: a survey laid from lines out of order fails nowhere else.
+    def inOrder(lap: Float64, lines: List[Float64]): Result[String, Unit] =
+        let stops = List.append(0.0 :: lines, lap :: Nil);
+        if (List.forAll(pair -> match pair { case (one, next) => one < next }, List.zip(stops, List.drop(1, stops))))
+            Ok(())
+        else
+            Err("the map's lines do not stand in order round its ${Util.Format.whole(lap)} m lap")
 
     def hundredth(metres: Float64): Float64 =
         Float64.round(metres * 100.0) / 100.0

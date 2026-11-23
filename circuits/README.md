@@ -56,6 +56,7 @@ How the drawing places a line the map gives no distance for is app-side: `Tracke
 
 `app/static/circuit-maps/<word>.json` is what the latest of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository, and the record keeps the season, the date the map was issued and the circuit's full name.
 It is served beside the geometry because the app reads it too: `Shared` asks for a circuit's record before its geometry, and checks the geometry against the record's centreline. A new map replaces the record, and the geometry is re-laid from it with `regenerate --write`.
+Both readers refuse a record whose lines do not stand in the order a car reaches them, every one before the finish line closes the lap: `Circuit.figuresOf` here, and the map decoders in `Motorsport.Wec.Circuit.Map` app-side.
 A map gives its finish line no degrees, so where OpenStreetMap tags none at the line (Monza, Fuji) the authored place is read off the map itself: the map's drawing laid over the survey, and its drawn lines read against their printed distances, which places the line to some 20 m.
 Every figure is kept twice, as `metres` and as the map printed it, because the print carries the precision the map was written to (0.01 m at Le Mans, whole metres elsewhere) and its decimal comma.
 `lengths` and `lines` hold only what the map gives a distance for, every line measured from the finish line; `drawn` names what it draws without one, and lists such as Le Mans's timing loops are kept in the map's own order.

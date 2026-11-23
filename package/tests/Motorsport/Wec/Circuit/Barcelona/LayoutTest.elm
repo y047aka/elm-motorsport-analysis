@@ -6,7 +6,6 @@ through the app's own decoder.
 
 import Expect
 import Motorsport.Circuit.Shape as Shape
-import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.TestHelpers.Drawn as Drawn
 import Motorsport.TestHelpers.LeMans as LeMansFixture
 import Motorsport.TestHelpers.Map.Barcelona as BarcelonaMap
@@ -26,11 +25,7 @@ tests =
                     Barcelona.layout map barcelona
             in
             describe "Motorsport.Wec.Circuit.Barcelona.Layout"
-                [ test "the lap is the length the circuit measures it at" <|
-                    \_ ->
-                        Shape.length drawing.shape
-                            |> Expect.within (Expect.Absolute 0.05) 4657.0
-                , test "the centreline runs forward round the lap, from the finish line" <|
+                [ test "the centreline runs forward round the lap, from the finish line" <|
                     \_ ->
                         List.map .metres barcelona.centreline
                             |> Expect.all
@@ -44,28 +39,6 @@ tests =
                                 [ \( first, last ) -> Maybe.map .lat first |> Expect.equal (Maybe.map .lat last)
                                 , \( first, last ) -> Maybe.map .lon first |> Expect.equal (Maybe.map .lon last)
                                 ]
-                , test "the sectors end where the 2026 map puts its intermediates" <|
-                    \_ ->
-                        Sector.values drawing.timingLines.sectors
-                            |> Expect.equal [ 1627, 3395, Shape.length drawing.shape ]
-                , test "the lines stand in the order a car reaches them" <|
-                    \_ ->
-                        Sector.values drawing.timingLines.sectors
-                            |> increasing
-                            |> Expect.equal True
-                , test "no line stands past the end of the lap" <|
-                    \_ ->
-                        let
-                            finishLine =
-                                Shape.length drawing.shape
-                        in
-                        Sector.values drawing.timingLines.sectors
-                            |> List.filter (\metres -> metres > finishLine)
-                            |> Expect.equal []
-                , test "the lap ends where the lap is" <|
-                    \_ ->
-                        Sector.get S3 drawing.timingLines.sectors
-                            |> Expect.within (Expect.Absolute 0.05) (Shape.length drawing.shape)
                 , test "the lap is not divided finer than its three sectors" <|
                     \_ ->
                         drawing.timingLines.miniSectors

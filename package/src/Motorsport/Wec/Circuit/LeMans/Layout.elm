@@ -37,7 +37,7 @@ type alias CircuitMap =
     }
 
 
-{-| Reading a map record, which has to give every figure in [`CircuitMap`](#CircuitMap).
+{-| Reading a map record, which has to give every figure in [`CircuitMap`](#CircuitMap), in the order a car reaches them.
 -}
 mapDecoder : Decoder CircuitMap
 mapDecoder =
@@ -49,6 +49,7 @@ mapDecoder =
         (Map.line "porscheOut")
         (Map.line "fordIn")
         (Map.line "fordOut")
+        |> Decode.andThen (\map -> Map.inOrder map.centreline [ map.intermediate1, map.intermediate2, map.porscheIn, map.porscheOut, map.fordIn, map.fordOut ] map)
 
 
 {-| Reading the served geometry, checked against the centreline the map gives.

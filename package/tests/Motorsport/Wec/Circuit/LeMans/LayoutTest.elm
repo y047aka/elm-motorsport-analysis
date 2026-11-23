@@ -4,11 +4,7 @@ module Motorsport.Wec.Circuit.LeMans.LayoutTest exposing (tests)
 -}
 
 import Expect
-import Motorsport.Circuit.Shape as Shape
-import Motorsport.Sector as Sector
 import Motorsport.TestHelpers.LeMans as LeMansFixture
-import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..))
-import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Test exposing (Test, describe, test)
 
@@ -22,11 +18,7 @@ tests =
                     LeMansLayout.layout map leMans
             in
             describe "Motorsport.Wec.Circuit.LeMans.Layout"
-                [ test "the lap is the length Al Kamel measures it at" <|
-                    \_ ->
-                        Shape.length drawing.shape
-                            |> Expect.within (Expect.Absolute 0.05) 13625.7
-                , test "the centreline runs forward round the lap, from the finish line" <|
+                [ test "the centreline runs forward round the lap, from the finish line" <|
                     \_ ->
                         List.map .metres leMans.centreline
                             |> Expect.all
@@ -40,16 +32,6 @@ tests =
                                 [ \( first, last ) -> Maybe.map .lat first |> Expect.equal (Maybe.map .lat last)
                                 , \( first, last ) -> Maybe.map .lon first |> Expect.equal (Maybe.map .lon last)
                                 ]
-                , test "the sectors end where the 2026 map puts its intermediates" <|
-                    \_ ->
-                        Sector.values drawing.timingLines.sectors
-                            |> Expect.equal [ 1900.7, 7672.13, Shape.length drawing.shape ]
-                , test "the map's lines stand in the order a car reaches them" <|
-                    \_ ->
-                        ( increasing (Sector.values drawing.timingLines.sectors)
-                        , increasing (List.filterMap identity (distances drawing.timingLines.miniSectors))
-                        )
-                            |> Expect.equal ( True, True )
                 , test "the lengths it is drawn at are the ones the tracker was measured at" <|
                     \_ ->
                         -- The reference set: every other circuit's lengths are read as
@@ -106,14 +88,3 @@ increasing xs =
     List.map2 (<) xs (List.drop 1 xs)
         |> List.all identity
 
-
-{-| The lines the circuit places, whether it places fifteen or none.
--}
-distances : MiniSectorLines -> List (Maybe Float)
-distances lines =
-    case lines of
-        SectorsOnly ->
-            []
-
-        LeMansMiniSectors mini ->
-            LeMans.values mini

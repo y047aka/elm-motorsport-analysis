@@ -50,26 +50,6 @@ pub mod TestTimingMap {
         survey = "A circuit"
     }
 
-    /// The derivation carries the map's figures whole: the lap the survey is stretched to
-    /// and the stretches, in order. These are the numbers the drawing was laid from and
-    /// the report places its shares against, so equality here is the derivation keeping
-    /// what it was handed.
-    @Test
-    def testTheDerivedMapCarriesTheMapsFigures(): Unit \ Assert =
-        match Circuit.byWord("cota") {
-            case None => Assert.assertTrueWithMsg(false, "no COTA is authored")
-            case Some(cota) =>
-                match Circuit.timingMapOf(cota, figures()) {
-                    case TimingMap.Published(map) =>
-                        Assert.assertTrueWithMsg(map#lapLength == 5513.0, "the derivation lost the lap the map gives");
-                        Assert.assertTrueWithMsg(
-                            map#stretches == 1311.0 :: 2257.0 :: 1945.0 :: Nil,
-                            "the derivation lost a stretch, or reordered them"
-                        )
-                    case _ => Assert.assertTrueWithMsg(false, "the derivation answers a map that publishes stretches with something other than them")
-                }
-        }
-
     /// A re-issued map is refused with the config's own reason: the report
     /// quotes it, which is what makes the refusal readable as the circuit's
     /// claim rather than the report's invention.

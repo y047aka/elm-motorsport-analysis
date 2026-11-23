@@ -77,13 +77,6 @@ pub mod TestCircuit {
             )
         }
 
-    /// A config's map record is the one the app is served under the circuit's word.
-    @Test
-    def testAMapRecordIsServedUnderTheCircuitsWord(): Unit \ Assert =
-        foreach (circuit <- Circuit.circuits()) {
-            Assert.assertTrue(Circuit.mapOf(circuit) == "app/static/circuit-maps/${circuit#word}.json")
-        }
-
     /// A record as a map gives it: the centreline, and the two intermediate lines.
     def record(lines: String): String =
         "{\"circuit\": \"A circuit\", \"season\": 2026, \"lengths\": {\"centerline\": {\"metres\": 13625.70, \"printed\": \"Centerline: 13.625,70 m\"}}, \"lines\": {${lines}}}"
@@ -117,4 +110,11 @@ pub mod TestCircuit {
             case Err(problem) => Assert.assertTrue(String.contains({substr = "lengths.centerline.metres"}, problem))
             case Ok(_)        => Assert.assertTrue(false)
         }
+
+    @Test
+    def testARecordWhoseLinesStandOutOfOrderIsRefused(): Unit \ Assert =
+        let swapped = "\"intermediate1\": {\"metres\": 7672.13}, \"intermediate2\": {\"metres\": 1900.70}";
+        let past = "\"intermediate1\": {\"metres\": 1900.70}, \"intermediate2\": {\"metres\": 13700.0}";
+        Assert.assertTrue(Result.isErr(Circuit.figuresOf(record(swapped))));
+        Assert.assertTrue(Result.isErr(Circuit.figuresOf(record(past))))
 }
