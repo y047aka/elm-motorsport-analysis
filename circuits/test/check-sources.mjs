@@ -48,7 +48,7 @@ const utilFiles = 'circuits/src/Util/Files.flix';
 const cliErrors = 'circuits/src/Cli/Errors.flix';
 const timingLinesFiles = 'circuits/src/TimingLines/Files.flix';
 const regenerate = 'circuits/src/Regenerate.flix';
-const overpass = 'circuits/src/Overpass.flix';
+const service = 'circuits/src/Service.flix';
 const geodesy = 'circuits/src/Geodesy.flix';
 const backendCircuit = 'backend/src/Motorsport/Circuit.flix';
 const circuitsCircuit = 'circuits/src/Motorsport/Circuit.flix';
@@ -81,16 +81,16 @@ check('the project spells its sphere once', () => {
 // reading that asked only the status would hand that page on as a geometry.
 check('one source reads what a service answered with', () => {
   const reading = spelling(/Net\.HttpResponse\./);
-  deepStrictEqual(reading, [overpass]);
+  deepStrictEqual(reading, [service]);
 });
 
-check('the services asked are the survey runners', () => {
-  deepStrictEqual(spelling(/Https\.send\(/), [overpass]);
+check('every service is sent its request through that one source', () => {
+  deepStrictEqual(spelling(/Https\.send\(/), [service]);
 });
 
 check('the sentence a failed answer is printed in is spelled once', () => {
   const spelled = spelling(/answered( \$\{| with something that is not JSON)/);
-  deepStrictEqual(spelled, [overpass]);
+  deepStrictEqual(spelled, [service]);
 });
 
 // The failure. A read's failure cannot tell a missing file from one that would

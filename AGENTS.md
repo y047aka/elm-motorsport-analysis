@@ -32,7 +32,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey`, `diff`, `regenerate`, `probe`, `timing-lines`. Paths resolve from where the command is run; what each fence answers is `circuits/README.md`'s, and each word's flags its module's header |
+| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey`, `diff`, `regenerate`, `elevation`, `probe`, `timing-lines`. Paths resolve from where the command is run; what each fence answers is `circuits/README.md`'s, and each word's flags its module's header |
 | `nix run .#geometry-test` | The project's `flix test` — readings off fixtures, no network, no database, no files written — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
 | `nix run .#geometry-timing-lines` | The `timing-lines` word on its own, computing in no database: `<season>/<id> [--against <season>] [--tolerance <metres>]` |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/backend`, both the CLI and the server |

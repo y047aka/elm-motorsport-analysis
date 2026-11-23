@@ -273,7 +273,8 @@ pub mod Regenerate {
     def surveyed(circuit: Circuit, answer: String, mode: Mode): Result[String, Verdict] \ { IO, Console } =
         match forM(
             figures <- MapRecord.read(circuit);
-            read    <- Survey.geometry(answer, circuit, figures)
+            heights <- Elevation.keptText(circuit);
+            read    <- Survey.geometry(answer, heights, circuit, figures)
         ) yield Geometry.Write.file(circuit, figures, read#geometry) {
             case Err(problem)  => Err("${circuit#word}: ${problem}")
             case Ok(written)   => laid(circuit, written, answer, mode)

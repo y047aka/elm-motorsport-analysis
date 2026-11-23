@@ -49,7 +49,8 @@ pub mod Survey {
         frame          = Frame,
         direction      = String,
         surveyedAt     = Option[String],
-        surveyedLength = Option[Float64]
+        surveyedLength = Option[Float64],
+        elevation      = Option[Elevation.Profile]
     }
 
     /// Which way a car goes round the drawing, as the geometry says it goes.
@@ -71,11 +72,24 @@ pub mod Survey {
         geometry = Survey.Geometry
     }
 
-    pub def geometry(text: String, circuit: Circuit, figures: Circuit.Figures): Result[String, Read] =
+    ///
+    /// `elevation` is the kept samples' text, where the circuit keeps any: every point
+    /// the survey keeps is given its height out of them, or the circuit is refused.
+    pub def geometry(text: String, elevation: Option[String], circuit: Circuit, figures: Circuit.Figures): Result[String, Read] =
         forM(
             reading  <- Overpass.Answer.read(text);
-            surveyed <- geometryOf(reading, circuit, figures)
-        ) yield {text = text, answer = reading, geometry = surveyed}
+            surveyed <- geometryOf(reading, circuit, figures);
+            heights  <- heightsOf(elevation, circuit, surveyed)
+        ) yield {text = text, answer = reading, geometry = {elevation = heights | surveyed}}
+
+    def heightsOf(elevation: Option[String], circuit: Circuit, surveyed: Geometry): Result[String, Option[Elevation.Profile]] =
+        match elevation {
+            case None => Ok(None)
+            case Some(text) =>
+                Elevation.read(text)
+                    |> Result.flatMap(kept -> Elevation.profileOf(circuit, kept, surveyed))
+                    |> Result.map(profile -> Some(profile))
+        }
 
     /// The lap, the pit lane and the frame, chained out of an answer already read. Two
     /// groundings arrive here: a relation's members, and a box's raceway ways.
@@ -643,7 +657,8 @@ pub mod Survey {
                         frame = {origin = northWest(both), parallel = parallel},
                         direction = turnDirection(lapPoints),
                         surveyedAt = reading#surveyedAt,
-                        surveyedLength = Some(measured)
+                        surveyedLength = Some(measured),
+                        elevation = None
                     })
         }
     }
@@ -868,7 +883,8 @@ pub mod Survey {
                 Cli.Args.outcomeOf(
                     forM(
                         figures <- MapRecord.read(asked#circuit) |> Result.mapErr(CliError.Reading);
-                        read    <- surveyed(asked, spelled, figures);
+                        heights <- Elevation.keptText(asked#circuit) |> Result.mapErr(CliError.Reading);
+                        read    <- surveyed(asked, spelled, heights, figures);
                         _       <- if (asked#fetch) keep(asked, read) else Ok(())
                     ) yield laid(asked, Geometry.Write.file(asked#circuit, figures, read#geometry))
                 )
@@ -915,8 +931,8 @@ pub mod Survey {
     /// laying, so a runner's HTML page, a reply stopped half way through its JSON and
     /// an answer whose relation will not chain into a lap are each met in the words
     /// the survey itself would say them in.
-    def surveyed(asked: Request, spelled: String, figures: Circuit.Figures): Result[CliError, Read] =
-        match geometry(spelled, asked#circuit, figures) {
+    def surveyed(asked: Request, spelled: String, heights: Option[String], figures: Circuit.Figures): Result[CliError, Read] =
+        match geometry(spelled, heights, asked#circuit, figures) {
             case Ok(read) => Ok(read)
             case Err(problem) =>
                 if (asked#fetch)

@@ -7,17 +7,15 @@
 /// that a run outlasts a runner's moment of being busy.
 ///
 /// What is asked is `Overpass.Query`'s and what comes back is `Overpass.Answer`'s; this
-/// module is the walking of the runners, the pace between the asks, and the one reading
-/// of what a service *answered with*.
+/// module is the walking of the runners. The pace between the asks and the reading of
+/// what a runner answered with are `Service`'s, shared with every other service asked.
 ///
 /// OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; an answer read
 /// here is a derivative of their tags.
 pub mod Overpass {
 
-    use IoError.IoError
     use Circuit.Circuit
     use Net.HttpRequest.HttpRequest
-    use Net.HttpResponse.HttpResponse
     use Net.Https.Https
     use Overpass.Answer.Answer
     use Time.Clock
@@ -32,30 +30,11 @@ pub mod Overpass {
     /// How many times each runner is asked before the walk gives up on it.
     pub def tries(): Int32 = 2
 
-    /// What a run calls itself. A runner's operator reads a log, and an anonymous
-    /// request is a request nobody can tell from a flood.
-    pub def userAgent(): String = "elm-motorsport-analysis/1.0 (circuit geometry)"
-
-    /// The shortest interval between two requests of one run.
-    pub def pace(): Duration = Duration.of(1500, Time.TimeUnit.Milliseconds)
-
     /// How long a runner that just failed is left alone for, longer each time that
     /// same runner is asked again.
     pub def backoff(attempt: Int32): Duration = Duration.of(4000 * attempt, Time.TimeUnit.Milliseconds)
 
     // ------------------------------------------------------------------- the asking
-
-    /// The handlers one run asks through: the User-Agent every request carries, the
-    /// pace between them, and the client underneath.
-    pub def paced(asking: Unit -> a \ ef): a \ (ef - Https) + { IO, Clock } =
-        Net.Https.runWithIO(() ->
-            Net.Https.withDefaultHeaders(headers(), () ->
-                Net.Https.withMinInterval({interval = pace()}, () -> asking())
-            )
-        )
-
-    def headers(): Map[String, List[String]] =
-        Map.insert("User-Agent", userAgent() :: Nil, Map.empty())
 
     /// One query, asked. When every runner has failed the failure carries the last
     /// thing any of them said, which is the only thing a run knows about them.
@@ -65,11 +44,11 @@ pub mod Overpass {
     /// One circuit's relation, asked through the run's handlers, as its text: the survey
     /// keeps those bytes as the runner spelled them.
     pub def askRelation(relation: Int64): Result[String, String] \ { IO, Clock } =
-        paced(() -> ask(Overpass.Query.survey(relation)))
+        Service.paced(() -> ask(Overpass.Query.survey(relation)))
 
     /// One box's raceway ground, asked on the same pace as a relation's survey.
     pub def askBox(extent: String): Result[String, String] \ { IO, Clock } =
-        paced(() -> ask(Overpass.Query.box(extent)))
+        Service.paced(() -> ask(Overpass.Query.box(extent)))
 
     /// One circuit's survey, asked of whichever ground its config names — the relation
     /// it chains from, or the box whose raceway ways it reads. Asked once from here so
@@ -109,39 +88,10 @@ pub mod Overpass {
         }
 
     def send(url: String, question: String): Result[String, String] \ Https =
-        match Https.send(post(url, question)) {
-            case Err(error)   => Err(worded(error))
-            case Ok(response) => answered(response, "Overpass")
-        }
-
-    /// A response, read: the body a service sent when it answered in JSON, or the sentence
-    /// it answered with. Two things make a body no answer — a status that is no success,
-    /// and text that is no JSON — and only the first of them is in the status: a service
-    /// behind a proxy answers a request it let time out as 200 with an HTML page. `asked`
-    /// is who the failure names.
-    def answered(response: HttpResponse, asked: String): Result[String, String] =
-        if (not Net.HttpResponse.isSuccess(response))
-            Err("${asked} answered ${Net.HttpResponse.status(response)}")
-        else
-            kept(Net.HttpResponse.body(response), asked)
+        Service.send(post(url, question), "Overpass")
 
     /// One query as a form post, which is what Overpass reads rather than a query in a
     /// URL: an answer of tens of thousands of points is no URL.
     def post(url: String, question: String): HttpRequest =
         HttpRequest.postWith(url, "data=${Net.HttpLayer.urlEncode(question)}")
-
-    /// A transport failure as the report prints it: which kind, and what the client
-    /// said about it.
-    def worded(error: IoError): String = match error {
-        case IoError(kind, message) => "${kind}: ${message}"
-    }
-
-    /// A body as it is kept, if it is an answer at all: that it opens as JSON is the
-    /// first thing asked of it, before its contents; what it says is read by
-    /// `Overpass.Answer.read`. The refusal names whoever was asked.
-    pub def kept(text: String, asked: String): Result[String, String] =
-        if (String.startsWith({prefix = "{"}, text) or String.startsWith({prefix = "["}, text))
-            Ok(text)
-        else
-            Err("${asked} answered with something that is not JSON")
 }

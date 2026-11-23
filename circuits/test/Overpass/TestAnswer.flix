@@ -110,7 +110,7 @@ pub mod Overpass.TestAnswer {
         }
 
     /// A runner behind a proxy answers a query that timed out with an HTML page and
-    /// a status of 200. The status is `Overpass.kept`'s to refuse; an answer that is
+    /// a status of 200. The status is `Service.kept`'s to refuse; an answer that is
     /// no JSON at all is refused here too, so a text read straight from a file is met
     /// the same way.
     @Test

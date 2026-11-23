@@ -65,12 +65,27 @@ pub mod Geometry {
     pub def pitLane(name: String, text: String): Result[String, List[Place]] =
         match found(text, name, "pit_lane") {
             case Err(problem) => Err(problem)
-            case Ok((_, shape)) =>
+            case Ok((props, shape)) =>
                 match placesOf("pit lane", shape) {
                     case Ok(Nil)     => Err("${name}: the pit lane holds no coordinates")
-                    case Ok(line)    => Ok(line)
+                    case Ok(line)    =>
+                        match heightsFit(props, List.length(line)) {
+                            case Ok(_)        => Ok(line)
+                            case Err(problem) => Err("${name}: the pit lane's ${problem}")
+                        }
                     case Err(problem) => Err("${name}: ${problem}")
                 }
+        }
+
+    /// A line's heights, where it carries any, are one per point: a height out of step
+    /// with its point is drawn at another point's place.
+    def heightsFit(props: Map[String, Json], points: Int32): Result[String, Unit] =
+        match numbersAt("elevation_m", props) {
+            case Err(problem)     => Err(problem)
+            case Ok(None)         => Ok(())
+            case Ok(Some(heights)) =>
+                if (List.length(heights) == points) Ok(())
+                else Err("${List.length(heights)} heights are for ${points} points")
         }
 
     /// The outline's own claims, checked in the order the profile makes them: a
@@ -101,9 +116,10 @@ pub mod Geometry {
                             if (List.length(metres) != points)
                                 Err("${name}: ${List.length(metres)} metres for ${points} points")
                             else
-                                match backwardsIn(metres) {
-                                    case None     => Ok({name = name, props = quoted(basis, props), coords = coords, metres = metres})
-                                    case Some(at) => Err("${name}: metres go backwards at point ${at}")
+                                match (backwardsIn(metres), heightsFit(props, points)) {
+                                    case (Some(at), _)    => Err("${name}: metres go backwards at point ${at}")
+                                    case (None, Err(problem)) => Err("${name}: the outline's ${problem}")
+                                    case (None, Ok(_))    => Ok({name = name, props = quoted(basis, props), coords = coords, metres = metres})
                                 }
                     }
         }

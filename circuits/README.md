@@ -1,6 +1,6 @@
 # circuits
 
-The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out, and one directory per circuit keeping the evidence — the Overpass answer the geometry was written from.
+The geometry pipeline: OpenStreetMap's map data in, a GeoJSON per circuit out, and one directory per circuit keeping the evidence — the Overpass answer the geometry was written from, and where a circuit has them, the heights its places were sampled at.
 It is the Flix project at this directory's root, run through the flake: `.#geometry -- <word>`, `.#geometry-timing-lines` and `.#geometry-test`, whose words `AGENTS.md`'s table lists.
 `-- probe` asks OpenStreetMap before a circuit has a config; `-- timing-lines` reads the timing feed with the decoder the load decodes it with.
 Each module's header says what it reads and refuses; what follows is what crosses them.
@@ -79,10 +79,23 @@ Per-file links show in `git ls-files -s` as mode `120000`.
 
 `.#geometry-test` and `.#flix-test` compile the linked files on either side, which is what proves the links survived the checkout.
 
+## The heights
+
+`elevation <word> --fetch` asks the source the circuit's config names for the height of every place the kept answer holds, and of the zero a turned lap opens at, which no node stands at; it keeps them as `circuits/<word>/elevation.json`.
+Only surveyed places are sampled: a height is never interpolated between two of them, so a long straight carries no height between its ends.
+The survey and the fence read the kept samples as they read the kept answer, and the geometry carries an `elevation_m` per point of each line and the dataset and datum as `elevation`; the positions stay pairs of degrees.
+A circuit with no kept samples is drawn without heights.
+
+**The samples are keyed by the degrees they were asked at.** An answer re-fetched with any node moved leaves that place unsampled, and the survey and the fence refuse the circuit until `elevation <word> --fetch` samples it again; re-fetching an answer and re-sampling it are one change.
+
+A source covers one country: COTA's is USGS 3DEP, a 1 m LiDAR model of the bare earth, whose service answers 504 for minutes at a time.
+A source whose model is of surfaces rather than the ground — Copernicus GLO-30 — reads grandstands and trees into the lap: at COTA it summed a lap's climbing to 92 m against 3DEP's 66.
+
 ## The probe, and OpenStreetMap's answers
 
-`Overpass.flix` spells the runners, a run's name and the backoff once, for the probe's question and the survey's alike; its `flix test` pins that only the survey asks for `node(w)`.
-**A proxy answers a timed-out request as 200 with an HTML page**, so the reading of what a service answered with — beside `Geodesy.earthMetres` — is held to one spelling by `test/check-sources.mjs`: a second reading asking only the status would hand HTML on as a geometry.
+`Overpass.flix` spells the runners and the backoff once, for the probe's question and the survey's alike; its `flix test` pins that only the survey asks for `node(w)`.
+`Service.flix` spells a run's name, its pace and the reading of what a service answered with, for Overpass and the elevation sources alike.
+**A proxy answers a timed-out request as 200 with an HTML page**, so that reading — beside `Geodesy.earthMetres` — is held to one spelling by `test/check-sources.mjs`: a second reading asking only the status would hand HTML on as a geometry.
 
 ## Wiring a test cannot see
 

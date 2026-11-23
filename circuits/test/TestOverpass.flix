@@ -7,7 +7,8 @@
 /// `Overpass.TestAnswer`'s.
 pub mod TestOverpass {
 
-    use Overpass.{backoff, pace, runners, tries, userAgent}
+    use Overpass.{backoff, runners, tries}
+    use Service.{pace, userAgent}
     use Time.Duration
 
     /// Which runners, in which order, over https — the `Https` effect refuses a URL
@@ -38,11 +39,11 @@ pub mod TestOverpass {
     @Test
     def testABodyIsKeptAsTheRunnerSpelledIt(): Unit \ Assert =
         let answer = "{\"elements\": []}";
-        match Overpass.kept(answer, "Overpass") {
+        match Service.kept(answer, "Overpass") {
             case Ok(text) => Assert.assertTrue(text == answer)
             case Err(_)   => Assert.assertTrue(false)
         };
-        match Overpass.kept("<html><body>504 Gateway Timeout</body></html>", "Overpass") {
+        match Service.kept("<html><body>504 Gateway Timeout</body></html>", "Overpass") {
             case Ok(_)        => Assert.assertTrue(false)
             case Err(problem) => Assert.assertTrue(problem == "Overpass answered with something that is not JSON")
         }

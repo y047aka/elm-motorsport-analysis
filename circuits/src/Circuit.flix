@@ -106,6 +106,9 @@ pub mod Circuit {
         // either one's line is the `timingLine`'s place itself.
         timedFrom = String,
         timingLine = Option[TimingLine],
+        // Where the heights of the surveyed places are asked, if anywhere: a source
+        // covers its own country, so each circuit names the one that covers it.
+        elevation = Option[Elevation.Source],
         // The geometry file, from the directory the command was asked from.
         file     = String,
         // The prose the geometry file documents its survey with.
@@ -135,6 +138,7 @@ pub mod Circuit {
         word     = "le_mans",
         timedFrom = "start-finish",
         timingLine = None,
+        elevation = None,
         file     = "app/static/geometry/le_mans.geojson",
         survey   = "The Circuit de la Sarthe"
     }
@@ -150,6 +154,7 @@ pub mod Circuit {
         word     = "cota",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -97.6422583, lat = 30.1335278}, within = Some(10.0)}),
+        elevation = Some(Elevation.Source.Usgs3dep),
         file   = "app/static/geometry/cota.geojson",
         survey = "The Circuit of the Americas"
     }
@@ -175,6 +180,7 @@ pub mod Circuit {
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
+        elevation = None,
         file   = "app/static/geometry/barcelona.geojson",
         survey = "The Circuit de Barcelona-Catalunya"
     }
@@ -194,6 +200,7 @@ pub mod Circuit {
         word     = "monza",
         timedFrom = "",
         timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
+        elevation = None,
         file   = "app/static/geometry/monza.geojson",
         survey = "The Autodromo Nazionale di Monza"
     }
@@ -217,6 +224,7 @@ pub mod Circuit {
         word     = "fuji",
         timedFrom = "",
         timingLine = Some({place = {lon = 138.926737, lat = 35.371955}, within = Some(25.0)}),
+        elevation = None,
         file   = "app/static/geometry/fuji.geojson",
         survey = "The Fuji Speedway"
     }
@@ -324,6 +332,11 @@ pub mod Circuit {
     pub def keptAnswer(circuit: Circuit): String =
         keptIn(circuit, keptAnswerName())
 
+    /// The heights the kept answer's places were sampled at, kept beside it: evidence the
+    /// survey and the regeneration fence read, since neither reaches a network.
+    pub def keptElevation(circuit: Circuit): String =
+        keptIn(circuit, keptElevationName())
+
     def keptIn(circuit: Circuit, name: String): String =
         "${evidenceDir()}/${circuit#word}/${name}"
 
@@ -344,13 +357,17 @@ pub mod Circuit {
     pub def keptAnswerName(): String =
         "overpass.json"
 
-    /// The names that say a directory was made to keep a circuit's evidence — the one
-    /// `keptAnswer` writes, and the ones the fence's warning looks for in a
+    /// The name the sampled heights are kept under in a circuit's own directory.
+    pub def keptElevationName(): String =
+        "elevation.json"
+
+    /// The names that say a directory was made to keep a circuit's evidence — the ones
+    /// `keptAnswer` and `keptElevation` write, and the ones the fence's warning looks for in a
     /// directory it listed. The warning is the reading that can be wrong unnoticed: a
     /// name spelled a second time somewhere is a directory it stops calling out, and a
     /// fence that stays green.
     pub def keptNames(): List[String] =
-        keptAnswerName() :: Nil
+        keptAnswerName() :: keptElevationName() :: Nil
 
     /// A path's last part: the name a file is known by where a directory has been
     /// listed rather than a path authored. Everything above the name is dropped rather

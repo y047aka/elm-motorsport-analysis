@@ -78,6 +78,75 @@ pub mod TestSurvey {
             :: member("way", "pit_lane", 20)
             :: Nil
 
+    // ------------------------------------------------------------------- the heights
+
+    /// The kept samples of a square, every place the survey asks for given a height of
+    /// its own — its order — less the places `dropped` names.
+    def heightsFor(places: List[Place], dropped: List[Place]): String =
+        List.zip(places, List.range(0, List.length(places)))
+            |> List.filter(pair -> match pair { case (at, _) => not List.memberOf(spelledAt(at), List.map(spelledAt, dropped)) })
+            |> List.map(pair -> match pair { case (at, n) => {place = at, metres = 100.0 + Int32.toFloat64(n), resolution = 1.0} })
+            |> Elevation.written(Elevation.Usgs.dataset())
+
+    def spelledAt(at: Place): String = Geometry.Write.coordinate(at#lon, at#lat)
+
+    /// The square's survey with no heights, and the places a sampling of it asks for.
+    def unheighted(circuit: Circuit, text: String): Result[String, Survey.Read] =
+        Survey.geometry(text, None, circuit, {lap = 4150.0, published = None})
+
+    @Test
+    def testATurnedZeroIsSampledAtItsOwnDegrees(): Unit \ Assert =
+        let circuit = turnedRelationCircuit(Some(boxLine()));
+        match unheighted(circuit, square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
+            case Ok(read) =>
+                let places = Elevation.placesOf(read#answer, read#geometry);
+                let zero = read#geometry#centreline |> List.head |> Option.map(each -> spelledAt(each#place));
+                // The six nodes the answer holds, then the zero the lap is turned at,
+                // which no node stands at: a height is asked there rather than drawn
+                // between the two nodes either side of it.
+                Assert.assertTrue(List.length(places) == 7);
+                Assert.assertTrue(Option.map(spelledAt, List.last(places)) == zero);
+                Assert.assertTrue(Option.map(z -> String.startsWith({prefix = "[-97.59"}, z), zero) == Some(true))
+        }
+
+    @Test
+    def testEveryKeptPointCarriesItsHeight(): Unit \ Assert =
+        let circuit = turnedRelationCircuit(Some(boxLine()));
+        let figures = {lap = 4150.0, published = None};
+        match unheighted(circuit, square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
+            case Ok(read) =>
+                let places = Elevation.placesOf(read#answer, read#geometry);
+                match Survey.geometry(square(7), Some(heightsFor(places, Nil)), circuit, figures) {
+                    case Err(problem) => Assert.assertTrueWithMsg(false, "the heights were refused: ${problem}")
+                    case Ok(heighted) =>
+                        let file = Geometry.Write.file(circuit, figures, heighted#geometry);
+                        // The zero first, at the height asked at its own degrees; then the
+                        // nodes the lap turns through, each at its own.
+                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [106,101,102,103,100,106]"}, file));
+                        Assert.assertTrue(String.contains({substr = "\"elevation\": {\"source\":\"USGS 3D Elevation Program (3DEP), best available\",\"license\":\"public domain\",\"datum\":\"NAVD88\"}"}, file));
+                        // The pit lane carries its own, between its two nodes.
+                        Assert.assertTrue(String.contains({substr = "\"elevation_m\": [104,105]"}, file))
+                }
+        }
+
+    @Test
+    def testAPlaceTheSamplesDoNotCoverRefusesTheCircuit(): Unit \ Assert =
+        let circuit = turnedRelationCircuit(Some(boxLine()));
+        match unheighted(circuit, square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
+            case Ok(read) =>
+                let places = Elevation.placesOf(read#answer, read#geometry);
+                let moved = read#geometry#centreline |> List.take(1) |> List.map(each -> each#place);
+                match Survey.geometry(square(7), Some(heightsFor(places, moved)), circuit, {lap = 4150.0, published = None}) {
+                    case Ok(_) => Assert.assertTrueWithMsg(false, "a place with no height was drawn")
+                    case Err(problem) =>
+                        Assert.assertTrue(String.contains({substr = "no height for 2 of the places the survey keeps, the first at [-97.59"}, problem));
+                        Assert.assertTrue(String.contains({substr = "`elevation turned --fetch`"}, problem))
+                }
+        }
+
     /// The answer of the square circuit, as the relation named.
     def square(id: Int32): String =
         answer(relation(id, members()) :: List.append(places(), List.append(lapWays(), pitWays())))
@@ -178,6 +247,7 @@ pub mod TestSurvey {
                     word = cota#word,
                     timedFrom = cota#timedFrom,
                     timingLine = Some({place = place, within = Some(5.0)}),
+                    elevation = cota#elevation,
                     file = cota#file,
                     survey = cota#survey
                 };
@@ -188,6 +258,7 @@ pub mod TestSurvey {
                     word = narrowed#word,
                     timedFrom = narrowed#timedFrom,
                     timingLine = Some({place = place, within = None}),
+                    elevation = narrowed#elevation,
                     file = narrowed#file,
                     survey = narrowed#survey
                 };
@@ -455,6 +526,7 @@ pub mod TestSurvey {
         word = "boxy",
         timedFrom = "",
         timingLine = timingLine,
+        elevation = None,
         file = "nowhere.geojson",
         survey = "A square"
     }
@@ -559,6 +631,7 @@ pub mod TestSurvey {
         word = "turned",
         timedFrom = "",
         timingLine = timingLine,
+        elevation = None,
         file = "nowhere.geojson",
         survey = "A square"
     }
