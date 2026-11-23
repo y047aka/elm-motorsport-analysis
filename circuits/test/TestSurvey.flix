@@ -142,7 +142,7 @@ pub mod TestSurvey {
                 match Survey.geometry(square(7), Some(heightsFor(places, moved)), circuit, {lap = 4150.0, published = None}) {
                     case Ok(_) => Assert.assertTrueWithMsg(false, "a place with no height was drawn")
                     case Err(problem) =>
-                        Assert.assertTrue(String.contains({substr = "no height for 2 of the places the survey keeps, the first at [-97.59"}, problem));
+                        Assert.assertTrue(String.contains({substr = "no height for 2 of the places the survey walks, the first at [-97.59"}, problem));
                         Assert.assertTrue(String.contains({substr = "`elevation turned --fetch`"}, problem))
                 }
         }
@@ -383,6 +383,15 @@ pub mod TestSurvey {
         // another at its end holds that point once: the ends are written before anything is
         // measured between them.
         Assert.assertTrue(Survey.simplify(line((0.0, 0.0) :: Nil), 0, 0) == 0 :: 0 :: Nil)
+
+    @Test
+    def testACrestOnAStraightIsKeptWhereThePointsHaveHeights(): Unit \ Assert =
+        // Straight on the plan: without heights the middle point goes. A crest a metre up
+        // stands off the line in three dimensions and stays; a steady grade does not.
+        let straight = line((0.0, 0.0) :: (50.0, 0.0) :: (100.0, 0.0) :: Nil);
+        Assert.assertTrue(Survey.simplifyOver(straight, None, 0, 2) == 0 :: 2 :: Nil);
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 151.0 :: 150.0 :: Nil), 0, 2) == 0 :: 1 :: 2 :: Nil);
+        Assert.assertTrue(Survey.simplifyOver(straight, Some(150.0 :: 155.0 :: 160.0 :: Nil), 0, 2) == 0 :: 2 :: Nil)
 
     @Test
     def testDirectionIsWhichWayTheSurveyRuns(): Unit \ Assert =

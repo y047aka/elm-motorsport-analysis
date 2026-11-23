@@ -56,7 +56,8 @@ pub mod Elevation {
         heights = Map[String, Float64]
     }
 
-    /// The heights a geometry carries, one per point of each line.
+    /// The heights a geometry carries, one per point of each line: the ones the thinning
+    /// kept, since a height is a reason the thinning keeps a point.
     pub type alias Profile = {
         dataset = Dataset,
         outline = List[Float64],
@@ -84,23 +85,18 @@ pub mod Elevation {
     def keyOf(place: Place): String =
         Geometry.Write.coordinate(place#lon, place#lat)
 
-    // ---------------------------------------------------------------- the profile
+    // ---------------------------------------------------------------- the heights
 
-    /// The heights of every point the survey keeps, out of the kept samples.
-    pub def profileOf(circuit: Circuit, kept: Kept, geometry: Survey.Geometry): Result[String, Profile] =
-        let outline = List.map(each -> each#place, geometry#centreline);
-        let wanting = List.filter(at -> not Map.memberOf(keyOf(at), kept#heights), List.append(outline, geometry#pitLane));
-        match wanting {
-            case Nil =>
-                Ok({dataset = kept#dataset, outline = heightsAt(kept, outline), pitLane = heightsAt(kept, geometry#pitLane)})
-            case first :: _ =>
+    /// The height of every place a line runs through, out of the kept samples.
+    pub def heightsOf(circuit: Circuit, kept: Kept, places: List[Place]): Result[String, List[Float64]] =
+        match List.filter(at -> not Map.memberOf(keyOf(at), kept#heights), places) {
+            case Nil => Ok(List.filterMap(at -> Map.get(keyOf(at), kept#heights), places))
+            case wanting =>
+                let first = List.head(wanting) |> Option.map(keyOf) |> Option.getWithDefault("");
                 Err(
-                    "the kept elevation holds no height for ${List.length(wanting)} of the places the survey keeps, the first at ${keyOf(first)}: the answer has moved since it was sampled, and `elevation ${circuit#word} --fetch` samples it again"
+                    "the kept elevation holds no height for ${List.length(wanting)} of the places the survey walks, the first at ${first}: the answer has moved since it was sampled, and `elevation ${circuit#word} --fetch` samples it again"
                 )
         }
-
-    def heightsAt(kept: Kept, places: List[Place]): List[Float64] =
-        List.filterMap(at -> Map.get(keyOf(at), kept#heights), places)
 
     // ---------------------------------------------------------------- the kept file
 
@@ -225,11 +221,11 @@ pub mod Elevation {
     /// the answer a run without `--fetch` is asked for, said at 1.
     def asking(asked: Request): Outcome \ { IO, Clock } =
         let circuit = asked#circuit;
-        match surveyedPlain(circuit) {
+        match keptInputs(circuit) {
             case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
-            case Ok(surveyed) =>
+            case Ok((text, figures)) =>
                 if (asked#fetch)
-                    match fetched(circuit, surveyed) {
+                    match fetched(circuit, text, figures) {
                         case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
                         case Ok(lines)    => Outcome.Done(lines)
                     }
@@ -237,41 +233,48 @@ pub mod Elevation {
                     match keptText(circuit) {
                         case Err(problem) => Outcome.Failed(problem)
                         case Ok(None)     => Outcome.Done("${circuit#word}: no kept elevation yet — asking a source is `--fetch`'s" :: Nil)
-                        case Ok(Some(text)) =>
-                            match read(text) |> Result.flatMap(kept -> profileOf(circuit, kept, surveyed#geometry)) {
-                                case Err(problem) => Outcome.Verdict("${circuit#word}: ${problem}" :: Nil)
-                                case Ok(profile)  => Outcome.Done(described(circuit, surveyed#geometry, profile))
+                        case Ok(Some(heights)) =>
+                            match Survey.geometry(text, Some(heights), circuit, figures) {
+                                case Err(problem)    => Outcome.Verdict("${circuit#word}: ${problem}" :: Nil)
+                                case Ok(surveyed)    => Outcome.Done(described(circuit, surveyed#geometry))
                             }
                     }
         }
 
-    /// The kept answer, surveyed with no heights: the places it keeps are what is sampled.
-    def surveyedPlain(circuit: Circuit): Result[String, Survey.Read] \ IO =
+    /// The kept answer and the map's figures, which every survey of the circuit is laid
+    /// from.
+    def keptInputs(circuit: Circuit): Result[String, (String, Circuit.Figures)] \ IO =
         forM(
             figures <- MapRecord.read(circuit);
-            text    <- Cli.Errors.readFile(Circuit.keptAnswer(circuit)) |> Result.mapErr(problem -> "${problem}");
-            read    <- Survey.geometry(text, None, circuit, figures)
-        ) yield read
+            text    <- Cli.Errors.readFile(Circuit.keptAnswer(circuit)) |> Result.mapErr(problem -> "${problem}")
+        ) yield (text, figures)
 
-    def fetched(circuit: Circuit, surveyed: Survey.Read): Result[String, List[String]] \ { IO, Clock } =
+    /// The places the answer surveyed with no heights keeps are what is sampled; then the
+    /// answer is surveyed again with them, as the survey and the fence will survey it.
+    def fetched(circuit: Circuit, text: String, figures: Circuit.Figures): Result[String, List[String]] \ { IO, Clock } =
         match circuit#elevation {
             case None => Err("no elevation source is authored for this circuit")
             case Some(source) =>
                 let dataset = datasetOf(source);
-                let places = placesOf(surveyed#answer, surveyed#geometry);
                 forM(
-                    samples <- ask(source, places);
-                    _       <- Cli.Errors.writeFile(Circuit.keptElevation(circuit), written(dataset, samples)) |> Result.mapErr(problem -> "${problem}");
-                    kept    <- read(written(dataset, samples));
-                    profile <- profileOf(circuit, kept, surveyed#geometry)
+                    plain    <- Survey.geometry(text, None, circuit, figures);
+                    samples  <- ask(source, placesOf(plain#answer, plain#geometry));
+                    _        <- Cli.Errors.writeFile(Circuit.keptElevation(circuit), written(dataset, samples)) |> Result.mapErr(problem -> "${problem}");
+                    surveyed <- Survey.geometry(text, Some(written(dataset, samples)), circuit, figures)
                 ) yield
                     "${circuit#word}: kept ${List.length(samples)} heights from ${dataset#name} at ${Circuit.keptElevation(circuit)}"
-                        :: described(circuit, surveyed#geometry, profile)
+                        :: described(circuit, surveyed#geometry)
         }
 
     /// What the heights say of the lap: its lowest and highest points, and where round
     /// the lap each stands.
-    def described(circuit: Circuit, geometry: Survey.Geometry, profile: Profile): List[String] =
+    def described(circuit: Circuit, geometry: Survey.Geometry): List[String] =
+        match geometry#elevation {
+            case None          => "${circuit#word}: the survey carries no heights" :: Nil
+            case Some(profile) => describedBy(circuit, geometry, profile)
+        }
+
+    def describedBy(circuit: Circuit, geometry: Survey.Geometry, profile: Profile): List[String] =
         let metres = List.map(each -> each#metre, geometry#centreline);
         let along = List.zip(profile#outline, metres);
         let lowest = List.foldLeft((best, each) -> if (fst(each) < fst(best)) each else best, (1.0e12, 0.0), along);

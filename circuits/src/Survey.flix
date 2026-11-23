@@ -73,35 +73,38 @@ pub mod Survey {
     }
 
     ///
-    /// `elevation` is the kept samples' text, where the circuit keeps any: every point
-    /// the survey keeps is given its height out of them, or the circuit is refused.
+    /// `elevation` is the kept samples' text, where the circuit keeps any: every place
+    /// either line runs through is given its height out of them, or the circuit is
+    /// refused.
     pub def geometry(text: String, elevation: Option[String], circuit: Circuit, figures: Circuit.Figures): Result[String, Read] =
         forM(
             reading  <- Overpass.Answer.read(text);
-            surveyed <- geometryOf(reading, circuit, figures);
-            heights  <- heightsOf(elevation, circuit, surveyed)
-        ) yield {text = text, answer = reading, geometry = {elevation = heights | surveyed}}
+            heights  <- keptHeights(elevation);
+            surveyed <- heightedOf(reading, circuit, figures, heights)
+        ) yield {text = text, answer = reading, geometry = surveyed}
 
-    def heightsOf(elevation: Option[String], circuit: Circuit, surveyed: Geometry): Result[String, Option[Elevation.Profile]] =
+    def keptHeights(elevation: Option[String]): Result[String, Option[Elevation.Kept]] =
         match elevation {
-            case None => Ok(None)
-            case Some(text) =>
-                Elevation.read(text)
-                    |> Result.flatMap(kept -> Elevation.profileOf(circuit, kept, surveyed))
-                    |> Result.map(profile -> Some(profile))
+            case None       => Ok(None)
+            case Some(text) => Elevation.read(text) |> Result.map(kept -> Some(kept))
         }
 
     /// The lap, the pit lane and the frame, chained out of an answer already read. Two
     /// groundings arrive here: a relation's members, and a box's raceway ways.
     pub def geometryOf(reading: Answer, circuit: Circuit, figures: Circuit.Figures): Result[String, Geometry] =
+        heightedOf(reading, circuit, figures, None)
+
+    /// The same, with every place given its height out of the kept samples where there are
+    /// any.
+    pub def heightedOf(reading: Answer, circuit: Circuit, figures: Circuit.Figures, heights: Option[Elevation.Kept]): Result[String, Geometry] =
         match circuit#relation {
-            case Some(id) => fromRelation(reading, circuit, figures#lap, id)
-            case None     => fromBox(reading, circuit, figures#lap)
+            case Some(id) => fromRelation(reading, circuit, figures#lap, heights, id)
+            case None     => fromBox(reading, circuit, figures#lap, heights)
         }
 
-    def fromRelation(reading: Answer, circuit: Circuit, lapLength: Float64, relation: Int64): Result[String, Geometry] =
+    def fromRelation(reading: Answer, circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept], relation: Int64): Result[String, Geometry] =
         if (circuit#timedFrom == "")
-            turnedRelation(reading, circuit, lapLength, relation)
+            turnedRelation(reading, circuit, lapLength, heights, relation)
         else
             let nodes = Overpass.Answer.nodePlaces(reading#elements);
             let ways = reading#elements |> Overpass.Answer.byKind("way");
@@ -111,13 +114,13 @@ pub mod Survey {
                 _          <- standsAtLine(rel#members, nodes, start, circuit);
                 lap        <- chained(rel, ways, nodes, start);
                 pit        <- pitChained(rel, ways, nodes);
-                laid     <- laidOut(reading, nodes, lap, pit, circuit, lapLength)
+                laid     <- laidOut(reading, nodes, lap, pit, circuit, lapLength, heights)
             ) yield laid
 
     /// A relation whose config names no role tags no member at the line, so its lap is
     /// chained from the one-way node nearest the authored place and turned at that place,
     /// as a box's lap is.
-    def turnedRelation(reading: Answer, circuit: Circuit, lapLength: Float64, relation: Int64): Result[String, Geometry] =
+    def turnedRelation(reading: Answer, circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept], relation: Int64): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
         match circuit#timingLine {
@@ -130,7 +133,7 @@ pub mod Survey {
                     walked   <- chain(segments, nodes, Some(nearestTo(oneWayNodes(segments), nodes, line#place)));
                     turned   <- turnAt(walked, nodes, line);
                     pit      <- pitChained(rel, ways, nodes);
-                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength)
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength, heights)
                 ) yield laid
         }
 
@@ -388,7 +391,7 @@ pub mod Survey {
     /// out. The zero
     /// turns at the projection of the authored place onto the lap rather than at a
     /// node, because a circuit may cross its own line between two nodes.
-    def fromBox(reading: Answer, circuit: Circuit, lapLength: Float64): Result[String, Geometry] =
+    def fromBox(reading: Answer, circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept]): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
         match circuit#timingLine {
@@ -402,7 +405,7 @@ pub mod Survey {
                     walked   <- chain(lapWay :: Nil, nodes, Some(nearestTo(lapWay#nodes, nodes, line#place)));
                     turned   <- turnAt(walked, nodes, line);
                     pit      <- chain(pitSegs, nodes, None);
-                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength)
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit, lapLength, heights)
                 ) yield laid
         }
 
@@ -622,11 +625,36 @@ pub mod Survey {
 
     /// The answer's degrees into the drawing's metres: one parallel for both lines, the lap
     /// stretched to the length the circuit publishes, the direction the survey runs, and the
-    /// line thinned to `tolerance`.
-    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit, lapLength: Float64): Result[String, Geometry] = {
+    /// line thinned to `tolerance` — in three dimensions where the places have heights, so
+    /// that a crest or a dip on a line straight on the plan is a point the drawing keeps.
+    def laidOut(reading: Answer, nodes: Map[Int64, Place], lap: List[Int64], pit: List[Int64], circuit: Circuit, lapLength: Float64, heights: Option[Elevation.Kept]): Result[String, Geometry] = {
         let lapNodes = List.filterMap(id -> Map.get(id, nodes), lap);
         let pitNodes = List.filterMap(id -> Map.get(id, nodes), pit);
         let both = List.append(lapNodes, pitNodes);
+        match heightsAlong(circuit, heights, lapNodes, pitNodes) {
+            case Err(problem) => Err(problem)
+            case Ok(lines) => laidWith(reading, lapNodes, pitNodes, both, circuit, lapLength, lines)
+        }
+    }
+
+    /// Each line's heights, where the circuit keeps samples of them.
+    type alias Heights = {
+        dataset = Elevation.Dataset,
+        lap     = List[Float64],
+        pit     = List[Float64]
+    }
+
+    def heightsAlong(circuit: Circuit, heights: Option[Elevation.Kept], lapNodes: List[Place], pitNodes: List[Place]): Result[String, Option[Heights]] =
+        match heights {
+            case None => Ok(None)
+            case Some(kept) =>
+                forM(
+                    lap <- Elevation.heightsOf(circuit, kept, lapNodes);
+                    pit <- Elevation.heightsOf(circuit, kept, pitNodes)
+                ) yield Some({dataset = kept#dataset, lap = lap, pit = pit})
+        }
+
+    def laidWith(reading: Answer, lapNodes: List[Place], pitNodes: List[Place], both: List[Place], circuit: Circuit, lapLength: Float64, lines: Option[Heights]): Result[String, Geometry] = {
         match parallelOf(both) {
             case None =>
                 Err("the answer holds no place of this lap, so there is no parallel to lay either line on")
@@ -649,8 +677,10 @@ pub mod Survey {
                     // and the metre are one pair from here on, and never looked up apart.
                     let lapMetres = Geodesy.together(lapNodes, metres);
                     let half = List.length(lapPoints) / 2;
-                    let kept = thinned(lapPoints, half);
-                    let keptPit = simplify(pitPoints, 0, lastIndex(pitPoints));
+                    let lapHeights = Option.map(each -> each#lap, lines);
+                    let pitHeights = Option.map(each -> each#pit, lines);
+                    let kept = thinned(lapPoints, lapHeights, half);
+                    let keptPit = simplifyOver(pitPoints, pitHeights, 0, lastIndex(pitPoints));
                     Ok({
                         centreline = List.map(at -> metred(at, lapMetres), kept),
                         pitLane = List.filterMap(at -> List.nth(at, pitNodes), keptPit),
@@ -658,7 +688,11 @@ pub mod Survey {
                         direction = turnDirection(lapPoints),
                         surveyedAt = reading#surveyedAt,
                         surveyedLength = Some(measured),
-                        elevation = None
+                        elevation = Option.map(each -> {
+                            dataset = each#dataset,
+                            outline = List.filterMap(at -> List.nth(at, each#lap), kept),
+                            pitLane = List.filterMap(at -> List.nth(at, each#pit), keptPit)
+                        }, lines)
                     })
         }
     }
@@ -675,22 +709,27 @@ pub mod Survey {
     /// The lap thinned: split at its own middle, so that the place the lap starts and ends at
     /// is not the pivot of both halves at once, and the halves joined at their meeting point
     /// rather than holding it twice.
-    def thinned(points: List[Point], half: Int32): List[Int32] =
-        List.append(withoutLast(simplify(points, 0, half)), simplify(points, half, lastIndex(points)))
+    def thinned(points: List[Point], heights: Option[List[Float64]], half: Int32): List[Int32] =
+        List.append(withoutLast(simplifyOver(points, heights, 0, half)), simplifyOver(points, heights, half, lastIndex(points)))
 
     /// Ramer–Douglas–Peucker over indices, so a kept point keeps the distance it was
     /// surveyed at rather than the shorter one the thinned line would give it. Of two
     /// points equally far, the first is the one turned on.
     pub def simplify(points: List[Point], lo: Int32, hi: Int32): List[Int32] =
+        simplifyOver(points, None, lo, hi)
+
+    /// The same over points with a height each, where the distance a point stands off
+    /// the line is measured in three dimensions.
+    pub def simplifyOver(points: List[Point], heights: Option[List[Float64]], lo: Int32, hi: Int32): List[Int32] =
         match (List.nth(lo, points), List.nth(hi, points)) {
             case (Some(a), Some(b)) =>
                 let dx = b#x - a#x;
                 let dy = b#y - a#y;
                 let norm = hypot(dx, dy);
-                match furthest(points, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
+                match furthest(points, heights, lo, hi, a, b, dx, dy, norm, 0.0, -1, lo + 1) {
                     case (best, at) =>
                         if (best <= tolerance() or at < 0) lo :: hi :: Nil
-                        else List.append(withoutLast(simplify(points, lo, at)), simplify(points, at, hi))
+                        else List.append(withoutLast(simplifyOver(points, heights, lo, at)), simplifyOver(points, heights, at, hi))
                 }
             case _ => Nil
         }
@@ -700,6 +739,8 @@ pub mod Survey {
     /// height of the triangle and not the hypotenuse of anything.
     def furthest(
         points: List[Point],
+        heights: Option[List[Float64]],
+        lo: Int32,
         hi: Int32,
         a: Point,
         b: Point,
@@ -716,11 +757,14 @@ pub mod Survey {
             match List.nth(every, points) {
                 case None => (best, at)
                 case Some(p) =>
-                    let distance = offLine(p, a, b, dx, dy, norm);
+                    let distance = match heights {
+                        case None    => offLine(p, a, b, dx, dy, norm)
+                        case Some(z) => offLine3(p, a, b, heightAt(every, z), heightAt(lo, z), heightAt(hi, z))
+                    };
                     if (distance > best)
-                        furthest(points, hi, a, b, dx, dy, norm, distance, every, every + 1)
+                        furthest(points, heights, lo, hi, a, b, dx, dy, norm, distance, every, every + 1)
                     else
-                        furthest(points, hi, a, b, dx, dy, norm, best, at, every + 1)
+                        furthest(points, heights, lo, hi, a, b, dx, dy, norm, best, at, every + 1)
             }
 
     def offLine(p: Point, a: Point, b: Point, dx: Float64, dy: Float64, norm: Float64): Float64 =
@@ -728,6 +772,24 @@ pub mod Survey {
             hypot(p#x - a#x, p#y - a#y)
         else
             Float64.abs((dy * p#x) - (dx * p#y) + (b#x * a#y) - (b#y * a#x)) / norm
+
+    /// How far a point stands off the line through two others, in three dimensions: the
+    /// cross product of the line and the point's offset, over the line's own length.
+    def offLine3(p: Point, a: Point, b: Point, zp: Float64, za: Float64, zb: Float64): Float64 =
+        let ux = b#x - a#x;
+        let uy = b#y - a#y;
+        let uz = zb - za;
+        let wx = p#x - a#x;
+        let wy = p#y - a#y;
+        let wz = zp - za;
+        let norm = hypot(hypot(ux, uy), uz);
+        if (norm == 0.0)
+            hypot(hypot(wx, wy), wz)
+        else
+            hypot(hypot(uy * wz - uz * wy, uz * wx - ux * wz), ux * wy - uy * wx) / norm
+
+    def heightAt(at: Int32, heights: List[Float64]): Float64 =
+        List.nth(at, heights) |> Option.getWithDefault(0.0)
 
     /// Which way the closed line runs, from the shoelace sum in the drawing's own metres:
     /// positive is clockwise, because this projection's `y` runs south.
