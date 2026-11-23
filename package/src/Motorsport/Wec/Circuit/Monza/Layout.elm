@@ -11,10 +11,7 @@ are drawn through are
 [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-The drawn start line stands where the survey was chained, which is 197 m after
-the painted one -- OpenStreetMap tags the relation's `start` and `finish` roles
-on the pit-exit light and holds no node at the line itself. The circuit
-project's config says the whole of it at its own authoring.
+The drawn finish line stands where the series' 2026 map puts it, as nearly as that map can be laid over the survey: OpenStreetMap holds no node at the line, so the place is authored, and the circuit project's config says how it was found.
 
 @docs decoder, layout
 

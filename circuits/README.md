@@ -57,7 +57,8 @@ How the drawing places a line the map gives no distance for is app-side: `Tracke
 ## The maps' figures, kept as read
 
 `<word>/map-<season>.json` is what one of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository, and the record keeps the date the map was issued and the circuit's full name.
-The app reads Le Mans's alone; the other circuits' configs and `Layout` modules hold their own copies of the figures, which are the records' for COTA's and Barcelona's laps and COTA's lines, and not yet for Monza's and Fuji's zero, which stands where OpenStreetMap or track-atlas put a line rather than at the map's finish line.
+The app reads Le Mans's alone; the other circuits' configs and `Layout` modules hold their own copies of the figures.
+A map gives its finish line no degrees, so where OpenStreetMap tags none at the line (Monza, Fuji) the authored place is read off the map itself: the map's drawing laid over the survey, and its drawn lines read against their printed distances, which places the line to some 20 m.
 Every figure is kept twice, as `metres` and as the map printed it, because the print carries the precision the map was written to (0.01 m at Le Mans, whole metres elsewhere) and its decimal comma.
 `lengths` and `lines` hold only what the map gives a distance for, every line measured from the finish line; `drawn` names what it draws without one, and lists such as Le Mans's timing loops are kept in the map's own order.
 `sectors` and Le Mans's `zones` are the stretches the map colours, each bounded by the drawn labels its colour changes at; a colour is sampled off the stretch's own label, since the shared template's labels print one colour on every map where its lines are rendered a little differently on each.

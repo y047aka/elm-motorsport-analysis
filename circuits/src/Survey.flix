@@ -86,16 +86,43 @@ pub mod Survey {
         }
 
     def fromRelation(reading: Answer, circuit: Circuit, relation: Int64): Result[String, Geometry] =
+        if (circuit#timedFrom == "")
+            turnedRelation(reading, circuit, relation)
+        else
+            let nodes = Overpass.Answer.nodePlaces(reading#elements);
+            let ways = reading#elements |> Overpass.Answer.byKind("way");
+            forM(
+                rel        <- relationOf(reading, relation);
+                start      <- lineOf(rel, circuit);
+                _          <- standsAtLine(rel#members, nodes, start, circuit);
+                lap        <- chained(rel, ways, nodes, start);
+                pit        <- pitChained(rel, ways, nodes);
+                laid     <- laidOut(reading, nodes, lap, pit, circuit)
+            ) yield laid
+
+    /// A relation whose config names no role tags no member at the line, so its lap is
+    /// chained from the one-way node nearest the authored place and turned at that place,
+    /// as a box's lap is.
+    def turnedRelation(reading: Answer, circuit: Circuit, relation: Int64): Result[String, Geometry] =
         let nodes = Overpass.Answer.nodePlaces(reading#elements);
         let ways = reading#elements |> Overpass.Answer.byKind("way");
-        forM(
-            rel        <- relationOf(reading, relation);
-            start      <- lineOf(rel, circuit);
-            _          <- standsAtLine(rel#members, nodes, start, circuit);
-            lap        <- chained(rel, ways, nodes, start);
-            pit        <- pitChained(rel, ways, nodes);
-            laid     <- laidOut(reading, nodes, lap, pit, circuit)
-        ) yield laid
+        match circuit#timingLine {
+            case None =>
+                Err("'${circuit#word}' names no role and authors no timing line: nothing says where its lap is measured from")
+            case Some(line) =>
+                forM(
+                    rel      <- relationOf(reading, relation);
+                    segments <- lapSegments(rel, ways);
+                    walked   <- chain(segments, nodes, Some(nearestTo(oneWayNodes(segments), nodes, line#place)));
+                    turned   <- turnAt(walked, nodes, line);
+                    pit      <- pitChained(rel, ways, nodes);
+                    laid     <- laidOut(reading, Map.insert(turnedId(), turned#place, nodes), turned#ids, pit, circuit)
+                ) yield laid
+        }
+
+    /// The nodes a chain may open at: a chain opens on a way driven one way only.
+    def oneWayNodes(segments: List[Segment]): List[Int64] =
+        segments |> List.filter(segment -> segment#oneway) |> List.flatMap(segment -> segment#nodes)
 
     def relationOf(reading: Answer, relation: Int64): Result[String, Element] =
         match reading#elements |> Overpass.Answer.byKind("relation") |> Map.get(relation) {

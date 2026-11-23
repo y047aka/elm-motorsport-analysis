@@ -107,7 +107,8 @@ pub mod Circuit {
         word     = String,
         // The relation member the lap is measured from. A relation may tag more than one
         // line, and every metre is measured from whichever one was answered to. A box
-        // names no members, and its line is the `timingLine`'s place itself.
+        // names no members, and neither does a relation that tags no member at its line:
+        // either one's line is the `timingLine`'s place itself.
         timedFrom = String,
         timingLine = Option[TimingLine],
         // The length the surveyed line is stretched to, in the circuit's own metres.
@@ -209,13 +210,12 @@ pub mod Circuit {
 
     /// Monza. The relation `284565` carries its 20 lap ways under no role at all
     /// and names its pit under `pit_lane`. Its `start` and `finish` roles both name
-    /// one node — and that node is a `highway=traffic_signals` point: the pit-exit
-    /// light, 197 m after the line the tobi/track-atlas dataset marks as `start_finish`.
-    /// OSM holds no node where that line stands, so no role a survey could answer does,
-    /// and no `timingLine` can be authored without the byte fence refusing every survey
-    /// of the relation; the drawn zero and start line of this circuit therefore stand
-    /// at the pit-exit light. A node joined to the relation at the line's place would
-    /// fix the drawing without moving a metre of the survey.
+    /// one node — and that node is a `highway=traffic_signals` point, the pit-exit
+    /// light — so no role is named, and the lap is turned at the authored place.
+    /// That place is the series' 2026 map's finish line, which no source gives in degrees:
+    /// the map, laid over the survey, puts its finish line, its pit-in line and i2 between
+    /// 298 and 334 m before the light, and the place is the survey's point 320 m before it.
+    /// The map is drawn wider than the circuit, so the place is good to some 20 m.
     ///
     /// The distances the FIA issues round a lap here were never read at authoring:
     /// no stretches are authored, the geometry writes no `sectors`, and the timing
@@ -225,8 +225,8 @@ pub mod Circuit {
         box      = None,
         pit      = None,
         word     = "monza",
-        timedFrom = "finish",
-        timingLine = None,
+        timedFrom = "",
+        timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
         lap      = 5793.0,
         sectors  = {published = None, eachSeason = None},
         file   = "app/static/geometry/monza.geojson",
@@ -239,11 +239,12 @@ pub mod Circuit {
     /// the `pit` field names — the other hanger is a 123 m unnamed connector — and the
     /// drift course, short circuit, kart track and abandoned stubs are what no line
     /// passes and a box survey therefore leaves out.
-    /// No node stands at the line — the lap's nearest is 207 m down it — so the zero
-    /// stands on the authored place alone, and a place better sourced than this one moves
-    /// the drawn zero and every Fuji baseline with it. It is the `start_finish` marker of
-    /// the tobi/track-atlas dataset, whose outline was stitched from these same ways: no
-    /// measurement independent of them.
+    /// No node stands at the line, so the zero stands on the authored place alone, and a
+    /// place better sourced than this one moves the drawn zero and every Fuji baseline with it.
+    /// That place is the series' 2026 map's finish line, which no source gives in degrees:
+    /// the map, laid over the survey, puts its finish line, start line, i1 and i2 between 59
+    /// and 99 m before the tobi/track-atlas `start_finish` marker the zero stood at, and
+    /// the place is the survey's point 80 m before that marker, good to some 20 m.
     ///
     /// The distances the series issue round a lap here were never read at authoring:
     /// no stretches are authored, the geometry writes no `sectors`, and the timing
@@ -254,7 +255,7 @@ pub mod Circuit {
         pit      = Some(148621414i64 :: Nil),
         word     = "fuji",
         timedFrom = "",
-        timingLine = Some({place = {lon = 138.927423, lat = 35.372405}, within = Some(25.0)}),
+        timingLine = Some({place = {lon = 138.926737, lat = 35.371955}, within = Some(25.0)}),
         // The grand prix lap as the championship measures it: the 2023 6 Hours of Fuji
         // ran 1,044.927 km over 229 laps, which divides to exactly 4,563 m. The surveyed
         // centreline measures 4,553.6 m, 0.2 percent short of it — within what `laidOut`

@@ -547,6 +547,36 @@ pub mod TestSurvey {
             )
         )
 
+    /// The square's relation, configured to name no role: the line stands where the box's
+    /// does, four tenths along the one-way first stretch, and no member is tagged there.
+    def turnedRelationCircuit(timingLine: Option[{place = Place, within = Option[Float64]}]): Circuit = {
+        relation = Some(7i64),
+        box = None,
+        pit = None,
+        word = "turned",
+        timedFrom = "",
+        timingLine = timingLine,
+        lap = 4150.0,
+        sectors = {published = None, eachSeason = None},
+        file = "nowhere.geojson",
+        survey = "A square"
+    }
+
+    @Test
+    def testARelationNamingNoRoleIsTurnedAtTheAuthoredLine(): Unit \ Assert =
+        match writtenOf(turnedRelationCircuit(Some(boxLine())), square(7)) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "the relation refused its own square: ${problem}")
+            case Ok(file) =>
+                // The lap opens at the authored place, between nodes 1 and 2, and not at
+                // the node the relation tags `start-finish`.
+                Assert.assertTrue(String.contains({substr = "\"coordinates\":[[-97.596"}, file));
+                Assert.assertTrue(String.contains({substr = "\"direction\": \"clockwise\""}, file))
+        }
+
+    @Test
+    def testARelationNamingNoRoleAuthorsNothingWithoutATimingLine(): Unit \ Assert =
+        Assert.assertTrue(refused("names no role and authors no timing line", writtenOf(turnedRelationCircuit(None), square(7))))
+
     @Test
     def testAClosedRingIsGroundAndNeverAPitLane(): Unit \ Assert =
         // A kart ring touching the lap at node 1 hangs off it at both its ends — and is

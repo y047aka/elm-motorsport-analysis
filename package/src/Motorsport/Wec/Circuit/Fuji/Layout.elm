@@ -11,10 +11,7 @@ are drawn through are
 [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
 circuit is drawn out of.
 
-Fuji is surveyed from a box of raceway ways rather than a relation;
-its drawn zero stands at the published start/finish, which falls between two
-surveyed nodes rather than on one. The circuit project's config and README hold
-the whole of that authoring.
+Fuji is surveyed from a box of raceway ways rather than a relation; its drawn zero stands where the series' 2026 map puts the finish line, as nearly as that map can be laid over the survey, between two surveyed nodes rather than on one. The circuit project's config holds the whole of that authoring.
 
 @docs decoder, layout
 
