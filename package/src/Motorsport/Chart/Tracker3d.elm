@@ -5,9 +5,11 @@ perspective camera, so the side of the loop standing near comes out wide and the
 side standing far narrow, and the reader turns it by dragging.
 
 The lap keeps its own shape -- the same metres [`ground`](Motorsport-Chart-Tracker#ground)
-hands the flat drawing -- and is set on a plane of its own above the plane it was
-surveyed on. Nothing is added to the circuit: no height it does not have. What
-turns it is a frame, and what draws it is SVG, projected point by point.
+hands the flat drawing -- and is set above the plane it was surveyed on. A circuit
+whose geometry carries heights stands at them, its lowest point where every other lap
+stands flat, and its heights drawn `steep` times over; one that carries none stands
+flat. Nothing is added to the circuit: no height it does not have. What turns it is a
+frame, and what draws it is SVG, projected point by point.
 
 Everything the drawing measures is a share of the lap's own size, so one set of
 lengths serves every circuit and the ring it falls back to.
@@ -263,14 +265,14 @@ the eye and sized by how far the eye already is.
 -}
 type alias Stance =
     { eye : Camera3d Unitless Space
-    , size : { centre : Point, half : Float }
+    , size : Size
     , ground : List Shot
     , ribbon : List Shot
     , fit : Place
     }
 
 
-stance : { w : Float, h : Float } -> Model -> List Point -> Stance
+stance : { w : Float, h : Float } -> Model -> List Lifted -> Stance
 stance frame model points =
     let
         eye =
@@ -331,7 +333,7 @@ projected : Model -> List Point -> List Shot
 projected model points =
     let
         { ground, fit } =
-            stance box model points
+            stance box model (List.map flat points)
     in
     List.map (place fit) ground
 
@@ -346,7 +348,7 @@ band : Model -> List Point -> List Shot
 band model points =
     let
         scene =
-            stance box model points
+            stance box model (List.map flat points)
     in
     List.map (place scene.fit) scene.ribbon
 
@@ -367,6 +369,7 @@ type alias Scene =
     , finish : ( Shot, Shot )
     , labels : List ( Shot, Float, String )
     , cars : List Car
+    , steep : Maybe Float
     }
 
 
@@ -400,6 +403,15 @@ lift =
 bandWidth : Float
 bandWidth =
     0.03
+
+
+{-| How many times over a circuit's heights are drawn. A lap is some kilometres across
+and its heights some tens of metres apart, which drawn true is a lap that looks flat;
+the drawing says so beside it, since it is the one length here not drawn to scale.
+-}
+steep : Float
+steep =
+    5
 
 
 carSize : Float
@@ -458,26 +470,67 @@ view surface model shown standings =
         g =
             Tracker.ground shown
 
-        { eye, size, ground, ribbon, fit } =
-            stance (frameOf surface) model g.lap
+        rising =
+            Maybe.map (\relief height -> (height - relief.lowest) * steep) g.relief
 
-        acrossBand : Float -> Shape.Position -> ( Shot, Shot )
-        acrossBand width position =
+        risesOf heights points =
+            case ( rising, heights ) of
+                ( Just rise, Just these ) ->
+                    List.map2 (\p h -> { x = p.x, y = p.y, rise = rise h }) points these
+
+                _ ->
+                    List.map flat points
+
+        lap =
+            risesOf (Maybe.map .lap g.relief) g.lap
+
+        { eye, size, ground, ribbon, fit } =
+            stance (frameOf surface) model lap
+
+        acrossBand : Float -> Lifted -> Shape.Position -> ( Shot, Shot )
+        acrossBand width standing position =
             let
                 out =
                     outward position
 
                 side k =
-                    project eye (raisedAt size { x = position.x + out.x * k * size.half, y = position.y + out.y * k * size.half })
+                    project eye (raisedAt size { x = position.x + out.x * k * size.half, y = position.y + out.y * k * size.half, rise = standing.rise })
             in
             ( side width, side (negate width) )
 
+        -- Where a progress round the lap stands, and how high: a height between two of
+        -- the lap's points is the one the line between them passes.
         onLap progress =
-            g.at progress
+            let
+                position =
+                    g.at progress
+            in
+            ( { x = position.x
+              , y = position.y
+              , rise =
+                    case ( rising, g.relief ) of
+                        ( Just rise, Just relief ) ->
+                            rise (relief.at progress)
+
+                        _ ->
+                            0
+              }
+            , position
+            )
+
+        across width progress =
+            let
+                ( standing, position ) =
+                    onLap progress
+            in
+            acrossBand width standing position
+
+        pitLine =
+            risesOf (Maybe.map .pitLane g.relief) g.pitLane
 
         pit =
-            { ground = List.map (project eye << groundAt size) g.pitLane
-            , band = List.map (project eye << raisedAt size) g.pitLane
+            { ground = List.map (project eye << groundAt size) pitLine
+            , band = List.map (project eye << raisedAt size) pitLine
             }
 
         cars =
@@ -485,11 +538,11 @@ view surface model shown standings =
                 |> List.map
                     (\car ->
                         let
-                            position =
+                            ( standing, position ) =
                                 onLap (g.progressOf car)
 
                             shot =
-                                project eye (raisedAt size position)
+                                project eye (raisedAt size standing)
 
                             -- The dot is the ground the car stands on: a circle of the
                             -- car's own radius, drawn in the road's plane rather than on
@@ -511,6 +564,7 @@ view surface model shown standings =
                                     (raisedAt size
                                         { x = position.x + axis.x * share * size.half
                                         , y = position.y + axis.y * share * size.half
+                                        , rise = standing.rise
                                         }
                                     )
 
@@ -540,27 +594,28 @@ view surface model shown standings =
             , pit = pit
             , band = ribbon
             , risers =
-                every (riserStride (ringOf g.lap)) (ringOf g.lap)
+                every (riserStride (ringOf lap)) (ringOf lap)
                     |> List.map (\p -> ( project eye (groundAt size p), project eye (raisedAt size p) ))
-            , boundaries = List.map (onLap >> acrossBand (bandWidth / 2)) g.boundaries
-            , finish = acrossBand (bandWidth * 0.8) (onLap 0)
+            , boundaries = List.map (across (bandWidth / 2)) g.boundaries
+            , finish = across (bandWidth * 0.8) 0
             , labels =
                 List.map
                     (\{ progress, label } ->
                         let
-                            position =
+                            ( standing, position ) =
                                 onLap progress
 
                             out =
                                 outward position
 
                             shot =
-                                project eye (raisedAt size { x = position.x + out.x * labelOffset * size.half, y = position.y + out.y * labelOffset * size.half })
+                                project eye (raisedAt size { x = position.x + out.x * labelOffset * size.half, y = position.y + out.y * labelOffset * size.half, rise = standing.rise })
                         in
                         ( shot, labelSize * atDepth eye shot, label )
                     )
                     g.sectors
             , cars = cars
+            , steep = Maybe.map (\_ -> steep) g.relief
             }
     in
     draw fit scene
@@ -601,6 +656,25 @@ every n list =
             first :: every n (List.drop (n - 1) rest)
 
 
+{-| A point of a line, and how far above the plane the lap is set on it stands, in the
+line's own metres and already drawn `steep` times over.
+-}
+type alias Lifted =
+    { x : Float
+    , y : Float
+    , rise : Float
+    }
+
+
+flat : Point -> Lifted
+flat p =
+    { x = p.x, y = p.y, rise = 0 }
+
+
+type alias Size =
+    { centre : Point, half : Float }
+
+
 {-| The lap as the two edges of a band, in the order a polygon wants them: one way
 round the outside and back round the inside, which leaves the band itself filled and
 the middle of the circuit empty.
@@ -614,7 +688,7 @@ other, and a polygon closes only the two ends of the list it is handed: leave th
 short of it and the band has a wedge missing where the finish line stands.
 
 -}
-bandOf : { centre : Point, half : Float } -> List Point -> List Point
+bandOf : Size -> List Lifted -> List Lifted
 bandOf size ring =
     let
         seams =
@@ -626,15 +700,15 @@ bandOf size ring =
     edge (bandWidth / 2) ++ List.reverse (edge (negate (bandWidth / 2)))
 
 
-offset : Float -> Point -> Point -> Point
+offset : Float -> Lifted -> Point -> Lifted
 offset k p n =
-    { x = p.x + n.x * k, y = p.y + n.y * k }
+    { p | x = p.x + n.x * k, y = p.y + n.y * k }
 
 
 {-| The unit vector to the left of the way the lap runs, at each point, read off the
 way it runs through that point.
 -}
-normals : List Point -> List Point
+normals : List { a | x : Float, y : Float } -> List Point
 normals ring =
     List.map2
         (\from to -> normalize { x = negate (to.y - from.y), y = to.x - from.x })
@@ -667,7 +741,7 @@ previous list =
 
 {-| A circuit's mark list closes itself; the ring's does not.
 -}
-ringOf : List Point -> List Point
+ringOf : List { a | x : Float, y : Float } -> List { a | x : Float, y : Float }
 ringOf lap =
     case ( List.head lap, List.reverse lap |> List.head ) of
         ( Just first, Just last ) ->
@@ -686,17 +760,20 @@ ringOf lap =
 above: turned over, the circuit would be the wrong circuit -- the Circuit de la
 Sarthe's right-hand turns coming out left-hand.
 -}
-groundAt : { centre : Point, half : Float } -> { a | x : Float, y : Float } -> Point3d Unitless Space
+groundAt : Size -> { a | x : Float, y : Float } -> Point3d Unitless Space
 groundAt size p =
     planeAt 0 size p
 
 
-raisedAt : { centre : Point, half : Float } -> { a | x : Float, y : Float } -> Point3d Unitless Space
+{-| A point set on the lap: `lift` over the plane it was surveyed on, and its own rise
+over that, in the plane's units.
+-}
+raisedAt : Size -> Lifted -> Point3d Unitless Space
 raisedAt size p =
-    planeAt lift size p
+    planeAt (lift + p.rise / size.half) size p
 
 
-planeAt : Float -> { centre : Point, half : Float } -> { a | x : Float, y : Float } -> Point3d Unitless Space
+planeAt : Float -> Size -> { a | x : Float, y : Float } -> Point3d Unitless Space
 planeAt height size p =
     Point3d.unitless
         ((p.x - size.centre.x) / size.half)
@@ -704,7 +781,7 @@ planeAt height size p =
         height
 
 
-sizeOf : List Point -> { centre : Point, half : Float }
+sizeOf : List { a | x : Float, y : Float } -> Size
 sizeOf points =
     let
         x0 =
@@ -754,7 +831,26 @@ draw fit scene =
                 |> List.sortBy (.at >> .depth >> negate)
                 |> List.map (carMarker fit)
             )
+        , case scene.steep of
+            Just times ->
+                text_
+                    [ Svg.Attributes.x (String.fromFloat (fit.frame.w * 0.015))
+                    , Svg.Attributes.y (String.fromFloat (fit.frame.h - fit.frame.w * 0.015))
+                    , Svg.Attributes.fontSize (String.fromFloat (fit.frame.w * captionSize))
+                    , fill "oklch(1 0 0 / 0.45)"
+                    ]
+                    [ text ("Heights ×" ++ String.fromFloat times) ]
+
+            Nothing ->
+                g [] []
         ]
+
+
+{-| The caption's size, as a share of the box's width.
+-}
+captionSize : Float
+captionSize =
+    0.016
 
 
 closed : List a -> List a

@@ -87,6 +87,7 @@ Where the places have heights the line is thinned in three dimensions, to the sa
 What OpenStreetMap does not hold, no thinning can keep: COTA's climb to turn 1 has no node between 297 m and 562 m round the lap, so the geometry rises 17 m on one straight stretch.
 The survey and the fence read the kept samples as they read the kept answer, and the geometry carries an `elevation_m` per point of each line and the dataset and datum as `elevation`; the positions stay pairs of degrees.
 A circuit with no kept samples is drawn without heights.
+App-side, `Motorsport.Wec.Circuit.Geometry` reads `elevation_m` as optional and refuses heights out of step with their points, and the 3D map raises the lap by them, `Tracker3d.steep` times over.
 
 **The samples are keyed by the degrees they were asked at.** An answer re-fetched with any node moved leaves that place unsampled, and the survey and the fence refuse the circuit until `elevation <word> --fetch` samples it again; re-fetching an answer and re-sampling it are one change.
 

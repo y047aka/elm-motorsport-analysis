@@ -65,6 +65,24 @@ tests =
             \_ ->
                 decode { outline | direction = Just "anticlockwise" }
                     |> complainsAbout "says it runs anticlockwise"
+        , test "the heights beside both lines are read, one per point" <|
+            \_ ->
+                heighted (Just [ 150, 160, 150 ]) (Just [ 151, 152 ])
+                    |> Result.map .heights
+                    |> Expect.equal (Ok (Just { centreline = [ 150, 160, 150 ], pitLane = [ 151, 152 ] }))
+        , test "a geometry carrying no heights is read as one standing flat" <|
+            \_ ->
+                decode outline
+                    |> Result.map .heights
+                    |> Expect.equal (Ok Nothing)
+        , test "a height out of step with its points is refused" <|
+            \_ ->
+                heighted (Just [ 150, 160 ]) (Just [ 151, 152 ])
+                    |> complainsAbout "2 heights for the outline's 3 points"
+        , test "heights on one line and not the other are refused" <|
+            \_ ->
+                heighted (Just [ 150, 160, 150 ]) Nothing
+                    |> complainsAbout "one line carries heights and the other does not"
         , test "a role drawn as a point is no line, and so no outline" <|
             \_ ->
                 decodeOf [ outlineFeature outline (point [ 0.2, 47.9 ]), pitLane ]
@@ -120,6 +138,38 @@ outlineFeature lap geometry =
                    )
           )
         , ( "geometry", geometry )
+        ]
+
+
+{-| The lap and the pit lane, each carrying the heights given as its `elevation_m`.
+-}
+heighted : Maybe (List Float) -> Maybe (List Float) -> Result String Geometry.Geometry
+heighted lap pit =
+    let
+        withHeights heights feature =
+            case ( heights, Decode.decodeValue (Decode.keyValuePairs Decode.value) feature ) of
+                ( Just these, Ok members ) ->
+                    members
+                        |> List.map
+                            (\( key, value ) ->
+                                if key == "properties" then
+                                    ( key
+                                    , Decode.decodeValue (Decode.keyValuePairs Decode.value) value
+                                        |> Result.withDefault []
+                                        |> (\props -> Encode.object (props ++ [ ( "elevation_m", Encode.list Encode.float these ) ]))
+                                    )
+
+                                else
+                                    ( key, value )
+                            )
+                        |> Encode.object
+
+                _ ->
+                    feature
+    in
+    decodeOf
+        [ withHeights lap (outlineFeature outline (line [ ( 47.9, 0.1 ), ( 47.9, 0.2 ), ( 47.9, 0.1 ) ]))
+        , withHeights pit pitLane
         ]
 
 

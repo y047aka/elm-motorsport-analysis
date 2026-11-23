@@ -48,6 +48,7 @@ layout map geometry =
     in
     { shape = lap
     , pitLane = pit
+    , relief = Circuit.reliefOf geometry.centreline geometry.heights
     , timingLines = timingLines map lap
     , lengths = lengths
     }

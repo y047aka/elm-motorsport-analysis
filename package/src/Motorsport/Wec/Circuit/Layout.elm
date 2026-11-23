@@ -1,7 +1,7 @@
 module Motorsport.Wec.Circuit.Layout exposing
     ( Layout, TimingLines, MiniSectorLines(..)
     , Lengths, LabelLengths
-    , shapeOf, pitLaneOf
+    , shapeOf, pitLaneOf, reliefOf
     )
 
 {-| One circuit as a map draws it: the lap, the pit lane beside it, and where
@@ -15,11 +15,12 @@ circuit is drawn to the same tenth of a metre.
 
 @docs Layout, TimingLines, MiniSectorLines
 @docs Lengths, LabelLengths
-@docs shapeOf, pitLaneOf
+@docs shapeOf, pitLaneOf, reliefOf
 
 -}
 
 import Motorsport.Circuit.Geodesy exposing (Frame, project)
+import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Mark, Point, Shape)
 import Motorsport.Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
@@ -28,12 +29,14 @@ import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 {-| The circuit as the tracker draws it.
 
 `lengths` is what the drawing is made at, per detail: see
-[`Lengths`](#Lengths).
+[`Lengths`](#Lengths). `relief` is how high its lines stand, for a circuit whose
+geometry carries heights.
 
 -}
 type alias Layout =
     { shape : Shape
     , pitLane : List Point
+    , relief : Maybe Relief
     , timingLines : TimingLines
     , lengths : { compact : Lengths, full : Lengths }
     }
@@ -129,6 +132,19 @@ shapeOf frame surveyed =
 pitLaneOf : Frame -> List { a | lat : Float, lon : Float } -> List Point
 pitLaneOf frame surveyed =
     List.map (drawn frame) surveyed
+
+
+{-| The heights a geometry carries, laid beside the metres of the lap's points.
+-}
+reliefOf : List { a | metres : Float } -> Maybe { centreline : List Float, pitLane : List Float } -> Maybe Relief
+reliefOf surveyed =
+    Maybe.map
+        (\heights ->
+            Relief.fromHeights
+                { lap = List.map2 (\point height -> { metres = point.metres, height = height }) surveyed heights.centreline
+                , pitLane = heights.pitLane
+                }
+        )
 
 
 mark : Frame -> { a | lat : Float, lon : Float, metres : Float } -> Mark

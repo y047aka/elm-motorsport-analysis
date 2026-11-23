@@ -2,6 +2,7 @@
   "tests": [
     "Internal.Statistics",
     "Motorsport.Circuit.Geodesy",
+    "Motorsport.Circuit.Relief",
     "Motorsport.Circuit.Shape",
     "Motorsport.Driver",
     "Motorsport.Duration",
