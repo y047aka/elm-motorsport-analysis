@@ -229,9 +229,31 @@ pub mod Circuit {
         survey = "The Fuji Speedway"
     }
 
+    /// Spa-Francorchamps. The relation `284560` lists its 30 lap ways under no role at all,
+    /// names one way `pit_lane`, and tags one node `start`; no role names the finish line,
+    /// so the lap is turned at the authored place.
+    ///
+    /// That place is the map's finish line, which no source gives in degrees. The map puts
+    /// its Start Line 122 m after the finish line, and a node stands 123.9 m behind the
+    /// relation's `start` node along the lap — the agreement Barcelona (127 against 128) and
+    /// COTA (296.6 against 297) show between their two tagged nodes — so `start` is the map's
+    /// Start Line and the zero is the survey's point 122 m before it, to within the quarter
+    /// metre the lap is thinned to.
+    def spa(): Circuit = {
+        relation = Some(284560i64),
+        box      = None,
+        pit      = None,
+        word     = "spa",
+        timedFrom = "",
+        timingLine = Some({place = {lon = 5.9660150, lat = 50.4431125}, within = Some(10.0)}),
+        elevation = None,
+        file   = "app/static/geometry/spa.geojson",
+        survey = "The Circuit de Spa-Francorchamps"
+    }
+
     /// The circuits there are, in the order a run over all of them walks them.
     pub def circuits(): List[Circuit] =
-        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: Nil
+        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: spa() :: Nil
 
     /// A circuit by the word the app draws it by — the word its directory and its kept
     /// files are named by too.

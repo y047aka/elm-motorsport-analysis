@@ -86,5 +86,5 @@ test('every circuit Shared draws is one Flix can name', () => {
 });
 
 test('the circuits with drawings here are drawn', () => {
-  expect(drawnNames().sort()).toEqual(['barcelona', 'cota', 'fuji', 'le_mans', 'monza']);
+  expect(drawnNames().sort()).toEqual(['barcelona', 'cota', 'fuji', 'le_mans', 'monza', 'spa']);
 });
