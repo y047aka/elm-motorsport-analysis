@@ -511,11 +511,13 @@ currentSector clock lap =
 
 Not clamped: past the end of the lap gives more than 1 and before its start
 gives a negative.
+`time` is how long this lap takes over the whole sector.
 
 -}
 type alias SectorProgress =
     { sector : Sector
     , progress : Float
+    , time : Duration
     }
 
 
@@ -535,6 +537,7 @@ progressAt clock lap =
         Just
             { sector = sector
             , progress = progressThrough clock segment
+            , time = segment.time
             }
 
 
@@ -623,6 +626,7 @@ mini-sector here because the clock falls inside it.
 type alias MiniSectorProgress =
     { miniSector : LeMans2025MiniSector
     , progress : Float
+    , time : Duration
     }
 
 
@@ -633,6 +637,7 @@ miniSectorProgressAt clock lap =
             (\( miniSector, segment ) ->
                 { miniSector = miniSector
                 , progress = progressThrough clock segment
+                , time = segment.time
                 }
             )
 
@@ -672,7 +677,7 @@ reachedAt clock lap =
         |> List.Extra.last
         |> Maybe.map
             (\( sector, segment ) ->
-                { sector = sector, progress = min 1 (progressThrough clock segment) }
+                { sector = sector, progress = min 1 (progressThrough clock segment), time = segment.time }
             )
 
 
@@ -685,7 +690,7 @@ miniSectorReachedAt clock lap =
         |> List.Extra.last
         |> Maybe.map
             (\( miniSector, segment ) ->
-                { miniSector = miniSector, progress = min 1 (progressThrough clock segment) }
+                { miniSector = miniSector, progress = min 1 (progressThrough clock segment), time = segment.time }
             )
 
 

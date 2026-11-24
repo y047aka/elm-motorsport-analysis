@@ -275,7 +275,7 @@ ground shown =
             { lap = List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks circuit.shape)
             , pitLane = circuit.pitLane
             , at = \progress -> Shape.at (Config.toMetres circuit.scale progress) circuit.shape
-            , progressOf = Config.computeProgress circuit.config
+            , progressOf = Config.progressOn circuit.scale circuit.config
             , boundaries = Config.calcSectorBoundaries circuit.config
             , sectors = sectorMarks circuit.config
             , relief =
@@ -907,7 +907,7 @@ renderCarOnCircuit detail circuit car =
             circuitConstants detail circuit
 
         position =
-            Shape.at (Config.toMetres circuit.scale (Config.computeProgress circuit.config car)) circuit.shape
+            Shape.at (Config.toMetres circuit.scale (Config.progressOn circuit.scale circuit.config car)) circuit.shape
 
         marker =
             g [ Attributes.transform [ Translate position.x position.y ] ]

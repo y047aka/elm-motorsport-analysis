@@ -138,7 +138,7 @@ suite =
                     carAt "7" (leMansFieldAt 3500)
                         |> Maybe.andThen (.currentLap >> .miniSectors >> recordedMiniSectors)
                         |> Maybe.andThen .current
-                        |> Expect.equal (Just { miniSector = Z12, progress = 0.5 })
+                        |> Expect.equal (Just { miniSector = Z12, progress = 0.5, time = 1000 })
             , test "each of them reads complete behind the car, part way at it, and untouched ahead" <|
                 \_ ->
                     carAt "7" (leMansFieldAt 3500)

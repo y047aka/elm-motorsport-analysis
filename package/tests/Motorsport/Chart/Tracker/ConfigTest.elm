@@ -48,6 +48,34 @@ tests =
                     Config.toMetres (Config.lapScale (Pace.fromShape Nothing PaceTest.stadium) stadiumLines stadiumSectors) 0.35
                         |> Expect.greaterThan 825
             ]
+        , describe "evenness"
+            [ test "draws a stretch run near its usual time at the reference pace, and one run at twice it evenly" <|
+                \_ ->
+                    [ 1000, 1200, 1600, 2000, 3000 ]
+                        |> List.map (\time -> Config.evenness { time = time, usual = 1000 })
+                        |> expectAll [ 0, 0, 0.5, 1, 1 ]
+            ]
+        , describe "ease"
+            [ test "at no evenness, is the progress the stretch's share gives" <|
+                \_ ->
+                    Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 0.5, evenness = 0 }
+                        |> Expect.within (Expect.Absolute 0.000001) 0.35
+            , test "at full evenness, runs the stretch's distance at one speed" <|
+                \_ ->
+                    Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 0.5, evenness = 1 }
+                        |> Config.toMetres stadiumScale
+                        |> Expect.within (Expect.Absolute 0.01) 825
+            , test "leaves the stretch's ends where they are, however even" <|
+                \_ ->
+                    [ 0, 0.5, 1 ]
+                        |> List.concatMap
+                            (\e ->
+                                [ Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 0, evenness = e }
+                                , Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 1, evenness = e }
+                                ]
+                            )
+                        |> expectAll [ 0.2, 0.5, 0.2, 0.5, 0.2, 0.5 ]
+            ]
         , describe "the grain a round and its circuit disagree on"
             [
                 -- `lapScale` reads the finer grain only when the round is timed
@@ -89,6 +117,11 @@ stadiumSectors =
         }
     , miniSectors = NoMiniSectors
     }
+
+
+stadiumScale : Config.LapScale
+stadiumScale =
+    Config.lapScale (Pace.fromShape Nothing PaceTest.stadium) stadiumLines stadiumSectors
 
 
 stadiumLines : TimingLines

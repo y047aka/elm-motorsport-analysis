@@ -3,6 +3,7 @@ module Motorsport.Chart.Tracker.Config exposing
     , MiniSectorShares(..)
     , computeProgress, calcSectorBoundaries
     , LapScale, lapScale, toMetres
+    , progressOn, evenness, ease
     )
 
 {-| The track's proportions: how much of the lap each stretch of it takes, and
@@ -18,10 +19,12 @@ shares are held per sector and per mini-sector, so reading one is
 @docs MiniSectorShares
 @docs computeProgress, calcSectorBoundaries
 @docs LapScale, lapScale, toMetres
+@docs progressOn, evenness, ease
 
 -}
 
 import Motorsport.Circuit.Pace as Pace exposing (Pace)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
@@ -62,11 +65,36 @@ car sits between the same two boundaries the drawn track puts it between.
 -}
 computeProgress : TrackConfig -> CarAt -> Float
 computeProgress config car =
+    case stretchOf config car of
+        Just stretch ->
+            along stretch.share stretch.progress
+
+        Nothing ->
+            car.currentLap.progress
+
+
+{-| The stretch of the lap a car is in: its share of the lap, how far through it the car is, and how long the car's lap takes over it.
+-}
+type alias Stretch =
+    { share : Share
+    , progress : Float
+    , time : Duration
+    }
+
+
+{-| `Nothing` for a lap with no sector time to place the car by, which is placed by its own lap progress instead -- measured against that lap's total time, so it takes no account of where the boundaries between the stretches fall.
+-}
+stretchOf : TrackConfig -> CarAt -> Maybe Stretch
+stretchOf config car =
     case ( config.miniSectors, car.currentLap.miniSectors ) of
         ( MiniSectorShares shares, Snapshot.Recorded { current } ) ->
             case current of
                 Just miniSector ->
-                    along (LeMans.get miniSector.miniSector shares) miniSector.progress
+                    Just
+                        { share = LeMans.get miniSector.miniSector shares
+                        , progress = miniSector.progress
+                        , time = miniSector.time
+                        }
 
                 -- Nowhere to place the car at the finer grain.
                 Nothing ->
@@ -76,23 +104,84 @@ computeProgress config car =
             bySector config car
 
 
-{-| Where round the lap the three-sector grain puts the car, falling back to the
-car's own lap progress for a lap with no sector time to place it by -- measured
-against that lap's total time, so it takes no account of where the boundaries
-between the stretches fall.
+{-| Not a `let` in [`stretchOf`](#stretchOf): Elm would work it out even when the finer grain answers, once per car per frame.
+-}
+bySector : TrackConfig -> CarAt -> Maybe Stretch
+bySector config car =
+    Maybe.map
+        (\{ sector, progress, time } ->
+            { share = Sector.get sector config.sectors, progress = progress, time = time }
+        )
+        car.currentLap.sector
 
-Not a `let` in [`computeProgress`](#computeProgress): Elm would work it out even
-when the finer grain answers, once per car per frame.
+
+{-| How far round the lap to draw a car on a circuit: [`computeProgress`](#computeProgress), eased towards an even pace through a stretch the car is running far slower than usual.
+
+A car under a full course yellow, behind the safety car or through a slow zone is held to a speed rather than driving the corners, so the reference lap's quick straights and slow bends would misplace it.
+How much slower than usual is the stretch's time against its share of the car's own best lap; see [`evenness`](#evenness).
 
 -}
-bySector : TrackConfig -> CarAt -> Float
-bySector config car =
-    case car.currentLap.sector of
-        Just { sector, progress } ->
-            along (Sector.get sector config.sectors) progress
+progressOn : LapScale -> TrackConfig -> CarAt -> Float
+progressOn scale config car =
+    case stretchOf config car of
+        Just stretch ->
+            ease scale
+                { share = stretch.share
+                , progress = stretch.progress
+                , evenness =
+                    case car.bestLap of
+                        Just best ->
+                            evenness { time = stretch.time, usual = stretch.share.share * toFloat best.time }
+
+                        Nothing ->
+                            0
+                }
 
         Nothing ->
             car.currentLap.progress
+
+
+{-| How far towards an even pace a stretch run in `time` is drawn, where it usually takes `usual`: none up to 1.2 times as long, all of it from 2 times, and in proportion between.
+
+Chosen against Le Mans 2025, where 95% of its mini-sectors run under green took at most 1.11 times their share of the car's best lap, those run under a full course yellow 2.9 at the slowest tenth, and those behind the safety car 1.43 at the median.
+
+-}
+evenness : { time : Duration, usual : Float } -> Float
+evenness { time, usual } =
+    if usual > 0 then
+        clamp 0 1 ((toFloat time / usual - 1.2) / 0.8)
+
+    else
+        0
+
+
+{-| A progress through a stretch drawn `evenness` of the way from where the reference lap's pace puts it to where an even pace through that stretch does.
+Both agree at the stretch's ends, so a car that changes how evenly it is drawn as it crosses into the next stretch does not jump.
+-}
+ease : LapScale -> { share : Share, progress : Float, evenness : Float } -> Float
+ease scale placing =
+    let
+        paced =
+            along placing.share placing.progress
+    in
+    if placing.evenness <= 0 then
+        paced
+
+    else
+        let
+            from =
+                toMetres scale placing.share.start
+
+            to =
+                toMetres scale (placing.share.start + placing.share.share)
+
+            atPace =
+                toMetres scale paced
+
+            atEven =
+                from + placing.progress * (to - from)
+        in
+        toProgress scale (atPace + placing.evenness * (atEven - atPace))
 
 
 along : Share -> Float -> Float
@@ -208,3 +297,31 @@ interpolate pace knots progress =
 
         [] ->
             progress
+
+
+{-| The progress [`toMetres`](#toMetres) puts at a distance round the lap.
+-}
+toProgress : LapScale -> Float -> Float
+toProgress (LapScale pace knots) metres =
+    invert knots (Pace.secondsAt pace metres)
+
+
+invert : List Knot -> Float -> Float
+invert knots seconds =
+    case knots of
+        a :: b :: rest ->
+            if seconds <= b.seconds || List.isEmpty rest then
+                if b.seconds > a.seconds then
+                    a.progress + (seconds - a.seconds) / (b.seconds - a.seconds) * (b.progress - a.progress)
+
+                else
+                    a.progress
+
+            else
+                invert (b :: rest) seconds
+
+        [ a ] ->
+            a.progress
+
+        [] ->
+            seconds
