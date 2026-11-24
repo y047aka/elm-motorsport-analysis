@@ -246,6 +246,12 @@ pub mod Circuit {
     /// COTA (296.6 against 297) show between their two tagged nodes — so `start` is the map's
     /// Start Line and the zero is the survey's point 122 m before it, to within the quarter
     /// metre the lap is thinned to.
+    ///
+    /// That place is taken off OpenStreetMap's own `start` node, so it checks the survey
+    /// against nothing but itself: a `start` node moved in OpenStreetMap moves the zero with
+    /// it on the next `--fetch`, and only the map's drawing could say which was right.
+    ///
+    /// Its heights are the SPW's LiDAR model of Wallonia at 0.5 m.
     def spa(): Circuit = {
         relation = Some(284560i64),
         box      = None,
@@ -254,7 +260,7 @@ pub mod Circuit {
         word     = "spa",
         timedFrom = "",
         timingLine = Some({place = {lon = 5.9660150, lat = 50.4431125}, within = Some(10.0)}),
-        elevation = None,
+        elevation = Some(Elevation.Source.WalloniaMnt),
         file   = "app/static/geometry/spa.geojson",
         survey = "The Circuit de Spa-Francorchamps"
     }
@@ -262,6 +268,15 @@ pub mod Circuit {
     /// São Paulo — Interlagos. The relation `6781071` lists its 25 lap ways under no role at
     /// all, names one way `pit_lane`, and tags both a `start` and a `finish` node standing
     /// 60.04 m apart along the lap, which is the offset the 2026 map prints for its Start Line.
+    ///
+    /// `timingLine` is the `finish` node's own place in the kept answer: it checks the tagged
+    /// line against nothing but itself, and is there so that a re-fetch answering a `finish`
+    /// moved more than 10 m fails before it writes anything.
+    ///
+    /// It is served without heights. No source here covers Brazil; the city's own LiDAR
+    /// terrain model (GeoSampa, MDT 2017 and 2020) is published as tiles of points to download
+    /// and as no service a place can be asked of, and a model of surfaces such as Copernicus
+    /// GLO-30 reads grandstands and trees into the lap.
     def saoPaulo(): Circuit = {
         relation = Some(6781071i64),
         box      = None,
@@ -269,7 +284,7 @@ pub mod Circuit {
         bypassed = None,
         word     = "sao_paulo",
         timedFrom = "finish",
-        timingLine = None,
+        timingLine = Some({place = {lon = -46.7001274, lat = -23.7032239}, within = Some(10.0)}),
         elevation = None,
         file   = "app/static/geometry/sao_paulo.geojson",
         survey = "The Autódromo José Carlos Pace"
@@ -280,13 +295,20 @@ pub mod Circuit {
     ///
     /// That node is the map's finish line, not its Start Line: the map draws its Start Line
     /// `218 m` and its Pit Out `222.8 m` after the line, and laid over the survey those two
-    /// fall `210 m` and `228 m` behind `start` along the lap.
+    /// fall `210 m` and `228 m` after `start` along the lap. `timingLine` is that node's own
+    /// place in the kept answer, so it checks the line against nothing but itself, and is
+    /// there so that a re-fetch answering a `start` moved more than 10 m fails before it
+    /// writes anything.
     ///
     /// `bypassed` names the Variante Bassa chicane. The relation lists it under no role, as
     /// it lists every way the lap does run, and the bypass runs through the two nodes the
     /// chicane joins, so no walk of the relation's ground separates the lap from the chicane
     /// without being told which is which. The lap of the other 32 ways stands 4,904.5 m
     /// against the published 4,909 m.
+    ///
+    /// Its heights are Regione Emilia-Romagna's LiDAR model at 0.5 m from its 2022 survey,
+    /// which covers Imola and Faenza but not the whole region; Regione Lombardia's DTM 5x5,
+    /// Monza's, stops at Lombardy.
     def imola(): Circuit = {
         relation = Some(9291096i64),
         box      = None,
@@ -294,8 +316,8 @@ pub mod Circuit {
         bypassed = Some(176764793i64 :: 1025616646i64 :: 1025616647i64 :: Nil),
         word     = "imola",
         timedFrom = "start",
-        timingLine = None,
-        elevation = None,
+        timingLine = Some({place = {lon = 11.7140173, lat = 44.3444055}, within = Some(10.0)}),
+        elevation = Some(Elevation.Source.EmiliaRomagnaDtm),
         file   = "app/static/geometry/imola.geojson",
         survey = "The Autodromo Internazionale Enzo e Dino Ferrari"
     }

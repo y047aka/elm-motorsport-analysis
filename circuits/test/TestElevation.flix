@@ -93,6 +93,21 @@ pub mod TestElevation {
         };
         Assert.assertTrue(refused("holds no height", Elevation.Icgc.sampleOf(at, "@MET2m Stretch.Pixel Value; NoData; ")))
 
+    @Test
+    def testWallonieAnswersThePixelThePlaceStandsIn(): Unit \ Assert =
+        let at = {lat = 50.4431125, lon = 5.966015};
+        // Longitude first, with no tolerance, on a map a thousandth of a degree across.
+        Assert.assertTrue(String.contains({substr = "/identify?geometry=5.966015,50.4431125&"}, Elevation.Wallonie.urlOf(at)));
+        Assert.assertTrue(String.contains({substr = "&tolerance=0&mapExtent=5.9655"}, Elevation.Wallonie.urlOf(at)));
+        let answered = "{\"results\":[{\"layerId\":0,\"layerName\":\"Relief Wallonie - MNT 2021-2022 - 50cm\",\"displayFieldName\":\"\",\"attributes\":{\"Stretch.Pixel Value\":\"414.223145\"}}]}";
+        match Elevation.Wallonie.sampleOf(at, answered) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(read)     => Assert.assertTrue(read#metres == 414.223145 and read#resolution == 0.5)
+        };
+        // A place outside Wallonia is answered with no result at all.
+        Assert.assertTrue(refused("holds no height at [5.966015,50.4431125]", Elevation.Wallonie.sampleOf(at, "{\"results\":[]}")));
+        Assert.assertTrue(refused("answered no results", Elevation.Wallonie.sampleOf(at, "{\"error\":{\"code\":400}}")))
+
     // ---------------------------------------------------------------- the kept file
 
     @Test

@@ -62,7 +62,7 @@ A lone `start` node is not always the map's Start Line — Imola's is its finish
 Every figure is kept twice, as `metres` and as the map printed it, because the print carries the precision the map was written to (0.01 m at Le Mans, whole metres elsewhere) and its decimal comma.
 `lengths` and `lines` hold only what the map gives a distance for, every line measured from the finish line; `drawn` names what it draws without one, and lists such as Le Mans's timing loops are kept in the map's own order.
 `sectors` and Le Mans's `zones` are the stretches the map colours, each bounded by the drawn labels its colour changes at; a colour is sampled off the stretch's own label, since the shared template's labels print one colour on every map where its lines are rendered a little differently on each.
-A map's figures need not agree with one another: Lap by Pits should be the centreline less the track between Pit In and Pit Out plus the pit lane, and 2026's Fuji map misses that by 9 m and Barcelona's by 5.2 m. Spa's 2026 map misses it by 48 m, and there Pit In - Pit Out (386.6 m) is all but the track between its own Pit In and Pit Out lines (386.4 m); the record keeps what the map prints either way.
+A map's figures need not agree with one another: Lap by Pits should be the centreline less the track between Pit In and Pit Out plus the pit lane, and 2026's Fuji map misses that by 9 m and Barcelona's by 5.2 m. São Paulo's 2026 map misses it by 3 m and Spa's by 48 m, and at Spa Pit In - Pit Out (386.6 m) is all but the track between its own Pit In and Pit Out lines (386.4 m); the record keeps what the map prints either way.
 
 ## The links into `backend/src`
 

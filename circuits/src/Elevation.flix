@@ -35,6 +35,8 @@ pub mod Elevation {
         case IcgcMet2
         case LombardiaDtm5
         case GsiDem
+        case WalloniaMnt
+        case EmiliaRomagnaDtm
     }
 
     /// What a source says of itself, in the kept file and, less the service, in the
@@ -48,7 +50,7 @@ pub mod Elevation {
 
     /// Every source, in no order a reader depends on.
     pub def sources(): List[Source] =
-        Source.Usgs3dep :: Source.IgnLidarHd :: Source.IcgcMet2 :: Source.LombardiaDtm5 :: Source.GsiDem :: Nil
+        Source.Usgs3dep :: Source.IgnLidarHd :: Source.IcgcMet2 :: Source.LombardiaDtm5 :: Source.GsiDem :: Source.WalloniaMnt :: Source.EmiliaRomagnaDtm :: Nil
 
     /// The source a kept dataset was sampled from, known by its service.
     pub def sourceOf(dataset: Dataset): Option[Source] =
@@ -84,6 +86,19 @@ pub mod Elevation {
             license = "GSI content terms of use (CC BY 4.0 compatible)",
             datum   = "Tokyo Bay mean sea level",
             service = Elevation.Gsi.service()
+        }
+        case Source.WalloniaMnt => {
+            name    = "Relief de la Wallonie, MNT 2021-2022 (© SPW)",
+            license = "CC BY 4.0",
+            datum   = "Deuxième Nivellement Général",
+            service = Elevation.Wallonie.service()
+        }
+        // Its metadata (MetasfERa `r_emiro:2022-07-04T145319`) names no vertical datum.
+        case Source.EmiliaRomagnaDtm => {
+            name    = "DTM 0,5x0,5m - RER 2022 (© Regione Emilia-Romagna)",
+            license = "CC BY 4.0",
+            datum   = "unstated",
+            service = "https://servizigis.regione.emilia-romagna.it/arcgis/rest/services/public/DtmRER2022/ImageServer"
         }
     }
 
@@ -228,6 +243,8 @@ pub mod Elevation {
             case Source.IgnLidarHd     => Elevation.Geopf.sample(places)
             case Source.IcgcMet2       => Elevation.Icgc.sample(places)
             case Source.GsiDem         => Elevation.Gsi.sample(places)
+            case Source.WalloniaMnt    => Elevation.Wallonie.sample(places)
+            case Source.EmiliaRomagnaDtm => Elevation.ArcGis.sample(datasetOf(source)#service, "RER DTM 2022", places)
         })
 
     /// How many times a request is asked before the run gives up: a source answers 504

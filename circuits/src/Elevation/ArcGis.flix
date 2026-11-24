@@ -1,5 +1,6 @@
 /// An ArcGIS ImageServer asked through its `getSamples`: the height of an elevation model
-/// at each place. USGS 3DEP and Regione Lombardia's DTM 5x5 are both served this way.
+/// at each place. USGS 3DEP, Regione Lombardia's DTM 5x5 and Regione Emilia-Romagna's DTM
+/// 2022 are all served this way.
 ///
 /// One request carries a multipoint of up to `batch` places and comes back with one
 /// sample per place, matched to it by `locationId`, the index it was sent at. A height
