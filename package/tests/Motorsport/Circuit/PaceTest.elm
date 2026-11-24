@@ -2,6 +2,7 @@ module Motorsport.Circuit.PaceTest exposing (stadium, tests)
 
 import Expect
 import Motorsport.Circuit.Pace as Pace exposing (Pace)
+import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Shape)
 import Test exposing (Test, describe, test)
 
@@ -40,16 +41,37 @@ stadium =
         )
 
 
+{-| The stadium on a slope: the lower straight climbs 50 m and the upper one comes back down.
+-}
+hill : Relief
+hill =
+    Relief.fromHeights
+        { lap =
+            [ { metres = 0, height = 0 }
+            , { metres = 1000, height = 50 }
+            , { metres = 1000 + pi * 50, height = 50 }
+            , { metres = 2000 + pi * 50, height = 0 }
+            , { metres = Shape.length stadium, height = 0 }
+            ]
+        , pitLane = []
+        }
+
+
 pace : Pace
 pace =
-    Pace.fromShape stadium
+    Pace.fromShape Nothing stadium
 
 
 {-| Seconds per metre over the ten metres from a distance.
 -}
 slowness : Float -> Float
-slowness metres =
-    (Pace.secondsAt pace (metres + 10) - Pace.secondsAt pace metres) / 10
+slowness =
+    slownessOf pace
+
+
+slownessOf : Pace -> Float -> Float
+slownessOf of_ metres =
+    (Pace.secondsAt of_ (metres + 10) - Pace.secondsAt of_ metres) / 10
 
 
 tests : Test
@@ -67,6 +89,14 @@ tests =
             \_ ->
                 slowness 1700
                     |> Expect.greaterThan (slowness 1900)
+        , test "a climb is taken slower than the same straight on the level" <|
+            \_ ->
+                slownessOf (Pace.fromShape (Just hill) stadium) 800
+                    |> Expect.greaterThan (slowness 800)
+        , test "a descent is taken quicker than the same straight on the level" <|
+            \_ ->
+                slownessOf (Pace.fromShape (Just hill) stadium) 1500
+                    |> Expect.lessThan (slowness 1500)
         , test "metresAt undoes secondsAt" <|
             \_ ->
                 [ 0, 123, 1000, 1080, 2300 ]

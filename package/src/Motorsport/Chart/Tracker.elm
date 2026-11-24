@@ -192,7 +192,7 @@ onCircuit layout { direction, config } =
         , shape = layout.shape
         , pitLane = layout.pitLane
         , relief = layout.relief
-        , scale = Config.lapScale (Pace.fromShape layout.shape) layout.timingLines config
+        , scale = Config.lapScale (Pace.fromShape layout.relief layout.shape) layout.timingLines config
         , lengths = layout.lengths
         , bounds =
             boundsOf

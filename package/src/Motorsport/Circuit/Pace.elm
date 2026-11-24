@@ -13,6 +13,7 @@ A lap's timing says only when a car crossed each line; between two lines the tra
 -}
 
 import Array exposing (Array)
+import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 
 
@@ -50,12 +51,14 @@ Only the shape of the lap is read off them: every lap is stretched to the time i
             , { x = 0, y = 0, metres = 2200 }
             ]
 
-    secondsAt (fromShape lap) 0
+    secondsAt (fromShape Nothing lap) 0
     --> 0
 
+Where the lap's heights are known, the car is slowed climbing and pushed on descending, and brakes harder uphill than down: the slope is read across the same 60 m chord.
+
 -}
-fromShape : Shape -> Pace
-fromShape shape =
+fromShape : Maybe Relief -> Shape -> Pace
+fromShape relief shape =
     let
         lapLength =
             Shape.length shape
@@ -78,20 +81,32 @@ fromShape shape =
             reach =
                 max 1 (round (curvatureReach / step))
 
-            cornering =
-                Array.initialize count
-                    (\i ->
-                        Maybe.map3 curvature
-                            (Array.get (modBy count (i - reach)) places)
-                            (Array.get i places)
-                            (Array.get (modBy count (i + reach)) places)
-                            |> Maybe.withDefault 0
-                            |> cornerSpeed
-                    )
-                    |> Array.toList
+            gradeAt i =
+                case relief of
+                    Just heights ->
+                        (Relief.at (toFloat (i + reach) * step) heights - Relief.at (toFloat (i - reach) * step) heights)
+                            / (toFloat (2 * reach) * step)
+
+                    Nothing ->
+                        0
+
+            samples =
+                List.range 0 (count - 1)
+                    |> List.map
+                        (\i ->
+                            { cornering =
+                                Maybe.map3 curvature
+                                    (Array.get (modBy count (i - reach)) places)
+                                    (Array.get i places)
+                                    (Array.get (modBy count (i + reach)) places)
+                                    |> Maybe.withDefault 0
+                                    |> cornerSpeed
+                            , grade = gradeAt i
+                            }
+                        )
 
             speeds =
-                limitByAcceleration step cornering
+                limitByAcceleration step samples
         in
         Profiled { step = step, seconds = Array.fromList (elapsed step speeds) }
 
@@ -148,21 +163,22 @@ cornerSpeed kappa =
 {-| The cornering speeds, cut to what the car can accelerate up to after each slow point and brake down from before it.
 
 The lap is a loop, so both passes start at its slowest point, which neither can be going faster than on arrival.
+A sample's grade is the slope across the chord centred on it, taken as the slope of the stretch from it to the next.
 
 -}
-limitByAcceleration : Float -> List Float -> List Float
-limitByAcceleration step cornering =
+limitByAcceleration : Float -> List { cornering : Float, grade : Float } -> List Float
+limitByAcceleration step samples =
     let
         count =
-            List.length cornering
+            List.length samples
 
         slowest =
-            cornering
+            samples
                 |> List.indexedMap Tuple.pair
                 |> List.foldl
-                    (\( i, v ) ( bestI, bestV ) ->
-                        if v < bestV then
-                            ( i, v )
+                    (\( i, { cornering } ) ( bestI, bestV ) ->
+                        if cornering < bestV then
+                            ( i, cornering )
 
                         else
                             ( bestI, bestV )
@@ -171,23 +187,26 @@ limitByAcceleration step cornering =
                 |> Tuple.first
 
         rotated =
-            List.drop slowest cornering ++ List.take slowest cornering
+            List.drop slowest samples ++ List.take slowest samples
+
+        reachable speed acceleration =
+            sqrt (max 1 (speed ^ 2 + 2 * acceleration * step))
 
         accelerated =
             case rotated of
                 first :: rest ->
                     List.foldl
-                        (\v ( previous, done ) ->
+                        (\sample ( previous, done ) ->
                             let
-                                drag =
-                                    max 0.02 (1 - (previous / limits.top) ^ 2)
+                                power =
+                                    limits.accelerating * max 0.02 (1 - (previous.speed / limits.top) ^ 2)
 
-                                reached =
-                                    min v (sqrt (previous ^ 2 + 2 * limits.accelerating * drag * step))
+                                speed =
+                                    min sample.cornering (reachable previous.speed (power - gravity * previous.grade))
                             in
-                            ( reached, reached :: done )
+                            ( { speed = speed, grade = sample.grade }, { speed = speed, grade = sample.grade } :: done )
                         )
-                        ( first, [ first ] )
+                        ( { speed = first.cornering, grade = first.grade }, [ { speed = first.cornering, grade = first.grade } ] )
                         rest
                         |> Tuple.second
 
@@ -198,14 +217,14 @@ limitByAcceleration step cornering =
             case List.reverse accelerated of
                 first :: _ ->
                     List.foldl
-                        (\v ( next, done ) ->
+                        (\sample ( next, done ) ->
                             let
-                                reached =
-                                    min v (sqrt (next ^ 2 + 2 * limits.braking * step))
+                                speed =
+                                    min sample.speed (reachable next (limits.braking + gravity * sample.grade))
                             in
-                            ( reached, reached :: done )
+                            ( speed, speed :: done )
                         )
-                        ( first, [] )
+                        ( first.speed, [] )
                         accelerated
                         |> Tuple.second
 
@@ -213,6 +232,11 @@ limitByAcceleration step cornering =
                     []
     in
     List.drop (count - slowest) braked ++ List.take (count - slowest) braked
+
+
+gravity : Float
+gravity =
+    9.81
 
 
 {-| The time each sample is reached at, from the first, and the whole lap's last.

@@ -1,6 +1,6 @@
 module Motorsport.Wec.Circuit.LeMansPaceTest exposing (tests)
 
-{-| The reference lap of Le Mans as served, against the share of the lap the 2025 24 Hours' summary gives each stretch between the lines its map gives a distance for.
+{-| The reference lap of Le Mans as served, heights and all, against the share of the lap the 2025 24 Hours' summary gives each stretch between the lines its map gives a distance for.
 -}
 
 import Expect
@@ -40,14 +40,14 @@ tests =
         [ test "spends the lap between its lines closer to the 2025 race than an even pace does" <|
             \_ ->
                 case layout of
-                    Ok { shape, timingLines } ->
-                        case timingLines.miniSectors of
-                            LeMansMiniSectors lines ->
+                    Ok { shape, relief, timingLines } ->
+                        case ( timingLines.miniSectors, relief ) of
+                            ( LeMansMiniSectors lines, Just _ ) ->
                                 let
                                     distances =
                                         List.filterMap (\( mini, share ) -> LeMans.get mini lines |> Maybe.map (\metres -> ( metres, share ))) shares2025
                                 in
-                                ( missedBy (Pace.fromShape shape) (Shape.length shape) distances
+                                ( missedBy (Pace.fromShape relief shape) (Shape.length shape) distances
                                 , missedBy Pace.even (Shape.length shape) distances
                                 )
                                     |> Expect.all
@@ -56,8 +56,11 @@ tests =
                                         , Tuple.second >> Expect.atLeast 0.09
                                         ]
 
-                            SectorsOnly ->
+                            ( SectorsOnly, _ ) ->
                                 Expect.fail "Le Mans places its mini-sectors' lines"
+
+                            ( _, Nothing ) ->
+                                Expect.fail "Le Mans's geometry carries its heights"
 
                     Err problem ->
                         Expect.fail (Decode.errorToString problem)
