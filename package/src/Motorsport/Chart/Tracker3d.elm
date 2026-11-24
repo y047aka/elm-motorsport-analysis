@@ -496,19 +496,19 @@ view surface model shown standings =
             in
             ( side width, side (negate width) )
 
-        -- Where a progress round the lap stands, and how high: a height between two of
+        -- Where a place round the lap stands, and how high: a height between two of
         -- the lap's points is the one the line between them passes.
-        onLap progress =
+        onLap along =
             let
                 position =
-                    g.at progress
+                    g.at along
             in
             ( { x = position.x
               , y = position.y
               , rise =
                     case ( rising, g.relief ) of
                         ( Just rise, Just relief ) ->
-                            rise (relief.at progress)
+                            rise (relief.at along)
 
                         _ ->
                             0
@@ -516,10 +516,10 @@ view surface model shown standings =
             , position
             )
 
-        across width progress =
+        across width along =
             let
                 ( standing, position ) =
-                    onLap progress
+                    onLap along
             in
             acrossBand width standing position
 
@@ -537,7 +537,7 @@ view surface model shown standings =
                     (\car ->
                         let
                             ( standing, position ) =
-                                onLap (g.progressOf car)
+                                onLap (g.carAt car)
 
                             shot =
                                 project eye (raisedAt size standing)
@@ -595,13 +595,13 @@ view surface model shown standings =
                 every (riserStride (ringOf lap)) (ringOf lap)
                     |> List.map (\p -> ( project eye (groundAt size p), project eye (raisedAt size p) ))
             , boundaries = List.map (across (bandWidth / 2)) g.boundaries
-            , finish = across (bandWidth * 0.8) 0
+            , finish = across (bandWidth * 0.8) g.finish
             , labels =
                 List.map
-                    (\{ progress, label } ->
+                    (\{ at, label } ->
                         let
                             ( standing, position ) =
-                                onLap progress
+                                onLap at
 
                             out =
                                 outward position

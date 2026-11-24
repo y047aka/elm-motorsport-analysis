@@ -48,33 +48,31 @@ tests =
                     Config.toMetres (Config.lapScale (Pace.fromShape Nothing PaceTest.stadium) stadiumLines stadiumSectors) 0.35
                         |> Expect.greaterThan 825
             ]
-        , describe "evenness"
-            [ test "draws a stretch run near its usual time at the reference pace, and one run at twice it evenly" <|
-                \_ ->
-                    [ 1000, 1200, 1600, 2000, 3000 ]
-                        |> List.map (\time -> Config.evenness { time = time, usual = 1000 })
-                        |> expectAll [ 0, 0, 0.5, 1, 1 ]
-            ]
         , describe "ease"
-            [ test "at no evenness, is the progress the stretch's share gives" <|
+            [ test "draws a stretch run near its usual time at the reference lap's pace" <|
                 \_ ->
-                    Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 0.5, evenness = 0 }
-                        |> Expect.within (Expect.Absolute 0.000001) 0.35
-            , test "at full evenness, runs the stretch's distance at one speed" <|
+                    [ 1000, 1200 ]
+                        |> List.map (\took -> easedHalfway { took = took, usually = 1000 })
+                        |> expectAll [ halfwayAtPace, halfwayAtPace ]
+            , test "draws a stretch run in twice its usual time or more at one speed" <|
                 \_ ->
-                    Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 0.5, evenness = 1 }
-                        |> Config.toMetres stadiumScale
-                        |> Expect.within (Expect.Absolute 0.01) 825
+                    [ 2000, 3000 ]
+                        |> List.map (\took -> easedHalfway { took = took, usually = 1000 })
+                        |> expectAll [ 825, 825 ]
+            , test "draws one between in proportion" <|
+                \_ ->
+                    easedHalfway { took = 1600, usually = 1000 }
+                        |> Expect.within (Expect.Absolute 0.01) ((halfwayAtPace + 825) / 2)
             , test "leaves the stretch's ends where they are, however even" <|
                 \_ ->
-                    [ 0, 0.5, 1 ]
+                    [ 1000, 1600, 2000 ]
                         |> List.concatMap
-                            (\e ->
-                                [ Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 0, evenness = e }
-                                , Config.ease stadiumScale { share = stadiumSectors.sectors.s2, progress = 1, evenness = e }
+                            (\took ->
+                                [ Config.ease stadiumScale (Config.evenness { took = took, usually = 1000 }) { share = stadiumSectors.sectors.s2, progress = 0 }
+                                , Config.ease stadiumScale (Config.evenness { took = took, usually = 1000 }) { share = stadiumSectors.sectors.s2, progress = 1 }
                                 ]
                             )
-                        |> expectAll [ 0.2, 0.5, 0.2, 0.5, 0.2, 0.5 ]
+                        |> expectAll [ 500, 1150, 500, 1150, 500, 1150 ]
             ]
         , describe "the grain a round and its circuit disagree on"
             [
@@ -117,6 +115,18 @@ stadiumSectors =
         }
     , miniSectors = NoMiniSectors
     }
+
+
+{-| Half way through the stretch from 500 m to 1,150 m, at the reference lap's pace and as a stretch that took what it did would be drawn.
+-}
+easedHalfway : { took : Int, usually : Int } -> Float
+easedHalfway durations =
+    Config.ease stadiumScale (Config.evenness durations) { share = stadiumSectors.sectors.s2, progress = 0.5 }
+
+
+halfwayAtPace : Float
+halfwayAtPace =
+    Config.toMetres stadiumScale 0.35
 
 
 stadiumScale : Config.LapScale

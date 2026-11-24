@@ -1,12 +1,12 @@
 module Motorsport.Chart.Tracker exposing
     ( Detail(..), Track, fromConfig, onCircuit, view
-    , Ground, ground
+    , Ground, ground, Along
     )
 
 {-| The field drawn going round the circuit.
 
 @docs Detail, Track, fromConfig, onCircuit, view
-@docs Ground, ground
+@docs Ground, ground, Along
 
 -}
 
@@ -202,8 +202,7 @@ onCircuit layout { direction, config } =
         }
 
 
-{-| The track read on the ground it runs on: the lines it is drawn from, where a
-progress round the lap (0-1) stands, and how far round the lap a car is.
+{-| The track read on the ground it runs on: the lines it is drawn from, where a place [`Along`](#Along) the lap stands, and where along it a car, the finish line, each sector boundary and each sector's name are.
 
 The units are the ones the track's own drawing uses -- drawing metres for a
 circuit, viewBox units for the ring -- so a second reading of the same track asks
@@ -212,7 +211,7 @@ lane, because it draws none.
 
 `relief` is how high the lines stand, in metres above their datum, for a circuit
 whose geometry carries heights: one per point of `lap` and of `pitLane`, and `at` a
-progress round the lap. The ring has none.
+place along the lap. The ring has none.
 
 @docs Ground, ground
 
@@ -220,18 +219,26 @@ progress round the lap. The ring has none.
 type alias Ground =
     { lap : List Point
     , pitLane : List Point
-    , at : Float -> Shape.Position
-    , progressOf : CarAt -> Float
-    , boundaries : List Float
-    , sectors : List { progress : Float, label : String }
+    , at : Along -> Shape.Position
+    , carAt : CarAt -> Along
+    , finish : Along
+    , boundaries : List Along
+    , sectors : List { at : Along, label : String }
     , relief :
         Maybe
             { lap : List Float
             , pitLane : List Float
-            , at : Float -> Float
+            , at : Along -> Float
             , lowest : Float
             }
     }
+
+
+{-| A place round the lap of one [`Ground`](#Ground), measured the way that ground measures it: metres round a circuit, a share of the lap round the ring.
+Only the ground it came from can say where it stands.
+-}
+type Along
+    = Along Float
 
 
 ground : Track -> Ground
@@ -264,26 +271,28 @@ ground shown =
             in
             { lap = List.map onRing (fractions 120)
             , pitLane = []
-            , at = around
-            , progressOf = Config.computeProgress config
-            , boundaries = Config.calcSectorBoundaries config
-            , sectors = sectorMarks config
+            , at = \(Along progress) -> around progress
+            , carAt = Config.computeProgress config >> Along
+            , finish = Along 0
+            , boundaries = List.map Along (Config.calcSectorBoundaries config)
+            , sectors = List.map (\{ progress, label } -> { at = Along progress, label = label }) (sectorMarks config)
             , relief = Nothing
             }
 
         OnCircuit circuit ->
             { lap = List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks circuit.shape)
             , pitLane = circuit.pitLane
-            , at = \progress -> Shape.at (Config.toMetres circuit.scale progress) circuit.shape
-            , progressOf = Config.progressOn circuit.scale circuit.config
-            , boundaries = Config.calcSectorBoundaries circuit.config
-            , sectors = sectorMarks circuit.config
+            , at = \(Along metres) -> Shape.at metres circuit.shape
+            , carAt = Config.metresOn circuit.scale circuit.config >> Along
+            , finish = Along 0
+            , boundaries = List.map (Config.toMetres circuit.scale >> Along) (Config.calcSectorBoundaries circuit.config)
+            , sectors = List.map (\{ progress, label } -> { at = Along (Config.toMetres circuit.scale progress), label = label }) (sectorMarks circuit.config)
             , relief =
                 Maybe.map
                     (\relief ->
                         { lap = Relief.lap relief
                         , pitLane = Relief.pitLane relief
-                        , at = \progress -> Relief.at (Config.toMetres circuit.scale progress) relief
+                        , at = \(Along metres) -> Relief.at metres relief
                         , lowest = Relief.lowest relief
                         }
                     )
@@ -907,7 +916,7 @@ renderCarOnCircuit detail circuit car =
             circuitConstants detail circuit
 
         position =
-            Shape.at (Config.toMetres circuit.scale (Config.progressOn circuit.scale circuit.config car)) circuit.shape
+            Shape.at (Config.metresOn circuit.scale circuit.config car) circuit.shape
 
         marker =
             g [ Attributes.transform [ Translate position.x position.y ] ]
