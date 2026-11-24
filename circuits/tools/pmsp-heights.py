@@ -19,6 +19,8 @@ import re
 import struct
 import sys
 import tempfile
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -34,13 +36,18 @@ GROUND = 2
 
 
 def fetched(url, headers=None, tries=4):
+    """A 4xx is an answer and is raised at once; a 5xx or a dropped connection is asked again, 2, 4 and 8 s later."""
     for attempt in range(tries):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=headers or {}), timeout=120) as answer:
                 return answer.read()
+        except urllib.error.HTTPError as refusal:
+            if refusal.code < 500 or attempt == tries - 1:
+                raise
         except OSError:
             if attempt == tries - 1:
                 raise
+        time.sleep(2 ** (attempt + 1))
 
 
 def tile_names():

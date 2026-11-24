@@ -108,6 +108,17 @@ pub mod TestElevation {
         Assert.assertTrue(refused("holds no height at [5.966015,50.4431125]", Elevation.Wallonie.sampleOf(at, "{\"results\":[]}")));
         Assert.assertTrue(refused("answered no results", Elevation.Wallonie.sampleOf(at, "{\"error\":{\"code\":400}}")))
 
+    @Test
+    def testFetchAndPlacesAreAskedOneAtATime(): Unit \ Assert =
+        match Elevation.arguments("sao_paulo" :: "--fetch" :: "--places" :: "places.json" :: Nil) {
+            case Cli.Args.Parsed.Refused(refusal) => Assert.assertTrue(String.contains({substr = "give one or the other"}, "${refusal#problem}"))
+            case _                                => Assert.assertTrueWithMsg(false, "both were taken")
+        };
+        match Elevation.arguments("sao_paulo" :: "--places" :: "places.json" :: Nil) {
+            case Cli.Args.Parsed.Asked(asked) => Assert.assertTrue(asked#places == Some("places.json") and not asked#fetch)
+            case _                            => Assert.assertTrueWithMsg(false, "--places alone was refused")
+        }
+
     // ---------------------------------------------------------------- the kept file
 
     @Test

@@ -248,14 +248,14 @@ pub mod Elevation {
     /// Every place asked of the circuit's source.
     def ask(source: Source, places: List[Place]): Result[String, List[Sample]] \ { IO, Clock } =
         Service.paced(() -> match source {
-            case Source.Usgs3dep       => Elevation.ArcGis.sample(datasetOf(source)#service, "USGS 3DEP", places)
-            case Source.LombardiaDtm5  => Elevation.ArcGis.sample(datasetOf(source)#service, "Lombardia DTM 5x5", places)
-            case Source.IgnLidarHd     => Elevation.Geopf.sample(places)
-            case Source.IcgcMet2       => Elevation.Icgc.sample(places)
-            case Source.GsiDem         => Elevation.Gsi.sample(places)
-            case Source.WalloniaMnt    => Elevation.Wallonie.sample(places)
+            case Source.Usgs3dep         => Elevation.ArcGis.sample(datasetOf(source)#service, "USGS 3DEP", places)
+            case Source.LombardiaDtm5    => Elevation.ArcGis.sample(datasetOf(source)#service, "Lombardia DTM 5x5", places)
+            case Source.IgnLidarHd       => Elevation.Geopf.sample(places)
+            case Source.IcgcMet2         => Elevation.Icgc.sample(places)
+            case Source.GsiDem           => Elevation.Gsi.sample(places)
+            case Source.WalloniaMnt      => Elevation.Wallonie.sample(places)
             case Source.EmiliaRomagnaDtm => Elevation.ArcGis.sample(datasetOf(source)#service, "RER DTM 2022", places)
-            case Source.PmspLidar2017  => Err("the São Paulo LiDAR is a point cloud no service answers a place of: `--places <file>` lists the places, and `nix run .#geometry-pmsp-heights -- <file>` samples them")
+            case Source.PmspLidar2017    => Err("the São Paulo LiDAR is a point cloud no service answers a place of: `--places <file>` lists the places, and `nix run .#geometry-pmsp-heights -- <file>` samples them")
         })
 
     /// How many times a request is asked before the run gives up: a source answers 504
@@ -328,11 +328,12 @@ pub mod Elevation {
                 match Circuit.byWord(one) {
                     case None          => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
                     case Some(circuit) =>
-                        Ok({
-                            circuit = circuit,
-                            fetch = List.memberOf(Setting.Fetch, scanned#options),
-                            places = List.findMap(placesNamed, scanned#options)
-                        })
+                        let fetch = List.memberOf(Setting.Fetch, scanned#options);
+                        let places = List.findMap(placesNamed, scanned#options);
+                        if (fetch and places != None)
+                            Err(ArgsError.ParseErrors("--fetch asks a source and --places lists the places for one no service answers: give one or the other." :: Nil))
+                        else
+                            Ok({circuit = circuit, fetch = fetch, places = places})
                 }
         }
 
@@ -368,24 +369,26 @@ pub mod Elevation {
                             case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
                             case Ok(lines)    => Outcome.Done(lines)
                         }
-                    case None =>
-                if (asked#fetch)
-                    match fetched(circuit, text, figures) {
-                        case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
-                        case Ok(lines)    => Outcome.Done(lines)
-                    }
-                else
-                    match keptText(circuit) {
-                        case Err(problem) => Outcome.Failed(problem)
-                        case Ok(None)     => Outcome.Done("${circuit#word}: no kept elevation yet — asking a source is `--fetch`'s" :: Nil)
-                        case Ok(Some(heights)) =>
-                            match Survey.geometry(text, Some(heights), circuit, figures) {
-                                case Err(problem)    => Outcome.Verdict("${circuit#word}: ${problem}" :: Nil)
-                                case Ok(surveyed)    => Outcome.Done(described(circuit, surveyed#geometry))
-                            }
-                    }
+                    case None => sampling(asked#fetch, circuit, text, figures)
                 }
         }
+
+    def sampling(fetch: Bool, circuit: Circuit, text: String, figures: Circuit.Figures): Outcome \ { IO, Clock } =
+        if (fetch)
+            match fetched(circuit, text, figures) {
+                case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
+                case Ok(lines)    => Outcome.Done(lines)
+            }
+        else
+            match keptText(circuit) {
+                case Err(problem) => Outcome.Failed(problem)
+                case Ok(None)     => Outcome.Done("${circuit#word}: no kept elevation yet — asking a source is `--fetch`'s" :: Nil)
+                case Ok(Some(heights)) =>
+                    match Survey.geometry(text, Some(heights), circuit, figures) {
+                        case Err(problem) => Outcome.Verdict("${circuit#word}: ${problem}" :: Nil)
+                        case Ok(surveyed) => Outcome.Done(described(circuit, surveyed#geometry))
+                    }
+            }
 
     /// The places a source no service answers is to be read at, written for whatever reads
     /// it: what the source says of itself, which the kept file is to carry, and the places
