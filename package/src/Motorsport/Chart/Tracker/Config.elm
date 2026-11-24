@@ -21,6 +21,7 @@ shares are held per sector and per mini-sector, so reading one is
 
 -}
 
+import Motorsport.Circuit.Pace as Pace exposing (Pace)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
@@ -135,33 +136,37 @@ calcSectorBoundaries config =
 [`lapScale`](#lapScale).
 -}
 type LapScale
-    = LapScale (List Knot)
+    = LapScale Pace (List Knot)
 
 
 type alias Knot =
     { progress : Float
     , metres : Float
+    , seconds : Float
     }
 
 
 {-| A progress is a share of the time a lap takes, and the stretches of a lap
 are not driven at one speed, so the two only agree at the lines the lap is
-timed at. The scale is pinned to the lines whose distance is known and runs
-straight between them: a car between two of those is placed by the share of
-the time between them it has run, and so is a line with no distance given.
+timed at.
+The scale is pinned to the lines whose distance is known, and between two of them a car is where the [`Pace`](Motorsport-Circuit-Pace) puts it once it has run the same share of the time between them; so is a line with no distance given.
+[`Pace.even`](Motorsport-Circuit-Pace#even) runs the scale straight between the lines.
 
 A stretch no lap has set a time for is not a place to pin the scale to.
 
 -}
-lapScale : TimingLines -> TrackConfig -> LapScale
-lapScale lines config =
+lapScale : Pace -> TimingLines -> TrackConfig -> LapScale
+lapScale pace lines config =
     let
         knot { start, share } metres =
             if share > 0 then
-                Maybe.map (\m -> { progress = start + share, metres = m }) metres
+                Maybe.map (pinned (start + share)) metres
 
             else
                 Nothing
+
+        pinned progress metres =
+            { progress = progress, metres = metres, seconds = Pace.secondsAt pace metres }
 
         ends =
             case ( config.miniSectors, lines.miniSectors ) of
@@ -174,29 +179,29 @@ lapScale lines config =
                 _ ->
                     Sector.values (Sector.map2 (\share metres -> knot share (Just metres)) config.sectors lines.sectors)
     in
-    LapScale ({ progress = 0, metres = 0 } :: List.filterMap identity ends)
+    LapScale pace (pinned 0 0 :: List.filterMap identity ends)
 
 
 {-| Past the last line the scale is pinned to, it runs on as it ran into it.
 -}
 toMetres : LapScale -> Float -> Float
-toMetres (LapScale knots) progress =
-    interpolate knots progress
+toMetres (LapScale pace knots) progress =
+    interpolate pace knots progress
 
 
-interpolate : List Knot -> Float -> Float
-interpolate knots progress =
+interpolate : Pace -> List Knot -> Float -> Float
+interpolate pace knots progress =
     case knots of
         a :: b :: rest ->
             if progress <= b.progress || List.isEmpty rest then
                 if b.progress > a.progress then
-                    a.metres + (progress - a.progress) / (b.progress - a.progress) * (b.metres - a.metres)
+                    Pace.metresAt pace (a.seconds + (progress - a.progress) / (b.progress - a.progress) * (b.seconds - a.seconds))
 
                 else
                     a.metres
 
             else
-                interpolate (b :: rest) progress
+                interpolate pace (b :: rest) progress
 
         [ a ] ->
             a.metres

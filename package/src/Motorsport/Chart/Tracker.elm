@@ -12,6 +12,7 @@ module Motorsport.Chart.Tracker exposing
 
 import Motorsport.Chart.Tracker.Config as Config exposing (LapScale, TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
+import Motorsport.Circuit.Pace as Pace
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -174,7 +175,9 @@ fromConfig =
 
 
 {-| The track drawn to the circuit's own shape, with the cars placed by the
-lines it is timed at. The pit lane is drawn and no car is placed on it; the lap
+lines it is timed at.
+Between two lines a car runs at the pace the circuit's bends allow: see [`Pace`](Motorsport-Circuit-Pace).
+The pit lane is drawn and no car is placed on it; the lap
 runs the direction its survey was chained in.
 
 The lengths it is drawn at come with the circuit: see
@@ -189,7 +192,7 @@ onCircuit layout { direction, config } =
         , shape = layout.shape
         , pitLane = layout.pitLane
         , relief = layout.relief
-        , scale = Config.lapScale layout.timingLines config
+        , scale = Config.lapScale (Pace.fromShape layout.shape) layout.timingLines config
         , lengths = layout.lengths
         , bounds =
             boundsOf
