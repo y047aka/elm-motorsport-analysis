@@ -273,10 +273,11 @@ pub mod Circuit {
     /// line against nothing but itself, and is there so that a re-fetch answering a `finish`
     /// moved more than 10 m fails before it writes anything.
     ///
-    /// It is served without heights. No source here covers Brazil; the city's own LiDAR
-    /// terrain model (GeoSampa, MDT 2017 and 2020) is published as tiles of points to download
-    /// and as no service a place can be asked of, and a model of surfaces such as Copernicus
-    /// GLO-30 reads grandstands and trees into the lap.
+    /// Its heights are the ground returns of the city's 2017 LiDAR survey. That is a point
+    /// cloud, published as tiles to download and as no service a place can be asked of, so
+    /// `elevation sao_paulo --places` lists the places and `circuits/tools/pmsp-heights.py`
+    /// reads them; a model of surfaces such as Copernicus GLO-30 reads grandstands and trees
+    /// into the lap.
     def saoPaulo(): Circuit = {
         relation = Some(6781071i64),
         box      = None,
@@ -285,7 +286,7 @@ pub mod Circuit {
         word     = "sao_paulo",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -46.7001274, lat = -23.7032239}, within = Some(10.0)}),
-        elevation = None,
+        elevation = Some(Elevation.Source.PmspLidar2017),
         file   = "app/static/geometry/sao_paulo.geojson",
         survey = "The Autódromo José Carlos Pace"
     }

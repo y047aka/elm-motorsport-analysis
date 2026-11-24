@@ -128,6 +128,14 @@ pub mod TestElevation {
         }
 
     @Test
+    def testThePlacesFileIsHeadedAsTheKeptFileIsAndSpellsAPlaceALine(): Unit \ Assert =
+        // `circuits/tools/pmsp-heights.py` copies the head into the kept file and reads the
+        // places one per line, keeping each as it is spelled here.
+        let text = Elevation.placesWritten(Elevation.datasetOf(Elevation.Source.PmspLidar2017), places());
+        Assert.assertTrue(String.startsWith({prefix = "{\"source\": \"Mapa 3D Digital da Cidade"}, text));
+        Assert.assertTrue(String.contains({substr = "\"service\": \"https://laz-m3dc-pmsp.s3.sa-east-1.amazonaws.com\", \"places\": [\n[-97.6422583,30.1335278],\n[-97.64,30.13]\n]}\n"}, text))
+
+    @Test
     def testASampleMissingItsHeightIsRefusedNotSkipped(): Unit \ Assert =
         let text = "{\"source\": \"s\", \"license\": \"l\", \"datum\": \"d\", \"service\": \"u\", \"samples\": [\n{\"lon\":-97.64,\"lat\":30.13}\n]}";
         Assert.assertTrue(refused("sample 1 is not a place and a height", Elevation.read(text)));
