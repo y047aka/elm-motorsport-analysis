@@ -7,3 +7,4 @@ flix        = "0.79.0"
 
 [mvn-dependencies]
 "com.github.mreutegg:laszip4j" = "0.21"
+"org.locationtech.proj4j:proj4j" = "1.4.3"

@@ -86,7 +86,8 @@ Per-file links show in `git ls-files -s` as mode `120000`.
 `elevation <word> --fetch` samples the places a survey walks (`Elevation.placesOf`) from the source the circuit's config names, and keeps the source's own values as `circuits/<word>/elevation.json`.
 The survey and the fence read them as they read the kept answer; how they are despiked, smoothed and thinned is `Survey.laidOut`'s, and a circuit keeping none is drawn without heights.
 
-**São Paulo's source is a point cloud no service answers a place of**, so `--fetch` reads every one of the city's 5,544 LiDAR tiles' headers to find the few the lap stands on, then streams those through `laszip4j` (LGPL-2.1, the project's one Maven dependency) and keeps only the ground returns near a place; no tile is written to disk.
+**São Paulo's source is a point cloud no service answers a place of**, so `--fetch` reads every one of the city's 5,544 LiDAR tiles' headers to find the few the lap stands on, then streams those through `laszip4j` (LGPL-2.1) and keeps only the ground returns near a place; no tile is written to disk.
+The places are found on the tiles' SIRGAS 2000 / UTM 23S grid by `proj4j` (Apache 2.0); those two are the project's only Maven dependencies.
 A height there is the median of the ground returns within 1 m of the place, or 1.5 m under a bridge, so it is read here rather than taken off a model; `resolution_m` says which radius.
 
 **The samples are keyed by the degrees they were asked at.** An answer re-fetched with any node moved leaves that place unsampled, and the survey and the fence refuse the circuit until `elevation <word> --fetch` samples it again; re-fetching an answer and re-sampling it are one change.
