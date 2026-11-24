@@ -7,6 +7,15 @@
 pub mod Service {
 
     use IoError.IoError
+
+    import java.io.InputStream
+    import java.lang.Throwable
+    import java.net.URI
+    import java.net.http.HttpClient
+    import java.net.http.{HttpRequest => JHttpRequest}
+    import java.net.http.{HttpResponse => JHttpResponse}
+    import java.net.http.{HttpResponse$BodyHandlers => BodyHandlers}
+    import java.util.concurrent.CompletableFuture
     use Net.HttpRequest.HttpRequest
     use Net.HttpResponse.HttpResponse
     use Net.Https.Https
@@ -75,4 +84,58 @@ pub mod Service {
             Ok(text)
         else
             Err("${asked} answered with something that is not JSON")
+
+    // ---------------------------------------------------------------- files, not answers
+
+    /// How many files' openings are asked of a file store at once. A file store is not paced
+    /// as a service is.
+    def together(): Int32 = 32
+
+    /// The first `count` bytes of each of `urls`, in their order. A file store answers a
+    /// range of a file, and none of this is JSON, so it is read here by its status alone.
+    pub def openings(urls: List[String], count: Int32, asked: String): Result[String, List[Vector[Int8]]] \ IO =
+        let client = HttpClient.newHttpClient();
+        batches(urls)
+            |> Result.traverse(batch -> {
+                let pending = List.map(url -> (url, client.sendAsync(ranged(url, count), BodyHandlers.ofByteArray())), batch);
+                Result.traverse(pair -> match pair {
+                    case (url, future) => openingOf(url, future, asked)
+                }, pending)
+            })
+            |> Result.map(List.flatten)
+
+    def batches(urls: List[String]): List[List[String]] =
+        if (List.isEmpty(urls)) Nil
+        else List.take(together(), urls) :: batches(List.drop(together(), urls))
+
+    def ranged(url: String, count: Int32): JHttpRequest \ IO =
+        let last = count - 1;
+        JHttpRequest.newBuilder(URI.create(url)).header("User-Agent", userAgent()).header("Range", "bytes=0-${last}").build()
+
+    def openingOf(url: String, future: CompletableFuture[JHttpResponse[Array[Int8, Static]]], asked: String): Result[String, Vector[Int8]] \ IO =
+        try {
+            let response = future.join();
+            let status = response.statusCode();
+            if (status == 200 or status == 206)
+                Ok(Array.toVector(response.body()))
+            else
+                Err("${asked} answered ${status} for ${url}")
+        } catch {
+            case e: Throwable => Err("${asked} answered nothing for ${url}: ${e.getMessage()}")
+        }
+
+    /// A whole file, handed to `read` as it arrives, so a file of millions of points is
+    /// never held whole.
+    pub def streamed(url: String, asked: String, read: InputStream -> Result[String, a] \ IO): Result[String, a] \ IO =
+        try {
+            let request = JHttpRequest.newBuilder(URI.create(url)).header("User-Agent", userAgent()).build();
+            let response = HttpClient.newHttpClient().send(request, BodyHandlers.ofInputStream());
+            let stream = response.body();
+            let status = response.statusCode();
+            let result = if (status == 200) read(stream) else Err("${asked} answered ${status} for ${url}");
+            stream.close();
+            result
+        } catch {
+            case e: Throwable => Err("${asked} answered nothing for ${url}: ${e.getMessage()}")
+        }
 }

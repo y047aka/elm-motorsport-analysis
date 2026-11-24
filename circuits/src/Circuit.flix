@@ -273,11 +273,9 @@ pub mod Circuit {
     /// line against nothing but itself, and is there so that a re-fetch answering a `finish`
     /// moved more than 10 m fails before it writes anything.
     ///
-    /// Its heights are the ground returns of the city's 2017 LiDAR survey. That is a point
-    /// cloud, published as tiles to download and as no service a place can be asked of, so
-    /// `elevation sao_paulo --places` lists the places and `circuits/tools/pmsp-heights.py`
-    /// reads them; a model of surfaces such as Copernicus GLO-30 reads grandstands and trees
-    /// into the lap.
+    /// Its heights are the ground returns of the city's 2017 LiDAR survey, read off the
+    /// tiles themselves (`Elevation.Pmsp`); a model of surfaces such as Copernicus GLO-30
+    /// reads grandstands and trees into the lap.
     def saoPaulo(): Circuit = {
         relation = Some(6781071i64),
         box      = None,

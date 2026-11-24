@@ -50,6 +50,7 @@ const timingLinesFiles = 'circuits/src/TimingLines/Files.flix';
 const regenerate = 'circuits/src/Regenerate.flix';
 const service = 'circuits/src/Service.flix';
 const geodesy = 'circuits/src/Geodesy.flix';
+const utm = 'circuits/src/Geodesy/Utm.flix';
 const backendCircuit = 'backend/src/Motorsport/Circuit.flix';
 const circuitsCircuit = 'circuits/src/Motorsport/Circuit.flix';
 
@@ -68,9 +69,13 @@ function check(name, body) {
 // cost is not a rounding: on the equatorial radius the probe prints 13,627 m
 // for the lap the survey measures at 13,612 — and the measured lap is the one
 // reading a config is authored from.
+// The one other earth spelled is GRS80's, which `Geodesy.Utm` finds a place among a
+// LiDAR tile's points on, and which draws nothing: it is held to that one definition.
 check('the project spells its sphere once', () => {
-  deepStrictEqual(spelling(/63\d{5}/), [geodesy],
+  deepStrictEqual(spelling(/63\d{5}/), [geodesy, utm],
     'the earth radius is not spelled in exactly one source');
+  deepStrictEqual(text(utm).match(/.*63\d{5}.*/g), ['    def grs80Metres(): Float64 = 6378137.0'],
+    'Geodesy.Utm spells an earth beyond its ellipsoid');
   const stated = here('Geodesy.flix').match(/63\d{5}/g) ?? [];
   equal(stated.length, 1, 'the earth radius is spelled more than once even in Geodesy.flix');
   match(here('Geodesy.flix'), /pub def earthMetres\(\): Float64 = 6371008\.8/);

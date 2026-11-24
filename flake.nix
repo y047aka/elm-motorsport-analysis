@@ -181,17 +181,6 @@
         # the feeds sit beside the repository this command's `circuits` is in.
         timingLinesCmd = "flix run -- timing-lines --csv ../data/wec \"$@\"";
 
-        # São Paulo's heights are read off a point cloud no service answers a place of
-        # (`circuits/tools/pmsp-heights.py`); Python joins for that reading alone. It
-        # runs where it is asked from, so its paths need no `GEOMETRY_FROM`.
-        pmspHeightsApp = pkgs.writeShellApplication {
-          name = "geometry-pmsp-heights";
-          runtimeInputs = [ (pkgs.python3.withPackages (ps: [ ps.laspy ps.lazrs ps.numpy ps.pyproj ps.scipy ])) ];
-          text = ''
-            python3 ${./circuits/tools/pmsp-heights.py} "$@"
-          '';
-        };
-
         # The CLI converts the rounds `Motorsport.Calendar` lists, reading each
         # season directory under one directory and writing into the same one
         # under the other. Anything else given to `nix run` is forwarded, which
@@ -268,7 +257,6 @@
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
           geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: survey [--fetch] [--write] | diff | regenerate | elevation [--fetch] | probe | timing-lines (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
           geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                            meta.description = "Run the circuits project's tests — its `flix test` (the survey's, the probe's and the timing report's readings, the last of which compile symlinked backend/src sources; no network, no database, no files written) and `test/check-sources.mjs`, the reading of the project's own sources no pure @Test can make"; };
-          geometry-pmsp-heights = { type = "app"; program = "${pmspHeightsApp}/bin/geometry-pmsp-heights";                                                    meta.description = "São Paulo's heights, read off the city's 2017 LiDAR ground returns: <places.json> <elevation.json>, the places written by `elevation sao_paulo --places`";  };
           geometry-timing-lines = { type = "app"; program = "${mkGeometryApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits geometry project's timing-lines word, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };

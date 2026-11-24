@@ -101,9 +101,7 @@ pub mod Elevation {
             datum   = "unstated",
             service = "https://servizigis.regione.emilia-romagna.it/arcgis/rest/services/public/DtmRER2022/ImageServer"
         }
-        // A point cloud, not a model: no service answers a place, so its heights are read
-        // outside this project (`circuits/tools/pmsp-heights.py`). Its licence and vertical
-        // datum are not yet confirmed.
+        // Its licence and vertical datum are not yet confirmed.
         case Source.PmspLidar2017 => {
             name    = "Mapa 3D Digital da Cidade, LiDAR 2017, ground returns (© Prefeitura de São Paulo)",
             license = "unconfirmed",
@@ -255,7 +253,7 @@ pub mod Elevation {
             case Source.GsiDem           => Elevation.Gsi.sample(places)
             case Source.WalloniaMnt      => Elevation.Wallonie.sample(places)
             case Source.EmiliaRomagnaDtm => Elevation.ArcGis.sample(datasetOf(source)#service, "RER DTM 2022", places)
-            case Source.PmspLidar2017    => Err("the São Paulo LiDAR is a point cloud no service answers a place of: `--places <file>` lists the places, and `nix run .#geometry-pmsp-heights -- <file>` samples them")
+            case Source.PmspLidar2017    => Elevation.Pmsp.sample(places)
         })
 
     /// How many times a request is asked before the run gives up: a source answers 504
@@ -293,13 +291,11 @@ pub mod Elevation {
 
     pub type alias Request = {
         circuit = Circuit,
-        fetch   = Bool,
-        places  = Option[String]
+        fetch   = Bool
     }
 
     enum Setting with Eq {
         case Fetch
-        case Places(String)
         case Help
     }
 
@@ -310,12 +306,6 @@ pub mod Elevation {
             optionNames   = "fetch" :: Nil,
             argDescriptor = ArgDescr.NoArg(Setting.Fetch),
             explanation   = "ask the circuit's elevation source now and keep the samples\nbeside its answer instead of reading the kept ones"
-        } ::
-        {
-            optionIds     = Nil,
-            optionNames   = "places" :: Nil,
-            argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Places(path)), "PLACES.JSON"),
-            explanation   = "write the places the circuit is sampled at, and what its\nsource says of itself, for a source no service answers"
         } :: Nil
 
     def isHelp(setting: Setting): Bool =
@@ -327,25 +317,13 @@ pub mod Elevation {
             case one :: _ =>
                 match Circuit.byWord(one) {
                     case None          => Err(ArgsError.ParseErrors(Circuit.unknown(one) :: Nil))
-                    case Some(circuit) =>
-                        let fetch = List.memberOf(Setting.Fetch, scanned#options);
-                        let places = List.findMap(placesNamed, scanned#options);
-                        if (fetch and places != None)
-                            Err(ArgsError.ParseErrors("--fetch asks a source and --places lists the places for one no service answers: give one or the other." :: Nil))
-                        else
-                            Ok({circuit = circuit, fetch = fetch, places = places})
+                    case Some(circuit) => Ok({circuit = circuit, fetch = List.memberOf(Setting.Fetch, scanned#options)})
                 }
-        }
-
-    def placesNamed(setting: Setting): Option[String] =
-        match setting {
-            case Setting.Places(path) => Some(path)
-            case _                    => None
         }
 
     pub def usage(): String =
         Util.GetOpt.usageInfo(
-            "usage: nix run .#geometry -- elevation <circuit> [--fetch | --places <places.json>]",
+            "usage: nix run .#geometry -- elevation <circuit> [--fetch]",
             optionDescrs()
         )
 
@@ -363,52 +341,22 @@ pub mod Elevation {
         match keptInputs(circuit) {
             case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
             case Ok((text, figures)) =>
-                match asked#places {
-                    case Some(path) =>
-                        match listed(circuit, text, figures, path) {
-                            case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
-                            case Ok(lines)    => Outcome.Done(lines)
-                        }
-                    case None => sampling(asked#fetch, circuit, text, figures)
-                }
-        }
-
-    def sampling(fetch: Bool, circuit: Circuit, text: String, figures: Circuit.Figures): Outcome \ { IO, Clock } =
-        if (fetch)
-            match fetched(circuit, text, figures) {
-                case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
-                case Ok(lines)    => Outcome.Done(lines)
-            }
-        else
-            match keptText(circuit) {
-                case Err(problem) => Outcome.Failed(problem)
-                case Ok(None)     => Outcome.Done("${circuit#word}: no kept elevation yet — asking a source is `--fetch`'s" :: Nil)
-                case Ok(Some(heights)) =>
-                    match Survey.geometry(text, Some(heights), circuit, figures) {
-                        case Err(problem) => Outcome.Verdict("${circuit#word}: ${problem}" :: Nil)
-                        case Ok(surveyed) => Outcome.Done(described(circuit, surveyed#geometry))
+                if (asked#fetch)
+                    match fetched(circuit, text, figures) {
+                        case Err(problem) => Outcome.Failed("${circuit#word}: ${problem}")
+                        case Ok(lines)    => Outcome.Done(lines)
                     }
-            }
-
-    /// The places a source no service answers is to be read at, written for whatever reads
-    /// it: what the source says of itself, which the kept file is to carry, and the places
-    /// in the order the kept file is to hold them.
-    def listed(circuit: Circuit, text: String, figures: Circuit.Figures, path: String): Result[String, List[String]] \ IO =
-        match circuit#elevation {
-            case None => Err("no elevation source is authored for this circuit")
-            case Some(source) =>
-                forM(
-                    plain <- Survey.geometry(text, None, circuit, figures);
-                    places = placesOf(plain#answer, plain#geometry);
-                    _     <- Cli.Errors.writeFile(path, placesWritten(datasetOf(source), places)) |> Result.mapErr(problem -> "${problem}")
-                ) yield "${circuit#word}: wrote ${List.length(places)} places to sample at ${path}" :: Nil
+                else
+                    match keptText(circuit) {
+                        case Err(problem) => Outcome.Failed(problem)
+                        case Ok(None)     => Outcome.Done("${circuit#word}: no kept elevation yet — asking a source is `--fetch`'s" :: Nil)
+                        case Ok(Some(heights)) =>
+                            match Survey.geometry(text, Some(heights), circuit, figures) {
+                                case Err(problem)    => Outcome.Verdict("${circuit#word}: ${problem}" :: Nil)
+                                case Ok(surveyed)    => Outcome.Done(described(circuit, surveyed#geometry))
+                            }
+                    }
         }
-
-    /// The places file: the dataset as the kept file heads it, then one place per line.
-    pub def placesWritten(dataset: Dataset, places: List[Place]): String =
-        let head = "{\"source\": ${Geometry.Write.text(dataset#name)}, \"license\": ${Geometry.Write.text(dataset#license)}, \"datum\": ${Geometry.Write.text(dataset#datum)}, \"service\": ${Geometry.Write.text(dataset#service)}, \"places\": [\n";
-        let lines = List.map(at -> Geometry.Write.coordinate(at#lon, at#lat), places) |> String.intercalate(",\n");
-        "${head}${lines}\n]}\n"
 
     /// The kept answer and the map's figures, which every survey of the circuit is laid
     /// from.
