@@ -39,6 +39,7 @@ import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as MonzaLayout
+import Motorsport.Wec.Circuit.SaoPaulo.Layout as SaoPauloLayout
 import Motorsport.Wec.Circuit.Spa.Layout as SpaLayout
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era as Era
@@ -663,6 +664,9 @@ drawingFor circuit =
 
         "spa" ->
             Just (fetchDrawing circuit Map.intermediatesDecoder SpaLayout.decoder SpaLayout.layout)
+
+        "sao_paulo" ->
+            Just (fetchDrawing circuit Map.intermediatesDecoder SaoPauloLayout.decoder SaoPauloLayout.layout)
 
         _ ->
             Nothing

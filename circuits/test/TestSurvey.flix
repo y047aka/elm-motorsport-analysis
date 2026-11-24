@@ -507,7 +507,7 @@ pub mod TestSurvey {
     @Test
     def testParseRefusesWhatItCannotSurvey(): Unit \ Assert =
         Assert.assertTrue(argumentRefused("survey reads one circuit", Survey.parse(Nil)));
-        Assert.assertTrue(argumentRefused("no circuit is surveyed under 'qatar': known are cota, le_mans, barcelona, monza, fuji, spa", Survey.parse("qatar" :: Nil)));
+        Assert.assertTrue(argumentRefused("no circuit is surveyed under 'qatar': known are cota, le_mans, barcelona, monza, fuji, spa, sao_paulo", Survey.parse("qatar" :: Nil)));
         Assert.assertTrue(argumentRefused("option '--answer' requires an argument", Survey.parse("--answer" :: Nil)));
         // A flag is no file: `--answer --write` is a reader who meant something else, and
         // the survey that read it as a path would report a file that cannot be opened.

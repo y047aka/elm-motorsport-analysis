@@ -23,12 +23,14 @@ const fixtures = [
   { module: "Survey.Fuji", file: "app/static/geometry/fuji.geojson" },
   { module: "Survey.LeMans", file: "app/static/geometry/le_mans.geojson" },
   { module: "Survey.Monza", file: "app/static/geometry/monza.geojson" },
+  { module: "Survey.SaoPaulo", file: "app/static/geometry/sao_paulo.geojson" },
   { module: "Survey.Spa", file: "app/static/geometry/spa.geojson" },
   { module: "Map.Barcelona", file: "app/static/circuit-maps/barcelona.json" },
   { module: "Map.Cota", file: "app/static/circuit-maps/cota.json" },
   { module: "Map.Fuji", file: "app/static/circuit-maps/fuji.json" },
   { module: "Map.LeMans", file: "app/static/circuit-maps/le_mans.json" },
   { module: "Map.Monza", file: "app/static/circuit-maps/monza.json" },
+  { module: "Map.SaoPaulo", file: "app/static/circuit-maps/sao_paulo.json" },
   { module: "Map.Spa", file: "app/static/circuit-maps/spa.json" },
 ];
 

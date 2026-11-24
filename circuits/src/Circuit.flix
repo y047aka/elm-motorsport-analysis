@@ -251,9 +251,24 @@ pub mod Circuit {
         survey = "The Circuit de Spa-Francorchamps"
     }
 
+    /// São Paulo — Interlagos. The relation `6781071` lists its 25 lap ways under no role at
+    /// all, names one way `pit_lane`, and tags both a `start` and a `finish` node standing
+    /// 60.04 m apart along the lap, which is the offset the 2026 map prints for its Start Line.
+    def saoPaulo(): Circuit = {
+        relation = Some(6781071i64),
+        box      = None,
+        pit      = None,
+        word     = "sao_paulo",
+        timedFrom = "finish",
+        timingLine = None,
+        elevation = None,
+        file   = "app/static/geometry/sao_paulo.geojson",
+        survey = "The Autódromo José Carlos Pace"
+    }
+
     /// The circuits there are, in the order a run over all of them walks them.
     pub def circuits(): List[Circuit] =
-        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: spa() :: Nil
+        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: spa() :: saoPaulo() :: Nil
 
     /// A circuit by the word the app draws it by — the word its directory and its kept
     /// files are named by too.

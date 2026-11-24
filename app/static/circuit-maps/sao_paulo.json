@@ -1,0 +1,24 @@
+{
+  "circuit": "Interlagos",
+  "season": 2026,
+  "issued": "2025-12-03T14:35",
+  "lengths": {
+    "centerline": { "metres": 4309, "printed": "Centerline: 4.309 m." },
+    "lapByPits": { "metres": 4255, "printed": "Lap by Pits: 4.255 m." },
+    "pitInToPitOut": { "metres": 387.4, "printed": "Pit In - Pit Out: 387,4 m." }
+  },
+  "lines": {
+    "start": { "metres": 60.2, "printed": "Start Line Offset: 60,2 m." },
+    "pitOut": { "metres": 337.41, "printed": "Pit Out at: 337,41 m." },
+    "intermediate1": { "metres": 1234, "printed": "i1 at: 1.234 m." },
+    "intermediate2": { "metres": 3155, "printed": "i2 at: 3.155 m." },
+    "pitIn": { "metres": 4208, "printed": "Pit In at: 4.208 m." }
+  },
+  "drawn": ["FL", "TS", "SC L1", "SC L2", "i1", "i2", "Pit in", "Pit Out"],
+  "sectors": [
+    { "name": "S1", "from": "FL", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "FL", "colour": "#e20258" }
+  ],
+  "corners": 15
+}

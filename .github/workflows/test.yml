@@ -51,6 +51,7 @@ jobs:
           nix run .#geometry -- survey monza
           nix run .#geometry -- survey fuji
           nix run .#geometry -- survey spa
+          nix run .#geometry -- survey sao_paulo
 
   # Its own job: the one check here that needs node_modules, and a type error
   # should not share a red mark with a failing test.

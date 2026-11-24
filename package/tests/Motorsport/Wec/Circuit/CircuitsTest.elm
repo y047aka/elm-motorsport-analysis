@@ -12,12 +12,14 @@ import Motorsport.TestHelpers.Map.Cota as CotaMap
 import Motorsport.TestHelpers.Map.Fuji as FujiMap
 import Motorsport.TestHelpers.Map.LeMans as LeMansMap
 import Motorsport.TestHelpers.Map.Monza as MonzaMap
+import Motorsport.TestHelpers.Map.SaoPaulo as SaoPauloMap
 import Motorsport.TestHelpers.Map.Spa as SpaMap
 import Motorsport.TestHelpers.Survey.Barcelona as BarcelonaSurvey
 import Motorsport.TestHelpers.Survey.Cota as CotaSurvey
 import Motorsport.TestHelpers.Survey.Fuji as FujiSurvey
 import Motorsport.TestHelpers.Survey.LeMans as LeMansSurvey
 import Motorsport.TestHelpers.Survey.Monza as MonzaSurvey
+import Motorsport.TestHelpers.Survey.SaoPaulo as SaoPauloSurvey
 import Motorsport.TestHelpers.Survey.Spa as SpaSurvey
 import Motorsport.TestHelpers.SurveySuite as SurveySuite
 import Motorsport.Wec.Circuit.Barcelona.Layout as Barcelona
@@ -28,6 +30,7 @@ import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMans
 import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as Monza
+import Motorsport.Wec.Circuit.SaoPaulo.Layout as SaoPaulo
 import Motorsport.Wec.Circuit.Spa.Layout as Spa
 import Test exposing (Test, describe, test)
 
@@ -63,6 +66,10 @@ circuits =
     , { name = "Spa"
       , box = { minLat = 50.427, maxLat = 50.447, minLon = 5.959, maxLon = 5.978 }
       , read = drawn Map.intermediatesDecoder Spa.decoder Spa.layout SpaMap.text SpaSurvey.text
+      }
+    , { name = "São Paulo"
+      , box = { minLat = -23.707, maxLat = -23.696, minLon = -46.701, maxLon = -46.694 }
+      , read = drawn Map.intermediatesDecoder SaoPaulo.decoder SaoPaulo.layout SaoPauloMap.text SaoPauloSurvey.text
       }
     ]
 
