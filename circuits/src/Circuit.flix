@@ -97,6 +97,8 @@ pub mod Circuit {
         // the lap — which of them is the pit is a reading of names and turns, and the
         // survey reads geometry and one-way tags alone.
         pit      = Option[List[Int64]],
+        // The ways a relation lists under no role that the lap no longer runs, named by id.
+        bypassed = Option[List[Int64]],
         // The word the summaries send for the circuit, which names its directory, its
         // kept answer and the file the app reads.
         word     = String,
@@ -135,6 +137,7 @@ pub mod Circuit {
         relation = Some(2126739i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "le_mans",
         timedFrom = "start-finish",
         timingLine = None,
@@ -151,6 +154,7 @@ pub mod Circuit {
         relation = Some(6537729i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "cota",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -97.6422583, lat = 30.1335278}, within = Some(10.0)}),
@@ -177,6 +181,7 @@ pub mod Circuit {
         relation = Some(284540i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
@@ -197,6 +202,7 @@ pub mod Circuit {
         relation = Some(284565i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "monza",
         timedFrom = "",
         timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
@@ -221,6 +227,7 @@ pub mod Circuit {
         relation = None,
         box      = Some({south = 35.3397, west = 138.8927, north = 35.3997, east = 138.9527}),
         pit      = Some(148621414i64 :: Nil),
+        bypassed = None,
         word     = "fuji",
         timedFrom = "",
         timingLine = Some({place = {lon = 138.926737, lat = 35.371955}, within = Some(25.0)}),
@@ -243,6 +250,7 @@ pub mod Circuit {
         relation = Some(284560i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "spa",
         timedFrom = "",
         timingLine = Some({place = {lon = 5.9660150, lat = 50.4431125}, within = Some(10.0)}),
@@ -258,6 +266,7 @@ pub mod Circuit {
         relation = Some(6781071i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "sao_paulo",
         timedFrom = "finish",
         timingLine = None,
@@ -266,9 +275,34 @@ pub mod Circuit {
         survey = "The Autódromo José Carlos Pace"
     }
 
+    /// Imola. The relation `9291096` lists its 35 lap ways under no role at all, names one
+    /// way `pit_lane`, and tags one node `start`.
+    ///
+    /// That node is the map's finish line, not its Start Line: the map draws its Start Line
+    /// `218 m` and its Pit Out `222.8 m` after the line, and laid over the survey those two
+    /// fall `210 m` and `228 m` behind `start` along the lap.
+    ///
+    /// `bypassed` names the Variante Bassa chicane. The relation lists it under no role, as
+    /// it lists every way the lap does run, and the bypass runs through the two nodes the
+    /// chicane joins, so no walk of the relation's ground separates the lap from the chicane
+    /// without being told which is which. The lap of the other 32 ways stands 4,904.5 m
+    /// against the published 4,909 m.
+    def imola(): Circuit = {
+        relation = Some(9291096i64),
+        box      = None,
+        pit      = None,
+        bypassed = Some(176764793i64 :: 1025616646i64 :: 1025616647i64 :: Nil),
+        word     = "imola",
+        timedFrom = "start",
+        timingLine = None,
+        elevation = None,
+        file   = "app/static/geometry/imola.geojson",
+        survey = "The Autodromo Internazionale Enzo e Dino Ferrari"
+    }
+
     /// The circuits there are, in the order a run over all of them walks them.
     pub def circuits(): List[Circuit] =
-        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: spa() :: saoPaulo() :: Nil
+        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: spa() :: saoPaulo() :: imola() :: Nil
 
     /// A circuit by the word the app draws it by — the word its directory and its kept
     /// files are named by too.

@@ -35,6 +35,7 @@ import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Fuji.Layout as FujiLayout
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
+import Motorsport.Wec.Circuit.Imola.Layout as ImolaLayout
 import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Circuit.Map as Map
@@ -667,6 +668,9 @@ drawingFor circuit =
 
         "sao_paulo" ->
             Just (fetchDrawing circuit Map.intermediatesDecoder SaoPauloLayout.decoder SaoPauloLayout.layout)
+
+        "imola" ->
+            Just (fetchDrawing circuit Map.intermediatesDecoder ImolaLayout.decoder ImolaLayout.layout)
 
         _ ->
             Nothing

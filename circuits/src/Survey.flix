@@ -119,7 +119,7 @@ pub mod Survey {
                 rel        <- relationOf(reading, relation);
                 start      <- lineOf(rel, circuit);
                 _          <- standsAtLine(rel#members, nodes, start, circuit);
-                lap        <- chained(rel, ways, nodes, start);
+                lap        <- chained(rel, ways, nodes, start, circuit#bypassed);
                 pit        <- pitChained(rel, ways, nodes);
                 laid     <- laidOut(reading, nodes, lap, pit, circuit, lapLength, heights)
             ) yield laid
@@ -136,7 +136,7 @@ pub mod Survey {
             case Some(line) =>
                 forM(
                     rel      <- relationOf(reading, relation);
-                    segments <- lapSegments(rel, ways);
+                    segments <- lapSegments(rel, ways, circuit#bypassed);
                     walked   <- chain(segments, nodes, Some(nearestTo(oneWayNodes(segments), nodes, line#place)));
                     turned   <- turnAt(walked, nodes, line);
                     pit      <- pitChained(rel, ways, nodes);
@@ -208,9 +208,9 @@ pub mod Survey {
 
     /// The lap: the ways the relation lists with no role, chained from the line the lap is
     /// measured from, turned to start there, and closed back onto it.
-    def chained(relation: Element, ways: Map[Int64, Element], nodes: Map[Int64, Place], start: Int64): Result[String, List[Int64]] =
+    def chained(relation: Element, ways: Map[Int64, Element], nodes: Map[Int64, Place], start: Int64, bypassed: Option[List[Int64]]): Result[String, List[Int64]] =
         forM(
-            segments <- lapSegments(relation, ways);
+            segments <- lapSegments(relation, ways, bypassed);
             track    <- chain(segments, nodes, Some(start))
         ) yield List.append(rotate(withoutLast(track), start), start :: Nil)
 
@@ -221,11 +221,20 @@ pub mod Survey {
         pitSegments(relation, ways)
             |> Result.flatMap(segments -> chain(segments, nodes, None))
 
-    /// The ways a lap is chained from are the ones the relation puts on no line at all.
-    def lapSegments(relation: Element, ways: Map[Int64, Element]): Result[String, List[Segment]] =
-        relation#members
+    /// The ways a lap is chained from are the ones the relation puts on no line at all, less
+    /// the ones the config says the lap no longer runs.
+    def lapSegments(relation: Element, ways: Map[Int64, Element], bypassed: Option[List[Int64]]): Result[String, List[Segment]] =
+        let unlaid = relation#members
             |> List.filter(member -> member#kind == "way" and member#role == "")
-            |> Result.traverse(wayOf(relation, ways))
+            |> List.map(member -> member#ref);
+        let named = Option.getWithDefault(Nil, bypassed);
+        let unknown = named |> List.filter(id -> not List.memberOf(id, unlaid));
+        if (not List.isEmpty(unknown))
+            Err("relation ${relation#id} lists no way under no role named ${unknown |> List.map(Int64.toString) |> String.intercalate(", ")}")
+        else
+            relation#members
+                |> List.filter(member -> member#kind == "way" and member#role == "" and not List.memberOf(member#ref, named))
+                |> Result.traverse(wayOf(relation, ways))
 
     /// A pit lane's members are named by their role alone: a relation may tag a node as part
     /// of a pit lane, and that is a member no line can be chained out of.

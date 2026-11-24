@@ -50,6 +50,7 @@ Add one `def <word>(): Circuit` and append it to `circuits()`.
 Its doc-comment is where *how the relation is actually tagged*, and where its line's place came from, belong.
 
 - `relation` / `box` / `pit` — exactly one grounding: the relation the ways are named by, or the box whose raceway ways are chained by standing at the line. A box at a racing complex may hang more than one line off the lap, and the survey reads geometry and one-way tags rather than any way's `name`; `pit` names the pit lane's ways by id then, as a relation's members do.
+- `bypassed` — where a relation lists ground under no role that the lap no longer runs (Imola's bypassed Variante Bassa chicane), its ways' ids. The chain takes every unroled way and a failure to chain names what it left out; this is how a name answers it.
 - `timedFrom` — the relation member naming the line the lap is timed across; every metre is measured from it. Leave it `""` where the relation tags no member at the finish line (Monza's roles name the pit-exit light): the lap is then turned at `timingLine`'s place, as a box's is.
 - `timingLine` — the finish line's place (and the `within` the survey may allow). With a `timedFrom` it checks the tagged node; without one it *is* the zero.
 
