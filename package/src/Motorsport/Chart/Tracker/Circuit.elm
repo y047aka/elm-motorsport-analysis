@@ -128,7 +128,7 @@ ground (Circuit circuit) =
     { lap = List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks circuit.shape)
     , pitLane = circuit.pitLane
     , at = \metres -> Shape.at metres circuit.shape
-    , metresOf = LapScale.metresOn circuit.scale circuit.config
+    , metresOf = LapScale.metresOn circuit.scale
     , boundaries = List.map (LapScale.toMetres circuit.scale) (Config.calcSectorBoundaries circuit.config)
     , sectors =
         circuit.config.sectors
@@ -437,7 +437,7 @@ renderCarOnCircuit detail circuit car =
             circuitConstants detail circuit
 
         position =
-            Shape.at (LapScale.metresOn circuit.scale circuit.config car) circuit.shape
+            Shape.at (LapScale.metresOn circuit.scale car) circuit.shape
 
         marker =
             g [ Attributes.transform [ Translate position.x position.y ] ]

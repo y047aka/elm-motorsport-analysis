@@ -23,7 +23,11 @@ import Motorsport.Wec.Circuit.LeMans as LeMans
 [`lapScale`](#lapScale).
 -}
 type LapScale
-    = LapScale Pace (List Knot)
+    = LapScale
+        { pace : Pace
+        , config : TrackConfig
+        , knots : List Knot
+        }
 
 
 type alias Knot =
@@ -66,13 +70,13 @@ lapScale pace lines config =
                 _ ->
                     Sector.values (Sector.map2 (\share metres -> knot share (Just metres)) config.sectors lines.sectors)
     in
-    LapScale pace (pinned 0 0 :: List.filterMap identity ends)
+    LapScale { pace = pace, config = config, knots = pinned 0 0 :: List.filterMap identity ends }
 
 
 {-| Past the last line the scale is pinned to, it runs on as it ran into it.
 -}
 toMetres : LapScale -> Float -> Float
-toMetres (LapScale pace knots) progress =
+toMetres (LapScale { pace, knots }) progress =
     interpolate pace knots progress
 
 
@@ -103,8 +107,8 @@ A car under a full course yellow, behind the safety car or through a slow zone i
 How much slower than usual is the stretch's time against its share of the car's own best lap.
 
 -}
-metresOn : LapScale -> TrackConfig -> CarAt -> Float
-metresOn scale config car =
+metresOn : LapScale -> CarAt -> Float
+metresOn ((LapScale { config }) as scale) car =
     case Config.stretchOf config car of
         Just stretch ->
             ease scale
