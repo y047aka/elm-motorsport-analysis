@@ -4,6 +4,10 @@
 /// This is the name a run calls itself by, the pace between its requests, and the one
 /// reading of what a service *answered with*. What each service is asked is its own
 /// module's: `Overpass` walks its runners, `Elevation` its sources.
+///
+/// A file store is asked here too, for files rather than answers: the opening bytes of
+/// many files at once, and a whole file streamed to whoever reads it. Neither is JSON, so
+/// each is read by its status alone, and a store is not paced as a service is.
 pub mod Service {
 
     use IoError.IoError
@@ -87,19 +91,26 @@ pub mod Service {
 
     // ---------------------------------------------------------------- files, not answers
 
-    /// How many files' openings are asked of a file store at once. A file store is not paced
-    /// as a service is.
+    /// What one asking of a file store came to. A 4xx is the store's answer and is not
+    /// asked again; a 5xx or a dropped connection is.
+    enum Fetched[a] {
+        case Got(a)
+        case Refused(String)
+        case Failed(String)
+    }
+
+    /// How many files' openings are asked at once.
     def together(): Int32 = 32
 
-    /// The first `count` bytes of each of `urls`, in their order. A file store answers a
-    /// range of a file, and none of this is JSON, so it is read here by its status alone.
+    /// The first `count` bytes of each of `urls`, in their order.
     pub def openings(urls: List[String], count: Int32, asked: String): Result[String, List[Vector[Int8]]] \ IO =
         let client = HttpClient.newHttpClient();
         batches(urls)
             |> Result.traverse(batch -> {
                 let pending = List.map(url -> (url, client.sendAsync(ranged(url, count), BodyHandlers.ofByteArray())), batch);
                 Result.traverse(pair -> match pair {
-                    case (url, future) => openingOf(url, future, asked)
+                    case (url, future) =>
+                        retried(1, () -> openingOf(url, count, asked, future), () -> openingOf(url, count, asked, client.sendAsync(ranged(url, count), BodyHandlers.ofByteArray())))
                 }, pending)
             })
             |> Result.map(List.flatten)
@@ -112,30 +123,78 @@ pub mod Service {
         let last = count - 1;
         JHttpRequest.newBuilder(URI.create(url)).header("User-Agent", userAgent()).header("Range", "bytes=0-${last}").build()
 
-    def openingOf(url: String, future: CompletableFuture[JHttpResponse[Array[Int8, Static]]], asked: String): Result[String, Vector[Int8]] \ IO =
+    /// A store that ignores the range answers 200 with the whole file, which is refused
+    /// rather than read: a tile is tens of megabytes.
+    def openingOf(url: String, count: Int32, asked: String, future: CompletableFuture[JHttpResponse[Array[Int8, Static]]]): Fetched[Vector[Int8]] \ IO =
         try {
             let response = future.join();
             let status = response.statusCode();
-            if (status == 200 or status == 206)
-                Ok(Array.toVector(response.body()))
+            let body = response.body();
+            if (status != 200 and status != 206)
+                byStatus(status, url, asked)
+            else if (Array.length(body) > count)
+                Fetched.Refused("${asked} sent the whole of ${url}, not its first ${count} bytes")
             else
-                Err("${asked} answered ${status} for ${url}")
+                Fetched.Got(Array.toVector(body))
         } catch {
-            case e: Throwable => Err("${asked} answered nothing for ${url}: ${e.getMessage()}")
+            case e: Throwable => Fetched.Failed("${asked} answered nothing for ${url}: ${e.getMessage()}")
         }
 
     /// A whole file, handed to `read` as it arrives, so a file of millions of points is
-    /// never held whole.
+    /// never held whole. A file cut off half way is asked for again from its start.
     pub def streamed(url: String, asked: String, read: InputStream -> Result[String, a] \ IO): Result[String, a] \ IO =
+        let once = () -> streamedOnce(url, asked, read);
+        retried(1, once, once)
+
+    def streamedOnce(url: String, asked: String, read: InputStream -> Result[String, a] \ IO): Fetched[a] \ IO =
         try {
             let request = JHttpRequest.newBuilder(URI.create(url)).header("User-Agent", userAgent()).build();
             let response = HttpClient.newHttpClient().send(request, BodyHandlers.ofInputStream());
             let stream = response.body();
             let status = response.statusCode();
-            let result = if (status == 200) read(stream) else Err("${asked} answered ${status} for ${url}");
-            stream.close();
+            let result =
+                if (status != 200)
+                    byStatus(status, url, asked)
+                else
+                    try {
+                        match read(stream) {
+                            case Ok(value)    => Fetched.Got(value)
+                            case Err(problem) => Fetched.Refused(problem)
+                        }
+                    } catch {
+                        case e: Throwable => Fetched.Failed("${asked} broke off ${url}: ${e.getMessage()}")
+                    };
+            closed(stream);
             result
         } catch {
-            case e: Throwable => Err("${asked} answered nothing for ${url}: ${e.getMessage()}")
+            case e: Throwable => Fetched.Failed("${asked} answered nothing for ${url}: ${e.getMessage()}")
+        }
+
+    /// A stream whose reading is over, closed. A close that fails loses nothing the
+    /// reading has not already kept or refused.
+    def closed(stream: InputStream): Unit \ IO =
+        try {
+            stream.close()
+        } catch {
+            case _: Throwable => ()
+        }
+
+    def byStatus(status: Int32, url: String, asked: String): Fetched[a] =
+        if (status >= 500) Fetched.Failed("${asked} answered ${status} for ${url}")
+        else Fetched.Refused("${asked} answered ${status} for ${url}")
+
+    /// `first` asked, then `again` after each failure that asking again could mend, as
+    /// many times and as far apart as `Elevation` asks a source.
+    def retried(attempt: Int32, first: Unit -> Fetched[a] \ IO, again: Unit -> Fetched[a] \ IO): Result[String, a] \ IO =
+        match first() {
+            case Fetched.Got(value)       => Ok(value)
+            case Fetched.Refused(problem) => Err(problem)
+            case Fetched.Failed(problem)  =>
+                if (attempt >= Elevation.tries())
+                    Err(problem)
+                else {
+                    Net.HttpLayer.sleep(Time.Duration.toMillis(Overpass.backoff(attempt)));
+                    retried(attempt + 1, again, again)
+                }
         }
 }
