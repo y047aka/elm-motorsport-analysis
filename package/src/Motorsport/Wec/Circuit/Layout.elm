@@ -59,7 +59,7 @@ leaves no distance for.
 
 [`MiniSectorShares`](Motorsport-Chart-Tracker-Config#MiniSectorShares) is the
 same question asked of a round's timing rather than of its circuit, and
-[`lapScale`](Motorsport-Chart-Tracker-Config#lapScale) is where the two answers
+[`lapScale`](Motorsport-Chart-Tracker-LapScale#lapScale) is where the two answers
 are read together.
 
 -}

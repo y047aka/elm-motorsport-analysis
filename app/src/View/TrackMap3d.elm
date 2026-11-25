@@ -15,7 +15,7 @@ import Html exposing (Html)
 import Html.Attributes exposing (attribute, class)
 import Html.Events exposing (preventDefaultOn)
 import Json.Decode as Decode
-import Motorsport.Chart.Tracker exposing (Track)
+import Motorsport.Chart.Tracker.Circuit exposing (Circuit)
 import Motorsport.Chart.Tracker3d as Track3d exposing (Model)
 import Motorsport.Race.Snapshot exposing (Snapshot)
 
@@ -26,7 +26,7 @@ its own.
 -}
 type alias Config msg =
     { model : Model
-    , track : Track
+    , circuit : Circuit
     , snapshot : Snapshot
     , size : { width : Float, height : Float }
     , label : String
@@ -44,7 +44,7 @@ type alias Config msg =
 keys.
 -}
 surface : Config msg -> Html msg
-surface ({ model, track, snapshot, size, label, keys, wheel } as config) =
+surface ({ model, circuit, snapshot, size, label, keys, wheel } as config) =
     Html.node "drag-handle"
         ([ class
             ("absolute inset-0 grid touch-none select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring "
@@ -67,7 +67,7 @@ surface ({ model, track, snapshot, size, label, keys, wheel } as config) =
             ++ Handle.eventsByButton config
             ++ [ Handle.arrowKeys keys, scroll wheel ]
         )
-        [ Track3d.view size model track snapshot ]
+        [ Track3d.view size model circuit snapshot ]
 
 
 {-| The two-finger scroll, which turns the map the way the right button's drag does. Its

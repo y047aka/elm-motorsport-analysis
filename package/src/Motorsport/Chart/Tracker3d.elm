@@ -4,7 +4,7 @@ module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, 
 perspective camera, so the side of the loop standing near comes out wide and the
 side standing far narrow, and the reader turns it by dragging.
 
-The lap keeps its own shape -- the same metres [`ground`](Motorsport-Chart-Tracker#ground)
+The lap keeps its own shape -- the same metres [`ground`](Motorsport-Chart-Tracker-Circuit#ground)
 hands the flat drawing -- and is set above the plane it was surveyed on. A circuit
 whose geometry carries heights stands at them, its lowest point where every other lap
 stands flat, and its heights drawn `steep` times over; one that carries none stands
@@ -12,7 +12,8 @@ flat. Nothing is added to the circuit: no height it does not have. What turns it
 frame, and what draws it is SVG, projected point by point.
 
 Everything the drawing measures is a share of the lap's own size, so one set of
-lengths serves every circuit and the ring it falls back to.
+lengths serves every circuit.
+A round whose circuit the app has no map of has no raised map: the flat ring is all it is drawn on.
 
 @docs Model, Msg, init, update, view, box, projected, band, perPixel
 
@@ -20,7 +21,7 @@ lengths serves every circuit and the ring it falls back to.
 
 import Angle
 import Camera3d exposing (Camera3d)
-import Motorsport.Chart.Tracker as Tracker exposing (Track)
+import Motorsport.Chart.Tracker.Circuit as Circuit exposing (Circuit)
 import Motorsport.Circuit.Shape as Shape exposing (Point)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Wec.Class as Class
@@ -462,11 +463,11 @@ labelSize =
     0.045
 
 
-view : { width : Float, height : Float } -> Model -> Track -> Snapshot -> Svg msg
+view : { width : Float, height : Float } -> Model -> Circuit -> Snapshot -> Svg msg
 view surface model shown standings =
     let
         g =
-            Tracker.ground shown
+            Circuit.ground shown
 
         rising =
             Maybe.map (\relief height -> (height - relief.lowest) * steep) g.relief
@@ -496,19 +497,19 @@ view surface model shown standings =
             in
             ( side width, side (negate width) )
 
-        -- Where a place round the lap stands, and how high: a height between two of
+        -- Where a distance round the lap stands, and how high: a height between two of
         -- the lap's points is the one the line between them passes.
-        onLap along =
+        onLap metres =
             let
                 position =
-                    g.at along
+                    g.at metres
             in
             ( { x = position.x
               , y = position.y
               , rise =
                     case ( rising, g.relief ) of
                         ( Just rise, Just relief ) ->
-                            rise (relief.at along)
+                            rise (relief.at metres)
 
                         _ ->
                             0
@@ -516,10 +517,10 @@ view surface model shown standings =
             , position
             )
 
-        across width along =
+        across width metres =
             let
                 ( standing, position ) =
-                    onLap along
+                    onLap metres
             in
             acrossBand width standing position
 
@@ -537,7 +538,7 @@ view surface model shown standings =
                     (\car ->
                         let
                             ( standing, position ) =
-                                onLap (g.carAt car)
+                                onLap (g.metresOf car)
 
                             shot =
                                 project eye (raisedAt size standing)
@@ -595,13 +596,13 @@ view surface model shown standings =
                 every (riserStride (ringOf lap)) (ringOf lap)
                     |> List.map (\p -> ( project eye (groundAt size p), project eye (raisedAt size p) ))
             , boundaries = List.map (across (bandWidth / 2)) g.boundaries
-            , finish = across (bandWidth * 0.8) g.finish
+            , finish = across (bandWidth * 0.8) 0
             , labels =
                 List.map
-                    (\{ at, label } ->
+                    (\{ metres, label } ->
                         let
                             ( standing, position ) =
-                                onLap at
+                                onLap metres
 
                             out =
                                 outward position
@@ -736,7 +737,7 @@ previous list =
     List.take 1 (List.reverse list) ++ List.drop 1 list
 
 
-{-| A circuit's mark list closes itself; the ring's does not.
+{-| A circuit's mark list closes itself, its last mark standing on its first; a list that does not is taken as it is.
 -}
 ringOf : List { a | x : Float, y : Float } -> List { a | x : Float, y : Float }
 ringOf lap =

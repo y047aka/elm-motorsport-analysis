@@ -18,7 +18,7 @@ import Html exposing (Html, div, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (on)
 import Json.Decode as Decode
-import Motorsport.Chart.Tracker exposing (Track)
+import Motorsport.Chart.Tracker.Circuit exposing (Circuit)
 import Motorsport.Race.Snapshot exposing (Snapshot)
 import Page.Wec.Camera as Camera
 import Page.Wec.Columns as Columns
@@ -385,6 +385,7 @@ its top.
 The top is the same at every move of one drag, because a box grown by a grip at its pinned
 end grows its shift by the same travel -- which is why a throw past the window pulls back
 freely rather than sticking.
+
 -}
 bounded : Side -> Model -> Resize.Fence
 bounded s m =
@@ -443,8 +444,19 @@ Nothing lies between the box and the drawing: a band of box that sized nothing w
 Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
 
 -}
-view : Model -> Track -> Snapshot -> Html Msg
-view m track snapshot =
+view : Model -> Maybe Circuit -> Snapshot -> Html Msg
+view m drawn snapshot =
+    case drawn of
+        Just circuit ->
+            box m circuit snapshot
+
+        -- No raised map, and no press to float one: the column offers none.
+        Nothing ->
+            text ""
+
+
+box : Model -> Circuit -> Snapshot -> Html Msg
+box m circuit snapshot =
     let
         edgeGrip s =
             div [ Attributes.class ("absolute " ++ s.at ++ " " ++ edgeTrack s) ]
@@ -482,7 +494,7 @@ view m track snapshot =
         , attribute "data-tracker-float" ""
         ]
         [ if m.shown then
-            surface m track snapshot
+            surface m circuit snapshot
 
           else
             text ""
@@ -507,11 +519,11 @@ toggled =
 {-| The drawing, and what each input is asked for: the left button carries the box, the right
 one turns the map, and a two-finger scroll turns it.
 -}
-surface : Model -> Track -> Snapshot -> Html Msg
-surface m track snapshot =
+surface : Model -> Circuit -> Snapshot -> Html Msg
+surface m circuit snapshot =
     TrackMap3d.surface
         { model = m.camera.eye
-        , track = track
+        , circuit = circuit
         , snapshot = snapshot
         , size =
             { width = m.width.size, height = m.height.size }
