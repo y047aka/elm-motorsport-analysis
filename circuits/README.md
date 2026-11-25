@@ -11,6 +11,7 @@ OpenStreetMap data is © OpenStreetMap contributors, under the ODbL; every geome
 
 A circuit joins as a record in `src/Circuit.flix` — the relation, or a box of raceway ground where OpenStreetMap tags no relation, the member role naming the line the lap is measured from, and the timing line's published coordinates — as a map record at `app/static/circuit-maps/<word>.json`, whose centreline is the length the surveyed line is stretched to, and as a directory named by the word the summaries send for it.
 How each circuit is actually tagged is its config comment's to say.
+A relation may list ground under no role that the lap no longer runs — Imola's bypassed Variante Bassa chicane — and `bypassed` names those ways by id, as `pit` names the pit lane's; a chain that walked the lap and the bypassed chicane both would have to split a way.
 The config's timing-line coordinates are what make a run answering the wrong role fail before it writes anything, rather than drawing every car early.
 
 What the pipeline writes is a served file, not a build artifact: the app reads `app/static/geometry/<word>.geojson` through `Motorsport.Wec.Circuit.Geometry`, which re-runs the pipeline's checks on the bytes, and the `Layout` module beside it holds what the file cannot know — the drawing's lengths — and lays the timing lines the map record gives. Nothing generates Elm from the geometry.
@@ -56,11 +57,12 @@ How the drawing places a line the map gives no distance for is app-side: `Tracke
 `app/static/circuit-maps/<word>.json` is what the latest of the series' circuit maps prints, read off it by hand; the PDF stays out of the repository, since the maps are not to be redistributed, and the record keeps the season, the date the map was issued and the circuit's full name.
 It is served beside the geometry because the app reads it too: `Shared` asks for a circuit's record before its geometry, and checks the geometry against the record's centreline. A new map replaces the record, and the geometry is re-laid from it with `regenerate --write`.
 Both readers refuse a record whose lines do not stand in the order a car reaches them, every one before the finish line closes the lap: `Circuit.figuresOf` here, and the map decoders in `Motorsport.Wec.Circuit.Map` app-side.
-A map gives its finish line no degrees, so where OpenStreetMap tags none at the line the authored place is read off the map's drawing laid over the survey; the config of each such circuit (Monza, Fuji) says how, and how near.
+A map gives its finish line no degrees, so where OpenStreetMap tags none at the line the authored place is read off the map's drawing laid over the survey; the config of each such circuit (Monza, Fuji) says how, and how near. Where the relation tags its own line, the map's Start Line Offset is its own check on the reading: the two nodes should stand that far apart along the lap, as São Paulo's tagged `start` and `finish` do at 60.04 m against the map's 60.2 m, as Barcelona's and COTA's tagged pair do at 127 against 128 and 296.6 against 297, and as the node behind Spa's lone `start` node does at 123.9 against 122.
+A lone `start` node is not always the map's Start Line — Imola's is its finish line, with the map's Start Line and Pit Out falling 210 m and 228 m after it against the 218 m and 222.8 m the map prints — so which of the two a lone `start` names is the map's drawing's to say, and the config comment records it.
 Every figure is kept twice, as `metres` and as the map printed it, because the print carries the precision the map was written to (0.01 m at Le Mans, whole metres elsewhere) and its decimal comma.
 `lengths` and `lines` hold only what the map gives a distance for, every line measured from the finish line; `drawn` names what it draws without one, and lists such as Le Mans's timing loops are kept in the map's own order.
 `sectors` and Le Mans's `zones` are the stretches the map colours, each bounded by the drawn labels its colour changes at; a colour is sampled off the stretch's own label, since the shared template's labels print one colour on every map where its lines are rendered a little differently on each.
-A map's figures need not agree with one another: Lap by Pits should be the centreline less the track between Pit In and Pit Out plus the pit lane, and 2026's Fuji map misses that by 9 m and Barcelona's by 5.2 m.
+A map's figures need not agree with one another: Lap by Pits should be the centreline less the track between Pit In and Pit Out plus the pit lane, and 2026's Fuji map misses that by 9 m and Barcelona's by 5.2 m. São Paulo's 2026 map misses it by 3 m and Spa's by 48 m, and at Spa Pit In - Pit Out (386.6 m) is all but the track between its own Pit In and Pit Out lines (386.4 m); the record keeps what the map prints either way.
 
 ## The links into `backend/src`
 
@@ -83,6 +85,10 @@ Per-file links show in `git ls-files -s` as mode `120000`.
 
 `elevation <word> --fetch` samples the places a survey walks (`Elevation.placesOf`) from the source the circuit's config names, and keeps the source's own values as `circuits/<word>/elevation.json`.
 The survey and the fence read them as they read the kept answer; how they are despiked, smoothed and thinned is `Survey.laidOut`'s, and a circuit keeping none is drawn without heights.
+
+**São Paulo's source is a point cloud no service answers a place of**, so `--fetch` reads every one of the city's 5,544 LiDAR tiles' headers to find the few the lap stands on, then streams those through `laszip4j` (LGPL-2.1) and keeps only the ground returns near a place; no tile is written to disk.
+The places are found on the tiles' SIRGAS 2000 / UTM 23S grid by `proj4j` (Apache 2.0); those two are the project's only Maven dependencies.
+A height there is the median of the ground returns within 1 m of the place, or 1.5 m under a bridge, so it is read here rather than taken off a model; `resolution_m` says which radius.
 
 **The samples are keyed by the degrees they were asked at.** An answer re-fetched with any node moved leaves that place unsampled, and the survey and the fence refuse the circuit until `elevation <word> --fetch` samples it again; re-fetching an answer and re-sampling it are one change.
 

@@ -3,6 +3,8 @@
 /// back. Which heights a survey's points are given is `TestSurvey`'s.
 pub mod TestElevation {
 
+    import java.lang.{Double => JDouble}
+
     use Geodesy.Place
 
     def places(): List[Place] =
@@ -92,6 +94,72 @@ pub mod TestElevation {
             case Ok(read)     => Assert.assertTrue(read#metres == 120.43 and read#resolution == 2.0)
         };
         Assert.assertTrue(refused("holds no height", Elevation.Icgc.sampleOf(at, "@MET2m Stretch.Pixel Value; NoData; ")))
+
+    @Test
+    def testWallonieAnswersThePixelThePlaceStandsIn(): Unit \ Assert =
+        let at = {lat = 50.4431125, lon = 5.966015};
+        // Longitude first, with no tolerance, on a map a thousandth of a degree across.
+        Assert.assertTrue(String.contains({substr = "/identify?geometry=5.966015,50.4431125&"}, Elevation.Wallonie.urlOf(at)));
+        Assert.assertTrue(String.contains({substr = "&tolerance=0&mapExtent=5.9655"}, Elevation.Wallonie.urlOf(at)));
+        let answered = "{\"results\":[{\"layerId\":0,\"layerName\":\"Relief Wallonie - MNT 2021-2022 - 50cm\",\"displayFieldName\":\"\",\"attributes\":{\"Stretch.Pixel Value\":\"414.223145\"}}]}";
+        match Elevation.Wallonie.sampleOf(at, answered) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(read)     => Assert.assertTrue(read#metres == 414.223145 and read#resolution == 0.5)
+        };
+        // A place outside Wallonia is answered with no result at all.
+        Assert.assertTrue(refused("holds no height at [5.966015,50.4431125]", Elevation.Wallonie.sampleOf(at, "{\"results\":[]}")));
+        Assert.assertTrue(refused("answered no results", Elevation.Wallonie.sampleOf(at, "{\"error\":{\"code\":400}}")))
+
+    @Test
+    def testUtmIsTheGridSirgas2000WritesSaoPauloOn(): Unit \ Assert =
+        // Read off PROJ (EPSG:4326 to EPSG:31983) for the same degrees.
+        let near = (grid, east, north) -> Float64.abs(grid#east - east) < 0.001 and Float64.abs(grid#north - north) < 0.001;
+        Assert.assertTrue(near(Geodesy.Utm.gridOf(23, true, {lon = -46.7001274, lat = -23.7032239}), 326666.6421, 7377596.0670));
+        Assert.assertTrue(near(Geodesy.Utm.gridOf(23, true, {lon = -45.0, lat = -23.0}), 500000.0, 7456480.2365));
+        Assert.assertTrue(near(Geodesy.Utm.gridOf(23, true, {lon = -47.9, lat = -20.1}), 196737.2863, 7774813.5480))
+
+    @Test
+    def testPmspListsItsTilesAPageAtATime(): Unit \ Assert =
+        let page = "<ListBucketResult><NextContinuationToken>1HX+e/l=</NextContinuationToken><Contents><Key>MDS_color_2122-211.laz</Key><Size>4</Size></Contents><Contents><Key>readme.txt</Key></Contents><Contents><Key>MDS_color_2122-212.laz</Key></Contents></ListBucketResult>";
+        Assert.assertTrue(Elevation.Pmsp.keysOf(page) == "MDS_color_2122-211.laz" :: "MDS_color_2122-212.laz" :: Nil);
+        Assert.assertTrue(Elevation.Pmsp.continuationOf(page) == Some("1HX+e/l="));
+        Assert.assertTrue(Elevation.Pmsp.continuationOf("<ListBucketResult><Contents><Key>a.laz</Key></Contents></ListBucketResult>") == None)
+
+    @Test
+    def testPmspReadsATilesExtentOffItsHeader(): Unit \ Assert =
+        let head = header(0.01 :: 0.01 :: 0.001 :: 0.0 :: 0.0 :: 0.0 :: 319339.5 :: 319234.25 :: 7344542.0 :: 7344056.0 :: Nil);
+        match Elevation.Pmsp.tileOf("t.laz", head) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(tile) =>
+                Assert.assertTrue(tile#west == 319234.25 and tile#east == 319339.5 and tile#south == 7344056.0 and tile#north == 7344542.0);
+                Assert.assertTrue(tile#scale == (0.01, 0.01, 0.001))
+        };
+        Assert.assertTrue(refused("sent 100 bytes of t.laz's header", Elevation.Pmsp.tileOf("t.laz", Vector.repeat(100, 0i8))))
+
+    @Test
+    def testPmspReadsAPlaceAsTheMedianOfTheNearestGroundAndWidensUnderABridge(): Unit \ Assert =
+        let at = {lon = -46.7001274, lat = -23.7032239};
+        let grid = Geodesy.Utm.gridOf(23, true, at);
+        let near = (east, north, up) -> {east = grid#east + east, north = grid#north + north, up = up};
+        let read = returns -> Elevation.Pmsp.heightAt(Elevation.Pmsp.cellsOf(returns), at, grid);
+        // The return 1.2 m off is left out while any stands within 1 m.
+        match read(near(0.5, 0.0, 780.0) :: near(0.0, -0.9, 781.0) :: near(0.3, 0.3, 783.5) :: near(0.0, 1.2, 700.0) :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(sample)   => Assert.assertTrue(sample#metres == 781.0 and sample#resolution == 1.0)
+        };
+        match read(near(1.2, 0.0, 760.0) :: near(-1.4, 0.0, 761.0) :: Nil) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, problem)
+            case Ok(sample)   => Assert.assertTrue(sample#metres == 760.5 and sample#resolution == 1.5)
+        };
+        Assert.assertTrue(refused("holds no ground return within 1.5 m of [-46.7001274,-23.7032239]", read(near(1.6, 0.0, 760.0) :: Nil)))
+
+    /// A LAS header's opening: zeros, but for the ten little-endian doubles from byte 131 on.
+    def header(doubles: List[Float64]): Vector[Int8] =
+        let bytes = List.flatMap(x -> {
+            let bits = JDouble.doubleToRawLongBits(x);
+            List.map(i -> Int32.truncateToInt8(Int64.clampToInt32(min = Int32.minValue(), max = Int32.maxValue(), Int64.bitwiseAnd(Int64.rightShift(bits, 8 * i), 255i64))), List.range(0, 8))
+        }, doubles);
+        Vector.append(Vector.append(Vector.repeat(131, 0i8), List.toVector(bytes)), Vector.repeat(16, 0i8))
 
     // ---------------------------------------------------------------- the kept file
 

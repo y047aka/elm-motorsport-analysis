@@ -35,10 +35,13 @@ import Motorsport.Wec.Circuit.Barcelona.Layout as BarcelonaLayout
 import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Fuji.Layout as FujiLayout
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
+import Motorsport.Wec.Circuit.Imola.Layout as ImolaLayout
 import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as MonzaLayout
+import Motorsport.Wec.Circuit.SaoPaulo.Layout as SaoPauloLayout
+import Motorsport.Wec.Circuit.Spa.Layout as SpaLayout
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Drawing, Msg(..))
@@ -659,6 +662,15 @@ drawingFor circuit =
 
         "fuji" ->
             Just (fetchDrawing circuit Map.intermediatesDecoder FujiLayout.decoder FujiLayout.layout)
+
+        "spa" ->
+            Just (fetchDrawing circuit Map.intermediatesDecoder SpaLayout.decoder SpaLayout.layout)
+
+        "sao_paulo" ->
+            Just (fetchDrawing circuit Map.intermediatesDecoder SaoPauloLayout.decoder SaoPauloLayout.layout)
+
+        "imola" ->
+            Just (fetchDrawing circuit Map.intermediatesDecoder ImolaLayout.decoder ImolaLayout.layout)
 
         _ ->
             Nothing

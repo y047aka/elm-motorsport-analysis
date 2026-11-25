@@ -98,7 +98,7 @@ pub mod TestSurvey {
 
     @Test
     def testATurnedZeroIsSampledAtItsOwnDegrees(): Unit \ Assert =
-        let circuit = turnedRelationCircuit(Some(boxLine()));
+        let circuit = turnedRelationCircuit(None, Some(boxLine()));
         match unheighted(circuit, square(7)) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
             case Ok(read) =>
@@ -155,7 +155,7 @@ pub mod TestSurvey {
 
     @Test
     def testEveryKeptPointCarriesItsHeight(): Unit \ Assert =
-        let circuit = turnedRelationCircuit(Some(boxLine()));
+        let circuit = turnedRelationCircuit(None, Some(boxLine()));
         let figures = {lap = 4150.0, published = None};
         match unheighted(circuit, square(7)) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
@@ -176,7 +176,7 @@ pub mod TestSurvey {
 
     @Test
     def testAPlaceTheSamplesDoNotCoverRefusesTheCircuit(): Unit \ Assert =
-        let circuit = turnedRelationCircuit(Some(boxLine()));
+        let circuit = turnedRelationCircuit(None, Some(boxLine()));
         match unheighted(circuit, square(7)) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "the square refused: ${problem}")
             case Ok(read) =>
@@ -287,6 +287,7 @@ pub mod TestSurvey {
                     relation = cota#relation,
                     box = cota#box,
                     pit = cota#pit,
+                    bypassed = cota#bypassed,
                     word = cota#word,
                     timedFrom = cota#timedFrom,
                     timingLine = Some({place = place, within = Some(5.0)}),
@@ -298,6 +299,7 @@ pub mod TestSurvey {
                     relation = narrowed#relation,
                     box = narrowed#box,
                     pit = narrowed#pit,
+                    bypassed = narrowed#bypassed,
                     word = narrowed#word,
                     timedFrom = narrowed#timedFrom,
                     timingLine = Some({place = place, within = None}),
@@ -507,7 +509,7 @@ pub mod TestSurvey {
     @Test
     def testParseRefusesWhatItCannotSurvey(): Unit \ Assert =
         Assert.assertTrue(argumentRefused("survey reads one circuit", Survey.parse(Nil)));
-        Assert.assertTrue(argumentRefused("no circuit is surveyed under 'qatar': known are cota, le_mans, barcelona, monza, fuji", Survey.parse("qatar" :: Nil)));
+        Assert.assertTrue(argumentRefused("no circuit is surveyed under 'qatar': known are cota, le_mans, barcelona, monza, fuji, spa, sao_paulo, imola", Survey.parse("qatar" :: Nil)));
         Assert.assertTrue(argumentRefused("option '--answer' requires an argument", Survey.parse("--answer" :: Nil)));
         // A flag is no file: `--answer --write` is a reader who meant something else, and
         // the survey that read it as a path would report a file that cannot be opened.
@@ -577,6 +579,7 @@ pub mod TestSurvey {
         relation = None,
         box = Some({south = 29.98, west = -97.62, north = 30.06, east = -97.53}),
         pit = pit,
+        bypassed = None,
         word = "boxy",
         timedFrom = "",
         timingLine = timingLine,
@@ -678,10 +681,14 @@ pub mod TestSurvey {
 
     /// The square's relation, configured to name no role: the line stands where the box's
     /// does, four tenths along the one-way first stretch, and no member is tagged there.
-    def turnedRelationCircuit(timingLine: Option[{place = Place, within = Option[Float64]}]): Circuit = {
+    def turnedRelationCircuit(
+        bypassed: Option[List[Int64]],
+        timingLine: Option[{place = Place, within = Option[Float64]}]
+    ): Circuit = {
         relation = Some(7i64),
         box = None,
         pit = None,
+        bypassed = bypassed,
         word = "turned",
         timedFrom = "",
         timingLine = timingLine,
@@ -692,7 +699,7 @@ pub mod TestSurvey {
 
     @Test
     def testARelationNamingNoRoleIsTurnedAtTheAuthoredLine(): Unit \ Assert =
-        match writtenOf(turnedRelationCircuit(Some(boxLine())), 4150.0, square(7)) {
+        match writtenOf(turnedRelationCircuit(None, Some(boxLine())), 4150.0, square(7)) {
             case Err(problem) => Assert.assertTrueWithMsg(false, "the relation refused its own square: ${problem}")
             case Ok(file) =>
                 // The lap opens at the authored place, between nodes 1 and 2, and not at
@@ -703,7 +710,39 @@ pub mod TestSurvey {
 
     @Test
     def testARelationNamingNoRoleAuthorsNothingWithoutATimingLine(): Unit \ Assert =
-        Assert.assertTrue(refused("names no role and authors no timing line", writtenOf(turnedRelationCircuit(None), 4150.0, square(7))))
+        Assert.assertTrue(refused("names no role and authors no timing line", writtenOf(turnedRelationCircuit(None, None), 4150.0, square(7))))
+
+    /// A relation that lists ground under no role that the lap no longer runs chains no lap
+    /// until the config names it: the chain takes every unroled way, and the way the lap left
+    /// behind hangs between two nodes the lap already passed through.
+    def aBypassedSquare(): String =
+        answer(
+            relation(7, List.append(members(), member("way", "", 14) :: Nil))
+                :: List.append(
+                    places(),
+                    List.append(List.append(lapWays(), way(14, true, 2 :: 3 :: Nil) :: Nil), pitWays())
+                )
+        )
+
+    @Test
+    def testAWayTheLapNoLongerRunsIsLeftOutOfTheChainUntilNamed(): Unit \ Assert =
+        let asking = aBypassedSquare();
+        Assert.assertTrue(
+            refused("ways left out of the chain", writtenOf(turnedRelationCircuit(None, Some(boxLine())), 4150.0, asking))
+        );
+        match writtenOf(turnedRelationCircuit(Some(14i64 :: Nil), Some(boxLine())), 4150.0, asking) {
+            case Err(problem) => Assert.assertTrueWithMsg(false, "naming the way did not free the chain: ${problem}")
+            case Ok(file) => Assert.assertTrue(String.contains({substr = "\"direction\": \"clockwise\""}, file))
+        }
+
+    @Test
+    def testABypassedWayTheRelationListsNowhereIsRefused(): Unit \ Assert =
+        Assert.assertTrue(
+            refused(
+                "relation 7 lists no way under no role named 911",
+                writtenOf(turnedRelationCircuit(Some(911i64 :: Nil), Some(boxLine())), 4150.0, square(7))
+            )
+        )
 
     @Test
     def testAClosedRingIsGroundAndNeverAPitLane(): Unit \ Assert =

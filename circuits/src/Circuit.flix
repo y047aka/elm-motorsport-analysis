@@ -97,6 +97,8 @@ pub mod Circuit {
         // the lap — which of them is the pit is a reading of names and turns, and the
         // survey reads geometry and one-way tags alone.
         pit      = Option[List[Int64]],
+        // The ways a relation lists under no role that the lap no longer runs, named by id.
+        bypassed = Option[List[Int64]],
         // The word the summaries send for the circuit, which names its directory, its
         // kept answer and the file the app reads.
         word     = String,
@@ -135,6 +137,7 @@ pub mod Circuit {
         relation = Some(2126739i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "le_mans",
         timedFrom = "start-finish",
         timingLine = None,
@@ -151,6 +154,7 @@ pub mod Circuit {
         relation = Some(6537729i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "cota",
         timedFrom = "finish",
         timingLine = Some({place = {lon = -97.6422583, lat = 30.1335278}, within = Some(10.0)}),
@@ -177,6 +181,7 @@ pub mod Circuit {
         relation = Some(284540i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "barcelona",
         timedFrom = "finish",
         timingLine = Some({place = {lon = 2.262122, lat = 41.571101}, within = Some(25.0)}),
@@ -197,6 +202,7 @@ pub mod Circuit {
         relation = Some(284565i64),
         box      = None,
         pit      = None,
+        bypassed = None,
         word     = "monza",
         timedFrom = "",
         timingLine = Some({place = {lon = 9.280768, lat = 45.616101}, within = Some(25.0)}),
@@ -221,6 +227,7 @@ pub mod Circuit {
         relation = None,
         box      = Some({south = 35.3397, west = 138.8927, north = 35.3997, east = 138.9527}),
         pit      = Some(148621414i64 :: Nil),
+        bypassed = None,
         word     = "fuji",
         timedFrom = "",
         timingLine = Some({place = {lon = 138.926737, lat = 35.371955}, within = Some(25.0)}),
@@ -229,9 +236,94 @@ pub mod Circuit {
         survey = "The Fuji Speedway"
     }
 
+    /// Spa-Francorchamps. The relation `284560` lists its 30 lap ways under no role at all,
+    /// names one way `pit_lane`, and tags one node `start`; no role names the finish line,
+    /// so the lap is turned at the authored place.
+    ///
+    /// That place is the map's finish line, which no source gives in degrees. The map puts
+    /// its Start Line 122 m after the finish line, and a node stands 123.9 m behind the
+    /// relation's `start` node along the lap — the agreement Barcelona (127 against 128) and
+    /// COTA (296.6 against 297) show between their two tagged nodes — so `start` is the map's
+    /// Start Line and the zero is the survey's point 122 m before it, to within the quarter
+    /// metre the lap is thinned to.
+    ///
+    /// That place is taken off OpenStreetMap's own `start` node, so it checks the survey
+    /// against nothing but itself: a `start` node moved in OpenStreetMap moves the zero with
+    /// it on the next `--fetch`, and only the map's drawing could say which was right.
+    ///
+    /// Its heights are the SPW's LiDAR model of Wallonia at 0.5 m.
+    def spa(): Circuit = {
+        relation = Some(284560i64),
+        box      = None,
+        pit      = None,
+        bypassed = None,
+        word     = "spa",
+        timedFrom = "",
+        timingLine = Some({place = {lon = 5.9660150, lat = 50.4431125}, within = Some(10.0)}),
+        elevation = Some(Elevation.Source.WalloniaMnt),
+        file   = "app/static/geometry/spa.geojson",
+        survey = "The Circuit de Spa-Francorchamps"
+    }
+
+    /// São Paulo — Interlagos. The relation `6781071` lists its 25 lap ways under no role at
+    /// all, names one way `pit_lane`, and tags both a `start` and a `finish` node standing
+    /// 60.04 m apart along the lap, which is the offset the 2026 map prints for its Start Line.
+    ///
+    /// `timingLine` is the `finish` node's own place in the kept answer: it checks the tagged
+    /// line against nothing but itself, and is there so that a re-fetch answering a `finish`
+    /// moved more than 10 m fails before it writes anything.
+    ///
+    /// Its heights are the ground returns of the city's 2017 LiDAR survey, read off the
+    /// tiles themselves (`Elevation.Pmsp`); a model of surfaces such as Copernicus GLO-30
+    /// reads grandstands and trees into the lap.
+    def saoPaulo(): Circuit = {
+        relation = Some(6781071i64),
+        box      = None,
+        pit      = None,
+        bypassed = None,
+        word     = "sao_paulo",
+        timedFrom = "finish",
+        timingLine = Some({place = {lon = -46.7001274, lat = -23.7032239}, within = Some(10.0)}),
+        elevation = Some(Elevation.Source.PmspLidar2017),
+        file   = "app/static/geometry/sao_paulo.geojson",
+        survey = "The Autódromo José Carlos Pace"
+    }
+
+    /// Imola. The relation `9291096` lists its 35 lap ways under no role at all, names one
+    /// way `pit_lane`, and tags one node `start`.
+    ///
+    /// That node is the map's finish line, not its Start Line: the map draws its Start Line
+    /// `218 m` and its Pit Out `222.8 m` after the line, and laid over the survey those two
+    /// fall `210 m` and `228 m` after `start` along the lap. `timingLine` is that node's own
+    /// place in the kept answer, so it checks the line against nothing but itself, and is
+    /// there so that a re-fetch answering a `start` moved more than 10 m fails before it
+    /// writes anything.
+    ///
+    /// `bypassed` names the Variante Bassa chicane. The relation lists it under no role, as
+    /// it lists every way the lap does run, and the bypass runs through the two nodes the
+    /// chicane joins, so no walk of the relation's ground separates the lap from the chicane
+    /// without being told which is which. The lap of the other 32 ways stands 4,904.5 m
+    /// against the published 4,909 m.
+    ///
+    /// Its heights are Regione Emilia-Romagna's LiDAR model at 0.5 m from its 2022 survey,
+    /// which covers Imola and Faenza but not the whole region; Regione Lombardia's DTM 5x5,
+    /// Monza's, stops at Lombardy.
+    def imola(): Circuit = {
+        relation = Some(9291096i64),
+        box      = None,
+        pit      = None,
+        bypassed = Some(176764793i64 :: 1025616646i64 :: 1025616647i64 :: Nil),
+        word     = "imola",
+        timedFrom = "start",
+        timingLine = Some({place = {lon = 11.7140173, lat = 44.3444055}, within = Some(10.0)}),
+        elevation = Some(Elevation.Source.EmiliaRomagnaDtm),
+        file   = "app/static/geometry/imola.geojson",
+        survey = "The Autodromo Internazionale Enzo e Dino Ferrari"
+    }
+
     /// The circuits there are, in the order a run over all of them walks them.
     pub def circuits(): List[Circuit] =
-        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: Nil
+        cota() :: leMans() :: barcelona() :: monza() :: fuji() :: spa() :: saoPaulo() :: imola() :: Nil
 
     /// A circuit by the word the app draws it by — the word its directory and its kept
     /// files are named by too.

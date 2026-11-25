@@ -1,0 +1,23 @@
+{
+  "circuit": "Imola",
+  "season": 2026,
+  "issued": "2025-12-03T12:07",
+  "lengths": {
+    "centerline": { "metres": 4909, "printed": "Centerline: 4.909 m." },
+    "lapByPits": { "metres": 4904, "printed": "Lap by the pits: 4.904 m." },
+    "pitInToPitOut": { "metres": 549, "printed": "Pit In - Pit Out: 549 m." }
+  },
+  "lines": {
+    "start": { "metres": 218, "printed": "Start Line Offset: 218 m." },
+    "pitOut": { "metres": 222.8, "printed": "Pit Out at: 222,8 m." },
+    "intermediate1": { "metres": 1214, "printed": "i1 at: 1.214 m." },
+    "intermediate2": { "metres": 2728, "printed": "i2 at: 2.728 m." }
+  },
+  "drawn": ["FL", "Start Line", "TS", "SCL1", "SCL2", "Pit FL", "Pit In", "Pit Out", "i1", "i2"],
+  "sectors": [
+    { "name": "S1", "from": "FL", "to": "i1", "colour": "#175dd7" },
+    { "name": "S2", "from": "i1", "to": "i2", "colour": "#e2d702" },
+    { "name": "S3", "from": "i2", "to": "FL", "colour": "#e20258" }
+  ],
+  "corners": 21
+}

@@ -1,0 +1,2752 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-07-24T11:04:51Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "relation",
+  "id": 9291096,
+  "members": [
+    {
+      "type": "node",
+      "ref": 5106325593,
+      "role": "start"
+    },
+    {
+      "type": "way",
+      "ref": 1025616649,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616648,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771404,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616650,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616651,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616652,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771401,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616654,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616653,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616655,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771402,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771399,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616656,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616657,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771400,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771393,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 7920430,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616641,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616643,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771394,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616642,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771395,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771396,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771397,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616640,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771398,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771405,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616639,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616638,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616644,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616645,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1021771403,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 176764793,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616646,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 1025616647,
+      "role": ""
+    },
+    {
+      "type": "way",
+      "ref": 196368195,
+      "role": "pit_lane"
+    }
+  ],
+  "tags": {
+    "area": "no",
+    "name": "Autodromo Internazionale Enzo e Dino Ferrari",
+    "type": "circuit"
+  }
+},
+{
+  "type": "way",
+  "id": 7920430,
+  "nodes": [
+    4797338713,
+    58725819,
+    2077556258,
+    2077556150,
+    58725828,
+    2077556219,
+    2077556168,
+    2077556151,
+    58725835,
+    2077556148,
+    2077556224,
+    2077556140,
+    2077556206
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Piratella",
+    "oneway": "yes",
+    "ref": "10",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 176764793,
+  "nodes": [
+    9456255716,
+    5167232891,
+    4797338704
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Bassa",
+    "oneway": "yes",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt",
+    "wikidata": "Q122205661"
+  }
+},
+{
+  "type": "way",
+  "id": 196368195,
+  "nodes": [
+    2067102312,
+    2067102242,
+    2067102297,
+    2067102296,
+    2067102254,
+    2067102253,
+    2067102247,
+    2067102309,
+    2067102316,
+    2067102299,
+    2067102301,
+    5165956147,
+    4797457663,
+    4800014143,
+    2067102240,
+    2067102251,
+    2067102289,
+    2067102264,
+    2067102256,
+    2067102282,
+    2067102248,
+    2067102244,
+    2067102258,
+    2067102292,
+    2067102281,
+    2067102252,
+    2067102313,
+    2067102255,
+    2067102303,
+    2067102277,
+    2067102278,
+    2067102295,
+    2067102269,
+    2169464947
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Pit Lane",
+    "oneway": "yes",
+    "sport": "motor",
+    "surface": "asphalt",
+    "wikimedia_commons": "File:Imola-pitlane.jpg"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771393,
+  "nodes": [
+    2077556206,
+    2077556129
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771394,
+  "nodes": [
+    2077498210,
+    58725785,
+    2077498223,
+    2077498207,
+    2077498209,
+    2077498231,
+    2077498267,
+    2077498258,
+    2077498251
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "ref": "8",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771395,
+  "nodes": [
+    4797365448,
+    58725768,
+    58725778,
+    2077498235,
+    2077498244,
+    2077498252,
+    2077498215,
+    2077498270,
+    2077498264,
+    2077498266,
+    2077498255,
+    2077498248,
+    2077498208,
+    2077498239,
+    2077498254,
+    2077498250,
+    2077498246,
+    981462857
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Tosa",
+    "oneway": "yes",
+    "ref": "7",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771396,
+  "nodes": [
+    2077498228,
+    4797365456,
+    4797365455,
+    4797365448
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771397,
+  "nodes": [
+    9456255714,
+    58725759,
+    2077498243,
+    2077498242,
+    2077498221,
+    2077498220,
+    2077498211,
+    2077498219,
+    2077498268,
+    2077498262,
+    2077498214,
+    2077498256,
+    2077498260,
+    2077498228
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Villeneuve",
+    "name:etymology:wikidata": "Q172845",
+    "name:etymology:wikipedia": "it:Gilles Villeneuve",
+    "oneway": "yes",
+    "ref": "6",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771398,
+  "nodes": [
+    58725738,
+    58725744
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771399,
+  "nodes": [
+    58725903,
+    2077556183
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771400,
+  "nodes": [
+    9456257419,
+    2077556160,
+    2077556153,
+    2077556191,
+    2077556135,
+    2077556163,
+    2077556166,
+    2077556158,
+    2077556147,
+    2077556164,
+    9456257418
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Acque Minerali",
+    "oneway": "yes",
+    "ref": "12",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771401,
+  "nodes": [
+    2077556134,
+    58725964,
+    58725982
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771402,
+  "nodes": [
+    2077556183,
+    2077556142,
+    2077556171,
+    2077556126,
+    2077556216,
+    2077556149,
+    2077556155
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Gresini",
+    "name:etymology": "Fausto Gresini",
+    "name:etymology:wikidata": "Q1382825",
+    "name:etymology:wikipedia": "it:Fausto Gresini",
+    "old_name": "Variante Alta",
+    "oneway": "yes",
+    "ref": "14",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:name:etymology": "https://www.gpone.com/it/2021/09/08/news/la-variante-alta-dellautodromo-di-imola-intitolata-a-fausto-gresini.html",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771403,
+  "nodes": [
+    58726064,
+    1872449436,
+    1872449434,
+    4797338704,
+    1872449445,
+    1872449440,
+    5106325593
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771404,
+  "nodes": [
+    9456257417,
+    2067102271,
+    58726025,
+    2067102267,
+    2067102268,
+    58726033,
+    2067102276,
+    2067102326,
+    2067102307,
+    2067102288,
+    762086543,
+    58726039,
+    58726046
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Rivazza",
+    "oneway": "yes",
+    "ref": "19",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1021771405,
+  "nodes": [
+    9456255713,
+    2077498234,
+    2077498263,
+    2077498265,
+    2077498233,
+    2077498247,
+    2077498222,
+    2077498226,
+    2077498271,
+    2077498230,
+    58725729,
+    58725733,
+    58725738
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Tamburello",
+    "oneway": "yes",
+    "ref": "4",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt",
+    "wikidata": "Q177416",
+    "wikipedia": "fr:Tamburello"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616638,
+  "nodes": [
+    4797338702,
+    4797338701,
+    58725709,
+    58725711,
+    58725712,
+    58725714,
+    2067102324,
+    2067102243,
+    2067102305,
+    9456255712
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Tamburello",
+    "oneway": "yes",
+    "ref": "2",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt",
+    "wikidata": "Q177416",
+    "wikipedia": "fr:Tamburello"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616639,
+  "nodes": [
+    9456255712,
+    2067102317,
+    2067102279,
+    2067102311,
+    2067102325,
+    2067102300,
+    2067102246,
+    2067102308,
+    58725723,
+    9456255713
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Tamburello",
+    "oneway": "yes",
+    "ref": "3",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt",
+    "wikidata": "Q177416",
+    "wikipedia": "fr:Tamburello"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616640,
+  "nodes": [
+    58725744,
+    58725755,
+    2077498213,
+    2077498216,
+    2077498224,
+    2077498227,
+    2077498269,
+    2077498225,
+    2077498259,
+    9456255714
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Villeneuve",
+    "name:etymology:wikidata": "Q172845",
+    "name:etymology:wikipedia": "it:Gilles Villeneuve",
+    "oneway": "yes",
+    "ref": "5",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616641,
+  "nodes": [
+    58725794,
+    2077556262,
+    2077556124,
+    981462516,
+    2077556152,
+    2077556157,
+    58725799,
+    2077556213,
+    2077556145,
+    2077556246,
+    2077556236,
+    58725808,
+    4797338713
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Piratella",
+    "oneway": "yes",
+    "ref": "9",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616642,
+  "nodes": [
+    981462857,
+    708347658,
+    2077498210
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616643,
+  "nodes": [
+    2077498251,
+    58725794
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616644,
+  "nodes": [
+    2067102320,
+    2067102266,
+    2169464947,
+    58725699,
+    2067102245,
+    2067102284,
+    4797338702
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616645,
+  "nodes": [
+    5106325593,
+    4797338703,
+    58725682,
+    2067102283,
+    2067102257,
+    58725689,
+    2067102322,
+    58725694,
+    58726118,
+    2067102294,
+    2067102261,
+    2067102320
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "ref": "1",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616646,
+  "nodes": [
+    9456255715,
+    1872449437,
+    1872449433,
+    1872449438,
+    1872449444,
+    1872449442,
+    1872449441,
+    9456255716
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Bassa",
+    "oneway": "yes",
+    "ref": "21",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt",
+    "wikidata": "Q122205661"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616647,
+  "nodes": [
+    1872449436,
+    4797338706,
+    4797338705,
+    1872449446,
+    2067102259,
+    1872449439,
+    9456255715
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Variante Bassa",
+    "oneway": "yes",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt",
+    "wikidata": "Q122205661"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616648,
+  "nodes": [
+    58726046,
+    2067102312,
+    4797338707
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616649,
+  "nodes": [
+    4797338707,
+    4797338708,
+    2067102273,
+    2067102270,
+    2067102275,
+    2067102306,
+    2067102318,
+    2067102286,
+    58726055,
+    58726063,
+    58726064
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "ref": "20",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616650,
+  "nodes": [
+    4797338709,
+    2077556228,
+    2077556143,
+    2077556226,
+    2077556128,
+    2077556244,
+    2077556208,
+    2077556144,
+    2077556234,
+    58726002,
+    58726009,
+    58726016,
+    2077556214,
+    762086529,
+    9456257417
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Rivazza",
+    "oneway": "yes",
+    "ref": "18",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616651,
+  "nodes": [
+    762086495,
+    4797338711,
+    4797338710,
+    4797338709
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616652,
+  "nodes": [
+    58725982,
+    2077556223,
+    2077556197,
+    2077556217,
+    2077556211,
+    2077556156,
+    762086495
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "ref": "17",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616653,
+  "nodes": [
+    58725949,
+    2077556137
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616654,
+  "nodes": [
+    2077556137,
+    4797338712,
+    2077556199,
+    2077556256,
+    58725957,
+    2077556193,
+    762086492,
+    2077556154,
+    2077556240,
+    2077556133,
+    2077556134
+  ],
+  "tags": {
+    "highway": "raceway",
+    "oneway": "yes",
+    "ref": "16",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616655,
+  "nodes": [
+    2077556155,
+    2077556202,
+    2077556161,
+    2077556127,
+    2077556177,
+    58725914,
+    58725930,
+    58725937,
+    58725949
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Gresini",
+    "name:etymology": "Fausto Gresini",
+    "name:etymology:wikidata": "Q1382825",
+    "name:etymology:wikipedia": "it:Fausto Gresini",
+    "old_name": "Variante Alta",
+    "oneway": "yes",
+    "ref": "15",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:name:etymology": "https://www.gpone.com/it/2021/09/08/news/la-variante-alta-dellautodromo-di-imola-intitolata-a-fausto-gresini.html",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616656,
+  "nodes": [
+    9456257418,
+    58725855,
+    58725865,
+    58725874,
+    58725885,
+    58725892,
+    58725903
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Acque Minerali",
+    "oneway": "yes",
+    "ref": "13",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "way",
+  "id": 1025616657,
+  "nodes": [
+    2077556129,
+    2077556238,
+    2077556232,
+    2077556189,
+    2077556230,
+    58725854,
+    2077556125,
+    2077556200,
+    9456257419
+  ],
+  "tags": {
+    "highway": "raceway",
+    "name": "Acque Minerali",
+    "oneway": "yes",
+    "ref": "11",
+    "source:name": "https://www.autodromoimola.it/tracciato/",
+    "source:oneway": "http://www.autodromoimola.it/regolamento/",
+    "source:ref": "https://www.autodromoimola.it/tracciato/",
+    "sport": "motor",
+    "surface": "asphalt"
+  }
+},
+{
+  "type": "node",
+  "id": 58725682,
+  "lat": 44.3444639,
+  "lon": 11.7135885
+},
+{
+  "type": "node",
+  "id": 58725689,
+  "lat": 44.3445048,
+  "lon": 11.7131108
+},
+{
+  "type": "node",
+  "id": 58725694,
+  "lat": 44.3445216,
+  "lon": 11.7127227
+},
+{
+  "type": "node",
+  "id": 58725699,
+  "lat": 44.3443639,
+  "lon": 11.7097098
+},
+{
+  "type": "node",
+  "id": 58725709,
+  "lat": 44.3441038,
+  "lon": 11.7082368
+},
+{
+  "type": "node",
+  "id": 58725711,
+  "lat": 44.3440812,
+  "lon": 11.7081930
+},
+{
+  "type": "node",
+  "id": 58725712,
+  "lat": 44.3440540,
+  "lon": 11.7081576
+},
+{
+  "type": "node",
+  "id": 58725714,
+  "lat": 44.3440252,
+  "lon": 11.7081266
+},
+{
+  "type": "node",
+  "id": 58725723,
+  "lat": 44.3434122,
+  "lon": 11.7077300
+},
+{
+  "type": "node",
+  "id": 58725729,
+  "lat": 44.3428348,
+  "lon": 11.7063436
+},
+{
+  "type": "node",
+  "id": 58725733,
+  "lat": 44.3427963,
+  "lon": 11.7063176
+},
+{
+  "type": "node",
+  "id": 58725738,
+  "lat": 44.3427341,
+  "lon": 11.7062831
+},
+{
+  "type": "node",
+  "id": 58725744,
+  "lat": 44.3394473,
+  "lon": 11.7044264
+},
+{
+  "type": "node",
+  "id": 58725755,
+  "lat": 44.3394274,
+  "lon": 11.7044139
+},
+{
+  "type": "node",
+  "id": 58725759,
+  "lat": 44.3387186,
+  "lon": 11.7045809
+},
+{
+  "type": "node",
+  "id": 58725768,
+  "lat": 44.3370746,
+  "lon": 11.7022637
+},
+{
+  "type": "node",
+  "id": 58725778,
+  "lat": 44.3370073,
+  "lon": 11.7021763
+},
+{
+  "type": "node",
+  "id": 58725785,
+  "lat": 44.3368316,
+  "lon": 11.7063115
+},
+{
+  "type": "node",
+  "id": 58725794,
+  "lat": 44.3366229,
+  "lon": 11.7091341
+},
+{
+  "type": "node",
+  "id": 58725799,
+  "lat": 44.3366803,
+  "lon": 11.7097425
+},
+{
+  "type": "node",
+  "id": 58725808,
+  "lat": 44.3369544,
+  "lon": 11.7100623
+},
+{
+  "type": "node",
+  "id": 58725819,
+  "lat": 44.3373847,
+  "lon": 11.7103537
+},
+{
+  "type": "node",
+  "id": 58725828,
+  "lat": 44.3376977,
+  "lon": 11.7105039
+},
+{
+  "type": "node",
+  "id": 58725835,
+  "lat": 44.3381522,
+  "lon": 11.7105732
+},
+{
+  "type": "node",
+  "id": 58725854,
+  "lat": 44.3401267,
+  "lon": 11.7101017
+},
+{
+  "type": "node",
+  "id": 58725855,
+  "lat": 44.3407691,
+  "lon": 11.7114391
+},
+{
+  "type": "node",
+  "id": 58725865,
+  "lat": 44.3407490,
+  "lon": 11.7115057
+},
+{
+  "type": "node",
+  "id": 58725874,
+  "lat": 44.3407344,
+  "lon": 11.7115776
+},
+{
+  "type": "node",
+  "id": 58725885,
+  "lat": 44.3407232,
+  "lon": 11.7116612
+},
+{
+  "type": "node",
+  "id": 58725892,
+  "lat": 44.3407198,
+  "lon": 11.7117478
+},
+{
+  "type": "node",
+  "id": 58725903,
+  "lat": 44.3407220,
+  "lon": 11.7119187
+},
+{
+  "type": "node",
+  "id": 58725914,
+  "lat": 44.3404749,
+  "lon": 11.7173752
+},
+{
+  "type": "node",
+  "id": 58725930,
+  "lat": 44.3404717,
+  "lon": 11.7174198
+},
+{
+  "type": "node",
+  "id": 58725937,
+  "lat": 44.3404786,
+  "lon": 11.7174626
+},
+{
+  "type": "node",
+  "id": 58725949,
+  "lat": 44.3404942,
+  "lon": 11.7175150
+},
+{
+  "type": "node",
+  "id": 58725957,
+  "lat": 44.3412776,
+  "lon": 11.7200118
+},
+{
+  "type": "node",
+  "id": 58725964,
+  "lat": 44.3420469,
+  "lon": 11.7213583
+},
+{
+  "type": "node",
+  "id": 58725982,
+  "lat": 44.3430493,
+  "lon": 11.7227665
+},
+{
+  "type": "node",
+  "id": 58726002,
+  "lat": 44.3440885,
+  "lon": 11.7251980
+},
+{
+  "type": "node",
+  "id": 58726009,
+  "lat": 44.3441218,
+  "lon": 11.7251946
+},
+{
+  "type": "node",
+  "id": 58726016,
+  "lat": 44.3441492,
+  "lon": 11.7251910
+},
+{
+  "type": "node",
+  "id": 58726025,
+  "lat": 44.3449082,
+  "lon": 11.7247256
+},
+{
+  "type": "node",
+  "id": 58726033,
+  "lat": 44.3450102,
+  "lon": 11.7245683
+},
+{
+  "type": "node",
+  "id": 58726039,
+  "lat": 44.3450354,
+  "lon": 11.7242156
+},
+{
+  "type": "node",
+  "id": 58726046,
+  "lat": 44.3450163,
+  "lon": 11.7241362
+},
+{
+  "type": "node",
+  "id": 58726055,
+  "lat": 44.3440173,
+  "lon": 11.7201756
+},
+{
+  "type": "node",
+  "id": 58726063,
+  "lat": 44.3440103,
+  "lon": 11.7200623
+},
+{
+  "type": "node",
+  "id": 58726064,
+  "lat": 44.3440178,
+  "lon": 11.7196069
+},
+{
+  "type": "node",
+  "id": 58726118,
+  "lat": 44.3445248,
+  "lon": 11.7125819
+},
+{
+  "type": "node",
+  "id": 708347658,
+  "lat": 44.3366695,
+  "lon": 11.7046442
+},
+{
+  "type": "node",
+  "id": 762086492,
+  "lat": 44.3416183,
+  "lon": 11.7206745
+},
+{
+  "type": "node",
+  "id": 762086495,
+  "lat": 44.3434514,
+  "lon": 11.7236193
+},
+{
+  "type": "node",
+  "id": 762086529,
+  "lat": 44.3442284,
+  "lon": 11.7251522
+},
+{
+  "type": "node",
+  "id": 762086543,
+  "lat": 44.3450448,
+  "lon": 11.7242720
+},
+{
+  "type": "node",
+  "id": 981462516,
+  "lat": 44.3366062,
+  "lon": 11.7095086
+},
+{
+  "type": "node",
+  "id": 981462857,
+  "lat": 44.3364682,
+  "lon": 11.7026365
+},
+{
+  "type": "node",
+  "id": 1872449433,
+  "lat": 44.3438124,
+  "lon": 11.7180292
+},
+{
+  "type": "node",
+  "id": 1872449434,
+  "lat": 44.3440478,
+  "lon": 11.7166872
+},
+{
+  "type": "node",
+  "id": 1872449436,
+  "lat": 44.3440422,
+  "lon": 11.7181493
+},
+{
+  "type": "node",
+  "id": 1872449437,
+  "lat": 44.3438465,
+  "lon": 11.7180394
+},
+{
+  "type": "node",
+  "id": 1872449438,
+  "lat": 44.3437945,
+  "lon": 11.7180061
+},
+{
+  "type": "node",
+  "id": 1872449439,
+  "lat": 44.3439574,
+  "lon": 11.7180433
+},
+{
+  "type": "node",
+  "id": 1872449440,
+  "lat": 44.3440910,
+  "lon": 11.7160728
+},
+{
+  "type": "node",
+  "id": 1872449441,
+  "lat": 44.3437958,
+  "lon": 11.7178900
+},
+{
+  "type": "node",
+  "id": 1872449442,
+  "lat": 44.3437871,
+  "lon": 11.7179448
+},
+{
+  "type": "node",
+  "id": 1872449444,
+  "lat": 44.3437867,
+  "lon": 11.7179750
+},
+{
+  "type": "node",
+  "id": 1872449445,
+  "lat": 44.3440716,
+  "lon": 11.7161929
+},
+{
+  "type": "node",
+  "id": 1872449446,
+  "lat": 44.3440044,
+  "lon": 11.7180540
+},
+{
+  "type": "node",
+  "id": 2067102240,
+  "lat": 44.3442161,
+  "lon": 11.7161536
+},
+{
+  "type": "node",
+  "id": 2067102242,
+  "lat": 44.3446726,
+  "lon": 11.7228251
+},
+{
+  "type": "node",
+  "id": 2067102243,
+  "lat": 44.3439630,
+  "lon": 11.7080902
+},
+{
+  "type": "node",
+  "id": 2067102244,
+  "lat": 44.3445528,
+  "lon": 11.7136117
+},
+{
+  "type": "node",
+  "id": 2067102245,
+  "lat": 44.3443523,
+  "lon": 11.7096199
+},
+{
+  "type": "node",
+  "id": 2067102246,
+  "lat": 44.3434757,
+  "lon": 11.7078461
+},
+{
+  "type": "node",
+  "id": 2067102247,
+  "lat": 44.3442440,
+  "lon": 11.7208857
+},
+{
+  "type": "node",
+  "id": 2067102248,
+  "lat": 44.3445473,
+  "lon": 11.7137351
+},
+{
+  "type": "node",
+  "id": 2067102251,
+  "lat": 44.3445402,
+  "lon": 11.7140256
+},
+{
+  "type": "node",
+  "id": 2067102252,
+  "lat": 44.3445874,
+  "lon": 11.7127789
+},
+{
+  "type": "node",
+  "id": 2067102253,
+  "lat": 44.3442965,
+  "lon": 11.7210964
+},
+{
+  "type": "node",
+  "id": 2067102254,
+  "lat": 44.3443958,
+  "lon": 11.7214674
+},
+{
+  "type": "node",
+  "id": 2067102255,
+  "lat": 44.3445912,
+  "lon": 11.7125093
+},
+{
+  "type": "node",
+  "id": 2067102256,
+  "lat": 44.3445437,
+  "lon": 11.7138550
+},
+{
+  "type": "node",
+  "id": 2067102257,
+  "lat": 44.3444934,
+  "lon": 11.7132666
+},
+{
+  "type": "node",
+  "id": 2067102258,
+  "lat": 44.3445605,
+  "lon": 11.7134401
+},
+{
+  "type": "node",
+  "id": 2067102259,
+  "lat": 44.3439844,
+  "lon": 11.7180438
+},
+{
+  "type": "node",
+  "id": 2067102261,
+  "lat": 44.3445200,
+  "lon": 11.7121963
+},
+{
+  "type": "node",
+  "id": 2067102264,
+  "lat": 44.3445437,
+  "lon": 11.7138995
+},
+{
+  "type": "node",
+  "id": 2067102266,
+  "lat": 44.3444442,
+  "lon": 11.7109381
+},
+{
+  "type": "node",
+  "id": 2067102267,
+  "lat": 44.3449437,
+  "lon": 11.7246888
+},
+{
+  "type": "node",
+  "id": 2067102268,
+  "lat": 44.3449791,
+  "lon": 11.7246343
+},
+{
+  "type": "node",
+  "id": 2067102269,
+  "lat": 44.3444991,
+  "lon": 11.7113333
+},
+{
+  "type": "node",
+  "id": 2067102270,
+  "lat": 44.3440712,
+  "lon": 11.7206584
+},
+{
+  "type": "node",
+  "id": 2067102271,
+  "lat": 44.3448633,
+  "lon": 11.7247662
+},
+{
+  "type": "node",
+  "id": 2067102273,
+  "lat": 44.3441026,
+  "lon": 11.7208262
+},
+{
+  "type": "node",
+  "id": 2067102275,
+  "lat": 44.3440606,
+  "lon": 11.7205744
+},
+{
+  "type": "node",
+  "id": 2067102276,
+  "lat": 44.3450278,
+  "lon": 11.7245157
+},
+{
+  "type": "node",
+  "id": 2067102277,
+  "lat": 44.3445605,
+  "lon": 11.7120466
+},
+{
+  "type": "node",
+  "id": 2067102278,
+  "lat": 44.3445480,
+  "lon": 11.7118698
+},
+{
+  "type": "node",
+  "id": 2067102279,
+  "lat": 44.3436331,
+  "lon": 11.7079912
+},
+{
+  "type": "node",
+  "id": 2067102281,
+  "lat": 44.3445759,
+  "lon": 11.7130243
+},
+{
+  "type": "node",
+  "id": 2067102282,
+  "lat": 44.3445451,
+  "lon": 11.7138022
+},
+{
+  "type": "node",
+  "id": 2067102283,
+  "lat": 44.3444822,
+  "lon": 11.7134215
+},
+{
+  "type": "node",
+  "id": 2067102284,
+  "lat": 44.3443366,
+  "lon": 11.7095209
+},
+{
+  "type": "node",
+  "id": 2067102286,
+  "lat": 44.3440266,
+  "lon": 11.7202748
+},
+{
+  "type": "node",
+  "id": 2067102288,
+  "lat": 44.3450495,
+  "lon": 11.7243349
+},
+{
+  "type": "node",
+  "id": 2067102289,
+  "lat": 44.3445435,
+  "lon": 11.7139621
+},
+{
+  "type": "node",
+  "id": 2067102292,
+  "lat": 44.3445691,
+  "lon": 11.7132697
+},
+{
+  "type": "node",
+  "id": 2067102294,
+  "lat": 44.3445248,
+  "lon": 11.7124000
+},
+{
+  "type": "node",
+  "id": 2067102295,
+  "lat": 44.3445317,
+  "lon": 11.7116780
+},
+{
+  "type": "node",
+  "id": 2067102296,
+  "lat": 44.3444446,
+  "lon": 11.7216789
+},
+{
+  "type": "node",
+  "id": 2067102297,
+  "lat": 44.3446290,
+  "lon": 11.7226074
+},
+{
+  "type": "node",
+  "id": 2067102299,
+  "lat": 44.3441604,
+  "lon": 11.7203173
+},
+{
+  "type": "node",
+  "id": 2067102300,
+  "lat": 44.3435025,
+  "lon": 11.7078907
+},
+{
+  "type": "node",
+  "id": 2067102301,
+  "lat": 44.3441587,
+  "lon": 11.7201700
+},
+{
+  "type": "node",
+  "id": 2067102303,
+  "lat": 44.3445787,
+  "lon": 11.7123081
+},
+{
+  "type": "node",
+  "id": 2067102305,
+  "lat": 44.3439095,
+  "lon": 11.7080728
+},
+{
+  "type": "node",
+  "id": 2067102306,
+  "lat": 44.3440489,
+  "lon": 11.7204781
+},
+{
+  "type": "node",
+  "id": 2067102307,
+  "lat": 44.3450492,
+  "lon": 11.7243917
+},
+{
+  "type": "node",
+  "id": 2067102308,
+  "lat": 44.3434462,
+  "lon": 11.7077950
+},
+{
+  "type": "node",
+  "id": 2067102309,
+  "lat": 44.3442058,
+  "lon": 11.7207100
+},
+{
+  "type": "node",
+  "id": 2067102311,
+  "lat": 44.3435799,
+  "lon": 11.7079618
+},
+{
+  "type": "node",
+  "id": 2067102312,
+  "lat": 44.3447972,
+  "lon": 11.7233113
+},
+{
+  "type": "node",
+  "id": 2067102313,
+  "lat": 44.3445912,
+  "lon": 11.7126407
+},
+{
+  "type": "node",
+  "id": 2067102316,
+  "lat": 44.3441683,
+  "lon": 11.7204504
+},
+{
+  "type": "node",
+  "id": 2067102317,
+  "lat": 44.3437141,
+  "lon": 11.7080214
+},
+{
+  "type": "node",
+  "id": 2067102318,
+  "lat": 44.3440368,
+  "lon": 11.7203696
+},
+{
+  "type": "node",
+  "id": 2067102320,
+  "lat": 44.3444882,
+  "lon": 11.7116757
+},
+{
+  "type": "node",
+  "id": 2067102322,
+  "lat": 44.3445149,
+  "lon": 11.7129055
+},
+{
+  "type": "node",
+  "id": 2067102324,
+  "lat": 44.3439926,
+  "lon": 11.7081046
+},
+{
+  "type": "node",
+  "id": 2067102325,
+  "lat": 44.3435386,
+  "lon": 11.7079311
+},
+{
+  "type": "node",
+  "id": 2067102326,
+  "lat": 44.3450406,
+  "lon": 11.7244572
+},
+{
+  "type": "node",
+  "id": 2077498207,
+  "lat": 44.3368530,
+  "lon": 11.7066540
+},
+{
+  "type": "node",
+  "id": 2077498208,
+  "lat": 44.3365210,
+  "lon": 11.7022584
+},
+{
+  "type": "node",
+  "id": 2077498209,
+  "lat": 44.3368584,
+  "lon": 11.7068777
+},
+{
+  "type": "node",
+  "id": 2077498210,
+  "lat": 44.3367432,
+  "lon": 11.7053331
+},
+{
+  "type": "node",
+  "id": 2077498211,
+  "lat": 44.3385503,
+  "lon": 11.7045849
+},
+{
+  "type": "node",
+  "id": 2077498213,
+  "lat": 44.3393913,
+  "lon": 11.7043992
+},
+{
+  "type": "node",
+  "id": 2077498214,
+  "lat": 44.3384170,
+  "lon": 11.7044573
+},
+{
+  "type": "node",
+  "id": 2077498215,
+  "lat": 44.3367950,
+  "lon": 11.7020531
+},
+{
+  "type": "node",
+  "id": 2077498216,
+  "lat": 44.3393612,
+  "lon": 11.7043897
+},
+{
+  "type": "node",
+  "id": 2077498219,
+  "lat": 44.3385160,
+  "lon": 11.7045660
+},
+{
+  "type": "node",
+  "id": 2077498220,
+  "lat": 44.3385852,
+  "lon": 11.7045921
+},
+{
+  "type": "node",
+  "id": 2077498221,
+  "lat": 44.3386164,
+  "lon": 11.7045976
+},
+{
+  "type": "node",
+  "id": 2077498222,
+  "lat": 44.3429562,
+  "lon": 11.7064739
+},
+{
+  "type": "node",
+  "id": 2077498223,
+  "lat": 44.3368440,
+  "lon": 11.7064511
+},
+{
+  "type": "node",
+  "id": 2077498224,
+  "lat": 44.3393273,
+  "lon": 11.7043850
+},
+{
+  "type": "node",
+  "id": 2077498225,
+  "lat": 44.3392033,
+  "lon": 11.7044017
+},
+{
+  "type": "node",
+  "id": 2077498226,
+  "lat": 44.3429265,
+  "lon": 11.7064277
+},
+{
+  "type": "node",
+  "id": 2077498227,
+  "lat": 44.3392867,
+  "lon": 11.7043824
+},
+{
+  "type": "node",
+  "id": 2077498228,
+  "lat": 44.3383353,
+  "lon": 11.7043276
+},
+{
+  "type": "node",
+  "id": 2077498230,
+  "lat": 44.3428678,
+  "lon": 11.7063685
+},
+{
+  "type": "node",
+  "id": 2077498231,
+  "lat": 44.3368546,
+  "lon": 11.7070592
+},
+{
+  "type": "node",
+  "id": 2077498233,
+  "lat": 44.3430226,
+  "lon": 11.7065873
+},
+{
+  "type": "node",
+  "id": 2077498234,
+  "lat": 44.3430915,
+  "lon": 11.7067687
+},
+{
+  "type": "node",
+  "id": 2077498235,
+  "lat": 44.3369602,
+  "lon": 11.7021205
+},
+{
+  "type": "node",
+  "id": 2077498239,
+  "lat": 44.3364994,
+  "lon": 11.7023180
+},
+{
+  "type": "node",
+  "id": 2077498242,
+  "lat": 44.3386549,
+  "lon": 11.7045999
+},
+{
+  "type": "node",
+  "id": 2077498243,
+  "lat": 44.3386944,
+  "lon": 11.7045902
+},
+{
+  "type": "node",
+  "id": 2077498244,
+  "lat": 44.3369036,
+  "lon": 11.7020814
+},
+{
+  "type": "node",
+  "id": 2077498246,
+  "lat": 44.3364665,
+  "lon": 11.7025201
+},
+{
+  "type": "node",
+  "id": 2077498247,
+  "lat": 44.3429912,
+  "lon": 11.7065291
+},
+{
+  "type": "node",
+  "id": 2077498248,
+  "lat": 44.3365517,
+  "lon": 11.7022062
+},
+{
+  "type": "node",
+  "id": 2077498250,
+  "lat": 44.3364700,
+  "lon": 11.7024558
+},
+{
+  "type": "node",
+  "id": 2077498251,
+  "lat": 44.3368165,
+  "lon": 11.7076327
+},
+{
+  "type": "node",
+  "id": 2077498252,
+  "lat": 44.3368530,
+  "lon": 11.7020598
+},
+{
+  "type": "node",
+  "id": 2077498254,
+  "lat": 44.3364794,
+  "lon": 11.7023815
+},
+{
+  "type": "node",
+  "id": 2077498255,
+  "lat": 44.3365980,
+  "lon": 11.7021517
+},
+{
+  "type": "node",
+  "id": 2077498256,
+  "lat": 44.3383881,
+  "lon": 11.7044129
+},
+{
+  "type": "node",
+  "id": 2077498258,
+  "lat": 44.3368352,
+  "lon": 11.7074324
+},
+{
+  "type": "node",
+  "id": 2077498259,
+  "lat": 44.3391614,
+  "lon": 11.7044165
+},
+{
+  "type": "node",
+  "id": 2077498260,
+  "lat": 44.3383641,
+  "lon": 11.7043723
+},
+{
+  "type": "node",
+  "id": 2077498262,
+  "lat": 44.3384530,
+  "lon": 11.7045063
+},
+{
+  "type": "node",
+  "id": 2077498263,
+  "lat": 44.3430666,
+  "lon": 11.7067000
+},
+{
+  "type": "node",
+  "id": 2077498264,
+  "lat": 44.3366979,
+  "lon": 11.7020812
+},
+{
+  "type": "node",
+  "id": 2077498265,
+  "lat": 44.3430417,
+  "lon": 11.7066346
+},
+{
+  "type": "node",
+  "id": 2077498266,
+  "lat": 44.3366481,
+  "lon": 11.7021099
+},
+{
+  "type": "node",
+  "id": 2077498267,
+  "lat": 44.3368493,
+  "lon": 11.7072399
+},
+{
+  "type": "node",
+  "id": 2077498268,
+  "lat": 44.3384817,
+  "lon": 11.7045394
+},
+{
+  "type": "node",
+  "id": 2077498269,
+  "lat": 44.3392438,
+  "lon": 11.7043902
+},
+{
+  "type": "node",
+  "id": 2077498270,
+  "lat": 44.3367435,
+  "lon": 11.7020634
+},
+{
+  "type": "node",
+  "id": 2077498271,
+  "lat": 44.3428937,
+  "lon": 11.7063908
+},
+{
+  "type": "node",
+  "id": 2077556124,
+  "lat": 44.3366007,
+  "lon": 11.7094250
+},
+{
+  "type": "node",
+  "id": 2077556125,
+  "lat": 44.3401688,
+  "lon": 11.7101360
+},
+{
+  "type": "node",
+  "id": 2077556126,
+  "lat": 44.3407279,
+  "lon": 11.7171417
+},
+{
+  "type": "node",
+  "id": 2077556127,
+  "lat": 44.3404946,
+  "lon": 11.7173047
+},
+{
+  "type": "node",
+  "id": 2077556128,
+  "lat": 44.3439391,
+  "lon": 11.7251220
+},
+{
+  "type": "node",
+  "id": 2077556129,
+  "lat": 44.3399101,
+  "lon": 11.7100679
+},
+{
+  "type": "node",
+  "id": 2077556133,
+  "lat": 44.3418591,
+  "lon": 11.7210820
+},
+{
+  "type": "node",
+  "id": 2077556134,
+  "lat": 44.3419437,
+  "lon": 11.7212115
+},
+{
+  "type": "node",
+  "id": 2077556135,
+  "lat": 44.3408959,
+  "lon": 11.7108285
+},
+{
+  "type": "node",
+  "id": 2077556137,
+  "lat": 44.3410668,
+  "lon": 11.7194698
+},
+{
+  "type": "node",
+  "id": 2077556140,
+  "lat": 44.3384933,
+  "lon": 11.7105072
+},
+{
+  "type": "node",
+  "id": 2077556142,
+  "lat": 44.3407439,
+  "lon": 11.7170651
+},
+{
+  "type": "node",
+  "id": 2077556143,
+  "lat": 44.3438935,
+  "lon": 11.7250334
+},
+{
+  "type": "node",
+  "id": 2077556144,
+  "lat": 44.3440299,
+  "lon": 11.7251883
+},
+{
+  "type": "node",
+  "id": 2077556145,
+  "lat": 44.3367872,
+  "lon": 11.7099100
+},
+{
+  "type": "node",
+  "id": 2077556147,
+  "lat": 44.3408986,
+  "lon": 11.7110001
+},
+{
+  "type": "node",
+  "id": 2077556148,
+  "lat": 44.3382492,
+  "lon": 11.7105659
+},
+{
+  "type": "node",
+  "id": 2077556149,
+  "lat": 44.3406764,
+  "lon": 11.7171941
+},
+{
+  "type": "node",
+  "id": 2077556150,
+  "lat": 44.3375957,
+  "lon": 11.7104673
+},
+{
+  "type": "node",
+  "id": 2077556151,
+  "lat": 44.3380517,
+  "lon": 11.7105713
+},
+{
+  "type": "node",
+  "id": 2077556152,
+  "lat": 44.3366217,
+  "lon": 11.7095888
+},
+{
+  "type": "node",
+  "id": 2077556153,
+  "lat": 44.3408609,
+  "lon": 11.7107552
+},
+{
+  "type": "node",
+  "id": 2077556154,
+  "lat": 44.3417086,
+  "lon": 11.7208342
+},
+{
+  "type": "node",
+  "id": 2077556155,
+  "lat": 44.3405726,
+  "lon": 11.7172382
+},
+{
+  "type": "node",
+  "id": 2077556156,
+  "lat": 44.3433723,
+  "lon": 11.7233868
+},
+{
+  "type": "node",
+  "id": 2077556157,
+  "lat": 44.3366474,
+  "lon": 11.7096641
+},
+{
+  "type": "node",
+  "id": 2077556158,
+  "lat": 44.3409051,
+  "lon": 11.7109556
+},
+{
+  "type": "node",
+  "id": 2077556160,
+  "lat": 44.3408375,
+  "lon": 11.7107306
+},
+{
+  "type": "node",
+  "id": 2077556161,
+  "lat": 44.3405115,
+  "lon": 11.7172825
+},
+{
+  "type": "node",
+  "id": 2077556163,
+  "lat": 44.3409041,
+  "lon": 11.7108699
+},
+{
+  "type": "node",
+  "id": 2077556164,
+  "lat": 44.3408818,
+  "lon": 11.7110679
+},
+{
+  "type": "node",
+  "id": 2077556166,
+  "lat": 44.3409070,
+  "lon": 11.7109034
+},
+{
+  "type": "node",
+  "id": 2077556168,
+  "lat": 44.3379361,
+  "lon": 11.7105653
+},
+{
+  "type": "node",
+  "id": 2077556171,
+  "lat": 44.3407387,
+  "lon": 11.7171105
+},
+{
+  "type": "node",
+  "id": 2077556177,
+  "lat": 44.3404810,
+  "lon": 11.7173334
+},
+{
+  "type": "node",
+  "id": 2077556183,
+  "lat": 44.3407493,
+  "lon": 11.7169670
+},
+{
+  "type": "node",
+  "id": 2077556189,
+  "lat": 44.3400539,
+  "lon": 11.7100657
+},
+{
+  "type": "node",
+  "id": 2077556191,
+  "lat": 44.3408819,
+  "lon": 11.7107912
+},
+{
+  "type": "node",
+  "id": 2077556193,
+  "lat": 44.3413364,
+  "lon": 11.7201335
+},
+{
+  "type": "node",
+  "id": 2077556197,
+  "lat": 44.3432047,
+  "lon": 11.7230170
+},
+{
+  "type": "node",
+  "id": 2077556199,
+  "lat": 44.3411548,
+  "lon": 11.7197253
+},
+{
+  "type": "node",
+  "id": 2077556200,
+  "lat": 44.3402202,
+  "lon": 11.7101825
+},
+{
+  "type": "node",
+  "id": 2077556202,
+  "lat": 44.3405366,
+  "lon": 11.7172546
+},
+{
+  "type": "node",
+  "id": 2077556206,
+  "lat": 44.3386147,
+  "lon": 11.7104642
+},
+{
+  "type": "node",
+  "id": 2077556208,
+  "lat": 44.3440071,
+  "lon": 11.7251776
+},
+{
+  "type": "node",
+  "id": 2077556211,
+  "lat": 44.3433395,
+  "lon": 11.7232980
+},
+{
+  "type": "node",
+  "id": 2077556213,
+  "lat": 44.3367299,
+  "lon": 11.7098335
+},
+{
+  "type": "node",
+  "id": 2077556214,
+  "lat": 44.3441824,
+  "lon": 11.7251775
+},
+{
+  "type": "node",
+  "id": 2077556216,
+  "lat": 44.3407087,
+  "lon": 11.7171700
+},
+{
+  "type": "node",
+  "id": 2077556217,
+  "lat": 44.3432967,
+  "lon": 11.7232001
+},
+{
+  "type": "node",
+  "id": 2077556219,
+  "lat": 44.3378120,
+  "lon": 11.7105408
+},
+{
+  "type": "node",
+  "id": 2077556223,
+  "lat": 44.3431089,
+  "lon": 11.7228519
+},
+{
+  "type": "node",
+  "id": 2077556224,
+  "lat": 44.3383796,
+  "lon": 11.7105378
+},
+{
+  "type": "node",
+  "id": 2077556226,
+  "lat": 44.3439147,
+  "lon": 11.7250845
+},
+{
+  "type": "node",
+  "id": 2077556228,
+  "lat": 44.3438728,
+  "lon": 11.7249878
+},
+{
+  "type": "node",
+  "id": 2077556230,
+  "lat": 44.3400940,
+  "lon": 11.7100831
+},
+{
+  "type": "node",
+  "id": 2077556232,
+  "lat": 44.3400028,
+  "lon": 11.7100566
+},
+{
+  "type": "node",
+  "id": 2077556234,
+  "lat": 44.3440551,
+  "lon": 11.7251976
+},
+{
+  "type": "node",
+  "id": 2077556236,
+  "lat": 44.3368918,
+  "lon": 11.7100098
+},
+{
+  "type": "node",
+  "id": 2077556238,
+  "lat": 44.3399526,
+  "lon": 11.7100582
+},
+{
+  "type": "node",
+  "id": 2077556240,
+  "lat": 44.3418066,
+  "lon": 11.7209986
+},
+{
+  "type": "node",
+  "id": 2077556244,
+  "lat": 44.3439755,
+  "lon": 11.7251547
+},
+{
+  "type": "node",
+  "id": 2077556246,
+  "lat": 44.3368431,
+  "lon": 11.7099676
+},
+{
+  "type": "node",
+  "id": 2077556256,
+  "lat": 44.3412177,
+  "lon": 11.7198757
+},
+{
+  "type": "node",
+  "id": 2077556258,
+  "lat": 44.3374816,
+  "lon": 11.7104096
+},
+{
+  "type": "node",
+  "id": 2077556262,
+  "lat": 44.3366026,
+  "lon": 11.7093245
+},
+{
+  "type": "node",
+  "id": 2169464947,
+  "lat": 44.3444218,
+  "lon": 11.7105749
+},
+{
+  "type": "node",
+  "id": 4797338701,
+  "lat": 44.3441245,
+  "lon": 11.7083063
+},
+{
+  "type": "node",
+  "id": 4797338702,
+  "lat": 44.3441367,
+  "lon": 11.7083671
+},
+{
+  "type": "node",
+  "id": 4797338703,
+  "lat": 44.3444448,
+  "lon": 11.7137606
+},
+{
+  "type": "node",
+  "id": 4797338704,
+  "lat": 44.3440525,
+  "lon": 11.7163452
+},
+{
+  "type": "node",
+  "id": 4797338705,
+  "lat": 44.3440182,
+  "lon": 11.7180675
+},
+{
+  "type": "node",
+  "id": 4797338706,
+  "lat": 44.3440290,
+  "lon": 11.7180895
+},
+{
+  "type": "node",
+  "id": 4797338707,
+  "lat": 44.3442033,
+  "lon": 11.7212555
+},
+{
+  "type": "node",
+  "id": 4797338708,
+  "lat": 44.3441439,
+  "lon": 11.7210266
+},
+{
+  "type": "node",
+  "id": 4797338709,
+  "lat": 44.3438363,
+  "lon": 11.7248707
+},
+{
+  "type": "node",
+  "id": 4797338710,
+  "lat": 44.3436587,
+  "lon": 11.7242815
+},
+{
+  "type": "node",
+  "id": 4797338711,
+  "lat": 44.3434774,
+  "lon": 11.7237027
+},
+{
+  "type": "node",
+  "id": 4797338712,
+  "lat": 44.3411073,
+  "lon": 11.7195934
+},
+{
+  "type": "node",
+  "id": 4797338713,
+  "lat": 44.3372700,
+  "lon": 11.7102740
+},
+{
+  "type": "node",
+  "id": 4797365448,
+  "lat": 44.3371538,
+  "lon": 11.7023758
+},
+{
+  "type": "node",
+  "id": 4797365455,
+  "lat": 44.3376506,
+  "lon": 11.7031910
+},
+{
+  "type": "node",
+  "id": 4797365456,
+  "lat": 44.3379670,
+  "lon": 11.7037073
+},
+{
+  "type": "node",
+  "id": 4797457663,
+  "lat": 44.3442032,
+  "lon": 11.7163466
+},
+{
+  "type": "node",
+  "id": 4800014143,
+  "lat": 44.3442072,
+  "lon": 11.7162501
+},
+{
+  "type": "node",
+  "id": 5106325593,
+  "lat": 44.3444055,
+  "lon": 11.7140173
+},
+{
+  "type": "node",
+  "id": 5165956147,
+  "lat": 44.3441648,
+  "lon": 11.7196425
+},
+{
+  "type": "node",
+  "id": 5167232891,
+  "lat": 44.3439957,
+  "lon": 11.7166870
+},
+{
+  "type": "node",
+  "id": 9456255712,
+  "lat": 44.3438118,
+  "lon": 11.7080471
+},
+{
+  "type": "node",
+  "id": 9456255713,
+  "lat": 44.3432476,
+  "lon": 11.7072461
+},
+{
+  "type": "node",
+  "id": 9456255714,
+  "lat": 44.3389400,
+  "lon": 11.7044987
+},
+{
+  "type": "node",
+  "id": 9456255715,
+  "lat": 44.3439020,
+  "lon": 11.7180414
+},
+{
+  "type": "node",
+  "id": 9456255716,
+  "lat": 44.3438199,
+  "lon": 11.7177447
+},
+{
+  "type": "node",
+  "id": 9456257417,
+  "lat": 44.3445459,
+  "lon": 11.7249592
+},
+{
+  "type": "node",
+  "id": 9456257418,
+  "lat": 44.3408254,
+  "lon": 11.7112535
+},
+{
+  "type": "node",
+  "id": 9456257419,
+  "lat": 44.3405289,
+  "lon": 11.7104566
+}
+
+  ]
+}
