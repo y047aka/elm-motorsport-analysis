@@ -1,7 +1,7 @@
 module Motorsport.Wec.Circuit.Map exposing (Intermediates, intermediatesDecoder, centreline, line, inOrder)
 
 {-| A circuit map's record, as the app is served it at `static/circuit-maps/<word>.json`: the figures the map prints, kept by hand off the series' circuit map.
-The circuits project stretches the served geometry to the same record's centreline, so a record changed without the geometry re-laid (`circuits/README.md`) is a geometry the decoder refuses.
+The upstream pipeline (`github:y047aka/circuit-maps-3d`) stretches the served geometry to the same record's centreline, so a record changed without the geometry re-laid is a geometry the decoder refuses.
 
 @docs Intermediates, intermediatesDecoder, centreline, line, inOrder
 

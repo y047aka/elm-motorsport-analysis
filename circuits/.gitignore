@@ -1,8 +1,0 @@
-*.fpkg
-*.jar
-.GITHUB_TOKEN
-artifact/
-build/
-lib/
-.db/
-crash_report_*.txt

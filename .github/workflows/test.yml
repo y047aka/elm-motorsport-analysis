@@ -29,8 +29,7 @@ jobs:
           path: |
             backend/lib
             backend/sqlitefx/lib
-            circuits/lib
-          key: flix-deps-${{ runner.os }}-${{ hashFiles('backend/flix.toml', 'backend/sqlitefx/flix.toml', 'circuits/flix.toml') }}
+          key: flix-deps-${{ runner.os }}-${{ hashFiles('backend/flix.toml', 'backend/sqlitefx/flix.toml') }}
           restore-keys: flix-deps-${{ runner.os }}-
       # No `pnpm install`: none of these commands touches node_modules.
       - name: Elm tests
@@ -39,20 +38,6 @@ jobs:
         run: nix run .#flix-test
       - name: Database library tests
         run: nix run .#sqlitefx-test
-      - name: Geometry command tests
-        run: nix run .#geometry-test
-      # The byte fence, over every kept answer. A fresh asking
-      # of OpenStreetMap is the regeneration fence's.
-      - name: Geometry survey reproduces the kept geometries
-        run: |
-          nix run .#geometry -- survey cota
-          nix run .#geometry -- survey le_mans
-          nix run .#geometry -- survey barcelona
-          nix run .#geometry -- survey monza
-          nix run .#geometry -- survey fuji
-          nix run .#geometry -- survey spa
-          nix run .#geometry -- survey sao_paulo
-          nix run .#geometry -- survey imola
 
   # Its own job: the one check here that needs node_modules, and a type error
   # should not share a red mark with a failing test.

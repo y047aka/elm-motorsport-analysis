@@ -2,9 +2,10 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
+    circuit-maps-3d.url = "github:y047aka/circuit-maps-3d";
   };
 
-  outputs = { nixpkgs, flake-utils, ... }:
+  outputs = { nixpkgs, flake-utils, circuit-maps-3d, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -67,44 +68,23 @@
             '';
           };
 
-        # The geometry pipeline itself, a Flix project at the root of `circuits/`:
-        # it asks OpenStreetMap for an answer, surveys a circuit out of one, lays two
-        # kept geometries together, writes the file the app serves, probes a place
-        # for a circuit, and reads two rounds' feeds for the timing-lines report.
-        # It reaches no database, and no network at run time until the survey's
-        # `--fetch` asks one. Which command runs where, and what the
-        # project shares with `backend/src` — by symlink and by `github:y047aka/csv` —
-        # is `circuits/README.md`'s to say.
+        # The surveyed geometry and each circuit's map record are owned by
+        # `github:y047aka/circuit-maps-3d`; its flake's default package lays
+        # `geometry/<word>.geojson` and `specs/<word>.json` out flat. The app
+        # reads both from `app/static/` under their served names, and nothing
+        # compares the two sides' bytes: a pinned input whose geometry moves
+        # moves every tracker VRT baseline with it.
         #
-        # `GEOMETRY_FROM` is the directory the reader was standing in: `flix` has to be
-        # started inside the project to find its `flix.toml`, and the reader names
-        # `app/static/geometry/le_mans.geojson` from outside it.
-        mkGeometryApp = name: cmd:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [ flix ];
-            text = ''
-              export GEOMETRY_FROM="$PWD"
-              cd circuits
-              ${cmd}
-            '';
-          };
-
-        # The project's tests are two readings of it: `flix test`, every one handed
-        # a fixture, and `check-sources.mjs`, which reads the project's own sources
-        # — facts no `@Test` can reach, since a test computes in no IO and so meets
-        # no file, builds no `HttpResponse`, and cannot see what a second spelling
-        # of a constant would cost. Node joins for that reading alone, and the
-        # script needs nothing beyond `node:fs`.
-        geometryTestApp = pkgs.writeShellApplication {
-          name = "geometry-test";
-          runtimeInputs = [ flix pkgs.nodejs_26 ];
-          text = ''
-            export GEOMETRY_FROM="$PWD"
-            cd circuits
-            flix test && node test/check-sources.mjs
-          '';
-        };
+        # Every command that reads the files copies the pinned bytes into the
+        # working tree first; they are not committed.
+        circuitData = circuit-maps-3d.packages.${system}.default;
+        syncCircuitData = ''
+          mkdir -p app/static/geometry app/static/circuit-maps
+          cp -f ${circuitData}/geometry/*.geojson app/static/geometry/
+          for f in ${circuitData}/specs/*.json; do
+            cp -f "$f" "app/static/circuit-maps/$(basename "$f")"
+          done
+        '';
 
         # Where the CLI and the server compute when the caller names nowhere
         # else. The file is in the working copy rather than under /tmp, so the
@@ -176,11 +156,6 @@
           (cd backend && flix run -- ${csvDir} ${outDir})
         '';
 
-        # Where its timings come from, and what they cannot answer, is
-        # `circuits/README.md`'s. The `--csv` is the flake's, not the reader's:
-        # the feeds sit beside the repository this command's `circuits` is in.
-        timingLinesCmd = "flix run -- timing-lines --csv ../data/wec \"$@\"";
-
         # The CLI converts the rounds `Motorsport.Calendar` lists, reading each
         # season directory under one directory and writing into the same one
         # under the other. Anything else given to `nix run` is forwarded, which
@@ -196,8 +171,8 @@
         # own with `-g <shot>`. `--update-snapshots` with nothing narrowing it
         # rewrites every baseline to this machine's rasteriser, which CI rejects.
         # A file named after the flag is read as its mode, so name the shot.
-        vrtTestCmd = "cd app && playwright test \"$@\"";
-        vrtUpdateCmd = "cd app && playwright test --update-snapshots \"$@\"";
+        vrtTestCmd = "${syncCircuitData}\ncd app && playwright test \"$@\"";
+        vrtUpdateCmd = "${syncCircuitData}\ncd app && playwright test --update-snapshots \"$@\"";
 
         # The fetcher encodes what it downloads, so it needs libwebp beside Node.
         # Kept apart from `mkNodeApp`: every other Node command would carry the
@@ -243,23 +218,20 @@
         });
 
         apps = {
-          dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "cd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
-          build                = { type = "app"; program = "${mkNodeApp "build"                "cd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
-          test                 = { type = "app"; program = "${mkNodeApp "test"                 "cd app && elm-test && cd .. && node app/scripts/test-fixtures.mjs && cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (on the served geometry bytes, via elm-verify-examples + elm-test)"; };
+          dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "${syncCircuitData}\ncd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
+          build                = { type = "app"; program = "${mkNodeApp "build"                "${syncCircuitData}\ncd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
+          test                 = { type = "app"; program = "${mkNodeApp "test"                 "${syncCircuitData}\ncd app && elm-test && cd .. && node app/scripts/test-fixtures.mjs && cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (on the served geometry bytes, via elm-verify-examples + elm-test)"; };
           test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt" vrtTestCmd}/bin/test-vrt";                     meta.description = "Run Playwright VRT tests"; };
           update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" vrtUpdateCmd}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
           benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "cd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
-          typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                                            meta.description = "Type-check the app's TypeScript (tsc --noEmit); the circuit tools are Flix now and compile under .#geometry-test"; };
+          typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                                            meta.description = "Type-check the app's TypeScript (tsc --noEmit)"; };
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          geometry           = { type = "app"; program = "${mkGeometryApp "geometry" "flix run -- \"$@\""}/bin/geometry";                                                meta.description = "The geometry pipeline, one word at a time: survey [--fetch] [--write] | diff | regenerate | elevation [--fetch] | probe | timing-lines (the circuits geometry project; nix run .#geometry -- <word> ..., paths from where the command is run; the Flix main owns the word list and answers a wrong one with the usages)"; };
-          geometry-test        = { type = "app"; program = "${geometryTestApp}/bin/geometry-test";                                            meta.description = "Run the circuits project's tests — its `flix test` (the survey's, the probe's and the timing report's readings, the last of which compile symlinked backend/src sources; no network, no database, no files written) and `test/check-sources.mjs`, the reading of the project's own sources no pure @Test can make"; };
-          geometry-timing-lines = { type = "app"; program = "${mkGeometryApp "geometry-timing-lines" timingLinesCmd}/bin/geometry-timing-lines";                              meta.description = "Whether a circuit's timing lines still stand where they stood a season earlier, read off two rounds' sector times (the circuits geometry project's timing-lines word, computing in no database; <season>/<id> [--against <season>] [--tolerance <metres>])"; };
-          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
-          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
+          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   syncCircuitData "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
+          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" (syncCircuitData + "\n" + exportEveryRound) "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test" "flix test"}/bin/flix-test";                                                     meta.description = "Run the Flix project's tests"; };
           sqlitefx-test        = { type = "app"; program = "${mkFlixApp "sqlitefx-test" "cd sqlitefx && flix test"}/bin/sqlitefx-test";                             meta.description = "Run backend/sqlitefx's tests, against SQLite databases in memory and in temporary files"; };

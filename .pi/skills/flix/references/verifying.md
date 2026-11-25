@@ -9,26 +9,6 @@ rm -rf backend/build && nix run .#flix-test
 `flix build` and `flix test` are incremental and CI is not. A cold run is the
 only one worth believing.
 
-## The other project
-
-The pipeline at the `circuits/` root is a Flix project with its own `flix.toml`, and nothing about a green `.#flix-test` says anything about it:
-
-```bash
-nix run .#geometry-test    # the geometry project's `flix test`: survey, probe and
-                           # report readings, the last through links to `backend/src`
-```
-
-The run starts inside the project,
-which is the only place `flix` finds its `flix.toml`.
-
-The report reads some of `backend/src` through symlinks — `backend/README.md` holds what a change to a shared file costs — and a symlink that did not survive a checkout fails as `Undefined use`, reported in the module that needed it rather than in the link.
-Nothing else is linked into
-the project: it asks
-OpenStreetMap and reads kept Overpass answers and geometry files, writing a kept answer,
-a served geometry or an overlay only when told to, while its own tests hand every reading
-a string rather than a file — so `.#geometry-test` opens and writes nothing. It
-needs no jar to be tested: the command runs the interpreter.
-
 ## What is written where
 
 `flix build` typechecks and writes nothing; `flix build-jar` writes
@@ -39,9 +19,6 @@ There is no `artifact/` to clear before believing a run either: it is output, an
 nothing reads it back to decide what to compile. The directory that is worth leaving
 alone is `lib/`, the resolution cache CI restores — clearing it makes the next run ask
 Maven Central again, which answers a busy runner with a 429.
-
-A second Flix project writes those same two directories wherever it is run, so it takes
-a `.gitignore` with it: `circuits/` holds one.
 
 ## The stack check
 

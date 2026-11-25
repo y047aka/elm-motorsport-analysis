@@ -3,10 +3,6 @@
 Two things out of one jar: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows.
 The flake's commands for it are `nix run .#flix-build`, `.#flix-test`, `.#cli-run`, `.#cli-load`, `.#cli-export` and `.#serve-api`.
 
-The timing-lines report and the probe are not commands of this jar: both are words of the `circuits/` project, which links some sources here rather than resolving them.
-Editing one of those linked files is compiled and tested twice, by `nix run .#flix-test` and by `nix run .#geometry-test`, and moving or renaming one breaks both until its link moves too.
-Which files the links reach, and why a link is never a directory, are `circuits/README.md`'s.
-
 Adding a round is `/skill:add-round`'s.
 What follows is what the code cannot say for itself.
 
@@ -119,7 +115,7 @@ Twenty seasons of the WEC are on the order of 1.5 million laps and 150MB.
 ## `Sqlitefx`, the database library
 
 The database is reached through `backend/sqlitefx`, a SQLite port of [sqlfx](https://github.com/ababup1192/sqlfx) with a README of its own: what it is, where it differs from sqlfx, and where its line with this project runs.
-`src/Sqlitefx/` is a symlink per file into it, the way `circuits/` reaches this `src` (`circuits/README.md` says why a link is never a directory), so `.#flix-test` compiles the library and `.#sqlitefx-test` tests it.
+`src/Sqlitefx/` is a symlink per file into it — never one per directory, because Flix's source walker does not descend a symlinked directory — so `.#flix-test` compiles the library and `.#sqlitefx-test` tests it.
 Only what this project reads is linked, and what that reads: not the pool, migrations, retry, fragments or the `.q` generator. A module the library starts importing is linked by hand, and a link left out fails as an undefined name.
 
 - No `Pool`: the CLI opens one connection per run and the server one per request, which WAL mode makes work.
@@ -222,7 +218,6 @@ A `Sql.Key` is declared columns, so a key over an undeclared column does not typ
 ## Testing
 
 - **Where a test lives** — `test/Motorsport/` drives the domain's decisions given the readings they are made from and needs no database; `test/Round/` and `test/Server/TestApi.flix` drive the reading and need one. A subject with both has a file in each, named for the module it drives.
-- **A reading with no database** — a CSV feed, an Overpass answer, a circuit's published timing lines — is driven under `circuits/` by `nix run .#geometry-test`, which compiles its links to this `src` and tests nothing else of it. The circuit words the summary sends are the one list both projects hold; `circuits/test/check-sources.mjs` lays the two copies together.
 - **A clean build** — `flix build` and `flix test` are incremental and CI is not: a compile that only fails from cold passes locally until `backend/build` is removed. `rm -rf backend/build` before believing a green run.
 - **The type checker's stack** — it recurses once per expression, and Linux gives its thread a smaller stack than macOS, so a deep enough chain compiles here and overflows in CI. It cannot be measured here: on macOS `-Xss` does not reach the type checker, and a cold build passes at 256k, and the JVM will not start at 160k. CI is the check, and a long curried lambda or pipeline is what to suspect when it overflows.
 - **The database** — a test drives JDBC against the in-memory database `Round.TestSupport.url` names, a connection of its own per test. A test that reaches no database fails rather than skipping. `Db.TestJdbc` drives a file database too, under a directory that does not exist yet: the directory `connect` makes, the journal mode `Db.connection` sets, and two connections at once are reached no other way.

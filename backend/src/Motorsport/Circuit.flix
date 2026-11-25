@@ -9,8 +9,9 @@
 /// the same thing would only give the two a chance to disagree.
 ///
 /// What a circuit publishes about the lines its lap is timed to is not held
-/// here: the timing report is the `circuits/` project's, and it derives those
-/// figures from the config the drawing is laid from. This module is the wire
+/// here: those figures are the upstream geometry project's
+/// (`github:y047aka/circuit-maps-3d`), which derives them from the config the
+/// drawing is laid from. This module is the wire
 /// vocabulary alone -- the word the export writes and the app reads.
 pub mod Motorsport.Circuit {
 
@@ -33,10 +34,6 @@ pub mod Motorsport.Circuit {
     /// no summary can send is the mistake that passes every compiler, and
     /// `app/tests/geometry-contract.spec.ts` reads this file and `Shared.elm`
     /// to catch it.
-    ///
-    /// The timing report holds its own copy of these words, in
-    /// `circuits/src/Motorsport/Circuit.flix`; `circuits/test/check-sources.mjs`
-    /// lays the two bodies together, since no project compiles both.
     pub def jsonValue(circuit: Circuit): String =
         match circuit {
             case Circuit.Qatar    => "qatar"
