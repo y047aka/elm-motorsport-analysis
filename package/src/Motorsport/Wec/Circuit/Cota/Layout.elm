@@ -128,13 +128,11 @@ pitLane geometry =
 
 Every season here is drawn with that map, the latest. A season that moved its lines would be drawn with the wrong boundaries, and would place every car wrong between them.
 
-What a new season is checked against is the round's own splits, and for movement
-only: `nix run .#geometry-timing-lines -- 2026/cota_6h --against 2025` reads each
-class's fastest sector times as two distances round a lap of this length. A
+What a new season can check the lines against is the round's own splits, and for movement
+only: a
 sector's share of a lap is not a share of its distance -- the shares themselves
 place the first line 170 m from where this layout does -- so the times say
 whether two seasons put the lines in the same places, not where a line stands.
-How far apart is too far is the command's to say, not this drawing's.
 
 Nothing here splits the lap finer: the feed carries no mini-sector times for
 this round, so a car between two of these lines is placed by the share of the

@@ -125,7 +125,7 @@ a network — casts each call once, where it is imported:
 def cos(degrees: Float64): Float64 = unsafe IO { Math.cos(degrees * (Math.PI / 180.0)) }
 ```
 
-`circuits/src/Candidates.flix` holds the two this project needs, and every
+`circuit-maps-3d`'s `src/Candidates.flix` holds the two it needs, and every
 call site in it goes through them. Casting per call site instead spreads the lie
 across the module; casting the whole `Math` class is not a thing the language offers.
 

@@ -14,7 +14,7 @@ The per-comment rules of what may be written at all are `AGENTS.md`'s (*Never wr
 The target of every pass is a fact written in prose in two places: it must move twice, and a fact that must move twice will not.
 
 - **Where a fact is duplicated, the copy closer to the thing it describes owns it** — a comment over a header, a header over a README, a README over `AGENTS.md`. Keep the owner's copy; leave one line pointing at it where the others were.
-- **A pointer is a one-line mention of the thing, not of its contents.** "the steps are `/skill:add-circuit`'s", "`backend/README.md` holds the rest". Prose moves; pointers hold.
+- **A pointer is a one-line mention of the thing, not of its contents.** "the steps are `/skill:add-round`'s", "`backend/README.md` holds the rest". Prose moves; pointers hold.
 - **A cut is only a cut when the fact still lives somewhere.** Find where the removed sentence lives now before removing it; if nowhere does and the fact has an owner closer to the code — a module header, a README, a skill — move it there first, then cut. Moving a fact toward the thing it describes is distillation; moving it away is not.
 
 ## AGENTS.md is the home of last resort
@@ -96,7 +96,7 @@ Docs compile in no build; verification is reading each surviving claim against t
 - A claim naming a command: run it, or its `--help`, when in doubt.
 - A claim naming a file, table, or key: `rg` / `ls` it.
 - A count: recompute it from what it counts; don't spot-check.
-- Flix doc comments: `///` sits directly above what it documents — a module's doc above `pub mod`, or E6289 answers. One under `backend/src` that the `circuits/` project symlinks compiles in both projects: verify with `.#flix-build` *and* `.#geometry-test`.
+- Flix doc comments: `///` sits directly above what it documents — a module's doc above `pub mod`, or E6289 answers.
 - Elm docstrings: `.#test` runs elm-verify-examples over them — an example in a docstring is a test, and a stale example fails the build; with Flix's E6289, these are the few documentation failures a compiler can actually see.
 
 ## Hazards

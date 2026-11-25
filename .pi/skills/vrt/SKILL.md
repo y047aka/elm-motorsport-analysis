@@ -44,5 +44,5 @@ This is the way to land any baseline.
 What separates them is the rasteriser — CoreText against FreeType — which no Chromium flag touches.
 `tests/screenshot.css` narrows the gap by asking for greyscale antialiasing, and the tolerance absorbs the rest, barely.
 
-The circuits' tracker shots are pixel baselines no more: the bytes they rendered are held by the geometry project's fences, and a circuit is strokes whose pixels only follow those bytes — leaving one baseline-free polygon assertion per circuit as the whole E2E of a drawing.
-A survey that moved a circuit's bytes takes a re-baseline with it, and `/skill:add-circuit` says where the move is measured in metres before anyone reads the pixels.
+The circuits' tracker shots are pixel baselines no more: the bytes they rendered are held by the upstream pipeline's fences (`github:y047aka/circuit-maps-3d`), and a circuit is strokes whose pixels only follow those bytes — leaving one baseline-free polygon assertion per circuit as the whole E2E of a drawing.
+A bump of the `circuit-maps-3d` pin that moves a circuit's bytes takes a re-baseline with it, and the move is measured in metres on the GeoJSON — with the upstream project's `diff` — before anyone reads the pixels.

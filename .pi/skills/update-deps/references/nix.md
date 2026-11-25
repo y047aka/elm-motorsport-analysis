@@ -18,16 +18,14 @@ nix flake update
 Major — point `nixpkgs.url` in `flake.nix` at the newer `nixos-YY.MM` branch,
 then `nix flake update`.
 
-Bumping the `flix` version in `flake.nix` is a run of both Flix projects:
-`circuits/` holds its own `flix.toml`, and a project left behind fails as its
-own red rather than as the flake not evaluating.
+Bumping the `flix` version in `flake.nix` needs a cold `.#flix-test` and
+`.#sqlitefx-test`: both Flix projects in the tree build against it.
 
 ## Verify
 
 ```bash
 nix run .#test
 nix run .#flix-test
-nix run .#geometry-test
 nix run .#build
 ```
 

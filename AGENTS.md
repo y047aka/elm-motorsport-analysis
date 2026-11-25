@@ -10,7 +10,6 @@ SQLite → HTTP or a JSON export → Elm visualization.
   through `elm.json`.
 - **`/backend`** — Flix: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. Read `backend/README.md` before changing anything here.
 - **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`, read by the CLI and nothing else. It sits outside `/app` because the build copies all of `app/static` into the bundle.
-- **`/circuits`** — the geometry pipeline, a second Flix project: OpenStreetMap surveys into the served `app/static/geometry/*.geojson`, one directory per circuit. It reads some of `backend/src` through symlinks. Read `circuits/README.md` before changing anything here.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -24,7 +23,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | the app's elm-test, then the package's elm-verify-examples + elm-test |
-| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript (the circuit tools compile under `.#geometry-test`) |
+| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
 | `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
@@ -32,9 +31,6 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
-| `nix run .#geometry -- <word> ...` | The geometry pipeline, one word at a time: `survey`, `diff`, `regenerate`, `elevation`, `probe`, `timing-lines`. Paths resolve from where the command is run; what each fence answers is `circuits/README.md`'s, and each word's flags its module's header |
-| `nix run .#geometry-test` | The project's `flix test` — readings off fixtures, no network, no database, no files written — then `test/check-sources.mjs`, the facts about the project's own sources that no pure `@Test` can reach |
-| `nix run .#geometry-timing-lines` | The `timing-lines` word on its own, computing in no database: `<season>/<id> [--against <season>] [--tolerance <metres>]` |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/backend`, both the CLI and the server |
 | `nix run .#sqlitefx-test` | Test `backend/sqlitefx`, the database library (`backend/sqlitefx/README.md`) |
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
@@ -52,9 +48,8 @@ Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
 | --- | --- | --- |
 | Elm under `app/` or `package/` | `.#format`, `.#test`, `.#review-app` / `.#review-package` | `.#test` only |
 | TypeScript under `app/` | `.#typecheck` | yes |
-| `backend/` | `.#flix-test`; a file `circuits/` symlinks also `.#geometry-test` (`backend/README.md`) | yes |
+| `backend/` | `.#flix-test` (`backend/README.md`) | yes |
 | `backend/sqlitefx/` | `.#sqlitefx-test`, and `.#flix-test` for the files `backend/src/Sqlitefx/` links | yes |
-| `circuits/` | `.#geometry-test`; a kept geometry also re-surveys byte for byte | yes |
 | Anything drawn, or `app/src/shadcn/` | `.#test-vrt`; a baseline lands through `.#update-snapshots-ci`, never `.#update-snapshots-vrt` | yes (`playwright.yml`) |
 | Comments or docs | `/skill:distill-docs`'s after-a-change pass | no |
 
@@ -66,7 +61,6 @@ They are not registered with Claude Code's `Skill` tool: read the file and follo
 | Skill | Read before |
 | --- | --- |
 | `add-round` | adding a timing CSV as a served round — the calendar, the CLI, the checks, and which frozen lists a new name joins |
-| `add-circuit` | taking a circuit from an OpenStreetMap probe to a drawing |
 | `flix` | diagnosing a Flix build failure: the errors this tree has produced and what each meant |
 | `shadcn` | changing `app/src/shadcn/` or `app/src/UI/Shadcn/` |
 | `vrt` | touching a VRT baseline: how a shot is judged and how a baseline lands |
@@ -75,6 +69,8 @@ They are not registered with Claude Code's `Skill` tool: read the file and follo
 | `commit-push` | a commit and push the user asks for — never a pull request |
 
 ## Data hazards
+
+**The served geometry and circuit maps are owned upstream**: `app/static/geometry/*.geojson` and `app/static/circuit-maps/*.json` are not committed — the dev, build, test, VRT and Tauri commands copy them from the pinned `circuit-maps-3d` flake input (`github:y047aka/circuit-maps-3d`) into the working tree. A bump of the pin that moves a geometry moves every tracker VRT baseline with it; the upstream fence is what proves its bytes are reproducible from the kept OpenStreetMap evidence.
 
 **A checkout holds the CSV, the calendar and two rounds' files**: 2025's Le Mans and Circuit of the Americas, so the VRT and a dev server work with nothing run first.
 Every other round's files are ignored rather than committed; `.#tauri-build` is the one command that writes them all.
@@ -126,7 +122,7 @@ Nothing in a `Race` moves; a clock is applied to it to get what is true then.
 
 `Shared` picks a round's drawing by the circuit its summary names (`track.circuit`), not by the round id; a circuit with no geometry draws as the ring.
 
-Where the timing lines stand is `circuits/README.md`'s; how a car is placed between them is decided here.
+Where the timing lines stand is the served circuit map's (`static/circuit-maps/<word>.json`); how a car is placed between them is decided here.
 A line the map gives no distance for is placed by the time between the lines either side of it (`Tracker.Config.lapScale`).
 A circuit whose feed is never timed finer than three sectors is drawn less finely too: between two of its lines a COTA car is placed by the time it has run between them, where a Le Mans car is placed by a mini-sector.
 
@@ -184,7 +180,7 @@ A line a change adds to this file must name no closer owner: what one module, RE
 - **TypeScript** — `/app/tests/` is outside the TS project on purpose: Playwright comes from the flake, so `@playwright/test` does not resolve for `tsc`.
 - **The Elm/element contract** (`app/tests/custom-elements.spec.ts`) reads the values Elm can send out of the wrapper sources, so a constructor without a matching variant in the vendored component fails there instead of shipping unstyled.
 - **Spec constants** (`app/tests/car-detail.spec.ts`) are read out of the Elm sources that decide them. A constant that moves modules must take its pattern with it; `readConstant` fails by name when one misses.
-- **Geometry and Flix** — `circuits/README.md` and `backend/README.md` hold what each test reads.
+- **Flix** — `backend/README.md` holds what each test reads.
 - **VRT** runs against the export, so it needs nothing set up, and drives the two kept rounds.
 
 ## Environment

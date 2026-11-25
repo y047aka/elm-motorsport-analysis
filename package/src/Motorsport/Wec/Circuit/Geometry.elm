@@ -4,8 +4,9 @@ module Motorsport.Wec.Circuit.Geometry exposing (Geometry, LapPoint, decoder)
 surveyed degrees, how far round the lap each stands, and the
 [`Frame`](Motorsport-Circuit-Geodesy#Frame) to project them through.
 
-The file is written by the pipeline in `circuits/` and served under
-`/static/geometry/`, named by the word the summaries send for the circuit.
+The file is written by the pipeline in `github:y047aka/circuit-maps-3d` and
+copied into `/static/geometry/` by the commands that read it, named by the
+word the summaries send for the circuit.
 [`decoder`](#decoder) checks the bytes as they arrive: a served file can be
 stale, truncated, or -- in a Tauri bundle -- the app shell the asset resolver
 answers for a path it does not know. A geometry that fails here fails as the
@@ -57,9 +58,9 @@ publishes: one metre per point, the first at the finish line's 0, none going bac
 at the published length, back where the first one stood.
 
 The file's own `sectors` are not read or checked here: nothing in a drawing is
-placed by them, and `nix run .#geometry-timing-lines` is the reader that judges
-them -- out of the figures `Motorsport.Circuit` holds rather than out of this
-file.
+placed by them, and the upstream pipeline (`github:y047aka/circuit-maps-3d`) is
+what keeps them honest -- against the figures the circuit's map record holds
+rather than against one another.
 
 -}
 decoder : { lapLength : Float } -> Decoder Geometry

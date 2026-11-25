@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { existsSync } from 'node:fs';
 
 import { drawnNames, readSource } from './helpers';
 
@@ -9,19 +8,19 @@ import { drawnNames, readSource } from './helpers';
  * A drawn circuit is a list in `Shared` — the words `drawingFor` matches — a
  * second list in Flix — the words `Circuit.jsonValue` can send in a summary — and
  * two files behind them, the map record at `app/static/circuit-maps/<word>.json`
- * and the geometry at `app/static/geometry/<word>.geojson`. None of it compiles: a
- * rename on one side alone is a round drawn as the ring with nothing red, and a
- * file missing is a round that fails to load. The words come out of the sources
- * and the files out of the kept ones; nothing needs a browser.
+ * and the geometry at `app/static/geometry/<word>.geojson`, both copied from the
+ * `circuit-maps-3d` flake input by the commands that read them. None of it
+ * compiles: a rename on one side alone is a round drawn as the ring with nothing
+ * red, and a file missing is a round that fails to load. The words come out of
+ * the sources and the files out of the synced ones; nothing needs a browser.
  *
  * The two word lists are compared here;
  * what is not compared is a geometry's contents. Whether those are internally
  * honest — a known basis, a direction, metres ascending that end at the
  * published lap, sectors adding up to it, a pit lane beside it — is a refusal of
- * `Geometry.outline` and `Geometry.pitLane`, pinned by
- * `circuits/test/TestGeometry.flix` and re-asked of the repository's real bytes
- * by every run of the byte fence (`nix run .#geometry -- survey <word>`), which
- * reproduces the served file from the kept Overpass answer.
+ * `Geometry.outline` and `Geometry.pitLane`, and the upstream
+ * `github:y047aka/circuit-maps-3d` pipeline's to keep: its fence reproduces every
+ * published file from the kept Overpass answer.
  */
 
 type Features = { features: { properties?: Record<string, unknown> }[] };
@@ -43,15 +42,6 @@ test('every circuit Shared draws has its geometry where the app reaches for it',
       outline!.circuit,
       `${name}: the served file is not the geometry the app reaches for`,
     ).toBe(name);
-  }
-});
-
-test("a circuit's directory is named by the word the app draws it by", () => {
-  for (const name of drawnNames()) {
-    expect(
-      existsSync(new URL(`../../circuits/${name}/overpass.json`, import.meta.url)),
-      `${name} is drawn, but no kept Overpass answer stands in circuits/${name}/`,
-    ).toBe(true);
   }
 });
 

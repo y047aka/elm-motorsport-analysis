@@ -15,7 +15,7 @@ Nothing downstream can derive the year — the feed's `HOUR` column is a time of
 
 A round id is `<circuit stem>_<duration>`: `fuji_6h`, `bahrain_8h`, `qatar_1812km`. The stem is the circuit's word (`bahrain_8h` and a future `bahrain_1812km` are both `bahrain`), and the suffixes are not a grammar — that is why `Events.circuit` matches whole ids rather than cutting them.
 
-If the circuit is new — its word is not in `Motorsport.Circuit`'s enum, or no geometry is served for it — run the **/add-circuit** skill first and come back.
+If the circuit is new — its word is not in `Motorsport.Circuit`'s enum, or no geometry is served for it — the circuit joins upstream in `github:y047aka/circuit-maps-3d` first (its `docs/adding-a-circuit.md` holds the steps), and its geometry arrives here when the flake input next moves; come back after.
 
 ## 1. File the CSV
 
@@ -58,7 +58,7 @@ SELECT DISTINCT class FROM entries;          -- against the era's grid
 
 - **A manufacturer the hand-written table has no row for stops nothing** — the car keeps the feed's name and takes a colour from its number, and no build fails. Add a row to `manufacturers.json`.
 - **A Le Mans feed split other than fifteen mini-sectors** reads as `NoMiniSectors` (`byMiniSectorDecoder` requires all fifteen keys) — check the mini-sector columns of a new-season Le Mans CSV before believing a round drawn without them.
-- **Whether the circuit's timing lines still stand** is `nix run .#geometry-timing-lines -- <season>/<id> --against <prev-season>`, answered once the round is loaded.
+- **Whether the circuit's timing lines still stand** in a new season's map is what the geometry upstream is re-laid against; a map that moved its lines takes a geometry re-lay, and a moved geometry takes every tracker baseline it draws.
 
 ## 5. Photographs and kept files
 
