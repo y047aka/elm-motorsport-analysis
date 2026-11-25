@@ -26,7 +26,7 @@ type LapScale
     = LapScale
         { pace : Pace
         , config : TrackConfig
-        , knots : List Knot
+        , lines : List Knot
         }
 
 
@@ -35,6 +35,13 @@ type alias Knot =
     , metres : Float
     , seconds : Float
     }
+
+
+{-| Where every lap starts, at every pace.
+-}
+finishLine : Knot
+finishLine =
+    { progress = 0, metres = 0, seconds = 0 }
 
 
 {-| A progress is a share of the time a lap takes, and the stretches of a lap
@@ -70,20 +77,22 @@ lapScale pace lines config =
                 _ ->
                     Sector.values (Sector.map2 (\share metres -> knot share (Just metres)) config.sectors lines.sectors)
     in
-    LapScale { pace = pace, config = config, knots = pinned 0 0 :: List.filterMap identity ends }
+    LapScale { pace = pace, config = config, lines = List.filterMap identity ends }
 
 
 {-| Past the last line the scale is pinned to, it runs on as it ran into it.
 -}
 toMetres : LapScale -> Float -> Float
-toMetres (LapScale { pace, knots }) progress =
-    interpolate pace knots progress
+toMetres (LapScale { pace, lines }) progress =
+    interpolate pace finishLine lines progress
 
 
-interpolate : Pace -> List Knot -> Float -> Float
-interpolate pace knots progress =
-    case knots of
-        a :: b :: rest ->
+{-| From the line `a` on, round the `lines` after it.
+-}
+interpolate : Pace -> Knot -> List Knot -> Float -> Float
+interpolate pace a lines progress =
+    case lines of
+        b :: rest ->
             if progress <= b.progress || List.isEmpty rest then
                 if b.progress > a.progress then
                     Pace.metresAt pace (a.seconds + (progress - a.progress) / (b.progress - a.progress) * (b.seconds - a.seconds))
@@ -92,13 +101,10 @@ interpolate pace knots progress =
                     a.metres
 
             else
-                interpolate pace (b :: rest) progress
-
-        [ a ] ->
-            a.metres
+                interpolate pace b rest progress
 
         [] ->
-            progress
+            a.metres
 
 
 {-| How far round the lap, in metres, to draw a car on a circuit: where [`computeProgress`](Motorsport-Chart-Tracker-Config#computeProgress) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
