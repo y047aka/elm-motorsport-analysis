@@ -1,7 +1,7 @@
 module Motorsport.Chart.Tracker.Config exposing
     ( TrackConfig, Share
     , MiniSectorShares(..)
-    , computeProgress, calcSectorBoundaries
+    , progressOf, boundaries
     , Stretch, stretchOf
     )
 
@@ -16,7 +16,7 @@ shares are held per sector and per mini-sector, so reading one is
 
 @docs TrackConfig, Share
 @docs MiniSectorShares
-@docs computeProgress, calcSectorBoundaries
+@docs progressOf, boundaries
 @docs Stretch, stretchOf
 
 -}
@@ -59,8 +59,8 @@ Read at the finest grain the circuit and the car's own lap both have, so that a
 car sits between the same two boundaries the drawn track puts it between.
 
 -}
-computeProgress : TrackConfig -> CarAt -> Float
-computeProgress config car =
+progressOf : TrackConfig -> CarAt -> Float
+progressOf config car =
     case stretchOf config car of
         Just stretch ->
             along stretch.share stretch.progress
@@ -125,8 +125,8 @@ so marks nothing; the line and the flag are not boundaries between stretches
 and are dropped.
 
 -}
-calcSectorBoundaries : TrackConfig -> List Float
-calcSectorBoundaries config =
+boundaries : TrackConfig -> List Float
+boundaries config =
     let
         stretches =
             case config.miniSectors of

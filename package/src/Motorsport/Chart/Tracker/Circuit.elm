@@ -129,7 +129,7 @@ ground (Circuit circuit) =
     , pitLane = circuit.pitLane
     , at = \metres -> Shape.at metres circuit.shape
     , metresOf = LapScale.metresOn circuit.scale
-    , boundaries = List.map (LapScale.toMetres circuit.scale) (Config.calcSectorBoundaries circuit.config)
+    , boundaries = List.map (LapScale.toMetres circuit.scale) (Config.boundaries circuit.config)
     , sectors =
         circuit.config.sectors
             |> Sector.toList
@@ -264,7 +264,7 @@ circuitTrack detail circuit =
                 }
 
         boundaries =
-            Config.calcSectorBoundaries circuit.config
+            Config.boundaries circuit.config
                 |> List.map
                     (\progress ->
                         across circuit

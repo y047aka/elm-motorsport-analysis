@@ -107,7 +107,7 @@ interpolate pace a lines progress =
             a.metres
 
 
-{-| How far round the lap, in metres, to draw a car on a circuit: where [`computeProgress`](Motorsport-Chart-Tracker-Config#computeProgress) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
+{-| How far round the lap, in metres, to draw a car on a circuit: where [`progressOf`](Motorsport-Chart-Tracker-Config#progressOf) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
 
 A car under a full course yellow, behind the safety car or through a slow zone is held to a speed rather than driving the corners, so the reference lap's quick straights and slow bends would misplace it.
 How much slower than usual is the stretch's time against its share of the car's own best lap.

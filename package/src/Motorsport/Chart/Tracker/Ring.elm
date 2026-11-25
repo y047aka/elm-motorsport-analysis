@@ -166,7 +166,7 @@ track detail config =
                 []
 
         boundaries =
-            Config.calcSectorBoundaries config
+            Config.boundaries config
                 |> List.map (Scale.convert clockwise)
                 |> List.map (\angle -> makeBoundary angle)
 
@@ -293,7 +293,7 @@ coordinatesOnTrack detail config car =
             (constants detail).track
 
         progress =
-            Config.computeProgress config car
+            Config.progressOf config car
 
         angle =
             Scale.convert clockwise progress
