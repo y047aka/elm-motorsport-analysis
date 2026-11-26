@@ -212,6 +212,22 @@ suite =
                         |> Maybe.map .time
                         |> Expect.equal Nothing
             ]
+        , describe "a class's best lap, at that moment"
+            [ test "is the fastest any car of the class has finished, whether or not every car has finished one" <|
+                \_ ->
+                    -- Car 3 is still on its opening lap at 7.000; car 1, its
+                    -- classmate, finished a 6.000.
+                    Snapshot.classBestLap (classOf "HYPERCAR") fieldWithTailenders
+                        |> Expect.equal (Just 6000)
+            , test "is the class's own, not the field's" <|
+                \_ ->
+                    Snapshot.classBestLap (classOf "LMGT3") fieldWithTailenders
+                        |> Expect.equal (Just 5000)
+            , test "is none before any car of the class has finished a lap" <|
+                \_ ->
+                    Snapshot.classBestLap (classOf "HYPERCAR") (snapshotAt 3000)
+                        |> Expect.equal Nothing
+            ]
         , describe "the lap the car has just finished"
             [ test "a car on its opening lap has none" <|
                 \_ ->

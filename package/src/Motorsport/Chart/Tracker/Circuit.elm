@@ -112,7 +112,7 @@ type alias Ground =
     { lap : List Point
     , pitLane : List Point
     , at : Length -> Shape.Position
-    , distanceOf : CarAt -> Length
+    , distanceOf : Snapshot -> CarAt -> Length
     , boundaries : List Length
     , sectors : List { at : Length, label : String }
     , relief :
@@ -426,20 +426,20 @@ renderCarsOnCircuit detail circuit standings =
             |> List.map
                 (\car ->
                     ( car.metadata.carNumber
-                    , Lazy.lazy3 renderCarOnCircuit detail circuit car
+                    , Lazy.lazy4 renderCarOnCircuit detail circuit standings car
                     )
                 )
         )
 
 
-renderCarOnCircuit : Detail -> Drawing -> CarAt -> Svg msg
-renderCarOnCircuit detail circuit car =
+renderCarOnCircuit : Detail -> Drawing -> Snapshot -> CarAt -> Svg msg
+renderCarOnCircuit detail circuit standings car =
     let
         c =
             circuitConstants detail circuit
 
         position =
-            Shape.at (Length.inMeters (LapScale.distanceOf circuit.scale car)) circuit.shape
+            Shape.at (Length.inMeters (LapScale.distanceOf circuit.scale standings car)) circuit.shape
 
         marker =
             g [ Attributes.transform [ Translate position.x position.y ] ]

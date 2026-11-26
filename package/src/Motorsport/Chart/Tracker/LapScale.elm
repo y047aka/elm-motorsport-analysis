@@ -13,7 +13,7 @@ module Motorsport.Chart.Tracker.LapScale exposing
 import Duration exposing (Seconds)
 import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Simulation.Pace.Neutralisation as Neutralisation exposing (Neutralisation)
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap exposing (ReferenceLap)
@@ -114,17 +114,26 @@ interpolate referenceLap a lines progress =
 
 {-| How far round the lap to draw a car on a circuit: where [`progressOf`](Motorsport-Chart-Tracker-Config#progressOf) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
 
-How much slower than usual is the stretch's time against its share of the car's own best lap: see [`Neutralisation`](Motorsport-Simulation-Pace-Neutralisation).
+How much slower than usual is the stretch's time against its share of the car's own best lap, or of its class's best while it has set none: see [`Neutralisation`](Motorsport-Simulation-Pace-Neutralisation).
 
 -}
-distanceOf : LapScale -> CarAt -> Length
-distanceOf ((LapScale { config }) as scale) car =
+distanceOf : LapScale -> Snapshot -> CarAt -> Length
+distanceOf ((LapScale { config }) as scale) standings car =
+    let
+        usualLap =
+            case car.bestLap of
+                Just best ->
+                    Just best.time
+
+                Nothing ->
+                    Snapshot.classBestLap car.metadata.class standings
+    in
     case Config.stretchOf config car of
         Just stretch ->
             ease scale
-                (case car.bestLap of
-                    Just best ->
-                        Neutralisation.fromTimes { took = stretch.time, usually = round (stretch.share.share * toFloat best.time) }
+                (case usualLap of
+                    Just lapTime ->
+                        Neutralisation.fromTimes { took = stretch.time, usually = round (stretch.share.share * toFloat lapTime) }
 
                     Nothing ->
                         Neutralisation.none

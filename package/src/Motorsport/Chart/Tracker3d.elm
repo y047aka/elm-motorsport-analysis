@@ -539,7 +539,7 @@ view surface model shown standings =
                     (\car ->
                         let
                             ( standing, position ) =
-                                onLap (g.distanceOf car)
+                                onLap (g.distanceOf standings car)
 
                             shot =
                                 project eye (raisedAt size standing)
