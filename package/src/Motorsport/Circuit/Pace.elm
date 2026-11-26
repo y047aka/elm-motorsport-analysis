@@ -71,7 +71,7 @@ lapOf parameters relief shape =
             Shape.length shape
 
         count =
-            floor (lapLength / Length.inMeters parameters.reading.sampleStep)
+            floor (lapLength / Length.inMeters parameters.course.sampleStep)
     in
     if count < 3 then
         Even
@@ -86,7 +86,7 @@ lapOf parameters relief shape =
                     |> Array.map (\{ x, y } -> { x = x, y = y })
 
             reach =
-                max 1 (round (Length.inMeters parameters.reading.curvatureReach / step))
+                max 1 (round (Length.inMeters parameters.course.curvatureReach / step))
 
             gradeAt i =
                 case relief of
@@ -121,7 +121,7 @@ lapOf parameters relief shape =
 {-| Every figure the reference lap is worked out from: how the course is read, and the car that is run round it.
 -}
 type alias Parameters =
-    { reading : Reading
+    { course : Course
     , car : Car
     }
 
@@ -132,7 +132,7 @@ type alias Parameters =
   - `curvatureReach`: how far either side of a sample its curvature and slope are read; the chord this spans smooths the corners OpenStreetMap draws as polygons and stands in for the racing line's wider radius.
 
 -}
-type alias Reading =
+type alias Course =
     { sampleStep : Length
     , curvatureReach : Length
     }
@@ -164,7 +164,7 @@ The car's were chosen against the green-flag laps of the 2025 and 2026 rounds at
 -}
 reference : Parameters
 reference =
-    { reading =
+    { course =
         { sampleStep = Length.meters 5
         , curvatureReach = Length.meters 30
         }
