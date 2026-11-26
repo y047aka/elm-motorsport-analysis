@@ -17,9 +17,9 @@ import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.CarImage as CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer exposing (Manufacturers)
-import Data.Wec.Manufacturer.Table as ManufacturerTable
 import Dict exposing (Dict)
 import Effect exposing (Effect)
+import Generated.Data.Wec.Manufacturer.Table as ManufacturerTable
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Analysis.Energy as Energy
