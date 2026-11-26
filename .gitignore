@@ -17,7 +17,7 @@ app/static/circuit-maps/
 package/tests/Motorsport/TestHelpers/Survey/
 package/tests/Motorsport/TestHelpers/Map/
 
-# Written by app/codegen from data/wec/manufacturers.json, by every command that compiles the app.
+# Written by app/codegen (the flake's generateElm).
 app/generated/
 
 # Flix compiler scratch dir if invoked from repo root

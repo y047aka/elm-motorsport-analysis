@@ -9,7 +9,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
 - **`/backend`** — Flix: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. Read `backend/README.md` before changing anything here.
-- **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`, read by the CLI, and `data/wec/manufacturers.json`, which `app/codegen` compiles into the app (`app/generated/`, ignored). It sits outside `/app` because the build copies all of `app/static` into the bundle.
+- **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`, read by the CLI, and the manufacturer table, `data/wec/manufacturers.json`, which `app/codegen` compiles into the app. It sits outside `/app` because the build copies all of `app/static` into the bundle.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -84,7 +84,6 @@ Correct `timeline_events` beside `laps`.
 The Vite dev server forwards `/api` to port 8080 and answers it from `static/` when nothing is listening.
 
 `static/car-images.json` is read by no compiler: a mistake shows as a car drawn without a photograph, not as a build that fails.
-A manufacturer missing from `data/wec/manufacturers.json` fails no build either: its cars are drawn by their numbers.
 
 ## Architecture
 

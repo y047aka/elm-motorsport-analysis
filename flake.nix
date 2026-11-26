@@ -86,8 +86,7 @@
           done
         '';
 
-        # `app/codegen` writes `data/wec/manufacturers.json` out as the ignored module `app/generated/Generated/Manufacturer/Wec.elm`, so every command that compiles the app writes it first.
-        # elm-codegen comes from `app/node_modules`, which is why `.#test` needs `pnpm install` too.
+        # `app/codegen`'s output, `app/generated/`, is not committed, so every command that compiles the app writes it first; elm-codegen comes from `app/node_modules`.
         # elm-codegen 0.6 exits 0 when the generator itself does not compile, so the old output is removed first: a broken generator then fails the app's compile by module name instead of leaving last run's table in place.
         generateElm = ''
           rm -rf app/generated
