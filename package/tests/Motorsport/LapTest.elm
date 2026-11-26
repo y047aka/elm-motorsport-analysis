@@ -173,10 +173,10 @@ tests =
                     [ 4000, 4500, 5000, 8500 ]
                         |> List.map (\elapsed -> Lap.progressAt { elapsed = instant elapsed } lap)
                         |> Expect.equal
-                            [ Just { sector = S1, progress = 0 }
-                            , Just { sector = S1, progress = 0.5 }
-                            , Just { sector = S2, progress = 0 }
-                            , Just { sector = S3, progress = 0.5 }
+                            [ Just { sector = S1, progress = 0, time = 1000 }
+                            , Just { sector = S1, progress = 0.5, time = 1000 }
+                            , Just { sector = S2, progress = 0, time = 2000 }
+                            , Just { sector = S3, progress = 0.5, time = 3000 }
                             ]
             , test "reports past the end of a lap that is already over, rather than capping" <|
                 \_ ->
@@ -209,9 +209,9 @@ tests =
                         |> List.map (\sector -> Lap.sectorStart sector lap)
                         |> List.map (\start -> Lap.progressAt { elapsed = start } lap)
                         |> Expect.equal
-                            [ Just { sector = S1, progress = 0 }
-                            , Just { sector = S2, progress = 0 }
-                            , Just { sector = S3, progress = 0 }
+                            [ Just { sector = S1, progress = 0, time = 1000 }
+                            , Just { sector = S2, progress = 0, time = 2000 }
+                            , Just { sector = S3, progress = 0, time = 3000 }
                             ]
             ]
         , describe "miniSegments"
@@ -260,7 +260,7 @@ tests =
                 \_ ->
                     -- Z4 runs 4.400 to 4.800.
                     Lap.miniSectorProgressAt { elapsed = instant 4600 } lapWithMiniSectors
-                        |> Expect.equal (Just { miniSector = Z4, progress = 0.5 })
+                        |> Expect.equal (Just { miniSector = Z4, progress = 0.5, time = 400 })
             , test "reports no mini-sector at all once the lap is over, rather than the last one" <|
                 \_ ->
                     Lap.miniSectorProgressAt { elapsed = instant 10000 } lapWithMiniSectors

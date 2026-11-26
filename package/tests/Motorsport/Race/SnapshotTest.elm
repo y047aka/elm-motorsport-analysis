@@ -1,4 +1,4 @@
-module Motorsport.Race.SnapshotTest exposing (suite)
+module Motorsport.Race.SnapshotTest exposing (fieldWithTailenders, suite)
 
 import Expect
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
@@ -138,7 +138,7 @@ suite =
                     carAt "7" (leMansFieldAt 3500)
                         |> Maybe.andThen (.currentLap >> .miniSectors >> recordedMiniSectors)
                         |> Maybe.andThen .current
-                        |> Expect.equal (Just { miniSector = Z12, progress = 0.5 })
+                        |> Expect.equal (Just { miniSector = Z12, progress = 0.5, time = 1000 })
             , test "each of them reads complete behind the car, part way at it, and untouched ahead" <|
                 \_ ->
                     carAt "7" (leMansFieldAt 3500)
@@ -210,6 +210,22 @@ suite =
                     carAt "2" (snapshotAt 3000)
                         |> Maybe.andThen .bestLap
                         |> Maybe.map .time
+                        |> Expect.equal Nothing
+            ]
+        , describe "a class's best lap, at that moment"
+            [ test "is the fastest any car of the class has finished, whether or not every car has finished one" <|
+                \_ ->
+                    -- Car 3 is still on its opening lap at 7.000; car 1, its
+                    -- classmate, finished a 6.000.
+                    Snapshot.classBestLap (classOf "HYPERCAR") fieldWithTailenders
+                        |> Expect.equal (Just 6000)
+            , test "is the class's own, not the field's" <|
+                \_ ->
+                    Snapshot.classBestLap (classOf "LMGT3") fieldWithTailenders
+                        |> Expect.equal (Just 5000)
+            , test "is none before any car of the class has finished a lap" <|
+                \_ ->
+                    Snapshot.classBestLap (classOf "HYPERCAR") (snapshotAt 3000)
                         |> Expect.equal Nothing
             ]
         , describe "the lap the car has just finished"

@@ -23,6 +23,7 @@ import List.Extra
 import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
+import Motorsport.Chart.Tracker.Detail exposing (Detail(..))
 import Motorsport.Clock as Clock
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
@@ -300,11 +301,20 @@ trackerFrame marker drawing controls =
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away.
 -}
-trackerCard : Bool -> Bool -> Html Msg -> TrackerChart.Track -> Snapshot -> Html Msg
-trackerCard several held toggle track snapshot =
+trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
+trackerCard several held track snapshot =
+    let
+        floating =
+            case TrackerChart.circuit track of
+                Just _ ->
+                    [ Html.map FloatMsg Float.trigger ]
+
+                Nothing ->
+                    []
+    in
     trackerFrame "data-tracker-column"
-        (TrackerChart.view TrackerChart.Full track snapshot)
-        (toggle :: standingsTrigger :: cornerControls (corner several held Columns.Tracker))
+        (TrackerChart.view Full track snapshot)
+        (floating ++ standingsTrigger :: cornerControls (corner several held Columns.Tracker))
 
 
 {-| The page under the header: the standings, the strip, and whatever floats over
@@ -328,7 +338,7 @@ mainGrid round keys m =
         [ Attributes.class "row-start-2 h-full min-h-0 relative grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]" ]
         [ standingsCell "col-start-1 min-h-0 grid relative" keys m round.energy snapshot replay.race.cars
         , columnStrip "col-start-2" round.track round.timeline keys m round.pitCycles replay snapshot
-        , Html.map FloatMsg (Float.view m.float round.track snapshot)
+        , Html.map FloatMsg (Float.view m.float (TrackerChart.circuit round.track) snapshot)
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
         ]
@@ -464,7 +474,7 @@ columnStrip cell track timeline keys m pitCycles replay snapshot =
                             class_
 
                     Columns.Tracker ->
-                        trackerCard several (Columns.isCarried placement) (Html.map FloatMsg Float.trigger) track snapshot
+                        trackerCard several (Columns.isCarried placement) track snapshot
 
                     Columns.Events ->
                         EventsColumn.view

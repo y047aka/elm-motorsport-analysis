@@ -2,7 +2,7 @@ module Motorsport.Race.Snapshot exposing
     ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..), Lane
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
-    , toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
+    , toList, toClassList, get, inClass, classBestLap, leader, classLeader, lapCount, elapsed
     , gapBetween
     , bestTimes, lapHistory
     )
@@ -14,7 +14,7 @@ Built once per frame and shared by every view that reads it.
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap, Lane
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
-@docs toList, toClassList, get, inClass, leader, classLeader, lapCount, elapsed
+@docs toList, toClassList, get, inClass, classBestLap, leader, classLeader, lapCount, elapsed
 @docs gapBetween
 @docs bestTimes, lapHistory
 
@@ -336,6 +336,15 @@ inClass class (Snapshot s) =
         |> List.head
         |> Maybe.map Tuple.second
         |> Maybe.withDefault []
+
+
+{-| The fastest lap any car of a class had finished by this moment: `Nothing` until one has.
+-}
+classBestLap : Class -> Snapshot -> Maybe Duration
+classBestLap class snapshot =
+    inClass class snapshot
+        |> List.filterMap (.bestLap >> Maybe.map .time)
+        |> List.minimum
 
 
 leader : Snapshot -> Maybe CarAt

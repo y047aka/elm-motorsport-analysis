@@ -103,6 +103,7 @@ Where a new module goes:
 
 - `Race/` — the loaded race, its indices, and readings of it at a moment.
 - `Analysis/` — holds no state and draws nothing. A colour, an emphasis or an axis domain in what it hands back puts it in `Chart/` instead. How many views read it is not a test.
+- `Simulation/` — a model run on figures chosen rather than measured: what it hands back is an assumption fitted to the races, never a reading of one. Models are grouped by what they model (`Pace.ReferenceLap`, `Pace.Neutralisation`).
 - Directly under `Motorsport/` — serves both sides, so neither owns it (`BestTimes`, `Lap.Performance`).
 - `Wec/` — WEC-specific knowledge: classes and eras, circuits. The core still imports out of `Wec/` (`rg 'import Motorsport.Wec' package/src` lists where); reversing that arrow is its own change.
 
@@ -123,12 +124,12 @@ Nothing in a `Race` moves; a clock is applied to it to get what is true then.
 `Shared` picks a round's drawing by the circuit its summary names (`track.circuit`), not by the round id; a circuit with no geometry draws as the ring.
 
 Where the timing lines stand is the served circuit map's (`static/circuit-maps/<word>.json`); how a car is placed between them is decided here.
-A line the map gives no distance for is placed by the time between the lines either side of it (`Tracker.Config.lapScale`).
+A line the map gives no distance for is placed by the time between the lines either side of it (`Tracker.LapScale.lapScale`).
 A circuit whose feed is never timed finer than three sectors is drawn less finely too: between two of its lines a COTA car is placed by the time it has run between them, where a Le Mans car is placed by a mini-sector.
 
-`LeMansMiniSectors` holds Le Mans's fifteen mini-sectors by name and is load-bearing in three places: the sum, `Data.Wec.byMiniSectorDecoder` (which requires all fifteen keys, so a differently-split lap reads as `NoMiniSectors`), and `Tracker.Config.lapScale`.
+`LeMansMiniSectors` holds Le Mans's fifteen mini-sectors by name and is load-bearing in three places: the sum, `Data.Wec.byMiniSectorDecoder` (which requires all fifteen keys, so a differently-split lap reads as `NoMiniSectors`), and `Tracker.LapScale.lapScale`.
 The first other circuit whose feed carries mini-sectors has to generalize all three together — a named list at both ends, joined by name — and re-make the decoder's `optional` decision, because what catches a missing line today is the record's totality.
-`ConfigTest` names the two combinations the `lapScale` catch-all holds; do not "simplify" it into reading one side.
+`LapScaleTest` names the two combinations the `lapScale` catch-all holds; do not "simplify" it into reading one side.
 
 `Circuit/Layout`'s Le Mans `Lengths` are frozen by a test: every Le Mans snapshot was rendered with them. Any length moved on any circuit goes through `.#update-snapshots-ci`.
 

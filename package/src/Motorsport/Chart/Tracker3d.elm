@@ -4,15 +4,14 @@ module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, 
 perspective camera, so the side of the loop standing near comes out wide and the
 side standing far narrow, and the reader turns it by dragging.
 
-The lap keeps its own shape -- the same metres [`ground`](Motorsport-Chart-Tracker#ground)
-hands the flat drawing -- and is set above the plane it was surveyed on. A circuit
-whose geometry carries heights stands at them, its lowest point where every other lap
+The lap keeps its own shape -- the metres the flat drawing is made in, which [`ground`](Motorsport-Chart-Tracker-Circuit#ground) hands it -- and is set above the plane it was surveyed on.
+A circuit whose geometry carries heights stands at them, its lowest point where every other lap
 stands flat, and its heights drawn `steep` times over; one that carries none stands
 flat. Nothing is added to the circuit: no height it does not have. What turns it is a
 frame, and what draws it is SVG, projected point by point.
 
 Everything the drawing measures is a share of the lap's own size, so one set of
-lengths serves every circuit and the ring it falls back to.
+lengths serves every circuit.
 
 @docs Model, Msg, init, update, view, box, projected, band, perPixel
 
@@ -20,7 +19,8 @@ lengths serves every circuit and the ring it falls back to.
 
 import Angle
 import Camera3d exposing (Camera3d)
-import Motorsport.Chart.Tracker as Tracker exposing (Track)
+import Length
+import Motorsport.Chart.Tracker.Circuit as Circuit exposing (Circuit)
 import Motorsport.Circuit.Shape as Shape exposing (Point)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Wec.Class as Class
@@ -278,17 +278,17 @@ stance frame model points =
         eye =
             camera model
 
-        ring =
-            ringOf points
+        loop =
+            opened points
 
         size =
-            sizeOf ring
+            sizeOf loop
 
         ground =
-            List.map (project eye << groundAt size) ring
+            List.map (project eye << groundAt size) loop
 
         ribbon =
-            List.map (project eye << raisedAt size) (bandOf size ring)
+            List.map (project eye << raisedAt size) (bandOf size loop)
 
         marks =
             ground ++ ribbon
@@ -462,14 +462,14 @@ labelSize =
     0.045
 
 
-view : { width : Float, height : Float } -> Model -> Track -> Snapshot -> Svg msg
+view : { width : Float, height : Float } -> Model -> Circuit -> Snapshot -> Svg msg
 view surface model shown standings =
     let
         g =
-            Tracker.ground shown
+            Circuit.ground shown
 
         rising =
-            Maybe.map (\relief height -> (height - relief.lowest) * steep) g.relief
+            Maybe.map (\relief height -> Length.inMeters (height |> Quantity.minus relief.lowest) * steep) g.relief
 
         risesOf heights points =
             case ( rising, heights ) of
@@ -496,19 +496,19 @@ view surface model shown standings =
             in
             ( side width, side (negate width) )
 
-        -- Where a progress round the lap stands, and how high: a height between two of
+        -- Where a distance round the lap stands, and how high: a height between two of
         -- the lap's points is the one the line between them passes.
-        onLap progress =
+        onLap distance =
             let
                 position =
-                    g.at progress
+                    g.at distance
             in
             ( { x = position.x
               , y = position.y
               , rise =
                     case ( rising, g.relief ) of
                         ( Just rise, Just relief ) ->
-                            rise (relief.at progress)
+                            rise (relief.at distance)
 
                         _ ->
                             0
@@ -516,10 +516,10 @@ view surface model shown standings =
             , position
             )
 
-        across width progress =
+        across width distance =
             let
                 ( standing, position ) =
-                    onLap progress
+                    onLap distance
             in
             acrossBand width standing position
 
@@ -537,7 +537,7 @@ view surface model shown standings =
                     (\car ->
                         let
                             ( standing, position ) =
-                                onLap (g.progressOf car)
+                                onLap (g.distanceOf standings car)
 
                             shot =
                                 project eye (raisedAt size standing)
@@ -592,16 +592,16 @@ view surface model shown standings =
             , pit = pit
             , band = ribbon
             , risers =
-                every (riserStride (ringOf lap)) (ringOf lap)
+                every (riserStride (opened lap)) (opened lap)
                     |> List.map (\p -> ( project eye (groundAt size p), project eye (raisedAt size p) ))
             , boundaries = List.map (across (bandWidth / 2)) g.boundaries
-            , finish = across (bandWidth * 0.8) 0
+            , finish = across (bandWidth * 0.8) Quantity.zero
             , labels =
                 List.map
-                    (\{ progress, label } ->
+                    (\{ at, label } ->
                         let
                             ( standing, position ) =
-                                onLap progress
+                                onLap at
 
                             out =
                                 outward position
@@ -637,8 +637,8 @@ outward position =
 {-| How many marks stand between two risers.
 -}
 riserStride : List a -> Int
-riserStride ring =
-    max 1 (List.length ring // 120)
+riserStride loop =
+    max 1 (List.length loop // 120)
 
 
 {-| Every `n`th item, from the first.
@@ -686,10 +686,10 @@ short of it and the band has a wedge missing where the finish line stands.
 
 -}
 bandOf : Size -> List Lifted -> List Lifted
-bandOf size ring =
+bandOf size loop =
     let
         seams =
-            List.map2 Tuple.pair ring (normals ring) |> closed
+            List.map2 Tuple.pair loop (normals loop) |> closed
 
         edge share =
             List.map (\( p, n ) -> offset (share * size.half) p n) seams
@@ -706,11 +706,11 @@ offset k p n =
 way it runs through that point.
 -}
 normals : List { a | x : Float, y : Float } -> List Point
-normals ring =
+normals loop =
     List.map2
         (\from to -> normalize { x = negate (to.y - from.y), y = to.x - from.x })
-        (previous ring)
-        (following ring)
+        (previous loop)
+        (following loop)
 
 
 normalize : Point -> Point
@@ -736,10 +736,10 @@ previous list =
     List.take 1 (List.reverse list) ++ List.drop 1 list
 
 
-{-| A circuit's mark list closes itself; the ring's does not.
+{-| A circuit's mark list closes itself, its last mark standing on its first; a list that does not is taken as it is.
 -}
-ringOf : List { a | x : Float, y : Float } -> List { a | x : Float, y : Float }
-ringOf lap =
+opened : List { a | x : Float, y : Float } -> List { a | x : Float, y : Float }
+opened lap =
     case ( List.head lap, List.reverse lap |> List.head ) of
         ( Just first, Just last ) ->
             if abs (first.x - last.x) < 0.001 && abs (first.y - last.y) < 0.001 then
