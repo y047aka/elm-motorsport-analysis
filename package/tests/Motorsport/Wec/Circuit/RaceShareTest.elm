@@ -36,7 +36,16 @@ races =
 tests : Test
 tests =
     describe "each circuit's reference lap"
-        (List.map raceTest races)
+        (everyCircuitHeld :: List.map raceTest races)
+
+
+everyCircuitHeld : Test
+everyCircuitHeld =
+    test "every circuit the app draws is held to a race" <|
+        \_ ->
+            List.map .name Circuits.circuits
+                |> List.filter (\name -> not (List.any (\race -> race.name == name) races))
+                |> Expect.equal []
 
 
 raceTest : { name : String, shares : List Float, atMost : Float } -> Test
