@@ -433,16 +433,7 @@ edgeTrack s =
             "left-0 z-10 grid h-2 w-full content-center"
 
 
-{-| The map floated over the columns, filling the box it is stood in.
-
-The box stands on the page whether or not it is open -- a `popovertarget` resolves by id, so the element has to be there to be shown -- and the UA keeps a closed popover out of layout. What is not built while it is closed is the drawing itself, which is recomputed every frame of the race.
-
-It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at.
-
-Nothing lies between the box and the drawing: a band of box that sized nothing would be a place where neither operation answers.
-
-Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
-
+{-| The map floated over the columns, for a round whose circuit the app has a map of: a round with none has no box.
 -}
 view : Model -> Maybe Circuit -> Snapshot -> Html Msg
 view m drawn snapshot =
@@ -454,6 +445,17 @@ view m drawn snapshot =
             text ""
 
 
+{-| The map floated over the columns, filling the box it is stood in.
+
+The box stands on the page whether or not it is open -- a `popovertarget` resolves by id, so the element has to be there to be shown -- and the UA keeps a closed popover out of layout. What is not built while it is closed is the drawing itself, which is recomputed every frame of the race.
+
+It is a child of `mainGrid` and not of the strip, whose offsets are read against `mainGrid`'s padding box, so `bottom-2.5 right-2.5` is what stands it on the same edge the columns end at.
+
+Nothing lies between the box and the drawing: a band of box that sized nothing would be a place where neither operation answers.
+
+Three of the UA's popover sheet reach this box and each is answered: `inset: 0` by `top-auto left-auto`, `overflow: auto` by `overflow-visible` because the grips stand outside the box, and `display: none` by `hidden [&:popover-open]:grid` -- an author `display` silently wins over the UA's hiding of a closed popover.
+
+-}
 box : Model -> Circuit -> Snapshot -> Html Msg
 box m circuit snapshot =
     let
