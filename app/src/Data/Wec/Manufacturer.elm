@@ -2,7 +2,8 @@ module Data.Wec.Manufacturer exposing (Manufacturers, decoder, fromName)
 
 {-| Which manufacturers the timing feed names, and how each is drawn.
 
-The table is `/static/manufacturers.json`, which is written by hand.
+The table is `data/wec/manufacturers.json`, which is written by hand.
+The app never fetches it: `app/codegen` reads it with [`decoder`](#decoder) at build time and writes it out as `Data.Wec.Manufacturer.Table`, so a table that does not read fails the build.
 
 @docs Manufacturers, decoder, fromName
 

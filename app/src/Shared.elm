@@ -16,7 +16,8 @@ import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.CarImage as CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
-import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
+import Data.Wec.Manufacturer exposing (Manufacturers)
+import Data.Wec.Manufacturer.Table as ManufacturerTable
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Http
@@ -57,7 +58,6 @@ so a half-loaded one cannot be read as a loaded one.
 -}
 type alias Model =
     { calendar : Catalogue
-    , manufacturers : Maybe Manufacturers
     , carImages : Maybe CarImages
     , drawings : Dict.Dict String Drawing
     , round : Round
@@ -83,10 +83,8 @@ type Problem
     | LoadFailed Http.Error
 
 
-{-| `Waiting` is a URL that arrived before the calendar or one of the two tables
-did. The calendar says where a round's files are, and the tables what colours
-its cars and which photograph each carries, so the request waits rather than
-being guessed at.
+{-| `Waiting` is a URL that arrived before the calendar or the car images did.
+The calendar says where a round's files are, and the car images which photograph each car carries, so the request waits rather than being guessed at.
 
 `Loading` carries no `LoadedRound`, which is what stops the previous round's
 cars being shown under this one's name.
@@ -173,14 +171,11 @@ type alias LoadedRound =
     }
 
 
-{-| The calendar, the manufacturer table and the car images are asked for here
-rather than by the pages that read them: they are the same files whichever route
-the app opened on, and a round reached by its URL still draws on all three.
+{-| The calendar and the car images are asked for here rather than by the pages that read them: they are the same files whichever route the app opened on, and a round reached by its URL still draws on both.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
     ( { calendar = Arriving
-      , manufacturers = Nothing
       , carImages = Nothing
       , drawings = Dict.empty
       , round = NoRound
@@ -190,10 +185,6 @@ init _ =
             [ Http.get
                 { url = "/api/wec/index.json"
                 , expect = Http.expectJson CalendarLoaded Calendar.decoder
-                }
-            , Http.get
-                { url = "/static/manufacturers.json"
-                , expect = Http.expectJson ManufacturersLoaded Manufacturer.decoder
                 }
             , Http.get
                 { url = "/static/car-images.json"
@@ -274,14 +265,9 @@ update msg m =
         CalendarLoaded (Err error) ->
             resumeWaitingRound { m | calendar = Missing error }
 
-        ManufacturersLoaded result ->
-            -- Unlike the calendar's, this failure does not hold the round
-            -- back: a table that names no one leaves the cars their numbers.
-            resumeWaitingRound
-                { m | manufacturers = Just (Result.withDefault Dict.empty result) }
-
         CarImagesLoaded result ->
-            -- As above: a table that has no picture of a car leaves it drawn
+            -- Unlike the calendar's, this failure does not hold the round
+            -- back: a table that has no picture of a car leaves it drawn
             -- without one.
             resumeWaitingRound
                 { m | carImages = Just (Result.withDefault CarImage.none result) }
@@ -332,13 +318,12 @@ update msg m =
             ( { m | round = mapLoaded (stepReplay replayMsg) m.round }, Effect.none )
 
 
-{-| Called as the URL, the calendar and the two tables arrive, so whichever is
-last is the one that finds everything it needs here.
+{-| Called as the URL, the calendar and the car images arrive, so whichever is last is the one that finds everything it needs here.
 -}
 resumeWaitingRound : Model -> ( Model, Effect Msg )
 resumeWaitingRound m =
-    case ( m.round, m.manufacturers, m.carImages ) of
-        ( Waiting params, Just manufacturers, Just carImages ) ->
+    case ( m.round, m.carImages ) of
+        ( Waiting params, Just carImages ) ->
             case m.calendar of
                 Arriving ->
                     ( m, Effect.none )
@@ -356,7 +341,7 @@ resumeWaitingRound m =
                                 id =
                                     { season = season.season, id = round.id, name = round.name }
                             in
-                            askFor params manufacturers (photographIn carImages id) id round m
+                            askFor params ManufacturerTable.table (photographIn carImages id) id round m
 
         _ ->
             ( m, Effect.none )

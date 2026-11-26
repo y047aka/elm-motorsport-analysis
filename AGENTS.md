@@ -9,7 +9,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
 - **`/backend`** — Flix: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. Read `backend/README.md` before changing anything here.
-- **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`, read by the CLI and nothing else. It sits outside `/app` because the build copies all of `app/static` into the bundle.
+- **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`, read by the CLI, and `data/wec/manufacturers.json`, which `app/codegen` compiles into the app (`app/generated/`, ignored). It sits outside `/app` because the build copies all of `app/static` into the bundle.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -83,7 +83,8 @@ Correct `timeline_events` beside `laps`.
 `.#cli-run` converts every round `Motorsport.Calendar` lists and fails any whose CSV is missing; app-side, `Data.Wec.Calendar` is the only source of which rounds exist and where their files are.
 The Vite dev server forwards `/api` to port 8080 and answers it from `static/` when nothing is listening.
 
-`static/manufacturers.json` and `static/car-images.json` are read by no compiler: a mistake shows as a car drawn by its number or without a photograph, not as a build that fails.
+`static/car-images.json` is read by no compiler: a mistake shows as a car drawn without a photograph, not as a build that fails.
+A manufacturer missing from `data/wec/manufacturers.json` fails no build either: its cars are drawn by their numbers.
 
 ## Architecture
 
@@ -178,7 +179,7 @@ A line a change adds to this file must name no closer owner: what one module, RE
 
 ## Testing hazards
 
-- **Elm** — `.#test` first runs `app/scripts/test-fixtures.mjs`, which writes the served geometry and circuit maps out as ignored Elm modules under `TestHelpers/Survey/` and `TestHelpers/Map/`; a bare `elm-test` without them fails to compile by name.
+- **Elm** — `.#test` first runs `app/scripts/test-fixtures.mjs`, which writes the served geometry and circuit maps out as ignored Elm modules under `TestHelpers/Survey/` and `TestHelpers/Map/`; a bare `elm-test` without them fails to compile by name, as does any bare `elm make` without `app/generated/` (the flake's `generateElm`).
   `elm-explorations/test` sits in the app's `dependencies` on purpose: hand-written `test-dependencies` read fine to elm-test but make every `elm make` fail with "dependencies edited by hand".
 - **TypeScript** — `/app/tests/` is outside the TS project on purpose: Playwright comes from the flake, so `@playwright/test` does not resolve for `tsc`.
 - **The Elm/element contract** (`app/tests/custom-elements.spec.ts`) reads the values Elm can send out of the wrapper sources, so a constructor without a matching variant in the vendored component fails there instead of shipping unstyled.

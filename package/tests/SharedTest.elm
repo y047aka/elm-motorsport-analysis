@@ -258,7 +258,6 @@ already in when the URL arrived.
 loadingSpa : Shared.Model
 loadingSpa =
     fresh
-        |> step (ManufacturersLoaded (Ok manufacturers))
         |> step (CarImagesLoaded (Ok carImages))
         |> step (CalendarLoaded (Ok calendar))
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
@@ -272,7 +271,6 @@ loadingSpaByDeepLink =
     fresh
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
         |> step (CalendarLoaded (Ok calendar))
-        |> step (ManufacturersLoaded (Ok manufacturers))
         |> step (CarImagesLoaded (Ok carImages))
 
 
@@ -296,16 +294,15 @@ suite =
                         , Just "/static/images/wec/2025/toyota-7-le-mans.png"
                         )
         , describe "update"
-            [ test "resolves the round whichever of the URL, the calendar and the tables is last" <|
+            [ test "resolves the round whichever of the URL, the calendar and the car images is last" <|
                 \_ ->
                     [ loadingSpa, loadingSpaByDeepLink ]
                         |> List.map (Shared.roundId >> Maybe.map .name)
                         |> Expect.equalLists
                             [ Just "6 Hours of Spa", Just "6 Hours of Spa" ]
-            , test "opens a round neither table reached" <|
+            , test "opens a round the car images did not reach" <|
                 \_ ->
                     fresh
-                        |> step (ManufacturersLoaded (Err Http.NetworkError))
                         |> step (CarImagesLoaded (Err Http.NetworkError))
                         |> step (CalendarLoaded (Ok calendar))
                         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
@@ -323,7 +320,6 @@ suite =
             , test "leaves a round the calendar does not list unresolved" <|
                 \_ ->
                     fresh
-                        |> step (ManufacturersLoaded (Ok manufacturers))
                         |> step (CarImagesLoaded (Ok carImages))
                         |> step (CalendarLoaded (Ok calendar))
                         |> step (FetchJson_Wec { season = "2025", event = "monza_6h" })

@@ -86,6 +86,14 @@
           done
         '';
 
+        # `app/codegen` writes `data/wec/manufacturers.json` out as the ignored module `app/generated/Data/Wec/Manufacturer/Table.elm`, so every command that compiles the app writes it first.
+        # elm-codegen comes from `app/node_modules`, which is why `.#test` needs `pnpm install` too.
+        # elm-codegen 0.6 exits 0 when the generator itself does not compile, so the old output is removed first: a broken generator then fails the app's compile by module name instead of leaving last run's table in place.
+        generateElm = ''
+          rm -rf app/generated
+          (cd app && pnpm exec elm-codegen run --flags-from ../data/wec/manufacturers.json --output generated)
+        '';
+
         # Where the CLI and the server compute when the caller names nowhere
         # else. The file is in the working copy rather than under /tmp, so the
         # rows a run left there are still there to be queried; the path is
@@ -171,8 +179,8 @@
         # own with `-g <shot>`. `--update-snapshots` with nothing narrowing it
         # rewrites every baseline to this machine's rasteriser, which CI rejects.
         # A file named after the flag is read as its mode, so name the shot.
-        vrtTestCmd = "${syncCircuitData}\ncd app && playwright test \"$@\"";
-        vrtUpdateCmd = "${syncCircuitData}\ncd app && playwright test --update-snapshots \"$@\"";
+        vrtTestCmd = "${syncCircuitData}\n${generateElm}\ncd app && playwright test \"$@\"";
+        vrtUpdateCmd = "${syncCircuitData}\n${generateElm}\ncd app && playwright test --update-snapshots \"$@\"";
 
         # The fetcher encodes what it downloads, so it needs libwebp beside Node.
         # Kept apart from `mkNodeApp`: every other Node command would carry the
@@ -218,9 +226,9 @@
         });
 
         apps = {
-          dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "${syncCircuitData}\ncd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
-          build                = { type = "app"; program = "${mkNodeApp "build"                "${syncCircuitData}\ncd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
-          test                 = { type = "app"; program = "${mkNodeApp "test"                 "${syncCircuitData}\ncd app && elm-test && cd .. && node app/scripts/test-fixtures.mjs && cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (on the served geometry bytes, via elm-verify-examples + elm-test)"; };
+          dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "${syncCircuitData}\n${generateElm}\ncd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
+          build                = { type = "app"; program = "${mkNodeApp "build"                "${syncCircuitData}\n${generateElm}\ncd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
+          test                 = { type = "app"; program = "${mkNodeApp "test"                 "${syncCircuitData}\n${generateElm}\ncd app && elm-test && cd .. && node app/scripts/test-fixtures.mjs && cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (on the served geometry bytes, via elm-verify-examples + elm-test)"; };
           test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt" vrtTestCmd}/bin/test-vrt";                     meta.description = "Run Playwright VRT tests"; };
           update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" vrtUpdateCmd}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
@@ -230,8 +238,8 @@
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
-          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   syncCircuitData "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
-          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" (syncCircuitData + "\n" + exportEveryRound) "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
+          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   (syncCircuitData + generateElm) "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
+          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" (syncCircuitData + generateElm + exportEveryRound) "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test" "flix test"}/bin/flix-test";                                                     meta.description = "Run the Flix project's tests"; };
           sqlitefx-test        = { type = "app"; program = "${mkFlixApp "sqlitefx-test" "cd sqlitefx && flix test"}/bin/sqlitefx-test";                             meta.description = "Run backend/sqlitefx's tests, against SQLite databases in memory and in temporary files"; };

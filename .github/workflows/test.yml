@@ -31,7 +31,9 @@ jobs:
             backend/sqlitefx/lib
           key: flix-deps-${{ runner.os }}-${{ hashFiles('backend/flix.toml', 'backend/sqlitefx/flix.toml') }}
           restore-keys: flix-deps-${{ runner.os }}-
-      # No `pnpm install`: none of these commands touches node_modules.
+      # `.#test` writes the generated Elm with elm-codegen, which is the one thing here out of node_modules.
+      - name: Install dependencies
+        run: nix develop --command pnpm -C app install --frozen-lockfile
       - name: Elm tests
         run: nix run .#test
       - name: CLI tests
@@ -39,8 +41,7 @@ jobs:
       - name: Database library tests
         run: nix run .#sqlitefx-test
 
-  # Its own job: the one check here that needs node_modules, and a type error
-  # should not share a red mark with a failing test.
+  # Its own job: a type error should not share a red mark with a failing test.
   typecheck:
     timeout-minutes: 30
     runs-on: ubuntu-24.04
