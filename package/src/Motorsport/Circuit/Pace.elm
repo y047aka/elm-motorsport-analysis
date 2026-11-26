@@ -65,13 +65,13 @@ lapOf : Parameters -> Maybe Relief -> Shape -> Pace
 lapOf parameters relief shape =
     let
         limits =
-            limitsOf parameters
+            limitsOf parameters.car
 
         lapLength =
             Shape.length shape
 
         count =
-            floor (lapLength / Length.inMeters parameters.sampleStep)
+            floor (lapLength / Length.inMeters parameters.reading.sampleStep)
     in
     if count < 3 then
         Even
@@ -86,7 +86,7 @@ lapOf parameters relief shape =
                     |> Array.map (\{ x, y } -> { x = x, y = y })
 
             reach =
-                max 1 (round (Length.inMeters parameters.curvatureReach / step))
+                max 1 (round (Length.inMeters parameters.reading.curvatureReach / step))
 
             gradeAt i =
                 case relief of
@@ -118,20 +118,36 @@ lapOf parameters relief shape =
         Profiled { step = step, seconds = Array.fromList (elapsed step speeds) }
 
 
-{-| Every figure the reference lap is worked out from.
+{-| Every figure the reference lap is worked out from: how the course is read, and the car that is run round it.
+-}
+type alias Parameters =
+    { reading : Reading
+    , car : Car
+    }
+
+
+{-| How the course's centreline is read.
 
   - `sampleStep`: how far apart the lap is sampled.
   - `curvatureReach`: how far either side of a sample its curvature and slope are read; the chord this spans smooths the corners OpenStreetMap draws as polygons and stands in for the racing line's wider radius.
-  - `grip`: how hard the car can corner standing still. Downforce makes it grip harder the faster it goes, in proportion to the square of its speed, by just enough that a bend wider in radius than `flatOutRadius` is no limit at all.
-  - `accelerating`: how hard the car can accelerate from a standstill, falling with the square of its speed towards `top`, and never below `leastAcceleration` of it, so that `top` is reached.
+
+-}
+type alias Reading =
+    { sampleStep : Length
+    , curvatureReach : Length
+    }
+
+
+{-| The car run round it.
+
+  - `grip`: how hard it can corner standing still. Downforce makes it grip harder the faster it goes, in proportion to the square of its speed, by just enough that a bend wider in radius than `flatOutRadius` is no limit at all.
+  - `accelerating`: how hard it can accelerate from a standstill, falling with the square of its speed towards `top`, and never below `leastAcceleration` of it, so that `top` is reached.
   - `braking`: how hard it can brake.
   - `top`: how fast it can go.
 
 -}
-type alias Parameters =
-    { sampleStep : Length
-    , curvatureReach : Length
-    , grip : Acceleration
+type alias Car =
+    { grip : Acceleration
     , flatOutRadius : Length
     , accelerating : Acceleration
     , leastAcceleration : Float
@@ -148,18 +164,22 @@ The car's were chosen against the green-flag laps of the 2025 and 2026 rounds at
 -}
 reference : Parameters
 reference =
-    { sampleStep = Length.meters 5
-    , curvatureReach = Length.meters 30
-    , grip = Acceleration.metersPerSecondSquared 15
-    , flatOutRadius = Length.meters 200
-    , accelerating = Acceleration.metersPerSecondSquared 10
-    , leastAcceleration = 0.02
-    , braking = Acceleration.metersPerSecondSquared 20
-    , top = Speed.metersPerSecond 92
+    { reading =
+        { sampleStep = Length.meters 5
+        , curvatureReach = Length.meters 30
+        }
+    , car =
+        { grip = Acceleration.metersPerSecondSquared 15
+        , flatOutRadius = Length.meters 200
+        , accelerating = Acceleration.metersPerSecondSquared 10
+        , leastAcceleration = 0.02
+        , braking = Acceleration.metersPerSecondSquared 20
+        , top = Speed.metersPerSecond 92
+        }
     }
 
 
-{-| The parameters as the passes read them, once per lap, in metres and seconds: a bend of curvature κ is taken at the speed v where v²κ = `grip` + `downforce` v².
+{-| The car as the passes read it, once per lap, in metres and seconds: a bend of curvature κ is taken at the speed v where v²κ = `grip` + `downforce` v².
 -}
 type alias Limits =
     { grip : Float
@@ -171,14 +191,14 @@ type alias Limits =
     }
 
 
-limitsOf : Parameters -> Limits
-limitsOf parameters =
-    { grip = Acceleration.inMetersPerSecondSquared parameters.grip
-    , downforce = 1 / Length.inMeters parameters.flatOutRadius
-    , accelerating = Acceleration.inMetersPerSecondSquared parameters.accelerating
-    , leastAcceleration = parameters.leastAcceleration
-    , braking = Acceleration.inMetersPerSecondSquared parameters.braking
-    , top = Speed.inMetersPerSecond parameters.top
+limitsOf : Car -> Limits
+limitsOf car =
+    { grip = Acceleration.inMetersPerSecondSquared car.grip
+    , downforce = 1 / Length.inMeters car.flatOutRadius
+    , accelerating = Acceleration.inMetersPerSecondSquared car.accelerating
+    , leastAcceleration = car.leastAcceleration
+    , braking = Acceleration.inMetersPerSecondSquared car.braking
+    , top = Speed.inMetersPerSecond car.top
     }
 
 
