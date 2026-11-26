@@ -1,5 +1,5 @@
-module Motorsport.Circuit.Pace exposing
-    ( Pace, even, fromShape
+module Motorsport.Simulation.ReferenceLap exposing
+    ( ReferenceLap, steady, fromShape
     , timeTo, distanceAfter
     )
 
@@ -7,7 +7,7 @@ module Motorsport.Circuit.Pace exposing
 
 A lap's timing says only when a car crossed each line; between two lines the tracker spends the time the car took there as this reference spends it, so the car still crosses every line when its timing says it did.
 
-@docs Pace, even, fromShape
+@docs ReferenceLap, steady, fromShape
 @docs timeTo, distanceAfter
 
 -}
@@ -21,8 +21,8 @@ import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Speed exposing (Speed)
 
 
-type Pace
-    = Even
+type ReferenceLap
+    = Steady
     | Profiled
         { step : Float
         , seconds : Array Float
@@ -31,14 +31,18 @@ type Pace
 
 {-| Every metre taken at one metre a second.
 -}
-even : Pace
-even =
-    Even
+steady : ReferenceLap
+steady =
+    Steady
 
 
 {-| The reference car's lap of a shape, in the shape's own metres.
 
 A point-mass car limited by how hard it can corner, accelerate and brake, run round the centreline sampled every few metres; every figure it is run with is one of `reference`'s.
+
+    import Duration
+    import Length
+    import Motorsport.Circuit.Shape as Shape exposing (Shape)
 
     lap : Shape
     lap =
@@ -56,12 +60,12 @@ A point-mass car limited by how hard it can corner, accelerate and brake, run ro
 Where the lap's heights are known, the car is slowed climbing and pushed on descending, and brakes harder uphill than down: the slope is read across the same chord as the curvature.
 
 -}
-fromShape : Maybe Relief -> Shape -> Pace
+fromShape : Maybe Relief -> Shape -> ReferenceLap
 fromShape =
     lapOf reference
 
 
-lapOf : Parameters -> Maybe Relief -> Shape -> Pace
+lapOf : Parameters -> Maybe Relief -> Shape -> ReferenceLap
 lapOf parameters relief shape =
     let
         limits =
@@ -74,7 +78,7 @@ lapOf parameters relief shape =
             floor (lapLength / Length.inMeters parameters.course.sampleStep)
     in
     if count < 3 then
-        Even
+        Steady
 
     else
         let
@@ -159,7 +163,7 @@ type alias Car =
 {-| The figures [`fromShape`](#fromShape) runs with.
 
 They are no one car's, and only the shape of the lap is read off them: every lap is stretched to the time it was run in.
-The car's were chosen against the green-flag laps of the 2025 and 2026 rounds at every circuit drawn, as the figures that share those laps out between the lines the maps give a distance for most nearly as the races did: 0.013 of the lap off in all, on the mean of the fourteen rounds, against 0.027 for grip that downforce adds nothing to (`ReferenceLapTest`).
+The car's were chosen against the green-flag laps of the 2025 and 2026 rounds at every circuit drawn, as the figures that share those laps out between the lines the maps give a distance for most nearly as the races did: 0.013 of the lap off in all, on the mean of the fourteen rounds, against 0.027 for grip that downforce adds nothing to (`RaceShareTest`).
 
 -}
 reference : Parameters
@@ -331,26 +335,29 @@ elapsed step speeds =
 {-| When the reference car reaches a distance round the lap, from the moment it set off.
 A distance past the end of the lap, or short of its start, is on another lap, a lap's time later or earlier.
 -}
-timeTo : Pace -> Length -> Duration
-timeTo pace along =
-    Duration.seconds (secondsAt pace (Length.inMeters along))
+timeTo : ReferenceLap -> Length -> Duration
+timeTo lap along =
+    Duration.seconds (secondsAt lap (Length.inMeters along))
 
 
 {-| How far round the lap the reference car is after a time: the inverse of [`timeTo`](#timeTo).
 
-    distanceAfter even (Duration.seconds 120)
+    import Duration
+    import Length
+
+    distanceAfter steady (Duration.seconds 120)
     --> Length.meters 120
 
 -}
-distanceAfter : Pace -> Duration -> Length
-distanceAfter pace time =
-    Length.meters (metresAt pace (Duration.inSeconds time))
+distanceAfter : ReferenceLap -> Duration -> Length
+distanceAfter lap time =
+    Length.meters (metresAt lap (Duration.inSeconds time))
 
 
-secondsAt : Pace -> Float -> Float
-secondsAt pace metres =
-    case pace of
-        Even ->
+secondsAt : ReferenceLap -> Float -> Float
+secondsAt lap metres =
+    case lap of
+        Steady ->
             metres
 
         Profiled { step, seconds } ->
@@ -376,10 +383,10 @@ secondsAt pace metres =
             laps * lapSeconds + lerp (get i seconds) (get (i + 1) seconds) (within - toFloat i)
 
 
-metresAt : Pace -> Float -> Float
-metresAt pace time =
-    case pace of
-        Even ->
+metresAt : ReferenceLap -> Float -> Float
+metresAt lap time =
+    case lap of
+        Steady ->
             time
 
         Profiled { step, seconds } ->

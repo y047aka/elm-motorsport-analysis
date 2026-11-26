@@ -4,9 +4,9 @@ import Expect
 import Length
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
-import Motorsport.Circuit.Pace as Pace
-import Motorsport.Circuit.PaceTest as PaceTest
 import Motorsport.Circuit.Shape as Shape
+import Motorsport.Simulation.ReferenceLap as ReferenceLap
+import Motorsport.Simulation.ReferenceLapTest as ReferenceLapTest
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (Test, describe, test)
@@ -19,35 +19,35 @@ tests =
             [ test "runs straight between two lines at the sector grain" <|
                 \_ ->
                     [ 0.1, 0.35, 0.75 ]
-                        |> List.map (metresAt (LapScale.lapScale Pace.even sectorLines bySectors))
+                        |> List.map (metresAt (LapScale.lapScale ReferenceLap.steady sectorLines bySectors))
                         |> expectAll [ 500, 2500, 7000 ]
             , test "puts a line with no distance where the time between its neighbours does" <|
                 \_ ->
                     -- IP1 ends the third of fifteen even stretches, and is the
                     -- first line with a distance: SCL2's end is a third of it.
-                    metresAt (LapScale.lapScale Pace.even miniSectorLines byMiniSectors) (1 / 15)
+                    metresAt (LapScale.lapScale ReferenceLap.steady miniSectorLines byMiniSectors) (1 / 15)
                         |> Expect.within (Expect.Absolute 0.001) 600
             , test "pins the scale to every line with a distance" <|
                 \_ ->
-                    metresAt (LapScale.lapScale Pace.even miniSectorLines byMiniSectors) (7 / 15)
+                    metresAt (LapScale.lapScale ReferenceLap.steady miniSectorLines byMiniSectors) (7 / 15)
                         |> Expect.within (Expect.Absolute 0.001) 6000
             , test "is not pinned to a stretch no lap has set a time for" <|
                 \_ ->
                     -- IP2's stretch takes no share, so its line would pin two
                     -- distances to one progress.
-                    metresAt (LapScale.lapScale Pace.even miniSectorLines withoutIp2) (7 / 15)
+                    metresAt (LapScale.lapScale ReferenceLap.steady miniSectorLines withoutIp2) (7 / 15)
                         |> Expect.within (Expect.Absolute 0.001) (1800 + (4 / 12) * (12000 - 1800))
             ]
         , describe "at the pace of a circuit's bends"
             [ test "still puts every line where its distance is" <|
                 \_ ->
                     [ 0.2, 0.5 ]
-                        |> List.map (metresAt (LapScale.lapScale (Pace.fromShape Nothing PaceTest.stadium) stadiumLines stadiumSectors))
+                        |> List.map (metresAt (LapScale.lapScale (ReferenceLap.fromShape Nothing ReferenceLapTest.stadium) stadiumLines stadiumSectors))
                         |> expectAll [ 500, 1150 ]
             , test "runs a straight in less of the time between two lines than a bend" <|
                 \_ ->
                     -- Half the time from 500 m to the bend's end at 1,150 m.
-                    metresAt (LapScale.lapScale (Pace.fromShape Nothing PaceTest.stadium) stadiumLines stadiumSectors) 0.35
+                    metresAt (LapScale.lapScale (ReferenceLap.fromShape Nothing ReferenceLapTest.stadium) stadiumLines stadiumSectors) 0.35
                         |> Expect.greaterThan 825
             ]
         , describe "ease"
@@ -86,14 +86,14 @@ tests =
                     -- Nothing finer than 1,000, 4,000 and 10,000 m is placed,
                     -- and these interpolate those three distances.
                     [ 0.1, 0.35, 0.75 ]
-                        |> List.map (metresAt (LapScale.lapScale Pace.even sectorsOnlyLines byMiniSectors))
+                        |> List.map (metresAt (LapScale.lapScale ReferenceLap.steady sectorsOnlyLines byMiniSectors))
                         |> expectAll [ 500, 2687.5, 7187.5 ]
             , test "lines the circuit places that no round was timed across" <|
                 \_ ->
                     -- Fifteen lines placed and a lap split three ways: these
                     -- interpolate 1,800, 6,000 and 12,000 m.
                     [ 0.1, 0.35, 0.75 ]
-                        |> List.map (metresAt (LapScale.lapScale Pace.even miniSectorLines bySectors))
+                        |> List.map (metresAt (LapScale.lapScale ReferenceLap.steady miniSectorLines bySectors))
                         |> expectAll [ 900, 3900, 9000 ]
             ]
         ]
@@ -141,12 +141,12 @@ halfwayAtPace =
 
 stadiumScale : LapScale
 stadiumScale =
-    LapScale.lapScale (Pace.fromShape Nothing PaceTest.stadium) stadiumLines stadiumSectors
+    LapScale.lapScale (ReferenceLap.fromShape Nothing ReferenceLapTest.stadium) stadiumLines stadiumSectors
 
 
 stadiumLines : TimingLines
 stadiumLines =
-    { sectors = { s1 = 500, s2 = 1150, s3 = Shape.length PaceTest.stadium }
+    { sectors = { s1 = 500, s2 = 1150, s3 = Shape.length ReferenceLapTest.stadium }
     , miniSectors = SectorsOnly
     }
 

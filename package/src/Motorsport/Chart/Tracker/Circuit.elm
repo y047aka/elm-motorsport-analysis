@@ -16,11 +16,11 @@ import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..),
 import Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
 import Motorsport.Circuit.Direction exposing (Direction(..))
-import Motorsport.Circuit.Pace as Pace
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
+import Motorsport.Simulation.ReferenceLap as ReferenceLap
 import Motorsport.Wec.Circuit.Layout exposing (Layout, Lengths)
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Wec.Class as Class
@@ -74,7 +74,7 @@ fromLayout layout { direction, config } =
         , shape = layout.shape
         , pitLane = layout.pitLane
         , relief = layout.relief
-        , scale = LapScale.lapScale (Pace.fromShape layout.relief layout.shape) layout.timingLines config
+        , scale = LapScale.lapScale (ReferenceLap.fromShape layout.relief layout.shape) layout.timingLines config
         , lengths = layout.lengths
         , bounds =
             boundsOf

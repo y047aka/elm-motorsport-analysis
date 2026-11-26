@@ -1,11 +1,11 @@
-module Motorsport.Circuit.PaceTest exposing (stadium, tests)
+module Motorsport.Simulation.ReferenceLapTest exposing (stadium, tests)
 
 import Duration
 import Expect
 import Length
-import Motorsport.Circuit.Pace as Pace exposing (Pace)
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Shape)
+import Motorsport.Simulation.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Test exposing (Test, describe, test)
 
 
@@ -59,9 +59,9 @@ hill =
         }
 
 
-pace : Pace
+pace : ReferenceLap
 pace =
-    Pace.fromShape Nothing stadium
+    ReferenceLap.fromShape Nothing stadium
 
 
 {-| Seconds per metre over the ten metres from a distance.
@@ -71,19 +71,19 @@ slowness =
     slownessOf pace
 
 
-slownessOf : Pace -> Float -> Float
+slownessOf : ReferenceLap -> Float -> Float
 slownessOf of_ metres =
     (secondsAt of_ (metres + 10) - secondsAt of_ metres) / 10
 
 
-secondsAt : Pace -> Float -> Float
+secondsAt : ReferenceLap -> Float -> Float
 secondsAt of_ metres =
-    Duration.inSeconds (Pace.timeTo of_ (Length.meters metres))
+    Duration.inSeconds (ReferenceLap.timeTo of_ (Length.meters metres))
 
 
 tests : Test
 tests =
-    describe "Motorsport.Circuit.Pace"
+    describe "Motorsport.Simulation.ReferenceLap"
         [ test "a bend is taken slower than a straight" <|
             \_ ->
                 slowness 1070
@@ -98,16 +98,16 @@ tests =
                     |> Expect.greaterThan (slowness 1900)
         , test "a climb is taken slower than the same straight on the level" <|
             \_ ->
-                slownessOf (Pace.fromShape (Just hill) stadium) 800
+                slownessOf (ReferenceLap.fromShape (Just hill) stadium) 800
                     |> Expect.greaterThan (slowness 800)
         , test "a descent is taken quicker than the same straight on the level" <|
             \_ ->
-                slownessOf (Pace.fromShape (Just hill) stadium) 1500
+                slownessOf (ReferenceLap.fromShape (Just hill) stadium) 1500
                     |> Expect.lessThan (slowness 1500)
         , test "distanceAfter undoes timeTo" <|
             \_ ->
                 [ 0, 123, 1000, 1080, 2300 ]
-                    |> List.map (Length.meters >> Pace.timeTo pace >> Pace.distanceAfter pace >> Length.inMeters)
+                    |> List.map (Length.meters >> ReferenceLap.timeTo pace >> ReferenceLap.distanceAfter pace >> Length.inMeters)
                     |> List.map2 (\expected actual -> abs (expected - actual)) [ 0, 123, 1000, 1080, 2300 ]
                     |> List.maximum
                     |> Maybe.withDefault 0
@@ -117,8 +117,8 @@ tests =
                 secondsAt pace (Shape.length stadium + 300)
                     |> Expect.within (Expect.Absolute 0.001)
                         (secondsAt pace (Shape.length stadium) + secondsAt pace 300)
-        , test "an even pace takes a second over each metre" <|
+        , test "a steady lap takes a second over each metre" <|
             \_ ->
-                Pace.timeTo Pace.even (Length.meters 1234)
+                ReferenceLap.timeTo ReferenceLap.steady (Length.meters 1234)
                     |> Expect.equal (Duration.seconds 1234)
         ]

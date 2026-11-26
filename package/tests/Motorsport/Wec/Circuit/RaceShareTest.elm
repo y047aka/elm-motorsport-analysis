@@ -1,4 +1,4 @@
-module Motorsport.Wec.Circuit.ReferenceLapTest exposing (tests)
+module Motorsport.Wec.Circuit.RaceShareTest exposing (tests)
 
 {-| Every drawn circuit's reference lap, heights and all, against how its 2026 race shared its laps out between the lines its map gives a distance for.
 
@@ -9,8 +9,8 @@ At Le Mans the lines are the seven of its mini-sectors' the map gives a distance
 
 import Expect
 import Length
-import Motorsport.Circuit.Pace as Pace exposing (Pace)
 import Motorsport.Circuit.Shape as Shape
+import Motorsport.Simulation.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.CircuitsTest as Circuits
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
@@ -52,13 +52,13 @@ raceTest race =
                         lapLength =
                             Shape.length layout.shape
                     in
-                    ( missedBy (Pace.fromShape layout.relief layout.shape) lapLength lines race.shares
-                    , missedBy Pace.even lapLength lines race.shares
+                    ( missedBy (ReferenceLap.fromShape layout.relief layout.shape) lapLength lines race.shares
+                    , missedBy ReferenceLap.steady lapLength lines race.shares
                     )
                         |> Expect.all
                             [ \_ -> Expect.equal (List.length race.shares) (List.length lines)
                             , Tuple.first >> Expect.atMost race.atMost
-                            , \( atPace, even ) -> Expect.lessThan (even / 3) atPace
+                            , \( shaped, steady ) -> Expect.lessThan (steady / 3) shaped
                             ]
 
                 Just (Err problem) ->
@@ -80,18 +80,18 @@ linesOf layout =
             [ layout.timingLines.sectors.s1, layout.timingLines.sectors.s2, layout.timingLines.sectors.s3 ]
 
 
-{-| How far, summed over the stretches between the lines, the share of the lap a pace spends on each is from the share the race did.
+{-| How far, summed over the stretches between the lines, the share of the lap a reference lap spends on each is from the share the race did.
 -}
-missedBy : Pace -> Float -> List Float -> List Float -> Float
-missedBy pace lapLength lines shares =
+missedBy : ReferenceLap -> Float -> List Float -> List Float -> Float
+missedBy lap lapLength lines shares =
     let
         lapTime =
-            Pace.timeTo pace (Length.meters lapLength)
+            ReferenceLap.timeTo lap (Length.meters lapLength)
 
         stretches ends =
             List.map2 (-) ends (0 :: ends)
     in
     List.map2 (\a b -> abs (a - b))
-        (stretches (List.map (\metres -> Quantity.ratio (Pace.timeTo pace (Length.meters metres)) lapTime) lines))
+        (stretches (List.map (\metres -> Quantity.ratio (ReferenceLap.timeTo lap (Length.meters metres)) lapTime) lines))
         (stretches shares)
         |> List.sum

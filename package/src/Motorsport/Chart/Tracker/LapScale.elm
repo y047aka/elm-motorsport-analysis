@@ -13,10 +13,10 @@ module Motorsport.Chart.Tracker.LapScale exposing
 import Duration exposing (Seconds)
 import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
-import Motorsport.Circuit.Pace as Pace exposing (Pace)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
+import Motorsport.Simulation.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Quantity exposing (Quantity)
@@ -27,7 +27,7 @@ import Quantity exposing (Quantity)
 -}
 type LapScale
     = LapScale
-        { pace : Pace
+        { referenceLap : ReferenceLap
         , config : TrackConfig
         , lines : List Knot
         }
@@ -52,14 +52,14 @@ finishLine =
 {-| A progress is a share of the time a lap takes, and the stretches of a lap
 are not driven at one speed, so the two only agree at the lines the lap is
 timed at.
-The scale is pinned to the lines whose distance is known, and between two of them a car is where the [`Pace`](Motorsport-Circuit-Pace) puts it once it has run the same share of the time between them; so is a line with no distance given.
-[`Pace.even`](Motorsport-Circuit-Pace#even) runs the scale straight between the lines.
+The scale is pinned to the lines whose distance is known, and between two of them a car is where the [`ReferenceLap`](Motorsport-Simulation-ReferenceLap) puts it once it has run the same share of the time between them; so is a line with no distance given.
+[`ReferenceLap.steady`](Motorsport-Simulation-ReferenceLap#steady) runs the scale straight between the lines.
 
 A stretch no lap has set a time for is not a place to pin the scale to.
 
 -}
-lapScale : Pace -> TimingLines -> TrackConfig -> LapScale
-lapScale pace lines config =
+lapScale : ReferenceLap -> TimingLines -> TrackConfig -> LapScale
+lapScale referenceLap lines config =
     let
         knot { start, share } metres =
             if share > 0 then
@@ -69,7 +69,7 @@ lapScale pace lines config =
                 Nothing
 
         pinned progress metres =
-            { progress = progress, distance = Length.meters metres, time = Pace.timeTo pace (Length.meters metres) }
+            { progress = progress, distance = Length.meters metres, time = ReferenceLap.timeTo referenceLap (Length.meters metres) }
 
         ends =
             case ( config.miniSectors, lines.miniSectors ) of
@@ -82,31 +82,31 @@ lapScale pace lines config =
                 _ ->
                     Sector.values (Sector.map2 (\share metres -> knot share (Just metres)) config.sectors lines.sectors)
     in
-    LapScale { pace = pace, config = config, lines = List.filterMap identity ends }
+    LapScale { referenceLap = referenceLap, config = config, lines = List.filterMap identity ends }
 
 
 {-| Past the last line the scale is pinned to, it runs on as it ran into it.
 -}
 distanceAt : LapScale -> Float -> Length
-distanceAt (LapScale { pace, lines }) progress =
-    interpolate pace finishLine lines progress
+distanceAt (LapScale { referenceLap, lines }) progress =
+    interpolate referenceLap finishLine lines progress
 
 
 {-| From the line `a` on, round the `lines` after it.
 -}
-interpolate : Pace -> Knot -> List Knot -> Float -> Length
-interpolate pace a lines progress =
+interpolate : ReferenceLap -> Knot -> List Knot -> Float -> Length
+interpolate referenceLap a lines progress =
     case lines of
         b :: rest ->
             if progress <= b.progress || List.isEmpty rest then
                 if b.progress > a.progress then
-                    Pace.distanceAfter pace (Quantity.interpolateFrom a.time b.time ((progress - a.progress) / (b.progress - a.progress)))
+                    ReferenceLap.distanceAfter referenceLap (Quantity.interpolateFrom a.time b.time ((progress - a.progress) / (b.progress - a.progress)))
 
                 else
                     a.distance
 
             else
-                interpolate pace b rest progress
+                interpolate referenceLap b rest progress
 
         [] ->
             a.distance

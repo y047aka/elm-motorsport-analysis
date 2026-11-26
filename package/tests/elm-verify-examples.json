@@ -14,6 +14,7 @@
     "Motorsport.Position",
     "Motorsport.Race.TimelineEvent",
     "Motorsport.Sector",
+    "Motorsport.Simulation.ReferenceLap",
     "Motorsport.Status",
     "Motorsport.Wec.Circuit.LeMans",
     "Motorsport.Wec.Class",
