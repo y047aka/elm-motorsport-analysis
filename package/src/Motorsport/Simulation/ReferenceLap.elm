@@ -5,8 +5,6 @@ module Motorsport.Simulation.ReferenceLap exposing
 
 {-| How long a reference car takes to reach each distance round a lap: quick along the straights, slow through the bends, braking into them and accelerating out of them.
 
-A lap's timing says only when a car crossed each line; between two lines the tracker spends the time the car took there as this reference spends it, so the car still crosses every line when its timing says it did.
-
 @docs ReferenceLap, steady, fromShape
 @docs timeTo, distanceAfter
 
