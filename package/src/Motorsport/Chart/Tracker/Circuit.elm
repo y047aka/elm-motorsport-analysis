@@ -20,7 +20,7 @@ import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
-import Motorsport.Simulation.ReferenceLap as ReferenceLap
+import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap
 import Motorsport.Wec.Circuit.Layout exposing (Layout, Lengths)
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Wec.Class as Class

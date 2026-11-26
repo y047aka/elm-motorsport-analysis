@@ -103,7 +103,7 @@ Where a new module goes:
 
 - `Race/` — the loaded race, its indices, and readings of it at a moment.
 - `Analysis/` — holds no state and draws nothing. A colour, an emphasis or an axis domain in what it hands back puts it in `Chart/` instead. How many views read it is not a test.
-- `Simulation/` — a model run on figures chosen rather than measured (`ReferenceLap`): what it hands back is an assumption fitted to the races, never a reading of one.
+- `Simulation/` — a model run on figures chosen rather than measured: what it hands back is an assumption fitted to the races, never a reading of one. Models are grouped by what they model, so that two side by side are not read as one model's parts (`Pace.ReferenceLap`, `Pace.Neutralisation`).
 - Directly under `Motorsport/` — serves both sides, so neither owns it (`BestTimes`, `Lap.Performance`).
 - `Wec/` — WEC-specific knowledge: classes and eras, circuits. The core still imports out of `Wec/` (`rg 'import Motorsport.Wec' package/src` lists where); reversing that arrow is its own change.
 

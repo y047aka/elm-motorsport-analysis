@@ -1,11 +1,11 @@
-module Motorsport.Simulation.ReferenceLapTest exposing (stadium, tests)
+module Motorsport.Simulation.Pace.ReferenceLapTest exposing (stadium, tests)
 
 import Duration
 import Expect
 import Length
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Shape)
-import Motorsport.Simulation.ReferenceLap as ReferenceLap exposing (ReferenceLap)
+import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Test exposing (Test, describe, test)
 
 
@@ -83,7 +83,7 @@ secondsAt of_ metres =
 
 tests : Test
 tests =
-    describe "Motorsport.Simulation.ReferenceLap"
+    describe "Motorsport.Simulation.Pace.ReferenceLap"
         [ test "a bend is taken slower than a straight" <|
             \_ ->
                 slowness 1070

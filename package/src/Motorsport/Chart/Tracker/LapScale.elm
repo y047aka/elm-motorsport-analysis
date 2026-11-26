@@ -15,8 +15,8 @@ import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
-import Motorsport.Simulation.Neutralised as Neutralised exposing (Neutralised)
-import Motorsport.Simulation.ReferenceLap as ReferenceLap exposing (ReferenceLap)
+import Motorsport.Simulation.Pace.Neutralisation as Neutralisation exposing (Neutralisation)
+import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Quantity exposing (Quantity)
@@ -52,8 +52,8 @@ finishLine =
 {-| A progress is a share of the time a lap takes, and the stretches of a lap
 are not driven at one speed, so the two only agree at the lines the lap is
 timed at.
-The scale is pinned to the lines whose distance is known, and between two of them a car is where the [`ReferenceLap`](Motorsport-Simulation-ReferenceLap) puts it once it has run the same share of the time between them; so is a line with no distance given.
-[`ReferenceLap.steady`](Motorsport-Simulation-ReferenceLap#steady) runs the scale straight between the lines.
+The scale is pinned to the lines whose distance is known, and between two of them a car is where the [`ReferenceLap`](Motorsport-Simulation-Pace-ReferenceLap) puts it once it has run the same share of the time between them; so is a line with no distance given.
+[`ReferenceLap.steady`](Motorsport-Simulation-Pace-ReferenceLap#steady) runs the scale straight between the lines.
 
 A stretch no lap has set a time for is not a place to pin the scale to.
 
@@ -114,7 +114,7 @@ interpolate referenceLap a lines progress =
 
 {-| How far round the lap to draw a car on a circuit: where [`progressOf`](Motorsport-Chart-Tracker-Config#progressOf) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
 
-How much slower than usual is the stretch's time against its share of the car's own best lap: see [`Neutralised`](Motorsport-Simulation-Neutralised).
+How much slower than usual is the stretch's time against its share of the car's own best lap: see [`Neutralisation`](Motorsport-Simulation-Pace-Neutralisation).
 
 -}
 distanceOf : LapScale -> CarAt -> Length
@@ -124,10 +124,10 @@ distanceOf ((LapScale { config }) as scale) car =
             ease scale
                 (case car.bestLap of
                     Just best ->
-                        Neutralised.fromTimes { took = stretch.time, usually = round (stretch.share.share * toFloat best.time) }
+                        Neutralisation.fromTimes { took = stretch.time, usually = round (stretch.share.share * toFloat best.time) }
 
                     Nothing ->
-                        Neutralised.none
+                        Neutralisation.none
                 )
                 stretch
 
@@ -138,9 +138,9 @@ distanceOf ((LapScale { config }) as scale) car =
 {-| How far round the lap a car part way through a stretch is drawn.
 The reference lap's pace and an even pace agree at the stretch's ends, so a car read as more or less neutralised as it crosses into the next stretch does not jump.
 -}
-ease : LapScale -> Neutralised -> { a | share : Share, progress : Float } -> Length
-ease scale neutralised { share, progress } =
-    Neutralised.between
+ease : LapScale -> Neutralisation -> { a | share : Share, progress : Float } -> Length
+ease scale neutralisation { share, progress } =
+    Neutralisation.between
         (distanceAt scale (share.start + progress * share.share))
         (Quantity.interpolateFrom (distanceAt scale share.start) (distanceAt scale (share.start + share.share)) progress)
-        neutralised
+        neutralisation

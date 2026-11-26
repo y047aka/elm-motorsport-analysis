@@ -1,11 +1,11 @@
-module Motorsport.Simulation.Neutralised exposing (Neutralised, none, fromTimes, between)
+module Motorsport.Simulation.Pace.Neutralisation exposing (Neutralisation, none, fromTimes, between)
 
 {-| How a car runs while the race is neutralised -- under a full course yellow, behind the safety car or through a slow zone.
 
-A neutralised car is held to a speed rather than driving the corners, so it runs at an even pace and not at the [`ReferenceLap`](Motorsport-Simulation-ReferenceLap)'s quick straights and slow bends.
+A neutralised car is held to a speed rather than driving the corners, so it runs at an even pace and not at the [`ReferenceLap`](Motorsport-Simulation-Pace-ReferenceLap)'s quick straights and slow bends.
 The timing does not say where round the lap a car was neutralised; how much longer than usual it takes over a stretch is what is read as how neutralised it is.
 
-@docs Neutralised, none, fromTimes, between
+@docs Neutralisation, none, fromTimes, between
 
 -}
 
@@ -15,15 +15,15 @@ import Quantity exposing (Quantity)
 
 {-| How neutralised a car is: how far it runs from the reference lap's pace towards an even pace, from none of the way to all of it.
 -}
-type Neutralised
-    = Neutralised Float
+type Neutralisation
+    = Neutralisation Float
 
 
 {-| Not neutralised at all: at the reference lap's pace.
 -}
-none : Neutralised
+none : Neutralisation
 none =
-    Neutralised 0
+    Neutralisation 0
 
 
 {-| How many times as long as usual a stretch has to take before the car running it is read as neutralised at all, and before it is read as neutralised through and through.
@@ -49,10 +49,10 @@ slowness =
     --> Length.meters 10
 
 -}
-fromTimes : { took : Duration, usually : Duration } -> Neutralised
+fromTimes : { took : Duration, usually : Duration } -> Neutralisation
 fromTimes { took, usually } =
     if usually > 0 then
-        Neutralised (clamp 0 1 ((toFloat took / toFloat usually - slowness.from) / (slowness.to - slowness.from)))
+        Neutralisation (clamp 0 1 ((toFloat took / toFloat usually - slowness.from) / (slowness.to - slowness.from)))
 
     else
         none
@@ -60,6 +60,6 @@ fromTimes { took, usually } =
 
 {-| Where between what the reference lap's pace gives and what an even pace gives a car this neutralised stands.
 -}
-between : Quantity Float units -> Quantity Float units -> Neutralised -> Quantity Float units
-between atPace atEvenPace (Neutralised towardsEven) =
+between : Quantity Float units -> Quantity Float units -> Neutralisation -> Quantity Float units
+between atPace atEvenPace (Neutralisation towardsEven) =
     Quantity.interpolateFrom atPace atEvenPace towardsEven

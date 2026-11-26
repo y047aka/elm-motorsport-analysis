@@ -5,9 +5,9 @@ import Length
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
 import Motorsport.Circuit.Shape as Shape
-import Motorsport.Simulation.Neutralised as Neutralised
-import Motorsport.Simulation.ReferenceLap as ReferenceLap
-import Motorsport.Simulation.ReferenceLapTest as ReferenceLapTest
+import Motorsport.Simulation.Pace.Neutralisation as Neutralisation
+import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap
+import Motorsport.Simulation.Pace.ReferenceLapTest as ReferenceLapTest
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (Test, describe, test)
@@ -71,8 +71,8 @@ tests =
                     [ 1000, 1600, 2000 ]
                         |> List.concatMap
                             (\took ->
-                                [ LapScale.ease stadiumScale (Neutralised.fromTimes { took = took, usually = 1000 }) { share = stadiumSectors.sectors.s2, progress = 0 } |> Length.inMeters
-                                , LapScale.ease stadiumScale (Neutralised.fromTimes { took = took, usually = 1000 }) { share = stadiumSectors.sectors.s2, progress = 1 } |> Length.inMeters
+                                [ LapScale.ease stadiumScale (Neutralisation.fromTimes { took = took, usually = 1000 }) { share = stadiumSectors.sectors.s2, progress = 0 } |> Length.inMeters
+                                , LapScale.ease stadiumScale (Neutralisation.fromTimes { took = took, usually = 1000 }) { share = stadiumSectors.sectors.s2, progress = 1 } |> Length.inMeters
                                 ]
                             )
                         |> expectAll [ 500, 1150, 500, 1150, 500, 1150 ]
@@ -131,7 +131,7 @@ stadiumSectors =
 -}
 easedHalfway : { took : Int, usually : Int } -> Float
 easedHalfway durations =
-    LapScale.ease stadiumScale (Neutralised.fromTimes durations) { share = stadiumSectors.sectors.s2, progress = 0.5 }
+    LapScale.ease stadiumScale (Neutralisation.fromTimes durations) { share = stadiumSectors.sectors.s2, progress = 0.5 }
         |> Length.inMeters
 
 

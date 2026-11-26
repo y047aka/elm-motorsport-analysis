@@ -1,4 +1,4 @@
-module Motorsport.Simulation.ReferenceLap exposing
+module Motorsport.Simulation.Pace.ReferenceLap exposing
     ( ReferenceLap, steady, fromShape
     , timeTo, distanceAfter
     )
