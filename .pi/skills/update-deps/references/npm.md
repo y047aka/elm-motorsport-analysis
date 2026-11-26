@@ -14,6 +14,8 @@ The outdated report splits minor from major. The security report splits by
 severity and fix availability; note `fixable-breaking` — those fixes need
 `--force` and may introduce breaking changes.
 
+`app/pnpm-workspace.yaml` holds back any version published less than seven days ago, so `outdated` can name a version that neither flow below will install yet; report it as waiting rather than failed.
+
 ## Update — minor
 
 `pnpm -C app update` moves transitive dependencies only: every entry in
