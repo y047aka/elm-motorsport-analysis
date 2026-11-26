@@ -6,6 +6,7 @@ module Motorsport.Chart.Tracker.Ring exposing (view)
 
 -}
 
+import Angle exposing (Angle)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
 import Motorsport.Chart.Tracker.Marker as Marker
@@ -20,6 +21,13 @@ import Svg.Keyed as Keyed
 import Svg.Lazy as Lazy
 import TypedSvg.Attributes as Attributes exposing (strokeWidth, viewBox, x1, x2, y1, y2)
 import TypedSvg.Types exposing (Transform(..), px)
+
+
+{-| A share of the lap (0-1) as an angle, round from 12 o'clock.
+-}
+angleAt : Float -> Angle
+angleAt progress =
+    Angle.radians (Scale.convert clockwise progress)
 
 
 {-| A share of the lap (0-1) as an angle in radians, round from 12 o'clock.
@@ -154,10 +162,10 @@ track detail config =
 
         makeBoundary angle =
             line
-                [ x1 (px (cx + (r - c.track.sectorBoundaryOffset) * cos angle))
-                , y1 (px (cy + (r - c.track.sectorBoundaryOffset) * sin angle))
-                , x2 (px (cx + (r + c.track.sectorBoundaryOffset) * cos angle))
-                , y2 (px (cy + (r + c.track.sectorBoundaryOffset) * sin angle))
+                [ x1 (px (cx + (r - c.track.sectorBoundaryOffset) * Angle.cos angle))
+                , y1 (px (cy + (r - c.track.sectorBoundaryOffset) * Angle.sin angle))
+                , x2 (px (cx + (r + c.track.sectorBoundaryOffset) * Angle.cos angle))
+                , y2 (px (cy + (r + c.track.sectorBoundaryOffset) * Angle.sin angle))
                 , stroke "oklch(0.23 0 0)"
                 , strokeWidth (px c.track.sectorBoundaryStrokeWidth)
                 ]
@@ -165,7 +173,7 @@ track detail config =
 
         boundaries =
             Config.boundaries config
-                |> List.map (Scale.convert clockwise)
+                |> List.map angleAt
                 |> List.map (\angle -> makeBoundary angle)
 
         sectorLabels =
@@ -241,13 +249,13 @@ makeLabel detail { progress, radius, fontSize, color, label } =
             (constants detail).track
 
         angle =
-            Scale.convert clockwise progress
+            angleAt progress
 
         labelX =
-            cx + radius * cos angle
+            cx + radius * Angle.cos angle
 
         labelY =
-            cy + radius * sin angle
+            cy + radius * Angle.sin angle
     in
     text_
         [ Attributes.x (px labelX)
@@ -284,7 +292,7 @@ renderCarOnTrack detail config car =
     renderCar detail car coords
 
 
-coordinatesOnTrack : Detail -> TrackConfig -> CarAt -> { angle : Float, x : Float, y : Float }
+coordinatesOnTrack : Detail -> TrackConfig -> CarAt -> { angle : Angle, x : Float, y : Float }
 coordinatesOnTrack detail config car =
     let
         { cx, cy, r } =
@@ -294,15 +302,15 @@ coordinatesOnTrack detail config car =
             Config.progressOf config car
 
         angle =
-            Scale.convert clockwise progress
+            angleAt progress
     in
     { angle = angle
-    , x = cx + r * cos angle
-    , y = cy + r * sin angle
+    , x = cx + r * Angle.cos angle
+    , y = cy + r * Angle.sin angle
     }
 
 
-renderCar : Detail -> CarAt -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar : Detail -> CarAt -> { angle : Angle, x : Float, y : Float } -> Svg msg
 renderCar detail car { angle, x, y } =
     let
         c =
@@ -324,6 +332,6 @@ renderCar detail car { angle, x, y } =
                 [ marker
                 , Marker.number carFontSize
                     car.standing.positionInClass
-                    { x = cx + carRadius * cos angle, y = cy + carRadius * sin angle }
+                    { x = cx + carRadius * Angle.cos angle, y = cy + carRadius * Angle.sin angle }
                     { carNumber = car.metadata.carNumber }
                 ]

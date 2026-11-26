@@ -7,6 +7,7 @@ written here; the kept files themselves are read by `CircuitsTest`.
 import Expect
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Length
 import Motorsport.Wec.Circuit.Geometry as Geometry
 import Test exposing (Test, describe, test)
 
@@ -45,7 +46,7 @@ tests =
             \_ ->
                 decode outline
                     |> Result.map (.centreline >> List.reverse >> List.head >> Maybe.map .metres)
-                    |> Expect.equal (Ok (Just 10.0))
+                    |> Expect.equal (Ok (Just (Length.meters 10.0)))
         , test "a geometry without a pit lane is not a geometry" <|
             \_ ->
                 { outline | metres = [ 0, 5, 10 ] }
@@ -69,7 +70,7 @@ tests =
             \_ ->
                 heighted (Just [ 150, 160, 150 ]) (Just [ 151, 152 ])
                     |> Result.map .heights
-                    |> Expect.equal (Ok (Just { centreline = [ 150, 160, 150 ], pitLane = [ 151, 152 ] }))
+                    |> Expect.equal (Ok (Just { centreline = List.map Length.meters [ 150, 160, 150 ], pitLane = List.map Length.meters [ 151, 152 ] }))
         , test "a geometry carrying no heights is read as one standing flat" <|
             \_ ->
                 decode outline
@@ -209,7 +210,7 @@ decodeOf : List Encode.Value -> Result String Geometry.Geometry
 decodeOf all =
     Encode.object [ ( "type", Encode.string "FeatureCollection" ), ( "features", Encode.list identity all ) ]
         |> Encode.encode 0
-        |> Decode.decodeString (Geometry.decoder { lapLength = 10 })
+        |> Decode.decodeString (Geometry.decoder { lapLength = Length.meters 10 })
         |> Result.mapError Decode.errorToString
 
 

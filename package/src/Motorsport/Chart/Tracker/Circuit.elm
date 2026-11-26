@@ -131,7 +131,7 @@ ground : Circuit -> Ground
 ground (Circuit circuit) =
     { lap = List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks circuit.shape)
     , pitLane = circuit.pitLane
-    , at = \distance -> Shape.at (Length.inMeters distance) circuit.shape
+    , at = \distance -> Shape.at distance circuit.shape
     , distanceOf = LapScale.distanceOf circuit.scale
     , boundaries = List.map (LapScale.distanceAt circuit.scale) (Config.boundaries circuit.config)
     , sectors =
@@ -146,10 +146,10 @@ ground (Circuit circuit) =
     , relief =
         Maybe.map
             (\relief ->
-                { lap = List.map Length.meters (Relief.lap relief)
-                , pitLane = List.map Length.meters (Relief.pitLane relief)
-                , at = \distance -> Length.meters (Relief.at (Length.inMeters distance) relief)
-                , lowest = Length.meters (Relief.lowest relief)
+                { lap = Relief.lap relief
+                , pitLane = Relief.pitLane relief
+                , at = \distance -> Relief.at distance relief
+                , lowest = Relief.lowest relief
                 }
             )
             circuit.relief
@@ -292,7 +292,7 @@ across : Drawing -> { at : Length, halfLength : Float, color : String, width : F
 across circuit { at, halfLength, color, width } =
     let
         position =
-            Shape.at (Length.inMeters at) circuit.shape
+            Shape.at at circuit.shape
 
         out =
             outward circuit.direction position.heading
@@ -380,7 +380,7 @@ labelOnCircuit :
 labelOnCircuit circuit { at, offset, fontSize, color, label } =
     let
         position =
-            Shape.at (Length.inMeters at) circuit.shape
+            Shape.at at circuit.shape
 
         out =
             outward circuit.direction position.heading
@@ -441,7 +441,7 @@ renderCarOnCircuit detail circuit standings car =
             circuitConstants detail circuit
 
         position =
-            Shape.at (Length.inMeters (LapScale.distanceOf circuit.scale standings car)) circuit.shape
+            Shape.at (LapScale.distanceOf circuit.scale standings car) circuit.shape
 
         marker =
             g [ Attributes.transform [ Translate position.x position.y ] ]

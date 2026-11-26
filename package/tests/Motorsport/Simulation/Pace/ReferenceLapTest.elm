@@ -30,15 +30,15 @@ stadium =
                         in
                         { x = centreX + radius * cos angle
                         , y = radius + radius * sin angle
-                        , metres = startMetres + bendLength * toFloat i / 18
+                        , metres = Length.meters (startMetres + bendLength * toFloat i / 18)
                         }
                     )
     in
     Shape.fromMarks
-        ({ x = 0, y = 0, metres = 0 }
-            :: { x = 1000, y = 0, metres = 1000 }
+        ({ x = 0, y = 0, metres = Length.meters 0 }
+            :: { x = 1000, y = 0, metres = Length.meters 1000 }
             :: bend 1000 (-pi / 2) 1000
-            ++ { x = 0, y = 2 * radius, metres = 2000 + bendLength }
+            ++ { x = 0, y = 2 * radius, metres = Length.meters (2000 + bendLength) }
             :: bend 0 (pi / 2) (2000 + bendLength)
         )
 
@@ -49,11 +49,11 @@ hill : Relief
 hill =
     Relief.fromHeights
         { lap =
-            [ { metres = 0, height = 0 }
-            , { metres = 1000, height = 50 }
-            , { metres = 1000 + pi * 50, height = 50 }
-            , { metres = 2000 + pi * 50, height = 0 }
-            , { metres = Shape.length stadium, height = 0 }
+            [ { metres = Length.meters 0, height = Length.meters 0 }
+            , { metres = Length.meters 1000, height = Length.meters 50 }
+            , { metres = Length.meters (1000 + pi * 50), height = Length.meters 50 }
+            , { metres = Length.meters (2000 + pi * 50), height = Length.meters 0 }
+            , { metres = Shape.length stadium, height = Length.meters 0 }
             ]
         , pitLane = []
         }
@@ -114,9 +114,13 @@ tests =
                     |> Expect.atMost 0.001
         , test "a distance a lap on is reached a lap's time later" <|
             \_ ->
-                secondsAt pace (Shape.length stadium + 300)
+                let
+                    lapMetres =
+                        Length.inMeters (Shape.length stadium)
+                in
+                secondsAt pace (lapMetres + 300)
                     |> Expect.within (Expect.Absolute 0.001)
-                        (secondsAt pace (Shape.length stadium) + secondsAt pace 300)
+                        (secondsAt pace lapMetres + secondsAt pace 300)
         , test "a steady lap takes a second over each metre" <|
             \_ ->
                 ReferenceLap.timeTo ReferenceLap.steady (Length.meters 1234)

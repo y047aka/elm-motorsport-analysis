@@ -16,6 +16,7 @@ import Duration exposing (Duration)
 import Length exposing (Length)
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
+import Quantity
 import Speed exposing (Speed)
 
 
@@ -45,11 +46,11 @@ A point-mass car limited by how hard it can corner, accelerate and brake, run ro
     lap : Shape
     lap =
         Shape.fromMarks
-            [ { x = 0, y = 0, metres = 0 }
-            , { x = 1000, y = 0, metres = 1000 }
-            , { x = 1000, y = 100, metres = 1100 }
-            , { x = 0, y = 100, metres = 2100 }
-            , { x = 0, y = 0, metres = 2200 }
+            [ { x = 0, y = 0, metres = Length.meters 0 }
+            , { x = 1000, y = 0, metres = Length.meters 1000 }
+            , { x = 1000, y = 100, metres = Length.meters 1100 }
+            , { x = 0, y = 100, metres = Length.meters 2100 }
+            , { x = 0, y = 0, metres = Length.meters 2200 }
             ]
 
     timeTo (fromShape { shape = lap, relief = Nothing }) (Length.meters 0)
@@ -90,7 +91,7 @@ readCourse : Course -> { shape : Shape, relief : Maybe Relief } -> Maybe Reading
 readCourse course { shape, relief } =
     let
         lapLength =
-            Shape.length shape
+            Length.inMeters (Shape.length shape)
 
         count =
             floor (lapLength / Length.inMeters course.sampleStep)
@@ -104,7 +105,7 @@ readCourse course { shape, relief } =
                 lapLength / toFloat count
 
             places =
-                Array.initialize count (\i -> Shape.at (toFloat i * step) shape)
+                Array.initialize count (\i -> Shape.at (Length.meters (toFloat i * step)) shape)
                     |> Array.map (\{ x, y } -> { x = x, y = y })
 
             reach =
@@ -113,8 +114,12 @@ readCourse course { shape, relief } =
             slopeAt i =
                 case relief of
                     Just heights ->
-                        (Relief.at (toFloat (i + reach) * step) heights - Relief.at (toFloat (i - reach) * step) heights)
-                            / (toFloat (2 * reach) * step)
+                        Quantity.ratio
+                            (Quantity.difference
+                                (Relief.at (Length.meters (toFloat (i + reach) * step)) heights)
+                                (Relief.at (Length.meters (toFloat (i - reach) * step)) heights)
+                            )
+                            (Length.meters (toFloat (2 * reach) * step))
 
                     Nothing ->
                         0

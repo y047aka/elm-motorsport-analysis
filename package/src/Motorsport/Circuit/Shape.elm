@@ -14,12 +14,14 @@ far round the lap it is.
 -}
 
 import Array exposing (Array)
+import Length exposing (Length)
+import Quantity
 
 
 type Shape
     = Shape
         { marks : Array Mark
-        , length : Float
+        , length : Length
         }
 
 
@@ -28,7 +30,7 @@ type Shape
 type alias Mark =
     { x : Float
     , y : Float
-    , metres : Float
+    , metres : Length
     }
 
 
@@ -52,11 +54,11 @@ fromMarks list =
         , length =
             Array.get (Array.length array - 1) array
                 |> Maybe.map .metres
-                |> Maybe.withDefault 0
+                |> Maybe.withDefault Quantity.zero
         }
 
 
-length : Shape -> Float
+length : Shape -> Length
 length (Shape shape) =
     shape.length
 
@@ -79,32 +81,38 @@ type alias Position =
 {-| Where on the line a distance round the lap falls. A distance past the end
 of the lap, or short of its start, is taken round the lap again.
 
+    import Length exposing (meters)
+
     square : Shape
     square =
         fromMarks
-            [ { x = 0, y = 0, metres = 0 }
-            , { x = 10, y = 0, metres = 10 }
-            , { x = 10, y = 10, metres = 20 }
-            , { x = 0, y = 10, metres = 30 }
-            , { x = 0, y = 0, metres = 40 }
+            [ { x = 0, y = 0, metres = meters 0 }
+            , { x = 10, y = 0, metres = meters 10 }
+            , { x = 10, y = 10, metres = meters 20 }
+            , { x = 0, y = 10, metres = meters 30 }
+            , { x = 0, y = 0, metres = meters 40 }
             ]
 
-    at 15 square
+    at (meters 15) square
     --> { x = 10, y = 5, heading = { x = 0, y = 1 } }
 
-    at 45 square
+    at (meters 45) square
     --> { x = 5, y = 0, heading = { x = 1, y = 0 } }
 
 -}
-at : Float -> Shape -> Position
+at : Length -> Shape -> Position
 at metres (Shape shape) =
     let
         wrapped =
-            if shape.length > 0 then
-                metres - toFloat (floor (metres / shape.length)) * shape.length
+            if Quantity.greaterThanZero shape.length then
+                let
+                    laps =
+                        Quantity.float (toFloat (floor (Quantity.ratio metres shape.length)))
+                in
+                Quantity.difference metres (Quantity.timesUnitless laps shape.length)
 
             else
-                0
+                Quantity.zero
 
         i =
             lastAtOrBefore wrapped shape.marks 0 (Array.length shape.marks - 1)
@@ -123,7 +131,7 @@ at metres (Shape shape) =
 {-| The index of the last mark at or before `metres`, between `lo`, which is,
 and `hi`, which is not unless it is the only one left.
 -}
-lastAtOrBefore : Float -> Array Mark -> Int -> Int -> Int
+lastAtOrBefore : Length -> Array Mark -> Int -> Int -> Int
 lastAtOrBefore metres array lo hi =
     if hi - lo <= 1 then
         lo
@@ -135,7 +143,7 @@ lastAtOrBefore metres array lo hi =
         in
         case Array.get mid array of
             Just mark ->
-                if mark.metres <= metres then
+                if mark.metres |> Quantity.lessThanOrEqualTo metres then
                     lastAtOrBefore metres array mid hi
 
                 else
@@ -145,15 +153,15 @@ lastAtOrBefore metres array lo hi =
                 lo
 
 
-between : Mark -> Mark -> Float -> Position
+between : Mark -> Mark -> Length -> Position
 between a b metres =
     let
         span =
-            b.metres - a.metres
+            Quantity.difference b.metres a.metres
 
         fraction =
-            if span > 0 then
-                (metres - a.metres) / span
+            if Quantity.greaterThanZero span then
+                Quantity.ratio (Quantity.difference metres a.metres) span
 
             else
                 0

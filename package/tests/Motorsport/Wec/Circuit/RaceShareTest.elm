@@ -59,7 +59,7 @@ raceTest race =
                             linesOf layout
 
                         lapLength =
-                            Shape.length layout.shape
+                            Length.inMeters (Shape.length layout.shape)
                     in
                     ( missedBy (ReferenceLap.fromShape { shape = layout.shape, relief = layout.relief }) lapLength lines race.shares
                     , missedBy ReferenceLap.steady lapLength lines race.shares
@@ -84,9 +84,10 @@ linesOf layout =
     case layout.timingLines.miniSectors of
         LeMansMiniSectors published ->
             List.filterMap (\mini -> LeMans.get mini published) [ IP1, IP2, PORIN, POROUT, SCL1, FORDOUT, FL ]
+                |> List.map Length.inMeters
 
         SectorsOnly ->
-            [ layout.timingLines.sectors.s1, layout.timingLines.sectors.s2, layout.timingLines.sectors.s3 ]
+            List.map Length.inMeters [ layout.timingLines.sectors.s1, layout.timingLines.sectors.s2, layout.timingLines.sectors.s3 ]
 
 
 {-| How far, summed over the stretches between the lines, the share of the lap a reference lap spends on each is from the share the race did.

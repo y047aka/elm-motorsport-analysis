@@ -5,6 +5,7 @@ module Motorsport.Wec.Circuit.MapTest exposing (tests)
 
 import Expect
 import Json.Decode as Decode
+import Length exposing (Length)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Circuit.Map as Map
 import Test exposing (Test, describe, test)
@@ -30,7 +31,13 @@ tests =
         [ test "a record whose lines stand in order is read whole" <|
             \_ ->
                 intermediates 5513 1311 3568
-                    |> Expect.equal (Ok { centreline = 5513, intermediate1 = 1311, intermediate2 = 3568 })
+                    |> Expect.equal
+                        (Ok
+                            { centreline = Length.meters 5513
+                            , intermediate1 = Length.meters 1311
+                            , intermediate2 = Length.meters 3568
+                            }
+                        )
         , test "a record whose second line stands before its first is refused" <|
             \_ ->
                 intermediates 5513 3568 1311

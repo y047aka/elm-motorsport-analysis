@@ -13,6 +13,7 @@ The record they are written into and the projection the degrees are drawn throug
 -}
 
 import Json.Decode as Decode exposing (Decoder)
+import Length exposing (Length)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
@@ -27,13 +28,13 @@ Every season is drawn on the record's map, the latest.
 
 -}
 type alias CircuitMap =
-    { centreline : Float
-    , intermediate1 : Float
-    , intermediate2 : Float
-    , porscheIn : Float
-    , porscheOut : Float
-    , fordIn : Float
-    , fordOut : Float
+    { centreline : Length
+    , intermediate1 : Length
+    , intermediate2 : Length
+    , porscheIn : Length
+    , porscheOut : Length
+    , fordIn : Length
+    , fordOut : Length
     }
 
 

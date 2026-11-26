@@ -13,15 +13,17 @@ simplified to. Degrees are WGS84, the datum GPS records are written in.
 
 -}
 
+import Angle exposing (Angle)
 import Motorsport.Circuit.Shape exposing (Point)
+import Quantity
 
 
 {-| A place on the earth: WGS84 degrees, north and east of Greenwich being
 positive.
 -}
 type alias Coordinate =
-    { lat : Float
-    , lon : Float
+    { lat : Angle
+    , lon : Angle
     }
 
 
@@ -41,29 +43,41 @@ at `parallel` -- the latitude the circuit is surveyed about, which is where the
 drawing neither stretches nor shrinks the ground it stands on. Metres come out
 north up with `y` running south, the way every circuit is drawn.
 -}
-frame : { origin : Coordinate, parallel : Float } -> Frame
+frame : { origin : Coordinate, parallel : Angle } -> Frame
 frame { origin, parallel } =
     let
         north =
-            degrees 1 * 6371008.8
+            Angle.inRadians (Angle.degrees 1) * meanEarthRadius
     in
     Frame
         { origin = origin
         , north = north
-        , east = north * cos (degrees parallel)
+        , east = north * Angle.cos parallel
         }
+
+
+{-| The earth's mean radius, in metres.
+-}
+meanEarthRadius : Float
+meanEarthRadius =
+    6371008.8
 
 
 {-| Where a place on the earth falls in a circuit's metres: east along `x`,
 south along `y`.
 
+    import Angle
+
     leMans : Frame
     leMans =
-        frame { origin = { lat = 47.9618722, lon = 0.2074582 }, parallel = 47.94364 }
+        frame
+            { origin = { lat = Angle.degrees 47.9618722, lon = Angle.degrees 0.2074582 }
+            , parallel = Angle.degrees 47.94364
+            }
 
     let
         finish =
-            project leMans { lat = 47.9498718, lon = 0.2075404 }
+            project leMans { lat = Angle.degrees 47.9498718, lon = Angle.degrees 0.2075404 }
     in
     ( round finish.x, round finish.y )
 
@@ -75,6 +89,6 @@ which is where the drawing puts the Circuit de la Sarthe's finish line, at
 -}
 project : Frame -> Coordinate -> Point
 project (Frame { origin, north, east }) coordinate =
-    { x = (coordinate.lon - origin.lon) * east
-    , y = (origin.lat - coordinate.lat) * north
+    { x = Angle.inDegrees (Quantity.difference coordinate.lon origin.lon) * east
+    , y = Angle.inDegrees (Quantity.difference origin.lat coordinate.lat) * north
     }

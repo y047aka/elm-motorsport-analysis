@@ -11,6 +11,7 @@ below its zero.
 
 -}
 
+import Angle
 import Expect
 import Motorsport.Circuit.Geodesy exposing (Coordinate, Frame, project)
 import Motorsport.Circuit.Shape as Shape exposing (Point)
@@ -74,14 +75,17 @@ suite survey =
             \_ ->
                 mistakes places
                     (\place ->
-                        place.degrees.lat
-                            >= survey.box.minLat
-                            && place.degrees.lat
-                            <= survey.box.maxLat
-                            && place.degrees.lon
-                            >= survey.box.minLon
-                            && place.degrees.lon
-                            <= survey.box.maxLon
+                        let
+                            lat =
+                                Angle.inDegrees place.degrees.lat
+
+                            lon =
+                                Angle.inDegrees place.degrees.lon
+                        in
+                        lat >= survey.box.minLat
+                            && lat <= survey.box.maxLat
+                            && lon >= survey.box.minLon
+                            && lon <= survey.box.maxLon
                     )
                     |> Expect.equal []
         ]

@@ -40,6 +40,14 @@ tests =
                     -- distances to one progress.
                     metresAt (LapScale.lapScale ReferenceLap.steady miniSectorLines withoutIp2) (7 / 15)
                         |> Expect.within (Expect.Absolute 0.001) (1800 + (4 / 12) * (12000 - 1800))
+            , test "the last line is reached at the end of the lap" <|
+                \_ ->
+                    metresAt (LapScale.lapScale ReferenceLap.steady sectorLines bySectors) 1
+                        |> Expect.within (Expect.Absolute 0.001) 10000
+            , test "the end of the lap is where the drawn lap ends" <|
+                \_ ->
+                    metresAt stadiumScale 1
+                        |> Expect.within (Expect.Absolute 0.001) (Length.inMeters (Shape.length ReferenceLapTest.stadium))
             ]
         , describe "at the pace of a circuit's bends"
             [ test "still puts every line where its distance is" <|
@@ -170,7 +178,7 @@ stadiumScale =
 
 stadiumLines : TimingLines
 stadiumLines =
-    { sectors = { s1 = 500, s2 = 1150, s3 = Shape.length ReferenceLapTest.stadium }
+    { sectors = { s1 = Length.meters 500, s2 = Length.meters 1150, s3 = Shape.length ReferenceLapTest.stadium }
     , miniSectors = SectorsOnly
     }
 
@@ -188,7 +196,7 @@ bySectors =
 
 sectorLines : TimingLines
 sectorLines =
-    { sectors = { s1 = 1000, s2 = 4000, s3 = 10000 }
+    { sectors = { s1 = Length.meters 1000, s2 = Length.meters 4000, s3 = Length.meters 10000 }
     , miniSectors = LeMansMiniSectors (LeMans.initialize (\_ -> Nothing))
     }
 
@@ -198,7 +206,7 @@ sectorLines =
 -}
 sectorsOnlyLines : TimingLines
 sectorsOnlyLines =
-    { sectors = { s1 = 1000, s2 = 4000, s3 = 10000 }
+    { sectors = { s1 = Length.meters 1000, s2 = Length.meters 4000, s3 = Length.meters 10000 }
     , miniSectors = SectorsOnly
     }
 
@@ -246,20 +254,20 @@ withoutIp2 =
 -}
 miniSectorLines : TimingLines
 miniSectorLines =
-    { sectors = { s1 = 1800, s2 = 6000, s3 = 12000 }
+    { sectors = { s1 = Length.meters 1800, s2 = Length.meters 6000, s3 = Length.meters 12000 }
     , miniSectors =
         LeMansMiniSectors
             (LeMans.initialize
                 (\mini ->
                     case mini of
                         IP1 ->
-                            Just 1800
+                            Just (Length.meters 1800)
 
                         IP2 ->
-                            Just 6000
+                            Just (Length.meters 6000)
 
                         FL ->
-                            Just 12000
+                            Just (Length.meters 12000)
 
                         _ ->
                             Nothing

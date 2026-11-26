@@ -3,7 +3,7 @@ module Motorsport.Circuit.Relief exposing
     , lap, pitLane, at, lowest, highest
     )
 
-{-| How high a circuit stands along its lap and its pit lane, in metres above the datum
+{-| How high a circuit stands along its lap and its pit lane, above the datum
 its heights were sampled against.
 
 A height is held at each point the drawing is made of, beside how far round the lap the
@@ -16,21 +16,23 @@ one the straight line passes.
 -}
 
 import Array exposing (Array)
+import Length exposing (Length)
+import Quantity
 
 
 type Relief
     = Relief
-        { lap : Array { metres : Float, height : Float }
-        , pitLane : List Float
-        , lowest : Float
-        , highest : Float
+        { lap : Array { metres : Length, height : Length }
+        , pitLane : List Length
+        , lowest : Length
+        , highest : Length
         }
 
 
 {-| The heights of the lap's points, in the order the lap is driven and each beside its
 metre, and of the pit lane's points in the order it is drawn.
 -}
-fromHeights : { lap : List { metres : Float, height : Float }, pitLane : List Float } -> Relief
+fromHeights : { lap : List { metres : Length, height : Length }, pitLane : List Length } -> Relief
 fromHeights heights =
     let
         all =
@@ -39,33 +41,33 @@ fromHeights heights =
     Relief
         { lap = Array.fromList heights.lap
         , pitLane = heights.pitLane
-        , lowest = Maybe.withDefault 0 (List.minimum all)
-        , highest = Maybe.withDefault 0 (List.maximum all)
+        , lowest = Maybe.withDefault Quantity.zero (Quantity.minimum all)
+        , highest = Maybe.withDefault Quantity.zero (Quantity.maximum all)
         }
 
 
 {-| The lap's heights, one per point of its line.
 -}
-lap : Relief -> List Float
+lap : Relief -> List Length
 lap (Relief relief) =
     Array.toList relief.lap |> List.map .height
 
 
 {-| The pit lane's heights, one per point of its line.
 -}
-pitLane : Relief -> List Float
+pitLane : Relief -> List Length
 pitLane (Relief relief) =
     relief.pitLane
 
 
 {-| The lowest and the highest of either line's heights.
 -}
-lowest : Relief -> Float
+lowest : Relief -> Length
 lowest (Relief relief) =
     relief.lowest
 
 
-highest : Relief -> Float
+highest : Relief -> Length
 highest (Relief relief) =
     relief.highest
 
@@ -73,46 +75,56 @@ highest (Relief relief) =
 {-| How high the lap stands `metres` round it. A distance past the end of the lap, or
 short of its start, is taken round the lap again.
 
+    import Length exposing (meters)
+
     hill : Relief
     hill =
         fromHeights
             { lap =
-                [ { metres = 0, height = 150 }
-                , { metres = 100, height = 160 }
-                , { metres = 200, height = 150 }
+                [ { metres = meters 0, height = meters 150 }
+                , { metres = meters 100, height = meters 160 }
+                , { metres = meters 200, height = meters 150 }
                 ]
             , pitLane = []
             }
 
-    at 50 hill
-    --> 155
+    at (meters 50) hill
+    --> meters 155
 
-    at 250 hill
-    --> 155
+    at (meters 250) hill
+    --> meters 155
 
 -}
-at : Float -> Relief -> Float
+at : Length -> Relief -> Length
 at metres (Relief relief) =
     let
         length =
             Array.get (Array.length relief.lap - 1) relief.lap
                 |> Maybe.map .metres
-                |> Maybe.withDefault 0
+                |> Maybe.withDefault Quantity.zero
 
         wrapped =
-            if length > 0 then
-                metres - toFloat (floor (metres / length)) * length
+            if Quantity.greaterThanZero length then
+                let
+                    laps =
+                        Quantity.float (toFloat (floor (Quantity.ratio metres length)))
+                in
+                Quantity.difference metres (Quantity.timesUnitless laps length)
 
             else
-                0
+                Quantity.zero
 
         i =
             lastAtOrBefore wrapped relief.lap 0 (Array.length relief.lap - 1)
     in
     case ( Array.get i relief.lap, Array.get (i + 1) relief.lap ) of
         ( Just a, Just b ) ->
-            if b.metres > a.metres then
-                a.height + (wrapped - a.metres) / (b.metres - a.metres) * (b.height - a.height)
+            if b.metres |> Quantity.greaterThan a.metres then
+                let
+                    share =
+                        Quantity.ratio (Quantity.difference wrapped a.metres) (Quantity.difference b.metres a.metres)
+                in
+                Quantity.plus a.height (Quantity.timesUnitless (Quantity.float share) (Quantity.difference b.height a.height))
 
             else
                 a.height
@@ -121,10 +133,10 @@ at metres (Relief relief) =
             a.height
 
         ( Nothing, _ ) ->
-            0
+            Quantity.zero
 
 
-lastAtOrBefore : Float -> Array { metres : Float, height : Float } -> Int -> Int -> Int
+lastAtOrBefore : Length -> Array { metres : Length, height : Length } -> Int -> Int -> Int
 lastAtOrBefore metres array lo hi =
     if hi - lo <= 1 then
         lo
@@ -136,7 +148,7 @@ lastAtOrBefore metres array lo hi =
         in
         case Array.get mid array of
             Just mark ->
-                if mark.metres <= metres then
+                if mark.metres |> Quantity.lessThanOrEqualTo metres then
                     lastAtOrBefore metres array mid hi
 
                 else

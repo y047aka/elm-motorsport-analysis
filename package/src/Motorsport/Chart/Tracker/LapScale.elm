@@ -69,7 +69,7 @@ lapScale referenceLap lines config =
                 Nothing
 
         pinned progress metres =
-            { progress = progress, distance = Length.meters metres, time = ReferenceLap.timeTo referenceLap (Length.meters metres) }
+            { progress = progress, distance = metres, time = ReferenceLap.timeTo referenceLap metres }
 
         ends =
             case ( config.miniSectors, lines.miniSectors ) of

@@ -19,6 +19,8 @@ circuit is drawn to the same tenth of a metre.
 
 -}
 
+import Angle exposing (Angle)
+import Length exposing (Length)
 import Motorsport.Circuit.Geodesy exposing (Frame, project)
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Mark, Point, Shape)
@@ -42,11 +44,11 @@ type alias Layout =
     }
 
 
-{-| How far round the lap, in metres, each stretch of it ends: where the line it
+{-| How far round the lap each stretch of it ends: where the line it
 is timed to stands.
 -}
 type alias TimingLines =
-    { sectors : BySector Float
+    { sectors : BySector Length
     , miniSectors : MiniSectorLines
     }
 
@@ -65,7 +67,7 @@ are read together.
 -}
 type MiniSectorLines
     = SectorsOnly
-    | LeMansMiniSectors (ByMiniSector (Maybe Float))
+    | LeMansMiniSectors (ByMiniSector (Maybe Length))
 
 
 {-| The lengths one detail of a circuit's drawing is made at, in metres on the
@@ -122,21 +124,21 @@ type alias LabelLengths =
 {-| The lap's centreline as a line on the ground, from the degrees it was
 surveyed at and the distances those degrees were stretched to.
 -}
-shapeOf : Frame -> List { a | lat : Float, lon : Float, metres : Float } -> Shape
+shapeOf : Frame -> List { a | lat : Angle, lon : Angle, metres : Length } -> Shape
 shapeOf frame surveyed =
     Shape.fromMarks (List.map (mark frame) surveyed)
 
 
 {-| The pit lane as a line on the ground. No car is ever placed on it.
 -}
-pitLaneOf : Frame -> List { a | lat : Float, lon : Float } -> List Point
+pitLaneOf : Frame -> List { a | lat : Angle, lon : Angle } -> List Point
 pitLaneOf frame surveyed =
     List.map (drawn frame) surveyed
 
 
 {-| The heights a geometry carries, laid beside the metres of the lap's points.
 -}
-reliefOf : List { a | metres : Float } -> Maybe { centreline : List Float, pitLane : List Float } -> Maybe Relief
+reliefOf : List { a | metres : Length } -> Maybe { centreline : List Length, pitLane : List Length } -> Maybe Relief
 reliefOf surveyed =
     Maybe.map
         (\heights ->
@@ -147,7 +149,7 @@ reliefOf surveyed =
         )
 
 
-mark : Frame -> { a | lat : Float, lon : Float, metres : Float } -> Mark
+mark : Frame -> { a | lat : Angle, lon : Angle, metres : Length } -> Mark
 mark frame point =
     let
         place =
@@ -159,7 +161,7 @@ mark frame point =
     }
 
 
-drawn : Frame -> { a | lat : Float, lon : Float } -> Point
+drawn : Frame -> { a | lat : Angle, lon : Angle } -> Point
 drawn frame place =
     let
         metres =

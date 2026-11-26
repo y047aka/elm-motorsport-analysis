@@ -25,19 +25,22 @@ places were sampled carries beside its points as `elevation_m`.
 
 -}
 
+import Angle exposing (Angle)
 import GeoJson
 import Json.Decode as Decode exposing (Decoder)
+import Length exposing (Length)
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.Geodesy as Geodesy exposing (Coordinate, Frame)
+import Quantity
 
 
 {-| A point of the lap: where it stands on the earth, and how far round the lap
 it is.
 -}
 type alias LapPoint =
-    { lat : Float
-    , lon : Float
-    , metres : Float
+    { lat : Angle
+    , lon : Angle
+    , metres : Length
     }
 
 
@@ -49,7 +52,7 @@ type alias Geometry =
     , direction : Direction
     , centreline : List LapPoint
     , pitLane : List Coordinate
-    , heights : Maybe { centreline : List Float, pitLane : List Float }
+    , heights : Maybe { centreline : List Length, pitLane : List Length }
     }
 
 
@@ -63,7 +66,7 @@ what keeps them honest -- against the figures the circuit's map record holds
 rather than against one another.
 
 -}
-decoder : { lapLength : Float } -> Decoder Geometry
+decoder : { lapLength : Length } -> Decoder Geometry
 decoder { lapLength } =
     GeoJson.decoder
         |> Decode.andThen
@@ -86,8 +89,8 @@ line feature =
             Just
                 { role = role
                 , coordinates = coordinates
-                , metres = Decode.decodeValue (Decode.field "metres" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
-                , heights = Decode.decodeValue (Decode.field "elevation_m" (Decode.list Decode.float)) feature.properties |> Result.toMaybe
+                , metres = Decode.decodeValue (Decode.field "metres" (Decode.list (Decode.map Length.meters Decode.float))) feature.properties |> Result.toMaybe
+                , heights = Decode.decodeValue (Decode.field "elevation_m" (Decode.list (Decode.map Length.meters Decode.float))) feature.properties |> Result.toMaybe
                 , frame = Decode.decodeValue frame feature.properties |> Result.toMaybe
                 , direction = Decode.decodeValue (Decode.maybe (Decode.field "direction" Decode.string)) feature.properties |> Result.withDefault Nothing
                 }
@@ -100,7 +103,7 @@ roundTheLap : Maybe GeoJson.Geometry -> Maybe (List Coordinate)
 roundTheLap geometry =
     case geometry of
         Just (GeoJson.LineString positions) ->
-            Just (List.map (\( lon, lat, _ ) -> { lat = lat, lon = lon }) positions)
+            Just (List.map (\( lon, lat, _ ) -> { lat = Angle.degrees lat, lon = Angle.degrees lon }) positions)
 
         _ ->
             Nothing
@@ -109,14 +112,14 @@ roundTheLap geometry =
 type alias Feature =
     { role : String
     , coordinates : List Coordinate
-    , metres : Maybe (List Float)
-    , heights : Maybe (List Float)
+    , metres : Maybe (List Length)
+    , heights : Maybe (List Length)
     , frame : Maybe Frame
     , direction : Maybe String
     }
 
 
-assemble : Float -> List Feature -> Decoder Geometry
+assemble : Length -> List Feature -> Decoder Geometry
 assemble lapLength features =
     case ( find "outline" features, find "pit_lane" features ) of
         ( Just outline, Just pitLane ) ->
@@ -157,7 +160,7 @@ assemble lapLength features =
 {-| Both lines' heights, or neither's: one per point of each, since a height out of
 step with its point is drawn at another point's place.
 -}
-heightsOf : Feature -> Feature -> Result String (Maybe { centreline : List Float, pitLane : List Float })
+heightsOf : Feature -> Feature -> Result String (Maybe { centreline : List Length, pitLane : List Length })
 heightsOf outline pitLane =
     case ( outline.heights, pitLane.heights ) of
         ( Nothing, Nothing ) ->
@@ -182,7 +185,7 @@ find role =
     List.filter (\one -> one.role == role) >> List.head
 
 
-verify : Float -> List Float -> List Coordinate -> Maybe String
+verify : Length -> List Length -> List Coordinate -> Maybe String
 verify lapLength metres coordinates =
     [ \_ ->
         if List.length metres /= List.length coordinates then
@@ -193,7 +196,7 @@ verify lapLength metres coordinates =
     , \_ -> firstDrop metres Nothing 0 |> Maybe.map (\at -> "metres go backwards at point " ++ String.fromInt at)
     , \_ -> endsAt lapLength (List.head (List.reverse metres))
     , \_ ->
-        if List.head metres /= Just 0 then
+        if List.head metres /= Just Quantity.zero then
             Just "the outline does not start at the finish line's 0 m"
 
         else
@@ -223,21 +226,21 @@ firstComplaint checks =
                     firstComplaint rest
 
 
-endsAt : Float -> Maybe Float -> Maybe String
+endsAt : Length -> Maybe Length -> Maybe String
 endsAt lapLength last =
     case last of
         Nothing ->
             Just "the outline holds no points"
 
         Just metre ->
-            if abs (metre - lapLength) > 0.1 then
-                Just ("the outline ends at " ++ String.fromFloat metre ++ " m, not the published " ++ String.fromFloat lapLength ++ " m")
+            if Quantity.abs (Quantity.difference metre lapLength) |> Quantity.greaterThan (Length.meters 0.1) then
+                Just ("the outline ends at " ++ String.fromFloat (Length.inMeters metre) ++ " m, not the published " ++ String.fromFloat (Length.inMeters lapLength) ++ " m")
 
             else
                 Nothing
 
 
-firstDrop : List Float -> Maybe Float -> Int -> Maybe Int
+firstDrop : List Length -> Maybe Length -> Int -> Maybe Int
 firstDrop rest previous at =
     case rest of
         [] ->
@@ -246,7 +249,7 @@ firstDrop rest previous at =
         next :: after ->
             case previous of
                 Just before ->
-                    if next < before then
+                    if next |> Quantity.lessThan before then
                         Just at
 
                     else
@@ -260,7 +263,10 @@ frame : Decoder Frame
 frame =
     Decode.map3
         (\originLat originLon parallel ->
-            Geodesy.frame { origin = { lat = originLat, lon = originLon }, parallel = parallel }
+            Geodesy.frame
+                { origin = { lat = Angle.degrees originLat, lon = Angle.degrees originLon }
+                , parallel = Angle.degrees parallel
+                }
         )
         (Decode.field "frame" (Decode.field "origin" (Decode.field "lat" Decode.float)))
         (Decode.field "frame" (Decode.field "origin" (Decode.field "lon" Decode.float)))

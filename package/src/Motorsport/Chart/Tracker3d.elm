@@ -1,4 +1,4 @@
-module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, box, projected, band, perPixel)
+module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, box, projected, band, roll)
 
 {-| The circuit raised off the ground it was surveyed on and seen through a
 perspective camera, so the side of the loop standing near comes out wide and the
@@ -13,11 +13,11 @@ frame, and what draws it is SVG, projected point by point.
 Everything the drawing measures is a share of the lap's own size, so one set of
 lengths serves every circuit.
 
-@docs Model, Msg, init, update, view, box, projected, band, perPixel
+@docs Model, Msg, init, update, view, box, projected, band, roll
 
 -}
 
-import Angle
+import Angle exposing (Angle)
 import Camera3d exposing (Camera3d)
 import Length
 import Motorsport.Chart.Tracker.Circuit as Circuit exposing (Circuit)
@@ -42,8 +42,8 @@ elevation lifts the eye towards overhead; together they are the whole pose -- th
 scale to set, the drawing being fitted to its box.
 -}
 type alias Model =
-    { azimuth : Float
-    , elevation : Float
+    { azimuth : Angle
+    , elevation : Angle
     }
 
 
@@ -52,16 +52,16 @@ in space before it is touched.
 -}
 init : Model
 init =
-    { azimuth = -pi / 2
-    , elevation = degrees 26
+    { azimuth = Angle.degrees -90
+    , elevation = Angle.degrees 26
     }
 
 
-{-| Roll the map towards the right by, and lift the eye towards overhead by, the radians
+{-| Roll the map towards the right by, and lift the eye towards overhead by, the angles
 given.
 -}
 type Msg
-    = Roll Float Float
+    = Roll Angle Angle
 
 
 {-| The azimuth runs the other way round from a roll towards the right: a thing rolled to
@@ -71,23 +71,28 @@ running down. The reversal is made here and nowhere else.
 update : Msg -> Model -> Model
 update msg m =
     case msg of
-        Roll roll rise ->
-            { m | azimuth = m.azimuth - roll, elevation = lifted (m.elevation + rise) }
+        Roll right rise ->
+            { m | azimuth = Quantity.difference m.azimuth right, elevation = lifted (Quantity.plus m.elevation rise) }
 
 
-{-| The radians a pixel of the pointer's travel is worth.
+{-| The angle a pointer's travel of `pixels` is worth.
 -}
-perPixel : Float
+roll : Float -> Angle
+roll pixels =
+    Quantity.timesUnitless (Quantity.float pixels) perPixel
+
+
+perPixel : Angle
 perPixel =
-    degrees 0.45
+    Angle.degrees 0.45
 
 
 {-| The eye's height above the plane the lap lies in. Overhead is the flat map
 again; it stops short of straight down, where the frame turns over.
 -}
-lifted : Float -> Float
+lifted : Angle -> Angle
 lifted =
-    clamp (degrees 4) (degrees 87)
+    Quantity.clamp (Angle.degrees 4) (Angle.degrees 87)
 
 
 {-| The eye's distance from the lap, in the lap's own radii.
@@ -157,8 +162,8 @@ camera : Model -> Camera3d Unitless Space
 camera m =
     Camera3d.orbitZ
         { focalPoint = Point3d.origin
-        , azimuth = Angle.radians m.azimuth
-        , elevation = Angle.radians m.elevation
+        , azimuth = m.azimuth
+        , elevation = m.elevation
         , distance = Quantity.float eyeDistance
         , projection = Camera3d.Perspective
         , fov = Camera3d.angle (Angle.degrees 30)

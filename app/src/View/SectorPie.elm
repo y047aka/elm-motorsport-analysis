@@ -7,12 +7,14 @@ three-slot donut.
 
 -}
 
+import Angle exposing (Angle)
 import Html exposing (Html)
 import Motorsport.Lap.Performance as Performance exposing (SegmentState)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status
 import Path
+import Quantity
 import Shape
 import Svg exposing (Svg, g, svg)
 import Svg.Attributes as SvgAttr
@@ -72,15 +74,25 @@ sectorSlot : Int -> ( String, Float ) -> List (Svg msg)
 sectorSlot index ( color, fraction ) =
     let
         slot =
-            2 * pi / 3
+            Angle.turns (1 / 3)
+
+        startAngle =
+            Quantity.plus (Angle.turns (toFloat index / 3)) (Quantity.half pieGap)
 
         arc fillFraction =
+            let
+                filled =
+                    Quantity.plus startAngle
+                        (Quantity.timesUnitless (Quantity.float fillFraction)
+                            (Quantity.difference slot pieGap)
+                        )
+            in
             Shape.arc
                 { innerRadius = pieInner
                 , outerRadius = pieOuter
                 , cornerRadius = 1
-                , startAngle = toFloat index * slot + pieGap / 2
-                , endAngle = toFloat index * slot + pieGap / 2 + (slot - pieGap) * fillFraction
+                , startAngle = Angle.inRadians startAngle
+                , endAngle = Angle.inRadians filled
                 , padAngle = 0
                 , padRadius = 0
                 }
@@ -110,8 +122,8 @@ pieInner =
     6.5
 
 
-{-| Gap between slots, in radians.
+{-| Gap between slots.
 -}
-pieGap : Float
+pieGap : Angle
 pieGap =
-    0.12
+    Angle.radians 0.12

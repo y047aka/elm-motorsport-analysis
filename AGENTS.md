@@ -99,6 +99,8 @@ Each module's header says what it is; this section holds only what crosses modul
 
 `/package/src/Motorsport/` holds the domain; `Internal/` holds what the sport has no word for (`Statistics`, `ChangePoints`, `Jsonl`, `DataView`). Both sides write Tailwind that `app/style.css` defines, which is why it scans `/package` too.
 
+A distance round the lap is a `Length` and a surveyed place a pair of `Angle`s (`ianmackenzie/elm-units`), turned into those where a served file's metres or degrees arrive. What the drawing measures is its own unit and stays a `Float`: a circuit's `x`/`y`, the lengths a detail is drawn at, and the ring's viewBox.
+
 Where a new module goes:
 
 - `Race/` — the loaded race, its indices, and readings of it at a moment.

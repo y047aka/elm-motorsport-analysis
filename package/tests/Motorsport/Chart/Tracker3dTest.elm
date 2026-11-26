@@ -8,6 +8,7 @@ it does.
 
 -}
 
+import Angle exposing (Angle)
 import Expect
 import Fuzz exposing (Fuzzer)
 import Motorsport.Chart.Tracker3d as Tracker3d
@@ -21,13 +22,13 @@ tests =
             [ test "a drag turns it by how far the pointer travelled" <|
                 \_ ->
                     Expect.within (Expect.Absolute 0.0001)
-                        (drag 200 0).azimuth
-                        (Tracker3d.init.azimuth + 2 * ((drag 100 0).azimuth - Tracker3d.init.azimuth))
+                        (spin (drag 200 0))
+                        (spin Tracker3d.init + 2 * (spin (drag 100 0) - spin Tracker3d.init))
             , fuzz2 Fuzz.float Fuzz.float "the eye stops short of the frame that turns the circuit over" <|
                 \dx dy ->
                     Expect.within (Expect.Absolute 0.0001)
-                        (clamp (degrees 4) (degrees 87) (drag dx dy).elevation)
-                        (drag dx dy).elevation
+                        (clamp 4 87 (tilt (drag dx dy)))
+                        (tilt (drag dx dy))
             ]
         , describe "the projection"
             [ test "the band runs all the way round the lap" <|
@@ -77,7 +78,7 @@ tests =
                 \_ ->
                     -- The convention the map is turned by, and the one that goes back
                     -- unnoticed: the pointer's `x` and the azimuth run opposite.
-                    Expect.lessThan Tracker3d.init.azimuth (drag 100 0).azimuth
+                    Expect.lessThan (spin Tracker3d.init) (spin (drag 100 0))
             , test "the lap lands inside the box it is drawn in" <|
                 \_ ->
                     insideBox Tracker3d.init
@@ -159,7 +160,7 @@ tests =
                             min wide tall / max wide tall
 
                         grazing =
-                            turned Tracker3d.init.azimuth (degrees 4)
+                            turned Tracker3d.init.azimuth (Angle.degrees 4)
                     in
                     Expect.greaterThan (flatness grazing) (flatness overhead)
             ]
@@ -170,17 +171,17 @@ tests =
 -}
 drag : Float -> Float -> Tracker3d.Model
 drag x y =
-    Tracker3d.update (Tracker3d.Roll (x * Tracker3d.perPixel) (y * Tracker3d.perPixel)) Tracker3d.init
+    Tracker3d.update (Tracker3d.Roll (Tracker3d.roll x) (Tracker3d.roll y)) Tracker3d.init
 
 
 overhead : Tracker3d.Model
 overhead =
-    turned Tracker3d.init.azimuth (degrees 86)
+    turned Tracker3d.init.azimuth (Angle.degrees 86)
 
 
 {-| The map opened at, turned to a given azimuth and elevation.
 -}
-turned : Float -> Float -> Tracker3d.Model
+turned : Angle -> Angle -> Tracker3d.Model
 turned azimuth elevation =
     let
         opened =
@@ -189,14 +190,28 @@ turned azimuth elevation =
     { opened | azimuth = azimuth, elevation = elevation }
 
 
-azimuths : Fuzzer Float
+{-| Which way round the map is looked at, in radians.
+-}
+spin : Tracker3d.Model -> Float
+spin =
+    .azimuth >> Angle.inRadians
+
+
+{-| How high the eye stands, in degrees.
+-}
+tilt : Tracker3d.Model -> Float
+tilt =
+    .elevation >> Angle.inDegrees
+
+
+azimuths : Fuzzer Angle
 azimuths =
-    Fuzz.map (\n -> degrees (toFloat (modBy 360 (abs n)))) Fuzz.int
+    Fuzz.map (\n -> Angle.degrees (toFloat (modBy 360 (abs n)))) Fuzz.int
 
 
-elevations : Fuzzer Float
+elevations : Fuzzer Angle
 elevations =
-    Fuzz.map (\n -> degrees (4 + toFloat (modBy 100 (abs n)) * 0.83)) Fuzz.int
+    Fuzz.map (\n -> Angle.degrees (4 + toFloat (modBy 100 (abs n)) * 0.83)) Fuzz.int
 
 
 {-| A lap drawn as the circuit's metres are drawn, `y` running south. The four corners

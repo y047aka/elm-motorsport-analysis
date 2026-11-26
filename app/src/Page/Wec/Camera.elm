@@ -85,7 +85,7 @@ runs what =
 -}
 turned : Float -> Float -> Track3d.Msg
 turned x y =
-    Track3d.Roll (negate (x * Track3d.perPixel)) (negate (y * Track3d.perPixel))
+    Track3d.Roll (Track3d.roll (negate x)) (Track3d.roll (negate y))
 
 
 {-| A two-finger scroll is taken at a third of the rate a drag is: a mouse wheel's notch is
