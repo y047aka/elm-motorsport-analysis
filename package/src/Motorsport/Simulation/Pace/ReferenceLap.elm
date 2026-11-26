@@ -415,14 +415,11 @@ secondsAt lap metres =
                 count =
                     Array.length seconds - 1
 
-                lapLength =
-                    step * toFloat count
-
-                laps =
-                    toFloat (floor (metres / lapLength))
+                ( laps, withinLap ) =
+                    splitLaps (step * toFloat count) metres
 
                 within =
-                    (metres - laps * lapLength) / step
+                    withinLap / step
 
                 i =
                     clamp 0 (count - 1) (floor within)
@@ -447,11 +444,8 @@ metresAt lap time =
                 lapSeconds =
                     get count seconds
 
-                laps =
-                    toFloat (floor (time / lapSeconds))
-
-                within =
-                    time - laps * lapSeconds
+                ( laps, within ) =
+                    splitLaps lapSeconds time
 
                 i =
                     lastAtOrBefore within seconds 0 count
@@ -470,6 +464,17 @@ metresAt lap time =
                         0
             in
             step * (laps * toFloat count + toFloat i + fraction)
+
+
+{-| How many whole laps of `lap` a distance or a time spans, and how far into the next it runs on.
+-}
+splitLaps : Float -> Float -> ( Float, Float )
+splitLaps lap amount =
+    let
+        laps =
+            toFloat (floor (amount / lap))
+    in
+    ( laps, amount - laps * lap )
 
 
 lastAtOrBefore : Float -> Array Float -> Int -> Int -> Int
