@@ -52,20 +52,20 @@ A point-mass car limited by how hard it can corner, accelerate and brake, run ro
             , { x = 0, y = 0, metres = 2200 }
             ]
 
-    timeTo (fromShape Nothing lap) (Length.meters 0)
+    timeTo (fromShape { shape = lap, relief = Nothing }) (Length.meters 0)
     --> Duration.seconds 0
 
 Where the lap's heights are known, the car is slowed climbing and pushed on descending, and brakes harder uphill than down: the slope is read across the same chord as the curvature.
 
 -}
-fromShape : Maybe Relief -> Shape -> ReferenceLap
+fromShape : { shape : Shape, relief : Maybe Relief } -> ReferenceLap
 fromShape =
     lapOf reference
 
 
-lapOf : Parameters -> Maybe Relief -> Shape -> ReferenceLap
-lapOf parameters relief shape =
-    case readCourse parameters.course relief shape of
+lapOf : Parameters -> { shape : Shape, relief : Maybe Relief } -> ReferenceLap
+lapOf parameters lap =
+    case readCourse parameters.course lap of
         Just reading ->
             runCar (limitsOf parameters.car) reading
 
@@ -86,8 +86,8 @@ type alias Reading =
 A sample's curvature and slope are both read across the chord `curvatureReach` either side of it, and the slope is taken as the slope of the stretch from it to the next.
 
 -}
-readCourse : Course -> Maybe Relief -> Shape -> Maybe Reading
-readCourse course relief shape =
+readCourse : Course -> { shape : Shape, relief : Maybe Relief } -> Maybe Reading
+readCourse course { shape, relief } =
     let
         lapLength =
             Shape.length shape

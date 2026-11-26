@@ -61,7 +61,7 @@ hill =
 
 pace : ReferenceLap
 pace =
-    ReferenceLap.fromShape Nothing stadium
+    ReferenceLap.fromShape { shape = stadium, relief = Nothing }
 
 
 {-| Seconds per metre over the ten metres from a distance.
@@ -98,11 +98,11 @@ tests =
                     |> Expect.greaterThan (slowness 1900)
         , test "a climb is taken slower than the same straight on the level" <|
             \_ ->
-                slownessOf (ReferenceLap.fromShape (Just hill) stadium) 800
+                slownessOf (ReferenceLap.fromShape { shape = stadium, relief = Just hill }) 800
                     |> Expect.greaterThan (slowness 800)
         , test "a descent is taken quicker than the same straight on the level" <|
             \_ ->
-                slownessOf (ReferenceLap.fromShape (Just hill) stadium) 1500
+                slownessOf (ReferenceLap.fromShape { shape = stadium, relief = Just hill }) 1500
                     |> Expect.lessThan (slowness 1500)
         , test "distanceAfter undoes timeTo" <|
             \_ ->

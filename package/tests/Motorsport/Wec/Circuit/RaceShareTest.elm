@@ -61,7 +61,7 @@ raceTest race =
                         lapLength =
                             Shape.length layout.shape
                     in
-                    ( missedBy (ReferenceLap.fromShape layout.relief layout.shape) lapLength lines race.shares
+                    ( missedBy (ReferenceLap.fromShape { shape = layout.shape, relief = layout.relief }) lapLength lines race.shares
                     , missedBy ReferenceLap.steady lapLength lines race.shares
                     )
                         |> Expect.all

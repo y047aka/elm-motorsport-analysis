@@ -76,7 +76,7 @@ fromLayout layout { direction, config } =
         , shape = layout.shape
         , pitLane = layout.pitLane
         , relief = layout.relief
-        , scale = LapScale.lapScale (ReferenceLap.fromShape layout.relief layout.shape) layout.timingLines config
+        , scale = LapScale.lapScale (ReferenceLap.fromShape { shape = layout.shape, relief = layout.relief }) layout.timingLines config
         , lengths = layout.lengths
         , bounds =
             boundsOf

@@ -45,12 +45,12 @@ tests =
             [ test "still puts every line where its distance is" <|
                 \_ ->
                     [ 0.2, 0.5 ]
-                        |> List.map (metresAt (LapScale.lapScale (ReferenceLap.fromShape Nothing ReferenceLapTest.stadium) stadiumLines stadiumSectors))
+                        |> List.map (metresAt (LapScale.lapScale (ReferenceLap.fromShape { shape = ReferenceLapTest.stadium, relief = Nothing }) stadiumLines stadiumSectors))
                         |> expectAll [ 500, 1150 ]
             , test "runs a straight in less of the time between two lines than a bend" <|
                 \_ ->
                     -- Half the time from 500 m to the bend's end at 1,150 m.
-                    metresAt (LapScale.lapScale (ReferenceLap.fromShape Nothing ReferenceLapTest.stadium) stadiumLines stadiumSectors) 0.35
+                    metresAt (LapScale.lapScale (ReferenceLap.fromShape { shape = ReferenceLapTest.stadium, relief = Nothing }) stadiumLines stadiumSectors) 0.35
                         |> Expect.greaterThan 825
             ]
         , describe "distanceOf"
@@ -165,7 +165,7 @@ halfwayAtPace =
 
 stadiumScale : LapScale
 stadiumScale =
-    LapScale.lapScale (ReferenceLap.fromShape Nothing ReferenceLapTest.stadium) stadiumLines stadiumSectors
+    LapScale.lapScale (ReferenceLap.fromShape { shape = ReferenceLapTest.stadium, relief = Nothing }) stadiumLines stadiumSectors
 
 
 stadiumLines : TimingLines
