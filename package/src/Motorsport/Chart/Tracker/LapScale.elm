@@ -15,7 +15,7 @@ import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
-import Motorsport.Simulation.Evenness as Evenness exposing (Evenness)
+import Motorsport.Simulation.Neutralised as Neutralised exposing (Neutralised)
 import Motorsport.Simulation.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans
@@ -114,7 +114,7 @@ interpolate referenceLap a lines progress =
 
 {-| How far round the lap to draw a car on a circuit: where [`progressOf`](Motorsport-Chart-Tracker-Config#progressOf) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
 
-How much slower than usual is the stretch's time against its share of the car's own best lap: see [`Evenness`](Motorsport-Simulation-Evenness).
+How much slower than usual is the stretch's time against its share of the car's own best lap: see [`Neutralised`](Motorsport-Simulation-Neutralised).
 
 -}
 distanceOf : LapScale -> CarAt -> Length
@@ -124,10 +124,10 @@ distanceOf ((LapScale { config }) as scale) car =
             ease scale
                 (case car.bestLap of
                     Just best ->
-                        Evenness.fromTimes { took = stretch.time, usually = round (stretch.share.share * toFloat best.time) }
+                        Neutralised.fromTimes { took = stretch.time, usually = round (stretch.share.share * toFloat best.time) }
 
                     Nothing ->
-                        Evenness.none
+                        Neutralised.none
                 )
                 stretch
 
@@ -136,11 +136,11 @@ distanceOf ((LapScale { config }) as scale) car =
 
 
 {-| How far round the lap a car part way through a stretch is drawn.
-The reference lap's pace and an even pace agree at the stretch's ends, so a car that changes how evenly it is drawn as it crosses into the next stretch does not jump.
+The reference lap's pace and an even pace agree at the stretch's ends, so a car read as more or less neutralised as it crosses into the next stretch does not jump.
 -}
-ease : LapScale -> Evenness -> { a | share : Share, progress : Float } -> Length
-ease scale evenness { share, progress } =
-    Evenness.between
+ease : LapScale -> Neutralised -> { a | share : Share, progress : Float } -> Length
+ease scale neutralised { share, progress } =
+    Neutralised.between
         (distanceAt scale (share.start + progress * share.share))
         (Quantity.interpolateFrom (distanceAt scale share.start) (distanceAt scale (share.start + share.share)) progress)
-        evenness
+        neutralised

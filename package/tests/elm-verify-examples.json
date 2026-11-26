@@ -14,7 +14,7 @@
     "Motorsport.Position",
     "Motorsport.Race.TimelineEvent",
     "Motorsport.Sector",
-    "Motorsport.Simulation.Evenness",
+    "Motorsport.Simulation.Neutralised",
     "Motorsport.Simulation.ReferenceLap",
     "Motorsport.Status",
     "Motorsport.Wec.Circuit.LeMans",
