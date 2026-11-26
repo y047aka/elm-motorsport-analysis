@@ -34,11 +34,7 @@ even =
 
 {-| The reference car's lap of a shape, in the shape's own metres.
 
-A point-mass car limited by how hard it can corner, accelerate and brake, run round the centreline sampled every few metres.
-The curvature is read across a chord 60 m long, which smooths the corners OpenStreetMap draws as polygons and stands in for the racing line's wider radius.
-
-The limits are no one car's, and only the shape of the lap is read off them: every lap is stretched to the time it was run in.
-They were chosen against the green-flag laps of the 2025 and 2026 rounds at every circuit drawn, as the limits that share those laps out between the lines the maps give a distance for most nearly as the races did: 0.013 of the lap off in all, on the mean of the fourteen rounds, against 0.027 for grip that downforce adds nothing to (`ReferenceLapTest`).
+A point-mass car limited by how hard it can corner, accelerate and brake, run round the centreline sampled every few metres; every figure it is run with is one of `reference`'s.
 
     lap : Shape
     lap =
@@ -53,17 +49,22 @@ They were chosen against the green-flag laps of the 2025 and 2026 rounds at ever
     secondsAt (fromShape Nothing lap) 0
     --> 0
 
-Where the lap's heights are known, the car is slowed climbing and pushed on descending, and brakes harder uphill than down: the slope is read across the same 60 m chord.
+Where the lap's heights are known, the car is slowed climbing and pushed on descending, and brakes harder uphill than down: the slope is read across the same chord as the curvature.
 
 -}
 fromShape : Maybe Relief -> Shape -> Pace
-fromShape relief shape =
+fromShape =
+    lapOf reference
+
+
+lapOf : Parameters -> Maybe Relief -> Shape -> Pace
+lapOf parameters relief shape =
     let
         lapLength =
             Shape.length shape
 
         count =
-            floor (lapLength / sampleStep)
+            floor (lapLength / parameters.sampleStep)
     in
     if count < 3 then
         Even
@@ -78,7 +79,7 @@ fromShape relief shape =
                     |> Array.map (\{ x, y } -> { x = x, y = y })
 
             reach =
-                max 1 (round (curvatureReach / step))
+                max 1 (round (parameters.curvatureReach / step))
 
             gradeAt i =
                 case relief of
@@ -99,33 +100,56 @@ fromShape relief shape =
                                     (Array.get i places)
                                     (Array.get (modBy count (i + reach)) places)
                                     |> Maybe.withDefault 0
-                                    |> cornerSpeed
+                                    |> cornerSpeed parameters
                             , grade = gradeAt i
                             }
                         )
 
             speeds =
-                limitByAcceleration step samples
+                limitByAcceleration parameters step samples
         in
         Profiled { step = step, seconds = Array.fromList (elapsed step speeds) }
 
 
-sampleStep : Float
-sampleStep =
-    5
+{-| Every figure the reference lap is worked out from, in metres and seconds.
 
+  - `sampleStep`: how far apart the lap is sampled.
+  - `curvatureReach`: how far either side of a sample its curvature and slope are read; the chord this spans smooths the corners OpenStreetMap draws as polygons and stands in for the racing line's wider radius.
+  - `grip` and `downforce`: how hard the car can corner standing still, and how much harder each (metre per second)² it is going makes it, so a bend of curvature κ is taken at the speed v where v²κ = `grip` + `downforce` v², and one of a radius over 1 / `downforce` is no limit at all.
+  - `accelerating`: how hard the car can accelerate from a standstill, falling with the square of its speed towards `top`, and never below `leastAcceleration` of it, so that `top` is reached.
+  - `braking`: how hard it can brake.
+  - `top`: how fast it can go.
 
-curvatureReach : Float
-curvatureReach =
-    30
-
-
-{-| Metres per second squared, and metres per second.
-`grip` is how hard the car can corner standing still and `downforce` how much harder each (metre per second)² it is going makes it, so a corner of curvature κ is taken at the speed v where v²κ = `grip` + `downforce` v², and a bend of a radius over 1 / `downforce` metres is no limit at all.
 -}
-limits : { grip : Float, downforce : Float, accelerating : Float, braking : Float, top : Float }
-limits =
-    { grip = 15, downforce = 0.005, accelerating = 10, braking = 20, top = 92 }
+type alias Parameters =
+    { sampleStep : Float
+    , curvatureReach : Float
+    , grip : Float
+    , downforce : Float
+    , accelerating : Float
+    , leastAcceleration : Float
+    , braking : Float
+    , top : Float
+    }
+
+
+{-| The figures [`fromShape`](#fromShape) runs with.
+
+They are no one car's, and only the shape of the lap is read off them: every lap is stretched to the time it was run in.
+The car's were chosen against the green-flag laps of the 2025 and 2026 rounds at every circuit drawn, as the figures that share those laps out between the lines the maps give a distance for most nearly as the races did: 0.013 of the lap off in all, on the mean of the fourteen rounds, against 0.027 for grip that downforce adds nothing to (`ReferenceLapTest`).
+
+-}
+reference : Parameters
+reference =
+    { sampleStep = 5
+    , curvatureReach = 30
+    , grip = 15
+    , downforce = 0.005
+    , accelerating = 10
+    , leastAcceleration = 0.02
+    , braking = 20
+    , top = 92
+    }
 
 
 {-| The curvature of the circle through three points, from the area of the triangle they make.
@@ -151,13 +175,13 @@ distance a b =
     sqrt ((b.x - a.x) ^ 2 + (b.y - a.y) ^ 2)
 
 
-cornerSpeed : Float -> Float
-cornerSpeed kappa =
-    if kappa > limits.downforce then
-        min limits.top (sqrt (limits.grip / (kappa - limits.downforce)))
+cornerSpeed : Parameters -> Float -> Float
+cornerSpeed parameters kappa =
+    if kappa > parameters.downforce then
+        min parameters.top (sqrt (parameters.grip / (kappa - parameters.downforce)))
 
     else
-        limits.top
+        parameters.top
 
 
 {-| The cornering speeds, cut to what the car can accelerate up to after each slow point and brake down from before it.
@@ -166,8 +190,8 @@ The lap is a loop, so both passes start at its slowest point, which neither can 
 A sample's grade is the slope across the chord centred on it, taken as the slope of the stretch from it to the next.
 
 -}
-limitByAcceleration : Float -> List { cornering : Float, grade : Float } -> List Float
-limitByAcceleration step samples =
+limitByAcceleration : Parameters -> Float -> List { cornering : Float, grade : Float } -> List Float
+limitByAcceleration parameters step samples =
     let
         count =
             List.length samples
@@ -183,7 +207,7 @@ limitByAcceleration step samples =
                         else
                             ( bestI, bestV )
                     )
-                    ( 0, limits.top )
+                    ( 0, parameters.top )
                 |> Tuple.first
 
         rotated =
@@ -199,7 +223,7 @@ limitByAcceleration step samples =
                         (\sample ( previous, done ) ->
                             let
                                 power =
-                                    limits.accelerating * max 0.02 (1 - (previous.speed / limits.top) ^ 2)
+                                    parameters.accelerating * max parameters.leastAcceleration (1 - (previous.speed / parameters.top) ^ 2)
 
                                 speed =
                                     min sample.cornering (reachable previous.speed (power - gravity * previous.grade))
@@ -220,7 +244,7 @@ limitByAcceleration step samples =
                         (\sample ( next, done ) ->
                             let
                                 speed =
-                                    min sample.speed (reachable next (limits.braking + gravity * sample.grade))
+                                    min sample.speed (reachable next (parameters.braking + gravity * sample.grade))
                             in
                             ( speed, speed :: done )
                         )

@@ -142,15 +142,22 @@ atPace =
     Evenness 0
 
 
-{-| How evenly a stretch that `took` what it `usually` takes is drawn: not at all up to 1.2 times as long, all the way from 2 times, and in proportion between.
+{-| How many times as long as usual a stretch has to take before it is drawn at all evenly, and before it is drawn at an even pace through and through.
 
 Chosen against Le Mans 2025, where 95% of its mini-sectors run under green took at most 1.11 times their share of the car's best lap, those run under a full course yellow 2.9 at the slowest tenth, and those behind the safety car 1.43 at the median.
 
 -}
+slowness : { from : Float, to : Float }
+slowness =
+    { from = 1.2, to = 2 }
+
+
+{-| How evenly a stretch that `took` what it `usually` takes is drawn: not at all up to `slowness.from` times as long, all the way from `slowness.to` times, and in proportion between.
+-}
 evenness : { took : Duration, usually : Duration } -> Evenness
 evenness { took, usually } =
     if usually > 0 then
-        Evenness (clamp 0 1 ((toFloat took / toFloat usually - 1.2) / 0.8))
+        Evenness (clamp 0 1 ((toFloat took / toFloat usually - slowness.from) / (slowness.to - slowness.from)))
 
     else
         atPace
