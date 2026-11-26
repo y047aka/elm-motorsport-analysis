@@ -45,7 +45,7 @@ view detail shown standings =
             Circuit.view detail drawn standings
 
 
-{-| The circuit's own shape, where the app has a map of it: what the raised map is drawn from.
+{-| The circuit's own shape, where the app has a map of it.
 -}
 circuit : Track -> Maybe Circuit
 circuit shown =

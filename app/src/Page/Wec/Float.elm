@@ -450,7 +450,6 @@ view m drawn snapshot =
         Just circuit ->
             box m circuit snapshot
 
-        -- No raised map, and no press to float one: the column offers none.
         Nothing ->
             text ""
 

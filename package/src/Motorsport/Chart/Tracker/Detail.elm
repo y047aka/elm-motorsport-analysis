@@ -1,6 +1,6 @@
 module Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
 
-{-| How much of a tracker is drawn, by the ring and by a circuit alike.
+{-| How much of a tracker is drawn.
 
 @docs Detail, Labels
 

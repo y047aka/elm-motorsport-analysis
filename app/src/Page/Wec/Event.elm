@@ -300,7 +300,6 @@ trackerFrame marker drawing controls =
 
 {-| The tracker's column, carried among the cars as any other is. Its ✕ is
 the one thing that takes it away.
-The press that floats the raised map is offered only for a circuit the app has a map of: the ring has no raised map.
 -}
 trackerCard : Bool -> Bool -> TrackerChart.Track -> Snapshot -> Html Msg
 trackerCard several held track snapshot =

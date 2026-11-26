@@ -161,7 +161,7 @@ type alias Car =
 {-| The figures [`fromShape`](#fromShape) runs with.
 
 They are no one car's, and only the shape of the lap is read off them: every lap is stretched to the time it was run in.
-The car's were chosen against the green-flag laps of the 2025 and 2026 rounds at every circuit drawn, as the figures that share those laps out between the lines the maps give a distance for most nearly as the races did: 0.013 of the lap off in all, on the mean of the fourteen rounds, against 0.027 for grip that downforce adds nothing to (`RaceShareTest`).
+The car's were chosen as the figures that share the green-flag laps of the 2025 and 2026 rounds out between the lines the maps give a distance for most nearly as the races did; `RaceShareTest` holds each circuit to its 2026 race.
 
 -}
 reference : Parameters

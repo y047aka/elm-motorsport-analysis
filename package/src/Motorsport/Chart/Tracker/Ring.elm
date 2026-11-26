@@ -2,8 +2,6 @@ module Motorsport.Chart.Tracker.Ring exposing (view)
 
 {-| The track as the summary's proportions describe it: a ring, run clockwise from the finish line at 12 o'clock, each stretch taking the share of the circle its share of the lap gives it, and each car placed by the share of its lap's time it has run.
 
-It is what a round is drawn on when the app has no map of its circuit.
-
 @docs view
 
 -}

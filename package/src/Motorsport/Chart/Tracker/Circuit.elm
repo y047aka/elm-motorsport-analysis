@@ -33,7 +33,7 @@ import TypedSvg.Attributes as Attributes exposing (strokeWidth, viewBox, x1, x2,
 import TypedSvg.Types exposing (Transform(..), px)
 
 
-{-| A circuit the app has a map of, ready to draw: hold on to it and hand it to [`view`](#view) each frame.
+{-| A circuit the app has a map of, ready to draw.
 -}
 type Circuit
     = Circuit Drawing
@@ -64,6 +64,8 @@ Between two lines a car runs at the pace the circuit's bends allow: see [`LapSca
 The pit lane is drawn and no car is placed on it; the lap runs the direction its survey was chained in.
 
 The lengths it is drawn at come with the circuit: see [`Lengths`](Motorsport-Wec-Circuit-Layout#Lengths).
+
+It works out the circuit's reference lap, so a circuit is built once and drawn every frame, not built every frame.
 
 -}
 fromLayout : Layout -> { direction : Direction, config : TrackConfig } -> Circuit
