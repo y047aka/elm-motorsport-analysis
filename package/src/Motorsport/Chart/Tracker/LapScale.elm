@@ -1,21 +1,21 @@
 module Motorsport.Chart.Tracker.LapScale exposing
     ( LapScale, lapScale, distanceAt
-    , distanceOf, Evenness, evenness, ease
+    , distanceOf, ease
     )
 
 {-| How far round a circuit a car is drawn: the summary's proportions pinned to the lines the circuit is timed at, run between them at the pace the circuit's bends allow, and eased towards an even pace where a car is running far slower than usual.
 
 @docs LapScale, lapScale, distanceAt
-@docs distanceOf, Evenness, evenness, ease
+@docs distanceOf, ease
 
 -}
 
 import Duration exposing (Seconds)
 import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
-import Motorsport.Duration exposing (Duration)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
+import Motorsport.Simulation.Evenness as Evenness exposing (Evenness)
 import Motorsport.Simulation.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans
@@ -114,8 +114,7 @@ interpolate referenceLap a lines progress =
 
 {-| How far round the lap to draw a car on a circuit: where [`progressOf`](Motorsport-Chart-Tracker-Config#progressOf) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
 
-A car under a full course yellow, behind the safety car or through a slow zone is held to a speed rather than driving the corners, so the reference lap's quick straights and slow bends would misplace it.
-How much slower than usual is the stretch's time against its share of the car's own best lap.
+How much slower than usual is the stretch's time against its share of the car's own best lap: see [`Evenness`](Motorsport-Simulation-Evenness).
 
 -}
 distanceOf : LapScale -> CarAt -> Length
@@ -125,10 +124,10 @@ distanceOf ((LapScale { config }) as scale) car =
             ease scale
                 (case car.bestLap of
                     Just best ->
-                        evenness { took = stretch.time, usually = round (stretch.share.share * toFloat best.time) }
+                        Evenness.fromTimes { took = stretch.time, usually = round (stretch.share.share * toFloat best.time) }
 
                     Nothing ->
-                        atPace
+                        Evenness.none
                 )
                 stretch
 
@@ -136,56 +135,12 @@ distanceOf ((LapScale { config }) as scale) car =
             distanceAt scale car.currentLap.progress
 
 
-{-| How far a car is drawn from where the reference lap's pace puts it towards where an even pace through its stretch does: from none of the way to all of it.
--}
-type Evenness
-    = Evenness Float
-
-
-atPace : Evenness
-atPace =
-    Evenness 0
-
-
-{-| How many times as long as usual a stretch has to take before it is drawn at all evenly, and before it is drawn at an even pace through and through.
-
-Chosen against Le Mans 2025, where 95% of its mini-sectors run under green took at most 1.11 times their share of the car's best lap, those run under a full course yellow 2.9 at the slowest tenth, and those behind the safety car 1.43 at the median.
-
--}
-slowness : { from : Float, to : Float }
-slowness =
-    { from = 1.2, to = 2 }
-
-
-{-| How evenly a stretch that `took` what it `usually` takes is drawn: not at all up to `slowness.from` times as long, all the way from `slowness.to` times, and in proportion between.
--}
-evenness : { took : Duration, usually : Duration } -> Evenness
-evenness { took, usually } =
-    if usually > 0 then
-        Evenness (clamp 0 1 ((toFloat took / toFloat usually - slowness.from) / (slowness.to - slowness.from)))
-
-    else
-        atPace
-
-
 {-| How far round the lap a car part way through a stretch is drawn.
 The reference lap's pace and an even pace agree at the stretch's ends, so a car that changes how evenly it is drawn as it crosses into the next stretch does not jump.
 -}
 ease : LapScale -> Evenness -> { a | share : Share, progress : Float } -> Length
-ease scale (Evenness towardsEven) { share, progress } =
-    let
-        paced =
-            distanceAt scale (share.start + progress * share.share)
-    in
-    if towardsEven <= 0 then
-        paced
-
-    else
-        let
-            atEvenPace =
-                Quantity.interpolateFrom
-                    (distanceAt scale share.start)
-                    (distanceAt scale (share.start + share.share))
-                    progress
-        in
-        Quantity.interpolateFrom paced atEvenPace towardsEven
+ease scale evenness { share, progress } =
+    Evenness.between
+        (distanceAt scale (share.start + progress * share.share))
+        (Quantity.interpolateFrom (distanceAt scale share.start) (distanceAt scale (share.start + share.share)) progress)
+        evenness
