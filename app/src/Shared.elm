@@ -16,7 +16,6 @@ import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.CarImage as CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
-import Data.Wec.Manufacturer exposing (Manufacturers)
 import Dict exposing (Dict)
 import Effect exposing (Effect)
 import Generated.Manufacturer.Wec
@@ -341,7 +340,7 @@ resumeWaitingRound m =
                                 id =
                                     { season = season.season, id = round.id, name = round.name }
                             in
-                            askFor params Generated.Manufacturer.Wec.table (photographIn carImages id) id round m
+                            askFor params (photographIn carImages id) id round m
 
         _ ->
             ( m, Effect.none )
@@ -355,8 +354,8 @@ photographIn carImages id carNumber =
     CarImage.url carImages { season = id.season, round = id.id, carNumber = carNumber }
 
 
-askFor : { season : String, event : String } -> Manufacturers -> (Car.CarNumber -> Maybe String) -> RoundId -> Calendar.Round -> Model -> ( Model, Effect Msg )
-askFor params manufacturers carImageUrl id round m =
+askFor : { season : String, event : String } -> (Car.CarNumber -> Maybe String) -> RoundId -> Calendar.Round -> Model -> ( Model, Effect Msg )
+askFor params carImageUrl id round m =
     case Era.fromSeason id.season of
         Nothing ->
             ( { m | round = Unavailable params NoClassGrid }, Effect.none )
@@ -367,7 +366,7 @@ askFor params manufacturers carImageUrl id round m =
                 Cmd.batch
                     [ Http.get
                         { url = round.summary
-                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era manufacturers carImageUrl)
+                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era Generated.Manufacturer.Wec.table carImageUrl)
                         }
                     , Http.get
                         { url = round.laps
