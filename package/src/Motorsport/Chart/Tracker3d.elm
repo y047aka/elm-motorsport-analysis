@@ -280,17 +280,17 @@ stance frame model points =
         eye =
             camera model
 
-        ring =
-            ringOf points
+        loop =
+            opened points
 
         size =
-            sizeOf ring
+            sizeOf loop
 
         ground =
-            List.map (project eye << groundAt size) ring
+            List.map (project eye << groundAt size) loop
 
         ribbon =
-            List.map (project eye << raisedAt size) (bandOf size ring)
+            List.map (project eye << raisedAt size) (bandOf size loop)
 
         marks =
             ground ++ ribbon
@@ -594,7 +594,7 @@ view surface model shown standings =
             , pit = pit
             , band = ribbon
             , risers =
-                every (riserStride (ringOf lap)) (ringOf lap)
+                every (riserStride (opened lap)) (opened lap)
                     |> List.map (\p -> ( project eye (groundAt size p), project eye (raisedAt size p) ))
             , boundaries = List.map (across (bandWidth / 2)) g.boundaries
             , finish = across (bandWidth * 0.8) Quantity.zero
@@ -639,8 +639,8 @@ outward position =
 {-| How many marks stand between two risers.
 -}
 riserStride : List a -> Int
-riserStride ring =
-    max 1 (List.length ring // 120)
+riserStride loop =
+    max 1 (List.length loop // 120)
 
 
 {-| Every `n`th item, from the first.
@@ -688,10 +688,10 @@ short of it and the band has a wedge missing where the finish line stands.
 
 -}
 bandOf : Size -> List Lifted -> List Lifted
-bandOf size ring =
+bandOf size loop =
     let
         seams =
-            List.map2 Tuple.pair ring (normals ring) |> closed
+            List.map2 Tuple.pair loop (normals loop) |> closed
 
         edge share =
             List.map (\( p, n ) -> offset (share * size.half) p n) seams
@@ -708,11 +708,11 @@ offset k p n =
 way it runs through that point.
 -}
 normals : List { a | x : Float, y : Float } -> List Point
-normals ring =
+normals loop =
     List.map2
         (\from to -> normalize { x = negate (to.y - from.y), y = to.x - from.x })
-        (previous ring)
-        (following ring)
+        (previous loop)
+        (following loop)
 
 
 normalize : Point -> Point
@@ -740,8 +740,8 @@ previous list =
 
 {-| A circuit's mark list closes itself, its last mark standing on its first; a list that does not is taken as it is.
 -}
-ringOf : List { a | x : Float, y : Float } -> List { a | x : Float, y : Float }
-ringOf lap =
+opened : List { a | x : Float, y : Float } -> List { a | x : Float, y : Float }
+opened lap =
     case ( List.head lap, List.reverse lap |> List.head ) of
         ( Just first, Just last ) ->
             if abs (first.x - last.x) < 0.001 && abs (first.y - last.y) < 0.001 then
