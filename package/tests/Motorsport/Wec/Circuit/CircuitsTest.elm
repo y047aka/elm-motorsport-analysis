@@ -1,4 +1,4 @@
-module Motorsport.Wec.Circuit.CircuitsTest exposing (tests)
+module Motorsport.Wec.Circuit.CircuitsTest exposing (Circuit, circuits, tests)
 
 {-| Every circuit the app draws, read from the map record and the geometry it serves through the app's own decoders: the survey checked through the drawing it is projected into, and each drawing's lengths against Le Mans's.
 A circuit joins with a row in `circuits`.

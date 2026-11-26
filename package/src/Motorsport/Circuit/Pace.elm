@@ -37,9 +37,8 @@ even =
 A point-mass car limited by how hard it can corner, accelerate and brake, run round the centreline sampled every few metres.
 The curvature is read across a chord 60 m long, which smooths the corners OpenStreetMap draws as polygons and stands in for the racing line's wider radius.
 
-The limits are no one car's.
-They were chosen against Le Mans 2025, where they put the seven lines its map gives a distance for at their share of the lap to within 0.03 of the lap in all, against 0.09 for an even pace (`LeMansPaceTest`).
-Only the shape of the lap is read off them: every lap is stretched to the time it was run in.
+The limits are no one car's, and only the shape of the lap is read off them: every lap is stretched to the time it was run in.
+They were chosen against the green-flag laps of the 2025 and 2026 rounds at every circuit drawn, as the limits that share those laps out between the lines the maps give a distance for most nearly as the races did: 0.013 of the lap off in all, on the mean of the fourteen rounds, against 0.027 for grip that downforce adds nothing to (`ReferenceLapTest`).
 
     lap : Shape
     lap =
@@ -122,10 +121,11 @@ curvatureReach =
 
 
 {-| Metres per second squared, and metres per second.
+`grip` is how hard the car can corner standing still and `downforce` how much harder each (metre per second)² it is going makes it, so a corner of curvature κ is taken at the speed v where v²κ = `grip` + `downforce` v², and a bend of a radius over 1 / `downforce` metres is no limit at all.
 -}
-limits : { lateral : Float, accelerating : Float, braking : Float, top : Float }
+limits : { grip : Float, downforce : Float, accelerating : Float, braking : Float, top : Float }
 limits =
-    { lateral = 30, accelerating = 10, braking = 30, top = 92 }
+    { grip = 15, downforce = 0.005, accelerating = 10, braking = 20, top = 92 }
 
 
 {-| The curvature of the circle through three points, from the area of the triangle they make.
@@ -153,8 +153,8 @@ distance a b =
 
 cornerSpeed : Float -> Float
 cornerSpeed kappa =
-    if kappa > 0 then
-        min limits.top (sqrt (limits.lateral / kappa))
+    if kappa > limits.downforce then
+        min limits.top (sqrt (limits.grip / (kappa - limits.downforce)))
 
     else
         limits.top
