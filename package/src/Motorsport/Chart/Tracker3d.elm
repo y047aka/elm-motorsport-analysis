@@ -4,9 +4,8 @@ module Motorsport.Chart.Tracker3d exposing (Model, Msg(..), init, update, view, 
 perspective camera, so the side of the loop standing near comes out wide and the
 side standing far narrow, and the reader turns it by dragging.
 
-The lap keeps its own shape -- the metres the flat drawing is made in, which
-[`ground`](Motorsport-Chart-Tracker-Circuit#ground) hands it -- and is set above the plane it was surveyed on. A circuit
-whose geometry carries heights stands at them, its lowest point where every other lap
+The lap keeps its own shape -- the metres the flat drawing is made in, which [`ground`](Motorsport-Chart-Tracker-Circuit#ground) hands it -- and is set above the plane it was surveyed on.
+A circuit whose geometry carries heights stands at them, its lowest point where every other lap
 stands flat, and its heights drawn `steep` times over; one that carries none stands
 flat. Nothing is added to the circuit: no height it does not have. What turns it is a
 frame, and what draws it is SVG, projected point by point.
