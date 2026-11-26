@@ -1,15 +1,17 @@
 module Motorsport.Chart.Tracker.LapScale exposing
-    ( LapScale, lapScale, toMetres
-    , metresOn, Evenness, evenness, ease
+    ( LapScale, lapScale, distanceAt
+    , distanceOf, Evenness, evenness, ease
     )
 
-{-| How far round a circuit, in metres, a car is drawn: the summary's proportions pinned to the lines the circuit is timed at, run between them at the pace the circuit's bends allow, and eased towards an even pace where a car is running far slower than usual.
+{-| How far round a circuit a car is drawn: the summary's proportions pinned to the lines the circuit is timed at, run between them at the pace the circuit's bends allow, and eased towards an even pace where a car is running far slower than usual.
 
-@docs LapScale, lapScale, toMetres
-@docs metresOn, Evenness, evenness, ease
+@docs LapScale, lapScale, distanceAt
+@docs distanceOf, Evenness, evenness, ease
 
 -}
 
+import Duration exposing (Seconds)
+import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
 import Motorsport.Circuit.Pace as Pace exposing (Pace)
 import Motorsport.Duration exposing (Duration)
@@ -17,9 +19,10 @@ import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.LeMans as LeMans
+import Quantity exposing (Quantity)
 
 
-{-| How far round the lap, in metres, a track progress puts a car. See
+{-| How far round the lap a track progress puts a car. See
 [`lapScale`](#lapScale).
 -}
 type LapScale
@@ -30,10 +33,12 @@ type LapScale
         }
 
 
+{-| A line the scale is pinned to: the progress it stands at, how far round the lap it stands, and when the reference car reaches it.
+-}
 type alias Knot =
     { progress : Float
-    , metres : Float
-    , seconds : Float
+    , distance : Length
+    , time : Quantity Float Seconds
     }
 
 
@@ -41,7 +46,7 @@ type alias Knot =
 -}
 finishLine : Knot
 finishLine =
-    { progress = 0, metres = 0, seconds = 0 }
+    { progress = 0, distance = Quantity.zero, time = Quantity.zero }
 
 
 {-| A progress is a share of the time a lap takes, and the stretches of a lap
@@ -64,7 +69,7 @@ lapScale pace lines config =
                 Nothing
 
         pinned progress metres =
-            { progress = progress, metres = metres, seconds = Pace.secondsAt pace metres }
+            { progress = progress, distance = Length.meters metres, time = Pace.timeTo pace (Length.meters metres) }
 
         ends =
             case ( config.miniSectors, lines.miniSectors ) of
@@ -82,39 +87,39 @@ lapScale pace lines config =
 
 {-| Past the last line the scale is pinned to, it runs on as it ran into it.
 -}
-toMetres : LapScale -> Float -> Float
-toMetres (LapScale { pace, lines }) progress =
+distanceAt : LapScale -> Float -> Length
+distanceAt (LapScale { pace, lines }) progress =
     interpolate pace finishLine lines progress
 
 
 {-| From the line `a` on, round the `lines` after it.
 -}
-interpolate : Pace -> Knot -> List Knot -> Float -> Float
+interpolate : Pace -> Knot -> List Knot -> Float -> Length
 interpolate pace a lines progress =
     case lines of
         b :: rest ->
             if progress <= b.progress || List.isEmpty rest then
                 if b.progress > a.progress then
-                    Pace.metresAt pace (a.seconds + (progress - a.progress) / (b.progress - a.progress) * (b.seconds - a.seconds))
+                    Pace.distanceAfter pace (Quantity.interpolateFrom a.time b.time ((progress - a.progress) / (b.progress - a.progress)))
 
                 else
-                    a.metres
+                    a.distance
 
             else
                 interpolate pace b rest progress
 
         [] ->
-            a.metres
+            a.distance
 
 
-{-| How far round the lap, in metres, to draw a car on a circuit: where [`progressOf`](Motorsport-Chart-Tracker-Config#progressOf) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
+{-| How far round the lap to draw a car on a circuit: where [`progressOf`](Motorsport-Chart-Tracker-Config#progressOf) puts it, eased towards an even pace through a stretch the car is running far slower than usual.
 
 A car under a full course yellow, behind the safety car or through a slow zone is held to a speed rather than driving the corners, so the reference lap's quick straights and slow bends would misplace it.
 How much slower than usual is the stretch's time against its share of the car's own best lap.
 
 -}
-metresOn : LapScale -> CarAt -> Float
-metresOn ((LapScale { config }) as scale) car =
+distanceOf : LapScale -> CarAt -> Length
+distanceOf ((LapScale { config }) as scale) car =
     case Config.stretchOf config car of
         Just stretch ->
             ease scale
@@ -128,7 +133,7 @@ metresOn ((LapScale { config }) as scale) car =
                 stretch
 
         Nothing ->
-            toMetres scale car.currentLap.progress
+            distanceAt scale car.currentLap.progress
 
 
 {-| How far a car is drawn from where the reference lap's pace puts it towards where an even pace through its stretch does: from none of the way to all of it.
@@ -163,24 +168,24 @@ evenness { took, usually } =
         atPace
 
 
-{-| How far round the lap, in metres, a car part way through a stretch is drawn.
+{-| How far round the lap a car part way through a stretch is drawn.
 The reference lap's pace and an even pace agree at the stretch's ends, so a car that changes how evenly it is drawn as it crosses into the next stretch does not jump.
 -}
-ease : LapScale -> Evenness -> { a | share : Share, progress : Float } -> Float
+ease : LapScale -> Evenness -> { a | share : Share, progress : Float } -> Length
 ease scale (Evenness towardsEven) { share, progress } =
     let
-        atPaceMetres =
-            toMetres scale (share.start + progress * share.share)
+        paced =
+            distanceAt scale (share.start + progress * share.share)
     in
     if towardsEven <= 0 then
-        atPaceMetres
+        paced
 
     else
         let
-            from =
-                toMetres scale share.start
-
-            to =
-                toMetres scale (share.start + share.share)
+            atEvenPace =
+                Quantity.interpolateFrom
+                    (distanceAt scale share.start)
+                    (distanceAt scale (share.start + share.share))
+                    progress
         in
-        atPaceMetres + towardsEven * (from + progress * (to - from) - atPaceMetres)
+        Quantity.interpolateFrom paced atEvenPace towardsEven

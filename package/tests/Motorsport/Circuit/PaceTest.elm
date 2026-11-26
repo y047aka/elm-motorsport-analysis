@@ -1,6 +1,8 @@
 module Motorsport.Circuit.PaceTest exposing (stadium, tests)
 
+import Duration
 import Expect
+import Length
 import Motorsport.Circuit.Pace as Pace exposing (Pace)
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Shape)
@@ -71,7 +73,12 @@ slowness =
 
 slownessOf : Pace -> Float -> Float
 slownessOf of_ metres =
-    (Pace.secondsAt of_ (metres + 10) - Pace.secondsAt of_ metres) / 10
+    (secondsAt of_ (metres + 10) - secondsAt of_ metres) / 10
+
+
+secondsAt : Pace -> Float -> Float
+secondsAt of_ metres =
+    Duration.inSeconds (Pace.timeTo of_ (Length.meters metres))
 
 
 tests : Test
@@ -97,21 +104,21 @@ tests =
             \_ ->
                 slownessOf (Pace.fromShape (Just hill) stadium) 1500
                     |> Expect.lessThan (slowness 1500)
-        , test "metresAt undoes secondsAt" <|
+        , test "distanceAfter undoes timeTo" <|
             \_ ->
                 [ 0, 123, 1000, 1080, 2300 ]
-                    |> List.map (Pace.secondsAt pace >> Pace.metresAt pace)
+                    |> List.map (Length.meters >> Pace.timeTo pace >> Pace.distanceAfter pace >> Length.inMeters)
                     |> List.map2 (\expected actual -> abs (expected - actual)) [ 0, 123, 1000, 1080, 2300 ]
                     |> List.maximum
                     |> Maybe.withDefault 0
                     |> Expect.atMost 0.001
         , test "a distance a lap on is reached a lap's time later" <|
             \_ ->
-                Pace.secondsAt pace (Shape.length stadium + 300)
+                secondsAt pace (Shape.length stadium + 300)
                     |> Expect.within (Expect.Absolute 0.001)
-                        (Pace.secondsAt pace (Shape.length stadium) + Pace.secondsAt pace 300)
+                        (secondsAt pace (Shape.length stadium) + secondsAt pace 300)
         , test "an even pace takes a second over each metre" <|
             \_ ->
-                Pace.secondsAt Pace.even 1234
-                    |> Expect.equal 1234
+                Pace.timeTo Pace.even (Length.meters 1234)
+                    |> Expect.equal (Duration.seconds 1234)
         ]

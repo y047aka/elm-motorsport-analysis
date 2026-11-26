@@ -3,13 +3,14 @@ module Motorsport.Chart.Tracker.Circuit exposing
     , Ground, ground
     )
 
-{-| A circuit drawn to its own shape, flat: the lap, the pit lane beside it, the lines it is timed at, and the field placed round it in metres.
+{-| A circuit drawn to its own shape, flat: the lap, the pit lane beside it, the lines it is timed at, and the field placed round it.
 
 @docs Circuit, fromLayout, view
 @docs Ground, ground
 
 -}
 
+import Length exposing (Length)
 import Motorsport.Chart.Tracker.Car as Car
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
@@ -23,6 +24,7 @@ import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.Layout exposing (Layout, Lengths)
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Wec.Class as Class
+import Quantity
 import Svg exposing (Svg, g, line, polygon, polyline, svg, text, text_)
 import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, strokeLinejoin, textAnchor)
 import Svg.Keyed as Keyed
@@ -101,24 +103,24 @@ boundsOf corners =
                 rest
 
 
-{-| The circuit read on the ground it runs on, for a drawing of its own: the lines it is drawn from, in drawing metres, and every place along the lap -- a car, a sector boundary, a sector's name -- as the metres round it from the finish line, which `at` stands on the ground.
+{-| The circuit read on the ground it runs on, for a drawing of its own: the lines it is drawn from, in drawing metres, and every place along the lap -- a car, a sector boundary, a sector's name -- as its distance round the lap from the finish line, which `at` stands on the ground.
 
-`relief` is how high the lines stand, in metres above their datum, for a circuit whose geometry carries heights: one per point of `lap` and of `pitLane`, and `at` a distance round the lap.
+`relief` is how high the lines stand above their datum, for a circuit whose geometry carries heights: one per point of `lap` and of `pitLane`, and `at` a distance round the lap.
 
 -}
 type alias Ground =
     { lap : List Point
     , pitLane : List Point
-    , at : Float -> Shape.Position
-    , metresOf : CarAt -> Float
-    , boundaries : List Float
-    , sectors : List { metres : Float, label : String }
+    , at : Length -> Shape.Position
+    , distanceOf : CarAt -> Length
+    , boundaries : List Length
+    , sectors : List { at : Length, label : String }
     , relief :
         Maybe
-            { lap : List Float
-            , pitLane : List Float
-            , at : Float -> Float
-            , lowest : Float
+            { lap : List Length
+            , pitLane : List Length
+            , at : Length -> Length
+            , lowest : Length
             }
     }
 
@@ -127,25 +129,25 @@ ground : Circuit -> Ground
 ground (Circuit circuit) =
     { lap = List.map (\mark -> { x = mark.x, y = mark.y }) (Shape.marks circuit.shape)
     , pitLane = circuit.pitLane
-    , at = \metres -> Shape.at metres circuit.shape
-    , metresOf = LapScale.metresOn circuit.scale
-    , boundaries = List.map (LapScale.toMetres circuit.scale) (Config.boundaries circuit.config)
+    , at = \distance -> Shape.at (Length.inMeters distance) circuit.shape
+    , distanceOf = LapScale.distanceOf circuit.scale
+    , boundaries = List.map (LapScale.distanceAt circuit.scale) (Config.boundaries circuit.config)
     , sectors =
         circuit.config.sectors
             |> Sector.toList
             |> List.map
                 (\( sector, { start, share } ) ->
-                    { metres = LapScale.toMetres circuit.scale (start + share / 2)
+                    { at = LapScale.distanceAt circuit.scale (start + share / 2)
                     , label = Sector.toString sector
                     }
                 )
     , relief =
         Maybe.map
             (\relief ->
-                { lap = Relief.lap relief
-                , pitLane = Relief.pitLane relief
-                , at = \metres -> Relief.at metres relief
-                , lowest = Relief.lowest relief
+                { lap = List.map Length.meters (Relief.lap relief)
+                , pitLane = List.map Length.meters (Relief.pitLane relief)
+                , at = \distance -> Length.meters (Relief.at (Length.inMeters distance) relief)
+                , lowest = Length.meters (Relief.lowest relief)
                 }
             )
             circuit.relief
@@ -257,7 +259,7 @@ circuitTrack detail circuit =
 
         startFinishLine =
             across circuit
-                { metres = 0
+                { at = Quantity.zero
                 , halfLength = c.startFinishLineExtension
                 , color = "#fff"
                 , width = c.startFinishLineStrokeWidth
@@ -268,7 +270,7 @@ circuitTrack detail circuit =
                 |> List.map
                     (\progress ->
                         across circuit
-                            { metres = LapScale.toMetres circuit.scale progress
+                            { at = LapScale.distanceAt circuit.scale progress
                             , halfLength = c.sectorBoundaryOffset
                             , color = "oklch(0.23 0 0)"
                             , width = c.sectorBoundaryStrokeWidth
@@ -284,11 +286,11 @@ pointsAttribute =
         >> String.join " "
 
 
-across : Drawing -> { metres : Float, halfLength : Float, color : String, width : Float } -> Svg msg
-across circuit { metres, halfLength, color, width } =
+across : Drawing -> { at : Length, halfLength : Float, color : String, width : Float } -> Svg msg
+across circuit { at, halfLength, color, width } =
     let
         position =
-            Shape.at metres circuit.shape
+            Shape.at (Length.inMeters at) circuit.shape
 
         out =
             outward circuit.direction position.heading
@@ -332,7 +334,7 @@ circuitLabels labels circuit =
                         |> List.map
                             (\( sector, { start, share } ) ->
                                 labelOnCircuit circuit
-                                    { metres = LapScale.toMetres circuit.scale (start + share / 2)
+                                    { at = LapScale.distanceAt circuit.scale (start + share / 2)
                                     , offset = sectorRadius
                                     , fontSize = sectorFontSize
                                     , color = "oklch(1 0 0 / 0.5)"
@@ -352,7 +354,7 @@ circuitLabels labels circuit =
                                 |> List.map
                                     (\( mini, { start, share } ) ->
                                         labelOnCircuit circuit
-                                            { metres = LapScale.toMetres circuit.scale (start + share)
+                                            { at = LapScale.distanceAt circuit.scale (start + share)
                                             , offset = miniSectorRadius
                                             , fontSize = miniSectorFontSize
                                             , color = "oklch(0.5 0 0)"
@@ -366,17 +368,17 @@ circuitLabels labels circuit =
 labelOnCircuit :
     Drawing
     ->
-        { metres : Float
+        { at : Length
         , offset : Float
         , fontSize : Float
         , color : String
         , label : String
         }
     -> Svg msg
-labelOnCircuit circuit { metres, offset, fontSize, color, label } =
+labelOnCircuit circuit { at, offset, fontSize, color, label } =
     let
         position =
-            Shape.at metres circuit.shape
+            Shape.at (Length.inMeters at) circuit.shape
 
         out =
             outward circuit.direction position.heading
@@ -437,7 +439,7 @@ renderCarOnCircuit detail circuit car =
             circuitConstants detail circuit
 
         position =
-            Shape.at (LapScale.metresOn circuit.scale car) circuit.shape
+            Shape.at (Length.inMeters (LapScale.distanceOf circuit.scale car)) circuit.shape
 
         marker =
             g [ Attributes.transform [ Translate position.x position.y ] ]

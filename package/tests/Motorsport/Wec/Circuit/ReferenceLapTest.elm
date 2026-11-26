@@ -8,11 +8,13 @@ At Le Mans the lines are the seven of its mini-sectors' the map gives a distance
 -}
 
 import Expect
+import Length
 import Motorsport.Circuit.Pace as Pace exposing (Pace)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.Wec.Circuit.CircuitsTest as Circuits
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Quantity
 import Test exposing (Test, describe, test)
 
 
@@ -83,13 +85,13 @@ linesOf layout =
 missedBy : Pace -> Float -> List Float -> List Float -> Float
 missedBy pace lapLength lines shares =
     let
-        lapSeconds =
-            Pace.secondsAt pace lapLength
+        lapTime =
+            Pace.timeTo pace (Length.meters lapLength)
 
         stretches ends =
             List.map2 (-) ends (0 :: ends)
     in
     List.map2 (\a b -> abs (a - b))
-        (stretches (List.map (\metres -> Pace.secondsAt pace metres / lapSeconds) lines))
+        (stretches (List.map (\metres -> Quantity.ratio (Pace.timeTo pace (Length.meters metres)) lapTime) lines))
         (stretches shares)
         |> List.sum

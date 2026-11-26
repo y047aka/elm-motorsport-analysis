@@ -21,6 +21,7 @@ A round whose circuit the app has no map of has no raised map: the flat ring is 
 
 import Angle
 import Camera3d exposing (Camera3d)
+import Length
 import Motorsport.Chart.Tracker.Circuit as Circuit exposing (Circuit)
 import Motorsport.Circuit.Shape as Shape exposing (Point)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
@@ -470,7 +471,7 @@ view surface model shown standings =
             Circuit.ground shown
 
         rising =
-            Maybe.map (\relief height -> (height - relief.lowest) * steep) g.relief
+            Maybe.map (\relief height -> Length.inMeters (height |> Quantity.minus relief.lowest) * steep) g.relief
 
         risesOf heights points =
             case ( rising, heights ) of
@@ -499,17 +500,17 @@ view surface model shown standings =
 
         -- Where a distance round the lap stands, and how high: a height between two of
         -- the lap's points is the one the line between them passes.
-        onLap metres =
+        onLap distance =
             let
                 position =
-                    g.at metres
+                    g.at distance
             in
             ( { x = position.x
               , y = position.y
               , rise =
                     case ( rising, g.relief ) of
                         ( Just rise, Just relief ) ->
-                            rise (relief.at metres)
+                            rise (relief.at distance)
 
                         _ ->
                             0
@@ -517,10 +518,10 @@ view surface model shown standings =
             , position
             )
 
-        across width metres =
+        across width distance =
             let
                 ( standing, position ) =
-                    onLap metres
+                    onLap distance
             in
             acrossBand width standing position
 
@@ -538,7 +539,7 @@ view surface model shown standings =
                     (\car ->
                         let
                             ( standing, position ) =
-                                onLap (g.metresOf car)
+                                onLap (g.distanceOf car)
 
                             shot =
                                 project eye (raisedAt size standing)
@@ -596,13 +597,13 @@ view surface model shown standings =
                 every (riserStride (ringOf lap)) (ringOf lap)
                     |> List.map (\p -> ( project eye (groundAt size p), project eye (raisedAt size p) ))
             , boundaries = List.map (across (bandWidth / 2)) g.boundaries
-            , finish = across (bandWidth * 0.8) 0
+            , finish = across (bandWidth * 0.8) Quantity.zero
             , labels =
                 List.map
-                    (\{ metres, label } ->
+                    (\{ at, label } ->
                         let
                             ( standing, position ) =
-                                onLap metres
+                                onLap at
 
                             out =
                                 outward position
