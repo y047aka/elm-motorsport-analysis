@@ -19,7 +19,7 @@ import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer exposing (Manufacturers)
 import Dict exposing (Dict)
 import Effect exposing (Effect)
-import Generated.Data.Wec.Manufacturer.Table as ManufacturerTable
+import Generated.Wec.Manufacturer
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Analysis.Energy as Energy
@@ -341,7 +341,7 @@ resumeWaitingRound m =
                                 id =
                                     { season = season.season, id = round.id, name = round.name }
                             in
-                            askFor params ManufacturerTable.table (photographIn carImages id) id round m
+                            askFor params Generated.Wec.Manufacturer.table (photographIn carImages id) id round m
 
         _ ->
             ( m, Effect.none )
