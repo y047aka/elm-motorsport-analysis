@@ -1,8 +1,8 @@
-module Motorsport.Chart.Tracker.Car exposing (marker, label)
+module Motorsport.Chart.Tracker.Marker exposing (dot, number)
 
 {-| A car as both flat trackers mark it: a dot in its class's colour, shrinking and fading down the class, and its number set beside it.
 
-@docs marker, label
+@docs dot, number
 
 -}
 
@@ -12,8 +12,8 @@ import TypedSvg.Attributes as Attributes exposing (fontSize)
 import TypedSvg.Types exposing (px)
 
 
-marker : Float -> Int -> String -> Svg msg
-marker size positionInClass classColorValue =
+dot : Float -> Int -> String -> Svg msg
+dot size positionInClass classColorValue =
     let
         scaleFactor =
             max 0.4 (1 - (toFloat positionInClass * 0.1))
@@ -38,8 +38,8 @@ marker size positionInClass classColorValue =
         []
 
 
-label : Float -> Int -> { x : Float, y : Float } -> { carNumber : String } -> Svg msg
-label labelFontSize positionInClass { x, y } { carNumber } =
+number : Float -> Int -> { x : Float, y : Float } -> { carNumber : String } -> Svg msg
+number labelFontSize positionInClass { x, y } { carNumber } =
     let
         scaleFactor =
             max 0.75 (1 - (toFloat positionInClass * 0.02))

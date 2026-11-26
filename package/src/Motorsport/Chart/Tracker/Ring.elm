@@ -8,9 +8,9 @@ It is what a round is drawn on when the app has no map of its circuit.
 
 -}
 
-import Motorsport.Chart.Tracker.Car as Car
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
+import Motorsport.Chart.Tracker.Marker as Marker
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.LeMans as LeMans
@@ -315,7 +315,7 @@ renderCar detail car { angle, x, y } =
 
         marker =
             g [ Attributes.transform [ Translate x y ] ]
-                [ Lazy.lazy3 Car.marker c.car.size car.standing.positionInClass (Class.toColor car.metadata.class) ]
+                [ Lazy.lazy3 Marker.dot c.car.size car.standing.positionInClass (Class.toColor car.metadata.class) ]
     in
     case c.labels of
         NoLabels ->
@@ -324,7 +324,7 @@ renderCar detail car { angle, x, y } =
         Labels { carRadius, carFontSize } ->
             g []
                 [ marker
-                , Car.label carFontSize
+                , Marker.number carFontSize
                     car.standing.positionInClass
                     { x = cx + carRadius * cos angle, y = cy + carRadius * sin angle }
                     { carNumber = car.metadata.carNumber }

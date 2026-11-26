@@ -11,10 +11,10 @@ module Motorsport.Chart.Tracker.Circuit exposing
 -}
 
 import Length exposing (Length)
-import Motorsport.Chart.Tracker.Car as Car
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
+import Motorsport.Chart.Tracker.Marker as Marker
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
@@ -443,7 +443,7 @@ renderCarOnCircuit detail circuit car =
 
         marker =
             g [ Attributes.transform [ Translate position.x position.y ] ]
-                [ Lazy.lazy3 Car.marker c.carSize car.standing.positionInClass (Class.toColor car.metadata.class) ]
+                [ Lazy.lazy3 Marker.dot c.carSize car.standing.positionInClass (Class.toColor car.metadata.class) ]
     in
     case c.labels of
         NoLabels ->
@@ -456,7 +456,7 @@ renderCarOnCircuit detail circuit car =
             in
             g []
                 [ marker
-                , Car.label carFontSize
+                , Marker.number carFontSize
                     car.standing.positionInClass
                     { x = position.x + out.x * carRadius, y = position.y + out.y * carRadius }
                     { carNumber = car.metadata.carNumber }
