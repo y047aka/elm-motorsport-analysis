@@ -1,4 +1,4 @@
-module Motorsport.Race.SnapshotTest exposing (suite)
+module Motorsport.Race.SnapshotTest exposing (fieldWithTailenders, suite)
 
 import Expect
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)

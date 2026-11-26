@@ -5,6 +5,8 @@ import Length
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
 import Motorsport.Circuit.Shape as Shape
+import Motorsport.Race.Snapshot as Snapshot
+import Motorsport.Race.SnapshotTest as SnapshotTest
 import Motorsport.Simulation.Pace.Neutralisation as Neutralisation
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap
 import Motorsport.Simulation.Pace.ReferenceLapTest as ReferenceLapTest
@@ -50,6 +52,18 @@ tests =
                     -- Half the time from 500 m to the bend's end at 1,150 m.
                     metresAt (LapScale.lapScale (ReferenceLap.fromShape Nothing ReferenceLapTest.stadium) stadiumLines stadiumSectors) 0.35
                         |> Expect.greaterThan 825
+            ]
+        , describe "distanceOf"
+            [ test "reads a car with no best lap of its own against its class's best" <|
+                \_ ->
+                    -- At 7.000 car 3 is 1/7 through its opening lap's S2, a stretch of 7.000 that its class's best lap, car 1's 6.000, spends 1.800 on: neutralised through and through, so at an even pace from 500 m to 1,150 m.
+                    metresOfCar "3"
+                        |> Expect.within (Expect.Absolute 0.01) (500 + 650 / 7)
+            , test "reads a car with a best lap against its own" <|
+                \_ ->
+                    -- At 7.000 car 2 is a third through an S2 of 1.500, which its own 5.000 lap spends 1.500 on: at the reference lap's pace.
+                    metresOfCar "2"
+                        |> Expect.within (Expect.Absolute 0.01) (metresAt stadiumScale 0.3)
             ]
         , describe "ease"
             [ test "draws a stretch run near its usual time at the reference lap's pace" <|
@@ -98,6 +112,15 @@ tests =
                         |> expectAll [ 900, 3900, 9000 ]
             ]
         ]
+
+
+{-| Where the stadium's scale draws a car of the three-car field at 7.000.
+-}
+metresOfCar : String -> Float
+metresOfCar carNumber =
+    Snapshot.get carNumber SnapshotTest.fieldWithTailenders
+        |> Maybe.map (LapScale.distanceOf stadiumScale SnapshotTest.fieldWithTailenders >> Length.inMeters)
+        |> Maybe.withDefault -1
 
 
 {-| How far round the lap, in metres, a scale puts a progress.
