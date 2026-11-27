@@ -18,7 +18,16 @@ pub mod Round.Render {
     /// The round's summary and the indices read off the same rows, written as
     /// one document.
     pub def renderSummary(metadata: Metadata.Metadata, index: Index.Index): String =
-        Extra.render(withIndex(Metadata.toJson(metadata), Index.toJson(index)))
+        Extra.render(withIndex(Metadata.toJson(metadata), Index.toJson(hasMiniSectors(metadata), index)))
+
+    /// Whether the round's feed measured mini-sectors -- the round's
+    /// `track.miniSectors` being there.
+    def hasMiniSectors(metadata: Metadata.Metadata): Bool =
+        match metadata#track#miniSectors {
+            case None        => false
+            case Some(_ :: _) => true
+            case Some(Nil)   => false
+        }
 
     def withIndex(metadata: Json, index: Json): Json =
         match metadata {

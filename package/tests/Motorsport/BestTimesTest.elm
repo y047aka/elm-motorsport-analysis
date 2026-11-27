@@ -40,6 +40,17 @@ tests =
                     atEnd BestTimes.empty
                         |> .fastestLapTime
                         |> Expect.equal Nothing
+            , test "a round whose feed measured no mini-sectors reads as holding none" <|
+                \_ ->
+                    -- An absent `miniSectors` is the shape a round whose feed
+                    -- measured none arrives in; an absent `sectors`, next test,
+                    -- is still a wrong shape.
+                    Decode.decodeString BestTimes.changesDecoder
+                        """{ "fastestLapTime": []
+                           , "sectors": { "s1": [], "s2": [], "s3": [] }
+                           }"""
+                        |> Result.map (\read -> MiniSector.names read.fastestMiniSectors)
+                        |> Expect.equal (Ok [])
             , test "a summary missing a record is a summary of the wrong shape" <|
                 \_ ->
                     Decode.decodeString BestTimes.changesDecoder

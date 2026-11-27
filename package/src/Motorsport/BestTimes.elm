@@ -23,6 +23,7 @@ arrives with the round's summary.
 import Decode.Driver as Driver
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Json.Decode as Decode exposing (Decoder, field)
+import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -90,13 +91,17 @@ empty =
 
 
 {-| Read the records as the round's summary spells them out.
+
+`miniSectors` is absent where the round's feed measured none, which is the
+empty list here -- the same fact `track.miniSectors` being absent states.
+
 -}
 changesDecoder : Decoder Changes
 changesDecoder =
-    Decode.map3 ByRecord
-        (field "fastestLapTime" holdersDecoder)
-        (field "sectors" (Decode.map3 BySector (field "s1" holdersDecoder) (field "s2" holdersDecoder) (field "s3" holdersDecoder)))
-        (field "miniSectors" miniSectorsDecoder)
+    Decode.succeed ByRecord
+        |> required "fastestLapTime" holdersDecoder
+        |> required "sectors" (Decode.map3 BySector (field "s1" holdersDecoder) (field "s2" holdersDecoder) (field "s3" holdersDecoder))
+        |> optional "miniSectors" miniSectorsDecoder []
 
 
 miniSectorsDecoder : Decoder (Named (ChangePoints Holder))

@@ -1843,24 +1843,7 @@
             "driver": "Alessandro PIER GUIDI"
           }
         ]
-      },
-      "miniSectors": [
-        { "name": "SCL2", "changes": [] },
-        { "name": "Z4", "changes": [] },
-        { "name": "IP1", "changes": [] },
-        { "name": "Z12", "changes": [] },
-        { "name": "SCLC", "changes": [] },
-        { "name": "A7-1", "changes": [] },
-        { "name": "IP2", "changes": [] },
-        { "name": "A8-1", "changes": [] },
-        { "name": "SCLB", "changes": [] },
-        { "name": "PORIN", "changes": [] },
-        { "name": "POROUT", "changes": [] },
-        { "name": "PITREF", "changes": [] },
-        { "name": "SCL1", "changes": [] },
-        { "name": "FORDOUT", "changes": [] },
-        { "name": "FL", "changes": [] }
-      ]
+      }
     },
     "flagChanges": [
       { "elapsed": "3:19.104", "flag": "safetyCar" },
