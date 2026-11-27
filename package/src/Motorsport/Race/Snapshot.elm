@@ -23,6 +23,7 @@ Built once per frame and shared by every view that reads it.
 import Dict
 import List.Extra
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -37,7 +38,6 @@ import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
-import Motorsport.Wec.Class as Class exposing (Class)
 
 
 {-| Every car of the race as it stands at one moment, in running order.

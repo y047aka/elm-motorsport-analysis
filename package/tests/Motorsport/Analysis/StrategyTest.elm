@@ -3,6 +3,7 @@ module Motorsport.Analysis.StrategyTest exposing (suite)
 import Expect
 import Motorsport.Analysis.Stint as Stint
 import Motorsport.Analysis.Strategy as Strategy
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
@@ -10,7 +11,7 @@ import Motorsport.Race.Stint exposing (Stint)
 import Motorsport.Status as Status
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
 
@@ -108,7 +109,7 @@ suite =
                     -- leader's distance, neither has a future stop.
                     Expect.equal
                         ( plannedOnWhen Status.Retired (onClock 20 5) 20 [ 5 ] 10
-                            , plannedOnWhen Status.Checkered (onClock 20 5) 20 [ 5, 10, 15 ] 15
+                        , plannedOnWhen Status.Checkered (onClock 20 5) 20 [ 5, 10, 15 ] 15
                         )
                     <|
                         ( [], [] )
@@ -267,4 +268,4 @@ emptyLap =
 
 classOf : String -> Class
 classOf =
-    Class.fromString Era.Gt3AsThirdClass
+    Class.fromString (WecClass.grid Era.Gt3AsThirdClass)

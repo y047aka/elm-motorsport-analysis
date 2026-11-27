@@ -32,10 +32,10 @@ it is on, and what `plan` forecasts it has left.
 
 import Internal.Statistics as Statistics
 import Motorsport.Analysis.Stint as Stint
+import Motorsport.Class exposing (Class)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.Wec.Class exposing (Class)
 
 
 {-| What the finished race says of a class. `distance` is how far the class

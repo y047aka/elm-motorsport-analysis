@@ -26,6 +26,7 @@ the race says the same number the same way.
 import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
+import Motorsport.Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
@@ -34,7 +35,6 @@ import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Position as Position exposing (Movement(..), Position)
 import Motorsport.Race.Snapshot as Snapshot exposing (CurrentSectorStates)
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.Wec.Class exposing (Class)
 
 
 {-| A rated time as a timing screen prints it: the time in the colour of its

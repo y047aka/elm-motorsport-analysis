@@ -10,10 +10,10 @@ import Angle exposing (Angle)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
 import Motorsport.Chart.Tracker.Marker as Marker
+import Motorsport.Class as Class
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.LeMans as LeMans
-import Motorsport.Wec.Class as Class
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Attributes exposing (class, dominantBaseline, fill, stroke, textAnchor)

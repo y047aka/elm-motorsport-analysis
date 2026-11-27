@@ -21,6 +21,7 @@ import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
 import Motorsport.Analysis.Energy as Energy exposing (Energy)
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -30,7 +31,6 @@ import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (CarNumber, Metadata)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status
-import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark

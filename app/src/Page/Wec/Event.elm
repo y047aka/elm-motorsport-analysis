@@ -24,13 +24,13 @@ import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy exposing (PitCycle)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Chart.Tracker.Detail exposing (Detail(..))
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Position exposing (Position)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Replay as Replay
-import Motorsport.Wec.Class as Class exposing (Class)
 import Page.Wec.Columns as Columns
 import Page.Wec.Float as Float
 import Page.Wec.Resize as Resize

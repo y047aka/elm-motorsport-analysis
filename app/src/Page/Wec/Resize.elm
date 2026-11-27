@@ -57,6 +57,7 @@ pointer's travel from the size `Drag` was picked up with.
 
 A size has several grips and one `Model` between them, so the pick rides on the carry,
 where it cannot outlive it.
+
 -}
 type alias Model =
     { size : Float

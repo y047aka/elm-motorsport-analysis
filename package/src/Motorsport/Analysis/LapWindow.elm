@@ -16,12 +16,12 @@ that covers depends on who was running and how quickly they went round.
 -}
 
 import List.Extra
+import Motorsport.Class exposing (Class)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.LapRange exposing (LapRange)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Wec.Class exposing (Class)
 
 
 type LapWindow

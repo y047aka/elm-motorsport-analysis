@@ -98,6 +98,7 @@ held only by how small it may go, the page being what stops it growing.
 
 A travel is held between two of them too -- how far a box may be shifted along one axis is
 said the same way as how wide it may be grown.
+
 -}
 type alias Fence =
     { min : Float

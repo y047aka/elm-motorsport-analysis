@@ -3,11 +3,12 @@ module Motorsport.Analysis.EnergyTest exposing (suite)
 import Expect
 import Motorsport.Analysis.Energy as Energy exposing (Energy(..))
 import Motorsport.Analysis.Strategy as Strategy
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
 
@@ -20,6 +21,7 @@ the eleventh clean run where the class is `fleet` and twelve where it is `slowFl
 run joins the pool of its class, which is what the numbers here are counted from.
 
 The clock asks one question -- where the car stands on its energy -- and never the plan: a class's plan is the finished race's, so a test may ask about any lap it likes and read the subtraction off the same ten laps.
+
 -}
 suite : Test
 suite =
@@ -33,7 +35,7 @@ suite =
                     -- cars that went thirteen are read as overruns.
                     energyOf (slowFleet ++ [ runner [ run 13, stint 3 ] ]) 18
                         |> Maybe.map (\reading -> ( planOf reading, ceilingOf reading ))
-                        |> Expect.equal (Just ( 10, 13))
+                        |> Expect.equal (Just ( 10, 13 ))
             , test "and no reading while the class has fewer than ten clean stopped runs" <|
                 \_ ->
                     -- Eight cars and the reading car's own first stint: nine clean
@@ -558,12 +560,12 @@ fractionOf reading =
 
 hypercar : Class
 hypercar =
-    Class.fromString Era.Gt3AsThirdClass "HYPERCAR"
+    Class.fromString (WecClass.grid Era.Gt3AsThirdClass) "HYPERCAR"
 
 
 lmp2 : Class
 lmp2 =
-    Class.fromString Era.Gt3AsThirdClass "LMP2"
+    Class.fromString (WecClass.grid Era.Gt3AsThirdClass) "LMP2"
 
 
 {-| Five cars of another class in the same race: enough to race, fewer than a class needs to

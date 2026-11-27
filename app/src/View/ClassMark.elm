@@ -13,8 +13,8 @@ row's mark, a section's heading and a column's head.
 
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes exposing (attribute)
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Race.Car exposing (Metadata)
-import Motorsport.Wec.Class as Class exposing (Class)
 
 
 {-| The bar on its own, for a row that is named by its car number beside it.

@@ -2,8 +2,9 @@ module Motorsport.RaceTest exposing (suite)
 
 import Expect
 import Internal.ChangePoints as ChangePoints
-import Motorsport.BestTimes as BestTimes
 import Json.Decode as Decode
+import Motorsport.BestTimes as BestTimes
+import Motorsport.Class as Class
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -13,7 +14,6 @@ import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Status as Status
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
 

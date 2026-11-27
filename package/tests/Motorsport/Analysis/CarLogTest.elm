@@ -2,6 +2,7 @@ module Motorsport.Analysis.CarLogTest exposing (suite)
 
 import Expect
 import Motorsport.Analysis.CarLog as CarLog
+import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
@@ -13,7 +14,6 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
 

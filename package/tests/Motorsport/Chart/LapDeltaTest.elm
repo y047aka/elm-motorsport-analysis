@@ -4,6 +4,7 @@ import Expect
 import Internal.ChangePoints as ChangePoints
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Chart.LapDelta as LapDelta
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
@@ -14,7 +15,7 @@ import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
 
@@ -165,7 +166,7 @@ metadataOf : String -> Car.Metadata
 metadataOf carNumber =
     { carNumber = carNumber
     , drivers = [ driverNamed ("Driver " ++ carNumber) ]
-    , class = Class.fromString Era.Gt3AsThirdClass "HYPERCAR"
+    , class = Class.fromString (WecClass.grid Era.Gt3AsThirdClass) "HYPERCAR"
     , group = "H"
     , team = "Team " ++ carNumber
     , manufacturer = Manufacturer.unknown

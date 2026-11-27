@@ -34,9 +34,9 @@ import Drag.Handle exposing (Place)
 import Html
 import Html.Attributes as Attributes
 import List.Extra
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Wec.Class as Class exposing (Class)
 import Task
 
 

@@ -4,6 +4,7 @@ import Expect
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
@@ -18,7 +19,7 @@ import Motorsport.Status as Status exposing (Status)
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
 
@@ -747,7 +748,7 @@ carTwo =
 
 classOf : String -> Class
 classOf =
-    Class.fromString Era.Gt3AsThirdClass
+    Class.fromString (WecClass.grid Era.Gt3AsThirdClass)
 
 
 metadataOf : String -> Class -> Car.Metadata

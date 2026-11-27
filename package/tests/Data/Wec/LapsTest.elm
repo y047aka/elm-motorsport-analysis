@@ -2,6 +2,7 @@ module Data.Wec.LapsTest exposing (suite)
 
 import Data.Wec.Laps as Laps exposing (RawLap)
 import Expect
+import Motorsport.Class as Class
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer exposing (unknown)
@@ -9,7 +10,6 @@ import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
 

@@ -4,6 +4,7 @@ import Expect
 import Internal.ChangePoints as ChangePoints
 import Motorsport.Analysis.ClassPositions as ClassPositions
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
@@ -14,7 +15,7 @@ import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
 
@@ -143,7 +144,7 @@ noIndex =
 
 classOf : String -> Class
 classOf =
-    Class.fromString Era.Gt3AsThirdClass
+    Class.fromString (WecClass.grid Era.Gt3AsThirdClass)
 
 
 metadataOf : String -> Class -> Car.Metadata

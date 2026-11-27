@@ -24,6 +24,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Chart.Tracker as Tracker
+import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
@@ -42,7 +43,6 @@ import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as MonzaLayout
 import Motorsport.Wec.Circuit.SaoPaulo.Layout as SaoPauloLayout
 import Motorsport.Wec.Circuit.Spa.Layout as SpaLayout
-import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Drawing, Msg(..))
 import Task exposing (Task)

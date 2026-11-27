@@ -12,12 +12,12 @@ that button.
 import Html exposing (Html, button, div, img, text)
 import Html.Attributes exposing (alt, attribute, class, src, title)
 import Html.Events exposing (onClick)
+import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Leaderboard exposing (viewPositionChangeInline)
 import Motorsport.Position as Position exposing (Position)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
-import Motorsport.Wec.Class as Class
 import View.CarNumberBadge as CarNumberBadge
 
 

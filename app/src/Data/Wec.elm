@@ -15,13 +15,14 @@ import Decode.Driver as Driver
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
+import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
 import Motorsport.Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
-import Motorsport.Wec.Class as Class
+import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era exposing (Era)
 
 
@@ -229,7 +230,7 @@ carMetadataDecoder era manufacturers carImageUrl =
         )
         |> required "carNumber" string
         |> required "drivers" (Decode.list (field "name" Driver.decoder))
-        |> required "class" (string |> Decode.map (Class.fromString era))
+        |> required "class" (string |> Decode.map (Class.fromString (WecClass.grid era)))
         |> required "group" string
         |> required "team" string
         |> required "manufacturer" string

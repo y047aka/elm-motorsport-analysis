@@ -32,10 +32,10 @@ import Dict exposing (Dict)
 import Internal.Statistics as Statistics
 import List.Extra
 import Motorsport.Analysis.Stint as Stint
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
-import Motorsport.Wec.Class as Class exposing (Class)
 
 
 {-| How far a car has gone on its energy, and which side of its class's plan it stands on.

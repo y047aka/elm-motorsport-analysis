@@ -22,8 +22,8 @@ averaging a baseline.
 -}
 
 import List.Extra
+import Motorsport.Class exposing (Class)
 import Motorsport.Race.Snapshot exposing (CarAt)
-import Motorsport.Wec.Class exposing (Class)
 
 
 type Rivals

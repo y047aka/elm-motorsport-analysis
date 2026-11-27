@@ -22,8 +22,8 @@ import Camera3d exposing (Camera3d)
 import Length
 import Motorsport.Chart.Tracker.Circuit as Circuit exposing (Circuit)
 import Motorsport.Circuit.Shape as Shape exposing (Point)
+import Motorsport.Class as Class
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
-import Motorsport.Wec.Class as Class
 import Point2d
 import Point3d exposing (Point3d)
 import Point3d.Projection as Projection

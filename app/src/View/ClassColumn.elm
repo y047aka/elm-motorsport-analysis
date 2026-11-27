@@ -38,6 +38,7 @@ import Motorsport.Analysis.Strategy as Strategy exposing (PitCycle, PredictedSti
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapDelta as LapDelta
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -47,7 +48,6 @@ import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Race.Stint as RaceStint exposing (Stint)
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.Wec.Class as Class exposing (Class)
 import UI.Shadcn.Card as Card
 import View.CarDetail.Header as Header
 import View.CarNumberBadge as CarNumberBadge

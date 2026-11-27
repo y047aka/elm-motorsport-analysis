@@ -1,6 +1,7 @@
 module Motorsport.Race.StintTest exposing (suite)
 
 import Expect
+import Motorsport.Class as Class
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
@@ -8,7 +9,6 @@ import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Stint as Stint exposing (End(..))
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
 

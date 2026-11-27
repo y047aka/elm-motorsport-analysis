@@ -2,8 +2,9 @@ module Motorsport.Race.TimelineEventTest exposing (suite)
 
 import Expect
 import Json.Decode as Decode
-import Motorsport.Duration as Duration
+import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
+import Motorsport.Duration as Duration
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -12,7 +13,6 @@ import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..))
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Test exposing (Test, describe, test)
 
@@ -81,7 +81,6 @@ written name =
     decoded ("{ \"elapsed\": \"0.000\", \"event\": \"" ++ name ++ "\", \"carNumber\": \"7\" }")
 
 
-
 {-| `(when, what)`, which is the whole of an event.
 -}
 decoded : String -> Result Decode.Error ( Instant, EventType )
@@ -139,7 +138,7 @@ lapDetail =
                             Just mini ->
                                 Expect.equal
                                     (LeMans.get LeMans.SCL2 mini
-                                        |> \r -> ( r.time, r.fastest, r.personalBest )
+                                        |> (\r -> ( r.time, r.fastest, r.personalBest ))
                                     )
                                     ( Duration.fromString "8.151"
                                     , Duration.fromString "8.151"
@@ -154,10 +153,9 @@ lapDetail =
 
 
 {-| Every car event names the lap it fell on, and only a fastest lap carries that lap's
-    times. These are lines the kept round actually writes, so a decoder that reads a
-    `lap` on its own as a promise of `performance` fails here rather than taking the
-    whole events column down with it.
-
+times. These are lines the kept round actually writes, so a decoder that reads a
+`lap` on its own as a promise of `performance` fails here rather than taking the
+whole events column down with it.
 -}
 carEventLaps : Test
 carEventLaps =
